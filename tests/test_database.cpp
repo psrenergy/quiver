@@ -1,8 +1,9 @@
+#include "database_fixture.h"
+
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <psr/database.h>
 #include <string>
-#include "database_fixture.h"
 
 namespace fs = std::filesystem;
 

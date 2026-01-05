@@ -41,7 +41,7 @@ std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_pat
     console_sink->set_level(to_spdlog_level(console_level));
 
     if (db_path == ":memory:") {
-        // 
+        //
         auto logger = std::make_shared<spdlog::logger>(logger_name, console_sink);
         logger->set_level(spdlog::level::debug);
         logger->warn("...");
@@ -60,11 +60,11 @@ std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_pat
             auto log_file_path = (db_dir / "psr_database.log").string();
             file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_file_path, true);
             file_sink->set_level(spdlog::level::debug);
-            
+
             std::vector<spdlog::sink_ptr> sinks{console_sink, file_sink};
             auto logger = std::make_shared<spdlog::logger>(logger_name, sinks.begin(), sinks.end());
             logger->set_level(spdlog::level::debug);
-            
+
             return logger;
         } catch (const spdlog::spdlog_ex& ex) {
             // If file sink creation fails, continue with console-only logging
