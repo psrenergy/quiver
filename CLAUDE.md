@@ -43,7 +43,7 @@ Managed via CMake FetchContent in `cmake/Dependencies.cmake`:
 ## Project Structure
 
 ```
-psr_database/
+database/
 ├── include/psr/        # Public headers
 │   ├── database.h      # C++ Database class
 │   ├── result.h        # C++ Result/Row/Value
