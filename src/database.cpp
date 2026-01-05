@@ -43,7 +43,7 @@ std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_pat
     console_sink->set_level(to_spdlog_level(console_level));
 
     if (db_path == ":memory:") {
-        //
+        // 
         auto logger = std::make_shared<spdlog::logger>(logger_name, console_sink);
         logger->set_level(spdlog::level::debug);
         logger->warn("...");
