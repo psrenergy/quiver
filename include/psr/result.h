@@ -34,4 +34,4 @@ private:
 
 }  // namespace psr
 
-#endif  // PSR_DATABASE_VALUE_H
+#endif  // PSR_DATABASE_RESULT_H

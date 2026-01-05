@@ -13,19 +13,19 @@ class PSR_API Row {
 public:
     explicit Row(std::vector<Value> values);
 
-    size_t size() const;
-    size_t column_count() const { return size(); }
+    std::size_t size() const;
+    std::size_t column_count() const { return size(); }
     bool empty() const;
 
-    const Value& at(size_t index) const;
-    const Value& operator[](size_t index) const;
+    const Value& at(std::size_t index) const;
+    const Value& operator[](std::size_t index) const;
 
     // Type-specific getters (return optionals for safe access)
-    bool is_null(size_t index) const;
-    std::optional<int64_t> get_int(size_t index) const;
-    std::optional<double> get_double(size_t index) const;
-    std::optional<std::string> get_string(size_t index) const;
-    std::optional<std::vector<uint8_t>> get_blob(size_t index) const;
+    bool is_null(std::size_t index) const;
+    std::optional<int64_t> get_int(std::size_t index) const;
+    std::optional<double> get_double(std::size_t index) const;
+    std::optional<std::string> get_string(std::size_t index) const;
+    std::optional<std::vector<uint8_t>> get_blob(std::size_t index) const;
 
     // Iterator support
     auto begin() const { return values_.begin(); }
@@ -37,4 +37,4 @@ private:
 
 }  // namespace psr
 
-#endif  // PSR_DATABASE_VALUE_H
+#endif  // PSR_DATABASE_ROW_H
