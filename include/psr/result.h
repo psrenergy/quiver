@@ -1,5 +1,5 @@
-#ifndef PSR_DATABASE_RESULT_H
-#define PSR_DATABASE_RESULT_H
+#ifndef PSR_RESULT_H
+#define PSR_RESULT_H
 
 #include "export.h"
 #include "row.h"
@@ -34,4 +34,4 @@ private:
 
 }  // namespace psr
 
-#endif  // PSR_DATABASE_RESULT_H
+#endif  // PSR_RESULT_H

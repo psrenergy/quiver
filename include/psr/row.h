@@ -1,5 +1,5 @@
-#ifndef PSR_DATABASE_ROW_H
-#define PSR_DATABASE_ROW_H
+#ifndef PSR_ROW_H
+#define PSR_ROW_H
 
 #include "export.h"
 #include "value.h"
@@ -37,4 +37,4 @@ private:
 
 }  // namespace psr
 
-#endif  // PSR_DATABASE_ROW_H
+#endif  // PSR_ROW_H

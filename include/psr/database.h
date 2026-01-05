@@ -1,5 +1,5 @@
-#ifndef PSR_DATABASE_DATABASE_H
-#define PSR_DATABASE_DATABASE_H
+#ifndef PSR_DATABASE_H
+#define PSR_DATABASE_H
 
 #include "export.h"
 
@@ -49,4 +49,4 @@ private:
 
 }  // namespace psr
 
-#endif  // PSR_DATABASE_DATABASE_H
+#endif  // PSR_DATABASE_H

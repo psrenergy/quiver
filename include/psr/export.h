@@ -1,5 +1,5 @@
-#ifndef PSR_DATABASE_EXPORT_H
-#define PSR_DATABASE_EXPORT_H
+#ifndef PSR_EXPORT_H
+#define PSR_EXPORT_H
 
 #ifdef PSR_DATABASE_STATIC
 #define PSR_API
@@ -15,4 +15,4 @@
 #endif
 #endif
 
-#endif  // PSR_DATABASE_EXPORT_H
+#endif  // PSR_EXPORT_H

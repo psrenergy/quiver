@@ -1,5 +1,5 @@
-#ifndef PSR_DATABASE_VALUE_H
-#define PSR_DATABASE_VALUE_H
+#ifndef PSR_VALUE_H
+#define PSR_VALUE_H
 
 #include "export.h"
 
@@ -14,4 +14,4 @@ using Value = std::variant<std::nullptr_t, int64_t, double, std::string, std::ve
 
 }  // namespace psr
 
-#endif  // PSR_DATABASE_VALUE_H
+#endif  // PSR_VALUE_H
