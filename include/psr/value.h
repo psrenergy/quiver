@@ -1,8 +1,6 @@
 #ifndef PSR_VALUE_H
 #define PSR_VALUE_H
 
-#include "export.h"
-
 #include <cstdint>
 #include <string>
 #include <variant>

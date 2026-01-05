@@ -3,9 +3,7 @@
 
 #include "export.h"
 #include "row.h"
-#include "value.h"
 
-#include <optional>
 #include <vector>
 
 namespace psr {
