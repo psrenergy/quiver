@@ -130,8 +130,9 @@ TEST_F(DatabaseFixture, CreatesFileOnDisk) {
     auto db = psr_database_open(path.c_str(), &options);
 
     ASSERT_NE(db, nullptr);
-
     EXPECT_TRUE(fs::exists(path));
+
+    psr_database_close(db);
 }
 
 TEST_F(DatabaseFixture, DefaultOptions) {
