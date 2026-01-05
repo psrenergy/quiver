@@ -5,10 +5,15 @@
 
 #include <memory>
 #include <string>
+#include <variant>
+#include <vector>
 
 struct sqlite3;
 
 namespace psr {
+
+using Value = std::variant<std::nullptr_t, int64_t, double, std::string, std::vector<uint8_t>, std::vector<int64_t>,
+                           std::vector<double>, std::vector<std::string>>;
 
 enum class LogLevel { debug, info, warn, error, off };
 
@@ -32,6 +37,8 @@ public:
 
     bool is_open() const;
     void close();
+
+    void execute(const std::string& sql, const std::vector<Value>& params = {});
 
     const std::string& path() const;
 

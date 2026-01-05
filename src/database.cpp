@@ -137,6 +137,62 @@ void Database::close() {
     }
 }
 
+void Database::execute(const std::string& sql, const std::vector<Value>& params) {
+    if (!is_open()) {
+        throw std::runtime_error("Database is not open");
+    }
+
+    sqlite3_stmt* stmt = nullptr;
+    int rc = sqlite3_prepare_v2(impl_->db, sql.c_str(), -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) {
+        throw std::runtime_error("Failed to prepare statement: " + std::string(sqlite3_errmsg(impl_->db)));
+    }
+
+    // Bind parameters
+    for (size_t i = 0; i < params.size(); ++i) {
+        int idx = static_cast<int>(i + 1);
+        const auto& param = params[i];
+
+        std::visit(
+            [&](auto&& arg) {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_same_v<T, std::nullptr_t>) {
+                    sqlite3_bind_null(stmt, idx);
+                } else if constexpr (std::is_same_v<T, int64_t>) {
+                    sqlite3_bind_int64(stmt, idx, arg);
+                } else if constexpr (std::is_same_v<T, double>) {
+                    sqlite3_bind_double(stmt, idx, arg);
+                } else if constexpr (std::is_same_v<T, std::string>) {
+                    sqlite3_bind_text(stmt, idx, arg.c_str(), static_cast<int>(arg.size()), SQLITE_TRANSIENT);
+                } else if constexpr (std::is_same_v<T, std::vector<uint8_t>>) {
+                    sqlite3_bind_blob(stmt, idx, arg.data(), static_cast<int>(arg.size()), SQLITE_TRANSIENT);
+                }
+            },
+            param);
+    }
+
+    // Get column info
+    std::vector<std::string> columns;
+    int col_count = sqlite3_column_count(stmt);
+    columns.reserve(col_count);
+    for (int i = 0; i < col_count; ++i) {
+        const char* name = sqlite3_column_name(stmt, i);
+        columns.emplace_back(name ? name : "");
+    }
+
+    // Execute
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW)
+        ;
+
+    sqlite3_finalize(stmt);
+
+    if (rc != SQLITE_DONE) {
+        throw std::runtime_error("Failed to execute statement: " + std::string(sqlite3_errmsg(impl_->db)));
+    }
+
+    return;
+}
+
 const std::string& Database::path() const {
     static const std::string empty;
     return impl_ ? impl_->path : empty;
