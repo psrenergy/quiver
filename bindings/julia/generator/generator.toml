@@ -2,7 +2,7 @@
 library_name = "libpsr_database_c"
 output_file_path = "../src/c_api.jl"
 module_name = "C"
-jll_pkg_name = "PSRDatabase_jll"
+# jll_pkg_name = "PSRDatabase_jll"
 print_using_CEnum = false
 prologue_file_path = "./prologue.jl"
 epilogue_file_path = "./epilogue.jl"

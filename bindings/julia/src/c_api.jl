@@ -1,10 +1,9 @@
 module C
 
-using PSRDatabase_jll
-export PSRDatabase_jll
+using CEnum
+using Libdl
 
-
-
+global libpsr_database_c = raw"C:\Development\Database\database\build\bin\libpsr_database_c.dll"
 
 @cenum psr_error_t::Int32 begin
     PSR_OK = 0
@@ -59,9 +58,9 @@ end
 
 mutable struct sqlite3 end
 
-const PSR_C_API = __declspec(dllimport)
+# const PSR_C_API = __declspec(dllimport)
 
-const PSR_API = __declspec(dllimport)
+# const PSR_API = __declspec(dllimport)
 
 
 
