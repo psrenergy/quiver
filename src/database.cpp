@@ -1,5 +1,7 @@
 #include "psr/database.h"
 
+#include "psr/result.h"
+
 #include <atomic>
 #include <filesystem>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -137,7 +139,7 @@ void Database::close() {
     }
 }
 
-void Database::execute(const std::string& sql, const std::vector<Value>& params) {
+Result Database::execute(const std::string& sql, const std::vector<Value>& params) {
     if (!is_open()) {
         throw std::runtime_error("Database is not open");
     }
@@ -180,9 +182,40 @@ void Database::execute(const std::string& sql, const std::vector<Value>& params)
         columns.emplace_back(name ? name : "");
     }
 
-    // Execute
-    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW)
-        ;
+    // Execute and fetch results
+    std::vector<Row> rows;
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        std::vector<Value> values;
+        values.reserve(col_count);
+
+        for (int i = 0; i < col_count; ++i) {
+            int type = sqlite3_column_type(stmt, i);
+            switch (type) {
+            case SQLITE_INTEGER:
+                values.emplace_back(sqlite3_column_int64(stmt, i));
+                break;
+            case SQLITE_FLOAT:
+                values.emplace_back(sqlite3_column_double(stmt, i));
+                break;
+            case SQLITE_TEXT: {
+                const char* text = reinterpret_cast<const char*>(sqlite3_column_text(stmt, i));
+                values.emplace_back(std::string(text ? text : ""));
+                break;
+            }
+            case SQLITE_BLOB: {
+                const uint8_t* data = reinterpret_cast<const uint8_t*>(sqlite3_column_blob(stmt, i));
+                int size = sqlite3_column_bytes(stmt, i);
+                values.emplace_back(std::vector<uint8_t>(data, data + size));
+                break;
+            }
+            case SQLITE_NULL:
+            default:
+                values.emplace_back(nullptr);
+                break;
+            }
+        }
+        rows.emplace_back(std::move(values));
+    }
 
     sqlite3_finalize(stmt);
 
@@ -190,7 +223,7 @@ void Database::execute(const std::string& sql, const std::vector<Value>& params)
         throw std::runtime_error("Failed to execute statement: " + std::string(sqlite3_errmsg(impl_->db)));
     }
 
-    return;
+    return Result(std::move(columns), std::move(rows));
 }
 
 const std::string& Database::path() const {
