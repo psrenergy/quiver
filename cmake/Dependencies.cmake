@@ -48,13 +48,3 @@ if(PSR_BUILD_TESTS)
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(googletest)
 endif()
-
-# pybind11 for Python bindings
-if(PSR_BUILD_PYTHON_BINDING)
-    find_package(Python COMPONENTS Interpreter Development REQUIRED)
-    FetchContent_Declare(pybind11
-        GIT_REPOSITORY https://github.com/pybind/pybind11.git
-        GIT_TAG v2.13.6
-    )
-    FetchContent_MakeAvailable(pybind11)
-endif()
