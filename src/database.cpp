@@ -33,48 +33,47 @@ std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_pat
     namespace fs = std::filesystem;
 
     // Generate unique logger name for multiple Database instances
-    uint64_t id = g_logger_counter.fetch_add(1);
-    std::string logger_name = "psr_database_" + std::to_string(id);
+    auto id = g_logger_counter.fetch_add(1);
+    auto logger_name = "psr_database_" + std::to_string(id);
 
     // Create console sink (thread-safe)
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
     console_sink->set_level(to_spdlog_level(console_level));
 
-    // Determine log file path
-    std::string log_file_path;
-
-    if (db_path == ":memory:" || db_path.empty()) {
-        // In-memory database: use current working directory
-        log_file_path = (fs::current_path() / "psr_database.log").string();
+    if (db_path == ":memory:") {
+        // 
+        auto logger = std::make_shared<spdlog::logger>(logger_name, console_sink);
+        logger->set_level(spdlog::level::debug);
+        logger->warn("...");
+        return logger;
     } else {
         // File-based database: use database directory
-        fs::path db_dir = fs::path(db_path).parent_path();
+        auto db_dir = fs::path(db_path).parent_path();
         if (db_dir.empty()) {
             // Database file in current directory (no path separator)
             db_dir = fs::current_path();
         }
-        log_file_path = (db_dir / "psr_database.log").string();
+
+        // Create file sink (thread-safe)
+        std::shared_ptr<spdlog::sinks::basic_file_sink_mt> file_sink = nullptr;
+        try {
+            auto log_file_path = (db_dir / "psr_database.log").string();
+            file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_file_path, true);
+            file_sink->set_level(spdlog::level::debug);
+            
+            std::vector<spdlog::sink_ptr> sinks{console_sink, file_sink};
+            auto logger = std::make_shared<spdlog::logger>(logger_name, sinks.begin(), sinks.end());
+            logger->set_level(spdlog::level::debug);
+            
+            return logger;
+        } catch (const spdlog::spdlog_ex& ex) {
+            // If file sink creation fails, continue with console-only logging
+            auto logger = std::make_shared<spdlog::logger>(logger_name, console_sink);
+            logger->set_level(spdlog::level::debug);
+            logger->warn("Failed to create file sink: {}. Logging to console only.", ex.what());
+            return logger;
+        }
     }
-
-    // Create file sink (thread-safe)
-    std::shared_ptr<spdlog::sinks::basic_file_sink_mt> file_sink;
-    try {
-        file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_file_path, true);
-        file_sink->set_level(spdlog::level::debug);
-    } catch (const spdlog::spdlog_ex& ex) {
-        // If file sink creation fails, continue with console-only logging
-        auto logger = std::make_shared<spdlog::logger>(logger_name, console_sink);
-        logger->set_level(spdlog::level::debug);
-        logger->warn("Failed to create file sink: {}. Logging to console only.", ex.what());
-        return logger;
-    }
-
-    // Create logger with both sinks
-    std::vector<spdlog::sink_ptr> sinks{console_sink, file_sink};
-    auto logger = std::make_shared<spdlog::logger>(logger_name, sinks.begin(), sinks.end());
-    logger->set_level(spdlog::level::debug);
-
-    return logger;
 }
 
 }  // anonymous namespace
@@ -93,9 +92,9 @@ struct Database::Impl {
     }
 };
 
-Database::Database(const std::string& path, LogLevel console_level) : impl_(std::make_unique<Impl>()) {
+Database::Database(const std::string& path, const DatabaseOptions& options) : impl_(std::make_unique<Impl>()) {
     impl_->path = path;
-    impl_->logger = create_database_logger(path, console_level);
+    impl_->logger = create_database_logger(path, options.console_level);
 
     impl_->logger->debug("Opening database: {}", path);
 

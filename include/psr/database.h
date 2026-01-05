@@ -12,9 +12,14 @@ namespace psr {
 
 enum class LogLevel { debug, info, warn, error, off };
 
+struct PSR_API DatabaseOptions {
+    bool read_only = false;
+    LogLevel console_level = LogLevel::info;
+};
+
 class PSR_API Database {
 public:
-    explicit Database(const std::string& path, LogLevel console_level = LogLevel::info);
+    explicit Database(const std::string& path, const DatabaseOptions& options = DatabaseOptions());
     ~Database();
 
     // Non-copyable

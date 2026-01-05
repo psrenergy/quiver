@@ -76,12 +76,12 @@ TEST_F(DatabaseTest, CloseIsIdempotent) {
 }
 
 TEST_F(DatabaseTest, LogLevelDebug) {
-    psr::Database db(":memory:", psr::LogLevel::debug);
+    psr::Database db(":memory:", {.console_level = psr::LogLevel::debug});
     EXPECT_TRUE(db.is_open());
 }
 
 TEST_F(DatabaseTest, LogLevelOff) {
-    psr::Database db(":memory:", psr::LogLevel::off);
+    psr::Database db(":memory:", {.console_level = psr::LogLevel::off});
     EXPECT_TRUE(db.is_open());
 }
 
