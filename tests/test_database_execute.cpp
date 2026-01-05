@@ -7,7 +7,10 @@
 
 namespace fs = std::filesystem;
 
-TEST_F(DatabaseFixture, OpenInMemory) {
+TEST_F(DatabaseFixture, ExecuteCreateTable) {
     psr::Database db(":memory:");
-    EXPECT_TRUE(db.is_open());
+
+    auto result = db.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)");
+    EXPECT_TRUE(result.empty());
+    EXPECT_EQ(result.row_count(), 0);
 }

@@ -2,6 +2,7 @@ include(GoogleTest)
 
 add_executable(psr_database_tests
     test_database.cpp
+    test_database_execute.cpp
 )
 
 target_link_libraries(psr_database_tests
