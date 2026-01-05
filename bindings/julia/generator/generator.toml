@@ -1,27 +1,12 @@
 [general]
-library_name = "liblua"
+library_name = "libpsr_database_c"
 output_file_path = "../src/c_api.jl"
 module_name = "C"
-jll_pkg_name = "Lua_jll"
+jll_pkg_name = "PSRDatabase_jll"
 print_using_CEnum = false
 prologue_file_path = "./prologue.jl"
 epilogue_file_path = "./epilogue.jl"
 output_ignorelist = [
-    "LUA_VERSION",
-    "LUA_RELEASE",
-    "LUA_VDIR",
-    "LUA_SHRDIR",
-    "LUA_INTEGER_FMT",
-    "LUA_VERSUFFIX",
-    "LUA_COPYRIGHT",
-    "LUA_API",
-    "LUA_MININTEGER",
-    "LUA_MAXINTEGER",
-    "LUA_MAXUNSIGNED",
-    "LUA_KCONTEXT",
-    "LUAI_MAXALIGN",
-    "LUALIB_API",
-    "LUAMOD_API",
 ]
 
 [codegen]

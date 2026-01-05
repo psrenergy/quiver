@@ -1,3 +1,8 @@
 module PSRDatabase
 
-end # module
+include("c_api.jl")
+import .C
+
+include("database.jl")
+
+end
