@@ -51,9 +51,6 @@ public:
     void commit();
     void rollback();
 
-    // Legacy accessor (deprecated, use current_version())
-    int get_user_version() const;
-
     const std::string& path() const;
 
 private:

@@ -6,15 +6,15 @@
 
 namespace database_utils {
 
-TEST_F(DatabaseFixture, GetUserVersion) {
+TEST_F(DatabaseFixture, CurrentVersion) {
     psr::Database db(":memory:");
 
     db.execute("PRAGMA user_version = 1;");
-    int version = db.get_user_version();
+    int version = db.current_version();
     EXPECT_EQ(version, 1);
 
     db.execute("PRAGMA user_version = 42;");
-    version = db.get_user_version();
+    version = db.current_version();
     EXPECT_EQ(version, 42);
 }
 

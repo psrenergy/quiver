@@ -223,7 +223,7 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
     return Result(std::move(columns), std::move(rows));
 }
 
-int Database::get_user_version() const {
+int64_t Database::current_version() const {
     sqlite3_stmt* stmt = nullptr;
     const char* sql = "PRAGMA user_version;";
     int rc = sqlite3_prepare_v2(impl_->db, sql, -1, &stmt, nullptr);
@@ -232,7 +232,7 @@ int Database::get_user_version() const {
     }
 
     rc = sqlite3_step(stmt);
-    int user_version = 0;
+    int64_t user_version = 0;
     if (rc == SQLITE_ROW) {
         user_version = sqlite3_column_int(stmt, 0);
     } else {
@@ -263,10 +263,6 @@ Database Database::from_schema(const std::string& db_path,
     Database db(db_path, options);
     db.apply_schema(schema_path);
     return db;
-}
-
-int64_t Database::current_version() const {
-    return static_cast<int64_t>(get_user_version());
 }
 
 void Database::set_version(int64_t version) {
