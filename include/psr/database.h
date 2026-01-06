@@ -29,10 +29,28 @@ public:
     Database(Database&& other) noexcept;
     Database& operator=(Database&& other) noexcept;
 
+    // Factory method: open database and apply migrations from schema directory
+    static Database from_schema(const std::string& db_path,
+                                const std::string& schema_path,
+                                const DatabaseOptions& options = DatabaseOptions());
+
     bool is_healthy() const;
 
     Result execute(const std::string& sql, const std::vector<Value>& params = {});
 
+    // Schema version management
+    int64_t current_version() const;
+    void set_version(int64_t version);
+
+    // Migration
+    void migrate_up(const std::string& schema_path);
+
+    // Transaction management
+    void begin_transaction();
+    void commit();
+    void rollback();
+
+    // Legacy accessor (deprecated, use current_version())
     int get_user_version() const;
 
     const std::string& path() const;
@@ -40,6 +58,9 @@ public:
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
+
+    // Internal helper for executing raw SQL (for migrations)
+    void execute_raw(const std::string& sql);
 };
 
 }  // namespace psr

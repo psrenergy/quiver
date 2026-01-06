@@ -1,5 +1,6 @@
 #include "psr/database.h"
 
+#include "psr/migrations.h"
 #include "psr/result.h"
 
 #include <atomic>
@@ -244,6 +245,120 @@ int Database::get_user_version() const {
 const std::string& Database::path() const {
     static const std::string empty;
     return impl_ ? impl_->path : empty;
+}
+
+Database Database::from_schema(const std::string& db_path,
+                               const std::string& schema_path,
+                               const DatabaseOptions& options) {
+    Database db(db_path, options);
+    db.migrate_up(schema_path);
+    return db;
+}
+
+int64_t Database::current_version() const {
+    return static_cast<int64_t>(get_user_version());
+}
+
+void Database::set_version(int64_t version) {
+    std::string sql = "PRAGMA user_version = " + std::to_string(version) + ";";
+    char* err_msg = nullptr;
+    int rc = sqlite3_exec(impl_->db, sql.c_str(), nullptr, nullptr, &err_msg);
+    if (rc != SQLITE_OK) {
+        std::string error = err_msg ? err_msg : "Unknown error";
+        sqlite3_free(err_msg);
+        throw std::runtime_error("Failed to set user_version: " + error);
+    }
+    impl_->logger->debug("Set schema version to {}", version);
+}
+
+void Database::begin_transaction() {
+    char* err_msg = nullptr;
+    int rc = sqlite3_exec(impl_->db, "BEGIN TRANSACTION;", nullptr, nullptr, &err_msg);
+    if (rc != SQLITE_OK) {
+        std::string error = err_msg ? err_msg : "Unknown error";
+        sqlite3_free(err_msg);
+        throw std::runtime_error("Failed to begin transaction: " + error);
+    }
+    impl_->logger->debug("Transaction started");
+}
+
+void Database::commit() {
+    char* err_msg = nullptr;
+    int rc = sqlite3_exec(impl_->db, "COMMIT;", nullptr, nullptr, &err_msg);
+    if (rc != SQLITE_OK) {
+        std::string error = err_msg ? err_msg : "Unknown error";
+        sqlite3_free(err_msg);
+        throw std::runtime_error("Failed to commit transaction: " + error);
+    }
+    impl_->logger->debug("Transaction committed");
+}
+
+void Database::rollback() {
+    char* err_msg = nullptr;
+    int rc = sqlite3_exec(impl_->db, "ROLLBACK;", nullptr, nullptr, &err_msg);
+    if (rc != SQLITE_OK) {
+        std::string error = err_msg ? err_msg : "Unknown error";
+        sqlite3_free(err_msg);
+        impl_->logger->error("Failed to rollback transaction: {}", error);
+        // Don't throw here - rollback is often called in error recovery
+    } else {
+        impl_->logger->debug("Transaction rolled back");
+    }
+}
+
+void Database::execute_raw(const std::string& sql) {
+    char* err_msg = nullptr;
+    int rc = sqlite3_exec(impl_->db, sql.c_str(), nullptr, nullptr, &err_msg);
+    if (rc != SQLITE_OK) {
+        std::string error = err_msg ? err_msg : "Unknown error";
+        sqlite3_free(err_msg);
+        throw std::runtime_error("Failed to execute SQL: " + error);
+    }
+}
+
+void Database::migrate_up(const std::string& schema_path) {
+    Migrations migrations(schema_path);
+    if (migrations.empty()) {
+        impl_->logger->debug("No migrations found in {}", schema_path);
+        return;
+    }
+
+    int64_t current = current_version();
+    auto pending = migrations.pending(current);
+
+    if (pending.empty()) {
+        impl_->logger->debug("Database is up to date at version {}", current);
+        return;
+    }
+
+    impl_->logger->info("Applying {} pending migration(s) from version {} to {}",
+                        pending.size(), current, migrations.latest_version());
+
+    for (const auto& migration : pending) {
+        impl_->logger->info("Applying migration {}", migration.version());
+
+        std::string up_sql = migration.up_sql();
+        if (up_sql.empty()) {
+            throw std::runtime_error("Migration " + std::to_string(migration.version()) +
+                                     " has no up.sql file");
+        }
+
+        begin_transaction();
+        try {
+            execute_raw(up_sql);
+            set_version(migration.version());
+            commit();
+            impl_->logger->info("Migration {} applied successfully", migration.version());
+        } catch (const std::exception& e) {
+            rollback();
+            impl_->logger->error("Migration {} failed: {}", migration.version(), e.what());
+            throw std::runtime_error("Migration " + std::to_string(migration.version()) +
+                                     " failed: " + e.what());
+        }
+    }
+
+    impl_->logger->info("All migrations applied successfully. Database now at version {}",
+                        current_version());
 }
 
 }  // namespace psr
