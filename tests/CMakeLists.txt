@@ -17,10 +17,6 @@ target_link_libraries(psr_database_tests
         GTest::gmock
 )
 
-target_compile_definitions(psr_database_tests PRIVATE
-    TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test_valid_database_definitions"
-)
-
 # Copy DLLs to output directory for test discovery
 if(WIN32 AND BUILD_SHARED_LIBS)
     add_custom_command(TARGET psr_database_tests POST_BUILD

@@ -6,15 +6,10 @@ namespace fs = std::filesystem;
 
 class SchemaValidatorFixture : public ::testing::Test {
 protected:
-    std::string test_data_dir;
     psr::DatabaseOptions opts{.console_level = psr::LogLevel::off};
 
-    void SetUp() override {
-        test_data_dir = TEST_DATA_DIR;
-    }
-
     std::string schema_path(const std::string& filename) {
-        return (fs::path(test_data_dir) / filename).string();
+        return (fs::path(__FILE__).parent_path() / filename).string();
     }
 };
 
