@@ -52,8 +52,6 @@ PSR_C_API int64_t psr_database_create_element(psr_database_t* db, const char* co
 
 // Schema operations
 PSR_C_API psr_error_t psr_database_apply_schema(psr_database_t* db, const char* schema_path);
-PSR_C_API psr_error_t psr_database_apply_schema_string(psr_database_t* db, const char* schema_sql);
-PSR_C_API psr_error_t psr_database_validate_schema(psr_database_t* db);
 
 #ifdef __cplusplus
 }

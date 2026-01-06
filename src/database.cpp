@@ -385,26 +385,20 @@ void Database::apply_schema(const std::string& schema_path) {
     }
 
     impl_->logger->info("Applying schema from: {}", schema_path);
-    apply_schema_string(schema_sql);
-    impl_->logger->info("Schema applied successfully");
-}
 
-void Database::apply_schema_string(const std::string& schema_sql) {
     begin_transaction();
     try {
         execute_raw(schema_sql);
-        validate_schema();
+        SchemaValidator validator(impl_->db);
+        validator.validate();
         commit();
     } catch (const std::exception& e) {
         rollback();
         impl_->logger->error("Failed to apply schema: {}", e.what());
         throw;
     }
-}
 
-void Database::validate_schema() {
-    SchemaValidator validator(impl_->db);
-    validator.validate();
+    impl_->logger->info("Schema applied successfully");
 }
 
 int64_t Database::create_element(const std::string& collection, const Element& element) {

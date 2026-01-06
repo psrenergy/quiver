@@ -199,28 +199,4 @@ PSR_C_API psr_error_t psr_database_apply_schema(psr_database_t* db, const char* 
     }
 }
 
-PSR_C_API psr_error_t psr_database_apply_schema_string(psr_database_t* db, const char* schema_sql) {
-    if (!db || !schema_sql) {
-        return PSR_ERROR_INVALID_ARGUMENT;
-    }
-    try {
-        db->db.apply_schema_string(schema_sql);
-        return PSR_OK;
-    } catch (const std::exception&) {
-        return PSR_ERROR_SCHEMA;
-    }
-}
-
-PSR_C_API psr_error_t psr_database_validate_schema(psr_database_t* db) {
-    if (!db) {
-        return PSR_ERROR_INVALID_ARGUMENT;
-    }
-    try {
-        db->db.validate_schema();
-        return PSR_OK;
-    } catch (const std::exception&) {
-        return PSR_ERROR_SCHEMA;
-    }
-}
-
 }  // extern "C"
