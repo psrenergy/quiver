@@ -105,3 +105,28 @@ TEST(Element, OverwriteValue) {
     EXPECT_EQ(element.scalars().size(), 1);
     EXPECT_EQ(std::get<double>(element.scalars().at("value")), 2.0);
 }
+
+TEST(Element, ToString) {
+    psr::Element element;
+    element.set("label", std::string{"Plant 1"})
+        .set("capacity", 50.0)
+        .set_vector("costs", std::vector<double>{1.5, 2.5});
+
+    std::string str = element.to_string();
+
+    EXPECT_NE(str.find("Element {"), std::string::npos);
+    EXPECT_NE(str.find("scalars:"), std::string::npos);
+    EXPECT_NE(str.find("vectors:"), std::string::npos);
+    EXPECT_NE(str.find("label: \"Plant 1\""), std::string::npos);
+    EXPECT_NE(str.find("capacity:"), std::string::npos);
+    EXPECT_NE(str.find("costs: ["), std::string::npos);
+}
+
+TEST(Element, ToStringEmpty) {
+    psr::Element element;
+    std::string str = element.to_string();
+
+    EXPECT_NE(str.find("Element {"), std::string::npos);
+    EXPECT_EQ(str.find("scalars:"), std::string::npos);
+    EXPECT_EQ(str.find("vectors:"), std::string::npos);
+}

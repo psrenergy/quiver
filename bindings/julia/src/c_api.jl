@@ -9,6 +9,15 @@ global libpsr_database_c = raw"C:\Development\Database\database\build\bin\libpsr
     PSR_OK = 0
     PSR_ERROR_INVALID_ARGUMENT = -1
     PSR_ERROR_DATABASE = -2
+    PSR_ERROR_MIGRATION = -3
+end
+
+function psr_error_string(error)
+    @ccall libpsr_database_c.psr_error_string(error::psr_error_t)::Ptr{Cchar}
+end
+
+function psr_version()
+    @ccall libpsr_database_c.psr_version()::Ptr{Cchar}
 end
 
 @cenum psr_log_level_t::UInt32 begin
@@ -32,36 +41,115 @@ mutable struct psr_database end
 
 const psr_database_t = psr_database
 
-function psr_database_open(path, options, error)
-    @ccall libpsr_database_c.psr_database_open(path::Ptr{Cchar}, options::Ptr{psr_database_options_t}, error::Ptr{psr_error_t})::Ptr{psr_database_t}
+function psr_database_open(path, options)
+    @ccall libpsr_database_c.psr_database_open(path::Ptr{Cchar}, options::Ptr{psr_database_options_t})::Ptr{psr_database_t}
+end
+
+function psr_database_from_migrations(db_path, migrations_path, options)
+    @ccall libpsr_database_c.psr_database_from_migrations(db_path::Ptr{Cchar}, migrations_path::Ptr{Cchar}, options::Ptr{psr_database_options_t})::Ptr{psr_database_t}
 end
 
 function psr_database_close(db)
     @ccall libpsr_database_c.psr_database_close(db::Ptr{psr_database_t})::Cvoid
 end
 
-function psr_database_is_open(db)
-    @ccall libpsr_database_c.psr_database_is_open(db::Ptr{psr_database_t})::Cint
+function psr_database_is_healthy(db)
+    @ccall libpsr_database_c.psr_database_is_healthy(db::Ptr{psr_database_t})::Cint
 end
 
 function psr_database_path(db)
     @ccall libpsr_database_c.psr_database_path(db::Ptr{psr_database_t})::Ptr{Cchar}
 end
 
-function psr_error_string(error)
-    @ccall libpsr_database_c.psr_error_string(error::psr_error_t)::Ptr{Cchar}
+function psr_database_current_version(db)
+    @ccall libpsr_database_c.psr_database_current_version(db::Ptr{psr_database_t})::Int64
 end
 
-function psr_version()
-    @ccall libpsr_database_c.psr_version()::Ptr{Cchar}
+function psr_database_set_version(db, version)
+    @ccall libpsr_database_c.psr_database_set_version(db::Ptr{psr_database_t}, version::Int64)::psr_error_t
 end
 
-mutable struct sqlite3 end
+function psr_database_migrate_up(db, migrations_path)
+    @ccall libpsr_database_c.psr_database_migrate_up(db::Ptr{psr_database_t}, migrations_path::Ptr{Cchar})::psr_error_t
+end
+
+function psr_database_begin_transaction(db)
+    @ccall libpsr_database_c.psr_database_begin_transaction(db::Ptr{psr_database_t})::psr_error_t
+end
+
+function psr_database_commit(db)
+    @ccall libpsr_database_c.psr_database_commit(db::Ptr{psr_database_t})::psr_error_t
+end
+
+function psr_database_rollback(db)
+    @ccall libpsr_database_c.psr_database_rollback(db::Ptr{psr_database_t})::psr_error_t
+end
+
+mutable struct psr_element end
+
+const psr_element_t = psr_element
+
+function psr_database_create_element(db, collection, element)
+    @ccall libpsr_database_c.psr_database_create_element(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, element::Ptr{psr_element_t})::Int64
+end
+
+function psr_element_create()
+    @ccall libpsr_database_c.psr_element_create()::Ptr{psr_element_t}
+end
+
+function psr_element_destroy(element)
+    @ccall libpsr_database_c.psr_element_destroy(element::Ptr{psr_element_t})::Cvoid
+end
+
+function psr_element_clear(element)
+    @ccall libpsr_database_c.psr_element_clear(element::Ptr{psr_element_t})::Cvoid
+end
+
+function psr_element_set_int(element, name, value)
+    @ccall libpsr_database_c.psr_element_set_int(element::Ptr{psr_element_t}, name::Ptr{Cchar}, value::Int64)::psr_error_t
+end
+
+function psr_element_set_double(element, name, value)
+    @ccall libpsr_database_c.psr_element_set_double(element::Ptr{psr_element_t}, name::Ptr{Cchar}, value::Cdouble)::psr_error_t
+end
+
+function psr_element_set_string(element, name, value)
+    @ccall libpsr_database_c.psr_element_set_string(element::Ptr{psr_element_t}, name::Ptr{Cchar}, value::Ptr{Cchar})::psr_error_t
+end
+
+function psr_element_set_null(element, name)
+    @ccall libpsr_database_c.psr_element_set_null(element::Ptr{psr_element_t}, name::Ptr{Cchar})::psr_error_t
+end
+
+function psr_element_set_vector_int(element, name, values, count)
+    @ccall libpsr_database_c.psr_element_set_vector_int(element::Ptr{psr_element_t}, name::Ptr{Cchar}, values::Ptr{Int64}, count::Csize_t)::psr_error_t
+end
+
+function psr_element_set_vector_double(element, name, values, count)
+    @ccall libpsr_database_c.psr_element_set_vector_double(element::Ptr{psr_element_t}, name::Ptr{Cchar}, values::Ptr{Cdouble}, count::Csize_t)::psr_error_t
+end
+
+function psr_element_set_vector_string(element, name, values, count)
+    @ccall libpsr_database_c.psr_element_set_vector_string(element::Ptr{psr_element_t}, name::Ptr{Cchar}, values::Ptr{Ptr{Cchar}}, count::Csize_t)::psr_error_t
+end
+
+function psr_element_has_scalars(element)
+    @ccall libpsr_database_c.psr_element_has_scalars(element::Ptr{psr_element_t})::Cint
+end
+
+function psr_element_has_vectors(element)
+    @ccall libpsr_database_c.psr_element_has_vectors(element::Ptr{psr_element_t})::Cint
+end
+
+function psr_element_scalar_count(element)
+    @ccall libpsr_database_c.psr_element_scalar_count(element::Ptr{psr_element_t})::Csize_t
+end
+
+function psr_element_vector_count(element)
+    @ccall libpsr_database_c.psr_element_vector_count(element::Ptr{psr_element_t})::Csize_t
+end
 
 # const PSR_C_API = __declspec(dllimport)
-
-# const PSR_API = __declspec(dllimport)
-
 
 
 

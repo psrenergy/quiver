@@ -19,13 +19,13 @@ end
 
 cd(@__DIR__)
 
-include_dir = raw"C:\Development\Database\database\include"
+include_dir = raw"C:\Development\Database\database\include\psr\c"
 
 options = load_options(joinpath(@__DIR__, "generator.toml"))
 
 @show args = get_default_args()
 
-@show headers = get_headers_recursive(include_dir)
+@show headers = [joinpath(include_dir, header) for header in readdir(include_dir) if endswith(header, ".h")]
 
 Libdl.dlopen(raw"C:\Development\Database\database\build\bin\libpsr_database_c.dll")
 

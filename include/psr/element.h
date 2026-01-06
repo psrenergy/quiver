@@ -34,6 +34,9 @@ public:
 
     void clear();
 
+    // Pretty print
+    std::string to_string() const;
+
 private:
     std::map<std::string, Value> scalars_;
     std::map<std::string, Value> vectors_;

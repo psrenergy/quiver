@@ -62,3 +62,4 @@ Testing/
 PSRDatabase.jl/
 *.log
 *.sqlite
+nul
