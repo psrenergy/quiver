@@ -6,6 +6,7 @@ add_executable(psr_database_tests
     test_database_utils.cpp
     test_element.cpp
     test_migrations/test_migrations.cpp
+    test_schema_validator.cpp
 )
 
 target_link_libraries(psr_database_tests
@@ -14,6 +15,10 @@ target_link_libraries(psr_database_tests
         psr_compiler_options
         GTest::gtest_main
         GTest::gmock
+)
+
+target_compile_definitions(psr_database_tests PRIVATE
+    TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test_valid_database_definitions"
 )
 
 # Copy DLLs to output directory for test discovery

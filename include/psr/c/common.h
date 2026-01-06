@@ -25,6 +25,7 @@ typedef enum {
     PSR_ERROR_INVALID_ARGUMENT = -1,
     PSR_ERROR_DATABASE = -2,
     PSR_ERROR_MIGRATION = -3,
+    PSR_ERROR_SCHEMA = -4,
 } psr_error_t;
 
 // Utility functions

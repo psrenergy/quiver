@@ -46,6 +46,8 @@ public:
 
     void migrate_up(const std::string& migration_path);
     void apply_schema(const std::string& schema_path);
+    void apply_schema_string(const std::string& schema_sql);
+    void validate_schema();
 
     // Element operations
     int64_t create_element(const std::string& collection, const Element& element);
