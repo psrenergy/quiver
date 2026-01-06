@@ -149,6 +149,14 @@ function psr_element_vector_count(element)
     @ccall libpsr_database_c.psr_element_vector_count(element::Ptr{psr_element_t})::Csize_t
 end
 
+function psr_element_to_string(element)
+    @ccall libpsr_database_c.psr_element_to_string(element::Ptr{psr_element_t})::Ptr{Cchar}
+end
+
+function psr_string_free(str)
+    @ccall libpsr_database_c.psr_string_free(str::Ptr{Cchar})::Cvoid
+end
+
 # const PSR_C_API = __declspec(dllimport)
 
 
