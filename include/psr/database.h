@@ -29,11 +29,13 @@ public:
     Database(Database&& other) noexcept;
     Database& operator=(Database&& other) noexcept;
 
-    // Factory method: open database and apply migrations
     static Database from_migrations(const std::string& db_path,
                                     const std::string& migrations_path,
                                     const DatabaseOptions& options = DatabaseOptions());
 
+    static Database from_schema(const std::string& db_path,
+                                const std::string& schema_path,
+                                const DatabaseOptions& options = DatabaseOptions());
     bool is_healthy() const;
 
     Result execute(const std::string& sql, const std::vector<Value>& params = {});
