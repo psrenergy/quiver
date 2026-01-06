@@ -1,39 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cat:*)",
-      "Bash(git show:*)",
+      "Bash",
       "WebSearch",
-      "Bash(cmake:*)",
-      "Bash(./psr_database_tests.exe:*)",
-      "Bash(ctest:*)",
-      "Bash(ls:*)",
-      "Bash(echo:*)",
-      "Bash(cmd /c \"cd C:\\\\Development\\\\Personal\\\\psr_database\\\\build\\\\bin && psr_database_tests.exe --gtest_list_tests\")",
-      "Bash(\"C:/Development/Personal/psr_database/build/bin/psr_database_tests.exe\" --gtest_list_tests)",
-      "Bash(objdump:*)",
-      "WebFetch(domain:github.com)",
-      "Bash(find:*)",
-      "Bash(tree:*)",
-      "WebFetch(domain:gitlab.com)",
+      "WebFetch(domain:*)",
       "mcp__context7__resolve-library-id",
-      "mcp__context7__query-docs",
-      "Bash(julia --project=. -e:*)",
-      "Bash(handle.exe:*)",
-      "Bash(tasklist:*)",
-      "Bash(taskkill:*)",
-      "Bash(wmic process:*)",
-      "Bash(\"C:/Development/Personal/psr_database/build/bin/psr_database_tests.exe\" --gtest_filter=\"CreateVectorsTest.SucceedsWithVectorAttributes\")",
-      "Bash(\"C:/Development/Personal/psr_database/build/bin/psr_database_tests.exe\")",
-      "Bash(\"C:/Development/Personal/psr_database/build/bin/psr_database_tests.exe\" --gtest_filter=\"CreateVectorsTest.ScalarForeignKeyResolvedByLabel\")",
-      "Bash(julia --project=../.. -e:*)",
-      "Bash(julia --project=.. -e:*)",
-      "Bash(del /q \"C:\\\\Development\\\\Personal\\\\psr_database\\\\bindings\\\\julia\\\\test\\\\test_create\\\\*.sqlite\")",
-      "Bash(julia:*)",
-      "Bash(del /q \"C:\\\\Development\\\\Personal\\\\psr_database\\\\bindings\\\\julia\\\\test\\\\test_read\\\\*.sqlite\")",
-      "Bash(del /q \"C:\\\\Development\\\\Personal\\\\psr_database\\\\bindings\\\\julia\\\\test\\\\test_compare_dbs\\\\*.sqlite\")",
-      "Bash(cmd /c \"taskkill /F /IM julia.exe\")",
-      "Bash(.hpp \")"
+      "mcp__context7__query-docs"
     ]
   }
 }
