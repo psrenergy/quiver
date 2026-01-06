@@ -1,6 +1,7 @@
 #include "psr/c/element.h"
 #include "psr/element.h"
 
+#include <cstring>
 #include <new>
 #include <string>
 #include <vector>
@@ -125,6 +126,24 @@ PSR_C_API size_t psr_element_vector_count(psr_element_t* element) {
         return 0;
     }
     return element->element.vectors().size();
+}
+
+PSR_C_API char* psr_element_to_string(psr_element_t* element) {
+    if (!element) {
+        return nullptr;
+    }
+    try {
+        std::string str = element->element.to_string();
+        char* result = new char[str.size() + 1];
+        std::memcpy(result, str.c_str(), str.size() + 1);
+        return result;
+    } catch (const std::bad_alloc&) {
+        return nullptr;
+    }
+}
+
+PSR_C_API void psr_string_free(char* str) {
+    delete[] str;
 }
 
 }  // extern "C"

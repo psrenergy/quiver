@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <psr/c/element.h>
+#include <string>
 
 TEST(ElementCApi, CreateAndDestroy) {
     auto element = psr_element_create();
@@ -173,4 +174,34 @@ TEST(ElementCApi, EmptyVector) {
     EXPECT_EQ(psr_element_has_vectors(element), 1);
 
     psr_element_destroy(element);
+}
+
+TEST(ElementCApi, ToString) {
+    auto element = psr_element_create();
+    ASSERT_NE(element, nullptr);
+
+    psr_element_set_string(element, "label", "Plant 1");
+    psr_element_set_double(element, "capacity", 50.0);
+    double costs[] = {1.5, 2.5};
+    psr_element_set_vector_double(element, "costs", costs, 2);
+
+    char* str = psr_element_to_string(element);
+    ASSERT_NE(str, nullptr);
+
+    std::string result(str);
+    EXPECT_NE(result.find("Element {"), std::string::npos);
+    EXPECT_NE(result.find("scalars:"), std::string::npos);
+    EXPECT_NE(result.find("vectors:"), std::string::npos);
+    EXPECT_NE(result.find("label: \"Plant 1\""), std::string::npos);
+
+    psr_string_free(str);
+    psr_element_destroy(element);
+}
+
+TEST(ElementCApi, ToStringNull) {
+    EXPECT_EQ(psr_element_to_string(nullptr), nullptr);
+}
+
+TEST(ElementCApi, StringFreeNull) {
+    psr_string_free(nullptr);
 }

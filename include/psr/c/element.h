@@ -41,6 +41,10 @@ PSR_C_API int psr_element_has_vectors(psr_element_t* element);
 PSR_C_API size_t psr_element_scalar_count(psr_element_t* element);
 PSR_C_API size_t psr_element_vector_count(psr_element_t* element);
 
+// Pretty print (caller must free returned string with psr_string_free)
+PSR_C_API char* psr_element_to_string(psr_element_t* element);
+PSR_C_API void psr_string_free(char* str);
+
 #ifdef __cplusplus
 }
 #endif
