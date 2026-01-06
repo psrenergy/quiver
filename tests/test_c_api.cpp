@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <psr/c/database.h>
+#include <psr/c/element.h>
 #include <string>
 
 namespace fs = std::filesystem;
