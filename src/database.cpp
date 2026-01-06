@@ -377,7 +377,7 @@ void Database::apply_schema(const std::string& schema_path) {
 
     std::stringstream buffer;
     buffer << file.rdbuf();
-    std::string schema_sql = buffer.str();
+    auto schema_sql = buffer.str();
 
     if (schema_sql.empty()) {
         throw std::runtime_error("Schema file is empty: " + schema_path);
