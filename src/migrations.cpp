@@ -44,8 +44,7 @@ Migrations::Migrations(const std::string& path) : impl_(std::make_unique<Impl>()
 
 Migrations::~Migrations() = default;
 
-Migrations::Migrations(const Migrations& other)
-    : impl_(std::make_unique<Impl>(*other.impl_)) {}
+Migrations::Migrations(const Migrations& other) : impl_(std::make_unique<Impl>(*other.impl_)) {}
 
 Migrations& Migrations::operator=(const Migrations& other) {
     if (this != &other) {

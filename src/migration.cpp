@@ -16,13 +16,11 @@ struct Migration::Impl {
     Impl(const Impl& other) : version(other.version), path(other.path) {}
 };
 
-Migration::Migration(int64_t version, const std::string& path)
-    : impl_(std::make_unique<Impl>(version, path)) {}
+Migration::Migration(int64_t version, const std::string& path) : impl_(std::make_unique<Impl>(version, path)) {}
 
 Migration::~Migration() = default;
 
-Migration::Migration(const Migration& other)
-    : impl_(std::make_unique<Impl>(*other.impl_)) {}
+Migration::Migration(const Migration& other) : impl_(std::make_unique<Impl>(*other.impl_)) {}
 
 Migration& Migration::operator=(const Migration& other) {
     if (this != &other) {

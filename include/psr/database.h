@@ -30,8 +30,7 @@ public:
     Database& operator=(Database&& other) noexcept;
 
     // Factory method: open database and apply migrations from schema directory
-    static Database from_schema(const std::string& db_path,
-                                const std::string& schema_path,
+    static Database from_schema(const std::string& db_path, const std::string& schema_path,
                                 const DatabaseOptions& options = DatabaseOptions());
 
     bool is_healthy() const;
