@@ -76,9 +76,9 @@ TEST(Element, SetVectorString) {
 TEST(Element, FluentChaining) {
     psr::Element element;
     element.set("label", std::string{"Plant 1"})
-           .set("capacity", 50.0)
-           .set("id", int64_t{1})
-           .set_vector("costs", std::vector<double>{1.0, 2.0, 3.0});
+        .set("capacity", 50.0)
+        .set("id", int64_t{1})
+        .set_vector("costs", std::vector<double>{1.0, 2.0, 3.0});
 
     EXPECT_EQ(element.scalars().size(), 3);
     EXPECT_EQ(element.vectors().size(), 1);
@@ -86,8 +86,7 @@ TEST(Element, FluentChaining) {
 
 TEST(Element, Clear) {
     psr::Element element;
-    element.set("label", std::string{"test"})
-           .set_vector("data", std::vector<double>{1.0});
+    element.set("label", std::string{"test"}).set_vector("data", std::vector<double>{1.0});
 
     EXPECT_TRUE(element.has_scalars());
     EXPECT_TRUE(element.has_vectors());

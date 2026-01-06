@@ -6,11 +6,11 @@
 #include <atomic>
 #include <filesystem>
 #include <fstream>
-#include <sstream>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 #include <sqlite3.h>
+#include <sstream>
 #include <stdexcept>
 
 namespace {
@@ -257,9 +257,8 @@ Database Database::from_migrations(const std::string& db_path,
     return db;
 }
 
-Database Database::from_schema(const std::string& db_path,
-                               const std::string& schema_path,
-                               const DatabaseOptions& options) {
+Database
+Database::from_schema(const std::string& db_path, const std::string& schema_path, const DatabaseOptions& options) {
     Database db(db_path, options);
     db.apply_schema(schema_path);
     return db;
