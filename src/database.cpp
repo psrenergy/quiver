@@ -105,7 +105,7 @@ Database::Database(const std::string& path, const DatabaseOptions& options) : im
     impl_->logger->debug("Opening database: {}", path);
 
     int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
-    int rc = sqlite3_open_v2(path.c_str(), &impl_->db, flags, nullptr);
+    auto rc = sqlite3_open_v2(path.c_str(), &impl_->db, flags, nullptr);
 
     if (rc != SQLITE_OK) {
         std::string error_msg = impl_->db ? sqlite3_errmsg(impl_->db) : "Unknown error";
@@ -142,13 +142,13 @@ bool Database::is_healthy() const {
 
 Result Database::execute(const std::string& sql, const std::vector<Value>& params) {
     sqlite3_stmt* stmt = nullptr;
-    int rc = sqlite3_prepare_v2(impl_->db, sql.c_str(), -1, &stmt, nullptr);
+    auto rc = sqlite3_prepare_v2(impl_->db, sql.c_str(), -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
         throw std::runtime_error("Failed to prepare statement: " + std::string(sqlite3_errmsg(impl_->db)));
     }
 
     // Bind parameters
-    for (size_t i = 0; i < params.size(); ++i) {
+    for (std::size_t i = 0; i < params.size(); ++i) {
         int idx = static_cast<int>(i + 1);
         const auto& param = params[i];
 
@@ -226,7 +226,7 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
 int64_t Database::current_version() const {
     sqlite3_stmt* stmt = nullptr;
     const char* sql = "PRAGMA user_version;";
-    int rc = sqlite3_prepare_v2(impl_->db, sql, -1, &stmt, nullptr);
+    auto rc = sqlite3_prepare_v2(impl_->db, sql, -1, &stmt, nullptr);
     if (rc != SQLITE_OK) {
         throw std::runtime_error("Failed to prepare statement: " + std::string(sqlite3_errmsg(impl_->db)));
     }
@@ -267,7 +267,7 @@ Database::from_schema(const std::string& db_path, const std::string& schema_path
 void Database::set_version(int64_t version) {
     std::string sql = "PRAGMA user_version = " + std::to_string(version) + ";";
     char* err_msg = nullptr;
-    int rc = sqlite3_exec(impl_->db, sql.c_str(), nullptr, nullptr, &err_msg);
+    auto rc = sqlite3_exec(impl_->db, sql.c_str(), nullptr, nullptr, &err_msg);
     if (rc != SQLITE_OK) {
         std::string error = err_msg ? err_msg : "Unknown error";
         sqlite3_free(err_msg);
@@ -278,7 +278,7 @@ void Database::set_version(int64_t version) {
 
 void Database::begin_transaction() {
     char* err_msg = nullptr;
-    int rc = sqlite3_exec(impl_->db, "BEGIN TRANSACTION;", nullptr, nullptr, &err_msg);
+    auto rc = sqlite3_exec(impl_->db, "BEGIN TRANSACTION;", nullptr, nullptr, &err_msg);
     if (rc != SQLITE_OK) {
         std::string error = err_msg ? err_msg : "Unknown error";
         sqlite3_free(err_msg);
@@ -289,7 +289,7 @@ void Database::begin_transaction() {
 
 void Database::commit() {
     char* err_msg = nullptr;
-    int rc = sqlite3_exec(impl_->db, "COMMIT;", nullptr, nullptr, &err_msg);
+    auto rc = sqlite3_exec(impl_->db, "COMMIT;", nullptr, nullptr, &err_msg);
     if (rc != SQLITE_OK) {
         std::string error = err_msg ? err_msg : "Unknown error";
         sqlite3_free(err_msg);
@@ -300,7 +300,7 @@ void Database::commit() {
 
 void Database::rollback() {
     char* err_msg = nullptr;
-    int rc = sqlite3_exec(impl_->db, "ROLLBACK;", nullptr, nullptr, &err_msg);
+    auto rc = sqlite3_exec(impl_->db, "ROLLBACK;", nullptr, nullptr, &err_msg);
     if (rc != SQLITE_OK) {
         std::string error = err_msg ? err_msg : "Unknown error";
         sqlite3_free(err_msg);
@@ -313,7 +313,7 @@ void Database::rollback() {
 
 void Database::execute_raw(const std::string& sql) {
     char* err_msg = nullptr;
-    int rc = sqlite3_exec(impl_->db, sql.c_str(), nullptr, nullptr, &err_msg);
+    auto rc = sqlite3_exec(impl_->db, sql.c_str(), nullptr, nullptr, &err_msg);
     if (rc != SQLITE_OK) {
         std::string error = err_msg ? err_msg : "Unknown error";
         sqlite3_free(err_msg);
@@ -328,7 +328,7 @@ void Database::migrate_up(const std::string& migrations_path) {
         return;
     }
 
-    int64_t current = current_version();
+    auto current = current_version();
     auto pending = migrations.pending(current);
 
     if (pending.empty()) {
@@ -342,7 +342,7 @@ void Database::migrate_up(const std::string& migrations_path) {
     for (const auto& migration : pending) {
         impl_->logger->info("Applying migration {}", migration.version());
 
-        std::string up_sql = migration.up_sql();
+        auto up_sql = migration.up_sql();
         if (up_sql.empty()) {
             throw std::runtime_error("Migration " + std::to_string(migration.version()) + " has no up.sql file");
         }

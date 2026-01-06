@@ -32,7 +32,8 @@ gtest_discover_tests(psr_database_tests
 # C API tests
 if(PSR_BUILD_C_API)
     add_executable(psr_database_c_tests
-        test_c_api.cpp
+        test_c_api_database.cpp
+        test_c_api_element.cpp
     )
 
     target_link_libraries(psr_database_c_tests
