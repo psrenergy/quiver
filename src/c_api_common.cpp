@@ -12,6 +12,8 @@ PSR_C_API const char* psr_error_string(psr_error_t error) {
         return "Database error";
     case PSR_ERROR_MIGRATION:
         return "Migration error";
+    case PSR_ERROR_SCHEMA:
+        return "Schema validation error";
     default:
         return "Unknown error";
     }

@@ -2,6 +2,7 @@
 
 #include "psr/migrations.h"
 #include "psr/result.h"
+#include "psr/schema_validator.h"
 
 #include <atomic>
 #include <filesystem>
@@ -388,13 +389,16 @@ void Database::apply_schema(const std::string& schema_path) {
     begin_transaction();
     try {
         execute_raw(schema_sql);
+        SchemaValidator validator(impl_->db);
+        validator.validate();
         commit();
-        impl_->logger->info("Schema applied successfully");
     } catch (const std::exception& e) {
         rollback();
         impl_->logger->error("Failed to apply schema: {}", e.what());
-        throw std::runtime_error("Failed to apply schema: " + std::string(e.what()));
+        throw;
     }
+
+    impl_->logger->info("Schema applied successfully");
 }
 
 int64_t Database::create_element(const std::string& collection, const Element& element) {
