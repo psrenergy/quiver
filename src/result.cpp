@@ -13,11 +13,11 @@ const std::vector<std::string>& Result::columns() const {
     return columns_;
 }
 
-std::size_t Result::column_count() const {
+size_t Result::column_count() const {
     return columns_.size();
 }
 
-std::size_t Result::row_count() const {
+size_t Result::row_count() const {
     return rows_.size();
 }
 
@@ -25,11 +25,11 @@ bool Result::empty() const {
     return rows_.empty();
 }
 
-const Row& Result::at(std::size_t index) const {
+const Row& Result::at(size_t index) const {
     return rows_.at(index);
 }
 
-const Row& Result::operator[](std::size_t index) const {
+const Row& Result::operator[](size_t index) const {
     return rows_[index];
 }
 }  // namespace psr

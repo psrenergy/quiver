@@ -148,7 +148,7 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
     }
 
     // Bind parameters
-    for (std::size_t i = 0; i < params.size(); ++i) {
+    for (size_t i = 0; i < params.size(); ++i) {
         int idx = static_cast<int>(i + 1);
         const auto& param = params[i];
 

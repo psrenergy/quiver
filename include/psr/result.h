@@ -14,12 +14,12 @@ public:
     Result(std::vector<std::string> columns, std::vector<Row> rows);
 
     const std::vector<std::string>& columns() const;
-    std::size_t column_count() const;
-    std::size_t row_count() const;
+    size_t column_count() const;
+    size_t row_count() const;
     bool empty() const;
 
-    const Row& at(std::size_t index) const;
-    const Row& operator[](std::size_t index) const;
+    const Row& at(size_t index) const;
+    const Row& operator[](size_t index) const;
 
     // Iterator support
     auto begin() const { return rows_.begin(); }

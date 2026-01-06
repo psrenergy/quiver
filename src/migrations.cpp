@@ -28,7 +28,7 @@ Migrations::Migrations(const std::string& path) : impl_(std::make_unique<Impl>()
 
         const auto& dirname = entry.path().filename().string();
         try {
-            std::size_t pos = 0;
+            size_t pos = 0;
             auto migration_version = std::stoll(dirname, &pos);
             if (pos == dirname.size() && migration_version > 0) {
                 auto migration_path = entry.path().string();
