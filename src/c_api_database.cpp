@@ -1,8 +1,14 @@
 #include "psr/c/database.h"
+#include "psr/c/element.h"
 #include "psr/database.h"
 
 #include <new>
 #include <string>
+
+// Forward declare the psr_element struct (defined in c_api_element.cpp)
+struct psr_element {
+    psr::Element element;
+};
 
 namespace {
 
@@ -168,6 +174,17 @@ PSR_C_API psr_error_t psr_database_rollback(psr_database_t* db) {
         return PSR_OK;
     } catch (const std::exception&) {
         return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API int64_t psr_database_create_element(psr_database_t* db, const char* collection, psr_element_t* element) {
+    if (!db || !collection || !element) {
+        return -1;
+    }
+    try {
+        return db->db.create_element(collection, element->element);
+    } catch (const std::exception&) {
+        return -1;
     }
 }
 

@@ -397,4 +397,61 @@ void Database::apply_schema(const std::string& schema_path) {
     }
 }
 
+int64_t Database::create_element(const std::string& collection, const Element& element) {
+    impl_->logger->debug("Creating element in collection: {}", collection);
+
+    // Insert scalars into main table
+    const auto& scalars = element.scalars();
+    if (scalars.empty()) {
+        throw std::runtime_error("Element must have at least one scalar attribute");
+    }
+
+    // Build INSERT SQL: INSERT INTO <collection> (<cols>) VALUES (<placeholders>)
+    std::string sql = "INSERT INTO " + collection + " (";
+    std::string placeholders;
+    std::vector<Value> params;
+
+    bool first = true;
+    for (const auto& [name, value] : scalars) {
+        if (!first) {
+            sql += ", ";
+            placeholders += ", ";
+        }
+        sql += name;
+        placeholders += "?";
+        params.push_back(value);
+        first = false;
+    }
+    sql += ") VALUES (" + placeholders + ")";
+
+    execute(sql, params);
+    int64_t element_id = sqlite3_last_insert_rowid(impl_->db);
+    impl_->logger->debug("Inserted element with id: {}", element_id);
+
+    // Insert vectors into vector tables
+    const auto& vectors = element.vectors();
+    for (const auto& [attr_name, value] : vectors) {
+        std::string vector_table = collection + "_vector_" + attr_name;
+        std::string vector_sql =
+            "INSERT INTO " + vector_table + " (id, vector_index, " + attr_name + ") VALUES (?, ?, ?)";
+
+        std::visit(
+            [&](auto&& vec) {
+                using T = std::decay_t<decltype(vec)>;
+                if constexpr (std::is_same_v<T, std::vector<int64_t>> || std::is_same_v<T, std::vector<double>> ||
+                              std::is_same_v<T, std::vector<std::string>>) {
+                    for (size_t i = 0; i < vec.size(); ++i) {
+                        int64_t vector_index = static_cast<int64_t>(i + 1);  // 1-based index
+                        execute(vector_sql, {element_id, vector_index, vec[i]});
+                    }
+                    impl_->logger->debug("Inserted {} vector elements for {}", vec.size(), attr_name);
+                }
+            },
+            value);
+    }
+
+    impl_->logger->info("Created element {} in {}", element_id, collection);
+    return element_id;
+}
+
 }  // namespace psr

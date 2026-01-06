@@ -2,6 +2,7 @@
 #define PSR_DATABASE_H
 
 #include "export.h"
+#include "psr/element.h"
 #include "psr/log_level.h"
 #include "psr/result.h"
 
@@ -45,6 +46,9 @@ public:
 
     void migrate_up(const std::string& migration_path);
     void apply_schema(const std::string& schema_path);
+
+    // Element operations
+    int64_t create_element(const std::string& collection, const Element& element);
 
     // Transaction management
     void begin_transaction();

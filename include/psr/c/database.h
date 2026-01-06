@@ -46,6 +46,12 @@ PSR_C_API psr_error_t psr_database_begin_transaction(psr_database_t* db);
 PSR_C_API psr_error_t psr_database_commit(psr_database_t* db);
 PSR_C_API psr_error_t psr_database_rollback(psr_database_t* db);
 
+// Element operations (requires psr_element_t from element.h)
+typedef struct psr_element psr_element_t;
+PSR_C_API int64_t psr_database_create_element(psr_database_t* db,
+                                               const char* collection,
+                                               psr_element_t* element);
+
 #ifdef __cplusplus
 }
 #endif

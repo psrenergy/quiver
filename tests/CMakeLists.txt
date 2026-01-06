@@ -39,6 +39,7 @@ if(PSR_BUILD_C_API)
     target_link_libraries(psr_database_c_tests
         PRIVATE
             psr_database_c
+            psr_database
             psr_compiler_options
             GTest::gtest_main
     )
@@ -47,6 +48,9 @@ if(PSR_BUILD_C_API)
         add_custom_command(TARGET psr_database_c_tests POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 $<TARGET_FILE:psr_database_c>
+                $<TARGET_FILE_DIR:psr_database_c_tests>
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:psr_database>
                 $<TARGET_FILE_DIR:psr_database_c_tests>
         )
     endif()
