@@ -22,9 +22,18 @@ PSR_C_API psr_error_t psr_element_set_string(psr_element_t* element, const char*
 PSR_C_API psr_error_t psr_element_set_null(psr_element_t* element, const char* name);
 
 // Vector setters
-PSR_C_API psr_error_t psr_element_set_vector_int(psr_element_t* element, const char* name, const int64_t* values, size_t count);
-PSR_C_API psr_error_t psr_element_set_vector_double(psr_element_t* element, const char* name, const double* values, size_t count);
-PSR_C_API psr_error_t psr_element_set_vector_string(psr_element_t* element, const char* name, const char** values, size_t count);
+PSR_C_API psr_error_t psr_element_set_vector_int(psr_element_t* element,
+                                                 const char* name,
+                                                 const int64_t* values,
+                                                 size_t count);
+PSR_C_API psr_error_t psr_element_set_vector_double(psr_element_t* element,
+                                                    const char* name,
+                                                    const double* values,
+                                                    size_t count);
+PSR_C_API psr_error_t psr_element_set_vector_string(psr_element_t* element,
+                                                    const char* name,
+                                                    const char** values,
+                                                    size_t count);
 
 // Accessors
 PSR_C_API int psr_element_has_scalars(psr_element_t* element);
