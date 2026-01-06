@@ -44,6 +44,7 @@ public:
     void set_version(int64_t version);
 
     void migrate_up(const std::string& migration_path);
+    void apply_schema(const std::string& schema_path);
 
     // Transaction management
     void begin_transaction();

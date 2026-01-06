@@ -32,7 +32,8 @@
       "Bash(julia:*)",
       "Bash(del /q \"C:\\\\Development\\\\Personal\\\\psr_database\\\\bindings\\\\julia\\\\test\\\\test_read\\\\*.sqlite\")",
       "Bash(del /q \"C:\\\\Development\\\\Personal\\\\psr_database\\\\bindings\\\\julia\\\\test\\\\test_compare_dbs\\\\*.sqlite\")",
-      "Bash(cmd /c \"taskkill /F /IM julia.exe\")"
+      "Bash(cmd /c \"taskkill /F /IM julia.exe\")",
+      "Bash(.hpp \")"
     ]
   }
 }

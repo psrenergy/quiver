@@ -5,6 +5,8 @@
 
 #include <atomic>
 #include <filesystem>
+#include <fstream>
+#include <sstream>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
@@ -255,6 +257,14 @@ Database Database::from_migrations(const std::string& db_path,
     return db;
 }
 
+Database Database::from_schema(const std::string& db_path,
+                               const std::string& schema_path,
+                               const DatabaseOptions& options) {
+    Database db(db_path, options);
+    db.apply_schema(schema_path);
+    return db;
+}
+
 int64_t Database::current_version() const {
     return static_cast<int64_t>(get_user_version());
 }
@@ -356,6 +366,40 @@ void Database::migrate_up(const std::string& migrations_path) {
     }
 
     impl_->logger->info("All migrations applied successfully. Database now at version {}", current_version());
+}
+
+void Database::apply_schema(const std::string& schema_path) {
+    namespace fs = std::filesystem;
+
+    if (!fs::exists(schema_path)) {
+        throw std::runtime_error("Schema file not found: " + schema_path);
+    }
+
+    std::ifstream file(schema_path);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open schema file: " + schema_path);
+    }
+
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    std::string schema_sql = buffer.str();
+
+    if (schema_sql.empty()) {
+        throw std::runtime_error("Schema file is empty: " + schema_path);
+    }
+
+    impl_->logger->info("Applying schema from: {}", schema_path);
+
+    begin_transaction();
+    try {
+        execute_raw(schema_sql);
+        commit();
+        impl_->logger->info("Schema applied successfully");
+    } catch (const std::exception& e) {
+        rollback();
+        impl_->logger->error("Failed to apply schema: {}", e.what());
+        throw std::runtime_error("Failed to apply schema: " + std::string(e.what()));
+    }
 }
 
 }  // namespace psr
