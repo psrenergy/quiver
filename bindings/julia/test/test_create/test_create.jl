@@ -91,53 +91,53 @@ end
     return nothing
 end
 
-# @testset "Create Sets with Relations" begin
-#     path_schema = joinpath(@__DIR__, "test_create_sets_with_relations.sql")
-#     db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
-#     PSRDatabase.create_element!(
-#         db,
-#         "Configuration";
-#         label = "Toy Case",
-#         some_value = 1.0,
-#     )
-#     PSRDatabase.create_element!(db, "Product"; label = "Sugar", unit = "Kg")
-#     PSRDatabase.create_element!(db, "Product"; label = "Sugarcane", unit = "ton")
-#     PSRDatabase.create_element!(db, "Product"; label = "Molasse", unit = "ton")
-#     PSRDatabase.create_element!(db, "Product"; label = "Bagasse", unit = "ton")
-#     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(
-#         db,
-#         "Product",
-#         label = "Bagasse 2",
-#         unit = 30,
-#     )
-#     PSRDatabase.create_element!(db, "Process";
-#         label = "Sugar Mill",
-#         product_set = ["Sugarcane"],
-#         factor = [1.0],
-#     )
+@testset "Create Sets with Relations" begin
+    path_schema = joinpath(@__DIR__, "test_create_sets_with_relations.sql")
+    db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
+    PSRDatabase.create_element!(
+        db,
+        "Configuration";
+        label = "Toy Case",
+        some_value = 1.0,
+    )
+    PSRDatabase.create_element!(db, "Product"; label = "Sugar", unit = "Kg")
+    PSRDatabase.create_element!(db, "Product"; label = "Sugarcane", unit = "ton")
+    PSRDatabase.create_element!(db, "Product"; label = "Molasse", unit = "ton")
+    PSRDatabase.create_element!(db, "Product"; label = "Bagasse", unit = "ton")
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(
+        db,
+        "Product",
+        label = "Bagasse 2",
+        unit = 30,
+    )
+    PSRDatabase.create_element!(db, "Process";
+        label = "Sugar Mill",
+        product_set = ["Sugarcane"],
+        factor = [1.0],
+    )
 
-#     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(db,
-#         "Process";
-#         label = "Sugar Mill 2",
-#         product_set = ["Sugar"],
-#         factor = ["wrong"],
-#     )
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(db,
+        "Process";
+        label = "Sugar Mill 2",
+        product_set = ["Sugar"],
+        factor = ["wrong"],
+    )
 
-#     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(db,
-#         "Process";
-#         label = "Sugar Mill 3",
-#         product_set = ["Some Sugar"],
-#         factor = [1.0],
-#     )
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(db,
+        "Process";
+        label = "Sugar Mill 3",
+        product_set = ["Some Sugar"],
+        factor = [1.0],
+    )
 
-#     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(db,
-#         "Process";
-#         label = "Sugar Mill 3",
-#         product_set = ["Sugear"],
-#         factor = [],
-#     )
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(db,
+        "Process";
+        label = "Sugar Mill 3",
+        product_set = ["Sugear"],
+        factor = [],
+    )
 
-#     PSRDatabase.close!(db)
-# end
+    PSRDatabase.close!(db)
+end
 
 end
