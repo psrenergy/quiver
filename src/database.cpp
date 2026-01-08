@@ -445,6 +445,9 @@ int64_t Database::create_element(const std::string& collection, const Element& e
                 using T = std::decay_t<decltype(vec)>;
                 if constexpr (std::is_same_v<T, std::vector<int64_t>> || std::is_same_v<T, std::vector<double>> ||
                               std::is_same_v<T, std::vector<std::string>>) {
+                    if (vec.empty()) {
+                        throw std::runtime_error("Empty vector not allowed for attribute '" + attr_name + "'");
+                    }
                     for (size_t i = 0; i < vec.size(); ++i) {
                         int64_t vector_index = static_cast<int64_t>(i + 1);  // 1-based index
                         execute(vector_sql, {element_id, vector_index, vec[i]});

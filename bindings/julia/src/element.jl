@@ -57,13 +57,6 @@ function Base.setindex!(el::Element, value::Vector{<:Float64}, name::String)
     end
 end
 
-function Base.setindex!(el::Element, value::Vector{Any}, name::String)
-    if isempty(value)
-        throw(DatabaseException("Empty vectors are not allowed for '$name'"))
-    end
-    error("Unsupported vector element type for '$name'")
-end
-
 # function Base.setindex!(el::Element, value::Vector{<:String}, name::String)
 #     cname = Base.cconvert(Cstring, name)
 #     cvalues = Vector{Ptr{Cchar}}(undef, length(value))
