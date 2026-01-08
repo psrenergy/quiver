@@ -10,6 +10,7 @@ global libpsr_database_c = raw"C:\Development\Database\database\build\bin\libpsr
     PSR_ERROR_INVALID_ARGUMENT = -1
     PSR_ERROR_DATABASE = -2
     PSR_ERROR_MIGRATION = -3
+    PSR_ERROR_SCHEMA = -4
 end
 
 function psr_error_string(error)
@@ -47,6 +48,10 @@ end
 
 function psr_database_from_migrations(db_path, migrations_path, options)
     @ccall libpsr_database_c.psr_database_from_migrations(db_path::Ptr{Cchar}, migrations_path::Ptr{Cchar}, options::Ptr{psr_database_options_t})::Ptr{psr_database_t}
+end
+
+function psr_database_from_schema(db_path, schema_path, options)
+    @ccall libpsr_database_c.psr_database_from_schema(db_path::Ptr{Cchar}, schema_path::Ptr{Cchar}, options::Ptr{psr_database_options_t})::Ptr{psr_database_t}
 end
 
 function psr_database_close(db)
