@@ -7,6 +7,7 @@ using Libdl
 
 const libpsr_database_c = joinpath(@__DIR__, "..", "..", "..", "build", "bin", "libpsr_database_c.dll")  
 
+
 @cenum psr_error_t::Int32 begin
     PSR_OK = 0
     PSR_ERROR_INVALID_ARGUMENT = -1
@@ -168,5 +169,6 @@ end
 # const PSR_C_API = __declspec(dllimport)
 
 #! format: on
+
 
 end # module
