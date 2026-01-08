@@ -37,59 +37,59 @@ end
     PSRDatabase.close!(db)
 end
 
-# @testset "Create Parameters and Vectors" begin
-#     @show path_schema = joinpath(@__DIR__, "test_create_parameters_and_vectors.sql")
-#     @show isfile(path_schema)
-#     db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
-#     PSRDatabase.create_element!(db, "Configuration"; label = "Toy Case", value1 = 1.0)
-#     PSRDatabase.create_element!(
-#         db,
-#         "Resource";
-#         label = "Resource 1",
-#         type = "E",
-#         some_value = [1.0, 2.0, 3.0],
-#     )
-#     PSRDatabase.create_element!(db, "Cost"; label = "Cost 1", value = 30.0)
-#     PSRDatabase.create_element!(db, "Cost"; label = "Cost 2", value = 20.0)
-#     PSRDatabase.create_element!(
-#         db,
-#         "Plant";
-#         label = "Plant 1",
-#         capacity = 50.0,
-#         some_factor = [0.1, 0.3],
-#     )
-#     PSRDatabase.create_element!(
-#         db,
-#         "Plant";
-#         label = "Plant 2",
-#         capacity = 50.0,
-#         some_factor = [0.1, 0.3, 0.5],
-#     )
-#     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(
-#         db,
-#         "Plant";
-#         label = "Plant 3",
-#         generation = "some_file.txt",
-#     )
-#     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(
-#         db,
-#         "Plant";
-#         label = "Plant 2",
-#         capacity = 50.0,
-#         some_factor = [],
-#     )
-#     PSRDatabase.create_element!(db, "Plant"; label = "Plant 3", resource_id = 1)
-#     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(
-#         db,
-#         "Resource";
-#         label = "Resource 1",
-#         type = "E",
-#         some_value = 1.0,
-#     )
-#     PSRDatabase.close!(db)
+@testset "Create Parameters and Vectors" begin
+    @show path_schema = joinpath(@__DIR__, "test_create_parameters_and_vectors.sql")
+    @show isfile(path_schema)
+    db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
+    PSRDatabase.create_element!(db, "Configuration"; label = "Toy Case", value1 = 1.0)
+    PSRDatabase.create_element!(
+        db,
+        "Resource";
+        label = "Resource 1",
+        type = "E",
+        some_value = [1.0, 2.0, 3.0],
+    )
+    PSRDatabase.create_element!(db, "Cost"; label = "Cost 1", value = 30.0)
+    PSRDatabase.create_element!(db, "Cost"; label = "Cost 2", value = 20.0)
+    PSRDatabase.create_element!(
+        db,
+        "Plant";
+        label = "Plant 1",
+        capacity = 50.0,
+        some_factor = [0.1, 0.3],
+    )
+    PSRDatabase.create_element!(
+        db,
+        "Plant";
+        label = "Plant 2",
+        capacity = 50.0,
+        some_factor = [0.1, 0.3, 0.5],
+    )
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(
+        db,
+        "Plant";
+        label = "Plant 3",
+        generation = "some_file.txt",
+    )
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(
+        db,
+        "Plant";
+        label = "Plant 2",
+        capacity = 50.0,
+        some_factor = [],
+    )
+    PSRDatabase.create_element!(db, "Plant"; label = "Plant 3", resource_id = 1)
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(
+        db,
+        "Resource";
+        label = "Resource 1",
+        type = "E",
+        some_value = 1.0,
+    )
+    PSRDatabase.close!(db)
 
-#     return nothing
-# end
+    return nothing
+end
 
 # @testset "Create Sets with Relations" begin
 #     path_schema = joinpath(@__DIR__, "test_create_sets_with_relations.sql")
