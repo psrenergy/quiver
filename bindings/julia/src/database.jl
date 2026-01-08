@@ -2,17 +2,23 @@ struct Database
     ptr::Ptr{C.psr_database}
 end
 
-# function from_schema(path::String, schema_path::String; read_only::Bool, console_level::C.psr_log_level_t)
-#     options = Ref(C.psr_database_options_t(Int32(read_only), C.psr_log_level_t(console_level)))
-#     ptr = C.psr_database_from_schema(Base.cconvert(Cstring, path), Base.cconvert(Cstring, schema_path), options)
-#     if ptr == C_NULL
-#         error("Failed to create database from schema")
-#     end
-#     return Database(ptr)
-# end
+function create_empty_db_from_schema(db_path, schema_path; force::Bool = true)
+    options = Ref(C.psr_database_options_t(0, C.PSR_LOG_DEBUG))
+    return Database(C.psr_database_from_schema(db_path, schema_path, options))
+end
 
 function create_element!(db::Database, collection::String, e::Element)
     C.psr_database_create_element(db.ptr, collection, e.ptr)
+    return nothing
+end
+
+function create_element!(db::Database, collection::String; kwargs...)
+    @show kwargs
+    e = Element()
+    for (k, v) in kwargs
+        e[String(k)] = v
+    end
+    create_element!(db, collection, e)
     return nothing
 end
 
@@ -22,9 +28,9 @@ function close!(db::Database)
 end
 
 function debug()
+    db_path = raw"C:\Development\Database\database\bindings\julia\test\test_database.db"
     schema_path = raw"C:\Development\Database\database\tests\test_create\test_create_parameters.sql"
-    options = Ref(C.psr_database_options_t(0, C.PSR_LOG_DEBUG))
-    db = Database(C.psr_database_from_schema(":memory:", schema_path, options))
+    db = create_empty_db_from_schema(db_path, schema_path)
 
     # db = from_schema(":memory:", schema_path; read_only=false, console_level=C.PSR_LOG_DEBUG)
 

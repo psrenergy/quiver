@@ -6,6 +6,6 @@ import .C
 include("element.jl")
 include("database.jl")
 
-export Element
+export Element, Database
 
 end
