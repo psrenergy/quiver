@@ -74,9 +74,9 @@ end
     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(
         db,
         "Plant";
-        label = "Plant 2",
+        label = "Plant 4",
         capacity = 50.0,
-        some_factor = [],
+        some_factor = Float64[],
     )
     PSRDatabase.create_element!(db, "Plant"; label = "Plant 3", resource_id = 1)
     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(
