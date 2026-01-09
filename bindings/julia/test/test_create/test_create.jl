@@ -37,8 +37,7 @@ end
 end
 
 @testset "Create Parameters and Vectors" begin
-    @show path_schema = joinpath(@__DIR__, "test_create_parameters_and_vectors.sql")
-    @show isfile(path_schema)
+    path_schema = joinpath(@__DIR__, "test_create_parameters_and_vectors.sql")
     db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
     PSRDatabase.create_element!(db, "Configuration"; label = "Toy Case", value1 = 1.0)
     PSRDatabase.create_element!(
