@@ -2,7 +2,6 @@
 #define PSR_C_ELEMENT_H
 
 #include "common.h"
-#include "platform.h"
 
 #ifdef __cplusplus
 extern "C" {
