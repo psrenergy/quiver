@@ -119,13 +119,13 @@ using Test
         "Plant 2",
     ) ==
           ["2020-01-01 00:00:00", "2020-01-02 00:00:00"]
-    # @test PSRDatabase.read_vector_parameter(
-    #     db,
-    #     "Plant",
-    #     "date_some_date",
-    #     "Plant 3",
-    # ) ==
-    #       String[]
+    @test PSRDatabase.read_vector_parameter(
+        db,
+        "Plant",
+        "date_some_date",
+        "Plant 3",
+    ) ==
+          String[]
     # @test PSRDatabase.read_vector_parameter(
     #     db,
     #     "Plant",
