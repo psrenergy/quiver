@@ -139,37 +139,6 @@ function psr_int_array_free(arr)
     @ccall libpsr_database_c.psr_int_array_free(arr::Ptr{Int64})::Cvoid
 end
 
-# Schema introspection
-function psr_database_get_set_tables(db, collection, out_count)
-    @ccall libpsr_database_c.psr_database_get_set_tables(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, out_count::Ptr{Int64})::Ptr{Ptr{Cchar}}
-end
-
-struct psr_column_info_t
-    name::Ptr{Cchar}
-    fk_table::Ptr{Cchar}
-    fk_column::Ptr{Cchar}
-end
-
-function psr_database_get_table_columns(db, table, out_count)
-    @ccall libpsr_database_c.psr_database_get_table_columns(db::Ptr{psr_database_t}, table::Ptr{Cchar}, out_count::Ptr{Int64})::Ptr{psr_column_info_t}
-end
-
-function psr_column_info_array_free(arr, count)
-    @ccall libpsr_database_c.psr_column_info_array_free(arr::Ptr{psr_column_info_t}, count::Csize_t)::Cvoid
-end
-
-function psr_database_find_element_id(db, collection, label)
-    @ccall libpsr_database_c.psr_database_find_element_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, label::Ptr{Cchar})::Int64
-end
-
-mutable struct psr_vector_group end
-
-const psr_vector_group_t = psr_vector_group
-
-mutable struct psr_set_group end
-
-const psr_set_group_t = psr_set_group
-
 function psr_element_create()
     @ccall libpsr_database_c.psr_element_create()::Ptr{psr_element_t}
 end
@@ -198,84 +167,32 @@ function psr_element_set_null(element, name)
     @ccall libpsr_database_c.psr_element_set_null(element::Ptr{psr_element_t}, name::Ptr{Cchar})::psr_error_t
 end
 
-function psr_vector_group_create()
-    @ccall libpsr_database_c.psr_vector_group_create()::Ptr{psr_vector_group_t}
+function psr_element_set_array_int(element, name, values, count)
+    @ccall libpsr_database_c.psr_element_set_array_int(element::Ptr{psr_element_t}, name::Ptr{Cchar}, values::Ptr{Int64}, count::Int32)::psr_error_t
 end
 
-function psr_vector_group_destroy(group)
-    @ccall libpsr_database_c.psr_vector_group_destroy(group::Ptr{psr_vector_group_t})::Cvoid
+function psr_element_set_array_double(element, name, values, count)
+    @ccall libpsr_database_c.psr_element_set_array_double(element::Ptr{psr_element_t}, name::Ptr{Cchar}, values::Ptr{Cdouble}, count::Int32)::psr_error_t
 end
 
-function psr_vector_group_add_row(group)
-    @ccall libpsr_database_c.psr_vector_group_add_row(group::Ptr{psr_vector_group_t})::psr_error_t
-end
-
-function psr_vector_group_set_int(group, column, value)
-    @ccall libpsr_database_c.psr_vector_group_set_int(group::Ptr{psr_vector_group_t}, column::Ptr{Cchar}, value::Int64)::psr_error_t
-end
-
-function psr_vector_group_set_double(group, column, value)
-    @ccall libpsr_database_c.psr_vector_group_set_double(group::Ptr{psr_vector_group_t}, column::Ptr{Cchar}, value::Cdouble)::psr_error_t
-end
-
-function psr_vector_group_set_string(group, column, value)
-    @ccall libpsr_database_c.psr_vector_group_set_string(group::Ptr{psr_vector_group_t}, column::Ptr{Cchar}, value::Ptr{Cchar})::psr_error_t
-end
-
-function psr_element_add_vector_group(element, name, group)
-    @ccall libpsr_database_c.psr_element_add_vector_group(element::Ptr{psr_element_t}, name::Ptr{Cchar}, group::Ptr{psr_vector_group_t})::psr_error_t
-end
-
-function psr_set_group_create()
-    @ccall libpsr_database_c.psr_set_group_create()::Ptr{psr_set_group_t}
-end
-
-function psr_set_group_destroy(group)
-    @ccall libpsr_database_c.psr_set_group_destroy(group::Ptr{psr_set_group_t})::Cvoid
-end
-
-function psr_set_group_add_row(group)
-    @ccall libpsr_database_c.psr_set_group_add_row(group::Ptr{psr_set_group_t})::psr_error_t
-end
-
-function psr_set_group_set_int(group, column, value)
-    @ccall libpsr_database_c.psr_set_group_set_int(group::Ptr{psr_set_group_t}, column::Ptr{Cchar}, value::Int64)::psr_error_t
-end
-
-function psr_set_group_set_double(group, column, value)
-    @ccall libpsr_database_c.psr_set_group_set_double(group::Ptr{psr_set_group_t}, column::Ptr{Cchar}, value::Cdouble)::psr_error_t
-end
-
-function psr_set_group_set_string(group, column, value)
-    @ccall libpsr_database_c.psr_set_group_set_string(group::Ptr{psr_set_group_t}, column::Ptr{Cchar}, value::Ptr{Cchar})::psr_error_t
-end
-
-function psr_element_add_set_group(element, name, group)
-    @ccall libpsr_database_c.psr_element_add_set_group(element::Ptr{psr_element_t}, name::Ptr{Cchar}, group::Ptr{psr_set_group_t})::psr_error_t
+function psr_element_set_array_string(element, name, values, count)
+    @ccall libpsr_database_c.psr_element_set_array_string(element::Ptr{psr_element_t}, name::Ptr{Cchar}, values::Ptr{Ptr{Cchar}}, count::Int32)::psr_error_t
 end
 
 function psr_element_has_scalars(element)
     @ccall libpsr_database_c.psr_element_has_scalars(element::Ptr{psr_element_t})::Cint
 end
 
-function psr_element_has_vector_groups(element)
-    @ccall libpsr_database_c.psr_element_has_vector_groups(element::Ptr{psr_element_t})::Cint
-end
-
-function psr_element_has_set_groups(element)
-    @ccall libpsr_database_c.psr_element_has_set_groups(element::Ptr{psr_element_t})::Cint
+function psr_element_has_arrays(element)
+    @ccall libpsr_database_c.psr_element_has_arrays(element::Ptr{psr_element_t})::Cint
 end
 
 function psr_element_scalar_count(element)
     @ccall libpsr_database_c.psr_element_scalar_count(element::Ptr{psr_element_t})::Csize_t
 end
 
-function psr_element_vector_group_count(element)
-    @ccall libpsr_database_c.psr_element_vector_group_count(element::Ptr{psr_element_t})::Csize_t
-end
-
-function psr_element_set_group_count(element)
-    @ccall libpsr_database_c.psr_element_set_group_count(element::Ptr{psr_element_t})::Csize_t
+function psr_element_array_count(element)
+    @ccall libpsr_database_c.psr_element_array_count(element::Ptr{psr_element_t})::Csize_t
 end
 
 function psr_element_to_string(element)

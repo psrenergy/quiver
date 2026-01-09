@@ -14,7 +14,7 @@ end
 
 function Base.setindex!(el::Element, value::Integer, name::String)
     cname = Base.cconvert(Cstring, name)
-    err = C.psr_element_set_int(el.ptr, cname, Int32(value))
+    err = C.psr_element_set_int(el.ptr, cname, Int64(value))
     if err != C.PSR_OK
         error("Failed to set int value for '$name'")
     end
@@ -38,80 +38,32 @@ function Base.setindex!(el::Element, value::String, name::String)
 end
 
 function Base.setindex!(el::Element, value::Vector{<:Integer}, name::String)
-    if isempty(value)
-        error("Empty vector not allowed for '$name'")
-    end
-    
-    # Create a vector group with single column having same name as the group
-    group_ptr = C.psr_vector_group_create()
-    if group_ptr == C_NULL
-        error("Failed to create vector group for '$name'")
-    end
-    
-    try
-        for val in value
-            C.psr_vector_group_add_row(group_ptr)
-            C.psr_vector_group_set_int(group_ptr, name, Int64(val))
-        end
-        
-        err = C.psr_element_add_vector_group(el.ptr, name, group_ptr)
-        if err != C.PSR_OK
-            error("Failed to add vector group '$name' to element")
-        end
-    finally
-        C.psr_vector_group_destroy(group_ptr)
+    cname = Base.cconvert(Cstring, name)
+    int_values = Int64[Int64(v) for v in value]
+    err = C.psr_element_set_array_int(el.ptr, cname, int_values, Int32(length(int_values)))
+    if err != C.PSR_OK
+        error("Failed to set array<int> value for '$name'")
     end
 end
 
 function Base.setindex!(el::Element, value::Vector{<:Float64}, name::String)
-    if isempty(value)
-        error("Empty vector not allowed for '$name'")
-    end
-    
-    # Create a vector group with single column having same name as the group
-    group_ptr = C.psr_vector_group_create()
-    if group_ptr == C_NULL
-        error("Failed to create vector group for '$name'")
-    end
-    
-    try
-        for val in value
-            C.psr_vector_group_add_row(group_ptr)
-            C.psr_vector_group_set_double(group_ptr, name, Float64(val))
-        end
-        
-        err = C.psr_element_add_vector_group(el.ptr, name, group_ptr)
-        if err != C.PSR_OK
-            error("Failed to add vector group '$name' to element")
-        end
-    finally
-        C.psr_vector_group_destroy(group_ptr)
+    cname = Base.cconvert(Cstring, name)
+    err = C.psr_element_set_array_double(el.ptr, cname, value, Int32(length(value)))
+    if err != C.PSR_OK
+        error("Failed to set array<double> value for '$name'")
     end
 end
 
 function Base.setindex!(el::Element, value::Vector{<:AbstractString}, name::String)
-    if isempty(value)
-        error("Empty vector not allowed for '$name'")
+    cname = Base.cconvert(Cstring, name)
+    # Convert strings to null-terminated C strings
+    cstrings = [Base.cconvert(Cstring, s) for s in value]
+    ptrs = [Base.unsafe_convert(Cstring, cs) for cs in cstrings]
+    GC.@preserve cstrings begin
+        err = C.psr_element_set_array_string(el.ptr, cname, ptrs, Int32(length(value)))
     end
-    
-    # Create a vector group with single column having same name as the group
-    group_ptr = C.psr_vector_group_create()
-    if group_ptr == C_NULL
-        error("Failed to create vector group for '$name'")
-    end
-    
-    try
-        for val in value
-            C.psr_vector_group_add_row(group_ptr)
-            C.psr_vector_group_set_string(group_ptr, name, val)
-        end
-        
-        err = C.psr_element_add_vector_group(el.ptr, name, group_ptr)
-        if err != C.PSR_OK
-            error("Failed to add vector group '$name' to element")
-        end
-    finally
-        C.psr_vector_group_destroy(group_ptr)
+    if err != C.PSR_OK
+        error("Failed to set array<string> value for '$name'")
     end
 end
 
