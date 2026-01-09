@@ -127,6 +127,30 @@ function psr_database_read_scalar_parameter_int(db, collection, attribute, label
     @ccall libpsr_database_c.psr_database_read_scalar_parameter_int(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar}, out_value::Ptr{Int64}, is_null::Ptr{Cint})::psr_error_t
 end
 
+function psr_database_read_vector_parameters_double(db, collection, attribute, out_values, out_counts)
+    @ccall libpsr_database_c.psr_database_read_vector_parameters_double(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Cdouble}}}, out_counts::Ptr{Ptr{Int64}})::Int64
+end
+
+function psr_database_read_vector_parameters_string(db, collection, attribute, out_values, out_counts)
+    @ccall libpsr_database_c.psr_database_read_vector_parameters_string(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Ptr{Cchar}}}}, out_counts::Ptr{Ptr{Int64}})::Int64
+end
+
+function psr_database_read_vector_parameters_int(db, collection, attribute, out_values, out_counts)
+    @ccall libpsr_database_c.psr_database_read_vector_parameters_int(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Int64}}}, out_counts::Ptr{Ptr{Int64}})::Int64
+end
+
+function psr_database_read_vector_parameter_double(db, collection, attribute, label, out_values)
+    @ccall libpsr_database_c.psr_database_read_vector_parameter_double(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar}, out_values::Ptr{Ptr{Cdouble}})::Int64
+end
+
+function psr_database_read_vector_parameter_string(db, collection, attribute, label, out_values)
+    @ccall libpsr_database_c.psr_database_read_vector_parameter_string(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Cchar}}})::Int64
+end
+
+function psr_database_read_vector_parameter_int(db, collection, attribute, label, out_values)
+    @ccall libpsr_database_c.psr_database_read_vector_parameter_int(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar}, out_values::Ptr{Ptr{Int64}})::Int64
+end
+
 function psr_double_array_free(arr)
     @ccall libpsr_database_c.psr_double_array_free(arr::Ptr{Cdouble})::Cvoid
 end
@@ -139,69 +163,6 @@ function psr_int_array_free(arr)
     @ccall libpsr_database_c.psr_int_array_free(arr::Ptr{Int64})::Cvoid
 end
 
-# Vector parameter reading (nested arrays) - returns element count, -1 on error
-function psr_database_read_vector_parameters_double(db, collection, attribute, out_values, out_counts)
-    @ccall libpsr_database_c.psr_database_read_vector_parameters_double(
-        db::Ptr{psr_database_t}, 
-        collection::Ptr{Cchar}, 
-        attribute::Ptr{Cchar}, 
-        out_values::Ptr{Ptr{Ptr{Cdouble}}}, 
-        out_counts::Ptr{Ptr{Int64}}
-    )::Int64
-end
-
-function psr_database_read_vector_parameters_string(db, collection, attribute, out_values, out_counts)
-    @ccall libpsr_database_c.psr_database_read_vector_parameters_string(
-        db::Ptr{psr_database_t}, 
-        collection::Ptr{Cchar}, 
-        attribute::Ptr{Cchar}, 
-        out_values::Ptr{Ptr{Ptr{Ptr{Cchar}}}}, 
-        out_counts::Ptr{Ptr{Int64}}
-    )::Int64
-end
-
-function psr_database_read_vector_parameters_int(db, collection, attribute, out_values, out_counts)
-    @ccall libpsr_database_c.psr_database_read_vector_parameters_int(
-        db::Ptr{psr_database_t}, 
-        collection::Ptr{Cchar}, 
-        attribute::Ptr{Cchar}, 
-        out_values::Ptr{Ptr{Ptr{Int64}}}, 
-        out_counts::Ptr{Ptr{Int64}}
-    )::Int64
-end
-
-# Single element vector reading - returns array length, -1 on error
-function psr_database_read_vector_parameter_double(db, collection, attribute, label, out_values)
-    @ccall libpsr_database_c.psr_database_read_vector_parameter_double(
-        db::Ptr{psr_database_t}, 
-        collection::Ptr{Cchar}, 
-        attribute::Ptr{Cchar}, 
-        label::Ptr{Cchar}, 
-        out_values::Ptr{Ptr{Cdouble}}
-    )::Int64
-end
-
-function psr_database_read_vector_parameter_string(db, collection, attribute, label, out_values)
-    @ccall libpsr_database_c.psr_database_read_vector_parameter_string(
-        db::Ptr{psr_database_t}, 
-        collection::Ptr{Cchar}, 
-        attribute::Ptr{Cchar}, 
-        label::Ptr{Cchar}, 
-        out_values::Ptr{Ptr{Ptr{Cchar}}}
-    )::Int64
-end
-
-function psr_database_read_vector_parameter_int(db, collection, attribute, label, out_values)
-    @ccall libpsr_database_c.psr_database_read_vector_parameter_int(
-        db::Ptr{psr_database_t}, 
-        collection::Ptr{Cchar}, 
-        attribute::Ptr{Cchar}, 
-        label::Ptr{Cchar}, 
-        out_values::Ptr{Ptr{Int64}}
-    )::Int64
-end
-
-# Nested array memory management
 function psr_double_array_array_free(arr, element_count)
     @ccall libpsr_database_c.psr_double_array_array_free(arr::Ptr{Ptr{Cdouble}}, element_count::Csize_t)::Cvoid
 end
