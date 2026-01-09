@@ -2,12 +2,9 @@
 
 SQLite wrapper library with C++ core and language bindings.
 
-## Status
-
-**Work in Progress** - No backwards compatibility required. Breaking changes are acceptable.
-
 ## Principles
 
+- This is a WIP project. No backwards compatibility required. Breaking changes are acceptable.
 - Clean code over defensive code
 - Simple solutions over complex abstractions
 - Delete unused code, don't deprecate

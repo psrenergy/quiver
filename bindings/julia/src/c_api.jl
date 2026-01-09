@@ -103,44 +103,22 @@ function psr_database_create_element(db, collection, element)
     @ccall libpsr_database_c.psr_database_create_element(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, element::Ptr{psr_element_t})::Int64
 end
 
-# Scalar parameter reading - arrays
 function psr_database_read_scalar_parameters_double(db, collection, attribute, out_values)
-    @ccall libpsr_database_c.psr_database_read_scalar_parameters_double(
-        db::Ptr{psr_database_t},
-        collection::Ptr{Cchar},
-        attribute::Ptr{Cchar},
-        out_values::Ptr{Ptr{Cdouble}})::Int64
+    @ccall libpsr_database_c.psr_database_read_scalar_parameters_double(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Cdouble}})::Int64
 end
 
 function psr_database_read_scalar_parameters_string(db, collection, attribute, out_values)
-    @ccall libpsr_database_c.psr_database_read_scalar_parameters_string(
-        db::Ptr{psr_database_t},
-        collection::Ptr{Cchar},
-        attribute::Ptr{Cchar},
-        out_values::Ptr{Ptr{Ptr{Cchar}}})::Int64
+    @ccall libpsr_database_c.psr_database_read_scalar_parameters_string(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Cchar}}})::Int64
 end
 
-# Scalar parameter reading - single value
 function psr_database_read_scalar_parameter_double(db, collection, attribute, label, out_value, is_null)
-    @ccall libpsr_database_c.psr_database_read_scalar_parameter_double(
-        db::Ptr{psr_database_t},
-        collection::Ptr{Cchar},
-        attribute::Ptr{Cchar},
-        label::Ptr{Cchar},
-        out_value::Ptr{Cdouble},
-        is_null::Ptr{Cint})::psr_error_t
+    @ccall libpsr_database_c.psr_database_read_scalar_parameter_double(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar}, out_value::Ptr{Cdouble}, is_null::Ptr{Cint})::psr_error_t
 end
 
 function psr_database_read_scalar_parameter_string(db, collection, attribute, label, out_value)
-    @ccall libpsr_database_c.psr_database_read_scalar_parameter_string(
-        db::Ptr{psr_database_t},
-        collection::Ptr{Cchar},
-        attribute::Ptr{Cchar},
-        label::Ptr{Cchar},
-        out_value::Ptr{Ptr{Cchar}})::psr_error_t
+    @ccall libpsr_database_c.psr_database_read_scalar_parameter_string(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar}, out_value::Ptr{Ptr{Cchar}})::psr_error_t
 end
 
-# Array memory management
 function psr_double_array_free(arr)
     @ccall libpsr_database_c.psr_double_array_free(arr::Ptr{Cdouble})::Cvoid
 end
