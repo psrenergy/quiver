@@ -151,6 +151,30 @@ function psr_database_read_vector_parameter_int(db, collection, attribute, label
     @ccall libpsr_database_c.psr_database_read_vector_parameter_int(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar}, out_values::Ptr{Ptr{Int64}})::Int64
 end
 
+function psr_database_read_set_parameters_double(db, collection, attribute, out_values, out_counts)
+    @ccall libpsr_database_c.psr_database_read_set_parameters_double(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Cdouble}}}, out_counts::Ptr{Ptr{Int64}})::Int64
+end
+
+function psr_database_read_set_parameters_string(db, collection, attribute, out_values, out_counts)
+    @ccall libpsr_database_c.psr_database_read_set_parameters_string(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Ptr{Cchar}}}}, out_counts::Ptr{Ptr{Int64}})::Int64
+end
+
+function psr_database_read_set_parameters_int(db, collection, attribute, out_values, out_counts)
+    @ccall libpsr_database_c.psr_database_read_set_parameters_int(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Int64}}}, out_counts::Ptr{Ptr{Int64}})::Int64
+end
+
+function psr_database_read_set_parameter_double(db, collection, attribute, label, out_values)
+    @ccall libpsr_database_c.psr_database_read_set_parameter_double(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar}, out_values::Ptr{Ptr{Cdouble}})::Int64
+end
+
+function psr_database_read_set_parameter_string(db, collection, attribute, label, out_values)
+    @ccall libpsr_database_c.psr_database_read_set_parameter_string(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Cchar}}})::Int64
+end
+
+function psr_database_read_set_parameter_int(db, collection, attribute, label, out_values)
+    @ccall libpsr_database_c.psr_database_read_set_parameter_int(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar}, out_values::Ptr{Ptr{Int64}})::Int64
+end
+
 function psr_double_array_free(arr)
     @ccall libpsr_database_c.psr_double_array_free(arr::Ptr{Cdouble})::Cvoid
 end
