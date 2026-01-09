@@ -61,8 +61,12 @@ ColumnType Schema::get_column_type(const std::string& table, const std::string& 
     return *type;
 }
 
-std::string Schema::vector_table_name(const std::string& collection, const std::string& attr) {
-    return collection + "_vector_" + attr;
+std::string Schema::vector_table_name(const std::string& collection, const std::string& group) {
+    return collection + "_vector_" + group;
+}
+
+std::string Schema::set_table_name(const std::string& collection, const std::string& group) {
+    return collection + "_set_" + group;
 }
 
 bool Schema::is_collection(const std::string& table) const {

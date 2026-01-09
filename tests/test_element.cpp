@@ -4,9 +4,11 @@
 TEST(Element, DefaultEmpty) {
     psr::Element element;
     EXPECT_FALSE(element.has_scalars());
-    EXPECT_FALSE(element.has_vectors());
+    EXPECT_FALSE(element.has_vector_groups());
+    EXPECT_FALSE(element.has_set_groups());
     EXPECT_TRUE(element.scalars().empty());
-    EXPECT_TRUE(element.vectors().empty());
+    EXPECT_TRUE(element.vector_groups().empty());
+    EXPECT_TRUE(element.set_groups().empty());
 }
 
 TEST(Element, SetInt) {
@@ -42,59 +44,67 @@ TEST(Element, SetNull) {
     EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(element.scalars().at("empty")));
 }
 
-TEST(Element, SetVectorInt) {
+TEST(Element, AddVectorGroup) {
     psr::Element element;
-    element.set_vector("ids", std::vector<int64_t>{1, 2, 3});
+    psr::VectorGroup group = {
+        {{"value", 1.5}, {"count", int64_t{10}}},
+        {{"value", 2.5}, {"count", int64_t{20}}},
+        {{"value", 3.5}, {"count", int64_t{30}}}
+    };
+    element.add_vector_group("test_group", group);
 
-    EXPECT_TRUE(element.has_vectors());
-    auto& vec = std::get<std::vector<int64_t>>(element.vectors().at("ids"));
-    EXPECT_EQ(vec.size(), 3);
-    EXPECT_EQ(vec[0], 1);
-    EXPECT_EQ(vec[2], 3);
+    EXPECT_TRUE(element.has_vector_groups());
+    const auto& groups = element.vector_groups();
+    EXPECT_EQ(groups.size(), 1);
+    EXPECT_EQ(groups.at("test_group").size(), 3);
+    EXPECT_EQ(std::get<double>(groups.at("test_group")[0].at("value")), 1.5);
+    EXPECT_EQ(std::get<int64_t>(groups.at("test_group")[1].at("count")), 20);
 }
 
-TEST(Element, SetVectorDouble) {
+TEST(Element, AddSetGroup) {
     psr::Element element;
-    element.set_vector("costs", std::vector<double>{1.5, 2.5, 3.5});
+    psr::SetGroup group = {
+        {{"tag", std::string{"important"}}, {"priority", int64_t{1}}},
+        {{"tag", std::string{"urgent"}}, {"priority", int64_t{2}}}
+    };
+    element.add_set_group("tags", group);
 
-    EXPECT_TRUE(element.has_vectors());
-    auto& vec = std::get<std::vector<double>>(element.vectors().at("costs"));
-    EXPECT_EQ(vec.size(), 3);
-    EXPECT_EQ(vec[1], 2.5);
-}
-
-TEST(Element, SetVectorString) {
-    psr::Element element;
-    element.set_vector("names", std::vector<std::string>{"a", "b", "c"});
-
-    EXPECT_TRUE(element.has_vectors());
-    auto& vec = std::get<std::vector<std::string>>(element.vectors().at("names"));
-    EXPECT_EQ(vec.size(), 3);
-    EXPECT_EQ(vec[0], "a");
+    EXPECT_TRUE(element.has_set_groups());
+    const auto& groups = element.set_groups();
+    EXPECT_EQ(groups.size(), 1);
+    EXPECT_EQ(groups.at("tags").size(), 2);
+    EXPECT_EQ(std::get<std::string>(groups.at("tags")[0].at("tag")), "important");
 }
 
 TEST(Element, FluentChaining) {
     psr::Element element;
+    psr::VectorGroup vec_group = {{{"cost", 1.0}}, {{"cost", 2.0}}, {{"cost", 3.0}}};
+    psr::SetGroup set_group = {{{"name", std::string{"a"}}}};
+    
     element.set("label", std::string{"Plant 1"})
         .set("capacity", 50.0)
         .set("id", int64_t{1})
-        .set_vector("costs", std::vector<double>{1.0, 2.0, 3.0});
+        .add_vector_group("costs", vec_group)
+        .add_set_group("names", set_group);
 
     EXPECT_EQ(element.scalars().size(), 3);
-    EXPECT_EQ(element.vectors().size(), 1);
+    EXPECT_EQ(element.vector_groups().size(), 1);
+    EXPECT_EQ(element.set_groups().size(), 1);
 }
 
 TEST(Element, Clear) {
     psr::Element element;
-    element.set("label", std::string{"test"}).set_vector("data", std::vector<double>{1.0});
+    psr::VectorGroup group = {{{"data", 1.0}}};
+    element.set("label", std::string{"test"}).add_vector_group("data", group);
 
     EXPECT_TRUE(element.has_scalars());
-    EXPECT_TRUE(element.has_vectors());
+    EXPECT_TRUE(element.has_vector_groups());
 
     element.clear();
 
     EXPECT_FALSE(element.has_scalars());
-    EXPECT_FALSE(element.has_vectors());
+    EXPECT_FALSE(element.has_vector_groups());
+    EXPECT_FALSE(element.has_set_groups());
 }
 
 TEST(Element, OverwriteValue) {
@@ -108,18 +118,19 @@ TEST(Element, OverwriteValue) {
 
 TEST(Element, ToString) {
     psr::Element element;
+    psr::VectorGroup vec_group = {{{"costs", 1.5}}, {{"costs", 2.5}}};
     element.set("label", std::string{"Plant 1"})
         .set("capacity", 50.0)
-        .set_vector("costs", std::vector<double>{1.5, 2.5});
+        .add_vector_group("costs", vec_group);
 
     std::string str = element.to_string();
 
     EXPECT_NE(str.find("Element {"), std::string::npos);
     EXPECT_NE(str.find("scalars:"), std::string::npos);
-    EXPECT_NE(str.find("vectors:"), std::string::npos);
+    EXPECT_NE(str.find("vector_groups:"), std::string::npos);
     EXPECT_NE(str.find("label: \"Plant 1\""), std::string::npos);
     EXPECT_NE(str.find("capacity:"), std::string::npos);
-    EXPECT_NE(str.find("costs: ["), std::string::npos);
+    EXPECT_NE(str.find("costs:"), std::string::npos);
 }
 
 TEST(Element, ToStringEmpty) {

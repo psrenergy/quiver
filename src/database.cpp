@@ -457,32 +457,63 @@ int64_t Database::create_element(const std::string& collection, const Element& e
     const auto element_id = sqlite3_last_insert_rowid(impl_->db);
     impl_->logger->debug("Inserted element with id: {}", element_id);
 
-    // Insert vectors into vector tables
-    const auto& vectors = element.vectors();
-    for (const auto& [attr_name, value] : vectors) {
-        // Validate vector type
-        impl_->type_validator->validate_vector(collection, attr_name, value);
+    // Insert vector groups into vector tables
+    const auto& vector_groups = element.vector_groups();
+    for (const auto& [group_name, rows] : vector_groups) {
+        // Validate vector group types
+        impl_->type_validator->validate_vector_group(collection, group_name, rows);
 
-        std::string vector_table = Schema::vector_table_name(collection, attr_name);
-        std::string vector_sql =
-            "INSERT INTO " + vector_table + " (id, vector_index, " + attr_name + ") VALUES (?, ?, ?)";
+        std::string vector_table = Schema::vector_table_name(collection, group_name);
 
-        std::visit(
-            [&](auto&& vec) {
-                using T = std::decay_t<decltype(vec)>;
-                if constexpr (std::is_same_v<T, std::vector<int64_t>> || std::is_same_v<T, std::vector<double>> ||
-                              std::is_same_v<T, std::vector<std::string>>) {
-                    if (vec.empty()) {
-                        throw std::runtime_error("Empty vector not allowed for attribute '" + attr_name + "'");
-                    }
-                    for (size_t i = 0; i < vec.size(); ++i) {
-                        int64_t vector_index = static_cast<int64_t>(i + 1);  // 1-based index
-                        execute(vector_sql, {element_id, vector_index, vec[i]});
-                    }
-                    impl_->logger->debug("Inserted {} vector elements for {}", vec.size(), attr_name);
-                }
-            },
-            value);
+        if (rows.empty()) {
+            throw std::runtime_error("Empty vector group not allowed for group '" + group_name + "'");
+        }
+
+        // Build INSERT SQL dynamically based on columns in the first row
+        // All rows in a group must have the same columns
+        for (size_t row_idx = 0; row_idx < rows.size(); ++row_idx) {
+            const auto& row = rows[row_idx];
+            int64_t vector_index = static_cast<int64_t>(row_idx + 1);  // 1-based index
+
+            std::string vec_sql = "INSERT INTO " + vector_table + " (id, vector_index";
+            std::string vec_placeholders = "?, ?";
+            std::vector<Value> vec_params = {element_id, vector_index};
+
+            for (const auto& [col_name, value] : row) {
+                vec_sql += ", " + col_name;
+                vec_placeholders += ", ?";
+                vec_params.push_back(value);
+            }
+            vec_sql += ") VALUES (" + vec_placeholders + ")";
+
+            execute(vec_sql, vec_params);
+        }
+        impl_->logger->debug("Inserted {} vector rows for group {}", rows.size(), group_name);
+    }
+
+    // Insert set groups into set tables
+    const auto& set_groups = element.set_groups();
+    for (const auto& [group_name, rows] : set_groups) {
+        // Validate set group types
+        impl_->type_validator->validate_set_group(collection, group_name, rows);
+
+        std::string set_table = Schema::set_table_name(collection, group_name);
+
+        for (const auto& row : rows) {
+            std::string set_sql = "INSERT INTO " + set_table + " (id";
+            std::string set_placeholders = "?";
+            std::vector<Value> set_params = {element_id};
+
+            for (const auto& [col_name, value] : row) {
+                set_sql += ", " + col_name;
+                set_placeholders += ", ?";
+                set_params.push_back(value);
+            }
+            set_sql += ") VALUES (" + set_placeholders + ")";
+
+            execute(set_sql, set_params);
+        }
+        impl_->logger->debug("Inserted {} set rows for group {}", rows.size(), group_name);
     }
 
     impl_->logger->info("Created element {} in {}", element_id, collection);

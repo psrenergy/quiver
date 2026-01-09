@@ -51,6 +51,18 @@ std::string value_to_string(const Value& value) {
         value);
 }
 
+std::string row_to_string(const VectorRow& row) {
+    std::string result = "{";
+    bool first = true;
+    for (const auto& [name, value] : row) {
+        if (!first)
+            result += ", ";
+        result += name + ": " + value_to_string(value);
+        first = false;
+    }
+    return result + "}";
+}
+
 }  // namespace
 
 Element& Element::set(const std::string& name, int64_t value) {
@@ -73,18 +85,13 @@ Element& Element::set_null(const std::string& name) {
     return *this;
 }
 
-Element& Element::set_vector(const std::string& name, std::vector<int64_t> values) {
-    vectors_[name] = std::move(values);
+Element& Element::add_vector_group(const std::string& group_name, VectorGroup rows) {
+    vector_groups_[group_name] = std::move(rows);
     return *this;
 }
 
-Element& Element::set_vector(const std::string& name, std::vector<double> values) {
-    vectors_[name] = std::move(values);
-    return *this;
-}
-
-Element& Element::set_vector(const std::string& name, std::vector<std::string> values) {
-    vectors_[name] = std::move(values);
+Element& Element::add_set_group(const std::string& group_name, SetGroup rows) {
+    set_groups_[group_name] = std::move(rows);
     return *this;
 }
 
@@ -92,21 +99,30 @@ const std::map<std::string, Value>& Element::scalars() const {
     return scalars_;
 }
 
-const std::map<std::string, Value>& Element::vectors() const {
-    return vectors_;
+const std::map<std::string, VectorGroup>& Element::vector_groups() const {
+    return vector_groups_;
+}
+
+const std::map<std::string, SetGroup>& Element::set_groups() const {
+    return set_groups_;
 }
 
 bool Element::has_scalars() const {
     return !scalars_.empty();
 }
 
-bool Element::has_vectors() const {
-    return !vectors_.empty();
+bool Element::has_vector_groups() const {
+    return !vector_groups_.empty();
+}
+
+bool Element::has_set_groups() const {
+    return !set_groups_.empty();
 }
 
 void Element::clear() {
     scalars_.clear();
-    vectors_.clear();
+    vector_groups_.clear();
+    set_groups_.clear();
 }
 
 std::string Element::to_string() const {
@@ -120,10 +136,25 @@ std::string Element::to_string() const {
         }
     }
 
-    if (!vectors_.empty()) {
-        oss << "  vectors:\n";
-        for (const auto& [name, value] : vectors_) {
-            oss << "    " << name << ": " << value_to_string(value) << "\n";
+    if (!vector_groups_.empty()) {
+        oss << "  vector_groups:\n";
+        for (const auto& [name, rows] : vector_groups_) {
+            oss << "    " << name << ": [\n";
+            for (size_t i = 0; i < rows.size(); ++i) {
+                oss << "      [" << i << "] " << row_to_string(rows[i]) << "\n";
+            }
+            oss << "    ]\n";
+        }
+    }
+
+    if (!set_groups_.empty()) {
+        oss << "  set_groups:\n";
+        for (const auto& [name, rows] : set_groups_) {
+            oss << "    " << name << ": [\n";
+            for (const auto& row : rows) {
+                oss << "      " << row_to_string(row) << "\n";
+            }
+            oss << "    ]\n";
         }
     }
 

@@ -11,28 +11,48 @@ void TypeValidator::validate_scalar(const std::string& table, const std::string&
     validate_value("column '" + column + "'", expected, value);
 }
 
-void TypeValidator::validate_vector(const std::string& collection,
-                                    const std::string& attr_name,
-                                    const Value& vector_value) const {
-    ColumnType expected = get_vector_element_type(collection, attr_name);
-    validate_value("vector '" + attr_name + "'", expected, vector_value);
-}
-
-ColumnType TypeValidator::get_vector_element_type(const std::string& collection, const std::string& attr_name) const {
-    std::string vector_table = Schema::vector_table_name(collection, attr_name);
+void TypeValidator::validate_vector_group(const std::string& collection,
+                                          const std::string& group_name,
+                                          const VectorGroup& group) const {
+    std::string vector_table = Schema::vector_table_name(collection, group_name);
     const auto* table = schema_.get_table(vector_table);
     if (!table) {
         throw std::runtime_error("Vector table not found: " + vector_table);
     }
 
-    // Find the value column (not id, not vector_index)
-    for (const auto& [name, col] : table->columns) {
-        if (name != "id" && name != "vector_index") {
-            return col.type;
+    for (size_t row_idx = 0; row_idx < group.size(); ++row_idx) {
+        const auto& row = group[row_idx];
+        for (const auto& [col_name, value] : row) {
+            const auto* col = table->get_column(col_name);
+            if (!col) {
+                throw std::runtime_error("Column '" + col_name + "' not found in vector table '" + vector_table + "'");
+            }
+            validate_value("vector '" + group_name + "' row " + std::to_string(row_idx) + " column '" + col_name + "'",
+                           col->type, value);
         }
     }
+}
 
-    throw std::runtime_error("Vector table '" + vector_table + "' has no value column");
+void TypeValidator::validate_set_group(const std::string& collection,
+                                       const std::string& group_name,
+                                       const SetGroup& group) const {
+    std::string set_table = Schema::set_table_name(collection, group_name);
+    const auto* table = schema_.get_table(set_table);
+    if (!table) {
+        throw std::runtime_error("Set table not found: " + set_table);
+    }
+
+    for (size_t row_idx = 0; row_idx < group.size(); ++row_idx) {
+        const auto& row = group[row_idx];
+        for (const auto& [col_name, value] : row) {
+            const auto* col = table->get_column(col_name);
+            if (!col) {
+                throw std::runtime_error("Column '" + col_name + "' not found in set table '" + set_table + "'");
+            }
+            validate_value("set '" + group_name + "' row " + std::to_string(row_idx) + " column '" + col_name + "'",
+                           col->type, value);
+        }
+    }
 }
 
 void TypeValidator::validate_value(const std::string& context, ColumnType expected_type, const Value& value) {

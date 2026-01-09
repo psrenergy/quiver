@@ -93,9 +93,14 @@ TEST_F(DatabaseFixture, CreateElementWithVector) {
     auto db = psr::Database::from_schema(
         ":memory:", schema_path("test_database_schema.sql"), {.console_level = psr::LogLevel::off});
 
-    // Create element with vector
+    // Create element with vector group (single attribute per row)
     psr::Element element;
-    element.set("label", std::string("Plant 1")).set_vector("costs", std::vector<double>{1.5, 2.5, 3.5});
+    psr::VectorGroup costs_group = {
+        {{"costs", 1.5}},
+        {{"costs", 2.5}},
+        {{"costs", 3.5}}
+    };
+    element.set("label", std::string("Plant 1")).add_vector_group("costs", costs_group);
 
     int64_t id = db.create_element("Plant", element);
     EXPECT_EQ(id, 1);
@@ -115,6 +120,71 @@ TEST_F(DatabaseFixture, CreateElementWithVector) {
     EXPECT_EQ(vec_result[1].get_double(1).value(), 2.5);
     EXPECT_EQ(vec_result[2].get_int(0).value(), 3);
     EXPECT_EQ(vec_result[2].get_double(1).value(), 3.5);
+}
+
+TEST_F(DatabaseFixture, CreateElementWithVectorGroup) {
+    auto db = psr::Database::from_schema(
+        ":memory:", schema_path("test_database_schema.sql"), {.console_level = psr::LogLevel::off});
+
+    // Create element with vector group containing multiple attributes per row
+    psr::Element element;
+    psr::VectorGroup multi_attr_group = {
+        {{"factor", 1.5}, {"quantity", int64_t{10}}},
+        {{"factor", 2.5}, {"quantity", int64_t{20}}},
+        {{"factor", 3.5}, {"quantity", int64_t{30}}}
+    };
+    element.set("label", std::string("Plant 1")).add_vector_group("multi_attr", multi_attr_group);
+
+    int64_t id = db.create_element("Plant", element);
+    EXPECT_EQ(id, 1);
+
+    // Verify vector table with multiple attributes
+    auto vec_result = db.execute(
+        "SELECT vector_index, factor, quantity FROM Plant_vector_multi_attr WHERE id = ? ORDER BY vector_index", {id});
+    EXPECT_EQ(vec_result.row_count(), 3);
+    
+    EXPECT_EQ(vec_result[0].get_int(0).value(), 1);
+    EXPECT_EQ(vec_result[0].get_double(1).value(), 1.5);
+    EXPECT_EQ(vec_result[0].get_int(2).value(), 10);
+    
+    EXPECT_EQ(vec_result[1].get_int(0).value(), 2);
+    EXPECT_EQ(vec_result[1].get_double(1).value(), 2.5);
+    EXPECT_EQ(vec_result[1].get_int(2).value(), 20);
+    
+    EXPECT_EQ(vec_result[2].get_int(0).value(), 3);
+    EXPECT_EQ(vec_result[2].get_double(1).value(), 3.5);
+    EXPECT_EQ(vec_result[2].get_int(2).value(), 30);
+}
+
+TEST_F(DatabaseFixture, CreateElementWithSetGroup) {
+    auto db = psr::Database::from_schema(
+        ":memory:", schema_path("test_database_schema.sql"), {.console_level = psr::LogLevel::off});
+
+    // Create element with set group
+    psr::Element element;
+    psr::SetGroup tags_set = {
+        {{"tag_name", std::string("important")}, {"priority", int64_t{1}}},
+        {{"tag_name", std::string("urgent")}, {"priority", int64_t{2}}},
+        {{"tag_name", std::string("review")}, {"priority", int64_t{3}}}
+    };
+    element.set("label", std::string("Plant 1")).add_set_group("tags", tags_set);
+
+    int64_t id = db.create_element("Plant", element);
+    EXPECT_EQ(id, 1);
+
+    // Verify set table (no vector_index, unordered)
+    auto set_result = db.execute(
+        "SELECT tag_name, priority FROM Plant_set_tags WHERE id = ? ORDER BY priority", {id});
+    EXPECT_EQ(set_result.row_count(), 3);
+    
+    EXPECT_EQ(set_result[0].get_string(0).value(), "important");
+    EXPECT_EQ(set_result[0].get_int(1).value(), 1);
+    
+    EXPECT_EQ(set_result[1].get_string(0).value(), "urgent");
+    EXPECT_EQ(set_result[1].get_int(1).value(), 2);
+    
+    EXPECT_EQ(set_result[2].get_string(0).value(), "review");
+    EXPECT_EQ(set_result[2].get_int(1).value(), 3);
 }
 
 TEST_F(DatabaseFixture, CreateMultipleElements) {

@@ -57,8 +57,9 @@ public:
     // Column type lookup (throws if table/column not found)
     ColumnType get_column_type(const std::string& table, const std::string& column) const;
 
-    // Vector table naming convention
-    static std::string vector_table_name(const std::string& collection, const std::string& attr);
+    // Vector/Set table naming convention
+    static std::string vector_table_name(const std::string& collection, const std::string& group);
+    static std::string set_table_name(const std::string& collection, const std::string& group);
 
     // Table classification
     bool is_collection(const std::string& table) const;

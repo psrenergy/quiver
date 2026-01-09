@@ -21,3 +21,20 @@ CREATE TABLE Plant_vector_costs (
     FOREIGN KEY(id) REFERENCES Plant(id) ON DELETE CASCADE ON UPDATE CASCADE,
     PRIMARY KEY (id, vector_index)
 ) STRICT;
+
+CREATE TABLE Plant_vector_multi_attr (
+    id INTEGER,
+    vector_index INTEGER NOT NULL,
+    factor REAL NOT NULL,
+    quantity INTEGER,
+    FOREIGN KEY(id) REFERENCES Plant(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    PRIMARY KEY (id, vector_index)
+) STRICT;
+
+CREATE TABLE Plant_set_tags (
+    id INTEGER,
+    tag_name TEXT NOT NULL,
+    priority INTEGER,
+    FOREIGN KEY(id) REFERENCES Plant(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE(id, tag_name, priority)
+) STRICT;
