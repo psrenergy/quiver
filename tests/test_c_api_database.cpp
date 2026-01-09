@@ -190,7 +190,7 @@ TEST_F(DatabaseFixture, CreateElementWithScalars) {
 }
 
 TEST_F(DatabaseFixture, CreateElementWithVector) {
-    // Test: Use C API to create element with vector group using schema
+    // Test: Use C API to create element with array using schema
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", schema_path("test_database_schema.sql").c_str(), &options);
@@ -200,16 +200,9 @@ TEST_F(DatabaseFixture, CreateElementWithVector) {
     ASSERT_NE(element, nullptr);
     psr_element_set_string(element, "label", "Plant 1");
 
-    // Create vector group with costs
-    auto group = psr_vector_group_create();
-    psr_vector_group_add_row(group);
-    psr_vector_group_set_double(group, "costs", 1.5);
-    psr_vector_group_add_row(group);
-    psr_vector_group_set_double(group, "costs", 2.5);
-    psr_vector_group_add_row(group);
-    psr_vector_group_set_double(group, "costs", 3.5);
-    psr_element_add_vector_group(element, "costs", group);
-    psr_vector_group_destroy(group);
+    // Create array of costs
+    double costs[] = {1.5, 2.5, 3.5};
+    psr_element_set_array_double(element, "costs", costs, 3);
 
     int64_t id = psr_database_create_element(db, "Plant", element);
     EXPECT_EQ(id, 1);

@@ -17,11 +17,9 @@ TEST(ElementCApi, EmptyElement) {
     ASSERT_NE(element, nullptr);
 
     EXPECT_EQ(psr_element_has_scalars(element), 0);
-    EXPECT_EQ(psr_element_has_vector_groups(element), 0);
-    EXPECT_EQ(psr_element_has_set_groups(element), 0);
+    EXPECT_EQ(psr_element_has_arrays(element), 0);
     EXPECT_EQ(psr_element_scalar_count(element), 0);
-    EXPECT_EQ(psr_element_vector_group_count(element), 0);
-    EXPECT_EQ(psr_element_set_group_count(element), 0);
+    EXPECT_EQ(psr_element_array_count(element), 0);
 
     psr_element_destroy(element);
 }
@@ -67,53 +65,39 @@ TEST(ElementCApi, SetNull) {
     psr_element_destroy(element);
 }
 
-TEST(ElementCApi, VectorGroup) {
+TEST(ElementCApi, SetArrayInt) {
     auto element = psr_element_create();
     ASSERT_NE(element, nullptr);
 
-    auto group = psr_vector_group_create();
-    ASSERT_NE(group, nullptr);
+    int64_t values[] = {10, 20, 30};
+    EXPECT_EQ(psr_element_set_array_int(element, "counts", values, 3), PSR_OK);
+    EXPECT_EQ(psr_element_has_arrays(element), 1);
+    EXPECT_EQ(psr_element_array_count(element), 1);
 
-    // Add first row
-    EXPECT_EQ(psr_vector_group_add_row(group), PSR_OK);
-    EXPECT_EQ(psr_vector_group_set_double(group, "value", 1.5), PSR_OK);
-    EXPECT_EQ(psr_vector_group_set_int(group, "count", 10), PSR_OK);
-
-    // Add second row
-    EXPECT_EQ(psr_vector_group_add_row(group), PSR_OK);
-    EXPECT_EQ(psr_vector_group_set_double(group, "value", 2.5), PSR_OK);
-    EXPECT_EQ(psr_vector_group_set_int(group, "count", 20), PSR_OK);
-
-    EXPECT_EQ(psr_element_add_vector_group(element, "test_group", group), PSR_OK);
-    EXPECT_EQ(psr_element_has_vector_groups(element), 1);
-    EXPECT_EQ(psr_element_vector_group_count(element), 1);
-
-    psr_vector_group_destroy(group);
     psr_element_destroy(element);
 }
 
-TEST(ElementCApi, SetGroup) {
+TEST(ElementCApi, SetArrayDouble) {
     auto element = psr_element_create();
     ASSERT_NE(element, nullptr);
 
-    auto group = psr_set_group_create();
-    ASSERT_NE(group, nullptr);
+    double values[] = {1.5, 2.5, 3.5};
+    EXPECT_EQ(psr_element_set_array_double(element, "costs", values, 3), PSR_OK);
+    EXPECT_EQ(psr_element_has_arrays(element), 1);
+    EXPECT_EQ(psr_element_array_count(element), 1);
 
-    // Add first row
-    EXPECT_EQ(psr_set_group_add_row(group), PSR_OK);
-    EXPECT_EQ(psr_set_group_set_string(group, "tag", "important"), PSR_OK);
-    EXPECT_EQ(psr_set_group_set_int(group, "priority", 1), PSR_OK);
+    psr_element_destroy(element);
+}
 
-    // Add second row
-    EXPECT_EQ(psr_set_group_add_row(group), PSR_OK);
-    EXPECT_EQ(psr_set_group_set_string(group, "tag", "urgent"), PSR_OK);
-    EXPECT_EQ(psr_set_group_set_int(group, "priority", 2), PSR_OK);
+TEST(ElementCApi, SetArrayString) {
+    auto element = psr_element_create();
+    ASSERT_NE(element, nullptr);
 
-    EXPECT_EQ(psr_element_add_set_group(element, "tags", group), PSR_OK);
-    EXPECT_EQ(psr_element_has_set_groups(element), 1);
-    EXPECT_EQ(psr_element_set_group_count(element), 1);
+    const char* values[] = {"important", "urgent", "review"};
+    EXPECT_EQ(psr_element_set_array_string(element, "tags", values, 3), PSR_OK);
+    EXPECT_EQ(psr_element_has_arrays(element), 1);
+    EXPECT_EQ(psr_element_array_count(element), 1);
 
-    psr_set_group_destroy(group);
     psr_element_destroy(element);
 }
 
@@ -122,20 +106,16 @@ TEST(ElementCApi, Clear) {
     ASSERT_NE(element, nullptr);
 
     psr_element_set_int(element, "id", 1);
-
-    auto group = psr_vector_group_create();
-    psr_vector_group_add_row(group);
-    psr_vector_group_set_double(group, "data", 1.0);
-    psr_element_add_vector_group(element, "data", group);
-    psr_vector_group_destroy(group);
+    double values[] = {1.0, 2.0};
+    psr_element_set_array_double(element, "data", values, 2);
 
     EXPECT_EQ(psr_element_has_scalars(element), 1);
-    EXPECT_EQ(psr_element_has_vector_groups(element), 1);
+    EXPECT_EQ(psr_element_has_arrays(element), 1);
 
     psr_element_clear(element);
 
     EXPECT_EQ(psr_element_has_scalars(element), 0);
-    EXPECT_EQ(psr_element_has_vector_groups(element), 0);
+    EXPECT_EQ(psr_element_has_arrays(element), 0);
 
     psr_element_destroy(element);
 }
@@ -161,11 +141,9 @@ TEST(ElementCApi, NullNameErrors) {
 
 TEST(ElementCApi, NullAccessors) {
     EXPECT_EQ(psr_element_has_scalars(nullptr), 0);
-    EXPECT_EQ(psr_element_has_vector_groups(nullptr), 0);
-    EXPECT_EQ(psr_element_has_set_groups(nullptr), 0);
+    EXPECT_EQ(psr_element_has_arrays(nullptr), 0);
     EXPECT_EQ(psr_element_scalar_count(nullptr), 0);
-    EXPECT_EQ(psr_element_vector_group_count(nullptr), 0);
-    EXPECT_EQ(psr_element_set_group_count(nullptr), 0);
+    EXPECT_EQ(psr_element_array_count(nullptr), 0);
 }
 
 TEST(ElementCApi, MultipleScalars) {
@@ -188,13 +166,8 @@ TEST(ElementCApi, ToString) {
     psr_element_set_string(element, "label", "Plant 1");
     psr_element_set_double(element, "capacity", 50.0);
 
-    auto group = psr_vector_group_create();
-    psr_vector_group_add_row(group);
-    psr_vector_group_set_double(group, "costs", 1.5);
-    psr_vector_group_add_row(group);
-    psr_vector_group_set_double(group, "costs", 2.5);
-    psr_element_add_vector_group(element, "costs", group);
-    psr_vector_group_destroy(group);
+    double costs[] = {1.5, 2.5};
+    psr_element_set_array_double(element, "costs", costs, 2);
 
     char* str = psr_element_to_string(element);
     ASSERT_NE(str, nullptr);
@@ -202,7 +175,7 @@ TEST(ElementCApi, ToString) {
     std::string result(str);
     EXPECT_NE(result.find("Element {"), std::string::npos);
     EXPECT_NE(result.find("scalars:"), std::string::npos);
-    EXPECT_NE(result.find("vector_groups:"), std::string::npos);
+    EXPECT_NE(result.find("arrays:"), std::string::npos);
     EXPECT_NE(result.find("label: \"Plant 1\""), std::string::npos);
 
     psr_string_free(str);
@@ -217,26 +190,21 @@ TEST(ElementCApi, StringFreeNull) {
     psr_string_free(nullptr);
 }
 
-TEST(ElementCApi, VectorGroupNullErrors) {
-    EXPECT_EQ(psr_vector_group_add_row(nullptr), PSR_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(psr_vector_group_set_int(nullptr, "x", 1), PSR_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(psr_vector_group_set_double(nullptr, "x", 1.0), PSR_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(psr_vector_group_set_string(nullptr, "x", "y"), PSR_ERROR_INVALID_ARGUMENT);
+TEST(ElementCApi, ArrayNullErrors) {
+    int64_t int_values[] = {1, 2, 3};
+    double double_values[] = {1.0, 2.0, 3.0};
+    const char* string_values[] = {"a", "b", "c"};
+
+    EXPECT_EQ(psr_element_set_array_int(nullptr, "x", int_values, 3), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_array_double(nullptr, "x", double_values, 3), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_array_string(nullptr, "x", string_values, 3), PSR_ERROR_INVALID_ARGUMENT);
 
     auto element = psr_element_create();
-    EXPECT_EQ(psr_element_add_vector_group(element, "x", nullptr), PSR_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(psr_element_add_vector_group(nullptr, "x", nullptr), PSR_ERROR_INVALID_ARGUMENT);
-    psr_element_destroy(element);
-}
-
-TEST(ElementCApi, SetGroupNullErrors) {
-    EXPECT_EQ(psr_set_group_add_row(nullptr), PSR_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(psr_set_group_set_int(nullptr, "x", 1), PSR_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(psr_set_group_set_double(nullptr, "x", 1.0), PSR_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(psr_set_group_set_string(nullptr, "x", "y"), PSR_ERROR_INVALID_ARGUMENT);
-
-    auto element = psr_element_create();
-    EXPECT_EQ(psr_element_add_set_group(element, "x", nullptr), PSR_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(psr_element_add_set_group(nullptr, "x", nullptr), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_array_int(element, nullptr, int_values, 3), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_array_double(element, nullptr, double_values, 3), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_array_string(element, nullptr, string_values, 3), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_array_int(element, "x", nullptr, 3), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_array_double(element, "x", nullptr, 3), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_array_string(element, "x", nullptr, 3), PSR_ERROR_INVALID_ARGUMENT);
     psr_element_destroy(element);
 }

@@ -93,10 +93,9 @@ TEST_F(DatabaseFixture, CreateElementWithVector) {
     auto db = psr::Database::from_schema(
         ":memory:", schema_path("test_database_schema.sql"), {.console_level = psr::LogLevel::off});
 
-    // Create element with vector group (single attribute per row)
+    // Create element with vector array (single attribute)
     psr::Element element;
-    psr::VectorGroup costs_group = {{{"costs", 1.5}}, {{"costs", 2.5}}, {{"costs", 3.5}}};
-    element.set("label", std::string("Plant 1")).add_vector_group("costs", costs_group);
+    element.set("label", std::string("Plant 1")).set_array("costs", std::vector<double>{1.5, 2.5, 3.5});
 
     int64_t id = db.create_element("Plant", element);
     EXPECT_EQ(id, 1);
@@ -123,11 +122,11 @@ TEST_F(DatabaseFixture, CreateElementWithVectorGroup) {
         ":memory:", schema_path("test_database_schema.sql"), {.console_level = psr::LogLevel::off});
 
     // Create element with vector group containing multiple attributes per row
+    // Each attribute is passed as separate arrays with same length
     psr::Element element;
-    psr::VectorGroup multi_attr_group = {{{"factor", 1.5}, {"quantity", int64_t{10}}},
-                                         {{"factor", 2.5}, {"quantity", int64_t{20}}},
-                                         {{"factor", 3.5}, {"quantity", int64_t{30}}}};
-    element.set("label", std::string("Plant 1")).add_vector_group("multi_attr", multi_attr_group);
+    element.set("label", std::string("Plant 1"))
+        .set_array("factor", std::vector<double>{1.5, 2.5, 3.5})
+        .set_array("quantity", std::vector<int64_t>{10, 20, 30});
 
     int64_t id = db.create_element("Plant", element);
     EXPECT_EQ(id, 1);
@@ -154,12 +153,11 @@ TEST_F(DatabaseFixture, CreateElementWithSetGroup) {
     auto db = psr::Database::from_schema(
         ":memory:", schema_path("test_database_schema.sql"), {.console_level = psr::LogLevel::off});
 
-    // Create element with set group
+    // Create element with set group - each attribute passed as separate arrays
     psr::Element element;
-    psr::SetGroup tags_set = {{{"tag_name", std::string("important")}, {"priority", int64_t{1}}},
-                              {{"tag_name", std::string("urgent")}, {"priority", int64_t{2}}},
-                              {{"tag_name", std::string("review")}, {"priority", int64_t{3}}}};
-    element.set("label", std::string("Plant 1")).add_set_group("tags", tags_set);
+    element.set("label", std::string("Plant 1"))
+        .set_array("tag_name", std::vector<std::string>{"important", "urgent", "review"})
+        .set_array("priority", std::vector<int64_t>{1, 2, 3});
 
     int64_t id = db.create_element("Plant", element);
     EXPECT_EQ(id, 1);
