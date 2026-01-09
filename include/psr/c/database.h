@@ -126,9 +126,10 @@ PSR_C_API void psr_string_array_free(char** arr, size_t count);
 PSR_C_API void psr_int_array_free(int64_t* arr);
 
 // Nested array memory management (for vector parameters)
-PSR_C_API void psr_double_array_array_free(double** arr, int64_t* counts, size_t element_count);
-PSR_C_API void psr_string_array_array_free(char*** arr, int64_t* counts, size_t element_count);
-PSR_C_API void psr_int_array_array_free(int64_t** arr, int64_t* counts, size_t element_count);
+PSR_C_API void psr_double_array_array_free(double** arr, size_t element_count);
+PSR_C_API void psr_string_array_array_free(char*** arr, size_t* counts, size_t element_count);
+PSR_C_API void psr_int_array_array_free(int64_t** arr, size_t element_count);
+PSR_C_API void psr_int64_array_free(int64_t* arr);
 
 #ifdef __cplusplus
 }

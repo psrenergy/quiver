@@ -417,4 +417,323 @@ PSR_C_API void psr_int_array_free(int64_t* arr) {
     delete[] arr;
 }
 
+// Vector parameter reading (returns nested arrays - one per element)
+// Returns element count, or -1 on error
+PSR_C_API int64_t psr_database_read_vector_parameters_double(psr_database_t* db,
+                                                              const char* collection,
+                                                              const char* attribute,
+                                                              double*** out_values,
+                                                              int64_t** out_counts) {
+    if (!db || !collection || !attribute || !out_values || !out_counts) {
+        return -1;
+    }
+
+    try {
+        auto results = db->db.read_vector_parameters(collection, attribute);
+
+        if (results.empty()) {
+            *out_values = nullptr;
+            *out_counts = nullptr;
+            return 0;
+        }
+
+        *out_values = new double*[results.size()];
+        *out_counts = new int64_t[results.size()];
+
+        for (size_t i = 0; i < results.size(); ++i) {
+            const auto& vec = results[i];
+            (*out_counts)[i] = static_cast<int64_t>(vec.size());
+
+            if (vec.empty()) {
+                (*out_values)[i] = nullptr;
+            } else {
+                (*out_values)[i] = new double[vec.size()];
+                for (size_t j = 0; j < vec.size(); ++j) {
+                    if (std::holds_alternative<double>(vec[j])) {
+                        (*out_values)[i][j] = std::get<double>(vec[j]);
+                    } else if (std::holds_alternative<int64_t>(vec[j])) {
+                        (*out_values)[i][j] = static_cast<double>(std::get<int64_t>(vec[j]));
+                    } else if (std::holds_alternative<std::nullptr_t>(vec[j])) {
+                        (*out_values)[i][j] = std::numeric_limits<double>::quiet_NaN();
+                    } else {
+                        // Cleanup on error
+                        for (size_t k = 0; k <= i; ++k) {
+                            delete[] (*out_values)[k];
+                        }
+                        delete[] *out_values;
+                        delete[] *out_counts;
+                        return -1;
+                    }
+                }
+            }
+        }
+        return static_cast<int64_t>(results.size());
+    } catch (const std::exception&) {
+        return -1;
+    }
+}
+
+PSR_C_API int64_t psr_database_read_vector_parameters_string(psr_database_t* db,
+                                                              const char* collection,
+                                                              const char* attribute,
+                                                              char**** out_values,
+                                                              int64_t** out_counts) {
+    if (!db || !collection || !attribute || !out_values || !out_counts) {
+        return -1;
+    }
+
+    try {
+        auto results = db->db.read_vector_parameters(collection, attribute);
+
+        if (results.empty()) {
+            *out_values = nullptr;
+            *out_counts = nullptr;
+            return 0;
+        }
+
+        *out_values = new char**[results.size()];
+        *out_counts = new int64_t[results.size()];
+
+        for (size_t i = 0; i < results.size(); ++i) {
+            const auto& vec = results[i];
+            (*out_counts)[i] = static_cast<int64_t>(vec.size());
+
+            if (vec.empty()) {
+                (*out_values)[i] = nullptr;
+            } else {
+                (*out_values)[i] = new char*[vec.size()];
+                for (size_t j = 0; j < vec.size(); ++j) {
+                    std::string str;
+                    if (std::holds_alternative<std::string>(vec[j])) {
+                        str = std::get<std::string>(vec[j]);
+                    } else if (std::holds_alternative<std::nullptr_t>(vec[j])) {
+                        str = "";
+                    } else {
+                        // Cleanup on error
+                        for (size_t k = 0; k < i; ++k) {
+                            for (size_t l = 0; l < static_cast<size_t>((*out_counts)[k]); ++l) {
+                                delete[] (*out_values)[k][l];
+                            }
+                            delete[] (*out_values)[k];
+                        }
+                        for (size_t l = 0; l < j; ++l) {
+                            delete[] (*out_values)[i][l];
+                        }
+                        delete[] (*out_values)[i];
+                        delete[] *out_values;
+                        delete[] *out_counts;
+                        return -1;
+                    }
+                    (*out_values)[i][j] = new char[str.size() + 1];
+                    std::memcpy((*out_values)[i][j], str.c_str(), str.size() + 1);
+                }
+            }
+        }
+        return static_cast<int64_t>(results.size());
+    } catch (const std::exception&) {
+        return -1;
+    }
+}
+
+PSR_C_API int64_t psr_database_read_vector_parameters_int(psr_database_t* db,
+                                                          const char* collection,
+                                                          const char* attribute,
+                                                          int64_t*** out_values,
+                                                          int64_t** out_counts) {
+    if (!db || !collection || !attribute || !out_values || !out_counts) {
+        return -1;
+    }
+
+    try {
+        auto results = db->db.read_vector_parameters(collection, attribute);
+
+        if (results.empty()) {
+            *out_values = nullptr;
+            *out_counts = nullptr;
+            return 0;
+        }
+
+        *out_values = new int64_t*[results.size()];
+        *out_counts = new int64_t[results.size()];
+
+        for (size_t i = 0; i < results.size(); ++i) {
+            const auto& vec = results[i];
+            (*out_counts)[i] = static_cast<int64_t>(vec.size());
+
+            if (vec.empty()) {
+                (*out_values)[i] = nullptr;
+            } else {
+                (*out_values)[i] = new int64_t[vec.size()];
+                for (size_t j = 0; j < vec.size(); ++j) {
+                    if (std::holds_alternative<int64_t>(vec[j])) {
+                        (*out_values)[i][j] = std::get<int64_t>(vec[j]);
+                    } else if (std::holds_alternative<std::nullptr_t>(vec[j])) {
+                        (*out_values)[i][j] = 0;
+                    } else {
+                        // Cleanup on error
+                        for (size_t k = 0; k <= i; ++k) {
+                            delete[] (*out_values)[k];
+                        }
+                        delete[] *out_values;
+                        delete[] *out_counts;
+                        return -1;
+                    }
+                }
+            }
+        }
+        return static_cast<int64_t>(results.size());
+    } catch (const std::exception&) {
+        return -1;
+    }
+}
+
+// Single element vector parameter reading (returns array length, or -1 on error)
+PSR_C_API int64_t psr_database_read_vector_parameter_double(psr_database_t* db,
+                                                            const char* collection,
+                                                            const char* attribute,
+                                                            const char* label,
+                                                            double** out_values) {
+    if (!db || !collection || !attribute || !label || !out_values) {
+        return -1;
+    }
+
+    try {
+        auto result = db->db.read_vector_parameter(collection, attribute, label);
+
+        if (result.empty()) {
+            *out_values = nullptr;
+            return 0;
+        }
+
+        *out_values = new double[result.size()];
+        for (size_t i = 0; i < result.size(); ++i) {
+            if (std::holds_alternative<double>(result[i])) {
+                (*out_values)[i] = std::get<double>(result[i]);
+            } else if (std::holds_alternative<int64_t>(result[i])) {
+                (*out_values)[i] = static_cast<double>(std::get<int64_t>(result[i]));
+            } else if (std::holds_alternative<std::nullptr_t>(result[i])) {
+                (*out_values)[i] = std::numeric_limits<double>::quiet_NaN();
+            } else {
+                delete[] *out_values;
+                return -1;
+            }
+        }
+        return static_cast<int64_t>(result.size());
+    } catch (const std::exception&) {
+        return -1;
+    }
+}
+
+PSR_C_API int64_t psr_database_read_vector_parameter_string(psr_database_t* db,
+                                                            const char* collection,
+                                                            const char* attribute,
+                                                            const char* label,
+                                                            char*** out_values) {
+    if (!db || !collection || !attribute || !label || !out_values) {
+        return -1;
+    }
+
+    try {
+        auto result = db->db.read_vector_parameter(collection, attribute, label);
+
+        if (result.empty()) {
+            *out_values = nullptr;
+            return 0;
+        }
+
+        *out_values = new char*[result.size()];
+        for (size_t i = 0; i < result.size(); ++i) {
+            std::string str;
+            if (std::holds_alternative<std::string>(result[i])) {
+                str = std::get<std::string>(result[i]);
+            } else if (std::holds_alternative<std::nullptr_t>(result[i])) {
+                str = "";
+            } else {
+                for (size_t j = 0; j < i; ++j) {
+                    delete[] (*out_values)[j];
+                }
+                delete[] *out_values;
+                return -1;
+            }
+            (*out_values)[i] = new char[str.size() + 1];
+            std::memcpy((*out_values)[i], str.c_str(), str.size() + 1);
+        }
+        return static_cast<int64_t>(result.size());
+    } catch (const std::exception&) {
+        return -1;
+    }
+}
+
+PSR_C_API int64_t psr_database_read_vector_parameter_int(psr_database_t* db,
+                                                         const char* collection,
+                                                         const char* attribute,
+                                                         const char* label,
+                                                         int64_t** out_values) {
+    if (!db || !collection || !attribute || !label || !out_values) {
+        return -1;
+    }
+
+    try {
+        auto result = db->db.read_vector_parameter(collection, attribute, label);
+
+        if (result.empty()) {
+            *out_values = nullptr;
+            return 0;
+        }
+
+        *out_values = new int64_t[result.size()];
+        for (size_t i = 0; i < result.size(); ++i) {
+            if (std::holds_alternative<int64_t>(result[i])) {
+                (*out_values)[i] = std::get<int64_t>(result[i]);
+            } else if (std::holds_alternative<std::nullptr_t>(result[i])) {
+                (*out_values)[i] = 0;
+            } else {
+                delete[] *out_values;
+                return -1;
+            }
+        }
+        return static_cast<int64_t>(result.size());
+    } catch (const std::exception&) {
+        return -1;
+    }
+}
+
+// Nested array memory management
+PSR_C_API void psr_double_array_array_free(double** arr, size_t count) {
+    if (arr) {
+        for (size_t i = 0; i < count; ++i) {
+            delete[] arr[i];
+        }
+        delete[] arr;
+    }
+}
+
+PSR_C_API void psr_string_array_array_free(char*** arr, size_t* counts, size_t element_count) {
+    if (arr) {
+        for (size_t i = 0; i < element_count; ++i) {
+            if (arr[i]) {
+                for (size_t j = 0; j < counts[i]; ++j) {
+                    delete[] arr[i][j];
+                }
+                delete[] arr[i];
+            }
+        }
+        delete[] arr;
+    }
+    delete[] counts;
+}
+
+PSR_C_API void psr_int_array_array_free(int64_t** arr, size_t count) {
+    if (arr) {
+        for (size_t i = 0; i < count; ++i) {
+            delete[] arr[i];
+        }
+        delete[] arr;
+    }
+}
+
+PSR_C_API void psr_int64_array_free(int64_t* arr) {
+    delete[] arr;
+}
+
 }  // extern "C"
