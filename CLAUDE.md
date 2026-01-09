@@ -2,30 +2,38 @@
 
 SQLite wrapper library with C++ core and language bindings.
 
-## Status
-
-**Work in Progress** - No backwards compatibility required. Breaking changes are acceptable.
-
 ## Principles
 
+- This is a WIP project. No backwards compatibility required. Breaking changes are acceptable.
 - Clean code over defensive code
 - Simple solutions over complex abstractions
 - Delete unused code, don't deprecate
 - No compatibility shims or legacy support
-
-## Architecture
-
-```
-include/psr/       C++ public headers
-src/               C++ implementation
-bindings/          Language bindings (Lua, Julia)
-```
 
 ## Build
 
 ```bash
 cmake --build build --config Debug
 ```
+
+## Tests
+
+C++ tests:
+```bash
+./build/bin/psr_database_tests.exe
+./build/bin/psr_database_c_tests.exe
+```
+
+Julia tests (individual file):
+```bash
+julia --project=bindings/julia -e "include(\"bindings/julia/test/test_read/test_read.jl\")"
+```
+
+## Instructions
+
+- To create the `bindings/julia/src/c_api.jl` run the command `bindings/julia/generator/generator.bat`
+- If Julia manifest has version conflicts, delete `bindings/julia/Manifest.toml` and run `julia --project=bindings/julia -e "using Pkg; Pkg.instantiate()"`
+
 
 ## Patterns
 

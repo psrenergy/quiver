@@ -52,6 +52,44 @@ PSR_C_API psr_error_t psr_database_rollback(psr_database_t* db);
 typedef struct psr_element psr_element_t;
 PSR_C_API int64_t psr_database_create_element(psr_database_t* db, const char* collection, psr_element_t* element);
 
+// Scalar parameter reading - arrays (return count, -1 on error)
+PSR_C_API int64_t psr_database_read_scalar_parameters_double(psr_database_t* db,
+                                                             const char* collection,
+                                                             const char* attribute,
+                                                             double** out_values);
+PSR_C_API int64_t psr_database_read_scalar_parameters_string(psr_database_t* db,
+                                                             const char* collection,
+                                                             const char* attribute,
+                                                             char*** out_values);
+PSR_C_API int64_t psr_database_read_scalar_parameters_int(psr_database_t* db,
+                                                          const char* collection,
+                                                          const char* attribute,
+                                                          int64_t** out_values);
+
+// Scalar parameter reading - single value
+PSR_C_API psr_error_t psr_database_read_scalar_parameter_double(psr_database_t* db,
+                                                                const char* collection,
+                                                                const char* attribute,
+                                                                const char* label,
+                                                                double* out_value,
+                                                                int* is_null);
+PSR_C_API psr_error_t psr_database_read_scalar_parameter_string(psr_database_t* db,
+                                                                const char* collection,
+                                                                const char* attribute,
+                                                                const char* label,
+                                                                char** out_value);
+PSR_C_API psr_error_t psr_database_read_scalar_parameter_int(psr_database_t* db,
+                                                             const char* collection,
+                                                             const char* attribute,
+                                                             const char* label,
+                                                             int64_t* out_value,
+                                                             int* is_null);
+
+// Array memory management
+PSR_C_API void psr_double_array_free(double* arr);
+PSR_C_API void psr_string_array_free(char** arr, size_t count);
+PSR_C_API void psr_int_array_free(int64_t* arr);
+
 #ifdef __cplusplus
 }
 #endif

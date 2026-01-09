@@ -489,4 +489,67 @@ int64_t Database::create_element(const std::string& collection, const Element& e
     return element_id;
 }
 
+std::vector<Value> Database::read_scalar_parameters(const std::string& collection, const std::string& attribute) const {
+    impl_->logger->debug("Reading scalar parameters: {}.{}", collection, attribute);
+
+    if (!impl_->schema) {
+        throw std::runtime_error("Cannot read parameters: no schema loaded");
+    }
+
+    if (!impl_->schema->is_collection(collection)) {
+        throw std::runtime_error("'" + collection + "' is not a valid collection");
+    }
+
+    const auto* table_def = impl_->schema->get_table(collection);
+    if (!table_def) {
+        throw std::runtime_error("Collection not found in schema: " + collection);
+    }
+    if (!table_def->has_column(attribute)) {
+        throw std::runtime_error("Attribute '" + attribute + "' not found in collection '" + collection + "'");
+    }
+
+    std::string sql = "SELECT " + attribute + " FROM " + collection + " ORDER BY id";
+    auto result = const_cast<Database*>(this)->execute(sql);
+
+    std::vector<Value> values;
+    values.reserve(result.row_count());
+    for (const auto& row : result) {
+        values.push_back(row.at(0));
+    }
+
+    impl_->logger->debug("Read {} values for {}.{}", values.size(), collection, attribute);
+    return values;
+}
+
+Value Database::read_scalar_parameter(const std::string& collection,
+                                      const std::string& attribute,
+                                      const std::string& label) const {
+    impl_->logger->debug("Reading scalar parameter: {}.{} for label '{}'", collection, attribute, label);
+
+    if (!impl_->schema) {
+        throw std::runtime_error("Cannot read parameter: no schema loaded");
+    }
+
+    if (!impl_->schema->is_collection(collection)) {
+        throw std::runtime_error("'" + collection + "' is not a valid collection");
+    }
+
+    const auto* table_def = impl_->schema->get_table(collection);
+    if (!table_def) {
+        throw std::runtime_error("Collection not found in schema: " + collection);
+    }
+    if (!table_def->has_column(attribute)) {
+        throw std::runtime_error("Attribute '" + attribute + "' not found in collection '" + collection + "'");
+    }
+
+    std::string sql = "SELECT " + attribute + " FROM " + collection + " WHERE label = ?";
+    auto result = const_cast<Database*>(this)->execute(sql, {label});
+
+    if (result.empty()) {
+        throw std::runtime_error("Element with label '" + label + "' not found in collection '" + collection + "'");
+    }
+
+    return result.at(0).at(0);
+}
+
 }  // namespace psr

@@ -15,6 +15,7 @@ const libpsr_database_c = joinpath(@__DIR__, "..", "..", "..", "build", "bin", "
     PSR_ERROR_MIGRATION = -3
     PSR_ERROR_SCHEMA = -4
     PSR_ERROR_CREATE_ELEMENT = -5
+    PSR_ERROR_NOT_FOUND = -6
 end
 
 function psr_error_string(error)
@@ -102,6 +103,42 @@ function psr_database_create_element(db, collection, element)
     @ccall libpsr_database_c.psr_database_create_element(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, element::Ptr{psr_element_t})::Int64
 end
 
+function psr_database_read_scalar_parameters_double(db, collection, attribute, out_values)
+    @ccall libpsr_database_c.psr_database_read_scalar_parameters_double(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Cdouble}})::Int64
+end
+
+function psr_database_read_scalar_parameters_string(db, collection, attribute, out_values)
+    @ccall libpsr_database_c.psr_database_read_scalar_parameters_string(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Cchar}}})::Int64
+end
+
+function psr_database_read_scalar_parameters_int(db, collection, attribute, out_values)
+    @ccall libpsr_database_c.psr_database_read_scalar_parameters_int(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Int64}})::Int64
+end
+
+function psr_database_read_scalar_parameter_double(db, collection, attribute, label, out_value, is_null)
+    @ccall libpsr_database_c.psr_database_read_scalar_parameter_double(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar}, out_value::Ptr{Cdouble}, is_null::Ptr{Cint})::psr_error_t
+end
+
+function psr_database_read_scalar_parameter_string(db, collection, attribute, label, out_value)
+    @ccall libpsr_database_c.psr_database_read_scalar_parameter_string(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar}, out_value::Ptr{Ptr{Cchar}})::psr_error_t
+end
+
+function psr_database_read_scalar_parameter_int(db, collection, attribute, label, out_value, is_null)
+    @ccall libpsr_database_c.psr_database_read_scalar_parameter_int(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar}, out_value::Ptr{Int64}, is_null::Ptr{Cint})::psr_error_t
+end
+
+function psr_double_array_free(arr)
+    @ccall libpsr_database_c.psr_double_array_free(arr::Ptr{Cdouble})::Cvoid
+end
+
+function psr_string_array_free(arr, count)
+    @ccall libpsr_database_c.psr_string_array_free(arr::Ptr{Ptr{Cchar}}, count::Csize_t)::Cvoid
+end
+
+function psr_int_array_free(arr)
+    @ccall libpsr_database_c.psr_int_array_free(arr::Ptr{Int64})::Cvoid
+end
+
 function psr_element_create()
     @ccall libpsr_database_c.psr_element_create()::Ptr{psr_element_t}
 end
@@ -165,8 +202,6 @@ end
 function psr_string_free(str)
     @ccall libpsr_database_c.psr_string_free(str::Ptr{Cchar})::Cvoid
 end
-
-# const PSR_C_API = __declspec(dllimport)
 
 #! format: on
 
