@@ -57,6 +57,13 @@ public:
 
     const std::string& path() const;
 
+    // Scalar parameter reading
+    std::vector<Value> read_scalar_parameters(const std::string& collection,
+                                              const std::string& attribute) const;
+    Value read_scalar_parameter(const std::string& collection,
+                                const std::string& attribute,
+                                const std::string& label) const;
+
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;

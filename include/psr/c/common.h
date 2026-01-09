@@ -27,6 +27,7 @@ typedef enum {
     PSR_ERROR_MIGRATION = -3,
     PSR_ERROR_SCHEMA = -4,
     PSR_ERROR_CREATE_ELEMENT = -5,
+    PSR_ERROR_NOT_FOUND = -6,
 } psr_error_t;
 
 // Utility functions

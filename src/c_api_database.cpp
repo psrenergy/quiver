@@ -2,8 +2,11 @@
 #include "psr/c/element.h"
 #include "psr/database.h"
 
+#include <cstring>
+#include <limits>
 #include <new>
 #include <string>
+#include <variant>
 
 // Forward declare the psr_element struct (defined in c_api_element.cpp)
 struct psr_element {
@@ -202,6 +205,151 @@ psr_database_from_schema(const char* db_path, const char* schema_path, const psr
         return nullptr;
     } catch (const std::exception&) {
         return nullptr;
+    }
+}
+
+PSR_C_API int64_t psr_database_read_scalar_parameters_double(psr_database_t* db,
+                                                              const char* collection,
+                                                              const char* attribute,
+                                                              double** out_values) {
+    if (!db || !collection || !attribute || !out_values) {
+        return -1;
+    }
+
+    try {
+        auto values = db->db.read_scalar_parameters(collection, attribute);
+
+        *out_values = new double[values.size()];
+        for (size_t i = 0; i < values.size(); ++i) {
+            const auto& val = values[i];
+            if (std::holds_alternative<std::nullptr_t>(val)) {
+                (*out_values)[i] = std::numeric_limits<double>::quiet_NaN();
+            } else if (std::holds_alternative<double>(val)) {
+                (*out_values)[i] = std::get<double>(val);
+            } else if (std::holds_alternative<int64_t>(val)) {
+                (*out_values)[i] = static_cast<double>(std::get<int64_t>(val));
+            } else {
+                delete[] *out_values;
+                *out_values = nullptr;
+                return -1;
+            }
+        }
+        return static_cast<int64_t>(values.size());
+    } catch (const std::exception&) {
+        return -1;
+    }
+}
+
+PSR_C_API int64_t psr_database_read_scalar_parameters_string(psr_database_t* db,
+                                                              const char* collection,
+                                                              const char* attribute,
+                                                              char*** out_values) {
+    if (!db || !collection || !attribute || !out_values) {
+        return -1;
+    }
+
+    try {
+        auto values = db->db.read_scalar_parameters(collection, attribute);
+
+        *out_values = new char*[values.size()];
+        for (size_t i = 0; i < values.size(); ++i) {
+            const auto& val = values[i];
+            std::string str;
+            if (std::holds_alternative<std::nullptr_t>(val)) {
+                str = "";
+            } else if (std::holds_alternative<std::string>(val)) {
+                str = std::get<std::string>(val);
+            } else {
+                for (size_t j = 0; j < i; ++j) {
+                    delete[] (*out_values)[j];
+                }
+                delete[] *out_values;
+                *out_values = nullptr;
+                return -1;
+            }
+            (*out_values)[i] = new char[str.size() + 1];
+            std::memcpy((*out_values)[i], str.c_str(), str.size() + 1);
+        }
+        return static_cast<int64_t>(values.size());
+    } catch (const std::exception&) {
+        return -1;
+    }
+}
+
+PSR_C_API psr_error_t psr_database_read_scalar_parameter_double(psr_database_t* db,
+                                                                 const char* collection,
+                                                                 const char* attribute,
+                                                                 const char* label,
+                                                                 double* out_value,
+                                                                 int* is_null) {
+    if (!db || !collection || !attribute || !label || !out_value || !is_null) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+
+    try {
+        auto value = db->db.read_scalar_parameter(collection, attribute, label);
+
+        if (std::holds_alternative<std::nullptr_t>(value)) {
+            *is_null = 1;
+            *out_value = std::numeric_limits<double>::quiet_NaN();
+        } else if (std::holds_alternative<double>(value)) {
+            *is_null = 0;
+            *out_value = std::get<double>(value);
+        } else if (std::holds_alternative<int64_t>(value)) {
+            *is_null = 0;
+            *out_value = static_cast<double>(std::get<int64_t>(value));
+        } else {
+            return PSR_ERROR_DATABASE;
+        }
+        return PSR_OK;
+    } catch (const std::runtime_error&) {
+        return PSR_ERROR_NOT_FOUND;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API psr_error_t psr_database_read_scalar_parameter_string(psr_database_t* db,
+                                                                 const char* collection,
+                                                                 const char* attribute,
+                                                                 const char* label,
+                                                                 char** out_value) {
+    if (!db || !collection || !attribute || !label || !out_value) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+
+    try {
+        auto value = db->db.read_scalar_parameter(collection, attribute, label);
+
+        std::string str;
+        if (std::holds_alternative<std::nullptr_t>(value)) {
+            str = "";
+        } else if (std::holds_alternative<std::string>(value)) {
+            str = std::get<std::string>(value);
+        } else {
+            return PSR_ERROR_DATABASE;
+        }
+
+        *out_value = new char[str.size() + 1];
+        std::memcpy(*out_value, str.c_str(), str.size() + 1);
+        return PSR_OK;
+    } catch (const std::runtime_error&) {
+        return PSR_ERROR_NOT_FOUND;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API void psr_double_array_free(double* arr) {
+    delete[] arr;
+}
+
+PSR_C_API void psr_string_array_free(char** arr, size_t count) {
+    if (arr) {
+        for (size_t i = 0; i < count; ++i) {
+            delete[] arr[i];
+        }
+        delete[] arr;
     }
 }
 
