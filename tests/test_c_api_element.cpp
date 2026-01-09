@@ -122,7 +122,7 @@ TEST(ElementCApi, Clear) {
     ASSERT_NE(element, nullptr);
 
     psr_element_set_int(element, "id", 1);
-    
+
     auto group = psr_vector_group_create();
     psr_vector_group_add_row(group);
     psr_vector_group_set_double(group, "data", 1.0);
@@ -187,7 +187,7 @@ TEST(ElementCApi, ToString) {
 
     psr_element_set_string(element, "label", "Plant 1");
     psr_element_set_double(element, "capacity", 50.0);
-    
+
     auto group = psr_vector_group_create();
     psr_vector_group_add_row(group);
     psr_vector_group_set_double(group, "costs", 1.5);
@@ -222,7 +222,7 @@ TEST(ElementCApi, VectorGroupNullErrors) {
     EXPECT_EQ(psr_vector_group_set_int(nullptr, "x", 1), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_vector_group_set_double(nullptr, "x", 1.0), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_vector_group_set_string(nullptr, "x", "y"), PSR_ERROR_INVALID_ARGUMENT);
-    
+
     auto element = psr_element_create();
     EXPECT_EQ(psr_element_add_vector_group(element, "x", nullptr), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_add_vector_group(nullptr, "x", nullptr), PSR_ERROR_INVALID_ARGUMENT);
@@ -234,7 +234,7 @@ TEST(ElementCApi, SetGroupNullErrors) {
     EXPECT_EQ(psr_set_group_set_int(nullptr, "x", 1), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_set_group_set_double(nullptr, "x", 1.0), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_set_group_set_string(nullptr, "x", "y"), PSR_ERROR_INVALID_ARGUMENT);
-    
+
     auto element = psr_element_create();
     EXPECT_EQ(psr_element_add_set_group(element, "x", nullptr), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_add_set_group(nullptr, "x", nullptr), PSR_ERROR_INVALID_ARGUMENT);

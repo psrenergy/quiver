@@ -46,11 +46,9 @@ TEST(Element, SetNull) {
 
 TEST(Element, AddVectorGroup) {
     psr::Element element;
-    psr::VectorGroup group = {
-        {{"value", 1.5}, {"count", int64_t{10}}},
-        {{"value", 2.5}, {"count", int64_t{20}}},
-        {{"value", 3.5}, {"count", int64_t{30}}}
-    };
+    psr::VectorGroup group = {{{"value", 1.5}, {"count", int64_t{10}}},
+                              {{"value", 2.5}, {"count", int64_t{20}}},
+                              {{"value", 3.5}, {"count", int64_t{30}}}};
     element.add_vector_group("test_group", group);
 
     EXPECT_TRUE(element.has_vector_groups());
@@ -63,10 +61,8 @@ TEST(Element, AddVectorGroup) {
 
 TEST(Element, AddSetGroup) {
     psr::Element element;
-    psr::SetGroup group = {
-        {{"tag", std::string{"important"}}, {"priority", int64_t{1}}},
-        {{"tag", std::string{"urgent"}}, {"priority", int64_t{2}}}
-    };
+    psr::SetGroup group = {{{"tag", std::string{"important"}}, {"priority", int64_t{1}}},
+                           {{"tag", std::string{"urgent"}}, {"priority", int64_t{2}}}};
     element.add_set_group("tags", group);
 
     EXPECT_TRUE(element.has_set_groups());
@@ -80,7 +76,7 @@ TEST(Element, FluentChaining) {
     psr::Element element;
     psr::VectorGroup vec_group = {{{"cost", 1.0}}, {{"cost", 2.0}}, {{"cost", 3.0}}};
     psr::SetGroup set_group = {{{"name", std::string{"a"}}}};
-    
+
     element.set("label", std::string{"Plant 1"})
         .set("capacity", 50.0)
         .set("id", int64_t{1})
@@ -119,9 +115,7 @@ TEST(Element, OverwriteValue) {
 TEST(Element, ToString) {
     psr::Element element;
     psr::VectorGroup vec_group = {{{"costs", 1.5}}, {{"costs", 2.5}}};
-    element.set("label", std::string{"Plant 1"})
-        .set("capacity", 50.0)
-        .add_vector_group("costs", vec_group);
+    element.set("label", std::string{"Plant 1"}).set("capacity", 50.0).add_vector_group("costs", vec_group);
 
     std::string str = element.to_string();
 

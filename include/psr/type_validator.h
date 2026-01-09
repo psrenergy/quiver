@@ -20,7 +20,8 @@ public:
     void validate_scalar(const std::string& table, const std::string& column, const Value& value) const;
 
     // Validate a vector group against the expected types in the vector table
-    void validate_vector_group(const std::string& collection, const std::string& group_name, const VectorGroup& group) const;
+    void
+    validate_vector_group(const std::string& collection, const std::string& group_name, const VectorGroup& group) const;
 
     // Validate a set group against the expected types in the set table
     void validate_set_group(const std::string& collection, const std::string& group_name, const SetGroup& group) const;

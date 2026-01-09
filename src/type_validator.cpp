@@ -28,7 +28,8 @@ void TypeValidator::validate_vector_group(const std::string& collection,
                 throw std::runtime_error("Column '" + col_name + "' not found in vector table '" + vector_table + "'");
             }
             validate_value("vector '" + group_name + "' row " + std::to_string(row_idx) + " column '" + col_name + "'",
-                           col->type, value);
+                           col->type,
+                           value);
         }
     }
 }
@@ -50,7 +51,8 @@ void TypeValidator::validate_set_group(const std::string& collection,
                 throw std::runtime_error("Column '" + col_name + "' not found in set table '" + set_table + "'");
             }
             validate_value("set '" + group_name + "' row " + std::to_string(row_idx) + " column '" + col_name + "'",
-                           col->type, value);
+                           col->type,
+                           value);
         }
     }
 }

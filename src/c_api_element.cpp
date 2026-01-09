@@ -115,7 +115,9 @@ PSR_C_API psr_error_t psr_vector_group_set_string(psr_vector_group_t* group, con
     return PSR_OK;
 }
 
-PSR_C_API psr_error_t psr_element_add_vector_group(psr_element_t* element, const char* name, psr_vector_group_t* group) {
+PSR_C_API psr_error_t psr_element_add_vector_group(psr_element_t* element,
+                                                   const char* name,
+                                                   psr_vector_group_t* group) {
     if (!element || !name || !group) {
         return PSR_ERROR_INVALID_ARGUMENT;
     }
