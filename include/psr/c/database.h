@@ -1,6 +1,7 @@
 #ifndef PSR_C_DATABASE_H
 #define PSR_C_DATABASE_H
 
+#include "platform.h"
 #include "common.h"
 
 #ifdef __cplusplus

@@ -1,22 +1,13 @@
 #ifndef PSR_C_COMMON_H
 #define PSR_C_COMMON_H
 
+#include "platform.h"
+
 #include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
-#endif
-
-// Platform-specific export macros
-#ifdef _WIN32
-#ifdef PSR_DATABASE_C_EXPORTS
-#define PSR_C_API __declspec(dllexport)
-#else
-#define PSR_C_API __declspec(dllimport)
-#endif
-#else
-#define PSR_C_API __attribute__((visibility("default")))
 #endif
 
 // Error codes
