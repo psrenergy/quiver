@@ -57,6 +57,9 @@ public:
 
     const std::string& path() const;
 
+    // Schema access for introspection
+    const class Schema* schema() const;
+
     // Scalar parameter reading
     std::vector<Value> read_scalar_parameters(const std::string& collection, const std::string& attribute) const;
     Value

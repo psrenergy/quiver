@@ -1,6 +1,7 @@
 #include "psr/c/database.h"
 #include "psr/c/element.h"
 #include "psr/database.h"
+#include "psr/schema.h"
 
 #include <cstring>
 #include <limits>
@@ -415,6 +416,138 @@ PSR_C_API void psr_string_array_free(char** arr, size_t count) {
 
 PSR_C_API void psr_int_array_free(int64_t* arr) {
     delete[] arr;
+}
+
+PSR_C_API char** psr_database_get_set_tables(psr_database_t* db, const char* collection, int64_t* out_count) {
+    if (!db || !collection || !out_count) {
+        if (out_count)
+            *out_count = 0;
+        return nullptr;
+    }
+
+    try {
+        const auto* schema = db->db.schema();
+        if (!schema) {
+            *out_count = 0;
+            return nullptr;
+        }
+
+        // Find all set tables for this collection
+        std::vector<std::string> set_tables;
+        const std::string prefix = std::string(collection) + "_set_";
+        for (const auto& table_name : schema->table_names()) {
+            if (table_name.rfind(prefix, 0) == 0) {  // starts with prefix
+                set_tables.push_back(table_name);
+            }
+        }
+
+        if (set_tables.empty()) {
+            *out_count = 0;
+            return nullptr;
+        }
+
+        // Allocate array of strings
+        char** result = new char*[set_tables.size()];
+        for (size_t i = 0; i < set_tables.size(); ++i) {
+            result[i] = new char[set_tables[i].size() + 1];
+            std::memcpy(result[i], set_tables[i].c_str(), set_tables[i].size() + 1);
+        }
+        *out_count = static_cast<int64_t>(set_tables.size());
+        return result;
+    } catch (const std::exception&) {
+        *out_count = 0;
+        return nullptr;
+    }
+}
+
+PSR_C_API psr_column_info_t*
+psr_database_get_table_columns(psr_database_t* db, const char* table, int64_t* out_count) {
+    if (!db || !table || !out_count) {
+        if (out_count)
+            *out_count = 0;
+        return nullptr;
+    }
+
+    try {
+        const auto* schema = db->db.schema();
+        if (!schema) {
+            *out_count = 0;
+            return nullptr;
+        }
+
+        const auto* table_def = schema->get_table(table);
+        if (!table_def) {
+            *out_count = 0;
+            return nullptr;
+        }
+
+        // Build column info excluding 'id' column
+        std::vector<psr_column_info_t> columns;
+        for (const auto& [col_name, col_def] : table_def->columns) {
+            if (col_name == "id")
+                continue;  // Skip id column
+
+            psr_column_info_t info;
+            info.name = new char[col_name.size() + 1];
+            std::memcpy(info.name, col_name.c_str(), col_name.size() + 1);
+
+            // Check if this column is a foreign key
+            info.fk_table = nullptr;
+            info.fk_column = nullptr;
+            for (const auto& fk : table_def->foreign_keys) {
+                if (fk.from_column == col_name) {
+                    info.fk_table = new char[fk.to_table.size() + 1];
+                    std::memcpy(info.fk_table, fk.to_table.c_str(), fk.to_table.size() + 1);
+                    info.fk_column = new char[fk.to_column.size() + 1];
+                    std::memcpy(info.fk_column, fk.to_column.c_str(), fk.to_column.size() + 1);
+                    break;
+                }
+            }
+
+            columns.push_back(info);
+        }
+
+        if (columns.empty()) {
+            *out_count = 0;
+            return nullptr;
+        }
+
+        // Copy to heap array
+        psr_column_info_t* result = new psr_column_info_t[columns.size()];
+        std::memcpy(result, columns.data(), columns.size() * sizeof(psr_column_info_t));
+        *out_count = static_cast<int64_t>(columns.size());
+        return result;
+    } catch (const std::exception&) {
+        *out_count = 0;
+        return nullptr;
+    }
+}
+
+PSR_C_API void psr_column_info_array_free(psr_column_info_t* arr, size_t count) {
+    if (arr) {
+        for (size_t i = 0; i < count; ++i) {
+            delete[] arr[i].name;
+            delete[] arr[i].fk_table;
+            delete[] arr[i].fk_column;
+        }
+        delete[] arr;
+    }
+}
+
+PSR_C_API int64_t psr_database_find_element_id(psr_database_t* db, const char* collection, const char* label) {
+    if (!db || !collection || !label) {
+        return -1;
+    }
+
+    try {
+        auto value = db->db.read_scalar_parameter(collection, "id", label);
+        if (std::holds_alternative<int64_t>(value)) {
+            return std::get<int64_t>(value);
+        }
+        return -1;
+    } catch (const std::exception&) {
+        return -1;
+    }
 }
 
 }  // extern "C"

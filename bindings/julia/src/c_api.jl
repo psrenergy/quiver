@@ -139,6 +139,29 @@ function psr_int_array_free(arr)
     @ccall libpsr_database_c.psr_int_array_free(arr::Ptr{Int64})::Cvoid
 end
 
+# Schema introspection
+function psr_database_get_set_tables(db, collection, out_count)
+    @ccall libpsr_database_c.psr_database_get_set_tables(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, out_count::Ptr{Int64})::Ptr{Ptr{Cchar}}
+end
+
+struct psr_column_info_t
+    name::Ptr{Cchar}
+    fk_table::Ptr{Cchar}
+    fk_column::Ptr{Cchar}
+end
+
+function psr_database_get_table_columns(db, table, out_count)
+    @ccall libpsr_database_c.psr_database_get_table_columns(db::Ptr{psr_database_t}, table::Ptr{Cchar}, out_count::Ptr{Int64})::Ptr{psr_column_info_t}
+end
+
+function psr_column_info_array_free(arr, count)
+    @ccall libpsr_database_c.psr_column_info_array_free(arr::Ptr{psr_column_info_t}, count::Csize_t)::Cvoid
+end
+
+function psr_database_find_element_id(db, collection, label)
+    @ccall libpsr_database_c.psr_database_find_element_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, label::Ptr{Cchar})::Int64
+end
+
 mutable struct psr_vector_group end
 
 const psr_vector_group_t = psr_vector_group
