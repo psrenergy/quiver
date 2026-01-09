@@ -681,4 +681,120 @@ Value Database::read_scalar_parameter(const std::string& collection,
     return result.at(0).at(0);
 }
 
+std::vector<std::vector<Value>>
+Database::read_vector_parameters(const std::string& collection, const std::string& attribute) const {
+    impl_->logger->debug("Reading vector parameters: {}.{}", collection, attribute);
+
+    if (!impl_->schema) {
+        throw std::runtime_error("Cannot read parameters: no schema loaded");
+    }
+
+    if (!impl_->schema->is_collection(collection)) {
+        throw std::runtime_error("'" + collection + "' is not a valid collection");
+    }
+
+    // Find the vector table containing this attribute
+    std::string vector_table;
+    for (const auto& table_name : impl_->schema->table_names()) {
+        if (!impl_->schema->is_vector_table(table_name))
+            continue;
+        if (impl_->schema->get_parent_collection(table_name) != collection)
+            continue;
+
+        const auto* table_def = impl_->schema->get_table(table_name);
+        if (table_def && table_def->has_column(attribute)) {
+            vector_table = table_name;
+            break;
+        }
+    }
+
+    if (vector_table.empty()) {
+        throw std::runtime_error("Attribute '" + attribute + "' is not a vector attribute of collection '" + collection +
+                                 "'");
+    }
+
+    // Get all element IDs from the main collection table
+    std::string id_sql = "SELECT id FROM " + collection + " ORDER BY id";
+    auto id_result = const_cast<Database*>(this)->execute(id_sql);
+
+    std::vector<std::vector<Value>> all_values;
+    all_values.reserve(id_result.row_count());
+
+    for (const auto& id_row : id_result) {
+        int64_t element_id = std::get<int64_t>(id_row.at(0));
+
+        // Get vector values for this element
+        std::string vec_sql =
+            "SELECT " + attribute + " FROM " + vector_table + " WHERE id = ? ORDER BY vector_index";
+        auto vec_result = const_cast<Database*>(this)->execute(vec_sql, {element_id});
+
+        std::vector<Value> element_values;
+        element_values.reserve(vec_result.row_count());
+        for (const auto& row : vec_result) {
+            element_values.push_back(row.at(0));
+        }
+        all_values.push_back(std::move(element_values));
+    }
+
+    impl_->logger->debug("Read vector parameters for {} elements", all_values.size());
+    return all_values;
+}
+
+std::vector<Value> Database::read_vector_parameter(const std::string& collection,
+                                                   const std::string& attribute,
+                                                   const std::string& label) const {
+    impl_->logger->debug("Reading vector parameter: {}.{} for label '{}'", collection, attribute, label);
+
+    if (!impl_->schema) {
+        throw std::runtime_error("Cannot read parameter: no schema loaded");
+    }
+
+    if (!impl_->schema->is_collection(collection)) {
+        throw std::runtime_error("'" + collection + "' is not a valid collection");
+    }
+
+    // Find the vector table containing this attribute
+    std::string vector_table;
+    for (const auto& table_name : impl_->schema->table_names()) {
+        if (!impl_->schema->is_vector_table(table_name))
+            continue;
+        if (impl_->schema->get_parent_collection(table_name) != collection)
+            continue;
+
+        const auto* table_def = impl_->schema->get_table(table_name);
+        if (table_def && table_def->has_column(attribute)) {
+            vector_table = table_name;
+            break;
+        }
+    }
+
+    if (vector_table.empty()) {
+        throw std::runtime_error("Attribute '" + attribute + "' is not a vector attribute of collection '" + collection +
+                                 "'");
+    }
+
+    // Get element ID from label
+    std::string id_sql = "SELECT id FROM " + collection + " WHERE label = ?";
+    auto id_result = const_cast<Database*>(this)->execute(id_sql, {label});
+
+    if (id_result.empty()) {
+        throw std::runtime_error("Element with label '" + label + "' not found in collection '" + collection + "'");
+    }
+
+    int64_t element_id = std::get<int64_t>(id_result.at(0).at(0));
+
+    // Get vector values for this element
+    std::string vec_sql = "SELECT " + attribute + " FROM " + vector_table + " WHERE id = ? ORDER BY vector_index";
+    auto vec_result = const_cast<Database*>(this)->execute(vec_sql, {element_id});
+
+    std::vector<Value> values;
+    values.reserve(vec_result.row_count());
+    for (const auto& row : vec_result) {
+        values.push_back(row.at(0));
+    }
+
+    impl_->logger->debug("Read {} vector values for {}.{} label '{}'", values.size(), collection, attribute, label);
+    return values;
+}
+
 }  // namespace psr
