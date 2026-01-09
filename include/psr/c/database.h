@@ -90,25 +90,6 @@ PSR_C_API void psr_double_array_free(double* arr);
 PSR_C_API void psr_string_array_free(char** arr, size_t count);
 PSR_C_API void psr_int_array_free(int64_t* arr);
 
-// Schema introspection - set tables
-// Returns list of set table names for a collection (e.g., ["Process_set_someset"])
-// out_count is set to the number of tables, returns array of strings (caller must free with psr_string_array_free)
-PSR_C_API char** psr_database_get_set_tables(psr_database_t* db, const char* collection, int64_t* out_count);
-
-// Column info for a table
-typedef struct {
-    char* name;
-    char* fk_table;   // NULL if not a foreign key
-    char* fk_column;  // NULL if not a foreign key
-} psr_column_info_t;
-
-// Returns array of column info for a table (caller must free with psr_column_info_array_free)
-PSR_C_API psr_column_info_t* psr_database_get_table_columns(psr_database_t* db, const char* table, int64_t* out_count);
-PSR_C_API void psr_column_info_array_free(psr_column_info_t* arr, size_t count);
-
-// Find element ID by label (returns -1 if not found)
-PSR_C_API int64_t psr_database_find_element_id(psr_database_t* db, const char* collection, const char* label);
-
 #ifdef __cplusplus
 }
 #endif
