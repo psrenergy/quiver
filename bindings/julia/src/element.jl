@@ -67,6 +67,24 @@ function Base.setindex!(el::Element, value::Vector{<:AbstractString}, name::Stri
     end
 end
 
+# Handle empty arrays (Vector{Any}) - throw a DatabaseException
+function Base.setindex!(el::Element, value::Vector{Any}, name::String)
+    if isempty(value)
+        throw(DatabaseException("Empty array not allowed for '$name'"))
+    end
+    # For non-empty Vector{Any}, try to determine the element type
+    first_val = first(value)
+    if first_val isa Integer
+        el[name] = Int64[Int64(v) for v in value]
+    elseif first_val isa AbstractFloat
+        el[name] = Float64[Float64(v) for v in value]
+    elseif first_val isa AbstractString
+        el[name] = String[String(v) for v in value]
+    else
+        error("Unsupported array element type for '$name': $(typeof(first_val))")
+    end
+end
+
 function Base.show(io::IO, e::Element)
     cstr = C.psr_element_to_string(e.ptr)
     str = unsafe_string(cstr)
