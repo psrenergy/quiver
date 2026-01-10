@@ -28,6 +28,13 @@ DynamicLibrary get library {
     }
   }
 
+  // Try current working directory (for tests)
+  final cwdPath = '${Directory.current.path}/$_libraryName';
+  if (File(cwdPath).existsSync()) {
+    _cachedLibrary = DynamicLibrary.open(cwdPath);
+    return _cachedLibrary!;
+  }
+
   // Try executable directory (Flutter bundled)
   final execDir = File(Platform.resolvedExecutable).parent.path;
   final bundledPath = '$execDir/$_libraryName';

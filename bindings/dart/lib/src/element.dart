@@ -11,7 +11,7 @@ import 'exceptions.dart';
 /// Elements are used to insert data into collections.
 /// After use, call [dispose] to free native memory.
 class Element {
-  Pointer<psr_element_t$1> _ptr;
+  final Pointer<psr_element_t$1> _ptr;
   bool _isDisposed = false;
 
   /// Creates a new empty element.

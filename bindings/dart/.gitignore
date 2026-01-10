@@ -1,0 +1,18 @@
+# Dart/Flutter
+.dart_tool/
+.packages
+build/
+pubspec.lock
+
+# Native libraries (copy from build folder for testing)
+*.dll
+*.so
+*.dylib
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Test artifacts
+*.db
