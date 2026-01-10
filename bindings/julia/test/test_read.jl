@@ -3,8 +3,10 @@ module TestRead
 using PSRDatabase
 using Test
 
+include("fixture.jl")
+
 @testset "Read Parameters" begin
-    path_schema = joinpath(@__DIR__, "test_read.sql")
+    path_schema = joinpath(tests_path(), "test_read", "test_read.sql")
 
     db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
 
