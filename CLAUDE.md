@@ -36,6 +36,7 @@ julia --project=bindings/julia -e "include(\"bindings/julia/test/test_read/test_
 ## Instructions
 
 - To create the `bindings/julia/src/c_api.jl` run the command `bindings/julia/generator/generator.bat`
+- To create the `bindings/dart/lib/src/ffi/bindings.dart` run the command `bindings/dart/generator/generator.bat`
 - If Julia manifest has version conflicts, delete `bindings/julia/Manifest.toml` and run `julia --project=bindings/julia -e "using Pkg; Pkg.instantiate()"`
 
 
