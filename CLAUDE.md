@@ -13,6 +13,7 @@ SQLite wrapper library with C++ core and language bindings.
 - No compatibility shims or legacy support
 - The intelligence should be in the C++ layer, not in the bindings
 - The bindings should be thin wrappers over the C++ API
+- All the *.sql tests should be in the `tests/` folder, and the bindings should refer to them from there
 
 ## Build
 

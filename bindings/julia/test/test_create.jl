@@ -3,8 +3,10 @@ module TestCreate
 using PSRDatabase
 using Test
 
+include("fixture.jl")
+
 @testset "Create Parameters" begin
-    path_schema = joinpath(@__DIR__, "test_create_parameters.sql")
+    path_schema = joinpath(tests_path(), "test_create", "test_create_parameters.sql")
     db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(
         db,
@@ -25,7 +27,7 @@ using Test
 end
 
 @testset "Create Empty Parameters" begin
-    path_schema = joinpath(@__DIR__, "test_create_parameters.sql")
+    path_schema = joinpath(tests_path(), "test_create", "test_create_parameters.sql")
 
     db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
     PSRDatabase.create_element!(db, "Configuration"; label = "Toy Case")
@@ -37,7 +39,7 @@ end
 end
 
 @testset "Create Parameters and Vectors" begin
-    path_schema = joinpath(@__DIR__, "test_create_parameters_and_vectors.sql")
+    path_schema = joinpath(tests_path(), "test_create", "test_create_parameters_and_vectors.sql")
     db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
     PSRDatabase.create_element!(db, "Configuration"; label = "Toy Case", value1 = 1.0)
     PSRDatabase.create_element!(
@@ -90,7 +92,7 @@ end
 end
 
 @testset "Create Sets with Relations" begin
-    path_schema = joinpath(@__DIR__, "test_create_sets_with_relations.sql")
+    path_schema = joinpath(tests_path(), "test_create", "test_create_sets_with_relations.sql")
     db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
     PSRDatabase.create_element!(
         db,

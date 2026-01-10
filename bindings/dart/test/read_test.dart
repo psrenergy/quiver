@@ -4,7 +4,7 @@ import 'package:psr_database/psr_database.dart';
 import 'package:test/test.dart';
 
 void main() {
-  final schemaPath = '${Directory.current.path}/test/test_fixtures/test_read.sql';
+  final schemaPath = '${Directory.current.path}../../../tests/test_read/test_read.sql';
 
   group('Database', () {
     late String dbPath;

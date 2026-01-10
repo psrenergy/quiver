@@ -3,9 +3,11 @@ module TestValidDatabaseDefinitions
 using PSRDatabase
 using Test
 
+include("fixture.jl")
+
 @testset "Invalid Database Without Configuration Table" begin
     path_schema =
-        joinpath(@__DIR__, "test_invalid_database_without_configuration_table.sql")
+        joinpath(tests_path(), "test_valid_database_definitions", "test_invalid_database_without_configuration_table.sql")
     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_empty_db_from_schema(
         ":memory:",
         path_schema;
@@ -14,7 +16,7 @@ using Test
 end
 
 @testset "Invalid Database With Duplicated Attributes" begin
-    path_schema = joinpath(@__DIR__, "test_invalid_database_with_duplicated_attributes.sql")
+    path_schema = joinpath(tests_path(), "test_valid_database_definitions", "test_invalid_database_with_duplicated_attributes.sql")
     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_empty_db_from_schema(
         ":memory:",
         path_schema;
@@ -22,7 +24,7 @@ end
     )
 
     path_schema =
-        joinpath(@__DIR__, "test_invalid_database_with_duplicated_attributes_2.sql")
+        joinpath(tests_path(), "test_valid_database_definitions", "test_invalid_database_with_duplicated_attributes_2.sql")
     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_empty_db_from_schema(
         ":memory:",
         path_schema;
@@ -32,7 +34,7 @@ end
 
 @testset "Invalid Database With Invalid Collection Id" begin
     path_schema =
-        joinpath(@__DIR__, "test_invalid_database_with_invalid_collection_id.sql")
+        joinpath(tests_path(), "test_valid_database_definitions", "test_invalid_database_with_invalid_collection_id.sql")
     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_empty_db_from_schema(
         ":memory:",
         path_schema;
@@ -42,7 +44,7 @@ end
 
 @testset "Invalid Vector Table" begin
     path_schema =
-        joinpath(@__DIR__, "test_invalid_vector_table.sql")
+        joinpath(tests_path(), "test_valid_database_definitions", "test_invalid_vector_table.sql")
     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_empty_db_from_schema(
         ":memory:",
         path_schema;
@@ -52,7 +54,7 @@ end
 
 @testset "Invalid Database Foreign Key Actions" begin
     path_schema =
-        joinpath(@__DIR__, "test_invalid_database_foreign_key_actions.sql")
+        joinpath(tests_path(), "test_valid_database_definitions", "test_invalid_database_foreign_key_actions.sql")
     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_empty_db_from_schema(
         ":memory:",
         path_schema;
@@ -62,7 +64,7 @@ end
 
 @testset "Invalid Database Vector Table Without Vector Index" begin
     path_schema =
-        joinpath(@__DIR__, "test_invalid_database_vector_table_without_vector_index.sql")
+        joinpath(tests_path(), "test_valid_database_definitions", "test_invalid_database_vector_table_without_vector_index.sql")
     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_empty_db_from_schema(
         ":memory:",
         path_schema;
@@ -71,7 +73,7 @@ end
 end
 
 @testset "Invalid Duplicated Collection Definition" begin
-    path_schema = joinpath(@__DIR__, "test_invalid_duplicated_collection_definition.sql")
+    path_schema = joinpath(tests_path(), "test_valid_database_definitions", "test_invalid_duplicated_collection_definition.sql")
     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_empty_db_from_schema(
         ":memory:",
         path_schema;
@@ -80,14 +82,14 @@ end
 end
 
 @testset "Valid Database" begin
-    path_schema = joinpath(@__DIR__, "test_valid_database.sql")
+    path_schema = joinpath(tests_path(), "test_valid_database_definitions", "test_valid_database.sql")
     db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
     PSRDatabase.close!(db)
     @test true
 end
 
 @testset "Invalid Foreign Key Has Not Null Constraint" begin
-    path_schema = joinpath(@__DIR__, "test_invalid_foreign_key_has_not_null_constraint.sql")
+    path_schema = joinpath(tests_path(), "test_valid_database_definitions", "test_invalid_foreign_key_has_not_null_constraint.sql")
     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_empty_db_from_schema(
         ":memory:",
         path_schema;
@@ -96,7 +98,7 @@ end
 end
 
 @testset "Invalid Relation Attribute" begin
-    path_schema = joinpath(@__DIR__, "test_invalid_relation_attribute.sql")
+    path_schema = joinpath(tests_path(), "test_valid_database_definitions", "test_invalid_relation_attribute.sql")
     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_empty_db_from_schema(
         ":memory:",
         path_schema;
@@ -105,7 +107,7 @@ end
 end
 
 @testset "Invalid Database Without Label Constraints" begin
-    path_schema = joinpath(@__DIR__, "test_invalid_database_without_label_constraints.sql")
+    path_schema = joinpath(tests_path(), "test_valid_database_definitions", "test_invalid_database_without_label_constraints.sql")
     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_empty_db_from_schema(
         ":memory:",
         path_schema;
@@ -114,7 +116,7 @@ end
 end
 
 @testset "Invalid Set Table Not All Unique" begin
-    path_schema = joinpath(@__DIR__, "test_invalid_set_table_not_all_unique.sql")
+    path_schema = joinpath(tests_path(), "test_valid_database_definitions", "test_invalid_set_table_not_all_unique.sql")
     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_empty_db_from_schema(
         ":memory:",
         path_schema;
@@ -123,7 +125,7 @@ end
 end
 
 @testset "Invalid Set Table Without Unique Constraint" begin
-    path_schema = joinpath(@__DIR__, "test_invalid_set_table_without_unique_constraint.sql")
+    path_schema = joinpath(tests_path(), "test_valid_database_definitions", "test_invalid_set_table_without_unique_constraint.sql")
     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_empty_db_from_schema(
         ":memory:",
         path_schema;
