@@ -52,119 +52,45 @@ PSR_C_API psr_error_t psr_database_rollback(psr_database_t* db);
 typedef struct psr_element psr_element_t;
 PSR_C_API int64_t psr_database_create_element(psr_database_t* db, const char* collection, psr_element_t* element);
 
-// Scalar parameter reading - arrays (return count, -1 on error)
-PSR_C_API int64_t psr_database_read_scalar_parameters_double(psr_database_t* db,
-                                                             const char* collection,
-                                                             const char* attribute,
-                                                             double** out_values);
-PSR_C_API int64_t psr_database_read_scalar_parameters_string(psr_database_t* db,
-                                                             const char* collection,
-                                                             const char* attribute,
-                                                             char*** out_values);
-PSR_C_API int64_t psr_database_read_scalar_parameters_int(psr_database_t* db,
-                                                          const char* collection,
-                                                          const char* attribute,
-                                                          int64_t** out_values);
+// Parameter reading - generic tagged union API
+// Returns psr_read_result_t with type-tagged values
 
-// Scalar parameter reading - single value
-PSR_C_API psr_error_t psr_database_read_scalar_parameter_double(psr_database_t* db,
+// Scalar parameters - all elements
+PSR_C_API psr_read_result_t psr_database_read_scalar_parameters(psr_database_t* db,
+                                                                 const char* collection,
+                                                                 const char* attribute);
+
+// Scalar parameter - single element by label
+PSR_C_API psr_read_result_t psr_database_read_scalar_parameter(psr_database_t* db,
                                                                 const char* collection,
                                                                 const char* attribute,
-                                                                const char* label,
-                                                                double* out_value,
-                                                                int* is_null);
-PSR_C_API psr_error_t psr_database_read_scalar_parameter_string(psr_database_t* db,
+                                                                const char* label);
+
+// Vector parameters - all elements (each value is PSR_VALUE_ARRAY)
+PSR_C_API psr_read_result_t psr_database_read_vector_parameters(psr_database_t* db,
+                                                                 const char* collection,
+                                                                 const char* attribute);
+
+// Vector parameter - single element by label (returns flat array)
+PSR_C_API psr_read_result_t psr_database_read_vector_parameter(psr_database_t* db,
                                                                 const char* collection,
                                                                 const char* attribute,
-                                                                const char* label,
-                                                                char** out_value);
-PSR_C_API psr_error_t psr_database_read_scalar_parameter_int(psr_database_t* db,
+                                                                const char* label);
+
+// Set parameters - all elements (each value is PSR_VALUE_ARRAY)
+PSR_C_API psr_read_result_t psr_database_read_set_parameters(psr_database_t* db,
+                                                              const char* collection,
+                                                              const char* attribute);
+
+// Set parameter - single element by label (returns flat array)
+PSR_C_API psr_read_result_t psr_database_read_set_parameter(psr_database_t* db,
                                                              const char* collection,
                                                              const char* attribute,
-                                                             const char* label,
-                                                             int64_t* out_value,
-                                                             int* is_null);
+                                                             const char* label);
 
-// Vector parameter reading - all elements (returns element count, -1 on error)
-// out_values is array of arrays, out_counts is array of lengths for each element
-PSR_C_API int64_t psr_database_read_vector_parameters_double(psr_database_t* db,
-                                                             const char* collection,
-                                                             const char* attribute,
-                                                             double*** out_values,
-                                                             int64_t** out_counts);
-PSR_C_API int64_t psr_database_read_vector_parameters_string(psr_database_t* db,
-                                                             const char* collection,
-                                                             const char* attribute,
-                                                             char**** out_values,
-                                                             int64_t** out_counts);
-PSR_C_API int64_t psr_database_read_vector_parameters_int(psr_database_t* db,
-                                                          const char* collection,
-                                                          const char* attribute,
-                                                          int64_t*** out_values,
-                                                          int64_t** out_counts);
-
-// Vector parameter reading - single element by label (returns array length, -1 on error)
-PSR_C_API int64_t psr_database_read_vector_parameter_double(psr_database_t* db,
-                                                            const char* collection,
-                                                            const char* attribute,
-                                                            const char* label,
-                                                            double** out_values);
-PSR_C_API int64_t psr_database_read_vector_parameter_string(psr_database_t* db,
-                                                            const char* collection,
-                                                            const char* attribute,
-                                                            const char* label,
-                                                            char*** out_values);
-PSR_C_API int64_t psr_database_read_vector_parameter_int(psr_database_t* db,
-                                                         const char* collection,
-                                                         const char* attribute,
-                                                         const char* label,
-                                                         int64_t** out_values);
-
-// Set parameter reading - all elements (returns element count, -1 on error)
-// out_values is array of arrays, out_counts is array of lengths for each element
-PSR_C_API int64_t psr_database_read_set_parameters_double(psr_database_t* db,
-                                                          const char* collection,
-                                                          const char* attribute,
-                                                          double*** out_values,
-                                                          int64_t** out_counts);
-PSR_C_API int64_t psr_database_read_set_parameters_string(psr_database_t* db,
-                                                          const char* collection,
-                                                          const char* attribute,
-                                                          char**** out_values,
-                                                          int64_t** out_counts);
-PSR_C_API int64_t psr_database_read_set_parameters_int(psr_database_t* db,
-                                                       const char* collection,
-                                                       const char* attribute,
-                                                       int64_t*** out_values,
-                                                       int64_t** out_counts);
-
-// Set parameter reading - single element by label (returns array length, -1 on error)
-PSR_C_API int64_t psr_database_read_set_parameter_double(psr_database_t* db,
-                                                         const char* collection,
-                                                         const char* attribute,
-                                                         const char* label,
-                                                         double** out_values);
-PSR_C_API int64_t psr_database_read_set_parameter_string(psr_database_t* db,
-                                                         const char* collection,
-                                                         const char* attribute,
-                                                         const char* label,
-                                                         char*** out_values);
-PSR_C_API int64_t psr_database_read_set_parameter_int(psr_database_t* db,
-                                                      const char* collection,
-                                                      const char* attribute,
-                                                      const char* label,
-                                                      int64_t** out_values);
-
-// Array memory management
-PSR_C_API void psr_double_array_free(double* arr);
-PSR_C_API void psr_string_array_free(char** arr, size_t count);
-PSR_C_API void psr_int_array_free(int64_t* arr);
-
-// Nested array memory management (for vector parameters)
-PSR_C_API void psr_double_array_array_free(double** arr, size_t element_count);
-PSR_C_API void psr_string_array_array_free(char*** arr, size_t* counts, size_t element_count);
-PSR_C_API void psr_int_array_array_free(int64_t** arr, size_t element_count);
-PSR_C_API void psr_int64_array_free(int64_t* arr);
+// Memory management for tagged union values
+PSR_C_API void psr_value_free(psr_value_t* value);
+PSR_C_API void psr_read_result_free(psr_read_result_t* result);
 
 #ifdef __cplusplus
 }

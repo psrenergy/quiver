@@ -32,441 +32,130 @@ function close!(db::Database)
     return nothing
 end
 
-function read_scalar_parameters(db::Database, collection::String, attribute::String; default=nothing)
-    # Try double first (most common for numeric data)
-    out_values = Ref{Ptr{Cdouble}}(C_NULL)
-    count = C.psr_database_read_scalar_parameters_double(db.ptr, collection, attribute, out_values)
+function extract_value_from_ptr(val_ptr::Ptr{C.psr_value_t}; default=nothing)
+    # Read type field directly (at offset 0)
+    type_ptr = Ptr{C.psr_value_type_t}(UInt(val_ptr))
+    type_val = unsafe_load(type_ptr)
 
-    if count >= 0
-        try
-            result = Vector{Float64}(undef, count)
-            for i in 1:count
-                val = unsafe_load(out_values[], i)
-                if isnan(val) && default !== nothing
-                    result[i] = Float64(default)
-                else
-                    result[i] = val
-                end
-            end
-            return result
-        finally
-            C.psr_double_array_free(out_values[])
-        end
+    if type_val == C.PSR_VALUE_NULL
+        return default
+    elseif type_val == C.PSR_VALUE_INT64
+        int_ptr = Ptr{Int64}(UInt(val_ptr) + 8)
+        return unsafe_load(int_ptr)
+    elseif type_val == C.PSR_VALUE_DOUBLE
+        double_ptr = Ptr{Cdouble}(UInt(val_ptr) + 8)
+        result = unsafe_load(double_ptr)
+        return isnan(result) && default !== nothing ? default : result
+    elseif type_val == C.PSR_VALUE_STRING
+        string_ptr_ptr = Ptr{Ptr{Cchar}}(UInt(val_ptr) + 8)
+        return unsafe_string(unsafe_load(string_ptr_ptr))
+    elseif type_val == C.PSR_VALUE_ARRAY
+        elements_ptr_ptr = Ptr{Ptr{C.psr_value_t}}(UInt(val_ptr) + 8)
+        count_ptr = Ptr{Csize_t}(UInt(val_ptr) + 16)
+        elements_ptr = unsafe_load(elements_ptr_ptr)
+        count = unsafe_load(count_ptr)
+        return [extract_value_at_index(elements_ptr, i; default) for i in 1:count]
     end
-
-    # Try string
-    out_strings = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
-    count = C.psr_database_read_scalar_parameters_string(db.ptr, collection, attribute, out_strings)
-
-    if count >= 0
-        try
-            result = Vector{String}(undef, count)
-            for i in 1:count
-                str_ptr = unsafe_load(out_strings[], i)
-                result[i] = unsafe_string(str_ptr)
-            end
-            return result
-        finally
-            C.psr_string_array_free(out_strings[], count)
-        end
-    end
-
-    # Try int
-    out_ints = Ref{Ptr{Int64}}(C_NULL)
-    count = C.psr_database_read_scalar_parameters_int(db.ptr, collection, attribute, out_ints)
-
-    if count >= 0
-        try
-            result = Vector{Int64}(undef, count)
-            for i in 1:count
-                result[i] = unsafe_load(out_ints[], i)
-            end
-            return result
-        finally
-            C.psr_int_array_free(out_ints[])
-        end
-    end
-
-    throw(DatabaseException("Failed to read scalar parameters '$attribute' from collection '$collection'"))
+    return default
 end
 
-function read_scalar_parameter(db::Database, collection::String, attribute::String, label::String)
-    # Try double first
-    out_value = Ref{Cdouble}(0.0)
-    is_null = Ref{Cint}(0)
-    err = C.psr_database_read_scalar_parameter_double(db.ptr, collection, attribute, label, out_value, is_null)
+function extract_value_at_index(values_ptr::Ptr{C.psr_value_t}, index::Integer; default=nothing)
+    val_ptr = Ptr{C.psr_value_t}(UInt(values_ptr) + (index - 1) * 24)
+    return extract_value_from_ptr(val_ptr; default)
+end
 
-    if err == C.PSR_OK
-        return is_null[] != 0 ? NaN : out_value[]
-    elseif err == C.PSR_ERROR_NOT_FOUND
-        throw(DatabaseException("Element with label '$label' not found in collection '$collection'"))
+function read_scalar_parameters(db::Database, collection::String, attribute::String; default=nothing)
+    result = C.psr_database_read_scalar_parameters(db.ptr, collection, attribute)
+
+    if result.error == C.PSR_ERROR_NOT_FOUND
+        throw(DatabaseException("Attribute '$attribute' not found in collection '$collection'"))
+    elseif result.error != C.PSR_OK
+        throw(DatabaseException("Failed to read scalar parameters '$attribute' from collection '$collection'"))
     end
 
-    # Try string
-    out_str = Ref{Ptr{Cchar}}(C_NULL)
-    err = C.psr_database_read_scalar_parameter_string(db.ptr, collection, attribute, label, out_str)
+    try
+        return [extract_value_at_index(result.values, i; default) for i in 1:result.count]
+    finally
+        C.psr_read_result_free(Ref(result))
+    end
+end
 
-    if err == C.PSR_OK
-        try
-            return unsafe_string(out_str[])
-        finally
-            C.psr_string_free(out_str[])
-        end
-    elseif err == C.PSR_ERROR_NOT_FOUND
+function read_scalar_parameter(db::Database, collection::String, attribute::String, label::String; default=nothing)
+    result = C.psr_database_read_scalar_parameter(db.ptr, collection, attribute, label)
+
+    if result.error == C.PSR_ERROR_NOT_FOUND
         throw(DatabaseException("Element with label '$label' not found in collection '$collection'"))
+    elseif result.error != C.PSR_OK
+        throw(DatabaseException("Failed to read scalar parameter '$attribute' for '$label' from collection '$collection'"))
     end
 
-    # Try int
-    out_int = Ref{Int64}(0)
-    is_null = Ref{Cint}(0)
-    err = C.psr_database_read_scalar_parameter_int(db.ptr, collection, attribute, label, out_int, is_null)
-
-    if err == C.PSR_OK
-        return is_null[] != 0 ? 0 : out_int[]
-    elseif err == C.PSR_ERROR_NOT_FOUND
-        throw(DatabaseException("Element with label '$label' not found in collection '$collection'"))
+    try
+        return extract_value_from_ptr(result.values; default)
+    finally
+        C.psr_read_result_free(Ref(result))
     end
-
-    throw(DatabaseException("Failed to read scalar parameter '$attribute' for '$label' from collection '$collection'"))
 end
 
 function read_vector_parameters(db::Database, collection::String, attribute::String; default=nothing)
-    # Try double first (most common for numeric data)
-    out_values = Ref{Ptr{Ptr{Cdouble}}}(C_NULL)
-    out_counts = Ref{Ptr{Int64}}(C_NULL)
-    
-    element_count = C.psr_database_read_vector_parameters_double(db.ptr, collection, attribute, out_values, out_counts)
-    
-    if element_count >= 0
-        try
-            result = Vector{Vector{Float64}}(undef, element_count)
-            
-            for i in 1:element_count
-                count = unsafe_load(out_counts[], i)
-                vec = Vector{Float64}(undef, count)
-                arr_ptr = unsafe_load(out_values[], i)
-                
-                for j in 1:count
-                    val = unsafe_load(arr_ptr, j)
-                    if isnan(val) && default !== nothing
-                        vec[j] = Float64(default)
-                    else
-                        vec[j] = val
-                    end
-                end
-                result[i] = vec
-            end
-            return result
-        finally
-            C.psr_double_array_array_free(out_values[], element_count)
-            C.psr_int64_array_free(out_counts[])
-        end
+    result = C.psr_database_read_vector_parameters(db.ptr, collection, attribute)
+
+    if result.error == C.PSR_ERROR_NOT_FOUND
+        throw(DatabaseException("Attribute '$attribute' not found in collection '$collection'"))
+    elseif result.error != C.PSR_OK
+        throw(DatabaseException("Failed to read vector parameters '$attribute' from collection '$collection'"))
     end
 
-    # Try string
-    out_str_values = Ref{Ptr{Ptr{Ptr{Cchar}}}}(C_NULL)
-    out_counts = Ref{Ptr{Int64}}(C_NULL)
-    
-    element_count = C.psr_database_read_vector_parameters_string(db.ptr, collection, attribute, out_str_values, out_counts)
-    
-    if element_count >= 0
-        try
-            result = Vector{Vector{String}}(undef, element_count)
-            
-            for i in 1:element_count
-                count = unsafe_load(out_counts[], i)
-                vec = Vector{String}(undef, count)
-                arr_ptr = unsafe_load(out_str_values[], i)
-                
-                for j in 1:count
-                    str_ptr = unsafe_load(arr_ptr, j)
-                    vec[j] = unsafe_string(str_ptr)
-                end
-                result[i] = vec
-            end
-            return result
-        finally
-            # For string arrays, the free function takes the counts array
-            # But we need to pass the Int64 array, not a size_t pointer
-            if out_str_values[] != C_NULL
-                for i in 1:element_count
-                    count = unsafe_load(out_counts[], i)
-                    arr_ptr = unsafe_load(out_str_values[], i)
-                    if arr_ptr != C_NULL
-                        C.psr_string_array_free(arr_ptr, count)
-                    end
-                end
-                # Free the outer array manually
-            end
-            C.psr_int64_array_free(out_counts[])
-        end
+    try
+        return [extract_value_at_index(result.values, i; default) for i in 1:result.count]
+    finally
+        C.psr_read_result_free(Ref(result))
     end
-
-    # Try int
-    out_int_values = Ref{Ptr{Ptr{Int64}}}(C_NULL)
-    out_counts = Ref{Ptr{Int64}}(C_NULL)
-    
-    element_count = C.psr_database_read_vector_parameters_int(db.ptr, collection, attribute, out_int_values, out_counts)
-    
-    if element_count >= 0
-        try
-            result = Vector{Vector{Int64}}(undef, element_count)
-            
-            for i in 1:element_count
-                count = unsafe_load(out_counts[], i)
-                vec = Vector{Int64}(undef, count)
-                arr_ptr = unsafe_load(out_int_values[], i)
-                
-                for j in 1:count
-                    vec[j] = unsafe_load(arr_ptr, j)
-                end
-                result[i] = vec
-            end
-            return result
-        finally
-            C.psr_int_array_array_free(out_int_values[], element_count)
-            C.psr_int64_array_free(out_counts[])
-        end
-    end
-
-    throw(DatabaseException("Failed to read vector parameters '$attribute' from collection '$collection'"))
 end
 
 function read_vector_parameter(db::Database, collection::String, attribute::String, label::String; default=nothing)
-    # Try double first
-    out_values = Ref{Ptr{Cdouble}}(C_NULL)
-    
-    count = C.psr_database_read_vector_parameter_double(db.ptr, collection, attribute, label, out_values)
-    
-    if count >= 0
-        try
-            result = Vector{Float64}(undef, count)
-            
-            for i in 1:count
-                val = unsafe_load(out_values[], i)
-                if isnan(val) && default !== nothing
-                    result[i] = Float64(default)
-                else
-                    result[i] = val
-                end
-            end
-            return result
-        finally
-            if out_values[] != C_NULL
-                C.psr_double_array_free(out_values[])
-            end
-        end
+    result = C.psr_database_read_vector_parameter(db.ptr, collection, attribute, label)
+
+    if result.error == C.PSR_ERROR_NOT_FOUND
+        throw(DatabaseException("Element with label '$label' not found in collection '$collection'"))
+    elseif result.error != C.PSR_OK
+        throw(DatabaseException("Failed to read vector parameter '$attribute' for '$label' from collection '$collection'"))
     end
 
-    # Try string
-    out_str_values = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
-    
-    count = C.psr_database_read_vector_parameter_string(db.ptr, collection, attribute, label, out_str_values)
-    
-    if count >= 0
-        try
-            result = Vector{String}(undef, count)
-            
-            for i in 1:count
-                str_ptr = unsafe_load(out_str_values[], i)
-                result[i] = unsafe_string(str_ptr)
-            end
-            return result
-        finally
-            if out_str_values[] != C_NULL
-                C.psr_string_array_free(out_str_values[], count)
-            end
-        end
+    try
+        return [extract_value_at_index(result.values, i; default) for i in 1:result.count]
+    finally
+        C.psr_read_result_free(Ref(result))
     end
-
-    # Try int
-    out_int_values = Ref{Ptr{Int64}}(C_NULL)
-    
-    count = C.psr_database_read_vector_parameter_int(db.ptr, collection, attribute, label, out_int_values)
-    
-    if count >= 0
-        try
-            result = Vector{Int64}(undef, count)
-            
-            for i in 1:count
-                result[i] = unsafe_load(out_int_values[], i)
-            end
-            return result
-        finally
-            if out_int_values[] != C_NULL
-                C.psr_int_array_free(out_int_values[])
-            end
-        end
-    end
-
-    throw(DatabaseException("Failed to read vector parameter '$attribute' for '$label' from collection '$collection'"))
 end
 
 function read_set_parameters(db::Database, collection::String, attribute::String; default=nothing)
-    # Try double first (most common for numeric data)
-    out_values = Ref{Ptr{Ptr{Cdouble}}}(C_NULL)
-    out_counts = Ref{Ptr{Int64}}(C_NULL)
+    result = C.psr_database_read_set_parameters(db.ptr, collection, attribute)
 
-    element_count = C.psr_database_read_set_parameters_double(db.ptr, collection, attribute, out_values, out_counts)
-
-    if element_count >= 0
-        try
-            result = Vector{Vector{Float64}}(undef, element_count)
-
-            for i in 1:element_count
-                count = unsafe_load(out_counts[], i)
-                vec = Vector{Float64}(undef, count)
-                arr_ptr = unsafe_load(out_values[], i)
-
-                for j in 1:count
-                    val = unsafe_load(arr_ptr, j)
-                    if isnan(val) && default !== nothing
-                        vec[j] = Float64(default)
-                    else
-                        vec[j] = val
-                    end
-                end
-                result[i] = vec
-            end
-            return result
-        finally
-            C.psr_double_array_array_free(out_values[], element_count)
-            C.psr_int64_array_free(out_counts[])
-        end
+    if result.error == C.PSR_ERROR_NOT_FOUND
+        throw(DatabaseException("Attribute '$attribute' not found in collection '$collection'"))
+    elseif result.error != C.PSR_OK
+        throw(DatabaseException("Failed to read set parameters '$attribute' from collection '$collection'"))
     end
 
-    # Try string
-    out_str_values = Ref{Ptr{Ptr{Ptr{Cchar}}}}(C_NULL)
-    out_counts = Ref{Ptr{Int64}}(C_NULL)
-
-    element_count = C.psr_database_read_set_parameters_string(db.ptr, collection, attribute, out_str_values, out_counts)
-
-    if element_count >= 0
-        try
-            result = Vector{Vector{String}}(undef, element_count)
-
-            for i in 1:element_count
-                count = unsafe_load(out_counts[], i)
-                vec = Vector{String}(undef, count)
-                arr_ptr = unsafe_load(out_str_values[], i)
-
-                for j in 1:count
-                    str_ptr = unsafe_load(arr_ptr, j)
-                    vec[j] = unsafe_string(str_ptr)
-                end
-                result[i] = vec
-            end
-            return result
-        finally
-            if out_str_values[] != C_NULL
-                for i in 1:element_count
-                    count = unsafe_load(out_counts[], i)
-                    arr_ptr = unsafe_load(out_str_values[], i)
-                    if arr_ptr != C_NULL
-                        C.psr_string_array_free(arr_ptr, count)
-                    end
-                end
-            end
-            C.psr_int64_array_free(out_counts[])
-        end
+    try
+        return [extract_value_at_index(result.values, i; default) for i in 1:result.count]
+    finally
+        C.psr_read_result_free(Ref(result))
     end
-
-    # Try int
-    out_int_values = Ref{Ptr{Ptr{Int64}}}(C_NULL)
-    out_counts = Ref{Ptr{Int64}}(C_NULL)
-
-    element_count = C.psr_database_read_set_parameters_int(db.ptr, collection, attribute, out_int_values, out_counts)
-
-    if element_count >= 0
-        try
-            result = Vector{Vector{Int64}}(undef, element_count)
-
-            for i in 1:element_count
-                count = unsafe_load(out_counts[], i)
-                vec = Vector{Int64}(undef, count)
-                arr_ptr = unsafe_load(out_int_values[], i)
-
-                for j in 1:count
-                    vec[j] = unsafe_load(arr_ptr, j)
-                end
-                result[i] = vec
-            end
-            return result
-        finally
-            C.psr_int_array_array_free(out_int_values[], element_count)
-            C.psr_int64_array_free(out_counts[])
-        end
-    end
-
-    throw(DatabaseException("Failed to read set parameters '$attribute' from collection '$collection'"))
 end
 
 function read_set_parameter(db::Database, collection::String, attribute::String, label::String; default=nothing)
-    # Try double first
-    out_values = Ref{Ptr{Cdouble}}(C_NULL)
+    result = C.psr_database_read_set_parameter(db.ptr, collection, attribute, label)
 
-    count = C.psr_database_read_set_parameter_double(db.ptr, collection, attribute, label, out_values)
-
-    if count >= 0
-        try
-            result = Vector{Float64}(undef, count)
-
-            for i in 1:count
-                val = unsafe_load(out_values[], i)
-                if isnan(val) && default !== nothing
-                    result[i] = Float64(default)
-                else
-                    result[i] = val
-                end
-            end
-            return result
-        finally
-            if out_values[] != C_NULL
-                C.psr_double_array_free(out_values[])
-            end
-        end
+    if result.error == C.PSR_ERROR_NOT_FOUND
+        throw(DatabaseException("Element with label '$label' not found in collection '$collection'"))
+    elseif result.error != C.PSR_OK
+        throw(DatabaseException("Failed to read set parameter '$attribute' for '$label' from collection '$collection'"))
     end
 
-    # Try string
-    out_str_values = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
-
-    count = C.psr_database_read_set_parameter_string(db.ptr, collection, attribute, label, out_str_values)
-
-    if count >= 0
-        try
-            result = Vector{String}(undef, count)
-
-            for i in 1:count
-                str_ptr = unsafe_load(out_str_values[], i)
-                result[i] = unsafe_string(str_ptr)
-            end
-            return result
-        finally
-            if out_str_values[] != C_NULL
-                C.psr_string_array_free(out_str_values[], count)
-            end
-        end
+    try
+        return [extract_value_at_index(result.values, i; default) for i in 1:result.count]
+    finally
+        C.psr_read_result_free(Ref(result))
     end
-
-    # Try int
-    out_int_values = Ref{Ptr{Int64}}(C_NULL)
-
-    count = C.psr_database_read_set_parameter_int(db.ptr, collection, attribute, label, out_int_values)
-
-    if count >= 0
-        try
-            result = Vector{Int64}(undef, count)
-
-            for i in 1:count
-                result[i] = unsafe_load(out_int_values[], i)
-            end
-            return result
-        finally
-            if out_int_values[] != C_NULL
-                C.psr_int_array_free(out_int_values[])
-            end
-        end
-    end
-
-    throw(DatabaseException("Failed to read set parameter '$attribute' for '$label' from collection '$collection'"))
 end

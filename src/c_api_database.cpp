@@ -41,6 +41,71 @@ psr::DatabaseOptions to_cpp_options(const psr_database_options_t* options) {
     return cpp_options;
 }
 
+// Convert a single psr::Value to psr_value_t
+psr_value_t convert_value(const psr::Value& value) {
+    psr_value_t result;
+    result.data = {};
+
+    std::visit(
+        [&result](auto&& arg) {
+            using T = std::decay_t<decltype(arg)>;
+
+            if constexpr (std::is_same_v<T, std::nullptr_t>) {
+                result.type = PSR_VALUE_NULL;
+            } else if constexpr (std::is_same_v<T, int64_t>) {
+                result.type = PSR_VALUE_INT64;
+                result.data.int_value = arg;
+            } else if constexpr (std::is_same_v<T, double>) {
+                result.type = PSR_VALUE_DOUBLE;
+                result.data.double_value = arg;
+            } else if constexpr (std::is_same_v<T, std::string>) {
+                result.type = PSR_VALUE_STRING;
+                result.data.string_value = new char[arg.size() + 1];
+                std::memcpy(result.data.string_value, arg.c_str(), arg.size() + 1);
+            } else {
+                // For other types (vectors in Value), treat as null
+                result.type = PSR_VALUE_NULL;
+            }
+        },
+        value);
+
+    return result;
+}
+
+// Convert a vector of psr::Value to a psr_value_t with PSR_VALUE_ARRAY type
+psr_value_t convert_value_array(const std::vector<psr::Value>& values) {
+    psr_value_t result;
+    result.type = PSR_VALUE_ARRAY;
+    result.data.array_value.count = values.size();
+
+    if (values.empty()) {
+        result.data.array_value.elements = nullptr;
+    } else {
+        result.data.array_value.elements = new psr_value_t[values.size()];
+        for (size_t i = 0; i < values.size(); ++i) {
+            result.data.array_value.elements[i] = convert_value(values[i]);
+        }
+    }
+
+    return result;
+}
+
+psr_read_result_t make_error_result(psr_error_t error) {
+    psr_read_result_t result;
+    result.error = error;
+    result.values = nullptr;
+    result.count = 0;
+    return result;
+}
+
+psr_read_result_t make_success_result(psr_value_t* values, size_t count) {
+    psr_read_result_t result;
+    result.error = PSR_OK;
+    result.values = values;
+    result.count = count;
+    return result;
+}
+
 }  // namespace
 
 struct psr_database {
@@ -208,813 +273,203 @@ psr_database_from_schema(const char* db_path, const char* schema_path, const psr
     }
 }
 
-PSR_C_API int64_t psr_database_read_scalar_parameters_double(psr_database_t* db,
-                                                             const char* collection,
-                                                             const char* attribute,
-                                                             double** out_values) {
-    if (!db || !collection || !attribute || !out_values) {
-        return -1;
+// Generic tagged union read functions
+
+PSR_C_API psr_read_result_t psr_database_read_scalar_parameters(psr_database_t* db,
+                                                                 const char* collection,
+                                                                 const char* attribute) {
+    if (!db || !collection || !attribute) {
+        return make_error_result(PSR_ERROR_INVALID_ARGUMENT);
     }
 
     try {
         auto values = db->db.read_scalar_parameters(collection, attribute);
 
-        *out_values = new double[values.size()];
-        for (size_t i = 0; i < values.size(); ++i) {
-            const auto& val = values[i];
-            if (std::holds_alternative<std::nullptr_t>(val)) {
-                (*out_values)[i] = std::numeric_limits<double>::quiet_NaN();
-            } else if (std::holds_alternative<double>(val)) {
-                (*out_values)[i] = std::get<double>(val);
-            } else if (std::holds_alternative<int64_t>(val)) {
-                (*out_values)[i] = static_cast<double>(std::get<int64_t>(val));
-            } else {
-                delete[] *out_values;
-                *out_values = nullptr;
-                return -1;
-            }
+        if (values.empty()) {
+            return make_success_result(nullptr, 0);
         }
-        return static_cast<int64_t>(values.size());
+
+        auto* result_values = new psr_value_t[values.size()];
+        for (size_t i = 0; i < values.size(); ++i) {
+            result_values[i] = convert_value(values[i]);
+        }
+
+        return make_success_result(result_values, values.size());
+    } catch (const std::runtime_error&) {
+        return make_error_result(PSR_ERROR_NOT_FOUND);
     } catch (const std::exception&) {
-        return -1;
+        return make_error_result(PSR_ERROR_DATABASE);
     }
 }
 
-PSR_C_API int64_t psr_database_read_scalar_parameters_string(psr_database_t* db,
-                                                             const char* collection,
-                                                             const char* attribute,
-                                                             char*** out_values) {
-    if (!db || !collection || !attribute || !out_values) {
-        return -1;
-    }
-
-    try {
-        auto values = db->db.read_scalar_parameters(collection, attribute);
-
-        *out_values = new char*[values.size()];
-        for (size_t i = 0; i < values.size(); ++i) {
-            const auto& val = values[i];
-            std::string str;
-            if (std::holds_alternative<std::nullptr_t>(val)) {
-                str = "";
-            } else if (std::holds_alternative<std::string>(val)) {
-                str = std::get<std::string>(val);
-            } else {
-                for (size_t j = 0; j < i; ++j) {
-                    delete[] (*out_values)[j];
-                }
-                delete[] *out_values;
-                *out_values = nullptr;
-                return -1;
-            }
-            (*out_values)[i] = new char[str.size() + 1];
-            std::memcpy((*out_values)[i], str.c_str(), str.size() + 1);
-        }
-        return static_cast<int64_t>(values.size());
-    } catch (const std::exception&) {
-        return -1;
-    }
-}
-
-PSR_C_API int64_t psr_database_read_scalar_parameters_int(psr_database_t* db,
-                                                          const char* collection,
-                                                          const char* attribute,
-                                                          int64_t** out_values) {
-    if (!db || !collection || !attribute || !out_values) {
-        return -1;
-    }
-
-    try {
-        auto values = db->db.read_scalar_parameters(collection, attribute);
-
-        *out_values = new int64_t[values.size()];
-        for (size_t i = 0; i < values.size(); ++i) {
-            const auto& val = values[i];
-            if (std::holds_alternative<std::nullptr_t>(val)) {
-                (*out_values)[i] = 0;
-            } else if (std::holds_alternative<int64_t>(val)) {
-                (*out_values)[i] = std::get<int64_t>(val);
-            } else {
-                delete[] *out_values;
-                *out_values = nullptr;
-                return -1;
-            }
-        }
-        return static_cast<int64_t>(values.size());
-    } catch (const std::exception&) {
-        return -1;
-    }
-}
-
-PSR_C_API psr_error_t psr_database_read_scalar_parameter_double(psr_database_t* db,
+PSR_C_API psr_read_result_t psr_database_read_scalar_parameter(psr_database_t* db,
                                                                 const char* collection,
                                                                 const char* attribute,
-                                                                const char* label,
-                                                                double* out_value,
-                                                                int* is_null) {
-    if (!db || !collection || !attribute || !label || !out_value || !is_null) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+                                                                const char* label) {
+    if (!db || !collection || !attribute || !label) {
+        return make_error_result(PSR_ERROR_INVALID_ARGUMENT);
     }
 
     try {
         auto value = db->db.read_scalar_parameter(collection, attribute, label);
 
-        if (std::holds_alternative<std::nullptr_t>(value)) {
-            *is_null = 1;
-            *out_value = std::numeric_limits<double>::quiet_NaN();
-        } else if (std::holds_alternative<double>(value)) {
-            *is_null = 0;
-            *out_value = std::get<double>(value);
-        } else if (std::holds_alternative<int64_t>(value)) {
-            *is_null = 0;
-            *out_value = static_cast<double>(std::get<int64_t>(value));
-        } else {
-            return PSR_ERROR_DATABASE;
-        }
-        return PSR_OK;
+        auto* result_values = new psr_value_t[1];
+        result_values[0] = convert_value(value);
+
+        return make_success_result(result_values, 1);
     } catch (const std::runtime_error&) {
-        return PSR_ERROR_NOT_FOUND;
+        return make_error_result(PSR_ERROR_NOT_FOUND);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return make_error_result(PSR_ERROR_DATABASE);
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_scalar_parameter_string(psr_database_t* db,
+PSR_C_API psr_read_result_t psr_database_read_vector_parameters(psr_database_t* db,
+                                                                 const char* collection,
+                                                                 const char* attribute) {
+    if (!db || !collection || !attribute) {
+        return make_error_result(PSR_ERROR_INVALID_ARGUMENT);
+    }
+
+    try {
+        auto results = db->db.read_vector_parameters(collection, attribute);
+
+        if (results.empty()) {
+            return make_success_result(nullptr, 0);
+        }
+
+        auto* result_values = new psr_value_t[results.size()];
+        for (size_t i = 0; i < results.size(); ++i) {
+            result_values[i] = convert_value_array(results[i]);
+        }
+
+        return make_success_result(result_values, results.size());
+    } catch (const std::runtime_error&) {
+        return make_error_result(PSR_ERROR_NOT_FOUND);
+    } catch (const std::exception&) {
+        return make_error_result(PSR_ERROR_DATABASE);
+    }
+}
+
+PSR_C_API psr_read_result_t psr_database_read_vector_parameter(psr_database_t* db,
                                                                 const char* collection,
                                                                 const char* attribute,
-                                                                const char* label,
-                                                                char** out_value) {
-    if (!db || !collection || !attribute || !label || !out_value) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+                                                                const char* label) {
+    if (!db || !collection || !attribute || !label) {
+        return make_error_result(PSR_ERROR_INVALID_ARGUMENT);
     }
 
     try {
-        auto value = db->db.read_scalar_parameter(collection, attribute, label);
+        auto values = db->db.read_vector_parameter(collection, attribute, label);
 
-        std::string str;
-        if (std::holds_alternative<std::nullptr_t>(value)) {
-            str = "";
-        } else if (std::holds_alternative<std::string>(value)) {
-            str = std::get<std::string>(value);
-        } else {
-            return PSR_ERROR_DATABASE;
+        if (values.empty()) {
+            return make_success_result(nullptr, 0);
         }
 
-        *out_value = new char[str.size() + 1];
-        std::memcpy(*out_value, str.c_str(), str.size() + 1);
-        return PSR_OK;
+        auto* result_values = new psr_value_t[values.size()];
+        for (size_t i = 0; i < values.size(); ++i) {
+            result_values[i] = convert_value(values[i]);
+        }
+
+        return make_success_result(result_values, values.size());
     } catch (const std::runtime_error&) {
-        return PSR_ERROR_NOT_FOUND;
+        return make_error_result(PSR_ERROR_NOT_FOUND);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return make_error_result(PSR_ERROR_DATABASE);
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_scalar_parameter_int(psr_database_t* db,
-                                                             const char* collection,
-                                                             const char* attribute,
-                                                             const char* label,
-                                                             int64_t* out_value,
-                                                             int* is_null) {
-    if (!db || !collection || !attribute || !label || !out_value || !is_null) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+PSR_C_API psr_read_result_t psr_database_read_set_parameters(psr_database_t* db,
+                                                              const char* collection,
+                                                              const char* attribute) {
+    if (!db || !collection || !attribute) {
+        return make_error_result(PSR_ERROR_INVALID_ARGUMENT);
     }
 
     try {
-        auto value = db->db.read_scalar_parameter(collection, attribute, label);
+        auto results = db->db.read_set_parameters(collection, attribute);
 
-        if (std::holds_alternative<std::nullptr_t>(value)) {
-            *is_null = 1;
-            *out_value = 0;
-        } else if (std::holds_alternative<int64_t>(value)) {
-            *is_null = 0;
-            *out_value = std::get<int64_t>(value);
-        } else {
-            return PSR_ERROR_DATABASE;
+        if (results.empty()) {
+            return make_success_result(nullptr, 0);
         }
-        return PSR_OK;
+
+        auto* result_values = new psr_value_t[results.size()];
+        for (size_t i = 0; i < results.size(); ++i) {
+            result_values[i] = convert_value_array(results[i]);
+        }
+
+        return make_success_result(result_values, results.size());
     } catch (const std::runtime_error&) {
-        return PSR_ERROR_NOT_FOUND;
+        return make_error_result(PSR_ERROR_NOT_FOUND);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return make_error_result(PSR_ERROR_DATABASE);
     }
 }
 
-PSR_C_API void psr_double_array_free(double* arr) {
-    delete[] arr;
-}
-
-PSR_C_API void psr_string_array_free(char** arr, size_t count) {
-    if (arr) {
-        for (size_t i = 0; i < count; ++i) {
-            delete[] arr[i];
-        }
-        delete[] arr;
-    }
-}
-
-PSR_C_API void psr_int_array_free(int64_t* arr) {
-    delete[] arr;
-}
-
-// Vector parameter reading (returns nested arrays - one per element)
-// Returns element count, or -1 on error
-PSR_C_API int64_t psr_database_read_vector_parameters_double(psr_database_t* db,
+PSR_C_API psr_read_result_t psr_database_read_set_parameter(psr_database_t* db,
                                                              const char* collection,
                                                              const char* attribute,
-                                                             double*** out_values,
-                                                             int64_t** out_counts) {
-    if (!db || !collection || !attribute || !out_values || !out_counts) {
-        return -1;
+                                                             const char* label) {
+    if (!db || !collection || !attribute || !label) {
+        return make_error_result(PSR_ERROR_INVALID_ARGUMENT);
     }
 
     try {
-        auto results = db->db.read_vector_parameters(collection, attribute);
+        auto values = db->db.read_set_parameter(collection, attribute, label);
 
-        if (results.empty()) {
-            *out_values = nullptr;
-            *out_counts = nullptr;
-            return 0;
+        if (values.empty()) {
+            return make_success_result(nullptr, 0);
         }
 
-        *out_values = new double*[results.size()];
-        *out_counts = new int64_t[results.size()];
-
-        for (size_t i = 0; i < results.size(); ++i) {
-            const auto& vec = results[i];
-            (*out_counts)[i] = static_cast<int64_t>(vec.size());
-
-            if (vec.empty()) {
-                (*out_values)[i] = nullptr;
-            } else {
-                (*out_values)[i] = new double[vec.size()];
-                for (size_t j = 0; j < vec.size(); ++j) {
-                    if (std::holds_alternative<double>(vec[j])) {
-                        (*out_values)[i][j] = std::get<double>(vec[j]);
-                    } else if (std::holds_alternative<int64_t>(vec[j])) {
-                        (*out_values)[i][j] = static_cast<double>(std::get<int64_t>(vec[j]));
-                    } else if (std::holds_alternative<std::nullptr_t>(vec[j])) {
-                        (*out_values)[i][j] = std::numeric_limits<double>::quiet_NaN();
-                    } else {
-                        // Cleanup on error
-                        for (size_t k = 0; k <= i; ++k) {
-                            delete[] (*out_values)[k];
-                        }
-                        delete[] *out_values;
-                        delete[] *out_counts;
-                        return -1;
-                    }
-                }
-            }
+        auto* result_values = new psr_value_t[values.size()];
+        for (size_t i = 0; i < values.size(); ++i) {
+            result_values[i] = convert_value(values[i]);
         }
-        return static_cast<int64_t>(results.size());
+
+        return make_success_result(result_values, values.size());
+    } catch (const std::runtime_error&) {
+        return make_error_result(PSR_ERROR_NOT_FOUND);
     } catch (const std::exception&) {
-        return -1;
+        return make_error_result(PSR_ERROR_DATABASE);
     }
 }
 
-PSR_C_API int64_t psr_database_read_vector_parameters_string(psr_database_t* db,
-                                                             const char* collection,
-                                                             const char* attribute,
-                                                             char**** out_values,
-                                                             int64_t** out_counts) {
-    if (!db || !collection || !attribute || !out_values || !out_counts) {
-        return -1;
-    }
+// Memory management for tagged union values
 
-    try {
-        auto results = db->db.read_vector_parameters(collection, attribute);
+PSR_C_API void psr_value_free(psr_value_t* value) {
+    if (!value)
+        return;
 
-        if (results.empty()) {
-            *out_values = nullptr;
-            *out_counts = nullptr;
-            return 0;
-        }
-
-        *out_values = new char**[results.size()];
-        *out_counts = new int64_t[results.size()];
-
-        for (size_t i = 0; i < results.size(); ++i) {
-            const auto& vec = results[i];
-            (*out_counts)[i] = static_cast<int64_t>(vec.size());
-
-            if (vec.empty()) {
-                (*out_values)[i] = nullptr;
-            } else {
-                (*out_values)[i] = new char*[vec.size()];
-                for (size_t j = 0; j < vec.size(); ++j) {
-                    std::string str;
-                    if (std::holds_alternative<std::string>(vec[j])) {
-                        str = std::get<std::string>(vec[j]);
-                    } else if (std::holds_alternative<std::nullptr_t>(vec[j])) {
-                        str = "";
-                    } else {
-                        // Cleanup on error
-                        for (size_t k = 0; k < i; ++k) {
-                            for (size_t l = 0; l < static_cast<size_t>((*out_counts)[k]); ++l) {
-                                delete[] (*out_values)[k][l];
-                            }
-                            delete[] (*out_values)[k];
-                        }
-                        for (size_t l = 0; l < j; ++l) {
-                            delete[] (*out_values)[i][l];
-                        }
-                        delete[] (*out_values)[i];
-                        delete[] *out_values;
-                        delete[] *out_counts;
-                        return -1;
-                    }
-                    (*out_values)[i][j] = new char[str.size() + 1];
-                    std::memcpy((*out_values)[i][j], str.c_str(), str.size() + 1);
-                }
+    switch (value->type) {
+    case PSR_VALUE_STRING:
+        delete[] value->data.string_value;
+        value->data.string_value = nullptr;
+        break;
+    case PSR_VALUE_ARRAY:
+        if (value->data.array_value.elements) {
+            for (size_t i = 0; i < value->data.array_value.count; ++i) {
+                psr_value_free(&value->data.array_value.elements[i]);
             }
+            delete[] value->data.array_value.elements;
+            value->data.array_value.elements = nullptr;
         }
-        return static_cast<int64_t>(results.size());
-    } catch (const std::exception&) {
-        return -1;
+        break;
+    default:
+        break;
     }
+    value->type = PSR_VALUE_NULL;
 }
 
-PSR_C_API int64_t psr_database_read_vector_parameters_int(psr_database_t* db,
-                                                          const char* collection,
-                                                          const char* attribute,
-                                                          int64_t*** out_values,
-                                                          int64_t** out_counts) {
-    if (!db || !collection || !attribute || !out_values || !out_counts) {
-        return -1;
+PSR_C_API void psr_read_result_free(psr_read_result_t* result) {
+    if (!result || !result->values)
+        return;
+
+    for (size_t i = 0; i < result->count; ++i) {
+        psr_value_free(&result->values[i]);
     }
-
-    try {
-        auto results = db->db.read_vector_parameters(collection, attribute);
-
-        if (results.empty()) {
-            *out_values = nullptr;
-            *out_counts = nullptr;
-            return 0;
-        }
-
-        *out_values = new int64_t*[results.size()];
-        *out_counts = new int64_t[results.size()];
-
-        for (size_t i = 0; i < results.size(); ++i) {
-            const auto& vec = results[i];
-            (*out_counts)[i] = static_cast<int64_t>(vec.size());
-
-            if (vec.empty()) {
-                (*out_values)[i] = nullptr;
-            } else {
-                (*out_values)[i] = new int64_t[vec.size()];
-                for (size_t j = 0; j < vec.size(); ++j) {
-                    if (std::holds_alternative<int64_t>(vec[j])) {
-                        (*out_values)[i][j] = std::get<int64_t>(vec[j]);
-                    } else if (std::holds_alternative<std::nullptr_t>(vec[j])) {
-                        (*out_values)[i][j] = 0;
-                    } else {
-                        // Cleanup on error
-                        for (size_t k = 0; k <= i; ++k) {
-                            delete[] (*out_values)[k];
-                        }
-                        delete[] *out_values;
-                        delete[] *out_counts;
-                        return -1;
-                    }
-                }
-            }
-        }
-        return static_cast<int64_t>(results.size());
-    } catch (const std::exception&) {
-        return -1;
-    }
-}
-
-// Single element vector parameter reading (returns array length, or -1 on error)
-PSR_C_API int64_t psr_database_read_vector_parameter_double(psr_database_t* db,
-                                                            const char* collection,
-                                                            const char* attribute,
-                                                            const char* label,
-                                                            double** out_values) {
-    if (!db || !collection || !attribute || !label || !out_values) {
-        return -1;
-    }
-
-    try {
-        auto result = db->db.read_vector_parameter(collection, attribute, label);
-
-        if (result.empty()) {
-            *out_values = nullptr;
-            return 0;
-        }
-
-        *out_values = new double[result.size()];
-        for (size_t i = 0; i < result.size(); ++i) {
-            if (std::holds_alternative<double>(result[i])) {
-                (*out_values)[i] = std::get<double>(result[i]);
-            } else if (std::holds_alternative<int64_t>(result[i])) {
-                (*out_values)[i] = static_cast<double>(std::get<int64_t>(result[i]));
-            } else if (std::holds_alternative<std::nullptr_t>(result[i])) {
-                (*out_values)[i] = std::numeric_limits<double>::quiet_NaN();
-            } else {
-                delete[] *out_values;
-                return -1;
-            }
-        }
-        return static_cast<int64_t>(result.size());
-    } catch (const std::exception&) {
-        return -1;
-    }
-}
-
-PSR_C_API int64_t psr_database_read_vector_parameter_string(psr_database_t* db,
-                                                            const char* collection,
-                                                            const char* attribute,
-                                                            const char* label,
-                                                            char*** out_values) {
-    if (!db || !collection || !attribute || !label || !out_values) {
-        return -1;
-    }
-
-    try {
-        auto result = db->db.read_vector_parameter(collection, attribute, label);
-
-        if (result.empty()) {
-            *out_values = nullptr;
-            return 0;
-        }
-
-        *out_values = new char*[result.size()];
-        for (size_t i = 0; i < result.size(); ++i) {
-            std::string str;
-            if (std::holds_alternative<std::string>(result[i])) {
-                str = std::get<std::string>(result[i]);
-            } else if (std::holds_alternative<std::nullptr_t>(result[i])) {
-                str = "";
-            } else {
-                for (size_t j = 0; j < i; ++j) {
-                    delete[] (*out_values)[j];
-                }
-                delete[] *out_values;
-                return -1;
-            }
-            (*out_values)[i] = new char[str.size() + 1];
-            std::memcpy((*out_values)[i], str.c_str(), str.size() + 1);
-        }
-        return static_cast<int64_t>(result.size());
-    } catch (const std::exception&) {
-        return -1;
-    }
-}
-
-PSR_C_API int64_t psr_database_read_vector_parameter_int(psr_database_t* db,
-                                                         const char* collection,
-                                                         const char* attribute,
-                                                         const char* label,
-                                                         int64_t** out_values) {
-    if (!db || !collection || !attribute || !label || !out_values) {
-        return -1;
-    }
-
-    try {
-        auto result = db->db.read_vector_parameter(collection, attribute, label);
-
-        if (result.empty()) {
-            *out_values = nullptr;
-            return 0;
-        }
-
-        *out_values = new int64_t[result.size()];
-        for (size_t i = 0; i < result.size(); ++i) {
-            if (std::holds_alternative<int64_t>(result[i])) {
-                (*out_values)[i] = std::get<int64_t>(result[i]);
-            } else if (std::holds_alternative<std::nullptr_t>(result[i])) {
-                (*out_values)[i] = 0;
-            } else {
-                delete[] *out_values;
-                return -1;
-            }
-        }
-        return static_cast<int64_t>(result.size());
-    } catch (const std::exception&) {
-        return -1;
-    }
-}
-
-// Set parameter reading (returns nested arrays - one per element)
-// Returns element count, or -1 on error
-PSR_C_API int64_t psr_database_read_set_parameters_double(psr_database_t* db,
-                                                          const char* collection,
-                                                          const char* attribute,
-                                                          double*** out_values,
-                                                          int64_t** out_counts) {
-    if (!db || !collection || !attribute || !out_values || !out_counts) {
-        return -1;
-    }
-
-    try {
-        auto results = db->db.read_set_parameters(collection, attribute);
-
-        if (results.empty()) {
-            *out_values = nullptr;
-            *out_counts = nullptr;
-            return 0;
-        }
-
-        *out_values = new double*[results.size()];
-        *out_counts = new int64_t[results.size()];
-
-        for (size_t i = 0; i < results.size(); ++i) {
-            const auto& vec = results[i];
-            (*out_counts)[i] = static_cast<int64_t>(vec.size());
-
-            if (vec.empty()) {
-                (*out_values)[i] = nullptr;
-            } else {
-                (*out_values)[i] = new double[vec.size()];
-                for (size_t j = 0; j < vec.size(); ++j) {
-                    if (std::holds_alternative<double>(vec[j])) {
-                        (*out_values)[i][j] = std::get<double>(vec[j]);
-                    } else if (std::holds_alternative<int64_t>(vec[j])) {
-                        (*out_values)[i][j] = static_cast<double>(std::get<int64_t>(vec[j]));
-                    } else if (std::holds_alternative<std::nullptr_t>(vec[j])) {
-                        (*out_values)[i][j] = std::numeric_limits<double>::quiet_NaN();
-                    } else {
-                        // Cleanup on error
-                        for (size_t k = 0; k <= i; ++k) {
-                            delete[] (*out_values)[k];
-                        }
-                        delete[] *out_values;
-                        delete[] *out_counts;
-                        return -1;
-                    }
-                }
-            }
-        }
-        return static_cast<int64_t>(results.size());
-    } catch (const std::exception&) {
-        return -1;
-    }
-}
-
-PSR_C_API int64_t psr_database_read_set_parameters_string(psr_database_t* db,
-                                                          const char* collection,
-                                                          const char* attribute,
-                                                          char**** out_values,
-                                                          int64_t** out_counts) {
-    if (!db || !collection || !attribute || !out_values || !out_counts) {
-        return -1;
-    }
-
-    try {
-        auto results = db->db.read_set_parameters(collection, attribute);
-
-        if (results.empty()) {
-            *out_values = nullptr;
-            *out_counts = nullptr;
-            return 0;
-        }
-
-        *out_values = new char**[results.size()];
-        *out_counts = new int64_t[results.size()];
-
-        for (size_t i = 0; i < results.size(); ++i) {
-            const auto& vec = results[i];
-            (*out_counts)[i] = static_cast<int64_t>(vec.size());
-
-            if (vec.empty()) {
-                (*out_values)[i] = nullptr;
-            } else {
-                (*out_values)[i] = new char*[vec.size()];
-                for (size_t j = 0; j < vec.size(); ++j) {
-                    std::string str;
-                    if (std::holds_alternative<std::string>(vec[j])) {
-                        str = std::get<std::string>(vec[j]);
-                    } else if (std::holds_alternative<std::nullptr_t>(vec[j])) {
-                        str = "";
-                    } else {
-                        // Cleanup on error
-                        for (size_t k = 0; k < i; ++k) {
-                            for (size_t l = 0; l < static_cast<size_t>((*out_counts)[k]); ++l) {
-                                delete[] (*out_values)[k][l];
-                            }
-                            delete[] (*out_values)[k];
-                        }
-                        for (size_t l = 0; l < j; ++l) {
-                            delete[] (*out_values)[i][l];
-                        }
-                        delete[] (*out_values)[i];
-                        delete[] *out_values;
-                        delete[] *out_counts;
-                        return -1;
-                    }
-                    (*out_values)[i][j] = new char[str.size() + 1];
-                    std::memcpy((*out_values)[i][j], str.c_str(), str.size() + 1);
-                }
-            }
-        }
-        return static_cast<int64_t>(results.size());
-    } catch (const std::exception&) {
-        return -1;
-    }
-}
-
-PSR_C_API int64_t psr_database_read_set_parameters_int(psr_database_t* db,
-                                                       const char* collection,
-                                                       const char* attribute,
-                                                       int64_t*** out_values,
-                                                       int64_t** out_counts) {
-    if (!db || !collection || !attribute || !out_values || !out_counts) {
-        return -1;
-    }
-
-    try {
-        auto results = db->db.read_set_parameters(collection, attribute);
-
-        if (results.empty()) {
-            *out_values = nullptr;
-            *out_counts = nullptr;
-            return 0;
-        }
-
-        *out_values = new int64_t*[results.size()];
-        *out_counts = new int64_t[results.size()];
-
-        for (size_t i = 0; i < results.size(); ++i) {
-            const auto& vec = results[i];
-            (*out_counts)[i] = static_cast<int64_t>(vec.size());
-
-            if (vec.empty()) {
-                (*out_values)[i] = nullptr;
-            } else {
-                (*out_values)[i] = new int64_t[vec.size()];
-                for (size_t j = 0; j < vec.size(); ++j) {
-                    if (std::holds_alternative<int64_t>(vec[j])) {
-                        (*out_values)[i][j] = std::get<int64_t>(vec[j]);
-                    } else if (std::holds_alternative<std::nullptr_t>(vec[j])) {
-                        (*out_values)[i][j] = 0;
-                    } else {
-                        // Cleanup on error
-                        for (size_t k = 0; k <= i; ++k) {
-                            delete[] (*out_values)[k];
-                        }
-                        delete[] *out_values;
-                        delete[] *out_counts;
-                        return -1;
-                    }
-                }
-            }
-        }
-        return static_cast<int64_t>(results.size());
-    } catch (const std::exception&) {
-        return -1;
-    }
-}
-
-// Single element set parameter reading (returns array length, or -1 on error)
-PSR_C_API int64_t psr_database_read_set_parameter_double(psr_database_t* db,
-                                                         const char* collection,
-                                                         const char* attribute,
-                                                         const char* label,
-                                                         double** out_values) {
-    if (!db || !collection || !attribute || !label || !out_values) {
-        return -1;
-    }
-
-    try {
-        auto result = db->db.read_set_parameter(collection, attribute, label);
-
-        if (result.empty()) {
-            *out_values = nullptr;
-            return 0;
-        }
-
-        *out_values = new double[result.size()];
-        for (size_t i = 0; i < result.size(); ++i) {
-            if (std::holds_alternative<double>(result[i])) {
-                (*out_values)[i] = std::get<double>(result[i]);
-            } else if (std::holds_alternative<int64_t>(result[i])) {
-                (*out_values)[i] = static_cast<double>(std::get<int64_t>(result[i]));
-            } else if (std::holds_alternative<std::nullptr_t>(result[i])) {
-                (*out_values)[i] = std::numeric_limits<double>::quiet_NaN();
-            } else {
-                delete[] *out_values;
-                return -1;
-            }
-        }
-        return static_cast<int64_t>(result.size());
-    } catch (const std::exception&) {
-        return -1;
-    }
-}
-
-PSR_C_API int64_t psr_database_read_set_parameter_string(psr_database_t* db,
-                                                         const char* collection,
-                                                         const char* attribute,
-                                                         const char* label,
-                                                         char*** out_values) {
-    if (!db || !collection || !attribute || !label || !out_values) {
-        return -1;
-    }
-
-    try {
-        auto result = db->db.read_set_parameter(collection, attribute, label);
-
-        if (result.empty()) {
-            *out_values = nullptr;
-            return 0;
-        }
-
-        *out_values = new char*[result.size()];
-        for (size_t i = 0; i < result.size(); ++i) {
-            std::string str;
-            if (std::holds_alternative<std::string>(result[i])) {
-                str = std::get<std::string>(result[i]);
-            } else if (std::holds_alternative<std::nullptr_t>(result[i])) {
-                str = "";
-            } else {
-                for (size_t j = 0; j < i; ++j) {
-                    delete[] (*out_values)[j];
-                }
-                delete[] *out_values;
-                return -1;
-            }
-            (*out_values)[i] = new char[str.size() + 1];
-            std::memcpy((*out_values)[i], str.c_str(), str.size() + 1);
-        }
-        return static_cast<int64_t>(result.size());
-    } catch (const std::exception&) {
-        return -1;
-    }
-}
-
-PSR_C_API int64_t psr_database_read_set_parameter_int(psr_database_t* db,
-                                                      const char* collection,
-                                                      const char* attribute,
-                                                      const char* label,
-                                                      int64_t** out_values) {
-    if (!db || !collection || !attribute || !label || !out_values) {
-        return -1;
-    }
-
-    try {
-        auto result = db->db.read_set_parameter(collection, attribute, label);
-
-        if (result.empty()) {
-            *out_values = nullptr;
-            return 0;
-        }
-
-        *out_values = new int64_t[result.size()];
-        for (size_t i = 0; i < result.size(); ++i) {
-            if (std::holds_alternative<int64_t>(result[i])) {
-                (*out_values)[i] = std::get<int64_t>(result[i]);
-            } else if (std::holds_alternative<std::nullptr_t>(result[i])) {
-                (*out_values)[i] = 0;
-            } else {
-                delete[] *out_values;
-                return -1;
-            }
-        }
-        return static_cast<int64_t>(result.size());
-    } catch (const std::exception&) {
-        return -1;
-    }
-}
-
-// Nested array memory management
-PSR_C_API void psr_double_array_array_free(double** arr, size_t count) {
-    if (arr) {
-        for (size_t i = 0; i < count; ++i) {
-            delete[] arr[i];
-        }
-        delete[] arr;
-    }
-}
-
-PSR_C_API void psr_string_array_array_free(char*** arr, size_t* counts, size_t element_count) {
-    if (arr) {
-        for (size_t i = 0; i < element_count; ++i) {
-            if (arr[i]) {
-                for (size_t j = 0; j < counts[i]; ++j) {
-                    delete[] arr[i][j];
-                }
-                delete[] arr[i];
-            }
-        }
-        delete[] arr;
-    }
-    delete[] counts;
-}
-
-PSR_C_API void psr_int_array_array_free(int64_t** arr, size_t count) {
-    if (arr) {
-        for (size_t i = 0; i < count; ++i) {
-            delete[] arr[i];
-        }
-        delete[] arr;
-    }
-}
-
-PSR_C_API void psr_int64_array_free(int64_t* arr) {
-    delete[] arr;
+    delete[] result->values;
+    result->values = nullptr;
+    result->count = 0;
 }
 
 }  // extern "C"

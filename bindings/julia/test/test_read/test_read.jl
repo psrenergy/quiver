@@ -66,7 +66,7 @@ using Test
           "Resource 1"
     @test PSRDatabase.read_scalar_parameters(db, "Cost", "value") == [100.0, 10.0]
     @test any(
-        isnan,
+        isnothing,
         PSRDatabase.read_scalar_parameters(db, "Cost", "value_without_default"),
     )
     @test PSRDatabase.read_scalar_parameters(

@@ -18,6 +18,82 @@ const libpsr_database_c = joinpath(@__DIR__, "..", "..", "..", "build", "bin", "
     PSR_ERROR_NOT_FOUND = -6
 end
 
+@cenum psr_value_type_t::UInt32 begin
+    PSR_VALUE_NULL = 0
+    PSR_VALUE_INT64 = 1
+    PSR_VALUE_DOUBLE = 2
+    PSR_VALUE_STRING = 3
+    PSR_VALUE_ARRAY = 4
+end
+
+struct var"##Ctag#232"
+    data::NTuple{16, UInt8}
+end
+
+function Base.getproperty(x::Ptr{var"##Ctag#232"}, f::Symbol)
+    f === :int_value && return Ptr{Int64}(x + 0)
+    f === :double_value && return Ptr{Cdouble}(x + 0)
+    f === :string_value && return Ptr{Ptr{Cchar}}(x + 0)
+    f === :array_value && return Ptr{var"##Ctag#233"}(x + 0)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::var"##Ctag#232", f::Symbol)
+    r = Ref{var"##Ctag#232"}(x)
+    ptr = Base.unsafe_convert(Ptr{var"##Ctag#232"}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{var"##Ctag#232"}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+function Base.propertynames(x::var"##Ctag#232", private::Bool = false)
+    (:int_value, :double_value, :string_value, :array_value, if private
+            fieldnames(typeof(x))
+        else
+            ()
+        end...)
+end
+
+struct psr_value
+    data::NTuple{24, UInt8}
+end
+
+function Base.getproperty(x::Ptr{psr_value}, f::Symbol)
+    f === :type && return Ptr{psr_value_type_t}(x + 0)
+    f === :data && return Ptr{var"##Ctag#232"}(x + 8)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::psr_value, f::Symbol)
+    r = Ref{psr_value}(x)
+    ptr = Base.unsafe_convert(Ptr{psr_value}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{psr_value}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
+function Base.propertynames(x::psr_value, private::Bool = false)
+    (:type, :data, if private
+            fieldnames(typeof(x))
+        else
+            ()
+        end...)
+end
+
+const psr_value_t = psr_value
+
+struct psr_read_result_t
+    error::psr_error_t
+    values::Ptr{psr_value_t}
+    count::Csize_t
+end
+
 function psr_error_string(error)
     @ccall libpsr_database_c.psr_error_string(error::psr_error_t)::Ptr{Cchar}
 end
@@ -103,104 +179,36 @@ function psr_database_create_element(db, collection, element)
     @ccall libpsr_database_c.psr_database_create_element(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, element::Ptr{psr_element_t})::Int64
 end
 
-function psr_database_read_scalar_parameters_double(db, collection, attribute, out_values)
-    @ccall libpsr_database_c.psr_database_read_scalar_parameters_double(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Cdouble}})::Int64
+function psr_database_read_scalar_parameters(db, collection, attribute)
+    @ccall libpsr_database_c.psr_database_read_scalar_parameters(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar})::psr_read_result_t
 end
 
-function psr_database_read_scalar_parameters_string(db, collection, attribute, out_values)
-    @ccall libpsr_database_c.psr_database_read_scalar_parameters_string(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Cchar}}})::Int64
+function psr_database_read_scalar_parameter(db, collection, attribute, label)
+    @ccall libpsr_database_c.psr_database_read_scalar_parameter(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar})::psr_read_result_t
 end
 
-function psr_database_read_scalar_parameters_int(db, collection, attribute, out_values)
-    @ccall libpsr_database_c.psr_database_read_scalar_parameters_int(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Int64}})::Int64
+function psr_database_read_vector_parameters(db, collection, attribute)
+    @ccall libpsr_database_c.psr_database_read_vector_parameters(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar})::psr_read_result_t
 end
 
-function psr_database_read_scalar_parameter_double(db, collection, attribute, label, out_value, is_null)
-    @ccall libpsr_database_c.psr_database_read_scalar_parameter_double(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar}, out_value::Ptr{Cdouble}, is_null::Ptr{Cint})::psr_error_t
+function psr_database_read_vector_parameter(db, collection, attribute, label)
+    @ccall libpsr_database_c.psr_database_read_vector_parameter(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar})::psr_read_result_t
 end
 
-function psr_database_read_scalar_parameter_string(db, collection, attribute, label, out_value)
-    @ccall libpsr_database_c.psr_database_read_scalar_parameter_string(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar}, out_value::Ptr{Ptr{Cchar}})::psr_error_t
+function psr_database_read_set_parameters(db, collection, attribute)
+    @ccall libpsr_database_c.psr_database_read_set_parameters(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar})::psr_read_result_t
 end
 
-function psr_database_read_scalar_parameter_int(db, collection, attribute, label, out_value, is_null)
-    @ccall libpsr_database_c.psr_database_read_scalar_parameter_int(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar}, out_value::Ptr{Int64}, is_null::Ptr{Cint})::psr_error_t
+function psr_database_read_set_parameter(db, collection, attribute, label)
+    @ccall libpsr_database_c.psr_database_read_set_parameter(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar})::psr_read_result_t
 end
 
-function psr_database_read_vector_parameters_double(db, collection, attribute, out_values, out_counts)
-    @ccall libpsr_database_c.psr_database_read_vector_parameters_double(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Cdouble}}}, out_counts::Ptr{Ptr{Int64}})::Int64
+function psr_value_free(value)
+    @ccall libpsr_database_c.psr_value_free(value::Ptr{psr_value_t})::Cvoid
 end
 
-function psr_database_read_vector_parameters_string(db, collection, attribute, out_values, out_counts)
-    @ccall libpsr_database_c.psr_database_read_vector_parameters_string(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Ptr{Cchar}}}}, out_counts::Ptr{Ptr{Int64}})::Int64
-end
-
-function psr_database_read_vector_parameters_int(db, collection, attribute, out_values, out_counts)
-    @ccall libpsr_database_c.psr_database_read_vector_parameters_int(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Int64}}}, out_counts::Ptr{Ptr{Int64}})::Int64
-end
-
-function psr_database_read_vector_parameter_double(db, collection, attribute, label, out_values)
-    @ccall libpsr_database_c.psr_database_read_vector_parameter_double(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar}, out_values::Ptr{Ptr{Cdouble}})::Int64
-end
-
-function psr_database_read_vector_parameter_string(db, collection, attribute, label, out_values)
-    @ccall libpsr_database_c.psr_database_read_vector_parameter_string(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Cchar}}})::Int64
-end
-
-function psr_database_read_vector_parameter_int(db, collection, attribute, label, out_values)
-    @ccall libpsr_database_c.psr_database_read_vector_parameter_int(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar}, out_values::Ptr{Ptr{Int64}})::Int64
-end
-
-function psr_database_read_set_parameters_double(db, collection, attribute, out_values, out_counts)
-    @ccall libpsr_database_c.psr_database_read_set_parameters_double(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Cdouble}}}, out_counts::Ptr{Ptr{Int64}})::Int64
-end
-
-function psr_database_read_set_parameters_string(db, collection, attribute, out_values, out_counts)
-    @ccall libpsr_database_c.psr_database_read_set_parameters_string(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Ptr{Cchar}}}}, out_counts::Ptr{Ptr{Int64}})::Int64
-end
-
-function psr_database_read_set_parameters_int(db, collection, attribute, out_values, out_counts)
-    @ccall libpsr_database_c.psr_database_read_set_parameters_int(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Int64}}}, out_counts::Ptr{Ptr{Int64}})::Int64
-end
-
-function psr_database_read_set_parameter_double(db, collection, attribute, label, out_values)
-    @ccall libpsr_database_c.psr_database_read_set_parameter_double(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar}, out_values::Ptr{Ptr{Cdouble}})::Int64
-end
-
-function psr_database_read_set_parameter_string(db, collection, attribute, label, out_values)
-    @ccall libpsr_database_c.psr_database_read_set_parameter_string(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Cchar}}})::Int64
-end
-
-function psr_database_read_set_parameter_int(db, collection, attribute, label, out_values)
-    @ccall libpsr_database_c.psr_database_read_set_parameter_int(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, label::Ptr{Cchar}, out_values::Ptr{Ptr{Int64}})::Int64
-end
-
-function psr_double_array_free(arr)
-    @ccall libpsr_database_c.psr_double_array_free(arr::Ptr{Cdouble})::Cvoid
-end
-
-function psr_string_array_free(arr, count)
-    @ccall libpsr_database_c.psr_string_array_free(arr::Ptr{Ptr{Cchar}}, count::Csize_t)::Cvoid
-end
-
-function psr_int_array_free(arr)
-    @ccall libpsr_database_c.psr_int_array_free(arr::Ptr{Int64})::Cvoid
-end
-
-function psr_double_array_array_free(arr, element_count)
-    @ccall libpsr_database_c.psr_double_array_array_free(arr::Ptr{Ptr{Cdouble}}, element_count::Csize_t)::Cvoid
-end
-
-function psr_string_array_array_free(arr, counts, element_count)
-    @ccall libpsr_database_c.psr_string_array_array_free(arr::Ptr{Ptr{Ptr{Cchar}}}, counts::Ptr{Csize_t}, element_count::Csize_t)::Cvoid
-end
-
-function psr_int_array_array_free(arr, element_count)
-    @ccall libpsr_database_c.psr_int_array_array_free(arr::Ptr{Ptr{Int64}}, element_count::Csize_t)::Cvoid
-end
-
-function psr_int64_array_free(arr)
-    @ccall libpsr_database_c.psr_int64_array_free(arr::Ptr{Int64})::Cvoid
+function psr_read_result_free(result)
+    @ccall libpsr_database_c.psr_read_result_free(result::Ptr{psr_read_result_t})::Cvoid
 end
 
 function psr_element_create()
@@ -266,6 +274,28 @@ end
 function psr_string_free(str)
     @ccall libpsr_database_c.psr_string_free(str::Ptr{Cchar})::Cvoid
 end
+
+struct var"##Ctag#233"
+    elements::Ptr{psr_value_t}
+    count::Csize_t
+end
+function Base.getproperty(x::Ptr{var"##Ctag#233"}, f::Symbol)
+    f === :elements && return Ptr{Ptr{psr_value_t}}(x + 0)
+    f === :count && return Ptr{Csize_t}(x + 8)
+    return getfield(x, f)
+end
+
+function Base.getproperty(x::var"##Ctag#233", f::Symbol)
+    r = Ref{var"##Ctag#233"}(x)
+    ptr = Base.unsafe_convert(Ptr{var"##Ctag#233"}, r)
+    fptr = getproperty(ptr, f)
+    GC.@preserve r unsafe_load(fptr)
+end
+
+function Base.setproperty!(x::Ptr{var"##Ctag#233"}, f::Symbol, v)
+    unsafe_store!(getproperty(x, f), v)
+end
+
 
 #! format: on
 
