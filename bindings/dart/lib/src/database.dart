@@ -47,6 +47,13 @@ Object? _extractValueAtIndex(
   return _extractValue(ptr, defaultValue: defaultValue);
 }
 
+/// Frees a read result.
+void _freeResult(psr_read_result_t result) {
+  final ptr = calloc<psr_read_result_t>()..ref = result;
+  bindings.psr_read_result_free(ptr);
+  calloc.free(ptr);
+}
+
 /// A wrapper for the PSR Database.
 ///
 /// Use [Database.fromSchema] to create a new database from a SQL schema file.
@@ -58,24 +65,15 @@ class Database {
   Database._(this._ptr);
 
   /// Creates a new database from a SQL schema file.
-  ///
-  /// - [dbPath] - Path to the SQLite database file.
-  /// - [schemaPath] - Path to the SQL schema file.
-  ///
-  /// Throws [SchemaException] if the schema is invalid.
-  /// Throws [DatabaseOperationException] if the database cannot be created.
   factory Database.fromSchema(String dbPath, String schemaPath) {
-    final dbPathPtr = dbPath.toNativeUtf8();
-    final schemaPathPtr = schemaPath.toNativeUtf8();
-    final optionsPtr = calloc<psr_database_options_t>();
-
+    final arena = Arena();
     try {
-      // Get default options
+      final optionsPtr = arena<psr_database_options_t>();
       optionsPtr.ref = bindings.psr_database_options_default();
 
       final ptr = bindings.psr_database_from_schema(
-        dbPathPtr.cast(),
-        schemaPathPtr.cast(),
+        dbPath.toNativeUtf8(allocator: arena).cast(),
+        schemaPath.toNativeUtf8(allocator: arena).cast(),
         optionsPtr,
       );
 
@@ -85,9 +83,7 @@ class Database {
 
       return Database._(ptr);
     } finally {
-      malloc.free(dbPathPtr);
-      malloc.free(schemaPathPtr);
-      calloc.free(optionsPtr);
+      arena.releaseAll();
     }
   }
 
@@ -97,21 +93,35 @@ class Database {
     }
   }
 
+  /// Throws if result has an error.
+  void _checkResult(psr_read_result_t result, String context) {
+    if (result.error != 0) {
+      throw DatabaseException.fromError(result.error, context);
+    }
+  }
+
+  /// Extracts all values from a read result and frees it.
+  List<Object?> _extractResults(psr_read_result_t result, Object? defaultValue) {
+    try {
+      return List.generate(
+        result.count,
+        (i) => _extractValueAtIndex(result.values, i, defaultValue: defaultValue),
+      );
+    } finally {
+      _freeResult(result);
+    }
+  }
+
+  /// Extracts a single value from a read result and frees it.
+  Object? _extractSingleResult(psr_read_result_t result, Object? defaultValue) {
+    try {
+      return _extractValue(result.values, defaultValue: defaultValue);
+    } finally {
+      _freeResult(result);
+    }
+  }
+
   /// Creates a new element in the specified collection.
-  ///
-  /// - [collection] - The name of the collection.
-  /// - [values] - A map of attribute names to values.
-  ///
-  /// Returns the ID of the created element.
-  ///
-  /// Supported value types:
-  /// - `null` - null value
-  /// - `int` - 64-bit integer
-  /// - `double` - 64-bit floating point
-  /// - `String` - UTF-8 string
-  /// - `List<int>` - array of integers
-  /// - `List<double>` - array of doubles
-  /// - `List<String>` - array of strings
   int createElement(String collection, Map<String, Object?> values) {
     _ensureNotClosed();
 
@@ -127,40 +137,28 @@ class Database {
   }
 
   /// Creates a new element in the specified collection using an Element builder.
-  ///
-  /// - [collection] - The name of the collection.
-  /// - [element] - The Element builder containing the values.
-  ///
-  /// Returns the ID of the created element.
-  ///
-  /// Note: The caller is responsible for disposing the Element after use.
   int createElementFromBuilder(String collection, Element element) {
     _ensureNotClosed();
 
-    final collectionPtr = collection.toNativeUtf8();
+    final arena = Arena();
     try {
       final id = bindings.psr_database_create_element(
         _ptr,
-        collectionPtr.cast(),
+        collection.toNativeUtf8(allocator: arena).cast(),
         element.ptr.cast(),
       );
 
       if (id < 0) {
-        throw DatabaseException.fromError(
-          id,
-          "Failed to create element in '$collection'",
-        );
+        throw DatabaseException.fromError(id, "Failed to create element in '$collection'");
       }
 
       return id;
     } finally {
-      malloc.free(collectionPtr);
+      arena.releaseAll();
     }
   }
 
   /// Closes the database and frees native resources.
-  ///
-  /// After calling this method, the database cannot be used.
   void close() {
     if (_isClosed) return;
     bindings.psr_database_close(_ptr);
@@ -172,299 +170,109 @@ class Database {
   // ============================================================
 
   /// Reads all values of a scalar attribute from a collection.
-  ///
-  /// Returns a list of values, one for each element in the collection.
-  /// Use [defaultValue] to substitute for null values.
-  ///
-  /// Throws [NotFoundException] if the attribute is not found.
-  List<Object?> readScalarParameters(
-    String collection,
-    String attribute, {
-    Object? defaultValue,
-  }) {
+  List<Object?> readScalarParameters(String collection, String attribute, {Object? defaultValue}) {
     _ensureNotClosed();
-
-    final collectionPtr = collection.toNativeUtf8();
-    final attributePtr = attribute.toNativeUtf8();
-
+    final arena = Arena();
     try {
       final result = bindings.psr_database_read_scalar_parameters(
         _ptr,
-        collectionPtr.cast(),
-        attributePtr.cast(),
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
       );
-
-      if (result.error != 0) {
-        throw DatabaseException.fromError(
-          result.error,
-          "Failed to read scalar parameters '$attribute' from '$collection'",
-        );
-      }
-
-      try {
-        return List.generate(
-          result.count,
-          (i) => _extractValueAtIndex(
-            result.values,
-            i,
-            defaultValue: defaultValue,
-          ),
-        );
-      } finally {
-        final resultPtr = calloc<psr_read_result_t>();
-        resultPtr.ref = result;
-        bindings.psr_read_result_free(resultPtr);
-        calloc.free(resultPtr);
-      }
+      _checkResult(result, "Failed to read scalar parameters '$attribute' from '$collection'");
+      return _extractResults(result, defaultValue);
     } finally {
-      malloc.free(collectionPtr);
-      malloc.free(attributePtr);
+      arena.releaseAll();
     }
   }
 
   /// Reads a scalar attribute value for a specific element by label.
-  ///
-  /// Use [defaultValue] to substitute for null values.
-  ///
-  /// Throws [NotFoundException] if the element or attribute is not found.
-  Object? readScalarParameter(
-    String collection,
-    String attribute,
-    String label, {
-    Object? defaultValue,
-  }) {
+  Object? readScalarParameter(String collection, String attribute, String label, {Object? defaultValue}) {
     _ensureNotClosed();
-
-    final collectionPtr = collection.toNativeUtf8();
-    final attributePtr = attribute.toNativeUtf8();
-    final labelPtr = label.toNativeUtf8();
-
+    final arena = Arena();
     try {
       final result = bindings.psr_database_read_scalar_parameter(
         _ptr,
-        collectionPtr.cast(),
-        attributePtr.cast(),
-        labelPtr.cast(),
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        label.toNativeUtf8(allocator: arena).cast(),
       );
-
-      if (result.error != 0) {
-        throw DatabaseException.fromError(
-          result.error,
-          "Failed to read scalar parameter '$attribute' for '$label' from '$collection'",
-        );
-      }
-
-      try {
-        return _extractValue(result.values, defaultValue: defaultValue);
-      } finally {
-        final resultPtr = calloc<psr_read_result_t>();
-        resultPtr.ref = result;
-        bindings.psr_read_result_free(resultPtr);
-        calloc.free(resultPtr);
-      }
+      _checkResult(result, "Failed to read scalar parameter '$attribute' for '$label' from '$collection'");
+      return _extractSingleResult(result, defaultValue);
     } finally {
-      malloc.free(collectionPtr);
-      malloc.free(attributePtr);
-      malloc.free(labelPtr);
+      arena.releaseAll();
     }
   }
 
   /// Reads all values of a vector attribute from a collection.
-  ///
-  /// Returns a list of lists, one vector for each element in the collection.
-  /// Use [defaultValue] to substitute for null values within vectors.
-  ///
-  /// Throws [NotFoundException] if the attribute is not found.
-  List<List<Object?>> readVectorParameters(
-    String collection,
-    String attribute, {
-    Object? defaultValue,
-  }) {
+  List<List<Object?>> readVectorParameters(String collection, String attribute, {Object? defaultValue}) {
     _ensureNotClosed();
-
-    final collectionPtr = collection.toNativeUtf8();
-    final attributePtr = attribute.toNativeUtf8();
-
+    final arena = Arena();
     try {
       final result = bindings.psr_database_read_vector_parameters(
         _ptr,
-        collectionPtr.cast(),
-        attributePtr.cast(),
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
       );
-
-      if (result.error != 0) {
-        throw DatabaseException.fromError(
-          result.error,
-          "Failed to read vector parameters '$attribute' from '$collection'",
-        );
-      }
-
-      try {
-        return List.generate(result.count, (i) {
-          final value = _extractValueAtIndex(
-            result.values,
-            i,
-            defaultValue: defaultValue,
-          );
-          return (value as List<Object?>?) ?? [];
-        });
-      } finally {
-        final resultPtr = calloc<psr_read_result_t>();
-        resultPtr.ref = result;
-        bindings.psr_read_result_free(resultPtr);
-        calloc.free(resultPtr);
-      }
+      _checkResult(result, "Failed to read vector parameters '$attribute' from '$collection'");
+      return _extractResults(result, defaultValue).map((v) => (v as List<Object?>?) ?? []).toList();
     } finally {
-      malloc.free(collectionPtr);
-      malloc.free(attributePtr);
+      arena.releaseAll();
     }
   }
 
   /// Reads a vector attribute value for a specific element by label.
-  ///
-  /// Use [defaultValue] to substitute for null values within the vector.
-  ///
-  /// Throws [NotFoundException] if the element or attribute is not found.
-  List<Object?> readVectorParameter(
-    String collection,
-    String attribute,
-    String label, {
-    Object? defaultValue,
-  }) {
+  List<Object?> readVectorParameter(String collection, String attribute, String label, {Object? defaultValue}) {
     _ensureNotClosed();
-
-    final collectionPtr = collection.toNativeUtf8();
-    final attributePtr = attribute.toNativeUtf8();
-    final labelPtr = label.toNativeUtf8();
-
+    final arena = Arena();
     try {
       final result = bindings.psr_database_read_vector_parameter(
         _ptr,
-        collectionPtr.cast(),
-        attributePtr.cast(),
-        labelPtr.cast(),
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        label.toNativeUtf8(allocator: arena).cast(),
       );
-
-      if (result.error != 0) {
-        throw DatabaseException.fromError(
-          result.error,
-          "Failed to read vector parameter '$attribute' for '$label' from '$collection'",
-        );
-      }
-
-      try {
-        final value = _extractValue(result.values, defaultValue: defaultValue);
-        return (value as List<Object?>?) ?? [];
-      } finally {
-        final resultPtr = calloc<psr_read_result_t>();
-        resultPtr.ref = result;
-        bindings.psr_read_result_free(resultPtr);
-        calloc.free(resultPtr);
-      }
+      _checkResult(result, "Failed to read vector parameter '$attribute' for '$label' from '$collection'");
+      final value = _extractSingleResult(result, defaultValue);
+      return (value as List<Object?>?) ?? [];
     } finally {
-      malloc.free(collectionPtr);
-      malloc.free(attributePtr);
-      malloc.free(labelPtr);
+      arena.releaseAll();
     }
   }
 
   /// Reads all values of a set attribute from a collection.
-  ///
-  /// Returns a list of lists, one set for each element in the collection.
-  /// Use [defaultValue] to substitute for null values within sets.
-  ///
-  /// Throws [NotFoundException] if the attribute is not found.
-  List<List<Object?>> readSetParameters(
-    String collection,
-    String attribute, {
-    Object? defaultValue,
-  }) {
+  List<List<Object?>> readSetParameters(String collection, String attribute, {Object? defaultValue}) {
     _ensureNotClosed();
-
-    final collectionPtr = collection.toNativeUtf8();
-    final attributePtr = attribute.toNativeUtf8();
-
+    final arena = Arena();
     try {
       final result = bindings.psr_database_read_set_parameters(
         _ptr,
-        collectionPtr.cast(),
-        attributePtr.cast(),
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
       );
-
-      if (result.error != 0) {
-        throw DatabaseException.fromError(
-          result.error,
-          "Failed to read set parameters '$attribute' from '$collection'",
-        );
-      }
-
-      try {
-        return List.generate(result.count, (i) {
-          final value = _extractValueAtIndex(
-            result.values,
-            i,
-            defaultValue: defaultValue,
-          );
-          return (value as List<Object?>?) ?? [];
-        });
-      } finally {
-        final resultPtr = calloc<psr_read_result_t>();
-        resultPtr.ref = result;
-        bindings.psr_read_result_free(resultPtr);
-        calloc.free(resultPtr);
-      }
+      _checkResult(result, "Failed to read set parameters '$attribute' from '$collection'");
+      return _extractResults(result, defaultValue).map((v) => (v as List<Object?>?) ?? []).toList();
     } finally {
-      malloc.free(collectionPtr);
-      malloc.free(attributePtr);
+      arena.releaseAll();
     }
   }
 
   /// Reads a set attribute value for a specific element by label.
-  ///
-  /// Use [defaultValue] to substitute for null values within the set.
-  ///
-  /// Throws [NotFoundException] if the element or attribute is not found.
-  List<Object?> readSetParameter(
-    String collection,
-    String attribute,
-    String label, {
-    Object? defaultValue,
-  }) {
+  List<Object?> readSetParameter(String collection, String attribute, String label, {Object? defaultValue}) {
     _ensureNotClosed();
-
-    final collectionPtr = collection.toNativeUtf8();
-    final attributePtr = attribute.toNativeUtf8();
-    final labelPtr = label.toNativeUtf8();
-
+    final arena = Arena();
     try {
       final result = bindings.psr_database_read_set_parameter(
         _ptr,
-        collectionPtr.cast(),
-        attributePtr.cast(),
-        labelPtr.cast(),
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        label.toNativeUtf8(allocator: arena).cast(),
       );
-
-      if (result.error != 0) {
-        throw DatabaseException.fromError(
-          result.error,
-          "Failed to read set parameter '$attribute' for '$label' from '$collection'",
-        );
-      }
-
-      try {
-        final value = _extractValue(result.values, defaultValue: defaultValue);
-        return (value as List<Object?>?) ?? [];
-      } finally {
-        final resultPtr = calloc<psr_read_result_t>();
-        resultPtr.ref = result;
-        bindings.psr_read_result_free(resultPtr);
-        calloc.free(resultPtr);
-      }
+      _checkResult(result, "Failed to read set parameter '$attribute' for '$label' from '$collection'");
+      final value = _extractSingleResult(result, defaultValue);
+      return (value as List<Object?>?) ?? [];
     } finally {
-      malloc.free(collectionPtr);
-      malloc.free(attributePtr);
-      malloc.free(labelPtr);
+      arena.releaseAll();
     }
   }
-
 }
