@@ -72,10 +72,13 @@ void SchemaValidator::validate_collection(const std::string& name) {
         validation_error("Collection '" + name + "' must have 'id' as primary key");
     }
 
-    // Must have 'label' column with NOT NULL constraint
+    // Must have 'label' column with TEXT type and NOT NULL constraint
     const auto* label_col = table->get_column("label");
     if (!label_col) {
         validation_error("Collection '" + name + "' must have a 'label' column");
+    }
+    if (label_col->type != ColumnType::Text) {
+        validation_error("Collection '" + name + "' label column must be TEXT type");
     }
     if (!label_col->not_null) {
         validation_error("Collection '" + name + "' label column must have NOT NULL constraint");

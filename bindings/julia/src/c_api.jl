@@ -26,30 +26,30 @@ end
     PSR_VALUE_ARRAY = 4
 end
 
-struct var"##Ctag#232"
+struct var"##Ctag#277"
     data::NTuple{16, UInt8}
 end
 
-function Base.getproperty(x::Ptr{var"##Ctag#232"}, f::Symbol)
+function Base.getproperty(x::Ptr{var"##Ctag#277"}, f::Symbol)
     f === :int_value && return Ptr{Int64}(x + 0)
     f === :double_value && return Ptr{Cdouble}(x + 0)
     f === :string_value && return Ptr{Ptr{Cchar}}(x + 0)
-    f === :array_value && return Ptr{var"##Ctag#233"}(x + 0)
+    f === :array_value && return Ptr{var"##Ctag#278"}(x + 0)
     return getfield(x, f)
 end
 
-function Base.getproperty(x::var"##Ctag#232", f::Symbol)
-    r = Ref{var"##Ctag#232"}(x)
-    ptr = Base.unsafe_convert(Ptr{var"##Ctag#232"}, r)
+function Base.getproperty(x::var"##Ctag#277", f::Symbol)
+    r = Ref{var"##Ctag#277"}(x)
+    ptr = Base.unsafe_convert(Ptr{var"##Ctag#277"}, r)
     fptr = getproperty(ptr, f)
     GC.@preserve r unsafe_load(fptr)
 end
 
-function Base.setproperty!(x::Ptr{var"##Ctag#232"}, f::Symbol, v)
+function Base.setproperty!(x::Ptr{var"##Ctag#277"}, f::Symbol, v)
     unsafe_store!(getproperty(x, f), v)
 end
 
-function Base.propertynames(x::var"##Ctag#232", private::Bool = false)
+function Base.propertynames(x::var"##Ctag#277", private::Bool = false)
     (:int_value, :double_value, :string_value, :array_value, if private
             fieldnames(typeof(x))
         else
@@ -63,7 +63,7 @@ end
 
 function Base.getproperty(x::Ptr{psr_value}, f::Symbol)
     f === :type && return Ptr{psr_value_type_t}(x + 0)
-    f === :data && return Ptr{var"##Ctag#232"}(x + 8)
+    f === :data && return Ptr{var"##Ctag#277"}(x + 8)
     return getfield(x, f)
 end
 
@@ -275,24 +275,24 @@ function psr_string_free(str)
     @ccall libpsr_database_c.psr_string_free(str::Ptr{Cchar})::Cvoid
 end
 
-struct var"##Ctag#233"
+struct var"##Ctag#278"
     elements::Ptr{psr_value_t}
     count::Csize_t
 end
-function Base.getproperty(x::Ptr{var"##Ctag#233"}, f::Symbol)
+function Base.getproperty(x::Ptr{var"##Ctag#278"}, f::Symbol)
     f === :elements && return Ptr{Ptr{psr_value_t}}(x + 0)
     f === :count && return Ptr{Csize_t}(x + 8)
     return getfield(x, f)
 end
 
-function Base.getproperty(x::var"##Ctag#233", f::Symbol)
-    r = Ref{var"##Ctag#233"}(x)
-    ptr = Base.unsafe_convert(Ptr{var"##Ctag#233"}, r)
+function Base.getproperty(x::var"##Ctag#278", f::Symbol)
+    r = Ref{var"##Ctag#278"}(x)
+    ptr = Base.unsafe_convert(Ptr{var"##Ctag#278"}, r)
     fptr = getproperty(ptr, f)
     GC.@preserve r unsafe_load(fptr)
 end
 
-function Base.setproperty!(x::Ptr{var"##Ctag#233"}, f::Symbol, v)
+function Base.setproperty!(x::Ptr{var"##Ctag#278"}, f::Symbol, v)
     unsafe_store!(getproperty(x, f), v)
 end
 
