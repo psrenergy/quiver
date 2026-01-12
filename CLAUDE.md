@@ -21,6 +21,14 @@ SQLite wrapper library with C++ core and language bindings.
 cmake --build build --config Debug
 ```
 
+## Build and Test All
+
+```bash
+build-all.bat            # Build everything and run all tests (Debug)
+build-all.bat --release  # Build in Release mode
+test-all.bat             # Run all tests (assumes already built)
+```
+
 ## Tests
 
 C++ tests:
