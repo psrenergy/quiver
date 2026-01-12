@@ -274,36 +274,36 @@ class PsrDatabaseBindings {
           int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>,
               ffi.Pointer<psr_element_t>)>();
 
-  psr_read_result_t psr_database_read_scalar_parameters(
+  psr_read_result_t psr_database_read_scalar(
     ffi.Pointer<psr_database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
   ) {
-    return _psr_database_read_scalar_parameters(
+    return _psr_database_read_scalar(
       db,
       collection,
       attribute,
     );
   }
 
-  late final _psr_database_read_scalar_parametersPtr = _lookup<
+  late final _psr_database_read_scalarPtr = _lookup<
       ffi.NativeFunction<
           psr_read_result_t Function(
               ffi.Pointer<psr_database_t>,
               ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>)>>('psr_database_read_scalar_parameters');
-  late final _psr_database_read_scalar_parameters =
-      _psr_database_read_scalar_parametersPtr.asFunction<
+              ffi.Pointer<ffi.Char>)>>('psr_database_read_scalar');
+  late final _psr_database_read_scalar =
+      _psr_database_read_scalarPtr.asFunction<
           psr_read_result_t Function(ffi.Pointer<psr_database_t>,
               ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)>();
 
-  psr_read_result_t psr_database_read_scalar_parameter(
+  psr_read_result_t psr_database_read_scalar_by_label(
     ffi.Pointer<psr_database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     ffi.Pointer<ffi.Char> label,
   ) {
-    return _psr_database_read_scalar_parameter(
+    return _psr_database_read_scalar_by_label(
       db,
       collection,
       attribute,
@@ -311,51 +311,51 @@ class PsrDatabaseBindings {
     );
   }
 
-  late final _psr_database_read_scalar_parameterPtr = _lookup<
+  late final _psr_database_read_scalar_by_labelPtr = _lookup<
       ffi.NativeFunction<
           psr_read_result_t Function(
               ffi.Pointer<psr_database_t>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>)>>('psr_database_read_scalar_parameter');
-  late final _psr_database_read_scalar_parameter =
-      _psr_database_read_scalar_parameterPtr.asFunction<
+              ffi.Pointer<ffi.Char>)>>('psr_database_read_scalar_by_label');
+  late final _psr_database_read_scalar_by_label =
+      _psr_database_read_scalar_by_labelPtr.asFunction<
           psr_read_result_t Function(
               ffi.Pointer<psr_database_t>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Char>)>();
 
-  psr_read_result_t psr_database_read_vector_parameters(
+  psr_read_result_t psr_database_read_vector(
     ffi.Pointer<psr_database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
   ) {
-    return _psr_database_read_vector_parameters(
+    return _psr_database_read_vector(
       db,
       collection,
       attribute,
     );
   }
 
-  late final _psr_database_read_vector_parametersPtr = _lookup<
+  late final _psr_database_read_vectorPtr = _lookup<
       ffi.NativeFunction<
           psr_read_result_t Function(
               ffi.Pointer<psr_database_t>,
               ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>)>>('psr_database_read_vector_parameters');
-  late final _psr_database_read_vector_parameters =
-      _psr_database_read_vector_parametersPtr.asFunction<
+              ffi.Pointer<ffi.Char>)>>('psr_database_read_vector');
+  late final _psr_database_read_vector =
+      _psr_database_read_vectorPtr.asFunction<
           psr_read_result_t Function(ffi.Pointer<psr_database_t>,
               ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)>();
 
-  psr_read_result_t psr_database_read_vector_parameter(
+  psr_read_result_t psr_database_read_vector_by_label(
     ffi.Pointer<psr_database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     ffi.Pointer<ffi.Char> label,
   ) {
-    return _psr_database_read_vector_parameter(
+    return _psr_database_read_vector_by_label(
       db,
       collection,
       attribute,
@@ -363,51 +363,50 @@ class PsrDatabaseBindings {
     );
   }
 
-  late final _psr_database_read_vector_parameterPtr = _lookup<
+  late final _psr_database_read_vector_by_labelPtr = _lookup<
       ffi.NativeFunction<
           psr_read_result_t Function(
               ffi.Pointer<psr_database_t>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>)>>('psr_database_read_vector_parameter');
-  late final _psr_database_read_vector_parameter =
-      _psr_database_read_vector_parameterPtr.asFunction<
+              ffi.Pointer<ffi.Char>)>>('psr_database_read_vector_by_label');
+  late final _psr_database_read_vector_by_label =
+      _psr_database_read_vector_by_labelPtr.asFunction<
           psr_read_result_t Function(
               ffi.Pointer<psr_database_t>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Char>)>();
 
-  psr_read_result_t psr_database_read_set_parameters(
+  psr_read_result_t psr_database_read_set(
     ffi.Pointer<psr_database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
   ) {
-    return _psr_database_read_set_parameters(
+    return _psr_database_read_set(
       db,
       collection,
       attribute,
     );
   }
 
-  late final _psr_database_read_set_parametersPtr = _lookup<
+  late final _psr_database_read_setPtr = _lookup<
       ffi.NativeFunction<
           psr_read_result_t Function(
               ffi.Pointer<psr_database_t>,
               ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>)>>('psr_database_read_set_parameters');
-  late final _psr_database_read_set_parameters =
-      _psr_database_read_set_parametersPtr.asFunction<
-          psr_read_result_t Function(ffi.Pointer<psr_database_t>,
-              ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)>();
+              ffi.Pointer<ffi.Char>)>>('psr_database_read_set');
+  late final _psr_database_read_set = _psr_database_read_setPtr.asFunction<
+      psr_read_result_t Function(ffi.Pointer<psr_database_t>,
+          ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)>();
 
-  psr_read_result_t psr_database_read_set_parameter(
+  psr_read_result_t psr_database_read_set_by_label(
     ffi.Pointer<psr_database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     ffi.Pointer<ffi.Char> label,
   ) {
-    return _psr_database_read_set_parameter(
+    return _psr_database_read_set_by_label(
       db,
       collection,
       attribute,
@@ -415,15 +414,15 @@ class PsrDatabaseBindings {
     );
   }
 
-  late final _psr_database_read_set_parameterPtr = _lookup<
+  late final _psr_database_read_set_by_labelPtr = _lookup<
       ffi.NativeFunction<
           psr_read_result_t Function(
               ffi.Pointer<psr_database_t>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>)>>('psr_database_read_set_parameter');
-  late final _psr_database_read_set_parameter =
-      _psr_database_read_set_parameterPtr.asFunction<
+              ffi.Pointer<ffi.Char>)>>('psr_database_read_set_by_label');
+  late final _psr_database_read_set_by_label =
+      _psr_database_read_set_by_labelPtr.asFunction<
           psr_read_result_t Function(
               ffi.Pointer<psr_database_t>,
               ffi.Pointer<ffi.Char>,

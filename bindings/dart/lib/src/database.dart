@@ -170,16 +170,16 @@ class Database {
   // ============================================================
 
   /// Reads all values of a scalar attribute from a collection.
-  List<Object?> readScalarParameters(String collection, String attribute, {Object? defaultValue}) {
+  List<Object?> readScalar(String collection, String attribute, {Object? defaultValue}) {
     _ensureNotClosed();
     final arena = Arena();
     try {
-      final result = bindings.psr_database_read_scalar_parameters(
+      final result = bindings.psr_database_read_scalar(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
       );
-      _checkResult(result, "Failed to read scalar parameters '$attribute' from '$collection'");
+      _checkResult(result, "Failed to read scalar '$attribute' from '$collection'");
       return _extractResults(result, defaultValue);
     } finally {
       arena.releaseAll();
@@ -187,17 +187,17 @@ class Database {
   }
 
   /// Reads a scalar attribute value for a specific element by label.
-  Object? readScalarParameter(String collection, String attribute, String label, {Object? defaultValue}) {
+  Object? readScalarByLabel(String collection, String attribute, String label, {Object? defaultValue}) {
     _ensureNotClosed();
     final arena = Arena();
     try {
-      final result = bindings.psr_database_read_scalar_parameter(
+      final result = bindings.psr_database_read_scalar_by_label(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
         label.toNativeUtf8(allocator: arena).cast(),
       );
-      _checkResult(result, "Failed to read scalar parameter '$attribute' for '$label' from '$collection'");
+      _checkResult(result, "Failed to read scalar '$attribute' for '$label' from '$collection'");
       return _extractSingleResult(result, defaultValue);
     } finally {
       arena.releaseAll();
@@ -205,16 +205,16 @@ class Database {
   }
 
   /// Reads all values of a vector attribute from a collection.
-  List<List<Object?>> readVectorParameters(String collection, String attribute, {Object? defaultValue}) {
+  List<List<Object?>> readVector(String collection, String attribute, {Object? defaultValue}) {
     _ensureNotClosed();
     final arena = Arena();
     try {
-      final result = bindings.psr_database_read_vector_parameters(
+      final result = bindings.psr_database_read_vector(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
       );
-      _checkResult(result, "Failed to read vector parameters '$attribute' from '$collection'");
+      _checkResult(result, "Failed to read vector '$attribute' from '$collection'");
       return _extractResults(result, defaultValue).map((v) => (v as List<Object?>?) ?? []).toList();
     } finally {
       arena.releaseAll();
@@ -222,17 +222,17 @@ class Database {
   }
 
   /// Reads a vector attribute value for a specific element by label.
-  List<Object?> readVectorParameter(String collection, String attribute, String label, {Object? defaultValue}) {
+  List<Object?> readVectorByLabel(String collection, String attribute, String label, {Object? defaultValue}) {
     _ensureNotClosed();
     final arena = Arena();
     try {
-      final result = bindings.psr_database_read_vector_parameter(
+      final result = bindings.psr_database_read_vector_by_label(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
         label.toNativeUtf8(allocator: arena).cast(),
       );
-      _checkResult(result, "Failed to read vector parameter '$attribute' for '$label' from '$collection'");
+      _checkResult(result, "Failed to read vector '$attribute' for '$label' from '$collection'");
       final value = _extractSingleResult(result, defaultValue);
       return (value as List<Object?>?) ?? [];
     } finally {
@@ -241,16 +241,16 @@ class Database {
   }
 
   /// Reads all values of a set attribute from a collection.
-  List<List<Object?>> readSetParameters(String collection, String attribute, {Object? defaultValue}) {
+  List<List<Object?>> readSet(String collection, String attribute, {Object? defaultValue}) {
     _ensureNotClosed();
     final arena = Arena();
     try {
-      final result = bindings.psr_database_read_set_parameters(
+      final result = bindings.psr_database_read_set(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
       );
-      _checkResult(result, "Failed to read set parameters '$attribute' from '$collection'");
+      _checkResult(result, "Failed to read set '$attribute' from '$collection'");
       return _extractResults(result, defaultValue).map((v) => (v as List<Object?>?) ?? []).toList();
     } finally {
       arena.releaseAll();
@@ -258,17 +258,17 @@ class Database {
   }
 
   /// Reads a set attribute value for a specific element by label.
-  List<Object?> readSetParameter(String collection, String attribute, String label, {Object? defaultValue}) {
+  List<Object?> readSetByLabel(String collection, String attribute, String label, {Object? defaultValue}) {
     _ensureNotClosed();
     final arena = Arena();
     try {
-      final result = bindings.psr_database_read_set_parameter(
+      final result = bindings.psr_database_read_set_by_label(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
         label.toNativeUtf8(allocator: arena).cast(),
       );
-      _checkResult(result, "Failed to read set parameter '$attribute' for '$label' from '$collection'");
+      _checkResult(result, "Failed to read set '$attribute' for '$label' from '$collection'");
       final value = _extractSingleResult(result, defaultValue);
       return (value as List<Object?>?) ?? [];
     } finally {

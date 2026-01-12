@@ -650,10 +650,10 @@ std::vector<Value> Database::read_scalar(const std::string& collection, const st
     return values;
 }
 
-Value Database::read_scalar_parameter(const std::string& collection,
-                                      const std::string& attribute,
-                                      const std::string& label) const {
-    impl_->logger->debug("Reading scalar parameter: {}.{} for label '{}'", collection, attribute, label);
+Value Database::read_scalar_by_label(const std::string& collection,
+                                     const std::string& attribute,
+                                     const std::string& label) const {
+    impl_->logger->debug("Reading scalar by label: {}.{} for label '{}'", collection, attribute, label);
 
     if (!impl_->schema) {
         throw std::runtime_error("Cannot read parameter: no schema loaded");
@@ -681,9 +681,9 @@ Value Database::read_scalar_parameter(const std::string& collection,
     return result.at(0).at(0);
 }
 
-std::vector<std::vector<Value>> Database::read_vector_parameters(const std::string& collection,
-                                                                 const std::string& attribute) const {
-    impl_->logger->debug("Reading vector parameters: {}.{}", collection, attribute);
+std::vector<std::vector<Value>> Database::read_vector(const std::string& collection,
+                                                      const std::string& attribute) const {
+    impl_->logger->debug("Reading vector: {}.{}", collection, attribute);
 
     if (!impl_->schema) {
         throw std::runtime_error("Cannot read parameters: no schema loaded");
@@ -739,10 +739,10 @@ std::vector<std::vector<Value>> Database::read_vector_parameters(const std::stri
     return all_values;
 }
 
-std::vector<Value> Database::read_vector_parameter(const std::string& collection,
-                                                   const std::string& attribute,
-                                                   const std::string& label) const {
-    impl_->logger->debug("Reading vector parameter: {}.{} for label '{}'", collection, attribute, label);
+std::vector<Value> Database::read_vector_by_label(const std::string& collection,
+                                                  const std::string& attribute,
+                                                  const std::string& label) const {
+    impl_->logger->debug("Reading vector by label: {}.{} for label '{}'", collection, attribute, label);
 
     if (!impl_->schema) {
         throw std::runtime_error("Cannot read parameter: no schema loaded");
@@ -796,9 +796,9 @@ std::vector<Value> Database::read_vector_parameter(const std::string& collection
     return values;
 }
 
-std::vector<std::vector<Value>> Database::read_set_parameters(const std::string& collection,
-                                                              const std::string& attribute) const {
-    impl_->logger->debug("Reading set parameters: {}.{}", collection, attribute);
+std::vector<std::vector<Value>> Database::read_set(const std::string& collection,
+                                                   const std::string& attribute) const {
+    impl_->logger->debug("Reading set: {}.{}", collection, attribute);
 
     if (!impl_->schema) {
         throw std::runtime_error("Cannot read parameters: no schema loaded");
@@ -854,10 +854,10 @@ std::vector<std::vector<Value>> Database::read_set_parameters(const std::string&
     return all_values;
 }
 
-std::vector<Value> Database::read_set_parameter(const std::string& collection,
-                                                const std::string& attribute,
-                                                const std::string& label) const {
-    impl_->logger->debug("Reading set parameter: {}.{} for label '{}'", collection, attribute, label);
+std::vector<Value> Database::read_set_by_label(const std::string& collection,
+                                               const std::string& attribute,
+                                               const std::string& label) const {
+    impl_->logger->debug("Reading set by label: {}.{} for label '{}'", collection, attribute, label);
 
     if (!impl_->schema) {
         throw std::runtime_error("Cannot read parameter: no schema loaded");
