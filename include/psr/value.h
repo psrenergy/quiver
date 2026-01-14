@@ -12,10 +12,7 @@ using Value = std::variant<std::nullptr_t,
                            int64_t,
                            double,
                            std::string,
-                           std::vector<uint8_t>,
-                           std::vector<int64_t>,
-                           std::vector<double>,
-                           std::vector<std::string>>;
+                           std::vector<uint8_t>>;
 
 }  // namespace psr
 
