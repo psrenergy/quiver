@@ -28,9 +28,6 @@ void TypeValidator::validate_value(const std::string& context, ColumnType expect
             if constexpr (std::is_same_v<T, std::nullptr_t>) {
                 // NULL allowed for any type
                 return;
-            } else if constexpr (std::is_same_v<T, std::vector<uint8_t>>) {
-                // BLOB allowed for any type
-                return;
             } else if constexpr (std::is_same_v<T, int64_t>) {
                 if (expected_type != ColumnType::Integer) {
                     throw std::runtime_error("Type mismatch for " + context + ": expected " +

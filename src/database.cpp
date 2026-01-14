@@ -168,8 +168,6 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
                     sqlite3_bind_double(stmt, idx, arg);
                 } else if constexpr (std::is_same_v<T, std::string>) {
                     sqlite3_bind_text(stmt, idx, arg.c_str(), static_cast<int>(arg.size()), SQLITE_TRANSIENT);
-                } else if constexpr (std::is_same_v<T, std::vector<uint8_t>>) {
-                    sqlite3_bind_blob(stmt, idx, arg.data(), static_cast<int>(arg.size()), SQLITE_TRANSIENT);
                 }
             },
             param);
@@ -204,12 +202,7 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
                 values.emplace_back(std::string(text ? text : ""));
                 break;
             }
-            case SQLITE_BLOB: {
-                const uint8_t* data = reinterpret_cast<const uint8_t*>(sqlite3_column_blob(stmt, i));
-                int size = sqlite3_column_bytes(stmt, i);
-                values.emplace_back(std::vector<uint8_t>(data, data + size));
-                break;
-            }
+            case SQLITE_BLOB:
             case SQLITE_NULL:
             default:
                 values.emplace_back(nullptr);

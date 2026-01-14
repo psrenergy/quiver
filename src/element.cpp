@@ -18,8 +18,6 @@ std::string value_to_string(const Value& value) {
                 return std::to_string(arg);
             } else if constexpr (std::is_same_v<T, std::string>) {
                 return "\"" + arg + "\"";
-            } else if constexpr (std::is_same_v<T, std::vector<uint8_t>>) {
-                return "<blob:" + std::to_string(arg.size()) + " bytes>";
             } else {
                 return "<unknown>";
             }
