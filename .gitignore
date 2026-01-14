@@ -63,3 +63,4 @@ PSRDatabase.jl/
 *.log
 *.sqlite
 nul
+tmpclaude*

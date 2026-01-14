@@ -25,7 +25,6 @@ public:
     std::optional<int64_t> get_int(size_t index) const;
     std::optional<double> get_double(size_t index) const;
     std::optional<std::string> get_string(size_t index) const;
-    std::optional<std::vector<uint8_t>> get_blob(size_t index) const;
 
     // Iterator support
     auto begin() const { return values_.begin(); }

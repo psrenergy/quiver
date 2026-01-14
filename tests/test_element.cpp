@@ -44,7 +44,7 @@ TEST(Element, SetNull) {
 
 TEST(Element, SetArrayInt) {
     psr::Element element;
-    element.set_array("counts", std::vector<int64_t>{10, 20, 30});
+    element.set("counts", std::vector<int64_t>{10, 20, 30});
 
     EXPECT_TRUE(element.has_arrays());
     const auto& arrays = element.arrays();
@@ -57,7 +57,7 @@ TEST(Element, SetArrayInt) {
 
 TEST(Element, SetArrayDouble) {
     psr::Element element;
-    element.set_array("values", std::vector<double>{1.5, 2.5, 3.5});
+    element.set("values", std::vector<double>{1.5, 2.5, 3.5});
 
     EXPECT_TRUE(element.has_arrays());
     const auto& arrays = element.arrays();
@@ -69,7 +69,7 @@ TEST(Element, SetArrayDouble) {
 
 TEST(Element, SetArrayString) {
     psr::Element element;
-    element.set_array("tags", std::vector<std::string>{"important", "urgent"});
+    element.set("tags", std::vector<std::string>{"important", "urgent"});
 
     EXPECT_TRUE(element.has_arrays());
     const auto& arrays = element.arrays();
@@ -85,7 +85,7 @@ TEST(Element, FluentChaining) {
     element.set("label", std::string{"Plant 1"})
         .set("capacity", 50.0)
         .set("id", int64_t{1})
-        .set_array("costs", std::vector<double>{1.0, 2.0, 3.0});
+        .set("costs", std::vector<double>{1.0, 2.0, 3.0});
 
     EXPECT_EQ(element.scalars().size(), 3);
     EXPECT_EQ(element.arrays().size(), 1);
@@ -93,7 +93,7 @@ TEST(Element, FluentChaining) {
 
 TEST(Element, Clear) {
     psr::Element element;
-    element.set("label", std::string{"test"}).set_array("data", std::vector<double>{1.0});
+    element.set("label", std::string{"test"}).set("data", std::vector<double>{1.0});
 
     EXPECT_TRUE(element.has_scalars());
     EXPECT_TRUE(element.has_arrays());
@@ -117,7 +117,7 @@ TEST(Element, ToString) {
     psr::Element element;
     element.set("label", std::string{"Plant 1"})
         .set("capacity", 50.0)
-        .set_array("costs", std::vector<double>{1.5, 2.5});
+        .set("costs", std::vector<double>{1.5, 2.5});
 
     std::string str = element.to_string();
 

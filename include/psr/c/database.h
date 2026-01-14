@@ -52,46 +52,6 @@ PSR_C_API psr_error_t psr_database_rollback(psr_database_t* db);
 typedef struct psr_element psr_element_t;
 PSR_C_API int64_t psr_database_create_element(psr_database_t* db, const char* collection, psr_element_t* element);
 
-// Parameter reading - generic tagged union API
-// Returns psr_read_result_t with type-tagged values
-
-// Scalar parameters - all elements
-PSR_C_API psr_read_result_t psr_database_read_scalar_parameters(psr_database_t* db,
-                                                                const char* collection,
-                                                                const char* attribute);
-
-// Scalar parameter - single element by label
-PSR_C_API psr_read_result_t psr_database_read_scalar_parameter(psr_database_t* db,
-                                                               const char* collection,
-                                                               const char* attribute,
-                                                               const char* label);
-
-// Vector parameters - all elements (each value is PSR_VALUE_ARRAY)
-PSR_C_API psr_read_result_t psr_database_read_vector_parameters(psr_database_t* db,
-                                                                const char* collection,
-                                                                const char* attribute);
-
-// Vector parameter - single element by label (returns flat array)
-PSR_C_API psr_read_result_t psr_database_read_vector_parameter(psr_database_t* db,
-                                                               const char* collection,
-                                                               const char* attribute,
-                                                               const char* label);
-
-// Set parameters - all elements (each value is PSR_VALUE_ARRAY)
-PSR_C_API psr_read_result_t psr_database_read_set_parameters(psr_database_t* db,
-                                                             const char* collection,
-                                                             const char* attribute);
-
-// Set parameter - single element by label (returns flat array)
-PSR_C_API psr_read_result_t psr_database_read_set_parameter(psr_database_t* db,
-                                                            const char* collection,
-                                                            const char* attribute,
-                                                            const char* label);
-
-// Memory management for tagged union values
-PSR_C_API void psr_value_free(psr_value_t* value);
-PSR_C_API void psr_read_result_free(psr_read_result_t* result);
-
 #ifdef __cplusplus
 }
 #endif

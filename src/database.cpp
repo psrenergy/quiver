@@ -168,8 +168,6 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
                     sqlite3_bind_double(stmt, idx, arg);
                 } else if constexpr (std::is_same_v<T, std::string>) {
                     sqlite3_bind_text(stmt, idx, arg.c_str(), static_cast<int>(arg.size()), SQLITE_TRANSIENT);
-                } else if constexpr (std::is_same_v<T, std::vector<uint8_t>>) {
-                    sqlite3_bind_blob(stmt, idx, arg.data(), static_cast<int>(arg.size()), SQLITE_TRANSIENT);
                 }
             },
             param);
@@ -204,12 +202,7 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
                 values.emplace_back(std::string(text ? text : ""));
                 break;
             }
-            case SQLITE_BLOB: {
-                const uint8_t* data = reinterpret_cast<const uint8_t*>(sqlite3_column_blob(stmt, i));
-                int size = sqlite3_column_bytes(stmt, i);
-                values.emplace_back(std::vector<uint8_t>(data, data + size));
-                break;
-            }
+            case SQLITE_BLOB:
             case SQLITE_NULL:
             default:
                 values.emplace_back(nullptr);
@@ -595,13 +588,14 @@ int64_t Database::create_element(const std::string& collection, const Element& e
                 for (const auto& fk : table_def->foreign_keys) {
                     if (fk.from_column == col_name && std::holds_alternative<std::string>(val)) {
                         const std::string& label = std::get<std::string>(val);
-                        // Look up the ID by label
-                        auto id_result = read_scalar_parameter(fk.to_table, "id", label);
-                        if (!std::holds_alternative<int64_t>(id_result)) {
+                        // Look up the ID by label using direct SQL query
+                        auto lookup_sql = "SELECT id FROM " + fk.to_table + " WHERE label = ?";
+                        auto lookup_result = execute(lookup_sql, {label});
+                        if (lookup_result.empty() || !lookup_result[0].get_int(0)) {
                             throw std::runtime_error("Failed to resolve label '" + label + "' to ID in table '" +
                                                      fk.to_table + "'");
                         }
-                        val = std::get<int64_t>(id_result);
+                        val = lookup_result[0].get_int(0).value();
                         break;
                     }
                 }
@@ -616,299 +610,6 @@ int64_t Database::create_element(const std::string& collection, const Element& e
 
     impl_->logger->info("Created element {} in {}", element_id, collection);
     return element_id;
-}
-
-std::vector<Value> Database::read_scalar_parameters(const std::string& collection, const std::string& attribute) const {
-    impl_->logger->debug("Reading scalar parameters: {}.{}", collection, attribute);
-
-    if (!impl_->schema) {
-        throw std::runtime_error("Cannot read parameters: no schema loaded");
-    }
-
-    if (!impl_->schema->is_collection(collection)) {
-        throw std::runtime_error("'" + collection + "' is not a valid collection");
-    }
-
-    const auto* table_def = impl_->schema->get_table(collection);
-    if (!table_def) {
-        throw std::runtime_error("Collection not found in schema: " + collection);
-    }
-    if (!table_def->has_column(attribute)) {
-        throw std::runtime_error("Attribute '" + attribute + "' not found in collection '" + collection + "'");
-    }
-
-    auto sql = "SELECT " + attribute + " FROM " + collection + " ORDER BY id";
-    auto result = const_cast<Database*>(this)->execute(sql);
-
-    std::vector<Value> values;
-    values.reserve(result.row_count());
-    for (const auto& row : result) {
-        values.push_back(row.at(0));
-    }
-
-    impl_->logger->debug("Read {} values for {}.{}", values.size(), collection, attribute);
-    return values;
-}
-
-Value Database::read_scalar_parameter(const std::string& collection,
-                                      const std::string& attribute,
-                                      const std::string& label) const {
-    impl_->logger->debug("Reading scalar parameter: {}.{} for label '{}'", collection, attribute, label);
-
-    if (!impl_->schema) {
-        throw std::runtime_error("Cannot read parameter: no schema loaded");
-    }
-
-    if (!impl_->schema->is_collection(collection)) {
-        throw std::runtime_error("'" + collection + "' is not a valid collection");
-    }
-
-    const auto* table_def = impl_->schema->get_table(collection);
-    if (!table_def) {
-        throw std::runtime_error("Collection not found in schema: " + collection);
-    }
-    if (!table_def->has_column(attribute)) {
-        throw std::runtime_error("Attribute '" + attribute + "' not found in collection '" + collection + "'");
-    }
-
-    auto sql = "SELECT " + attribute + " FROM " + collection + " WHERE label = ?";
-    auto result = const_cast<Database*>(this)->execute(sql, {label});
-
-    if (result.empty()) {
-        throw std::runtime_error("Element with label '" + label + "' not found in collection '" + collection + "'");
-    }
-
-    return result.at(0).at(0);
-}
-
-std::vector<std::vector<Value>> Database::read_vector_parameters(const std::string& collection,
-                                                                 const std::string& attribute) const {
-    impl_->logger->debug("Reading vector parameters: {}.{}", collection, attribute);
-
-    if (!impl_->schema) {
-        throw std::runtime_error("Cannot read parameters: no schema loaded");
-    }
-
-    if (!impl_->schema->is_collection(collection)) {
-        throw std::runtime_error("'" + collection + "' is not a valid collection");
-    }
-
-    // Find the vector table containing this attribute
-    std::string vector_table;
-    for (const auto& table_name : impl_->schema->table_names()) {
-        if (!impl_->schema->is_vector_table(table_name))
-            continue;
-        if (impl_->schema->get_parent_collection(table_name) != collection)
-            continue;
-
-        const auto* table_def = impl_->schema->get_table(table_name);
-        if (table_def && table_def->has_column(attribute)) {
-            vector_table = table_name;
-            break;
-        }
-    }
-
-    if (vector_table.empty()) {
-        throw std::runtime_error("Attribute '" + attribute + "' is not a vector attribute of collection '" +
-                                 collection + "'");
-    }
-
-    // Get all element IDs from the main collection table
-    auto id_sql = "SELECT id FROM " + collection + " ORDER BY id";
-    auto id_result = const_cast<Database*>(this)->execute(id_sql);
-
-    std::vector<std::vector<Value>> all_values;
-    all_values.reserve(id_result.row_count());
-
-    for (const auto& id_row : id_result) {
-        auto element_id = std::get<int64_t>(id_row.at(0));
-
-        // Get vector values for this element
-        auto vec_sql = "SELECT " + attribute + " FROM " + vector_table + " WHERE id = ? ORDER BY vector_index";
-        auto vec_result = const_cast<Database*>(this)->execute(vec_sql, {element_id});
-
-        std::vector<Value> element_values;
-        element_values.reserve(vec_result.row_count());
-        for (const auto& row : vec_result) {
-            element_values.push_back(row.at(0));
-        }
-        all_values.push_back(std::move(element_values));
-    }
-
-    impl_->logger->debug("Read vector parameters for {} elements", all_values.size());
-    return all_values;
-}
-
-std::vector<Value> Database::read_vector_parameter(const std::string& collection,
-                                                   const std::string& attribute,
-                                                   const std::string& label) const {
-    impl_->logger->debug("Reading vector parameter: {}.{} for label '{}'", collection, attribute, label);
-
-    if (!impl_->schema) {
-        throw std::runtime_error("Cannot read parameter: no schema loaded");
-    }
-
-    if (!impl_->schema->is_collection(collection)) {
-        throw std::runtime_error("'" + collection + "' is not a valid collection");
-    }
-
-    // Find the vector table containing this attribute
-    std::string vector_table;
-    for (const auto& table_name : impl_->schema->table_names()) {
-        if (!impl_->schema->is_vector_table(table_name))
-            continue;
-        if (impl_->schema->get_parent_collection(table_name) != collection)
-            continue;
-
-        const auto* table_def = impl_->schema->get_table(table_name);
-        if (table_def && table_def->has_column(attribute)) {
-            vector_table = table_name;
-            break;
-        }
-    }
-
-    if (vector_table.empty()) {
-        throw std::runtime_error("Attribute '" + attribute + "' is not a vector attribute of collection '" +
-                                 collection + "'");
-    }
-
-    // Get element ID from label
-    auto id_sql = "SELECT id FROM " + collection + " WHERE label = ?";
-    auto id_result = const_cast<Database*>(this)->execute(id_sql, {label});
-
-    if (id_result.empty()) {
-        throw std::runtime_error("Element with label '" + label + "' not found in collection '" + collection + "'");
-    }
-
-    auto element_id = std::get<int64_t>(id_result.at(0).at(0));
-
-    // Get vector values for this element
-    auto vec_sql = "SELECT " + attribute + " FROM " + vector_table + " WHERE id = ? ORDER BY vector_index";
-    auto vec_result = const_cast<Database*>(this)->execute(vec_sql, {element_id});
-
-    std::vector<Value> values;
-    values.reserve(vec_result.row_count());
-    for (const auto& row : vec_result) {
-        values.push_back(row.at(0));
-    }
-
-    impl_->logger->debug("Read {} vector values for {}.{} label '{}'", values.size(), collection, attribute, label);
-    return values;
-}
-
-std::vector<std::vector<Value>> Database::read_set_parameters(const std::string& collection,
-                                                              const std::string& attribute) const {
-    impl_->logger->debug("Reading set parameters: {}.{}", collection, attribute);
-
-    if (!impl_->schema) {
-        throw std::runtime_error("Cannot read parameters: no schema loaded");
-    }
-
-    if (!impl_->schema->is_collection(collection)) {
-        throw std::runtime_error("'" + collection + "' is not a valid collection");
-    }
-
-    // Find the set table containing this attribute
-    std::string set_table;
-    for (const auto& table_name : impl_->schema->table_names()) {
-        if (!impl_->schema->is_set_table(table_name))
-            continue;
-        if (impl_->schema->get_parent_collection(table_name) != collection)
-            continue;
-
-        const auto* table_def = impl_->schema->get_table(table_name);
-        if (table_def && table_def->has_column(attribute)) {
-            set_table = table_name;
-            break;
-        }
-    }
-
-    if (set_table.empty()) {
-        throw std::runtime_error("Attribute '" + attribute + "' is not a set attribute of collection '" + collection +
-                                 "'");
-    }
-
-    // Get all element IDs from the main collection table
-    auto id_sql = "SELECT id FROM " + collection + " ORDER BY id";
-    auto id_result = const_cast<Database*>(this)->execute(id_sql);
-
-    std::vector<std::vector<Value>> all_values;
-    all_values.reserve(id_result.row_count());
-
-    for (const auto& id_row : id_result) {
-        auto element_id = std::get<int64_t>(id_row.at(0));
-
-        // Get set values for this element (no ordering - sets are unordered)
-        auto set_sql = "SELECT " + attribute + " FROM " + set_table + " WHERE id = ?";
-        auto set_result = const_cast<Database*>(this)->execute(set_sql, {element_id});
-
-        std::vector<Value> element_values;
-        element_values.reserve(set_result.row_count());
-        for (const auto& row : set_result) {
-            element_values.push_back(row.at(0));
-        }
-        all_values.push_back(std::move(element_values));
-    }
-
-    impl_->logger->debug("Read set parameters for {} elements", all_values.size());
-    return all_values;
-}
-
-std::vector<Value> Database::read_set_parameter(const std::string& collection,
-                                                const std::string& attribute,
-                                                const std::string& label) const {
-    impl_->logger->debug("Reading set parameter: {}.{} for label '{}'", collection, attribute, label);
-
-    if (!impl_->schema) {
-        throw std::runtime_error("Cannot read parameter: no schema loaded");
-    }
-
-    if (!impl_->schema->is_collection(collection)) {
-        throw std::runtime_error("'" + collection + "' is not a valid collection");
-    }
-
-    // Find the set table containing this attribute
-    std::string set_table;
-    for (const auto& table_name : impl_->schema->table_names()) {
-        if (!impl_->schema->is_set_table(table_name))
-            continue;
-        if (impl_->schema->get_parent_collection(table_name) != collection)
-            continue;
-
-        const auto* table_def = impl_->schema->get_table(table_name);
-        if (table_def && table_def->has_column(attribute)) {
-            set_table = table_name;
-            break;
-        }
-    }
-
-    if (set_table.empty()) {
-        throw std::runtime_error("Attribute '" + attribute + "' is not a set attribute of collection '" + collection +
-                                 "'");
-    }
-
-    // Get element ID from label
-    auto id_sql = "SELECT id FROM " + collection + " WHERE label = ?";
-    auto id_result = const_cast<Database*>(this)->execute(id_sql, {label});
-
-    if (id_result.empty()) {
-        throw std::runtime_error("Element with label '" + label + "' not found in collection '" + collection + "'");
-    }
-
-    auto element_id = std::get<int64_t>(id_result.at(0).at(0));
-
-    // Get set values for this element (no ordering - sets are unordered)
-    auto set_sql = "SELECT " + attribute + " FROM " + set_table + " WHERE id = ?";
-    auto set_result = const_cast<Database*>(this)->execute(set_sql, {element_id});
-
-    std::vector<Value> values;
-    values.reserve(set_result.row_count());
-    for (const auto& row : set_result) {
-        values.push_back(row.at(0));
-    }
-
-    impl_->logger->debug("Read {} set values for {}.{} label '{}'", values.size(), collection, attribute, label);
-    return values;
 }
 
 }  // namespace psr

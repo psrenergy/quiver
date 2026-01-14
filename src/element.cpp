@@ -18,8 +18,6 @@ std::string value_to_string(const Value& value) {
                 return std::to_string(arg);
             } else if constexpr (std::is_same_v<T, std::string>) {
                 return "\"" + arg + "\"";
-            } else if constexpr (std::is_same_v<T, std::vector<uint8_t>>) {
-                return "<blob:" + std::to_string(arg.size()) + " bytes>";
             } else {
                 return "<unknown>";
             }
@@ -49,7 +47,7 @@ Element& Element::set_null(const std::string& name) {
     return *this;
 }
 
-Element& Element::set_array(const std::string& name, const std::vector<int64_t>& values) {
+Element& Element::set(const std::string& name, const std::vector<int64_t>& values) {
     std::vector<Value> arr;
     arr.reserve(values.size());
     for (const auto& v : values) {
@@ -59,7 +57,7 @@ Element& Element::set_array(const std::string& name, const std::vector<int64_t>&
     return *this;
 }
 
-Element& Element::set_array(const std::string& name, const std::vector<double>& values) {
+Element& Element::set(const std::string& name, const std::vector<double>& values) {
     std::vector<Value> arr;
     arr.reserve(values.size());
     for (const auto& v : values) {
@@ -69,7 +67,7 @@ Element& Element::set_array(const std::string& name, const std::vector<double>& 
     return *this;
 }
 
-Element& Element::set_array(const std::string& name, const std::vector<std::string>& values) {
+Element& Element::set(const std::string& name, const std::vector<std::string>& values) {
     std::vector<Value> arr;
     arr.reserve(values.size());
     for (const auto& v : values) {

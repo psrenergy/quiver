@@ -21,9 +21,9 @@ public:
     Element& set_null(const std::string& name);
 
     // Arrays - stored generically, Database::create_element routes to vector/set tables
-    Element& set_array(const std::string& name, const std::vector<int64_t>& values);
-    Element& set_array(const std::string& name, const std::vector<double>& values);
-    Element& set_array(const std::string& name, const std::vector<std::string>& values);
+    Element& set(const std::string& name, const std::vector<int64_t>& values);
+    Element& set(const std::string& name, const std::vector<double>& values);
+    Element& set(const std::string& name, const std::vector<std::string>& values);
 
     // Accessors
     const std::map<std::string, Value>& scalars() const;

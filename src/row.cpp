@@ -55,12 +55,4 @@ std::optional<std::string> Row::get_string(size_t index) const {
     return std::nullopt;
 }
 
-std::optional<std::vector<uint8_t>> Row::get_blob(size_t index) const {
-    if (index >= values_.size())
-        return std::nullopt;
-    if (const auto* val = std::get_if<std::vector<uint8_t>>(&values_[index])) {
-        return *val;
-    }
-    return std::nullopt;
-}
 }  // namespace psr

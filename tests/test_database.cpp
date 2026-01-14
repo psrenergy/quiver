@@ -95,7 +95,7 @@ TEST_F(DatabaseFixture, CreateElementWithVector) {
 
     // Create element with vector array (single attribute)
     psr::Element element;
-    element.set("label", std::string("Plant 1")).set_array("costs", std::vector<double>{1.5, 2.5, 3.5});
+    element.set("label", std::string("Plant 1")).set("costs", std::vector<double>{1.5, 2.5, 3.5});
 
     int64_t id = db.create_element("Plant", element);
     EXPECT_EQ(id, 1);
@@ -125,8 +125,8 @@ TEST_F(DatabaseFixture, CreateElementWithVectorGroup) {
     // Each attribute is passed as separate arrays with same length
     psr::Element element;
     element.set("label", std::string("Plant 1"))
-        .set_array("factor", std::vector<double>{1.5, 2.5, 3.5})
-        .set_array("quantity", std::vector<int64_t>{10, 20, 30});
+        .set("factor", std::vector<double>{1.5, 2.5, 3.5})
+        .set("quantity", std::vector<int64_t>{10, 20, 30});
 
     int64_t id = db.create_element("Plant", element);
     EXPECT_EQ(id, 1);
@@ -156,8 +156,8 @@ TEST_F(DatabaseFixture, CreateElementWithSetGroup) {
     // Create element with set group - each attribute passed as separate arrays
     psr::Element element;
     element.set("label", std::string("Plant 1"))
-        .set_array("tag_name", std::vector<std::string>{"important", "urgent", "review"})
-        .set_array("priority", std::vector<int64_t>{1, 2, 3});
+        .set("tag_name", std::vector<std::string>{"important", "urgent", "review"})
+        .set("priority", std::vector<int64_t>{1, 2, 3});
 
     int64_t id = db.create_element("Plant", element);
     EXPECT_EQ(id, 1);

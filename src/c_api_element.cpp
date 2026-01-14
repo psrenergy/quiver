@@ -69,7 +69,7 @@ PSR_C_API psr_error_t psr_element_set_array_int(psr_element_t* element,
         return PSR_ERROR_INVALID_ARGUMENT;
     }
     std::vector<int64_t> arr(values, values + count);
-    element->element.set_array(name, arr);
+    element->element.set(name, arr);
     return PSR_OK;
 }
 
@@ -81,7 +81,7 @@ PSR_C_API psr_error_t psr_element_set_array_double(psr_element_t* element,
         return PSR_ERROR_INVALID_ARGUMENT;
     }
     std::vector<double> arr(values, values + count);
-    element->element.set_array(name, arr);
+    element->element.set(name, arr);
     return PSR_OK;
 }
 
@@ -97,7 +97,7 @@ PSR_C_API psr_error_t psr_element_set_array_string(psr_element_t* element,
     for (int32_t i = 0; i < count; ++i) {
         arr.emplace_back(values[i] ? values[i] : "");
     }
-    element->element.set_array(name, arr);
+    element->element.set(name, arr);
     return PSR_OK;
 }
 
