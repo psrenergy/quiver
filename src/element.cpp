@@ -49,7 +49,7 @@ Element& Element::set_null(const std::string& name) {
     return *this;
 }
 
-Element& Element::set_array(const std::string& name, const std::vector<int64_t>& values) {
+Element& Element::set(const std::string& name, const std::vector<int64_t>& values) {
     std::vector<Value> arr;
     arr.reserve(values.size());
     for (const auto& v : values) {
@@ -59,7 +59,7 @@ Element& Element::set_array(const std::string& name, const std::vector<int64_t>&
     return *this;
 }
 
-Element& Element::set_array(const std::string& name, const std::vector<double>& values) {
+Element& Element::set(const std::string& name, const std::vector<double>& values) {
     std::vector<Value> arr;
     arr.reserve(values.size());
     for (const auto& v : values) {
@@ -69,7 +69,7 @@ Element& Element::set_array(const std::string& name, const std::vector<double>& 
     return *this;
 }
 
-Element& Element::set_array(const std::string& name, const std::vector<std::string>& values) {
+Element& Element::set(const std::string& name, const std::vector<std::string>& values) {
     std::vector<Value> arr;
     arr.reserve(values.size());
     for (const auto& v : values) {
