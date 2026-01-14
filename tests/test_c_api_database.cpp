@@ -174,7 +174,7 @@ TEST_F(DatabaseFixture, CreateElementWithScalars) {
     // Test: Use C API to create element with schema
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", schema_path("schema_basic.sql").c_str(), &options);
+    auto db = psr_database_from_schema(":memory:", schema_path("schemas/valid/basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto element = psr_element_create();
@@ -194,7 +194,7 @@ TEST_F(DatabaseFixture, CreateElementWithVector) {
     // Test: Use C API to create element with array using schema
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", schema_path("schema_collections.sql").c_str(), &options);
+    auto db = psr_database_from_schema(":memory:", schema_path("schemas/valid/collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     // Create Configuration first

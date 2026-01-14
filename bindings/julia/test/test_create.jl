@@ -6,7 +6,7 @@ using Test
 include("fixture.jl")
 
 @testset "Create Scalar Attributes" begin
-    path_schema = joinpath(tests_path(), "schema_basic.sql")
+    path_schema = joinpath(tests_path(), ""schemas", "valid", "basic.sql"")
     db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
 
     # Create Configuration with various scalar types
@@ -26,7 +26,7 @@ include("fixture.jl")
 end
 
 @testset "Create Collections with Vectors" begin
-    path_schema = joinpath(tests_path(), "schema_collections.sql")
+    path_schema = joinpath(tests_path(), ""schemas", "valid", "collections.sql"")
     db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
 
     PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
@@ -56,7 +56,7 @@ end
 end
 
 @testset "Create Collections with Sets" begin
-    path_schema = joinpath(tests_path(), "schema_collections.sql")
+    path_schema = joinpath(tests_path(), ""schemas", "valid", "collections.sql"")
     db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
 
     PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
@@ -102,7 +102,7 @@ end
 end
 
 @testset "Reject Invalid Element" begin
-    path_schema = joinpath(tests_path(), "schema_basic.sql")
+    path_schema = joinpath(tests_path(), ""schemas", "valid", "basic.sql"")
     db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
 
     # Missing required label

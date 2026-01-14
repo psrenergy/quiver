@@ -11,7 +11,7 @@ void main() {
     '..',
     'tests',
   );
-  final invalidPath = path.join(testsPath, 'invalid');
+  final invalidPath = path.join(testsPath, 'schemas', 'invalid');
 
   late String dbPath;
   late Directory tempDir;
@@ -35,7 +35,7 @@ void main() {
     test('loads basic schema', () {
       final db = Database.fromSchema(
         dbPath,
-        path.join(testsPath, 'schema_basic.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       db.close();
     });
@@ -43,7 +43,7 @@ void main() {
     test('loads collections schema', () {
       final db = Database.fromSchema(
         dbPath,
-        path.join(testsPath, 'schema_collections.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       db.close();
     });
@@ -51,7 +51,7 @@ void main() {
     test('loads relations schema', () {
       final db = Database.fromSchema(
         dbPath,
-        path.join(testsPath, 'schema_relations.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
       );
       db.close();
     });

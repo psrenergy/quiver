@@ -15,7 +15,7 @@ void main() {
     test('creates Configuration with all scalar types', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'schema_basic.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
         final id = db.createElement('Configuration', {
@@ -35,7 +35,7 @@ void main() {
     test('creates Configuration with default values', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'schema_basic.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
         final id = db.createElement('Configuration', {'label': 'Test Config'});
@@ -48,7 +48,7 @@ void main() {
     test('rejects wrong type for attribute', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'schema_basic.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
         expect(
@@ -66,7 +66,7 @@ void main() {
     test('rejects unknown attribute', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'schema_basic.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
         expect(
@@ -84,7 +84,7 @@ void main() {
     test('rejects missing label', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'schema_basic.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
         expect(
@@ -101,7 +101,7 @@ void main() {
     test('creates element with vector attribute', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'schema_collections.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
         db.createElement('Configuration', {'label': 'Test Config'});
@@ -120,7 +120,7 @@ void main() {
     test('creates element with only scalars', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'schema_collections.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
         db.createElement('Configuration', {'label': 'Test Config'});
@@ -137,7 +137,7 @@ void main() {
     test('rejects empty vector', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'schema_collections.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
         db.createElement('Configuration', {'label': 'Test Config'});
@@ -158,7 +158,7 @@ void main() {
     test('creates element with set attribute', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'schema_collections.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
         db.createElement('Configuration', {'label': 'Test Config'});
@@ -177,7 +177,7 @@ void main() {
     test('creates child with FK to parent', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'schema_relations.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
       );
       try {
         db.createElement('Configuration', {'label': 'Test Config'});
@@ -195,7 +195,7 @@ void main() {
     test('creates child with self-reference', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'schema_relations.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
       );
       try {
         db.createElement('Configuration', {'label': 'Test Config'});
@@ -214,7 +214,7 @@ void main() {
     test('creates child with vector containing FK refs', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'schema_relations.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
       );
       try {
         db.createElement('Configuration', {'label': 'Test Config'});

@@ -73,7 +73,7 @@ TEST_F(DatabaseFixture, CreatesFileOnDisk) {
 
 TEST_F(DatabaseFixture, CreateElementWithScalars) {
     auto db = psr::Database::from_schema(
-        ":memory:", schema_path("schema_basic.sql"), {.console_level = psr::LogLevel::off});
+        ":memory:", schema_path("schemas/valid/basic.sql"), {.console_level = psr::LogLevel::off});
 
     // Create element
     psr::Element element;
@@ -94,7 +94,7 @@ TEST_F(DatabaseFixture, CreateElementWithScalars) {
 
 TEST_F(DatabaseFixture, CreateElementWithVector) {
     auto db = psr::Database::from_schema(
-        ":memory:", schema_path("schema_collections.sql"), {.console_level = psr::LogLevel::off});
+        ":memory:", schema_path("schemas/valid/collections.sql"), {.console_level = psr::LogLevel::off});
 
     // Configuration required first
     psr::Element config;
@@ -126,7 +126,7 @@ TEST_F(DatabaseFixture, CreateElementWithVector) {
 
 TEST_F(DatabaseFixture, CreateElementWithVectorGroup) {
     auto db = psr::Database::from_schema(
-        ":memory:", schema_path("schema_collections.sql"), {.console_level = psr::LogLevel::off});
+        ":memory:", schema_path("schemas/valid/collections.sql"), {.console_level = psr::LogLevel::off});
 
     // Configuration required first
     psr::Element config;
@@ -162,7 +162,7 @@ TEST_F(DatabaseFixture, CreateElementWithVectorGroup) {
 
 TEST_F(DatabaseFixture, CreateElementWithSetGroup) {
     auto db = psr::Database::from_schema(
-        ":memory:", schema_path("schema_collections.sql"), {.console_level = psr::LogLevel::off});
+        ":memory:", schema_path("schemas/valid/collections.sql"), {.console_level = psr::LogLevel::off});
 
     // Configuration required first
     psr::Element config;
@@ -188,7 +188,7 @@ TEST_F(DatabaseFixture, CreateElementWithSetGroup) {
 
 TEST_F(DatabaseFixture, CreateMultipleElements) {
     auto db = psr::Database::from_schema(
-        ":memory:", schema_path("schema_basic.sql"), {.console_level = psr::LogLevel::off});
+        ":memory:", schema_path("schemas/valid/basic.sql"), {.console_level = psr::LogLevel::off});
 
     // Create multiple Configuration elements
     psr::Element e1;

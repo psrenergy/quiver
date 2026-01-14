@@ -15,7 +15,7 @@ void main() {
     test('reads strings from Configuration', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'schema_basic.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
         db.createElement('Configuration', {
@@ -43,7 +43,7 @@ void main() {
     test('reads integers from Configuration', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'schema_basic.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
         db.createElement('Configuration', {
@@ -67,7 +67,7 @@ void main() {
     test('reads doubles from Configuration', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'schema_basic.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
         db.createElement('Configuration', {
@@ -93,7 +93,7 @@ void main() {
     test('reads from Collection table', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'schema_collections.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
         db.createElement('Configuration', {'label': 'Test Config'});
@@ -130,7 +130,7 @@ void main() {
     test('returns empty list when no elements', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'schema_collections.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
         db.createElement('Configuration', {'label': 'Test Config'});
