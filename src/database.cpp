@@ -612,4 +612,49 @@ int64_t Database::create_element(const std::string& collection, const Element& e
     return element_id;
 }
 
+std::vector<int64_t> Database::read_scalar_ints(const std::string& collection, const std::string& attribute) {
+    auto sql = "SELECT " + attribute + " FROM " + collection;
+    auto result = execute(sql);
+
+    std::vector<int64_t> values;
+    values.reserve(result.row_count());
+    for (size_t i = 0; i < result.row_count(); ++i) {
+        auto val = result[i].get_int(0);
+        if (val) {
+            values.push_back(*val);
+        }
+    }
+    return values;
+}
+
+std::vector<double> Database::read_scalar_doubles(const std::string& collection, const std::string& attribute) {
+    auto sql = "SELECT " + attribute + " FROM " + collection;
+    auto result = execute(sql);
+
+    std::vector<double> values;
+    values.reserve(result.row_count());
+    for (size_t i = 0; i < result.row_count(); ++i) {
+        auto val = result[i].get_double(0);
+        if (val) {
+            values.push_back(*val);
+        }
+    }
+    return values;
+}
+
+std::vector<std::string> Database::read_scalar_strings(const std::string& collection, const std::string& attribute) {
+    auto sql = "SELECT " + attribute + " FROM " + collection;
+    auto result = execute(sql);
+
+    std::vector<std::string> values;
+    values.reserve(result.row_count());
+    for (size_t i = 0; i < result.row_count(); ++i) {
+        auto val = result[i].get_string(0);
+        if (val) {
+            values.push_back(*val);
+        }
+    }
+    return values;
+}
+
 }  // namespace psr

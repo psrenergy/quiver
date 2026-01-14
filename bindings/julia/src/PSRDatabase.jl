@@ -8,6 +8,5 @@ include("element.jl")
 include("database.jl")
 
 export Element, Database, DatabaseException
-export create_empty_db_from_schema, create_element!, close!
 
 end

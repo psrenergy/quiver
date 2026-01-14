@@ -274,6 +274,150 @@ class PsrDatabaseBindings {
           int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>,
               ffi.Pointer<psr_element_t>)>();
 
+  int psr_database_read_scalar_ints(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    ffi.Pointer<ffi.Pointer<ffi.Int64>> out_values,
+    ffi.Pointer<ffi.Size> out_count,
+  ) {
+    return _psr_database_read_scalar_ints(
+      db,
+      collection,
+      attribute,
+      out_values,
+      out_count,
+    );
+  }
+
+  late final _psr_database_read_scalar_intsPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+              ffi.Pointer<ffi.Size>)>>('psr_database_read_scalar_ints');
+  late final _psr_database_read_scalar_ints =
+      _psr_database_read_scalar_intsPtr.asFunction<
+          int Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+              ffi.Pointer<ffi.Size>)>();
+
+  int psr_database_read_scalar_doubles(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    ffi.Pointer<ffi.Pointer<ffi.Double>> out_values,
+    ffi.Pointer<ffi.Size> out_count,
+  ) {
+    return _psr_database_read_scalar_doubles(
+      db,
+      collection,
+      attribute,
+      out_values,
+      out_count,
+    );
+  }
+
+  late final _psr_database_read_scalar_doublesPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Double>>,
+              ffi.Pointer<ffi.Size>)>>('psr_database_read_scalar_doubles');
+  late final _psr_database_read_scalar_doubles =
+      _psr_database_read_scalar_doublesPtr.asFunction<
+          int Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Double>>,
+              ffi.Pointer<ffi.Size>)>();
+
+  int psr_database_read_scalar_strings(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>> out_values,
+    ffi.Pointer<ffi.Size> out_count,
+  ) {
+    return _psr_database_read_scalar_strings(
+      db,
+      collection,
+      attribute,
+      out_values,
+      out_count,
+    );
+  }
+
+  late final _psr_database_read_scalar_stringsPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+              ffi.Pointer<ffi.Size>)>>('psr_database_read_scalar_strings');
+  late final _psr_database_read_scalar_strings =
+      _psr_database_read_scalar_stringsPtr.asFunction<
+          int Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+              ffi.Pointer<ffi.Size>)>();
+
+  void psr_free_int_array(
+    ffi.Pointer<ffi.Int64> values,
+  ) {
+    return _psr_free_int_array(
+      values,
+    );
+  }
+
+  late final _psr_free_int_arrayPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Int64>)>>(
+          'psr_free_int_array');
+  late final _psr_free_int_array = _psr_free_int_arrayPtr
+      .asFunction<void Function(ffi.Pointer<ffi.Int64>)>();
+
+  void psr_free_double_array(
+    ffi.Pointer<ffi.Double> values,
+  ) {
+    return _psr_free_double_array(
+      values,
+    );
+  }
+
+  late final _psr_free_double_arrayPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Double>)>>(
+          'psr_free_double_array');
+  late final _psr_free_double_array = _psr_free_double_arrayPtr
+      .asFunction<void Function(ffi.Pointer<ffi.Double>)>();
+
+  void psr_free_string_array(
+    ffi.Pointer<ffi.Pointer<ffi.Char>> values,
+    int count,
+  ) {
+    return _psr_free_string_array(
+      values,
+      count,
+    );
+  }
+
+  late final _psr_free_string_arrayPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Char>>,
+              ffi.Size)>>('psr_free_string_array');
+  late final _psr_free_string_array = _psr_free_string_arrayPtr
+      .asFunction<void Function(ffi.Pointer<ffi.Pointer<ffi.Char>>, int)>();
+
   ffi.Pointer<psr_element_t1> psr_element_create() {
     return _psr_element_create();
   }

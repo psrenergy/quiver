@@ -52,6 +52,11 @@ public:
     // Element operations
     int64_t create_element(const std::string& collection, const Element& element);
 
+    // Read scalar attributes
+    std::vector<int64_t> read_scalar_ints(const std::string& collection, const std::string& attribute);
+    std::vector<double> read_scalar_doubles(const std::string& collection, const std::string& attribute);
+    std::vector<std::string> read_scalar_strings(const std::string& collection, const std::string& attribute);
+
     // Transaction management
     void begin_transaction();
     void commit();

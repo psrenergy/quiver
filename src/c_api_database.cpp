@@ -206,4 +206,98 @@ psr_database_from_schema(const char* db_path, const char* schema_path, const psr
     }
 }
 
+PSR_C_API psr_error_t psr_database_read_scalar_ints(psr_database_t* db,
+                                                    const char* collection,
+                                                    const char* attribute,
+                                                    int64_t** out_values,
+                                                    size_t* out_count) {
+    if (!db || !collection || !attribute || !out_values || !out_count) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+
+    try {
+        auto values = db->db.read_scalar_ints(collection, attribute);
+        *out_count = values.size();
+        if (values.empty()) {
+            *out_values = nullptr;
+            return PSR_OK;
+        }
+        *out_values = new int64_t[values.size()];
+        std::copy(values.begin(), values.end(), *out_values);
+        return PSR_OK;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API psr_error_t psr_database_read_scalar_doubles(psr_database_t* db,
+                                                       const char* collection,
+                                                       const char* attribute,
+                                                       double** out_values,
+                                                       size_t* out_count) {
+    if (!db || !collection || !attribute || !out_values || !out_count) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+
+    try {
+        auto values = db->db.read_scalar_doubles(collection, attribute);
+        *out_count = values.size();
+        if (values.empty()) {
+            *out_values = nullptr;
+            return PSR_OK;
+        }
+        *out_values = new double[values.size()];
+        std::copy(values.begin(), values.end(), *out_values);
+        return PSR_OK;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API psr_error_t psr_database_read_scalar_strings(psr_database_t* db,
+                                                       const char* collection,
+                                                       const char* attribute,
+                                                       char*** out_values,
+                                                       size_t* out_count) {
+    if (!db || !collection || !attribute || !out_values || !out_count) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+
+    try {
+        auto values = db->db.read_scalar_strings(collection, attribute);
+        *out_count = values.size();
+        if (values.empty()) {
+            *out_values = nullptr;
+            return PSR_OK;
+        }
+        *out_values = new char*[values.size()];
+        for (size_t i = 0; i < values.size(); ++i) {
+            (*out_values)[i] = new char[values[i].size() + 1];
+            std::copy(values[i].begin(), values[i].end(), (*out_values)[i]);
+            (*out_values)[i][values[i].size()] = '\0';
+        }
+        return PSR_OK;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API void psr_free_int_array(int64_t* values) {
+    delete[] values;
+}
+
+PSR_C_API void psr_free_double_array(double* values) {
+    delete[] values;
+}
+
+PSR_C_API void psr_free_string_array(char** values, size_t count) {
+    if (!values) {
+        return;
+    }
+    for (size_t i = 0; i < count; ++i) {
+        delete[] values[i];
+    }
+    delete[] values;
+}
+
 }  // extern "C"

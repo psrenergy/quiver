@@ -52,6 +52,30 @@ PSR_C_API psr_error_t psr_database_rollback(psr_database_t* db);
 typedef struct psr_element psr_element_t;
 PSR_C_API int64_t psr_database_create_element(psr_database_t* db, const char* collection, psr_element_t* element);
 
+// Read scalar attributes
+PSR_C_API psr_error_t psr_database_read_scalar_ints(psr_database_t* db,
+                                                    const char* collection,
+                                                    const char* attribute,
+                                                    int64_t** out_values,
+                                                    size_t* out_count);
+
+PSR_C_API psr_error_t psr_database_read_scalar_doubles(psr_database_t* db,
+                                                       const char* collection,
+                                                       const char* attribute,
+                                                       double** out_values,
+                                                       size_t* out_count);
+
+PSR_C_API psr_error_t psr_database_read_scalar_strings(psr_database_t* db,
+                                                       const char* collection,
+                                                       const char* attribute,
+                                                       char*** out_values,
+                                                       size_t* out_count);
+
+// Memory cleanup for read results
+PSR_C_API void psr_free_int_array(int64_t* values);
+PSR_C_API void psr_free_double_array(double* values);
+PSR_C_API void psr_free_string_array(char** values, size_t count);
+
 #ifdef __cplusplus
 }
 #endif
