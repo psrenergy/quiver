@@ -8,9 +8,7 @@ class SchemaValidatorFixture : public ::testing::Test {
 protected:
     psr::DatabaseOptions opts{.console_level = psr::LogLevel::off};
 
-    std::string tests_path() {
-        return fs::path(__FILE__).parent_path().string();
-    }
+    std::string tests_path() { return fs::path(__FILE__).parent_path().string(); }
 
     std::string valid_schema(const std::string& filename) {
         return (fs::path(__FILE__).parent_path() / "schemas" / "valid" / filename).string();
@@ -66,8 +64,7 @@ TEST_F(SchemaValidatorFixture, InvalidVectorNoIndex) {
 }
 
 TEST_F(SchemaValidatorFixture, InvalidSetNoUnique) {
-    EXPECT_THROW(psr::Database::from_schema(":memory:", invalid_schema("set_no_unique.sql"), opts),
-                 std::runtime_error);
+    EXPECT_THROW(psr::Database::from_schema(":memory:", invalid_schema("set_no_unique.sql"), opts), std::runtime_error);
 }
 
 TEST_F(SchemaValidatorFixture, InvalidFkNotNullSetNull) {
@@ -76,6 +73,5 @@ TEST_F(SchemaValidatorFixture, InvalidFkNotNullSetNull) {
 }
 
 TEST_F(SchemaValidatorFixture, InvalidFkActions) {
-    EXPECT_THROW(psr::Database::from_schema(":memory:", invalid_schema("fk_actions.sql"), opts),
-                 std::runtime_error);
+    EXPECT_THROW(psr::Database::from_schema(":memory:", invalid_schema("fk_actions.sql"), opts), std::runtime_error);
 }

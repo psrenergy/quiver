@@ -77,9 +77,7 @@ TEST_F(DatabaseFixture, CreateElementWithScalars) {
 
     // Create element
     psr::Element element;
-    element.set("label", std::string("Config 1"))
-        .set("integer_attribute", int64_t{42})
-        .set("float_attribute", 3.14);
+    element.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42}).set("float_attribute", 3.14);
 
     int64_t id = db.create_element("Configuration", element);
     EXPECT_EQ(id, 1);
@@ -116,8 +114,9 @@ TEST_F(DatabaseFixture, CreateElementWithVector) {
     EXPECT_EQ(result[0].get_string(0).value(), "Item 1");
 
     // Verify vector table
-    auto vec_result =
-        db.execute("SELECT vector_index, value_int, value_float FROM Collection_vector_values WHERE id = ? ORDER BY vector_index", {id});
+    auto vec_result = db.execute(
+        "SELECT vector_index, value_int, value_float FROM Collection_vector_values WHERE id = ? ORDER BY vector_index",
+        {id});
     EXPECT_EQ(vec_result.row_count(), 3);
     EXPECT_EQ(vec_result[0].get_int(0).value(), 1);
     EXPECT_EQ(vec_result[0].get_int(1).value(), 1);
@@ -144,7 +143,8 @@ TEST_F(DatabaseFixture, CreateElementWithVectorGroup) {
 
     // Verify vector table with multiple attributes
     auto vec_result = db.execute(
-        "SELECT vector_index, value_int, value_float FROM Collection_vector_values WHERE id = ? ORDER BY vector_index", {id});
+        "SELECT vector_index, value_int, value_float FROM Collection_vector_values WHERE id = ? ORDER BY vector_index",
+        {id});
     EXPECT_EQ(vec_result.row_count(), 3);
 
     EXPECT_EQ(vec_result[0].get_int(0).value(), 1);
@@ -171,8 +171,7 @@ TEST_F(DatabaseFixture, CreateElementWithSetGroup) {
 
     // Create element with set attribute
     psr::Element element;
-    element.set("label", std::string("Item 1"))
-        .set("tag", std::vector<std::string>{"important", "urgent", "review"});
+    element.set("label", std::string("Item 1")).set("tag", std::vector<std::string>{"important", "urgent", "review"});
 
     int64_t id = db.create_element("Collection", element);
     EXPECT_EQ(id, 1);
