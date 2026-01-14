@@ -588,13 +588,14 @@ int64_t Database::create_element(const std::string& collection, const Element& e
                 for (const auto& fk : table_def->foreign_keys) {
                     if (fk.from_column == col_name && std::holds_alternative<std::string>(val)) {
                         const std::string& label = std::get<std::string>(val);
-                        // Look up the ID by label
-                        auto id_result = read_scalar_by_label(fk.to_table, "id", label);
-                        if (!std::holds_alternative<int64_t>(id_result)) {
+                        // Look up the ID by label using direct SQL query
+                        auto lookup_sql = "SELECT id FROM " + fk.to_table + " WHERE label = ?";
+                        auto lookup_result = execute(lookup_sql, {label});
+                        if (lookup_result.empty() || !lookup_result[0].get_int(0)) {
                             throw std::runtime_error("Failed to resolve label '" + label + "' to ID in table '" +
                                                      fk.to_table + "'");
                         }
-                        val = std::get<int64_t>(id_result);
+                        val = lookup_result[0].get_int(0).value();
                         break;
                     }
                 }
