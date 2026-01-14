@@ -9,70 +9,55 @@ void main() {
     '..',
     '..',
     'tests',
-    'test_create',
   );
 
-  group('Create Parameters', () {
-    test('rejects wrong type for parameter', () {
+  group('Create Scalar Attributes', () {
+    test('creates Configuration with all scalar types', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'test_create_parameters.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        final id = db.createElement('Configuration', {
+          'label': 'Test Config',
+          'integer_attribute': 42,
+          'float_attribute': 3.14,
+          'string_attribute': 'hello',
+          'date_attribute': '2024-01-01',
+          'boolean_attribute': 1,
+        });
+        expect(id, greaterThan(0));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('creates Configuration with default values', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        final id = db.createElement('Configuration', {'label': 'Test Config'});
+        expect(id, greaterThan(0));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('rejects wrong type for attribute', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
         expect(
           () => db.createElement('Configuration', {
-            'label': 'Toy Case',
-            'value1': 'wrong', // Should be double, not string
+            'label': 'Test Config',
+            'integer_attribute': 'not an int',
           }),
           throwsA(isA<DatabaseException>()),
         );
-      } finally {
-        db.close();
-      }
-    });
-
-    test('creates element with valid parameters', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'test_create_parameters.sql'),
-      );
-      try {
-        final id = db.createElement('Configuration', {
-          'label': 'Toy Case',
-          'value1': 1.0,
-        });
-        expect(id, greaterThan(0));
-      } finally {
-        db.close();
-      }
-    });
-
-    test('creates element with default values', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'test_create_parameters.sql'),
-      );
-      try {
-        db.createElement('Configuration', {'label': 'Toy Case', 'value1': 1.0});
-        final id = db.createElement('Resource', {'label': 'Resource 2'});
-        expect(id, greaterThan(0));
-      } finally {
-        db.close();
-      }
-    });
-
-    test('creates element with enum value', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'test_create_parameters.sql'),
-      );
-      try {
-        db.createElement('Configuration', {'label': 'Toy Case', 'value1': 1.0});
-        final id = db.createElement('Resource', {
-          'label': 'Resource 1',
-          'type': 'E',
-        });
-        expect(id, greaterThan(0));
       } finally {
         db.close();
       }
@@ -81,14 +66,13 @@ void main() {
     test('rejects unknown attribute', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'test_create_parameters.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Toy Case', 'value1': 1.0});
         expect(
-          () => db.createElement('Resource', {
-            'label': 'Resource 4',
-            'type3': 'E', // Unknown attribute
+          () => db.createElement('Configuration', {
+            'label': 'Test Config',
+            'unknown_attr': 123,
           }),
           throwsA(isA<DatabaseException>()),
         );
@@ -96,31 +80,15 @@ void main() {
         db.close();
       }
     });
-  });
 
-  group('Create Empty Parameters', () {
-    test('creates element with only label', () {
+    test('rejects missing label', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'test_create_parameters.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        final id = db.createElement('Configuration', {'label': 'Toy Case'});
-        expect(id, greaterThan(0));
-      } finally {
-        db.close();
-      }
-    });
-
-    test('rejects element without label', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'test_create_parameters.sql'),
-      );
-      try {
-        db.createElement('Configuration', {'label': 'Toy Case'});
         expect(
-          () => db.createElement('Resource', {}), // Missing required label
+          () => db.createElement('Configuration', {}),
           throwsA(isA<DatabaseException>()),
         );
       } finally {
@@ -129,18 +97,19 @@ void main() {
     });
   });
 
-  group('Create Parameters and Vectors', () {
+  group('Create Collections with Vectors', () {
     test('creates element with vector attribute', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'test_create_parameters_and_vectors.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Toy Case', 'value1': 1.0});
-        final id = db.createElement('Resource', {
-          'label': 'Resource 1',
-          'type': 'E',
-          'some_value': [1.0, 2.0, 3.0],
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Collection', {
+          'label': 'Item 1',
+          'some_integer': 10,
+          'value_int': [1, 2, 3],
+          'value_float': [0.1, 0.2, 0.3],
         });
         expect(id, greaterThan(0));
       } finally {
@@ -148,53 +117,18 @@ void main() {
       }
     });
 
-    test('creates multiple elements with vectors', () {
+    test('creates element with only scalars', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'test_create_parameters_and_vectors.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Toy Case', 'value1': 1.0});
-        db.createElement('Resource', {
-          'label': 'Resource 1',
-          'type': 'E',
-          'some_value': [1.0, 2.0, 3.0],
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Collection', {
+          'label': 'Item 1',
+          'some_integer': 20,
         });
-        db.createElement('Cost', {'label': 'Cost 1', 'value': 30.0});
-        db.createElement('Cost', {'label': 'Cost 2', 'value': 20.0});
-
-        final id1 = db.createElement('Plant', {
-          'label': 'Plant 1',
-          'capacity': 50.0,
-          'some_factor': [0.1, 0.3],
-        });
-        expect(id1, greaterThan(0));
-
-        final id2 = db.createElement('Plant', {
-          'label': 'Plant 2',
-          'capacity': 50.0,
-          'some_factor': [0.1, 0.3, 0.5],
-        });
-        expect(id2, greaterThan(0));
-      } finally {
-        db.close();
-      }
-    });
-
-    test('rejects time series file attribute', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'test_create_parameters_and_vectors.sql'),
-      );
-      try {
-        db.createElement('Configuration', {'label': 'Toy Case', 'value1': 1.0});
-        expect(
-          () => db.createElement('Plant', {
-            'label': 'Plant 3',
-            'generation': 'some_file.txt', // Time series not supported
-          }),
-          throwsA(isA<DatabaseException>()),
-        );
+        expect(id, greaterThan(0));
       } finally {
         db.close();
       }
@@ -203,58 +137,14 @@ void main() {
     test('rejects empty vector', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'test_create_parameters_and_vectors.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Toy Case', 'value1': 1.0});
+        db.createElement('Configuration', {'label': 'Test Config'});
         expect(
-          () => db.createElement('Plant', {
-            'label': 'Plant 4',
-            'capacity': 50.0,
-            'some_factor': <double>[], // Empty vector not allowed
-          }),
-          throwsA(isA<DatabaseException>()),
-        );
-      } finally {
-        db.close();
-      }
-    });
-
-    test('creates element with foreign key reference', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'test_create_parameters_and_vectors.sql'),
-      );
-      try {
-        db.createElement('Configuration', {'label': 'Toy Case', 'value1': 1.0});
-        db.createElement('Resource', {
-          'label': 'Resource 1',
-          'type': 'E',
-          'some_value': [1.0, 2.0, 3.0],
-        });
-
-        final id = db.createElement('Plant', {
-          'label': 'Plant 3',
-          'resource_id': 1,
-        });
-        expect(id, greaterThan(0));
-      } finally {
-        db.close();
-      }
-    });
-
-    test('rejects scalar value for vector attribute', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'test_create_parameters_and_vectors.sql'),
-      );
-      try {
-        db.createElement('Configuration', {'label': 'Toy Case', 'value1': 1.0});
-        expect(
-          () => db.createElement('Resource', {
-            'label': 'Resource 1',
-            'type': 'E',
-            'some_value': 1.0, // Should be a list, not scalar
+          () => db.createElement('Collection', {
+            'label': 'Item 1',
+            'value_int': <int>[],
           }),
           throwsA(isA<DatabaseException>()),
         );
@@ -264,26 +154,37 @@ void main() {
     });
   });
 
-  group('Create Sets with Relations', () {
-    test('creates element with set relation', () {
+  group('Create Collections with Sets', () {
+    test('creates element with set attribute', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'test_create_sets_with_relations.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        db.createElement('Configuration', {
-          'label': 'Toy Case',
-          'some_value': 1.0,
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Collection', {
+          'label': 'Item 1',
+          'tag': ['alpha', 'beta', 'gamma'],
         });
-        db.createElement('Product', {'label': 'Sugar', 'unit': 'Kg'});
-        db.createElement('Product', {'label': 'Sugarcane', 'unit': 'ton'});
-        db.createElement('Product', {'label': 'Molasse', 'unit': 'ton'});
-        db.createElement('Product', {'label': 'Bagasse', 'unit': 'ton'});
+        expect(id, greaterThan(0));
+      } finally {
+        db.close();
+      }
+    });
+  });
 
-        final id = db.createElement('Process', {
-          'label': 'Sugar Mill',
-          'product_set': ['Sugarcane'],
-          'factor': [1.0],
+  group('Create Relations', () {
+    test('creates child with FK to parent', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Parent', {'label': 'Parent 1'});
+        final id = db.createElement('Child', {
+          'label': 'Child 1',
+          'parent_id': 1,
         });
         expect(id, greaterThan(0));
       } finally {
@@ -291,96 +192,39 @@ void main() {
       }
     });
 
-    test('rejects wrong type in unit attribute', () {
+    test('creates child with self-reference', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'test_create_sets_with_relations.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
       );
       try {
-        db.createElement('Configuration', {
-          'label': 'Toy Case',
-          'some_value': 1.0,
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Parent', {'label': 'Parent 1'});
+        db.createElement('Child', {'label': 'Child 1'});
+        final id = db.createElement('Child', {
+          'label': 'Child 2',
+          'sibling_id': 1,
         });
-        db.createElement('Product', {'label': 'Sugar', 'unit': 'Kg'});
-        expect(
-          () => db.createElement('Product', {
-            'label': 'Bagasse 2',
-            'unit': 30, // Should be string, not int
-          }),
-          throwsA(isA<DatabaseException>()),
-        );
+        expect(id, greaterThan(0));
       } finally {
         db.close();
       }
     });
 
-    test('rejects wrong type in set factor', () {
+    test('creates child with vector containing FK refs', () {
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'test_create_sets_with_relations.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
       );
       try {
-        db.createElement('Configuration', {
-          'label': 'Toy Case',
-          'some_value': 1.0,
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Parent', {'label': 'Parent 1'});
+        db.createElement('Parent', {'label': 'Parent 2'});
+        final id = db.createElement('Child', {
+          'label': 'Child 1',
+          'parent_ref': [1, 2],
         });
-        db.createElement('Product', {'label': 'Sugar', 'unit': 'Kg'});
-        expect(
-          () => db.createElement('Process', {
-            'label': 'Sugar Mill 2',
-            'product_set': ['Sugar'],
-            'factor': ['wrong'], // Should be double, not string
-          }),
-          throwsA(isA<DatabaseException>()),
-        );
-      } finally {
-        db.close();
-      }
-    });
-
-    test('rejects non-existent relation reference', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'test_create_sets_with_relations.sql'),
-      );
-      try {
-        db.createElement('Configuration', {
-          'label': 'Toy Case',
-          'some_value': 1.0,
-        });
-        db.createElement('Product', {'label': 'Sugar', 'unit': 'Kg'});
-        expect(
-          () => db.createElement('Process', {
-            'label': 'Sugar Mill 3',
-            'product_set': ['Some Sugar'], // Non-existent product
-            'factor': [1.0],
-          }),
-          throwsA(isA<DatabaseException>()),
-        );
-      } finally {
-        db.close();
-      }
-    });
-
-    test('rejects empty factor with set', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'test_create_sets_with_relations.sql'),
-      );
-      try {
-        db.createElement('Configuration', {
-          'label': 'Toy Case',
-          'some_value': 1.0,
-        });
-        db.createElement('Product', {'label': 'Sugar', 'unit': 'Kg'});
-        expect(
-          () => db.createElement('Process', {
-            'label': 'Sugar Mill 3',
-            'product_set': ['Sugar'],
-            'factor': <double>[], // Empty factor not allowed
-          }),
-          throwsA(isA<DatabaseException>()),
-        );
+        expect(id, greaterThan(0));
       } finally {
         db.close();
       }

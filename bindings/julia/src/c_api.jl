@@ -5,7 +5,26 @@ module C
 using CEnum
 using Libdl
 
-const libpsr_database_c = joinpath(@__DIR__, "..", "..", "..", "build", "bin", "libpsr_database_c.dll")  
+function _library_name()
+    if Sys.iswindows()
+        return "libpsr_database_c.dll"
+    elseif Sys.isapple()
+        return "libpsr_database_c.dylib"
+    else
+        return "libpsr_database_c.so"
+    end
+end
+
+function _library_dir()
+    # On Windows, DLLs go to bin/; on Linux/macOS, shared libs go to lib/
+    if Sys.iswindows()
+        return "bin"
+    else
+        return "lib"
+    end
+end
+
+const libpsr_database_c = joinpath(@__DIR__, "..", "..", "..", "build", _library_dir(), _library_name())  
 
 
 @cenum psr_error_t::Int32 begin

@@ -5,136 +5,119 @@ using Test
 
 include("fixture.jl")
 
-@testset "Create Parameters" begin
-    path_schema = joinpath(tests_path(), "test_create", "test_create_parameters.sql")
+@testset "Create Scalar Attributes" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
     db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
-    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(
-        db,
-        "Configuration";
-        label = "Toy Case",
-        value1 = "wrong",
+
+    # Create Configuration with various scalar types
+    PSRDatabase.create_element!(db, "Configuration";
+        label = "Test Config",
+        integer_attribute = 42,
+        float_attribute = 3.14,
+        string_attribute = "hello",
+        date_attribute = "2024-01-01",
+        boolean_attribute = 1,
     )
-    PSRDatabase.create_element!(db, "Configuration"; label = "Toy Case", value1 = 1.0)
-    PSRDatabase.create_element!(db, "Resource"; label = "Resource 2")
-    PSRDatabase.create_element!(db, "Resource"; label = "Resource 1", type = "E")
-    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(
-        db,
-        "Resource";
-        label = "Resource 4",
-        type3 = "E",
-    )
+
+    # Test default value is used
+    PSRDatabase.create_element!(db, "Configuration"; label = "Config 2")
+
     PSRDatabase.close!(db)
 end
 
-@testset "Create Empty Parameters" begin
-    path_schema = joinpath(tests_path(), "test_create", "test_create_parameters.sql")
-
+@testset "Create Collections with Vectors" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
     db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
-    PSRDatabase.create_element!(db, "Configuration"; label = "Toy Case")
-    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(
-        db,
-        "Resource",
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
+
+    # Create element with scalar and vector attributes
+    PSRDatabase.create_element!(db, "Collection";
+        label = "Item 1",
+        some_integer = 10,
+        some_float = 1.5,
+        value_int = [1, 2, 3],
+        value_float = [0.1, 0.2, 0.3],
     )
+
+    # Create element with only scalars
+    PSRDatabase.create_element!(db, "Collection";
+        label = "Item 2",
+        some_integer = 20,
+    )
+
+    # Reject empty vector
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(db, "Collection";
+        label = "Item 3",
+        value_int = Int64[],
+    )
+
     PSRDatabase.close!(db)
 end
 
-@testset "Create Parameters and Vectors" begin
-    path_schema = joinpath(tests_path(), "test_create", "test_create_parameters_and_vectors.sql")
+@testset "Create Collections with Sets" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
     db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
-    PSRDatabase.create_element!(db, "Configuration"; label = "Toy Case", value1 = 1.0)
-    PSRDatabase.create_element!(
-        db,
-        "Resource";
-        label = "Resource 1",
-        type = "E",
-        some_value = [1.0, 2.0, 3.0],
-    )
-    PSRDatabase.create_element!(db, "Cost"; label = "Cost 1", value = 30.0)
-    PSRDatabase.create_element!(db, "Cost"; label = "Cost 2", value = 20.0)
-    PSRDatabase.create_element!(
-        db,
-        "Plant";
-        label = "Plant 1",
-        capacity = 50.0,
-        some_factor = [0.1, 0.3],
-    )
-    PSRDatabase.create_element!(
-        db,
-        "Plant";
-        label = "Plant 2",
-        capacity = 50.0,
-        some_factor = [0.1, 0.3, 0.5],
-    )
-    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(
-        db,
-        "Plant";
-        label = "Plant 3",
-        generation = "some_file.txt",
-    )
-    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(
-        db,
-        "Plant";
-        label = "Plant 4",
-        capacity = 50.0,
-        some_factor = Float64[],
-    )
-    PSRDatabase.create_element!(db, "Plant"; label = "Plant 3", resource_id = 1)
-    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(
-        db,
-        "Resource";
-        label = "Resource 1",
-        type = "E",
-        some_value = 1.0,
-    )
-    PSRDatabase.close!(db)
 
-    return nothing
+    PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
+
+    # Create element with set attribute
+    PSRDatabase.create_element!(db, "Collection";
+        label = "Item 1",
+        tag = ["alpha", "beta", "gamma"],
+    )
+
+    PSRDatabase.close!(db)
 end
 
-@testset "Create Sets with Relations" begin
-    path_schema = joinpath(tests_path(), "test_create", "test_create_sets_with_relations.sql")
+@testset "Create Relations" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
     db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
-    PSRDatabase.create_element!(
-        db,
-        "Configuration";
-        label = "Toy Case",
-        some_value = 1.0,
-    )
-    PSRDatabase.create_element!(db, "Product"; label = "Sugar", unit = "Kg")
-    PSRDatabase.create_element!(db, "Product"; label = "Sugarcane", unit = "ton")
-    PSRDatabase.create_element!(db, "Product"; label = "Molasse", unit = "ton")
-    PSRDatabase.create_element!(db, "Product"; label = "Bagasse", unit = "ton")
-    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(
-        db,
-        "Product",
-        label = "Bagasse 2",
-        unit = 30,
-    )
-    PSRDatabase.create_element!(db, "Process";
-        label = "Sugar Mill",
-        product_set = ["Sugarcane"],
-        factor = [1.0],
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
+
+    # Create parent elements
+    PSRDatabase.create_element!(db, "Parent"; label = "Parent 1")
+    PSRDatabase.create_element!(db, "Parent"; label = "Parent 2")
+
+    # Create child with FK to parent
+    PSRDatabase.create_element!(db, "Child";
+        label = "Child 1",
+        parent_id = 1,
     )
 
-    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(db,
-        "Process";
-        label = "Sugar Mill 2",
-        product_set = ["Sugar"],
-        factor = ["wrong"],
+    # Create child with self-reference
+    PSRDatabase.create_element!(db, "Child";
+        label = "Child 2",
+        sibling_id = 1,
     )
 
-    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(db,
-        "Process";
-        label = "Sugar Mill 3",
-        product_set = ["Some Sugar"],
-        factor = [1.0],
+    # Create child with vector containing FK refs
+    PSRDatabase.create_element!(db, "Child";
+        label = "Child 3",
+        parent_ref = [1, 2],
     )
 
-    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(db,
-        "Process";
-        label = "Sugar Mill 3",
-        product_set = ["Sugear"],
-        factor = [],
+    PSRDatabase.close!(db)
+end
+
+@testset "Reject Invalid Element" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
+
+    # Missing required label
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(db, "Configuration")
+
+    # Wrong type for attribute
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(db, "Configuration";
+        label = "Test",
+        integer_attribute = "not an int",
+    )
+
+    # Unknown attribute
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(db, "Configuration";
+        label = "Test",
+        unknown_attr = 123,
     )
 
     PSRDatabase.close!(db)

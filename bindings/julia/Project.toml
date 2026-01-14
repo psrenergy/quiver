@@ -10,12 +10,12 @@ Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 
 [compat]
 Aqua = "0.8"
-CEnum = "0.5.0"
+CEnum = "0.5"
 DataFrames = "1"
 Dates = "1"
-Libdl = "1.11.0"
+Libdl = "1"
 Test = "1"
-julia = "1.10"
+julia = "1.12"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"

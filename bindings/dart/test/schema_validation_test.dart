@@ -4,14 +4,14 @@ import 'package:test/test.dart';
 import 'package:path/path.dart' as path;
 
 void main() {
-  // Path to central tests folder (from bindings/dart, go up 2 levels to database/)
+  // Path to central tests folder
   final testsPath = path.join(
     Directory.current.path,
     '..',
     '..',
     'tests',
-    'test_valid_database_definitions',
   );
+  final invalidPath = path.join(testsPath, 'schemas', 'invalid');
 
   late String dbPath;
   late Directory tempDir;
@@ -22,164 +22,130 @@ void main() {
   });
 
   tearDown(() {
-    // On Windows, there may be a brief delay before file handles are released
-    // after a failed schema validation. Try to delete, but ignore errors.
     try {
       if (tempDir.existsSync()) {
         tempDir.deleteSync(recursive: true);
       }
     } catch (_) {
-      // Ignore file access errors - temp files will be cleaned up by OS
+      // Ignore file access errors
     }
   });
 
-  group('Schema Validation - Invalid Schemas', () {
+  group('Valid Schemas', () {
+    test('loads basic schema', () {
+      final db = Database.fromSchema(
+        dbPath,
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      db.close();
+    });
+
+    test('loads collections schema', () {
+      final db = Database.fromSchema(
+        dbPath,
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      db.close();
+    });
+
+    test('loads relations schema', () {
+      final db = Database.fromSchema(
+        dbPath,
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      db.close();
+    });
+  });
+
+  group('Invalid Schemas', () {
     test('rejects schema without Configuration table', () {
       expect(
         () => Database.fromSchema(
           dbPath,
-          path.join(testsPath, 'test_invalid_database_without_configuration_table.sql'),
+          path.join(invalidPath, 'no_configuration.sql'),
         ),
         throwsA(isA<SchemaException>()),
       );
     });
 
-    test('rejects schema with duplicated attributes', () {
+    test('rejects schema with label missing NOT NULL', () {
       expect(
         () => Database.fromSchema(
           dbPath,
-          path.join(testsPath, 'test_invalid_database_with_duplicated_attributes.sql'),
+          path.join(invalidPath, 'label_not_null.sql'),
         ),
         throwsA(isA<SchemaException>()),
       );
     });
 
-    test('rejects schema with duplicated attributes 2', () {
+    test('rejects schema with label missing UNIQUE', () {
       expect(
         () => Database.fromSchema(
           dbPath,
-          path.join(testsPath, 'test_invalid_database_with_duplicated_attributes_2.sql'),
+          path.join(invalidPath, 'label_not_unique.sql'),
         ),
         throwsA(isA<SchemaException>()),
       );
     });
 
-    test('rejects schema with invalid collection name', () {
+    test('rejects schema with label wrong type', () {
       expect(
         () => Database.fromSchema(
           dbPath,
-          path.join(testsPath, 'test_invalid_database_with_invalid_collection_name.sql'),
+          path.join(invalidPath, 'label_wrong_type.sql'),
         ),
         throwsA(isA<SchemaException>()),
       );
     });
 
-    test('rejects schema with vector table without vector index', () {
+    test('rejects schema with duplicate attribute', () {
       expect(
         () => Database.fromSchema(
           dbPath,
-          path.join(testsPath, 'test_invalid_database_vector_table_without_vector_index.sql'),
+          path.join(invalidPath, 'duplicate_attribute.sql'),
         ),
         throwsA(isA<SchemaException>()),
       );
     });
 
-    test('rejects schema with foreign key with NOT NULL constraint', () {
+    test('rejects schema with vector table without vector_index', () {
       expect(
         () => Database.fromSchema(
           dbPath,
-          path.join(testsPath, 'test_invalid_foreign_key_has_not_null_constraint.sql'),
+          path.join(invalidPath, 'vector_no_index.sql'),
         ),
         throwsA(isA<SchemaException>()),
       );
     });
 
-    test('rejects schema with duplicated collection definition', () {
+    test('rejects schema with set table without UNIQUE', () {
       expect(
         () => Database.fromSchema(
           dbPath,
-          path.join(testsPath, 'test_invalid_duplicated_collection_definition.sql'),
+          path.join(invalidPath, 'set_no_unique.sql'),
         ),
         throwsA(isA<SchemaException>()),
       );
     });
 
-    test('rejects schema with invalid relation attribute', () {
+    test('rejects schema with FK NOT NULL and ON DELETE SET NULL', () {
       expect(
         () => Database.fromSchema(
           dbPath,
-          path.join(testsPath, 'test_invalid_relation_attribute.sql'),
+          path.join(invalidPath, 'fk_not_null_set_null.sql'),
         ),
         throwsA(isA<SchemaException>()),
       );
     });
 
-    test('rejects schema with invalid vector table', () {
+    test('rejects schema with invalid FK actions', () {
       expect(
         () => Database.fromSchema(
           dbPath,
-          path.join(testsPath, 'test_invalid_vector_table.sql'),
+          path.join(invalidPath, 'fk_actions.sql'),
         ),
         throwsA(isA<SchemaException>()),
       );
-    });
-
-    test('rejects schema with invalid foreign key actions', () {
-      expect(
-        () => Database.fromSchema(
-          dbPath,
-          path.join(testsPath, 'test_invalid_database_foreign_key_actions.sql'),
-        ),
-        throwsA(isA<SchemaException>()),
-      );
-    });
-
-    test('rejects schema with label not UNIQUE', () {
-      expect(
-        () => Database.fromSchema(
-          dbPath,
-          path.join(testsPath, 'test_invalid_label_constraints_unique.sql'),
-        ),
-        throwsA(isA<SchemaException>()),
-      );
-    });
-
-    test('rejects schema with label nullable', () {
-      expect(
-        () => Database.fromSchema(
-          dbPath,
-          path.join(testsPath, 'test_invalid_label_constraints_null.sql'),
-        ),
-        throwsA(isA<SchemaException>()),
-      );
-    });
-
-    test('rejects schema with label not TEXT type', () {
-      expect(
-        () => Database.fromSchema(
-          dbPath,
-          path.join(testsPath, 'test_invalid_label_constraints_text.sql'),
-        ),
-        throwsA(isA<SchemaException>()),
-      );
-    });
-  });
-
-  group('Valid Schemas', () {
-    test('loads full schema with multiple collections', () {
-      final db = Database.fromSchema(
-        dbPath,
-        path.join(testsPath, 'test_valid_schema_full.sql'),
-      );
-      db.close();
-    });
-
-    test('loads schema with string default values', () {
-      final db = Database.fromSchema(
-        dbPath,
-        path.join(testsPath, 'test_string_default_value.sql'),
-      );
-      db.close();
     });
   });
 }

@@ -6,7 +6,7 @@ add_executable(psr_database_tests
     test_database.cpp
     test_element.cpp
     test_migrations/test_migrations.cpp
-    test_valid_database_definitions/test_schema_validator.cpp
+    test_schema_validator.cpp
 )
 
 target_link_libraries(psr_database_tests

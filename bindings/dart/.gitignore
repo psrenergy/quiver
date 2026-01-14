@@ -16,3 +16,6 @@ pubspec.lock
 
 # Test artifacts
 *.db
+
+# Coverage
+coverage/
