@@ -3,7 +3,11 @@ import 'dart:io';
 
 import 'bindings.dart';
 
-const String _libraryName = 'libpsr_database_c.dll';
+String get _libraryName {
+  if (Platform.isWindows) return 'libpsr_database_c.dll';
+  if (Platform.isMacOS) return 'libpsr_database_c.dylib';
+  return 'libpsr_database_c.so'; // Linux and others
+}
 
 PsrDatabaseBindings? _cachedBindings;
 DynamicLibrary? _cachedLibrary;
