@@ -60,18 +60,18 @@ include("fixture.jl")
 
     @test PSRDatabase.read_scalar_strings(db, "Configuration", "label") ==
           ["Toy Case"]
-#     @test PSRDatabase.read_scalar_parameters(db, "Configuration", "date_initial") ==
-#           ["2020-01-01 00:00:00"]
-#     @test PSRDatabase.read_scalar_parameters(db, "Resource", "label") ==
-#           ["Resource 1", "Resource 2"]
-#     @test PSRDatabase.read_scalar_parameter(db, "Resource", "label", "Resource 1") ==
+    @test PSRDatabase.read_scalar_strings(db, "Configuration", "date_initial") ==
+          ["2020-01-01 00:00:00"]
+    @test PSRDatabase.read_scalar_strings(db, "Resource", "label") ==
+          ["Resource 1", "Resource 2"]
+#     @test PSRDatabase.read_scalar_strings(db, "Resource", "label", "Resource 1") ==
 #           "Resource 1"
-#     @test PSRDatabase.read_scalar_parameters(db, "Cost", "value") == [100.0, 10.0]
+    @test PSRDatabase.read_scalar_doubles(db, "Cost", "value") == [100.0, 10.0]
 #     @test any(
 #         isnothing,
 #         PSRDatabase.read_scalar_parameters(db, "Cost", "value_without_default"),
 #     )
-#     @test PSRDatabase.read_scalar_parameters(
+#     @test PSRDatabase.read_scalar_doubles(
 #         db,
 #         "Cost",
 #         "value_without_default";
