@@ -3,7 +3,6 @@
 #include "psr/database.h"
 
 #include <new>
-#include <stdexcept>
 #include <string>
 
 // Forward declare the psr_element struct (defined in c_api_element.cpp)

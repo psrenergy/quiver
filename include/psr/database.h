@@ -6,10 +6,8 @@
 #include "psr/log_level.h"
 #include "psr/result.h"
 
-#include <map>
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace psr {
