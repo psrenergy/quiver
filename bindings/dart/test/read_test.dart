@@ -219,8 +219,8 @@ void main() {
     });
   });
 
-  group('Read Vector With Empty Vectors', () {
-    test('handles elements with and without vectors', () {
+  group('Read Vector Only Returns Elements With Data', () {
+    test('only returns vectors for elements with data', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
@@ -235,11 +235,16 @@ void main() {
           'label': 'Item 2',
           // No vector data
         });
+        db.createElement('Collection', {
+          'label': 'Item 3',
+          'value_int': [4, 5],
+        });
 
+        // Only elements with vector data are returned
         final result = db.readVectorInts('Collection', 'value_int');
         expect(result.length, equals(2));
         expect(result[0], equals([1, 2, 3]));
-        expect(result[1], isEmpty);
+        expect(result[1], equals([4, 5]));
       } finally {
         db.close();
       }

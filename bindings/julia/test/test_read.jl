@@ -104,7 +104,7 @@ end
     PSRDatabase.close!(db)
 end
 
-@testset "Read Vector With Empty Vectors" begin
+@testset "Read Vector Only Returns Elements With Data" begin
     path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
     db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
 
@@ -115,15 +115,21 @@ end
         label = "Item 1",
         value_int = [1, 2, 3],
     )
-    # Create element without vectors (empty)
+    # Create element without vectors (no vector data inserted)
     PSRDatabase.create_element!(db, "Collection";
         label = "Item 2",
     )
+    # Create another element with vectors
+    PSRDatabase.create_element!(db, "Collection";
+        label = "Item 3",
+        value_int = [4, 5],
+    )
 
+    # Only elements with vector data are returned
     result = PSRDatabase.read_vector_ints(db, "Collection", "value_int")
     @test length(result) == 2
     @test result[1] == [1, 2, 3]
-    @test result[2] == Int64[]
+    @test result[2] == [4, 5]
 
     PSRDatabase.close!(db)
 end
