@@ -299,4 +299,151 @@ PSR_C_API void psr_free_string_array(char** values, size_t count) {
     delete[] values;
 }
 
+PSR_C_API psr_error_t psr_database_read_vector_ints(psr_database_t* db,
+                                                     const char* collection,
+                                                     const char* attribute,
+                                                     int64_t*** out_vectors,
+                                                     size_t** out_sizes,
+                                                     size_t* out_count) {
+    if (!db || !collection || !attribute || !out_vectors || !out_sizes || !out_count) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+
+    try {
+        auto vectors = db->db.read_vector_ints(collection, attribute);
+        *out_count = vectors.size();
+        if (vectors.empty()) {
+            *out_vectors = nullptr;
+            *out_sizes = nullptr;
+            return PSR_OK;
+        }
+        *out_vectors = new int64_t*[vectors.size()];
+        *out_sizes = new size_t[vectors.size()];
+        for (size_t i = 0; i < vectors.size(); ++i) {
+            (*out_sizes)[i] = vectors[i].size();
+            if (vectors[i].empty()) {
+                (*out_vectors)[i] = nullptr;
+            } else {
+                (*out_vectors)[i] = new int64_t[vectors[i].size()];
+                std::copy(vectors[i].begin(), vectors[i].end(), (*out_vectors)[i]);
+            }
+        }
+        return PSR_OK;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API psr_error_t psr_database_read_vector_doubles(psr_database_t* db,
+                                                        const char* collection,
+                                                        const char* attribute,
+                                                        double*** out_vectors,
+                                                        size_t** out_sizes,
+                                                        size_t* out_count) {
+    if (!db || !collection || !attribute || !out_vectors || !out_sizes || !out_count) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+
+    try {
+        auto vectors = db->db.read_vector_doubles(collection, attribute);
+        *out_count = vectors.size();
+        if (vectors.empty()) {
+            *out_vectors = nullptr;
+            *out_sizes = nullptr;
+            return PSR_OK;
+        }
+        *out_vectors = new double*[vectors.size()];
+        *out_sizes = new size_t[vectors.size()];
+        for (size_t i = 0; i < vectors.size(); ++i) {
+            (*out_sizes)[i] = vectors[i].size();
+            if (vectors[i].empty()) {
+                (*out_vectors)[i] = nullptr;
+            } else {
+                (*out_vectors)[i] = new double[vectors[i].size()];
+                std::copy(vectors[i].begin(), vectors[i].end(), (*out_vectors)[i]);
+            }
+        }
+        return PSR_OK;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API psr_error_t psr_database_read_vector_strings(psr_database_t* db,
+                                                        const char* collection,
+                                                        const char* attribute,
+                                                        char**** out_vectors,
+                                                        size_t** out_sizes,
+                                                        size_t* out_count) {
+    if (!db || !collection || !attribute || !out_vectors || !out_sizes || !out_count) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+
+    try {
+        auto vectors = db->db.read_vector_strings(collection, attribute);
+        *out_count = vectors.size();
+        if (vectors.empty()) {
+            *out_vectors = nullptr;
+            *out_sizes = nullptr;
+            return PSR_OK;
+        }
+        *out_vectors = new char**[vectors.size()];
+        *out_sizes = new size_t[vectors.size()];
+        for (size_t i = 0; i < vectors.size(); ++i) {
+            (*out_sizes)[i] = vectors[i].size();
+            if (vectors[i].empty()) {
+                (*out_vectors)[i] = nullptr;
+            } else {
+                (*out_vectors)[i] = new char*[vectors[i].size()];
+                for (size_t j = 0; j < vectors[i].size(); ++j) {
+                    (*out_vectors)[i][j] = new char[vectors[i][j].size() + 1];
+                    std::copy(vectors[i][j].begin(), vectors[i][j].end(), (*out_vectors)[i][j]);
+                    (*out_vectors)[i][j][vectors[i][j].size()] = '\0';
+                }
+            }
+        }
+        return PSR_OK;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API void psr_free_int_vectors(int64_t** vectors, size_t* sizes, size_t count) {
+    if (!vectors) {
+        return;
+    }
+    for (size_t i = 0; i < count; ++i) {
+        delete[] vectors[i];
+    }
+    delete[] vectors;
+    delete[] sizes;
+}
+
+PSR_C_API void psr_free_double_vectors(double** vectors, size_t* sizes, size_t count) {
+    if (!vectors) {
+        return;
+    }
+    for (size_t i = 0; i < count; ++i) {
+        delete[] vectors[i];
+    }
+    delete[] vectors;
+    delete[] sizes;
+}
+
+PSR_C_API void psr_free_string_vectors(char*** vectors, size_t* sizes, size_t count) {
+    if (!vectors) {
+        return;
+    }
+    for (size_t i = 0; i < count; ++i) {
+        if (vectors[i]) {
+            for (size_t j = 0; j < sizes[i]; ++j) {
+                delete[] vectors[i][j];
+            }
+            delete[] vectors[i];
+        }
+    }
+    delete[] vectors;
+    delete[] sizes;
+}
+
 }  // extern "C"

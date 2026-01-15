@@ -55,6 +55,14 @@ public:
     std::vector<double> read_scalar_doubles(const std::string& collection, const std::string& attribute);
     std::vector<std::string> read_scalar_strings(const std::string& collection, const std::string& attribute);
 
+    // Read vector attributes
+    std::vector<std::vector<int64_t>> read_vector_ints(const std::string& collection,
+                                                        const std::string& attribute);
+    std::vector<std::vector<double>> read_vector_doubles(const std::string& collection,
+                                                          const std::string& attribute);
+    std::vector<std::vector<std::string>> read_vector_strings(const std::string& collection,
+                                                               const std::string& attribute);
+
     // Transaction management
     void begin_transaction();
     void commit();

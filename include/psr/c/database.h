@@ -71,10 +71,37 @@ PSR_C_API psr_error_t psr_database_read_scalar_strings(psr_database_t* db,
                                                        char*** out_values,
                                                        size_t* out_count);
 
+// Read vector attributes
+PSR_C_API psr_error_t psr_database_read_vector_ints(psr_database_t* db,
+                                                     const char* collection,
+                                                     const char* attribute,
+                                                     int64_t*** out_vectors,
+                                                     size_t** out_sizes,
+                                                     size_t* out_count);
+
+PSR_C_API psr_error_t psr_database_read_vector_doubles(psr_database_t* db,
+                                                        const char* collection,
+                                                        const char* attribute,
+                                                        double*** out_vectors,
+                                                        size_t** out_sizes,
+                                                        size_t* out_count);
+
+PSR_C_API psr_error_t psr_database_read_vector_strings(psr_database_t* db,
+                                                        const char* collection,
+                                                        const char* attribute,
+                                                        char**** out_vectors,
+                                                        size_t** out_sizes,
+                                                        size_t* out_count);
+
 // Memory cleanup for read results
 PSR_C_API void psr_free_int_array(int64_t* values);
 PSR_C_API void psr_free_double_array(double* values);
 PSR_C_API void psr_free_string_array(char** values, size_t count);
+
+// Memory cleanup for vector read results
+PSR_C_API void psr_free_int_vectors(int64_t** vectors, size_t* sizes, size_t count);
+PSR_C_API void psr_free_double_vectors(double** vectors, size_t* sizes, size_t count);
+PSR_C_API void psr_free_string_vectors(char*** vectors, size_t* sizes, size_t count);
 
 #ifdef __cplusplus
 }

@@ -89,3 +89,91 @@ function read_scalar_strings(db::Database, collection::String, attribute::String
     C.psr_free_string_array(out_values[], count)
     return result
 end
+
+function read_vector_ints(db::Database, collection::String, attribute::String)
+    out_vectors = Ref{Ptr{Ptr{Int64}}}(C_NULL)
+    out_sizes = Ref{Ptr{Csize_t}}(C_NULL)
+    out_count = Ref{Csize_t}(0)
+
+    err = C.psr_database_read_vector_ints(db.ptr, collection, attribute, out_vectors, out_sizes, out_count)
+    if err != C.PSR_OK
+        throw(DatabaseException("Failed to read vector ints from '$collection.$attribute'"))
+    end
+
+    count = out_count[]
+    if count == 0 || out_vectors[] == C_NULL
+        return Vector{Int64}[]
+    end
+
+    vectors_ptr = unsafe_wrap(Array, out_vectors[], count)
+    sizes_ptr = unsafe_wrap(Array, out_sizes[], count)
+    result = Vector{Int64}[]
+    for i in 1:count
+        if vectors_ptr[i] == C_NULL || sizes_ptr[i] == 0
+            push!(result, Int64[])
+        else
+            push!(result, copy(unsafe_wrap(Array, vectors_ptr[i], sizes_ptr[i])))
+        end
+    end
+    C.psr_free_int_vectors(out_vectors[], out_sizes[], count)
+    return result
+end
+
+function read_vector_doubles(db::Database, collection::String, attribute::String)
+    out_vectors = Ref{Ptr{Ptr{Cdouble}}}(C_NULL)
+    out_sizes = Ref{Ptr{Csize_t}}(C_NULL)
+    out_count = Ref{Csize_t}(0)
+
+    err = C.psr_database_read_vector_doubles(db.ptr, collection, attribute, out_vectors, out_sizes, out_count)
+    if err != C.PSR_OK
+        throw(DatabaseException("Failed to read vector doubles from '$collection.$attribute'"))
+    end
+
+    count = out_count[]
+    if count == 0 || out_vectors[] == C_NULL
+        return Vector{Float64}[]
+    end
+
+    vectors_ptr = unsafe_wrap(Array, out_vectors[], count)
+    sizes_ptr = unsafe_wrap(Array, out_sizes[], count)
+    result = Vector{Float64}[]
+    for i in 1:count
+        if vectors_ptr[i] == C_NULL || sizes_ptr[i] == 0
+            push!(result, Float64[])
+        else
+            push!(result, copy(unsafe_wrap(Array, vectors_ptr[i], sizes_ptr[i])))
+        end
+    end
+    C.psr_free_double_vectors(out_vectors[], out_sizes[], count)
+    return result
+end
+
+function read_vector_strings(db::Database, collection::String, attribute::String)
+    out_vectors = Ref{Ptr{Ptr{Ptr{Cchar}}}}(C_NULL)
+    out_sizes = Ref{Ptr{Csize_t}}(C_NULL)
+    out_count = Ref{Csize_t}(0)
+
+    err = C.psr_database_read_vector_strings(db.ptr, collection, attribute, out_vectors, out_sizes, out_count)
+    if err != C.PSR_OK
+        throw(DatabaseException("Failed to read vector strings from '$collection.$attribute'"))
+    end
+
+    count = out_count[]
+    if count == 0 || out_vectors[] == C_NULL
+        return Vector{String}[]
+    end
+
+    vectors_ptr = unsafe_wrap(Array, out_vectors[], count)
+    sizes_ptr = unsafe_wrap(Array, out_sizes[], count)
+    result = Vector{String}[]
+    for i in 1:count
+        if vectors_ptr[i] == C_NULL || sizes_ptr[i] == 0
+            push!(result, String[])
+        else
+            str_ptrs = unsafe_wrap(Array, vectors_ptr[i], sizes_ptr[i])
+            push!(result, [unsafe_string(ptr) for ptr in str_ptrs])
+        end
+    end
+    C.psr_free_string_vectors(out_vectors[], out_sizes[], count)
+    return result
+end

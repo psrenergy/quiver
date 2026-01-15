@@ -373,6 +373,117 @@ class PsrDatabaseBindings {
               ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
               ffi.Pointer<ffi.Size>)>();
 
+  int psr_database_read_vector_ints(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>> out_vectors,
+    ffi.Pointer<ffi.Pointer<ffi.Size>> out_sizes,
+    ffi.Pointer<ffi.Size> out_count,
+  ) {
+    return _psr_database_read_vector_ints(
+      db,
+      collection,
+      attribute,
+      out_vectors,
+      out_sizes,
+      out_count,
+    );
+  }
+
+  late final _psr_database_read_vector_intsPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>>,
+              ffi.Pointer<ffi.Pointer<ffi.Size>>,
+              ffi.Pointer<ffi.Size>)>>('psr_database_read_vector_ints');
+  late final _psr_database_read_vector_ints =
+      _psr_database_read_vector_intsPtr.asFunction<
+          int Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>>,
+              ffi.Pointer<ffi.Pointer<ffi.Size>>,
+              ffi.Pointer<ffi.Size>)>();
+
+  int psr_database_read_vector_doubles(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>> out_vectors,
+    ffi.Pointer<ffi.Pointer<ffi.Size>> out_sizes,
+    ffi.Pointer<ffi.Size> out_count,
+  ) {
+    return _psr_database_read_vector_doubles(
+      db,
+      collection,
+      attribute,
+      out_vectors,
+      out_sizes,
+      out_count,
+    );
+  }
+
+  late final _psr_database_read_vector_doublesPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>>,
+              ffi.Pointer<ffi.Pointer<ffi.Size>>,
+              ffi.Pointer<ffi.Size>)>>('psr_database_read_vector_doubles');
+  late final _psr_database_read_vector_doubles =
+      _psr_database_read_vector_doublesPtr.asFunction<
+          int Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>>,
+              ffi.Pointer<ffi.Pointer<ffi.Size>>,
+              ffi.Pointer<ffi.Size>)>();
+
+  int psr_database_read_vector_strings(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>> out_vectors,
+    ffi.Pointer<ffi.Pointer<ffi.Size>> out_sizes,
+    ffi.Pointer<ffi.Size> out_count,
+  ) {
+    return _psr_database_read_vector_strings(
+      db,
+      collection,
+      attribute,
+      out_vectors,
+      out_sizes,
+      out_count,
+    );
+  }
+
+  late final _psr_database_read_vector_stringsPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>>,
+              ffi.Pointer<ffi.Pointer<ffi.Size>>,
+              ffi.Pointer<ffi.Size>)>>('psr_database_read_vector_strings');
+  late final _psr_database_read_vector_strings =
+      _psr_database_read_vector_stringsPtr.asFunction<
+          int Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>>,
+              ffi.Pointer<ffi.Pointer<ffi.Size>>,
+              ffi.Pointer<ffi.Size>)>();
+
   void psr_free_int_array(
     ffi.Pointer<ffi.Int64> values,
   ) {
@@ -417,6 +528,66 @@ class PsrDatabaseBindings {
               ffi.Size)>>('psr_free_string_array');
   late final _psr_free_string_array = _psr_free_string_arrayPtr
       .asFunction<void Function(ffi.Pointer<ffi.Pointer<ffi.Char>>, int)>();
+
+  void psr_free_int_vectors(
+    ffi.Pointer<ffi.Pointer<ffi.Int64>> vectors,
+    ffi.Pointer<ffi.Size> sizes,
+    int count,
+  ) {
+    return _psr_free_int_vectors(
+      vectors,
+      sizes,
+      count,
+    );
+  }
+
+  late final _psr_free_int_vectorsPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+              ffi.Pointer<ffi.Size>, ffi.Size)>>('psr_free_int_vectors');
+  late final _psr_free_int_vectors = _psr_free_int_vectorsPtr.asFunction<
+      void Function(
+          ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>, int)>();
+
+  void psr_free_double_vectors(
+    ffi.Pointer<ffi.Pointer<ffi.Double>> vectors,
+    ffi.Pointer<ffi.Size> sizes,
+    int count,
+  ) {
+    return _psr_free_double_vectors(
+      vectors,
+      sizes,
+      count,
+    );
+  }
+
+  late final _psr_free_double_vectorsPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Double>>,
+              ffi.Pointer<ffi.Size>, ffi.Size)>>('psr_free_double_vectors');
+  late final _psr_free_double_vectors = _psr_free_double_vectorsPtr.asFunction<
+      void Function(
+          ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>, int)>();
+
+  void psr_free_string_vectors(
+    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>> vectors,
+    ffi.Pointer<ffi.Size> sizes,
+    int count,
+  ) {
+    return _psr_free_string_vectors(
+      vectors,
+      sizes,
+      count,
+    );
+  }
+
+  late final _psr_free_string_vectorsPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+              ffi.Pointer<ffi.Size>, ffi.Size)>>('psr_free_string_vectors');
+  late final _psr_free_string_vectors = _psr_free_string_vectorsPtr.asFunction<
+      void Function(ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+          ffi.Pointer<ffi.Size>, int)>();
 
   ffi.Pointer<psr_element_t1> psr_element_create() {
     return _psr_element_create();
