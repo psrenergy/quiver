@@ -142,7 +142,7 @@ jobs:
 
       - uses: dart-lang/setup-dart@v1
         with:
-          sdk: 3.38.7
+          sdk: 3.10.7
 
       - name: Install lcov
         run: sudo apt-get update && sudo apt-get install -y lcov
