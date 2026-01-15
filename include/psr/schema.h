@@ -68,6 +68,10 @@ public:
     bool is_time_series_table(const std::string& table) const;
     std::string get_parent_collection(const std::string& table) const;
 
+    // Find table for attribute (throws if not found)
+    std::string find_vector_table(const std::string& collection, const std::string& attribute) const;
+    std::string find_set_table(const std::string& collection, const std::string& attribute) const;
+
     // All tables/collections
     std::vector<std::string> table_names() const;
     std::vector<std::string> collection_names() const;
