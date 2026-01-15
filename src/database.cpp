@@ -201,7 +201,7 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
                 const char* text = reinterpret_cast<const char*>(sqlite3_column_text(stmt, i));
                 values.emplace_back(std::string(text ? text : ""));
                 break;
-            }    
+            }
             case SQLITE_NULL:
                 values.emplace_back(nullptr);
                 break;
