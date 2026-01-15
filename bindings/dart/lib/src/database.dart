@@ -185,6 +185,138 @@ class Database {
     }
   }
 
+  /// Reads all int vectors for a vector attribute from a collection.
+  List<List<int>> readVectorInts(String collection, String attribute) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outVectors = arena<Pointer<Pointer<Int64>>>();
+      final outSizes = arena<Pointer<Size>>();
+      final outCount = arena<Size>();
+
+      final err = bindings.psr_database_read_vector_ints(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        outVectors,
+        outSizes,
+        outCount,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to read vector ints from '$collection.$attribute'");
+      }
+
+      final count = outCount.value;
+      if (count == 0 || outVectors.value == nullptr) {
+        return [];
+      }
+
+      final result = <List<int>>[];
+      for (var i = 0; i < count; i++) {
+        final size = outSizes.value[i];
+        if (size == 0 || outVectors.value[i] == nullptr) {
+          result.add([]);
+        } else {
+          result.add(List<int>.generate(size, (j) => outVectors.value[i][j]));
+        }
+      }
+      bindings.psr_free_int_vectors(outVectors.value, outSizes.value, count);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Reads all double vectors for a vector attribute from a collection.
+  List<List<double>> readVectorDoubles(String collection, String attribute) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outVectors = arena<Pointer<Pointer<Double>>>();
+      final outSizes = arena<Pointer<Size>>();
+      final outCount = arena<Size>();
+
+      final err = bindings.psr_database_read_vector_doubles(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        outVectors,
+        outSizes,
+        outCount,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to read vector doubles from '$collection.$attribute'");
+      }
+
+      final count = outCount.value;
+      if (count == 0 || outVectors.value == nullptr) {
+        return [];
+      }
+
+      final result = <List<double>>[];
+      for (var i = 0; i < count; i++) {
+        final size = outSizes.value[i];
+        if (size == 0 || outVectors.value[i] == nullptr) {
+          result.add([]);
+        } else {
+          result.add(List<double>.generate(size, (j) => outVectors.value[i][j]));
+        }
+      }
+      bindings.psr_free_double_vectors(outVectors.value, outSizes.value, count);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Reads all string vectors for a vector attribute from a collection.
+  List<List<String>> readVectorStrings(String collection, String attribute) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outVectors = arena<Pointer<Pointer<Pointer<Char>>>>();
+      final outSizes = arena<Pointer<Size>>();
+      final outCount = arena<Size>();
+
+      final err = bindings.psr_database_read_vector_strings(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        outVectors,
+        outSizes,
+        outCount,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to read vector strings from '$collection.$attribute'");
+      }
+
+      final count = outCount.value;
+      if (count == 0 || outVectors.value == nullptr) {
+        return [];
+      }
+
+      final result = <List<String>>[];
+      for (var i = 0; i < count; i++) {
+        final size = outSizes.value[i];
+        if (size == 0 || outVectors.value[i] == nullptr) {
+          result.add([]);
+        } else {
+          result.add(List<String>.generate(size, (j) => outVectors.value[i][j].cast<Utf8>().toDartString()));
+        }
+      }
+      bindings.psr_free_string_vectors(outVectors.value, outSizes.value, count);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
   /// Closes the database and frees native resources.
   void close() {
     if (_isClosed) return;
