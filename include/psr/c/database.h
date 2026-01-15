@@ -95,25 +95,25 @@ PSR_C_API psr_error_t psr_database_read_vector_strings(psr_database_t* db,
 
 // Read set attributes (same structure as vectors, uses same free functions)
 PSR_C_API psr_error_t psr_database_read_set_ints(psr_database_t* db,
-                                                  const char* collection,
-                                                  const char* attribute,
-                                                  int64_t*** out_sets,
-                                                  size_t** out_sizes,
-                                                  size_t* out_count);
+                                                 const char* collection,
+                                                 const char* attribute,
+                                                 int64_t*** out_sets,
+                                                 size_t** out_sizes,
+                                                 size_t* out_count);
 
 PSR_C_API psr_error_t psr_database_read_set_doubles(psr_database_t* db,
-                                                     const char* collection,
-                                                     const char* attribute,
-                                                     double*** out_sets,
-                                                     size_t** out_sizes,
-                                                     size_t* out_count);
+                                                    const char* collection,
+                                                    const char* attribute,
+                                                    double*** out_sets,
+                                                    size_t** out_sizes,
+                                                    size_t* out_count);
 
 PSR_C_API psr_error_t psr_database_read_set_strings(psr_database_t* db,
-                                                     const char* collection,
-                                                     const char* attribute,
-                                                     char**** out_sets,
-                                                     size_t** out_sizes,
-                                                     size_t* out_count);
+                                                    const char* collection,
+                                                    const char* attribute,
+                                                    char**** out_sets,
+                                                    size_t** out_sizes,
+                                                    size_t* out_count);
 
 // Memory cleanup for read results
 PSR_C_API void psr_free_int_array(int64_t* values);
