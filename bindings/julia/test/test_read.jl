@@ -134,4 +134,68 @@ end
     PSRDatabase.close!(db)
 end
 
+@testset "Read Set Attributes" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+    db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
+
+    PSRDatabase.create_element!(db, "Collection";
+        label = "Item 1",
+        tag = ["important", "urgent"],
+    )
+    PSRDatabase.create_element!(db, "Collection";
+        label = "Item 2",
+        tag = ["review"],
+    )
+
+    result = PSRDatabase.read_set_strings(db, "Collection", "tag")
+    @test length(result) == 2
+    # Sets are unordered, so sort before comparison
+    @test sort(result[1]) == ["important", "urgent"]
+    @test result[2] == ["review"]
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Read Set Empty Result" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+    db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
+
+    # No Collection elements created
+    @test PSRDatabase.read_set_strings(db, "Collection", "tag") == Vector{String}[]
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Read Set Only Returns Elements With Data" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+    db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
+
+    # Create element with set data
+    PSRDatabase.create_element!(db, "Collection";
+        label = "Item 1",
+        tag = ["important"],
+    )
+    # Create element without set data
+    PSRDatabase.create_element!(db, "Collection";
+        label = "Item 2",
+    )
+    # Create another element with set data
+    PSRDatabase.create_element!(db, "Collection";
+        label = "Item 3",
+        tag = ["urgent", "review"],
+    )
+
+    # Only elements with set data are returned
+    result = PSRDatabase.read_set_strings(db, "Collection", "tag")
+    @test length(result) == 2
+
+    PSRDatabase.close!(db)
+end
+
 end

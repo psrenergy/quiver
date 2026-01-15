@@ -382,3 +382,71 @@ TEST_F(DatabaseFixture, ReadVectorOnlyReturnsElementsWithData) {
     EXPECT_EQ(vectors[0], (std::vector<int64_t>{1, 2, 3}));
     EXPECT_EQ(vectors[1], (std::vector<int64_t>{4, 5}));
 }
+
+TEST_F(DatabaseFixture, ReadSetStrings) {
+    auto db = psr::Database::from_schema(
+        ":memory:", schema_path("schemas/valid/collections.sql"), {.console_level = psr::LogLevel::off});
+
+    psr::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    psr::Element e1;
+    e1.set("label", std::string("Item 1")).set("tag", std::vector<std::string>{"important", "urgent"});
+    db.create_element("Collection", e1);
+
+    psr::Element e2;
+    e2.set("label", std::string("Item 2")).set("tag", std::vector<std::string>{"review"});
+    db.create_element("Collection", e2);
+
+    auto sets = db.read_set_strings("Collection", "tag");
+    EXPECT_EQ(sets.size(), 2);
+    // Sets are unordered, so sort before comparison
+    auto set1 = sets[0];
+    auto set2 = sets[1];
+    std::sort(set1.begin(), set1.end());
+    std::sort(set2.begin(), set2.end());
+    EXPECT_EQ(set1, (std::vector<std::string>{"important", "urgent"}));
+    EXPECT_EQ(set2, (std::vector<std::string>{"review"}));
+}
+
+TEST_F(DatabaseFixture, ReadSetEmpty) {
+    auto db = psr::Database::from_schema(
+        ":memory:", schema_path("schemas/valid/collections.sql"), {.console_level = psr::LogLevel::off});
+
+    psr::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    // No Collection elements created
+    auto sets = db.read_set_strings("Collection", "tag");
+    EXPECT_TRUE(sets.empty());
+}
+
+TEST_F(DatabaseFixture, ReadSetOnlyReturnsElementsWithData) {
+    auto db = psr::Database::from_schema(
+        ":memory:", schema_path("schemas/valid/collections.sql"), {.console_level = psr::LogLevel::off});
+
+    psr::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    // Element with set data
+    psr::Element e1;
+    e1.set("label", std::string("Item 1")).set("tag", std::vector<std::string>{"important"});
+    db.create_element("Collection", e1);
+
+    // Element without set data
+    psr::Element e2;
+    e2.set("label", std::string("Item 2"));
+    db.create_element("Collection", e2);
+
+    // Another element with set data
+    psr::Element e3;
+    e3.set("label", std::string("Item 3")).set("tag", std::vector<std::string>{"urgent", "review"});
+    db.create_element("Collection", e3);
+
+    // Only elements with set data are returned
+    auto sets = db.read_set_strings("Collection", "tag");
+    EXPECT_EQ(sets.size(), 2);
+}

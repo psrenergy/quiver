@@ -61,6 +61,11 @@ public:
     std::vector<std::vector<std::string>> read_vector_strings(const std::string& collection,
                                                               const std::string& attribute);
 
+    // Read set attributes
+    std::vector<std::vector<int64_t>> read_set_ints(const std::string& collection, const std::string& attribute);
+    std::vector<std::vector<double>> read_set_doubles(const std::string& collection, const std::string& attribute);
+    std::vector<std::vector<std::string>> read_set_strings(const std::string& collection, const std::string& attribute);
+
     // Transaction management
     void begin_transaction();
     void commit();

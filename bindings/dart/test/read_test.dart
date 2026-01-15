@@ -250,4 +250,78 @@ void main() {
       }
     });
   });
+
+  group('Read Set Attributes', () {
+    test('reads string sets from Collection', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'tag': ['important', 'urgent'],
+        });
+        db.createElement('Collection', {
+          'label': 'Item 2',
+          'tag': ['review'],
+        });
+
+        final result = db.readSetStrings('Collection', 'tag');
+        expect(result.length, equals(2));
+        // Sets are unordered, so sort before comparison
+        expect(result[0]..sort(), equals(['important', 'urgent']));
+        expect(result[1], equals(['review']));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Read Set Empty Result', () {
+    test('returns empty list when no elements', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+
+        expect(db.readSetStrings('Collection', 'tag'), isEmpty);
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Read Set Only Returns Elements With Data', () {
+    test('only returns sets for elements with data', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'tag': ['important'],
+        });
+        db.createElement('Collection', {
+          'label': 'Item 2',
+          // No set data
+        });
+        db.createElement('Collection', {
+          'label': 'Item 3',
+          'tag': ['urgent', 'review'],
+        });
+
+        // Only elements with set data are returned
+        final result = db.readSetStrings('Collection', 'tag');
+        expect(result.length, equals(2));
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

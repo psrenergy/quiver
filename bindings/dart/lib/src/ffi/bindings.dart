@@ -484,6 +484,117 @@ class PsrDatabaseBindings {
               ffi.Pointer<ffi.Pointer<ffi.Size>>,
               ffi.Pointer<ffi.Size>)>();
 
+  int psr_database_read_set_ints(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>> out_sets,
+    ffi.Pointer<ffi.Pointer<ffi.Size>> out_sizes,
+    ffi.Pointer<ffi.Size> out_count,
+  ) {
+    return _psr_database_read_set_ints(
+      db,
+      collection,
+      attribute,
+      out_sets,
+      out_sizes,
+      out_count,
+    );
+  }
+
+  late final _psr_database_read_set_intsPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>>,
+              ffi.Pointer<ffi.Pointer<ffi.Size>>,
+              ffi.Pointer<ffi.Size>)>>('psr_database_read_set_ints');
+  late final _psr_database_read_set_ints =
+      _psr_database_read_set_intsPtr.asFunction<
+          int Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>>,
+              ffi.Pointer<ffi.Pointer<ffi.Size>>,
+              ffi.Pointer<ffi.Size>)>();
+
+  int psr_database_read_set_doubles(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>> out_sets,
+    ffi.Pointer<ffi.Pointer<ffi.Size>> out_sizes,
+    ffi.Pointer<ffi.Size> out_count,
+  ) {
+    return _psr_database_read_set_doubles(
+      db,
+      collection,
+      attribute,
+      out_sets,
+      out_sizes,
+      out_count,
+    );
+  }
+
+  late final _psr_database_read_set_doublesPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>>,
+              ffi.Pointer<ffi.Pointer<ffi.Size>>,
+              ffi.Pointer<ffi.Size>)>>('psr_database_read_set_doubles');
+  late final _psr_database_read_set_doubles =
+      _psr_database_read_set_doublesPtr.asFunction<
+          int Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>>,
+              ffi.Pointer<ffi.Pointer<ffi.Size>>,
+              ffi.Pointer<ffi.Size>)>();
+
+  int psr_database_read_set_strings(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>> out_sets,
+    ffi.Pointer<ffi.Pointer<ffi.Size>> out_sizes,
+    ffi.Pointer<ffi.Size> out_count,
+  ) {
+    return _psr_database_read_set_strings(
+      db,
+      collection,
+      attribute,
+      out_sets,
+      out_sizes,
+      out_count,
+    );
+  }
+
+  late final _psr_database_read_set_stringsPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>>,
+              ffi.Pointer<ffi.Pointer<ffi.Size>>,
+              ffi.Pointer<ffi.Size>)>>('psr_database_read_set_strings');
+  late final _psr_database_read_set_strings =
+      _psr_database_read_set_stringsPtr.asFunction<
+          int Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>>,
+              ffi.Pointer<ffi.Pointer<ffi.Size>>,
+              ffi.Pointer<ffi.Size>)>();
+
   void psr_free_int_array(
     ffi.Pointer<ffi.Int64> values,
   ) {

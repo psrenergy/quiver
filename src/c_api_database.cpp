@@ -425,4 +425,76 @@ PSR_C_API void psr_free_string_vectors(char*** vectors, size_t* sizes, size_t co
     delete[] sizes;
 }
 
+// Set read functions (reuse vector helpers since sets have same return structure)
+
+PSR_C_API psr_error_t psr_database_read_set_ints(psr_database_t* db,
+                                                 const char* collection,
+                                                 const char* attribute,
+                                                 int64_t*** out_sets,
+                                                 size_t** out_sizes,
+                                                 size_t* out_count) {
+    if (!db || !collection || !attribute || !out_sets || !out_sizes || !out_count) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        return read_vectors_impl(db->db.read_set_ints(collection, attribute), out_sets, out_sizes, out_count);
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API psr_error_t psr_database_read_set_doubles(psr_database_t* db,
+                                                    const char* collection,
+                                                    const char* attribute,
+                                                    double*** out_sets,
+                                                    size_t** out_sizes,
+                                                    size_t* out_count) {
+    if (!db || !collection || !attribute || !out_sets || !out_sizes || !out_count) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        return read_vectors_impl(db->db.read_set_doubles(collection, attribute), out_sets, out_sizes, out_count);
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API psr_error_t psr_database_read_set_strings(psr_database_t* db,
+                                                    const char* collection,
+                                                    const char* attribute,
+                                                    char**** out_sets,
+                                                    size_t** out_sizes,
+                                                    size_t* out_count) {
+    if (!db || !collection || !attribute || !out_sets || !out_sizes || !out_count) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        auto sets = db->db.read_set_strings(collection, attribute);
+        *out_count = sets.size();
+        if (sets.empty()) {
+            *out_sets = nullptr;
+            *out_sizes = nullptr;
+            return PSR_OK;
+        }
+        *out_sets = new char**[sets.size()];
+        *out_sizes = new size_t[sets.size()];
+        for (size_t i = 0; i < sets.size(); ++i) {
+            (*out_sizes)[i] = sets[i].size();
+            if (sets[i].empty()) {
+                (*out_sets)[i] = nullptr;
+            } else {
+                (*out_sets)[i] = new char*[sets[i].size()];
+                for (size_t j = 0; j < sets[i].size(); ++j) {
+                    (*out_sets)[i][j] = new char[sets[i][j].size() + 1];
+                    std::copy(sets[i][j].begin(), sets[i][j].end(), (*out_sets)[i][j]);
+                    (*out_sets)[i][j][sets[i][j].size()] = '\0';
+                }
+            }
+        }
+        return PSR_OK;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
 }  // extern "C"

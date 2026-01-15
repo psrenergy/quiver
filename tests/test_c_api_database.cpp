@@ -553,3 +553,125 @@ TEST_F(DatabaseFixture, ReadVectorOnlyReturnsElementsWithData) {
     psr_free_int_vectors(vectors, sizes, count);
     psr_database_close(db);
 }
+
+TEST_F(DatabaseFixture, ReadSetStrings) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", schema_path("schemas/valid/collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto config = psr_element_create();
+    psr_element_set_string(config, "label", "Test Config");
+    psr_database_create_element(db, "Configuration", config);
+    psr_element_destroy(config);
+
+    auto e1 = psr_element_create();
+    psr_element_set_string(e1, "label", "Item 1");
+    const char* tags1[] = {"important", "urgent"};
+    psr_element_set_array_string(e1, "tag", tags1, 2);
+    psr_database_create_element(db, "Collection", e1);
+    psr_element_destroy(e1);
+
+    auto e2 = psr_element_create();
+    psr_element_set_string(e2, "label", "Item 2");
+    const char* tags2[] = {"review"};
+    psr_element_set_array_string(e2, "tag", tags2, 1);
+    psr_database_create_element(db, "Collection", e2);
+    psr_element_destroy(e2);
+
+    char*** sets = nullptr;
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_set_strings(db, "Collection", "tag", &sets, &sizes, &count);
+
+    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(count, 2);
+    EXPECT_EQ(sizes[0], 2);
+    EXPECT_EQ(sizes[1], 1);
+
+    // Sets are unordered, so just check values exist
+    std::vector<std::string> set1_values;
+    for (size_t i = 0; i < sizes[0]; i++) {
+        set1_values.push_back(sets[0][i]);
+    }
+    std::sort(set1_values.begin(), set1_values.end());
+    EXPECT_EQ(set1_values[0], "important");
+    EXPECT_EQ(set1_values[1], "urgent");
+
+    EXPECT_STREQ(sets[1][0], "review");
+
+    psr_free_string_vectors(sets, sizes, count);
+    psr_database_close(db);
+}
+
+TEST_F(DatabaseFixture, ReadSetEmpty) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", schema_path("schemas/valid/collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto config = psr_element_create();
+    psr_element_set_string(config, "label", "Test Config");
+    psr_database_create_element(db, "Configuration", config);
+    psr_element_destroy(config);
+
+    char*** sets = nullptr;
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_set_strings(db, "Collection", "tag", &sets, &sizes, &count);
+
+    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(count, 0);
+    EXPECT_EQ(sets, nullptr);
+    EXPECT_EQ(sizes, nullptr);
+
+    psr_database_close(db);
+}
+
+TEST_F(DatabaseFixture, ReadSetOnlyReturnsElementsWithData) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", schema_path("schemas/valid/collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto config = psr_element_create();
+    psr_element_set_string(config, "label", "Test Config");
+    psr_database_create_element(db, "Configuration", config);
+    psr_element_destroy(config);
+
+    // Element with set data
+    auto e1 = psr_element_create();
+    psr_element_set_string(e1, "label", "Item 1");
+    const char* tags1[] = {"important"};
+    psr_element_set_array_string(e1, "tag", tags1, 1);
+    psr_database_create_element(db, "Collection", e1);
+    psr_element_destroy(e1);
+
+    // Element without set data
+    auto e2 = psr_element_create();
+    psr_element_set_string(e2, "label", "Item 2");
+    psr_database_create_element(db, "Collection", e2);
+    psr_element_destroy(e2);
+
+    // Another element with set data
+    auto e3 = psr_element_create();
+    psr_element_set_string(e3, "label", "Item 3");
+    const char* tags3[] = {"urgent", "review"};
+    psr_element_set_array_string(e3, "tag", tags3, 2);
+    psr_database_create_element(db, "Collection", e3);
+    psr_element_destroy(e3);
+
+    char*** sets = nullptr;
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_set_strings(db, "Collection", "tag", &sets, &sizes, &count);
+
+    // Only elements with set data are returned
+    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(count, 2);
+    EXPECT_EQ(sizes[0], 1);
+    EXPECT_EQ(sizes[1], 2);
+
+    psr_free_string_vectors(sets, sizes, count);
+    psr_database_close(db);
+}

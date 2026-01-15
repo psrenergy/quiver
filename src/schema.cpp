@@ -96,6 +96,52 @@ std::string Schema::get_parent_collection(const std::string& table) const {
     return "";
 }
 
+std::string Schema::find_vector_table(const std::string& collection, const std::string& attribute) const {
+    // First try: Collection_vector_attribute
+    auto vt = vector_table_name(collection, attribute);
+    if (has_table(vt)) {
+        return vt;
+    }
+
+    // Second try: search all vector tables for the collection
+    for (const auto& table_name : table_names()) {
+        if (!is_vector_table(table_name))
+            continue;
+        if (get_parent_collection(table_name) != collection)
+            continue;
+
+        const auto* table_def = get_table(table_name);
+        if (table_def && table_def->has_column(attribute)) {
+            return table_name;
+        }
+    }
+
+    throw std::runtime_error("Vector attribute '" + attribute + "' not found for collection '" + collection + "'");
+}
+
+std::string Schema::find_set_table(const std::string& collection, const std::string& attribute) const {
+    // First try: Collection_set_attribute
+    auto st = set_table_name(collection, attribute);
+    if (has_table(st)) {
+        return st;
+    }
+
+    // Second try: search all set tables for the collection
+    for (const auto& table_name : table_names()) {
+        if (!is_set_table(table_name))
+            continue;
+        if (get_parent_collection(table_name) != collection)
+            continue;
+
+        const auto* table_def = get_table(table_name);
+        if (table_def && table_def->has_column(attribute)) {
+            return table_name;
+        }
+    }
+
+    throw std::runtime_error("Set attribute '" + attribute + "' not found for collection '" + collection + "'");
+}
+
 std::vector<std::string> Schema::table_names() const {
     std::vector<std::string> names;
     names.reserve(tables_.size());

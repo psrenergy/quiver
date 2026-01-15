@@ -317,6 +317,138 @@ class Database {
     }
   }
 
+  /// Reads all int sets for a set attribute from a collection.
+  List<List<int>> readSetInts(String collection, String attribute) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outSets = arena<Pointer<Pointer<Int64>>>();
+      final outSizes = arena<Pointer<Size>>();
+      final outCount = arena<Size>();
+
+      final err = bindings.psr_database_read_set_ints(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        outSets,
+        outSizes,
+        outCount,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to read set ints from '$collection.$attribute'");
+      }
+
+      final count = outCount.value;
+      if (count == 0 || outSets.value == nullptr) {
+        return [];
+      }
+
+      final result = <List<int>>[];
+      for (var i = 0; i < count; i++) {
+        final size = outSizes.value[i];
+        if (size == 0 || outSets.value[i] == nullptr) {
+          result.add([]);
+        } else {
+          result.add(List<int>.generate(size, (j) => outSets.value[i][j]));
+        }
+      }
+      bindings.psr_free_int_vectors(outSets.value, outSizes.value, count);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Reads all double sets for a set attribute from a collection.
+  List<List<double>> readSetDoubles(String collection, String attribute) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outSets = arena<Pointer<Pointer<Double>>>();
+      final outSizes = arena<Pointer<Size>>();
+      final outCount = arena<Size>();
+
+      final err = bindings.psr_database_read_set_doubles(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        outSets,
+        outSizes,
+        outCount,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to read set doubles from '$collection.$attribute'");
+      }
+
+      final count = outCount.value;
+      if (count == 0 || outSets.value == nullptr) {
+        return [];
+      }
+
+      final result = <List<double>>[];
+      for (var i = 0; i < count; i++) {
+        final size = outSizes.value[i];
+        if (size == 0 || outSets.value[i] == nullptr) {
+          result.add([]);
+        } else {
+          result.add(List<double>.generate(size, (j) => outSets.value[i][j]));
+        }
+      }
+      bindings.psr_free_double_vectors(outSets.value, outSizes.value, count);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Reads all string sets for a set attribute from a collection.
+  List<List<String>> readSetStrings(String collection, String attribute) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outSets = arena<Pointer<Pointer<Pointer<Char>>>>();
+      final outSizes = arena<Pointer<Size>>();
+      final outCount = arena<Size>();
+
+      final err = bindings.psr_database_read_set_strings(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        outSets,
+        outSizes,
+        outCount,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to read set strings from '$collection.$attribute'");
+      }
+
+      final count = outCount.value;
+      if (count == 0 || outSets.value == nullptr) {
+        return [];
+      }
+
+      final result = <List<String>>[];
+      for (var i = 0; i < count; i++) {
+        final size = outSizes.value[i];
+        if (size == 0 || outSets.value[i] == nullptr) {
+          result.add([]);
+        } else {
+          result.add(List<String>.generate(size, (j) => outSets.value[i][j].cast<Utf8>().toDartString()));
+        }
+      }
+      bindings.psr_free_string_vectors(outSets.value, outSizes.value, count);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
   /// Closes the database and frees native resources.
   void close() {
     if (_isClosed) return;
