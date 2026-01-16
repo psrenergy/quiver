@@ -396,9 +396,12 @@ TEST_F(LuaRunnerTest, ReadElementIdsFromLua) {
     std::string script = R"(
         local ids = db:read_element_ids("Collection")
         assert(#ids == 3, "Expected 3 IDs, got " .. #ids)
-        assert(ids[1] == )" + std::to_string(id1) + R"(, "First ID mismatch")
-        assert(ids[2] == )" + std::to_string(id2) + R"(, "Second ID mismatch")
-        assert(ids[3] == )" + std::to_string(id3) + R"(, "Third ID mismatch")
+        assert(ids[1] == )" +
+                         std::to_string(id1) + R"(, "First ID mismatch")
+        assert(ids[2] == )" +
+                         std::to_string(id2) + R"(, "Second ID mismatch")
+        assert(ids[3] == )" +
+                         std::to_string(id3) + R"(, "Third ID mismatch")
     )";
     lua.run(script);
 }
