@@ -166,6 +166,21 @@ PSR_C_API int64_t psr_database_create_element(psr_database_t* db, const char* co
     }
 }
 
+PSR_C_API psr_error_t psr_database_update_element(psr_database_t* db,
+                                                  const char* collection,
+                                                  int64_t id,
+                                                  const psr_element_t* element) {
+    if (!db || !collection || !element) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        db->db.update_element(collection, id, element->element);
+        return PSR_OK;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
 PSR_C_API psr_error_t psr_database_set_scalar_relation(psr_database_t* db,
                                                        const char* collection,
                                                        const char* attribute,
@@ -679,6 +694,176 @@ PSR_C_API psr_error_t psr_database_read_element_ids(psr_database_t* db,
     }
     try {
         return read_scalars_impl(db->db.read_element_ids(collection), out_ids, out_count);
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+// Update scalar functions
+
+PSR_C_API psr_error_t psr_database_update_scalar_integer(psr_database_t* db,
+                                                         const char* collection,
+                                                         const char* attribute,
+                                                         int64_t id,
+                                                         int64_t value) {
+    if (!db || !collection || !attribute) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        db->db.update_scalar_integer(collection, attribute, id, value);
+        return PSR_OK;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API psr_error_t psr_database_update_scalar_double(psr_database_t* db,
+                                                        const char* collection,
+                                                        const char* attribute,
+                                                        int64_t id,
+                                                        double value) {
+    if (!db || !collection || !attribute) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        db->db.update_scalar_double(collection, attribute, id, value);
+        return PSR_OK;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API psr_error_t psr_database_update_scalar_string(psr_database_t* db,
+                                                        const char* collection,
+                                                        const char* attribute,
+                                                        int64_t id,
+                                                        const char* value) {
+    if (!db || !collection || !attribute || !value) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        db->db.update_scalar_string(collection, attribute, id, value);
+        return PSR_OK;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+// Update vector functions
+
+PSR_C_API psr_error_t psr_database_update_vector_integers(psr_database_t* db,
+                                                          const char* collection,
+                                                          const char* attribute,
+                                                          int64_t id,
+                                                          const int64_t* values,
+                                                          size_t count) {
+    if (!db || !collection || !attribute || (count > 0 && !values)) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        std::vector<int64_t> vec(values, values + count);
+        db->db.update_vector_integers(collection, attribute, id, vec);
+        return PSR_OK;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API psr_error_t psr_database_update_vector_doubles(psr_database_t* db,
+                                                         const char* collection,
+                                                         const char* attribute,
+                                                         int64_t id,
+                                                         const double* values,
+                                                         size_t count) {
+    if (!db || !collection || !attribute || (count > 0 && !values)) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        std::vector<double> vec(values, values + count);
+        db->db.update_vector_doubles(collection, attribute, id, vec);
+        return PSR_OK;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API psr_error_t psr_database_update_vector_strings(psr_database_t* db,
+                                                         const char* collection,
+                                                         const char* attribute,
+                                                         int64_t id,
+                                                         const char* const* values,
+                                                         size_t count) {
+    if (!db || !collection || !attribute || (count > 0 && !values)) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        std::vector<std::string> vec;
+        vec.reserve(count);
+        for (size_t i = 0; i < count; ++i) {
+            vec.emplace_back(values[i]);
+        }
+        db->db.update_vector_strings(collection, attribute, id, vec);
+        return PSR_OK;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+// Update set functions
+
+PSR_C_API psr_error_t psr_database_update_set_integers(psr_database_t* db,
+                                                       const char* collection,
+                                                       const char* attribute,
+                                                       int64_t id,
+                                                       const int64_t* values,
+                                                       size_t count) {
+    if (!db || !collection || !attribute || (count > 0 && !values)) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        std::vector<int64_t> vec(values, values + count);
+        db->db.update_set_integers(collection, attribute, id, vec);
+        return PSR_OK;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API psr_error_t psr_database_update_set_doubles(psr_database_t* db,
+                                                      const char* collection,
+                                                      const char* attribute,
+                                                      int64_t id,
+                                                      const double* values,
+                                                      size_t count) {
+    if (!db || !collection || !attribute || (count > 0 && !values)) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        std::vector<double> vec(values, values + count);
+        db->db.update_set_doubles(collection, attribute, id, vec);
+        return PSR_OK;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API psr_error_t psr_database_update_set_strings(psr_database_t* db,
+                                                      const char* collection,
+                                                      const char* attribute,
+                                                      int64_t id,
+                                                      const char* const* values,
+                                                      size_t count) {
+    if (!db || !collection || !attribute || (count > 0 && !values)) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        std::vector<std::string> vec;
+        vec.reserve(count);
+        for (size_t i = 0; i < count; ++i) {
+            vec.emplace_back(values[i]);
+        }
+        db->db.update_set_strings(collection, attribute, id, vec);
+        return PSR_OK;
     } catch (const std::exception&) {
         return PSR_ERROR_DATABASE;
     }

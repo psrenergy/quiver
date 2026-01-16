@@ -44,6 +44,7 @@ public:
 
     // Element operations
     int64_t create_element(const std::string& collection, const Element& element);
+    void update_element(const std::string& collection, int64_t id, const Element& element);
 
     // Relation operations
     void set_scalar_relation(const std::string& collection,
@@ -94,6 +95,42 @@ public:
 
     // Read element IDs
     std::vector<int64_t> read_element_ids(const std::string& collection);
+
+    // Update scalar attributes (by element ID)
+    void update_scalar_integer(const std::string& collection, const std::string& attribute, int64_t id, int64_t value);
+    void update_scalar_double(const std::string& collection, const std::string& attribute, int64_t id, double value);
+    void update_scalar_string(const std::string& collection,
+                              const std::string& attribute,
+                              int64_t id,
+                              const std::string& value);
+
+    // Update vector attributes (by element ID) - replaces entire vector
+    void update_vector_integers(const std::string& collection,
+                                const std::string& attribute,
+                                int64_t id,
+                                const std::vector<int64_t>& values);
+    void update_vector_doubles(const std::string& collection,
+                               const std::string& attribute,
+                               int64_t id,
+                               const std::vector<double>& values);
+    void update_vector_strings(const std::string& collection,
+                               const std::string& attribute,
+                               int64_t id,
+                               const std::vector<std::string>& values);
+
+    // Update set attributes (by element ID) - replaces entire set
+    void update_set_integers(const std::string& collection,
+                             const std::string& attribute,
+                             int64_t id,
+                             const std::vector<int64_t>& values);
+    void update_set_doubles(const std::string& collection,
+                            const std::string& attribute,
+                            int64_t id,
+                            const std::vector<double>& values);
+    void update_set_strings(const std::string& collection,
+                            const std::string& attribute,
+                            int64_t id,
+                            const std::vector<std::string>& values);
 
     const std::string& path() const;
 
