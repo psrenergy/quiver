@@ -102,6 +102,10 @@ function psr_database_create_element(db, collection, element)
     @ccall libpsr_database_c.psr_database_create_element(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, element::Ptr{psr_element_t})::Int64
 end
 
+function psr_database_set_scalar_relation(db, collection, attribute, from_label, to_label)
+    @ccall libpsr_database_c.psr_database_set_scalar_relation(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, from_label::Ptr{Cchar}, to_label::Ptr{Cchar})::psr_error_t
+end
+
 function psr_database_read_scalar_integers(db, collection, attribute, out_values, out_count)
     @ccall libpsr_database_c.psr_database_read_scalar_integers(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::psr_error_t
 end
