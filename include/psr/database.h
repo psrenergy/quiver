@@ -42,9 +42,6 @@ public:
     Result execute(const std::string& sql, const std::vector<Value>& params = {});
 
     int64_t current_version() const;
-    void set_version(int64_t version);
-
-    void migrate_up(const std::string& migration_path);
     void apply_schema(const std::string& schema_path);
 
     // Element operations
@@ -66,11 +63,6 @@ public:
     std::vector<std::vector<double>> read_set_doubles(const std::string& collection, const std::string& attribute);
     std::vector<std::vector<std::string>> read_set_strings(const std::string& collection, const std::string& attribute);
 
-    // Transaction management
-    void begin_transaction();
-    void commit();
-    void rollback();
-
     const std::string& path() const;
 
     // Schema access for introspection
@@ -82,6 +74,13 @@ private:
 
     // Internal helper for executing raw SQL (for migrations)
     void execute_raw(const std::string& sql);
+
+    // Internal methods
+    void set_version(int64_t version);
+    void migrate_up(const std::string& migration_path);
+    void begin_transaction();
+    void commit();
+    void rollback();
 };
 
 }  // namespace psr

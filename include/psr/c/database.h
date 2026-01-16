@@ -38,15 +38,8 @@ PSR_C_API void psr_database_close(psr_database_t* db);
 PSR_C_API int psr_database_is_healthy(psr_database_t* db);
 PSR_C_API const char* psr_database_path(psr_database_t* db);
 
-// Version and migration
+// Version
 PSR_C_API int64_t psr_database_current_version(psr_database_t* db);
-PSR_C_API psr_error_t psr_database_set_version(psr_database_t* db, int64_t version);
-PSR_C_API psr_error_t psr_database_migrate_up(psr_database_t* db, const char* migrations_path);
-
-// Transaction management
-PSR_C_API psr_error_t psr_database_begin_transaction(psr_database_t* db);
-PSR_C_API psr_error_t psr_database_commit(psr_database_t* db);
-PSR_C_API psr_error_t psr_database_rollback(psr_database_t* db);
 
 // Element operations (requires psr_element_t from element.h)
 typedef struct psr_element psr_element_t;
