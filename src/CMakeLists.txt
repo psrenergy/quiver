@@ -30,8 +30,11 @@ target_include_directories(psr_database
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# sol2 requires SOL_SAFE_NUMERICS to distinguish integers from floats
-target_compile_definitions(psr_database PRIVATE SOL_SAFE_NUMERICS=1)
+# sol2 safety settings
+target_compile_definitions(psr_database PRIVATE
+    SOL_SAFE_NUMERICS=1
+    SOL_SAFE_FUNCTION=1
+)
 
 # Link dependencies
 target_link_libraries(psr_database
