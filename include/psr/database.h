@@ -92,6 +92,9 @@ public:
     std::vector<std::string>
     read_set_strings_by_id(const std::string& collection, const std::string& attribute, int64_t id);
 
+    // Read element IDs
+    std::vector<int64_t> read_element_ids(const std::string& collection);
+
     const std::string& path() const;
 
 private:

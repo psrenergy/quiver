@@ -1041,4 +1041,19 @@ Database::read_set_strings_by_id(const std::string& collection, const std::strin
     return values;
 }
 
+std::vector<int64_t> Database::read_element_ids(const std::string& collection) {
+    auto sql = "SELECT id FROM " + collection;
+    auto result = execute(sql);
+
+    std::vector<int64_t> ids;
+    ids.reserve(result.row_count());
+    for (size_t i = 0; i < result.row_count(); ++i) {
+        auto val = result[i].get_int(0);
+        if (val) {
+            ids.push_back(*val);
+        }
+    }
+    return ids;
+}
+
 }  // namespace psr
