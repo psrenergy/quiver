@@ -42,7 +42,6 @@ public:
     Result execute(const std::string& sql, const std::vector<Value>& params = {});
 
     int64_t current_version() const;
-    void apply_schema(const std::string& schema_path);
 
     // Element operations
     int64_t create_element(const std::string& collection, const Element& element);
@@ -78,6 +77,7 @@ private:
     // Internal methods
     void set_version(int64_t version);
     void migrate_up(const std::string& migration_path);
+    void apply_schema(const std::string& schema_path);
     void begin_transaction();
     void commit();
     void rollback();
