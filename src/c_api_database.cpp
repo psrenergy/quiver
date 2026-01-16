@@ -181,9 +181,7 @@ PSR_C_API psr_error_t psr_database_update_element(psr_database_t* db,
     }
 }
 
-PSR_C_API psr_error_t psr_database_delete_element_by_id(psr_database_t* db,
-                                                        const char* collection,
-                                                        int64_t id) {
+PSR_C_API psr_error_t psr_database_delete_element_by_id(psr_database_t* db, const char* collection, int64_t id) {
     if (!db || !collection) {
         return PSR_ERROR_INVALID_ARGUMENT;
     }
