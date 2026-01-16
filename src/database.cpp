@@ -250,10 +250,6 @@ const std::string& Database::path() const {
     return impl_ ? impl_->path : empty;
 }
 
-const Schema* Database::schema() const {
-    return impl_ ? impl_->schema.get() : nullptr;
-}
-
 Database Database::from_migrations(const std::string& db_path,
                                    const std::string& migrations_path,
                                    const DatabaseOptions& options) {

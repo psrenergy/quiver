@@ -70,9 +70,6 @@ public:
 
     const std::string& path() const;
 
-    // Schema access for introspection
-    const class Schema* schema() const;
-
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
