@@ -41,6 +41,15 @@ function close!(db::Database)
     return nothing
 end
 
+function set_scalar_relation!(db::Database, collection::String, attribute::String,
+                              from_label::String, to_label::String)
+    err = C.psr_database_set_scalar_relation(db.ptr, collection, attribute, from_label, to_label)
+    if err != C.PSR_OK
+        throw(DatabaseException("Failed to set scalar relation '$attribute' in '$collection'"))
+    end
+    return nothing
+end
+
 function read_scalar_integers(db::Database, collection::String, attribute::String)
     out_values = Ref{Ptr{Int64}}(C_NULL)
     out_count = Ref{Csize_t}(0)

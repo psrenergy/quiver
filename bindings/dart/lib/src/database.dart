@@ -83,6 +83,29 @@ class Database {
     }
   }
 
+  /// Sets a scalar relation (foreign key) between two elements by their labels.
+  void setScalarRelation(String collection, String attribute,
+      String fromLabel, String toLabel) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final err = bindings.psr_database_set_scalar_relation(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        fromLabel.toNativeUtf8(allocator: arena).cast(),
+        toLabel.toNativeUtf8(allocator: arena).cast(),
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to set scalar relation '$attribute' in '$collection'");
+      }
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
   /// Reads all integer values for a scalar attribute from a collection.
   List<int> readScalarIntegers(String collection, String attribute) {
     _ensureNotClosed();
