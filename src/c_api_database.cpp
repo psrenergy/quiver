@@ -195,10 +195,10 @@ psr_database_from_schema(const char* db_path, const char* schema_path, const psr
 }
 
 PSR_C_API psr_error_t psr_database_read_scalar_integers(psr_database_t* db,
-                                                    const char* collection,
-                                                    const char* attribute,
-                                                    int64_t** out_values,
-                                                    size_t* out_count) {
+                                                        const char* collection,
+                                                        const char* attribute,
+                                                        int64_t** out_values,
+                                                        size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
         return PSR_ERROR_INVALID_ARGUMENT;
     }
@@ -271,11 +271,11 @@ PSR_C_API void psr_free_string_array(char** values, size_t count) {
 }
 
 PSR_C_API psr_error_t psr_database_read_vector_integers(psr_database_t* db,
-                                                    const char* collection,
-                                                    const char* attribute,
-                                                    int64_t*** out_vectors,
-                                                    size_t** out_sizes,
-                                                    size_t* out_count) {
+                                                        const char* collection,
+                                                        const char* attribute,
+                                                        int64_t*** out_vectors,
+                                                        size_t** out_sizes,
+                                                        size_t* out_count) {
     if (!db || !collection || !attribute || !out_vectors || !out_sizes || !out_count) {
         return PSR_ERROR_INVALID_ARGUMENT;
     }
@@ -367,11 +367,11 @@ PSR_C_API void psr_free_string_vectors(char*** vectors, size_t* sizes, size_t co
 // Set read functions (reuse vector helpers since sets have same return structure)
 
 PSR_C_API psr_error_t psr_database_read_set_integers(psr_database_t* db,
-                                                 const char* collection,
-                                                 const char* attribute,
-                                                 int64_t*** out_sets,
-                                                 size_t** out_sizes,
-                                                 size_t* out_count) {
+                                                     const char* collection,
+                                                     const char* attribute,
+                                                     int64_t*** out_sets,
+                                                     size_t** out_sizes,
+                                                     size_t* out_count) {
     if (!db || !collection || !attribute || !out_sets || !out_sizes || !out_count) {
         return PSR_ERROR_INVALID_ARGUMENT;
     }

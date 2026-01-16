@@ -661,7 +661,7 @@ std::vector<std::string> Database::read_scalar_strings(const std::string& collec
 }
 
 std::vector<std::vector<int64_t>> Database::read_vector_integers(const std::string& collection,
-                                                             const std::string& attribute) {
+                                                                 const std::string& attribute) {
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + vector_table + " ORDER BY id, vector_index";
     auto result = execute(sql);
@@ -744,7 +744,8 @@ std::vector<std::vector<std::string>> Database::read_vector_strings(const std::s
     return vectors;
 }
 
-std::vector<std::vector<int64_t>> Database::read_set_integers(const std::string& collection, const std::string& attribute) {
+std::vector<std::vector<int64_t>> Database::read_set_integers(const std::string& collection,
+                                                              const std::string& attribute) {
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + set_table + " ORDER BY id";
     auto result = execute(sql);

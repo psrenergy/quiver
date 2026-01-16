@@ -47,10 +47,10 @@ PSR_C_API int64_t psr_database_create_element(psr_database_t* db, const char* co
 
 // Read scalar attributes
 PSR_C_API psr_error_t psr_database_read_scalar_integers(psr_database_t* db,
-                                                    const char* collection,
-                                                    const char* attribute,
-                                                    int64_t** out_values,
-                                                    size_t* out_count);
+                                                        const char* collection,
+                                                        const char* attribute,
+                                                        int64_t** out_values,
+                                                        size_t* out_count);
 
 PSR_C_API psr_error_t psr_database_read_scalar_doubles(psr_database_t* db,
                                                        const char* collection,
@@ -66,11 +66,11 @@ PSR_C_API psr_error_t psr_database_read_scalar_strings(psr_database_t* db,
 
 // Read vector attributes
 PSR_C_API psr_error_t psr_database_read_vector_integers(psr_database_t* db,
-                                                    const char* collection,
-                                                    const char* attribute,
-                                                    int64_t*** out_vectors,
-                                                    size_t** out_sizes,
-                                                    size_t* out_count);
+                                                        const char* collection,
+                                                        const char* attribute,
+                                                        int64_t*** out_vectors,
+                                                        size_t** out_sizes,
+                                                        size_t* out_count);
 
 PSR_C_API psr_error_t psr_database_read_vector_doubles(psr_database_t* db,
                                                        const char* collection,
@@ -88,11 +88,11 @@ PSR_C_API psr_error_t psr_database_read_vector_strings(psr_database_t* db,
 
 // Read set attributes (same structure as vectors, uses same free functions)
 PSR_C_API psr_error_t psr_database_read_set_integers(psr_database_t* db,
-                                                 const char* collection,
-                                                 const char* attribute,
-                                                 int64_t*** out_sets,
-                                                 size_t** out_sizes,
-                                                 size_t* out_count);
+                                                     const char* collection,
+                                                     const char* attribute,
+                                                     int64_t*** out_sets,
+                                                     size_t** out_sizes,
+                                                     size_t* out_count);
 
 PSR_C_API psr_error_t psr_database_read_set_doubles(psr_database_t* db,
                                                     const char* collection,
