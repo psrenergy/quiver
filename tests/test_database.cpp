@@ -450,3 +450,52 @@ TEST_F(DatabaseFixture, ReadSetOnlyReturnsElementsWithData) {
     auto sets = db.read_set_strings("Collection", "tag");
     EXPECT_EQ(sets.size(), 2);
 }
+
+// ============================================================================
+// set_scalar_relation tests
+// ============================================================================
+
+TEST_F(DatabaseFixture, SetScalarRelation) {
+    auto db = psr::Database::from_schema(
+        ":memory:", schema_path("schemas/valid/relations.sql"), {.console_level = psr::LogLevel::off});
+
+    // Create parent
+    psr::Element parent;
+    parent.set("label", std::string("Parent 1"));
+    db.create_element("Parent", parent);
+
+    // Create child without relation
+    psr::Element child;
+    child.set("label", std::string("Child 1"));
+    db.create_element("Child", child);
+
+    // Set the relation
+    db.set_scalar_relation("Child", "parent_id", "Child 1", "Parent 1");
+
+    // Verify the relation was set
+    auto result = db.execute("SELECT parent_id FROM Child WHERE label = ?", {std::string("Child 1")});
+    EXPECT_EQ(result.row_count(), 1);
+    EXPECT_EQ(result[0].get_int(0).value(), 1);  // Parent 1 has id = 1
+}
+
+TEST_F(DatabaseFixture, SetScalarRelationSelfReference) {
+    auto db = psr::Database::from_schema(
+        ":memory:", schema_path("schemas/valid/relations.sql"), {.console_level = psr::LogLevel::off});
+
+    // Create two children
+    psr::Element child1;
+    child1.set("label", std::string("Child 1"));
+    db.create_element("Child", child1);
+
+    psr::Element child2;
+    child2.set("label", std::string("Child 2"));
+    db.create_element("Child", child2);
+
+    // Set self-referential relation (sibling)
+    db.set_scalar_relation("Child", "sibling_id", "Child 1", "Child 2");
+
+    // Verify the relation was set
+    auto result = db.execute("SELECT sibling_id FROM Child WHERE label = ?", {std::string("Child 1")});
+    EXPECT_EQ(result.row_count(), 1);
+    EXPECT_EQ(result[0].get_int(0).value(), 2);  // Child 2 has id = 2
+}
