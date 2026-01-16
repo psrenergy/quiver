@@ -50,13 +50,13 @@ class Element {
       case null:
         setNull(name);
       case int v:
-        setInt(name, v);
+        setInteger(name, v);
       case double v:
         setDouble(name, v);
       case String v:
         setString(name, v);
       case List<int> v:
-        setArrayInt(name, v);
+        setArrayInteger(name, v);
       case List<double> v:
         setArrayDouble(name, v);
       case List<String> v:
@@ -75,7 +75,7 @@ class Element {
   void _setMixedList(String name, List<dynamic> values) {
     final first = values.first;
     if (first is int) {
-      setArrayInt(name, values.cast<int>());
+      setArrayInteger(name, values.cast<int>());
     } else if (first is double) {
       setArrayDouble(name, values.cast<double>());
     } else if (first is String) {
@@ -88,11 +88,11 @@ class Element {
   }
 
   /// Sets an integer value.
-  void setInt(String name, int value) {
+  void setInteger(String name, int value) {
     _ensureNotDisposed();
     final namePtr = name.toNativeUtf8();
     try {
-      final error = bindings.psr_element_set_int(_ptr, namePtr.cast(), value);
+      final error = bindings.psr_element_set_integer(_ptr, namePtr.cast(), value);
       if (error != 0) {
         throw DatabaseException.fromError(error, "Failed to set int '$name'");
       }
@@ -150,7 +150,7 @@ class Element {
   }
 
   /// Sets an array of integers.
-  void setArrayInt(String name, List<int> values) {
+  void setArrayInteger(String name, List<int> values) {
     _ensureNotDisposed();
     final namePtr = name.toNativeUtf8();
     final arrayPtr = malloc<Int64>(values.length);

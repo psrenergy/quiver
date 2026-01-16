@@ -14,7 +14,7 @@ end
 
 function Base.setindex!(el::Element, value::Integer, name::String)
     cname = Base.cconvert(Cstring, name)
-    err = C.psr_element_set_int(el.ptr, cname, Int64(value))
+    err = C.psr_element_set_integer(el.ptr, cname, Int64(value))
     if err != C.PSR_OK
         error("Failed to set int value for '$name'")
     end

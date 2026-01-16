@@ -187,6 +187,12 @@ PSR_C_API psr_error_t psr_database_read_set_strings_by_id(psr_database_t* db,
                                                           char*** out_values,
                                                           size_t* out_count);
 
+// Read element IDs
+PSR_C_API psr_error_t psr_database_read_element_ids(psr_database_t* db,
+                                                    const char* collection,
+                                                    int64_t** out_ids,
+                                                    size_t* out_count);
+
 // Memory cleanup for read results
 PSR_C_API void psr_free_int_array(int64_t* values);
 PSR_C_API void psr_free_double_array(double* values);

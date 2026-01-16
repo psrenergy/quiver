@@ -485,3 +485,22 @@ function read_set_strings_by_id(db::Database, collection::String, attribute::Str
     C.psr_free_string_array(out_values[], count)
     return result
 end
+
+function read_element_ids(db::Database, collection::String)
+    out_ids = Ref{Ptr{Int64}}(C_NULL)
+    out_count = Ref{Csize_t}(0)
+
+    err = C.psr_database_read_element_ids(db.ptr, collection, out_ids, out_count)
+    if err != C.PSR_OK
+        throw(DatabaseException("Failed to read element ids from '$collection'"))
+    end
+
+    count = out_count[]
+    if count == 0 || out_ids[] == C_NULL
+        return Int64[]
+    end
+
+    result = unsafe_wrap(Array, out_ids[], count) |> copy
+    C.psr_free_int_array(out_ids[])
+    return result
+end

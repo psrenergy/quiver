@@ -670,4 +670,18 @@ PSR_C_API psr_error_t psr_database_read_set_strings_by_id(psr_database_t* db,
     }
 }
 
+PSR_C_API psr_error_t psr_database_read_element_ids(psr_database_t* db,
+                                                    const char* collection,
+                                                    int64_t** out_ids,
+                                                    size_t* out_count) {
+    if (!db || !collection || !out_ids || !out_count) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        return read_scalars_impl(db->db.read_element_ids(collection), out_ids, out_count);
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
 }  // extern "C"

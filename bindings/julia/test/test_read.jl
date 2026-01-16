@@ -322,4 +322,36 @@ end
     PSRDatabase.close!(db)
 end
 
+# Read element IDs tests
+
+@testset "Read Element IDs" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Config 1", integer_attribute = 42)
+    PSRDatabase.create_element!(db, "Configuration"; label = "Config 2", integer_attribute = 100)
+    PSRDatabase.create_element!(db, "Configuration"; label = "Config 3", integer_attribute = 200)
+
+    ids = PSRDatabase.read_element_ids(db, "Configuration")
+    @test length(ids) == 3
+    @test ids[1] == 1
+    @test ids[2] == 2
+    @test ids[3] == 3
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Read Element IDs Empty" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
+
+    # No Collection elements created
+    ids = PSRDatabase.read_element_ids(db, "Collection")
+    @test ids == Int64[]
+
+    PSRDatabase.close!(db)
+end
+
 end

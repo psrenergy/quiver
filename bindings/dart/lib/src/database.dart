@@ -832,6 +832,41 @@ class Database {
     }
   }
 
+  // Read element IDs
+
+  /// Reads all element IDs from a collection.
+  List<int> readElementIds(String collection) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outIds = arena<Pointer<Int64>>();
+      final outCount = arena<Size>();
+
+      final err = bindings.psr_database_read_element_ids(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        outIds,
+        outCount,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to read element ids from '$collection'");
+      }
+
+      final count = outCount.value;
+      if (count == 0 || outIds.value == nullptr) {
+        return [];
+      }
+
+      final result = List<int>.generate(count, (i) => outIds.value[i]);
+      bindings.psr_free_int_array(outIds.value);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
   /// Closes the database and frees native resources.
   void close() {
     if (_isClosed) return;

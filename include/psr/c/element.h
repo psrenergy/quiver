@@ -16,7 +16,7 @@ PSR_C_API void psr_element_destroy(psr_element_t* element);
 PSR_C_API void psr_element_clear(psr_element_t* element);
 
 // Scalar setters
-PSR_C_API psr_error_t psr_element_set_int(psr_element_t* element, const char* name, int64_t value);
+PSR_C_API psr_error_t psr_element_set_integer(psr_element_t* element, const char* name, int64_t value);
 PSR_C_API psr_error_t psr_element_set_double(psr_element_t* element, const char* name, double value);
 PSR_C_API psr_error_t psr_element_set_string(psr_element_t* element, const char* name, const char* value);
 PSR_C_API psr_error_t psr_element_set_null(psr_element_t* element, const char* name);

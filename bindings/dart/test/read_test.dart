@@ -562,4 +562,53 @@ void main() {
       }
     });
   });
+
+  // Read element IDs tests
+
+  group('Read Element IDs', () {
+    test('reads all element IDs from collection', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 42,
+        });
+        db.createElement('Configuration', {
+          'label': 'Config 2',
+          'integer_attribute': 100,
+        });
+        db.createElement('Configuration', {
+          'label': 'Config 3',
+          'integer_attribute': 200,
+        });
+
+        final ids = db.readElementIds('Configuration');
+        expect(ids.length, equals(3));
+        expect(ids[0], equals(1));
+        expect(ids[1], equals(2));
+        expect(ids[2], equals(3));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('returns empty list when no elements', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+
+        // No Collection elements created
+        final ids = db.readElementIds('Collection');
+        expect(ids, isEmpty);
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

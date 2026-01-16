@@ -28,7 +28,7 @@ TEST(ElementCApi, SetInt) {
     auto element = psr_element_create();
     ASSERT_NE(element, nullptr);
 
-    EXPECT_EQ(psr_element_set_int(element, "count", 42), PSR_OK);
+    EXPECT_EQ(psr_element_set_integer(element, "count", 42), PSR_OK);
     EXPECT_EQ(psr_element_has_scalars(element), 1);
     EXPECT_EQ(psr_element_scalar_count(element), 1);
 
@@ -105,7 +105,7 @@ TEST(ElementCApi, Clear) {
     auto element = psr_element_create();
     ASSERT_NE(element, nullptr);
 
-    psr_element_set_int(element, "id", 1);
+    psr_element_set_integer(element, "id", 1);
     double values[] = {1.0, 2.0};
     psr_element_set_array_double(element, "data", values, 2);
 
@@ -121,7 +121,7 @@ TEST(ElementCApi, Clear) {
 }
 
 TEST(ElementCApi, NullElementErrors) {
-    EXPECT_EQ(psr_element_set_int(nullptr, "x", 1), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_integer(nullptr, "x", 1), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_double(nullptr, "x", 1.0), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_string(nullptr, "x", "y"), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_null(nullptr, "x"), PSR_ERROR_INVALID_ARGUMENT);
@@ -131,7 +131,7 @@ TEST(ElementCApi, NullNameErrors) {
     auto element = psr_element_create();
     ASSERT_NE(element, nullptr);
 
-    EXPECT_EQ(psr_element_set_int(element, nullptr, 1), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_integer(element, nullptr, 1), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_double(element, nullptr, 1.0), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_string(element, nullptr, "y"), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_null(element, nullptr), PSR_ERROR_INVALID_ARGUMENT);
@@ -152,7 +152,7 @@ TEST(ElementCApi, MultipleScalars) {
 
     psr_element_set_string(element, "label", "Plant 1");
     psr_element_set_double(element, "capacity", 50.0);
-    psr_element_set_int(element, "id", 1);
+    psr_element_set_integer(element, "id", 1);
 
     EXPECT_EQ(psr_element_scalar_count(element), 3);
 

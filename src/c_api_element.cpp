@@ -25,7 +25,7 @@ PSR_C_API void psr_element_clear(psr_element_t* element) {
     }
 }
 
-PSR_C_API psr_error_t psr_element_set_int(psr_element_t* element, const char* name, int64_t value) {
+PSR_C_API psr_error_t psr_element_set_integer(psr_element_t* element, const char* name, int64_t value) {
     if (!element || !name) {
         return PSR_ERROR_INVALID_ARGUMENT;
     }

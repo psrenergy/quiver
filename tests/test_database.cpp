@@ -674,3 +674,43 @@ TEST_F(DatabaseFixture, ReadSetByIdEmpty) {
     auto set = db.read_set_strings_by_id("Collection", "tag", id);
     EXPECT_TRUE(set.empty());
 }
+
+// ============================================================================
+// Read element IDs tests
+// ============================================================================
+
+TEST_F(DatabaseFixture, ReadElementIds) {
+    auto db = psr::Database::from_schema(
+        ":memory:", schema_path("schemas/valid/basic.sql"), {.console_level = psr::LogLevel::off});
+
+    psr::Element e1;
+    e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
+    int64_t id1 = db.create_element("Configuration", e1);
+
+    psr::Element e2;
+    e2.set("label", std::string("Config 2")).set("integer_attribute", int64_t{100});
+    int64_t id2 = db.create_element("Configuration", e2);
+
+    psr::Element e3;
+    e3.set("label", std::string("Config 3")).set("integer_attribute", int64_t{200});
+    int64_t id3 = db.create_element("Configuration", e3);
+
+    auto ids = db.read_element_ids("Configuration");
+    EXPECT_EQ(ids.size(), 3);
+    EXPECT_EQ(ids[0], id1);
+    EXPECT_EQ(ids[1], id2);
+    EXPECT_EQ(ids[2], id3);
+}
+
+TEST_F(DatabaseFixture, ReadElementIdsEmpty) {
+    auto db = psr::Database::from_schema(
+        ":memory:", schema_path("schemas/valid/collections.sql"), {.console_level = psr::LogLevel::off});
+
+    psr::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    // No Collection elements created
+    auto ids = db.read_element_ids("Collection");
+    EXPECT_TRUE(ids.empty());
+}

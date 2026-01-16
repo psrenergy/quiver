@@ -102,7 +102,11 @@ struct LuaRunner::Impl {
                const std::string& collection,
                const std::string& attribute,
                int64_t id,
-               sol::this_state s) { return read_set_strings_by_id_to_lua(self, collection, attribute, id, s); });
+               sol::this_state s) { return read_set_strings_by_id_to_lua(self, collection, attribute, id, s); },
+            "read_element_ids",
+            [](Database& self, const std::string& collection, sol::this_state s) {
+                return read_element_ids_to_lua(self, collection, s);
+            });
     }
 
     static int64_t
@@ -357,6 +361,16 @@ struct LuaRunner::Impl {
                                                     sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_set_strings_by_id(collection, attribute, id);
+        sol::table t = lua.create_table();
+        for (size_t i = 0; i < result.size(); ++i) {
+            t[i + 1] = result[i];
+        }
+        return t;
+    }
+
+    static sol::table read_element_ids_to_lua(Database& db, const std::string& collection, sol::this_state s) {
+        sol::state_view lua(s);
+        auto result = db.read_element_ids(collection);
         sol::table t = lua.create_table();
         for (size_t i = 0; i < result.size(); ++i) {
             t[i + 1] = result[i];

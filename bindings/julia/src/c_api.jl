@@ -185,6 +185,11 @@ function psr_database_read_set_strings_by_id(db, collection, attribute, id, out_
     @ccall libpsr_database_c.psr_database_read_set_strings_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Ptr{Cchar}}}, out_count::Ptr{Csize_t})::psr_error_t
 end
 
+# Read element IDs
+function psr_database_read_element_ids(db, collection, out_ids, out_count)
+    @ccall libpsr_database_c.psr_database_read_element_ids(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, out_ids::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::psr_error_t
+end
+
 function psr_free_int_array(values)
     @ccall libpsr_database_c.psr_free_int_array(values::Ptr{Int64})::Cvoid
 end
@@ -221,8 +226,8 @@ function psr_element_clear(element)
     @ccall libpsr_database_c.psr_element_clear(element::Ptr{psr_element_t})::Cvoid
 end
 
-function psr_element_set_int(element, name, value)
-    @ccall libpsr_database_c.psr_element_set_int(element::Ptr{psr_element_t}, name::Ptr{Cchar}, value::Int64)::psr_error_t
+function psr_element_set_integer(element, name, value)
+    @ccall libpsr_database_c.psr_element_set_integer(element::Ptr{psr_element_t}, name::Ptr{Cchar}, value::Int64)::psr_error_t
 end
 
 function psr_element_set_double(element, name, value)

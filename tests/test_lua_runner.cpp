@@ -378,3 +378,43 @@ TEST_F(LuaRunnerTest, ReadSetStringsByIdFromLua) {
     )";
     lua.run(script);
 }
+
+// ============================================================================
+// Read element IDs tests
+// ============================================================================
+
+TEST_F(LuaRunnerTest, ReadElementIdsFromLua) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    int64_t id1 = db.create_element("Collection", psr::Element().set("label", "Item 1"));
+    int64_t id2 = db.create_element("Collection", psr::Element().set("label", "Item 2"));
+    int64_t id3 = db.create_element("Collection", psr::Element().set("label", "Item 3"));
+
+    psr::LuaRunner lua(db);
+
+    std::string script = R"(
+        local ids = db:read_element_ids("Collection")
+        assert(#ids == 3, "Expected 3 IDs, got " .. #ids)
+        assert(ids[1] == )" +
+                         std::to_string(id1) + R"(, "First ID mismatch")
+        assert(ids[2] == )" +
+                         std::to_string(id2) + R"(, "Second ID mismatch")
+        assert(ids[3] == )" +
+                         std::to_string(id3) + R"(, "Third ID mismatch")
+    )";
+    lua.run(script);
+}
+
+TEST_F(LuaRunnerTest, ReadElementIdsEmptyFromLua) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+
+    psr::LuaRunner lua(db);
+
+    lua.run(R"(
+        local ids = db:read_element_ids("Collection")
+        assert(#ids == 0, "Expected 0 IDs for empty collection, got " .. #ids)
+    )");
+}
