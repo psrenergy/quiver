@@ -94,26 +94,6 @@ function psr_database_current_version(db)
     @ccall libpsr_database_c.psr_database_current_version(db::Ptr{psr_database_t})::Int64
 end
 
-function psr_database_set_version(db, version)
-    @ccall libpsr_database_c.psr_database_set_version(db::Ptr{psr_database_t}, version::Int64)::psr_error_t
-end
-
-function psr_database_migrate_up(db, migrations_path)
-    @ccall libpsr_database_c.psr_database_migrate_up(db::Ptr{psr_database_t}, migrations_path::Ptr{Cchar})::psr_error_t
-end
-
-function psr_database_begin_transaction(db)
-    @ccall libpsr_database_c.psr_database_begin_transaction(db::Ptr{psr_database_t})::psr_error_t
-end
-
-function psr_database_commit(db)
-    @ccall libpsr_database_c.psr_database_commit(db::Ptr{psr_database_t})::psr_error_t
-end
-
-function psr_database_rollback(db)
-    @ccall libpsr_database_c.psr_database_rollback(db::Ptr{psr_database_t})::psr_error_t
-end
-
 mutable struct psr_element end
 
 const psr_element_t = psr_element

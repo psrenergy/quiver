@@ -167,66 +167,6 @@ PSR_C_API int64_t psr_database_current_version(psr_database_t* db) {
     }
 }
 
-PSR_C_API psr_error_t psr_database_set_version(psr_database_t* db, int64_t version) {
-    if (!db) {
-        return PSR_ERROR_INVALID_ARGUMENT;
-    }
-    try {
-        db->db.set_version(version);
-        return PSR_OK;
-    } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
-    }
-}
-
-PSR_C_API psr_error_t psr_database_migrate_up(psr_database_t* db, const char* migrations_path) {
-    if (!db || !migrations_path) {
-        return PSR_ERROR_INVALID_ARGUMENT;
-    }
-    try {
-        db->db.migrate_up(migrations_path);
-        return PSR_OK;
-    } catch (const std::exception&) {
-        return PSR_ERROR_MIGRATION;
-    }
-}
-
-PSR_C_API psr_error_t psr_database_begin_transaction(psr_database_t* db) {
-    if (!db) {
-        return PSR_ERROR_INVALID_ARGUMENT;
-    }
-    try {
-        db->db.begin_transaction();
-        return PSR_OK;
-    } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
-    }
-}
-
-PSR_C_API psr_error_t psr_database_commit(psr_database_t* db) {
-    if (!db) {
-        return PSR_ERROR_INVALID_ARGUMENT;
-    }
-    try {
-        db->db.commit();
-        return PSR_OK;
-    } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
-    }
-}
-
-PSR_C_API psr_error_t psr_database_rollback(psr_database_t* db) {
-    if (!db) {
-        return PSR_ERROR_INVALID_ARGUMENT;
-    }
-    try {
-        db->db.rollback();
-        return PSR_OK;
-    } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
-    }
-}
-
 PSR_C_API int64_t psr_database_create_element(psr_database_t* db, const char* collection, psr_element_t* element) {
     if (!db || !collection || !element) {
         return -1;
