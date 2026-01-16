@@ -2,11 +2,20 @@ struct Database
     ptr::Ptr{C.psr_database}
 end
 
-function create_empty_db_from_schema(db_path, schema_path; force::Bool = true)
+function from_schema(db_path, schema_path; force::Bool = true)
     options = Ref(C.psr_database_options_t(0, C.PSR_LOG_DEBUG))
     ptr = C.psr_database_from_schema(db_path, schema_path, options)
     if ptr == C_NULL
         throw(DatabaseException("Failed to create database from schema '$schema_path'"))
+    end
+    return Database(ptr)
+end
+
+function from_migrations(db_path, migrations_path; force::Bool = true)
+    options = Ref(C.psr_database_options_t(0, C.PSR_LOG_DEBUG))
+    ptr = C.psr_database_from_migrations(db_path, migrations_path, options)
+    if ptr == C_NULL
+        throw(DatabaseException("Failed to create database from migrations '$migrations_path'"))
     end
     return Database(ptr)
 end

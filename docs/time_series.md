@@ -80,7 +80,7 @@ using Dates
 using PSRDatabase
 PSRDatabase = PSRDatabase.PSRDatabase
 
-db = PSRDatabase.create_empty_db_from_schema(db_path, path_schema; force = true)
+db = PSRDatabase.from_schema(db_path, path_schema; force = true)
 
 PSRDatabase.create_element!(db, "Configuration"; label = "Toy Case", value1 = 1.0)
 
@@ -124,7 +124,7 @@ using Dates
 using PSRDatabase
 PSRDatabase = PSRDatabase.PSRDatabase
 
-db = PSRDatabase.create_empty_db_from_schema(db_path, path_schema; force = true)
+db = PSRDatabase.from_schema(db_path, path_schema; force = true)
 
 PSRDatabase.create_element!(db, "Configuration"; label = "Toy Case", value1 = 1.0)
 

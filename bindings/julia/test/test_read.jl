@@ -7,7 +7,7 @@ include("fixture.jl")
 
 @testset "Read Scalar Attributes" begin
     path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
-    db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
+    db = PSRDatabase.from_schema(":memory:", path_schema; force = true)
 
     PSRDatabase.create_element!(db, "Configuration";
         label = "Config 1",
@@ -32,7 +32,7 @@ end
 
 @testset "Read From Collections" begin
     path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
-    db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
+    db = PSRDatabase.from_schema(":memory:", path_schema; force = true)
 
     PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
 
@@ -56,7 +56,7 @@ end
 
 @testset "Read Empty Result" begin
     path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
-    db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
+    db = PSRDatabase.from_schema(":memory:", path_schema; force = true)
 
     PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
 
@@ -70,7 +70,7 @@ end
 
 @testset "Read Vector Attributes" begin
     path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
-    db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
+    db = PSRDatabase.from_schema(":memory:", path_schema; force = true)
 
     PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
 
@@ -93,7 +93,7 @@ end
 
 @testset "Read Vector Empty Result" begin
     path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
-    db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
+    db = PSRDatabase.from_schema(":memory:", path_schema; force = true)
 
     PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
 
@@ -106,7 +106,7 @@ end
 
 @testset "Read Vector Only Returns Elements With Data" begin
     path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
-    db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
+    db = PSRDatabase.from_schema(":memory:", path_schema; force = true)
 
     PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
 
@@ -136,7 +136,7 @@ end
 
 @testset "Read Set Attributes" begin
     path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
-    db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
+    db = PSRDatabase.from_schema(":memory:", path_schema; force = true)
 
     PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
 
@@ -160,7 +160,7 @@ end
 
 @testset "Read Set Empty Result" begin
     path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
-    db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
+    db = PSRDatabase.from_schema(":memory:", path_schema; force = true)
 
     PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
 
@@ -172,7 +172,7 @@ end
 
 @testset "Read Set Only Returns Elements With Data" begin
     path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
-    db = PSRDatabase.create_empty_db_from_schema(":memory:", path_schema; force = true)
+    db = PSRDatabase.from_schema(":memory:", path_schema; force = true)
 
     PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
 

@@ -20,9 +20,9 @@ function Base.setindex!(el::Element, value::Integer, name::String)
     end
 end
 
-function Base.setindex!(el::Element, value::Float64, name::String)
+function Base.setindex!(el::Element, value::Real, name::String)
     cname = Base.cconvert(Cstring, name)
-    err = C.psr_element_set_double(el.ptr, cname, value)
+    err = C.psr_element_set_double(el.ptr, cname, Float64(value))
     if err != C.PSR_OK
         error("Failed to set double value for '$name'")
     end
@@ -46,9 +46,10 @@ function Base.setindex!(el::Element, value::Vector{<:Integer}, name::String)
     end
 end
 
-function Base.setindex!(el::Element, value::Vector{<:Float64}, name::String)
+function Base.setindex!(el::Element, value::Vector{<:Real}, name::String)
     cname = Base.cconvert(Cstring, name)
-    err = C.psr_element_set_array_double(el.ptr, cname, value, Int32(length(value)))
+    float_values = Float64[Float64(v) for v in value]
+    err = C.psr_element_set_array_double(el.ptr, cname, float_values, Int32(length(value)))
     if err != C.PSR_OK
         error("Failed to set array<double> value for '$name'")
     end
