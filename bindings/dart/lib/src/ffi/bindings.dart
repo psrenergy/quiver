@@ -230,6 +230,39 @@ class PsrDatabaseBindings {
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Char>)>();
 
+  int psr_database_read_scalar_relation(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>> out_values,
+    ffi.Pointer<ffi.Size> out_count,
+  ) {
+    return _psr_database_read_scalar_relation(
+      db,
+      collection,
+      attribute,
+      out_values,
+      out_count,
+    );
+  }
+
+  late final _psr_database_read_scalar_relationPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+              ffi.Pointer<ffi.Size>)>>('psr_database_read_scalar_relation');
+  late final _psr_database_read_scalar_relation =
+      _psr_database_read_scalar_relationPtr.asFunction<
+          int Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+              ffi.Pointer<ffi.Size>)>();
+
   int psr_database_read_scalar_integers(
     ffi.Pointer<psr_database_t> db,
     ffi.Pointer<ffi.Char> collection,
