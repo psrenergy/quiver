@@ -121,6 +121,72 @@ PSR_C_API psr_error_t psr_database_read_set_strings(psr_database_t* db,
                                                     size_t** out_sizes,
                                                     size_t* out_count);
 
+// Read scalar attributes by element ID
+PSR_C_API psr_error_t psr_database_read_scalar_integers_by_id(psr_database_t* db,
+                                                               const char* collection,
+                                                               const char* attribute,
+                                                               int64_t id,
+                                                               int64_t* out_value,
+                                                               int* out_has_value);
+
+PSR_C_API psr_error_t psr_database_read_scalar_doubles_by_id(psr_database_t* db,
+                                                              const char* collection,
+                                                              const char* attribute,
+                                                              int64_t id,
+                                                              double* out_value,
+                                                              int* out_has_value);
+
+PSR_C_API psr_error_t psr_database_read_scalar_strings_by_id(psr_database_t* db,
+                                                              const char* collection,
+                                                              const char* attribute,
+                                                              int64_t id,
+                                                              char** out_value,
+                                                              int* out_has_value);
+
+// Read vector attributes by element ID
+PSR_C_API psr_error_t psr_database_read_vector_integers_by_id(psr_database_t* db,
+                                                               const char* collection,
+                                                               const char* attribute,
+                                                               int64_t id,
+                                                               int64_t** out_values,
+                                                               size_t* out_count);
+
+PSR_C_API psr_error_t psr_database_read_vector_doubles_by_id(psr_database_t* db,
+                                                              const char* collection,
+                                                              const char* attribute,
+                                                              int64_t id,
+                                                              double** out_values,
+                                                              size_t* out_count);
+
+PSR_C_API psr_error_t psr_database_read_vector_strings_by_id(psr_database_t* db,
+                                                              const char* collection,
+                                                              const char* attribute,
+                                                              int64_t id,
+                                                              char*** out_values,
+                                                              size_t* out_count);
+
+// Read set attributes by element ID
+PSR_C_API psr_error_t psr_database_read_set_integers_by_id(psr_database_t* db,
+                                                            const char* collection,
+                                                            const char* attribute,
+                                                            int64_t id,
+                                                            int64_t** out_values,
+                                                            size_t* out_count);
+
+PSR_C_API psr_error_t psr_database_read_set_doubles_by_id(psr_database_t* db,
+                                                           const char* collection,
+                                                           const char* attribute,
+                                                           int64_t id,
+                                                           double** out_values,
+                                                           size_t* out_count);
+
+PSR_C_API psr_error_t psr_database_read_set_strings_by_id(psr_database_t* db,
+                                                           const char* collection,
+                                                           const char* attribute,
+                                                           int64_t id,
+                                                           char*** out_values,
+                                                           size_t* out_count);
+
 // Memory cleanup for read results
 PSR_C_API void psr_free_int_array(int64_t* values);
 PSR_C_API void psr_free_double_array(double* values);

@@ -316,3 +316,172 @@ function read_set_strings(db::Database, collection::String, attribute::String)
     C.psr_free_string_vectors(out_sets[], out_sizes[], count)
     return result
 end
+
+# Read scalar by ID functions
+
+function read_scalar_integers_by_id(db::Database, collection::String, attribute::String, id::Int64)
+    out_value = Ref{Int64}(0)
+    out_has_value = Ref{Cint}(0)
+
+    err = C.psr_database_read_scalar_integers_by_id(db.ptr, collection, attribute, id, out_value, out_has_value)
+    if err != C.PSR_OK
+        throw(DatabaseException("Failed to read scalar integer by id from '$collection.$attribute'"))
+    end
+
+    if out_has_value[] == 0
+        return nothing
+    end
+    return out_value[]
+end
+
+function read_scalar_doubles_by_id(db::Database, collection::String, attribute::String, id::Int64)
+    out_value = Ref{Float64}(0.0)
+    out_has_value = Ref{Cint}(0)
+
+    err = C.psr_database_read_scalar_doubles_by_id(db.ptr, collection, attribute, id, out_value, out_has_value)
+    if err != C.PSR_OK
+        throw(DatabaseException("Failed to read scalar double by id from '$collection.$attribute'"))
+    end
+
+    if out_has_value[] == 0
+        return nothing
+    end
+    return out_value[]
+end
+
+function read_scalar_strings_by_id(db::Database, collection::String, attribute::String, id::Int64)
+    out_value = Ref{Ptr{Cchar}}(C_NULL)
+    out_has_value = Ref{Cint}(0)
+
+    err = C.psr_database_read_scalar_strings_by_id(db.ptr, collection, attribute, id, out_value, out_has_value)
+    if err != C.PSR_OK
+        throw(DatabaseException("Failed to read scalar string by id from '$collection.$attribute'"))
+    end
+
+    if out_has_value[] == 0 || out_value[] == C_NULL
+        return nothing
+    end
+    result = unsafe_string(out_value[])
+    C.psr_string_free(out_value[])
+    return result
+end
+
+# Read vector by ID functions
+
+function read_vector_integers_by_id(db::Database, collection::String, attribute::String, id::Int64)
+    out_values = Ref{Ptr{Int64}}(C_NULL)
+    out_count = Ref{Csize_t}(0)
+
+    err = C.psr_database_read_vector_integers_by_id(db.ptr, collection, attribute, id, out_values, out_count)
+    if err != C.PSR_OK
+        throw(DatabaseException("Failed to read vector integers by id from '$collection.$attribute'"))
+    end
+
+    count = out_count[]
+    if count == 0 || out_values[] == C_NULL
+        return Int64[]
+    end
+
+    result = unsafe_wrap(Array, out_values[], count) |> copy
+    C.psr_free_int_array(out_values[])
+    return result
+end
+
+function read_vector_doubles_by_id(db::Database, collection::String, attribute::String, id::Int64)
+    out_values = Ref{Ptr{Float64}}(C_NULL)
+    out_count = Ref{Csize_t}(0)
+
+    err = C.psr_database_read_vector_doubles_by_id(db.ptr, collection, attribute, id, out_values, out_count)
+    if err != C.PSR_OK
+        throw(DatabaseException("Failed to read vector doubles by id from '$collection.$attribute'"))
+    end
+
+    count = out_count[]
+    if count == 0 || out_values[] == C_NULL
+        return Float64[]
+    end
+
+    result = unsafe_wrap(Array, out_values[], count) |> copy
+    C.psr_free_double_array(out_values[])
+    return result
+end
+
+function read_vector_strings_by_id(db::Database, collection::String, attribute::String, id::Int64)
+    out_values = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
+    out_count = Ref{Csize_t}(0)
+
+    err = C.psr_database_read_vector_strings_by_id(db.ptr, collection, attribute, id, out_values, out_count)
+    if err != C.PSR_OK
+        throw(DatabaseException("Failed to read vector strings by id from '$collection.$attribute'"))
+    end
+
+    count = out_count[]
+    if count == 0 || out_values[] == C_NULL
+        return String[]
+    end
+
+    ptrs = unsafe_wrap(Array, out_values[], count)
+    result = [unsafe_string(ptr) for ptr in ptrs]
+    C.psr_free_string_array(out_values[], count)
+    return result
+end
+
+# Read set by ID functions
+
+function read_set_integers_by_id(db::Database, collection::String, attribute::String, id::Int64)
+    out_values = Ref{Ptr{Int64}}(C_NULL)
+    out_count = Ref{Csize_t}(0)
+
+    err = C.psr_database_read_set_integers_by_id(db.ptr, collection, attribute, id, out_values, out_count)
+    if err != C.PSR_OK
+        throw(DatabaseException("Failed to read set integers by id from '$collection.$attribute'"))
+    end
+
+    count = out_count[]
+    if count == 0 || out_values[] == C_NULL
+        return Int64[]
+    end
+
+    result = unsafe_wrap(Array, out_values[], count) |> copy
+    C.psr_free_int_array(out_values[])
+    return result
+end
+
+function read_set_doubles_by_id(db::Database, collection::String, attribute::String, id::Int64)
+    out_values = Ref{Ptr{Float64}}(C_NULL)
+    out_count = Ref{Csize_t}(0)
+
+    err = C.psr_database_read_set_doubles_by_id(db.ptr, collection, attribute, id, out_values, out_count)
+    if err != C.PSR_OK
+        throw(DatabaseException("Failed to read set doubles by id from '$collection.$attribute'"))
+    end
+
+    count = out_count[]
+    if count == 0 || out_values[] == C_NULL
+        return Float64[]
+    end
+
+    result = unsafe_wrap(Array, out_values[], count) |> copy
+    C.psr_free_double_array(out_values[])
+    return result
+end
+
+function read_set_strings_by_id(db::Database, collection::String, attribute::String, id::Int64)
+    out_values = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
+    out_count = Ref{Csize_t}(0)
+
+    err = C.psr_database_read_set_strings_by_id(db.ptr, collection, attribute, id, out_values, out_count)
+    if err != C.PSR_OK
+        throw(DatabaseException("Failed to read set strings by id from '$collection.$attribute'"))
+    end
+
+    count = out_count[]
+    if count == 0 || out_values[] == C_NULL
+        return String[]
+    end
+
+    ptrs = unsafe_wrap(Array, out_values[], count)
+    result = [unsafe_string(ptr) for ptr in ptrs]
+    C.psr_free_string_array(out_values[], count)
+    return result
+end

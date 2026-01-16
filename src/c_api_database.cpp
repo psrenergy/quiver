@@ -468,4 +468,206 @@ PSR_C_API psr_error_t psr_database_read_set_strings(psr_database_t* db,
     }
 }
 
+// Read scalar by ID functions
+
+PSR_C_API psr_error_t psr_database_read_scalar_integers_by_id(psr_database_t* db,
+                                                               const char* collection,
+                                                               const char* attribute,
+                                                               int64_t id,
+                                                               int64_t* out_value,
+                                                               int* out_has_value) {
+    if (!db || !collection || !attribute || !out_value || !out_has_value) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        auto result = db->db.read_scalar_integers_by_id(collection, attribute, id);
+        if (result.has_value()) {
+            *out_value = *result;
+            *out_has_value = 1;
+        } else {
+            *out_has_value = 0;
+        }
+        return PSR_OK;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API psr_error_t psr_database_read_scalar_doubles_by_id(psr_database_t* db,
+                                                              const char* collection,
+                                                              const char* attribute,
+                                                              int64_t id,
+                                                              double* out_value,
+                                                              int* out_has_value) {
+    if (!db || !collection || !attribute || !out_value || !out_has_value) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        auto result = db->db.read_scalar_doubles_by_id(collection, attribute, id);
+        if (result.has_value()) {
+            *out_value = *result;
+            *out_has_value = 1;
+        } else {
+            *out_has_value = 0;
+        }
+        return PSR_OK;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API psr_error_t psr_database_read_scalar_strings_by_id(psr_database_t* db,
+                                                              const char* collection,
+                                                              const char* attribute,
+                                                              int64_t id,
+                                                              char** out_value,
+                                                              int* out_has_value) {
+    if (!db || !collection || !attribute || !out_value || !out_has_value) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        auto result = db->db.read_scalar_strings_by_id(collection, attribute, id);
+        if (result.has_value()) {
+            *out_value = new char[result->size() + 1];
+            std::copy(result->begin(), result->end(), *out_value);
+            (*out_value)[result->size()] = '\0';
+            *out_has_value = 1;
+        } else {
+            *out_value = nullptr;
+            *out_has_value = 0;
+        }
+        return PSR_OK;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+// Read vector by ID functions
+
+PSR_C_API psr_error_t psr_database_read_vector_integers_by_id(psr_database_t* db,
+                                                               const char* collection,
+                                                               const char* attribute,
+                                                               int64_t id,
+                                                               int64_t** out_values,
+                                                               size_t* out_count) {
+    if (!db || !collection || !attribute || !out_values || !out_count) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        auto values = db->db.read_vector_integers_by_id(collection, attribute, id);
+        return read_scalars_impl(values, out_values, out_count);
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API psr_error_t psr_database_read_vector_doubles_by_id(psr_database_t* db,
+                                                              const char* collection,
+                                                              const char* attribute,
+                                                              int64_t id,
+                                                              double** out_values,
+                                                              size_t* out_count) {
+    if (!db || !collection || !attribute || !out_values || !out_count) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        auto values = db->db.read_vector_doubles_by_id(collection, attribute, id);
+        return read_scalars_impl(values, out_values, out_count);
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API psr_error_t psr_database_read_vector_strings_by_id(psr_database_t* db,
+                                                              const char* collection,
+                                                              const char* attribute,
+                                                              int64_t id,
+                                                              char*** out_values,
+                                                              size_t* out_count) {
+    if (!db || !collection || !attribute || !out_values || !out_count) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        auto values = db->db.read_vector_strings_by_id(collection, attribute, id);
+        *out_count = values.size();
+        if (values.empty()) {
+            *out_values = nullptr;
+            return PSR_OK;
+        }
+        *out_values = new char*[values.size()];
+        for (size_t i = 0; i < values.size(); ++i) {
+            (*out_values)[i] = new char[values[i].size() + 1];
+            std::copy(values[i].begin(), values[i].end(), (*out_values)[i]);
+            (*out_values)[i][values[i].size()] = '\0';
+        }
+        return PSR_OK;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+// Read set by ID functions
+
+PSR_C_API psr_error_t psr_database_read_set_integers_by_id(psr_database_t* db,
+                                                            const char* collection,
+                                                            const char* attribute,
+                                                            int64_t id,
+                                                            int64_t** out_values,
+                                                            size_t* out_count) {
+    if (!db || !collection || !attribute || !out_values || !out_count) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        auto values = db->db.read_set_integers_by_id(collection, attribute, id);
+        return read_scalars_impl(values, out_values, out_count);
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API psr_error_t psr_database_read_set_doubles_by_id(psr_database_t* db,
+                                                           const char* collection,
+                                                           const char* attribute,
+                                                           int64_t id,
+                                                           double** out_values,
+                                                           size_t* out_count) {
+    if (!db || !collection || !attribute || !out_values || !out_count) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        auto values = db->db.read_set_doubles_by_id(collection, attribute, id);
+        return read_scalars_impl(values, out_values, out_count);
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
+PSR_C_API psr_error_t psr_database_read_set_strings_by_id(psr_database_t* db,
+                                                           const char* collection,
+                                                           const char* attribute,
+                                                           int64_t id,
+                                                           char*** out_values,
+                                                           size_t* out_count) {
+    if (!db || !collection || !attribute || !out_values || !out_count) {
+        return PSR_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        auto values = db->db.read_set_strings_by_id(collection, attribute, id);
+        *out_count = values.size();
+        if (values.empty()) {
+            *out_values = nullptr;
+            return PSR_OK;
+        }
+        *out_values = new char*[values.size()];
+        for (size_t i = 0; i < values.size(); ++i) {
+            (*out_values)[i] = new char[values[i].size() + 1];
+            std::copy(values[i].begin(), values[i].end(), (*out_values)[i]);
+            (*out_values)[i][values[i].size()] = '\0';
+        }
+        return PSR_OK;
+    } catch (const std::exception&) {
+        return PSR_ERROR_DATABASE;
+    }
+}
+
 }  // extern "C"

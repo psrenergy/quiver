@@ -584,6 +584,345 @@ class PsrDatabaseBindings {
               ffi.Pointer<ffi.Pointer<ffi.Size>>,
               ffi.Pointer<ffi.Size>)>();
 
+  // Read scalar by ID functions
+
+  int psr_database_read_scalar_integers_by_id(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    int id,
+    ffi.Pointer<ffi.Int64> out_value,
+    ffi.Pointer<ffi.Int> out_has_value,
+  ) {
+    return _psr_database_read_scalar_integers_by_id(
+      db,
+      collection,
+      attribute,
+      id,
+      out_value,
+      out_has_value,
+    );
+  }
+
+  late final _psr_database_read_scalar_integers_by_idPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Int64,
+              ffi.Pointer<ffi.Int64>,
+              ffi.Pointer<ffi.Int>)>>('psr_database_read_scalar_integers_by_id');
+  late final _psr_database_read_scalar_integers_by_id =
+      _psr_database_read_scalar_integers_by_idPtr.asFunction<
+          int Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              int,
+              ffi.Pointer<ffi.Int64>,
+              ffi.Pointer<ffi.Int>)>();
+
+  int psr_database_read_scalar_doubles_by_id(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    int id,
+    ffi.Pointer<ffi.Double> out_value,
+    ffi.Pointer<ffi.Int> out_has_value,
+  ) {
+    return _psr_database_read_scalar_doubles_by_id(
+      db,
+      collection,
+      attribute,
+      id,
+      out_value,
+      out_has_value,
+    );
+  }
+
+  late final _psr_database_read_scalar_doubles_by_idPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Int64,
+              ffi.Pointer<ffi.Double>,
+              ffi.Pointer<ffi.Int>)>>('psr_database_read_scalar_doubles_by_id');
+  late final _psr_database_read_scalar_doubles_by_id =
+      _psr_database_read_scalar_doubles_by_idPtr.asFunction<
+          int Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              int,
+              ffi.Pointer<ffi.Double>,
+              ffi.Pointer<ffi.Int>)>();
+
+  int psr_database_read_scalar_strings_by_id(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    int id,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> out_value,
+    ffi.Pointer<ffi.Int> out_has_value,
+  ) {
+    return _psr_database_read_scalar_strings_by_id(
+      db,
+      collection,
+      attribute,
+      id,
+      out_value,
+      out_has_value,
+    );
+  }
+
+  late final _psr_database_read_scalar_strings_by_idPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Int64,
+              ffi.Pointer<ffi.Pointer<ffi.Char>>,
+              ffi.Pointer<ffi.Int>)>>('psr_database_read_scalar_strings_by_id');
+  late final _psr_database_read_scalar_strings_by_id =
+      _psr_database_read_scalar_strings_by_idPtr.asFunction<
+          int Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              int,
+              ffi.Pointer<ffi.Pointer<ffi.Char>>,
+              ffi.Pointer<ffi.Int>)>();
+
+  // Read vector by ID functions
+
+  int psr_database_read_vector_integers_by_id(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    int id,
+    ffi.Pointer<ffi.Pointer<ffi.Int64>> out_values,
+    ffi.Pointer<ffi.Size> out_count,
+  ) {
+    return _psr_database_read_vector_integers_by_id(
+      db,
+      collection,
+      attribute,
+      id,
+      out_values,
+      out_count,
+    );
+  }
+
+  late final _psr_database_read_vector_integers_by_idPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Int64,
+              ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+              ffi.Pointer<ffi.Size>)>>('psr_database_read_vector_integers_by_id');
+  late final _psr_database_read_vector_integers_by_id =
+      _psr_database_read_vector_integers_by_idPtr.asFunction<
+          int Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              int,
+              ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+              ffi.Pointer<ffi.Size>)>();
+
+  int psr_database_read_vector_doubles_by_id(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    int id,
+    ffi.Pointer<ffi.Pointer<ffi.Double>> out_values,
+    ffi.Pointer<ffi.Size> out_count,
+  ) {
+    return _psr_database_read_vector_doubles_by_id(
+      db,
+      collection,
+      attribute,
+      id,
+      out_values,
+      out_count,
+    );
+  }
+
+  late final _psr_database_read_vector_doubles_by_idPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Int64,
+              ffi.Pointer<ffi.Pointer<ffi.Double>>,
+              ffi.Pointer<ffi.Size>)>>('psr_database_read_vector_doubles_by_id');
+  late final _psr_database_read_vector_doubles_by_id =
+      _psr_database_read_vector_doubles_by_idPtr.asFunction<
+          int Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              int,
+              ffi.Pointer<ffi.Pointer<ffi.Double>>,
+              ffi.Pointer<ffi.Size>)>();
+
+  int psr_database_read_vector_strings_by_id(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    int id,
+    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>> out_values,
+    ffi.Pointer<ffi.Size> out_count,
+  ) {
+    return _psr_database_read_vector_strings_by_id(
+      db,
+      collection,
+      attribute,
+      id,
+      out_values,
+      out_count,
+    );
+  }
+
+  late final _psr_database_read_vector_strings_by_idPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Int64,
+              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+              ffi.Pointer<ffi.Size>)>>('psr_database_read_vector_strings_by_id');
+  late final _psr_database_read_vector_strings_by_id =
+      _psr_database_read_vector_strings_by_idPtr.asFunction<
+          int Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              int,
+              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+              ffi.Pointer<ffi.Size>)>();
+
+  // Read set by ID functions
+
+  int psr_database_read_set_integers_by_id(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    int id,
+    ffi.Pointer<ffi.Pointer<ffi.Int64>> out_values,
+    ffi.Pointer<ffi.Size> out_count,
+  ) {
+    return _psr_database_read_set_integers_by_id(
+      db,
+      collection,
+      attribute,
+      id,
+      out_values,
+      out_count,
+    );
+  }
+
+  late final _psr_database_read_set_integers_by_idPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Int64,
+              ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+              ffi.Pointer<ffi.Size>)>>('psr_database_read_set_integers_by_id');
+  late final _psr_database_read_set_integers_by_id =
+      _psr_database_read_set_integers_by_idPtr.asFunction<
+          int Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              int,
+              ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+              ffi.Pointer<ffi.Size>)>();
+
+  int psr_database_read_set_doubles_by_id(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    int id,
+    ffi.Pointer<ffi.Pointer<ffi.Double>> out_values,
+    ffi.Pointer<ffi.Size> out_count,
+  ) {
+    return _psr_database_read_set_doubles_by_id(
+      db,
+      collection,
+      attribute,
+      id,
+      out_values,
+      out_count,
+    );
+  }
+
+  late final _psr_database_read_set_doubles_by_idPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Int64,
+              ffi.Pointer<ffi.Pointer<ffi.Double>>,
+              ffi.Pointer<ffi.Size>)>>('psr_database_read_set_doubles_by_id');
+  late final _psr_database_read_set_doubles_by_id =
+      _psr_database_read_set_doubles_by_idPtr.asFunction<
+          int Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              int,
+              ffi.Pointer<ffi.Pointer<ffi.Double>>,
+              ffi.Pointer<ffi.Size>)>();
+
+  int psr_database_read_set_strings_by_id(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    int id,
+    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>> out_values,
+    ffi.Pointer<ffi.Size> out_count,
+  ) {
+    return _psr_database_read_set_strings_by_id(
+      db,
+      collection,
+      attribute,
+      id,
+      out_values,
+      out_count,
+    );
+  }
+
+  late final _psr_database_read_set_strings_by_idPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Int64,
+              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+              ffi.Pointer<ffi.Size>)>>('psr_database_read_set_strings_by_id');
+  late final _psr_database_read_set_strings_by_id =
+      _psr_database_read_set_strings_by_idPtr.asFunction<
+          int Function(
+              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>,
+              int,
+              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+              ffi.Pointer<ffi.Size>)>();
+
   void psr_free_int_array(
     ffi.Pointer<ffi.Int64> values,
   ) {

@@ -399,4 +399,167 @@ void main() {
       }
     });
   });
+
+  // Read by ID tests
+
+  group('Read Scalar Integers by ID', () {
+    test('reads integer by specific element ID', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 42,
+        });
+        db.createElement('Configuration', {
+          'label': 'Config 2',
+          'integer_attribute': 100,
+        });
+
+        expect(db.readScalarIntegerById('Configuration', 'integer_attribute', 1), equals(42));
+        expect(db.readScalarIntegerById('Configuration', 'integer_attribute', 2), equals(100));
+        expect(db.readScalarIntegerById('Configuration', 'integer_attribute', 999), isNull);
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Read Scalar Doubles by ID', () {
+    test('reads double by specific element ID', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'float_attribute': 3.14,
+        });
+        db.createElement('Configuration', {
+          'label': 'Config 2',
+          'float_attribute': 2.71,
+        });
+
+        expect(db.readScalarDoubleById('Configuration', 'float_attribute', 1), equals(3.14));
+        expect(db.readScalarDoubleById('Configuration', 'float_attribute', 2), equals(2.71));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Read Scalar Strings by ID', () {
+    test('reads string by specific element ID', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'string_attribute': 'hello',
+        });
+        db.createElement('Configuration', {
+          'label': 'Config 2',
+          'string_attribute': 'world',
+        });
+
+        expect(db.readScalarStringById('Configuration', 'string_attribute', 1), equals('hello'));
+        expect(db.readScalarStringById('Configuration', 'string_attribute', 2), equals('world'));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Read Vector Integers by ID', () {
+    test('reads int vector by specific element ID', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_int': [1, 2, 3],
+        });
+        db.createElement('Collection', {
+          'label': 'Item 2',
+          'value_int': [10, 20],
+        });
+
+        expect(db.readVectorIntegersById('Collection', 'value_int', 1), equals([1, 2, 3]));
+        expect(db.readVectorIntegersById('Collection', 'value_int', 2), equals([10, 20]));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Read Vector Doubles by ID', () {
+    test('reads double vector by specific element ID', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_float': [1.5, 2.5, 3.5],
+        });
+
+        expect(db.readVectorDoublesById('Collection', 'value_float', 1), equals([1.5, 2.5, 3.5]));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Read Set Strings by ID', () {
+    test('reads string set by specific element ID', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'tag': ['important', 'urgent'],
+        });
+        db.createElement('Collection', {
+          'label': 'Item 2',
+          'tag': ['review'],
+        });
+
+        final result1 = db.readSetStringsById('Collection', 'tag', 1);
+        expect(result1..sort(), equals(['important', 'urgent']));
+        expect(db.readSetStringsById('Collection', 'tag', 2), equals(['review']));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Read Vector by ID Empty', () {
+    test('returns empty list when element has no vector data', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {'label': 'Item 1'}); // No vector data
+
+        expect(db.readVectorIntegersById('Collection', 'value_int', 1), isEmpty);
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

@@ -146,6 +146,45 @@ function psr_database_read_set_strings(db, collection, attribute, out_sets, out_
     @ccall libpsr_database_c.psr_database_read_set_strings(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_sets::Ptr{Ptr{Ptr{Ptr{Cchar}}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::psr_error_t
 end
 
+# Read scalar by ID functions
+function psr_database_read_scalar_integers_by_id(db, collection, attribute, id, out_value, out_has_value)
+    @ccall libpsr_database_c.psr_database_read_scalar_integers_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_value::Ptr{Int64}, out_has_value::Ptr{Cint})::psr_error_t
+end
+
+function psr_database_read_scalar_doubles_by_id(db, collection, attribute, id, out_value, out_has_value)
+    @ccall libpsr_database_c.psr_database_read_scalar_doubles_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_value::Ptr{Cdouble}, out_has_value::Ptr{Cint})::psr_error_t
+end
+
+function psr_database_read_scalar_strings_by_id(db, collection, attribute, id, out_value, out_has_value)
+    @ccall libpsr_database_c.psr_database_read_scalar_strings_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_value::Ptr{Ptr{Cchar}}, out_has_value::Ptr{Cint})::psr_error_t
+end
+
+# Read vector by ID functions
+function psr_database_read_vector_integers_by_id(db, collection, attribute, id, out_values, out_count)
+    @ccall libpsr_database_c.psr_database_read_vector_integers_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::psr_error_t
+end
+
+function psr_database_read_vector_doubles_by_id(db, collection, attribute, id, out_values, out_count)
+    @ccall libpsr_database_c.psr_database_read_vector_doubles_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Cdouble}}, out_count::Ptr{Csize_t})::psr_error_t
+end
+
+function psr_database_read_vector_strings_by_id(db, collection, attribute, id, out_values, out_count)
+    @ccall libpsr_database_c.psr_database_read_vector_strings_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Ptr{Cchar}}}, out_count::Ptr{Csize_t})::psr_error_t
+end
+
+# Read set by ID functions
+function psr_database_read_set_integers_by_id(db, collection, attribute, id, out_values, out_count)
+    @ccall libpsr_database_c.psr_database_read_set_integers_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::psr_error_t
+end
+
+function psr_database_read_set_doubles_by_id(db, collection, attribute, id, out_values, out_count)
+    @ccall libpsr_database_c.psr_database_read_set_doubles_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Cdouble}}, out_count::Ptr{Csize_t})::psr_error_t
+end
+
+function psr_database_read_set_strings_by_id(db, collection, attribute, id, out_values, out_count)
+    @ccall libpsr_database_c.psr_database_read_set_strings_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Ptr{Cchar}}}, out_count::Ptr{Csize_t})::psr_error_t
+end
+
 function psr_free_int_array(values)
     @ccall libpsr_database_c.psr_free_int_array(values::Ptr{Int64})::Cvoid
 end

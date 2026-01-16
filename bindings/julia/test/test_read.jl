@@ -227,4 +227,99 @@ end
     PSRDatabase.close!(db)
 end
 
+# Read by ID tests
+
+@testset "Read Scalar Integers by ID" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Config 1", integer_attribute = 42)
+    PSRDatabase.create_element!(db, "Configuration"; label = "Config 2", integer_attribute = 100)
+
+    @test PSRDatabase.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", 1) == 42
+    @test PSRDatabase.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", 2) == 100
+    @test PSRDatabase.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", 999) === nothing
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Read Scalar Doubles by ID" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Config 1", float_attribute = 3.14)
+    PSRDatabase.create_element!(db, "Configuration"; label = "Config 2", float_attribute = 2.71)
+
+    @test PSRDatabase.read_scalar_doubles_by_id(db, "Configuration", "float_attribute", 1) == 3.14
+    @test PSRDatabase.read_scalar_doubles_by_id(db, "Configuration", "float_attribute", 2) == 2.71
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Read Scalar Strings by ID" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Config 1", string_attribute = "hello")
+    PSRDatabase.create_element!(db, "Configuration"; label = "Config 2", string_attribute = "world")
+
+    @test PSRDatabase.read_scalar_strings_by_id(db, "Configuration", "string_attribute", 1) == "hello"
+    @test PSRDatabase.read_scalar_strings_by_id(db, "Configuration", "string_attribute", 2) == "world"
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Read Vector Integers by ID" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
+    PSRDatabase.create_element!(db, "Collection"; label = "Item 1", value_int = [1, 2, 3])
+    PSRDatabase.create_element!(db, "Collection"; label = "Item 2", value_int = [10, 20])
+
+    @test PSRDatabase.read_vector_integers_by_id(db, "Collection", "value_int", 1) == [1, 2, 3]
+    @test PSRDatabase.read_vector_integers_by_id(db, "Collection", "value_int", 2) == [10, 20]
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Read Vector Doubles by ID" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
+    PSRDatabase.create_element!(db, "Collection"; label = "Item 1", value_float = [1.5, 2.5, 3.5])
+
+    @test PSRDatabase.read_vector_doubles_by_id(db, "Collection", "value_float", 1) == [1.5, 2.5, 3.5]
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Read Set Strings by ID" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
+    PSRDatabase.create_element!(db, "Collection"; label = "Item 1", tag = ["important", "urgent"])
+    PSRDatabase.create_element!(db, "Collection"; label = "Item 2", tag = ["review"])
+
+    result1 = PSRDatabase.read_set_strings_by_id(db, "Collection", "tag", 1)
+    @test sort(result1) == ["important", "urgent"]
+    @test PSRDatabase.read_set_strings_by_id(db, "Collection", "tag", 2) == ["review"]
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Read Vector by ID Empty" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
+    PSRDatabase.create_element!(db, "Collection"; label = "Item 1")  # No vector data
+
+    @test PSRDatabase.read_vector_integers_by_id(db, "Collection", "value_int", 1) == Int64[]
+
+    PSRDatabase.close!(db)
+end
+
 end

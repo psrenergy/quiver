@@ -260,3 +260,121 @@ TEST_F(LuaRunnerTest, ComplexLuaScript) {
     EXPECT_EQ(labels[0], "Item 1");
     EXPECT_EQ(labels[4], "Item 5");
 }
+
+// ============================================================================
+// Read by ID tests
+// ============================================================================
+
+TEST_F(LuaRunnerTest, ReadScalarIntegerByIdFromLua) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    int64_t id1 = db.create_element("Collection", psr::Element().set("label", "Item 1").set("some_integer", int64_t{42}));
+    int64_t id2 =
+        db.create_element("Collection", psr::Element().set("label", "Item 2").set("some_integer", int64_t{100}));
+
+    psr::LuaRunner lua(db);
+
+    std::string script = R"(
+        local val1 = db:read_scalar_integers_by_id("Collection", "some_integer", )" +
+                          std::to_string(id1) + R"()
+        local val2 = db:read_scalar_integers_by_id("Collection", "some_integer", )" +
+                          std::to_string(id2) + R"()
+        assert(val1 == 42, "Expected 42, got " .. tostring(val1))
+        assert(val2 == 100, "Expected 100, got " .. tostring(val2))
+    )";
+    lua.run(script);
+}
+
+TEST_F(LuaRunnerTest, ReadScalarDoubleByIdFromLua) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    int64_t id1 = db.create_element("Collection", psr::Element().set("label", "Item 1").set("some_float", 3.14));
+
+    psr::LuaRunner lua(db);
+
+    std::string script = R"(
+        local val1 = db:read_scalar_doubles_by_id("Collection", "some_float", )" +
+                          std::to_string(id1) + R"()
+        assert(val1 == 3.14, "Expected 3.14, got " .. tostring(val1))
+    )";
+    lua.run(script);
+}
+
+TEST_F(LuaRunnerTest, ReadScalarStringByIdFromLua) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    int64_t id1 = db.create_element("Collection", psr::Element().set("label", "Item 1"));
+
+    psr::LuaRunner lua(db);
+
+    std::string script = R"(
+        local val1 = db:read_scalar_strings_by_id("Collection", "label", )" +
+                          std::to_string(id1) + R"()
+        assert(val1 == "Item 1", "Expected 'Item 1', got " .. tostring(val1))
+    )";
+    lua.run(script);
+}
+
+TEST_F(LuaRunnerTest, ReadScalarByIdNotFoundFromLua) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    db.create_element("Collection", psr::Element().set("label", "Item 1").set("some_integer", int64_t{42}));
+
+    psr::LuaRunner lua(db);
+
+    lua.run(R"(
+        local val = db:read_scalar_integers_by_id("Collection", "some_integer", 999)
+        assert(val == nil, "Expected nil for non-existent ID")
+    )");
+}
+
+TEST_F(LuaRunnerTest, ReadVectorIntegerByIdFromLua) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    int64_t id1 =
+        db.create_element("Collection",
+                          psr::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2, 3}));
+    int64_t id2 =
+        db.create_element("Collection",
+                          psr::Element().set("label", "Item 2").set("value_int", std::vector<int64_t>{10, 20}));
+
+    psr::LuaRunner lua(db);
+
+    std::string script = R"(
+        local vec1 = db:read_vector_integers_by_id("Collection", "value_int", )" +
+                          std::to_string(id1) + R"()
+        assert(#vec1 == 3, "Expected 3 elements in vec1")
+        assert(vec1[1] == 1, "vec1[1] should be 1")
+        assert(vec1[2] == 2, "vec1[2] should be 2")
+        assert(vec1[3] == 3, "vec1[3] should be 3")
+
+        local vec2 = db:read_vector_integers_by_id("Collection", "value_int", )" +
+                          std::to_string(id2) + R"()
+        assert(#vec2 == 2, "Expected 2 elements in vec2")
+        assert(vec2[1] == 10, "vec2[1] should be 10")
+        assert(vec2[2] == 20, "vec2[2] should be 20")
+    )";
+    lua.run(script);
+}
+
+TEST_F(LuaRunnerTest, ReadSetStringsByIdFromLua) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    int64_t id1 = db.create_element(
+        "Collection", psr::Element().set("label", "Item 1").set("tag", std::vector<std::string>{"important", "urgent"}));
+
+    psr::LuaRunner lua(db);
+
+    std::string script = R"(
+        local tags = db:read_set_strings_by_id("Collection", "tag", )" +
+                          std::to_string(id1) + R"()
+        assert(#tags == 2, "Expected 2 tags, got " .. #tags)
+    )";
+    lua.run(script);
+}

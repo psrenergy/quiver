@@ -675,3 +675,299 @@ TEST_F(DatabaseFixture, ReadSetOnlyReturnsElementsWithData) {
     psr_free_string_vectors(sets, sizes, count);
     psr_database_close(db);
 }
+
+// ============================================================================
+// Read scalar by ID tests
+// ============================================================================
+
+TEST_F(DatabaseFixture, ReadScalarIntegerById) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", schema_path("schemas/valid/basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto e1 = psr_element_create();
+    psr_element_set_string(e1, "label", "Config 1");
+    psr_element_set_int(e1, "integer_attribute", 42);
+    int64_t id1 = psr_database_create_element(db, "Configuration", e1);
+    psr_element_destroy(e1);
+
+    auto e2 = psr_element_create();
+    psr_element_set_string(e2, "label", "Config 2");
+    psr_element_set_int(e2, "integer_attribute", 100);
+    int64_t id2 = psr_database_create_element(db, "Configuration", e2);
+    psr_element_destroy(e2);
+
+    int64_t value;
+    int has_value;
+    auto err = psr_database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id1, &value, &has_value);
+
+    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(has_value, 1);
+    EXPECT_EQ(value, 42);
+
+    err = psr_database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id2, &value, &has_value);
+    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(has_value, 1);
+    EXPECT_EQ(value, 100);
+
+    psr_database_close(db);
+}
+
+TEST_F(DatabaseFixture, ReadScalarDoubleById) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", schema_path("schemas/valid/basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto e1 = psr_element_create();
+    psr_element_set_string(e1, "label", "Config 1");
+    psr_element_set_double(e1, "float_attribute", 3.14);
+    int64_t id1 = psr_database_create_element(db, "Configuration", e1);
+    psr_element_destroy(e1);
+
+    double value;
+    int has_value;
+    auto err = psr_database_read_scalar_doubles_by_id(db, "Configuration", "float_attribute", id1, &value, &has_value);
+
+    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(has_value, 1);
+    EXPECT_DOUBLE_EQ(value, 3.14);
+
+    psr_database_close(db);
+}
+
+TEST_F(DatabaseFixture, ReadScalarStringById) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", schema_path("schemas/valid/basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto e1 = psr_element_create();
+    psr_element_set_string(e1, "label", "Config 1");
+    psr_element_set_string(e1, "string_attribute", "hello");
+    int64_t id1 = psr_database_create_element(db, "Configuration", e1);
+    psr_element_destroy(e1);
+
+    char* value = nullptr;
+    int has_value;
+    auto err = psr_database_read_scalar_strings_by_id(db, "Configuration", "string_attribute", id1, &value, &has_value);
+
+    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(has_value, 1);
+    EXPECT_STREQ(value, "hello");
+
+    delete[] value;
+    psr_database_close(db);
+}
+
+TEST_F(DatabaseFixture, ReadScalarByIdNotFound) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", schema_path("schemas/valid/basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto e = psr_element_create();
+    psr_element_set_string(e, "label", "Config 1");
+    psr_element_set_int(e, "integer_attribute", 42);
+    psr_database_create_element(db, "Configuration", e);
+    psr_element_destroy(e);
+
+    int64_t value;
+    int has_value;
+    auto err = psr_database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", 999, &value, &has_value);
+
+    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(has_value, 0);
+
+    psr_database_close(db);
+}
+
+// ============================================================================
+// Read vector by ID tests
+// ============================================================================
+
+TEST_F(DatabaseFixture, ReadVectorIntegerById) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", schema_path("schemas/valid/collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto config = psr_element_create();
+    psr_element_set_string(config, "label", "Test Config");
+    psr_database_create_element(db, "Configuration", config);
+    psr_element_destroy(config);
+
+    auto e1 = psr_element_create();
+    psr_element_set_string(e1, "label", "Item 1");
+    int64_t values1[] = {1, 2, 3};
+    psr_element_set_array_int(e1, "value_int", values1, 3);
+    int64_t id1 = psr_database_create_element(db, "Collection", e1);
+    psr_element_destroy(e1);
+
+    auto e2 = psr_element_create();
+    psr_element_set_string(e2, "label", "Item 2");
+    int64_t values2[] = {10, 20};
+    psr_element_set_array_int(e2, "value_int", values2, 2);
+    int64_t id2 = psr_database_create_element(db, "Collection", e2);
+    psr_element_destroy(e2);
+
+    int64_t* values = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_vector_integers_by_id(db, "Collection", "value_int", id1, &values, &count);
+
+    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(count, 3);
+    EXPECT_EQ(values[0], 1);
+    EXPECT_EQ(values[1], 2);
+    EXPECT_EQ(values[2], 3);
+    psr_free_int_array(values);
+
+    err = psr_database_read_vector_integers_by_id(db, "Collection", "value_int", id2, &values, &count);
+    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(count, 2);
+    EXPECT_EQ(values[0], 10);
+    EXPECT_EQ(values[1], 20);
+    psr_free_int_array(values);
+
+    psr_database_close(db);
+}
+
+TEST_F(DatabaseFixture, ReadVectorDoubleById) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", schema_path("schemas/valid/collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto config = psr_element_create();
+    psr_element_set_string(config, "label", "Test Config");
+    psr_database_create_element(db, "Configuration", config);
+    psr_element_destroy(config);
+
+    auto e1 = psr_element_create();
+    psr_element_set_string(e1, "label", "Item 1");
+    double values1[] = {1.5, 2.5, 3.5};
+    psr_element_set_array_double(e1, "value_float", values1, 3);
+    int64_t id1 = psr_database_create_element(db, "Collection", e1);
+    psr_element_destroy(e1);
+
+    double* values = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_vector_doubles_by_id(db, "Collection", "value_float", id1, &values, &count);
+
+    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(count, 3);
+    EXPECT_DOUBLE_EQ(values[0], 1.5);
+    EXPECT_DOUBLE_EQ(values[1], 2.5);
+    EXPECT_DOUBLE_EQ(values[2], 3.5);
+
+    psr_free_double_array(values);
+    psr_database_close(db);
+}
+
+TEST_F(DatabaseFixture, ReadVectorByIdEmpty) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", schema_path("schemas/valid/collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto config = psr_element_create();
+    psr_element_set_string(config, "label", "Test Config");
+    psr_database_create_element(db, "Configuration", config);
+    psr_element_destroy(config);
+
+    auto e = psr_element_create();
+    psr_element_set_string(e, "label", "Item 1");
+    int64_t id = psr_database_create_element(db, "Collection", e);
+    psr_element_destroy(e);
+
+    int64_t* values = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_vector_integers_by_id(db, "Collection", "value_int", id, &values, &count);
+
+    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(count, 0);
+    EXPECT_EQ(values, nullptr);
+
+    psr_database_close(db);
+}
+
+// ============================================================================
+// Read set by ID tests
+// ============================================================================
+
+TEST_F(DatabaseFixture, ReadSetStringById) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", schema_path("schemas/valid/collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto config = psr_element_create();
+    psr_element_set_string(config, "label", "Test Config");
+    psr_database_create_element(db, "Configuration", config);
+    psr_element_destroy(config);
+
+    auto e1 = psr_element_create();
+    psr_element_set_string(e1, "label", "Item 1");
+    const char* tags1[] = {"important", "urgent"};
+    psr_element_set_array_string(e1, "tag", tags1, 2);
+    int64_t id1 = psr_database_create_element(db, "Collection", e1);
+    psr_element_destroy(e1);
+
+    auto e2 = psr_element_create();
+    psr_element_set_string(e2, "label", "Item 2");
+    const char* tags2[] = {"review"};
+    psr_element_set_array_string(e2, "tag", tags2, 1);
+    int64_t id2 = psr_database_create_element(db, "Collection", e2);
+    psr_element_destroy(e2);
+
+    char** values = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_set_strings_by_id(db, "Collection", "tag", id1, &values, &count);
+
+    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(count, 2);
+    std::vector<std::string> set_values;
+    for (size_t i = 0; i < count; i++) {
+        set_values.push_back(values[i]);
+    }
+    std::sort(set_values.begin(), set_values.end());
+    EXPECT_EQ(set_values[0], "important");
+    EXPECT_EQ(set_values[1], "urgent");
+    psr_free_string_array(values, count);
+
+    err = psr_database_read_set_strings_by_id(db, "Collection", "tag", id2, &values, &count);
+    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(count, 1);
+    EXPECT_STREQ(values[0], "review");
+    psr_free_string_array(values, count);
+
+    psr_database_close(db);
+}
+
+TEST_F(DatabaseFixture, ReadSetByIdEmpty) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", schema_path("schemas/valid/collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto config = psr_element_create();
+    psr_element_set_string(config, "label", "Test Config");
+    psr_database_create_element(db, "Configuration", config);
+    psr_element_destroy(config);
+
+    auto e = psr_element_create();
+    psr_element_set_string(e, "label", "Item 1");
+    int64_t id = psr_database_create_element(db, "Collection", e);
+    psr_element_destroy(e);
+
+    char** values = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_set_strings_by_id(db, "Collection", "tag", id, &values, &count);
+
+    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(count, 0);
+    EXPECT_EQ(values, nullptr);
+
+    psr_database_close(db);
+}

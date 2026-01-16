@@ -519,6 +519,320 @@ class Database {
     }
   }
 
+  // Read scalar by ID methods
+
+  /// Reads an integer value for a scalar attribute by element ID.
+  /// Returns null if the element is not found.
+  int? readScalarIntegerById(String collection, String attribute, int id) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outValue = arena<Int64>();
+      final outHasValue = arena<Int>();
+
+      final err = bindings.psr_database_read_scalar_integers_by_id(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        id,
+        outValue,
+        outHasValue,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to read scalar integer by id from '$collection.$attribute'");
+      }
+
+      if (outHasValue.value == 0) {
+        return null;
+      }
+      return outValue.value;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Reads a double value for a scalar attribute by element ID.
+  /// Returns null if the element is not found.
+  double? readScalarDoubleById(String collection, String attribute, int id) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outValue = arena<Double>();
+      final outHasValue = arena<Int>();
+
+      final err = bindings.psr_database_read_scalar_doubles_by_id(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        id,
+        outValue,
+        outHasValue,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to read scalar double by id from '$collection.$attribute'");
+      }
+
+      if (outHasValue.value == 0) {
+        return null;
+      }
+      return outValue.value;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Reads a string value for a scalar attribute by element ID.
+  /// Returns null if the element is not found.
+  String? readScalarStringById(String collection, String attribute, int id) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outValue = arena<Pointer<Char>>();
+      final outHasValue = arena<Int>();
+
+      final err = bindings.psr_database_read_scalar_strings_by_id(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        id,
+        outValue,
+        outHasValue,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to read scalar string by id from '$collection.$attribute'");
+      }
+
+      if (outHasValue.value == 0 || outValue.value == nullptr) {
+        return null;
+      }
+      final result = outValue.value.cast<Utf8>().toDartString();
+      bindings.psr_string_free(outValue.value);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  // Read vector by ID methods
+
+  /// Reads integer vector for a vector attribute by element ID.
+  List<int> readVectorIntegersById(String collection, String attribute, int id) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outValues = arena<Pointer<Int64>>();
+      final outCount = arena<Size>();
+
+      final err = bindings.psr_database_read_vector_integers_by_id(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        id,
+        outValues,
+        outCount,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to read vector integers by id from '$collection.$attribute'");
+      }
+
+      final count = outCount.value;
+      if (count == 0 || outValues.value == nullptr) {
+        return [];
+      }
+
+      final result = List<int>.generate(count, (i) => outValues.value[i]);
+      bindings.psr_free_int_array(outValues.value);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Reads double vector for a vector attribute by element ID.
+  List<double> readVectorDoublesById(String collection, String attribute, int id) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outValues = arena<Pointer<Double>>();
+      final outCount = arena<Size>();
+
+      final err = bindings.psr_database_read_vector_doubles_by_id(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        id,
+        outValues,
+        outCount,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to read vector doubles by id from '$collection.$attribute'");
+      }
+
+      final count = outCount.value;
+      if (count == 0 || outValues.value == nullptr) {
+        return [];
+      }
+
+      final result = List<double>.generate(count, (i) => outValues.value[i]);
+      bindings.psr_free_double_array(outValues.value);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Reads string vector for a vector attribute by element ID.
+  List<String> readVectorStringsById(String collection, String attribute, int id) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outValues = arena<Pointer<Pointer<Char>>>();
+      final outCount = arena<Size>();
+
+      final err = bindings.psr_database_read_vector_strings_by_id(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        id,
+        outValues,
+        outCount,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to read vector strings by id from '$collection.$attribute'");
+      }
+
+      final count = outCount.value;
+      if (count == 0 || outValues.value == nullptr) {
+        return [];
+      }
+
+      final result = List<String>.generate(count, (i) => outValues.value[i].cast<Utf8>().toDartString());
+      bindings.psr_free_string_array(outValues.value, count);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  // Read set by ID methods
+
+  /// Reads integer set for a set attribute by element ID.
+  List<int> readSetIntegersById(String collection, String attribute, int id) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outValues = arena<Pointer<Int64>>();
+      final outCount = arena<Size>();
+
+      final err = bindings.psr_database_read_set_integers_by_id(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        id,
+        outValues,
+        outCount,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to read set integers by id from '$collection.$attribute'");
+      }
+
+      final count = outCount.value;
+      if (count == 0 || outValues.value == nullptr) {
+        return [];
+      }
+
+      final result = List<int>.generate(count, (i) => outValues.value[i]);
+      bindings.psr_free_int_array(outValues.value);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Reads double set for a set attribute by element ID.
+  List<double> readSetDoublesById(String collection, String attribute, int id) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outValues = arena<Pointer<Double>>();
+      final outCount = arena<Size>();
+
+      final err = bindings.psr_database_read_set_doubles_by_id(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        id,
+        outValues,
+        outCount,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to read set doubles by id from '$collection.$attribute'");
+      }
+
+      final count = outCount.value;
+      if (count == 0 || outValues.value == nullptr) {
+        return [];
+      }
+
+      final result = List<double>.generate(count, (i) => outValues.value[i]);
+      bindings.psr_free_double_array(outValues.value);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Reads string set for a set attribute by element ID.
+  List<String> readSetStringsById(String collection, String attribute, int id) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outValues = arena<Pointer<Pointer<Char>>>();
+      final outCount = arena<Size>();
+
+      final err = bindings.psr_database_read_set_strings_by_id(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        id,
+        outValues,
+        outCount,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to read set strings by id from '$collection.$attribute'");
+      }
+
+      final count = outCount.value;
+      if (count == 0 || outValues.value == nullptr) {
+        return [];
+      }
+
+      final result = List<String>.generate(count, (i) => outValues.value[i].cast<Utf8>().toDartString());
+      bindings.psr_free_string_array(outValues.value, count);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
   /// Closes the database and frees native resources.
   void close() {
     if (_isClosed) return;
