@@ -193,6 +193,69 @@ PSR_C_API psr_error_t psr_database_read_element_ids(psr_database_t* db,
                                                     int64_t** out_ids,
                                                     size_t* out_count);
 
+// Update scalar attributes (by element ID)
+PSR_C_API psr_error_t psr_database_update_scalar_integer(psr_database_t* db,
+                                                         const char* collection,
+                                                         const char* attribute,
+                                                         int64_t id,
+                                                         int64_t value);
+
+PSR_C_API psr_error_t psr_database_update_scalar_double(psr_database_t* db,
+                                                        const char* collection,
+                                                        const char* attribute,
+                                                        int64_t id,
+                                                        double value);
+
+PSR_C_API psr_error_t psr_database_update_scalar_string(psr_database_t* db,
+                                                        const char* collection,
+                                                        const char* attribute,
+                                                        int64_t id,
+                                                        const char* value);
+
+// Update vector attributes (by element ID) - replaces entire vector
+PSR_C_API psr_error_t psr_database_update_vector_integers(psr_database_t* db,
+                                                          const char* collection,
+                                                          const char* attribute,
+                                                          int64_t id,
+                                                          const int64_t* values,
+                                                          size_t count);
+
+PSR_C_API psr_error_t psr_database_update_vector_doubles(psr_database_t* db,
+                                                         const char* collection,
+                                                         const char* attribute,
+                                                         int64_t id,
+                                                         const double* values,
+                                                         size_t count);
+
+PSR_C_API psr_error_t psr_database_update_vector_strings(psr_database_t* db,
+                                                         const char* collection,
+                                                         const char* attribute,
+                                                         int64_t id,
+                                                         const char* const* values,
+                                                         size_t count);
+
+// Update set attributes (by element ID) - replaces entire set
+PSR_C_API psr_error_t psr_database_update_set_integers(psr_database_t* db,
+                                                       const char* collection,
+                                                       const char* attribute,
+                                                       int64_t id,
+                                                       const int64_t* values,
+                                                       size_t count);
+
+PSR_C_API psr_error_t psr_database_update_set_doubles(psr_database_t* db,
+                                                      const char* collection,
+                                                      const char* attribute,
+                                                      int64_t id,
+                                                      const double* values,
+                                                      size_t count);
+
+PSR_C_API psr_error_t psr_database_update_set_strings(psr_database_t* db,
+                                                      const char* collection,
+                                                      const char* attribute,
+                                                      int64_t id,
+                                                      const char* const* values,
+                                                      size_t count);
+
 // Memory cleanup for read results
 PSR_C_API void psr_free_int_array(int64_t* values);
 PSR_C_API void psr_free_double_array(double* values);

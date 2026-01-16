@@ -518,8 +518,6 @@ class PsrDatabaseBindings {
           ffi.Pointer<ffi.Pointer<ffi.Size>>,
           ffi.Pointer<ffi.Size>)>();
 
-  // Read scalar by ID functions
-
   int psr_database_read_scalar_integers_by_id(
     ffi.Pointer<psr_database_t> db,
     ffi.Pointer<ffi.Char> collection,
@@ -597,8 +595,6 @@ class PsrDatabaseBindings {
   late final _psr_database_read_scalar_strings_by_id = _psr_database_read_scalar_strings_by_idPtr.asFunction<
       int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Pointer<ffi.Int>)>();
-
-  // Read vector by ID functions
 
   int psr_database_read_vector_integers_by_id(
     ffi.Pointer<psr_database_t> db,
@@ -683,8 +679,6 @@ class PsrDatabaseBindings {
       int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>, ffi.Pointer<ffi.Size>)>();
 
-  // Read set by ID functions
-
   int psr_database_read_set_integers_by_id(
     ffi.Pointer<psr_database_t> db,
     ffi.Pointer<ffi.Char> collection,
@@ -768,8 +762,6 @@ class PsrDatabaseBindings {
       int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>, ffi.Pointer<ffi.Size>)>();
 
-  // Read element IDs
-
   int psr_database_read_element_ids(
     ffi.Pointer<psr_database_t> db,
     ffi.Pointer<ffi.Char> collection,
@@ -791,6 +783,232 @@ class PsrDatabaseBindings {
   late final _psr_database_read_element_ids = _psr_database_read_element_idsPtr.asFunction<
       int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Int64>>,
           ffi.Pointer<ffi.Size>)>();
+
+  int psr_database_update_scalar_integer(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    int id,
+    int value,
+  ) {
+    return _psr_database_update_scalar_integer(
+      db,
+      collection,
+      attribute,
+      id,
+      value,
+    );
+  }
+
+  late final _psr_database_update_scalar_integerPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Int64)>>('psr_database_update_scalar_integer');
+  late final _psr_database_update_scalar_integer = _psr_database_update_scalar_integerPtr
+      .asFunction<int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, int)>();
+
+  int psr_database_update_scalar_double(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    int id,
+    double value,
+  ) {
+    return _psr_database_update_scalar_double(
+      db,
+      collection,
+      attribute,
+      id,
+      value,
+    );
+  }
+
+  late final _psr_database_update_scalar_doublePtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Double)>>('psr_database_update_scalar_double');
+  late final _psr_database_update_scalar_double = _psr_database_update_scalar_doublePtr.asFunction<
+      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, double)>();
+
+  int psr_database_update_scalar_string(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    int id,
+    ffi.Pointer<ffi.Char> value,
+  ) {
+    return _psr_database_update_scalar_string(
+      db,
+      collection,
+      attribute,
+      id,
+      value,
+    );
+  }
+
+  late final _psr_database_update_scalar_stringPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<ffi.Char>)>>('psr_database_update_scalar_string');
+  late final _psr_database_update_scalar_string = _psr_database_update_scalar_stringPtr.asFunction<
+      int Function(
+          ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<ffi.Char>)>();
+
+  int psr_database_update_vector_integers(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    int id,
+    ffi.Pointer<ffi.Int64> values,
+    int count,
+  ) {
+    return _psr_database_update_vector_integers(
+      db,
+      collection,
+      attribute,
+      id,
+      values,
+      count,
+    );
+  }
+
+  late final _psr_database_update_vector_integersPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<ffi.Int64>, ffi.Size)>>('psr_database_update_vector_integers');
+  late final _psr_database_update_vector_integers = _psr_database_update_vector_integersPtr.asFunction<
+      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
+          ffi.Pointer<ffi.Int64>, int)>();
+
+  int psr_database_update_vector_doubles(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    int id,
+    ffi.Pointer<ffi.Double> values,
+    int count,
+  ) {
+    return _psr_database_update_vector_doubles(
+      db,
+      collection,
+      attribute,
+      id,
+      values,
+      count,
+    );
+  }
+
+  late final _psr_database_update_vector_doublesPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<ffi.Double>, ffi.Size)>>('psr_database_update_vector_doubles');
+  late final _psr_database_update_vector_doubles = _psr_database_update_vector_doublesPtr.asFunction<
+      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
+          ffi.Pointer<ffi.Double>, int)>();
+
+  int psr_database_update_vector_strings(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    int id,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> values,
+    int count,
+  ) {
+    return _psr_database_update_vector_strings(
+      db,
+      collection,
+      attribute,
+      id,
+      values,
+      count,
+    );
+  }
+
+  late final _psr_database_update_vector_stringsPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Size)>>('psr_database_update_vector_strings');
+  late final _psr_database_update_vector_strings = _psr_database_update_vector_stringsPtr.asFunction<
+      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>, int)>();
+
+  int psr_database_update_set_integers(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    int id,
+    ffi.Pointer<ffi.Int64> values,
+    int count,
+  ) {
+    return _psr_database_update_set_integers(
+      db,
+      collection,
+      attribute,
+      id,
+      values,
+      count,
+    );
+  }
+
+  late final _psr_database_update_set_integersPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<ffi.Int64>, ffi.Size)>>('psr_database_update_set_integers');
+  late final _psr_database_update_set_integers = _psr_database_update_set_integersPtr.asFunction<
+      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
+          ffi.Pointer<ffi.Int64>, int)>();
+
+  int psr_database_update_set_doubles(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    int id,
+    ffi.Pointer<ffi.Double> values,
+    int count,
+  ) {
+    return _psr_database_update_set_doubles(
+      db,
+      collection,
+      attribute,
+      id,
+      values,
+      count,
+    );
+  }
+
+  late final _psr_database_update_set_doublesPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<ffi.Double>, ffi.Size)>>('psr_database_update_set_doubles');
+  late final _psr_database_update_set_doubles = _psr_database_update_set_doublesPtr.asFunction<
+      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
+          ffi.Pointer<ffi.Double>, int)>();
+
+  int psr_database_update_set_strings(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    int id,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> values,
+    int count,
+  ) {
+    return _psr_database_update_set_strings(
+      db,
+      collection,
+      attribute,
+      id,
+      values,
+      count,
+    );
+  }
+
+  late final _psr_database_update_set_stringsPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Size)>>('psr_database_update_set_strings');
+  late final _psr_database_update_set_strings = _psr_database_update_set_stringsPtr.asFunction<
+      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>, int)>();
 
   void psr_free_int_array(
     ffi.Pointer<ffi.Int64> values,
