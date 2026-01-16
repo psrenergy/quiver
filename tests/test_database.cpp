@@ -82,12 +82,15 @@ TEST_F(DatabaseFixture, CreateElementWithScalars) {
     int64_t id = db.create_element("Configuration", element);
     EXPECT_EQ(id, 1);
 
-    // Verify
-    auto result = db.execute("SELECT label, integer_attribute, float_attribute FROM Configuration WHERE id = ?", {id});
-    EXPECT_EQ(result.row_count(), 1);
-    EXPECT_EQ(result[0].get_string(0).value(), "Config 1");
-    EXPECT_EQ(result[0].get_int(1).value(), 42);
-    EXPECT_EQ(result[0].get_double(2).value(), 3.14);
+    // Verify using public read APIs
+    auto labels = db.read_scalar_strings("Configuration", "label");
+    auto integers = db.read_scalar_integers("Configuration", "integer_attribute");
+    auto floats = db.read_scalar_doubles("Configuration", "float_attribute");
+
+    EXPECT_EQ(labels.size(), 1);
+    EXPECT_EQ(labels[0], "Config 1");
+    EXPECT_EQ(integers[0], 42);
+    EXPECT_EQ(floats[0], 3.14);
 }
 
 TEST_F(DatabaseFixture, CreateElementWithVector) {
@@ -108,19 +111,18 @@ TEST_F(DatabaseFixture, CreateElementWithVector) {
     int64_t id = db.create_element("Collection", element);
     EXPECT_EQ(id, 1);
 
-    // Verify main table
-    auto result = db.execute("SELECT label FROM Collection WHERE id = ?", {id});
-    EXPECT_EQ(result.row_count(), 1);
-    EXPECT_EQ(result[0].get_string(0).value(), "Item 1");
+    // Verify using public read APIs
+    auto labels = db.read_scalar_strings("Collection", "label");
+    EXPECT_EQ(labels.size(), 1);
+    EXPECT_EQ(labels[0], "Item 1");
 
-    // Verify vector table
-    auto vec_result = db.execute(
-        "SELECT vector_index, value_int, value_float FROM Collection_vector_values WHERE id = ? ORDER BY vector_index",
-        {id});
-    EXPECT_EQ(vec_result.row_count(), 3);
-    EXPECT_EQ(vec_result[0].get_int(0).value(), 1);
-    EXPECT_EQ(vec_result[0].get_int(1).value(), 1);
-    EXPECT_EQ(vec_result[0].get_double(2).value(), 1.5);
+    auto int_vectors = db.read_vector_integers("Collection", "value_int");
+    EXPECT_EQ(int_vectors.size(), 1);
+    EXPECT_EQ(int_vectors[0], (std::vector<int64_t>{1, 2, 3}));
+
+    auto float_vectors = db.read_vector_doubles("Collection", "value_float");
+    EXPECT_EQ(float_vectors.size(), 1);
+    EXPECT_EQ(float_vectors[0], (std::vector<double>{1.5, 2.5, 3.5}));
 }
 
 TEST_F(DatabaseFixture, CreateElementWithVectorGroup) {
@@ -141,23 +143,14 @@ TEST_F(DatabaseFixture, CreateElementWithVectorGroup) {
     int64_t id = db.create_element("Collection", element);
     EXPECT_EQ(id, 1);
 
-    // Verify vector table with multiple attributes
-    auto vec_result = db.execute(
-        "SELECT vector_index, value_int, value_float FROM Collection_vector_values WHERE id = ? ORDER BY vector_index",
-        {id});
-    EXPECT_EQ(vec_result.row_count(), 3);
+    // Verify using public read APIs
+    auto int_vectors = db.read_vector_integers("Collection", "value_int");
+    EXPECT_EQ(int_vectors.size(), 1);
+    EXPECT_EQ(int_vectors[0], (std::vector<int64_t>{10, 20, 30}));
 
-    EXPECT_EQ(vec_result[0].get_int(0).value(), 1);
-    EXPECT_EQ(vec_result[0].get_int(1).value(), 10);
-    EXPECT_EQ(vec_result[0].get_double(2).value(), 1.5);
-
-    EXPECT_EQ(vec_result[1].get_int(0).value(), 2);
-    EXPECT_EQ(vec_result[1].get_int(1).value(), 20);
-    EXPECT_EQ(vec_result[1].get_double(2).value(), 2.5);
-
-    EXPECT_EQ(vec_result[2].get_int(0).value(), 3);
-    EXPECT_EQ(vec_result[2].get_int(1).value(), 30);
-    EXPECT_EQ(vec_result[2].get_double(2).value(), 3.5);
+    auto float_vectors = db.read_vector_doubles("Collection", "value_float");
+    EXPECT_EQ(float_vectors.size(), 1);
+    EXPECT_EQ(float_vectors[0], (std::vector<double>{1.5, 2.5, 3.5}));
 }
 
 TEST_F(DatabaseFixture, CreateElementWithSetGroup) {
@@ -176,13 +169,12 @@ TEST_F(DatabaseFixture, CreateElementWithSetGroup) {
     int64_t id = db.create_element("Collection", element);
     EXPECT_EQ(id, 1);
 
-    // Verify set table
-    auto set_result = db.execute("SELECT tag FROM Collection_set_tags WHERE id = ? ORDER BY tag", {id});
-    EXPECT_EQ(set_result.row_count(), 3);
-
-    EXPECT_EQ(set_result[0].get_string(0).value(), "important");
-    EXPECT_EQ(set_result[1].get_string(0).value(), "review");
-    EXPECT_EQ(set_result[2].get_string(0).value(), "urgent");
+    // Verify using public read APIs
+    auto sets = db.read_set_strings("Collection", "tag");
+    EXPECT_EQ(sets.size(), 1);
+    auto tags = sets[0];
+    std::sort(tags.begin(), tags.end());
+    EXPECT_EQ(tags, (std::vector<std::string>{"important", "review", "urgent"}));
 }
 
 TEST_F(DatabaseFixture, CreateMultipleElements) {
@@ -201,19 +193,9 @@ TEST_F(DatabaseFixture, CreateMultipleElements) {
     EXPECT_EQ(id1, 1);
     EXPECT_EQ(id2, 2);
 
-    auto result = db.execute("SELECT COUNT(*) FROM Configuration");
-    EXPECT_EQ(result[0].get_int(0).value(), 2);
-}
-
-TEST_F(DatabaseFixture, CreateTable) {
-    psr::Database db(":memory:", {.console_level = psr::LogLevel::off});
-
-    db.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, value TEXT)");
-    db.execute("INSERT INTO test (value) VALUES (?)", {std::string("hello")});
-
-    auto result = db.execute("SELECT * FROM test");
-    EXPECT_EQ(result.row_count(), 1);
-    EXPECT_EQ(result[0].get_string(1).value(), "hello");
+    // Verify using public read APIs
+    auto labels = db.read_scalar_strings("Configuration", "label");
+    EXPECT_EQ(labels.size(), 2);
 }
 
 TEST_F(DatabaseFixture, CurrentVersion) {
@@ -472,10 +454,10 @@ TEST_F(DatabaseFixture, SetScalarRelation) {
     // Set the relation
     db.set_scalar_relation("Child", "parent_id", "Child 1", "Parent 1");
 
-    // Verify the relation was set
-    auto result = db.execute("SELECT parent_id FROM Child WHERE label = ?", {std::string("Child 1")});
-    EXPECT_EQ(result.row_count(), 1);
-    EXPECT_EQ(result[0].get_int(0).value(), 1);  // Parent 1 has id = 1
+    // Verify the relation was set using public read API
+    auto relations = db.read_scalar_relation("Child", "parent_id");
+    EXPECT_EQ(relations.size(), 1);
+    EXPECT_EQ(relations[0], "Parent 1");
 }
 
 TEST_F(DatabaseFixture, SetScalarRelationSelfReference) {
@@ -494,8 +476,10 @@ TEST_F(DatabaseFixture, SetScalarRelationSelfReference) {
     // Set self-referential relation (sibling)
     db.set_scalar_relation("Child", "sibling_id", "Child 1", "Child 2");
 
-    // Verify the relation was set
-    auto result = db.execute("SELECT sibling_id FROM Child WHERE label = ?", {std::string("Child 1")});
-    EXPECT_EQ(result.row_count(), 1);
-    EXPECT_EQ(result[0].get_int(0).value(), 2);  // Child 2 has id = 2
+    // Verify the relation was set using public read API
+    auto relations = db.read_scalar_relation("Child", "sibling_id");
+    EXPECT_EQ(relations.size(), 2);
+    // Child 1 has sibling_id pointing to Child 2, Child 2 has no sibling
+    EXPECT_EQ(relations[0], "Child 2");
+    EXPECT_EQ(relations[1], "");  // Child 2 has no sibling set
 }

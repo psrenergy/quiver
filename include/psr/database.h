@@ -39,8 +39,6 @@ public:
                                 const DatabaseOptions& options = DatabaseOptions());
     bool is_healthy() const;
 
-    Result execute(const std::string& sql, const std::vector<Value>& params = {});
-
     int64_t current_version() const;
 
     // Element operations
@@ -81,6 +79,9 @@ private:
 
     // Internal helper for executing raw SQL (for migrations)
     void execute_raw(const std::string& sql);
+
+    // Internal method for parameterized queries
+    Result execute(const std::string& sql, const std::vector<Value>& params = {});
 
     // Internal methods
     void set_version(int64_t version);
