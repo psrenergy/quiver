@@ -2,6 +2,7 @@
 set(PSR_SOURCES
     database.cpp
     element.cpp
+    lua_runner.cpp
     migration.cpp
     migrations.cpp
     result.cpp

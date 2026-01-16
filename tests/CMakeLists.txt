@@ -3,6 +3,7 @@ include(GoogleTest)
 add_executable(psr_database_tests
     test_database.cpp
     test_element.cpp
+    test_lua_runner.cpp
     test_migrations/test_migrations.cpp
     test_schema_validator.cpp
 )
