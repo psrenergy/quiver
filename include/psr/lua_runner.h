@@ -10,17 +10,6 @@ namespace psr {
 
 class Database;
 
-/// Runs Lua scripts with access to a Database instance.
-///
-/// Example:
-/// @code
-/// auto db = psr::Database::from_schema(":memory:", "schema.sql");
-/// psr::LuaRunner lua(db);
-/// lua.run(R"(
-///     db:create_element("Collection", { label = "Item 1" })
-///     local labels = db:read_scalar_strings("Collection", "label")
-/// )");
-/// @endcode
 class PSR_API LuaRunner {
 public:
     explicit LuaRunner(Database& db);
