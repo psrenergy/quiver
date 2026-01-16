@@ -24,11 +24,10 @@ import 'exceptions.dart';
 /// ```
 class LuaRunner {
   Pointer<psr_lua_runner_t> _ptr;
-  final Database _db;
   bool _isDisposed = false;
 
   /// Creates a new LuaRunner for the given database.
-  LuaRunner(Database db) : _db = db, _ptr = nullptr {
+  LuaRunner(Database db) : _ptr = nullptr {
     _ptr = bindings.psr_lua_runner_new(db.ptr);
     if (_ptr == nullptr) {
       throw const DatabaseOperationException('Failed to create LuaRunner');
