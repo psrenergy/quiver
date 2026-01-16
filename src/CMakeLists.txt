@@ -70,6 +70,7 @@ if(PSR_BUILD_C_API)
         c_api_common.cpp
         c_api_database.cpp
         c_api_element.cpp
+        c_api_lua_runner.cpp
     )
 
     target_compile_definitions(psr_database_c PRIVATE

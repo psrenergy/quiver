@@ -234,6 +234,26 @@ function psr_string_free(str)
     @ccall libpsr_database_c.psr_string_free(str::Ptr{Cchar})::Cvoid
 end
 
+mutable struct psr_lua_runner end
+
+const psr_lua_runner_t = psr_lua_runner
+
+function psr_lua_runner_new(db)
+    @ccall libpsr_database_c.psr_lua_runner_new(db::Ptr{psr_database_t})::Ptr{psr_lua_runner_t}
+end
+
+function psr_lua_runner_free(runner)
+    @ccall libpsr_database_c.psr_lua_runner_free(runner::Ptr{psr_lua_runner_t})::Cvoid
+end
+
+function psr_lua_runner_run(runner, script)
+    @ccall libpsr_database_c.psr_lua_runner_run(runner::Ptr{psr_lua_runner_t}, script::Ptr{Cchar})::psr_error_t
+end
+
+function psr_lua_runner_get_error(runner)
+    @ccall libpsr_database_c.psr_lua_runner_get_error(runner::Ptr{psr_lua_runner_t})::Ptr{Cchar}
+end
+
 #! format: on
 
 
