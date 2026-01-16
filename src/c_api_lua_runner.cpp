@@ -1,6 +1,6 @@
+#include "c_api_internal.h"
 #include "psr/c/lua_runner.h"
 #include "psr/lua_runner.h"
-#include "c_api_internal.h"
 
 #include <new>
 #include <string>

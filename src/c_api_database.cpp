@@ -1,6 +1,6 @@
+#include "c_api_internal.h"
 #include "psr/c/database.h"
 #include "psr/c/element.h"
-#include "c_api_internal.h"
 
 #include <new>
 #include <string>
