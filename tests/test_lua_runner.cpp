@@ -98,3 +98,165 @@ TEST_F(LuaRunnerTest, ReuseRunner) {
     auto labels = db.read_scalar_strings("Collection", "label");
     EXPECT_EQ(labels.size(), 2);
 }
+
+TEST_F(LuaRunnerTest, ReadScalarIntegersFromLua) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    db.create_element("Collection", psr::Element().set("label", "Item 1").set("some_integer", int64_t{10}));
+    db.create_element("Collection", psr::Element().set("label", "Item 2").set("some_integer", int64_t{20}));
+    db.create_element("Collection", psr::Element().set("label", "Item 3").set("some_integer", int64_t{30}));
+
+    psr::LuaRunner lua(db);
+
+    lua.run(R"(
+        local integers = db:read_scalar_integers("Collection", "some_integer")
+        assert(#integers == 3, "Expected 3 integers, got " .. #integers)
+        assert(integers[1] == 10, "First integer should be 10")
+        assert(integers[2] == 20, "Second integer should be 20")
+        assert(integers[3] == 30, "Third integer should be 30")
+
+        -- Test sum
+        local sum = 0
+        for i, v in ipairs(integers) do
+            sum = sum + v
+        end
+        assert(sum == 60, "Sum should be 60, got " .. sum)
+    )");
+}
+
+TEST_F(LuaRunnerTest, ReadScalarDoublesFromLua) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    db.create_element("Collection", psr::Element().set("label", "Item 1").set("some_float", 1.5));
+    db.create_element("Collection", psr::Element().set("label", "Item 2").set("some_float", 2.5));
+
+    psr::LuaRunner lua(db);
+
+    lua.run(R"(
+        local doubles = db:read_scalar_doubles("Collection", "some_float")
+        assert(#doubles == 2, "Expected 2 doubles")
+        assert(doubles[1] == 1.5, "First double should be 1.5")
+        assert(doubles[2] == 2.5, "Second double should be 2.5")
+    )");
+}
+
+TEST_F(LuaRunnerTest, ReadVectorIntegersFromLua) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    db.create_element("Collection",
+                      psr::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2, 3}));
+    db.create_element("Collection",
+                      psr::Element().set("label", "Item 2").set("value_int", std::vector<int64_t>{10, 20}));
+
+    psr::LuaRunner lua(db);
+
+    lua.run(R"(
+        local vectors = db:read_vector_integers("Collection", "value_int")
+        assert(#vectors == 2, "Expected 2 vectors")
+
+        -- Check first vector
+        assert(#vectors[1] == 3, "First vector should have 3 elements")
+        assert(vectors[1][1] == 1, "First vector[1] should be 1")
+        assert(vectors[1][2] == 2, "First vector[2] should be 2")
+        assert(vectors[1][3] == 3, "First vector[3] should be 3")
+
+        -- Check second vector
+        assert(#vectors[2] == 2, "Second vector should have 2 elements")
+        assert(vectors[2][1] == 10, "Second vector[1] should be 10")
+        assert(vectors[2][2] == 20, "Second vector[2] should be 20")
+    )");
+}
+
+TEST_F(LuaRunnerTest, ReadVectorDoublesFromLua) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    db.create_element("Collection",
+                      psr::Element().set("label", "Item 1").set("value_float", std::vector<double>{1.1, 2.2, 3.3}));
+
+    psr::LuaRunner lua(db);
+
+    lua.run(R"(
+        local vectors = db:read_vector_doubles("Collection", "value_float")
+        assert(#vectors == 1, "Expected 1 vector")
+        assert(#vectors[1] == 3, "Vector should have 3 elements")
+        assert(vectors[1][1] == 1.1, "vector[1] should be 1.1")
+        assert(vectors[1][2] == 2.2, "vector[2] should be 2.2")
+        assert(vectors[1][3] == 3.3, "vector[3] should be 3.3")
+    )");
+}
+
+TEST_F(LuaRunnerTest, ReadEmptyVectorFromLua) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    // Create element without vector data
+    db.create_element("Collection", psr::Element().set("label", "Item 1"));
+
+    psr::LuaRunner lua(db);
+
+    // Reading vectors from elements that don't have vector data should return empty
+    lua.run(R"(
+        local vectors = db:read_vector_integers("Collection", "value_int")
+        assert(#vectors == 0, "Expected 0 vectors for elements without vector data")
+    )");
+}
+
+TEST_F(LuaRunnerTest, LuaRuntimeError) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+
+    psr::LuaRunner lua(db);
+
+    // Test runtime error (not syntax error)
+    EXPECT_THROW({ lua.run("error('This is a runtime error')"); }, std::runtime_error);
+}
+
+TEST_F(LuaRunnerTest, LuaAssertionFailure) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+
+    psr::LuaRunner lua(db);
+
+    EXPECT_THROW({ lua.run("assert(false, 'Assertion failed!')"); }, std::runtime_error);
+}
+
+TEST_F(LuaRunnerTest, ComplexLuaScript) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    psr::LuaRunner lua(db);
+
+    // A more complex script that uses multiple operations
+    lua.run(R"lua(
+        -- Create configuration
+        db:create_element("Configuration", { label = "Main Config" })
+
+        -- Create multiple elements with different data
+        for i = 1, 5 do
+            db:create_element("Collection", {
+                label = "Item " .. i,
+                some_integer = i * 10,
+                some_float = i * 1.5
+            })
+        end
+
+        -- Verify data
+        local labels = db:read_scalar_strings("Collection", "label")
+        assert(#labels == 5, "Should have 5 items")
+
+        local integers = db:read_scalar_integers("Collection", "some_integer")
+        local sum = 0
+        for _, v in ipairs(integers) do
+            sum = sum + v
+        end
+        assert(sum == 150, "Sum should be 150")
+    )lua");
+
+    // Verify from C++ side
+    auto labels = db.read_scalar_strings("Collection", "label");
+    EXPECT_EQ(labels.size(), 5);
+    EXPECT_EQ(labels[0], "Item 1");
+    EXPECT_EQ(labels[4], "Item 5");
+}

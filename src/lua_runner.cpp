@@ -36,6 +36,18 @@ struct LuaRunner::Impl {
             "read_scalar_doubles",
             [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
                 return read_scalar_doubles_to_lua(self, collection, attribute, s);
+            },
+            "read_vector_integers",
+            [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
+                return read_vector_integers_to_lua(self, collection, attribute, s);
+            },
+            "read_vector_doubles",
+            [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
+                return read_vector_doubles_to_lua(self, collection, attribute, s);
+            },
+            "read_vector_strings",
+            [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
+                return read_vector_strings_to_lua(self, collection, attribute, s);
             });
     }
 
@@ -117,6 +129,57 @@ struct LuaRunner::Impl {
             t[i + 1] = result[i];
         }
         return t;
+    }
+
+    static sol::table read_vector_integers_to_lua(Database& db,
+                                                  const std::string& collection,
+                                                  const std::string& attribute,
+                                                  sol::this_state s) {
+        sol::state_view lua(s);
+        auto result = db.read_vector_integers(collection, attribute);
+        sol::table outer = lua.create_table();
+        for (size_t i = 0; i < result.size(); ++i) {
+            sol::table inner = lua.create_table();
+            for (size_t j = 0; j < result[i].size(); ++j) {
+                inner[j + 1] = result[i][j];
+            }
+            outer[i + 1] = inner;
+        }
+        return outer;
+    }
+
+    static sol::table read_vector_doubles_to_lua(Database& db,
+                                                 const std::string& collection,
+                                                 const std::string& attribute,
+                                                 sol::this_state s) {
+        sol::state_view lua(s);
+        auto result = db.read_vector_doubles(collection, attribute);
+        sol::table outer = lua.create_table();
+        for (size_t i = 0; i < result.size(); ++i) {
+            sol::table inner = lua.create_table();
+            for (size_t j = 0; j < result[i].size(); ++j) {
+                inner[j + 1] = result[i][j];
+            }
+            outer[i + 1] = inner;
+        }
+        return outer;
+    }
+
+    static sol::table read_vector_strings_to_lua(Database& db,
+                                                 const std::string& collection,
+                                                 const std::string& attribute,
+                                                 sol::this_state s) {
+        sol::state_view lua(s);
+        auto result = db.read_vector_strings(collection, attribute);
+        sol::table outer = lua.create_table();
+        for (size_t i = 0; i < result.size(); ++i) {
+            sol::table inner = lua.create_table();
+            for (size_t j = 0; j < result[i].size(); ++j) {
+                inner[j + 1] = result[i][j];
+            }
+            outer[i + 1] = inner;
+        }
+        return outer;
     }
 };
 
