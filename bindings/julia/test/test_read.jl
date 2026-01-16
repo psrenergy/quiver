@@ -35,17 +35,8 @@ end
     db = PSRDatabase.from_schema(":memory:", path_schema)
 
     PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
-
-    PSRDatabase.create_element!(db, "Collection";
-        label = "Item 1",
-        some_integer = 10,
-        some_float = 1.5,
-    )
-    PSRDatabase.create_element!(db, "Collection";
-        label = "Item 2",
-        some_integer = 20,
-        some_float = 2.5,
-    )
+    PSRDatabase.create_element!(db, "Collection"; label = "Item 1", some_integer = 10, some_float = 1.5)
+    PSRDatabase.create_element!(db, "Collection"; label = "Item 2", some_integer = 20, some_float = 2.5)
 
     @test PSRDatabase.read_scalar_strings(db, "Collection", "label") == ["Item 1", "Item 2"]
     @test PSRDatabase.read_scalar_integers(db, "Collection", "some_integer") == [10, 20]
@@ -73,17 +64,14 @@ end
     db = PSRDatabase.from_schema(":memory:", path_schema)
 
     PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
-
-    PSRDatabase.create_element!(db, "Collection";
+    PSRDatabase.create_element!(
+        db,
+        "Collection";
         label = "Item 1",
         value_int = [1, 2, 3],
         value_float = [1.5, 2.5, 3.5],
     )
-    PSRDatabase.create_element!(db, "Collection";
-        label = "Item 2",
-        value_int = [10, 20],
-        value_float = [10.5, 20.5],
-    )
+    PSRDatabase.create_element!(db, "Collection"; label = "Item 2", value_int = [10, 20], value_float = [10.5, 20.5])
 
     @test PSRDatabase.read_vector_integers(db, "Collection", "value_int") == [[1, 2, 3], [10, 20]]
     @test PSRDatabase.read_vector_doubles(db, "Collection", "value_float") == [[1.5, 2.5, 3.5], [10.5, 20.5]]
@@ -111,19 +99,11 @@ end
     PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
 
     # Create element with vectors
-    PSRDatabase.create_element!(db, "Collection";
-        label = "Item 1",
-        value_int = [1, 2, 3],
-    )
+    PSRDatabase.create_element!(db, "Collection"; label = "Item 1", value_int = [1, 2, 3])
     # Create element without vectors (no vector data inserted)
-    PSRDatabase.create_element!(db, "Collection";
-        label = "Item 2",
-    )
+    PSRDatabase.create_element!(db, "Collection"; label = "Item 2")
     # Create another element with vectors
-    PSRDatabase.create_element!(db, "Collection";
-        label = "Item 3",
-        value_int = [4, 5],
-    )
+    PSRDatabase.create_element!(db, "Collection"; label = "Item 3", value_int = [4, 5])
 
     # Only elements with vector data are returned
     result = PSRDatabase.read_vector_integers(db, "Collection", "value_int")
@@ -139,15 +119,8 @@ end
     db = PSRDatabase.from_schema(":memory:", path_schema)
 
     PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
-
-    PSRDatabase.create_element!(db, "Collection";
-        label = "Item 1",
-        tag = ["important", "urgent"],
-    )
-    PSRDatabase.create_element!(db, "Collection";
-        label = "Item 2",
-        tag = ["review"],
-    )
+    PSRDatabase.create_element!(db, "Collection"; label = "Item 1", tag = ["important", "urgent"])
+    PSRDatabase.create_element!(db, "Collection"; label = "Item 2", tag = ["review"])
 
     result = PSRDatabase.read_set_strings(db, "Collection", "tag")
     @test length(result) == 2
@@ -177,19 +150,11 @@ end
     PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
 
     # Create element with set data
-    PSRDatabase.create_element!(db, "Collection";
-        label = "Item 1",
-        tag = ["important"],
-    )
+    PSRDatabase.create_element!(db, "Collection"; label = "Item 1", tag = ["important"])
     # Create element without set data
-    PSRDatabase.create_element!(db, "Collection";
-        label = "Item 2",
-    )
+    PSRDatabase.create_element!(db, "Collection"; label = "Item 2")
     # Create another element with set data
-    PSRDatabase.create_element!(db, "Collection";
-        label = "Item 3",
-        tag = ["urgent", "review"],
-    )
+    PSRDatabase.create_element!(db, "Collection"; label = "Item 3", tag = ["urgent", "review"])
 
     # Only elements with set data are returned
     result = PSRDatabase.read_set_strings(db, "Collection", "tag")
