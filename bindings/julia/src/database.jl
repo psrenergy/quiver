@@ -2,7 +2,7 @@ struct Database
     ptr::Ptr{C.psr_database}
 end
 
-function from_schema(db_path, schema_path; force::Bool = true)
+function from_schema(db_path, schema_path)
     options = Ref(C.psr_database_options_t(0, C.PSR_LOG_DEBUG))
     ptr = C.psr_database_from_schema(db_path, schema_path, options)
     if ptr == C_NULL
@@ -11,7 +11,7 @@ function from_schema(db_path, schema_path; force::Bool = true)
     return Database(ptr)
 end
 
-function from_migrations(db_path, migrations_path; force::Bool = true)
+function from_migrations(db_path, migrations_path)
     options = Ref(C.psr_database_options_t(0, C.PSR_LOG_DEBUG))
     ptr = C.psr_database_from_migrations(db_path, migrations_path, options)
     if ptr == C_NULL

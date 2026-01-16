@@ -2,6 +2,7 @@
 set(PSR_SOURCES
     database.cpp
     element.cpp
+    lua_runner.cpp
     migration.cpp
     migrations.cpp
     result.cpp
@@ -28,6 +29,9 @@ target_include_directories(psr_database
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+# sol2 requires SOL_SAFE_NUMERICS to distinguish integers from floats
+target_compile_definitions(psr_database PRIVATE SOL_SAFE_NUMERICS=1)
 
 # Link dependencies
 target_link_libraries(psr_database
@@ -69,6 +73,7 @@ if(PSR_BUILD_C_API)
         c_api_common.cpp
         c_api_database.cpp
         c_api_element.cpp
+        c_api_lua_runner.cpp
     )
 
     target_compile_definitions(psr_database_c PRIVATE

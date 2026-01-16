@@ -17,6 +17,9 @@ class Database {
 
   Database._(this._ptr);
 
+  /// Internal: Returns the native pointer for use by other library components.
+  Pointer<psr_database_t> get ptr => _ptr;
+
   /// Creates a new database from a SQL schema file.
   factory Database.fromSchema(String dbPath, String schemaPath) {
     final arena = Arena();

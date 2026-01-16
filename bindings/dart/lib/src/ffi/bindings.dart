@@ -962,6 +962,68 @@ class PsrDatabaseBindings {
           'psr_string_free');
   late final _psr_string_free =
       _psr_string_freePtr.asFunction<void Function(ffi.Pointer<ffi.Char>)>();
+
+  ffi.Pointer<psr_lua_runner_t> psr_lua_runner_new(
+    ffi.Pointer<psr_database_t> db,
+  ) {
+    return _psr_lua_runner_new(
+      db,
+    );
+  }
+
+  late final _psr_lua_runner_newPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Pointer<psr_lua_runner_t> Function(
+              ffi.Pointer<psr_database_t>)>>('psr_lua_runner_new');
+  late final _psr_lua_runner_new = _psr_lua_runner_newPtr.asFunction<
+      ffi.Pointer<psr_lua_runner_t> Function(ffi.Pointer<psr_database_t>)>();
+
+  void psr_lua_runner_free(
+    ffi.Pointer<psr_lua_runner_t> runner,
+  ) {
+    return _psr_lua_runner_free(
+      runner,
+    );
+  }
+
+  late final _psr_lua_runner_freePtr = _lookup<
+          ffi.NativeFunction<ffi.Void Function(ffi.Pointer<psr_lua_runner_t>)>>(
+      'psr_lua_runner_free');
+  late final _psr_lua_runner_free = _psr_lua_runner_freePtr
+      .asFunction<void Function(ffi.Pointer<psr_lua_runner_t>)>();
+
+  int psr_lua_runner_run(
+    ffi.Pointer<psr_lua_runner_t> runner,
+    ffi.Pointer<ffi.Char> script,
+  ) {
+    return _psr_lua_runner_run(
+      runner,
+      script,
+    );
+  }
+
+  late final _psr_lua_runner_runPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<psr_lua_runner_t>,
+              ffi.Pointer<ffi.Char>)>>('psr_lua_runner_run');
+  late final _psr_lua_runner_run = _psr_lua_runner_runPtr.asFunction<
+      int Function(ffi.Pointer<psr_lua_runner_t>, ffi.Pointer<ffi.Char>)>();
+
+  ffi.Pointer<ffi.Char> psr_lua_runner_get_error(
+    ffi.Pointer<psr_lua_runner_t> runner,
+  ) {
+    return _psr_lua_runner_get_error(
+      runner,
+    );
+  }
+
+  late final _psr_lua_runner_get_errorPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Pointer<ffi.Char> Function(
+              ffi.Pointer<psr_lua_runner_t>)>>('psr_lua_runner_get_error');
+  late final _psr_lua_runner_get_error =
+      _psr_lua_runner_get_errorPtr.asFunction<
+          ffi.Pointer<ffi.Char> Function(ffi.Pointer<psr_lua_runner_t>)>();
 }
 
 abstract class psr_error_t {
@@ -998,3 +1060,7 @@ final class psr_element extends ffi.Opaque {}
 
 typedef psr_element_t = psr_element;
 typedef psr_element_t1 = psr_element;
+
+final class psr_lua_runner extends ffi.Opaque {}
+
+typedef psr_lua_runner_t = psr_lua_runner;

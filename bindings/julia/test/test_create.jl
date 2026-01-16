@@ -7,7 +7,7 @@ include("fixture.jl")
 
 @testset "Create Scalar Attributes" begin
     path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
-    db = PSRDatabase.from_schema(":memory:", path_schema; force = true)
+    db = PSRDatabase.from_schema(":memory:", path_schema)
 
     # Create Configuration with various scalar types
     PSRDatabase.create_element!(db, "Configuration";
@@ -27,7 +27,7 @@ end
 
 @testset "Create Collections with Vectors" begin
     path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
-    db = PSRDatabase.from_schema(":memory:", path_schema; force = true)
+    db = PSRDatabase.from_schema(":memory:", path_schema)
 
     PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
 
@@ -41,13 +41,12 @@ end
     )
 
     # Create element with only scalars
-    PSRDatabase.create_element!(db, "Collection";
-        label = "Item 2",
-        some_integer = 20,
-    )
+    PSRDatabase.create_element!(db, "Collection"; label = "Item 2", some_integer = 20)
 
     # Reject empty vector
-    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(db, "Collection";
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(
+        db,
+        "Collection";
         label = "Item 3",
         value_int = Int64[],
     )
@@ -57,22 +56,19 @@ end
 
 @testset "Create Collections with Sets" begin
     path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
-    db = PSRDatabase.from_schema(":memory:", path_schema; force = true)
+    db = PSRDatabase.from_schema(":memory:", path_schema)
 
     PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
 
     # Create element with set attribute
-    PSRDatabase.create_element!(db, "Collection";
-        label = "Item 1",
-        tag = ["alpha", "beta", "gamma"],
-    )
+    PSRDatabase.create_element!(db, "Collection"; label = "Item 1", tag = ["alpha", "beta", "gamma"])
 
     PSRDatabase.close!(db)
 end
 
 @testset "Create Relations" begin
     path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
-    db = PSRDatabase.from_schema(":memory:", path_schema; force = true)
+    db = PSRDatabase.from_schema(":memory:", path_schema)
 
     PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
 
@@ -81,41 +77,36 @@ end
     PSRDatabase.create_element!(db, "Parent"; label = "Parent 2")
 
     # Create child with FK to parent
-    PSRDatabase.create_element!(db, "Child";
-        label = "Child 1",
-        parent_id = 1,
-    )
+    PSRDatabase.create_element!(db, "Child"; label = "Child 1", parent_id = 1)
 
     # Create child with self-reference
-    PSRDatabase.create_element!(db, "Child";
-        label = "Child 2",
-        sibling_id = 1,
-    )
+    PSRDatabase.create_element!(db, "Child"; label = "Child 2", sibling_id = 1)
 
     # Create child with vector containing FK refs
-    PSRDatabase.create_element!(db, "Child";
-        label = "Child 3",
-        parent_ref = [1, 2],
-    )
+    PSRDatabase.create_element!(db, "Child"; label = "Child 3", parent_ref = [1, 2])
 
     PSRDatabase.close!(db)
 end
 
 @testset "Reject Invalid Element" begin
     path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
-    db = PSRDatabase.from_schema(":memory:", path_schema; force = true)
+    db = PSRDatabase.from_schema(":memory:", path_schema)
 
     # Missing required label
     @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(db, "Configuration")
 
     # Wrong type for attribute
-    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(db, "Configuration";
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(
+        db,
+        "Configuration";
         label = "Test",
         integer_attribute = "not an int",
     )
 
     # Unknown attribute
-    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(db, "Configuration";
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.create_element!(
+        db,
+        "Configuration";
         label = "Test",
         unknown_attr = 123,
     )

@@ -1,14 +1,9 @@
+#include "c_api_internal.h"
 #include "psr/c/database.h"
 #include "psr/c/element.h"
-#include "psr/database.h"
 
 #include <new>
 #include <string>
-
-// Forward declare the psr_element struct (defined in c_api_element.cpp)
-struct psr_element {
-    psr::Element element;
-};
 
 namespace {
 
@@ -89,12 +84,6 @@ void free_vectors_impl(T** vectors, size_t* sizes, size_t count) {
 }
 
 }  // namespace
-
-struct psr_database {
-    psr::Database db;
-    psr_database(const std::string& path, const psr::DatabaseOptions& options) : db(path, options) {}
-    psr_database(psr::Database&& database) : db(std::move(database)) {}
-};
 
 extern "C" {
 

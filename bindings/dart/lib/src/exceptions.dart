@@ -47,3 +47,7 @@ class NotFoundException extends DatabaseException {
 class UnknownDatabaseException extends DatabaseException {
   const UnknownDatabaseException(super.message);
 }
+
+class LuaException extends DatabaseException {
+  const LuaException(super.message);
+}
