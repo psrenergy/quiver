@@ -805,8 +805,8 @@ class PsrDatabaseBindings {
           ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Int32>, ffi.Pointer<ffi.Int32>)>>('psr_database_get_attribute_type');
   late final _psr_database_get_attribute_type = _psr_database_get_attribute_typePtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
-          ffi.Pointer<ffi.Int32>, ffi.Pointer<ffi.Int32>)>();
+      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Int32>,
+          ffi.Pointer<ffi.Int32>)>();
 
   int psr_database_update_scalar_integer(
     ffi.Pointer<psr_database_t> db,
