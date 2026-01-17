@@ -611,4 +611,107 @@ void main() {
       }
     });
   });
+
+  // Get attribute type tests
+
+  group('Get Attribute Type', () {
+    test('returns scalar integer type', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        final result = db.getAttributeType('Configuration', 'integer_attribute');
+        expect(result.structure, equals('scalar'));
+        expect(result.dataType, equals('integer'));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('returns scalar real type', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        final result = db.getAttributeType('Configuration', 'float_attribute');
+        expect(result.structure, equals('scalar'));
+        expect(result.dataType, equals('real'));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('returns scalar text type', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        final result = db.getAttributeType('Configuration', 'string_attribute');
+        expect(result.structure, equals('scalar'));
+        expect(result.dataType, equals('text'));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('returns vector integer type', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        final result = db.getAttributeType('Collection', 'value_int');
+        expect(result.structure, equals('vector'));
+        expect(result.dataType, equals('integer'));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('returns vector real type', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        final result = db.getAttributeType('Collection', 'value_float');
+        expect(result.structure, equals('vector'));
+        expect(result.dataType, equals('real'));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('returns set text type', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        final result = db.getAttributeType('Collection', 'tag');
+        expect(result.structure, equals('set'));
+        expect(result.dataType, equals('text'));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws on nonexistent attribute', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        expect(
+          () => db.getAttributeType('Configuration', 'nonexistent'),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

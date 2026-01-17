@@ -867,6 +867,47 @@ class Database {
     }
   }
 
+  /// Returns the structure and data type of an attribute.
+  ({String structure, String dataType}) getAttributeType(String collection, String attribute) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outStructure = arena<Int32>();
+      final outDataType = arena<Int32>();
+
+      final err = bindings.psr_database_get_attribute_type(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        outStructure,
+        outDataType,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to get attribute type for '$collection.$attribute'");
+      }
+
+      final structure = switch (outStructure.value) {
+        0 => 'scalar',
+        1 => 'vector',
+        2 => 'set',
+        _ => 'unknown',
+      };
+
+      final dataType = switch (outDataType.value) {
+        0 => 'integer',
+        1 => 'real',
+        2 => 'text',
+        _ => 'unknown',
+      };
+
+      return (structure: structure, dataType: dataType);
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
   /// Deletes an element by ID from a collection.
   /// CASCADE DELETE handles cleanup of related vector/set tables.
   void deleteElementById(String collection, int id) {
