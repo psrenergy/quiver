@@ -522,3 +522,138 @@ TEST_F(LuaRunnerTest, DeleteElementByIdOtherElementsUnchangedFromLua) {
     EXPECT_TRUE(std::find(labels.begin(), labels.end(), "Item 3") != labels.end());
     EXPECT_TRUE(std::find(labels.begin(), labels.end(), "Item 2") == labels.end());
 }
+
+// ============================================================================
+// Update element tests
+// ============================================================================
+
+TEST_F(LuaRunnerTest, UpdateElementSingleScalarFromLua) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    db.create_element("Collection", psr::Element().set("label", "Item 1").set("some_integer", int64_t{100}));
+    db.create_element("Collection", psr::Element().set("label", "Item 2").set("some_integer", int64_t{200}));
+
+    psr::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:update_element("Collection", 1, { some_integer = 999 })
+
+        local val = db:read_scalar_integers_by_id("Collection", "some_integer", 1)
+        assert(val == 999, "Expected 999, got " .. tostring(val))
+
+        -- Verify label unchanged
+        local label = db:read_scalar_strings_by_id("Collection", "label", 1)
+        assert(label == "Item 1", "Label should be unchanged")
+    )");
+
+    // Verify from C++ side
+    auto value = db.read_scalar_integers_by_id("Collection", "some_integer", 1);
+    EXPECT_TRUE(value.has_value());
+    EXPECT_EQ(*value, 999);
+
+    auto label = db.read_scalar_strings_by_id("Collection", "label", 1);
+    EXPECT_TRUE(label.has_value());
+    EXPECT_EQ(*label, "Item 1");
+}
+
+TEST_F(LuaRunnerTest, UpdateElementMultipleScalarsFromLua) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    db.create_element("Collection",
+                      psr::Element().set("label", "Item 1").set("some_integer", int64_t{100}).set("some_float", 1.5));
+
+    psr::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:update_element("Collection", 1, { some_integer = 500, some_float = 9.9 })
+
+        local int_val = db:read_scalar_integers_by_id("Collection", "some_integer", 1)
+        assert(int_val == 500, "Expected integer 500, got " .. tostring(int_val))
+
+        local float_val = db:read_scalar_doubles_by_id("Collection", "some_float", 1)
+        assert(float_val == 9.9, "Expected float 9.9, got " .. tostring(float_val))
+
+        -- Verify label unchanged
+        local label = db:read_scalar_strings_by_id("Collection", "label", 1)
+        assert(label == "Item 1", "Label should be unchanged")
+    )");
+
+    // Verify from C++ side
+    auto int_value = db.read_scalar_integers_by_id("Collection", "some_integer", 1);
+    EXPECT_TRUE(int_value.has_value());
+    EXPECT_EQ(*int_value, 500);
+
+    auto float_value = db.read_scalar_doubles_by_id("Collection", "some_float", 1);
+    EXPECT_TRUE(float_value.has_value());
+    EXPECT_DOUBLE_EQ(*float_value, 9.9);
+}
+
+TEST_F(LuaRunnerTest, UpdateElementOtherElementsUnchangedFromLua) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    db.create_element("Collection", psr::Element().set("label", "Item 1").set("some_integer", int64_t{100}));
+    db.create_element("Collection", psr::Element().set("label", "Item 2").set("some_integer", int64_t{200}));
+    db.create_element("Collection", psr::Element().set("label", "Item 3").set("some_integer", int64_t{300}));
+
+    psr::LuaRunner lua(db);
+
+    lua.run(R"(
+        -- Update only element 2
+        db:update_element("Collection", 2, { some_integer = 999 })
+
+        -- Verify element 2 updated
+        local val2 = db:read_scalar_integers_by_id("Collection", "some_integer", 2)
+        assert(val2 == 999, "Element 2 should be updated to 999")
+
+        -- Verify elements 1 and 3 unchanged
+        local val1 = db:read_scalar_integers_by_id("Collection", "some_integer", 1)
+        assert(val1 == 100, "Element 1 should be unchanged at 100")
+
+        local val3 = db:read_scalar_integers_by_id("Collection", "some_integer", 3)
+        assert(val3 == 300, "Element 3 should be unchanged at 300")
+    )");
+
+    // Verify from C++ side
+    EXPECT_EQ(*db.read_scalar_integers_by_id("Collection", "some_integer", 1), 100);
+    EXPECT_EQ(*db.read_scalar_integers_by_id("Collection", "some_integer", 2), 999);
+    EXPECT_EQ(*db.read_scalar_integers_by_id("Collection", "some_integer", 3), 300);
+}
+
+TEST_F(LuaRunnerTest, UpdateElementArraysIgnoredFromLua) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    db.create_element("Collection", psr::Element()
+                                        .set("label", "Item 1")
+                                        .set("some_integer", int64_t{10})
+                                        .set("value_int", std::vector<int64_t>{1, 2, 3}));
+
+    psr::LuaRunner lua(db);
+
+    // Try to update with array values (should be ignored)
+    lua.run(R"(
+        db:update_element("Collection", 1, { some_integer = 999, value_int = {7, 8, 9} })
+
+        -- Verify scalar was updated
+        local int_val = db:read_scalar_integers_by_id("Collection", "some_integer", 1)
+        assert(int_val == 999, "Scalar should be updated to 999")
+
+        -- Verify vector was NOT updated (arrays ignored in update_element)
+        local vec = db:read_vector_integers_by_id("Collection", "value_int", 1)
+        assert(#vec == 3, "Vector should still have 3 elements")
+        assert(vec[1] == 1, "Vector[1] should be 1, not 7")
+        assert(vec[2] == 2, "Vector[2] should be 2, not 8")
+        assert(vec[3] == 3, "Vector[3] should be 3, not 9")
+    )");
+
+    // Verify from C++ side
+    auto int_value = db.read_scalar_integers_by_id("Collection", "some_integer", 1);
+    EXPECT_TRUE(int_value.has_value());
+    EXPECT_EQ(*int_value, 999);
+
+    auto vec_values = db.read_vector_integers_by_id("Collection", "value_int", 1);
+    EXPECT_EQ(vec_values, (std::vector<int64_t>{1, 2, 3}));
+}

@@ -226,6 +226,10 @@ function psr_database_delete_element_by_id(db, collection, id)
     @ccall libpsr_database_c.psr_database_delete_element_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, id::Int64)::psr_error_t
 end
 
+function psr_database_update_element(db, collection, id, element)
+    @ccall libpsr_database_c.psr_database_update_element(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, id::Int64, element::Ptr{psr_element_t})::psr_error_t
+end
+
 function psr_free_int_array(values)
     @ccall libpsr_database_c.psr_free_int_array(values::Ptr{Int64})::Cvoid
 end

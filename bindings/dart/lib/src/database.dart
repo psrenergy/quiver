@@ -888,6 +888,41 @@ class Database {
     }
   }
 
+  /// Updates an element's scalar attributes by ID using a map of values.
+  /// Note: Vector and set attributes are ignored in update operations.
+  void updateElement(String collection, int id, Map<String, Object?> values) {
+    _ensureNotClosed();
+    final element = Element();
+    try {
+      for (final entry in values.entries) {
+        element.set(entry.key, entry.value);
+      }
+      updateElementFromBuilder(collection, id, element);
+    } finally {
+      element.dispose();
+    }
+  }
+
+  /// Updates an element's scalar attributes by ID using an Element builder.
+  /// Note: Vector and set attributes are ignored in update operations.
+  void updateElementFromBuilder(String collection, int id, Element element) {
+    _ensureNotClosed();
+    final arena = Arena();
+    try {
+      final err = bindings.psr_database_update_element(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        id,
+        element.ptr.cast(),
+      );
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to update element $id in '$collection'");
+      }
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
   /// Closes the database and frees native resources.
   void close() {
     if (_isClosed) return;

@@ -1028,6 +1028,27 @@ class PsrDatabaseBindings {
   late final _psr_database_delete_element_by_id = _psr_database_delete_element_by_idPtr
       .asFunction<int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, int)>();
 
+  int psr_database_update_element(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    int id,
+    ffi.Pointer<psr_element_t> element,
+  ) {
+    return _psr_database_update_element(
+      db,
+      collection,
+      id,
+      element,
+    );
+  }
+
+  late final _psr_database_update_elementPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<psr_element_t>)>>('psr_database_update_element');
+  late final _psr_database_update_element = _psr_database_update_elementPtr
+      .asFunction<int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<psr_element_t>)>();
+
   void psr_free_int_array(
     ffi.Pointer<ffi.Int64> values,
   ) {

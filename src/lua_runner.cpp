@@ -110,11 +110,14 @@ struct LuaRunner::Impl {
             "delete_element_by_id",
             [](Database& self, const std::string& collection, int64_t id) {
                 self.delete_element_by_id(collection, id);
+            },
+            "update_element",
+            [](Database& self, const std::string& collection, int64_t id, sol::table values) {
+                update_element_from_lua(self, collection, id, values);
             });
     }
 
-    static int64_t
-    create_element_from_lua(Database& db, const std::string& collection, sol::table values, sol::this_state) {
+    static Element table_to_element(sol::table values) {
         Element element;
         for (auto pair : values) {
             sol::object key = pair.first;
@@ -153,7 +156,18 @@ struct LuaRunner::Impl {
                 element.set(k, val.as<std::string>());
             }
         }
+        return element;
+    }
+
+    static int64_t
+    create_element_from_lua(Database& db, const std::string& collection, sol::table values, sol::this_state) {
+        Element element = table_to_element(values);
         return db.create_element(collection, element);
+    }
+
+    static void update_element_from_lua(Database& db, const std::string& collection, int64_t id, sol::table values) {
+        Element element = table_to_element(values);
+        db.update_element(collection, id, element);
     }
 
     static sol::table read_scalar_strings_to_lua(Database& db,
