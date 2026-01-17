@@ -1,4 +1,3 @@
-#include "database_fixture.h"
 #include "test_utils.h"
 
 #include <algorithm>
@@ -12,7 +11,7 @@
 // Update scalar tests
 // ============================================================================
 
-TEST_F(DatabaseFixture, UpdateScalarInteger) {
+TEST(DatabaseCApi, UpdateScalarInteger) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
@@ -37,7 +36,7 @@ TEST_F(DatabaseFixture, UpdateScalarInteger) {
     psr_database_close(db);
 }
 
-TEST_F(DatabaseFixture, UpdateScalarDouble) {
+TEST(DatabaseCApi, UpdateScalarDouble) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
@@ -62,7 +61,7 @@ TEST_F(DatabaseFixture, UpdateScalarDouble) {
     psr_database_close(db);
 }
 
-TEST_F(DatabaseFixture, UpdateScalarString) {
+TEST(DatabaseCApi, UpdateScalarString) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
@@ -92,7 +91,7 @@ TEST_F(DatabaseFixture, UpdateScalarString) {
 // Update vector tests
 // ============================================================================
 
-TEST_F(DatabaseFixture, UpdateVectorIntegers) {
+TEST(DatabaseCApi, UpdateVectorIntegers) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
@@ -128,7 +127,7 @@ TEST_F(DatabaseFixture, UpdateVectorIntegers) {
     psr_database_close(db);
 }
 
-TEST_F(DatabaseFixture, UpdateVectorDoubles) {
+TEST(DatabaseCApi, UpdateVectorDoubles) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
@@ -162,7 +161,7 @@ TEST_F(DatabaseFixture, UpdateVectorDoubles) {
     psr_database_close(db);
 }
 
-TEST_F(DatabaseFixture, UpdateVectorToEmpty) {
+TEST(DatabaseCApi, UpdateVectorToEmpty) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
@@ -197,7 +196,7 @@ TEST_F(DatabaseFixture, UpdateVectorToEmpty) {
 // Update set tests
 // ============================================================================
 
-TEST_F(DatabaseFixture, UpdateSetStrings) {
+TEST(DatabaseCApi, UpdateSetStrings) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
@@ -238,7 +237,7 @@ TEST_F(DatabaseFixture, UpdateSetStrings) {
     psr_database_close(db);
 }
 
-TEST_F(DatabaseFixture, UpdateSetToEmpty) {
+TEST(DatabaseCApi, UpdateSetToEmpty) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
@@ -273,7 +272,7 @@ TEST_F(DatabaseFixture, UpdateSetToEmpty) {
 // update_element tests
 // ============================================================================
 
-TEST_F(DatabaseFixture, UpdateElementSingleScalar) {
+TEST(DatabaseCApi, UpdateElementSingleScalar) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
@@ -310,7 +309,7 @@ TEST_F(DatabaseFixture, UpdateElementSingleScalar) {
     psr_database_close(db);
 }
 
-TEST_F(DatabaseFixture, UpdateElementMultipleScalars) {
+TEST(DatabaseCApi, UpdateElementMultipleScalars) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
@@ -364,7 +363,7 @@ TEST_F(DatabaseFixture, UpdateElementMultipleScalars) {
     psr_database_close(db);
 }
 
-TEST_F(DatabaseFixture, UpdateElementOtherElementsUnchanged) {
+TEST(DatabaseCApi, UpdateElementOtherElementsUnchanged) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
@@ -407,7 +406,7 @@ TEST_F(DatabaseFixture, UpdateElementOtherElementsUnchanged) {
     psr_database_close(db);
 }
 
-TEST_F(DatabaseFixture, UpdateElementNullArguments) {
+TEST(DatabaseCApi, UpdateElementNullArguments) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);

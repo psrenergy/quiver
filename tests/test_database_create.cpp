@@ -1,11 +1,10 @@
-#include "database_fixture.h"
 #include "test_utils.h"
 
 #include <gtest/gtest.h>
 #include <psr/database.h>
 #include <psr/element.h>
 
-TEST_F(DatabaseFixture, CreateElementWithScalars) {
+TEST(Database, CreateElementWithScalars) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
@@ -27,7 +26,7 @@ TEST_F(DatabaseFixture, CreateElementWithScalars) {
     EXPECT_EQ(floats[0], 3.14);
 }
 
-TEST_F(DatabaseFixture, CreateElementWithVector) {
+TEST(Database, CreateElementWithVector) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -59,7 +58,7 @@ TEST_F(DatabaseFixture, CreateElementWithVector) {
     EXPECT_EQ(float_vectors[0], (std::vector<double>{1.5, 2.5, 3.5}));
 }
 
-TEST_F(DatabaseFixture, CreateElementWithVectorGroup) {
+TEST(Database, CreateElementWithVectorGroup) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -87,7 +86,7 @@ TEST_F(DatabaseFixture, CreateElementWithVectorGroup) {
     EXPECT_EQ(float_vectors[0], (std::vector<double>{1.5, 2.5, 3.5}));
 }
 
-TEST_F(DatabaseFixture, CreateElementWithSetGroup) {
+TEST(Database, CreateElementWithSetGroup) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -111,7 +110,7 @@ TEST_F(DatabaseFixture, CreateElementWithSetGroup) {
     EXPECT_EQ(tags, (std::vector<std::string>{"important", "review", "urgent"}));
 }
 
-TEST_F(DatabaseFixture, CreateMultipleElements) {
+TEST(Database, CreateMultipleElements) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 

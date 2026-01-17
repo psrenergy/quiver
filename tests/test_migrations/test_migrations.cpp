@@ -1,5 +1,3 @@
-#include "../database_fixture.h"
-
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <psr/database.h>
@@ -11,23 +9,17 @@ namespace fs = std::filesystem;
 
 namespace database_utils {
 
-// Get path to test migrations directory
-std::string get_test_migrations_path() {
-    // This file is at tests/test_migrations/test_migrations.cpp
-    // Migrations are at tests/test_migrations/chaining_migrations/
-    fs::path source_file(__FILE__);
-    return (source_file.parent_path() / "chaining_migrations").string();
-}
-
-// Test fixture for migration tests
-class MigrationFixture : public DatabaseFixture {
+class MigrationFixture : public ::testing::Test {
 protected:
-    std::string migrations_path;
-
     void SetUp() override {
-        DatabaseFixture::SetUp();
-        migrations_path = get_test_migrations_path();
+        path = (fs::temp_directory_path() / "psr_test.db").string();
+        migrations_path = (fs::path(__FILE__).parent_path() / "chaining_migrations").string();
     }
+    void TearDown() override {
+        if (fs::exists(path)) fs::remove(path);
+    }
+    std::string path;
+    std::string migrations_path;
 };
 
 // ============================================================================

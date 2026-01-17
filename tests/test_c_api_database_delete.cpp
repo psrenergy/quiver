@@ -1,11 +1,10 @@
-#include "database_fixture.h"
 #include "test_utils.h"
 
 #include <gtest/gtest.h>
 #include <psr/c/database.h>
 #include <psr/c/element.h>
 
-TEST_F(DatabaseFixture, DeleteElementById) {
+TEST(DatabaseCApi, DeleteElementById) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
@@ -38,7 +37,7 @@ TEST_F(DatabaseFixture, DeleteElementById) {
     psr_database_close(db);
 }
 
-TEST_F(DatabaseFixture, DeleteElementByIdWithVectorData) {
+TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
@@ -88,7 +87,7 @@ TEST_F(DatabaseFixture, DeleteElementByIdWithVectorData) {
     psr_database_close(db);
 }
 
-TEST_F(DatabaseFixture, DeleteElementByIdWithSetData) {
+TEST(DatabaseCApi, DeleteElementByIdWithSetData) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
@@ -138,7 +137,7 @@ TEST_F(DatabaseFixture, DeleteElementByIdWithSetData) {
     psr_database_close(db);
 }
 
-TEST_F(DatabaseFixture, DeleteElementByIdNonExistent) {
+TEST(DatabaseCApi, DeleteElementByIdNonExistent) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
@@ -165,7 +164,7 @@ TEST_F(DatabaseFixture, DeleteElementByIdNonExistent) {
     psr_database_close(db);
 }
 
-TEST_F(DatabaseFixture, DeleteElementByIdOtherElementsUnchanged) {
+TEST(DatabaseCApi, DeleteElementByIdOtherElementsUnchanged) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
@@ -221,7 +220,7 @@ TEST_F(DatabaseFixture, DeleteElementByIdOtherElementsUnchanged) {
     psr_database_close(db);
 }
 
-TEST_F(DatabaseFixture, DeleteElementByIdNullArguments) {
+TEST(DatabaseCApi, DeleteElementByIdNullArguments) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);

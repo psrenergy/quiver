@@ -1,11 +1,10 @@
-#include "database_fixture.h"
 #include "test_utils.h"
 
 #include <gtest/gtest.h>
 #include <psr/database.h>
 #include <psr/element.h>
 
-TEST_F(DatabaseFixture, SetScalarRelation) {
+TEST(Database, SetScalarRelation) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("relations.sql"), {.console_level = psr::LogLevel::off});
 
@@ -28,7 +27,7 @@ TEST_F(DatabaseFixture, SetScalarRelation) {
     EXPECT_EQ(relations[0], "Parent 1");
 }
 
-TEST_F(DatabaseFixture, SetScalarRelationSelfReference) {
+TEST(Database, SetScalarRelationSelfReference) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("relations.sql"), {.console_level = psr::LogLevel::off});
 

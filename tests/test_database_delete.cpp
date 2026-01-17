@@ -1,11 +1,10 @@
-#include "database_fixture.h"
 #include "test_utils.h"
 
 #include <gtest/gtest.h>
 #include <psr/database.h>
 #include <psr/element.h>
 
-TEST_F(DatabaseFixture, DeleteElementById) {
+TEST(Database, DeleteElementById) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
@@ -25,7 +24,7 @@ TEST_F(DatabaseFixture, DeleteElementById) {
     EXPECT_TRUE(ids.empty());
 }
 
-TEST_F(DatabaseFixture, DeleteElementByIdWithVectorData) {
+TEST(Database, DeleteElementByIdWithVectorData) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -53,7 +52,7 @@ TEST_F(DatabaseFixture, DeleteElementByIdWithVectorData) {
     EXPECT_TRUE(all_vectors.empty());
 }
 
-TEST_F(DatabaseFixture, DeleteElementByIdWithSetData) {
+TEST(Database, DeleteElementByIdWithSetData) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -81,7 +80,7 @@ TEST_F(DatabaseFixture, DeleteElementByIdWithSetData) {
     EXPECT_TRUE(all_sets.empty());
 }
 
-TEST_F(DatabaseFixture, DeleteElementByIdNonExistent) {
+TEST(Database, DeleteElementByIdNonExistent) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
@@ -97,7 +96,7 @@ TEST_F(DatabaseFixture, DeleteElementByIdNonExistent) {
     EXPECT_EQ(ids.size(), 1);
 }
 
-TEST_F(DatabaseFixture, DeleteElementByIdOtherElementsUnchanged) {
+TEST(Database, DeleteElementByIdOtherElementsUnchanged) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 

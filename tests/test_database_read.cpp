@@ -1,4 +1,3 @@
-#include "database_fixture.h"
 #include "test_utils.h"
 
 #include <gtest/gtest.h>
@@ -10,7 +9,7 @@
 // Read scalar tests
 // ============================================================================
 
-TEST_F(DatabaseFixture, ReadScalarIntegers) {
+TEST(Database, ReadScalarIntegers) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
@@ -28,7 +27,7 @@ TEST_F(DatabaseFixture, ReadScalarIntegers) {
     EXPECT_EQ(values[1], 100);
 }
 
-TEST_F(DatabaseFixture, ReadScalarDoubles) {
+TEST(Database, ReadScalarDoubles) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
@@ -46,7 +45,7 @@ TEST_F(DatabaseFixture, ReadScalarDoubles) {
     EXPECT_DOUBLE_EQ(values[1], 2.71);
 }
 
-TEST_F(DatabaseFixture, ReadScalarStrings) {
+TEST(Database, ReadScalarStrings) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
@@ -64,7 +63,7 @@ TEST_F(DatabaseFixture, ReadScalarStrings) {
     EXPECT_EQ(values[1], "world");
 }
 
-TEST_F(DatabaseFixture, ReadScalarEmpty) {
+TEST(Database, ReadScalarEmpty) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -86,7 +85,7 @@ TEST_F(DatabaseFixture, ReadScalarEmpty) {
 // Read vector tests
 // ============================================================================
 
-TEST_F(DatabaseFixture, ReadVectorIntegers) {
+TEST(Database, ReadVectorIntegers) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -108,7 +107,7 @@ TEST_F(DatabaseFixture, ReadVectorIntegers) {
     EXPECT_EQ(vectors[1], (std::vector<int64_t>{10, 20}));
 }
 
-TEST_F(DatabaseFixture, ReadVectorDoubles) {
+TEST(Database, ReadVectorDoubles) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -130,7 +129,7 @@ TEST_F(DatabaseFixture, ReadVectorDoubles) {
     EXPECT_EQ(vectors[1], (std::vector<double>{10.5, 20.5}));
 }
 
-TEST_F(DatabaseFixture, ReadVectorEmpty) {
+TEST(Database, ReadVectorEmpty) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -146,7 +145,7 @@ TEST_F(DatabaseFixture, ReadVectorEmpty) {
     EXPECT_TRUE(double_vectors.empty());
 }
 
-TEST_F(DatabaseFixture, ReadVectorOnlyReturnsElementsWithData) {
+TEST(Database, ReadVectorOnlyReturnsElementsWithData) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -180,7 +179,7 @@ TEST_F(DatabaseFixture, ReadVectorOnlyReturnsElementsWithData) {
 // Read set tests
 // ============================================================================
 
-TEST_F(DatabaseFixture, ReadSetStrings) {
+TEST(Database, ReadSetStrings) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -207,7 +206,7 @@ TEST_F(DatabaseFixture, ReadSetStrings) {
     EXPECT_EQ(set2, (std::vector<std::string>{"review"}));
 }
 
-TEST_F(DatabaseFixture, ReadSetEmpty) {
+TEST(Database, ReadSetEmpty) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -220,7 +219,7 @@ TEST_F(DatabaseFixture, ReadSetEmpty) {
     EXPECT_TRUE(sets.empty());
 }
 
-TEST_F(DatabaseFixture, ReadSetOnlyReturnsElementsWithData) {
+TEST(Database, ReadSetOnlyReturnsElementsWithData) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -252,7 +251,7 @@ TEST_F(DatabaseFixture, ReadSetOnlyReturnsElementsWithData) {
 // Read scalar by ID tests
 // ============================================================================
 
-TEST_F(DatabaseFixture, ReadScalarIntegerById) {
+TEST(Database, ReadScalarIntegerById) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
@@ -273,7 +272,7 @@ TEST_F(DatabaseFixture, ReadScalarIntegerById) {
     EXPECT_EQ(*val2, 100);
 }
 
-TEST_F(DatabaseFixture, ReadScalarDoubleById) {
+TEST(Database, ReadScalarDoubleById) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
@@ -294,7 +293,7 @@ TEST_F(DatabaseFixture, ReadScalarDoubleById) {
     EXPECT_DOUBLE_EQ(*val2, 2.71);
 }
 
-TEST_F(DatabaseFixture, ReadScalarStringById) {
+TEST(Database, ReadScalarStringById) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
@@ -315,7 +314,7 @@ TEST_F(DatabaseFixture, ReadScalarStringById) {
     EXPECT_EQ(*val2, "world");
 }
 
-TEST_F(DatabaseFixture, ReadScalarByIdNotFound) {
+TEST(Database, ReadScalarByIdNotFound) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
@@ -332,7 +331,7 @@ TEST_F(DatabaseFixture, ReadScalarByIdNotFound) {
 // Read vector by ID tests
 // ============================================================================
 
-TEST_F(DatabaseFixture, ReadVectorIntegerById) {
+TEST(Database, ReadVectorIntegerById) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -355,7 +354,7 @@ TEST_F(DatabaseFixture, ReadVectorIntegerById) {
     EXPECT_EQ(vec2, (std::vector<int64_t>{10, 20}));
 }
 
-TEST_F(DatabaseFixture, ReadVectorDoubleById) {
+TEST(Database, ReadVectorDoubleById) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -378,7 +377,7 @@ TEST_F(DatabaseFixture, ReadVectorDoubleById) {
     EXPECT_EQ(vec2, (std::vector<double>{10.5, 20.5}));
 }
 
-TEST_F(DatabaseFixture, ReadVectorByIdEmpty) {
+TEST(Database, ReadVectorByIdEmpty) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -398,7 +397,7 @@ TEST_F(DatabaseFixture, ReadVectorByIdEmpty) {
 // Read set by ID tests
 // ============================================================================
 
-TEST_F(DatabaseFixture, ReadSetStringById) {
+TEST(Database, ReadSetStringById) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -423,7 +422,7 @@ TEST_F(DatabaseFixture, ReadSetStringById) {
     EXPECT_EQ(set2, (std::vector<std::string>{"review"}));
 }
 
-TEST_F(DatabaseFixture, ReadSetByIdEmpty) {
+TEST(Database, ReadSetByIdEmpty) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -443,7 +442,7 @@ TEST_F(DatabaseFixture, ReadSetByIdEmpty) {
 // Read element IDs tests
 // ============================================================================
 
-TEST_F(DatabaseFixture, ReadElementIds) {
+TEST(Database, ReadElementIds) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
@@ -466,7 +465,7 @@ TEST_F(DatabaseFixture, ReadElementIds) {
     EXPECT_EQ(ids[2], id3);
 }
 
-TEST_F(DatabaseFixture, ReadElementIdsEmpty) {
+TEST(Database, ReadElementIdsEmpty) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -483,7 +482,7 @@ TEST_F(DatabaseFixture, ReadElementIdsEmpty) {
 // Get attribute type tests
 // ============================================================================
 
-TEST_F(DatabaseFixture, GetAttributeTypeScalarInteger) {
+TEST(Database, GetAttributeTypeScalarInteger) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
@@ -492,7 +491,7 @@ TEST_F(DatabaseFixture, GetAttributeTypeScalarInteger) {
     EXPECT_EQ(attr_type.data_type, psr::AttributeDataType::Integer);
 }
 
-TEST_F(DatabaseFixture, GetAttributeTypeScalarReal) {
+TEST(Database, GetAttributeTypeScalarReal) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
@@ -501,7 +500,7 @@ TEST_F(DatabaseFixture, GetAttributeTypeScalarReal) {
     EXPECT_EQ(attr_type.data_type, psr::AttributeDataType::Real);
 }
 
-TEST_F(DatabaseFixture, GetAttributeTypeScalarText) {
+TEST(Database, GetAttributeTypeScalarText) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
@@ -510,7 +509,7 @@ TEST_F(DatabaseFixture, GetAttributeTypeScalarText) {
     EXPECT_EQ(attr_type.data_type, psr::AttributeDataType::Text);
 }
 
-TEST_F(DatabaseFixture, GetAttributeTypeVectorInteger) {
+TEST(Database, GetAttributeTypeVectorInteger) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -519,7 +518,7 @@ TEST_F(DatabaseFixture, GetAttributeTypeVectorInteger) {
     EXPECT_EQ(attr_type.data_type, psr::AttributeDataType::Integer);
 }
 
-TEST_F(DatabaseFixture, GetAttributeTypeVectorReal) {
+TEST(Database, GetAttributeTypeVectorReal) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -528,7 +527,7 @@ TEST_F(DatabaseFixture, GetAttributeTypeVectorReal) {
     EXPECT_EQ(attr_type.data_type, psr::AttributeDataType::Real);
 }
 
-TEST_F(DatabaseFixture, GetAttributeTypeSetText) {
+TEST(Database, GetAttributeTypeSetText) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -537,14 +536,14 @@ TEST_F(DatabaseFixture, GetAttributeTypeSetText) {
     EXPECT_EQ(attr_type.data_type, psr::AttributeDataType::Text);
 }
 
-TEST_F(DatabaseFixture, GetAttributeTypeNotFound) {
+TEST(Database, GetAttributeTypeNotFound) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
     EXPECT_THROW(db.get_attribute_type("Configuration", "nonexistent"), std::runtime_error);
 }
 
-TEST_F(DatabaseFixture, GetAttributeTypeCollectionNotFound) {
+TEST(Database, GetAttributeTypeCollectionNotFound) {
     auto db = psr::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
