@@ -1,22 +1,13 @@
-#include "database_fixture.h"
+#include "test_utils.h"
 
-#include <filesystem>
 #include <gtest/gtest.h>
 #include <psr/c/database.h>
 #include <psr/c/element.h>
 
-namespace fs = std::filesystem;
-
-namespace {
-std::string schema_path(const std::string& filename) {
-    return (fs::path(__FILE__).parent_path() / filename).string();
-}
-}  // namespace
-
-TEST_F(DatabaseFixture, DeleteElementById) {
+TEST(DatabaseCApi, DeleteElementById) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", schema_path("schemas/valid/basic.sql").c_str(), &options);
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto e = psr_element_create();
@@ -46,10 +37,10 @@ TEST_F(DatabaseFixture, DeleteElementById) {
     psr_database_close(db);
 }
 
-TEST_F(DatabaseFixture, DeleteElementByIdWithVectorData) {
+TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", schema_path("schemas/valid/collections.sql").c_str(), &options);
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto config = psr_element_create();
@@ -96,10 +87,10 @@ TEST_F(DatabaseFixture, DeleteElementByIdWithVectorData) {
     psr_database_close(db);
 }
 
-TEST_F(DatabaseFixture, DeleteElementByIdWithSetData) {
+TEST(DatabaseCApi, DeleteElementByIdWithSetData) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", schema_path("schemas/valid/collections.sql").c_str(), &options);
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto config = psr_element_create();
@@ -146,10 +137,10 @@ TEST_F(DatabaseFixture, DeleteElementByIdWithSetData) {
     psr_database_close(db);
 }
 
-TEST_F(DatabaseFixture, DeleteElementByIdNonExistent) {
+TEST(DatabaseCApi, DeleteElementByIdNonExistent) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", schema_path("schemas/valid/basic.sql").c_str(), &options);
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto e = psr_element_create();
@@ -173,10 +164,10 @@ TEST_F(DatabaseFixture, DeleteElementByIdNonExistent) {
     psr_database_close(db);
 }
 
-TEST_F(DatabaseFixture, DeleteElementByIdOtherElementsUnchanged) {
+TEST(DatabaseCApi, DeleteElementByIdOtherElementsUnchanged) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", schema_path("schemas/valid/basic.sql").c_str(), &options);
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto e1 = psr_element_create();
@@ -229,10 +220,10 @@ TEST_F(DatabaseFixture, DeleteElementByIdOtherElementsUnchanged) {
     psr_database_close(db);
 }
 
-TEST_F(DatabaseFixture, DeleteElementByIdNullArguments) {
+TEST(DatabaseCApi, DeleteElementByIdNullArguments) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", schema_path("schemas/valid/basic.sql").c_str(), &options);
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     // Null db

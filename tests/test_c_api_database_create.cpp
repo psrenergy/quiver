@@ -1,23 +1,14 @@
-#include "database_fixture.h"
+#include "test_utils.h"
 
-#include <filesystem>
 #include <gtest/gtest.h>
 #include <psr/c/database.h>
 #include <psr/c/element.h>
 
-namespace fs = std::filesystem;
-
-namespace {
-std::string schema_path(const std::string& filename) {
-    return (fs::path(__FILE__).parent_path() / filename).string();
-}
-}  // namespace
-
-TEST_F(DatabaseFixture, CreateElementWithScalars) {
+TEST(DatabaseCApi, CreateElementWithScalars) {
     // Test: Use C API to create element with schema
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", schema_path("schemas/valid/basic.sql").c_str(), &options);
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto element = psr_element_create();
@@ -33,11 +24,11 @@ TEST_F(DatabaseFixture, CreateElementWithScalars) {
     psr_database_close(db);
 }
 
-TEST_F(DatabaseFixture, CreateElementWithVector) {
+TEST(DatabaseCApi, CreateElementWithVector) {
     // Test: Use C API to create element with array using schema
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", schema_path("schemas/valid/collections.sql").c_str(), &options);
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     // Create Configuration first
@@ -62,7 +53,7 @@ TEST_F(DatabaseFixture, CreateElementWithVector) {
     psr_database_close(db);
 }
 
-TEST_F(DatabaseFixture, CreateElementNullDb) {
+TEST(DatabaseCApi, CreateElementNullDb) {
     auto element = psr_element_create();
     ASSERT_NE(element, nullptr);
     psr_element_set_string(element, "label", "Test");
@@ -73,7 +64,7 @@ TEST_F(DatabaseFixture, CreateElementNullDb) {
     psr_element_destroy(element);
 }
 
-TEST_F(DatabaseFixture, CreateElementNullCollection) {
+TEST(DatabaseCApi, CreateElementNullCollection) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_open(":memory:", &options);
@@ -90,7 +81,7 @@ TEST_F(DatabaseFixture, CreateElementNullCollection) {
     psr_database_close(db);
 }
 
-TEST_F(DatabaseFixture, CreateElementNullElement) {
+TEST(DatabaseCApi, CreateElementNullElement) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_open(":memory:", &options);

@@ -43,6 +43,7 @@ if(PSR_BUILD_C_API)
         test_c_api_database_read.cpp
         test_c_api_database_update.cpp
         test_c_api_element.cpp
+        test_c_api_lua_runner.cpp
     )
 
     target_link_libraries(psr_database_c_tests

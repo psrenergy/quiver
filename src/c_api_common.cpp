@@ -14,6 +14,10 @@ PSR_C_API const char* psr_error_string(psr_error_t error) {
         return "Migration error";
     case PSR_ERROR_SCHEMA:
         return "Schema validation error";
+    case PSR_ERROR_CREATE_ELEMENT:
+        return "Failed to create element";
+    case PSR_ERROR_NOT_FOUND:
+        return "Not found";
     default:
         return "Unknown error";
     }

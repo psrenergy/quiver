@@ -1,22 +1,13 @@
-#include "database_fixture.h"
+#include "test_utils.h"
 
-#include <filesystem>
 #include <gtest/gtest.h>
 #include <psr/database.h>
 #include <psr/element.h>
 #include <psr/lua_runner.h>
 
-namespace fs = std::filesystem;
-
-namespace {
-std::string schema_path(const std::string& filename) {
-    return (fs::path(__FILE__).parent_path() / filename).string();
-}
-}  // namespace
-
 class LuaRunnerTest : public ::testing::Test {
 protected:
-    void SetUp() override { collections_schema = schema_path("schemas/valid/collections.sql"); }
+    void SetUp() override { collections_schema = VALID_SCHEMA("collections.sql"); }
     std::string collections_schema;
 };
 

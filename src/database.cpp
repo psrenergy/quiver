@@ -109,7 +109,7 @@ Database::Database(const std::string& path, const DatabaseOptions& options) : im
 
     impl_->logger->debug("Opening database: {}", path);
 
-    auto flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE;
+    auto flags = options.read_only ? SQLITE_OPEN_READONLY : (SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
     const auto rc = sqlite3_open_v2(path.c_str(), &impl_->db, flags, nullptr);
 
     if (rc != SQLITE_OK) {

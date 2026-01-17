@@ -1,21 +1,11 @@
-#include "database_fixture.h"
+#include "test_utils.h"
 
-#include <filesystem>
 #include <gtest/gtest.h>
 #include <psr/database.h>
 #include <psr/element.h>
 
-namespace fs = std::filesystem;
-
-namespace {
-std::string schema_path(const std::string& filename) {
-    return (fs::path(__FILE__).parent_path() / filename).string();
-}
-}  // namespace
-
-TEST_F(DatabaseFixture, DeleteElementById) {
-    auto db = psr::Database::from_schema(
-        ":memory:", schema_path("schemas/valid/basic.sql"), {.console_level = psr::LogLevel::off});
+TEST(Database, DeleteElementById) {
+    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
     psr::Element e;
     e.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
@@ -33,9 +23,9 @@ TEST_F(DatabaseFixture, DeleteElementById) {
     EXPECT_TRUE(ids.empty());
 }
 
-TEST_F(DatabaseFixture, DeleteElementByIdWithVectorData) {
-    auto db = psr::Database::from_schema(
-        ":memory:", schema_path("schemas/valid/collections.sql"), {.console_level = psr::LogLevel::off});
+TEST(Database, DeleteElementByIdWithVectorData) {
+    auto db =
+        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
     psr::Element config;
     config.set("label", std::string("Test Config"));
@@ -61,9 +51,9 @@ TEST_F(DatabaseFixture, DeleteElementByIdWithVectorData) {
     EXPECT_TRUE(all_vectors.empty());
 }
 
-TEST_F(DatabaseFixture, DeleteElementByIdWithSetData) {
-    auto db = psr::Database::from_schema(
-        ":memory:", schema_path("schemas/valid/collections.sql"), {.console_level = psr::LogLevel::off});
+TEST(Database, DeleteElementByIdWithSetData) {
+    auto db =
+        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
     psr::Element config;
     config.set("label", std::string("Test Config"));
@@ -89,9 +79,8 @@ TEST_F(DatabaseFixture, DeleteElementByIdWithSetData) {
     EXPECT_TRUE(all_sets.empty());
 }
 
-TEST_F(DatabaseFixture, DeleteElementByIdNonExistent) {
-    auto db = psr::Database::from_schema(
-        ":memory:", schema_path("schemas/valid/basic.sql"), {.console_level = psr::LogLevel::off});
+TEST(Database, DeleteElementByIdNonExistent) {
+    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
     psr::Element e;
     e.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
@@ -105,9 +94,8 @@ TEST_F(DatabaseFixture, DeleteElementByIdNonExistent) {
     EXPECT_EQ(ids.size(), 1);
 }
 
-TEST_F(DatabaseFixture, DeleteElementByIdOtherElementsUnchanged) {
-    auto db = psr::Database::from_schema(
-        ":memory:", schema_path("schemas/valid/basic.sql"), {.console_level = psr::LogLevel::off});
+TEST(Database, DeleteElementByIdOtherElementsUnchanged) {
+    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
     psr::Element e1;
     e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});

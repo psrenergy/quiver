@@ -22,6 +22,7 @@ tests/                 # C++ tests and shared SQL schemas
 ## Principles
 
 - WIP project - no backwards compatibility required
+- Be critical, not passive
 - Breaking changes are acceptable
 - Clean code over defensive code
 - Simple solutions over complex abstractions
