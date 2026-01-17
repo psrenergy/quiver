@@ -354,4 +354,81 @@ end
     PSRDatabase.close!(db)
 end
 
+# Get attribute type tests
+
+@testset "Get Attribute Type - Scalar Integer" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    result = PSRDatabase.get_attribute_type(db, "Configuration", "integer_attribute")
+    @test result.structure == PSRDatabase.PSR_ATTRIBUTE_SCALAR
+    @test result.data_type == PSRDatabase.PSR_DATA_TYPE_INTEGER
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Get Attribute Type - Scalar Real" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    result = PSRDatabase.get_attribute_type(db, "Configuration", "float_attribute")
+    @test result.structure == PSRDatabase.PSR_ATTRIBUTE_SCALAR
+    @test result.data_type == PSRDatabase.PSR_DATA_TYPE_REAL
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Get Attribute Type - Scalar Text" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    result = PSRDatabase.get_attribute_type(db, "Configuration", "string_attribute")
+    @test result.structure == PSRDatabase.PSR_ATTRIBUTE_SCALAR
+    @test result.data_type == PSRDatabase.PSR_DATA_TYPE_TEXT
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Get Attribute Type - Vector Integer" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    result = PSRDatabase.get_attribute_type(db, "Collection", "value_int")
+    @test result.structure == PSRDatabase.PSR_ATTRIBUTE_VECTOR
+    @test result.data_type == PSRDatabase.PSR_DATA_TYPE_INTEGER
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Get Attribute Type - Vector Real" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    result = PSRDatabase.get_attribute_type(db, "Collection", "value_float")
+    @test result.structure == PSRDatabase.PSR_ATTRIBUTE_VECTOR
+    @test result.data_type == PSRDatabase.PSR_DATA_TYPE_REAL
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Get Attribute Type - Set Text" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    result = PSRDatabase.get_attribute_type(db, "Collection", "tag")
+    @test result.structure == PSRDatabase.PSR_ATTRIBUTE_SET
+    @test result.data_type == PSRDatabase.PSR_DATA_TYPE_TEXT
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Get Attribute Type - Error on Nonexistent" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.get_attribute_type(db, "Configuration", "nonexistent")
+
+    PSRDatabase.close!(db)
+end
+
 end
