@@ -27,6 +27,7 @@ tests/                 # C++ tests and shared SQL schemas
 - Simple solutions over complex abstractions
 - Delete unused code, do not deprecate
 - Intelligence in C++ layer, bindings are thin wrappers
+- All public C++ methods should be binded to C API, then to Julia/Dart/Lua
 - All *.sql test schemas in `tests/schemas/`, bindings reference from there
 
 ## Build
