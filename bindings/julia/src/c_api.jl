@@ -37,6 +37,18 @@ const libpsr_database_c = joinpath(@__DIR__, "..", "..", "..", "build", library_
     PSR_ERROR_NOT_FOUND = -6
 end
 
+@cenum psr_attribute_structure_t::Int32 begin
+    PSR_ATTRIBUTE_SCALAR = 0
+    PSR_ATTRIBUTE_VECTOR = 1
+    PSR_ATTRIBUTE_SET = 2
+end
+
+@cenum psr_data_type_t::Int32 begin
+    PSR_DATA_TYPE_INTEGER = 0
+    PSR_DATA_TYPE_REAL = 1
+    PSR_DATA_TYPE_TEXT = 2
+end
+
 function psr_error_string(error)
     @ccall libpsr_database_c.psr_error_string(error::psr_error_t)::Ptr{Cchar}
 end
@@ -184,6 +196,10 @@ end
 
 function psr_database_read_element_ids(db, collection, out_ids, out_count)
     @ccall libpsr_database_c.psr_database_read_element_ids(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, out_ids::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::psr_error_t
+end
+
+function psr_database_get_attribute_type(db, collection, attribute, out_structure, out_data_type)
+    @ccall libpsr_database_c.psr_database_get_attribute_type(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_structure::Ptr{psr_attribute_structure_t}, out_data_type::Ptr{psr_data_type_t})::psr_error_t
 end
 
 function psr_database_update_scalar_integer(db, collection, attribute, id, value)
