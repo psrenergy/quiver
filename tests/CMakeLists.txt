@@ -1,7 +1,12 @@
 include(GoogleTest)
 
 add_executable(psr_database_tests
-    test_database.cpp
+    test_database_create.cpp
+    test_database_delete.cpp
+    test_database_lifecycle.cpp
+    test_database_read.cpp
+    test_database_relations.cpp
+    test_database_update.cpp
     test_element.cpp
     test_lua_runner.cpp
     test_migrations/test_migrations.cpp
@@ -32,7 +37,11 @@ gtest_discover_tests(psr_database_tests
 # C API tests
 if(PSR_BUILD_C_API)
     add_executable(psr_database_c_tests
-        test_c_api_database.cpp
+        test_c_api_database_create.cpp
+        test_c_api_database_delete.cpp
+        test_c_api_database_lifecycle.cpp
+        test_c_api_database_read.cpp
+        test_c_api_database_update.cpp
         test_c_api_element.cpp
     )
 
