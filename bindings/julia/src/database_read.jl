@@ -283,7 +283,7 @@ function read_scalar_floats_by_id(db::Database, collection::String, attribute::S
 
     err = C.psr_database_read_scalar_floats_by_id(db.ptr, collection, attribute, id, out_value, out_has_value)
     if err != C.PSR_OK
-        throw(DatabaseException("Failed to read scalar double by id from '$collection.$attribute'"))
+        throw(DatabaseException("Failed to read scalar float by id from '$collection.$attribute'"))
     end
 
     if out_has_value[] == 0

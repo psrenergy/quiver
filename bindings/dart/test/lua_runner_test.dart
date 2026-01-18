@@ -251,8 +251,8 @@ void main() {
           lua.run('''
             local floats = db:read_scalar_floats("Collection", "some_float")
             assert(#floats == 2, "Expected 2 floats")
-            assert(floats[1] == 1.5, "First double mismatch")
-            assert(floats[2] == 2.5, "Second double mismatch")
+            assert(floats[1] == 1.5, "First float mismatch")
+            assert(floats[2] == 2.5, "Second float mismatch")
           ''');
         } finally {
           lua.dispose();

@@ -192,16 +192,16 @@ TEST(ElementCApi, StringFreeNull) {
 
 TEST(ElementCApi, ArrayNullErrors) {
     int64_t int_values[] = {1, 2, 3};
-    double double_values[] = {1.0, 2.0, 3.0};
+    double float_values[] = {1.0, 2.0, 3.0};
     const char* string_values[] = {"a", "b", "c"};
 
     EXPECT_EQ(psr_element_set_array_int(nullptr, "x", int_values, 3), PSR_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(psr_element_set_array_float(nullptr, "x", double_values, 3), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_array_float(nullptr, "x", float_values, 3), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_array_string(nullptr, "x", string_values, 3), PSR_ERROR_INVALID_ARGUMENT);
 
     auto element = psr_element_create();
     EXPECT_EQ(psr_element_set_array_int(element, nullptr, int_values, 3), PSR_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(psr_element_set_array_float(element, nullptr, double_values, 3), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_array_float(element, nullptr, float_values, 3), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_array_string(element, nullptr, string_values, 3), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_array_int(element, "x", nullptr, 3), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_array_float(element, "x", nullptr, 3), PSR_ERROR_INVALID_ARGUMENT);

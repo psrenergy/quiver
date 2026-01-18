@@ -173,7 +173,7 @@ void main() {
       }
     });
 
-    test('reads double vectors from Collection', () {
+    test('reads float vectors from Collection', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
@@ -428,7 +428,7 @@ void main() {
   });
 
   group('Read Scalar Floats by ID', () {
-    test('reads double by specific element ID', () {
+    test('reads float by specific element ID', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
@@ -501,7 +501,7 @@ void main() {
   });
 
   group('Read Vector Floats by ID', () {
-    test('reads double vector by specific element ID', () {
+    test('reads float vector by specific element ID', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
@@ -829,7 +829,7 @@ void main() {
       }
     });
 
-    test('returns null for nonexistent double ID', () {
+    test('returns null for nonexistent float ID', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),

@@ -122,12 +122,12 @@ TEST(DatabaseCApi, ReadScalarEmpty) {
     EXPECT_EQ(int_count, 0);
     EXPECT_EQ(int_values, nullptr);
 
-    double* double_values = nullptr;
+    double* float_values = nullptr;
     size_t double_count = 0;
-    err = psr_database_read_scalar_floats(db, "Collection", "some_float", &double_values, &double_count);
+    err = psr_database_read_scalar_floats(db, "Collection", "some_float", &float_values, &double_count);
     EXPECT_EQ(err, PSR_OK);
     EXPECT_EQ(double_count, 0);
-    EXPECT_EQ(double_values, nullptr);
+    EXPECT_EQ(float_values, nullptr);
 
     psr_database_close(db);
 }
