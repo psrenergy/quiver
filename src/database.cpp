@@ -786,7 +786,7 @@ std::vector<double> Database::read_scalar_floats(const std::string& collection, 
     std::vector<double> values;
     values.reserve(result.row_count());
     for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_double(0);
+        auto val = result[i].get_float(0);
         if (val) {
             values.push_back(*val);
         }
@@ -828,7 +828,7 @@ Database::read_scalar_floats_by_id(const std::string& collection, const std::str
     if (result.empty()) {
         return std::nullopt;
     }
-    return result[0].get_double(0);
+    return result[0].get_float(0);
 }
 
 std::optional<std::string>
@@ -881,7 +881,7 @@ std::vector<std::vector<double>> Database::read_vector_floats(const std::string&
 
     for (size_t i = 0; i < result.row_count(); ++i) {
         auto id = result[i].get_int(0);
-        auto val = result[i].get_double(1);
+        auto val = result[i].get_float(1);
 
         if (!id)
             continue;
@@ -952,7 +952,7 @@ Database::read_vector_floats_by_id(const std::string& collection, const std::str
     std::vector<double> values;
     values.reserve(result.row_count());
     for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_double(0);
+        auto val = result[i].get_float(0);
         if (val) {
             values.push_back(*val);
         }
@@ -1016,7 +1016,7 @@ std::vector<std::vector<double>> Database::read_set_floats(const std::string& co
 
     for (size_t i = 0; i < result.row_count(); ++i) {
         auto id = result[i].get_int(0);
-        auto val = result[i].get_double(1);
+        auto val = result[i].get_float(1);
 
         if (!id)
             continue;
@@ -1087,7 +1087,7 @@ Database::read_set_floats_by_id(const std::string& collection, const std::string
     std::vector<double> values;
     values.reserve(result.row_count());
     for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_double(0);
+        auto val = result[i].get_float(0);
         if (val) {
             values.push_back(*val);
         }
@@ -1141,7 +1141,7 @@ void Database::update_scalar_integer(const std::string& collection,
     impl_->logger->info("Updated {}.{} for id {} to {}", collection, attribute, id, value);
 }
 
-void Database::update_scalar_double(const std::string& collection,
+void Database::update_scalar_float(const std::string& collection,
                                     const std::string& attribute,
                                     int64_t id,
                                     double value) {

@@ -315,7 +315,7 @@ PSR_C_API void psr_free_int_array(int64_t* values) {
     delete[] values;
 }
 
-PSR_C_API void psr_free_double_array(double* values) {
+PSR_C_API void psr_free_float_array(double* values) {
     delete[] values;
 }
 
@@ -403,7 +403,7 @@ PSR_C_API void psr_free_int_vectors(int64_t** vectors, size_t* sizes, size_t cou
     free_vectors_impl(vectors, sizes, count);
 }
 
-PSR_C_API void psr_free_double_vectors(double** vectors, size_t* sizes, size_t count) {
+PSR_C_API void psr_free_float_vectors(double** vectors, size_t* sizes, size_t count) {
     free_vectors_impl(vectors, sizes, count);
 }
 
@@ -729,7 +729,7 @@ PSR_C_API psr_error_t psr_database_update_scalar_integer(psr_database_t* db,
     }
 }
 
-PSR_C_API psr_error_t psr_database_update_scalar_double(psr_database_t* db,
+PSR_C_API psr_error_t psr_database_update_scalar_float(psr_database_t* db,
                                                         const char* collection,
                                                         const char* attribute,
                                                         int64_t id,
@@ -738,7 +738,7 @@ PSR_C_API psr_error_t psr_database_update_scalar_double(psr_database_t* db,
         return PSR_ERROR_INVALID_ARGUMENT;
     }
     try {
-        db->db.update_scalar_double(collection, attribute, id, value);
+        db->db.update_scalar_float(collection, attribute, id, value);
         return PSR_OK;
     } catch (const std::exception&) {
         return PSR_ERROR_DATABASE;

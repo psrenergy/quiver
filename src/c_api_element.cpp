@@ -33,7 +33,7 @@ PSR_C_API psr_error_t psr_element_set_integer(psr_element_t* element, const char
     return PSR_OK;
 }
 
-PSR_C_API psr_error_t psr_element_set_double(psr_element_t* element, const char* name, double value) {
+PSR_C_API psr_error_t psr_element_set_float(psr_element_t* element, const char* name, double value) {
     if (!element || !name) {
         return PSR_ERROR_INVALID_ARGUMENT;
     }
@@ -69,7 +69,7 @@ PSR_C_API psr_error_t psr_element_set_array_int(psr_element_t* element,
     return PSR_OK;
 }
 
-PSR_C_API psr_error_t psr_element_set_array_double(psr_element_t* element,
+PSR_C_API psr_error_t psr_element_set_array_float(psr_element_t* element,
                                                    const char* name,
                                                    const double* values,
                                                    int32_t count) {
