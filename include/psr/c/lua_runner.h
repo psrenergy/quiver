@@ -22,7 +22,9 @@ PSR_C_API void psr_lua_runner_free(psr_lua_runner_t* runner);
 // If an error occurs, call psr_lua_runner_get_error() to get the error message.
 PSR_C_API psr_error_t psr_lua_runner_run(psr_lua_runner_t* runner, const char* script);
 
-// Get the last error message (or NULL if no error)
+// Get the last error message (or NULL if no error).
+// The returned pointer is valid until the next call to psr_lua_runner_run().
+// Callers should copy the string if they need to retain it beyond that.
 PSR_C_API const char* psr_lua_runner_get_error(psr_lua_runner_t* runner);
 
 #ifdef __cplusplus
