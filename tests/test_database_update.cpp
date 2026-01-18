@@ -22,16 +22,16 @@ TEST(Database, UpdateScalarInteger) {
     EXPECT_EQ(*val, 100);
 }
 
-TEST(Database, UpdateScalarDouble) {
+TEST(Database, UpdateScalarFloat) {
     auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
     psr::Element e;
     e.set("label", std::string("Config 1")).set("float_attribute", 3.14);
     int64_t id = db.create_element("Configuration", e);
 
-    db.update_scalar_double("Configuration", "float_attribute", id, 2.71);
+    db.update_scalar_float("Configuration", "float_attribute", id, 2.71);
 
-    auto val = db.read_scalar_doubles_by_id("Configuration", "float_attribute", id);
+    auto val = db.read_scalar_floats_by_id("Configuration", "float_attribute", id);
     EXPECT_TRUE(val.has_value());
     EXPECT_DOUBLE_EQ(*val, 2.71);
 }
@@ -97,7 +97,7 @@ TEST(Database, UpdateVectorIntegers) {
     EXPECT_EQ(vec, (std::vector<int64_t>{10, 20, 30, 40}));
 }
 
-TEST(Database, UpdateVectorDoubles) {
+TEST(Database, UpdateVectorFloats) {
     auto db =
         psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -109,9 +109,9 @@ TEST(Database, UpdateVectorDoubles) {
     e.set("label", std::string("Item 1")).set("value_float", std::vector<double>{1.5, 2.5, 3.5});
     int64_t id = db.create_element("Collection", e);
 
-    db.update_vector_doubles("Collection", "value_float", id, {10.5, 20.5});
+    db.update_vector_floats("Collection", "value_float", id, {10.5, 20.5});
 
-    auto vec = db.read_vector_doubles_by_id("Collection", "value_float", id);
+    auto vec = db.read_vector_floats_by_id("Collection", "value_float", id);
     EXPECT_EQ(vec, (std::vector<double>{10.5, 20.5}));
 }
 
@@ -274,11 +274,11 @@ TEST(Database, UpdateElementMultipleScalars) {
         .set("string_attribute", std::string("world"));
     db.update_element("Configuration", id, update);
 
-    auto int_val = db.read_scalar_integers_by_id("Configuration", "integer_attribute", id);
-    EXPECT_TRUE(int_val.has_value());
-    EXPECT_EQ(*int_val, 100);
+    auto integer_val = db.read_scalar_integers_by_id("Configuration", "integer_attribute", id);
+    EXPECT_TRUE(integer_val.has_value());
+    EXPECT_EQ(*integer_val, 100);
 
-    auto float_val = db.read_scalar_doubles_by_id("Configuration", "float_attribute", id);
+    auto float_val = db.read_scalar_floats_by_id("Configuration", "float_attribute", id);
     EXPECT_TRUE(float_val.has_value());
     EXPECT_DOUBLE_EQ(*float_val, 2.71);
 
@@ -337,9 +337,9 @@ TEST(Database, UpdateElementIgnoresArrays) {
     db.update_element("Collection", id, update);
 
     // Verify scalar was updated
-    auto int_val = db.read_scalar_integers_by_id("Collection", "some_integer", id);
-    EXPECT_TRUE(int_val.has_value());
-    EXPECT_EQ(*int_val, 42);
+    auto integer_val = db.read_scalar_integers_by_id("Collection", "some_integer", id);
+    EXPECT_TRUE(integer_val.has_value());
+    EXPECT_EQ(*integer_val, 42);
 
     // Verify vector was NOT updated (arrays should be ignored)
     auto vec = db.read_vector_integers_by_id("Collection", "value_int", id);

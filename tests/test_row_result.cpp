@@ -57,20 +57,20 @@ TEST(Row, IsNullFalseForNonNull) {
 TEST(Row, GetIntOutOfBounds) {
     psr::Row row(std::vector<psr::Value>{int64_t{42}});
 
-    auto result = row.get_int(1);
+    auto result = row.get_integer(1);
     EXPECT_FALSE(result.has_value());
 
-    result = row.get_int(100);
+    result = row.get_integer(100);
     EXPECT_FALSE(result.has_value());
 }
 
-TEST(Row, GetDoubleOutOfBounds) {
+TEST(Row, GetFloatOutOfBounds) {
     psr::Row row(std::vector<psr::Value>{3.14});
 
-    auto result = row.get_double(1);
+    auto result = row.get_float(1);
     EXPECT_FALSE(result.has_value());
 
-    result = row.get_double(100);
+    result = row.get_float(100);
     EXPECT_FALSE(result.has_value());
 }
 
@@ -87,14 +87,14 @@ TEST(Row, GetStringOutOfBounds) {
 TEST(Row, GetIntWrongType) {
     psr::Row row(std::vector<psr::Value>{std::string("not an int")});
 
-    auto result = row.get_int(0);
+    auto result = row.get_integer(0);
     EXPECT_FALSE(result.has_value());
 }
 
-TEST(Row, GetDoubleWrongType) {
-    psr::Row row(std::vector<psr::Value>{std::string("not a double")});
+TEST(Row, GetFloatWrongType) {
+    psr::Row row(std::vector<psr::Value>{std::string("not a float")});
 
-    auto result = row.get_double(0);
+    auto result = row.get_float(0);
     EXPECT_FALSE(result.has_value());
 }
 
@@ -108,14 +108,14 @@ TEST(Row, GetStringWrongType) {
 TEST(Row, GetIntFromNull) {
     psr::Row row(std::vector<psr::Value>{nullptr});
 
-    auto result = row.get_int(0);
+    auto result = row.get_integer(0);
     EXPECT_FALSE(result.has_value());
 }
 
-TEST(Row, GetDoubleFromNull) {
+TEST(Row, GetFloatFromNull) {
     psr::Row row(std::vector<psr::Value>{nullptr});
 
-    auto result = row.get_double(0);
+    auto result = row.get_float(0);
     EXPECT_FALSE(result.has_value());
 }
 
@@ -217,11 +217,11 @@ TEST(Result, OperatorBracketValid) {
     psr::Result result(columns, std::move(rows));
 
     const auto& row = result[0];
-    EXPECT_EQ(row.get_int(0).value(), 42);
+    EXPECT_EQ(row.get_integer(0).value(), 42);
 }
 
 TEST(Result, MixedValueTypes) {
-    std::vector<std::string> columns = {"int_col", "double_col", "string_col", "null_col"};
+    std::vector<std::string> columns = {"integer_col", "float_col", "string_col", "null_col"};
     std::vector<psr::Row> rows;
     rows.emplace_back(std::vector<psr::Value>{int64_t{42}, 3.14, std::string("hello"), nullptr});
 
@@ -231,8 +231,8 @@ TEST(Result, MixedValueTypes) {
     EXPECT_EQ(result.column_count(), 4u);
 
     const auto& row = result[0];
-    EXPECT_EQ(row.get_int(0).value(), 42);
-    EXPECT_DOUBLE_EQ(row.get_double(1).value(), 3.14);
+    EXPECT_EQ(row.get_integer(0).value(), 42);
+    EXPECT_DOUBLE_EQ(row.get_float(1).value(), 3.14);
     EXPECT_EQ(row.get_string(2).value(), "hello");
     EXPECT_TRUE(row.is_null(3));
 }
@@ -275,7 +275,7 @@ TEST(RowResult, ReadScalarByIdWithNull) {
 
     // Read optional float attribute (should be nullopt since we didn't set it)
     // Note: integer_attribute has DEFAULT 6, so we use float_attribute instead
-    auto result = db.read_scalar_doubles_by_id("Configuration", "float_attribute", id);
+    auto result = db.read_scalar_floats_by_id("Configuration", "float_attribute", id);
     EXPECT_FALSE(result.has_value());
 }
 

@@ -78,9 +78,9 @@ bindings/dart/test/test.bat
 ### Database Class
 - Factory methods: `from_schema()`, `from_migrations()`
 - CRUD: `create_element(collection, element)`
-- Scalar readers: `read_scalar_integers/doubles/strings(collection, attribute)`
-- Vector readers: `read_vector_integers/doubles/strings(collection, attribute)`
-- Set readers: `read_set_integers/doubles/strings(collection, attribute)`
+- Scalar readers: `read_scalar_integers/floats/strings(collection, attribute)`
+- Vector readers: `read_vector_integers/floats/strings(collection, attribute)`
+- Set readers: `read_set_integers/floats/strings(collection, attribute)`
 - Relations: `set_scalar_relation()`, `read_scalar_relation()`
 
 ### Element Class
@@ -101,8 +101,8 @@ lua.run(R"(
 
 Available Lua methods:
 - `db:create_element(collection, table)`
-- `db:read_scalar_strings/integers/doubles(collection, attribute)`
-- `db:read_vector_strings/integers/doubles(collection, attribute)`
+- `db:read_scalar_strings/integers/floats(collection, attribute)`
+- `db:read_vector_strings/integers/floats(collection, attribute)`
 
 ## Bindings
 

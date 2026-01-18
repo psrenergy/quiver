@@ -18,7 +18,7 @@ TEST(Element, SetInt) {
     EXPECT_EQ(std::get<int64_t>(element.scalars().at("count")), 42);
 }
 
-TEST(Element, SetDouble) {
+TEST(Element, SetFloat) {
     psr::Element element;
     element.set("value", 3.14);
 
@@ -55,7 +55,7 @@ TEST(Element, SetArrayInt) {
     EXPECT_EQ(std::get<int64_t>(arrays.at("counts")[2]), 30);
 }
 
-TEST(Element, SetArrayDouble) {
+TEST(Element, SetArrayFloat) {
     psr::Element element;
     element.set("values", std::vector<double>{1.5, 2.5, 3.5});
 
@@ -240,11 +240,11 @@ TEST(Element, SetMultipleSameNameArrays) {
 TEST(Element, SetMixedScalarsAndArrays) {
     psr::Element element;
     element.set("label", std::string("Test"))
-        .set("int_value", int64_t{42})
-        .set("double_value", 3.14)
+        .set("integer_value", int64_t{42})
+        .set("float_value", 3.14)
         .set_null("null_value")
-        .set("int_array", std::vector<int64_t>{1, 2, 3})
-        .set("double_array", std::vector<double>{1.1, 2.2})
+        .set("integer_array", std::vector<int64_t>{1, 2, 3})
+        .set("float_array", std::vector<double>{1.1, 2.2})
         .set("string_array", std::vector<std::string>{"a", "b", "c"});
 
     EXPECT_EQ(element.scalars().size(), 4);

@@ -215,7 +215,7 @@ include("fixture.jl")
 
         PSRDatabase.create_element!(db, "Collection"; label = "Item 1", value_float = [1.1, 2.2, 3.3])
 
-        result = PSRDatabase.read_vector_doubles_by_id(db, "Collection", "value_float", Int64(1))
+        result = PSRDatabase.read_vector_floats_by_id(db, "Collection", "value_float", Int64(1))
         @test length(result) == 3
         @test result == [1.1, 2.2, 3.3]
 

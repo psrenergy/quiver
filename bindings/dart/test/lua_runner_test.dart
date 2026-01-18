@@ -235,8 +235,8 @@ void main() {
     });
   });
 
-  group('LuaRunner Read Doubles', () {
-    test('reads scalar doubles in Lua script', () {
+  group('LuaRunner Read Floats', () {
+    test('reads scalar floats in Lua script', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
@@ -249,10 +249,10 @@ void main() {
         final lua = LuaRunner(db);
         try {
           lua.run('''
-            local floats = db:read_scalar_doubles("Collection", "some_float")
-            assert(#floats == 2, "Expected 2 doubles")
-            assert(floats[1] == 1.5, "First double mismatch")
-            assert(floats[2] == 2.5, "Second double mismatch")
+            local floats = db:read_scalar_floats("Collection", "some_float")
+            assert(#floats == 2, "Expected 2 floats")
+            assert(floats[1] == 1.5, "First float mismatch")
+            assert(floats[2] == 2.5, "Second float mismatch")
           ''');
         } finally {
           lua.dispose();

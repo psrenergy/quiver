@@ -92,7 +92,7 @@ TEST_F(LuaRunnerCApiTest, CreateElement) {
     EXPECT_EQ(read_result, PSR_OK);
     EXPECT_EQ(count, 1);
     EXPECT_EQ(values[0], 42);
-    psr_free_int_array(values);
+    psr_free_integer_array(values);
 
     psr_lua_runner_free(lua);
     psr_database_close(db);
@@ -230,7 +230,7 @@ TEST_F(LuaRunnerCApiTest, CreateElementWithVectors) {
     EXPECT_EQ(vectors[0][0], 1);
     EXPECT_EQ(vectors[0][1], 2);
     EXPECT_EQ(vectors[0][2], 3);
-    psr_free_int_vectors(vectors, sizes, count);
+    psr_free_integer_vectors(vectors, sizes, count);
 
     psr_lua_runner_free(lua);
     psr_database_close(db);

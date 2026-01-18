@@ -179,15 +179,15 @@ class Database {
       }
 
       final result = List<int>.generate(count, (i) => outValues.value[i]);
-      bindings.psr_free_int_array(outValues.value);
+      bindings.psr_free_integer_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
     }
   }
 
-  /// Reads all double values for a scalar attribute from a collection.
-  List<double> readScalarDoubles(String collection, String attribute) {
+  /// Reads all float values for a scalar attribute from a collection.
+  List<double> readScalarFloats(String collection, String attribute) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -195,7 +195,7 @@ class Database {
       final outValues = arena<Pointer<Double>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_scalar_doubles(
+      final err = bindings.psr_database_read_scalar_floats(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -204,7 +204,7 @@ class Database {
       );
 
       if (err != psr_error_t.PSR_OK) {
-        throw DatabaseException.fromError(err, "Failed to read scalar doubles from '$collection.$attribute'");
+        throw DatabaseException.fromError(err, "Failed to read scalar floats from '$collection.$attribute'");
       }
 
       final count = outCount.value;
@@ -213,7 +213,7 @@ class Database {
       }
 
       final result = List<double>.generate(count, (i) => outValues.value[i]);
-      bindings.psr_free_double_array(outValues.value);
+      bindings.psr_free_float_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -291,15 +291,15 @@ class Database {
           result.add(List<int>.generate(size, (j) => outVectors.value[i][j]));
         }
       }
-      bindings.psr_free_int_vectors(outVectors.value, outSizes.value, count);
+      bindings.psr_free_integer_vectors(outVectors.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
     }
   }
 
-  /// Reads all double vectors for a vector attribute from a collection.
-  List<List<double>> readVectorDoubles(String collection, String attribute) {
+  /// Reads all float vectors for a vector attribute from a collection.
+  List<List<double>> readVectorFloats(String collection, String attribute) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -308,7 +308,7 @@ class Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_vector_doubles(
+      final err = bindings.psr_database_read_vector_floats(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -318,7 +318,7 @@ class Database {
       );
 
       if (err != psr_error_t.PSR_OK) {
-        throw DatabaseException.fromError(err, "Failed to read vector doubles from '$collection.$attribute'");
+        throw DatabaseException.fromError(err, "Failed to read vector floats from '$collection.$attribute'");
       }
 
       final count = outCount.value;
@@ -335,7 +335,7 @@ class Database {
           result.add(List<double>.generate(size, (j) => outVectors.value[i][j]));
         }
       }
-      bindings.psr_free_double_vectors(outVectors.value, outSizes.value, count);
+      bindings.psr_free_float_vectors(outVectors.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -423,15 +423,15 @@ class Database {
           result.add(List<int>.generate(size, (j) => outSets.value[i][j]));
         }
       }
-      bindings.psr_free_int_vectors(outSets.value, outSizes.value, count);
+      bindings.psr_free_integer_vectors(outSets.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
     }
   }
 
-  /// Reads all double sets for a set attribute from a collection.
-  List<List<double>> readSetDoubles(String collection, String attribute) {
+  /// Reads all float sets for a set attribute from a collection.
+  List<List<double>> readSetFloats(String collection, String attribute) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -440,7 +440,7 @@ class Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_set_doubles(
+      final err = bindings.psr_database_read_set_floats(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -450,7 +450,7 @@ class Database {
       );
 
       if (err != psr_error_t.PSR_OK) {
-        throw DatabaseException.fromError(err, "Failed to read set doubles from '$collection.$attribute'");
+        throw DatabaseException.fromError(err, "Failed to read set floats from '$collection.$attribute'");
       }
 
       final count = outCount.value;
@@ -467,7 +467,7 @@ class Database {
           result.add(List<double>.generate(size, (j) => outSets.value[i][j]));
         }
       }
-      bindings.psr_free_double_vectors(outSets.value, outSizes.value, count);
+      bindings.psr_free_float_vectors(outSets.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -552,9 +552,9 @@ class Database {
     }
   }
 
-  /// Reads a double value for a scalar attribute by element ID.
+  /// Reads a float value for a scalar attribute by element ID.
   /// Returns null if the element is not found.
-  double? readScalarDoubleById(String collection, String attribute, int id) {
+  double? readScalarFloatById(String collection, String attribute, int id) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -562,7 +562,7 @@ class Database {
       final outValue = arena<Double>();
       final outHasValue = arena<Int>();
 
-      final err = bindings.psr_database_read_scalar_doubles_by_id(
+      final err = bindings.psr_database_read_scalar_floats_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -572,7 +572,7 @@ class Database {
       );
 
       if (err != psr_error_t.PSR_OK) {
-        throw DatabaseException.fromError(err, "Failed to read scalar double by id from '$collection.$attribute'");
+        throw DatabaseException.fromError(err, "Failed to read scalar float by id from '$collection.$attribute'");
       }
 
       if (outHasValue.value == 0) {
@@ -648,15 +648,15 @@ class Database {
       }
 
       final result = List<int>.generate(count, (i) => outValues.value[i]);
-      bindings.psr_free_int_array(outValues.value);
+      bindings.psr_free_integer_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
     }
   }
 
-  /// Reads double vector for a vector attribute by element ID.
-  List<double> readVectorDoublesById(String collection, String attribute, int id) {
+  /// Reads float vector for a vector attribute by element ID.
+  List<double> readVectorFloatsById(String collection, String attribute, int id) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -664,7 +664,7 @@ class Database {
       final outValues = arena<Pointer<Double>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_vector_doubles_by_id(
+      final err = bindings.psr_database_read_vector_floats_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -674,7 +674,7 @@ class Database {
       );
 
       if (err != psr_error_t.PSR_OK) {
-        throw DatabaseException.fromError(err, "Failed to read vector doubles by id from '$collection.$attribute'");
+        throw DatabaseException.fromError(err, "Failed to read vector floats by id from '$collection.$attribute'");
       }
 
       final count = outCount.value;
@@ -683,7 +683,7 @@ class Database {
       }
 
       final result = List<double>.generate(count, (i) => outValues.value[i]);
-      bindings.psr_free_double_array(outValues.value);
+      bindings.psr_free_float_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -755,15 +755,15 @@ class Database {
       }
 
       final result = List<int>.generate(count, (i) => outValues.value[i]);
-      bindings.psr_free_int_array(outValues.value);
+      bindings.psr_free_integer_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
     }
   }
 
-  /// Reads double set for a set attribute by element ID.
-  List<double> readSetDoublesById(String collection, String attribute, int id) {
+  /// Reads float set for a set attribute by element ID.
+  List<double> readSetFloatsById(String collection, String attribute, int id) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -771,7 +771,7 @@ class Database {
       final outValues = arena<Pointer<Double>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_set_doubles_by_id(
+      final err = bindings.psr_database_read_set_floats_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -781,7 +781,7 @@ class Database {
       );
 
       if (err != psr_error_t.PSR_OK) {
-        throw DatabaseException.fromError(err, "Failed to read set doubles by id from '$collection.$attribute'");
+        throw DatabaseException.fromError(err, "Failed to read set floats by id from '$collection.$attribute'");
       }
 
       final count = outCount.value;
@@ -790,7 +790,7 @@ class Database {
       }
 
       final result = List<double>.generate(count, (i) => outValues.value[i]);
-      bindings.psr_free_double_array(outValues.value);
+      bindings.psr_free_float_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -860,7 +860,7 @@ class Database {
       }
 
       final result = List<int>.generate(count, (i) => outIds.value[i]);
-      bindings.psr_free_int_array(outIds.value);
+      bindings.psr_free_integer_array(outIds.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -897,8 +897,8 @@ class Database {
 
       final dataType = switch (outDataType.value) {
         psr_data_type_t.PSR_DATA_TYPE_INTEGER => 'integer',
-        psr_data_type_t.PSR_DATA_TYPE_REAL => 'real',
-        psr_data_type_t.PSR_DATA_TYPE_TEXT => 'text',
+        psr_data_type_t.PSR_DATA_TYPE_FLOAT => 'real',
+        psr_data_type_t.PSR_DATA_TYPE_STRING => 'text',
         _ => 'unknown',
       };
 
@@ -988,13 +988,13 @@ class Database {
     }
   }
 
-  /// Updates a double scalar attribute value by element ID.
-  void updateScalarDouble(String collection, String attribute, int id, double value) {
+  /// Updates a float scalar attribute value by element ID.
+  void updateScalarFloat(String collection, String attribute, int id, double value) {
     _ensureNotClosed();
 
     final arena = Arena();
     try {
-      final err = bindings.psr_database_update_scalar_double(
+      final err = bindings.psr_database_update_scalar_float(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -1003,7 +1003,7 @@ class Database {
       );
 
       if (err != psr_error_t.PSR_OK) {
-        throw DatabaseException.fromError(err, "Failed to update scalar double '$collection.$attribute' for id $id");
+        throw DatabaseException.fromError(err, "Failed to update scalar float '$collection.$attribute' for id $id");
       }
     } finally {
       arena.releaseAll();
@@ -1062,8 +1062,8 @@ class Database {
     }
   }
 
-  /// Updates a double vector attribute by element ID (replaces entire vector).
-  void updateVectorDoubles(String collection, String attribute, int id, List<double> values) {
+  /// Updates a float vector attribute by element ID (replaces entire vector).
+  void updateVectorFloats(String collection, String attribute, int id, List<double> values) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -1073,7 +1073,7 @@ class Database {
         nativeValues[i] = values[i];
       }
 
-      final err = bindings.psr_database_update_vector_doubles(
+      final err = bindings.psr_database_update_vector_floats(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -1083,7 +1083,7 @@ class Database {
       );
 
       if (err != psr_error_t.PSR_OK) {
-        throw DatabaseException.fromError(err, "Failed to update vector doubles '$collection.$attribute' for id $id");
+        throw DatabaseException.fromError(err, "Failed to update vector floats '$collection.$attribute' for id $id");
       }
     } finally {
       arena.releaseAll();
@@ -1148,8 +1148,8 @@ class Database {
     }
   }
 
-  /// Updates a double set attribute by element ID (replaces entire set).
-  void updateSetDoubles(String collection, String attribute, int id, List<double> values) {
+  /// Updates a float set attribute by element ID (replaces entire set).
+  void updateSetFloats(String collection, String attribute, int id, List<double> values) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -1159,7 +1159,7 @@ class Database {
         nativeValues[i] = values[i];
       }
 
-      final err = bindings.psr_database_update_set_doubles(
+      final err = bindings.psr_database_update_set_floats(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -1169,7 +1169,7 @@ class Database {
       );
 
       if (err != psr_error_t.PSR_OK) {
-        throw DatabaseException.fromError(err, "Failed to update set doubles '$collection.$attribute' for id $id");
+        throw DatabaseException.fromError(err, "Failed to update set floats '$collection.$attribute' for id $id");
       }
     } finally {
       arena.releaseAll();

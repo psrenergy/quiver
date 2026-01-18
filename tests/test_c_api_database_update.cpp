@@ -36,7 +36,7 @@ TEST(DatabaseCApi, UpdateScalarInteger) {
     psr_database_close(db);
 }
 
-TEST(DatabaseCApi, UpdateScalarDouble) {
+TEST(DatabaseCApi, UpdateScalarFloat) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
@@ -44,16 +44,16 @@ TEST(DatabaseCApi, UpdateScalarDouble) {
 
     auto e = psr_element_create();
     psr_element_set_string(e, "label", "Config 1");
-    psr_element_set_double(e, "float_attribute", 3.14);
+    psr_element_set_float(e, "float_attribute", 3.14);
     int64_t id = psr_database_create_element(db, "Configuration", e);
     psr_element_destroy(e);
 
-    auto err = psr_database_update_scalar_double(db, "Configuration", "float_attribute", id, 2.71);
+    auto err = psr_database_update_scalar_float(db, "Configuration", "float_attribute", id, 2.71);
     EXPECT_EQ(err, PSR_OK);
 
     double value;
     int has_value;
-    err = psr_database_read_scalar_doubles_by_id(db, "Configuration", "float_attribute", id, &value, &has_value);
+    err = psr_database_read_scalar_floats_by_id(db, "Configuration", "float_attribute", id, &value, &has_value);
     EXPECT_EQ(err, PSR_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_DOUBLE_EQ(value, 2.71);
@@ -105,7 +105,7 @@ TEST(DatabaseCApi, UpdateVectorIntegers) {
     auto e = psr_element_create();
     psr_element_set_string(e, "label", "Item 1");
     int64_t values1[] = {1, 2, 3};
-    psr_element_set_array_int(e, "value_int", values1, 3);
+    psr_element_set_array_integer(e, "value_int", values1, 3);
     int64_t id = psr_database_create_element(db, "Collection", e);
     psr_element_destroy(e);
 
@@ -123,11 +123,11 @@ TEST(DatabaseCApi, UpdateVectorIntegers) {
     EXPECT_EQ(read_values[2], 30);
     EXPECT_EQ(read_values[3], 40);
 
-    psr_free_int_array(read_values);
+    psr_free_integer_array(read_values);
     psr_database_close(db);
 }
 
-TEST(DatabaseCApi, UpdateVectorDoubles) {
+TEST(DatabaseCApi, UpdateVectorFloats) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
@@ -141,23 +141,23 @@ TEST(DatabaseCApi, UpdateVectorDoubles) {
     auto e = psr_element_create();
     psr_element_set_string(e, "label", "Item 1");
     double values1[] = {1.5, 2.5, 3.5};
-    psr_element_set_array_double(e, "value_float", values1, 3);
+    psr_element_set_array_float(e, "value_float", values1, 3);
     int64_t id = psr_database_create_element(db, "Collection", e);
     psr_element_destroy(e);
 
     double new_values[] = {10.5, 20.5};
-    auto err = psr_database_update_vector_doubles(db, "Collection", "value_float", id, new_values, 2);
+    auto err = psr_database_update_vector_floats(db, "Collection", "value_float", id, new_values, 2);
     EXPECT_EQ(err, PSR_OK);
 
     double* read_values = nullptr;
     size_t count = 0;
-    err = psr_database_read_vector_doubles_by_id(db, "Collection", "value_float", id, &read_values, &count);
+    err = psr_database_read_vector_floats_by_id(db, "Collection", "value_float", id, &read_values, &count);
     EXPECT_EQ(err, PSR_OK);
     EXPECT_EQ(count, 2);
     EXPECT_DOUBLE_EQ(read_values[0], 10.5);
     EXPECT_DOUBLE_EQ(read_values[1], 20.5);
 
-    psr_free_double_array(read_values);
+    psr_free_float_array(read_values);
     psr_database_close(db);
 }
 
@@ -175,7 +175,7 @@ TEST(DatabaseCApi, UpdateVectorToEmpty) {
     auto e = psr_element_create();
     psr_element_set_string(e, "label", "Item 1");
     int64_t values1[] = {1, 2, 3};
-    psr_element_set_array_int(e, "value_int", values1, 3);
+    psr_element_set_array_integer(e, "value_int", values1, 3);
     int64_t id = psr_database_create_element(db, "Collection", e);
     psr_element_destroy(e);
 
@@ -318,7 +318,7 @@ TEST(DatabaseCApi, UpdateElementMultipleScalars) {
     auto e = psr_element_create();
     psr_element_set_string(e, "label", "Config 1");
     psr_element_set_integer(e, "integer_attribute", 42);
-    psr_element_set_double(e, "float_attribute", 3.14);
+    psr_element_set_float(e, "float_attribute", 3.14);
     psr_element_set_string(e, "string_attribute", "hello");
     int64_t id = psr_database_create_element(db, "Configuration", e);
     psr_element_destroy(e);
@@ -326,24 +326,25 @@ TEST(DatabaseCApi, UpdateElementMultipleScalars) {
     // Update multiple scalar attributes at once
     auto update = psr_element_create();
     psr_element_set_integer(update, "integer_attribute", 100);
-    psr_element_set_double(update, "float_attribute", 2.71);
+    psr_element_set_float(update, "float_attribute", 2.71);
     psr_element_set_string(update, "string_attribute", "world");
     auto err = psr_database_update_element(db, "Configuration", id, update);
     psr_element_destroy(update);
     EXPECT_EQ(err, PSR_OK);
 
-    int64_t int_value;
+    int64_t integer_value;
     int has_value;
-    err = psr_database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id, &int_value, &has_value);
+    err = psr_database_read_scalar_integers_by_id(
+        db, "Configuration", "integer_attribute", id, &integer_value, &has_value);
     EXPECT_EQ(err, PSR_OK);
     EXPECT_EQ(has_value, 1);
-    EXPECT_EQ(int_value, 100);
+    EXPECT_EQ(integer_value, 100);
 
-    double double_value;
-    err = psr_database_read_scalar_doubles_by_id(db, "Configuration", "float_attribute", id, &double_value, &has_value);
+    double float_value;
+    err = psr_database_read_scalar_floats_by_id(db, "Configuration", "float_attribute", id, &float_value, &has_value);
     EXPECT_EQ(err, PSR_OK);
     EXPECT_EQ(has_value, 1);
-    EXPECT_DOUBLE_EQ(double_value, 2.71);
+    EXPECT_DOUBLE_EQ(float_value, 2.71);
 
     char* str_value = nullptr;
     err = psr_database_read_scalar_strings_by_id(db, "Configuration", "string_attribute", id, &str_value, &has_value);
@@ -464,18 +465,18 @@ TEST(DatabaseCApi, UpdateScalarIntegerNullAttribute) {
     psr_database_close(db);
 }
 
-TEST(DatabaseCApi, UpdateScalarDoubleNullDb) {
-    auto err = psr_database_update_scalar_double(nullptr, "Configuration", "float_attribute", 1, 3.14);
+TEST(DatabaseCApi, UpdateScalarFloatNullDb) {
+    auto err = psr_database_update_scalar_float(nullptr, "Configuration", "float_attribute", 1, 3.14);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 }
 
-TEST(DatabaseCApi, UpdateScalarDoubleNullCollection) {
+TEST(DatabaseCApi, UpdateScalarFloatNullCollection) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto err = psr_database_update_scalar_double(db, nullptr, "float_attribute", 1, 3.14);
+    auto err = psr_database_update_scalar_float(db, nullptr, "float_attribute", 1, 3.14);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
@@ -546,20 +547,20 @@ TEST(DatabaseCApi, UpdateVectorIntegersNullAttribute) {
     psr_database_close(db);
 }
 
-TEST(DatabaseCApi, UpdateVectorDoublesNullDb) {
+TEST(DatabaseCApi, UpdateVectorFloatsNullDb) {
     double values[] = {1.0, 2.0, 3.0};
-    auto err = psr_database_update_vector_doubles(nullptr, "Collection", "value_float", 1, values, 3);
+    auto err = psr_database_update_vector_floats(nullptr, "Collection", "value_float", 1, values, 3);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 }
 
-TEST(DatabaseCApi, UpdateVectorDoublesNullCollection) {
+TEST(DatabaseCApi, UpdateVectorFloatsNullCollection) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     double values[] = {1.0, 2.0, 3.0};
-    auto err = psr_database_update_vector_doubles(db, nullptr, "value_float", 1, values, 3);
+    auto err = psr_database_update_vector_floats(db, nullptr, "value_float", 1, values, 3);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
@@ -607,20 +608,20 @@ TEST(DatabaseCApi, UpdateSetIntegersNullCollection) {
     psr_database_close(db);
 }
 
-TEST(DatabaseCApi, UpdateSetDoublesNullDb) {
+TEST(DatabaseCApi, UpdateSetFloatsNullDb) {
     double values[] = {1.0, 2.0, 3.0};
-    auto err = psr_database_update_set_doubles(nullptr, "Collection", "tag", 1, values, 3);
+    auto err = psr_database_update_set_floats(nullptr, "Collection", "tag", 1, values, 3);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 }
 
-TEST(DatabaseCApi, UpdateSetDoublesNullCollection) {
+TEST(DatabaseCApi, UpdateSetFloatsNullCollection) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     double values[] = {1.0, 2.0, 3.0};
-    auto err = psr_database_update_set_doubles(db, nullptr, "tag", 1, values, 3);
+    auto err = psr_database_update_set_floats(db, nullptr, "tag", 1, values, 3);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);

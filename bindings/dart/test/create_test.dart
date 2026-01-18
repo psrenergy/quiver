@@ -379,7 +379,7 @@ void main() {
         });
         expect(id, greaterThan(0));
 
-        final result = db.readVectorDoublesById('Collection', 'value_float', 1);
+        final result = db.readVectorFloatsById('Collection', 'value_float', 1);
         expect(result.length, equals(3));
         expect(result, equals([1.1, 2.2, 3.3]));
       } finally {

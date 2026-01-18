@@ -25,7 +25,7 @@ include("fixture.jl")
 
         @test PSRDatabase.read_scalar_strings(db, "Configuration", "label") == ["Config 1", "Config 2"]
         @test PSRDatabase.read_scalar_integers(db, "Configuration", "integer_attribute") == [42, 100]
-        @test PSRDatabase.read_scalar_doubles(db, "Configuration", "float_attribute") == [3.14, 2.71]
+        @test PSRDatabase.read_scalar_floats(db, "Configuration", "float_attribute") == [3.14, 2.71]
         @test PSRDatabase.read_scalar_strings(db, "Configuration", "string_attribute") == ["hello", "world"]
 
         PSRDatabase.close!(db)
@@ -41,7 +41,7 @@ include("fixture.jl")
 
         @test PSRDatabase.read_scalar_strings(db, "Collection", "label") == ["Item 1", "Item 2"]
         @test PSRDatabase.read_scalar_integers(db, "Collection", "some_integer") == [10, 20]
-        @test PSRDatabase.read_scalar_doubles(db, "Collection", "some_float") == [1.5, 2.5]
+        @test PSRDatabase.read_scalar_floats(db, "Collection", "some_float") == [1.5, 2.5]
 
         PSRDatabase.close!(db)
     end
@@ -55,7 +55,7 @@ include("fixture.jl")
         # No Collection elements created
         @test PSRDatabase.read_scalar_strings(db, "Collection", "label") == String[]
         @test PSRDatabase.read_scalar_integers(db, "Collection", "some_integer") == Int64[]
-        @test PSRDatabase.read_scalar_doubles(db, "Collection", "some_float") == Float64[]
+        @test PSRDatabase.read_scalar_floats(db, "Collection", "some_float") == Float64[]
 
         PSRDatabase.close!(db)
     end
@@ -81,7 +81,7 @@ include("fixture.jl")
         )
 
         @test PSRDatabase.read_vector_integers(db, "Collection", "value_int") == [[1, 2, 3], [10, 20]]
-        @test PSRDatabase.read_vector_doubles(db, "Collection", "value_float") == [[1.5, 2.5, 3.5], [10.5, 20.5]]
+        @test PSRDatabase.read_vector_floats(db, "Collection", "value_float") == [[1.5, 2.5, 3.5], [10.5, 20.5]]
 
         PSRDatabase.close!(db)
     end
@@ -94,7 +94,7 @@ include("fixture.jl")
 
         # No Collection elements created
         @test PSRDatabase.read_vector_integers(db, "Collection", "value_int") == Vector{Int64}[]
-        @test PSRDatabase.read_vector_doubles(db, "Collection", "value_float") == Vector{Float64}[]
+        @test PSRDatabase.read_vector_floats(db, "Collection", "value_float") == Vector{Float64}[]
 
         PSRDatabase.close!(db)
     end
@@ -250,15 +250,15 @@ include("fixture.jl")
         PSRDatabase.close!(db)
     end
 
-    @testset "Scalar Doubles by ID" begin
+    @testset "Scalar Floats by ID" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
         db = PSRDatabase.from_schema(":memory:", path_schema)
 
         PSRDatabase.create_element!(db, "Configuration"; label = "Config 1", float_attribute = 3.14)
         PSRDatabase.create_element!(db, "Configuration"; label = "Config 2", float_attribute = 2.71)
 
-        @test PSRDatabase.read_scalar_doubles_by_id(db, "Configuration", "float_attribute", 1) == 3.14
-        @test PSRDatabase.read_scalar_doubles_by_id(db, "Configuration", "float_attribute", 2) == 2.71
+        @test PSRDatabase.read_scalar_floats_by_id(db, "Configuration", "float_attribute", 1) == 3.14
+        @test PSRDatabase.read_scalar_floats_by_id(db, "Configuration", "float_attribute", 2) == 2.71
 
         PSRDatabase.close!(db)
     end
@@ -290,14 +290,14 @@ include("fixture.jl")
         PSRDatabase.close!(db)
     end
 
-    @testset "Vector Doubles by ID" begin
+    @testset "Vector Floats by ID" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = PSRDatabase.from_schema(":memory:", path_schema)
 
         PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
         PSRDatabase.create_element!(db, "Collection"; label = "Item 1", value_float = [1.5, 2.5, 3.5])
 
-        @test PSRDatabase.read_vector_doubles_by_id(db, "Collection", "value_float", 1) == [1.5, 2.5, 3.5]
+        @test PSRDatabase.read_vector_floats_by_id(db, "Collection", "value_float", 1) == [1.5, 2.5, 3.5]
 
         PSRDatabase.close!(db)
     end
@@ -380,7 +380,7 @@ include("fixture.jl")
 
         result = PSRDatabase.get_attribute_type(db, "Configuration", "float_attribute")
         @test result.data_structure == PSRDatabase.PSR_DATA_STRUCTURE_SCALAR
-        @test result.data_type == PSRDatabase.PSR_DATA_TYPE_REAL
+        @test result.data_type == PSRDatabase.PSR_DATA_TYPE_FLOAT
 
         PSRDatabase.close!(db)
     end
@@ -391,7 +391,7 @@ include("fixture.jl")
 
         result = PSRDatabase.get_attribute_type(db, "Configuration", "string_attribute")
         @test result.data_structure == PSRDatabase.PSR_DATA_STRUCTURE_SCALAR
-        @test result.data_type == PSRDatabase.PSR_DATA_TYPE_TEXT
+        @test result.data_type == PSRDatabase.PSR_DATA_TYPE_STRING
 
         PSRDatabase.close!(db)
     end
@@ -413,7 +413,7 @@ include("fixture.jl")
 
         result = PSRDatabase.get_attribute_type(db, "Collection", "value_float")
         @test result.data_structure == PSRDatabase.PSR_DATA_STRUCTURE_VECTOR
-        @test result.data_type == PSRDatabase.PSR_DATA_TYPE_REAL
+        @test result.data_type == PSRDatabase.PSR_DATA_TYPE_FLOAT
 
         PSRDatabase.close!(db)
     end
@@ -424,7 +424,7 @@ include("fixture.jl")
 
         result = PSRDatabase.get_attribute_type(db, "Collection", "tag")
         @test result.data_structure == PSRDatabase.PSR_DATA_STRUCTURE_SET
-        @test result.data_type == PSRDatabase.PSR_DATA_TYPE_TEXT
+        @test result.data_type == PSRDatabase.PSR_DATA_TYPE_STRING
 
         PSRDatabase.close!(db)
     end
@@ -450,7 +450,7 @@ include("fixture.jl")
             "NonexistentCollection",
             "value",
         )
-        @test_throws PSRDatabase.DatabaseException PSRDatabase.read_scalar_doubles(db, "NonexistentCollection", "value")
+        @test_throws PSRDatabase.DatabaseException PSRDatabase.read_scalar_floats(db, "NonexistentCollection", "value")
 
         PSRDatabase.close!(db)
     end
@@ -469,7 +469,7 @@ include("fixture.jl")
             "Configuration",
             "nonexistent_attr",
         )
-        @test_throws PSRDatabase.DatabaseException PSRDatabase.read_scalar_doubles(
+        @test_throws PSRDatabase.DatabaseException PSRDatabase.read_scalar_floats(
             db,
             "Configuration",
             "nonexistent_attr",
@@ -486,7 +486,7 @@ include("fixture.jl")
 
         # Read by ID that doesn't exist returns nothing
         @test PSRDatabase.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", 999) === nothing
-        @test PSRDatabase.read_scalar_doubles_by_id(db, "Configuration", "float_attribute", 999) === nothing
+        @test PSRDatabase.read_scalar_floats_by_id(db, "Configuration", "float_attribute", 999) === nothing
         @test PSRDatabase.read_scalar_strings_by_id(db, "Configuration", "string_attribute", 999) === nothing
 
         PSRDatabase.close!(db)
@@ -503,7 +503,7 @@ include("fixture.jl")
             "NonexistentCollection",
             "value_int",
         )
-        @test_throws PSRDatabase.DatabaseException PSRDatabase.read_vector_doubles(
+        @test_throws PSRDatabase.DatabaseException PSRDatabase.read_vector_floats(
             db,
             "NonexistentCollection",
             "value_float",
@@ -542,6 +542,268 @@ include("fixture.jl")
             db,
             "NonexistentCollection",
             "parent_id",
+        )
+
+        PSRDatabase.close!(db)
+    end
+
+    # ============================================================================
+    # Generic read function tests
+    # ============================================================================
+
+    @testset "Generic Read - Scalar Integer" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = PSRDatabase.from_schema(":memory:", path_schema)
+
+        PSRDatabase.create_element!(db, "Configuration"; label = "Config 1", integer_attribute = 42)
+        PSRDatabase.create_element!(db, "Configuration"; label = "Config 2", integer_attribute = 100)
+
+        result = PSRDatabase.read(db, "Configuration", "integer_attribute")
+        @test result == [42, 100]
+        @test eltype(result) == Int64
+
+        PSRDatabase.close!(db)
+    end
+
+    @testset "Generic Read - Scalar Float" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = PSRDatabase.from_schema(":memory:", path_schema)
+
+        PSRDatabase.create_element!(db, "Configuration"; label = "Config 1", float_attribute = 3.14)
+        PSRDatabase.create_element!(db, "Configuration"; label = "Config 2", float_attribute = 2.71)
+
+        result = PSRDatabase.read(db, "Configuration", "float_attribute")
+        @test result == [3.14, 2.71]
+        @test eltype(result) == Float64
+
+        PSRDatabase.close!(db)
+    end
+
+    @testset "Generic Read - Scalar String" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = PSRDatabase.from_schema(":memory:", path_schema)
+
+        PSRDatabase.create_element!(db, "Configuration"; label = "Config 1", string_attribute = "hello")
+        PSRDatabase.create_element!(db, "Configuration"; label = "Config 2", string_attribute = "world")
+
+        result = PSRDatabase.read(db, "Configuration", "string_attribute")
+        @test result == ["hello", "world"]
+        @test eltype(result) == String
+
+        PSRDatabase.close!(db)
+    end
+
+    @testset "Generic Read - Vector Integer" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = PSRDatabase.from_schema(":memory:", path_schema)
+
+        PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
+        PSRDatabase.create_element!(db, "Collection"; label = "Item 1", value_int = [1, 2, 3])
+        PSRDatabase.create_element!(db, "Collection"; label = "Item 2", value_int = [10, 20])
+
+        result = PSRDatabase.read(db, "Collection", "value_int")
+        @test result == [[1, 2, 3], [10, 20]]
+
+        PSRDatabase.close!(db)
+    end
+
+    @testset "Generic Read - Vector Float" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = PSRDatabase.from_schema(":memory:", path_schema)
+
+        PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
+        PSRDatabase.create_element!(db, "Collection"; label = "Item 1", value_float = [1.5, 2.5, 3.5])
+        PSRDatabase.create_element!(db, "Collection"; label = "Item 2", value_float = [10.5, 20.5])
+
+        result = PSRDatabase.read(db, "Collection", "value_float")
+        @test result == [[1.5, 2.5, 3.5], [10.5, 20.5]]
+
+        PSRDatabase.close!(db)
+    end
+
+    @testset "Generic Read - Set String" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = PSRDatabase.from_schema(":memory:", path_schema)
+
+        PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
+        PSRDatabase.create_element!(db, "Collection"; label = "Item 1", tag = ["important", "urgent"])
+        PSRDatabase.create_element!(db, "Collection"; label = "Item 2", tag = ["review"])
+
+        result = PSRDatabase.read(db, "Collection", "tag")
+        @test length(result) == 2
+        @test sort(result[1]) == ["important", "urgent"]
+        @test result[2] == ["review"]
+
+        PSRDatabase.close!(db)
+    end
+
+    @testset "Generic Read - Empty Result" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = PSRDatabase.from_schema(":memory:", path_schema)
+
+        PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
+
+        # No Collection elements, scalar returns empty array
+        result = PSRDatabase.read(db, "Collection", "some_integer")
+        @test result == Int64[]
+
+        PSRDatabase.close!(db)
+    end
+
+    @testset "Generic Read - Invalid Collection" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = PSRDatabase.from_schema(":memory:", path_schema)
+
+        @test_throws PSRDatabase.DatabaseException PSRDatabase.read(db, "NonexistentCollection", "label")
+
+        PSRDatabase.close!(db)
+    end
+
+    @testset "Generic Read - Invalid Attribute" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = PSRDatabase.from_schema(":memory:", path_schema)
+
+        @test_throws PSRDatabase.DatabaseException PSRDatabase.read(db, "Configuration", "nonexistent_attribute")
+
+        PSRDatabase.close!(db)
+    end
+
+    # ============================================================================
+    # Generic read_by_id function tests
+    # ============================================================================
+
+    @testset "Generic Read by ID - Scalar Integer" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = PSRDatabase.from_schema(":memory:", path_schema)
+
+        PSRDatabase.create_element!(db, "Configuration"; label = "Config 1", integer_attribute = 42)
+        PSRDatabase.create_element!(db, "Configuration"; label = "Config 2", integer_attribute = 100)
+
+        @test PSRDatabase.read_by_id(db, "Configuration", "integer_attribute", 1) == 42
+        @test PSRDatabase.read_by_id(db, "Configuration", "integer_attribute", 2) == 100
+
+        PSRDatabase.close!(db)
+    end
+
+    @testset "Generic Read by ID - Scalar Float" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = PSRDatabase.from_schema(":memory:", path_schema)
+
+        PSRDatabase.create_element!(db, "Configuration"; label = "Config 1", float_attribute = 3.14)
+        PSRDatabase.create_element!(db, "Configuration"; label = "Config 2", float_attribute = 2.71)
+
+        @test PSRDatabase.read_by_id(db, "Configuration", "float_attribute", 1) == 3.14
+        @test PSRDatabase.read_by_id(db, "Configuration", "float_attribute", 2) == 2.71
+
+        PSRDatabase.close!(db)
+    end
+
+    @testset "Generic Read by ID - Scalar String" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = PSRDatabase.from_schema(":memory:", path_schema)
+
+        PSRDatabase.create_element!(db, "Configuration"; label = "Config 1", string_attribute = "hello")
+        PSRDatabase.create_element!(db, "Configuration"; label = "Config 2", string_attribute = "world")
+
+        @test PSRDatabase.read_by_id(db, "Configuration", "string_attribute", 1) == "hello"
+        @test PSRDatabase.read_by_id(db, "Configuration", "string_attribute", 2) == "world"
+
+        PSRDatabase.close!(db)
+    end
+
+    @testset "Generic Read by ID - Vector Integer" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = PSRDatabase.from_schema(":memory:", path_schema)
+
+        PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
+        PSRDatabase.create_element!(db, "Collection"; label = "Item 1", value_int = [1, 2, 3])
+        PSRDatabase.create_element!(db, "Collection"; label = "Item 2", value_int = [10, 20])
+
+        @test PSRDatabase.read_by_id(db, "Collection", "value_int", 1) == [1, 2, 3]
+        @test PSRDatabase.read_by_id(db, "Collection", "value_int", 2) == [10, 20]
+
+        PSRDatabase.close!(db)
+    end
+
+    @testset "Generic Read by ID - Vector Float" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = PSRDatabase.from_schema(":memory:", path_schema)
+
+        PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
+        PSRDatabase.create_element!(db, "Collection"; label = "Item 1", value_float = [1.5, 2.5, 3.5])
+        PSRDatabase.create_element!(db, "Collection"; label = "Item 2", value_float = [10.5, 20.5])
+
+        @test PSRDatabase.read_by_id(db, "Collection", "value_float", 1) == [1.5, 2.5, 3.5]
+        @test PSRDatabase.read_by_id(db, "Collection", "value_float", 2) == [10.5, 20.5]
+
+        PSRDatabase.close!(db)
+    end
+
+    @testset "Generic Read by ID - Set String" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = PSRDatabase.from_schema(":memory:", path_schema)
+
+        PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
+        PSRDatabase.create_element!(db, "Collection"; label = "Item 1", tag = ["important", "urgent"])
+        PSRDatabase.create_element!(db, "Collection"; label = "Item 2", tag = ["review"])
+
+        result1 = PSRDatabase.read_by_id(db, "Collection", "tag", 1)
+        @test sort(result1) == ["important", "urgent"]
+        @test PSRDatabase.read_by_id(db, "Collection", "tag", 2) == ["review"]
+
+        PSRDatabase.close!(db)
+    end
+
+    @testset "Generic Read by ID - Scalar Not Found" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = PSRDatabase.from_schema(":memory:", path_schema)
+
+        PSRDatabase.create_element!(db, "Configuration"; label = "Config 1", integer_attribute = 42)
+
+        # Scalar returns nothing for non-existent ID
+        @test PSRDatabase.read_by_id(db, "Configuration", "integer_attribute", 999) === nothing
+        @test PSRDatabase.read_by_id(db, "Configuration", "float_attribute", 999) === nothing
+        @test PSRDatabase.read_by_id(db, "Configuration", "string_attribute", 999) === nothing
+
+        PSRDatabase.close!(db)
+    end
+
+    @testset "Generic Read by ID - Vector Empty" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = PSRDatabase.from_schema(":memory:", path_schema)
+
+        PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
+        PSRDatabase.create_element!(db, "Collection"; label = "Item 1")  # No vector data
+
+        # Vector returns empty array for element without data
+        @test PSRDatabase.read_by_id(db, "Collection", "value_int", 1) == Int64[]
+
+        PSRDatabase.close!(db)
+    end
+
+    @testset "Generic Read by ID - Invalid Collection" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = PSRDatabase.from_schema(":memory:", path_schema)
+
+        @test_throws PSRDatabase.DatabaseException PSRDatabase.read_by_id(
+            db,
+            "NonexistentCollection",
+            "label",
+            1,
+        )
+
+        PSRDatabase.close!(db)
+    end
+
+    @testset "Generic Read by ID - Invalid Attribute" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = PSRDatabase.from_schema(":memory:", path_schema)
+
+        @test_throws PSRDatabase.DatabaseException PSRDatabase.read_by_id(
+            db,
+            "Configuration",
+            "nonexistent_attribute",
+            1,
         )
 
         PSRDatabase.close!(db)

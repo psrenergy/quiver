@@ -35,11 +35,11 @@ TEST(ElementCApi, SetInt) {
     psr_element_destroy(element);
 }
 
-TEST(ElementCApi, SetDouble) {
+TEST(ElementCApi, SetFloat) {
     auto element = psr_element_create();
     ASSERT_NE(element, nullptr);
 
-    EXPECT_EQ(psr_element_set_double(element, "value", 3.14), PSR_OK);
+    EXPECT_EQ(psr_element_set_float(element, "value", 3.14), PSR_OK);
     EXPECT_EQ(psr_element_has_scalars(element), 1);
 
     psr_element_destroy(element);
@@ -70,19 +70,19 @@ TEST(ElementCApi, SetArrayInt) {
     ASSERT_NE(element, nullptr);
 
     int64_t values[] = {10, 20, 30};
-    EXPECT_EQ(psr_element_set_array_int(element, "counts", values, 3), PSR_OK);
+    EXPECT_EQ(psr_element_set_array_integer(element, "counts", values, 3), PSR_OK);
     EXPECT_EQ(psr_element_has_arrays(element), 1);
     EXPECT_EQ(psr_element_array_count(element), 1);
 
     psr_element_destroy(element);
 }
 
-TEST(ElementCApi, SetArrayDouble) {
+TEST(ElementCApi, SetArrayFloat) {
     auto element = psr_element_create();
     ASSERT_NE(element, nullptr);
 
     double values[] = {1.5, 2.5, 3.5};
-    EXPECT_EQ(psr_element_set_array_double(element, "costs", values, 3), PSR_OK);
+    EXPECT_EQ(psr_element_set_array_float(element, "costs", values, 3), PSR_OK);
     EXPECT_EQ(psr_element_has_arrays(element), 1);
     EXPECT_EQ(psr_element_array_count(element), 1);
 
@@ -107,7 +107,7 @@ TEST(ElementCApi, Clear) {
 
     psr_element_set_integer(element, "id", 1);
     double values[] = {1.0, 2.0};
-    psr_element_set_array_double(element, "data", values, 2);
+    psr_element_set_array_float(element, "data", values, 2);
 
     EXPECT_EQ(psr_element_has_scalars(element), 1);
     EXPECT_EQ(psr_element_has_arrays(element), 1);
@@ -122,7 +122,7 @@ TEST(ElementCApi, Clear) {
 
 TEST(ElementCApi, NullElementErrors) {
     EXPECT_EQ(psr_element_set_integer(nullptr, "x", 1), PSR_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(psr_element_set_double(nullptr, "x", 1.0), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_float(nullptr, "x", 1.0), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_string(nullptr, "x", "y"), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_null(nullptr, "x"), PSR_ERROR_INVALID_ARGUMENT);
 }
@@ -132,7 +132,7 @@ TEST(ElementCApi, NullNameErrors) {
     ASSERT_NE(element, nullptr);
 
     EXPECT_EQ(psr_element_set_integer(element, nullptr, 1), PSR_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(psr_element_set_double(element, nullptr, 1.0), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_float(element, nullptr, 1.0), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_string(element, nullptr, "y"), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_null(element, nullptr), PSR_ERROR_INVALID_ARGUMENT);
 
@@ -151,7 +151,7 @@ TEST(ElementCApi, MultipleScalars) {
     ASSERT_NE(element, nullptr);
 
     psr_element_set_string(element, "label", "Plant 1");
-    psr_element_set_double(element, "capacity", 50.0);
+    psr_element_set_float(element, "capacity", 50.0);
     psr_element_set_integer(element, "id", 1);
 
     EXPECT_EQ(psr_element_scalar_count(element), 3);
@@ -164,10 +164,10 @@ TEST(ElementCApi, ToString) {
     ASSERT_NE(element, nullptr);
 
     psr_element_set_string(element, "label", "Plant 1");
-    psr_element_set_double(element, "capacity", 50.0);
+    psr_element_set_float(element, "capacity", 50.0);
 
     double costs[] = {1.5, 2.5};
-    psr_element_set_array_double(element, "costs", costs, 2);
+    psr_element_set_array_float(element, "costs", costs, 2);
 
     char* str = psr_element_to_string(element);
     ASSERT_NE(str, nullptr);
@@ -191,20 +191,20 @@ TEST(ElementCApi, StringFreeNull) {
 }
 
 TEST(ElementCApi, ArrayNullErrors) {
-    int64_t int_values[] = {1, 2, 3};
-    double double_values[] = {1.0, 2.0, 3.0};
+    int64_t integer_values[] = {1, 2, 3};
+    double float_values[] = {1.0, 2.0, 3.0};
     const char* string_values[] = {"a", "b", "c"};
 
-    EXPECT_EQ(psr_element_set_array_int(nullptr, "x", int_values, 3), PSR_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(psr_element_set_array_double(nullptr, "x", double_values, 3), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_array_integer(nullptr, "x", integer_values, 3), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_array_float(nullptr, "x", float_values, 3), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_array_string(nullptr, "x", string_values, 3), PSR_ERROR_INVALID_ARGUMENT);
 
     auto element = psr_element_create();
-    EXPECT_EQ(psr_element_set_array_int(element, nullptr, int_values, 3), PSR_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(psr_element_set_array_double(element, nullptr, double_values, 3), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_array_integer(element, nullptr, integer_values, 3), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_array_float(element, nullptr, float_values, 3), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_array_string(element, nullptr, string_values, 3), PSR_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(psr_element_set_array_int(element, "x", nullptr, 3), PSR_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(psr_element_set_array_double(element, "x", nullptr, 3), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_array_integer(element, "x", nullptr, 3), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_array_float(element, "x", nullptr, 3), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_array_string(element, "x", nullptr, 3), PSR_ERROR_INVALID_ARGUMENT);
     psr_element_destroy(element);
 }

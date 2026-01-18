@@ -26,7 +26,7 @@ TEST(Database, ReadScalarIntegers) {
     EXPECT_EQ(values[1], 100);
 }
 
-TEST(Database, ReadScalarDoubles) {
+TEST(Database, ReadScalarFloats) {
     auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
     psr::Element e1;
@@ -37,7 +37,7 @@ TEST(Database, ReadScalarDoubles) {
     e2.set("label", std::string("Config 2")).set("float_attribute", 2.71);
     db.create_element("Configuration", e2);
 
-    auto values = db.read_scalar_doubles("Configuration", "float_attribute");
+    auto values = db.read_scalar_floats("Configuration", "float_attribute");
     EXPECT_EQ(values.size(), 2);
     EXPECT_DOUBLE_EQ(values[0], 3.14);
     EXPECT_DOUBLE_EQ(values[1], 2.71);
@@ -70,11 +70,11 @@ TEST(Database, ReadScalarEmpty) {
 
     // No Collection elements created
     auto integers = db.read_scalar_integers("Collection", "some_integer");
-    auto doubles = db.read_scalar_doubles("Collection", "some_float");
+    auto floats = db.read_scalar_floats("Collection", "some_float");
     auto strings = db.read_scalar_strings("Collection", "label");
 
     EXPECT_TRUE(integers.empty());
-    EXPECT_TRUE(doubles.empty());
+    EXPECT_TRUE(floats.empty());
     EXPECT_TRUE(strings.empty());
 }
 
@@ -104,7 +104,7 @@ TEST(Database, ReadVectorIntegers) {
     EXPECT_EQ(vectors[1], (std::vector<int64_t>{10, 20}));
 }
 
-TEST(Database, ReadVectorDoubles) {
+TEST(Database, ReadVectorFloats) {
     auto db =
         psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -120,7 +120,7 @@ TEST(Database, ReadVectorDoubles) {
     e2.set("label", std::string("Item 2")).set("value_float", std::vector<double>{10.5, 20.5});
     db.create_element("Collection", e2);
 
-    auto vectors = db.read_vector_doubles("Collection", "value_float");
+    auto vectors = db.read_vector_floats("Collection", "value_float");
     EXPECT_EQ(vectors.size(), 2);
     EXPECT_EQ(vectors[0], (std::vector<double>{1.5, 2.5, 3.5}));
     EXPECT_EQ(vectors[1], (std::vector<double>{10.5, 20.5}));
@@ -135,11 +135,11 @@ TEST(Database, ReadVectorEmpty) {
     db.create_element("Configuration", config);
 
     // No Collection elements created
-    auto int_vectors = db.read_vector_integers("Collection", "value_int");
-    auto double_vectors = db.read_vector_doubles("Collection", "value_float");
+    auto integer_vectors = db.read_vector_integers("Collection", "value_int");
+    auto float_vectors = db.read_vector_floats("Collection", "value_float");
 
-    EXPECT_TRUE(int_vectors.empty());
-    EXPECT_TRUE(double_vectors.empty());
+    EXPECT_TRUE(integer_vectors.empty());
+    EXPECT_TRUE(float_vectors.empty());
 }
 
 TEST(Database, ReadVectorOnlyReturnsElementsWithData) {
@@ -268,7 +268,7 @@ TEST(Database, ReadScalarIntegerById) {
     EXPECT_EQ(*val2, 100);
 }
 
-TEST(Database, ReadScalarDoubleById) {
+TEST(Database, ReadScalarFloatById) {
     auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
     psr::Element e1;
@@ -279,8 +279,8 @@ TEST(Database, ReadScalarDoubleById) {
     e2.set("label", std::string("Config 2")).set("float_attribute", 2.71);
     int64_t id2 = db.create_element("Configuration", e2);
 
-    auto val1 = db.read_scalar_doubles_by_id("Configuration", "float_attribute", id1);
-    auto val2 = db.read_scalar_doubles_by_id("Configuration", "float_attribute", id2);
+    auto val1 = db.read_scalar_floats_by_id("Configuration", "float_attribute", id1);
+    auto val2 = db.read_scalar_floats_by_id("Configuration", "float_attribute", id2);
 
     EXPECT_TRUE(val1.has_value());
     EXPECT_DOUBLE_EQ(*val1, 3.14);
@@ -347,7 +347,7 @@ TEST(Database, ReadVectorIntegerById) {
     EXPECT_EQ(vec2, (std::vector<int64_t>{10, 20}));
 }
 
-TEST(Database, ReadVectorDoubleById) {
+TEST(Database, ReadVectorFloatById) {
     auto db =
         psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -363,8 +363,8 @@ TEST(Database, ReadVectorDoubleById) {
     e2.set("label", std::string("Item 2")).set("value_float", std::vector<double>{10.5, 20.5});
     int64_t id2 = db.create_element("Collection", e2);
 
-    auto vec1 = db.read_vector_doubles_by_id("Collection", "value_float", id1);
-    auto vec2 = db.read_vector_doubles_by_id("Collection", "value_float", id2);
+    auto vec1 = db.read_vector_floats_by_id("Collection", "value_float", id1);
+    auto vec2 = db.read_vector_floats_by_id("Collection", "value_float", id2);
 
     EXPECT_EQ(vec1, (std::vector<double>{1.5, 2.5, 3.5}));
     EXPECT_EQ(vec2, (std::vector<double>{10.5, 20.5}));
@@ -553,10 +553,10 @@ TEST(Database, ReadScalarIntegersInvalidAttribute) {
     EXPECT_THROW(db.read_scalar_integers("Configuration", "nonexistent_attribute"), std::runtime_error);
 }
 
-TEST(Database, ReadScalarDoublesInvalidCollection) {
+TEST(Database, ReadScalarFloatsInvalidCollection) {
     auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
-    EXPECT_THROW(db.read_scalar_doubles("NonexistentCollection", "float_attribute"), std::runtime_error);
+    EXPECT_THROW(db.read_scalar_floats("NonexistentCollection", "float_attribute"), std::runtime_error);
 }
 
 TEST(Database, ReadScalarStringsInvalidCollection) {

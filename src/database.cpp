@@ -603,11 +603,11 @@ int64_t Database::create_element(const std::string& collection, const Element& e
                         // Look up the ID by label using direct SQL query
                         auto lookup_sql = "SELECT id FROM " + fk.to_table + " WHERE label = ?";
                         auto lookup_result = execute(lookup_sql, {label});
-                        if (lookup_result.empty() || !lookup_result[0].get_int(0)) {
+                        if (lookup_result.empty() || !lookup_result[0].get_integer(0)) {
                             throw std::runtime_error("Failed to resolve label '" + label + "' to ID in table '" +
                                                      fk.to_table + "'");
                         }
-                        val = lookup_result[0].get_int(0).value();
+                        val = lookup_result[0].get_integer(0).value();
                         break;
                     }
                 }
@@ -714,10 +714,10 @@ void Database::set_scalar_relation(const std::string& collection,
     // Look up the target ID by label
     auto lookup_sql = "SELECT id FROM " + to_table + " WHERE label = ?";
     auto lookup_result = execute(lookup_sql, {to_label});
-    if (lookup_result.empty() || !lookup_result[0].get_int(0)) {
+    if (lookup_result.empty() || !lookup_result[0].get_integer(0)) {
         throw std::runtime_error("Target element with label '" + to_label + "' not found in '" + to_table + "'");
     }
-    auto to_id = lookup_result[0].get_int(0).value();
+    auto to_id = lookup_result[0].get_integer(0).value();
 
     // Update the source element
     auto update_sql = "UPDATE " + collection + " SET " + attribute + " = ? WHERE label = ?";
@@ -771,7 +771,7 @@ std::vector<int64_t> Database::read_scalar_integers(const std::string& collectio
     std::vector<int64_t> values;
     values.reserve(result.row_count());
     for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_int(0);
+        auto val = result[i].get_integer(0);
         if (val) {
             values.push_back(*val);
         }
@@ -779,14 +779,14 @@ std::vector<int64_t> Database::read_scalar_integers(const std::string& collectio
     return values;
 }
 
-std::vector<double> Database::read_scalar_doubles(const std::string& collection, const std::string& attribute) {
+std::vector<double> Database::read_scalar_floats(const std::string& collection, const std::string& attribute) {
     auto sql = "SELECT " + attribute + " FROM " + collection;
     auto result = execute(sql);
 
     std::vector<double> values;
     values.reserve(result.row_count());
     for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_double(0);
+        auto val = result[i].get_float(0);
         if (val) {
             values.push_back(*val);
         }
@@ -817,18 +817,18 @@ Database::read_scalar_integers_by_id(const std::string& collection, const std::s
     if (result.empty()) {
         return std::nullopt;
     }
-    return result[0].get_int(0);
+    return result[0].get_integer(0);
 }
 
 std::optional<double>
-Database::read_scalar_doubles_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+Database::read_scalar_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto sql = "SELECT " + attribute + " FROM " + collection + " WHERE id = ?";
     auto result = execute(sql, {id});
 
     if (result.empty()) {
         return std::nullopt;
     }
-    return result[0].get_double(0);
+    return result[0].get_float(0);
 }
 
 std::optional<std::string>
@@ -852,8 +852,8 @@ std::vector<std::vector<int64_t>> Database::read_vector_integers(const std::stri
     int64_t current_id = -1;
 
     for (size_t i = 0; i < result.row_count(); ++i) {
-        auto id = result[i].get_int(0);
-        auto val = result[i].get_int(1);
+        auto id = result[i].get_integer(0);
+        auto val = result[i].get_integer(1);
 
         if (!id)
             continue;
@@ -870,8 +870,8 @@ std::vector<std::vector<int64_t>> Database::read_vector_integers(const std::stri
     return vectors;
 }
 
-std::vector<std::vector<double>> Database::read_vector_doubles(const std::string& collection,
-                                                               const std::string& attribute) {
+std::vector<std::vector<double>> Database::read_vector_floats(const std::string& collection,
+                                                              const std::string& attribute) {
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + vector_table + " ORDER BY id, vector_index";
     auto result = execute(sql);
@@ -880,8 +880,8 @@ std::vector<std::vector<double>> Database::read_vector_doubles(const std::string
     int64_t current_id = -1;
 
     for (size_t i = 0; i < result.row_count(); ++i) {
-        auto id = result[i].get_int(0);
-        auto val = result[i].get_double(1);
+        auto id = result[i].get_integer(0);
+        auto val = result[i].get_float(1);
 
         if (!id)
             continue;
@@ -908,7 +908,7 @@ std::vector<std::vector<std::string>> Database::read_vector_strings(const std::s
     int64_t current_id = -1;
 
     for (size_t i = 0; i < result.row_count(); ++i) {
-        auto id = result[i].get_int(0);
+        auto id = result[i].get_integer(0);
         auto val = result[i].get_string(1);
 
         if (!id)
@@ -935,7 +935,7 @@ Database::read_vector_integers_by_id(const std::string& collection, const std::s
     std::vector<int64_t> values;
     values.reserve(result.row_count());
     for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_int(0);
+        auto val = result[i].get_integer(0);
         if (val) {
             values.push_back(*val);
         }
@@ -944,7 +944,7 @@ Database::read_vector_integers_by_id(const std::string& collection, const std::s
 }
 
 std::vector<double>
-Database::read_vector_doubles_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+Database::read_vector_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + vector_table + " WHERE id = ? ORDER BY vector_index";
     auto result = execute(sql, {id});
@@ -952,7 +952,7 @@ Database::read_vector_doubles_by_id(const std::string& collection, const std::st
     std::vector<double> values;
     values.reserve(result.row_count());
     for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_double(0);
+        auto val = result[i].get_float(0);
         if (val) {
             values.push_back(*val);
         }
@@ -987,8 +987,8 @@ std::vector<std::vector<int64_t>> Database::read_set_integers(const std::string&
     int64_t current_id = -1;
 
     for (size_t i = 0; i < result.row_count(); ++i) {
-        auto id = result[i].get_int(0);
-        auto val = result[i].get_int(1);
+        auto id = result[i].get_integer(0);
+        auto val = result[i].get_integer(1);
 
         if (!id)
             continue;
@@ -1005,8 +1005,8 @@ std::vector<std::vector<int64_t>> Database::read_set_integers(const std::string&
     return sets;
 }
 
-std::vector<std::vector<double>> Database::read_set_doubles(const std::string& collection,
-                                                            const std::string& attribute) {
+std::vector<std::vector<double>> Database::read_set_floats(const std::string& collection,
+                                                           const std::string& attribute) {
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + set_table + " ORDER BY id";
     auto result = execute(sql);
@@ -1015,8 +1015,8 @@ std::vector<std::vector<double>> Database::read_set_doubles(const std::string& c
     int64_t current_id = -1;
 
     for (size_t i = 0; i < result.row_count(); ++i) {
-        auto id = result[i].get_int(0);
-        auto val = result[i].get_double(1);
+        auto id = result[i].get_integer(0);
+        auto val = result[i].get_float(1);
 
         if (!id)
             continue;
@@ -1043,7 +1043,7 @@ std::vector<std::vector<std::string>> Database::read_set_strings(const std::stri
     int64_t current_id = -1;
 
     for (size_t i = 0; i < result.row_count(); ++i) {
-        auto id = result[i].get_int(0);
+        auto id = result[i].get_integer(0);
         auto val = result[i].get_string(1);
 
         if (!id)
@@ -1070,7 +1070,7 @@ Database::read_set_integers_by_id(const std::string& collection, const std::stri
     std::vector<int64_t> values;
     values.reserve(result.row_count());
     for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_int(0);
+        auto val = result[i].get_integer(0);
         if (val) {
             values.push_back(*val);
         }
@@ -1079,7 +1079,7 @@ Database::read_set_integers_by_id(const std::string& collection, const std::stri
 }
 
 std::vector<double>
-Database::read_set_doubles_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+Database::read_set_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + set_table + " WHERE id = ?";
     auto result = execute(sql, {id});
@@ -1087,7 +1087,7 @@ Database::read_set_doubles_by_id(const std::string& collection, const std::strin
     std::vector<double> values;
     values.reserve(result.row_count());
     for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_double(0);
+        auto val = result[i].get_float(0);
         if (val) {
             values.push_back(*val);
         }
@@ -1119,7 +1119,7 @@ std::vector<int64_t> Database::read_element_ids(const std::string& collection) {
     std::vector<int64_t> ids;
     ids.reserve(result.row_count());
     for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_int(0);
+        auto val = result[i].get_integer(0);
         if (val) {
             ids.push_back(*val);
         }
@@ -1141,10 +1141,10 @@ void Database::update_scalar_integer(const std::string& collection,
     impl_->logger->info("Updated {}.{} for id {} to {}", collection, attribute, id, value);
 }
 
-void Database::update_scalar_double(const std::string& collection,
-                                    const std::string& attribute,
-                                    int64_t id,
-                                    double value) {
+void Database::update_scalar_float(const std::string& collection,
+                                   const std::string& attribute,
+                                   int64_t id,
+                                   double value) {
     impl_->logger->debug("Updating {}.{} for id {} to {}", collection, attribute, id, value);
     impl_->require_collection(collection, "update scalar");
     impl_->type_validator->validate_scalar(collection, attribute, value);
@@ -1198,10 +1198,10 @@ void Database::update_vector_integers(const std::string& collection,
     impl_->logger->info("Updated vector {}.{} for id {} with {} values", collection, attribute, id, values.size());
 }
 
-void Database::update_vector_doubles(const std::string& collection,
-                                     const std::string& attribute,
-                                     int64_t id,
-                                     const std::vector<double>& values) {
+void Database::update_vector_floats(const std::string& collection,
+                                    const std::string& attribute,
+                                    int64_t id,
+                                    const std::vector<double>& values) {
     impl_->logger->debug("Updating vector {}.{} for id {} with {} values", collection, attribute, id, values.size());
     impl_->require_schema("update vector");
 
@@ -1284,10 +1284,10 @@ void Database::update_set_integers(const std::string& collection,
     impl_->logger->info("Updated set {}.{} for id {} with {} values", collection, attribute, id, values.size());
 }
 
-void Database::update_set_doubles(const std::string& collection,
-                                  const std::string& attribute,
-                                  int64_t id,
-                                  const std::vector<double>& values) {
+void Database::update_set_floats(const std::string& collection,
+                                 const std::string& attribute,
+                                 int64_t id,
+                                 const std::vector<double>& values) {
     impl_->logger->debug("Updating set {}.{} for id {} with {} values", collection, attribute, id, values.size());
     impl_->require_schema("update set");
 

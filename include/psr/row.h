@@ -22,8 +22,8 @@ public:
 
     // Type-specific getters (return optionals for safe access)
     bool is_null(size_t index) const;
-    std::optional<int64_t> get_int(size_t index) const;
-    std::optional<double> get_double(size_t index) const;
+    std::optional<int64_t> get_integer(size_t index) const;
+    std::optional<double> get_float(size_t index) const;
     std::optional<std::string> get_string(size_t index) const;
 
     // Iterator support

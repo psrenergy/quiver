@@ -289,14 +289,14 @@ class PsrDatabaseBindings {
       int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>)>();
 
-  int psr_database_read_scalar_doubles(
+  int psr_database_read_scalar_floats(
     ffi.Pointer<psr_database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     ffi.Pointer<ffi.Pointer<ffi.Double>> out_values,
     ffi.Pointer<ffi.Size> out_count,
   ) {
-    return _psr_database_read_scalar_doubles(
+    return _psr_database_read_scalar_floats(
       db,
       collection,
       attribute,
@@ -305,11 +305,11 @@ class PsrDatabaseBindings {
     );
   }
 
-  late final _psr_database_read_scalar_doublesPtr = _lookup<
+  late final _psr_database_read_scalar_floatsPtr = _lookup<
       ffi.NativeFunction<
           ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>>('psr_database_read_scalar_doubles');
-  late final _psr_database_read_scalar_doubles = _psr_database_read_scalar_doublesPtr.asFunction<
+              ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>>('psr_database_read_scalar_floats');
+  late final _psr_database_read_scalar_floats = _psr_database_read_scalar_floatsPtr.asFunction<
       int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>();
 
@@ -377,7 +377,7 @@ class PsrDatabaseBindings {
           ffi.Pointer<ffi.Pointer<ffi.Size>>,
           ffi.Pointer<ffi.Size>)>();
 
-  int psr_database_read_vector_doubles(
+  int psr_database_read_vector_floats(
     ffi.Pointer<psr_database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
@@ -385,7 +385,7 @@ class PsrDatabaseBindings {
     ffi.Pointer<ffi.Pointer<ffi.Size>> out_sizes,
     ffi.Pointer<ffi.Size> out_count,
   ) {
-    return _psr_database_read_vector_doubles(
+    return _psr_database_read_vector_floats(
       db,
       collection,
       attribute,
@@ -395,7 +395,7 @@ class PsrDatabaseBindings {
     );
   }
 
-  late final _psr_database_read_vector_doublesPtr = _lookup<
+  late final _psr_database_read_vector_floatsPtr = _lookup<
       ffi.NativeFunction<
           ffi.Int32 Function(
               ffi.Pointer<psr_database_t>,
@@ -403,8 +403,8 @@ class PsrDatabaseBindings {
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>>,
               ffi.Pointer<ffi.Pointer<ffi.Size>>,
-              ffi.Pointer<ffi.Size>)>>('psr_database_read_vector_doubles');
-  late final _psr_database_read_vector_doubles = _psr_database_read_vector_doublesPtr.asFunction<
+              ffi.Pointer<ffi.Size>)>>('psr_database_read_vector_floats');
+  late final _psr_database_read_vector_floats = _psr_database_read_vector_floatsPtr.asFunction<
       int Function(
           ffi.Pointer<psr_database_t>,
           ffi.Pointer<ffi.Char>,
@@ -485,7 +485,7 @@ class PsrDatabaseBindings {
           ffi.Pointer<ffi.Pointer<ffi.Size>>,
           ffi.Pointer<ffi.Size>)>();
 
-  int psr_database_read_set_doubles(
+  int psr_database_read_set_floats(
     ffi.Pointer<psr_database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
@@ -493,7 +493,7 @@ class PsrDatabaseBindings {
     ffi.Pointer<ffi.Pointer<ffi.Size>> out_sizes,
     ffi.Pointer<ffi.Size> out_count,
   ) {
-    return _psr_database_read_set_doubles(
+    return _psr_database_read_set_floats(
       db,
       collection,
       attribute,
@@ -503,7 +503,7 @@ class PsrDatabaseBindings {
     );
   }
 
-  late final _psr_database_read_set_doublesPtr = _lookup<
+  late final _psr_database_read_set_floatsPtr = _lookup<
       ffi.NativeFunction<
           ffi.Int32 Function(
               ffi.Pointer<psr_database_t>,
@@ -511,8 +511,8 @@ class PsrDatabaseBindings {
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>>,
               ffi.Pointer<ffi.Pointer<ffi.Size>>,
-              ffi.Pointer<ffi.Size>)>>('psr_database_read_set_doubles');
-  late final _psr_database_read_set_doubles = _psr_database_read_set_doublesPtr.asFunction<
+              ffi.Pointer<ffi.Size>)>>('psr_database_read_set_floats');
+  late final _psr_database_read_set_floats = _psr_database_read_set_floatsPtr.asFunction<
       int Function(
           ffi.Pointer<psr_database_t>,
           ffi.Pointer<ffi.Char>,
@@ -583,7 +583,7 @@ class PsrDatabaseBindings {
       int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Int64>, ffi.Pointer<ffi.Int>)>();
 
-  int psr_database_read_scalar_doubles_by_id(
+  int psr_database_read_scalar_floats_by_id(
     ffi.Pointer<psr_database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
@@ -591,7 +591,7 @@ class PsrDatabaseBindings {
     ffi.Pointer<ffi.Double> out_value,
     ffi.Pointer<ffi.Int> out_has_value,
   ) {
-    return _psr_database_read_scalar_doubles_by_id(
+    return _psr_database_read_scalar_floats_by_id(
       db,
       collection,
       attribute,
@@ -601,11 +601,11 @@ class PsrDatabaseBindings {
     );
   }
 
-  late final _psr_database_read_scalar_doubles_by_idPtr = _lookup<
+  late final _psr_database_read_scalar_floats_by_idPtr = _lookup<
       ffi.NativeFunction<
           ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Double>, ffi.Pointer<ffi.Int>)>>('psr_database_read_scalar_doubles_by_id');
-  late final _psr_database_read_scalar_doubles_by_id = _psr_database_read_scalar_doubles_by_idPtr.asFunction<
+              ffi.Pointer<ffi.Double>, ffi.Pointer<ffi.Int>)>>('psr_database_read_scalar_floats_by_id');
+  late final _psr_database_read_scalar_floats_by_id = _psr_database_read_scalar_floats_by_idPtr.asFunction<
       int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Double>, ffi.Pointer<ffi.Int>)>();
 
@@ -661,7 +661,7 @@ class PsrDatabaseBindings {
       int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>)>();
 
-  int psr_database_read_vector_doubles_by_id(
+  int psr_database_read_vector_floats_by_id(
     ffi.Pointer<psr_database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
@@ -669,7 +669,7 @@ class PsrDatabaseBindings {
     ffi.Pointer<ffi.Pointer<ffi.Double>> out_values,
     ffi.Pointer<ffi.Size> out_count,
   ) {
-    return _psr_database_read_vector_doubles_by_id(
+    return _psr_database_read_vector_floats_by_id(
       db,
       collection,
       attribute,
@@ -679,11 +679,11 @@ class PsrDatabaseBindings {
     );
   }
 
-  late final _psr_database_read_vector_doubles_by_idPtr = _lookup<
+  late final _psr_database_read_vector_floats_by_idPtr = _lookup<
       ffi.NativeFunction<
           ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>>('psr_database_read_vector_doubles_by_id');
-  late final _psr_database_read_vector_doubles_by_id = _psr_database_read_vector_doubles_by_idPtr.asFunction<
+              ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>>('psr_database_read_vector_floats_by_id');
+  late final _psr_database_read_vector_floats_by_id = _psr_database_read_vector_floats_by_idPtr.asFunction<
       int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>();
 
@@ -744,7 +744,7 @@ class PsrDatabaseBindings {
       int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>)>();
 
-  int psr_database_read_set_doubles_by_id(
+  int psr_database_read_set_floats_by_id(
     ffi.Pointer<psr_database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
@@ -752,7 +752,7 @@ class PsrDatabaseBindings {
     ffi.Pointer<ffi.Pointer<ffi.Double>> out_values,
     ffi.Pointer<ffi.Size> out_count,
   ) {
-    return _psr_database_read_set_doubles_by_id(
+    return _psr_database_read_set_floats_by_id(
       db,
       collection,
       attribute,
@@ -762,11 +762,11 @@ class PsrDatabaseBindings {
     );
   }
 
-  late final _psr_database_read_set_doubles_by_idPtr = _lookup<
+  late final _psr_database_read_set_floats_by_idPtr = _lookup<
       ffi.NativeFunction<
           ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>>('psr_database_read_set_doubles_by_id');
-  late final _psr_database_read_set_doubles_by_id = _psr_database_read_set_doubles_by_idPtr.asFunction<
+              ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>>('psr_database_read_set_floats_by_id');
+  late final _psr_database_read_set_floats_by_id = _psr_database_read_set_floats_by_idPtr.asFunction<
       int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>();
 
@@ -870,14 +870,14 @@ class PsrDatabaseBindings {
   late final _psr_database_update_scalar_integer = _psr_database_update_scalar_integerPtr
       .asFunction<int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, int)>();
 
-  int psr_database_update_scalar_double(
+  int psr_database_update_scalar_float(
     ffi.Pointer<psr_database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     int id,
     double value,
   ) {
-    return _psr_database_update_scalar_double(
+    return _psr_database_update_scalar_float(
       db,
       collection,
       attribute,
@@ -886,11 +886,11 @@ class PsrDatabaseBindings {
     );
   }
 
-  late final _psr_database_update_scalar_doublePtr = _lookup<
+  late final _psr_database_update_scalar_floatPtr = _lookup<
       ffi.NativeFunction<
           ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Double)>>('psr_database_update_scalar_double');
-  late final _psr_database_update_scalar_double = _psr_database_update_scalar_doublePtr.asFunction<
+              ffi.Double)>>('psr_database_update_scalar_float');
+  late final _psr_database_update_scalar_float = _psr_database_update_scalar_floatPtr.asFunction<
       int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, double)>();
 
   int psr_database_update_scalar_string(
@@ -943,7 +943,7 @@ class PsrDatabaseBindings {
       int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Int64>, int)>();
 
-  int psr_database_update_vector_doubles(
+  int psr_database_update_vector_floats(
     ffi.Pointer<psr_database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
@@ -951,7 +951,7 @@ class PsrDatabaseBindings {
     ffi.Pointer<ffi.Double> values,
     int count,
   ) {
-    return _psr_database_update_vector_doubles(
+    return _psr_database_update_vector_floats(
       db,
       collection,
       attribute,
@@ -961,11 +961,11 @@ class PsrDatabaseBindings {
     );
   }
 
-  late final _psr_database_update_vector_doublesPtr = _lookup<
+  late final _psr_database_update_vector_floatsPtr = _lookup<
       ffi.NativeFunction<
           ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Double>, ffi.Size)>>('psr_database_update_vector_doubles');
-  late final _psr_database_update_vector_doubles = _psr_database_update_vector_doublesPtr.asFunction<
+              ffi.Pointer<ffi.Double>, ffi.Size)>>('psr_database_update_vector_floats');
+  late final _psr_database_update_vector_floats = _psr_database_update_vector_floatsPtr.asFunction<
       int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Double>, int)>();
 
@@ -1021,7 +1021,7 @@ class PsrDatabaseBindings {
       int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Int64>, int)>();
 
-  int psr_database_update_set_doubles(
+  int psr_database_update_set_floats(
     ffi.Pointer<psr_database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
@@ -1029,7 +1029,7 @@ class PsrDatabaseBindings {
     ffi.Pointer<ffi.Double> values,
     int count,
   ) {
-    return _psr_database_update_set_doubles(
+    return _psr_database_update_set_floats(
       db,
       collection,
       attribute,
@@ -1039,11 +1039,11 @@ class PsrDatabaseBindings {
     );
   }
 
-  late final _psr_database_update_set_doublesPtr = _lookup<
+  late final _psr_database_update_set_floatsPtr = _lookup<
       ffi.NativeFunction<
           ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Double>, ffi.Size)>>('psr_database_update_set_doubles');
-  late final _psr_database_update_set_doubles = _psr_database_update_set_doublesPtr.asFunction<
+              ffi.Pointer<ffi.Double>, ffi.Size)>>('psr_database_update_set_floats');
+  late final _psr_database_update_set_floats = _psr_database_update_set_floatsPtr.asFunction<
       int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Double>, int)>();
 
@@ -1073,29 +1073,29 @@ class PsrDatabaseBindings {
       int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Pointer<ffi.Char>>, int)>();
 
-  void psr_free_int_array(
+  void psr_free_integer_array(
     ffi.Pointer<ffi.Int64> values,
   ) {
-    return _psr_free_int_array(
+    return _psr_free_integer_array(
       values,
     );
   }
 
-  late final _psr_free_int_arrayPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Int64>)>>('psr_free_int_array');
-  late final _psr_free_int_array = _psr_free_int_arrayPtr.asFunction<void Function(ffi.Pointer<ffi.Int64>)>();
+  late final _psr_free_integer_arrayPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Int64>)>>('psr_free_integer_array');
+  late final _psr_free_integer_array = _psr_free_integer_arrayPtr.asFunction<void Function(ffi.Pointer<ffi.Int64>)>();
 
-  void psr_free_double_array(
+  void psr_free_float_array(
     ffi.Pointer<ffi.Double> values,
   ) {
-    return _psr_free_double_array(
+    return _psr_free_float_array(
       values,
     );
   }
 
-  late final _psr_free_double_arrayPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Double>)>>('psr_free_double_array');
-  late final _psr_free_double_array = _psr_free_double_arrayPtr.asFunction<void Function(ffi.Pointer<ffi.Double>)>();
+  late final _psr_free_float_arrayPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Double>)>>('psr_free_float_array');
+  late final _psr_free_float_array = _psr_free_float_arrayPtr.asFunction<void Function(ffi.Pointer<ffi.Double>)>();
 
   void psr_free_string_array(
     ffi.Pointer<ffi.Pointer<ffi.Char>> values,
@@ -1113,40 +1113,40 @@ class PsrDatabaseBindings {
   late final _psr_free_string_array =
       _psr_free_string_arrayPtr.asFunction<void Function(ffi.Pointer<ffi.Pointer<ffi.Char>>, int)>();
 
-  void psr_free_int_vectors(
+  void psr_free_integer_vectors(
     ffi.Pointer<ffi.Pointer<ffi.Int64>> vectors,
     ffi.Pointer<ffi.Size> sizes,
     int count,
   ) {
-    return _psr_free_int_vectors(
+    return _psr_free_integer_vectors(
       vectors,
       sizes,
       count,
     );
   }
 
-  late final _psr_free_int_vectorsPtr = _lookup<
+  late final _psr_free_integer_vectorsPtr = _lookup<
           ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>, ffi.Size)>>(
-      'psr_free_int_vectors');
-  late final _psr_free_int_vectors = _psr_free_int_vectorsPtr
+      'psr_free_integer_vectors');
+  late final _psr_free_integer_vectors = _psr_free_integer_vectorsPtr
       .asFunction<void Function(ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>, int)>();
 
-  void psr_free_double_vectors(
+  void psr_free_float_vectors(
     ffi.Pointer<ffi.Pointer<ffi.Double>> vectors,
     ffi.Pointer<ffi.Size> sizes,
     int count,
   ) {
-    return _psr_free_double_vectors(
+    return _psr_free_float_vectors(
       vectors,
       sizes,
       count,
     );
   }
 
-  late final _psr_free_double_vectorsPtr = _lookup<
+  late final _psr_free_float_vectorsPtr = _lookup<
           ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>, ffi.Size)>>(
-      'psr_free_double_vectors');
-  late final _psr_free_double_vectors = _psr_free_double_vectorsPtr
+      'psr_free_float_vectors');
+  late final _psr_free_float_vectors = _psr_free_float_vectorsPtr
       .asFunction<void Function(ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>, int)>();
 
   void psr_free_string_vectors(
@@ -1218,23 +1218,23 @@ class PsrDatabaseBindings {
   late final _psr_element_set_integer =
       _psr_element_set_integerPtr.asFunction<int Function(ffi.Pointer<psr_element_t1>, ffi.Pointer<ffi.Char>, int)>();
 
-  int psr_element_set_double(
+  int psr_element_set_float(
     ffi.Pointer<psr_element_t1> element,
     ffi.Pointer<ffi.Char> name,
     double value,
   ) {
-    return _psr_element_set_double(
+    return _psr_element_set_float(
       element,
       name,
       value,
     );
   }
 
-  late final _psr_element_set_doublePtr =
+  late final _psr_element_set_floatPtr =
       _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<psr_element_t1>, ffi.Pointer<ffi.Char>, ffi.Double)>>(
-          'psr_element_set_double');
-  late final _psr_element_set_double =
-      _psr_element_set_doublePtr.asFunction<int Function(ffi.Pointer<psr_element_t1>, ffi.Pointer<ffi.Char>, double)>();
+          'psr_element_set_float');
+  late final _psr_element_set_float =
+      _psr_element_set_floatPtr.asFunction<int Function(ffi.Pointer<psr_element_t1>, ffi.Pointer<ffi.Char>, double)>();
 
   int psr_element_set_string(
     ffi.Pointer<psr_element_t1> element,
@@ -1271,13 +1271,13 @@ class PsrDatabaseBindings {
   late final _psr_element_set_null =
       _psr_element_set_nullPtr.asFunction<int Function(ffi.Pointer<psr_element_t1>, ffi.Pointer<ffi.Char>)>();
 
-  int psr_element_set_array_int(
+  int psr_element_set_array_integer(
     ffi.Pointer<psr_element_t1> element,
     ffi.Pointer<ffi.Char> name,
     ffi.Pointer<ffi.Int64> values,
     int count,
   ) {
-    return _psr_element_set_array_int(
+    return _psr_element_set_array_integer(
       element,
       name,
       values,
@@ -1285,20 +1285,20 @@ class PsrDatabaseBindings {
     );
   }
 
-  late final _psr_element_set_array_intPtr = _lookup<
+  late final _psr_element_set_array_integerPtr = _lookup<
       ffi.NativeFunction<
           ffi.Int32 Function(ffi.Pointer<psr_element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Int64>,
-              ffi.Int32)>>('psr_element_set_array_int');
-  late final _psr_element_set_array_int = _psr_element_set_array_intPtr
+              ffi.Int32)>>('psr_element_set_array_integer');
+  late final _psr_element_set_array_integer = _psr_element_set_array_integerPtr
       .asFunction<int Function(ffi.Pointer<psr_element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Int64>, int)>();
 
-  int psr_element_set_array_double(
+  int psr_element_set_array_float(
     ffi.Pointer<psr_element_t1> element,
     ffi.Pointer<ffi.Char> name,
     ffi.Pointer<ffi.Double> values,
     int count,
   ) {
-    return _psr_element_set_array_double(
+    return _psr_element_set_array_float(
       element,
       name,
       values,
@@ -1306,11 +1306,11 @@ class PsrDatabaseBindings {
     );
   }
 
-  late final _psr_element_set_array_doublePtr = _lookup<
+  late final _psr_element_set_array_floatPtr = _lookup<
       ffi.NativeFunction<
           ffi.Int32 Function(ffi.Pointer<psr_element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Double>,
-              ffi.Int32)>>('psr_element_set_array_double');
-  late final _psr_element_set_array_double = _psr_element_set_array_doublePtr
+              ffi.Int32)>>('psr_element_set_array_float');
+  late final _psr_element_set_array_float = _psr_element_set_array_floatPtr
       .asFunction<int Function(ffi.Pointer<psr_element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Double>, int)>();
 
   int psr_element_set_array_string(
@@ -1502,8 +1502,8 @@ abstract class psr_data_structure_t {
 
 abstract class psr_data_type_t {
   static const int PSR_DATA_TYPE_INTEGER = 0;
-  static const int PSR_DATA_TYPE_REAL = 1;
-  static const int PSR_DATA_TYPE_TEXT = 2;
+  static const int PSR_DATA_TYPE_FLOAT = 1;
+  static const int PSR_DATA_TYPE_STRING = 2;
 }
 
 final class psr_database extends ffi.Opaque {}

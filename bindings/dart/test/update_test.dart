@@ -58,7 +58,7 @@ void main() {
         final intValue = db.readScalarIntegerById('Configuration', 'integer_attribute', 1);
         expect(intValue, equals(500));
 
-        final floatValue = db.readScalarDoubleById('Configuration', 'float_attribute', 1);
+        final floatValue = db.readScalarFloatById('Configuration', 'float_attribute', 1);
         expect(floatValue, equals(9.9));
 
         // Verify label unchanged
@@ -245,7 +245,7 @@ void main() {
 
         db.updateElement('Configuration', 1, {'float_attribute': 99.99});
 
-        final value = db.readScalarDoubleById('Configuration', 'float_attribute', 1);
+        final value = db.readScalarFloatById('Configuration', 'float_attribute', 1);
         expect(value, equals(99.99));
       } finally {
         db.close();
@@ -381,7 +381,7 @@ void main() {
     });
   });
 
-  group('Update Scalar Double', () {
+  group('Update Scalar Float', () {
     test('basic update', () {
       final db = Database.fromSchema(
         ':memory:',
@@ -390,9 +390,9 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Config 1', 'float_attribute': 3.14});
 
-        db.updateScalarDouble('Configuration', 'float_attribute', 1, 2.71);
+        db.updateScalarFloat('Configuration', 'float_attribute', 1, 2.71);
 
-        final value = db.readScalarDoubleById('Configuration', 'float_attribute', 1);
+        final value = db.readScalarFloatById('Configuration', 'float_attribute', 1);
         expect(value, equals(2.71));
       } finally {
         db.close();
@@ -407,9 +407,9 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Config 1', 'float_attribute': 3.14});
 
-        db.updateScalarDouble('Configuration', 'float_attribute', 1, 0.0);
+        db.updateScalarFloat('Configuration', 'float_attribute', 1, 0.0);
 
-        final value = db.readScalarDoubleById('Configuration', 'float_attribute', 1);
+        final value = db.readScalarFloatById('Configuration', 'float_attribute', 1);
         expect(value, equals(0.0));
       } finally {
         db.close();
@@ -424,9 +424,9 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Config 1', 'float_attribute': 1.0});
 
-        db.updateScalarDouble('Configuration', 'float_attribute', 1, 1.23456789012345);
+        db.updateScalarFloat('Configuration', 'float_attribute', 1, 1.23456789012345);
 
-        final value = db.readScalarDoubleById('Configuration', 'float_attribute', 1);
+        final value = db.readScalarFloatById('Configuration', 'float_attribute', 1);
         expect(value, closeTo(1.23456789012345, 1e-10));
       } finally {
         db.close();
@@ -618,7 +618,7 @@ void main() {
     });
   });
 
-  group('Update Vector Doubles', () {
+  group('Update Vector Floats', () {
     test('replace existing vector', () {
       final db = Database.fromSchema(
         ':memory:',
@@ -631,9 +631,9 @@ void main() {
           'value_float': [1.5, 2.5, 3.5]
         });
 
-        db.updateVectorDoubles('Collection', 'value_float', 1, [10.5, 20.5]);
+        db.updateVectorFloats('Collection', 'value_float', 1, [10.5, 20.5]);
 
-        final values = db.readVectorDoublesById('Collection', 'value_float', 1);
+        final values = db.readVectorFloatsById('Collection', 'value_float', 1);
         expect(values, equals([10.5, 20.5]));
       } finally {
         db.close();
@@ -652,9 +652,9 @@ void main() {
           'value_float': [1.0]
         });
 
-        db.updateVectorDoubles('Collection', 'value_float', 1, [1.23456789, 9.87654321]);
+        db.updateVectorFloats('Collection', 'value_float', 1, [1.23456789, 9.87654321]);
 
-        final values = db.readVectorDoublesById('Collection', 'value_float', 1);
+        final values = db.readVectorFloatsById('Collection', 'value_float', 1);
         expect(values[0], closeTo(1.23456789, 1e-8));
         expect(values[1], closeTo(9.87654321, 1e-8));
       } finally {
@@ -674,9 +674,9 @@ void main() {
           'value_float': [1.5, 2.5, 3.5]
         });
 
-        db.updateVectorDoubles('Collection', 'value_float', 1, []);
+        db.updateVectorFloats('Collection', 'value_float', 1, []);
 
-        final values = db.readVectorDoublesById('Collection', 'value_float', 1);
+        final values = db.readVectorFloatsById('Collection', 'value_float', 1);
         expect(values, isEmpty);
       } finally {
         db.close();

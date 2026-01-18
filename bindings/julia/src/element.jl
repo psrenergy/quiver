@@ -28,9 +28,9 @@ end
 
 function Base.setindex!(el::Element, value::Real, name::String)
     cname = Base.cconvert(Cstring, name)
-    err = C.psr_element_set_double(el.ptr, cname, Float64(value))
+    err = C.psr_element_set_float(el.ptr, cname, Float64(value))
     if err != C.PSR_OK
-        error("Failed to set double value for '$name'")
+        error("Failed to set float value for '$name'")
     end
 end
 
@@ -45,8 +45,8 @@ end
 
 function Base.setindex!(el::Element, value::Vector{<:Integer}, name::String)
     cname = Base.cconvert(Cstring, name)
-    int_values = Int64[Int64(v) for v in value]
-    err = C.psr_element_set_array_int(el.ptr, cname, int_values, Int32(length(int_values)))
+    integer_values = Int64[Int64(v) for v in value]
+    err = C.psr_element_set_array_integer(el.ptr, cname, integer_values, Int32(length(integer_values)))
     if err != C.PSR_OK
         error("Failed to set array<int> value for '$name'")
     end
@@ -55,9 +55,9 @@ end
 function Base.setindex!(el::Element, value::Vector{<:Real}, name::String)
     cname = Base.cconvert(Cstring, name)
     float_values = Float64[Float64(v) for v in value]
-    err = C.psr_element_set_array_double(el.ptr, cname, float_values, Int32(length(value)))
+    err = C.psr_element_set_array_float(el.ptr, cname, float_values, Int32(length(value)))
     if err != C.PSR_OK
-        error("Failed to set array<double> value for '$name'")
+        error("Failed to set array<float> value for '$name'")
     end
 end
 
