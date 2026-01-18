@@ -3,12 +3,15 @@ include(GoogleTest)
 add_executable(psr_database_tests
     test_database_create.cpp
     test_database_delete.cpp
+    test_database_errors.cpp
     test_database_lifecycle.cpp
     test_database_read.cpp
     test_database_relations.cpp
     test_database_update.cpp
     test_element.cpp
     test_lua_runner.cpp
+    test_migrations.cpp
+    test_row_result.cpp
     test_schema_validator.cpp
 )
 
