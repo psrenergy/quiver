@@ -67,25 +67,25 @@ void SchemaValidator::validate_collection(const std::string& name) {
     }
 
     // Must have 'id' column as primary key
-    const auto* id_col = table->get_column("id");
-    if (!id_col || !id_col->primary_key) {
+    const auto* id_column = table->get_column("id");
+    if (!id_column || !id_column->primary_key) {
         validation_error("Collection '" + name + "' must have 'id' as primary key");
     }
 
     // Must have 'label' column with TEXT type and NOT NULL constraint
-    const auto* label_col = table->get_column("label");
-    if (!label_col) {
+    const auto* label_column = table->get_column("label");
+    if (!label_column) {
         validation_error("Collection '" + name + "' must have a 'label' column");
     }
-    if (label_col->type != ColumnType::Text) {
+    if (label_column->type != DataType::Text) {
         validation_error("Collection '" + name + "' label column must be TEXT type");
     }
-    if (!label_col->not_null) {
+    if (!label_column->not_null) {
         validation_error("Collection '" + name + "' label column must have NOT NULL constraint");
     }
 
     // Check for UNIQUE constraint on label
-    bool label_unique = false;
+    auto label_unique = false;
     for (const auto& idx : table->indexes) {
         if (idx.unique && idx.columns.size() == 1 && idx.columns[0] == "label") {
             label_unique = true;
@@ -104,7 +104,7 @@ void SchemaValidator::validate_vector_table(const std::string& name) {
     }
 
     // Get parent collection
-    std::string parent = schema_.get_parent_collection(name);
+    auto parent = schema_.get_parent_collection(name);
     if (std::find(collections_.begin(), collections_.end(), parent) == collections_.end()) {
         validation_error("Vector table '" + name + "' references non-existent collection '" + parent + "'");
     }

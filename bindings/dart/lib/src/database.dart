@@ -868,19 +868,19 @@ class Database {
   }
 
   /// Returns the structure and data type of an attribute.
-  ({String structure, String dataType}) getAttributeType(String collection, String attribute) {
+  ({String dataStructure, String dataType}) getAttributeType(String collection, String attribute) {
     _ensureNotClosed();
 
     final arena = Arena();
     try {
-      final outStructure = arena<Int32>();
+      final outDataStructure = arena<Int32>();
       final outDataType = arena<Int32>();
 
       final err = bindings.psr_database_get_attribute_type(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
-        outStructure,
+        outDataStructure,
         outDataType,
       );
 
@@ -888,7 +888,7 @@ class Database {
         throw DatabaseException.fromError(err, "Failed to get attribute type for '$collection.$attribute'");
       }
 
-      final structure = switch (outStructure.value) {
+      final dataStructure = switch (outDataStructure.value) {
         0 => 'scalar',
         1 => 'vector',
         2 => 'set',
@@ -902,7 +902,7 @@ class Database {
         _ => 'unknown',
       };
 
-      return (structure: structure, dataType: dataType);
+      return (dataStructure: dataStructure, dataType: dataType);
     } finally {
       arena.releaseAll();
     }

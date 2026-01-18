@@ -361,7 +361,7 @@ end
     db = PSRDatabase.from_schema(":memory:", path_schema)
 
     result = PSRDatabase.get_attribute_type(db, "Configuration", "integer_attribute")
-    @test result.structure == PSRDatabase.PSR_ATTRIBUTE_SCALAR
+    @test result.data_structure == PSRDatabase.PSR_DATA_STRUCTURE_SCALAR
     @test result.data_type == PSRDatabase.PSR_DATA_TYPE_INTEGER
 
     PSRDatabase.close!(db)
@@ -372,7 +372,7 @@ end
     db = PSRDatabase.from_schema(":memory:", path_schema)
 
     result = PSRDatabase.get_attribute_type(db, "Configuration", "float_attribute")
-    @test result.structure == PSRDatabase.PSR_ATTRIBUTE_SCALAR
+    @test result.data_structure == PSRDatabase.PSR_DATA_STRUCTURE_SCALAR
     @test result.data_type == PSRDatabase.PSR_DATA_TYPE_REAL
 
     PSRDatabase.close!(db)
@@ -383,7 +383,7 @@ end
     db = PSRDatabase.from_schema(":memory:", path_schema)
 
     result = PSRDatabase.get_attribute_type(db, "Configuration", "string_attribute")
-    @test result.structure == PSRDatabase.PSR_ATTRIBUTE_SCALAR
+    @test result.data_structure == PSRDatabase.PSR_DATA_STRUCTURE_SCALAR
     @test result.data_type == PSRDatabase.PSR_DATA_TYPE_TEXT
 
     PSRDatabase.close!(db)
@@ -394,7 +394,7 @@ end
     db = PSRDatabase.from_schema(":memory:", path_schema)
 
     result = PSRDatabase.get_attribute_type(db, "Collection", "value_int")
-    @test result.structure == PSRDatabase.PSR_ATTRIBUTE_VECTOR
+    @test result.data_structure == PSRDatabase.PSR_DATA_STRUCTURE_VECTOR
     @test result.data_type == PSRDatabase.PSR_DATA_TYPE_INTEGER
 
     PSRDatabase.close!(db)
@@ -405,7 +405,7 @@ end
     db = PSRDatabase.from_schema(":memory:", path_schema)
 
     result = PSRDatabase.get_attribute_type(db, "Collection", "value_float")
-    @test result.structure == PSRDatabase.PSR_ATTRIBUTE_VECTOR
+    @test result.data_structure == PSRDatabase.PSR_DATA_STRUCTURE_VECTOR
     @test result.data_type == PSRDatabase.PSR_DATA_TYPE_REAL
 
     PSRDatabase.close!(db)
@@ -416,7 +416,7 @@ end
     db = PSRDatabase.from_schema(":memory:", path_schema)
 
     result = PSRDatabase.get_attribute_type(db, "Collection", "tag")
-    @test result.structure == PSRDatabase.PSR_ATTRIBUTE_SET
+    @test result.data_structure == PSRDatabase.PSR_DATA_STRUCTURE_SET
     @test result.data_type == PSRDatabase.PSR_DATA_TYPE_TEXT
 
     PSRDatabase.close!(db)

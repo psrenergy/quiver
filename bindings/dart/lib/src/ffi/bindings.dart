@@ -174,6 +174,45 @@ class PsrDatabaseBindings {
   late final _psr_database_create_element = _psr_database_create_elementPtr
       .asFunction<int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<psr_element_t>)>();
 
+  int psr_database_update_element(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    int id,
+    ffi.Pointer<psr_element_t> element,
+  ) {
+    return _psr_database_update_element(
+      db,
+      collection,
+      id,
+      element,
+    );
+  }
+
+  late final _psr_database_update_elementPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<psr_element_t>)>>('psr_database_update_element');
+  late final _psr_database_update_element = _psr_database_update_elementPtr
+      .asFunction<int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<psr_element_t>)>();
+
+  int psr_database_delete_element_by_id(
+    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    int id,
+  ) {
+    return _psr_database_delete_element_by_id(
+      db,
+      collection,
+      id,
+    );
+  }
+
+  late final _psr_database_delete_element_by_idPtr =
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Int64)>>(
+          'psr_database_delete_element_by_id');
+  late final _psr_database_delete_element_by_id = _psr_database_delete_element_by_idPtr
+      .asFunction<int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, int)>();
+
   int psr_database_set_scalar_relation(
     ffi.Pointer<psr_database_t> db,
     ffi.Pointer<ffi.Char> collection,
@@ -788,14 +827,14 @@ class PsrDatabaseBindings {
     ffi.Pointer<psr_database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
-    ffi.Pointer<ffi.Int32> out_structure,
+    ffi.Pointer<ffi.Int32> out_data_structure,
     ffi.Pointer<ffi.Int32> out_data_type,
   ) {
     return _psr_database_get_attribute_type(
       db,
       collection,
       attribute,
-      out_structure,
+      out_data_structure,
       out_data_type,
     );
   }
@@ -1033,45 +1072,6 @@ class PsrDatabaseBindings {
   late final _psr_database_update_set_strings = _psr_database_update_set_stringsPtr.asFunction<
       int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Pointer<ffi.Char>>, int)>();
-
-  int psr_database_delete_element_by_id(
-    ffi.Pointer<psr_database_t> db,
-    ffi.Pointer<ffi.Char> collection,
-    int id,
-  ) {
-    return _psr_database_delete_element_by_id(
-      db,
-      collection,
-      id,
-    );
-  }
-
-  late final _psr_database_delete_element_by_idPtr =
-      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Int64)>>(
-          'psr_database_delete_element_by_id');
-  late final _psr_database_delete_element_by_id = _psr_database_delete_element_by_idPtr
-      .asFunction<int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, int)>();
-
-  int psr_database_update_element(
-    ffi.Pointer<psr_database_t> db,
-    ffi.Pointer<ffi.Char> collection,
-    int id,
-    ffi.Pointer<psr_element_t> element,
-  ) {
-    return _psr_database_update_element(
-      db,
-      collection,
-      id,
-      element,
-    );
-  }
-
-  late final _psr_database_update_elementPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<psr_element_t>)>>('psr_database_update_element');
-  late final _psr_database_update_element = _psr_database_update_elementPtr
-      .asFunction<int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<psr_element_t>)>();
 
   void psr_free_int_array(
     ffi.Pointer<ffi.Int64> values,
@@ -1486,24 +1486,24 @@ abstract class psr_log_level_t {
   static const int PSR_LOG_OFF = 4;
 }
 
-abstract class psr_attribute_structure_t {
-  static const int PSR_ATTRIBUTE_SCALAR = 0;
-  static const int PSR_ATTRIBUTE_VECTOR = 1;
-  static const int PSR_ATTRIBUTE_SET = 2;
-}
-
-abstract class psr_data_type_t {
-  static const int PSR_DATA_TYPE_INTEGER = 0;
-  static const int PSR_DATA_TYPE_REAL = 1;
-  static const int PSR_DATA_TYPE_TEXT = 2;
-}
-
 final class psr_database_options_t extends ffi.Struct {
   @ffi.Int()
   external int read_only;
 
   @ffi.Int32()
   external int console_level;
+}
+
+abstract class psr_data_structure_t {
+  static const int PSR_DATA_STRUCTURE_SCALAR = 0;
+  static const int PSR_DATA_STRUCTURE_VECTOR = 1;
+  static const int PSR_DATA_STRUCTURE_SET = 2;
+}
+
+abstract class psr_data_type_t {
+  static const int PSR_DATA_TYPE_INTEGER = 0;
+  static const int PSR_DATA_TYPE_REAL = 1;
+  static const int PSR_DATA_TYPE_TEXT = 2;
 }
 
 final class psr_database extends ffi.Opaque {}

@@ -37,18 +37,6 @@ const libpsr_database_c = joinpath(@__DIR__, "..", "..", "..", "build", library_
     PSR_ERROR_NOT_FOUND = -6
 end
 
-@cenum psr_attribute_structure_t::Int32 begin
-    PSR_ATTRIBUTE_SCALAR = 0
-    PSR_ATTRIBUTE_VECTOR = 1
-    PSR_ATTRIBUTE_SET = 2
-end
-
-@cenum psr_data_type_t::Int32 begin
-    PSR_DATA_TYPE_INTEGER = 0
-    PSR_DATA_TYPE_REAL = 1
-    PSR_DATA_TYPE_TEXT = 2
-end
-
 function psr_error_string(error)
     @ccall libpsr_database_c.psr_error_string(error::psr_error_t)::Ptr{Cchar}
 end
@@ -68,6 +56,18 @@ end
 struct psr_database_options_t
     read_only::Cint
     console_level::psr_log_level_t
+end
+
+@cenum psr_data_structure_t::UInt32 begin
+    PSR_DATA_STRUCTURE_SCALAR = 0
+    PSR_DATA_STRUCTURE_VECTOR = 1
+    PSR_DATA_STRUCTURE_SET = 2
+end
+
+@cenum psr_data_type_t::UInt32 begin
+    PSR_DATA_TYPE_INTEGER = 0
+    PSR_DATA_TYPE_REAL = 1
+    PSR_DATA_TYPE_TEXT = 2
 end
 
 function psr_database_options_default()
@@ -112,6 +112,14 @@ const psr_element_t = psr_element
 
 function psr_database_create_element(db, collection, element)
     @ccall libpsr_database_c.psr_database_create_element(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, element::Ptr{psr_element_t})::Int64
+end
+
+function psr_database_update_element(db, collection, id, element)
+    @ccall libpsr_database_c.psr_database_update_element(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, id::Int64, element::Ptr{psr_element_t})::psr_error_t
+end
+
+function psr_database_delete_element_by_id(db, collection, id)
+    @ccall libpsr_database_c.psr_database_delete_element_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, id::Int64)::psr_error_t
 end
 
 function psr_database_set_scalar_relation(db, collection, attribute, from_label, to_label)
@@ -198,8 +206,8 @@ function psr_database_read_element_ids(db, collection, out_ids, out_count)
     @ccall libpsr_database_c.psr_database_read_element_ids(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, out_ids::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::psr_error_t
 end
 
-function psr_database_get_attribute_type(db, collection, attribute, out_structure, out_data_type)
-    @ccall libpsr_database_c.psr_database_get_attribute_type(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_structure::Ptr{psr_attribute_structure_t}, out_data_type::Ptr{psr_data_type_t})::psr_error_t
+function psr_database_get_attribute_type(db, collection, attribute, out_data_structure, out_data_type)
+    @ccall libpsr_database_c.psr_database_get_attribute_type(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_data_structure::Ptr{psr_data_structure_t}, out_data_type::Ptr{psr_data_type_t})::psr_error_t
 end
 
 function psr_database_update_scalar_integer(db, collection, attribute, id, value)
@@ -236,14 +244,6 @@ end
 
 function psr_database_update_set_strings(db, collection, attribute, id, values, count)
     @ccall libpsr_database_c.psr_database_update_set_strings(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Ptr{Cchar}}, count::Csize_t)::psr_error_t
-end
-
-function psr_database_delete_element_by_id(db, collection, id)
-    @ccall libpsr_database_c.psr_database_delete_element_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, id::Int64)::psr_error_t
-end
-
-function psr_database_update_element(db, collection, id, element)
-    @ccall libpsr_database_c.psr_database_update_element(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, id::Int64, element::Ptr{psr_element_t})::psr_error_t
 end
 
 function psr_free_int_array(values)

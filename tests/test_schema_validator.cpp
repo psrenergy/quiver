@@ -125,8 +125,8 @@ TEST_F(SchemaValidatorFixture, GetAttributeTypeScalarInteger) {
 
     auto type = db.get_attribute_type("Configuration", "integer_attribute");
 
-    EXPECT_EQ(type.structure, psr::AttributeStructure::Scalar);
-    EXPECT_EQ(type.data_type, psr::AttributeDataType::Integer);
+    EXPECT_EQ(type.data_structure, psr::DataStructure::Scalar);
+    EXPECT_EQ(type.data_type, psr::DataType::Integer);
 }
 
 TEST_F(SchemaValidatorFixture, GetAttributeTypeScalarReal) {
@@ -134,8 +134,8 @@ TEST_F(SchemaValidatorFixture, GetAttributeTypeScalarReal) {
 
     auto type = db.get_attribute_type("Configuration", "float_attribute");
 
-    EXPECT_EQ(type.structure, psr::AttributeStructure::Scalar);
-    EXPECT_EQ(type.data_type, psr::AttributeDataType::Real);
+    EXPECT_EQ(type.data_structure, psr::DataStructure::Scalar);
+    EXPECT_EQ(type.data_type, psr::DataType::Real);
 }
 
 TEST_F(SchemaValidatorFixture, GetAttributeTypeScalarText) {
@@ -143,8 +143,8 @@ TEST_F(SchemaValidatorFixture, GetAttributeTypeScalarText) {
 
     auto type = db.get_attribute_type("Configuration", "label");
 
-    EXPECT_EQ(type.structure, psr::AttributeStructure::Scalar);
-    EXPECT_EQ(type.data_type, psr::AttributeDataType::Text);
+    EXPECT_EQ(type.data_structure, psr::DataStructure::Scalar);
+    EXPECT_EQ(type.data_type, psr::DataType::Text);
 }
 
 TEST_F(SchemaValidatorFixture, GetAttributeTypeVectorInteger) {
@@ -152,8 +152,8 @@ TEST_F(SchemaValidatorFixture, GetAttributeTypeVectorInteger) {
 
     auto type = db.get_attribute_type("Collection", "value_int");
 
-    EXPECT_EQ(type.structure, psr::AttributeStructure::Vector);
-    EXPECT_EQ(type.data_type, psr::AttributeDataType::Integer);
+    EXPECT_EQ(type.data_structure, psr::DataStructure::Vector);
+    EXPECT_EQ(type.data_type, psr::DataType::Integer);
 }
 
 TEST_F(SchemaValidatorFixture, GetAttributeTypeSetText) {
@@ -161,8 +161,8 @@ TEST_F(SchemaValidatorFixture, GetAttributeTypeSetText) {
 
     auto type = db.get_attribute_type("Collection", "tag");
 
-    EXPECT_EQ(type.structure, psr::AttributeStructure::Set);
-    EXPECT_EQ(type.data_type, psr::AttributeDataType::Text);
+    EXPECT_EQ(type.data_structure, psr::DataStructure::Set);
+    EXPECT_EQ(type.data_type, psr::DataType::Text);
 }
 
 // ============================================================================
@@ -174,8 +174,8 @@ TEST_F(SchemaValidatorFixture, GetAttributeTypeVectorReal) {
 
     auto type = db.get_attribute_type("Collection", "value_float");
 
-    EXPECT_EQ(type.structure, psr::AttributeStructure::Vector);
-    EXPECT_EQ(type.data_type, psr::AttributeDataType::Real);
+    EXPECT_EQ(type.data_structure, psr::DataStructure::Vector);
+    EXPECT_EQ(type.data_type, psr::DataType::Real);
 }
 
 TEST_F(SchemaValidatorFixture, GetAttributeTypeForeignKeyAsInteger) {
@@ -184,8 +184,8 @@ TEST_F(SchemaValidatorFixture, GetAttributeTypeForeignKeyAsInteger) {
     // parent_id is a foreign key but stored as INTEGER
     auto type = db.get_attribute_type("Child", "parent_id");
 
-    EXPECT_EQ(type.structure, psr::AttributeStructure::Scalar);
-    EXPECT_EQ(type.data_type, psr::AttributeDataType::Integer);
+    EXPECT_EQ(type.data_structure, psr::DataStructure::Scalar);
+    EXPECT_EQ(type.data_type, psr::DataType::Integer);
 }
 
 TEST_F(SchemaValidatorFixture, GetAttributeTypeSelfReference) {
@@ -194,8 +194,8 @@ TEST_F(SchemaValidatorFixture, GetAttributeTypeSelfReference) {
     // sibling_id is a self-referencing foreign key
     auto type = db.get_attribute_type("Child", "sibling_id");
 
-    EXPECT_EQ(type.structure, psr::AttributeStructure::Scalar);
-    EXPECT_EQ(type.data_type, psr::AttributeDataType::Integer);
+    EXPECT_EQ(type.data_structure, psr::DataStructure::Scalar);
+    EXPECT_EQ(type.data_type, psr::DataType::Integer);
 }
 
 // ============================================================================
@@ -226,7 +226,7 @@ TEST_F(SchemaValidatorFixture, RelationsSchemaWithVectorFK) {
 
     // Verify the schema loaded successfully with vector FK table
     auto type = db.get_attribute_type("Child", "label");
-    EXPECT_EQ(type.data_type, psr::AttributeDataType::Text);
+    EXPECT_EQ(type.data_type, psr::DataType::Text);
 }
 
 // ============================================================================
@@ -294,6 +294,6 @@ TEST_F(SchemaValidatorFixture, GetAttributeTypeIdColumn) {
 
     // 'id' column should exist and be INTEGER
     auto type = db.get_attribute_type("Configuration", "id");
-    EXPECT_EQ(type.structure, psr::AttributeStructure::Scalar);
-    EXPECT_EQ(type.data_type, psr::AttributeDataType::Integer);
+    EXPECT_EQ(type.data_structure, psr::DataStructure::Scalar);
+    EXPECT_EQ(type.data_type, psr::DataType::Integer);
 }

@@ -1,7 +1,7 @@
 #ifndef PSR_TYPE_VALIDATOR_H
 #define PSR_TYPE_VALIDATOR_H
 
-#include "column_type.h"
+#include "data_type.h"
 #include "export.h"
 #include "schema.h"
 #include "value.h"
@@ -23,7 +23,7 @@ public:
     void validate_array(const std::string& table, const std::string& column, const std::vector<Value>& values) const;
 
     // Low-level: validate value against explicit type
-    static void validate_value(const std::string& context, ColumnType expected_type, const Value& value);
+    static void validate_value(const std::string& context, DataType expected_type, const Value& value);
 
 private:
     const Schema& schema_;

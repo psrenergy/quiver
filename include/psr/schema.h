@@ -1,7 +1,7 @@
 #ifndef PSR_SCHEMA_H
 #define PSR_SCHEMA_H
 
-#include "column_type.h"
+#include "data_type.h"
 #include "export.h"
 
 #include <map>
@@ -15,7 +15,7 @@ namespace psr {
 
 struct ColumnDefinition {
     std::string name;
-    ColumnType type;
+    DataType type;
     bool not_null;
     bool primary_key;
 };
@@ -40,7 +40,7 @@ struct TableDefinition {
     std::vector<ForeignKey> foreign_keys;
     std::vector<Index> indexes;
 
-    std::optional<ColumnType> get_column_type(const std::string& column) const;
+    std::optional<DataType> get_data_type(const std::string& column) const;
     bool has_column(const std::string& column) const;
     const ColumnDefinition* get_column(const std::string& column) const;
 };
@@ -55,7 +55,7 @@ public:
     bool has_table(const std::string& name) const;
 
     // Column type lookup (throws if table/column not found)
-    ColumnType get_column_type(const std::string& table, const std::string& column) const;
+    DataType get_data_type(const std::string& table, const std::string& column) const;
 
     // Vector/Set table naming convention
     static std::string vector_table_name(const std::string& collection, const std::string& group);

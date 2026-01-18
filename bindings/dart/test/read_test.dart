@@ -622,7 +622,7 @@ void main() {
       );
       try {
         final result = db.getAttributeType('Configuration', 'integer_attribute');
-        expect(result.structure, equals('scalar'));
+        expect(result.dataStructure, equals('scalar'));
         expect(result.dataType, equals('integer'));
       } finally {
         db.close();
@@ -636,7 +636,7 @@ void main() {
       );
       try {
         final result = db.getAttributeType('Configuration', 'float_attribute');
-        expect(result.structure, equals('scalar'));
+        expect(result.dataStructure, equals('scalar'));
         expect(result.dataType, equals('real'));
       } finally {
         db.close();
@@ -650,7 +650,7 @@ void main() {
       );
       try {
         final result = db.getAttributeType('Configuration', 'string_attribute');
-        expect(result.structure, equals('scalar'));
+        expect(result.dataStructure, equals('scalar'));
         expect(result.dataType, equals('text'));
       } finally {
         db.close();
@@ -664,7 +664,7 @@ void main() {
       );
       try {
         final result = db.getAttributeType('Collection', 'value_int');
-        expect(result.structure, equals('vector'));
+        expect(result.dataStructure, equals('vector'));
         expect(result.dataType, equals('integer'));
       } finally {
         db.close();
@@ -678,7 +678,7 @@ void main() {
       );
       try {
         final result = db.getAttributeType('Collection', 'value_float');
-        expect(result.structure, equals('vector'));
+        expect(result.dataStructure, equals('vector'));
         expect(result.dataType, equals('real'));
       } finally {
         db.close();
@@ -692,7 +692,7 @@ void main() {
       );
       try {
         final result = db.getAttributeType('Collection', 'tag');
-        expect(result.structure, equals('set'));
+        expect(result.dataStructure, equals('set'));
         expect(result.dataType, equals('text'));
       } finally {
         db.close();

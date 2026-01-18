@@ -478,24 +478,24 @@ TEST(Database, GetAttributeTypeScalarInteger) {
     auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
     auto attr_type = db.get_attribute_type("Configuration", "integer_attribute");
-    EXPECT_EQ(attr_type.structure, psr::AttributeStructure::Scalar);
-    EXPECT_EQ(attr_type.data_type, psr::AttributeDataType::Integer);
+    EXPECT_EQ(attr_type.data_structure, psr::DataStructure::Scalar);
+    EXPECT_EQ(attr_type.data_type, psr::DataType::Integer);
 }
 
 TEST(Database, GetAttributeTypeScalarReal) {
     auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
     auto attr_type = db.get_attribute_type("Configuration", "float_attribute");
-    EXPECT_EQ(attr_type.structure, psr::AttributeStructure::Scalar);
-    EXPECT_EQ(attr_type.data_type, psr::AttributeDataType::Real);
+    EXPECT_EQ(attr_type.data_structure, psr::DataStructure::Scalar);
+    EXPECT_EQ(attr_type.data_type, psr::DataType::Real);
 }
 
 TEST(Database, GetAttributeTypeScalarText) {
     auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
     auto attr_type = db.get_attribute_type("Configuration", "string_attribute");
-    EXPECT_EQ(attr_type.structure, psr::AttributeStructure::Scalar);
-    EXPECT_EQ(attr_type.data_type, psr::AttributeDataType::Text);
+    EXPECT_EQ(attr_type.data_structure, psr::DataStructure::Scalar);
+    EXPECT_EQ(attr_type.data_type, psr::DataType::Text);
 }
 
 TEST(Database, GetAttributeTypeVectorInteger) {
@@ -503,8 +503,8 @@ TEST(Database, GetAttributeTypeVectorInteger) {
         psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
     auto attr_type = db.get_attribute_type("Collection", "value_int");
-    EXPECT_EQ(attr_type.structure, psr::AttributeStructure::Vector);
-    EXPECT_EQ(attr_type.data_type, psr::AttributeDataType::Integer);
+    EXPECT_EQ(attr_type.data_structure, psr::DataStructure::Vector);
+    EXPECT_EQ(attr_type.data_type, psr::DataType::Integer);
 }
 
 TEST(Database, GetAttributeTypeVectorReal) {
@@ -512,8 +512,8 @@ TEST(Database, GetAttributeTypeVectorReal) {
         psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
     auto attr_type = db.get_attribute_type("Collection", "value_float");
-    EXPECT_EQ(attr_type.structure, psr::AttributeStructure::Vector);
-    EXPECT_EQ(attr_type.data_type, psr::AttributeDataType::Real);
+    EXPECT_EQ(attr_type.data_structure, psr::DataStructure::Vector);
+    EXPECT_EQ(attr_type.data_type, psr::DataType::Real);
 }
 
 TEST(Database, GetAttributeTypeSetText) {
@@ -521,8 +521,8 @@ TEST(Database, GetAttributeTypeSetText) {
         psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
     auto attr_type = db.get_attribute_type("Collection", "tag");
-    EXPECT_EQ(attr_type.structure, psr::AttributeStructure::Set);
-    EXPECT_EQ(attr_type.data_type, psr::AttributeDataType::Text);
+    EXPECT_EQ(attr_type.data_structure, psr::DataStructure::Set);
+    EXPECT_EQ(attr_type.data_type, psr::DataType::Text);
 }
 
 TEST(Database, GetAttributeTypeNotFound) {
