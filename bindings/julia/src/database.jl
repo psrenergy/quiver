@@ -1,5 +1,11 @@
 mutable struct Database
     ptr::Ptr{C.psr_database}
+
+    function Database(ptr::Ptr{C.psr_database})
+        db = new(ptr)
+    finalizer(d -> d.ptr != C_NULL && C.psr_database_close(d.ptr), db)
+    return db
+    end
 end
 
 function from_schema(db_path, schema_path)
@@ -8,9 +14,7 @@ function from_schema(db_path, schema_path)
     if ptr == C_NULL
         throw(DatabaseException("Failed to create database from schema '$schema_path'"))
     end
-    db = Database(ptr)
-    finalizer(d -> d.ptr != C_NULL && C.psr_database_close(d.ptr), db)
-    return db
+    return Database(ptr)
 end
 
 function from_migrations(db_path, migrations_path)
@@ -19,9 +23,7 @@ function from_migrations(db_path, migrations_path)
     if ptr == C_NULL
         throw(DatabaseException("Failed to create database from migrations '$migrations_path'"))
     end
-    db = Database(ptr)
-    finalizer(d -> d.ptr != C_NULL && C.psr_database_close(d.ptr), db)
-    return db
+    return Database(ptr)
 end
 
 function create_element!(db::Database, collection::String, e::Element)
@@ -39,7 +41,7 @@ function create_element!(db::Database, collection::String; kwargs...)
     try
         create_element!(db, collection, e)
     finally
-        C.psr_element_destroy(e.ptr)
+        destroy!(e)
     end
     return nothing
 end
@@ -552,7 +554,7 @@ function update_element!(db::Database, collection::String, id::Int64; kwargs...)
     try
         update_element!(db, collection, id, e)
     finally
-        C.psr_element_destroy(e.ptr)
+        destroy!(e)
     end
     return nothing
 end

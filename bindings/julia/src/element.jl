@@ -6,10 +6,16 @@ mutable struct Element
         if ptr == C_NULL
             error("Failed to create Element")
         end
-        obj = new(ptr)
-        finalizer(e -> C.psr_element_destroy(e.ptr), obj)
-        return obj
+        return new(ptr)
     end
+end
+
+function destroy!(el::Element)
+    if el.ptr != C_NULL
+        C.psr_element_destroy(el.ptr)
+        el.ptr = C_NULL
+    end
+    return nothing
 end
 
 function Base.setindex!(el::Element, value::Integer, name::String)
