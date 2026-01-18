@@ -273,8 +273,9 @@ TEST(RowResult, ReadScalarByIdWithNull) {
     e.set("label", std::string("Config"));
     int64_t id = db.create_element("Configuration", e);
 
-    // Read optional integer attribute (should be nullopt)
-    auto result = db.read_scalar_integers_by_id("Configuration", "integer_attribute", id);
+    // Read optional float attribute (should be nullopt since we didn't set it)
+    // Note: integer_attribute has DEFAULT 6, so we use float_attribute instead
+    auto result = db.read_scalar_doubles_by_id("Configuration", "float_attribute", id);
     EXPECT_FALSE(result.has_value());
 }
 

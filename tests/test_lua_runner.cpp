@@ -784,16 +784,21 @@ TEST_F(LuaRunnerTest, ReadVectorIntegersEmpty) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadSetStringsEmpty) {
+TEST_F(LuaRunnerTest, ReadSetStringsByIdEmpty) {
     auto db = psr::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", psr::Element().set("label", "Config"));
 
+    // Create a collection element without any set values
+    int64_t id = db.create_element("Collection", psr::Element().set("label", "Item 1"));
+
     psr::LuaRunner lua(db);
 
-    lua.run(R"(
-        local sets = db:read_set_strings("Collection", "tag")
-        assert(#sets == 0, "Expected empty table, got " .. #sets .. " items")
-    )");
+    std::string script = R"(
+        local set = db:read_set_strings_by_id("Collection", "tag", )" +
+                         std::to_string(id) + R"()
+        assert(#set == 0, "Expected empty set, got " .. #set .. " items")
+    )";
+    lua.run(script);
 }
 
 TEST_F(LuaRunnerTest, CreateElementWithOnlyLabel) {
@@ -832,23 +837,22 @@ TEST_F(LuaRunnerTest, CreateElementMixedTypes) {
     EXPECT_DOUBLE_EQ(doubles[0], 3.14);
 }
 
-TEST_F(LuaRunnerTest, ReadVectorStringsByIdFromLua) {
+TEST_F(LuaRunnerTest, ReadVectorIntegersByIdFromLua) {
     auto db = psr::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", psr::Element().set("label", "Config"));
     int64_t id1 = db.create_element(
-        "Collection",
-        psr::Element().set("label", "Item 1").set("value_string", std::vector<std::string>{"a", "b", "c"}));
+        "Collection", psr::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{10, 20, 30}));
 
     psr::LuaRunner lua(db);
 
     std::string script = R"(
-        local vec = db:read_vector_strings_by_id("Collection", "value_string", )" +
+        local vec = db:read_vector_integers_by_id("Collection", "value_int", )" +
                          std::to_string(id1) + R"()
         assert(#vec == 3, "Expected 3 elements, got " .. #vec)
-        assert(vec[1] == "a", "First element should be 'a'")
-        assert(vec[2] == "b", "Second element should be 'b'")
-        assert(vec[3] == "c", "Third element should be 'c'")
+        assert(vec[1] == 10, "First element should be 10")
+        assert(vec[2] == 20, "Second element should be 20")
+        assert(vec[3] == 30, "Third element should be 30")
     )";
     lua.run(script);
 }
