@@ -572,7 +572,7 @@ class Database {
       );
 
       if (err != psr_error_t.PSR_OK) {
-        throw DatabaseException.fromError(err, "Failed to read scalar double by id from '$collection.$attribute'");
+        throw DatabaseException.fromError(err, "Failed to read scalar float by id from '$collection.$attribute'");
       }
 
       if (outHasValue.value == 0) {
@@ -655,7 +655,7 @@ class Database {
     }
   }
 
-  /// Reads double vector for a vector attribute by element ID.
+  /// Reads float vector for a vector attribute by element ID.
   List<double> readVectorFloatsById(String collection, String attribute, int id) {
     _ensureNotClosed();
 
@@ -762,7 +762,7 @@ class Database {
     }
   }
 
-  /// Reads double set for a set attribute by element ID.
+  /// Reads float set for a set attribute by element ID.
   List<double> readSetFloatsById(String collection, String attribute, int id) {
     _ensureNotClosed();
 
@@ -988,7 +988,7 @@ class Database {
     }
   }
 
-  /// Updates a double scalar attribute value by element ID.
+  /// Updates a float scalar attribute value by element ID.
   void updateScalarFloat(String collection, String attribute, int id, double value) {
     _ensureNotClosed();
 
@@ -1003,7 +1003,7 @@ class Database {
       );
 
       if (err != psr_error_t.PSR_OK) {
-        throw DatabaseException.fromError(err, "Failed to update scalar double '$collection.$attribute' for id $id");
+        throw DatabaseException.fromError(err, "Failed to update scalar float '$collection.$attribute' for id $id");
       }
     } finally {
       arena.releaseAll();
@@ -1062,7 +1062,7 @@ class Database {
     }
   }
 
-  /// Updates a double vector attribute by element ID (replaces entire vector).
+  /// Updates a float vector attribute by element ID (replaces entire vector).
   void updateVectorFloats(String collection, String attribute, int id, List<double> values) {
     _ensureNotClosed();
 
@@ -1148,7 +1148,7 @@ class Database {
     }
   }
 
-  /// Updates a double set attribute by element ID (replaces entire set).
+  /// Updates a float set attribute by element ID (replaces entire set).
   void updateSetFloats(String collection, String attribute, int id, List<double> values) {
     _ensureNotClosed();
 
