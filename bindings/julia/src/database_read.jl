@@ -481,7 +481,7 @@ function read(db::Database, collection::String, attribute::String)
         elseif attribute_type.data_type == C.PSR_DATA_TYPE_STRING
             return read_vector_strings(db, collection, attribute)
         else
-            throw(DatabaseException("Unsupported data type for '$collection.$attribute'")) 
+            throw(DatabaseException("Unsupported data type for '$collection.$attribute'"))
         end
     elseif attribute_type.data_structure == C.PSR_DATA_STRUCTURE_SET
         if attribute_type.data_type == C.PSR_DATA_TYPE_INTEGER

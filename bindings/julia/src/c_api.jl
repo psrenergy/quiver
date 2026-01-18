@@ -214,8 +214,8 @@ function psr_database_update_scalar_integer(db, collection, attribute, id, value
     @ccall libpsr_database_c.psr_database_update_scalar_integer(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, value::Int64)::psr_error_t
 end
 
-function psr_database_update_scalar_double(db, collection, attribute, id, value)
-    @ccall libpsr_database_c.psr_database_update_scalar_double(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, value::Cdouble)::psr_error_t
+function psr_database_update_scalar_float(db, collection, attribute, id, value)
+    @ccall libpsr_database_c.psr_database_update_scalar_float(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, value::Cdouble)::psr_error_t
 end
 
 function psr_database_update_scalar_string(db, collection, attribute, id, value)
@@ -250,8 +250,8 @@ function psr_free_int_array(values)
     @ccall libpsr_database_c.psr_free_int_array(values::Ptr{Int64})::Cvoid
 end
 
-function psr_free_double_array(values)
-    @ccall libpsr_database_c.psr_free_double_array(values::Ptr{Cdouble})::Cvoid
+function psr_free_float_array(values)
+    @ccall libpsr_database_c.psr_free_float_array(values::Ptr{Cdouble})::Cvoid
 end
 
 function psr_free_string_array(values, count)
@@ -262,8 +262,8 @@ function psr_free_int_vectors(vectors, sizes, count)
     @ccall libpsr_database_c.psr_free_int_vectors(vectors::Ptr{Ptr{Int64}}, sizes::Ptr{Csize_t}, count::Csize_t)::Cvoid
 end
 
-function psr_free_double_vectors(vectors, sizes, count)
-    @ccall libpsr_database_c.psr_free_double_vectors(vectors::Ptr{Ptr{Cdouble}}, sizes::Ptr{Csize_t}, count::Csize_t)::Cvoid
+function psr_free_float_vectors(vectors, sizes, count)
+    @ccall libpsr_database_c.psr_free_float_vectors(vectors::Ptr{Ptr{Cdouble}}, sizes::Ptr{Csize_t}, count::Csize_t)::Cvoid
 end
 
 function psr_free_string_vectors(vectors, sizes, count)
@@ -286,8 +286,8 @@ function psr_element_set_integer(element, name, value)
     @ccall libpsr_database_c.psr_element_set_integer(element::Ptr{psr_element_t}, name::Ptr{Cchar}, value::Int64)::psr_error_t
 end
 
-function psr_element_set_double(element, name, value)
-    @ccall libpsr_database_c.psr_element_set_double(element::Ptr{psr_element_t}, name::Ptr{Cchar}, value::Cdouble)::psr_error_t
+function psr_element_set_float(element, name, value)
+    @ccall libpsr_database_c.psr_element_set_float(element::Ptr{psr_element_t}, name::Ptr{Cchar}, value::Cdouble)::psr_error_t
 end
 
 function psr_element_set_string(element, name, value)
@@ -302,8 +302,8 @@ function psr_element_set_array_int(element, name, values, count)
     @ccall libpsr_database_c.psr_element_set_array_int(element::Ptr{psr_element_t}, name::Ptr{Cchar}, values::Ptr{Int64}, count::Int32)::psr_error_t
 end
 
-function psr_element_set_array_double(element, name, values, count)
-    @ccall libpsr_database_c.psr_element_set_array_double(element::Ptr{psr_element_t}, name::Ptr{Cchar}, values::Ptr{Cdouble}, count::Int32)::psr_error_t
+function psr_element_set_array_float(element, name, values, count)
+    @ccall libpsr_database_c.psr_element_set_array_float(element::Ptr{psr_element_t}, name::Ptr{Cchar}, values::Ptr{Cdouble}, count::Int32)::psr_error_t
 end
 
 function psr_element_set_array_string(element, name, values, count)
