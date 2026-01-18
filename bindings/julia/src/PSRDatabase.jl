@@ -13,9 +13,6 @@ include("database_delete.jl")
 include("lua_runner.jl")
 
 export Element, Database, LuaRunner, DatabaseException
-export get_attribute_type
-export PSR_DATA_STRUCTURE_SCALAR, PSR_DATA_STRUCTURE_VECTOR, PSR_DATA_STRUCTURE_SET
-export PSR_DATA_TYPE_INTEGER, PSR_DATA_TYPE_FLOAT, PSR_DATA_TYPE_STRING
 
 # Re-export enums from C module
 const PSR_DATA_STRUCTURE_SCALAR = C.PSR_DATA_STRUCTURE_SCALAR
