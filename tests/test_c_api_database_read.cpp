@@ -150,14 +150,14 @@ TEST(DatabaseCApi, ReadVectorIntegers) {
     auto e1 = psr_element_create();
     psr_element_set_string(e1, "label", "Item 1");
     int64_t values1[] = {1, 2, 3};
-    psr_element_set_array_int(e1, "value_int", values1, 3);
+    psr_element_set_array_integer(e1, "value_int", values1, 3);
     psr_database_create_element(db, "Collection", e1);
     psr_element_destroy(e1);
 
     auto e2 = psr_element_create();
     psr_element_set_string(e2, "label", "Item 2");
     int64_t values2[] = {10, 20};
-    psr_element_set_array_int(e2, "value_int", values2, 2);
+    psr_element_set_array_integer(e2, "value_int", values2, 2);
     psr_database_create_element(db, "Collection", e2);
     psr_element_destroy(e2);
 
@@ -272,7 +272,7 @@ TEST(DatabaseCApi, ReadVectorOnlyReturnsElementsWithData) {
     auto e1 = psr_element_create();
     psr_element_set_string(e1, "label", "Item 1");
     int64_t values1[] = {1, 2, 3};
-    psr_element_set_array_int(e1, "value_int", values1, 3);
+    psr_element_set_array_integer(e1, "value_int", values1, 3);
     psr_database_create_element(db, "Collection", e1);
     psr_element_destroy(e1);
 
@@ -286,7 +286,7 @@ TEST(DatabaseCApi, ReadVectorOnlyReturnsElementsWithData) {
     auto e3 = psr_element_create();
     psr_element_set_string(e3, "label", "Item 3");
     int64_t values3[] = {4, 5};
-    psr_element_set_array_int(e3, "value_int", values3, 2);
+    psr_element_set_array_integer(e3, "value_int", values3, 2);
     psr_database_create_element(db, "Collection", e3);
     psr_element_destroy(e3);
 
@@ -563,14 +563,14 @@ TEST(DatabaseCApi, ReadVectorIntegerById) {
     auto e1 = psr_element_create();
     psr_element_set_string(e1, "label", "Item 1");
     int64_t values1[] = {1, 2, 3};
-    psr_element_set_array_int(e1, "value_int", values1, 3);
+    psr_element_set_array_integer(e1, "value_int", values1, 3);
     int64_t id1 = psr_database_create_element(db, "Collection", e1);
     psr_element_destroy(e1);
 
     auto e2 = psr_element_create();
     psr_element_set_string(e2, "label", "Item 2");
     int64_t values2[] = {10, 20};
-    psr_element_set_array_int(e2, "value_int", values2, 2);
+    psr_element_set_array_integer(e2, "value_int", values2, 2);
     int64_t id2 = psr_database_create_element(db, "Collection", e2);
     psr_element_destroy(e2);
 

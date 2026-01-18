@@ -1271,7 +1271,7 @@ class PsrDatabaseBindings {
   late final _psr_element_set_null =
       _psr_element_set_nullPtr.asFunction<int Function(ffi.Pointer<psr_element_t1>, ffi.Pointer<ffi.Char>)>();
 
-  int psr_element_set_array_int(
+  int psr_element_set_array_integer(
     ffi.Pointer<psr_element_t1> element,
     ffi.Pointer<ffi.Char> name,
     ffi.Pointer<ffi.Int64> values,
@@ -1288,7 +1288,7 @@ class PsrDatabaseBindings {
   late final _psr_element_set_array_intPtr = _lookup<
       ffi.NativeFunction<
           ffi.Int32 Function(ffi.Pointer<psr_element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Int64>,
-              ffi.Int32)>>('psr_element_set_array_int');
+              ffi.Int32)>>('psr_element_set_array_integer');
   late final _psr_element_set_array_int = _psr_element_set_array_intPtr
       .asFunction<int Function(ffi.Pointer<psr_element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Int64>, int)>();
 

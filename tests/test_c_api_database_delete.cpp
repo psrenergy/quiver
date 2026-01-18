@@ -51,7 +51,7 @@ TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
     auto e = psr_element_create();
     psr_element_set_string(e, "label", "Item 1");
     int64_t values[] = {1, 2, 3};
-    psr_element_set_array_int(e, "value_int", values, 3);
+    psr_element_set_array_integer(e, "value_int", values, 3);
     int64_t id = psr_database_create_element(db, "Collection", e);
     psr_element_destroy(e);
 

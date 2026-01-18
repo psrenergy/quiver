@@ -159,7 +159,7 @@ class Element {
       for (var i = 0; i < values.length; i++) {
         arrayPtr[i] = values[i];
       }
-      final error = bindings.psr_element_set_array_int(
+      final error = bindings.psr_element_set_array_integer(
         _ptr,
         namePtr.cast(),
         arrayPtr,

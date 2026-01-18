@@ -70,7 +70,7 @@ TEST(ElementCApi, SetArrayInt) {
     ASSERT_NE(element, nullptr);
 
     int64_t values[] = {10, 20, 30};
-    EXPECT_EQ(psr_element_set_array_int(element, "counts", values, 3), PSR_OK);
+    EXPECT_EQ(psr_element_set_array_integer(element, "counts", values, 3), PSR_OK);
     EXPECT_EQ(psr_element_has_arrays(element), 1);
     EXPECT_EQ(psr_element_array_count(element), 1);
 
@@ -195,15 +195,15 @@ TEST(ElementCApi, ArrayNullErrors) {
     double float_values[] = {1.0, 2.0, 3.0};
     const char* string_values[] = {"a", "b", "c"};
 
-    EXPECT_EQ(psr_element_set_array_int(nullptr, "x", integer_values, 3), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_array_integer(nullptr, "x", integer_values, 3), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_array_float(nullptr, "x", float_values, 3), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_array_string(nullptr, "x", string_values, 3), PSR_ERROR_INVALID_ARGUMENT);
 
     auto element = psr_element_create();
-    EXPECT_EQ(psr_element_set_array_int(element, nullptr, integer_values, 3), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_array_integer(element, nullptr, integer_values, 3), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_array_float(element, nullptr, float_values, 3), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_array_string(element, nullptr, string_values, 3), PSR_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(psr_element_set_array_int(element, "x", nullptr, 3), PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(psr_element_set_array_integer(element, "x", nullptr, 3), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_array_float(element, "x", nullptr, 3), PSR_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(psr_element_set_array_string(element, "x", nullptr, 3), PSR_ERROR_INVALID_ARGUMENT);
     psr_element_destroy(element);

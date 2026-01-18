@@ -298,8 +298,8 @@ function psr_element_set_null(element, name)
     @ccall libpsr_database_c.psr_element_set_null(element::Ptr{psr_element_t}, name::Ptr{Cchar})::psr_error_t
 end
 
-function psr_element_set_array_int(element, name, values, count)
-    @ccall libpsr_database_c.psr_element_set_array_int(element::Ptr{psr_element_t}, name::Ptr{Cchar}, values::Ptr{Int64}, count::Int32)::psr_error_t
+function psr_element_set_array_integer(element, name, values, count)
+    @ccall libpsr_database_c.psr_element_set_array_integer(element::Ptr{psr_element_t}, name::Ptr{Cchar}, values::Ptr{Int64}, count::Int32)::psr_error_t
 end
 
 function psr_element_set_array_float(element, name, values, count)
