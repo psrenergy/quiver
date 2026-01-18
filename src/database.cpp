@@ -779,7 +779,7 @@ std::vector<int64_t> Database::read_scalar_integers(const std::string& collectio
     return values;
 }
 
-std::vector<double> Database::read_scalar_doubles(const std::string& collection, const std::string& attribute) {
+std::vector<double> Database::read_scalar_floats(const std::string& collection, const std::string& attribute) {
     auto sql = "SELECT " + attribute + " FROM " + collection;
     auto result = execute(sql);
 
@@ -821,7 +821,7 @@ Database::read_scalar_integers_by_id(const std::string& collection, const std::s
 }
 
 std::optional<double>
-Database::read_scalar_doubles_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+Database::read_scalar_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto sql = "SELECT " + attribute + " FROM " + collection + " WHERE id = ?";
     auto result = execute(sql, {id});
 
@@ -870,7 +870,7 @@ std::vector<std::vector<int64_t>> Database::read_vector_integers(const std::stri
     return vectors;
 }
 
-std::vector<std::vector<double>> Database::read_vector_doubles(const std::string& collection,
+std::vector<std::vector<double>> Database::read_vector_floats(const std::string& collection,
                                                                const std::string& attribute) {
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + vector_table + " ORDER BY id, vector_index";
@@ -944,7 +944,7 @@ Database::read_vector_integers_by_id(const std::string& collection, const std::s
 }
 
 std::vector<double>
-Database::read_vector_doubles_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+Database::read_vector_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + vector_table + " WHERE id = ? ORDER BY vector_index";
     auto result = execute(sql, {id});
@@ -1005,7 +1005,7 @@ std::vector<std::vector<int64_t>> Database::read_set_integers(const std::string&
     return sets;
 }
 
-std::vector<std::vector<double>> Database::read_set_doubles(const std::string& collection,
+std::vector<std::vector<double>> Database::read_set_floats(const std::string& collection,
                                                             const std::string& attribute) {
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + set_table + " ORDER BY id";
@@ -1079,7 +1079,7 @@ Database::read_set_integers_by_id(const std::string& collection, const std::stri
 }
 
 std::vector<double>
-Database::read_set_doubles_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+Database::read_set_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + set_table + " WHERE id = ?";
     auto result = execute(sql, {id});
@@ -1198,7 +1198,7 @@ void Database::update_vector_integers(const std::string& collection,
     impl_->logger->info("Updated vector {}.{} for id {} with {} values", collection, attribute, id, values.size());
 }
 
-void Database::update_vector_doubles(const std::string& collection,
+void Database::update_vector_floats(const std::string& collection,
                                      const std::string& attribute,
                                      int64_t id,
                                      const std::vector<double>& values) {
@@ -1284,7 +1284,7 @@ void Database::update_set_integers(const std::string& collection,
     impl_->logger->info("Updated set {}.{} for id {} with {} values", collection, attribute, id, values.size());
 }
 
-void Database::update_set_doubles(const std::string& collection,
+void Database::update_set_floats(const std::string& collection,
                                   const std::string& attribute,
                                   int64_t id,
                                   const std::vector<double>& values) {

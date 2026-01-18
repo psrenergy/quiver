@@ -42,7 +42,7 @@ TEST(DatabaseCApi, ReadScalarIntegers) {
     psr_database_close(db);
 }
 
-TEST(DatabaseCApi, ReadScalarDoubles) {
+TEST(DatabaseCApi, ReadScalarFloats) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
@@ -62,7 +62,7 @@ TEST(DatabaseCApi, ReadScalarDoubles) {
 
     double* values = nullptr;
     size_t count = 0;
-    auto err = psr_database_read_scalar_doubles(db, "Configuration", "float_attribute", &values, &count);
+    auto err = psr_database_read_scalar_floats(db, "Configuration", "float_attribute", &values, &count);
 
     EXPECT_EQ(err, PSR_OK);
     EXPECT_EQ(count, 2);
@@ -124,7 +124,7 @@ TEST(DatabaseCApi, ReadScalarEmpty) {
 
     double* double_values = nullptr;
     size_t double_count = 0;
-    err = psr_database_read_scalar_doubles(db, "Collection", "some_float", &double_values, &double_count);
+    err = psr_database_read_scalar_floats(db, "Collection", "some_float", &double_values, &double_count);
     EXPECT_EQ(err, PSR_OK);
     EXPECT_EQ(double_count, 0);
     EXPECT_EQ(double_values, nullptr);
@@ -180,7 +180,7 @@ TEST(DatabaseCApi, ReadVectorIntegers) {
     psr_database_close(db);
 }
 
-TEST(DatabaseCApi, ReadVectorDoubles) {
+TEST(DatabaseCApi, ReadVectorFloats) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
@@ -208,7 +208,7 @@ TEST(DatabaseCApi, ReadVectorDoubles) {
     double** vectors = nullptr;
     size_t* sizes = nullptr;
     size_t count = 0;
-    auto err = psr_database_read_vector_doubles(db, "Collection", "value_float", &vectors, &sizes, &count);
+    auto err = psr_database_read_vector_floats(db, "Collection", "value_float", &vectors, &sizes, &count);
 
     EXPECT_EQ(err, PSR_OK);
     EXPECT_EQ(count, 2);
@@ -247,7 +247,7 @@ TEST(DatabaseCApi, ReadVectorEmpty) {
     double** double_vectors = nullptr;
     size_t* double_sizes = nullptr;
     size_t double_count = 0;
-    err = psr_database_read_vector_doubles(
+    err = psr_database_read_vector_floats(
         db, "Collection", "value_float", &double_vectors, &double_sizes, &double_count);
     EXPECT_EQ(err, PSR_OK);
     EXPECT_EQ(double_count, 0);
@@ -489,7 +489,7 @@ TEST(DatabaseCApi, ReadScalarDoubleById) {
 
     double value;
     int has_value;
-    auto err = psr_database_read_scalar_doubles_by_id(db, "Configuration", "float_attribute", id1, &value, &has_value);
+    auto err = psr_database_read_scalar_floats_by_id(db, "Configuration", "float_attribute", id1, &value, &has_value);
 
     EXPECT_EQ(err, PSR_OK);
     EXPECT_EQ(has_value, 1);
@@ -615,7 +615,7 @@ TEST(DatabaseCApi, ReadVectorDoubleById) {
 
     double* values = nullptr;
     size_t count = 0;
-    auto err = psr_database_read_vector_doubles_by_id(db, "Collection", "value_float", id1, &values, &count);
+    auto err = psr_database_read_vector_floats_by_id(db, "Collection", "value_float", id1, &values, &count);
 
     EXPECT_EQ(err, PSR_OK);
     EXPECT_EQ(count, 3);
@@ -1008,14 +1008,14 @@ TEST(DatabaseCApi, ReadScalarIntegersNullOutput) {
     psr_database_close(db);
 }
 
-TEST(DatabaseCApi, ReadScalarDoublesNullDb) {
+TEST(DatabaseCApi, ReadScalarFloatsNullDb) {
     double* values = nullptr;
     size_t count = 0;
-    auto err = psr_database_read_scalar_doubles(nullptr, "Configuration", "float_attribute", &values, &count);
+    auto err = psr_database_read_scalar_floats(nullptr, "Configuration", "float_attribute", &values, &count);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 }
 
-TEST(DatabaseCApi, ReadScalarDoublesNullCollection) {
+TEST(DatabaseCApi, ReadScalarFloatsNullCollection) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
@@ -1023,24 +1023,24 @@ TEST(DatabaseCApi, ReadScalarDoublesNullCollection) {
 
     double* values = nullptr;
     size_t count = 0;
-    auto err = psr_database_read_scalar_doubles(db, nullptr, "float_attribute", &values, &count);
+    auto err = psr_database_read_scalar_floats(db, nullptr, "float_attribute", &values, &count);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
 
-TEST(DatabaseCApi, ReadScalarDoublesNullOutput) {
+TEST(DatabaseCApi, ReadScalarFloatsNullOutput) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     size_t count = 0;
-    auto err = psr_database_read_scalar_doubles(db, "Configuration", "float_attribute", nullptr, &count);
+    auto err = psr_database_read_scalar_floats(db, "Configuration", "float_attribute", nullptr, &count);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 
     double* values = nullptr;
-    err = psr_database_read_scalar_doubles(db, "Configuration", "float_attribute", &values, nullptr);
+    err = psr_database_read_scalar_floats(db, "Configuration", "float_attribute", &values, nullptr);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
@@ -1128,26 +1128,26 @@ TEST(DatabaseCApi, ReadScalarIntegersByIdNullOutput) {
     psr_database_close(db);
 }
 
-TEST(DatabaseCApi, ReadScalarDoublesByIdNullDb) {
+TEST(DatabaseCApi, ReadScalarFloatsByIdNullDb) {
     double value;
     int has_value;
     auto err =
-        psr_database_read_scalar_doubles_by_id(nullptr, "Configuration", "float_attribute", 1, &value, &has_value);
+        psr_database_read_scalar_floats_by_id(nullptr, "Configuration", "float_attribute", 1, &value, &has_value);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 }
 
-TEST(DatabaseCApi, ReadScalarDoublesByIdNullOutput) {
+TEST(DatabaseCApi, ReadScalarFloatsByIdNullOutput) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     int has_value;
-    auto err = psr_database_read_scalar_doubles_by_id(db, "Configuration", "float_attribute", 1, nullptr, &has_value);
+    auto err = psr_database_read_scalar_floats_by_id(db, "Configuration", "float_attribute", 1, nullptr, &has_value);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 
     double value;
-    err = psr_database_read_scalar_doubles_by_id(db, "Configuration", "float_attribute", 1, &value, nullptr);
+    err = psr_database_read_scalar_floats_by_id(db, "Configuration", "float_attribute", 1, &value, nullptr);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
@@ -1226,15 +1226,15 @@ TEST(DatabaseCApi, ReadVectorIntegersNullOutput) {
     psr_database_close(db);
 }
 
-TEST(DatabaseCApi, ReadVectorDoublesNullDb) {
+TEST(DatabaseCApi, ReadVectorFloatsNullDb) {
     double** vectors = nullptr;
     size_t* sizes = nullptr;
     size_t count = 0;
-    auto err = psr_database_read_vector_doubles(nullptr, "Collection", "value_float", &vectors, &sizes, &count);
+    auto err = psr_database_read_vector_floats(nullptr, "Collection", "value_float", &vectors, &sizes, &count);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 }
 
-TEST(DatabaseCApi, ReadVectorDoublesNullOutput) {
+TEST(DatabaseCApi, ReadVectorFloatsNullOutput) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
@@ -1242,14 +1242,14 @@ TEST(DatabaseCApi, ReadVectorDoublesNullOutput) {
 
     size_t* sizes = nullptr;
     size_t count = 0;
-    auto err = psr_database_read_vector_doubles(db, "Collection", "value_float", nullptr, &sizes, &count);
+    auto err = psr_database_read_vector_floats(db, "Collection", "value_float", nullptr, &sizes, &count);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 
     double** vectors = nullptr;
-    err = psr_database_read_vector_doubles(db, "Collection", "value_float", &vectors, nullptr, &count);
+    err = psr_database_read_vector_floats(db, "Collection", "value_float", &vectors, nullptr, &count);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 
-    err = psr_database_read_vector_doubles(db, "Collection", "value_float", &vectors, &sizes, nullptr);
+    err = psr_database_read_vector_floats(db, "Collection", "value_float", &vectors, &sizes, nullptr);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
@@ -1305,25 +1305,25 @@ TEST(DatabaseCApi, ReadVectorIntegersByIdNullOutput) {
     psr_database_close(db);
 }
 
-TEST(DatabaseCApi, ReadVectorDoublesByIdNullDb) {
+TEST(DatabaseCApi, ReadVectorFloatsByIdNullDb) {
     double* values = nullptr;
     size_t count = 0;
-    auto err = psr_database_read_vector_doubles_by_id(nullptr, "Collection", "value_float", 1, &values, &count);
+    auto err = psr_database_read_vector_floats_by_id(nullptr, "Collection", "value_float", 1, &values, &count);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 }
 
-TEST(DatabaseCApi, ReadVectorDoublesByIdNullOutput) {
+TEST(DatabaseCApi, ReadVectorFloatsByIdNullOutput) {
     auto options = psr_database_options_default();
     options.console_level = PSR_LOG_OFF;
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     size_t count = 0;
-    auto err = psr_database_read_vector_doubles_by_id(db, "Collection", "value_float", 1, nullptr, &count);
+    auto err = psr_database_read_vector_floats_by_id(db, "Collection", "value_float", 1, nullptr, &count);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 
     double* values = nullptr;
-    err = psr_database_read_vector_doubles_by_id(db, "Collection", "value_float", 1, &values, nullptr);
+    err = psr_database_read_vector_floats_by_id(db, "Collection", "value_float", 1, &values, nullptr);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
@@ -1384,11 +1384,11 @@ TEST(DatabaseCApi, ReadSetIntegersNullOutput) {
     psr_database_close(db);
 }
 
-TEST(DatabaseCApi, ReadSetDoublesNullDb) {
+TEST(DatabaseCApi, ReadSetFloatsNullDb) {
     double** sets = nullptr;
     size_t* sizes = nullptr;
     size_t count = 0;
-    auto err = psr_database_read_set_doubles(nullptr, "Collection", "tag", &sets, &sizes, &count);
+    auto err = psr_database_read_set_floats(nullptr, "Collection", "tag", &sets, &sizes, &count);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 }
 
@@ -1447,10 +1447,10 @@ TEST(DatabaseCApi, ReadSetIntegersByIdNullDb) {
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 }
 
-TEST(DatabaseCApi, ReadSetDoublesByIdNullDb) {
+TEST(DatabaseCApi, ReadSetFloatsByIdNullDb) {
     double* values = nullptr;
     size_t count = 0;
-    auto err = psr_database_read_set_doubles_by_id(nullptr, "Collection", "tag", 1, &values, &count);
+    auto err = psr_database_read_set_floats_by_id(nullptr, "Collection", "tag", 1, &values, &count);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 }
 

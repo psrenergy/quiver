@@ -41,7 +41,7 @@ class Element {
   /// - `double` - 64-bit floating point
   /// - `String` - UTF-8 string
   /// - `List<int>` - array of integers
-  /// - `List<double>` - array of doubles
+  /// - `List<double>` - array of floats
   /// - `List<String>` - array of strings
   void set(String name, Object? value) {
     _ensureNotDisposed();
@@ -174,7 +174,7 @@ class Element {
     }
   }
 
-  /// Sets an array of doubles.
+  /// Sets an array of floats.
   void setArrayDouble(String name, List<double> values) {
     _ensureNotDisposed();
     final namePtr = name.toNativeUtf8();

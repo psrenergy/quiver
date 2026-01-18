@@ -64,7 +64,7 @@ void main() {
       }
     });
 
-    test('reads doubles from Configuration', () {
+    test('reads floats from Configuration', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
@@ -80,7 +80,7 @@ void main() {
         });
 
         expect(
-          db.readScalarDoubles('Configuration', 'float_attribute'),
+          db.readScalarFloats('Configuration', 'float_attribute'),
           equals([3.14, 2.71]),
         );
       } finally {
@@ -117,7 +117,7 @@ void main() {
           equals([10, 20]),
         );
         expect(
-          db.readScalarDoubles('Collection', 'some_float'),
+          db.readScalarFloats('Collection', 'some_float'),
           equals([1.5, 2.5]),
         );
       } finally {
@@ -137,7 +137,7 @@ void main() {
 
         expect(db.readScalarStrings('Collection', 'label'), isEmpty);
         expect(db.readScalarIntegers('Collection', 'some_integer'), isEmpty);
-        expect(db.readScalarDoubles('Collection', 'some_float'), isEmpty);
+        expect(db.readScalarFloats('Collection', 'some_float'), isEmpty);
       } finally {
         db.close();
       }
@@ -190,7 +190,7 @@ void main() {
         });
 
         expect(
-          db.readVectorDoubles('Collection', 'value_float'),
+          db.readVectorFloats('Collection', 'value_float'),
           equals([
             [1.5, 2.5, 3.5],
             [10.5, 20.5],
@@ -212,7 +212,7 @@ void main() {
         db.createElement('Configuration', {'label': 'Test Config'});
 
         expect(db.readVectorIntegers('Collection', 'value_int'), isEmpty);
-        expect(db.readVectorDoubles('Collection', 'value_float'), isEmpty);
+        expect(db.readVectorFloats('Collection', 'value_float'), isEmpty);
       } finally {
         db.close();
       }
@@ -427,7 +427,7 @@ void main() {
     });
   });
 
-  group('Read Scalar Doubles by ID', () {
+  group('Read Scalar Floats by ID', () {
     test('reads double by specific element ID', () {
       final db = Database.fromSchema(
         ':memory:',
@@ -500,7 +500,7 @@ void main() {
     });
   });
 
-  group('Read Vector Doubles by ID', () {
+  group('Read Vector Floats by ID', () {
     test('reads double vector by specific element ID', () {
       final db = Database.fromSchema(
         ':memory:',
@@ -513,7 +513,7 @@ void main() {
           'value_float': [1.5, 2.5, 3.5],
         });
 
-        expect(db.readVectorDoublesById('Collection', 'value_float', 1), equals([1.5, 2.5, 3.5]));
+        expect(db.readVectorFloatsById('Collection', 'value_float', 1), equals([1.5, 2.5, 3.5]));
       } finally {
         db.close();
       }
@@ -748,14 +748,14 @@ void main() {
       }
     });
 
-    test('throws on nonexistent collection for doubles', () {
+    test('throws on nonexistent collection for floats', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
         expect(
-          () => db.readScalarDoubles('NonexistentCollection', 'value'),
+          () => db.readScalarFloats('NonexistentCollection', 'value'),
           throwsA(isA<DatabaseException>()),
         );
       } finally {
@@ -795,14 +795,14 @@ void main() {
       }
     });
 
-    test('throws on nonexistent attribute for doubles', () {
+    test('throws on nonexistent attribute for floats', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
         expect(
-          () => db.readScalarDoubles('Configuration', 'nonexistent_attr'),
+          () => db.readScalarFloats('Configuration', 'nonexistent_attr'),
           throwsA(isA<DatabaseException>()),
         );
       } finally {
@@ -881,7 +881,7 @@ void main() {
       }
     });
 
-    test('throws on nonexistent collection for vector doubles', () {
+    test('throws on nonexistent collection for vector floats', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
@@ -889,7 +889,7 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Test Config'});
         expect(
-          () => db.readVectorDoubles('NonexistentCollection', 'value_float'),
+          () => db.readVectorFloats('NonexistentCollection', 'value_float'),
           throwsA(isA<DatabaseException>()),
         );
       } finally {

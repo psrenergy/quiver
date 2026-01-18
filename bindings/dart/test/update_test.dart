@@ -618,7 +618,7 @@ void main() {
     });
   });
 
-  group('Update Vector Doubles', () {
+  group('Update Vector Floats', () {
     test('replace existing vector', () {
       final db = Database.fromSchema(
         ':memory:',
@@ -631,9 +631,9 @@ void main() {
           'value_float': [1.5, 2.5, 3.5]
         });
 
-        db.updateVectorDoubles('Collection', 'value_float', 1, [10.5, 20.5]);
+        db.updateVectorFloats('Collection', 'value_float', 1, [10.5, 20.5]);
 
-        final values = db.readVectorDoublesById('Collection', 'value_float', 1);
+        final values = db.readVectorFloatsById('Collection', 'value_float', 1);
         expect(values, equals([10.5, 20.5]));
       } finally {
         db.close();
@@ -652,9 +652,9 @@ void main() {
           'value_float': [1.0]
         });
 
-        db.updateVectorDoubles('Collection', 'value_float', 1, [1.23456789, 9.87654321]);
+        db.updateVectorFloats('Collection', 'value_float', 1, [1.23456789, 9.87654321]);
 
-        final values = db.readVectorDoublesById('Collection', 'value_float', 1);
+        final values = db.readVectorFloatsById('Collection', 'value_float', 1);
         expect(values[0], closeTo(1.23456789, 1e-8));
         expect(values[1], closeTo(9.87654321, 1e-8));
       } finally {
@@ -674,9 +674,9 @@ void main() {
           'value_float': [1.5, 2.5, 3.5]
         });
 
-        db.updateVectorDoubles('Collection', 'value_float', 1, []);
+        db.updateVectorFloats('Collection', 'value_float', 1, []);
 
-        final values = db.readVectorDoublesById('Collection', 'value_float', 1);
+        final values = db.readVectorFloatsById('Collection', 'value_float', 1);
         expect(values, isEmpty);
       } finally {
         db.close();

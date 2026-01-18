@@ -172,7 +172,7 @@ include("fixture.jl")
         PSRDatabase.close!(db)
     end
 
-    @testset "Read Doubles" begin
+    @testset "Read Floats" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = PSRDatabase.from_schema(":memory:", path_schema)
 
@@ -185,8 +185,8 @@ include("fixture.jl")
         PSRDatabase.run!(
             lua,
             """
-        local floats = db:read_scalar_doubles("Collection", "some_float")
-        assert(#floats == 2, "Expected 2 doubles")
+        local floats = db:read_scalar_floats("Collection", "some_float")
+        assert(#floats == 2, "Expected 2 floats")
         assert(floats[1] == 1.5, "First double mismatch")
         assert(floats[2] == 2.5, "Second double mismatch")
     """,

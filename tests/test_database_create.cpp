@@ -17,7 +17,7 @@ TEST(Database, CreateElementWithScalars) {
     // Verify using public read APIs
     auto labels = db.read_scalar_strings("Configuration", "label");
     auto integers = db.read_scalar_integers("Configuration", "integer_attribute");
-    auto floats = db.read_scalar_doubles("Configuration", "float_attribute");
+    auto floats = db.read_scalar_floats("Configuration", "float_attribute");
 
     EXPECT_EQ(labels.size(), 1);
     EXPECT_EQ(labels[0], "Config 1");
@@ -52,7 +52,7 @@ TEST(Database, CreateElementWithVector) {
     EXPECT_EQ(int_vectors.size(), 1);
     EXPECT_EQ(int_vectors[0], (std::vector<int64_t>{1, 2, 3}));
 
-    auto float_vectors = db.read_vector_doubles("Collection", "value_float");
+    auto float_vectors = db.read_vector_floats("Collection", "value_float");
     EXPECT_EQ(float_vectors.size(), 1);
     EXPECT_EQ(float_vectors[0], (std::vector<double>{1.5, 2.5, 3.5}));
 }
@@ -80,7 +80,7 @@ TEST(Database, CreateElementWithVectorGroup) {
     EXPECT_EQ(int_vectors.size(), 1);
     EXPECT_EQ(int_vectors[0], (std::vector<int64_t>{10, 20, 30}));
 
-    auto float_vectors = db.read_vector_doubles("Collection", "value_float");
+    auto float_vectors = db.read_vector_floats("Collection", "value_float");
     EXPECT_EQ(float_vectors.size(), 1);
     EXPECT_EQ(float_vectors[0], (std::vector<double>{1.5, 2.5, 3.5}));
 }

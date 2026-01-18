@@ -134,8 +134,8 @@ function psr_database_read_scalar_integers(db, collection, attribute, out_values
     @ccall libpsr_database_c.psr_database_read_scalar_integers(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::psr_error_t
 end
 
-function psr_database_read_scalar_doubles(db, collection, attribute, out_values, out_count)
-    @ccall libpsr_database_c.psr_database_read_scalar_doubles(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Cdouble}}, out_count::Ptr{Csize_t})::psr_error_t
+function psr_database_read_scalar_floats(db, collection, attribute, out_values, out_count)
+    @ccall libpsr_database_c.psr_database_read_scalar_floats(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Cdouble}}, out_count::Ptr{Csize_t})::psr_error_t
 end
 
 function psr_database_read_scalar_strings(db, collection, attribute, out_values, out_count)
@@ -146,8 +146,8 @@ function psr_database_read_vector_integers(db, collection, attribute, out_vector
     @ccall libpsr_database_c.psr_database_read_vector_integers(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_vectors::Ptr{Ptr{Ptr{Int64}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::psr_error_t
 end
 
-function psr_database_read_vector_doubles(db, collection, attribute, out_vectors, out_sizes, out_count)
-    @ccall libpsr_database_c.psr_database_read_vector_doubles(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_vectors::Ptr{Ptr{Ptr{Cdouble}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::psr_error_t
+function psr_database_read_vector_floats(db, collection, attribute, out_vectors, out_sizes, out_count)
+    @ccall libpsr_database_c.psr_database_read_vector_floats(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_vectors::Ptr{Ptr{Ptr{Cdouble}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::psr_error_t
 end
 
 function psr_database_read_vector_strings(db, collection, attribute, out_vectors, out_sizes, out_count)
@@ -158,8 +158,8 @@ function psr_database_read_set_integers(db, collection, attribute, out_sets, out
     @ccall libpsr_database_c.psr_database_read_set_integers(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_sets::Ptr{Ptr{Ptr{Int64}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::psr_error_t
 end
 
-function psr_database_read_set_doubles(db, collection, attribute, out_sets, out_sizes, out_count)
-    @ccall libpsr_database_c.psr_database_read_set_doubles(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_sets::Ptr{Ptr{Ptr{Cdouble}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::psr_error_t
+function psr_database_read_set_floats(db, collection, attribute, out_sets, out_sizes, out_count)
+    @ccall libpsr_database_c.psr_database_read_set_floats(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_sets::Ptr{Ptr{Ptr{Cdouble}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::psr_error_t
 end
 
 function psr_database_read_set_strings(db, collection, attribute, out_sets, out_sizes, out_count)
@@ -170,8 +170,8 @@ function psr_database_read_scalar_integers_by_id(db, collection, attribute, id, 
     @ccall libpsr_database_c.psr_database_read_scalar_integers_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_value::Ptr{Int64}, out_has_value::Ptr{Cint})::psr_error_t
 end
 
-function psr_database_read_scalar_doubles_by_id(db, collection, attribute, id, out_value, out_has_value)
-    @ccall libpsr_database_c.psr_database_read_scalar_doubles_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_value::Ptr{Cdouble}, out_has_value::Ptr{Cint})::psr_error_t
+function psr_database_read_scalar_floats_by_id(db, collection, attribute, id, out_value, out_has_value)
+    @ccall libpsr_database_c.psr_database_read_scalar_floats_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_value::Ptr{Cdouble}, out_has_value::Ptr{Cint})::psr_error_t
 end
 
 function psr_database_read_scalar_strings_by_id(db, collection, attribute, id, out_value, out_has_value)
@@ -182,8 +182,8 @@ function psr_database_read_vector_integers_by_id(db, collection, attribute, id, 
     @ccall libpsr_database_c.psr_database_read_vector_integers_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::psr_error_t
 end
 
-function psr_database_read_vector_doubles_by_id(db, collection, attribute, id, out_values, out_count)
-    @ccall libpsr_database_c.psr_database_read_vector_doubles_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Cdouble}}, out_count::Ptr{Csize_t})::psr_error_t
+function psr_database_read_vector_floats_by_id(db, collection, attribute, id, out_values, out_count)
+    @ccall libpsr_database_c.psr_database_read_vector_floats_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Cdouble}}, out_count::Ptr{Csize_t})::psr_error_t
 end
 
 function psr_database_read_vector_strings_by_id(db, collection, attribute, id, out_values, out_count)
@@ -194,8 +194,8 @@ function psr_database_read_set_integers_by_id(db, collection, attribute, id, out
     @ccall libpsr_database_c.psr_database_read_set_integers_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::psr_error_t
 end
 
-function psr_database_read_set_doubles_by_id(db, collection, attribute, id, out_values, out_count)
-    @ccall libpsr_database_c.psr_database_read_set_doubles_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Cdouble}}, out_count::Ptr{Csize_t})::psr_error_t
+function psr_database_read_set_floats_by_id(db, collection, attribute, id, out_values, out_count)
+    @ccall libpsr_database_c.psr_database_read_set_floats_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Cdouble}}, out_count::Ptr{Csize_t})::psr_error_t
 end
 
 function psr_database_read_set_strings_by_id(db, collection, attribute, id, out_values, out_count)
@@ -226,8 +226,8 @@ function psr_database_update_vector_integers(db, collection, attribute, id, valu
     @ccall libpsr_database_c.psr_database_update_vector_integers(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Int64}, count::Csize_t)::psr_error_t
 end
 
-function psr_database_update_vector_doubles(db, collection, attribute, id, values, count)
-    @ccall libpsr_database_c.psr_database_update_vector_doubles(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Cdouble}, count::Csize_t)::psr_error_t
+function psr_database_update_vector_floats(db, collection, attribute, id, values, count)
+    @ccall libpsr_database_c.psr_database_update_vector_floats(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Cdouble}, count::Csize_t)::psr_error_t
 end
 
 function psr_database_update_vector_strings(db, collection, attribute, id, values, count)
@@ -238,8 +238,8 @@ function psr_database_update_set_integers(db, collection, attribute, id, values,
     @ccall libpsr_database_c.psr_database_update_set_integers(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Int64}, count::Csize_t)::psr_error_t
 end
 
-function psr_database_update_set_doubles(db, collection, attribute, id, values, count)
-    @ccall libpsr_database_c.psr_database_update_set_doubles(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Cdouble}, count::Csize_t)::psr_error_t
+function psr_database_update_set_floats(db, collection, attribute, id, values, count)
+    @ccall libpsr_database_c.psr_database_update_set_floats(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Cdouble}, count::Csize_t)::psr_error_t
 end
 
 function psr_database_update_set_strings(db, collection, attribute, id, values, count)

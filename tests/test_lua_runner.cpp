@@ -73,7 +73,7 @@ TEST_F(LuaRunnerTest, CreateElementWithArrays) {
     EXPECT_EQ(vectors.size(), 1);
     EXPECT_EQ(vectors[0], (std::vector<int64_t>{1, 2, 3}));
 
-    auto floats = db.read_vector_doubles("Collection", "value_float");
+    auto floats = db.read_vector_floats("Collection", "value_float");
     EXPECT_EQ(floats.size(), 1);
     EXPECT_EQ(floats[0], (std::vector<double>{1.5, 2.5, 3.5}));
 }
@@ -116,7 +116,7 @@ TEST_F(LuaRunnerTest, ReadScalarIntegersFromLua) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadScalarDoublesFromLua) {
+TEST_F(LuaRunnerTest, ReadScalarFloatsFromLua) {
     auto db = psr::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", psr::Element().set("label", "Config"));
@@ -126,10 +126,10 @@ TEST_F(LuaRunnerTest, ReadScalarDoublesFromLua) {
     psr::LuaRunner lua(db);
 
     lua.run(R"(
-        local doubles = db:read_scalar_doubles("Collection", "some_float")
-        assert(#doubles == 2, "Expected 2 doubles")
-        assert(doubles[1] == 1.5, "First double should be 1.5")
-        assert(doubles[2] == 2.5, "Second double should be 2.5")
+        local floats = db:read_scalar_floats("Collection", "some_float")
+        assert(#floats == 2, "Expected 2 floats")
+        assert(floats[1] == 1.5, "First double should be 1.5")
+        assert(floats[2] == 2.5, "Second double should be 2.5")
     )");
 }
 
@@ -161,7 +161,7 @@ TEST_F(LuaRunnerTest, ReadVectorIntegersFromLua) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadVectorDoublesFromLua) {
+TEST_F(LuaRunnerTest, ReadVectorFloatsFromLua) {
     auto db = psr::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", psr::Element().set("label", "Config"));
@@ -171,7 +171,7 @@ TEST_F(LuaRunnerTest, ReadVectorDoublesFromLua) {
     psr::LuaRunner lua(db);
 
     lua.run(R"(
-        local vectors = db:read_vector_doubles("Collection", "value_float")
+        local vectors = db:read_vector_floats("Collection", "value_float")
         assert(#vectors == 1, "Expected 1 vector")
         assert(#vectors[1] == 3, "Vector should have 3 elements")
         assert(vectors[1][1] == 1.1, "vector[1] should be 1.1")
@@ -287,7 +287,7 @@ TEST_F(LuaRunnerTest, ReadScalarDoubleByIdFromLua) {
     psr::LuaRunner lua(db);
 
     std::string script = R"(
-        local val1 = db:read_scalar_doubles_by_id("Collection", "some_float", )" +
+        local val1 = db:read_scalar_floats_by_id("Collection", "some_float", )" +
                          std::to_string(id1) + R"()
         assert(val1 == 3.14, "Expected 3.14, got " .. tostring(val1))
     )";
@@ -563,7 +563,7 @@ TEST_F(LuaRunnerTest, UpdateElementMultipleScalarsFromLua) {
         local int_val = db:read_scalar_integers_by_id("Collection", "some_integer", 1)
         assert(int_val == 500, "Expected integer 500, got " .. tostring(int_val))
 
-        local float_val = db:read_scalar_doubles_by_id("Collection", "some_float", 1)
+        local float_val = db:read_scalar_floats_by_id("Collection", "some_float", 1)
         assert(float_val == 9.9, "Expected float 9.9, got " .. tostring(float_val))
 
         -- Verify label unchanged
@@ -576,7 +576,7 @@ TEST_F(LuaRunnerTest, UpdateElementMultipleScalarsFromLua) {
     EXPECT_TRUE(int_value.has_value());
     EXPECT_EQ(*int_value, 500);
 
-    auto float_value = db.read_scalar_doubles_by_id("Collection", "some_float", 1);
+    auto float_value = db.read_scalar_floats_by_id("Collection", "some_float", 1);
     EXPECT_TRUE(float_value.has_value());
     EXPECT_DOUBLE_EQ(*float_value, 9.9);
 }
@@ -832,9 +832,9 @@ TEST_F(LuaRunnerTest, CreateElementMixedTypes) {
     EXPECT_EQ(integers.size(), 1);
     EXPECT_EQ(integers[0], 42);
 
-    auto doubles = db.read_scalar_doubles("Collection", "some_float");
-    EXPECT_EQ(doubles.size(), 1);
-    EXPECT_DOUBLE_EQ(doubles[0], 3.14);
+    auto floats = db.read_scalar_floats("Collection", "some_float");
+    EXPECT_EQ(floats.size(), 1);
+    EXPECT_DOUBLE_EQ(floats[0], 3.14);
 }
 
 TEST_F(LuaRunnerTest, ReadVectorIntegersByIdFromLua) {
@@ -857,7 +857,7 @@ TEST_F(LuaRunnerTest, ReadVectorIntegersByIdFromLua) {
     lua.run(script);
 }
 
-TEST_F(LuaRunnerTest, ReadVectorDoublesByIdFromLua) {
+TEST_F(LuaRunnerTest, ReadVectorFloatsByIdFromLua) {
     auto db = psr::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", psr::Element().set("label", "Config"));
@@ -867,7 +867,7 @@ TEST_F(LuaRunnerTest, ReadVectorDoublesByIdFromLua) {
     psr::LuaRunner lua(db);
 
     std::string script = R"(
-        local vec = db:read_vector_doubles_by_id("Collection", "value_float", )" +
+        local vec = db:read_vector_floats_by_id("Collection", "value_float", )" +
                          std::to_string(id1) + R"()
         assert(#vec == 3, "Expected 3 elements, got " .. #vec)
         assert(vec[1] == 1.1, "First element should be 1.1")

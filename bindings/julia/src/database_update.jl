@@ -69,9 +69,9 @@ function update_vector_integers!(
     return nothing
 end
 
-function update_vector_doubles!(db::Database, collection::String, attribute::String, id::Int64, values::Vector{<:Real})
+function update_vector_floats!(db::Database, collection::String, attribute::String, id::Int64, values::Vector{<:Real})
     float_values = Float64[Float64(v) for v in values]
-    err = C.psr_database_update_vector_doubles(
+    err = C.psr_database_update_vector_floats(
         db.ptr,
         collection,
         attribute,
@@ -80,7 +80,7 @@ function update_vector_doubles!(db::Database, collection::String, attribute::Str
         Csize_t(length(float_values)),
     )
     if err != C.PSR_OK
-        throw(DatabaseException("Failed to update vector doubles '$collection.$attribute' for id $id"))
+        throw(DatabaseException("Failed to update vector floats '$collection.$attribute' for id $id"))
     end
     return nothing
 end
@@ -114,9 +114,9 @@ function update_set_integers!(db::Database, collection::String, attribute::Strin
     return nothing
 end
 
-function update_set_doubles!(db::Database, collection::String, attribute::String, id::Int64, values::Vector{<:Real})
+function update_set_floats!(db::Database, collection::String, attribute::String, id::Int64, values::Vector{<:Real})
     float_values = Float64[Float64(v) for v in values]
-    err = C.psr_database_update_set_doubles(
+    err = C.psr_database_update_set_floats(
         db.ptr,
         collection,
         attribute,
@@ -125,7 +125,7 @@ function update_set_doubles!(db::Database, collection::String, attribute::String
         Csize_t(length(float_values)),
     )
     if err != C.PSR_OK
-        throw(DatabaseException("Failed to update set doubles '$collection.$attribute' for id $id"))
+        throw(DatabaseException("Failed to update set floats '$collection.$attribute' for id $id"))
     end
     return nothing
 end

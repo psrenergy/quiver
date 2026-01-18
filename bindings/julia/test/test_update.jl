@@ -48,7 +48,7 @@ include("fixture.jl")
         int_value = PSRDatabase.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", Int64(1))
         @test int_value == 500
 
-        float_value = PSRDatabase.read_scalar_doubles_by_id(db, "Configuration", "float_attribute", Int64(1))
+        float_value = PSRDatabase.read_scalar_floats_by_id(db, "Configuration", "float_attribute", Int64(1))
         @test float_value == 9.9
 
         # Verify label unchanged
@@ -202,7 +202,7 @@ include("fixture.jl")
 
         PSRDatabase.update_element!(db, "Configuration", Int64(1); float_attribute = 99.99)
 
-        value = PSRDatabase.read_scalar_doubles_by_id(db, "Configuration", "float_attribute", Int64(1))
+        value = PSRDatabase.read_scalar_floats_by_id(db, "Configuration", "float_attribute", Int64(1))
         @test value == 99.99
 
         PSRDatabase.close!(db)
@@ -280,17 +280,17 @@ include("fixture.jl")
 
         # Basic update
         PSRDatabase.update_scalar_double!(db, "Configuration", "float_attribute", Int64(1), 2.71)
-        value = PSRDatabase.read_scalar_doubles_by_id(db, "Configuration", "float_attribute", Int64(1))
+        value = PSRDatabase.read_scalar_floats_by_id(db, "Configuration", "float_attribute", Int64(1))
         @test value == 2.71
 
         # Update to 0.0
         PSRDatabase.update_scalar_double!(db, "Configuration", "float_attribute", Int64(1), 0.0)
-        value = PSRDatabase.read_scalar_doubles_by_id(db, "Configuration", "float_attribute", Int64(1))
+        value = PSRDatabase.read_scalar_floats_by_id(db, "Configuration", "float_attribute", Int64(1))
         @test value == 0.0
 
         # Precision test
         PSRDatabase.update_scalar_double!(db, "Configuration", "float_attribute", Int64(1), 1.23456789012345)
-        value = PSRDatabase.read_scalar_doubles_by_id(db, "Configuration", "float_attribute", Int64(1))
+        value = PSRDatabase.read_scalar_floats_by_id(db, "Configuration", "float_attribute", Int64(1))
         @test value ≈ 1.23456789012345
 
         PSRDatabase.close!(db)
@@ -388,7 +388,7 @@ include("fixture.jl")
         PSRDatabase.close!(db)
     end
 
-    @testset "Vector Doubles" begin
+    @testset "Vector Floats" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = PSRDatabase.from_schema(":memory:", path_schema)
 
@@ -396,18 +396,18 @@ include("fixture.jl")
         PSRDatabase.create_element!(db, "Collection"; label = "Item 1", value_float = [1.5, 2.5, 3.5])
 
         # Replace existing vector
-        PSRDatabase.update_vector_doubles!(db, "Collection", "value_float", Int64(1), [10.5, 20.5])
-        values = PSRDatabase.read_vector_doubles_by_id(db, "Collection", "value_float", Int64(1))
+        PSRDatabase.update_vector_floats!(db, "Collection", "value_float", Int64(1), [10.5, 20.5])
+        values = PSRDatabase.read_vector_floats_by_id(db, "Collection", "value_float", Int64(1))
         @test values == [10.5, 20.5]
 
         # Precision test
-        PSRDatabase.update_vector_doubles!(db, "Collection", "value_float", Int64(1), [1.23456789, 9.87654321])
-        values = PSRDatabase.read_vector_doubles_by_id(db, "Collection", "value_float", Int64(1))
+        PSRDatabase.update_vector_floats!(db, "Collection", "value_float", Int64(1), [1.23456789, 9.87654321])
+        values = PSRDatabase.read_vector_floats_by_id(db, "Collection", "value_float", Int64(1))
         @test values ≈ [1.23456789, 9.87654321]
 
         # Update to empty vector
-        PSRDatabase.update_vector_doubles!(db, "Collection", "value_float", Int64(1), Float64[])
-        values = PSRDatabase.read_vector_doubles_by_id(db, "Collection", "value_float", Int64(1))
+        PSRDatabase.update_vector_floats!(db, "Collection", "value_float", Int64(1), Float64[])
+        values = PSRDatabase.read_vector_floats_by_id(db, "Collection", "value_float", Int64(1))
         @test isempty(values)
 
         PSRDatabase.close!(db)

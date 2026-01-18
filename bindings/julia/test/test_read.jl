@@ -25,7 +25,7 @@ include("fixture.jl")
 
         @test PSRDatabase.read_scalar_strings(db, "Configuration", "label") == ["Config 1", "Config 2"]
         @test PSRDatabase.read_scalar_integers(db, "Configuration", "integer_attribute") == [42, 100]
-        @test PSRDatabase.read_scalar_doubles(db, "Configuration", "float_attribute") == [3.14, 2.71]
+        @test PSRDatabase.read_scalar_floats(db, "Configuration", "float_attribute") == [3.14, 2.71]
         @test PSRDatabase.read_scalar_strings(db, "Configuration", "string_attribute") == ["hello", "world"]
 
         PSRDatabase.close!(db)
@@ -41,7 +41,7 @@ include("fixture.jl")
 
         @test PSRDatabase.read_scalar_strings(db, "Collection", "label") == ["Item 1", "Item 2"]
         @test PSRDatabase.read_scalar_integers(db, "Collection", "some_integer") == [10, 20]
-        @test PSRDatabase.read_scalar_doubles(db, "Collection", "some_float") == [1.5, 2.5]
+        @test PSRDatabase.read_scalar_floats(db, "Collection", "some_float") == [1.5, 2.5]
 
         PSRDatabase.close!(db)
     end
@@ -55,7 +55,7 @@ include("fixture.jl")
         # No Collection elements created
         @test PSRDatabase.read_scalar_strings(db, "Collection", "label") == String[]
         @test PSRDatabase.read_scalar_integers(db, "Collection", "some_integer") == Int64[]
-        @test PSRDatabase.read_scalar_doubles(db, "Collection", "some_float") == Float64[]
+        @test PSRDatabase.read_scalar_floats(db, "Collection", "some_float") == Float64[]
 
         PSRDatabase.close!(db)
     end
@@ -81,7 +81,7 @@ include("fixture.jl")
         )
 
         @test PSRDatabase.read_vector_integers(db, "Collection", "value_int") == [[1, 2, 3], [10, 20]]
-        @test PSRDatabase.read_vector_doubles(db, "Collection", "value_float") == [[1.5, 2.5, 3.5], [10.5, 20.5]]
+        @test PSRDatabase.read_vector_floats(db, "Collection", "value_float") == [[1.5, 2.5, 3.5], [10.5, 20.5]]
 
         PSRDatabase.close!(db)
     end
@@ -94,7 +94,7 @@ include("fixture.jl")
 
         # No Collection elements created
         @test PSRDatabase.read_vector_integers(db, "Collection", "value_int") == Vector{Int64}[]
-        @test PSRDatabase.read_vector_doubles(db, "Collection", "value_float") == Vector{Float64}[]
+        @test PSRDatabase.read_vector_floats(db, "Collection", "value_float") == Vector{Float64}[]
 
         PSRDatabase.close!(db)
     end
@@ -250,15 +250,15 @@ include("fixture.jl")
         PSRDatabase.close!(db)
     end
 
-    @testset "Scalar Doubles by ID" begin
+    @testset "Scalar Floats by ID" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
         db = PSRDatabase.from_schema(":memory:", path_schema)
 
         PSRDatabase.create_element!(db, "Configuration"; label = "Config 1", float_attribute = 3.14)
         PSRDatabase.create_element!(db, "Configuration"; label = "Config 2", float_attribute = 2.71)
 
-        @test PSRDatabase.read_scalar_doubles_by_id(db, "Configuration", "float_attribute", 1) == 3.14
-        @test PSRDatabase.read_scalar_doubles_by_id(db, "Configuration", "float_attribute", 2) == 2.71
+        @test PSRDatabase.read_scalar_floats_by_id(db, "Configuration", "float_attribute", 1) == 3.14
+        @test PSRDatabase.read_scalar_floats_by_id(db, "Configuration", "float_attribute", 2) == 2.71
 
         PSRDatabase.close!(db)
     end
@@ -290,14 +290,14 @@ include("fixture.jl")
         PSRDatabase.close!(db)
     end
 
-    @testset "Vector Doubles by ID" begin
+    @testset "Vector Floats by ID" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = PSRDatabase.from_schema(":memory:", path_schema)
 
         PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
         PSRDatabase.create_element!(db, "Collection"; label = "Item 1", value_float = [1.5, 2.5, 3.5])
 
-        @test PSRDatabase.read_vector_doubles_by_id(db, "Collection", "value_float", 1) == [1.5, 2.5, 3.5]
+        @test PSRDatabase.read_vector_floats_by_id(db, "Collection", "value_float", 1) == [1.5, 2.5, 3.5]
 
         PSRDatabase.close!(db)
     end
@@ -450,7 +450,7 @@ include("fixture.jl")
             "NonexistentCollection",
             "value",
         )
-        @test_throws PSRDatabase.DatabaseException PSRDatabase.read_scalar_doubles(db, "NonexistentCollection", "value")
+        @test_throws PSRDatabase.DatabaseException PSRDatabase.read_scalar_floats(db, "NonexistentCollection", "value")
 
         PSRDatabase.close!(db)
     end
@@ -469,7 +469,7 @@ include("fixture.jl")
             "Configuration",
             "nonexistent_attr",
         )
-        @test_throws PSRDatabase.DatabaseException PSRDatabase.read_scalar_doubles(
+        @test_throws PSRDatabase.DatabaseException PSRDatabase.read_scalar_floats(
             db,
             "Configuration",
             "nonexistent_attr",
@@ -486,7 +486,7 @@ include("fixture.jl")
 
         # Read by ID that doesn't exist returns nothing
         @test PSRDatabase.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", 999) === nothing
-        @test PSRDatabase.read_scalar_doubles_by_id(db, "Configuration", "float_attribute", 999) === nothing
+        @test PSRDatabase.read_scalar_floats_by_id(db, "Configuration", "float_attribute", 999) === nothing
         @test PSRDatabase.read_scalar_strings_by_id(db, "Configuration", "string_attribute", 999) === nothing
 
         PSRDatabase.close!(db)
@@ -503,7 +503,7 @@ include("fixture.jl")
             "NonexistentCollection",
             "value_int",
         )
-        @test_throws PSRDatabase.DatabaseException PSRDatabase.read_vector_doubles(
+        @test_throws PSRDatabase.DatabaseException PSRDatabase.read_vector_floats(
             db,
             "NonexistentCollection",
             "value_float",

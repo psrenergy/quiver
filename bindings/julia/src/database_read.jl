@@ -45,13 +45,13 @@ function read_scalar_integers(db::Database, collection::String, attribute::Strin
     return result
 end
 
-function read_scalar_doubles(db::Database, collection::String, attribute::String)
+function read_scalar_floats(db::Database, collection::String, attribute::String)
     out_values = Ref{Ptr{Float64}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.psr_database_read_scalar_doubles(db.ptr, collection, attribute, out_values, out_count)
+    err = C.psr_database_read_scalar_floats(db.ptr, collection, attribute, out_values, out_count)
     if err != C.PSR_OK
-        throw(DatabaseException("Failed to read scalar doubles from '$collection.$attribute'"))
+        throw(DatabaseException("Failed to read scalar floats from '$collection.$attribute'"))
     end
 
     count = out_count[]
@@ -113,14 +113,14 @@ function read_vector_integers(db::Database, collection::String, attribute::Strin
     return result
 end
 
-function read_vector_doubles(db::Database, collection::String, attribute::String)
+function read_vector_floats(db::Database, collection::String, attribute::String)
     out_vectors = Ref{Ptr{Ptr{Cdouble}}}(C_NULL)
     out_sizes = Ref{Ptr{Csize_t}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.psr_database_read_vector_doubles(db.ptr, collection, attribute, out_vectors, out_sizes, out_count)
+    err = C.psr_database_read_vector_floats(db.ptr, collection, attribute, out_vectors, out_sizes, out_count)
     if err != C.PSR_OK
-        throw(DatabaseException("Failed to read vector doubles from '$collection.$attribute'"))
+        throw(DatabaseException("Failed to read vector floats from '$collection.$attribute'"))
     end
 
     count = out_count[]
@@ -201,14 +201,14 @@ function read_set_integers(db::Database, collection::String, attribute::String)
     return result
 end
 
-function read_set_doubles(db::Database, collection::String, attribute::String)
+function read_set_floats(db::Database, collection::String, attribute::String)
     out_sets = Ref{Ptr{Ptr{Cdouble}}}(C_NULL)
     out_sizes = Ref{Ptr{Csize_t}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.psr_database_read_set_doubles(db.ptr, collection, attribute, out_sets, out_sizes, out_count)
+    err = C.psr_database_read_set_floats(db.ptr, collection, attribute, out_sets, out_sizes, out_count)
     if err != C.PSR_OK
-        throw(DatabaseException("Failed to read set doubles from '$collection.$attribute'"))
+        throw(DatabaseException("Failed to read set floats from '$collection.$attribute'"))
     end
 
     count = out_count[]
@@ -277,11 +277,11 @@ function read_scalar_integers_by_id(db::Database, collection::String, attribute:
     return out_value[]
 end
 
-function read_scalar_doubles_by_id(db::Database, collection::String, attribute::String, id::Int64)
+function read_scalar_floats_by_id(db::Database, collection::String, attribute::String, id::Int64)
     out_value = Ref{Float64}(0.0)
     out_has_value = Ref{Cint}(0)
 
-    err = C.psr_database_read_scalar_doubles_by_id(db.ptr, collection, attribute, id, out_value, out_has_value)
+    err = C.psr_database_read_scalar_floats_by_id(db.ptr, collection, attribute, id, out_value, out_has_value)
     if err != C.PSR_OK
         throw(DatabaseException("Failed to read scalar double by id from '$collection.$attribute'"))
     end
@@ -330,13 +330,13 @@ function read_vector_integers_by_id(db::Database, collection::String, attribute:
     return result
 end
 
-function read_vector_doubles_by_id(db::Database, collection::String, attribute::String, id::Int64)
+function read_vector_floats_by_id(db::Database, collection::String, attribute::String, id::Int64)
     out_values = Ref{Ptr{Float64}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.psr_database_read_vector_doubles_by_id(db.ptr, collection, attribute, id, out_values, out_count)
+    err = C.psr_database_read_vector_floats_by_id(db.ptr, collection, attribute, id, out_values, out_count)
     if err != C.PSR_OK
-        throw(DatabaseException("Failed to read vector doubles by id from '$collection.$attribute'"))
+        throw(DatabaseException("Failed to read vector floats by id from '$collection.$attribute'"))
     end
 
     count = out_count[]
@@ -390,13 +390,13 @@ function read_set_integers_by_id(db::Database, collection::String, attribute::St
     return result
 end
 
-function read_set_doubles_by_id(db::Database, collection::String, attribute::String, id::Int64)
+function read_set_floats_by_id(db::Database, collection::String, attribute::String, id::Int64)
     out_values = Ref{Ptr{Float64}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.psr_database_read_set_doubles_by_id(db.ptr, collection, attribute, id, out_values, out_count)
+    err = C.psr_database_read_set_floats_by_id(db.ptr, collection, attribute, id, out_values, out_count)
     if err != C.PSR_OK
-        throw(DatabaseException("Failed to read set doubles by id from '$collection.$attribute'"))
+        throw(DatabaseException("Failed to read set floats by id from '$collection.$attribute'"))
     end
 
     count = out_count[]
@@ -467,7 +467,7 @@ function read(db::Database, collection::String, attribute::String)
         if attribute_type.data_type == C.PSR_DATA_TYPE_INTEGER
             return read_scalar_integers(db, collection, attribute)
         elseif attribute_type.data_type == C.PSR_DATA_TYPE_FLOAT
-            return read_scalar_doubles(db, collection, attribute)
+            return read_scalar_floats(db, collection, attribute)
         elseif attribute_type.data_type == C.PSR_DATA_TYPE_STRING
             return read_scalar_strings(db, collection, attribute)
         else
@@ -477,7 +477,7 @@ function read(db::Database, collection::String, attribute::String)
         if attribute_type.data_type == C.PSR_DATA_TYPE_INTEGER
             return read_vector_integers(db, collection, attribute)
         elseif attribute_type.data_type == C.PSR_DATA_TYPE_FLOAT
-            return read_vector_doubles(db, collection, attribute)
+            return read_vector_floats(db, collection, attribute)
         elseif attribute_type.data_type == C.PSR_DATA_TYPE_STRING
             return read_vector_strings(db, collection, attribute)
         else
@@ -487,7 +487,7 @@ function read(db::Database, collection::String, attribute::String)
         if attribute_type.data_type == C.PSR_DATA_TYPE_INTEGER
             return read_set_integers(db, collection, attribute)
         elseif attribute_type.data_type == C.PSR_DATA_TYPE_FLOAT
-            return read_set_doubles(db, collection, attribute)
+            return read_set_floats(db, collection, attribute)
         elseif attribute_type.data_type == C.PSR_DATA_TYPE_STRING
             return read_set_strings(db, collection, attribute)
         else
@@ -505,7 +505,7 @@ function read_by_id(db::Database, collection::String, attribute::String, id::Int
         if attribute_type.data_type == C.PSR_DATA_TYPE_INTEGER
             return read_scalar_integers_by_id(db, collection, attribute, id)
         elseif attribute_type.data_type == C.PSR_DATA_TYPE_FLOAT
-            return read_scalar_doubles_by_id(db, collection, attribute, id)
+            return read_scalar_floats_by_id(db, collection, attribute, id)
         elseif attribute_type.data_type == C.PSR_DATA_TYPE_STRING
             return read_scalar_strings_by_id(db, collection, attribute, id)
         else
@@ -515,7 +515,7 @@ function read_by_id(db::Database, collection::String, attribute::String, id::Int
         if attribute_type.data_type == C.PSR_DATA_TYPE_INTEGER
             return read_vector_integers_by_id(db, collection, attribute, id)
         elseif attribute_type.data_type == C.PSR_DATA_TYPE_FLOAT
-            return read_vector_doubles_by_id(db, collection, attribute, id)
+            return read_vector_floats_by_id(db, collection, attribute, id)
         elseif attribute_type.data_type == C.PSR_DATA_TYPE_STRING
             return read_vector_strings_by_id(db, collection, attribute, id)
         else
@@ -525,7 +525,7 @@ function read_by_id(db::Database, collection::String, attribute::String, id::Int
         if attribute_type.data_type == C.PSR_DATA_TYPE_INTEGER
             return read_set_integers_by_id(db, collection, attribute, id)
         elseif attribute_type.data_type == C.PSR_DATA_TYPE_FLOAT
-            return read_set_doubles_by_id(db, collection, attribute, id)
+            return read_set_floats_by_id(db, collection, attribute, id)
         elseif attribute_type.data_type == C.PSR_DATA_TYPE_STRING
             return read_set_strings_by_id(db, collection, attribute, id)
         else

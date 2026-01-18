@@ -268,7 +268,7 @@ PSR_C_API psr_error_t psr_database_read_scalar_integers(psr_database_t* db,
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_scalar_doubles(psr_database_t* db,
+PSR_C_API psr_error_t psr_database_read_scalar_floats(psr_database_t* db,
                                                        const char* collection,
                                                        const char* attribute,
                                                        double** out_values,
@@ -277,7 +277,7 @@ PSR_C_API psr_error_t psr_database_read_scalar_doubles(psr_database_t* db,
         return PSR_ERROR_INVALID_ARGUMENT;
     }
     try {
-        return read_scalars_impl(db->db.read_scalar_doubles(collection, attribute), out_values, out_count);
+        return read_scalars_impl(db->db.read_scalar_floats(collection, attribute), out_values, out_count);
     } catch (const std::exception&) {
         return PSR_ERROR_DATABASE;
     }
@@ -345,7 +345,7 @@ PSR_C_API psr_error_t psr_database_read_vector_integers(psr_database_t* db,
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_vector_doubles(psr_database_t* db,
+PSR_C_API psr_error_t psr_database_read_vector_floats(psr_database_t* db,
                                                        const char* collection,
                                                        const char* attribute,
                                                        double*** out_vectors,
@@ -355,7 +355,7 @@ PSR_C_API psr_error_t psr_database_read_vector_doubles(psr_database_t* db,
         return PSR_ERROR_INVALID_ARGUMENT;
     }
     try {
-        return read_vectors_impl(db->db.read_vector_doubles(collection, attribute), out_vectors, out_sizes, out_count);
+        return read_vectors_impl(db->db.read_vector_floats(collection, attribute), out_vectors, out_sizes, out_count);
     } catch (const std::exception&) {
         return PSR_ERROR_DATABASE;
     }
@@ -441,7 +441,7 @@ PSR_C_API psr_error_t psr_database_read_set_integers(psr_database_t* db,
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_set_doubles(psr_database_t* db,
+PSR_C_API psr_error_t psr_database_read_set_floats(psr_database_t* db,
                                                     const char* collection,
                                                     const char* attribute,
                                                     double*** out_sets,
@@ -451,7 +451,7 @@ PSR_C_API psr_error_t psr_database_read_set_doubles(psr_database_t* db,
         return PSR_ERROR_INVALID_ARGUMENT;
     }
     try {
-        return read_vectors_impl(db->db.read_set_doubles(collection, attribute), out_sets, out_sizes, out_count);
+        return read_vectors_impl(db->db.read_set_floats(collection, attribute), out_sets, out_sizes, out_count);
     } catch (const std::exception&) {
         return PSR_ERROR_DATABASE;
     }
@@ -520,7 +520,7 @@ PSR_C_API psr_error_t psr_database_read_scalar_integers_by_id(psr_database_t* db
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_scalar_doubles_by_id(psr_database_t* db,
+PSR_C_API psr_error_t psr_database_read_scalar_floats_by_id(psr_database_t* db,
                                                              const char* collection,
                                                              const char* attribute,
                                                              int64_t id,
@@ -530,7 +530,7 @@ PSR_C_API psr_error_t psr_database_read_scalar_doubles_by_id(psr_database_t* db,
         return PSR_ERROR_INVALID_ARGUMENT;
     }
     try {
-        auto result = db->db.read_scalar_doubles_by_id(collection, attribute, id);
+        auto result = db->db.read_scalar_floats_by_id(collection, attribute, id);
         if (result.has_value()) {
             *out_value = *result;
             *out_has_value = 1;
@@ -588,7 +588,7 @@ PSR_C_API psr_error_t psr_database_read_vector_integers_by_id(psr_database_t* db
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_vector_doubles_by_id(psr_database_t* db,
+PSR_C_API psr_error_t psr_database_read_vector_floats_by_id(psr_database_t* db,
                                                              const char* collection,
                                                              const char* attribute,
                                                              int64_t id,
@@ -598,7 +598,7 @@ PSR_C_API psr_error_t psr_database_read_vector_doubles_by_id(psr_database_t* db,
         return PSR_ERROR_INVALID_ARGUMENT;
     }
     try {
-        auto values = db->db.read_vector_doubles_by_id(collection, attribute, id);
+        auto values = db->db.read_vector_floats_by_id(collection, attribute, id);
         return read_scalars_impl(values, out_values, out_count);
     } catch (const std::exception&) {
         return PSR_ERROR_DATABASE;
@@ -652,7 +652,7 @@ PSR_C_API psr_error_t psr_database_read_set_integers_by_id(psr_database_t* db,
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_set_doubles_by_id(psr_database_t* db,
+PSR_C_API psr_error_t psr_database_read_set_floats_by_id(psr_database_t* db,
                                                           const char* collection,
                                                           const char* attribute,
                                                           int64_t id,
@@ -662,7 +662,7 @@ PSR_C_API psr_error_t psr_database_read_set_doubles_by_id(psr_database_t* db,
         return PSR_ERROR_INVALID_ARGUMENT;
     }
     try {
-        auto values = db->db.read_set_doubles_by_id(collection, attribute, id);
+        auto values = db->db.read_set_floats_by_id(collection, attribute, id);
         return read_scalars_impl(values, out_values, out_count);
     } catch (const std::exception&) {
         return PSR_ERROR_DATABASE;
@@ -781,7 +781,7 @@ PSR_C_API psr_error_t psr_database_update_vector_integers(psr_database_t* db,
     }
 }
 
-PSR_C_API psr_error_t psr_database_update_vector_doubles(psr_database_t* db,
+PSR_C_API psr_error_t psr_database_update_vector_floats(psr_database_t* db,
                                                          const char* collection,
                                                          const char* attribute,
                                                          int64_t id,
@@ -792,7 +792,7 @@ PSR_C_API psr_error_t psr_database_update_vector_doubles(psr_database_t* db,
     }
     try {
         std::vector<double> vec(values, values + count);
-        db->db.update_vector_doubles(collection, attribute, id, vec);
+        db->db.update_vector_floats(collection, attribute, id, vec);
         return PSR_OK;
     } catch (const std::exception&) {
         return PSR_ERROR_DATABASE;
@@ -841,7 +841,7 @@ PSR_C_API psr_error_t psr_database_update_set_integers(psr_database_t* db,
     }
 }
 
-PSR_C_API psr_error_t psr_database_update_set_doubles(psr_database_t* db,
+PSR_C_API psr_error_t psr_database_update_set_floats(psr_database_t* db,
                                                       const char* collection,
                                                       const char* attribute,
                                                       int64_t id,
@@ -852,7 +852,7 @@ PSR_C_API psr_error_t psr_database_update_set_doubles(psr_database_t* db,
     }
     try {
         std::vector<double> vec(values, values + count);
-        db->db.update_set_doubles(collection, attribute, id, vec);
+        db->db.update_set_floats(collection, attribute, id, vec);
         return PSR_OK;
     } catch (const std::exception&) {
         return PSR_ERROR_DATABASE;

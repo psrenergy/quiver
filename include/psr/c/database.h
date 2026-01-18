@@ -80,7 +80,7 @@ PSR_C_API psr_error_t psr_database_read_scalar_integers(psr_database_t* db,
                                                         int64_t** out_values,
                                                         size_t* out_count);
 
-PSR_C_API psr_error_t psr_database_read_scalar_doubles(psr_database_t* db,
+PSR_C_API psr_error_t psr_database_read_scalar_floats(psr_database_t* db,
                                                        const char* collection,
                                                        const char* attribute,
                                                        double** out_values,
@@ -100,7 +100,7 @@ PSR_C_API psr_error_t psr_database_read_vector_integers(psr_database_t* db,
                                                         size_t** out_sizes,
                                                         size_t* out_count);
 
-PSR_C_API psr_error_t psr_database_read_vector_doubles(psr_database_t* db,
+PSR_C_API psr_error_t psr_database_read_vector_floats(psr_database_t* db,
                                                        const char* collection,
                                                        const char* attribute,
                                                        double*** out_vectors,
@@ -122,7 +122,7 @@ PSR_C_API psr_error_t psr_database_read_set_integers(psr_database_t* db,
                                                      size_t** out_sizes,
                                                      size_t* out_count);
 
-PSR_C_API psr_error_t psr_database_read_set_doubles(psr_database_t* db,
+PSR_C_API psr_error_t psr_database_read_set_floats(psr_database_t* db,
                                                     const char* collection,
                                                     const char* attribute,
                                                     double*** out_sets,
@@ -144,7 +144,7 @@ PSR_C_API psr_error_t psr_database_read_scalar_integers_by_id(psr_database_t* db
                                                               int64_t* out_value,
                                                               int* out_has_value);
 
-PSR_C_API psr_error_t psr_database_read_scalar_doubles_by_id(psr_database_t* db,
+PSR_C_API psr_error_t psr_database_read_scalar_floats_by_id(psr_database_t* db,
                                                              const char* collection,
                                                              const char* attribute,
                                                              int64_t id,
@@ -166,7 +166,7 @@ PSR_C_API psr_error_t psr_database_read_vector_integers_by_id(psr_database_t* db
                                                               int64_t** out_values,
                                                               size_t* out_count);
 
-PSR_C_API psr_error_t psr_database_read_vector_doubles_by_id(psr_database_t* db,
+PSR_C_API psr_error_t psr_database_read_vector_floats_by_id(psr_database_t* db,
                                                              const char* collection,
                                                              const char* attribute,
                                                              int64_t id,
@@ -188,7 +188,7 @@ PSR_C_API psr_error_t psr_database_read_set_integers_by_id(psr_database_t* db,
                                                            int64_t** out_values,
                                                            size_t* out_count);
 
-PSR_C_API psr_error_t psr_database_read_set_doubles_by_id(psr_database_t* db,
+PSR_C_API psr_error_t psr_database_read_set_floats_by_id(psr_database_t* db,
                                                           const char* collection,
                                                           const char* attribute,
                                                           int64_t id,
@@ -242,7 +242,7 @@ PSR_C_API psr_error_t psr_database_update_vector_integers(psr_database_t* db,
                                                           const int64_t* values,
                                                           size_t count);
 
-PSR_C_API psr_error_t psr_database_update_vector_doubles(psr_database_t* db,
+PSR_C_API psr_error_t psr_database_update_vector_floats(psr_database_t* db,
                                                          const char* collection,
                                                          const char* attribute,
                                                          int64_t id,
@@ -264,7 +264,7 @@ PSR_C_API psr_error_t psr_database_update_set_integers(psr_database_t* db,
                                                        const int64_t* values,
                                                        size_t count);
 
-PSR_C_API psr_error_t psr_database_update_set_doubles(psr_database_t* db,
+PSR_C_API psr_error_t psr_database_update_set_floats(psr_database_t* db,
                                                       const char* collection,
                                                       const char* attribute,
                                                       int64_t id,

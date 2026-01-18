@@ -113,10 +113,10 @@ TEST(DatabaseErrors, ReadScalarIntegersNoSchema) {
     EXPECT_THROW(db.read_scalar_integers("Configuration", "integer_attribute"), std::runtime_error);
 }
 
-TEST(DatabaseErrors, ReadScalarDoublesNoSchema) {
+TEST(DatabaseErrors, ReadScalarFloatsNoSchema) {
     psr::Database db(":memory:", {.console_level = psr::LogLevel::off});
 
-    EXPECT_THROW(db.read_scalar_doubles("Configuration", "float_attribute"), std::runtime_error);
+    EXPECT_THROW(db.read_scalar_floats("Configuration", "float_attribute"), std::runtime_error);
 }
 
 TEST(DatabaseErrors, ReadScalarStringsNoSchema) {
@@ -144,7 +144,7 @@ TEST(DatabaseErrors, ReadVectorIntegersCollectionNotFound) {
     EXPECT_THROW(db.read_vector_integers("NonexistentCollection", "value_int"), std::exception);
 }
 
-TEST(DatabaseErrors, ReadVectorDoublesCollectionNotFound) {
+TEST(DatabaseErrors, ReadVectorFloatsCollectionNotFound) {
     auto db =
         psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -152,7 +152,7 @@ TEST(DatabaseErrors, ReadVectorDoublesCollectionNotFound) {
     config.set("label", std::string("Config"));
     db.create_element("Configuration", config);
 
-    EXPECT_THROW(db.read_vector_doubles("NonexistentCollection", "value_float"), std::exception);
+    EXPECT_THROW(db.read_vector_floats("NonexistentCollection", "value_float"), std::exception);
 }
 
 // ============================================================================
@@ -295,7 +295,7 @@ TEST(DatabaseErrors, UpdateVectorIntegersCollectionNotFound) {
     EXPECT_THROW(db.update_vector_integers("NonexistentCollection", "value_int", 1, {1, 2, 3}), std::exception);
 }
 
-TEST(DatabaseErrors, UpdateVectorDoublesCollectionNotFound) {
+TEST(DatabaseErrors, UpdateVectorFloatsCollectionNotFound) {
     auto db =
         psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -303,7 +303,7 @@ TEST(DatabaseErrors, UpdateVectorDoublesCollectionNotFound) {
     config.set("label", std::string("Config"));
     db.create_element("Configuration", config);
 
-    EXPECT_THROW(db.update_vector_doubles("NonexistentCollection", "value_float", 1, {1.5, 2.5}), std::exception);
+    EXPECT_THROW(db.update_vector_floats("NonexistentCollection", "value_float", 1, {1.5, 2.5}), std::exception);
 }
 
 // ============================================================================
@@ -339,14 +339,14 @@ TEST(DatabaseErrors, ReadScalarIntegersAttributeNotFound) {
     EXPECT_THROW(db.read_scalar_integers("Configuration", "nonexistent_attribute"), std::runtime_error);
 }
 
-TEST(DatabaseErrors, ReadScalarDoublesAttributeNotFound) {
+TEST(DatabaseErrors, ReadScalarFloatsAttributeNotFound) {
     auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
 
     psr::Element e;
     e.set("label", std::string("Test"));
     db.create_element("Configuration", e);
 
-    EXPECT_THROW(db.read_scalar_doubles("Configuration", "nonexistent_attribute"), std::runtime_error);
+    EXPECT_THROW(db.read_scalar_floats("Configuration", "nonexistent_attribute"), std::runtime_error);
 }
 
 TEST(DatabaseErrors, ReadScalarStringsAttributeNotFound) {
@@ -374,7 +374,7 @@ TEST(DatabaseErrors, ReadVectorIntegersAttributeNotFound) {
     EXPECT_THROW(db.read_vector_integers("Collection", "nonexistent_attribute"), std::exception);
 }
 
-TEST(DatabaseErrors, ReadVectorDoublesAttributeNotFound) {
+TEST(DatabaseErrors, ReadVectorFloatsAttributeNotFound) {
     auto db =
         psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -382,7 +382,7 @@ TEST(DatabaseErrors, ReadVectorDoublesAttributeNotFound) {
     config.set("label", std::string("Config"));
     db.create_element("Configuration", config);
 
-    EXPECT_THROW(db.read_vector_doubles("Collection", "nonexistent_attribute"), std::exception);
+    EXPECT_THROW(db.read_vector_floats("Collection", "nonexistent_attribute"), std::exception);
 }
 
 TEST(DatabaseErrors, ReadVectorStringsAttributeNotFound) {
@@ -411,7 +411,7 @@ TEST(DatabaseErrors, ReadSetIntegersAttributeNotFound) {
     EXPECT_THROW(db.read_set_integers("Collection", "nonexistent_attribute"), std::exception);
 }
 
-TEST(DatabaseErrors, ReadSetDoublesAttributeNotFound) {
+TEST(DatabaseErrors, ReadSetFloatsAttributeNotFound) {
     auto db =
         psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
 
@@ -419,7 +419,7 @@ TEST(DatabaseErrors, ReadSetDoublesAttributeNotFound) {
     config.set("label", std::string("Config"));
     db.create_element("Configuration", config);
 
-    EXPECT_THROW(db.read_set_doubles("Collection", "nonexistent_attribute"), std::exception);
+    EXPECT_THROW(db.read_set_floats("Collection", "nonexistent_attribute"), std::exception);
 }
 
 // ============================================================================
