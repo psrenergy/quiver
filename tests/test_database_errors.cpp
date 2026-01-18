@@ -431,8 +431,9 @@ TEST(DatabaseErrors, ApplySchemaEmptyPath) {
 }
 
 TEST(DatabaseErrors, ApplySchemaFileNotFound) {
-    EXPECT_THROW(psr::Database::from_schema(":memory:", "nonexistent/path/schema.sql", {.console_level = psr::LogLevel::off}),
-                 std::runtime_error);
+    EXPECT_THROW(
+        psr::Database::from_schema(":memory:", "nonexistent/path/schema.sql", {.console_level = psr::LogLevel::off}),
+        std::runtime_error);
 }
 
 // ============================================================================

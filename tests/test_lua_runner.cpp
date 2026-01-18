@@ -907,8 +907,8 @@ TEST_F(LuaRunnerTest, UpdateElementNonExistentCollection) {
 
     psr::LuaRunner lua(db);
 
-    EXPECT_THROW({ lua.run(R"(db:update_element("NonexistentCollection", 1, { label = "Test" }))"); },
-                 std::runtime_error);
+    EXPECT_THROW(
+        { lua.run(R"(db:update_element("NonexistentCollection", 1, { label = "Test" }))"); }, std::runtime_error);
 }
 
 TEST_F(LuaRunnerTest, DeleteFromNonExistentCollection) {

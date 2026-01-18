@@ -257,10 +257,7 @@ TEST(Element, SetMixedScalarsAndArrays) {
 
 TEST(Element, ToStringWithAllTypes) {
     psr::Element element;
-    element.set("text", std::string("hello"))
-        .set("integer", int64_t{123})
-        .set("real", 45.67)
-        .set_null("empty");
+    element.set("text", std::string("hello")).set("integer", int64_t{123}).set("real", 45.67).set_null("empty");
 
     std::string str = element.to_string();
 
