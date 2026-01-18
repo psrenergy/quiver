@@ -876,3 +876,124 @@ TEST_F(LuaRunnerTest, ReadVectorDoublesByIdFromLua) {
     )";
     lua.run(script);
 }
+
+// ============================================================================
+// Additional LuaRunner error handling tests
+// ============================================================================
+
+TEST_F(LuaRunnerTest, CreateElementMissingLabel) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+
+    psr::LuaRunner lua(db);
+
+    // Attempting to create element without required label should fail
+    EXPECT_THROW({ lua.run(R"(db:create_element("Collection", { some_integer = 42 }))"); }, std::runtime_error);
+}
+
+TEST_F(LuaRunnerTest, ReadNonExistentAttribute) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    db.create_element("Collection", psr::Element().set("label", "Item 1"));
+
+    psr::LuaRunner lua(db);
+
+    EXPECT_THROW({ lua.run(R"(local x = db:read_scalar_strings("Collection", "nonexistent"))"); }, std::runtime_error);
+}
+
+TEST_F(LuaRunnerTest, UpdateElementNonExistentCollection) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+
+    psr::LuaRunner lua(db);
+
+    EXPECT_THROW({ lua.run(R"(db:update_element("NonexistentCollection", 1, { label = "Test" }))"); },
+                 std::runtime_error);
+}
+
+TEST_F(LuaRunnerTest, DeleteFromNonExistentCollection) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+
+    psr::LuaRunner lua(db);
+
+    EXPECT_THROW({ lua.run(R"(db:delete_element_by_id("NonexistentCollection", 1))"); }, std::runtime_error);
+}
+
+TEST_F(LuaRunnerTest, MultipleOperationsPartialFailure) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+
+    psr::LuaRunner lua(db);
+
+    // First operation succeeds, second should fail
+    EXPECT_THROW(
+        {
+            lua.run(R"(
+            db:create_element("Collection", { label = "Item 1" })
+            db:create_element("NonexistentCollection", { label = "Bad" })
+        )");
+        },
+        std::runtime_error);
+
+    // Verify first element was created before failure
+    auto labels = db.read_scalar_strings("Collection", "label");
+    EXPECT_EQ(labels.size(), 1);
+    EXPECT_EQ(labels[0], "Item 1");
+}
+
+TEST_F(LuaRunnerTest, LuaTypeCoercionInteger) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    psr::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:create_element("Configuration", { label = "Config" })
+        db:create_element("Collection", {
+            label = "Item 1",
+            some_integer = 42.0  -- Lua number that happens to be whole
+        })
+    )");
+
+    auto integers = db.read_scalar_integers("Collection", "some_integer");
+    EXPECT_EQ(integers.size(), 1);
+    EXPECT_EQ(integers[0], 42);
+}
+
+TEST_F(LuaRunnerTest, ReadElementIdsFromNonExistentCollection) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+
+    psr::LuaRunner lua(db);
+
+    EXPECT_THROW({ lua.run(R"(local ids = db:read_element_ids("NonexistentCollection"))"); }, std::runtime_error);
+}
+
+TEST_F(LuaRunnerTest, CreateElementWithSpecialCharactersInLabel) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    psr::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:create_element("Configuration", { label = "Config" })
+        db:create_element("Collection", { label = "Test's \"special\" chars: <>&" })
+    )");
+
+    auto labels = db.read_scalar_strings("Collection", "label");
+    EXPECT_EQ(labels.size(), 1);
+    EXPECT_EQ(labels[0], "Test's \"special\" chars: <>&");
+}
+
+TEST_F(LuaRunnerTest, LuaScriptWithUnicodeCharacters) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    psr::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:create_element("Configuration", { label = "配置" })
+        db:create_element("Collection", { label = "项目 αβγ 🎉" })
+    )");
+
+    auto config_labels = db.read_scalar_strings("Configuration", "label");
+    auto collection_labels = db.read_scalar_strings("Collection", "label");
+
+    EXPECT_EQ(config_labels.size(), 1);
+    EXPECT_EQ(collection_labels.size(), 1);
+}
