@@ -649,3 +649,97 @@ TEST_F(LuaRunnerTest, UpdateElementArraysIgnoredFromLua) {
     auto vec_values = db.read_vector_integers_by_id("Collection", "value_int", 1);
     EXPECT_EQ(vec_values, (std::vector<int64_t>{1, 2, 3}));
 }
+
+// ============================================================================
+// LuaRunner error path tests
+// ============================================================================
+
+TEST_F(LuaRunnerTest, UndefinedVariableError) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+
+    psr::LuaRunner lua(db);
+
+    EXPECT_THROW({ lua.run("local x = undefined_variable + 1"); }, std::runtime_error);
+}
+
+TEST_F(LuaRunnerTest, NilFunctionCallError) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+
+    psr::LuaRunner lua(db);
+
+    EXPECT_THROW({ lua.run("local f = nil; f()"); }, std::runtime_error);
+}
+
+TEST_F(LuaRunnerTest, TableIndexError) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+
+    psr::LuaRunner lua(db);
+
+    EXPECT_THROW({ lua.run("local t = nil; local x = t.field"); }, std::runtime_error);
+}
+
+TEST_F(LuaRunnerTest, CreateElementInvalidCollection) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+
+    psr::LuaRunner lua(db);
+
+    EXPECT_THROW(
+        { lua.run(R"(db:create_element("NonexistentCollection", { label = "Test" }))"); }, std::runtime_error);
+}
+
+TEST_F(LuaRunnerTest, MultipleScriptExecutions) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    psr::LuaRunner lua(db);
+
+    lua.run(R"(db:create_element("Configuration", { label = "Config" }))");
+    lua.run(R"(db:create_element("Collection", { label = "Item 1" }))");
+    lua.run(R"(db:create_element("Collection", { label = "Item 2" }))");
+    lua.run(R"(db:create_element("Collection", { label = "Item 3" }))");
+
+    auto labels = db.read_scalar_strings("Collection", "label");
+    EXPECT_EQ(labels.size(), 3);
+}
+
+TEST_F(LuaRunnerTest, EmptyScriptSucceeds) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+
+    psr::LuaRunner lua(db);
+
+    // Empty script should succeed
+    lua.run("");
+}
+
+TEST_F(LuaRunnerTest, WhitespaceOnlyScriptSucceeds) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+
+    psr::LuaRunner lua(db);
+
+    // Whitespace only script should succeed
+    lua.run("   \n\t\n   ");
+}
+
+TEST_F(LuaRunnerTest, CommentOnlyScriptSucceeds) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+
+    psr::LuaRunner lua(db);
+
+    // Comment only script should succeed
+    lua.run("-- this is a comment\n-- another comment");
+}
+
+TEST_F(LuaRunnerTest, ReadFromNonExistentCollection) {
+    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", psr::Element().set("label", "Config"));
+
+    psr::LuaRunner lua(db);
+
+    EXPECT_THROW(
+        { lua.run(R"(local x = db:read_scalar_strings("NonexistentCollection", "label"))"); }, std::runtime_error);
+}

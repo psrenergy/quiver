@@ -430,3 +430,230 @@ TEST(DatabaseCApi, UpdateElementNullArguments) {
     psr_element_destroy(element);
     psr_database_close(db);
 }
+
+// ============================================================================
+// Update scalar null pointer tests
+// ============================================================================
+
+TEST(DatabaseCApi, UpdateScalarIntegerNullDb) {
+    auto err = psr_database_update_scalar_integer(nullptr, "Configuration", "integer_attribute", 1, 42);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, UpdateScalarIntegerNullCollection) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto err = psr_database_update_scalar_integer(db, nullptr, "integer_attribute", 1, 42);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateScalarIntegerNullAttribute) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto err = psr_database_update_scalar_integer(db, "Configuration", nullptr, 1, 42);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateScalarDoubleNullDb) {
+    auto err = psr_database_update_scalar_double(nullptr, "Configuration", "float_attribute", 1, 3.14);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, UpdateScalarDoubleNullCollection) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto err = psr_database_update_scalar_double(db, nullptr, "float_attribute", 1, 3.14);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateScalarStringNullDb) {
+    auto err = psr_database_update_scalar_string(nullptr, "Configuration", "string_attribute", 1, "test");
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, UpdateScalarStringNullCollection) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto err = psr_database_update_scalar_string(db, nullptr, "string_attribute", 1, "test");
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateScalarStringNullValue) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto err = psr_database_update_scalar_string(db, "Configuration", "string_attribute", 1, nullptr);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+// ============================================================================
+// Update vector null pointer tests
+// ============================================================================
+
+TEST(DatabaseCApi, UpdateVectorIntegersNullDb) {
+    int64_t values[] = {1, 2, 3};
+    auto err = psr_database_update_vector_integers(nullptr, "Collection", "value_int", 1, values, 3);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, UpdateVectorIntegersNullCollection) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    int64_t values[] = {1, 2, 3};
+    auto err = psr_database_update_vector_integers(db, nullptr, "value_int", 1, values, 3);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateVectorIntegersNullAttribute) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    int64_t values[] = {1, 2, 3};
+    auto err = psr_database_update_vector_integers(db, "Collection", nullptr, 1, values, 3);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateVectorDoublesNullDb) {
+    double values[] = {1.0, 2.0, 3.0};
+    auto err = psr_database_update_vector_doubles(nullptr, "Collection", "value_float", 1, values, 3);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, UpdateVectorDoublesNullCollection) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    double values[] = {1.0, 2.0, 3.0};
+    auto err = psr_database_update_vector_doubles(db, nullptr, "value_float", 1, values, 3);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateVectorStringsNullDb) {
+    const char* values[] = {"a", "b", "c"};
+    auto err = psr_database_update_vector_strings(nullptr, "Collection", "tag", 1, values, 3);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, UpdateVectorStringsNullCollection) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    const char* values[] = {"a", "b", "c"};
+    auto err = psr_database_update_vector_strings(db, nullptr, "tag", 1, values, 3);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+// ============================================================================
+// Update set null pointer tests
+// ============================================================================
+
+TEST(DatabaseCApi, UpdateSetIntegersNullDb) {
+    int64_t values[] = {1, 2, 3};
+    auto err = psr_database_update_set_integers(nullptr, "Collection", "tag", 1, values, 3);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, UpdateSetIntegersNullCollection) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    int64_t values[] = {1, 2, 3};
+    auto err = psr_database_update_set_integers(db, nullptr, "tag", 1, values, 3);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateSetDoublesNullDb) {
+    double values[] = {1.0, 2.0, 3.0};
+    auto err = psr_database_update_set_doubles(nullptr, "Collection", "tag", 1, values, 3);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, UpdateSetDoublesNullCollection) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    double values[] = {1.0, 2.0, 3.0};
+    auto err = psr_database_update_set_doubles(db, nullptr, "tag", 1, values, 3);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateSetStringsNullDb) {
+    const char* values[] = {"a", "b", "c"};
+    auto err = psr_database_update_set_strings(nullptr, "Collection", "tag", 1, values, 3);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, UpdateSetStringsNullCollection) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    const char* values[] = {"a", "b", "c"};
+    auto err = psr_database_update_set_strings(db, nullptr, "tag", 1, values, 3);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateSetStringsNullAttribute) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    const char* values[] = {"a", "b", "c"};
+    auto err = psr_database_update_set_strings(db, "Collection", nullptr, 1, values, 3);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}

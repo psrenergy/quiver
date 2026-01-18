@@ -951,3 +951,581 @@ TEST(DatabaseCApi, GetAttributeTypeInvalidArgument) {
 
     psr_database_close(db);
 }
+
+// ============================================================================
+// Read scalar null pointer tests
+// ============================================================================
+
+TEST(DatabaseCApi, ReadScalarIntegersNullDb) {
+    int64_t* values = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_scalar_integers(nullptr, "Configuration", "integer_attribute", &values, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, ReadScalarIntegersNullCollection) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    int64_t* values = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_scalar_integers(db, nullptr, "integer_attribute", &values, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadScalarIntegersNullAttribute) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    int64_t* values = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_scalar_integers(db, "Configuration", nullptr, &values, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadScalarIntegersNullOutput) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    size_t count = 0;
+    auto err = psr_database_read_scalar_integers(db, "Configuration", "integer_attribute", nullptr, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    int64_t* values = nullptr;
+    err = psr_database_read_scalar_integers(db, "Configuration", "integer_attribute", &values, nullptr);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadScalarDoublesNullDb) {
+    double* values = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_scalar_doubles(nullptr, "Configuration", "float_attribute", &values, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, ReadScalarDoublesNullCollection) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    double* values = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_scalar_doubles(db, nullptr, "float_attribute", &values, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadScalarDoublesNullOutput) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    size_t count = 0;
+    auto err = psr_database_read_scalar_doubles(db, "Configuration", "float_attribute", nullptr, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    double* values = nullptr;
+    err = psr_database_read_scalar_doubles(db, "Configuration", "float_attribute", &values, nullptr);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadScalarStringsNullDb) {
+    char** values = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_scalar_strings(nullptr, "Configuration", "string_attribute", &values, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, ReadScalarStringsNullCollection) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    char** values = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_scalar_strings(db, nullptr, "string_attribute", &values, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadScalarStringsNullOutput) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    size_t count = 0;
+    auto err = psr_database_read_scalar_strings(db, "Configuration", "string_attribute", nullptr, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    char** values = nullptr;
+    err = psr_database_read_scalar_strings(db, "Configuration", "string_attribute", &values, nullptr);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+// ============================================================================
+// Read scalar by ID null pointer tests
+// ============================================================================
+
+TEST(DatabaseCApi, ReadScalarIntegersByIdNullDb) {
+    int64_t value;
+    int has_value;
+    auto err = psr_database_read_scalar_integers_by_id(nullptr, "Configuration", "integer_attribute", 1, &value, &has_value);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, ReadScalarIntegersByIdNullCollection) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    int64_t value;
+    int has_value;
+    auto err = psr_database_read_scalar_integers_by_id(db, nullptr, "integer_attribute", 1, &value, &has_value);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadScalarIntegersByIdNullOutput) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    int has_value;
+    auto err = psr_database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", 1, nullptr, &has_value);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    int64_t value;
+    err = psr_database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", 1, &value, nullptr);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadScalarDoublesByIdNullDb) {
+    double value;
+    int has_value;
+    auto err = psr_database_read_scalar_doubles_by_id(nullptr, "Configuration", "float_attribute", 1, &value, &has_value);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, ReadScalarDoublesByIdNullOutput) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    int has_value;
+    auto err = psr_database_read_scalar_doubles_by_id(db, "Configuration", "float_attribute", 1, nullptr, &has_value);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    double value;
+    err = psr_database_read_scalar_doubles_by_id(db, "Configuration", "float_attribute", 1, &value, nullptr);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadScalarStringsByIdNullDb) {
+    char* value = nullptr;
+    int has_value;
+    auto err = psr_database_read_scalar_strings_by_id(nullptr, "Configuration", "string_attribute", 1, &value, &has_value);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, ReadScalarStringsByIdNullOutput) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    int has_value;
+    auto err = psr_database_read_scalar_strings_by_id(db, "Configuration", "string_attribute", 1, nullptr, &has_value);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    char* value = nullptr;
+    err = psr_database_read_scalar_strings_by_id(db, "Configuration", "string_attribute", 1, &value, nullptr);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+// ============================================================================
+// Read vector null pointer tests
+// ============================================================================
+
+TEST(DatabaseCApi, ReadVectorIntegersNullDb) {
+    int64_t** vectors = nullptr;
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_vector_integers(nullptr, "Collection", "value_int", &vectors, &sizes, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, ReadVectorIntegersNullCollection) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    int64_t** vectors = nullptr;
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_vector_integers(db, nullptr, "value_int", &vectors, &sizes, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadVectorIntegersNullOutput) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_vector_integers(db, "Collection", "value_int", nullptr, &sizes, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    int64_t** vectors = nullptr;
+    err = psr_database_read_vector_integers(db, "Collection", "value_int", &vectors, nullptr, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    err = psr_database_read_vector_integers(db, "Collection", "value_int", &vectors, &sizes, nullptr);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadVectorDoublesNullDb) {
+    double** vectors = nullptr;
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_vector_doubles(nullptr, "Collection", "value_float", &vectors, &sizes, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, ReadVectorDoublesNullOutput) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_vector_doubles(db, "Collection", "value_float", nullptr, &sizes, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    double** vectors = nullptr;
+    err = psr_database_read_vector_doubles(db, "Collection", "value_float", &vectors, nullptr, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    err = psr_database_read_vector_doubles(db, "Collection", "value_float", &vectors, &sizes, nullptr);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadVectorStringsNullDb) {
+    char**** vectors = nullptr;
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_vector_strings(nullptr, "Collection", "tag", vectors, &sizes, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+// ============================================================================
+// Read vector by ID null pointer tests
+// ============================================================================
+
+TEST(DatabaseCApi, ReadVectorIntegersByIdNullDb) {
+    int64_t* values = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_vector_integers_by_id(nullptr, "Collection", "value_int", 1, &values, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, ReadVectorIntegersByIdNullCollection) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    int64_t* values = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_vector_integers_by_id(db, nullptr, "value_int", 1, &values, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadVectorIntegersByIdNullOutput) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    size_t count = 0;
+    auto err = psr_database_read_vector_integers_by_id(db, "Collection", "value_int", 1, nullptr, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    int64_t* values = nullptr;
+    err = psr_database_read_vector_integers_by_id(db, "Collection", "value_int", 1, &values, nullptr);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadVectorDoublesByIdNullDb) {
+    double* values = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_vector_doubles_by_id(nullptr, "Collection", "value_float", 1, &values, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, ReadVectorDoublesByIdNullOutput) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    size_t count = 0;
+    auto err = psr_database_read_vector_doubles_by_id(db, "Collection", "value_float", 1, nullptr, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    double* values = nullptr;
+    err = psr_database_read_vector_doubles_by_id(db, "Collection", "value_float", 1, &values, nullptr);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadVectorStringsByIdNullDb) {
+    char** values = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_vector_strings_by_id(nullptr, "Collection", "tag", 1, &values, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+// ============================================================================
+// Read set null pointer tests
+// ============================================================================
+
+TEST(DatabaseCApi, ReadSetIntegersNullDb) {
+    int64_t** sets = nullptr;
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_set_integers(nullptr, "Collection", "tag", &sets, &sizes, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, ReadSetIntegersNullCollection) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    int64_t** sets = nullptr;
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_set_integers(db, nullptr, "tag", &sets, &sizes, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadSetIntegersNullOutput) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_set_integers(db, "Collection", "tag", nullptr, &sizes, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    int64_t** sets = nullptr;
+    err = psr_database_read_set_integers(db, "Collection", "tag", &sets, nullptr, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    err = psr_database_read_set_integers(db, "Collection", "tag", &sets, &sizes, nullptr);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadSetDoublesNullDb) {
+    double** sets = nullptr;
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_set_doubles(nullptr, "Collection", "tag", &sets, &sizes, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, ReadSetStringsNullDb) {
+    char*** sets = nullptr;
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_set_strings(nullptr, "Collection", "tag", &sets, &sizes, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, ReadSetStringsNullCollection) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    char*** sets = nullptr;
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_set_strings(db, nullptr, "tag", &sets, &sizes, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadSetStringsNullOutput) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_set_strings(db, "Collection", "tag", nullptr, &sizes, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    char*** sets = nullptr;
+    err = psr_database_read_set_strings(db, "Collection", "tag", &sets, nullptr, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    err = psr_database_read_set_strings(db, "Collection", "tag", &sets, &sizes, nullptr);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+// ============================================================================
+// Read set by ID null pointer tests
+// ============================================================================
+
+TEST(DatabaseCApi, ReadSetIntegersByIdNullDb) {
+    int64_t* values = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_set_integers_by_id(nullptr, "Collection", "tag", 1, &values, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, ReadSetDoublesByIdNullDb) {
+    double* values = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_set_doubles_by_id(nullptr, "Collection", "tag", 1, &values, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, ReadSetStringsByIdNullDb) {
+    char** values = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_set_strings_by_id(nullptr, "Collection", "tag", 1, &values, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, ReadSetStringsByIdNullCollection) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    char** values = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_set_strings_by_id(db, nullptr, "tag", 1, &values, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadSetStringsByIdNullOutput) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    size_t count = 0;
+    auto err = psr_database_read_set_strings_by_id(db, "Collection", "tag", 1, nullptr, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    char** values = nullptr;
+    err = psr_database_read_set_strings_by_id(db, "Collection", "tag", 1, &values, nullptr);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+// ============================================================================
+// Read element IDs null pointer tests
+// ============================================================================
+
+TEST(DatabaseCApi, ReadElementIdsNullDb) {
+    int64_t* ids = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_element_ids(nullptr, "Configuration", &ids, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+}
+
+TEST(DatabaseCApi, ReadElementIdsNullCollection) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    int64_t* ids = nullptr;
+    size_t count = 0;
+    auto err = psr_database_read_element_ids(db, nullptr, &ids, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadElementIdsNullOutput) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    size_t count = 0;
+    auto err = psr_database_read_element_ids(db, "Configuration", nullptr, &count);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    int64_t* ids = nullptr;
+    err = psr_database_read_element_ids(db, "Configuration", &ids, nullptr);
+    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+
+    psr_database_close(db);
+}

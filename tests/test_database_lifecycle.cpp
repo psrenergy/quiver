@@ -75,3 +75,23 @@ TEST_F(TempFileFixture, CurrentVersion) {
     psr::Database db(":memory:", {.console_level = psr::LogLevel::off});
     EXPECT_EQ(db.current_version(), 0);
 }
+
+// ============================================================================
+// Schema error tests
+// ============================================================================
+
+TEST_F(TempFileFixture, FromSchemaFileNotFound) {
+    EXPECT_THROW(
+        psr::Database::from_schema(":memory:", "nonexistent/path/schema.sql", {.console_level = psr::LogLevel::off}),
+        std::runtime_error);
+}
+
+TEST_F(TempFileFixture, FromSchemaInvalidPath) {
+    EXPECT_THROW(psr::Database::from_schema(":memory:", "", {.console_level = psr::LogLevel::off}), std::runtime_error);
+}
+
+TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
+    // Invalid migrations path results in database with version 0 (no migrations applied)
+    auto db = psr::Database::from_migrations(":memory:", "nonexistent/migrations/", {.console_level = psr::LogLevel::off});
+    EXPECT_EQ(db.current_version(), 0);
+}

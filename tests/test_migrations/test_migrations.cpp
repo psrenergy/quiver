@@ -144,4 +144,67 @@ TEST_F(MigrationFixture, DatabaseFromMigrations) {
     EXPECT_TRUE(db.is_healthy());
 }
 
+TEST_F(MigrationFixture, MigrationsInvalidDirectory) {
+    psr::Migrations migrations("nonexistent/path/to/migrations");
+    EXPECT_TRUE(migrations.empty());
+    EXPECT_EQ(migrations.count(), 0u);
+    EXPECT_EQ(migrations.latest_version(), 0);
+}
+
+TEST_F(MigrationFixture, MigrationsPendingFromHigherVersion) {
+    psr::Migrations migrations(migrations_path);
+
+    // If current version is higher than latest migration version
+    auto pending = migrations.pending(100);
+    EXPECT_TRUE(pending.empty());
+}
+
+TEST_F(MigrationFixture, DatabaseFromMigrationsInvalidPath) {
+    // Invalid migrations path results in database with version 0 (no migrations applied)
+    auto db = psr::Database::from_migrations(path, "nonexistent/migrations/");
+    EXPECT_EQ(db.current_version(), 0);
+}
+
+TEST_F(MigrationFixture, MigrationVersionZero) {
+    psr::Migrations migrations(migrations_path);
+
+    // Version 0 should return all migrations as pending
+    auto pending = migrations.pending(0);
+    EXPECT_EQ(pending.size(), migrations.count());
+}
+
+TEST_F(MigrationFixture, MigrationsWithPartialApplication) {
+    // First apply first migration using from_migrations and then check
+    {
+        auto db = psr::Database::from_migrations(path, migrations_path);
+        EXPECT_EQ(db.current_version(), 3);
+    }
+
+    // Reopen the database and verify it still has version 3
+    {
+        psr::Database db(path);
+        EXPECT_EQ(db.current_version(), 3);
+    }
+}
+
+TEST_F(MigrationFixture, MigrationGetByVersion) {
+    psr::Migrations migrations(migrations_path);
+
+    auto all = migrations.all();
+    ASSERT_EQ(all.size(), 3u);
+
+    // Verify each migration has correct version
+    for (const auto& m : all) {
+        EXPECT_GE(m.version(), 1);
+        EXPECT_LE(m.version(), 3);
+    }
+}
+
+TEST_F(MigrationFixture, DatabaseFromMigrationsMemory) {
+    auto db = psr::Database::from_migrations(":memory:", migrations_path);
+
+    EXPECT_EQ(db.current_version(), 3);
+    EXPECT_TRUE(db.is_healthy());
+}
+
 }  // namespace database_utils
