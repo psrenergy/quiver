@@ -1376,25 +1376,11 @@ AttributeType Database::get_attribute_type(const std::string& collection, const 
         throw std::runtime_error("Collection not found in schema: " + collection);
     }
 
-    // Helper to convert ColumnType to AttributeDataType
-    auto to_data_type = [](ColumnType ct) -> AttributeDataType {
-        switch (ct) {
-        case ColumnType::Integer:
-            return AttributeDataType::Integer;
-        case ColumnType::Real:
-            return AttributeDataType::Real;
-        case ColumnType::Text:
-            return AttributeDataType::Text;
-        default:
-            throw std::runtime_error("Unknown column type");
-        }
-    };
-
     // Check if attribute exists as scalar (column on collection table)
     if (table_def->has_column(attribute)) {
-        auto col_type = table_def->get_column_type(attribute);
-        if (col_type) {
-            return AttributeType{AttributeStructure::Scalar, to_data_type(*col_type)};
+        auto data_type = table_def->get_data_type(attribute);
+        if (data_type) {
+            return AttributeType{AttributeStructure::Scalar, *data_type};
         }
     }
 
@@ -1407,9 +1393,9 @@ AttributeType Database::get_attribute_type(const std::string& collection, const 
 
         const auto* vec_table = impl_->schema->get_table(table_name);
         if (vec_table && vec_table->has_column(attribute)) {
-            auto col_type = vec_table->get_column_type(attribute);
-            if (col_type) {
-                return AttributeType{AttributeStructure::Vector, to_data_type(*col_type)};
+            auto data_type = vec_table->get_data_type(attribute);
+            if (data_type) {
+                return AttributeType{AttributeStructure::Vector, *data_type};
             }
         }
     }
@@ -1423,9 +1409,9 @@ AttributeType Database::get_attribute_type(const std::string& collection, const 
 
         const auto* set_table = impl_->schema->get_table(table_name);
         if (set_table && set_table->has_column(attribute)) {
-            auto col_type = set_table->get_column_type(attribute);
-            if (col_type) {
-                return AttributeType{AttributeStructure::Set, to_data_type(*col_type)};
+            auto data_type = set_table->get_data_type(attribute);
+            if (data_type) {
+                return AttributeType{AttributeStructure::Set, *data_type};
             }
         }
     }

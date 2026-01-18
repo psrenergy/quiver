@@ -7,7 +7,7 @@ namespace psr {
 
 // TableDefinition methods
 
-std::optional<ColumnType> TableDefinition::get_column_type(const std::string& column) const {
+std::optional<DataType> TableDefinition::get_data_type(const std::string& column) const {
     auto it = columns.find(column);
     if (it != columns.end()) {
         return it->second.type;
@@ -49,12 +49,12 @@ bool Schema::has_table(const std::string& name) const {
     return tables_.find(name) != tables_.end();
 }
 
-ColumnType Schema::get_column_type(const std::string& table, const std::string& column) const {
+DataType Schema::get_data_type(const std::string& table, const std::string& column) const {
     const auto* tbl = get_table(table);
     if (!tbl) {
         throw std::runtime_error("Table not found in schema: " + table);
     }
-    auto type = tbl->get_column_type(column);
+    auto type = tbl->get_data_type(column);
     if (!type) {
         throw std::runtime_error("Column '" + column + "' not found in table '" + table + "'");
     }
@@ -214,7 +214,7 @@ std::vector<ColumnDefinition> Schema::query_columns(sqlite3* db, const std::stri
 
         col.name = name ? name : "";
         std::string type_str = type ? type : "";
-        col.type = column_type_from_string(type_str);
+        col.type = data_type_from_string(type_str);
         col.not_null = sqlite3_column_int(stmt, 3) != 0;
         col.primary_key = sqlite3_column_int(stmt, 5) != 0;
 
