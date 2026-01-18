@@ -7,7 +7,7 @@ struct Element
             error("Failed to create Element")
         end
         obj = new(ptr)
-        # finalizer(C.psr_element_destroy, obj)
+        finalizer(e -> C.psr_element_destroy(e.ptr), obj)
         return obj
     end
 end

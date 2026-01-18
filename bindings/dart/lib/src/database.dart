@@ -889,16 +889,16 @@ class Database {
       }
 
       final dataStructure = switch (outDataStructure.value) {
-        0 => 'scalar',
-        1 => 'vector',
-        2 => 'set',
+        psr_data_structure_t.PSR_DATA_STRUCTURE_SCALAR => 'scalar',
+        psr_data_structure_t.PSR_DATA_STRUCTURE_VECTOR => 'vector',
+        psr_data_structure_t.PSR_DATA_STRUCTURE_SET => 'set',
         _ => 'unknown',
       };
 
       final dataType = switch (outDataType.value) {
-        0 => 'integer',
-        1 => 'real',
-        2 => 'text',
+        psr_data_type_t.PSR_DATA_TYPE_INTEGER => 'integer',
+        psr_data_type_t.PSR_DATA_TYPE_REAL => 'real',
+        psr_data_type_t.PSR_DATA_TYPE_TEXT => 'text',
         _ => 'unknown',
       };
 
@@ -958,6 +958,246 @@ class Database {
       );
       if (err != psr_error_t.PSR_OK) {
         throw DatabaseException.fromError(err, "Failed to update element $id in '$collection'");
+      }
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  // Update scalar attribute methods
+
+  /// Updates an integer scalar attribute value by element ID.
+  void updateScalarInteger(String collection, String attribute, int id, int value) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final err = bindings.psr_database_update_scalar_integer(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        id,
+        value,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to update scalar integer '$collection.$attribute' for id $id");
+      }
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Updates a double scalar attribute value by element ID.
+  void updateScalarDouble(String collection, String attribute, int id, double value) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final err = bindings.psr_database_update_scalar_double(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        id,
+        value,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to update scalar double '$collection.$attribute' for id $id");
+      }
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Updates a string scalar attribute value by element ID.
+  void updateScalarString(String collection, String attribute, int id, String value) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final err = bindings.psr_database_update_scalar_string(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        id,
+        value.toNativeUtf8(allocator: arena).cast(),
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to update scalar string '$collection.$attribute' for id $id");
+      }
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  // Update vector attribute methods
+
+  /// Updates an integer vector attribute by element ID (replaces entire vector).
+  void updateVectorIntegers(String collection, String attribute, int id, List<int> values) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final nativeValues = arena<Int64>(values.length);
+      for (var i = 0; i < values.length; i++) {
+        nativeValues[i] = values[i];
+      }
+
+      final err = bindings.psr_database_update_vector_integers(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        id,
+        nativeValues,
+        values.length,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to update vector integers '$collection.$attribute' for id $id");
+      }
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Updates a double vector attribute by element ID (replaces entire vector).
+  void updateVectorDoubles(String collection, String attribute, int id, List<double> values) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final nativeValues = arena<Double>(values.length);
+      for (var i = 0; i < values.length; i++) {
+        nativeValues[i] = values[i];
+      }
+
+      final err = bindings.psr_database_update_vector_doubles(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        id,
+        nativeValues,
+        values.length,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to update vector doubles '$collection.$attribute' for id $id");
+      }
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Updates a string vector attribute by element ID (replaces entire vector).
+  void updateVectorStrings(String collection, String attribute, int id, List<String> values) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final nativePtrs = arena<Pointer<Char>>(values.length);
+      for (var i = 0; i < values.length; i++) {
+        nativePtrs[i] = values[i].toNativeUtf8(allocator: arena).cast();
+      }
+
+      final err = bindings.psr_database_update_vector_strings(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        id,
+        nativePtrs,
+        values.length,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to update vector strings '$collection.$attribute' for id $id");
+      }
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  // Update set attribute methods
+
+  /// Updates an integer set attribute by element ID (replaces entire set).
+  void updateSetIntegers(String collection, String attribute, int id, List<int> values) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final nativeValues = arena<Int64>(values.length);
+      for (var i = 0; i < values.length; i++) {
+        nativeValues[i] = values[i];
+      }
+
+      final err = bindings.psr_database_update_set_integers(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        id,
+        nativeValues,
+        values.length,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to update set integers '$collection.$attribute' for id $id");
+      }
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Updates a double set attribute by element ID (replaces entire set).
+  void updateSetDoubles(String collection, String attribute, int id, List<double> values) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final nativeValues = arena<Double>(values.length);
+      for (var i = 0; i < values.length; i++) {
+        nativeValues[i] = values[i];
+      }
+
+      final err = bindings.psr_database_update_set_doubles(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        id,
+        nativeValues,
+        values.length,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to update set doubles '$collection.$attribute' for id $id");
+      }
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Updates a string set attribute by element ID (replaces entire set).
+  void updateSetStrings(String collection, String attribute, int id, List<String> values) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final nativePtrs = arena<Pointer<Char>>(values.length);
+      for (var i = 0; i < values.length; i++) {
+        nativePtrs[i] = values[i].toNativeUtf8(allocator: arena).cast();
+      }
+
+      final err = bindings.psr_database_update_set_strings(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        attribute.toNativeUtf8(allocator: arena).cast(),
+        id,
+        nativePtrs,
+        values.length,
+      );
+
+      if (err != psr_error_t.PSR_OK) {
+        throw DatabaseException.fromError(err, "Failed to update set strings '$collection.$attribute' for id $id");
       }
     } finally {
       arena.releaseAll();

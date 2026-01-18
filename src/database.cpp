@@ -95,6 +95,19 @@ struct Database::Impl {
     std::unique_ptr<Schema> schema;
     std::unique_ptr<TypeValidator> type_validator;
 
+    void require_schema(const char* operation) const {
+        if (!schema) {
+            throw std::runtime_error(std::string("Cannot ") + operation + ": no schema loaded");
+        }
+    }
+
+    void require_collection(const std::string& collection, const char* operation) const {
+        require_schema(operation);
+        if (!schema->has_table(collection)) {
+            throw std::runtime_error("Collection not found in schema: " + collection);
+        }
+    }
+
     ~Impl() {
         if (db) {
             sqlite3_close_v2(db);
@@ -1119,14 +1132,7 @@ void Database::update_scalar_integer(const std::string& collection,
                                      int64_t id,
                                      int64_t value) {
     impl_->logger->debug("Updating {}.{} for id {} to {}", collection, attribute, id, value);
-
-    if (!impl_->schema) {
-        throw std::runtime_error("Cannot update scalar: no schema loaded");
-    }
-    if (!impl_->schema->has_table(collection)) {
-        throw std::runtime_error("Collection not found in schema: " + collection);
-    }
-
+    impl_->require_collection(collection, "update scalar");
     impl_->type_validator->validate_scalar(collection, attribute, value);
 
     auto sql = "UPDATE " + collection + " SET " + attribute + " = ? WHERE id = ?";
@@ -1140,14 +1146,7 @@ void Database::update_scalar_double(const std::string& collection,
                                     int64_t id,
                                     double value) {
     impl_->logger->debug("Updating {}.{} for id {} to {}", collection, attribute, id, value);
-
-    if (!impl_->schema) {
-        throw std::runtime_error("Cannot update scalar: no schema loaded");
-    }
-    if (!impl_->schema->has_table(collection)) {
-        throw std::runtime_error("Collection not found in schema: " + collection);
-    }
-
+    impl_->require_collection(collection, "update scalar");
     impl_->type_validator->validate_scalar(collection, attribute, value);
 
     auto sql = "UPDATE " + collection + " SET " + attribute + " = ? WHERE id = ?";
@@ -1161,14 +1160,7 @@ void Database::update_scalar_string(const std::string& collection,
                                     int64_t id,
                                     const std::string& value) {
     impl_->logger->debug("Updating {}.{} for id {} to '{}'", collection, attribute, id, value);
-
-    if (!impl_->schema) {
-        throw std::runtime_error("Cannot update scalar: no schema loaded");
-    }
-    if (!impl_->schema->has_table(collection)) {
-        throw std::runtime_error("Collection not found in schema: " + collection);
-    }
-
+    impl_->require_collection(collection, "update scalar");
     impl_->type_validator->validate_scalar(collection, attribute, value);
 
     auto sql = "UPDATE " + collection + " SET " + attribute + " = ? WHERE id = ?";
@@ -1182,10 +1174,7 @@ void Database::update_vector_integers(const std::string& collection,
                                       int64_t id,
                                       const std::vector<int64_t>& values) {
     impl_->logger->debug("Updating vector {}.{} for id {} with {} values", collection, attribute, id, values.size());
-
-    if (!impl_->schema) {
-        throw std::runtime_error("Cannot update vector: no schema loaded");
-    }
+    impl_->require_schema("update vector");
 
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
 
@@ -1214,10 +1203,7 @@ void Database::update_vector_doubles(const std::string& collection,
                                      int64_t id,
                                      const std::vector<double>& values) {
     impl_->logger->debug("Updating vector {}.{} for id {} with {} values", collection, attribute, id, values.size());
-
-    if (!impl_->schema) {
-        throw std::runtime_error("Cannot update vector: no schema loaded");
-    }
+    impl_->require_schema("update vector");
 
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
 
@@ -1246,10 +1232,7 @@ void Database::update_vector_strings(const std::string& collection,
                                      int64_t id,
                                      const std::vector<std::string>& values) {
     impl_->logger->debug("Updating vector {}.{} for id {} with {} values", collection, attribute, id, values.size());
-
-    if (!impl_->schema) {
-        throw std::runtime_error("Cannot update vector: no schema loaded");
-    }
+    impl_->require_schema("update vector");
 
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
 
@@ -1278,10 +1261,7 @@ void Database::update_set_integers(const std::string& collection,
                                    int64_t id,
                                    const std::vector<int64_t>& values) {
     impl_->logger->debug("Updating set {}.{} for id {} with {} values", collection, attribute, id, values.size());
-
-    if (!impl_->schema) {
-        throw std::runtime_error("Cannot update set: no schema loaded");
-    }
+    impl_->require_schema("update set");
 
     auto set_table = impl_->schema->find_set_table(collection, attribute);
 
@@ -1309,10 +1289,7 @@ void Database::update_set_doubles(const std::string& collection,
                                   int64_t id,
                                   const std::vector<double>& values) {
     impl_->logger->debug("Updating set {}.{} for id {} with {} values", collection, attribute, id, values.size());
-
-    if (!impl_->schema) {
-        throw std::runtime_error("Cannot update set: no schema loaded");
-    }
+    impl_->require_schema("update set");
 
     auto set_table = impl_->schema->find_set_table(collection, attribute);
 
@@ -1340,10 +1317,7 @@ void Database::update_set_strings(const std::string& collection,
                                   int64_t id,
                                   const std::vector<std::string>& values) {
     impl_->logger->debug("Updating set {}.{} for id {} with {} values", collection, attribute, id, values.size());
-
-    if (!impl_->schema) {
-        throw std::runtime_error("Cannot update set: no schema loaded");
-    }
+    impl_->require_schema("update set");
 
     auto set_table = impl_->schema->find_set_table(collection, attribute);
 
