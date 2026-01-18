@@ -832,7 +832,7 @@ TEST(DatabaseCApi, GetAttributeTypeScalarReal) {
 
     EXPECT_EQ(err, PSR_OK);
     EXPECT_EQ(data_structure, PSR_DATA_STRUCTURE_SCALAR);
-    EXPECT_EQ(data_type, PSR_DATA_TYPE_REAL);
+    EXPECT_EQ(data_type, PSR_DATA_TYPE_FLOAT);
 
     psr_database_close(db);
 }
@@ -849,7 +849,7 @@ TEST(DatabaseCApi, GetAttributeTypeScalarText) {
 
     EXPECT_EQ(err, PSR_OK);
     EXPECT_EQ(data_structure, PSR_DATA_STRUCTURE_SCALAR);
-    EXPECT_EQ(data_type, PSR_DATA_TYPE_TEXT);
+    EXPECT_EQ(data_type, PSR_DATA_TYPE_STRING);
 
     psr_database_close(db);
 }
@@ -883,7 +883,7 @@ TEST(DatabaseCApi, GetAttributeTypeVectorReal) {
 
     EXPECT_EQ(err, PSR_OK);
     EXPECT_EQ(data_structure, PSR_DATA_STRUCTURE_VECTOR);
-    EXPECT_EQ(data_type, PSR_DATA_TYPE_REAL);
+    EXPECT_EQ(data_type, PSR_DATA_TYPE_FLOAT);
 
     psr_database_close(db);
 }
@@ -900,7 +900,7 @@ TEST(DatabaseCApi, GetAttributeTypeSetText) {
 
     EXPECT_EQ(err, PSR_OK);
     EXPECT_EQ(data_structure, PSR_DATA_STRUCTURE_SET);
-    EXPECT_EQ(data_type, PSR_DATA_TYPE_TEXT);
+    EXPECT_EQ(data_type, PSR_DATA_TYPE_STRING);
 
     psr_database_close(db);
 }

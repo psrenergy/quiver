@@ -66,8 +66,8 @@ end
 
 @cenum psr_data_type_t::UInt32 begin
     PSR_DATA_TYPE_INTEGER = 0
-    PSR_DATA_TYPE_REAL = 1
-    PSR_DATA_TYPE_TEXT = 2
+    PSR_DATA_TYPE_FLOAT = 1
+    PSR_DATA_TYPE_STRING = 2
 end
 
 function psr_database_options_default()

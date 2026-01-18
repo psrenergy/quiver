@@ -897,8 +897,8 @@ class Database {
 
       final dataType = switch (outDataType.value) {
         psr_data_type_t.PSR_DATA_TYPE_INTEGER => 'integer',
-        psr_data_type_t.PSR_DATA_TYPE_REAL => 'real',
-        psr_data_type_t.PSR_DATA_TYPE_TEXT => 'text',
+        psr_data_type_t.PSR_DATA_TYPE_FLOAT => 'real',
+        psr_data_type_t.PSR_DATA_TYPE_STRING => 'text',
         _ => 'unknown',
       };
 

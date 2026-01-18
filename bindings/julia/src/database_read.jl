@@ -466,9 +466,9 @@ function read(db::Database, collection::String, attribute::String)
     if attribute_type.data_structure == C.PSR_DATA_STRUCTURE_SCALAR
         if attribute_type.data_type == C.PSR_DATA_TYPE_INTEGER
             return read_scalar_integers(db, collection, attribute)
-        elseif attribute_type.data_type == C.PSR_DATA_TYPE_REAL
+        elseif attribute_type.data_type == C.PSR_DATA_TYPE_FLOAT
             return read_scalar_doubles(db, collection, attribute)
-        elseif attribute_type.data_type == C.PSR_DATA_TYPE_TEXT
+        elseif attribute_type.data_type == C.PSR_DATA_TYPE_STRING
             return read_scalar_strings(db, collection, attribute)
         else
             throw(DatabaseException("Unsupported data type for '$collection.$attribute'"))
@@ -476,9 +476,9 @@ function read(db::Database, collection::String, attribute::String)
     elseif attribute_type.data_structure == C.PSR_DATA_STRUCTURE_VECTOR
         if attribute_type.data_type == C.PSR_DATA_TYPE_INTEGER
             return read_vector_integers(db, collection, attribute)
-        elseif attribute_type.data_type == C.PSR_DATA_TYPE_REAL
+        elseif attribute_type.data_type == C.PSR_DATA_TYPE_FLOAT
             return read_vector_doubles(db, collection, attribute)
-        elseif attribute_type.data_type == C.PSR_DATA_TYPE_TEXT
+        elseif attribute_type.data_type == C.PSR_DATA_TYPE_STRING
             return read_vector_strings(db, collection, attribute)
         else
             throw(DatabaseException("Unsupported data type for '$collection.$attribute'")) 
@@ -486,9 +486,9 @@ function read(db::Database, collection::String, attribute::String)
     elseif attribute_type.data_structure == C.PSR_DATA_STRUCTURE_SET
         if attribute_type.data_type == C.PSR_DATA_TYPE_INTEGER
             return read_set_integers(db, collection, attribute)
-        elseif attribute_type.data_type == C.PSR_DATA_TYPE_REAL
+        elseif attribute_type.data_type == C.PSR_DATA_TYPE_FLOAT
             return read_set_doubles(db, collection, attribute)
-        elseif attribute_type.data_type == C.PSR_DATA_TYPE_TEXT
+        elseif attribute_type.data_type == C.PSR_DATA_TYPE_STRING
             return read_set_strings(db, collection, attribute)
         else
             throw(DatabaseException("Unsupported data type for '$collection.$attribute'"))
@@ -504,9 +504,9 @@ function read_by_id(db::Database, collection::String, attribute::String, id::Int
     if attribute_type.data_structure == C.PSR_DATA_STRUCTURE_SCALAR
         if attribute_type.data_type == C.PSR_DATA_TYPE_INTEGER
             return read_scalar_integers_by_id(db, collection, attribute, id)
-        elseif attribute_type.data_type == C.PSR_DATA_TYPE_REAL
+        elseif attribute_type.data_type == C.PSR_DATA_TYPE_FLOAT
             return read_scalar_doubles_by_id(db, collection, attribute, id)
-        elseif attribute_type.data_type == C.PSR_DATA_TYPE_TEXT
+        elseif attribute_type.data_type == C.PSR_DATA_TYPE_STRING
             return read_scalar_strings_by_id(db, collection, attribute, id)
         else
             throw(DatabaseException("Unsupported data type for '$collection.$attribute'"))
@@ -514,9 +514,9 @@ function read_by_id(db::Database, collection::String, attribute::String, id::Int
     elseif attribute_type.data_structure == C.PSR_DATA_STRUCTURE_VECTOR
         if attribute_type.data_type == C.PSR_DATA_TYPE_INTEGER
             return read_vector_integers_by_id(db, collection, attribute, id)
-        elseif attribute_type.data_type == C.PSR_DATA_TYPE_REAL
+        elseif attribute_type.data_type == C.PSR_DATA_TYPE_FLOAT
             return read_vector_doubles_by_id(db, collection, attribute, id)
-        elseif attribute_type.data_type == C.PSR_DATA_TYPE_TEXT
+        elseif attribute_type.data_type == C.PSR_DATA_TYPE_STRING
             return read_vector_strings_by_id(db, collection, attribute, id)
         else
             throw(DatabaseException("Unsupported data type for '$collection.$attribute'"))
@@ -524,9 +524,9 @@ function read_by_id(db::Database, collection::String, attribute::String, id::Int
     elseif attribute_type.data_structure == C.PSR_DATA_STRUCTURE_SET
         if attribute_type.data_type == C.PSR_DATA_TYPE_INTEGER
             return read_set_integers_by_id(db, collection, attribute, id)
-        elseif attribute_type.data_type == C.PSR_DATA_TYPE_REAL
+        elseif attribute_type.data_type == C.PSR_DATA_TYPE_FLOAT
             return read_set_doubles_by_id(db, collection, attribute, id)
-        elseif attribute_type.data_type == C.PSR_DATA_TYPE_TEXT
+        elseif attribute_type.data_type == C.PSR_DATA_TYPE_STRING
             return read_set_strings_by_id(db, collection, attribute, id)
         else
             throw(DatabaseException("Unsupported data type for '$collection.$attribute'"))

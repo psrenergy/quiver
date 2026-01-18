@@ -1502,8 +1502,8 @@ abstract class psr_data_structure_t {
 
 abstract class psr_data_type_t {
   static const int PSR_DATA_TYPE_INTEGER = 0;
-  static const int PSR_DATA_TYPE_REAL = 1;
-  static const int PSR_DATA_TYPE_TEXT = 2;
+  static const int PSR_DATA_TYPE_FLOAT = 1;
+  static const int PSR_DATA_TYPE_STRING = 2;
 }
 
 final class psr_database extends ffi.Opaque {}

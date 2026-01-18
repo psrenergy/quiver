@@ -909,10 +909,10 @@ PSR_C_API psr_error_t psr_database_get_attribute_type(psr_database_t* db,
             *out_data_type = PSR_DATA_TYPE_INTEGER;
             break;
         case psr::DataType::Real:
-            *out_data_type = PSR_DATA_TYPE_REAL;
+            *out_data_type = PSR_DATA_TYPE_FLOAT;
             break;
         case psr::DataType::Text:
-            *out_data_type = PSR_DATA_TYPE_TEXT;
+            *out_data_type = PSR_DATA_TYPE_STRING;
             break;
         }
 

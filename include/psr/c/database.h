@@ -30,7 +30,7 @@ typedef enum {
 } psr_data_structure_t;
 
 // Attribute data types
-typedef enum { PSR_DATA_TYPE_INTEGER = 0, PSR_DATA_TYPE_REAL = 1, PSR_DATA_TYPE_TEXT = 2 } psr_data_type_t;
+typedef enum { PSR_DATA_TYPE_INTEGER = 0, PSR_DATA_TYPE_FLOAT = 1, PSR_DATA_TYPE_STRING = 2 } psr_data_type_t;
 
 // Returns default options
 PSR_C_API psr_database_options_t psr_database_options_default(void);
