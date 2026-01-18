@@ -57,10 +57,10 @@ TEST(Row, IsNullFalseForNonNull) {
 TEST(Row, GetIntOutOfBounds) {
     psr::Row row(std::vector<psr::Value>{int64_t{42}});
 
-    auto result = row.get_int(1);
+    auto result = row.get_integer(1);
     EXPECT_FALSE(result.has_value());
 
-    result = row.get_int(100);
+    result = row.get_integer(100);
     EXPECT_FALSE(result.has_value());
 }
 
@@ -87,7 +87,7 @@ TEST(Row, GetStringOutOfBounds) {
 TEST(Row, GetIntWrongType) {
     psr::Row row(std::vector<psr::Value>{std::string("not an int")});
 
-    auto result = row.get_int(0);
+    auto result = row.get_integer(0);
     EXPECT_FALSE(result.has_value());
 }
 
@@ -108,7 +108,7 @@ TEST(Row, GetStringWrongType) {
 TEST(Row, GetIntFromNull) {
     psr::Row row(std::vector<psr::Value>{nullptr});
 
-    auto result = row.get_int(0);
+    auto result = row.get_integer(0);
     EXPECT_FALSE(result.has_value());
 }
 
@@ -217,7 +217,7 @@ TEST(Result, OperatorBracketValid) {
     psr::Result result(columns, std::move(rows));
 
     const auto& row = result[0];
-    EXPECT_EQ(row.get_int(0).value(), 42);
+    EXPECT_EQ(row.get_integer(0).value(), 42);
 }
 
 TEST(Result, MixedValueTypes) {
@@ -231,7 +231,7 @@ TEST(Result, MixedValueTypes) {
     EXPECT_EQ(result.column_count(), 4u);
 
     const auto& row = result[0];
-    EXPECT_EQ(row.get_int(0).value(), 42);
+    EXPECT_EQ(row.get_integer(0).value(), 42);
     EXPECT_DOUBLE_EQ(row.get_float(1).value(), 3.14);
     EXPECT_EQ(row.get_string(2).value(), "hello");
     EXPECT_TRUE(row.is_null(3));
