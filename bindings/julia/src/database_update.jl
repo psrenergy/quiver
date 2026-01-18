@@ -54,14 +54,14 @@ function update_vector_integers!(
     id::Int64,
     values::Vector{<:Integer},
 )
-    int_values = Int64[Int64(v) for v in values]
+    integer_values = Int64[Int64(v) for v in values]
     err = C.psr_database_update_vector_integers(
         db.ptr,
         collection,
         attribute,
         id,
-        int_values,
-        Csize_t(length(int_values)),
+        integer_values,
+        Csize_t(length(integer_values)),
     )
     if err != C.PSR_OK
         throw(DatabaseException("Failed to update vector integers '$collection.$attribute' for id $id"))
@@ -106,8 +106,8 @@ end
 # Update set attribute functions
 
 function update_set_integers!(db::Database, collection::String, attribute::String, id::Int64, values::Vector{<:Integer})
-    int_values = Int64[Int64(v) for v in values]
-    err = C.psr_database_update_set_integers(db.ptr, collection, attribute, id, int_values, Csize_t(length(int_values)))
+    integer_values = Int64[Int64(v) for v in values]
+    err = C.psr_database_update_set_integers(db.ptr, collection, attribute, id, integer_values, Csize_t(length(integer_values)))
     if err != C.PSR_OK
         throw(DatabaseException("Failed to update set integers '$collection.$attribute' for id $id"))
     end

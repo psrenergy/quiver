@@ -115,18 +115,18 @@ TEST(DatabaseCApi, ReadScalarEmpty) {
     psr_database_create_element(db, "Configuration", config);
     psr_element_destroy(config);
 
-    int64_t* int_values = nullptr;
-    size_t int_count = 0;
-    auto err = psr_database_read_scalar_integers(db, "Collection", "some_integer", &int_values, &int_count);
+    int64_t* integer_values = nullptr;
+    size_t integer_count = 0;
+    auto err = psr_database_read_scalar_integers(db, "Collection", "some_integer", &integer_values, &integer_count);
     EXPECT_EQ(err, PSR_OK);
-    EXPECT_EQ(int_count, 0);
-    EXPECT_EQ(int_values, nullptr);
+    EXPECT_EQ(integer_count, 0);
+    EXPECT_EQ(integer_values, nullptr);
 
     double* float_values = nullptr;
-    size_t double_count = 0;
-    err = psr_database_read_scalar_floats(db, "Collection", "some_float", &float_values, &double_count);
+    size_t float_count = 0;
+    err = psr_database_read_scalar_floats(db, "Collection", "some_float", &float_values, &float_count);
     EXPECT_EQ(err, PSR_OK);
-    EXPECT_EQ(double_count, 0);
+    EXPECT_EQ(float_count, 0);
     EXPECT_EQ(float_values, nullptr);
 
     psr_database_close(db);
@@ -237,20 +237,20 @@ TEST(DatabaseCApi, ReadVectorEmpty) {
 
     int64_t** int_vectors = nullptr;
     size_t* int_sizes = nullptr;
-    size_t int_count = 0;
-    auto err = psr_database_read_vector_integers(db, "Collection", "value_int", &int_vectors, &int_sizes, &int_count);
+    size_t integer_count = 0;
+    auto err = psr_database_read_vector_integers(db, "Collection", "value_int", &int_vectors, &int_sizes, &integer_count);
     EXPECT_EQ(err, PSR_OK);
-    EXPECT_EQ(int_count, 0);
+    EXPECT_EQ(integer_count, 0);
     EXPECT_EQ(int_vectors, nullptr);
     EXPECT_EQ(int_sizes, nullptr);
 
     double** double_vectors = nullptr;
     size_t* double_sizes = nullptr;
-    size_t double_count = 0;
+    size_t float_count = 0;
     err =
-        psr_database_read_vector_floats(db, "Collection", "value_float", &double_vectors, &double_sizes, &double_count);
+        psr_database_read_vector_floats(db, "Collection", "value_float", &double_vectors, &double_sizes, &float_count);
     EXPECT_EQ(err, PSR_OK);
-    EXPECT_EQ(double_count, 0);
+    EXPECT_EQ(float_count, 0);
     EXPECT_EQ(double_vectors, nullptr);
     EXPECT_EQ(double_sizes, nullptr);
 

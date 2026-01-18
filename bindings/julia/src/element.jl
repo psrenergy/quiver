@@ -45,8 +45,8 @@ end
 
 function Base.setindex!(el::Element, value::Vector{<:Integer}, name::String)
     cname = Base.cconvert(Cstring, name)
-    int_values = Int64[Int64(v) for v in value]
-    err = C.psr_element_set_array_int(el.ptr, cname, int_values, Int32(length(int_values)))
+    integer_values = Int64[Int64(v) for v in value]
+    err = C.psr_element_set_array_int(el.ptr, cname, integer_values, Int32(length(integer_values)))
     if err != C.PSR_OK
         error("Failed to set array<int> value for '$name'")
     end
