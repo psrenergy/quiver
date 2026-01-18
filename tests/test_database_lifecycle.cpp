@@ -301,4 +301,3 @@ TEST_F(MigrationFixture, DatabaseFromMigrationsMemory) {
     EXPECT_EQ(db.current_version(), 3);
     EXPECT_TRUE(db.is_healthy());
 }
-

@@ -207,7 +207,8 @@ TEST(DatabaseErrors, SetScalarRelationCollectionNotFound) {
     auto db =
         psr::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = psr::LogLevel::off});
 
-    EXPECT_THROW(db.set_scalar_relation("NonexistentCollection", "parent_id", "Child 1", "Parent 1"), std::runtime_error);
+    EXPECT_THROW(db.set_scalar_relation("NonexistentCollection", "parent_id", "Child 1", "Parent 1"),
+                 std::runtime_error);
 }
 
 TEST(DatabaseErrors, SetScalarRelationNotForeignKey) {
