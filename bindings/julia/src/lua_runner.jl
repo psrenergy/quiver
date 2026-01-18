@@ -1,4 +1,4 @@
-struct LuaRunner
+mutable struct LuaRunner
     ptr::Ptr{C.psr_lua_runner}
     db::Database  # Keep reference to prevent GC
 end
@@ -8,7 +8,9 @@ function LuaRunner(db::Database)
     if ptr == C_NULL
         throw(DatabaseException("Failed to create LuaRunner"))
     end
-    return LuaRunner(ptr, db)
+    runner = LuaRunner(ptr, db)
+    finalizer(r -> r.ptr != C_NULL && C.psr_lua_runner_free(r.ptr), runner)
+    return runner
 end
 
 function run!(runner::LuaRunner, script::String)
@@ -26,6 +28,9 @@ function run!(runner::LuaRunner, script::String)
 end
 
 function close!(runner::LuaRunner)
-    C.psr_lua_runner_free(runner.ptr)
+    if runner.ptr != C_NULL
+        C.psr_lua_runner_free(runner.ptr)
+        runner.ptr = C_NULL
+    end
     return nothing
 end
