@@ -58,9 +58,9 @@ PSR_C_API psr_error_t psr_element_set_null(psr_element_t* element, const char* n
 }
 
 PSR_C_API psr_error_t psr_element_set_array_integer(psr_element_t* element,
-                                                const char* name,
-                                                const int64_t* values,
-                                                int32_t count) {
+                                                    const char* name,
+                                                    const int64_t* values,
+                                                    int32_t count) {
     if (!element || !name || (!values && count > 0) || count < 0) {
         return PSR_ERROR_INVALID_ARGUMENT;
     }
