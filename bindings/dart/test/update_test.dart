@@ -274,4 +274,565 @@ void main() {
       }
     });
   });
+
+  // ==========================================================================
+  // Scalar update functions tests
+  // ==========================================================================
+
+  group('Update Scalar Integer', () {
+    test('basic update', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 42});
+
+        db.updateScalarInteger('Configuration', 'integer_attribute', 1, 100);
+
+        final value = db.readScalarIntegerById('Configuration', 'integer_attribute', 1);
+        expect(value, equals(100));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('update to zero', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 42});
+
+        db.updateScalarInteger('Configuration', 'integer_attribute', 1, 0);
+
+        final value = db.readScalarIntegerById('Configuration', 'integer_attribute', 1);
+        expect(value, equals(0));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('update to negative', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 42});
+
+        db.updateScalarInteger('Configuration', 'integer_attribute', 1, -999);
+
+        final value = db.readScalarIntegerById('Configuration', 'integer_attribute', 1);
+        expect(value, equals(-999));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('other elements unchanged', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 42});
+        db.createElement('Configuration', {'label': 'Config 2', 'integer_attribute': 100});
+
+        db.updateScalarInteger('Configuration', 'integer_attribute', 1, 999);
+
+        expect(db.readScalarIntegerById('Configuration', 'integer_attribute', 1), equals(999));
+        expect(db.readScalarIntegerById('Configuration', 'integer_attribute', 2), equals(100));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws on invalid collection', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        expect(
+          () => db.updateScalarInteger('NonexistentCollection', 'integer_attribute', 1, 42),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws on invalid attribute', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 42});
+        expect(
+          () => db.updateScalarInteger('Configuration', 'nonexistent_attribute', 1, 100),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Update Scalar Double', () {
+    test('basic update', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1', 'float_attribute': 3.14});
+
+        db.updateScalarDouble('Configuration', 'float_attribute', 1, 2.71);
+
+        final value = db.readScalarDoubleById('Configuration', 'float_attribute', 1);
+        expect(value, equals(2.71));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('update to zero', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1', 'float_attribute': 3.14});
+
+        db.updateScalarDouble('Configuration', 'float_attribute', 1, 0.0);
+
+        final value = db.readScalarDoubleById('Configuration', 'float_attribute', 1);
+        expect(value, equals(0.0));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('precision test', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1', 'float_attribute': 1.0});
+
+        db.updateScalarDouble('Configuration', 'float_attribute', 1, 1.23456789012345);
+
+        final value = db.readScalarDoubleById('Configuration', 'float_attribute', 1);
+        expect(value, closeTo(1.23456789012345, 1e-10));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Update Scalar String', () {
+    test('basic update', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1', 'string_attribute': 'hello'});
+
+        db.updateScalarString('Configuration', 'string_attribute', 1, 'world');
+
+        final value = db.readScalarStringById('Configuration', 'string_attribute', 1);
+        expect(value, equals('world'));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('update to empty string', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1', 'string_attribute': 'hello'});
+
+        db.updateScalarString('Configuration', 'string_attribute', 1, '');
+
+        final value = db.readScalarStringById('Configuration', 'string_attribute', 1);
+        expect(value, equals(''));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('unicode support', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1', 'string_attribute': 'hello'});
+
+        db.updateScalarString('Configuration', 'string_attribute', 1, '日本語テスト');
+
+        final value = db.readScalarStringById('Configuration', 'string_attribute', 1);
+        expect(value, equals('日本語テスト'));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  // ==========================================================================
+  // Vector update functions tests
+  // ==========================================================================
+
+  group('Update Vector Integers', () {
+    test('replace existing vector', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_int': [1, 2, 3]
+        });
+
+        db.updateVectorIntegers('Collection', 'value_int', 1, [10, 20, 30, 40]);
+
+        final values = db.readVectorIntegersById('Collection', 'value_int', 1);
+        expect(values, equals([10, 20, 30, 40]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('update to smaller vector', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_int': [1, 2, 3]
+        });
+
+        db.updateVectorIntegers('Collection', 'value_int', 1, [100]);
+
+        final values = db.readVectorIntegersById('Collection', 'value_int', 1);
+        expect(values, equals([100]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('update to empty vector', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_int': [1, 2, 3]
+        });
+
+        db.updateVectorIntegers('Collection', 'value_int', 1, []);
+
+        final values = db.readVectorIntegersById('Collection', 'value_int', 1);
+        expect(values, isEmpty);
+      } finally {
+        db.close();
+      }
+    });
+
+    test('update from empty to non-empty', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {'label': 'Item 1'});
+
+        // Verify initially empty
+        expect(db.readVectorIntegersById('Collection', 'value_int', 1), isEmpty);
+
+        db.updateVectorIntegers('Collection', 'value_int', 1, [1, 2, 3]);
+
+        final values = db.readVectorIntegersById('Collection', 'value_int', 1);
+        expect(values, equals([1, 2, 3]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('other elements unchanged', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_int': [1, 2, 3]
+        });
+        db.createElement('Collection', {
+          'label': 'Item 2',
+          'value_int': [10, 20]
+        });
+
+        db.updateVectorIntegers('Collection', 'value_int', 1, [100, 200]);
+
+        expect(db.readVectorIntegersById('Collection', 'value_int', 1), equals([100, 200]));
+        expect(db.readVectorIntegersById('Collection', 'value_int', 2), equals([10, 20]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws on invalid collection', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        expect(
+          () => db.updateVectorIntegers('NonexistentCollection', 'value_int', 1, [1, 2, 3]),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Update Vector Doubles', () {
+    test('replace existing vector', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_float': [1.5, 2.5, 3.5]
+        });
+
+        db.updateVectorDoubles('Collection', 'value_float', 1, [10.5, 20.5]);
+
+        final values = db.readVectorDoublesById('Collection', 'value_float', 1);
+        expect(values, equals([10.5, 20.5]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('precision test', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_float': [1.0]
+        });
+
+        db.updateVectorDoubles('Collection', 'value_float', 1, [1.23456789, 9.87654321]);
+
+        final values = db.readVectorDoublesById('Collection', 'value_float', 1);
+        expect(values[0], closeTo(1.23456789, 1e-8));
+        expect(values[1], closeTo(9.87654321, 1e-8));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('update to empty vector', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_float': [1.5, 2.5, 3.5]
+        });
+
+        db.updateVectorDoubles('Collection', 'value_float', 1, []);
+
+        final values = db.readVectorDoublesById('Collection', 'value_float', 1);
+        expect(values, isEmpty);
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  // ==========================================================================
+  // Set update functions tests
+  // ==========================================================================
+
+  group('Update Set Strings', () {
+    test('replace existing set', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'tag': ['important', 'urgent']
+        });
+
+        db.updateSetStrings('Collection', 'tag', 1, ['new_tag1', 'new_tag2', 'new_tag3']);
+
+        final values = db.readSetStringsById('Collection', 'tag', 1);
+        expect(values.toSet(), equals({'new_tag1', 'new_tag2', 'new_tag3'}));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('update to single element', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'tag': ['important', 'urgent']
+        });
+
+        db.updateSetStrings('Collection', 'tag', 1, ['single_tag']);
+
+        final values = db.readSetStringsById('Collection', 'tag', 1);
+        expect(values, equals(['single_tag']));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('update to empty set', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'tag': ['important', 'urgent']
+        });
+
+        db.updateSetStrings('Collection', 'tag', 1, []);
+
+        final values = db.readSetStringsById('Collection', 'tag', 1);
+        expect(values, isEmpty);
+      } finally {
+        db.close();
+      }
+    });
+
+    test('update from empty to non-empty', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {'label': 'Item 1'});
+
+        // Verify initially empty
+        expect(db.readSetStringsById('Collection', 'tag', 1), isEmpty);
+
+        db.updateSetStrings('Collection', 'tag', 1, ['important', 'urgent']);
+
+        final values = db.readSetStringsById('Collection', 'tag', 1);
+        expect(values.toSet(), equals({'important', 'urgent'}));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('other elements unchanged', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'tag': ['important']
+        });
+        db.createElement('Collection', {
+          'label': 'Item 2',
+          'tag': ['urgent', 'review']
+        });
+
+        db.updateSetStrings('Collection', 'tag', 1, ['updated']);
+
+        expect(db.readSetStringsById('Collection', 'tag', 1), equals(['updated']));
+        expect(db.readSetStringsById('Collection', 'tag', 2).toSet(), equals({'urgent', 'review'}));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('unicode support', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'tag': ['tag1']
+        });
+
+        db.updateSetStrings('Collection', 'tag', 1, ['日本語', '中文', '한국어']);
+
+        final values = db.readSetStringsById('Collection', 'tag', 1);
+        expect(values.toSet(), equals({'日本語', '中文', '한국어'}));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws on invalid collection', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        expect(
+          () => db.updateSetStrings('NonexistentCollection', 'tag', 1, ['tag1']),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

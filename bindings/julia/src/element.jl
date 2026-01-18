@@ -1,4 +1,4 @@
-struct Element
+mutable struct Element
     ptr::Ptr{C.psr_element}
 
     function Element()
@@ -6,10 +6,16 @@ struct Element
         if ptr == C_NULL
             error("Failed to create Element")
         end
-        obj = new(ptr)
-        # finalizer(C.psr_element_destroy, obj)
-        return obj
+        return new(ptr)
     end
+end
+
+function destroy!(el::Element)
+    if el.ptr != C_NULL
+        C.psr_element_destroy(el.ptr)
+        el.ptr = C_NULL
+    end
+    return nothing
 end
 
 function Base.setindex!(el::Element, value::Integer, name::String)
