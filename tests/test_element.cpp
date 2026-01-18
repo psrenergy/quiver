@@ -240,10 +240,10 @@ TEST(Element, SetMultipleSameNameArrays) {
 TEST(Element, SetMixedScalarsAndArrays) {
     psr::Element element;
     element.set("label", std::string("Test"))
-        .set("int_value", int64_t{42})
+        .set("integer_value", int64_t{42})
         .set("double_value", 3.14)
         .set_null("null_value")
-        .set("int_array", std::vector<int64_t>{1, 2, 3})
+        .set("integer_array", std::vector<int64_t>{1, 2, 3})
         .set("double_array", std::vector<double>{1.1, 2.2})
         .set("string_array", std::vector<std::string>{"a", "b", "c"});
 

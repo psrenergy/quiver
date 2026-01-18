@@ -135,10 +135,10 @@ TEST(Database, ReadVectorEmpty) {
     db.create_element("Configuration", config);
 
     // No Collection elements created
-    auto int_vectors = db.read_vector_integers("Collection", "value_int");
+    auto integer_vectors = db.read_vector_integers("Collection", "value_int");
     auto double_vectors = db.read_vector_floats("Collection", "value_float");
 
-    EXPECT_TRUE(int_vectors.empty());
+    EXPECT_TRUE(integer_vectors.empty());
     EXPECT_TRUE(double_vectors.empty());
 }
 

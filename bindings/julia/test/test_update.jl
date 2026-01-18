@@ -45,8 +45,8 @@ include("fixture.jl")
         PSRDatabase.update_element!(db, "Configuration", Int64(1); integer_attribute = 500, float_attribute = 9.9)
 
         # Verify updates
-        int_value = PSRDatabase.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", Int64(1))
-        @test int_value == 500
+        integer_value = PSRDatabase.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", Int64(1))
+        @test integer_value == 500
 
         float_value = PSRDatabase.read_scalar_floats_by_id(db, "Configuration", "float_attribute", Int64(1))
         @test float_value == 9.9
@@ -101,8 +101,8 @@ include("fixture.jl")
         PSRDatabase.update_element!(db, "Collection", Int64(1); some_integer = 999, value_int = [7, 8, 9])
 
         # Verify scalar was updated
-        int_value = PSRDatabase.read_scalar_integers_by_id(db, "Collection", "some_integer", Int64(1))
-        @test int_value == 999
+        integer_value = PSRDatabase.read_scalar_integers_by_id(db, "Collection", "some_integer", Int64(1))
+        @test integer_value == 999
 
         # Verify vector was NOT updated (arrays ignored in update_element)
         vec_values = PSRDatabase.read_vector_integers_by_id(db, "Collection", "value_int", Int64(1))

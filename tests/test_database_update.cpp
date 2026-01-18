@@ -274,9 +274,9 @@ TEST(Database, UpdateElementMultipleScalars) {
         .set("string_attribute", std::string("world"));
     db.update_element("Configuration", id, update);
 
-    auto int_val = db.read_scalar_integers_by_id("Configuration", "integer_attribute", id);
-    EXPECT_TRUE(int_val.has_value());
-    EXPECT_EQ(*int_val, 100);
+    auto integer_val = db.read_scalar_integers_by_id("Configuration", "integer_attribute", id);
+    EXPECT_TRUE(integer_val.has_value());
+    EXPECT_EQ(*integer_val, 100);
 
     auto float_val = db.read_scalar_floats_by_id("Configuration", "float_attribute", id);
     EXPECT_TRUE(float_val.has_value());
@@ -337,9 +337,9 @@ TEST(Database, UpdateElementIgnoresArrays) {
     db.update_element("Collection", id, update);
 
     // Verify scalar was updated
-    auto int_val = db.read_scalar_integers_by_id("Collection", "some_integer", id);
-    EXPECT_TRUE(int_val.has_value());
-    EXPECT_EQ(*int_val, 42);
+    auto integer_val = db.read_scalar_integers_by_id("Collection", "some_integer", id);
+    EXPECT_TRUE(integer_val.has_value());
+    EXPECT_EQ(*integer_val, 42);
 
     // Verify vector was NOT updated (arrays should be ignored)
     auto vec = db.read_vector_integers_by_id("Collection", "value_int", id);

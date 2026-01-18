@@ -179,7 +179,7 @@ class Database {
       }
 
       final result = List<int>.generate(count, (i) => outValues.value[i]);
-      bindings.psr_free_int_array(outValues.value);
+      bindings.psr_free_integer_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -291,7 +291,7 @@ class Database {
           result.add(List<int>.generate(size, (j) => outVectors.value[i][j]));
         }
       }
-      bindings.psr_free_int_vectors(outVectors.value, outSizes.value, count);
+      bindings.psr_free_integer_vectors(outVectors.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -423,7 +423,7 @@ class Database {
           result.add(List<int>.generate(size, (j) => outSets.value[i][j]));
         }
       }
-      bindings.psr_free_int_vectors(outSets.value, outSizes.value, count);
+      bindings.psr_free_integer_vectors(outSets.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -648,7 +648,7 @@ class Database {
       }
 
       final result = List<int>.generate(count, (i) => outValues.value[i]);
-      bindings.psr_free_int_array(outValues.value);
+      bindings.psr_free_integer_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -755,7 +755,7 @@ class Database {
       }
 
       final result = List<int>.generate(count, (i) => outValues.value[i]);
-      bindings.psr_free_int_array(outValues.value);
+      bindings.psr_free_integer_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -860,7 +860,7 @@ class Database {
       }
 
       final result = List<int>.generate(count, (i) => outIds.value[i]);
-      bindings.psr_free_int_array(outIds.value);
+      bindings.psr_free_integer_array(outIds.value);
       return result;
     } finally {
       arena.releaseAll();

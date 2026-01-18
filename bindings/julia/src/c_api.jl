@@ -246,8 +246,8 @@ function psr_database_update_set_strings(db, collection, attribute, id, values, 
     @ccall libpsr_database_c.psr_database_update_set_strings(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Ptr{Cchar}}, count::Csize_t)::psr_error_t
 end
 
-function psr_free_int_array(values)
-    @ccall libpsr_database_c.psr_free_int_array(values::Ptr{Int64})::Cvoid
+function psr_free_integer_array(values)
+    @ccall libpsr_database_c.psr_free_integer_array(values::Ptr{Int64})::Cvoid
 end
 
 function psr_free_float_array(values)
@@ -258,8 +258,8 @@ function psr_free_string_array(values, count)
     @ccall libpsr_database_c.psr_free_string_array(values::Ptr{Ptr{Cchar}}, count::Csize_t)::Cvoid
 end
 
-function psr_free_int_vectors(vectors, sizes, count)
-    @ccall libpsr_database_c.psr_free_int_vectors(vectors::Ptr{Ptr{Int64}}, sizes::Ptr{Csize_t}, count::Csize_t)::Cvoid
+function psr_free_integer_vectors(vectors, sizes, count)
+    @ccall libpsr_database_c.psr_free_integer_vectors(vectors::Ptr{Ptr{Int64}}, sizes::Ptr{Csize_t}, count::Csize_t)::Cvoid
 end
 
 function psr_free_float_vectors(vectors, sizes, count)

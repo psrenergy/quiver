@@ -38,7 +38,7 @@ TEST(DatabaseCApi, ReadScalarIntegers) {
     EXPECT_EQ(values[0], 42);
     EXPECT_EQ(values[1], 100);
 
-    psr_free_int_array(values);
+    psr_free_integer_array(values);
     psr_database_close(db);
 }
 
@@ -176,7 +176,7 @@ TEST(DatabaseCApi, ReadVectorIntegers) {
     EXPECT_EQ(vectors[1][0], 10);
     EXPECT_EQ(vectors[1][1], 20);
 
-    psr_free_int_vectors(vectors, sizes, count);
+    psr_free_integer_vectors(vectors, sizes, count);
     psr_database_close(db);
 }
 
@@ -307,7 +307,7 @@ TEST(DatabaseCApi, ReadVectorOnlyReturnsElementsWithData) {
     EXPECT_EQ(vectors[1][0], 4);
     EXPECT_EQ(vectors[1][1], 5);
 
-    psr_free_int_vectors(vectors, sizes, count);
+    psr_free_integer_vectors(vectors, sizes, count);
     psr_database_close(db);
 }
 
@@ -584,14 +584,14 @@ TEST(DatabaseCApi, ReadVectorIntegerById) {
     EXPECT_EQ(values[0], 1);
     EXPECT_EQ(values[1], 2);
     EXPECT_EQ(values[2], 3);
-    psr_free_int_array(values);
+    psr_free_integer_array(values);
 
     err = psr_database_read_vector_integers_by_id(db, "Collection", "value_int", id2, &values, &count);
     EXPECT_EQ(err, PSR_OK);
     EXPECT_EQ(count, 2);
     EXPECT_EQ(values[0], 10);
     EXPECT_EQ(values[1], 20);
-    psr_free_int_array(values);
+    psr_free_integer_array(values);
 
     psr_database_close(db);
 }
@@ -773,7 +773,7 @@ TEST(DatabaseCApi, ReadElementIds) {
     EXPECT_EQ(ids[1], id2);
     EXPECT_EQ(ids[2], id3);
 
-    psr_free_int_array(ids);
+    psr_free_integer_array(ids);
     psr_database_close(db);
 }
 

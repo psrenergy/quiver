@@ -123,7 +123,7 @@ TEST(DatabaseCApi, UpdateVectorIntegers) {
     EXPECT_EQ(read_values[2], 30);
     EXPECT_EQ(read_values[3], 40);
 
-    psr_free_int_array(read_values);
+    psr_free_integer_array(read_values);
     psr_database_close(db);
 }
 
@@ -332,12 +332,12 @@ TEST(DatabaseCApi, UpdateElementMultipleScalars) {
     psr_element_destroy(update);
     EXPECT_EQ(err, PSR_OK);
 
-    int64_t int_value;
+    int64_t integer_value;
     int has_value;
-    err = psr_database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id, &int_value, &has_value);
+    err = psr_database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id, &integer_value, &has_value);
     EXPECT_EQ(err, PSR_OK);
     EXPECT_EQ(has_value, 1);
-    EXPECT_EQ(int_value, 100);
+    EXPECT_EQ(integer_value, 100);
 
     double double_value;
     err = psr_database_read_scalar_floats_by_id(db, "Configuration", "float_attribute", id, &double_value, &has_value);

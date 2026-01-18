@@ -560,8 +560,8 @@ TEST_F(LuaRunnerTest, UpdateElementMultipleScalarsFromLua) {
     lua.run(R"(
         db:update_element("Collection", 1, { some_integer = 500, some_float = 9.9 })
 
-        local int_val = db:read_scalar_integers_by_id("Collection", "some_integer", 1)
-        assert(int_val == 500, "Expected integer 500, got " .. tostring(int_val))
+        local integer_val = db:read_scalar_integers_by_id("Collection", "some_integer", 1)
+        assert(integer_val == 500, "Expected integer 500, got " .. tostring(integer_val))
 
         local float_val = db:read_scalar_floats_by_id("Collection", "some_float", 1)
         assert(float_val == 9.9, "Expected float 9.9, got " .. tostring(float_val))
@@ -572,9 +572,9 @@ TEST_F(LuaRunnerTest, UpdateElementMultipleScalarsFromLua) {
     )");
 
     // Verify from C++ side
-    auto int_value = db.read_scalar_integers_by_id("Collection", "some_integer", 1);
-    EXPECT_TRUE(int_value.has_value());
-    EXPECT_EQ(*int_value, 500);
+    auto integer_value = db.read_scalar_integers_by_id("Collection", "some_integer", 1);
+    EXPECT_TRUE(integer_value.has_value());
+    EXPECT_EQ(*integer_value, 500);
 
     auto float_value = db.read_scalar_floats_by_id("Collection", "some_float", 1);
     EXPECT_TRUE(float_value.has_value());
@@ -630,8 +630,8 @@ TEST_F(LuaRunnerTest, UpdateElementArraysIgnoredFromLua) {
         db:update_element("Collection", 1, { some_integer = 999, value_int = {7, 8, 9} })
 
         -- Verify scalar was updated
-        local int_val = db:read_scalar_integers_by_id("Collection", "some_integer", 1)
-        assert(int_val == 999, "Scalar should be updated to 999")
+        local integer_val = db:read_scalar_integers_by_id("Collection", "some_integer", 1)
+        assert(integer_val == 999, "Scalar should be updated to 999")
 
         -- Verify vector was NOT updated (arrays ignored in update_element)
         local vec = db:read_vector_integers_by_id("Collection", "value_int", 1)

@@ -22,7 +22,7 @@ TEST(DatabaseCApi, DeleteElementById) {
     auto err = psr_database_read_element_ids(db, "Configuration", &ids, &count);
     EXPECT_EQ(err, PSR_OK);
     EXPECT_EQ(count, 1);
-    psr_free_int_array(ids);
+    psr_free_integer_array(ids);
 
     // Delete element
     err = psr_database_delete_element_by_id(db, "Configuration", id);
@@ -61,7 +61,7 @@ TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
     auto err = psr_database_read_vector_integers_by_id(db, "Collection", "value_int", id, &vec_values, &vec_count);
     EXPECT_EQ(err, PSR_OK);
     EXPECT_EQ(vec_count, 3);
-    psr_free_int_array(vec_values);
+    psr_free_integer_array(vec_values);
 
     // Delete element - CASCADE should delete vector rows too
     err = psr_database_delete_element_by_id(db, "Collection", id);
@@ -159,7 +159,7 @@ TEST(DatabaseCApi, DeleteElementByIdNonExistent) {
     err = psr_database_read_element_ids(db, "Configuration", &ids, &count);
     EXPECT_EQ(err, PSR_OK);
     EXPECT_EQ(count, 1);
-    psr_free_int_array(ids);
+    psr_free_integer_array(ids);
 
     psr_database_close(db);
 }
@@ -200,7 +200,7 @@ TEST(DatabaseCApi, DeleteElementByIdOtherElementsUnchanged) {
     EXPECT_EQ(count, 2);
     EXPECT_EQ(ids[0], id1);
     EXPECT_EQ(ids[1], id3);
-    psr_free_int_array(ids);
+    psr_free_integer_array(ids);
 
     // Verify first element unchanged
     int64_t val1;

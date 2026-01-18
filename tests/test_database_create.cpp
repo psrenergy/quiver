@@ -48,9 +48,9 @@ TEST(Database, CreateElementWithVector) {
     EXPECT_EQ(labels.size(), 1);
     EXPECT_EQ(labels[0], "Item 1");
 
-    auto int_vectors = db.read_vector_integers("Collection", "value_int");
-    EXPECT_EQ(int_vectors.size(), 1);
-    EXPECT_EQ(int_vectors[0], (std::vector<int64_t>{1, 2, 3}));
+    auto integer_vectors = db.read_vector_integers("Collection", "value_int");
+    EXPECT_EQ(integer_vectors.size(), 1);
+    EXPECT_EQ(integer_vectors[0], (std::vector<int64_t>{1, 2, 3}));
 
     auto float_vectors = db.read_vector_floats("Collection", "value_float");
     EXPECT_EQ(float_vectors.size(), 1);
@@ -76,9 +76,9 @@ TEST(Database, CreateElementWithVectorGroup) {
     EXPECT_EQ(id, 1);
 
     // Verify using public read APIs
-    auto int_vectors = db.read_vector_integers("Collection", "value_int");
-    EXPECT_EQ(int_vectors.size(), 1);
-    EXPECT_EQ(int_vectors[0], (std::vector<int64_t>{10, 20, 30}));
+    auto integer_vectors = db.read_vector_integers("Collection", "value_int");
+    EXPECT_EQ(integer_vectors.size(), 1);
+    EXPECT_EQ(integer_vectors[0], (std::vector<int64_t>{10, 20, 30}));
 
     auto float_vectors = db.read_vector_floats("Collection", "value_float");
     EXPECT_EQ(float_vectors.size(), 1);

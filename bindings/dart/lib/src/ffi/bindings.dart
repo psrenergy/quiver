@@ -1073,17 +1073,17 @@ class PsrDatabaseBindings {
       int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Pointer<ffi.Char>>, int)>();
 
-  void psr_free_int_array(
+  void psr_free_integer_array(
     ffi.Pointer<ffi.Int64> values,
   ) {
-    return _psr_free_int_array(
+    return _psr_free_integer_array(
       values,
     );
   }
 
-  late final _psr_free_int_arrayPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Int64>)>>('psr_free_int_array');
-  late final _psr_free_int_array = _psr_free_int_arrayPtr.asFunction<void Function(ffi.Pointer<ffi.Int64>)>();
+  late final _psr_free_integer_arrayPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Int64>)>>('psr_free_integer_array');
+  late final _psr_free_integer_array = _psr_free_integer_arrayPtr.asFunction<void Function(ffi.Pointer<ffi.Int64>)>();
 
   void psr_free_float_array(
     ffi.Pointer<ffi.Double> values,
@@ -1113,22 +1113,22 @@ class PsrDatabaseBindings {
   late final _psr_free_string_array =
       _psr_free_string_arrayPtr.asFunction<void Function(ffi.Pointer<ffi.Pointer<ffi.Char>>, int)>();
 
-  void psr_free_int_vectors(
+  void psr_free_integer_vectors(
     ffi.Pointer<ffi.Pointer<ffi.Int64>> vectors,
     ffi.Pointer<ffi.Size> sizes,
     int count,
   ) {
-    return _psr_free_int_vectors(
+    return _psr_free_integer_vectors(
       vectors,
       sizes,
       count,
     );
   }
 
-  late final _psr_free_int_vectorsPtr = _lookup<
+  late final _psr_free_integer_vectorsPtr = _lookup<
           ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>, ffi.Size)>>(
-      'psr_free_int_vectors');
-  late final _psr_free_int_vectors = _psr_free_int_vectorsPtr
+      'psr_free_integer_vectors');
+  late final _psr_free_integer_vectors = _psr_free_integer_vectorsPtr
       .asFunction<void Function(ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>, int)>();
 
   void psr_free_float_vectors(

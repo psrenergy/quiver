@@ -41,7 +41,7 @@ function read_scalar_integers(db::Database, collection::String, attribute::Strin
     end
 
     result = unsafe_wrap(Array, out_values[], count) |> copy
-    C.psr_free_int_array(out_values[])
+    C.psr_free_integer_array(out_values[])
     return result
 end
 
@@ -109,7 +109,7 @@ function read_vector_integers(db::Database, collection::String, attribute::Strin
             push!(result, copy(unsafe_wrap(Array, vectors_ptr[i], sizes_ptr[i])))
         end
     end
-    C.psr_free_int_vectors(out_vectors[], out_sizes[], count)
+    C.psr_free_integer_vectors(out_vectors[], out_sizes[], count)
     return result
 end
 
@@ -197,7 +197,7 @@ function read_set_integers(db::Database, collection::String, attribute::String)
             push!(result, copy(unsafe_wrap(Array, sets_ptr[i], sizes_ptr[i])))
         end
     end
-    C.psr_free_int_vectors(out_sets[], out_sizes[], count)
+    C.psr_free_integer_vectors(out_sets[], out_sizes[], count)
     return result
 end
 
@@ -326,7 +326,7 @@ function read_vector_integers_by_id(db::Database, collection::String, attribute:
     end
 
     result = unsafe_wrap(Array, out_values[], count) |> copy
-    C.psr_free_int_array(out_values[])
+    C.psr_free_integer_array(out_values[])
     return result
 end
 
@@ -386,7 +386,7 @@ function read_set_integers_by_id(db::Database, collection::String, attribute::St
     end
 
     result = unsafe_wrap(Array, out_values[], count) |> copy
-    C.psr_free_int_array(out_values[])
+    C.psr_free_integer_array(out_values[])
     return result
 end
 
@@ -444,7 +444,7 @@ function read_element_ids(db::Database, collection::String)
     end
 
     result = unsafe_wrap(Array, out_ids[], count) |> copy
-    C.psr_free_int_array(out_ids[])
+    C.psr_free_integer_array(out_ids[])
     return result
 end
 

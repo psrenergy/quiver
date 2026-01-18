@@ -311,7 +311,7 @@ PSR_C_API psr_error_t psr_database_read_scalar_strings(psr_database_t* db,
     }
 }
 
-PSR_C_API void psr_free_int_array(int64_t* values) {
+PSR_C_API void psr_free_integer_array(int64_t* values) {
     delete[] values;
 }
 
@@ -399,7 +399,7 @@ PSR_C_API psr_error_t psr_database_read_vector_strings(psr_database_t* db,
     }
 }
 
-PSR_C_API void psr_free_int_vectors(int64_t** vectors, size_t* sizes, size_t count) {
+PSR_C_API void psr_free_integer_vectors(int64_t** vectors, size_t* sizes, size_t count) {
     free_vectors_impl(vectors, sizes, count);
 }
 
