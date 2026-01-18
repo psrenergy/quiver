@@ -222,7 +222,7 @@ PSR_C_API psr_error_t psr_database_update_scalar_integer(psr_database_t* db,
                                                          int64_t id,
                                                          int64_t value);
 
-PSR_C_API psr_error_t psr_database_update_scalar_double(psr_database_t* db,
+PSR_C_API psr_error_t psr_database_update_scalar_float(psr_database_t* db,
                                                         const char* collection,
                                                         const char* attribute,
                                                         int64_t id,
@@ -280,12 +280,12 @@ PSR_C_API psr_error_t psr_database_update_set_strings(psr_database_t* db,
 
 // Memory cleanup for read results
 PSR_C_API void psr_free_int_array(int64_t* values);
-PSR_C_API void psr_free_double_array(double* values);
+PSR_C_API void psr_free_float_array(double* values);
 PSR_C_API void psr_free_string_array(char** values, size_t count);
 
 // Memory cleanup for vector read results
 PSR_C_API void psr_free_int_vectors(int64_t** vectors, size_t* sizes, size_t count);
-PSR_C_API void psr_free_double_vectors(double** vectors, size_t* sizes, size_t count);
+PSR_C_API void psr_free_float_vectors(double** vectors, size_t* sizes, size_t count);
 PSR_C_API void psr_free_string_vectors(char*** vectors, size_t* sizes, size_t count);
 
 #ifdef __cplusplus

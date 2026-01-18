@@ -103,7 +103,7 @@ public:
 
     // Update scalar attributes (by element ID)
     void update_scalar_integer(const std::string& collection, const std::string& attribute, int64_t id, int64_t value);
-    void update_scalar_double(const std::string& collection, const std::string& attribute, int64_t id, double value);
+    void update_scalar_float(const std::string& collection, const std::string& attribute, int64_t id, double value);
     void update_scalar_string(const std::string& collection,
                               const std::string& attribute,
                               int64_t id,

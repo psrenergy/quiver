@@ -37,7 +37,7 @@ std::optional<int64_t> Row::get_int(size_t index) const {
     return std::nullopt;
 }
 
-std::optional<double> Row::get_double(size_t index) const {
+std::optional<double> Row::get_float(size_t index) const {
     if (index >= values_.size())
         return std::nullopt;
     if (const auto* val = std::get_if<double>(&values_[index])) {
