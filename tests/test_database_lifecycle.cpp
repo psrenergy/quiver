@@ -92,6 +92,7 @@ TEST_F(TempFileFixture, FromSchemaInvalidPath) {
 
 TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
     // Invalid migrations path results in database with version 0 (no migrations applied)
-    auto db = psr::Database::from_migrations(":memory:", "nonexistent/migrations/", {.console_level = psr::LogLevel::off});
+    auto db =
+        psr::Database::from_migrations(":memory:", "nonexistent/migrations/", {.console_level = psr::LogLevel::off});
     EXPECT_EQ(db.current_version(), 0);
 }

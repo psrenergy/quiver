@@ -687,8 +687,7 @@ TEST_F(LuaRunnerTest, CreateElementInvalidCollection) {
 
     psr::LuaRunner lua(db);
 
-    EXPECT_THROW(
-        { lua.run(R"(db:create_element("NonexistentCollection", { label = "Test" }))"); }, std::runtime_error);
+    EXPECT_THROW({ lua.run(R"(db:create_element("NonexistentCollection", { label = "Test" }))"); }, std::runtime_error);
 }
 
 TEST_F(LuaRunnerTest, MultipleScriptExecutions) {

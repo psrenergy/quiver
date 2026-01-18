@@ -1091,7 +1091,8 @@ TEST(DatabaseCApi, ReadScalarStringsNullOutput) {
 TEST(DatabaseCApi, ReadScalarIntegersByIdNullDb) {
     int64_t value;
     int has_value;
-    auto err = psr_database_read_scalar_integers_by_id(nullptr, "Configuration", "integer_attribute", 1, &value, &has_value);
+    auto err =
+        psr_database_read_scalar_integers_by_id(nullptr, "Configuration", "integer_attribute", 1, &value, &has_value);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 }
 
@@ -1116,7 +1117,8 @@ TEST(DatabaseCApi, ReadScalarIntegersByIdNullOutput) {
     ASSERT_NE(db, nullptr);
 
     int has_value;
-    auto err = psr_database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", 1, nullptr, &has_value);
+    auto err =
+        psr_database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", 1, nullptr, &has_value);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 
     int64_t value;
@@ -1129,7 +1131,8 @@ TEST(DatabaseCApi, ReadScalarIntegersByIdNullOutput) {
 TEST(DatabaseCApi, ReadScalarDoublesByIdNullDb) {
     double value;
     int has_value;
-    auto err = psr_database_read_scalar_doubles_by_id(nullptr, "Configuration", "float_attribute", 1, &value, &has_value);
+    auto err =
+        psr_database_read_scalar_doubles_by_id(nullptr, "Configuration", "float_attribute", 1, &value, &has_value);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 }
 
@@ -1153,7 +1156,8 @@ TEST(DatabaseCApi, ReadScalarDoublesByIdNullOutput) {
 TEST(DatabaseCApi, ReadScalarStringsByIdNullDb) {
     char* value = nullptr;
     int has_value;
-    auto err = psr_database_read_scalar_strings_by_id(nullptr, "Configuration", "string_attribute", 1, &value, &has_value);
+    auto err =
+        psr_database_read_scalar_strings_by_id(nullptr, "Configuration", "string_attribute", 1, &value, &has_value);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 }
 
