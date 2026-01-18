@@ -32,7 +32,11 @@ function create_element!(db::Database, collection::String; kwargs...)
     for (k, v) in kwargs
         e[String(k)] = v
     end
-    create_element!(db, collection, e)
+    try
+        create_element!(db, collection, e)
+    finally
+        C.psr_element_destroy(e.ptr)
+    end
     return nothing
 end
 
@@ -538,6 +542,10 @@ function update_element!(db::Database, collection::String, id::Int64; kwargs...)
     for (k, v) in kwargs
         e[String(k)] = v
     end
-    update_element!(db, collection, id, e)
+    try
+        update_element!(db, collection, id, e)
+    finally
+        C.psr_element_destroy(e.ptr)
+    end
     return nothing
 end
