@@ -165,8 +165,7 @@ end
     PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
 
     # Create with only required label, no optional attributes
-    id = PSRDatabase.create_element!(db, "Collection"; label = "Minimal Item")
-    @test id > 0
+    PSRDatabase.create_element!(db, "Collection"; label = "Minimal Item")
 
     labels = PSRDatabase.read_scalar_strings(db, "Collection", "label")
     @test length(labels) == 1

@@ -230,4 +230,161 @@ void main() {
       }
     });
   });
+
+  // Edge case tests
+
+  group('Create Single Element Vector', () {
+    test('creates element with single element vector', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_int': [42],
+        });
+        expect(id, greaterThan(0));
+
+        final result = db.readVectorIntegersById('Collection', 'value_int', 1);
+        expect(result.length, equals(1));
+        expect(result[0], equals(42));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Create Large Vector', () {
+    test('creates element with 100+ element vector', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+
+        final largeVector = List.generate(150, (i) => i + 1);
+        final id = db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_int': largeVector,
+        });
+        expect(id, greaterThan(0));
+
+        final result = db.readVectorIntegersById('Collection', 'value_int', 1);
+        expect(result.length, equals(150));
+        expect(result, equals(largeVector));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Create Invalid Collection', () {
+    test('throws on nonexistent collection', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        expect(
+          () => db.createElement('NonexistentCollection', {'label': 'Test'}),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Create With Only Required Label', () {
+    test('creates element with only required label', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+
+        // Create with only required label, no optional attributes
+        final id = db.createElement('Collection', {'label': 'Minimal Item'});
+        expect(id, greaterThan(0));
+
+        final labels = db.readScalarStrings('Collection', 'label');
+        expect(labels.length, equals(1));
+        expect(labels[0], equals('Minimal Item'));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Create With Multiple Sets', () {
+    test('creates element with set containing multiple values', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+
+        final id = db.createElement('Collection', {
+          'label': 'Item 1',
+          'tag': ['a', 'b', 'c', 'd', 'e'],
+        });
+        expect(id, greaterThan(0));
+
+        final result = db.readSetStringsById('Collection', 'tag', 1);
+        expect(result.length, equals(5));
+        expect(result..sort(), equals(['a', 'b', 'c', 'd', 'e']));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Create Duplicate Label Rejected', () {
+    test('throws on duplicate label', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1'});
+
+        // Trying to create with same label should fail
+        expect(
+          () => db.createElement('Configuration', {'label': 'Config 1'}),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Create With Float Vector', () {
+    test('creates element with float vector', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+
+        final id = db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_float': [1.1, 2.2, 3.3],
+        });
+        expect(id, greaterThan(0));
+
+        final result = db.readVectorDoublesById('Collection', 'value_float', 1);
+        expect(result.length, equals(3));
+        expect(result, equals([1.1, 2.2, 3.3]));
+      } finally {
+        db.close();
+      }
+    });
+  });
 }
