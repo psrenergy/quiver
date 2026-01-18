@@ -123,4 +123,89 @@ end
     PSRDatabase.close!(db)
 end
 
+# Error handling tests
+
+@testset "Update Invalid Collection" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Config 1", integer_attribute = 100)
+
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.update_element!(db, "NonexistentCollection", Int64(1); integer_attribute = 999)
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Update Invalid Element ID" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Config 1", integer_attribute = 100)
+
+    # Update element that doesn't exist - should not throw but also should not affect anything
+    PSRDatabase.update_element!(db, "Configuration", Int64(999); integer_attribute = 500)
+
+    # Verify original element unchanged
+    value = PSRDatabase.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", Int64(1))
+    @test value == 100
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Update Invalid Attribute" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Config 1", integer_attribute = 100)
+
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.update_element!(db, "Configuration", Int64(1); nonexistent_attribute = 999)
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Update String Attribute" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Config 1", string_attribute = "original")
+
+    PSRDatabase.update_element!(db, "Configuration", Int64(1); string_attribute = "updated")
+
+    value = PSRDatabase.read_scalar_strings_by_id(db, "Configuration", "string_attribute", Int64(1))
+    @test value == "updated"
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Update Float Attribute" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Config 1", float_attribute = 1.5)
+
+    PSRDatabase.update_element!(db, "Configuration", Int64(1); float_attribute = 99.99)
+
+    value = PSRDatabase.read_scalar_doubles_by_id(db, "Configuration", "float_attribute", Int64(1))
+    @test value == 99.99
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Update Multiple Elements Sequentially" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Config 1", integer_attribute = 100)
+    PSRDatabase.create_element!(db, "Configuration"; label = "Config 2", integer_attribute = 200)
+
+    # Update both elements
+    PSRDatabase.update_element!(db, "Configuration", Int64(1); integer_attribute = 111)
+    PSRDatabase.update_element!(db, "Configuration", Int64(2); integer_attribute = 222)
+
+    @test PSRDatabase.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", Int64(1)) == 111
+    @test PSRDatabase.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", Int64(2)) == 222
+
+    PSRDatabase.close!(db)
+end
+
 end
