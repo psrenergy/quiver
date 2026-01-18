@@ -536,3 +536,109 @@ TEST(Database, GetAttributeTypeCollectionNotFound) {
 
     EXPECT_THROW(db.get_attribute_type("NonexistentCollection", "label"), std::runtime_error);
 }
+
+// ============================================================================
+// Invalid collection/attribute error tests
+// ============================================================================
+
+TEST(Database, ReadScalarIntegersInvalidCollection) {
+    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+
+    EXPECT_THROW(db.read_scalar_integers("NonexistentCollection", "integer_attribute"), std::runtime_error);
+}
+
+TEST(Database, ReadScalarIntegersInvalidAttribute) {
+    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+
+    EXPECT_THROW(db.read_scalar_integers("Configuration", "nonexistent_attribute"), std::runtime_error);
+}
+
+TEST(Database, ReadScalarDoublesInvalidCollection) {
+    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+
+    EXPECT_THROW(db.read_scalar_doubles("NonexistentCollection", "float_attribute"), std::runtime_error);
+}
+
+TEST(Database, ReadScalarStringsInvalidCollection) {
+    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+
+    EXPECT_THROW(db.read_scalar_strings("NonexistentCollection", "string_attribute"), std::runtime_error);
+}
+
+TEST(Database, ReadVectorIntegersInvalidCollection) {
+    auto db =
+        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+
+    psr::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    EXPECT_THROW(db.read_vector_integers("NonexistentCollection", "value_int"), std::runtime_error);
+}
+
+TEST(Database, ReadVectorIntegersInvalidAttribute) {
+    auto db =
+        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+
+    psr::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    EXPECT_THROW(db.read_vector_integers("Collection", "nonexistent_attribute"), std::runtime_error);
+}
+
+TEST(Database, ReadSetStringsInvalidCollection) {
+    auto db =
+        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+
+    psr::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    EXPECT_THROW(db.read_set_strings("NonexistentCollection", "tag"), std::runtime_error);
+}
+
+TEST(Database, ReadSetStringsInvalidAttribute) {
+    auto db =
+        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+
+    psr::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    EXPECT_THROW(db.read_set_strings("Collection", "nonexistent_attribute"), std::runtime_error);
+}
+
+TEST(Database, ReadElementIdsInvalidCollection) {
+    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+
+    EXPECT_THROW(db.read_element_ids("NonexistentCollection"), std::runtime_error);
+}
+
+TEST(Database, ReadScalarIntegerByIdInvalidCollection) {
+    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+
+    EXPECT_THROW(db.read_scalar_integers_by_id("NonexistentCollection", "integer_attribute", 1), std::runtime_error);
+}
+
+TEST(Database, ReadVectorIntegerByIdInvalidCollection) {
+    auto db =
+        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+
+    psr::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    EXPECT_THROW(db.read_vector_integers_by_id("NonexistentCollection", "value_int", 1), std::runtime_error);
+}
+
+TEST(Database, ReadSetStringsByIdInvalidCollection) {
+    auto db =
+        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+
+    psr::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    EXPECT_THROW(db.read_set_strings_by_id("NonexistentCollection", "tag", 1), std::runtime_error);
+}

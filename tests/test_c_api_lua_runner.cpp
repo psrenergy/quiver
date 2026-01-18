@@ -296,3 +296,128 @@ TEST_F(LuaRunnerCApiTest, UpdateElement) {
     psr_lua_runner_free(lua);
     psr_database_close(db);
 }
+
+// ============================================================================
+// Additional C API LuaRunner error tests
+// ============================================================================
+
+TEST_F(LuaRunnerCApiTest, EmptyScript) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto lua = psr_lua_runner_new(db);
+    ASSERT_NE(lua, nullptr);
+
+    auto result = psr_lua_runner_run(lua, "");
+    EXPECT_EQ(result, PSR_OK);
+
+    psr_lua_runner_free(lua);
+    psr_database_close(db);
+}
+
+TEST_F(LuaRunnerCApiTest, CommentOnlyScript) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto lua = psr_lua_runner_new(db);
+    ASSERT_NE(lua, nullptr);
+
+    auto result = psr_lua_runner_run(lua, "-- this is a comment\n-- another comment");
+    EXPECT_EQ(result, PSR_OK);
+
+    psr_lua_runner_free(lua);
+    psr_database_close(db);
+}
+
+TEST_F(LuaRunnerCApiTest, AssertionFailure) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto lua = psr_lua_runner_new(db);
+    ASSERT_NE(lua, nullptr);
+
+    auto result = psr_lua_runner_run(lua, "assert(false, 'Test assertion failure')");
+    EXPECT_NE(result, PSR_OK);
+
+    auto error = psr_lua_runner_get_error(lua);
+    EXPECT_NE(error, nullptr);
+    EXPECT_NE(std::string(error).find("assertion"), std::string::npos);
+
+    psr_lua_runner_free(lua);
+    psr_database_close(db);
+}
+
+TEST_F(LuaRunnerCApiTest, UndefinedVariableError) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto lua = psr_lua_runner_new(db);
+    ASSERT_NE(lua, nullptr);
+
+    auto result = psr_lua_runner_run(lua, "local x = undefined_variable + 1");
+    EXPECT_NE(result, PSR_OK);
+
+    auto error = psr_lua_runner_get_error(lua);
+    EXPECT_NE(error, nullptr);
+
+    psr_lua_runner_free(lua);
+    psr_database_close(db);
+}
+
+TEST_F(LuaRunnerCApiTest, ErrorClearedAfterSuccessfulRun) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto lua = psr_lua_runner_new(db);
+    ASSERT_NE(lua, nullptr);
+
+    // First, run a failing script
+    auto result = psr_lua_runner_run(lua, "invalid lua syntax !!!");
+    EXPECT_NE(result, PSR_OK);
+    auto error1 = psr_lua_runner_get_error(lua);
+    EXPECT_NE(error1, nullptr);
+
+    // Now run a successful script
+    result = psr_lua_runner_run(lua, "local x = 1 + 1");
+    EXPECT_EQ(result, PSR_OK);
+
+    psr_lua_runner_free(lua);
+    psr_database_close(db);
+}
+
+TEST_F(LuaRunnerCApiTest, ReadVectorIntegersFromLua) {
+    auto options = psr_database_options_default();
+    options.console_level = PSR_LOG_OFF;
+    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto lua = psr_lua_runner_new(db);
+    ASSERT_NE(lua, nullptr);
+
+    auto result = psr_lua_runner_run(lua, R"(
+        db:create_element("Configuration", { label = "Config" })
+        db:create_element("Collection", {
+            label = "Item 1",
+            value_int = {1, 2, 3}
+        })
+
+        local vectors = db:read_vector_integers("Collection", "value_int")
+        assert(#vectors == 1, "Expected 1 vector")
+        assert(#vectors[1] == 3, "Expected 3 values")
+        assert(vectors[1][1] == 1, "Expected first value to be 1")
+    )");
+    EXPECT_EQ(result, PSR_OK);
+
+    psr_lua_runner_free(lua);
+    psr_database_close(db);
+}

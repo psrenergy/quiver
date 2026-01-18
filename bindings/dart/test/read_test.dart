@@ -714,4 +714,240 @@ void main() {
       }
     });
   });
+
+  // Error handling tests
+
+  group('Read Invalid Collection', () {
+    test('throws on nonexistent collection for strings', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        expect(
+          () => db.readScalarStrings('NonexistentCollection', 'label'),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws on nonexistent collection for integers', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        expect(
+          () => db.readScalarIntegers('NonexistentCollection', 'value'),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws on nonexistent collection for doubles', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        expect(
+          () => db.readScalarDoubles('NonexistentCollection', 'value'),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Read Invalid Attribute', () {
+    test('throws on nonexistent attribute for strings', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        expect(
+          () => db.readScalarStrings('Configuration', 'nonexistent_attr'),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws on nonexistent attribute for integers', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        expect(
+          () => db.readScalarIntegers('Configuration', 'nonexistent_attr'),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws on nonexistent attribute for doubles', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        expect(
+          () => db.readScalarDoubles('Configuration', 'nonexistent_attr'),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Read By ID Not Found', () {
+    test('returns null for nonexistent integer ID', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 42,
+        });
+
+        expect(db.readScalarIntegerById('Configuration', 'integer_attribute', 999), isNull);
+      } finally {
+        db.close();
+      }
+    });
+
+    test('returns null for nonexistent double ID', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'float_attribute': 3.14,
+        });
+
+        expect(db.readScalarDoubleById('Configuration', 'float_attribute', 999), isNull);
+      } finally {
+        db.close();
+      }
+    });
+
+    test('returns null for nonexistent string ID', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'string_attribute': 'hello',
+        });
+
+        expect(db.readScalarStringById('Configuration', 'string_attribute', 999), isNull);
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Read Vector Invalid Collection', () {
+    test('throws on nonexistent collection for vector integers', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        expect(
+          () => db.readVectorIntegers('NonexistentCollection', 'value_int'),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws on nonexistent collection for vector doubles', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        expect(
+          () => db.readVectorDoubles('NonexistentCollection', 'value_float'),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Read Set Invalid Collection', () {
+    test('throws on nonexistent collection for set strings', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        expect(
+          () => db.readSetStrings('NonexistentCollection', 'tag'),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Read Element IDs Invalid Collection', () {
+    test('throws on nonexistent collection', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        expect(
+          () => db.readElementIds('NonexistentCollection'),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Read Scalar Relation Invalid Collection', () {
+    test('throws on nonexistent collection', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        expect(
+          () => db.readScalarRelation('NonexistentCollection', 'parent_id'),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

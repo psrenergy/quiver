@@ -431,4 +431,97 @@ end
     PSRDatabase.close!(db)
 end
 
+# Error handling tests
+
+@testset "Read Invalid Collection" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.read_scalar_strings(db, "NonexistentCollection", "label")
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.read_scalar_integers(db, "NonexistentCollection", "value")
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.read_scalar_doubles(db, "NonexistentCollection", "value")
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Read Invalid Attribute" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.read_scalar_strings(db, "Configuration", "nonexistent_attr")
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.read_scalar_integers(db, "Configuration", "nonexistent_attr")
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.read_scalar_doubles(db, "Configuration", "nonexistent_attr")
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Read By ID Not Found" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Config 1", integer_attribute = 42)
+
+    # Read by ID that doesn't exist returns nothing
+    @test PSRDatabase.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", 999) === nothing
+    @test PSRDatabase.read_scalar_doubles_by_id(db, "Configuration", "float_attribute", 999) === nothing
+    @test PSRDatabase.read_scalar_strings_by_id(db, "Configuration", "string_attribute", 999) === nothing
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Read Vector Invalid Collection" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
+
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.read_vector_integers(
+        db,
+        "NonexistentCollection",
+        "value_int",
+    )
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.read_vector_doubles(
+        db,
+        "NonexistentCollection",
+        "value_float",
+    )
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Read Set Invalid Collection" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
+
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.read_set_strings(db, "NonexistentCollection", "tag")
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Read Element IDs Invalid Collection" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.read_element_ids(db, "NonexistentCollection")
+
+    PSRDatabase.close!(db)
+end
+
+@testset "Read Scalar Relation Invalid Collection" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+    db = PSRDatabase.from_schema(":memory:", path_schema)
+
+    PSRDatabase.create_element!(db, "Configuration"; label = "Test Config")
+
+    @test_throws PSRDatabase.DatabaseException PSRDatabase.read_scalar_relation(
+        db,
+        "NonexistentCollection",
+        "parent_id",
+    )
+
+    PSRDatabase.close!(db)
+end
+
 end

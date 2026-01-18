@@ -155,4 +155,123 @@ void main() {
       }
     });
   });
+
+  // Error handling tests
+
+  group('Update Invalid Collection', () {
+    test('throws on nonexistent collection', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 100});
+        expect(
+          () => db.updateElement('NonexistentCollection', 1, {'integer_attribute': 999}),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Update Invalid Element ID', () {
+    test('does not throw for nonexistent ID', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 100});
+
+        // Update element that doesn't exist - should not throw
+        db.updateElement('Configuration', 999, {'integer_attribute': 500});
+
+        // Verify original element unchanged
+        final value = db.readScalarIntegerById('Configuration', 'integer_attribute', 1);
+        expect(value, equals(100));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Update Invalid Attribute', () {
+    test('throws on nonexistent attribute', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 100});
+        expect(
+          () => db.updateElement('Configuration', 1, {'nonexistent_attribute': 999}),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Update String Attribute', () {
+    test('updates string attribute correctly', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1', 'string_attribute': 'original'});
+
+        db.updateElement('Configuration', 1, {'string_attribute': 'updated'});
+
+        final value = db.readScalarStringById('Configuration', 'string_attribute', 1);
+        expect(value, equals('updated'));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Update Float Attribute', () {
+    test('updates float attribute correctly', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1', 'float_attribute': 1.5});
+
+        db.updateElement('Configuration', 1, {'float_attribute': 99.99});
+
+        final value = db.readScalarDoubleById('Configuration', 'float_attribute', 1);
+        expect(value, equals(99.99));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Update Multiple Elements Sequentially', () {
+    test('updates multiple elements independently', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 100});
+        db.createElement('Configuration', {'label': 'Config 2', 'integer_attribute': 200});
+
+        // Update both elements
+        db.updateElement('Configuration', 1, {'integer_attribute': 111});
+        db.updateElement('Configuration', 2, {'integer_attribute': 222});
+
+        expect(db.readScalarIntegerById('Configuration', 'integer_attribute', 1), equals(111));
+        expect(db.readScalarIntegerById('Configuration', 'integer_attribute', 2), equals(222));
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

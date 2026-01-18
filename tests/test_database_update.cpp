@@ -345,3 +345,132 @@ TEST(Database, UpdateElementIgnoresArrays) {
     auto vec = db.read_vector_integers_by_id("Collection", "value_int", id);
     EXPECT_EQ(vec, (std::vector<int64_t>{1, 2, 3}));
 }
+
+// ============================================================================
+// Update edge case tests
+// ============================================================================
+
+TEST(Database, UpdateVectorSingleElement) {
+    auto db =
+        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+
+    psr::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    psr::Element e;
+    e.set("label", std::string("Item 1")).set("value_int", std::vector<int64_t>{1, 2, 3});
+    int64_t id = db.create_element("Collection", e);
+
+    // Update to single element vector
+    db.update_vector_integers("Collection", "value_int", id, {42});
+
+    auto vec = db.read_vector_integers_by_id("Collection", "value_int", id);
+    EXPECT_EQ(vec, (std::vector<int64_t>{42}));
+}
+
+TEST(Database, UpdateSetSingleElement) {
+    auto db =
+        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+
+    psr::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    psr::Element e;
+    e.set("label", std::string("Item 1")).set("tag", std::vector<std::string>{"important", "urgent"});
+    int64_t id = db.create_element("Collection", e);
+
+    // Update to single element set
+    db.update_set_strings("Collection", "tag", id, {"single_tag"});
+
+    auto set = db.read_set_strings_by_id("Collection", "tag", id);
+    EXPECT_EQ(set, (std::vector<std::string>{"single_tag"}));
+}
+
+TEST(Database, UpdateScalarInvalidCollection) {
+    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+
+    EXPECT_THROW(db.update_scalar_integer("NonexistentCollection", "integer_attribute", 1, 42), std::runtime_error);
+}
+
+TEST(Database, UpdateScalarInvalidAttribute) {
+    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+
+    psr::Element e;
+    e.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
+    int64_t id = db.create_element("Configuration", e);
+
+    EXPECT_THROW(db.update_scalar_integer("Configuration", "nonexistent_attribute", id, 100), std::runtime_error);
+}
+
+TEST(Database, UpdateVectorInvalidCollection) {
+    auto db =
+        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+
+    psr::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    EXPECT_THROW(db.update_vector_integers("NonexistentCollection", "value_int", 1, {1, 2, 3}), std::runtime_error);
+}
+
+TEST(Database, UpdateSetInvalidCollection) {
+    auto db =
+        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+
+    psr::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    EXPECT_THROW(db.update_set_strings("NonexistentCollection", "tag", 1, {"tag1"}), std::runtime_error);
+}
+
+TEST(Database, UpdateVectorFromEmptyToNonEmpty) {
+    auto db =
+        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+
+    psr::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    // Create element without vector data
+    psr::Element e;
+    e.set("label", std::string("Item 1"));
+    int64_t id = db.create_element("Collection", e);
+
+    // Verify initially empty
+    auto vec_initial = db.read_vector_integers_by_id("Collection", "value_int", id);
+    EXPECT_TRUE(vec_initial.empty());
+
+    // Update to non-empty vector
+    db.update_vector_integers("Collection", "value_int", id, {1, 2, 3});
+
+    auto vec = db.read_vector_integers_by_id("Collection", "value_int", id);
+    EXPECT_EQ(vec, (std::vector<int64_t>{1, 2, 3}));
+}
+
+TEST(Database, UpdateSetFromEmptyToNonEmpty) {
+    auto db =
+        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+
+    psr::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    // Create element without set data
+    psr::Element e;
+    e.set("label", std::string("Item 1"));
+    int64_t id = db.create_element("Collection", e);
+
+    // Verify initially empty
+    auto set_initial = db.read_set_strings_by_id("Collection", "tag", id);
+    EXPECT_TRUE(set_initial.empty());
+
+    // Update to non-empty set
+    db.update_set_strings("Collection", "tag", id, {"important", "urgent"});
+
+    auto set = db.read_set_strings_by_id("Collection", "tag", id);
+    std::sort(set.begin(), set.end());
+    EXPECT_EQ(set, (std::vector<std::string>{"important", "urgent"}));
+}

@@ -194,7 +194,3 @@ by the function `PSRDatabase.set_migrations_folder` and after that you can creat
 ### Running migrations
 
 To run migrations you need to use the function `PSRDatabase.apply_migrations!`. There are various versions of this function, each one tailored to make something easier for the user.
-
-### Testing migrations
-
-It is very important to test if the migrations of a certain model are working as expected, so the user can be sure that the database schema is updated correctly. To test migrations you need to use the function `PSRDatabase.test_migrations()`. It is highly advised that each model has one of these functions in their test suite to make sure that the migrations are working as expected.
