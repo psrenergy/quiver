@@ -241,10 +241,10 @@ TEST(Element, SetMixedScalarsAndArrays) {
     psr::Element element;
     element.set("label", std::string("Test"))
         .set("integer_value", int64_t{42})
-        .set("double_value", 3.14)
+        .set("float_value", 3.14)
         .set_null("null_value")
         .set("integer_array", std::vector<int64_t>{1, 2, 3})
-        .set("double_array", std::vector<double>{1.1, 2.2})
+        .set("float_array", std::vector<double>{1.1, 2.2})
         .set("string_array", std::vector<std::string>{"a", "b", "c"});
 
     EXPECT_EQ(element.scalars().size(), 4);

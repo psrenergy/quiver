@@ -245,15 +245,15 @@ TEST(DatabaseCApi, ReadVectorEmpty) {
     EXPECT_EQ(integer_vectors, nullptr);
     EXPECT_EQ(integer_sizes, nullptr);
 
-    double** double_vectors = nullptr;
-    size_t* double_sizes = nullptr;
+    double** float_vectors = nullptr;
+    size_t* float_sizes = nullptr;
     size_t float_count = 0;
     err =
-        psr_database_read_vector_floats(db, "Collection", "value_float", &double_vectors, &double_sizes, &float_count);
+        psr_database_read_vector_floats(db, "Collection", "value_float", &float_vectors, &float_sizes, &float_count);
     EXPECT_EQ(err, PSR_OK);
     EXPECT_EQ(float_count, 0);
-    EXPECT_EQ(double_vectors, nullptr);
-    EXPECT_EQ(double_sizes, nullptr);
+    EXPECT_EQ(float_vectors, nullptr);
+    EXPECT_EQ(float_sizes, nullptr);
 
     psr_database_close(db);
 }
