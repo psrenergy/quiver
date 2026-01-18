@@ -301,3 +301,139 @@ TEST_F(MigrationFixture, DatabaseFromMigrationsMemory) {
     EXPECT_EQ(db.current_version(), 3);
     EXPECT_TRUE(db.is_healthy());
 }
+
+// ============================================================================
+// Transaction tests
+// ============================================================================
+
+#include "test_utils.h"
+#include <psr/element.h>
+
+class TransactionFixture : public ::testing::Test {
+protected:
+    psr::DatabaseOptions opts{.console_level = psr::LogLevel::off};
+};
+
+TEST_F(TransactionFixture, BeginCommit) {
+    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), opts);
+
+    db.begin_transaction();
+
+    psr::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    db.commit();
+
+    auto labels = db.read_scalar_strings("Configuration", "label");
+    EXPECT_EQ(labels.size(), 1);
+    EXPECT_EQ(labels[0], "Test Config");
+}
+
+TEST_F(TransactionFixture, BeginRollback) {
+    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), opts);
+
+    // Create an initial element
+    psr::Element config1;
+    config1.set("label", std::string("Initial Config"));
+    db.create_element("Configuration", config1);
+
+    // Start transaction
+    db.begin_transaction();
+
+    // Create another element within transaction
+    psr::Element config2;
+    config2.set("label", std::string("Transaction Config"));
+    db.create_element("Configuration", config2);
+
+    // Rollback
+    db.rollback();
+
+    // Only the initial element should remain
+    auto labels = db.read_scalar_strings("Configuration", "label");
+    EXPECT_EQ(labels.size(), 1);
+    EXPECT_EQ(labels[0], "Initial Config");
+}
+
+TEST_F(TransactionFixture, MultipleOperationsInTransaction) {
+    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), opts);
+
+    db.begin_transaction();
+
+    psr::Element config1;
+    config1.set("label", std::string("Config 1"));
+    db.create_element("Configuration", config1);
+
+    psr::Element config2;
+    config2.set("label", std::string("Config 2"));
+    db.create_element("Configuration", config2);
+
+    psr::Element config3;
+    config3.set("label", std::string("Config 3"));
+    db.create_element("Configuration", config3);
+
+    db.commit();
+
+    auto labels = db.read_scalar_strings("Configuration", "label");
+    EXPECT_EQ(labels.size(), 3);
+}
+
+TEST_F(TransactionFixture, ExecuteRawSqlSuccess) {
+    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), opts);
+
+    db.execute_raw("INSERT INTO Configuration (label) VALUES ('Raw Insert')");
+
+    auto labels = db.read_scalar_strings("Configuration", "label");
+    EXPECT_EQ(labels.size(), 1);
+    EXPECT_EQ(labels[0], "Raw Insert");
+}
+
+TEST_F(TransactionFixture, ExecuteRawSqlInvalidSQL) {
+    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), opts);
+
+    EXPECT_THROW(db.execute_raw("THIS IS NOT VALID SQL"), std::runtime_error);
+}
+
+TEST_F(TransactionFixture, ExecuteWithParams) {
+    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), opts);
+
+    auto result = db.execute("SELECT ?", {std::string("hello")});
+    EXPECT_EQ(result.row_count(), 1);
+    EXPECT_EQ(result[0].get_string(0).value(), "hello");
+}
+
+TEST_F(TransactionFixture, ExecuteWithNullParam) {
+    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), opts);
+
+    auto result = db.execute("SELECT ?", {nullptr});
+    EXPECT_EQ(result.row_count(), 1);
+    EXPECT_TRUE(result[0].is_null(0));
+}
+
+TEST_F(TransactionFixture, ExecuteWithIntParam) {
+    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), opts);
+
+    auto result = db.execute("SELECT ?", {int64_t{42}});
+    EXPECT_EQ(result.row_count(), 1);
+    EXPECT_EQ(result[0].get_int(0).value(), 42);
+}
+
+TEST_F(TransactionFixture, ExecuteWithDoubleParam) {
+    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), opts);
+
+    auto result = db.execute("SELECT ?", {3.14});
+    EXPECT_EQ(result.row_count(), 1);
+    EXPECT_DOUBLE_EQ(result[0].get_double(0).value(), 3.14);
+}
+
+TEST_F(TransactionFixture, ExecuteInvalidSQL) {
+    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), opts);
+
+    EXPECT_THROW(db.execute("INVALID SQL SYNTAX"), std::runtime_error);
+}
+
+TEST_F(TransactionFixture, ExecuteSelectNonExistentTable) {
+    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), opts);
+
+    EXPECT_THROW(db.execute("SELECT * FROM NonExistentTable"), std::runtime_error);
+}
