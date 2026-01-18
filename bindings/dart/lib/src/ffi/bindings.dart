@@ -827,14 +827,14 @@ class PsrDatabaseBindings {
     ffi.Pointer<psr_database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
-    ffi.Pointer<ffi.Int32> out_structure,
+    ffi.Pointer<ffi.Int32> out_data_structure,
     ffi.Pointer<ffi.Int32> out_data_type,
   ) {
     return _psr_database_get_attribute_type(
       db,
       collection,
       attribute,
-      out_structure,
+      out_data_structure,
       out_data_type,
     );
   }

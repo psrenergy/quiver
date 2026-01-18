@@ -941,7 +941,7 @@ TEST(DatabaseCApi, GetAttributeTypeInvalidArgument) {
     err = psr_database_get_attribute_type(db, "Configuration", nullptr, &data_structure, &data_type);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 
-    // Null out_structure
+    // Null out_data_structure
     err = psr_database_get_attribute_type(db, "Configuration", "label", nullptr, &data_type);
     EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
 

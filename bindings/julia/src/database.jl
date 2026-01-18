@@ -510,15 +510,15 @@ function read_element_ids(db::Database, collection::String)
 end
 
 function get_attribute_type(db::Database, collection::String, attribute::String)
-    out_structure = Ref{C.psr_data_structure_t}(C.PSR_DATA_STRUCTURE_SCALAR)
+    out_data_structure = Ref{C.psr_data_structure_t}(C.PSR_DATA_STRUCTURE_SCALAR)
     out_data_type = Ref{C.psr_data_type_t}(C.PSR_DATA_TYPE_INTEGER)
 
-    err = C.psr_database_get_attribute_type(db.ptr, collection, attribute, out_structure, out_data_type)
+    err = C.psr_database_get_attribute_type(db.ptr, collection, attribute, out_data_structure, out_data_type)
     if err != C.PSR_OK
         throw(DatabaseException("Failed to get attribute type for '$collection.$attribute'"))
     end
 
-    return (data_structure = out_structure[], data_type = out_data_type[])
+    return (data_structure = out_data_structure[], data_type = out_data_type[])
 end
 
 function delete_element_by_id!(db::Database, collection::String, id::Int64)

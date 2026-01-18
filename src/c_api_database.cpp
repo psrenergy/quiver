@@ -884,9 +884,9 @@ PSR_C_API psr_error_t psr_database_update_set_strings(psr_database_t* db,
 PSR_C_API psr_error_t psr_database_get_attribute_type(psr_database_t* db,
                                                       const char* collection,
                                                       const char* attribute,
-                                                      psr_data_structure_t* out_structure,
+                                                      psr_data_structure_t* out_data_structure,
                                                       psr_data_type_t* out_data_type) {
-    if (!db || !collection || !attribute || !out_structure || !out_data_type) {
+    if (!db || !collection || !attribute || !out_data_structure || !out_data_type) {
         return PSR_ERROR_INVALID_ARGUMENT;
     }
     try {
@@ -894,13 +894,13 @@ PSR_C_API psr_error_t psr_database_get_attribute_type(psr_database_t* db,
 
         switch (attr_type.data_structure) {
         case psr::DataStructure::Scalar:
-            *out_structure = PSR_DATA_STRUCTURE_SCALAR;
+            *out_data_structure = PSR_DATA_STRUCTURE_SCALAR;
             break;
         case psr::DataStructure::Vector:
-            *out_structure = PSR_DATA_STRUCTURE_VECTOR;
+            *out_data_structure = PSR_DATA_STRUCTURE_VECTOR;
             break;
         case psr::DataStructure::Set:
-            *out_structure = PSR_DATA_STRUCTURE_SET;
+            *out_data_structure = PSR_DATA_STRUCTURE_SET;
             break;
         }
 
