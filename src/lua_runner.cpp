@@ -197,9 +197,9 @@ struct LuaRunner::Impl {
     }
 
     static sol::table read_scalar_floats_to_lua(Database& db,
-                                                 const std::string& collection,
-                                                 const std::string& attribute,
-                                                 sol::this_state s) {
+                                                const std::string& collection,
+                                                const std::string& attribute,
+                                                sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_scalar_floats(collection, attribute);
         sol::table t = lua.create_table();
@@ -227,9 +227,9 @@ struct LuaRunner::Impl {
     }
 
     static sol::table read_vector_floats_to_lua(Database& db,
-                                                 const std::string& collection,
-                                                 const std::string& attribute,
-                                                 sol::this_state s) {
+                                                const std::string& collection,
+                                                const std::string& attribute,
+                                                sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_vector_floats(collection, attribute);
         sol::table outer = lua.create_table();
@@ -288,10 +288,10 @@ struct LuaRunner::Impl {
     }
 
     static sol::object read_scalar_floats_by_id_to_lua(Database& db,
-                                                        const std::string& collection,
-                                                        const std::string& attribute,
-                                                        int64_t id,
-                                                        sol::this_state s) {
+                                                       const std::string& collection,
+                                                       const std::string& attribute,
+                                                       int64_t id,
+                                                       sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_scalar_floats_by_id(collection, attribute, id);
         if (result.has_value()) {
@@ -316,10 +316,10 @@ struct LuaRunner::Impl {
     }
 
     static sol::table read_vector_floats_by_id_to_lua(Database& db,
-                                                       const std::string& collection,
-                                                       const std::string& attribute,
-                                                       int64_t id,
-                                                       sol::this_state s) {
+                                                      const std::string& collection,
+                                                      const std::string& attribute,
+                                                      int64_t id,
+                                                      sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_vector_floats_by_id(collection, attribute, id);
         sol::table t = lua.create_table();
@@ -359,10 +359,10 @@ struct LuaRunner::Impl {
     }
 
     static sol::table read_set_floats_by_id_to_lua(Database& db,
-                                                    const std::string& collection,
-                                                    const std::string& attribute,
-                                                    int64_t id,
-                                                    sol::this_state s) {
+                                                   const std::string& collection,
+                                                   const std::string& attribute,
+                                                   int64_t id,
+                                                   sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_set_floats_by_id(collection, attribute, id);
         sol::table t = lua.create_table();

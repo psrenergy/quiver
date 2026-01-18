@@ -115,9 +115,9 @@ public:
                                 int64_t id,
                                 const std::vector<int64_t>& values);
     void update_vector_floats(const std::string& collection,
-                               const std::string& attribute,
-                               int64_t id,
-                               const std::vector<double>& values);
+                              const std::string& attribute,
+                              int64_t id,
+                              const std::vector<double>& values);
     void update_vector_strings(const std::string& collection,
                                const std::string& attribute,
                                int64_t id,
@@ -129,9 +129,9 @@ public:
                              int64_t id,
                              const std::vector<int64_t>& values);
     void update_set_floats(const std::string& collection,
-                            const std::string& attribute,
-                            int64_t id,
-                            const std::vector<double>& values);
+                           const std::string& attribute,
+                           int64_t id,
+                           const std::vector<double>& values);
     void update_set_strings(const std::string& collection,
                             const std::string& attribute,
                             int64_t id,

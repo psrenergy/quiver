@@ -871,7 +871,7 @@ std::vector<std::vector<int64_t>> Database::read_vector_integers(const std::stri
 }
 
 std::vector<std::vector<double>> Database::read_vector_floats(const std::string& collection,
-                                                               const std::string& attribute) {
+                                                              const std::string& attribute) {
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + vector_table + " ORDER BY id, vector_index";
     auto result = execute(sql);
@@ -1006,7 +1006,7 @@ std::vector<std::vector<int64_t>> Database::read_set_integers(const std::string&
 }
 
 std::vector<std::vector<double>> Database::read_set_floats(const std::string& collection,
-                                                            const std::string& attribute) {
+                                                           const std::string& attribute) {
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + set_table + " ORDER BY id";
     auto result = execute(sql);
@@ -1142,9 +1142,9 @@ void Database::update_scalar_integer(const std::string& collection,
 }
 
 void Database::update_scalar_float(const std::string& collection,
-                                    const std::string& attribute,
-                                    int64_t id,
-                                    double value) {
+                                   const std::string& attribute,
+                                   int64_t id,
+                                   double value) {
     impl_->logger->debug("Updating {}.{} for id {} to {}", collection, attribute, id, value);
     impl_->require_collection(collection, "update scalar");
     impl_->type_validator->validate_scalar(collection, attribute, value);
@@ -1199,9 +1199,9 @@ void Database::update_vector_integers(const std::string& collection,
 }
 
 void Database::update_vector_floats(const std::string& collection,
-                                     const std::string& attribute,
-                                     int64_t id,
-                                     const std::vector<double>& values) {
+                                    const std::string& attribute,
+                                    int64_t id,
+                                    const std::vector<double>& values) {
     impl_->logger->debug("Updating vector {}.{} for id {} with {} values", collection, attribute, id, values.size());
     impl_->require_schema("update vector");
 
@@ -1285,9 +1285,9 @@ void Database::update_set_integers(const std::string& collection,
 }
 
 void Database::update_set_floats(const std::string& collection,
-                                  const std::string& attribute,
-                                  int64_t id,
-                                  const std::vector<double>& values) {
+                                 const std::string& attribute,
+                                 int64_t id,
+                                 const std::vector<double>& values) {
     impl_->logger->debug("Updating set {}.{} for id {} with {} values", collection, attribute, id, values.size());
     impl_->require_schema("update set");
 

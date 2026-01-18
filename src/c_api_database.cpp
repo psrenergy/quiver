@@ -269,10 +269,10 @@ PSR_C_API psr_error_t psr_database_read_scalar_integers(psr_database_t* db,
 }
 
 PSR_C_API psr_error_t psr_database_read_scalar_floats(psr_database_t* db,
-                                                       const char* collection,
-                                                       const char* attribute,
-                                                       double** out_values,
-                                                       size_t* out_count) {
+                                                      const char* collection,
+                                                      const char* attribute,
+                                                      double** out_values,
+                                                      size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
         return PSR_ERROR_INVALID_ARGUMENT;
     }
@@ -346,11 +346,11 @@ PSR_C_API psr_error_t psr_database_read_vector_integers(psr_database_t* db,
 }
 
 PSR_C_API psr_error_t psr_database_read_vector_floats(psr_database_t* db,
-                                                       const char* collection,
-                                                       const char* attribute,
-                                                       double*** out_vectors,
-                                                       size_t** out_sizes,
-                                                       size_t* out_count) {
+                                                      const char* collection,
+                                                      const char* attribute,
+                                                      double*** out_vectors,
+                                                      size_t** out_sizes,
+                                                      size_t* out_count) {
     if (!db || !collection || !attribute || !out_vectors || !out_sizes || !out_count) {
         return PSR_ERROR_INVALID_ARGUMENT;
     }
@@ -442,11 +442,11 @@ PSR_C_API psr_error_t psr_database_read_set_integers(psr_database_t* db,
 }
 
 PSR_C_API psr_error_t psr_database_read_set_floats(psr_database_t* db,
-                                                    const char* collection,
-                                                    const char* attribute,
-                                                    double*** out_sets,
-                                                    size_t** out_sizes,
-                                                    size_t* out_count) {
+                                                   const char* collection,
+                                                   const char* attribute,
+                                                   double*** out_sets,
+                                                   size_t** out_sizes,
+                                                   size_t* out_count) {
     if (!db || !collection || !attribute || !out_sets || !out_sizes || !out_count) {
         return PSR_ERROR_INVALID_ARGUMENT;
     }
@@ -521,11 +521,11 @@ PSR_C_API psr_error_t psr_database_read_scalar_integers_by_id(psr_database_t* db
 }
 
 PSR_C_API psr_error_t psr_database_read_scalar_floats_by_id(psr_database_t* db,
-                                                             const char* collection,
-                                                             const char* attribute,
-                                                             int64_t id,
-                                                             double* out_value,
-                                                             int* out_has_value) {
+                                                            const char* collection,
+                                                            const char* attribute,
+                                                            int64_t id,
+                                                            double* out_value,
+                                                            int* out_has_value) {
     if (!db || !collection || !attribute || !out_value || !out_has_value) {
         return PSR_ERROR_INVALID_ARGUMENT;
     }
@@ -589,11 +589,11 @@ PSR_C_API psr_error_t psr_database_read_vector_integers_by_id(psr_database_t* db
 }
 
 PSR_C_API psr_error_t psr_database_read_vector_floats_by_id(psr_database_t* db,
-                                                             const char* collection,
-                                                             const char* attribute,
-                                                             int64_t id,
-                                                             double** out_values,
-                                                             size_t* out_count) {
+                                                            const char* collection,
+                                                            const char* attribute,
+                                                            int64_t id,
+                                                            double** out_values,
+                                                            size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
         return PSR_ERROR_INVALID_ARGUMENT;
     }
@@ -653,11 +653,11 @@ PSR_C_API psr_error_t psr_database_read_set_integers_by_id(psr_database_t* db,
 }
 
 PSR_C_API psr_error_t psr_database_read_set_floats_by_id(psr_database_t* db,
-                                                          const char* collection,
-                                                          const char* attribute,
-                                                          int64_t id,
-                                                          double** out_values,
-                                                          size_t* out_count) {
+                                                         const char* collection,
+                                                         const char* attribute,
+                                                         int64_t id,
+                                                         double** out_values,
+                                                         size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
         return PSR_ERROR_INVALID_ARGUMENT;
     }
@@ -730,10 +730,10 @@ PSR_C_API psr_error_t psr_database_update_scalar_integer(psr_database_t* db,
 }
 
 PSR_C_API psr_error_t psr_database_update_scalar_float(psr_database_t* db,
-                                                        const char* collection,
-                                                        const char* attribute,
-                                                        int64_t id,
-                                                        double value) {
+                                                       const char* collection,
+                                                       const char* attribute,
+                                                       int64_t id,
+                                                       double value) {
     if (!db || !collection || !attribute) {
         return PSR_ERROR_INVALID_ARGUMENT;
     }
@@ -782,11 +782,11 @@ PSR_C_API psr_error_t psr_database_update_vector_integers(psr_database_t* db,
 }
 
 PSR_C_API psr_error_t psr_database_update_vector_floats(psr_database_t* db,
-                                                         const char* collection,
-                                                         const char* attribute,
-                                                         int64_t id,
-                                                         const double* values,
-                                                         size_t count) {
+                                                        const char* collection,
+                                                        const char* attribute,
+                                                        int64_t id,
+                                                        const double* values,
+                                                        size_t count) {
     if (!db || !collection || !attribute || (count > 0 && !values)) {
         return PSR_ERROR_INVALID_ARGUMENT;
     }
@@ -842,11 +842,11 @@ PSR_C_API psr_error_t psr_database_update_set_integers(psr_database_t* db,
 }
 
 PSR_C_API psr_error_t psr_database_update_set_floats(psr_database_t* db,
-                                                      const char* collection,
-                                                      const char* attribute,
-                                                      int64_t id,
-                                                      const double* values,
-                                                      size_t count) {
+                                                     const char* collection,
+                                                     const char* attribute,
+                                                     int64_t id,
+                                                     const double* values,
+                                                     size_t count) {
     if (!db || !collection || !attribute || (count > 0 && !values)) {
         return PSR_ERROR_INVALID_ARGUMENT;
     }

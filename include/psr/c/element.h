@@ -27,9 +27,9 @@ PSR_C_API psr_error_t psr_element_set_array_int(psr_element_t* element,
                                                 const int64_t* values,
                                                 int32_t count);
 PSR_C_API psr_error_t psr_element_set_array_float(psr_element_t* element,
-                                                   const char* name,
-                                                   const double* values,
-                                                   int32_t count);
+                                                  const char* name,
+                                                  const double* values,
+                                                  int32_t count);
 PSR_C_API psr_error_t psr_element_set_array_string(psr_element_t* element,
                                                    const char* name,
                                                    const char* const* values,

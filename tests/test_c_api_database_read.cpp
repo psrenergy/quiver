@@ -247,8 +247,8 @@ TEST(DatabaseCApi, ReadVectorEmpty) {
     double** double_vectors = nullptr;
     size_t* double_sizes = nullptr;
     size_t double_count = 0;
-    err = psr_database_read_vector_floats(
-        db, "Collection", "value_float", &double_vectors, &double_sizes, &double_count);
+    err =
+        psr_database_read_vector_floats(db, "Collection", "value_float", &double_vectors, &double_sizes, &double_count);
     EXPECT_EQ(err, PSR_OK);
     EXPECT_EQ(double_count, 0);
     EXPECT_EQ(double_vectors, nullptr);
