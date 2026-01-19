@@ -9,6 +9,7 @@
 #include <atomic>
 #include <filesystem>
 #include <fstream>
+#include <mutex>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
@@ -19,6 +20,11 @@
 namespace {
 
 std::atomic<uint64_t> g_logger_counter{0};
+std::once_flag sqlite3_init_flag;
+
+void ensure_sqlite3_initialized() {
+    std::call_once(sqlite3_init_flag, []() { sqlite3_initialize(); });
+}
 
 spdlog::level::level_enum to_spdlog_level(psr::LogLevel level) {
     switch (level) {
@@ -121,6 +127,8 @@ Database::Database(const std::string& path, const DatabaseOptions& options) : im
     impl_->logger = create_database_logger(path, options.console_level);
 
     impl_->logger->debug("Opening database: {}", path);
+
+    ensure_sqlite3_initialized();
 
     auto flags = options.read_only ? SQLITE_OPEN_READONLY : (SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
     const auto rc = sqlite3_open_v2(path.c_str(), &impl_->db, flags, nullptr);
