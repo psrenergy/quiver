@@ -164,27 +164,9 @@ jobs:
           cp build/lib/libpsr_database.so bindings/dart/
           cp build/lib/libpsr_database_c.so bindings/dart/
 
-      - name: Run tests (each file separately)
+      - name: Run tests (verbose)
         working-directory: bindings/dart
-        run: |
-          set +e
-          total_pass=0
-          total_fail=0
-          for f in test/create_test.dart test/delete_test.dart test/lua_runner_test.dart test/read_test.dart test/schema_validation_test.dart test/update_test.dart; do
-            echo "=== Running $f ==="
-            dart test "$f" --reporter expanded
-            if [ $? -ne 0 ]; then
-              echo "FAILED: $f"
-              total_fail=$((total_fail + 1))
-            else
-              echo "PASSED: $f"
-              total_pass=$((total_pass + 1))
-            fi
-          done
-          echo "=== Summary: $total_pass passed, $total_fail failed ==="
-          if [ $total_fail -gt 0 ]; then
-            exit 1
-          fi
+        run: dart test --reporter expanded
 
       - name: Run tests with coverage
         working-directory: bindings/dart
