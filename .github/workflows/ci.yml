@@ -164,6 +164,10 @@ jobs:
           cp build/lib/libpsr_database.so bindings/dart/
           cp build/lib/libpsr_database_c.so bindings/dart/
 
+      - name: Run tests (verbose)
+        working-directory: bindings/dart
+        run: dart test --reporter expanded
+
       - name: Run tests with coverage
         working-directory: bindings/dart
         run: |

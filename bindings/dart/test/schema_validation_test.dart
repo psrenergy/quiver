@@ -6,7 +6,7 @@ import 'package:path/path.dart' as path;
 void main() {
   // Path to central tests folder
   final testsPath = path.join(
-    Directory.current.path,
+    path.current,
     '..',
     '..',
     'tests',
