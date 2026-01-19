@@ -1,7 +1,7 @@
 """Exception classes for PSR Database."""
 
 
-class PSRDatabaseError(Exception):
+class DatabaseError(Exception):
     """Base exception for PSR Database errors."""
 
     def __init__(self, message: str, error_code: int | None = None):

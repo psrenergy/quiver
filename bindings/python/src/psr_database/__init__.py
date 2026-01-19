@@ -1,18 +1,16 @@
 """Python bindings for PSR Database."""
 
+from enum import IntEnum
+
 from psr_database._ffi import ffi, lib
-from psr_database.exceptions import PSRDatabaseError
+from psr_database.database import Database
+from psr_database.exceptions import DatabaseError
 
-__all__ = [
-    "version",
-    "error_string",
-    "PSRDatabaseError",
-    "ErrorCode",
-]
+__all__ = ["Database", "DatabaseError", "ErrorCode", "version", "error_string"]
 
 
-class ErrorCode:
-    """Error code constants matching psr_error_t."""
+class ErrorCode(IntEnum):
+    """Error codes from PSR Database C API."""
 
     OK = 0
     INVALID_ARGUMENT = -1
