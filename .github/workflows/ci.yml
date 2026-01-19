@@ -166,7 +166,13 @@ jobs:
 
       - name: Run tests (verbose)
         working-directory: bindings/dart
-        run: dart test --reporter expanded
+        run: |
+          dart test test/create_test.dart --reporter expanded
+          dart test test/delete_test.dart --reporter expanded
+          dart test test/lua_runner_test.dart --reporter expanded
+          dart test test/read_test.dart --reporter expanded
+          dart test test/schema_validation_test.dart --reporter expanded
+          dart test test/update_test.dart --reporter expanded
 
       - name: Run tests with coverage
         working-directory: bindings/dart
