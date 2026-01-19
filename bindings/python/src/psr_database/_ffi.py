@@ -6,53 +6,10 @@ from pathlib import Path
 
 from cffi import FFI
 
+from psr_database._bindings import CDEF
+
 ffi = FFI()
-
-ffi.cdef("""
-    // Error codes
-    typedef enum {
-        PSR_OK = 0,
-        PSR_ERROR_INVALID_ARGUMENT = -1,
-        PSR_ERROR_DATABASE = -2,
-        PSR_ERROR_MIGRATION = -3,
-        PSR_ERROR_SCHEMA = -4,
-        PSR_ERROR_CREATE_ELEMENT = -5,
-        PSR_ERROR_NOT_FOUND = -6,
-    } psr_error_t;
-
-    // Log levels
-    typedef enum {
-        PSR_LOG_DEBUG = 0,
-        PSR_LOG_INFO = 1,
-        PSR_LOG_WARN = 2,
-        PSR_LOG_ERROR = 3,
-        PSR_LOG_OFF = 4,
-    } psr_log_level_t;
-
-    // Database options
-    typedef struct {
-        int read_only;
-        psr_log_level_t console_level;
-    } psr_database_options_t;
-
-    psr_database_options_t psr_database_options_default(void);
-
-    // Opaque handles
-    typedef struct psr_database psr_database_t;
-
-    // Utility
-    const char* psr_error_string(psr_error_t error);
-    const char* psr_version(void);
-
-    // Database lifecycle
-    psr_database_t* psr_database_open(const char* path, const psr_database_options_t* options);
-    psr_database_t* psr_database_from_schema(const char* db_path, const char* schema_path, const psr_database_options_t* options);
-    psr_database_t* psr_database_from_migrations(const char* db_path, const char* migrations_path, const psr_database_options_t* options);
-    void psr_database_close(psr_database_t* db);
-    int psr_database_is_healthy(psr_database_t* db);
-    const char* psr_database_path(psr_database_t* db);
-    int64_t psr_database_current_version(psr_database_t* db);
-""")
+ffi.cdef(CDEF)
 
 
 def _find_library() -> str:
