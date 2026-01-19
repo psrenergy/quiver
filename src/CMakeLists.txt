@@ -46,6 +46,7 @@ target_link_libraries(psr_database
         spdlog::spdlog
         lua_library
         sol2
+        ${CMAKE_DL_LIBS}
 )
 
 # Set library properties
