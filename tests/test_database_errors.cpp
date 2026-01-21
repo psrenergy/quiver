@@ -9,42 +9,42 @@
 // ============================================================================
 
 TEST(DatabaseErrors, CreateElementNoSchema) {
-    psr::Database db(":memory:", {.console_level = psr::LogLevel::off});
+    margaux::Database db(":memory:", {.console_level = margaux::LogLevel::off});
 
-    psr::Element element;
+    margaux::Element element;
     element.set("label", std::string("Test"));
 
     EXPECT_THROW(db.create_element("Configuration", element), std::runtime_error);
 }
 
 TEST(DatabaseErrors, CreateElementCollectionNotFound) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element element;
+    margaux::Element element;
     element.set("label", std::string("Test"));
 
     EXPECT_THROW(db.create_element("NonexistentCollection", element), std::runtime_error);
 }
 
 TEST(DatabaseErrors, CreateElementEmptyElement) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element element;  // Empty element with no scalars
+    margaux::Element element;  // Empty element with no scalars
 
     EXPECT_THROW(db.create_element("Configuration", element), std::runtime_error);
 }
 
 TEST(DatabaseErrors, CreateElementEmptyArray) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     // Create required Configuration first
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
     // Try to create element with empty array
-    psr::Element element;
+    margaux::Element element;
     element.set("label", std::string("Item 1")).set("value_int", std::vector<int64_t>{});
 
     EXPECT_THROW(db.create_element("Collection", element), std::runtime_error);
@@ -55,33 +55,33 @@ TEST(DatabaseErrors, CreateElementEmptyArray) {
 // ============================================================================
 
 TEST(DatabaseErrors, UpdateElementNoSchema) {
-    psr::Database db(":memory:", {.console_level = psr::LogLevel::off});
+    margaux::Database db(":memory:", {.console_level = margaux::LogLevel::off});
 
-    psr::Element element;
+    margaux::Element element;
     element.set("label", std::string("Test"));
 
     EXPECT_THROW(db.update_element("Configuration", 1, element), std::runtime_error);
 }
 
 TEST(DatabaseErrors, UpdateElementCollectionNotFound) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element element;
+    margaux::Element element;
     element.set("label", std::string("Test"));
 
     EXPECT_THROW(db.update_element("NonexistentCollection", 1, element), std::runtime_error);
 }
 
 TEST(DatabaseErrors, UpdateElementEmptyElement) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     // Create an element first
-    psr::Element original;
+    margaux::Element original;
     original.set("label", std::string("Test"));
     int64_t id = db.create_element("Configuration", original);
 
     // Try to update with empty element
-    psr::Element empty_element;
+    margaux::Element empty_element;
 
     EXPECT_THROW(db.update_element("Configuration", id, empty_element), std::runtime_error);
 }
@@ -91,13 +91,13 @@ TEST(DatabaseErrors, UpdateElementEmptyElement) {
 // ============================================================================
 
 TEST(DatabaseErrors, DeleteElementNoSchema) {
-    psr::Database db(":memory:", {.console_level = psr::LogLevel::off});
+    margaux::Database db(":memory:", {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.delete_element_by_id("Configuration", 1), std::runtime_error);
 }
 
 TEST(DatabaseErrors, DeleteElementCollectionNotFound) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.delete_element_by_id("NonexistentCollection", 1), std::runtime_error);
 }
@@ -107,20 +107,20 @@ TEST(DatabaseErrors, DeleteElementCollectionNotFound) {
 // ============================================================================
 
 TEST(DatabaseErrors, ReadScalarIntegersNoSchema) {
-    psr::Database db(":memory:", {.console_level = psr::LogLevel::off});
+    margaux::Database db(":memory:", {.console_level = margaux::LogLevel::off});
 
     // Without schema, executing SQL directly will fail due to missing table
     EXPECT_THROW(db.read_scalar_integers("Configuration", "integer_attribute"), std::runtime_error);
 }
 
 TEST(DatabaseErrors, ReadScalarFloatsNoSchema) {
-    psr::Database db(":memory:", {.console_level = psr::LogLevel::off});
+    margaux::Database db(":memory:", {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.read_scalar_floats("Configuration", "float_attribute"), std::runtime_error);
 }
 
 TEST(DatabaseErrors, ReadScalarStringsNoSchema) {
-    psr::Database db(":memory:", {.console_level = psr::LogLevel::off});
+    margaux::Database db(":memory:", {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.read_scalar_strings("Configuration", "label"), std::runtime_error);
 }
@@ -134,10 +134,10 @@ TEST(DatabaseErrors, ReadScalarStringsNoSchema) {
 
 TEST(DatabaseErrors, ReadVectorIntegersCollectionNotFound) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     // Create required Configuration
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Config"));
     db.create_element("Configuration", config);
 
@@ -146,9 +146,9 @@ TEST(DatabaseErrors, ReadVectorIntegersCollectionNotFound) {
 
 TEST(DatabaseErrors, ReadVectorFloatsCollectionNotFound) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Config"));
     db.create_element("Configuration", config);
 
@@ -164,9 +164,9 @@ TEST(DatabaseErrors, ReadVectorFloatsCollectionNotFound) {
 
 TEST(DatabaseErrors, ReadSetStringsCollectionNotFound) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Config"));
     db.create_element("Configuration", config);
 
@@ -180,13 +180,13 @@ TEST(DatabaseErrors, ReadSetStringsCollectionNotFound) {
 // ============================================================================
 
 TEST(DatabaseErrors, GetAttributeTypeCollectionNotFound) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.get_attribute_type("NonexistentCollection", "label"), std::runtime_error);
 }
 
 TEST(DatabaseErrors, GetAttributeTypeAttributeNotFound) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.get_attribute_type("Configuration", "nonexistent_attribute"), std::runtime_error);
 }
@@ -196,14 +196,14 @@ TEST(DatabaseErrors, GetAttributeTypeAttributeNotFound) {
 // ============================================================================
 
 TEST(DatabaseErrors, SetScalarRelationNoSchema) {
-    psr::Database db(":memory:", {.console_level = psr::LogLevel::off});
+    margaux::Database db(":memory:", {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.set_scalar_relation("Child", "parent_id", "Child 1", "Parent 1"), std::runtime_error);
 }
 
 TEST(DatabaseErrors, SetScalarRelationCollectionNotFound) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.set_scalar_relation("NonexistentCollection", "parent_id", "Child 1", "Parent 1"),
                  std::runtime_error);
@@ -211,7 +211,7 @@ TEST(DatabaseErrors, SetScalarRelationCollectionNotFound) {
 
 TEST(DatabaseErrors, SetScalarRelationNotForeignKey) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = margaux::LogLevel::off});
 
     // 'label' is not a foreign key
     EXPECT_THROW(db.set_scalar_relation("Child", "label", "Child 1", "Parent 1"), std::runtime_error);
@@ -219,14 +219,14 @@ TEST(DatabaseErrors, SetScalarRelationNotForeignKey) {
 
 TEST(DatabaseErrors, SetScalarRelationTargetNotFound) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = margaux::LogLevel::off});
 
     // Create parent and child
-    psr::Element parent;
+    margaux::Element parent;
     parent.set("label", std::string("Parent 1"));
     db.create_element("Parent", parent);
 
-    psr::Element child;
+    margaux::Element child;
     child.set("label", std::string("Child 1"));
     db.create_element("Child", child);
 
@@ -235,21 +235,21 @@ TEST(DatabaseErrors, SetScalarRelationTargetNotFound) {
 }
 
 TEST(DatabaseErrors, ReadScalarRelationNoSchema) {
-    psr::Database db(":memory:", {.console_level = psr::LogLevel::off});
+    margaux::Database db(":memory:", {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.read_scalar_relation("Child", "parent_id"), std::runtime_error);
 }
 
 TEST(DatabaseErrors, ReadScalarRelationCollectionNotFound) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.read_scalar_relation("NonexistentCollection", "parent_id"), std::runtime_error);
 }
 
 TEST(DatabaseErrors, ReadScalarRelationNotForeignKey) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = margaux::LogLevel::off});
 
     // 'label' is not a foreign key
     EXPECT_THROW(db.read_scalar_relation("Child", "label"), std::runtime_error);
@@ -260,19 +260,19 @@ TEST(DatabaseErrors, ReadScalarRelationNotForeignKey) {
 // ============================================================================
 
 TEST(DatabaseErrors, UpdateScalarIntegerNoSchema) {
-    psr::Database db(":memory:", {.console_level = psr::LogLevel::off});
+    margaux::Database db(":memory:", {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.update_scalar_integer("Configuration", "integer_attribute", 1, 42), std::exception);
 }
 
 TEST(DatabaseErrors, UpdateScalarFloatNoSchema) {
-    psr::Database db(":memory:", {.console_level = psr::LogLevel::off});
+    margaux::Database db(":memory:", {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.update_scalar_float("Configuration", "float_attribute", 1, 3.14), std::exception);
 }
 
 TEST(DatabaseErrors, UpdateScalarStringNoSchema) {
-    psr::Database db(":memory:", {.console_level = psr::LogLevel::off});
+    margaux::Database db(":memory:", {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.update_scalar_string("Configuration", "label", 1, "new value"), std::exception);
 }
@@ -286,9 +286,9 @@ TEST(DatabaseErrors, UpdateScalarStringNoSchema) {
 
 TEST(DatabaseErrors, UpdateVectorIntegersCollectionNotFound) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Config"));
     db.create_element("Configuration", config);
 
@@ -297,9 +297,9 @@ TEST(DatabaseErrors, UpdateVectorIntegersCollectionNotFound) {
 
 TEST(DatabaseErrors, UpdateVectorFloatsCollectionNotFound) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Config"));
     db.create_element("Configuration", config);
 
@@ -315,9 +315,9 @@ TEST(DatabaseErrors, UpdateVectorFloatsCollectionNotFound) {
 
 TEST(DatabaseErrors, UpdateSetStringsCollectionNotFound) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Config"));
     db.create_element("Configuration", config);
 
@@ -329,9 +329,9 @@ TEST(DatabaseErrors, UpdateSetStringsCollectionNotFound) {
 // ============================================================================
 
 TEST(DatabaseErrors, ReadScalarIntegersAttributeNotFound) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Test"));
     db.create_element("Configuration", e);
 
@@ -340,9 +340,9 @@ TEST(DatabaseErrors, ReadScalarIntegersAttributeNotFound) {
 }
 
 TEST(DatabaseErrors, ReadScalarFloatsAttributeNotFound) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Test"));
     db.create_element("Configuration", e);
 
@@ -350,9 +350,9 @@ TEST(DatabaseErrors, ReadScalarFloatsAttributeNotFound) {
 }
 
 TEST(DatabaseErrors, ReadScalarStringsAttributeNotFound) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Test"));
     db.create_element("Configuration", e);
 
@@ -365,9 +365,9 @@ TEST(DatabaseErrors, ReadScalarStringsAttributeNotFound) {
 
 TEST(DatabaseErrors, ReadVectorIntegersAttributeNotFound) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Config"));
     db.create_element("Configuration", config);
 
@@ -376,9 +376,9 @@ TEST(DatabaseErrors, ReadVectorIntegersAttributeNotFound) {
 
 TEST(DatabaseErrors, ReadVectorFloatsAttributeNotFound) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Config"));
     db.create_element("Configuration", config);
 
@@ -387,9 +387,9 @@ TEST(DatabaseErrors, ReadVectorFloatsAttributeNotFound) {
 
 TEST(DatabaseErrors, ReadVectorStringsAttributeNotFound) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Config"));
     db.create_element("Configuration", config);
 
@@ -402,9 +402,9 @@ TEST(DatabaseErrors, ReadVectorStringsAttributeNotFound) {
 
 TEST(DatabaseErrors, ReadSetIntegersAttributeNotFound) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Config"));
     db.create_element("Configuration", config);
 
@@ -413,9 +413,9 @@ TEST(DatabaseErrors, ReadSetIntegersAttributeNotFound) {
 
 TEST(DatabaseErrors, ReadSetFloatsAttributeNotFound) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Config"));
     db.create_element("Configuration", config);
 
@@ -427,12 +427,12 @@ TEST(DatabaseErrors, ReadSetFloatsAttributeNotFound) {
 // ============================================================================
 
 TEST(DatabaseErrors, ApplySchemaEmptyPath) {
-    EXPECT_THROW(psr::Database::from_schema(":memory:", "", {.console_level = psr::LogLevel::off}), std::runtime_error);
+    EXPECT_THROW(margaux::Database::from_schema(":memory:", "", {.console_level = margaux::LogLevel::off}), std::runtime_error);
 }
 
 TEST(DatabaseErrors, ApplySchemaFileNotFound) {
     EXPECT_THROW(
-        psr::Database::from_schema(":memory:", "nonexistent/path/schema.sql", {.console_level = psr::LogLevel::off}),
+        margaux::Database::from_schema(":memory:", "nonexistent/path/schema.sql", {.console_level = margaux::LogLevel::off}),
         std::runtime_error);
 }
 
@@ -441,19 +441,19 @@ TEST(DatabaseErrors, ApplySchemaFileNotFound) {
 // ============================================================================
 
 TEST(DatabaseErrors, UpdateScalarIntegerCollectionNotFound) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.update_scalar_integer("NonexistentCollection", "value", 1, 42), std::runtime_error);
 }
 
 TEST(DatabaseErrors, UpdateScalarFloatCollectionNotFound) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.update_scalar_float("NonexistentCollection", "value", 1, 3.14), std::runtime_error);
 }
 
 TEST(DatabaseErrors, UpdateScalarStringCollectionNotFound) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.update_scalar_string("NonexistentCollection", "value", 1, "test"), std::runtime_error);
 }
@@ -463,7 +463,7 @@ TEST(DatabaseErrors, UpdateScalarStringCollectionNotFound) {
 // ============================================================================
 
 TEST(DatabaseErrors, ReadElementIdsNoSchema) {
-    psr::Database db(":memory:", {.console_level = psr::LogLevel::off});
+    margaux::Database db(":memory:", {.console_level = margaux::LogLevel::off});
 
     // Without schema, executing SQL will fail due to missing table
     EXPECT_THROW(db.read_element_ids("Configuration"), std::runtime_error);

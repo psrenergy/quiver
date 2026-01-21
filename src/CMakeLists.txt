@@ -57,7 +57,7 @@ set_target_properties(psr_database PROPERTIES
 )
 
 # Alias for use in subdirectories
-add_library(psr::database ALIAS psr_database)
+add_library(margaux::database ALIAS psr_database)
 
 # Installation rules
 include(GNUInstallDirs)
@@ -100,7 +100,7 @@ if(PSR_BUILD_C_API)
         SOVERSION ${PROJECT_VERSION_MAJOR}
     )
 
-    add_library(psr::database_c ALIAS psr_database_c)
+    add_library(margaux::database_c ALIAS psr_database_c)
 
     install(TARGETS psr_database_c
         EXPORT psr_databaseTargets

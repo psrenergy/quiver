@@ -2,7 +2,7 @@
 #include <psr/element.h>
 
 TEST(Element, DefaultEmpty) {
-    psr::Element element;
+    margaux::Element element;
     EXPECT_FALSE(element.has_scalars());
     EXPECT_FALSE(element.has_arrays());
     EXPECT_TRUE(element.scalars().empty());
@@ -10,7 +10,7 @@ TEST(Element, DefaultEmpty) {
 }
 
 TEST(Element, SetInt) {
-    psr::Element element;
+    margaux::Element element;
     element.set("count", int64_t{42});
 
     EXPECT_TRUE(element.has_scalars());
@@ -19,7 +19,7 @@ TEST(Element, SetInt) {
 }
 
 TEST(Element, SetFloat) {
-    psr::Element element;
+    margaux::Element element;
     element.set("value", 3.14);
 
     EXPECT_TRUE(element.has_scalars());
@@ -27,7 +27,7 @@ TEST(Element, SetFloat) {
 }
 
 TEST(Element, SetString) {
-    psr::Element element;
+    margaux::Element element;
     element.set("label", std::string{"Plant 1"});
 
     EXPECT_TRUE(element.has_scalars());
@@ -35,7 +35,7 @@ TEST(Element, SetString) {
 }
 
 TEST(Element, SetNull) {
-    psr::Element element;
+    margaux::Element element;
     element.set_null("empty");
 
     EXPECT_TRUE(element.has_scalars());
@@ -43,7 +43,7 @@ TEST(Element, SetNull) {
 }
 
 TEST(Element, SetArrayInt) {
-    psr::Element element;
+    margaux::Element element;
     element.set("counts", std::vector<int64_t>{10, 20, 30});
 
     EXPECT_TRUE(element.has_arrays());
@@ -56,7 +56,7 @@ TEST(Element, SetArrayInt) {
 }
 
 TEST(Element, SetArrayFloat) {
-    psr::Element element;
+    margaux::Element element;
     element.set("values", std::vector<double>{1.5, 2.5, 3.5});
 
     EXPECT_TRUE(element.has_arrays());
@@ -68,7 +68,7 @@ TEST(Element, SetArrayFloat) {
 }
 
 TEST(Element, SetArrayString) {
-    psr::Element element;
+    margaux::Element element;
     element.set("tags", std::vector<std::string>{"important", "urgent"});
 
     EXPECT_TRUE(element.has_arrays());
@@ -80,7 +80,7 @@ TEST(Element, SetArrayString) {
 }
 
 TEST(Element, FluentChaining) {
-    psr::Element element;
+    margaux::Element element;
 
     element.set("label", std::string{"Plant 1"})
         .set("capacity", 50.0)
@@ -92,7 +92,7 @@ TEST(Element, FluentChaining) {
 }
 
 TEST(Element, Clear) {
-    psr::Element element;
+    margaux::Element element;
     element.set("label", std::string{"test"}).set("data", std::vector<double>{1.0});
 
     EXPECT_TRUE(element.has_scalars());
@@ -105,7 +105,7 @@ TEST(Element, Clear) {
 }
 
 TEST(Element, OverwriteValue) {
-    psr::Element element;
+    margaux::Element element;
     element.set("value", 1.0);
     element.set("value", 2.0);
 
@@ -114,7 +114,7 @@ TEST(Element, OverwriteValue) {
 }
 
 TEST(Element, ToString) {
-    psr::Element element;
+    margaux::Element element;
     element.set("label", std::string{"Plant 1"}).set("capacity", 50.0).set("costs", std::vector<double>{1.5, 2.5});
 
     std::string str = element.to_string();
@@ -128,7 +128,7 @@ TEST(Element, ToString) {
 }
 
 TEST(Element, ToStringEmpty) {
-    psr::Element element;
+    margaux::Element element;
     std::string str = element.to_string();
 
     EXPECT_NE(str.find("Element {"), std::string::npos);
@@ -141,7 +141,7 @@ TEST(Element, ToStringEmpty) {
 // ============================================================================
 
 TEST(Element, ToStringWithSpecialCharacters) {
-    psr::Element element;
+    margaux::Element element;
     element.set("label", std::string("Test \"with\" special\nchars"));
 
     std::string str = element.to_string();
@@ -152,7 +152,7 @@ TEST(Element, ToStringWithSpecialCharacters) {
 }
 
 TEST(Element, ToStringWithEmptyString) {
-    psr::Element element;
+    margaux::Element element;
     element.set("empty_value", std::string(""));
 
     std::string str = element.to_string();
@@ -162,7 +162,7 @@ TEST(Element, ToStringWithEmptyString) {
 }
 
 TEST(Element, ToStringWithLargeArray) {
-    psr::Element element;
+    margaux::Element element;
     std::vector<int64_t> large_array;
     for (int i = 0; i < 100; ++i) {
         large_array.push_back(i);
@@ -180,7 +180,7 @@ TEST(Element, ToStringWithLargeArray) {
 }
 
 TEST(Element, ToStringWithNullValue) {
-    psr::Element element;
+    margaux::Element element;
     element.set_null("nullable_field");
 
     std::string str = element.to_string();
@@ -194,7 +194,7 @@ TEST(Element, ToStringWithNullValue) {
 // ============================================================================
 
 TEST(Element, SetOverwriteWithDifferentType) {
-    psr::Element element;
+    margaux::Element element;
     element.set("value", int64_t{42});
 
     // Overwrite with different type (double)
@@ -205,7 +205,7 @@ TEST(Element, SetOverwriteWithDifferentType) {
 }
 
 TEST(Element, ClearAndReuse) {
-    psr::Element element;
+    margaux::Element element;
     element.set("label", std::string("Original")).set("data", std::vector<double>{1.0, 2.0});
 
     EXPECT_TRUE(element.has_scalars());
@@ -226,7 +226,7 @@ TEST(Element, ClearAndReuse) {
 }
 
 TEST(Element, SetMultipleSameNameArrays) {
-    psr::Element element;
+    margaux::Element element;
     element.set("values", std::vector<int64_t>{1, 2, 3});
 
     // Overwrite with different array
@@ -238,7 +238,7 @@ TEST(Element, SetMultipleSameNameArrays) {
 }
 
 TEST(Element, SetMixedScalarsAndArrays) {
-    psr::Element element;
+    margaux::Element element;
     element.set("label", std::string("Test"))
         .set("integer_value", int64_t{42})
         .set("float_value", 3.14)
@@ -256,7 +256,7 @@ TEST(Element, SetMixedScalarsAndArrays) {
 }
 
 TEST(Element, ToStringWithAllTypes) {
-    psr::Element element;
+    margaux::Element element;
     element.set("text", std::string("hello")).set("integer", int64_t{123}).set("real", 45.67).set_null("empty");
 
     std::string str = element.to_string();

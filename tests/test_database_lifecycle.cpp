@@ -18,20 +18,20 @@ protected:
 };
 
 TEST_F(TempFileFixture, OpenFileOnDisk) {
-    psr::Database db(path);
+    margaux::Database db(path);
     EXPECT_TRUE(db.is_healthy());
     EXPECT_EQ(db.path(), path);
 }
 
 TEST_F(TempFileFixture, OpenInMemory) {
-    psr::Database db(":memory:");
+    margaux::Database db(":memory:");
     EXPECT_TRUE(db.is_healthy());
     EXPECT_EQ(db.path(), ":memory:");
 }
 
 TEST_F(TempFileFixture, DestructorClosesDatabase) {
     {
-        psr::Database db(path);
+        margaux::Database db(path);
         EXPECT_TRUE(db.is_healthy());
     }
     // Database should be closed after destructor
@@ -39,17 +39,17 @@ TEST_F(TempFileFixture, DestructorClosesDatabase) {
 }
 
 TEST_F(TempFileFixture, MoveConstructor) {
-    psr::Database db1(path);
+    margaux::Database db1(path);
     EXPECT_TRUE(db1.is_healthy());
 
-    psr::Database db2 = std::move(db1);
+    margaux::Database db2 = std::move(db1);
     EXPECT_TRUE(db2.is_healthy());
     EXPECT_EQ(db2.path(), path);
 }
 
 TEST_F(TempFileFixture, MoveAssignment) {
-    psr::Database db1(path);
-    psr::Database db2(":memory:");
+    margaux::Database db1(path);
+    margaux::Database db2(":memory:");
 
     db2 = std::move(db1);
     EXPECT_TRUE(db2.is_healthy());
@@ -57,25 +57,25 @@ TEST_F(TempFileFixture, MoveAssignment) {
 }
 
 TEST_F(TempFileFixture, LogLevelDebug) {
-    psr::Database db(":memory:", {.console_level = psr::LogLevel::debug});
+    margaux::Database db(":memory:", {.console_level = margaux::LogLevel::debug});
     EXPECT_TRUE(db.is_healthy());
 }
 
 TEST_F(TempFileFixture, LogLevelOff) {
-    psr::Database db(":memory:", {.console_level = psr::LogLevel::off});
+    margaux::Database db(":memory:", {.console_level = margaux::LogLevel::off});
     EXPECT_TRUE(db.is_healthy());
 }
 
 TEST_F(TempFileFixture, CreatesFileOnDisk) {
     {
-        psr::Database db(path);
+        margaux::Database db(path);
         EXPECT_TRUE(db.is_healthy());
     }
     EXPECT_TRUE(fs::exists(path));
 }
 
 TEST_F(TempFileFixture, CurrentVersion) {
-    psr::Database db(":memory:", {.console_level = psr::LogLevel::off});
+    margaux::Database db(":memory:", {.console_level = margaux::LogLevel::off});
     EXPECT_EQ(db.current_version(), 0);
 }
 
@@ -85,18 +85,18 @@ TEST_F(TempFileFixture, CurrentVersion) {
 
 TEST_F(TempFileFixture, FromSchemaFileNotFound) {
     EXPECT_THROW(
-        psr::Database::from_schema(":memory:", "nonexistent/path/schema.sql", {.console_level = psr::LogLevel::off}),
+        margaux::Database::from_schema(":memory:", "nonexistent/path/schema.sql", {.console_level = margaux::LogLevel::off}),
         std::runtime_error);
 }
 
 TEST_F(TempFileFixture, FromSchemaInvalidPath) {
-    EXPECT_THROW(psr::Database::from_schema(":memory:", "", {.console_level = psr::LogLevel::off}), std::runtime_error);
+    EXPECT_THROW(margaux::Database::from_schema(":memory:", "", {.console_level = margaux::LogLevel::off}), std::runtime_error);
 }
 
 TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
     // Invalid migrations path results in database with version 0 (no migrations applied)
     auto db =
-        psr::Database::from_migrations(":memory:", "nonexistent/migrations/", {.console_level = psr::LogLevel::off});
+        margaux::Database::from_migrations(":memory:", "nonexistent/migrations/", {.console_level = margaux::LogLevel::off});
     EXPECT_EQ(db.current_version(), 0);
 }
 
@@ -123,29 +123,29 @@ protected:
 // ============================================================================
 
 TEST_F(MigrationFixture, MigrationCreation) {
-    psr::Migration migration(1, migrations_path + "/1");
+    margaux::Migration migration(1, migrations_path + "/1");
     EXPECT_EQ(migration.version(), 1);
     EXPECT_FALSE(migration.path().empty());
 }
 
 TEST_F(MigrationFixture, MigrationUpSqlRead) {
-    psr::Migration migration(1, migrations_path + "/1");
+    margaux::Migration migration(1, migrations_path + "/1");
     std::string sql = migration.up_sql();
     EXPECT_FALSE(sql.empty());
     EXPECT_NE(sql.find("CREATE TABLE Test1"), std::string::npos);
 }
 
 TEST_F(MigrationFixture, MigrationDownSqlRead) {
-    psr::Migration migration(1, migrations_path + "/1");
+    margaux::Migration migration(1, migrations_path + "/1");
     std::string sql = migration.down_sql();
     EXPECT_FALSE(sql.empty());
     EXPECT_NE(sql.find("DROP TABLE"), std::string::npos);
 }
 
 TEST_F(MigrationFixture, MigrationComparison) {
-    psr::Migration m1(1, migrations_path + "/1");
-    psr::Migration m2(2, migrations_path + "/2");
-    psr::Migration m3(3, migrations_path + "/3");
+    margaux::Migration m1(1, migrations_path + "/1");
+    margaux::Migration m2(2, migrations_path + "/2");
+    margaux::Migration m3(3, migrations_path + "/3");
 
     EXPECT_TRUE(m1 < m2);
     EXPECT_TRUE(m2 < m3);
@@ -158,8 +158,8 @@ TEST_F(MigrationFixture, MigrationComparison) {
 }
 
 TEST_F(MigrationFixture, MigrationCopy) {
-    psr::Migration original(2, migrations_path + "/2");
-    psr::Migration copy = original;
+    margaux::Migration original(2, migrations_path + "/2");
+    margaux::Migration copy = original;
 
     EXPECT_EQ(copy.version(), original.version());
     EXPECT_EQ(copy.path(), original.path());
@@ -170,7 +170,7 @@ TEST_F(MigrationFixture, MigrationCopy) {
 // ============================================================================
 
 TEST_F(MigrationFixture, MigrationsLoad) {
-    psr::Migrations migrations(migrations_path);
+    margaux::Migrations migrations(migrations_path);
 
     EXPECT_FALSE(migrations.empty());
     EXPECT_EQ(migrations.count(), 3u);
@@ -178,7 +178,7 @@ TEST_F(MigrationFixture, MigrationsLoad) {
 }
 
 TEST_F(MigrationFixture, MigrationsOrder) {
-    psr::Migrations migrations(migrations_path);
+    margaux::Migrations migrations(migrations_path);
     auto all = migrations.all();
 
     ASSERT_EQ(all.size(), 3u);
@@ -188,7 +188,7 @@ TEST_F(MigrationFixture, MigrationsOrder) {
 }
 
 TEST_F(MigrationFixture, MigrationsPending) {
-    psr::Migrations migrations(migrations_path);
+    margaux::Migrations migrations(migrations_path);
 
     auto pending_from_0 = migrations.pending(0);
     EXPECT_EQ(pending_from_0.size(), 3u);
@@ -206,7 +206,7 @@ TEST_F(MigrationFixture, MigrationsPending) {
 }
 
 TEST_F(MigrationFixture, MigrationsIteration) {
-    psr::Migrations migrations(migrations_path);
+    margaux::Migrations migrations(migrations_path);
 
     int64_t expected_version = 1;
     for (const auto& migration : migrations) {
@@ -217,7 +217,7 @@ TEST_F(MigrationFixture, MigrationsIteration) {
 }
 
 TEST_F(MigrationFixture, MigrationsEmptyPath) {
-    psr::Migrations migrations("non_existent_path");
+    margaux::Migrations migrations("non_existent_path");
     EXPECT_TRUE(migrations.empty());
     EXPECT_EQ(migrations.count(), 0u);
     EXPECT_EQ(migrations.latest_version(), 0);
@@ -228,26 +228,26 @@ TEST_F(MigrationFixture, MigrationsEmptyPath) {
 // ============================================================================
 
 TEST_F(MigrationFixture, DatabaseCurrentVersion) {
-    psr::Database db(":memory:");
+    margaux::Database db(":memory:");
     EXPECT_EQ(db.current_version(), 0);
 }
 
 TEST_F(MigrationFixture, DatabaseFromMigrations) {
-    auto db = psr::Database::from_migrations(path, migrations_path);
+    auto db = margaux::Database::from_migrations(path, migrations_path);
 
     EXPECT_EQ(db.current_version(), 3);
     EXPECT_TRUE(db.is_healthy());
 }
 
 TEST_F(MigrationFixture, MigrationsInvalidDirectory) {
-    psr::Migrations migrations("nonexistent/path/to/migrations");
+    margaux::Migrations migrations("nonexistent/path/to/migrations");
     EXPECT_TRUE(migrations.empty());
     EXPECT_EQ(migrations.count(), 0u);
     EXPECT_EQ(migrations.latest_version(), 0);
 }
 
 TEST_F(MigrationFixture, MigrationsPendingFromHigherVersion) {
-    psr::Migrations migrations(migrations_path);
+    margaux::Migrations migrations(migrations_path);
 
     // If current version is higher than latest migration version
     auto pending = migrations.pending(100);
@@ -256,12 +256,12 @@ TEST_F(MigrationFixture, MigrationsPendingFromHigherVersion) {
 
 TEST_F(MigrationFixture, DatabaseFromMigrationsInvalidPath) {
     // Invalid migrations path results in database with version 0 (no migrations applied)
-    auto db = psr::Database::from_migrations(path, "nonexistent/migrations/");
+    auto db = margaux::Database::from_migrations(path, "nonexistent/migrations/");
     EXPECT_EQ(db.current_version(), 0);
 }
 
 TEST_F(MigrationFixture, MigrationVersionZero) {
-    psr::Migrations migrations(migrations_path);
+    margaux::Migrations migrations(migrations_path);
 
     // Version 0 should return all migrations as pending
     auto pending = migrations.pending(0);
@@ -271,19 +271,19 @@ TEST_F(MigrationFixture, MigrationVersionZero) {
 TEST_F(MigrationFixture, MigrationsWithPartialApplication) {
     // First apply first migration using from_migrations and then check
     {
-        auto db = psr::Database::from_migrations(path, migrations_path);
+        auto db = margaux::Database::from_migrations(path, migrations_path);
         EXPECT_EQ(db.current_version(), 3);
     }
 
     // Reopen the database and verify it still has version 3
     {
-        psr::Database db(path);
+        margaux::Database db(path);
         EXPECT_EQ(db.current_version(), 3);
     }
 }
 
 TEST_F(MigrationFixture, MigrationGetByVersion) {
-    psr::Migrations migrations(migrations_path);
+    margaux::Migrations migrations(migrations_path);
 
     auto all = migrations.all();
     ASSERT_EQ(all.size(), 3u);
@@ -296,7 +296,7 @@ TEST_F(MigrationFixture, MigrationGetByVersion) {
 }
 
 TEST_F(MigrationFixture, DatabaseFromMigrationsMemory) {
-    auto db = psr::Database::from_migrations(":memory:", migrations_path);
+    auto db = margaux::Database::from_migrations(":memory:", migrations_path);
 
     EXPECT_EQ(db.current_version(), 3);
     EXPECT_TRUE(db.is_healthy());

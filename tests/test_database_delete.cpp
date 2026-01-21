@@ -5,9 +5,9 @@
 #include <psr/element.h>
 
 TEST(Database, DeleteElementById) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
     int64_t id = db.create_element("Configuration", e);
 
@@ -25,13 +25,13 @@ TEST(Database, DeleteElementById) {
 
 TEST(Database, DeleteElementByIdWithVectorData) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Item 1")).set("value_int", std::vector<int64_t>{1, 2, 3});
     int64_t id = db.create_element("Collection", e);
 
@@ -53,13 +53,13 @@ TEST(Database, DeleteElementByIdWithVectorData) {
 
 TEST(Database, DeleteElementByIdWithSetData) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Item 1")).set("tag", std::vector<std::string>{"important", "urgent"});
     int64_t id = db.create_element("Collection", e);
 
@@ -80,9 +80,9 @@ TEST(Database, DeleteElementByIdWithSetData) {
 }
 
 TEST(Database, DeleteElementByIdNonExistent) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
     db.create_element("Configuration", e);
 
@@ -95,17 +95,17 @@ TEST(Database, DeleteElementByIdNonExistent) {
 }
 
 TEST(Database, DeleteElementByIdOtherElementsUnchanged) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element e1;
+    margaux::Element e1;
     e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
     int64_t id1 = db.create_element("Configuration", e1);
 
-    psr::Element e2;
+    margaux::Element e2;
     e2.set("label", std::string("Config 2")).set("integer_attribute", int64_t{100});
     int64_t id2 = db.create_element("Configuration", e2);
 
-    psr::Element e3;
+    margaux::Element e3;
     e3.set("label", std::string("Config 3")).set("integer_attribute", int64_t{200});
     int64_t id3 = db.create_element("Configuration", e3);
 
