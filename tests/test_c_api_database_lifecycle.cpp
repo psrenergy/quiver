@@ -89,7 +89,7 @@ TEST_F(TempFileFixture, ErrorStrings) {
     EXPECT_STREQ(psr_error_string(MARGAUX_ERROR_SCHEMA), "Schema validation error");
     EXPECT_STREQ(psr_error_string(MARGAUX_ERROR_CREATE_ELEMENT), "Failed to create element");
     EXPECT_STREQ(psr_error_string(MARGAUX_ERROR_NOT_FOUND), "Not found");
-    EXPECT_STREQ(psr_error_string(static_cast<psr_error_t>(-999)), "Unknown error");
+    EXPECT_STREQ(psr_error_string(static_cast<psr_margaux_t>(-999)), "Unknown error");
 }
 
 TEST_F(TempFileFixture, Version) {

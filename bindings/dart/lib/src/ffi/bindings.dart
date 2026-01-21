@@ -1468,7 +1468,7 @@ class PsrDatabaseBindings {
       _psr_lua_runner_get_errorPtr.asFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<psr_lua_runner_t>)>();
 }
 
-abstract class psr_error_t {
+abstract class psr_margaux_t {
   static const int MARGAUX_OK = 0;
   static const int MARGAUX_ERROR_INVALID_ARGUMENT = -1;
   static const int MARGAUX_ERROR_DATABASE = -2;

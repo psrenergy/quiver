@@ -100,7 +100,7 @@ class Database {
         toLabel.toNativeUtf8(allocator: arena).cast(),
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to set scalar relation '$attribute' in '$collection'");
       }
     } finally {
@@ -126,7 +126,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to read scalar relation '$attribute' from '$collection'");
       }
 
@@ -169,7 +169,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to read scalar integers from '$collection.$attribute'");
       }
 
@@ -203,7 +203,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to read scalar floats from '$collection.$attribute'");
       }
 
@@ -237,7 +237,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to read scalar strings from '$collection.$attribute'");
       }
 
@@ -273,7 +273,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to read vector integers from '$collection.$attribute'");
       }
 
@@ -317,7 +317,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to read vector floats from '$collection.$attribute'");
       }
 
@@ -361,7 +361,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to read vector strings from '$collection.$attribute'");
       }
 
@@ -405,7 +405,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to read set integers from '$collection.$attribute'");
       }
 
@@ -449,7 +449,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to read set floats from '$collection.$attribute'");
       }
 
@@ -493,7 +493,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to read set strings from '$collection.$attribute'");
       }
 
@@ -539,7 +539,7 @@ class Database {
         outHasValue,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to read scalar integer by id from '$collection.$attribute'");
       }
 
@@ -571,7 +571,7 @@ class Database {
         outHasValue,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to read scalar float by id from '$collection.$attribute'");
       }
 
@@ -603,7 +603,7 @@ class Database {
         outHasValue,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to read scalar string by id from '$collection.$attribute'");
       }
 
@@ -638,7 +638,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to read vector integers by id from '$collection.$attribute'");
       }
 
@@ -673,7 +673,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to read vector floats by id from '$collection.$attribute'");
       }
 
@@ -708,7 +708,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to read vector strings by id from '$collection.$attribute'");
       }
 
@@ -745,7 +745,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to read set integers by id from '$collection.$attribute'");
       }
 
@@ -780,7 +780,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to read set floats by id from '$collection.$attribute'");
       }
 
@@ -815,7 +815,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to read set strings by id from '$collection.$attribute'");
       }
 
@@ -850,7 +850,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to read element ids from '$collection'");
       }
 
@@ -884,7 +884,7 @@ class Database {
         outDataType,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to get attribute type for '$collection.$attribute'");
       }
 
@@ -921,7 +921,7 @@ class Database {
         id,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to delete element $id from '$collection'");
       }
     } finally {
@@ -956,7 +956,7 @@ class Database {
         id,
         element.ptr.cast(),
       );
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to update element $id in '$collection'");
       }
     } finally {
@@ -980,7 +980,7 @@ class Database {
         value,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to update scalar integer '$collection.$attribute' for id $id");
       }
     } finally {
@@ -1002,7 +1002,7 @@ class Database {
         value,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to update scalar float '$collection.$attribute' for id $id");
       }
     } finally {
@@ -1024,7 +1024,7 @@ class Database {
         value.toNativeUtf8(allocator: arena).cast(),
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to update scalar string '$collection.$attribute' for id $id");
       }
     } finally {
@@ -1054,7 +1054,7 @@ class Database {
         values.length,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to update vector integers '$collection.$attribute' for id $id");
       }
     } finally {
@@ -1082,7 +1082,7 @@ class Database {
         values.length,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to update vector floats '$collection.$attribute' for id $id");
       }
     } finally {
@@ -1110,7 +1110,7 @@ class Database {
         values.length,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to update vector strings '$collection.$attribute' for id $id");
       }
     } finally {
@@ -1140,7 +1140,7 @@ class Database {
         values.length,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to update set integers '$collection.$attribute' for id $id");
       }
     } finally {
@@ -1168,7 +1168,7 @@ class Database {
         values.length,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to update set floats '$collection.$attribute' for id $id");
       }
     } finally {
@@ -1196,7 +1196,7 @@ class Database {
         values.length,
       );
 
-      if (err != psr_error_t.MARGAUX_OK) {
+      if (err != psr_margaux_t.MARGAUX_OK) {
         throw DatabaseException.fromError(err, "Failed to update set strings '$collection.$attribute' for id $id");
       }
     } finally {

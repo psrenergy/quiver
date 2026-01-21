@@ -25,7 +25,7 @@ MARGAUX_C_API void psr_element_clear(psr_element_t* element) {
     }
 }
 
-MARGAUX_C_API psr_error_t psr_element_set_integer(psr_element_t* element, const char* name, int64_t value) {
+MARGAUX_C_API psr_margaux_t psr_element_set_integer(psr_element_t* element, const char* name, int64_t value) {
     if (!element || !name) {
         return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
@@ -33,7 +33,7 @@ MARGAUX_C_API psr_error_t psr_element_set_integer(psr_element_t* element, const 
     return MARGAUX_OK;
 }
 
-MARGAUX_C_API psr_error_t psr_element_set_float(psr_element_t* element, const char* name, double value) {
+MARGAUX_C_API psr_margaux_t psr_element_set_float(psr_element_t* element, const char* name, double value) {
     if (!element || !name) {
         return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
@@ -41,7 +41,7 @@ MARGAUX_C_API psr_error_t psr_element_set_float(psr_element_t* element, const ch
     return MARGAUX_OK;
 }
 
-MARGAUX_C_API psr_error_t psr_element_set_string(psr_element_t* element, const char* name, const char* value) {
+MARGAUX_C_API psr_margaux_t psr_element_set_string(psr_element_t* element, const char* name, const char* value) {
     if (!element || !name || !value) {
         return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
@@ -49,7 +49,7 @@ MARGAUX_C_API psr_error_t psr_element_set_string(psr_element_t* element, const c
     return MARGAUX_OK;
 }
 
-MARGAUX_C_API psr_error_t psr_element_set_null(psr_element_t* element, const char* name) {
+MARGAUX_C_API psr_margaux_t psr_element_set_null(psr_element_t* element, const char* name) {
     if (!element || !name) {
         return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
@@ -57,7 +57,7 @@ MARGAUX_C_API psr_error_t psr_element_set_null(psr_element_t* element, const cha
     return MARGAUX_OK;
 }
 
-MARGAUX_C_API psr_error_t psr_element_set_array_integer(psr_element_t* element,
+MARGAUX_C_API psr_margaux_t psr_element_set_array_integer(psr_element_t* element,
                                                         const char* name,
                                                         const int64_t* values,
                                                         int32_t count) {
@@ -69,7 +69,7 @@ MARGAUX_C_API psr_error_t psr_element_set_array_integer(psr_element_t* element,
     return MARGAUX_OK;
 }
 
-MARGAUX_C_API psr_error_t psr_element_set_array_float(psr_element_t* element,
+MARGAUX_C_API psr_margaux_t psr_element_set_array_float(psr_element_t* element,
                                                       const char* name,
                                                       const double* values,
                                                       int32_t count) {
@@ -81,7 +81,7 @@ MARGAUX_C_API psr_error_t psr_element_set_array_float(psr_element_t* element,
     return MARGAUX_OK;
 }
 
-MARGAUX_C_API psr_error_t psr_element_set_array_string(psr_element_t* element,
+MARGAUX_C_API psr_margaux_t psr_element_set_array_string(psr_element_t* element,
                                                        const char* name,
                                                        const char* const* values,
                                                        int32_t count) {
