@@ -229,7 +229,7 @@ include("fixture.jl")
         special_label = "ãçéóú\$/MWh"
         PSRDatabase.create_element!(db, "Configuration"; label = special_label)
 
-        @show labels = PSRDatabase.read_scalar_strings(db, "Configuration", "label")
+        labels = PSRDatabase.read_scalar_strings(db, "Configuration", "label")
         @test length(labels) == 1
         @test labels[1] == special_label
 
