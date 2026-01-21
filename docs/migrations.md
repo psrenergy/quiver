@@ -1,7 +1,7 @@
 # Migration Examples
 
 Migrations are a way to manage the evolution of the database schema over time.
-As mentioned in the documentation for [PSRDatabase](../psrdatabase/rules.md), migrations are defined by two separate `.sql` files that are stored in the `migrations` directory of the model. The first file is the `up` migration and it is used to update the database schema to a new version. The second file is the `down` migration and it is used to revert the changes made by the `up` migration. Migrations are stored in directories in the model and they have a specific naming convention. The name of the migration folder should be the number of the version (e.g. `/migrations/1/`).
+As mentioned in the documentation for [Margaux](../psrdatabase/rules.md), migrations are defined by two separate `.sql` files that are stored in the `migrations` directory of the model. The first file is the `up` migration and it is used to update the database schema to a new version. The second file is the `down` migration and it is used to revert the changes made by the `up` migration. Migrations are stored in directories in the model and they have a specific naming convention. The name of the migration folder should be the number of the version (e.g. `/migrations/1/`).
 
 In this section, we will provide some examples of migrations.
 First, let us start with the first migration, the one that creates the initial database schema.

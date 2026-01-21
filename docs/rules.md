@@ -1,6 +1,6 @@
-# PSRDatabase
+# Margaux
 
-SQL schemas for the `PSRDatabase` framework should follow the conventions described in this document. Note that this is a tool for creating and developing some kinds of applications. Not all tools will need to use this framework.
+SQL schemas for the `Margaux` framework should follow the conventions described in this document. Note that this is a tool for creating and developing some kinds of applications. Not all tools will need to use this framework.
 
 ## SQL Schema Conventions
 
@@ -174,7 +174,7 @@ CREATE TABLE Plant_time_series_files (
 
 ## Migrations
 
-Migrations are an important part of the `PSRDatabase` framework. They are used to update the database schema to a new version without the need to delete the database and create a new one from scratch. Migrations are defined by two separate `.sql` files that are stored in the `migrations` directory of the model. The first file is the `up` migration and it is used to update the database schema to a new version. The second file is the `down` migration and it is used to revert the changes made by the `up` migration. Migrations are stored in directories in the model and they have a specific naming convention. The name of the migration folder should be the number of the version (e.g. `/migrations/1/`).
+Migrations are an important part of the `Margaux` framework. They are used to update the database schema to a new version without the need to delete the database and create a new one from scratch. Migrations are defined by two separate `.sql` files that are stored in the `migrations` directory of the model. The first file is the `up` migration and it is used to update the database schema to a new version. The second file is the `down` migration and it is used to revert the changes made by the `up` migration. Migrations are stored in directories in the model and they have a specific naming convention. The name of the migration folder should be the number of the version (e.g. `/migrations/1/`).
 
 ```md
 database/migrations
@@ -188,9 +188,9 @@ database/migrations
 
 ### Creating a migration
 
-It is advised to create new migrations using the functions from `PSRDatabase`. First you need to make sure that the migrations directory is registered 
-by the function `PSRDatabase.set_migrations_folder` and after that you can create a new migration using the function `PSRDatabase.create_migration`. This function will create a new migration file with the name and version specified by the user. The migration file will contain a template for the migration.
+It is advised to create new migrations using the functions from `Margaux`. First you need to make sure that the migrations directory is registered 
+by the function `Margaux.set_migrations_folder` and after that you can create a new migration using the function `Margaux.create_migration`. This function will create a new migration file with the name and version specified by the user. The migration file will contain a template for the migration.
 
 ### Running migrations
 
-To run migrations you need to use the function `PSRDatabase.apply_migrations!`. There are various versions of this function, each one tailored to make something easier for the user.
+To run migrations you need to use the function `Margaux.apply_migrations!`. There are various versions of this function, each one tailored to make something easier for the user.

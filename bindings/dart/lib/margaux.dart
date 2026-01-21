@@ -1,4 +1,4 @@
-library psr_database;
+library margaux;
 
 export 'src/database.dart' show Database;
 export 'src/element.dart' show Element;

@@ -1,4 +1,4 @@
-module PSRDatabase
+module Margaux
 
 include("c_api.jl")
 import .C

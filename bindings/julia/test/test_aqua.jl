@@ -1,12 +1,12 @@
 # module TestAqua
 
 # using Aqua
-# using PSRDatabase
+# using Margaux
 # using Test
 
 # @testset "Aqua" begin
-#     Aqua.test_ambiguities(PSRDatabase; recursive = false)
-#     Aqua.test_all(PSRDatabase; ambiguities = false, unbound_args = false)
+#     Aqua.test_ambiguities(Margaux; recursive = false)
+#     Aqua.test_all(Margaux; ambiguities = false, unbound_args = false)
 #     return nothing
 # end
 

@@ -1,5 +1,5 @@
-name: PsrDatabaseBindings
-description: FFI bindings for PSR Database C API
+name: MargauxBindings
+description: FFI bindings for Margaux C API
 output: 'lib/src/ffi/bindings.dart'
 
 headers:

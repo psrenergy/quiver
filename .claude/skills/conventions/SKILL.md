@@ -1,6 +1,6 @@
 ---
 name: conventions
-description: SQL schema conventions for PSRDatabase. When writing SQL schemas for PSRDatabase, follow these conventions strictly.
+description: SQL schema conventions for Margaux. When writing SQL schemas for Margaux, follow these conventions strictly.
 ---
 
 # Collections (Tables)

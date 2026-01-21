@@ -9,12 +9,12 @@ String get _libraryName {
   return 'libpsr_database_c.so'; // Linux and others
 }
 
-PsrDatabaseBindings? _cachedBindings;
+MargauxBindings? _cachedBindings;
 DynamicLibrary? _cachedLibrary;
 
 /// Gets the FFI bindings, loading the library if needed.
-PsrDatabaseBindings get bindings {
-  _cachedBindings ??= PsrDatabaseBindings(library);
+MargauxBindings get bindings {
+  _cachedBindings ??= MargauxBindings(library);
   return _cachedBindings!;
 }
 

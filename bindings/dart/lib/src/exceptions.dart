@@ -1,4 +1,4 @@
-/// Base exception for PSR Database errors.
+/// Base exception for Margaux errors.
 sealed class DatabaseException implements Exception {
   final String message;
   const DatabaseException(this.message);

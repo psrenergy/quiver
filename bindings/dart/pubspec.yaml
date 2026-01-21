@@ -1,5 +1,5 @@
-name: psr_database
-description: Dart FFI bindings for PSR Database - SQLite wrapper library
+name: margaux
+description: Dart FFI bindings for Margaux
 version: 0.1.0
 
 environment:
@@ -15,8 +15,8 @@ dev_dependencies:
   test: ^1.24.0
 
 ffigen:
-  name: PsrDatabaseBindings
-  description: FFI bindings for PSR Database C API
+  name: MargauxBindings
+  description: FFI bindings for Margaux C API
   output: 'lib/src/ffi/bindings.dart'
   headers:
     entry-points:
