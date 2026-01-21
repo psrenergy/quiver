@@ -53,7 +53,7 @@ end
     MARGAUX_LOG_OFF = 4
 end
 
-struct psr_database_options_t
+struct database_options_t
     read_only::Cint
     console_level::psr_log_level_t
 end
@@ -70,180 +70,180 @@ end
     MARGAUX_DATA_TYPE_STRING = 2
 end
 
-function psr_database_options_default()
-    @ccall libmargaux_c.psr_database_options_default()::psr_database_options_t
+function database_options_default()
+    @ccall libmargaux_c.database_options_default()::database_options_t
 end
 
-mutable struct psr_database end
+mutable struct database end
 
-const psr_database_t = psr_database
+const database_t = database
 
-function psr_database_open(path, options)
-    @ccall libmargaux_c.psr_database_open(path::Ptr{Cchar}, options::Ptr{psr_database_options_t})::Ptr{psr_database_t}
+function database_open(path, options)
+    @ccall libmargaux_c.database_open(path::Ptr{Cchar}, options::Ptr{database_options_t})::Ptr{database_t}
 end
 
-function psr_database_from_migrations(db_path, migrations_path, options)
-    @ccall libmargaux_c.psr_database_from_migrations(db_path::Ptr{Cchar}, migrations_path::Ptr{Cchar}, options::Ptr{psr_database_options_t})::Ptr{psr_database_t}
+function database_from_migrations(db_path, migrations_path, options)
+    @ccall libmargaux_c.database_from_migrations(db_path::Ptr{Cchar}, migrations_path::Ptr{Cchar}, options::Ptr{database_options_t})::Ptr{database_t}
 end
 
-function psr_database_from_schema(db_path, schema_path, options)
-    @ccall libmargaux_c.psr_database_from_schema(db_path::Ptr{Cchar}, schema_path::Ptr{Cchar}, options::Ptr{psr_database_options_t})::Ptr{psr_database_t}
+function database_from_schema(db_path, schema_path, options)
+    @ccall libmargaux_c.database_from_schema(db_path::Ptr{Cchar}, schema_path::Ptr{Cchar}, options::Ptr{database_options_t})::Ptr{database_t}
 end
 
-function psr_database_close(db)
-    @ccall libmargaux_c.psr_database_close(db::Ptr{psr_database_t})::Cvoid
+function database_close(db)
+    @ccall libmargaux_c.database_close(db::Ptr{database_t})::Cvoid
 end
 
-function psr_database_is_healthy(db)
-    @ccall libmargaux_c.psr_database_is_healthy(db::Ptr{psr_database_t})::Cint
+function database_is_healthy(db)
+    @ccall libmargaux_c.database_is_healthy(db::Ptr{database_t})::Cint
 end
 
-function psr_database_path(db)
-    @ccall libmargaux_c.psr_database_path(db::Ptr{psr_database_t})::Ptr{Cchar}
+function database_path(db)
+    @ccall libmargaux_c.database_path(db::Ptr{database_t})::Ptr{Cchar}
 end
 
-function psr_database_current_version(db)
-    @ccall libmargaux_c.psr_database_current_version(db::Ptr{psr_database_t})::Int64
+function database_current_version(db)
+    @ccall libmargaux_c.database_current_version(db::Ptr{database_t})::Int64
 end
 
 mutable struct element end
 
 const element_t = element
 
-function psr_database_create_element(db, collection, element)
-    @ccall libmargaux_c.psr_database_create_element(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, element::Ptr{element_t})::Int64
+function database_create_element(db, collection, element)
+    @ccall libmargaux_c.database_create_element(db::Ptr{database_t}, collection::Ptr{Cchar}, element::Ptr{element_t})::Int64
 end
 
-function psr_database_update_element(db, collection, id, element)
-    @ccall libmargaux_c.psr_database_update_element(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, id::Int64, element::Ptr{element_t})::margaux_error_t
+function database_update_element(db, collection, id, element)
+    @ccall libmargaux_c.database_update_element(db::Ptr{database_t}, collection::Ptr{Cchar}, id::Int64, element::Ptr{element_t})::margaux_error_t
 end
 
-function psr_database_delete_element_by_id(db, collection, id)
-    @ccall libmargaux_c.psr_database_delete_element_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, id::Int64)::margaux_error_t
+function database_delete_element_by_id(db, collection, id)
+    @ccall libmargaux_c.database_delete_element_by_id(db::Ptr{database_t}, collection::Ptr{Cchar}, id::Int64)::margaux_error_t
 end
 
-function psr_database_set_scalar_relation(db, collection, attribute, from_label, to_label)
-    @ccall libmargaux_c.psr_database_set_scalar_relation(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, from_label::Ptr{Cchar}, to_label::Ptr{Cchar})::margaux_error_t
+function database_set_scalar_relation(db, collection, attribute, from_label, to_label)
+    @ccall libmargaux_c.database_set_scalar_relation(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, from_label::Ptr{Cchar}, to_label::Ptr{Cchar})::margaux_error_t
 end
 
-function psr_database_read_scalar_relation(db, collection, attribute, out_values, out_count)
-    @ccall libmargaux_c.psr_database_read_scalar_relation(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Cchar}}}, out_count::Ptr{Csize_t})::margaux_error_t
+function database_read_scalar_relation(db, collection, attribute, out_values, out_count)
+    @ccall libmargaux_c.database_read_scalar_relation(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Cchar}}}, out_count::Ptr{Csize_t})::margaux_error_t
 end
 
-function psr_database_read_scalar_integers(db, collection, attribute, out_values, out_count)
-    @ccall libmargaux_c.psr_database_read_scalar_integers(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::margaux_error_t
+function database_read_scalar_integers(db, collection, attribute, out_values, out_count)
+    @ccall libmargaux_c.database_read_scalar_integers(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::margaux_error_t
 end
 
-function psr_database_read_scalar_floats(db, collection, attribute, out_values, out_count)
-    @ccall libmargaux_c.psr_database_read_scalar_floats(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Cdouble}}, out_count::Ptr{Csize_t})::margaux_error_t
+function database_read_scalar_floats(db, collection, attribute, out_values, out_count)
+    @ccall libmargaux_c.database_read_scalar_floats(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Cdouble}}, out_count::Ptr{Csize_t})::margaux_error_t
 end
 
-function psr_database_read_scalar_strings(db, collection, attribute, out_values, out_count)
-    @ccall libmargaux_c.psr_database_read_scalar_strings(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Cchar}}}, out_count::Ptr{Csize_t})::margaux_error_t
+function database_read_scalar_strings(db, collection, attribute, out_values, out_count)
+    @ccall libmargaux_c.database_read_scalar_strings(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Cchar}}}, out_count::Ptr{Csize_t})::margaux_error_t
 end
 
-function psr_database_read_vector_integers(db, collection, attribute, out_vectors, out_sizes, out_count)
-    @ccall libmargaux_c.psr_database_read_vector_integers(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_vectors::Ptr{Ptr{Ptr{Int64}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::margaux_error_t
+function database_read_vector_integers(db, collection, attribute, out_vectors, out_sizes, out_count)
+    @ccall libmargaux_c.database_read_vector_integers(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_vectors::Ptr{Ptr{Ptr{Int64}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::margaux_error_t
 end
 
-function psr_database_read_vector_floats(db, collection, attribute, out_vectors, out_sizes, out_count)
-    @ccall libmargaux_c.psr_database_read_vector_floats(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_vectors::Ptr{Ptr{Ptr{Cdouble}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::margaux_error_t
+function database_read_vector_floats(db, collection, attribute, out_vectors, out_sizes, out_count)
+    @ccall libmargaux_c.database_read_vector_floats(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_vectors::Ptr{Ptr{Ptr{Cdouble}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::margaux_error_t
 end
 
-function psr_database_read_vector_strings(db, collection, attribute, out_vectors, out_sizes, out_count)
-    @ccall libmargaux_c.psr_database_read_vector_strings(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_vectors::Ptr{Ptr{Ptr{Ptr{Cchar}}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::margaux_error_t
+function database_read_vector_strings(db, collection, attribute, out_vectors, out_sizes, out_count)
+    @ccall libmargaux_c.database_read_vector_strings(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_vectors::Ptr{Ptr{Ptr{Ptr{Cchar}}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::margaux_error_t
 end
 
-function psr_database_read_set_integers(db, collection, attribute, out_sets, out_sizes, out_count)
-    @ccall libmargaux_c.psr_database_read_set_integers(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_sets::Ptr{Ptr{Ptr{Int64}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::margaux_error_t
+function database_read_set_integers(db, collection, attribute, out_sets, out_sizes, out_count)
+    @ccall libmargaux_c.database_read_set_integers(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_sets::Ptr{Ptr{Ptr{Int64}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::margaux_error_t
 end
 
-function psr_database_read_set_floats(db, collection, attribute, out_sets, out_sizes, out_count)
-    @ccall libmargaux_c.psr_database_read_set_floats(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_sets::Ptr{Ptr{Ptr{Cdouble}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::margaux_error_t
+function database_read_set_floats(db, collection, attribute, out_sets, out_sizes, out_count)
+    @ccall libmargaux_c.database_read_set_floats(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_sets::Ptr{Ptr{Ptr{Cdouble}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::margaux_error_t
 end
 
-function psr_database_read_set_strings(db, collection, attribute, out_sets, out_sizes, out_count)
-    @ccall libmargaux_c.psr_database_read_set_strings(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_sets::Ptr{Ptr{Ptr{Ptr{Cchar}}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::margaux_error_t
+function database_read_set_strings(db, collection, attribute, out_sets, out_sizes, out_count)
+    @ccall libmargaux_c.database_read_set_strings(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_sets::Ptr{Ptr{Ptr{Ptr{Cchar}}}}, out_sizes::Ptr{Ptr{Csize_t}}, out_count::Ptr{Csize_t})::margaux_error_t
 end
 
-function psr_database_read_scalar_integers_by_id(db, collection, attribute, id, out_value, out_has_value)
-    @ccall libmargaux_c.psr_database_read_scalar_integers_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_value::Ptr{Int64}, out_has_value::Ptr{Cint})::margaux_error_t
+function database_read_scalar_integers_by_id(db, collection, attribute, id, out_value, out_has_value)
+    @ccall libmargaux_c.database_read_scalar_integers_by_id(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_value::Ptr{Int64}, out_has_value::Ptr{Cint})::margaux_error_t
 end
 
-function psr_database_read_scalar_floats_by_id(db, collection, attribute, id, out_value, out_has_value)
-    @ccall libmargaux_c.psr_database_read_scalar_floats_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_value::Ptr{Cdouble}, out_has_value::Ptr{Cint})::margaux_error_t
+function database_read_scalar_floats_by_id(db, collection, attribute, id, out_value, out_has_value)
+    @ccall libmargaux_c.database_read_scalar_floats_by_id(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_value::Ptr{Cdouble}, out_has_value::Ptr{Cint})::margaux_error_t
 end
 
-function psr_database_read_scalar_strings_by_id(db, collection, attribute, id, out_value, out_has_value)
-    @ccall libmargaux_c.psr_database_read_scalar_strings_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_value::Ptr{Ptr{Cchar}}, out_has_value::Ptr{Cint})::margaux_error_t
+function database_read_scalar_strings_by_id(db, collection, attribute, id, out_value, out_has_value)
+    @ccall libmargaux_c.database_read_scalar_strings_by_id(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_value::Ptr{Ptr{Cchar}}, out_has_value::Ptr{Cint})::margaux_error_t
 end
 
-function psr_database_read_vector_integers_by_id(db, collection, attribute, id, out_values, out_count)
-    @ccall libmargaux_c.psr_database_read_vector_integers_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::margaux_error_t
+function database_read_vector_integers_by_id(db, collection, attribute, id, out_values, out_count)
+    @ccall libmargaux_c.database_read_vector_integers_by_id(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::margaux_error_t
 end
 
-function psr_database_read_vector_floats_by_id(db, collection, attribute, id, out_values, out_count)
-    @ccall libmargaux_c.psr_database_read_vector_floats_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Cdouble}}, out_count::Ptr{Csize_t})::margaux_error_t
+function database_read_vector_floats_by_id(db, collection, attribute, id, out_values, out_count)
+    @ccall libmargaux_c.database_read_vector_floats_by_id(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Cdouble}}, out_count::Ptr{Csize_t})::margaux_error_t
 end
 
-function psr_database_read_vector_strings_by_id(db, collection, attribute, id, out_values, out_count)
-    @ccall libmargaux_c.psr_database_read_vector_strings_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Ptr{Cchar}}}, out_count::Ptr{Csize_t})::margaux_error_t
+function database_read_vector_strings_by_id(db, collection, attribute, id, out_values, out_count)
+    @ccall libmargaux_c.database_read_vector_strings_by_id(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Ptr{Cchar}}}, out_count::Ptr{Csize_t})::margaux_error_t
 end
 
-function psr_database_read_set_integers_by_id(db, collection, attribute, id, out_values, out_count)
-    @ccall libmargaux_c.psr_database_read_set_integers_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::margaux_error_t
+function database_read_set_integers_by_id(db, collection, attribute, id, out_values, out_count)
+    @ccall libmargaux_c.database_read_set_integers_by_id(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::margaux_error_t
 end
 
-function psr_database_read_set_floats_by_id(db, collection, attribute, id, out_values, out_count)
-    @ccall libmargaux_c.psr_database_read_set_floats_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Cdouble}}, out_count::Ptr{Csize_t})::margaux_error_t
+function database_read_set_floats_by_id(db, collection, attribute, id, out_values, out_count)
+    @ccall libmargaux_c.database_read_set_floats_by_id(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Cdouble}}, out_count::Ptr{Csize_t})::margaux_error_t
 end
 
-function psr_database_read_set_strings_by_id(db, collection, attribute, id, out_values, out_count)
-    @ccall libmargaux_c.psr_database_read_set_strings_by_id(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Ptr{Cchar}}}, out_count::Ptr{Csize_t})::margaux_error_t
+function database_read_set_strings_by_id(db, collection, attribute, id, out_values, out_count)
+    @ccall libmargaux_c.database_read_set_strings_by_id(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, out_values::Ptr{Ptr{Ptr{Cchar}}}, out_count::Ptr{Csize_t})::margaux_error_t
 end
 
-function psr_database_read_element_ids(db, collection, out_ids, out_count)
-    @ccall libmargaux_c.psr_database_read_element_ids(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, out_ids::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::margaux_error_t
+function database_read_element_ids(db, collection, out_ids, out_count)
+    @ccall libmargaux_c.database_read_element_ids(db::Ptr{database_t}, collection::Ptr{Cchar}, out_ids::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::margaux_error_t
 end
 
-function psr_database_get_attribute_type(db, collection, attribute, out_data_structure, out_data_type)
-    @ccall libmargaux_c.psr_database_get_attribute_type(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_data_structure::Ptr{psr_data_structure_t}, out_data_type::Ptr{psr_data_type_t})::margaux_error_t
+function database_get_attribute_type(db, collection, attribute, out_data_structure, out_data_type)
+    @ccall libmargaux_c.database_get_attribute_type(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_data_structure::Ptr{psr_data_structure_t}, out_data_type::Ptr{psr_data_type_t})::margaux_error_t
 end
 
-function psr_database_update_scalar_integer(db, collection, attribute, id, value)
-    @ccall libmargaux_c.psr_database_update_scalar_integer(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, value::Int64)::margaux_error_t
+function database_update_scalar_integer(db, collection, attribute, id, value)
+    @ccall libmargaux_c.database_update_scalar_integer(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, value::Int64)::margaux_error_t
 end
 
-function psr_database_update_scalar_float(db, collection, attribute, id, value)
-    @ccall libmargaux_c.psr_database_update_scalar_float(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, value::Cdouble)::margaux_error_t
+function database_update_scalar_float(db, collection, attribute, id, value)
+    @ccall libmargaux_c.database_update_scalar_float(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, value::Cdouble)::margaux_error_t
 end
 
-function psr_database_update_scalar_string(db, collection, attribute, id, value)
-    @ccall libmargaux_c.psr_database_update_scalar_string(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, value::Ptr{Cchar})::margaux_error_t
+function database_update_scalar_string(db, collection, attribute, id, value)
+    @ccall libmargaux_c.database_update_scalar_string(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, value::Ptr{Cchar})::margaux_error_t
 end
 
-function psr_database_update_vector_integers(db, collection, attribute, id, values, count)
-    @ccall libmargaux_c.psr_database_update_vector_integers(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Int64}, count::Csize_t)::margaux_error_t
+function database_update_vector_integers(db, collection, attribute, id, values, count)
+    @ccall libmargaux_c.database_update_vector_integers(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Int64}, count::Csize_t)::margaux_error_t
 end
 
-function psr_database_update_vector_floats(db, collection, attribute, id, values, count)
-    @ccall libmargaux_c.psr_database_update_vector_floats(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Cdouble}, count::Csize_t)::margaux_error_t
+function database_update_vector_floats(db, collection, attribute, id, values, count)
+    @ccall libmargaux_c.database_update_vector_floats(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Cdouble}, count::Csize_t)::margaux_error_t
 end
 
-function psr_database_update_vector_strings(db, collection, attribute, id, values, count)
-    @ccall libmargaux_c.psr_database_update_vector_strings(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Ptr{Cchar}}, count::Csize_t)::margaux_error_t
+function database_update_vector_strings(db, collection, attribute, id, values, count)
+    @ccall libmargaux_c.database_update_vector_strings(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Ptr{Cchar}}, count::Csize_t)::margaux_error_t
 end
 
-function psr_database_update_set_integers(db, collection, attribute, id, values, count)
-    @ccall libmargaux_c.psr_database_update_set_integers(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Int64}, count::Csize_t)::margaux_error_t
+function database_update_set_integers(db, collection, attribute, id, values, count)
+    @ccall libmargaux_c.database_update_set_integers(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Int64}, count::Csize_t)::margaux_error_t
 end
 
-function psr_database_update_set_floats(db, collection, attribute, id, values, count)
-    @ccall libmargaux_c.psr_database_update_set_floats(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Cdouble}, count::Csize_t)::margaux_error_t
+function database_update_set_floats(db, collection, attribute, id, values, count)
+    @ccall libmargaux_c.database_update_set_floats(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Cdouble}, count::Csize_t)::margaux_error_t
 end
 
-function psr_database_update_set_strings(db, collection, attribute, id, values, count)
-    @ccall libmargaux_c.psr_database_update_set_strings(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Ptr{Cchar}}, count::Csize_t)::margaux_error_t
+function database_update_set_strings(db, collection, attribute, id, values, count)
+    @ccall libmargaux_c.database_update_set_strings(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Ptr{Cchar}}, count::Csize_t)::margaux_error_t
 end
 
 function psr_free_integer_array(values)
@@ -339,7 +339,7 @@ mutable struct psr_lua_runner end
 const psr_lua_runner_t = psr_lua_runner
 
 function psr_lua_runner_new(db)
-    @ccall libmargaux_c.psr_lua_runner_new(db::Ptr{psr_database_t})::Ptr{psr_lua_runner_t}
+    @ccall libmargaux_c.psr_lua_runner_new(db::Ptr{database_t})::Ptr{psr_lua_runner_t}
 end
 
 function psr_lua_runner_free(runner)

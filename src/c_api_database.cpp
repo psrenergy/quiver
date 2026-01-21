@@ -24,7 +24,7 @@ margaux::LogLevel to_cpp_log_level(psr_log_level_t level) {
     }
 }
 
-margaux::DatabaseOptions to_cpp_options(const psr_database_options_t* options) {
+margaux::DatabaseOptions to_cpp_options(const database_options_t* options) {
     margaux::DatabaseOptions cpp_options;
     if (options) {
         cpp_options.read_only = options->read_only != 0;
@@ -87,21 +87,21 @@ void free_vectors_impl(T** vectors, size_t* sizes, size_t count) {
 
 extern "C" {
 
-MARGAUX_C_API psr_database_options_t psr_database_options_default(void) {
-    psr_database_options_t options;
+MARGAUX_C_API database_options_t database_options_default(void) {
+    database_options_t options;
     options.read_only = 0;
     options.console_level = MARGAUX_LOG_INFO;
     return options;
 }
 
-MARGAUX_C_API psr_database_t* psr_database_open(const char* path, const psr_database_options_t* options) {
+MARGAUX_C_API database_t* database_open(const char* path, const database_options_t* options) {
     if (!path) {
         return nullptr;
     }
 
     try {
         auto cpp_options = to_cpp_options(options);
-        return new psr_database(path, cpp_options);
+        return new database(path, cpp_options);
     } catch (const std::bad_alloc&) {
         return nullptr;
     } catch (const std::exception&) {
@@ -109,26 +109,26 @@ MARGAUX_C_API psr_database_t* psr_database_open(const char* path, const psr_data
     }
 }
 
-MARGAUX_C_API void psr_database_close(psr_database_t* db) {
+MARGAUX_C_API void database_close(database_t* db) {
     delete db;
 }
 
-MARGAUX_C_API int psr_database_is_healthy(psr_database_t* db) {
+MARGAUX_C_API int database_is_healthy(database_t* db) {
     if (!db) {
         return 0;
     }
     return db->db.is_healthy() ? 1 : 0;
 }
 
-MARGAUX_C_API const char* psr_database_path(psr_database_t* db) {
+MARGAUX_C_API const char* database_path(database_t* db) {
     if (!db) {
         return nullptr;
     }
     return db->db.path().c_str();
 }
 
-MARGAUX_C_API psr_database_t*
-psr_database_from_migrations(const char* db_path, const char* migrations_path, const psr_database_options_t* options) {
+MARGAUX_C_API database_t*
+database_from_migrations(const char* db_path, const char* migrations_path, const database_options_t* options) {
     if (!db_path || !migrations_path) {
         return nullptr;
     }
@@ -136,7 +136,7 @@ psr_database_from_migrations(const char* db_path, const char* migrations_path, c
     try {
         auto cpp_options = to_cpp_options(options);
         auto db = margaux::Database::from_migrations(db_path, migrations_path, cpp_options);
-        return new psr_database(std::move(db));
+        return new database(std::move(db));
     } catch (const std::bad_alloc&) {
         return nullptr;
     } catch (const std::exception&) {
@@ -144,7 +144,7 @@ psr_database_from_migrations(const char* db_path, const char* migrations_path, c
     }
 }
 
-MARGAUX_C_API int64_t psr_database_current_version(psr_database_t* db) {
+MARGAUX_C_API int64_t database_current_version(database_t* db) {
     if (!db) {
         return -1;
     }
@@ -155,7 +155,7 @@ MARGAUX_C_API int64_t psr_database_current_version(psr_database_t* db) {
     }
 }
 
-MARGAUX_C_API int64_t psr_database_create_element(psr_database_t* db,
+MARGAUX_C_API int64_t database_create_element(database_t* db,
                                                   const char* collection,
                                                   element_t* element) {
     if (!db || !collection || !element) {
@@ -168,7 +168,7 @@ MARGAUX_C_API int64_t psr_database_create_element(psr_database_t* db,
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_update_element(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_update_element(database_t* db,
                                                           const char* collection,
                                                           int64_t id,
                                                           const element_t* element) {
@@ -183,7 +183,7 @@ MARGAUX_C_API margaux_error_t psr_database_update_element(psr_database_t* db,
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_delete_element_by_id(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_delete_element_by_id(database_t* db,
                                                                 const char* collection,
                                                                 int64_t id) {
     if (!db || !collection) {
@@ -197,7 +197,7 @@ MARGAUX_C_API margaux_error_t psr_database_delete_element_by_id(psr_database_t* 
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_set_scalar_relation(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_set_scalar_relation(database_t* db,
                                                                const char* collection,
                                                                const char* attribute,
                                                                const char* from_label,
@@ -213,7 +213,7 @@ MARGAUX_C_API margaux_error_t psr_database_set_scalar_relation(psr_database_t* d
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_read_scalar_relation(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_read_scalar_relation(database_t* db,
                                                                 const char* collection,
                                                                 const char* attribute,
                                                                 char*** out_values,
@@ -240,8 +240,8 @@ MARGAUX_C_API margaux_error_t psr_database_read_scalar_relation(psr_database_t* 
     }
 }
 
-MARGAUX_C_API psr_database_t*
-psr_database_from_schema(const char* db_path, const char* schema_path, const psr_database_options_t* options) {
+MARGAUX_C_API database_t*
+database_from_schema(const char* db_path, const char* schema_path, const database_options_t* options) {
     if (!db_path || !schema_path) {
         return nullptr;
     }
@@ -249,7 +249,7 @@ psr_database_from_schema(const char* db_path, const char* schema_path, const psr
     try {
         auto cpp_options = to_cpp_options(options);
         auto db = margaux::Database::from_schema(db_path, schema_path, cpp_options);
-        return new psr_database(std::move(db));
+        return new database(std::move(db));
     } catch (const std::bad_alloc&) {
         return nullptr;
     } catch (const std::exception&) {
@@ -257,7 +257,7 @@ psr_database_from_schema(const char* db_path, const char* schema_path, const psr
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_read_scalar_integers(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_read_scalar_integers(database_t* db,
                                                                 const char* collection,
                                                                 const char* attribute,
                                                                 int64_t** out_values,
@@ -272,7 +272,7 @@ MARGAUX_C_API margaux_error_t psr_database_read_scalar_integers(psr_database_t* 
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_read_scalar_floats(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_read_scalar_floats(database_t* db,
                                                               const char* collection,
                                                               const char* attribute,
                                                               double** out_values,
@@ -287,7 +287,7 @@ MARGAUX_C_API margaux_error_t psr_database_read_scalar_floats(psr_database_t* db
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_read_scalar_strings(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_read_scalar_strings(database_t* db,
                                                                const char* collection,
                                                                const char* attribute,
                                                                char*** out_values,
@@ -333,7 +333,7 @@ MARGAUX_C_API void psr_free_string_array(char** values, size_t count) {
     delete[] values;
 }
 
-MARGAUX_C_API margaux_error_t psr_database_read_vector_integers(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_read_vector_integers(database_t* db,
                                                                 const char* collection,
                                                                 const char* attribute,
                                                                 int64_t*** out_vectors,
@@ -349,7 +349,7 @@ MARGAUX_C_API margaux_error_t psr_database_read_vector_integers(psr_database_t* 
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_read_vector_floats(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_read_vector_floats(database_t* db,
                                                               const char* collection,
                                                               const char* attribute,
                                                               double*** out_vectors,
@@ -365,7 +365,7 @@ MARGAUX_C_API margaux_error_t psr_database_read_vector_floats(psr_database_t* db
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_read_vector_strings(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_read_vector_strings(database_t* db,
                                                                const char* collection,
                                                                const char* attribute,
                                                                char**** out_vectors,
@@ -429,7 +429,7 @@ MARGAUX_C_API void psr_free_string_vectors(char*** vectors, size_t* sizes, size_
 
 // Set read functions (reuse vector helpers since sets have same return structure)
 
-MARGAUX_C_API margaux_error_t psr_database_read_set_integers(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_read_set_integers(database_t* db,
                                                              const char* collection,
                                                              const char* attribute,
                                                              int64_t*** out_sets,
@@ -445,7 +445,7 @@ MARGAUX_C_API margaux_error_t psr_database_read_set_integers(psr_database_t* db,
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_read_set_floats(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_read_set_floats(database_t* db,
                                                            const char* collection,
                                                            const char* attribute,
                                                            double*** out_sets,
@@ -461,7 +461,7 @@ MARGAUX_C_API margaux_error_t psr_database_read_set_floats(psr_database_t* db,
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_read_set_strings(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_read_set_strings(database_t* db,
                                                             const char* collection,
                                                             const char* attribute,
                                                             char**** out_sets,
@@ -501,7 +501,7 @@ MARGAUX_C_API margaux_error_t psr_database_read_set_strings(psr_database_t* db,
 
 // Read scalar by ID functions
 
-MARGAUX_C_API margaux_error_t psr_database_read_scalar_integers_by_id(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_read_scalar_integers_by_id(database_t* db,
                                                                       const char* collection,
                                                                       const char* attribute,
                                                                       int64_t id,
@@ -524,7 +524,7 @@ MARGAUX_C_API margaux_error_t psr_database_read_scalar_integers_by_id(psr_databa
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_read_scalar_floats_by_id(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_read_scalar_floats_by_id(database_t* db,
                                                                     const char* collection,
                                                                     const char* attribute,
                                                                     int64_t id,
@@ -547,7 +547,7 @@ MARGAUX_C_API margaux_error_t psr_database_read_scalar_floats_by_id(psr_database
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_read_scalar_strings_by_id(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_read_scalar_strings_by_id(database_t* db,
                                                                      const char* collection,
                                                                      const char* attribute,
                                                                      int64_t id,
@@ -575,7 +575,7 @@ MARGAUX_C_API margaux_error_t psr_database_read_scalar_strings_by_id(psr_databas
 
 // Read vector by ID functions
 
-MARGAUX_C_API margaux_error_t psr_database_read_vector_integers_by_id(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_read_vector_integers_by_id(database_t* db,
                                                                       const char* collection,
                                                                       const char* attribute,
                                                                       int64_t id,
@@ -592,7 +592,7 @@ MARGAUX_C_API margaux_error_t psr_database_read_vector_integers_by_id(psr_databa
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_read_vector_floats_by_id(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_read_vector_floats_by_id(database_t* db,
                                                                     const char* collection,
                                                                     const char* attribute,
                                                                     int64_t id,
@@ -609,7 +609,7 @@ MARGAUX_C_API margaux_error_t psr_database_read_vector_floats_by_id(psr_database
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_read_vector_strings_by_id(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_read_vector_strings_by_id(database_t* db,
                                                                      const char* collection,
                                                                      const char* attribute,
                                                                      int64_t id,
@@ -639,7 +639,7 @@ MARGAUX_C_API margaux_error_t psr_database_read_vector_strings_by_id(psr_databas
 
 // Read set by ID functions
 
-MARGAUX_C_API margaux_error_t psr_database_read_set_integers_by_id(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_read_set_integers_by_id(database_t* db,
                                                                    const char* collection,
                                                                    const char* attribute,
                                                                    int64_t id,
@@ -656,7 +656,7 @@ MARGAUX_C_API margaux_error_t psr_database_read_set_integers_by_id(psr_database_
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_read_set_floats_by_id(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_read_set_floats_by_id(database_t* db,
                                                                  const char* collection,
                                                                  const char* attribute,
                                                                  int64_t id,
@@ -673,7 +673,7 @@ MARGAUX_C_API margaux_error_t psr_database_read_set_floats_by_id(psr_database_t*
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_read_set_strings_by_id(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_read_set_strings_by_id(database_t* db,
                                                                   const char* collection,
                                                                   const char* attribute,
                                                                   int64_t id,
@@ -701,7 +701,7 @@ MARGAUX_C_API margaux_error_t psr_database_read_set_strings_by_id(psr_database_t
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_read_element_ids(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_read_element_ids(database_t* db,
                                                             const char* collection,
                                                             int64_t** out_ids,
                                                             size_t* out_count) {
@@ -717,7 +717,7 @@ MARGAUX_C_API margaux_error_t psr_database_read_element_ids(psr_database_t* db,
 
 // Update scalar functions
 
-MARGAUX_C_API margaux_error_t psr_database_update_scalar_integer(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_update_scalar_integer(database_t* db,
                                                                  const char* collection,
                                                                  const char* attribute,
                                                                  int64_t id,
@@ -733,7 +733,7 @@ MARGAUX_C_API margaux_error_t psr_database_update_scalar_integer(psr_database_t*
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_update_scalar_float(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_update_scalar_float(database_t* db,
                                                                const char* collection,
                                                                const char* attribute,
                                                                int64_t id,
@@ -749,7 +749,7 @@ MARGAUX_C_API margaux_error_t psr_database_update_scalar_float(psr_database_t* d
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_update_scalar_string(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_update_scalar_string(database_t* db,
                                                                 const char* collection,
                                                                 const char* attribute,
                                                                 int64_t id,
@@ -767,7 +767,7 @@ MARGAUX_C_API margaux_error_t psr_database_update_scalar_string(psr_database_t* 
 
 // Update vector functions
 
-MARGAUX_C_API margaux_error_t psr_database_update_vector_integers(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_update_vector_integers(database_t* db,
                                                                   const char* collection,
                                                                   const char* attribute,
                                                                   int64_t id,
@@ -785,7 +785,7 @@ MARGAUX_C_API margaux_error_t psr_database_update_vector_integers(psr_database_t
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_update_vector_floats(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_update_vector_floats(database_t* db,
                                                                 const char* collection,
                                                                 const char* attribute,
                                                                 int64_t id,
@@ -803,7 +803,7 @@ MARGAUX_C_API margaux_error_t psr_database_update_vector_floats(psr_database_t* 
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_update_vector_strings(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_update_vector_strings(database_t* db,
                                                                  const char* collection,
                                                                  const char* attribute,
                                                                  int64_t id,
@@ -827,7 +827,7 @@ MARGAUX_C_API margaux_error_t psr_database_update_vector_strings(psr_database_t*
 
 // Update set functions
 
-MARGAUX_C_API margaux_error_t psr_database_update_set_integers(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_update_set_integers(database_t* db,
                                                                const char* collection,
                                                                const char* attribute,
                                                                int64_t id,
@@ -845,7 +845,7 @@ MARGAUX_C_API margaux_error_t psr_database_update_set_integers(psr_database_t* d
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_update_set_floats(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_update_set_floats(database_t* db,
                                                              const char* collection,
                                                              const char* attribute,
                                                              int64_t id,
@@ -863,7 +863,7 @@ MARGAUX_C_API margaux_error_t psr_database_update_set_floats(psr_database_t* db,
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_update_set_strings(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_update_set_strings(database_t* db,
                                                               const char* collection,
                                                               const char* attribute,
                                                               int64_t id,
@@ -885,7 +885,7 @@ MARGAUX_C_API margaux_error_t psr_database_update_set_strings(psr_database_t* db
     }
 }
 
-MARGAUX_C_API margaux_error_t psr_database_get_attribute_type(psr_database_t* db,
+MARGAUX_C_API margaux_error_t database_get_attribute_type(database_t* db,
                                                               const char* collection,
                                                               const char* attribute,
                                                               psr_data_structure_t* out_data_structure,

@@ -48,7 +48,7 @@ std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_pat
 
     // Generate unique logger name for multiple Database instances
     auto id = g_logger_counter.fetch_add(1);
-    auto logger_name = "psr_database_" + std::to_string(id);
+    auto logger_name = "margaux_" + std::to_string(id);
 
     // Create console sink (thread-safe)
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
@@ -71,7 +71,7 @@ std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_pat
         // Create file sink (thread-safe)
         std::shared_ptr<spdlog::sinks::basic_file_sink_mt> file_sink = nullptr;
         try {
-            const auto log_file_path = (db_dir / "psr_database.log").string();
+            const auto log_file_path = (db_dir / "database.log").string();
             file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_file_path, true);
             file_sink->set_level(spdlog::level::debug);
 
