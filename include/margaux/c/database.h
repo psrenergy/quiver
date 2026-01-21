@@ -40,7 +40,7 @@ typedef enum {
 MARGAUX_C_API database_options_t database_options_default(void);
 
 // Opaque handle type
-typedef struct database database_t;
+typedef struct margaux_database database_t;
 
 // Database lifecycle
 MARGAUX_C_API database_t* database_open(const char* path, const database_options_t* options);
@@ -56,7 +56,7 @@ MARGAUX_C_API const char* database_path(database_t* db);
 MARGAUX_C_API int64_t database_current_version(database_t* db);
 
 // Element operations (requires element_t from element.h)
-typedef struct element element_t;
+typedef struct margaux_element element_t;
 MARGAUX_C_API int64_t database_create_element(database_t* db, const char* collection, element_t* element);
 MARGAUX_C_API margaux_error_t database_update_element(database_t* db,
                                                       const char* collection,

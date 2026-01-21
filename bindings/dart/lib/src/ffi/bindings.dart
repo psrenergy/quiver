@@ -7,7 +7,7 @@
 // ignore_for_file: type=lint
 import 'dart:ffi' as ffi;
 
-/// FFI bindings for PSR Database C API
+/// FFI bindings for Margaux C API
 class MargauxBindings {
   /// Holds the symbol lookup function.
   final ffi.Pointer<T> Function<T extends ffi.NativeType>(String symbolName) _lookup;
@@ -1075,7 +1075,8 @@ class MargauxBindings {
 
   late final _margaux_free_integer_arrayPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Int64>)>>('margaux_free_integer_array');
-  late final _margaux_free_integer_array = _margaux_free_integer_arrayPtr.asFunction<void Function(ffi.Pointer<ffi.Int64>)>();
+  late final _margaux_free_integer_array =
+      _margaux_free_integer_arrayPtr.asFunction<void Function(ffi.Pointer<ffi.Int64>)>();
 
   void margaux_free_float_array(
     ffi.Pointer<ffi.Double> values,
@@ -1087,7 +1088,8 @@ class MargauxBindings {
 
   late final _margaux_free_float_arrayPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Double>)>>('margaux_free_float_array');
-  late final _margaux_free_float_array = _margaux_free_float_arrayPtr.asFunction<void Function(ffi.Pointer<ffi.Double>)>();
+  late final _margaux_free_float_array =
+      _margaux_free_float_arrayPtr.asFunction<void Function(ffi.Pointer<ffi.Double>)>();
 
   void margaux_free_string_array(
     ffi.Pointer<ffi.Pointer<ffi.Char>> values,
