@@ -38,6 +38,243 @@ class MargauxBindings {
   late final _margaux_versionPtr = _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function()>>('margaux_version');
   late final _margaux_version = _margaux_versionPtr.asFunction<ffi.Pointer<ffi.Char> Function()>();
 
+  ffi.Pointer<element_t> element_create() {
+    return _element_create();
+  }
+
+  late final _element_createPtr = _lookup<ffi.NativeFunction<ffi.Pointer<element_t> Function()>>('element_create');
+  late final _element_create = _element_createPtr.asFunction<ffi.Pointer<element_t> Function()>();
+
+  void element_destroy(
+    ffi.Pointer<element_t> element,
+  ) {
+    return _element_destroy(
+      element,
+    );
+  }
+
+  late final _element_destroyPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<element_t>)>>('element_destroy');
+  late final _element_destroy = _element_destroyPtr.asFunction<void Function(ffi.Pointer<element_t>)>();
+
+  void element_clear(
+    ffi.Pointer<element_t> element,
+  ) {
+    return _element_clear(
+      element,
+    );
+  }
+
+  late final _element_clearPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<element_t>)>>('element_clear');
+  late final _element_clear = _element_clearPtr.asFunction<void Function(ffi.Pointer<element_t>)>();
+
+  int element_set_integer(
+    ffi.Pointer<element_t> element,
+    ffi.Pointer<ffi.Char> name,
+    int value,
+  ) {
+    return _element_set_integer(
+      element,
+      name,
+      value,
+    );
+  }
+
+  late final _element_set_integerPtr =
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<element_t>, ffi.Pointer<ffi.Char>, ffi.Int64)>>(
+          'element_set_integer');
+  late final _element_set_integer =
+      _element_set_integerPtr.asFunction<int Function(ffi.Pointer<element_t>, ffi.Pointer<ffi.Char>, int)>();
+
+  int element_set_float(
+    ffi.Pointer<element_t> element,
+    ffi.Pointer<ffi.Char> name,
+    double value,
+  ) {
+    return _element_set_float(
+      element,
+      name,
+      value,
+    );
+  }
+
+  late final _element_set_floatPtr =
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<element_t>, ffi.Pointer<ffi.Char>, ffi.Double)>>(
+          'element_set_float');
+  late final _element_set_float =
+      _element_set_floatPtr.asFunction<int Function(ffi.Pointer<element_t>, ffi.Pointer<ffi.Char>, double)>();
+
+  int element_set_string(
+    ffi.Pointer<element_t> element,
+    ffi.Pointer<ffi.Char> name,
+    ffi.Pointer<ffi.Char> value,
+  ) {
+    return _element_set_string(
+      element,
+      name,
+      value,
+    );
+  }
+
+  late final _element_set_stringPtr = _lookup<
+          ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<element_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)>>(
+      'element_set_string');
+  late final _element_set_string = _element_set_stringPtr
+      .asFunction<int Function(ffi.Pointer<element_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)>();
+
+  int element_set_null(
+    ffi.Pointer<element_t> element,
+    ffi.Pointer<ffi.Char> name,
+  ) {
+    return _element_set_null(
+      element,
+      name,
+    );
+  }
+
+  late final _element_set_nullPtr =
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<element_t>, ffi.Pointer<ffi.Char>)>>(
+          'element_set_null');
+  late final _element_set_null =
+      _element_set_nullPtr.asFunction<int Function(ffi.Pointer<element_t>, ffi.Pointer<ffi.Char>)>();
+
+  int element_set_array_integer(
+    ffi.Pointer<element_t> element,
+    ffi.Pointer<ffi.Char> name,
+    ffi.Pointer<ffi.Int64> values,
+    int count,
+  ) {
+    return _element_set_array_integer(
+      element,
+      name,
+      values,
+      count,
+    );
+  }
+
+  late final _element_set_array_integerPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<element_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Int64>,
+              ffi.Int32)>>('element_set_array_integer');
+  late final _element_set_array_integer = _element_set_array_integerPtr
+      .asFunction<int Function(ffi.Pointer<element_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Int64>, int)>();
+
+  int element_set_array_float(
+    ffi.Pointer<element_t> element,
+    ffi.Pointer<ffi.Char> name,
+    ffi.Pointer<ffi.Double> values,
+    int count,
+  ) {
+    return _element_set_array_float(
+      element,
+      name,
+      values,
+      count,
+    );
+  }
+
+  late final _element_set_array_floatPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<element_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Double>,
+              ffi.Int32)>>('element_set_array_float');
+  late final _element_set_array_float = _element_set_array_floatPtr
+      .asFunction<int Function(ffi.Pointer<element_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Double>, int)>();
+
+  int element_set_array_string(
+    ffi.Pointer<element_t> element,
+    ffi.Pointer<ffi.Char> name,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> values,
+    int count,
+  ) {
+    return _element_set_array_string(
+      element,
+      name,
+      values,
+      count,
+    );
+  }
+
+  late final _element_set_array_stringPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<element_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Char>>,
+              ffi.Int32)>>('element_set_array_string');
+  late final _element_set_array_string = _element_set_array_stringPtr.asFunction<
+      int Function(ffi.Pointer<element_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Char>>, int)>();
+
+  int element_has_scalars(
+    ffi.Pointer<element_t> element,
+  ) {
+    return _element_has_scalars(
+      element,
+    );
+  }
+
+  late final _element_has_scalarsPtr =
+      _lookup<ffi.NativeFunction<ffi.Int Function(ffi.Pointer<element_t>)>>('element_has_scalars');
+  late final _element_has_scalars = _element_has_scalarsPtr.asFunction<int Function(ffi.Pointer<element_t>)>();
+
+  int element_has_arrays(
+    ffi.Pointer<element_t> element,
+  ) {
+    return _element_has_arrays(
+      element,
+    );
+  }
+
+  late final _element_has_arraysPtr =
+      _lookup<ffi.NativeFunction<ffi.Int Function(ffi.Pointer<element_t>)>>('element_has_arrays');
+  late final _element_has_arrays = _element_has_arraysPtr.asFunction<int Function(ffi.Pointer<element_t>)>();
+
+  int element_scalar_count(
+    ffi.Pointer<element_t> element,
+  ) {
+    return _element_scalar_count(
+      element,
+    );
+  }
+
+  late final _element_scalar_countPtr =
+      _lookup<ffi.NativeFunction<ffi.Size Function(ffi.Pointer<element_t>)>>('element_scalar_count');
+  late final _element_scalar_count = _element_scalar_countPtr.asFunction<int Function(ffi.Pointer<element_t>)>();
+
+  int element_array_count(
+    ffi.Pointer<element_t> element,
+  ) {
+    return _element_array_count(
+      element,
+    );
+  }
+
+  late final _element_array_countPtr =
+      _lookup<ffi.NativeFunction<ffi.Size Function(ffi.Pointer<element_t>)>>('element_array_count');
+  late final _element_array_count = _element_array_countPtr.asFunction<int Function(ffi.Pointer<element_t>)>();
+
+  ffi.Pointer<ffi.Char> element_to_string(
+    ffi.Pointer<element_t> element,
+  ) {
+    return _element_to_string(
+      element,
+    );
+  }
+
+  late final _element_to_stringPtr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<element_t>)>>('element_to_string');
+  late final _element_to_string =
+      _element_to_stringPtr.asFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<element_t>)>();
+
+  void margaux_string_free(
+    ffi.Pointer<ffi.Char> str,
+  ) {
+    return _margaux_string_free(
+      str,
+    );
+  }
+
+  late final _margaux_string_freePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Char>)>>('margaux_string_free');
+  late final _margaux_string_free = _margaux_string_freePtr.asFunction<void Function(ffi.Pointer<ffi.Char>)>();
+
   database_options_t database_options_default() {
     return _database_options_default();
   }
@@ -1162,244 +1399,6 @@ class MargauxBindings {
   late final _margaux_free_string_vectors = _margaux_free_string_vectorsPtr
       .asFunction<void Function(ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>, ffi.Pointer<ffi.Size>, int)>();
 
-  ffi.Pointer<element_t1> element_create() {
-    return _element_create();
-  }
-
-  late final _element_createPtr = _lookup<ffi.NativeFunction<ffi.Pointer<element_t1> Function()>>('element_create');
-  late final _element_create = _element_createPtr.asFunction<ffi.Pointer<element_t1> Function()>();
-
-  void element_destroy(
-    ffi.Pointer<element_t1> element,
-  ) {
-    return _element_destroy(
-      element,
-    );
-  }
-
-  late final _element_destroyPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<element_t1>)>>('element_destroy');
-  late final _element_destroy = _element_destroyPtr.asFunction<void Function(ffi.Pointer<element_t1>)>();
-
-  void element_clear(
-    ffi.Pointer<element_t1> element,
-  ) {
-    return _element_clear(
-      element,
-    );
-  }
-
-  late final _element_clearPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<element_t1>)>>('element_clear');
-  late final _element_clear = _element_clearPtr.asFunction<void Function(ffi.Pointer<element_t1>)>();
-
-  int element_set_integer(
-    ffi.Pointer<element_t1> element,
-    ffi.Pointer<ffi.Char> name,
-    int value,
-  ) {
-    return _element_set_integer(
-      element,
-      name,
-      value,
-    );
-  }
-
-  late final _element_set_integerPtr =
-      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>, ffi.Int64)>>(
-          'element_set_integer');
-  late final _element_set_integer =
-      _element_set_integerPtr.asFunction<int Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>, int)>();
-
-  int element_set_float(
-    ffi.Pointer<element_t1> element,
-    ffi.Pointer<ffi.Char> name,
-    double value,
-  ) {
-    return _element_set_float(
-      element,
-      name,
-      value,
-    );
-  }
-
-  late final _element_set_floatPtr =
-      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>, ffi.Double)>>(
-          'element_set_float');
-  late final _element_set_float =
-      _element_set_floatPtr.asFunction<int Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>, double)>();
-
-  int element_set_string(
-    ffi.Pointer<element_t1> element,
-    ffi.Pointer<ffi.Char> name,
-    ffi.Pointer<ffi.Char> value,
-  ) {
-    return _element_set_string(
-      element,
-      name,
-      value,
-    );
-  }
-
-  late final _element_set_stringPtr = _lookup<
-          ffi
-          .NativeFunction<ffi.Int32 Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)>>(
-      'element_set_string');
-  late final _element_set_string = _element_set_stringPtr
-      .asFunction<int Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)>();
-
-  int element_set_null(
-    ffi.Pointer<element_t1> element,
-    ffi.Pointer<ffi.Char> name,
-  ) {
-    return _element_set_null(
-      element,
-      name,
-    );
-  }
-
-  late final _element_set_nullPtr =
-      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>)>>(
-          'element_set_null');
-  late final _element_set_null =
-      _element_set_nullPtr.asFunction<int Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>)>();
-
-  int element_set_array_integer(
-    ffi.Pointer<element_t1> element,
-    ffi.Pointer<ffi.Char> name,
-    ffi.Pointer<ffi.Int64> values,
-    int count,
-  ) {
-    return _element_set_array_integer(
-      element,
-      name,
-      values,
-      count,
-    );
-  }
-
-  late final _element_set_array_integerPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Int64>,
-              ffi.Int32)>>('element_set_array_integer');
-  late final _element_set_array_integer = _element_set_array_integerPtr
-      .asFunction<int Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Int64>, int)>();
-
-  int element_set_array_float(
-    ffi.Pointer<element_t1> element,
-    ffi.Pointer<ffi.Char> name,
-    ffi.Pointer<ffi.Double> values,
-    int count,
-  ) {
-    return _element_set_array_float(
-      element,
-      name,
-      values,
-      count,
-    );
-  }
-
-  late final _element_set_array_floatPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Double>,
-              ffi.Int32)>>('element_set_array_float');
-  late final _element_set_array_float = _element_set_array_floatPtr
-      .asFunction<int Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Double>, int)>();
-
-  int element_set_array_string(
-    ffi.Pointer<element_t1> element,
-    ffi.Pointer<ffi.Char> name,
-    ffi.Pointer<ffi.Pointer<ffi.Char>> values,
-    int count,
-  ) {
-    return _element_set_array_string(
-      element,
-      name,
-      values,
-      count,
-    );
-  }
-
-  late final _element_set_array_stringPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Char>>,
-              ffi.Int32)>>('element_set_array_string');
-  late final _element_set_array_string = _element_set_array_stringPtr.asFunction<
-      int Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Char>>, int)>();
-
-  int element_has_scalars(
-    ffi.Pointer<element_t1> element,
-  ) {
-    return _element_has_scalars(
-      element,
-    );
-  }
-
-  late final _element_has_scalarsPtr =
-      _lookup<ffi.NativeFunction<ffi.Int Function(ffi.Pointer<element_t1>)>>('element_has_scalars');
-  late final _element_has_scalars = _element_has_scalarsPtr.asFunction<int Function(ffi.Pointer<element_t1>)>();
-
-  int element_has_arrays(
-    ffi.Pointer<element_t1> element,
-  ) {
-    return _element_has_arrays(
-      element,
-    );
-  }
-
-  late final _element_has_arraysPtr =
-      _lookup<ffi.NativeFunction<ffi.Int Function(ffi.Pointer<element_t1>)>>('element_has_arrays');
-  late final _element_has_arrays = _element_has_arraysPtr.asFunction<int Function(ffi.Pointer<element_t1>)>();
-
-  int element_scalar_count(
-    ffi.Pointer<element_t1> element,
-  ) {
-    return _element_scalar_count(
-      element,
-    );
-  }
-
-  late final _element_scalar_countPtr =
-      _lookup<ffi.NativeFunction<ffi.Size Function(ffi.Pointer<element_t1>)>>('element_scalar_count');
-  late final _element_scalar_count = _element_scalar_countPtr.asFunction<int Function(ffi.Pointer<element_t1>)>();
-
-  int element_array_count(
-    ffi.Pointer<element_t1> element,
-  ) {
-    return _element_array_count(
-      element,
-    );
-  }
-
-  late final _element_array_countPtr =
-      _lookup<ffi.NativeFunction<ffi.Size Function(ffi.Pointer<element_t1>)>>('element_array_count');
-  late final _element_array_count = _element_array_countPtr.asFunction<int Function(ffi.Pointer<element_t1>)>();
-
-  ffi.Pointer<ffi.Char> element_to_string(
-    ffi.Pointer<element_t1> element,
-  ) {
-    return _element_to_string(
-      element,
-    );
-  }
-
-  late final _element_to_stringPtr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<element_t1>)>>('element_to_string');
-  late final _element_to_string =
-      _element_to_stringPtr.asFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<element_t1>)>();
-
-  void margaux_string_free(
-    ffi.Pointer<ffi.Char> str,
-  ) {
-    return _margaux_string_free(
-      str,
-    );
-  }
-
-  late final _margaux_string_freePtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Char>)>>('margaux_string_free');
-  late final _margaux_string_free = _margaux_string_freePtr.asFunction<void Function(ffi.Pointer<ffi.Char>)>();
-
   ffi.Pointer<lua_runner_t> lua_runner_new(
     ffi.Pointer<database_t> db,
   ) {
@@ -1465,6 +1464,10 @@ abstract class margaux_error_t {
   static const int MARGAUX_ERROR_NOT_FOUND = -6;
 }
 
+final class element extends ffi.Opaque {}
+
+typedef element_t = element;
+
 abstract class margaux_log_level_t {
   static const int MARGAUX_LOG_DEBUG = 0;
   static const int MARGAUX_LOG_INFO = 1;
@@ -1496,11 +1499,6 @@ abstract class margaux_data_type_t {
 final class database extends ffi.Opaque {}
 
 typedef database_t = database;
-
-final class element extends ffi.Opaque {}
-
-typedef element_t = element;
-typedef element_t1 = element;
 
 final class lua_runner extends ffi.Opaque {}
 
