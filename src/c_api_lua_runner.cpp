@@ -6,10 +6,10 @@
 #include <string>
 
 struct margaux_lua_runner {
-    psr::LuaRunner runner;
+    margaux::LuaRunner runner;
     std::string last_error;
 
-    explicit margaux_lua_runner(psr::Database& db) : runner(db) {}
+    explicit margaux_lua_runner(margaux::Database& db) : runner(db) {}
 };
 
 margaux_lua_runner_t* margaux_lua_runner_new(margaux_t* db) {

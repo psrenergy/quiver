@@ -6,15 +6,15 @@
 
 TEST(Database, SetScalarRelation) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = margaux::LogLevel::off});
 
     // Create parent
-    psr::Element parent;
+    margaux::Element parent;
     parent.set("label", std::string("Parent 1"));
     db.create_element("Parent", parent);
 
     // Create child without relation
-    psr::Element child;
+    margaux::Element child;
     child.set("label", std::string("Child 1"));
     db.create_element("Child", child);
 
@@ -29,14 +29,14 @@ TEST(Database, SetScalarRelation) {
 
 TEST(Database, SetScalarRelationSelfReference) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = margaux::LogLevel::off});
 
     // Create two children
-    psr::Element child1;
+    margaux::Element child1;
     child1.set("label", std::string("Child 1"));
     db.create_element("Child", child1);
 
-    psr::Element child2;
+    margaux::Element child2;
     child2.set("label", std::string("Child 2"));
     db.create_element("Child", child2);
 
@@ -57,19 +57,19 @@ TEST(Database, SetScalarRelationSelfReference) {
 
 TEST(Database, ReadScalarRelationWithNulls) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = margaux::LogLevel::off});
 
     // Create parent
-    psr::Element parent;
+    margaux::Element parent;
     parent.set("label", std::string("Parent 1"));
     db.create_element("Parent", parent);
 
     // Create children without setting parent_id relation
-    psr::Element child1;
+    margaux::Element child1;
     child1.set("label", std::string("Child 1"));
     db.create_element("Child", child1);
 
-    psr::Element child2;
+    margaux::Element child2;
     child2.set("label", std::string("Child 2"));
     db.create_element("Child", child2);
 
@@ -82,19 +82,19 @@ TEST(Database, ReadScalarRelationWithNulls) {
 
 TEST(Database, ReadScalarRelationMixedNullsAndValues) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = margaux::LogLevel::off});
 
     // Create parent
-    psr::Element parent;
+    margaux::Element parent;
     parent.set("label", std::string("Parent 1"));
     db.create_element("Parent", parent);
 
     // Create children
-    psr::Element child1;
+    margaux::Element child1;
     child1.set("label", std::string("Child 1"));
     db.create_element("Child", child1);
 
-    psr::Element child2;
+    margaux::Element child2;
     child2.set("label", std::string("Child 2"));
     db.create_element("Child", child2);
 
@@ -109,7 +109,7 @@ TEST(Database, ReadScalarRelationMixedNullsAndValues) {
 
 TEST(Database, ReadScalarRelationEmpty) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = margaux::LogLevel::off});
 
     // No children created yet
     auto relations = db.read_scalar_relation("Child", "parent_id");
@@ -122,23 +122,23 @@ TEST(Database, ReadScalarRelationEmpty) {
 
 TEST(Database, SetScalarRelationMultipleChildren) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = margaux::LogLevel::off});
 
     // Create parent
-    psr::Element parent;
+    margaux::Element parent;
     parent.set("label", std::string("Parent 1"));
     db.create_element("Parent", parent);
 
     // Create children
-    psr::Element child1;
+    margaux::Element child1;
     child1.set("label", std::string("Child 1"));
     db.create_element("Child", child1);
 
-    psr::Element child2;
+    margaux::Element child2;
     child2.set("label", std::string("Child 2"));
     db.create_element("Child", child2);
 
-    psr::Element child3;
+    margaux::Element child3;
     child3.set("label", std::string("Child 3"));
     db.create_element("Child", child3);
 
@@ -155,19 +155,19 @@ TEST(Database, SetScalarRelationMultipleChildren) {
 
 TEST(Database, SetScalarRelationOverwrite) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = margaux::LogLevel::off});
 
     // Create two parents
-    psr::Element parent1;
+    margaux::Element parent1;
     parent1.set("label", std::string("Parent 1"));
     db.create_element("Parent", parent1);
 
-    psr::Element parent2;
+    margaux::Element parent2;
     parent2.set("label", std::string("Parent 2"));
     db.create_element("Parent", parent2);
 
     // Create child
-    psr::Element child;
+    margaux::Element child;
     child.set("label", std::string("Child 1"));
     db.create_element("Child", child);
 

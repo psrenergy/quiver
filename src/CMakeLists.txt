@@ -57,7 +57,7 @@ set_target_properties(margaux PROPERTIES
 )
 
 # Alias for use in subdirectories
-add_library(psr::database ALIAS margaux)
+add_library(margaux::database ALIAS margaux)
 
 # Installation rules
 include(GNUInstallDirs)
@@ -100,7 +100,7 @@ if(MARGAUX_BUILD_C_API)
         SOVERSION ${PROJECT_VERSION_MAJOR}
     )
 
-    add_library(psr::database_c ALIAS margaux_c)
+    add_library(margaux::database_c ALIAS margaux_c)
 
     install(TARGETS margaux_c
         EXPORT margauxTargets

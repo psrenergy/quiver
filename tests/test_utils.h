@@ -5,7 +5,7 @@
 #include <psr/c/database.h>
 #include <string>
 
-namespace psr::test {
+namespace margaux::test {
 
 // Get path relative to the test file's directory
 // Usage: path_from(__FILE__, "schemas/valid/basic.sql")
@@ -25,7 +25,7 @@ inline margaux_options_t quiet_options() {
 
 // Convenience macros for common schema locations
 // Usage: SCHEMA_PATH("schemas/valid/basic.sql")
-#define SCHEMA_PATH(relative) psr::test::path_from(__FILE__, relative)
+#define SCHEMA_PATH(relative) margaux::test::path_from(__FILE__, relative)
 #define VALID_SCHEMA(name) SCHEMA_PATH("schemas/valid/" name)
 #define INVALID_SCHEMA(name) SCHEMA_PATH("schemas/invalid/" name)
 
