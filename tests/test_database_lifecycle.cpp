@@ -84,19 +84,20 @@ TEST_F(TempFileFixture, CurrentVersion) {
 // ============================================================================
 
 TEST_F(TempFileFixture, FromSchemaFileNotFound) {
-    EXPECT_THROW(
-        margaux::Database::from_schema(":memory:", "nonexistent/path/schema.sql", {.console_level = margaux::LogLevel::off}),
-        std::runtime_error);
+    EXPECT_THROW(margaux::Database::from_schema(
+                     ":memory:", "nonexistent/path/schema.sql", {.console_level = margaux::LogLevel::off}),
+                 std::runtime_error);
 }
 
 TEST_F(TempFileFixture, FromSchemaInvalidPath) {
-    EXPECT_THROW(margaux::Database::from_schema(":memory:", "", {.console_level = margaux::LogLevel::off}), std::runtime_error);
+    EXPECT_THROW(margaux::Database::from_schema(":memory:", "", {.console_level = margaux::LogLevel::off}),
+                 std::runtime_error);
 }
 
 TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
     // Invalid migrations path results in database with version 0 (no migrations applied)
-    auto db =
-        margaux::Database::from_migrations(":memory:", "nonexistent/migrations/", {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_migrations(
+        ":memory:", "nonexistent/migrations/", {.console_level = margaux::LogLevel::off});
     EXPECT_EQ(db.current_version(), 0);
 }
 

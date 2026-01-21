@@ -23,17 +23,17 @@ MARGAUX_C_API psr_error_t psr_element_set_null(psr_element_t* element, const cha
 
 // Array setters - C++ create_element routes these to vector/set tables based on schema
 MARGAUX_C_API psr_error_t psr_element_set_array_integer(psr_element_t* element,
-                                                    const char* name,
-                                                    const int64_t* values,
-                                                    int32_t count);
+                                                        const char* name,
+                                                        const int64_t* values,
+                                                        int32_t count);
 MARGAUX_C_API psr_error_t psr_element_set_array_float(psr_element_t* element,
-                                                  const char* name,
-                                                  const double* values,
-                                                  int32_t count);
+                                                      const char* name,
+                                                      const double* values,
+                                                      int32_t count);
 MARGAUX_C_API psr_error_t psr_element_set_array_string(psr_element_t* element,
-                                                   const char* name,
-                                                   const char* const* values,
-                                                   int32_t count);
+                                                       const char* name,
+                                                       const char* const* values,
+                                                       int32_t count);
 
 // Accessors
 MARGAUX_C_API int psr_element_has_scalars(psr_element_t* element);

@@ -5,7 +5,8 @@
 #include <margaux/element.h>
 
 TEST(Database, CreateElementWithScalars) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     // Create element
     margaux::Element element;
@@ -26,8 +27,8 @@ TEST(Database, CreateElementWithScalars) {
 }
 
 TEST(Database, CreateElementWithVector) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     // Configuration required first
     margaux::Element config;
@@ -58,8 +59,8 @@ TEST(Database, CreateElementWithVector) {
 }
 
 TEST(Database, CreateElementWithVectorGroup) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     // Configuration required first
     margaux::Element config;
@@ -86,8 +87,8 @@ TEST(Database, CreateElementWithVectorGroup) {
 }
 
 TEST(Database, CreateElementWithSetGroup) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     // Configuration required first
     margaux::Element config;
@@ -110,7 +111,8 @@ TEST(Database, CreateElementWithSetGroup) {
 }
 
 TEST(Database, CreateMultipleElements) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     // Create multiple Configuration elements
     margaux::Element e1;
@@ -134,8 +136,8 @@ TEST(Database, CreateMultipleElements) {
 // ============================================================================
 
 TEST(Database, CreateElementSingleElementVector) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
@@ -153,8 +155,8 @@ TEST(Database, CreateElementSingleElementVector) {
 }
 
 TEST(Database, CreateElementSingleElementSet) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
@@ -172,7 +174,8 @@ TEST(Database, CreateElementSingleElementSet) {
 }
 
 TEST(Database, CreateElementInvalidCollection) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element element;
     element.set("label", std::string("Test"));
@@ -181,8 +184,8 @@ TEST(Database, CreateElementInvalidCollection) {
 }
 
 TEST(Database, CreateElementLargeVector) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
@@ -208,8 +211,8 @@ TEST(Database, CreateElementLargeVector) {
 }
 
 TEST(Database, CreateElementWithNoOptionalAttributes) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));

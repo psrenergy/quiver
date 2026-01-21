@@ -10,7 +10,8 @@
 // ============================================================================
 
 TEST(Database, ReadScalarIntegers) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element e1;
     e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
@@ -27,7 +28,8 @@ TEST(Database, ReadScalarIntegers) {
 }
 
 TEST(Database, ReadScalarFloats) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element e1;
     e1.set("label", std::string("Config 1")).set("float_attribute", 3.14);
@@ -44,7 +46,8 @@ TEST(Database, ReadScalarFloats) {
 }
 
 TEST(Database, ReadScalarStrings) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element e1;
     e1.set("label", std::string("Config 1")).set("string_attribute", std::string("hello"));
@@ -61,8 +64,8 @@ TEST(Database, ReadScalarStrings) {
 }
 
 TEST(Database, ReadScalarEmpty) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
@@ -83,8 +86,8 @@ TEST(Database, ReadScalarEmpty) {
 // ============================================================================
 
 TEST(Database, ReadVectorIntegers) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
@@ -105,8 +108,8 @@ TEST(Database, ReadVectorIntegers) {
 }
 
 TEST(Database, ReadVectorFloats) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
@@ -127,8 +130,8 @@ TEST(Database, ReadVectorFloats) {
 }
 
 TEST(Database, ReadVectorEmpty) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
@@ -143,8 +146,8 @@ TEST(Database, ReadVectorEmpty) {
 }
 
 TEST(Database, ReadVectorOnlyReturnsElementsWithData) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
@@ -177,8 +180,8 @@ TEST(Database, ReadVectorOnlyReturnsElementsWithData) {
 // ============================================================================
 
 TEST(Database, ReadSetStrings) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
@@ -204,8 +207,8 @@ TEST(Database, ReadSetStrings) {
 }
 
 TEST(Database, ReadSetEmpty) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
@@ -217,8 +220,8 @@ TEST(Database, ReadSetEmpty) {
 }
 
 TEST(Database, ReadSetOnlyReturnsElementsWithData) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
@@ -249,7 +252,8 @@ TEST(Database, ReadSetOnlyReturnsElementsWithData) {
 // ============================================================================
 
 TEST(Database, ReadScalarIntegerById) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element e1;
     e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
@@ -269,7 +273,8 @@ TEST(Database, ReadScalarIntegerById) {
 }
 
 TEST(Database, ReadScalarFloatById) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element e1;
     e1.set("label", std::string("Config 1")).set("float_attribute", 3.14);
@@ -289,7 +294,8 @@ TEST(Database, ReadScalarFloatById) {
 }
 
 TEST(Database, ReadScalarStringById) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element e1;
     e1.set("label", std::string("Config 1")).set("string_attribute", std::string("hello"));
@@ -309,7 +315,8 @@ TEST(Database, ReadScalarStringById) {
 }
 
 TEST(Database, ReadScalarByIdNotFound) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element e;
     e.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
@@ -325,8 +332,8 @@ TEST(Database, ReadScalarByIdNotFound) {
 // ============================================================================
 
 TEST(Database, ReadVectorIntegerById) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
@@ -348,8 +355,8 @@ TEST(Database, ReadVectorIntegerById) {
 }
 
 TEST(Database, ReadVectorFloatById) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
@@ -371,8 +378,8 @@ TEST(Database, ReadVectorFloatById) {
 }
 
 TEST(Database, ReadVectorByIdEmpty) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
@@ -391,8 +398,8 @@ TEST(Database, ReadVectorByIdEmpty) {
 // ============================================================================
 
 TEST(Database, ReadSetStringById) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
@@ -416,8 +423,8 @@ TEST(Database, ReadSetStringById) {
 }
 
 TEST(Database, ReadSetByIdEmpty) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
@@ -436,7 +443,8 @@ TEST(Database, ReadSetByIdEmpty) {
 // ============================================================================
 
 TEST(Database, ReadElementIds) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element e1;
     e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
@@ -458,8 +466,8 @@ TEST(Database, ReadElementIds) {
 }
 
 TEST(Database, ReadElementIdsEmpty) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
@@ -475,7 +483,8 @@ TEST(Database, ReadElementIdsEmpty) {
 // ============================================================================
 
 TEST(Database, GetAttributeTypeScalarInteger) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     auto attr_type = db.get_attribute_type("Configuration", "integer_attribute");
     EXPECT_EQ(attr_type.data_structure, margaux::DataStructure::Scalar);
@@ -483,7 +492,8 @@ TEST(Database, GetAttributeTypeScalarInteger) {
 }
 
 TEST(Database, GetAttributeTypeScalarReal) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     auto attr_type = db.get_attribute_type("Configuration", "float_attribute");
     EXPECT_EQ(attr_type.data_structure, margaux::DataStructure::Scalar);
@@ -491,7 +501,8 @@ TEST(Database, GetAttributeTypeScalarReal) {
 }
 
 TEST(Database, GetAttributeTypeScalarText) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     auto attr_type = db.get_attribute_type("Configuration", "string_attribute");
     EXPECT_EQ(attr_type.data_structure, margaux::DataStructure::Scalar);
@@ -499,8 +510,8 @@ TEST(Database, GetAttributeTypeScalarText) {
 }
 
 TEST(Database, GetAttributeTypeVectorInteger) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     auto attr_type = db.get_attribute_type("Collection", "value_int");
     EXPECT_EQ(attr_type.data_structure, margaux::DataStructure::Vector);
@@ -508,8 +519,8 @@ TEST(Database, GetAttributeTypeVectorInteger) {
 }
 
 TEST(Database, GetAttributeTypeVectorReal) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     auto attr_type = db.get_attribute_type("Collection", "value_float");
     EXPECT_EQ(attr_type.data_structure, margaux::DataStructure::Vector);
@@ -517,8 +528,8 @@ TEST(Database, GetAttributeTypeVectorReal) {
 }
 
 TEST(Database, GetAttributeTypeSetText) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     auto attr_type = db.get_attribute_type("Collection", "tag");
     EXPECT_EQ(attr_type.data_structure, margaux::DataStructure::Set);
@@ -526,13 +537,15 @@ TEST(Database, GetAttributeTypeSetText) {
 }
 
 TEST(Database, GetAttributeTypeNotFound) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.get_attribute_type("Configuration", "nonexistent"), std::runtime_error);
 }
 
 TEST(Database, GetAttributeTypeCollectionNotFound) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.get_attribute_type("NonexistentCollection", "label"), std::runtime_error);
 }
@@ -542,32 +555,36 @@ TEST(Database, GetAttributeTypeCollectionNotFound) {
 // ============================================================================
 
 TEST(Database, ReadScalarIntegersInvalidCollection) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.read_scalar_integers("NonexistentCollection", "integer_attribute"), std::runtime_error);
 }
 
 TEST(Database, ReadScalarIntegersInvalidAttribute) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.read_scalar_integers("Configuration", "nonexistent_attribute"), std::runtime_error);
 }
 
 TEST(Database, ReadScalarFloatsInvalidCollection) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.read_scalar_floats("NonexistentCollection", "float_attribute"), std::runtime_error);
 }
 
 TEST(Database, ReadScalarStringsInvalidCollection) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.read_scalar_strings("NonexistentCollection", "string_attribute"), std::runtime_error);
 }
 
 TEST(Database, ReadVectorIntegersInvalidCollection) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
@@ -577,8 +594,8 @@ TEST(Database, ReadVectorIntegersInvalidCollection) {
 }
 
 TEST(Database, ReadVectorIntegersInvalidAttribute) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
@@ -588,8 +605,8 @@ TEST(Database, ReadVectorIntegersInvalidAttribute) {
 }
 
 TEST(Database, ReadSetStringsInvalidCollection) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
@@ -599,8 +616,8 @@ TEST(Database, ReadSetStringsInvalidCollection) {
 }
 
 TEST(Database, ReadSetStringsInvalidAttribute) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
@@ -610,20 +627,22 @@ TEST(Database, ReadSetStringsInvalidAttribute) {
 }
 
 TEST(Database, ReadElementIdsInvalidCollection) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.read_element_ids("NonexistentCollection"), std::runtime_error);
 }
 
 TEST(Database, ReadScalarIntegerByIdInvalidCollection) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.read_scalar_integers_by_id("NonexistentCollection", "integer_attribute", 1), std::runtime_error);
 }
 
 TEST(Database, ReadVectorIntegerByIdInvalidCollection) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
@@ -633,8 +652,8 @@ TEST(Database, ReadVectorIntegerByIdInvalidCollection) {
 }
 
 TEST(Database, ReadSetStringsByIdInvalidCollection) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     margaux::Element config;
     config.set("label", std::string("Test Config"));
