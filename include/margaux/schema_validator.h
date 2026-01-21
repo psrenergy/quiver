@@ -9,7 +9,7 @@
 
 namespace margaux {
 
-// Validates that a schema follows PSR conventions:
+// Validates that a schema follows Margaux conventions:
 // - Configuration table exists
 // - Collections have id/label with proper constraints
 // - Vector tables have proper structure and FK constraints
