@@ -30,7 +30,11 @@ typedef enum {
 } psr_data_structure_t;
 
 // Attribute data types
-typedef enum { MARGAUX_DATA_TYPE_INTEGER = 0, MARGAUX_DATA_TYPE_FLOAT = 1, MARGAUX_DATA_TYPE_STRING = 2 } psr_data_type_t;
+typedef enum {
+    MARGAUX_DATA_TYPE_INTEGER = 0,
+    MARGAUX_DATA_TYPE_FLOAT = 1,
+    MARGAUX_DATA_TYPE_STRING = 2
+} psr_data_type_t;
 
 // Returns default options
 MARGAUX_C_API psr_database_options_t psr_database_options_default(void);
