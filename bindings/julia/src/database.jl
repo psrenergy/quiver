@@ -9,7 +9,7 @@ mutable struct Database
 end
 
 function from_schema(db_path, schema_path)
-    options = Ref(C.database_options_t(0, C.DECK_DATABASE_LOG_DEBUG))
+    options = Ref(C.database_options_t(0, C.MARGAUX_LOG_DEBUG))
     ptr = C.database_from_schema(db_path, schema_path, options)
     if ptr == C_NULL
         throw(DatabaseException("Failed to create database from schema '$schema_path'"))
@@ -18,7 +18,7 @@ function from_schema(db_path, schema_path)
 end
 
 function from_migrations(db_path, migrations_path)
-    options = Ref(C.database_options_t(0, C.DECK_DATABASE_LOG_DEBUG))
+    options = Ref(C.database_options_t(0, C.MARGAUX_LOG_DEBUG))
     ptr = C.database_from_migrations(db_path, migrations_path, options)
     if ptr == C_NULL
         throw(DatabaseException("Failed to create database from migrations '$migrations_path'"))

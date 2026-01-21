@@ -3,7 +3,7 @@ function read_scalar_relation(db::Database, collection::String, attribute::Strin
     out_count = Ref{Csize_t}(0)
 
     err = C.database_read_scalar_relation(db.ptr, collection, attribute, out_values, out_count)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to read scalar relation '$attribute' from '$collection'"))
     end
 
@@ -31,7 +31,7 @@ function read_scalar_integers(db::Database, collection::String, attribute::Strin
     out_count = Ref{Csize_t}(0)
 
     err = C.database_read_scalar_integers(db.ptr, collection, attribute, out_values, out_count)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to read scalar integers from '$collection.$attribute'"))
     end
 
@@ -50,7 +50,7 @@ function read_scalar_floats(db::Database, collection::String, attribute::String)
     out_count = Ref{Csize_t}(0)
 
     err = C.database_read_scalar_floats(db.ptr, collection, attribute, out_values, out_count)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to read scalar floats from '$collection.$attribute'"))
     end
 
@@ -69,7 +69,7 @@ function read_scalar_strings(db::Database, collection::String, attribute::String
     out_count = Ref{Csize_t}(0)
 
     err = C.database_read_scalar_strings(db.ptr, collection, attribute, out_values, out_count)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to read scalar strings from '$collection.$attribute'"))
     end
 
@@ -90,7 +90,7 @@ function read_vector_integers(db::Database, collection::String, attribute::Strin
     out_count = Ref{Csize_t}(0)
 
     err = C.database_read_vector_integers(db.ptr, collection, attribute, out_vectors, out_sizes, out_count)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to read vector integers from '$collection.$attribute'"))
     end
 
@@ -119,7 +119,7 @@ function read_vector_floats(db::Database, collection::String, attribute::String)
     out_count = Ref{Csize_t}(0)
 
     err = C.database_read_vector_floats(db.ptr, collection, attribute, out_vectors, out_sizes, out_count)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to read vector floats from '$collection.$attribute'"))
     end
 
@@ -148,7 +148,7 @@ function read_vector_strings(db::Database, collection::String, attribute::String
     out_count = Ref{Csize_t}(0)
 
     err = C.database_read_vector_strings(db.ptr, collection, attribute, out_vectors, out_sizes, out_count)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to read vector strings from '$collection.$attribute'"))
     end
 
@@ -178,7 +178,7 @@ function read_set_integers(db::Database, collection::String, attribute::String)
     out_count = Ref{Csize_t}(0)
 
     err = C.database_read_set_integers(db.ptr, collection, attribute, out_sets, out_sizes, out_count)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to read set integers from '$collection.$attribute'"))
     end
 
@@ -207,7 +207,7 @@ function read_set_floats(db::Database, collection::String, attribute::String)
     out_count = Ref{Csize_t}(0)
 
     err = C.database_read_set_floats(db.ptr, collection, attribute, out_sets, out_sizes, out_count)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to read set floats from '$collection.$attribute'"))
     end
 
@@ -236,7 +236,7 @@ function read_set_strings(db::Database, collection::String, attribute::String)
     out_count = Ref{Csize_t}(0)
 
     err = C.database_read_set_strings(db.ptr, collection, attribute, out_sets, out_sizes, out_count)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to read set strings from '$collection.$attribute'"))
     end
 
@@ -267,7 +267,7 @@ function read_scalar_integers_by_id(db::Database, collection::String, attribute:
     out_has_value = Ref{Cint}(0)
 
     err = C.database_read_scalar_integers_by_id(db.ptr, collection, attribute, id, out_value, out_has_value)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to read scalar integer by id from '$collection.$attribute'"))
     end
 
@@ -282,7 +282,7 @@ function read_scalar_floats_by_id(db::Database, collection::String, attribute::S
     out_has_value = Ref{Cint}(0)
 
     err = C.database_read_scalar_floats_by_id(db.ptr, collection, attribute, id, out_value, out_has_value)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to read scalar float by id from '$collection.$attribute'"))
     end
 
@@ -297,7 +297,7 @@ function read_scalar_strings_by_id(db::Database, collection::String, attribute::
     out_has_value = Ref{Cint}(0)
 
     err = C.database_read_scalar_strings_by_id(db.ptr, collection, attribute, id, out_value, out_has_value)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to read scalar string by id from '$collection.$attribute'"))
     end
 
@@ -316,7 +316,7 @@ function read_vector_integers_by_id(db::Database, collection::String, attribute:
     out_count = Ref{Csize_t}(0)
 
     err = C.database_read_vector_integers_by_id(db.ptr, collection, attribute, id, out_values, out_count)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to read vector integers by id from '$collection.$attribute'"))
     end
 
@@ -335,7 +335,7 @@ function read_vector_floats_by_id(db::Database, collection::String, attribute::S
     out_count = Ref{Csize_t}(0)
 
     err = C.database_read_vector_floats_by_id(db.ptr, collection, attribute, id, out_values, out_count)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to read vector floats by id from '$collection.$attribute'"))
     end
 
@@ -354,7 +354,7 @@ function read_vector_strings_by_id(db::Database, collection::String, attribute::
     out_count = Ref{Csize_t}(0)
 
     err = C.database_read_vector_strings_by_id(db.ptr, collection, attribute, id, out_values, out_count)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to read vector strings by id from '$collection.$attribute'"))
     end
 
@@ -376,7 +376,7 @@ function read_set_integers_by_id(db::Database, collection::String, attribute::St
     out_count = Ref{Csize_t}(0)
 
     err = C.database_read_set_integers_by_id(db.ptr, collection, attribute, id, out_values, out_count)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to read set integers by id from '$collection.$attribute'"))
     end
 
@@ -395,7 +395,7 @@ function read_set_floats_by_id(db::Database, collection::String, attribute::Stri
     out_count = Ref{Csize_t}(0)
 
     err = C.database_read_set_floats_by_id(db.ptr, collection, attribute, id, out_values, out_count)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to read set floats by id from '$collection.$attribute'"))
     end
 
@@ -414,7 +414,7 @@ function read_set_strings_by_id(db::Database, collection::String, attribute::Str
     out_count = Ref{Csize_t}(0)
 
     err = C.database_read_set_strings_by_id(db.ptr, collection, attribute, id, out_values, out_count)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to read set strings by id from '$collection.$attribute'"))
     end
 
@@ -434,7 +434,7 @@ function read_element_ids(db::Database, collection::String)
     out_count = Ref{Csize_t}(0)
 
     err = C.database_read_element_ids(db.ptr, collection, out_ids, out_count)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to read element ids from '$collection'"))
     end
 
@@ -449,11 +449,11 @@ function read_element_ids(db::Database, collection::String)
 end
 
 function get_attribute_type(db::Database, collection::String, attribute::String)
-    out_data_structure = Ref{C.margaux_data_structure_t}(C.DECK_DATABASE_DATA_STRUCTURE_SCALAR)
-    out_data_type = Ref{C.margaux_data_type_t}(C.DECK_DATABASE_DATA_TYPE_INTEGER)
+    out_data_structure = Ref{C.margaux_data_structure_t}(C.MARGAUX_DATA_STRUCTURE_SCALAR)
+    out_data_type = Ref{C.margaux_data_type_t}(C.MARGAUX_DATA_TYPE_INTEGER)
 
     err = C.database_get_attribute_type(db.ptr, collection, attribute, out_data_structure, out_data_type)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to get attribute type for '$collection.$attribute'"))
     end
 
@@ -463,32 +463,32 @@ end
 function read(db::Database, collection::String, attribute::String)
     attribute_type = get_attribute_type(db, collection, attribute)
 
-    if attribute_type.data_structure == C.DECK_DATABASE_DATA_STRUCTURE_SCALAR
-        if attribute_type.data_type == C.DECK_DATABASE_DATA_TYPE_INTEGER
+    if attribute_type.data_structure == C.MARGAUX_DATA_STRUCTURE_SCALAR
+        if attribute_type.data_type == C.MARGAUX_DATA_TYPE_INTEGER
             return read_scalar_integers(db, collection, attribute)
-        elseif attribute_type.data_type == C.DECK_DATABASE_DATA_TYPE_FLOAT
+        elseif attribute_type.data_type == C.MARGAUX_DATA_TYPE_FLOAT
             return read_scalar_floats(db, collection, attribute)
-        elseif attribute_type.data_type == C.DECK_DATABASE_DATA_TYPE_STRING
+        elseif attribute_type.data_type == C.MARGAUX_DATA_TYPE_STRING
             return read_scalar_strings(db, collection, attribute)
         else
             throw(DatabaseException("Unsupported data type for '$collection.$attribute'"))
         end
-    elseif attribute_type.data_structure == C.DECK_DATABASE_DATA_STRUCTURE_VECTOR
-        if attribute_type.data_type == C.DECK_DATABASE_DATA_TYPE_INTEGER
+    elseif attribute_type.data_structure == C.MARGAUX_DATA_STRUCTURE_VECTOR
+        if attribute_type.data_type == C.MARGAUX_DATA_TYPE_INTEGER
             return read_vector_integers(db, collection, attribute)
-        elseif attribute_type.data_type == C.DECK_DATABASE_DATA_TYPE_FLOAT
+        elseif attribute_type.data_type == C.MARGAUX_DATA_TYPE_FLOAT
             return read_vector_floats(db, collection, attribute)
-        elseif attribute_type.data_type == C.DECK_DATABASE_DATA_TYPE_STRING
+        elseif attribute_type.data_type == C.MARGAUX_DATA_TYPE_STRING
             return read_vector_strings(db, collection, attribute)
         else
             throw(DatabaseException("Unsupported data type for '$collection.$attribute'"))
         end
-    elseif attribute_type.data_structure == C.DECK_DATABASE_DATA_STRUCTURE_SET
-        if attribute_type.data_type == C.DECK_DATABASE_DATA_TYPE_INTEGER
+    elseif attribute_type.data_structure == C.MARGAUX_DATA_STRUCTURE_SET
+        if attribute_type.data_type == C.MARGAUX_DATA_TYPE_INTEGER
             return read_set_integers(db, collection, attribute)
-        elseif attribute_type.data_type == C.DECK_DATABASE_DATA_TYPE_FLOAT
+        elseif attribute_type.data_type == C.MARGAUX_DATA_TYPE_FLOAT
             return read_set_floats(db, collection, attribute)
-        elseif attribute_type.data_type == C.DECK_DATABASE_DATA_TYPE_STRING
+        elseif attribute_type.data_type == C.MARGAUX_DATA_TYPE_STRING
             return read_set_strings(db, collection, attribute)
         else
             throw(DatabaseException("Unsupported data type for '$collection.$attribute'"))
@@ -501,32 +501,32 @@ end
 function read_by_id(db::Database, collection::String, attribute::String, id::Int64)
     attribute_type = get_attribute_type(db, collection, attribute)
 
-    if attribute_type.data_structure == C.DECK_DATABASE_DATA_STRUCTURE_SCALAR
-        if attribute_type.data_type == C.DECK_DATABASE_DATA_TYPE_INTEGER
+    if attribute_type.data_structure == C.MARGAUX_DATA_STRUCTURE_SCALAR
+        if attribute_type.data_type == C.MARGAUX_DATA_TYPE_INTEGER
             return read_scalar_integers_by_id(db, collection, attribute, id)
-        elseif attribute_type.data_type == C.DECK_DATABASE_DATA_TYPE_FLOAT
+        elseif attribute_type.data_type == C.MARGAUX_DATA_TYPE_FLOAT
             return read_scalar_floats_by_id(db, collection, attribute, id)
-        elseif attribute_type.data_type == C.DECK_DATABASE_DATA_TYPE_STRING
+        elseif attribute_type.data_type == C.MARGAUX_DATA_TYPE_STRING
             return read_scalar_strings_by_id(db, collection, attribute, id)
         else
             throw(DatabaseException("Unsupported data type for '$collection.$attribute'"))
         end
-    elseif attribute_type.data_structure == C.DECK_DATABASE_DATA_STRUCTURE_VECTOR
-        if attribute_type.data_type == C.DECK_DATABASE_DATA_TYPE_INTEGER
+    elseif attribute_type.data_structure == C.MARGAUX_DATA_STRUCTURE_VECTOR
+        if attribute_type.data_type == C.MARGAUX_DATA_TYPE_INTEGER
             return read_vector_integers_by_id(db, collection, attribute, id)
-        elseif attribute_type.data_type == C.DECK_DATABASE_DATA_TYPE_FLOAT
+        elseif attribute_type.data_type == C.MARGAUX_DATA_TYPE_FLOAT
             return read_vector_floats_by_id(db, collection, attribute, id)
-        elseif attribute_type.data_type == C.DECK_DATABASE_DATA_TYPE_STRING
+        elseif attribute_type.data_type == C.MARGAUX_DATA_TYPE_STRING
             return read_vector_strings_by_id(db, collection, attribute, id)
         else
             throw(DatabaseException("Unsupported data type for '$collection.$attribute'"))
         end
-    elseif attribute_type.data_structure == C.DECK_DATABASE_DATA_STRUCTURE_SET
-        if attribute_type.data_type == C.DECK_DATABASE_DATA_TYPE_INTEGER
+    elseif attribute_type.data_structure == C.MARGAUX_DATA_STRUCTURE_SET
+        if attribute_type.data_type == C.MARGAUX_DATA_TYPE_INTEGER
             return read_set_integers_by_id(db, collection, attribute, id)
-        elseif attribute_type.data_type == C.DECK_DATABASE_DATA_TYPE_FLOAT
+        elseif attribute_type.data_type == C.MARGAUX_DATA_TYPE_FLOAT
             return read_set_floats_by_id(db, collection, attribute, id)
-        elseif attribute_type.data_type == C.DECK_DATABASE_DATA_TYPE_STRING
+        elseif attribute_type.data_type == C.MARGAUX_DATA_TYPE_STRING
             return read_set_strings_by_id(db, collection, attribute, id)
         else
             throw(DatabaseException("Unsupported data type for '$collection.$attribute'"))

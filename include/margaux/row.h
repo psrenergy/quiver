@@ -1,5 +1,5 @@
-#ifndef DECK_DATABASE_ROW_H
-#define DECK_DATABASE_ROW_H
+#ifndef MARGAUX_ROW_H
+#define MARGAUX_ROW_H
 
 #include "export.h"
 #include "value.h"
@@ -9,7 +9,7 @@
 
 namespace margaux {
 
-class DECK_DATABASE_API Row {
+class MARGAUX_API Row {
 public:
     explicit Row(std::vector<Value> values);
 
@@ -36,4 +36,4 @@ private:
 
 }  // namespace margaux
 
-#endif  // DECK_DATABASE_ROW_H
+#endif  // MARGAUX_ROW_H

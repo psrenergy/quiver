@@ -21,7 +21,7 @@ end
 function Base.setindex!(el::Element, value::Integer, name::String)
     cname = Base.cconvert(Cstring, name)
     err = C.element_set_integer(el.ptr, cname, Int64(value))
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         error("Failed to set int value for '$name'")
     end
 end
@@ -29,7 +29,7 @@ end
 function Base.setindex!(el::Element, value::Real, name::String)
     cname = Base.cconvert(Cstring, name)
     err = C.element_set_float(el.ptr, cname, Float64(value))
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         error("Failed to set float value for '$name'")
     end
 end
@@ -38,7 +38,7 @@ function Base.setindex!(el::Element, value::String, name::String)
     cname = Base.cconvert(Cstring, name)
     cvalue = Base.cconvert(Cstring, value)
     err = C.element_set_string(el.ptr, cname, cvalue)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         error("Failed to set string value for '$name'")
     end
 end
@@ -47,7 +47,7 @@ function Base.setindex!(el::Element, value::Vector{<:Integer}, name::String)
     cname = Base.cconvert(Cstring, name)
     integer_values = Int64[Int64(v) for v in value]
     err = C.element_set_array_integer(el.ptr, cname, integer_values, Int32(length(integer_values)))
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         error("Failed to set array<int> value for '$name'")
     end
 end
@@ -56,7 +56,7 @@ function Base.setindex!(el::Element, value::Vector{<:Real}, name::String)
     cname = Base.cconvert(Cstring, name)
     float_values = Float64[Float64(v) for v in value]
     err = C.element_set_array_float(el.ptr, cname, float_values, Int32(length(value)))
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         error("Failed to set array<float> value for '$name'")
     end
 end
@@ -69,7 +69,7 @@ function Base.setindex!(el::Element, value::Vector{<:AbstractString}, name::Stri
     GC.@preserve cstrings begin
         err = C.element_set_array_string(el.ptr, cname, ptrs, Int32(length(value)))
     end
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         error("Failed to set array<string> value for '$name'")
     end
 end

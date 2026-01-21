@@ -28,13 +28,13 @@ const libmargaux_c = joinpath(@__DIR__, "..", "..", "..", "build", library_dir()
 
 
 @cenum margaux_error_t::Int32 begin
-    DECK_DATABASE_OK = 0
-    DECK_DATABASE_ERROR_INVALID_ARGUMENT = -1
-    DECK_DATABASE_ERROR_DATABASE = -2
-    DECK_DATABASE_ERROR_MIGRATION = -3
-    DECK_DATABASE_ERROR_SCHEMA = -4
-    DECK_DATABASE_ERROR_CREATE_ELEMENT = -5
-    DECK_DATABASE_ERROR_NOT_FOUND = -6
+    MARGAUX_OK = 0
+    MARGAUX_ERROR_INVALID_ARGUMENT = -1
+    MARGAUX_ERROR_DATABASE = -2
+    MARGAUX_ERROR_MIGRATION = -3
+    MARGAUX_ERROR_SCHEMA = -4
+    MARGAUX_ERROR_CREATE_ELEMENT = -5
+    MARGAUX_ERROR_NOT_FOUND = -6
 end
 
 function margaux_error_string(error)
@@ -114,11 +114,11 @@ function margaux_string_free(str)
 end
 
 @cenum margaux_log_level_t::UInt32 begin
-    DECK_DATABASE_LOG_DEBUG = 0
-    DECK_DATABASE_LOG_INFO = 1
-    DECK_DATABASE_LOG_WARN = 2
-    DECK_DATABASE_LOG_ERROR = 3
-    DECK_DATABASE_LOG_OFF = 4
+    MARGAUX_LOG_DEBUG = 0
+    MARGAUX_LOG_INFO = 1
+    MARGAUX_LOG_WARN = 2
+    MARGAUX_LOG_ERROR = 3
+    MARGAUX_LOG_OFF = 4
 end
 
 struct database_options_t
@@ -127,15 +127,15 @@ struct database_options_t
 end
 
 @cenum margaux_data_structure_t::UInt32 begin
-    DECK_DATABASE_DATA_STRUCTURE_SCALAR = 0
-    DECK_DATABASE_DATA_STRUCTURE_VECTOR = 1
-    DECK_DATABASE_DATA_STRUCTURE_SET = 2
+    MARGAUX_DATA_STRUCTURE_SCALAR = 0
+    MARGAUX_DATA_STRUCTURE_VECTOR = 1
+    MARGAUX_DATA_STRUCTURE_SET = 2
 end
 
 @cenum margaux_data_type_t::UInt32 begin
-    DECK_DATABASE_DATA_TYPE_INTEGER = 0
-    DECK_DATABASE_DATA_TYPE_FLOAT = 1
-    DECK_DATABASE_DATA_TYPE_STRING = 2
+    MARGAUX_DATA_TYPE_INTEGER = 0
+    MARGAUX_DATA_TYPE_FLOAT = 1
+    MARGAUX_DATA_TYPE_STRING = 2
 end
 
 function database_options_default()

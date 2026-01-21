@@ -37,7 +37,7 @@ gtest_discover_tests(margaux_tests
 )
 
 # C API tests
-if(DECK_DATABASE_BUILD_C_API)
+if(MARGAUX_BUILD_C_API)
     add_executable(margaux_c_tests
         test_c_api_database_create.cpp
         test_c_api_database_delete.cpp

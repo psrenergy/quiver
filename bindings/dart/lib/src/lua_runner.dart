@@ -43,7 +43,7 @@ class LuaRunner {
         script.toNativeUtf8(allocator: arena).cast(),
       );
 
-      if (err != margaux_error_t.DECK_DATABASE_OK) {
+      if (err != margaux_error_t.MARGAUX_OK) {
         final errorPtr = bindings.lua_runner_get_error(_ptr);
         if (errorPtr != nullptr) {
           final errorMsg = errorPtr.cast<Utf8>().toDartString();

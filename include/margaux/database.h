@@ -1,5 +1,5 @@
-#ifndef DECK_DATABASE_DATABASE_H
-#define DECK_DATABASE_DATABASE_H
+#ifndef MARGAUX_DATABASE_H
+#define MARGAUX_DATABASE_H
 
 #include "export.h"
 #include "margaux/attribute_type.h"
@@ -14,12 +14,12 @@
 
 namespace margaux {
 
-struct DECK_DATABASE_API DatabaseOptions {
+struct MARGAUX_API DatabaseOptions {
     bool read_only = false;
     LogLevel console_level = LogLevel::info;
 };
 
-class DECK_DATABASE_API Database {
+class MARGAUX_API Database {
 public:
     explicit Database(const std::string& path, const DatabaseOptions& options = DatabaseOptions());
     ~Database();
@@ -160,4 +160,4 @@ private:
 
 }  // namespace margaux
 
-#endif  // DECK_DATABASE_DATABASE_H
+#endif  // MARGAUX_DATABASE_H

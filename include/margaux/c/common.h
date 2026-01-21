@@ -1,5 +1,5 @@
-#ifndef DECK_DATABASE_C_COMMON_H
-#define DECK_DATABASE_C_COMMON_H
+#ifndef MARGAUX_C_COMMON_H
+#define MARGAUX_C_COMMON_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -10,32 +10,32 @@ extern "C" {
 
 // Platform-specific export macros
 #ifdef _WIN32
-#ifdef DECK_DATABASE_DATABASE_C_EXPORTS
-#define DECK_DATABASE_C_API __declspec(dllexport)
+#ifdef MARGAUX_DATABASE_C_EXPORTS
+#define MARGAUX_C_API __declspec(dllexport)
 #else
-#define DECK_DATABASE_C_API __declspec(dllimport)
+#define MARGAUX_C_API __declspec(dllimport)
 #endif
 #else
-#define DECK_DATABASE_C_API __attribute__((visibility("default")))
+#define MARGAUX_C_API __attribute__((visibility("default")))
 #endif
 
 // Error codes
 typedef enum {
-    DECK_DATABASE_OK = 0,
-    DECK_DATABASE_ERROR_INVALID_ARGUMENT = -1,
-    DECK_DATABASE_ERROR_DATABASE = -2,
-    DECK_DATABASE_ERROR_MIGRATION = -3,
-    DECK_DATABASE_ERROR_SCHEMA = -4,
-    DECK_DATABASE_ERROR_CREATE_ELEMENT = -5,
-    DECK_DATABASE_ERROR_NOT_FOUND = -6,
+    MARGAUX_OK = 0,
+    MARGAUX_ERROR_INVALID_ARGUMENT = -1,
+    MARGAUX_ERROR_DATABASE = -2,
+    MARGAUX_ERROR_MIGRATION = -3,
+    MARGAUX_ERROR_SCHEMA = -4,
+    MARGAUX_ERROR_CREATE_ELEMENT = -5,
+    MARGAUX_ERROR_NOT_FOUND = -6,
 } margaux_error_t;
 
 // Utility functions
-DECK_DATABASE_C_API const char* margaux_error_string(margaux_error_t error);
-DECK_DATABASE_C_API const char* margaux_version(void);
+MARGAUX_C_API const char* margaux_error_string(margaux_error_t error);
+MARGAUX_C_API const char* margaux_version(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // DECK_DATABASE_C_COMMON_H
+#endif  // MARGAUX_C_COMMON_H

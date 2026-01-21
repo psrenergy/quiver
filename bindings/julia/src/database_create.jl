@@ -26,7 +26,7 @@ function set_scalar_relation!(
     to_label::String,
 )
     err = C.database_set_scalar_relation(db.ptr, collection, attribute, from_label, to_label)
-    if err != C.DECK_DATABASE_OK
+    if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to set scalar relation '$attribute' in '$collection'"))
     end
     return nothing
