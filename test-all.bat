@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 REM ============================================================
-REM Test All - PSR Database
+REM Test All - Margaux
 REM ============================================================
 REM Runs all tests (assumes already built):
 REM   - C++ unit tests
@@ -15,7 +15,7 @@ SET ROOT_DIR=%~dp0
 
 echo.
 echo ============================================================
-echo  PSR Database - Test All
+echo  Margaux - Test All
 echo ============================================================
 echo.
 
