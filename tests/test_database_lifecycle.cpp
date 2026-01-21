@@ -1,8 +1,8 @@
 #include <filesystem>
 #include <gtest/gtest.h>
-#include <psr/database.h>
-#include <psr/migration.h>
-#include <psr/migrations.h>
+#include <margaux/database.h>
+#include <margaux/migration.h>
+#include <margaux/migrations.h>
 #include <string>
 
 namespace fs = std::filesystem;

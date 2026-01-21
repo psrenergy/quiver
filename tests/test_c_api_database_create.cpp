@@ -1,8 +1,8 @@
 #include "test_utils.h"
 
 #include <gtest/gtest.h>
-#include <psr/c/database.h>
-#include <psr/c/element.h>
+#include <margaux/c/database.h>
+#include <margaux/c/element.h>
 
 TEST(DatabaseCApi, CreateElementWithScalars) {
     // Test: Use C API to create element with schema

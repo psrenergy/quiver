@@ -1,7 +1,7 @@
 #include "test_utils.h"
 
 #include <gtest/gtest.h>
-#include <psr/database.h>
+#include <margaux/database.h>
 
 class SchemaValidatorFixture : public ::testing::Test {
 protected:
