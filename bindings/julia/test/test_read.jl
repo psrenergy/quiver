@@ -368,8 +368,8 @@ include("fixture.jl")
         db = PSRDatabase.from_schema(":memory:", path_schema)
 
         result = PSRDatabase.get_attribute_type(db, "Configuration", "integer_attribute")
-        @test result.data_structure == PSRDatabase.PSR_DATA_STRUCTURE_SCALAR
-        @test result.data_type == PSRDatabase.PSR_DATA_TYPE_INTEGER
+        @test result.data_structure == PSRDatabase.MARGAUX_DATA_STRUCTURE_SCALAR
+        @test result.data_type == PSRDatabase.MARGAUX_DATA_TYPE_INTEGER
 
         PSRDatabase.close!(db)
     end
@@ -379,8 +379,8 @@ include("fixture.jl")
         db = PSRDatabase.from_schema(":memory:", path_schema)
 
         result = PSRDatabase.get_attribute_type(db, "Configuration", "float_attribute")
-        @test result.data_structure == PSRDatabase.PSR_DATA_STRUCTURE_SCALAR
-        @test result.data_type == PSRDatabase.PSR_DATA_TYPE_FLOAT
+        @test result.data_structure == PSRDatabase.MARGAUX_DATA_STRUCTURE_SCALAR
+        @test result.data_type == PSRDatabase.MARGAUX_DATA_TYPE_FLOAT
 
         PSRDatabase.close!(db)
     end
@@ -390,8 +390,8 @@ include("fixture.jl")
         db = PSRDatabase.from_schema(":memory:", path_schema)
 
         result = PSRDatabase.get_attribute_type(db, "Configuration", "string_attribute")
-        @test result.data_structure == PSRDatabase.PSR_DATA_STRUCTURE_SCALAR
-        @test result.data_type == PSRDatabase.PSR_DATA_TYPE_STRING
+        @test result.data_structure == PSRDatabase.MARGAUX_DATA_STRUCTURE_SCALAR
+        @test result.data_type == PSRDatabase.MARGAUX_DATA_TYPE_STRING
 
         PSRDatabase.close!(db)
     end
@@ -401,8 +401,8 @@ include("fixture.jl")
         db = PSRDatabase.from_schema(":memory:", path_schema)
 
         result = PSRDatabase.get_attribute_type(db, "Collection", "value_int")
-        @test result.data_structure == PSRDatabase.PSR_DATA_STRUCTURE_VECTOR
-        @test result.data_type == PSRDatabase.PSR_DATA_TYPE_INTEGER
+        @test result.data_structure == PSRDatabase.MARGAUX_DATA_STRUCTURE_VECTOR
+        @test result.data_type == PSRDatabase.MARGAUX_DATA_TYPE_INTEGER
 
         PSRDatabase.close!(db)
     end
@@ -412,8 +412,8 @@ include("fixture.jl")
         db = PSRDatabase.from_schema(":memory:", path_schema)
 
         result = PSRDatabase.get_attribute_type(db, "Collection", "value_float")
-        @test result.data_structure == PSRDatabase.PSR_DATA_STRUCTURE_VECTOR
-        @test result.data_type == PSRDatabase.PSR_DATA_TYPE_FLOAT
+        @test result.data_structure == PSRDatabase.MARGAUX_DATA_STRUCTURE_VECTOR
+        @test result.data_type == PSRDatabase.MARGAUX_DATA_TYPE_FLOAT
 
         PSRDatabase.close!(db)
     end
@@ -423,8 +423,8 @@ include("fixture.jl")
         db = PSRDatabase.from_schema(":memory:", path_schema)
 
         result = PSRDatabase.get_attribute_type(db, "Collection", "tag")
-        @test result.data_structure == PSRDatabase.PSR_DATA_STRUCTURE_SET
-        @test result.data_type == PSRDatabase.PSR_DATA_TYPE_STRING
+        @test result.data_structure == PSRDatabase.MARGAUX_DATA_STRUCTURE_SET
+        @test result.data_type == PSRDatabase.MARGAUX_DATA_TYPE_STRING
 
         PSRDatabase.close!(db)
     end

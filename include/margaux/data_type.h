@@ -1,5 +1,5 @@
-#ifndef PSR_DATA_TYPE_H
-#define PSR_DATA_TYPE_H
+#ifndef MARGAUX_DATA_TYPE_H
+#define MARGAUX_DATA_TYPE_H
 
 #include <stdexcept>
 #include <string>
@@ -32,4 +32,4 @@ inline const char* data_type_to_string(DataType type) {
 
 }  // namespace psr
 
-#endif  // PSR_DATA_TYPE_H
+#endif  // MARGAUX_DATA_TYPE_H

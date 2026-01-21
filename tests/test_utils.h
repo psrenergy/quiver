@@ -1,5 +1,5 @@
-#ifndef PSR_TEST_UTILS_H
-#define PSR_TEST_UTILS_H
+#ifndef MARGAUX_TEST_UTILS_H
+#define MARGAUX_TEST_UTILS_H
 
 #include <filesystem>
 #include <psr/c/database.h>
@@ -17,7 +17,7 @@ inline std::string path_from(const char* test_file, const std::string& relative)
 // Default options with logging off for tests
 inline margaux_options_t quiet_options() {
     auto options = margaux_options_default();
-    options.console_level = PSR_LOG_OFF;
+    options.console_level = MARGAUX_LOG_OFF;
     return options;
 }
 
@@ -29,4 +29,4 @@ inline margaux_options_t quiet_options() {
 #define VALID_SCHEMA(name) SCHEMA_PATH("schemas/valid/" name)
 #define INVALID_SCHEMA(name) SCHEMA_PATH("schemas/invalid/" name)
 
-#endif  // PSR_TEST_UTILS_H
+#endif  // MARGAUX_TEST_UTILS_H

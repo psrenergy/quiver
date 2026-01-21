@@ -1,5 +1,5 @@
 # Core library sources
-set(PSR_SOURCES
+set(MARGAUX_SOURCES
     database.cpp
     element.cpp
     lua_runner.cpp
@@ -13,12 +13,12 @@ set(PSR_SOURCES
 )
 
 # Build type
-if(PSR_BUILD_SHARED)
-    add_library(margaux SHARED ${PSR_SOURCES})
-    target_compile_definitions(margaux PRIVATE PSR_DATABASE_EXPORTS)
+if(MARGAUX_BUILD_SHARED)
+    add_library(margaux SHARED ${MARGAUX_SOURCES})
+    target_compile_definitions(margaux PRIVATE MARGAUX_DATABASE_EXPORTS)
 else()
-    add_library(margaux STATIC ${PSR_SOURCES})
-    target_compile_definitions(margaux PUBLIC PSR_DATABASE_STATIC)
+    add_library(margaux STATIC ${MARGAUX_SOURCES})
+    target_compile_definitions(margaux PUBLIC MARGAUX_DATABASE_STATIC)
 endif()
 
 # Include directories
@@ -72,7 +72,7 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/psr
 )
 
 # C API wrapper (optional)
-if(PSR_BUILD_C_API)
+if(MARGAUX_BUILD_C_API)
     add_library(margaux_c SHARED
         c_api_common.cpp
         c_api_database.cpp
@@ -81,8 +81,8 @@ if(PSR_BUILD_C_API)
     )
 
     target_compile_definitions(margaux_c PRIVATE
-        PSR_DATABASE_C_EXPORTS
-        PSR_VERSION="${PROJECT_VERSION}"
+        MARGAUX_DATABASE_C_EXPORTS
+        MARGAUX_VERSION="${PROJECT_VERSION}"
     )
 
     target_include_directories(margaux_c PUBLIC

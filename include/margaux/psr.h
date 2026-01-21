@@ -1,8 +1,8 @@
-#ifndef PSR_H
-#define PSR_H
+#ifndef MARGAUX_H
+#define MARGAUX_H
 
 #include "database.h"
 #include "element.h"
 #include "export.h"
 
-#endif  // PSR_H
+#endif  // MARGAUX_H

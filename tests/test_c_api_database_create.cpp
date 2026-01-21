@@ -7,7 +7,7 @@
 TEST(DatabaseCApi, CreateElementWithScalars) {
     // Test: Use C API to create element with schema
     auto options = margaux_options_default();
-    options.console_level = PSR_LOG_OFF;
+    options.console_level = MARGAUX_LOG_OFF;
     auto db = margaux_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -27,7 +27,7 @@ TEST(DatabaseCApi, CreateElementWithScalars) {
 TEST(DatabaseCApi, CreateElementWithVector) {
     // Test: Use C API to create element with array using schema
     auto options = margaux_options_default();
-    options.console_level = PSR_LOG_OFF;
+    options.console_level = MARGAUX_LOG_OFF;
     auto db = margaux_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -66,7 +66,7 @@ TEST(DatabaseCApi, CreateElementNullDb) {
 
 TEST(DatabaseCApi, CreateElementNullCollection) {
     auto options = margaux_options_default();
-    options.console_level = PSR_LOG_OFF;
+    options.console_level = MARGAUX_LOG_OFF;
     auto db = margaux_open(":memory:", &options);
     ASSERT_NE(db, nullptr);
 
@@ -83,7 +83,7 @@ TEST(DatabaseCApi, CreateElementNullCollection) {
 
 TEST(DatabaseCApi, CreateElementNullElement) {
     auto options = margaux_options_default();
-    options.console_level = PSR_LOG_OFF;
+    options.console_level = MARGAUX_LOG_OFF;
     auto db = margaux_open(":memory:", &options);
     ASSERT_NE(db, nullptr);
 

@@ -1,5 +1,5 @@
-#ifndef PSR_ROW_H
-#define PSR_ROW_H
+#ifndef MARGAUX_ROW_H
+#define MARGAUX_ROW_H
 
 #include "export.h"
 #include "value.h"
@@ -9,7 +9,7 @@
 
 namespace psr {
 
-class PSR_API Row {
+class MARGAUX_API Row {
 public:
     explicit Row(std::vector<Value> values);
 
@@ -36,4 +36,4 @@ private:
 
 }  // namespace psr
 
-#endif  // PSR_ROW_H
+#endif  // MARGAUX_ROW_H

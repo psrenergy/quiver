@@ -1,5 +1,5 @@
-#ifndef PSR_ELEMENT_H
-#define PSR_ELEMENT_H
+#ifndef MARGAUX_ELEMENT_H
+#define MARGAUX_ELEMENT_H
 
 #include "export.h"
 #include "value.h"
@@ -10,7 +10,7 @@
 
 namespace psr {
 
-class PSR_API Element {
+class MARGAUX_API Element {
 public:
     Element() = default;
 
@@ -44,4 +44,4 @@ private:
 
 }  // namespace psr
 
-#endif  // PSR_ELEMENT_H
+#endif  // MARGAUX_ELEMENT_H

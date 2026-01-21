@@ -1,5 +1,5 @@
-#ifndef PSR_SCHEMA_H
-#define PSR_SCHEMA_H
+#ifndef MARGAUX_SCHEMA_H
+#define MARGAUX_SCHEMA_H
 
 #include "data_type.h"
 #include "export.h"
@@ -45,7 +45,7 @@ struct TableDefinition {
     const ColumnDefinition* get_column(const std::string& column) const;
 };
 
-class PSR_API Schema {
+class MARGAUX_API Schema {
 public:
     // Factory: loads schema from database
     static Schema from_database(sqlite3* db);
@@ -88,4 +88,4 @@ private:
 
 }  // namespace psr
 
-#endif  // PSR_SCHEMA_H
+#endif  // MARGAUX_SCHEMA_H

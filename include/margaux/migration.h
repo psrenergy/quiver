@@ -1,5 +1,5 @@
-#ifndef PSR_MIGRATION_H
-#define PSR_MIGRATION_H
+#ifndef MARGAUX_MIGRATION_H
+#define MARGAUX_MIGRATION_H
 
 #include "export.h"
 
@@ -8,7 +8,7 @@
 
 namespace psr {
 
-class PSR_API Migration {
+class MARGAUX_API Migration {
 public:
     Migration(int64_t version, const std::string& path);
     ~Migration();
@@ -42,4 +42,4 @@ private:
 
 }  // namespace psr
 
-#endif  // PSR_MIGRATION_H
+#endif  // MARGAUX_MIGRATION_H

@@ -1,5 +1,5 @@
-#ifndef PSR_SCHEMA_VALIDATOR_H
-#define PSR_SCHEMA_VALIDATOR_H
+#ifndef MARGAUX_SCHEMA_VALIDATOR_H
+#define MARGAUX_SCHEMA_VALIDATOR_H
 
 #include "export.h"
 #include "schema.h"
@@ -15,7 +15,7 @@ namespace psr {
 // - Vector tables have proper structure and FK constraints
 // - Set tables have proper UNIQUE constraints
 // - No duplicate attributes across collection and its vector tables
-class PSR_API SchemaValidator {
+class MARGAUX_API SchemaValidator {
 public:
     explicit SchemaValidator(const Schema& schema);
 
@@ -41,4 +41,4 @@ private:
 
 }  // namespace psr
 
-#endif  // PSR_SCHEMA_VALIDATOR_H
+#endif  // MARGAUX_SCHEMA_VALIDATOR_H

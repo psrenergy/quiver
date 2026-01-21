@@ -1,5 +1,5 @@
-#ifndef PSR_LUA_RUNNER_H
-#define PSR_LUA_RUNNER_H
+#ifndef MARGAUX_LUA_RUNNER_H
+#define MARGAUX_LUA_RUNNER_H
 
 #include "export.h"
 
@@ -10,7 +10,7 @@ namespace psr {
 
 class Database;
 
-class PSR_API LuaRunner {
+class MARGAUX_API LuaRunner {
 public:
     explicit LuaRunner(Database& db);
     ~LuaRunner();
@@ -33,4 +33,4 @@ private:
 
 }  // namespace psr
 
-#endif  // PSR_LUA_RUNNER_H
+#endif  // MARGAUX_LUA_RUNNER_H

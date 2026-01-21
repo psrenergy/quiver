@@ -6,7 +6,7 @@
 
 TEST(DatabaseCApi, DeleteElementById) {
     auto options = margaux_options_default();
-    options.console_level = PSR_LOG_OFF;
+    options.console_level = MARGAUX_LOG_OFF;
     auto db = margaux_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -20,17 +20,17 @@ TEST(DatabaseCApi, DeleteElementById) {
     int64_t* ids = nullptr;
     size_t count = 0;
     auto err = margaux_read_element_ids(db, "Configuration", &ids, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 1);
     margaux_free_integer_array(ids);
 
     // Delete element
     err = margaux_delete_element_by_id(db, "Configuration", id);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     // Verify element is gone
     err = margaux_read_element_ids(db, "Configuration", &ids, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 0);
     EXPECT_EQ(ids, nullptr);
 
@@ -39,7 +39,7 @@ TEST(DatabaseCApi, DeleteElementById) {
 
 TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
     auto options = margaux_options_default();
-    options.console_level = PSR_LOG_OFF;
+    options.console_level = MARGAUX_LOG_OFF;
     auto db = margaux_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -59,19 +59,19 @@ TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
     int64_t* vec_values = nullptr;
     size_t vec_count = 0;
     auto err = margaux_read_vector_integers_by_id(db, "Collection", "value_int", id, &vec_values, &vec_count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(vec_count, 3);
     margaux_free_integer_array(vec_values);
 
     // Delete element - CASCADE should delete vector rows too
     err = margaux_delete_element_by_id(db, "Collection", id);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     // Verify element is gone
     int64_t* ids = nullptr;
     size_t count = 0;
     err = margaux_read_element_ids(db, "Collection", &ids, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 0);
     EXPECT_EQ(ids, nullptr);
 
@@ -79,7 +79,7 @@ TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
     int64_t** vectors = nullptr;
     size_t* sizes = nullptr;
     err = margaux_read_vector_integers(db, "Collection", "value_int", &vectors, &sizes, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 0);
     EXPECT_EQ(vectors, nullptr);
     EXPECT_EQ(sizes, nullptr);
@@ -89,7 +89,7 @@ TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
 
 TEST(DatabaseCApi, DeleteElementByIdWithSetData) {
     auto options = margaux_options_default();
-    options.console_level = PSR_LOG_OFF;
+    options.console_level = MARGAUX_LOG_OFF;
     auto db = margaux_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -109,19 +109,19 @@ TEST(DatabaseCApi, DeleteElementByIdWithSetData) {
     char** set_values = nullptr;
     size_t set_count = 0;
     auto err = margaux_read_set_strings_by_id(db, "Collection", "tag", id, &set_values, &set_count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(set_count, 2);
     margaux_free_string_array(set_values, set_count);
 
     // Delete element - CASCADE should delete set rows too
     err = margaux_delete_element_by_id(db, "Collection", id);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     // Verify element is gone
     int64_t* ids = nullptr;
     size_t count = 0;
     err = margaux_read_element_ids(db, "Collection", &ids, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 0);
     EXPECT_EQ(ids, nullptr);
 
@@ -129,7 +129,7 @@ TEST(DatabaseCApi, DeleteElementByIdWithSetData) {
     char*** sets = nullptr;
     size_t* sizes = nullptr;
     err = margaux_read_set_strings(db, "Collection", "tag", &sets, &sizes, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 0);
     EXPECT_EQ(sets, nullptr);
     EXPECT_EQ(sizes, nullptr);
@@ -139,7 +139,7 @@ TEST(DatabaseCApi, DeleteElementByIdWithSetData) {
 
 TEST(DatabaseCApi, DeleteElementByIdNonExistent) {
     auto options = margaux_options_default();
-    options.console_level = PSR_LOG_OFF;
+    options.console_level = MARGAUX_LOG_OFF;
     auto db = margaux_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -151,13 +151,13 @@ TEST(DatabaseCApi, DeleteElementByIdNonExistent) {
 
     // Delete non-existent ID - should succeed silently (SQL DELETE is idempotent)
     auto err = margaux_delete_element_by_id(db, "Configuration", 999);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     // Verify original element still exists
     int64_t* ids = nullptr;
     size_t count = 0;
     err = margaux_read_element_ids(db, "Configuration", &ids, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 1);
     margaux_free_integer_array(ids);
 
@@ -166,7 +166,7 @@ TEST(DatabaseCApi, DeleteElementByIdNonExistent) {
 
 TEST(DatabaseCApi, DeleteElementByIdOtherElementsUnchanged) {
     auto options = margaux_options_default();
-    options.console_level = PSR_LOG_OFF;
+    options.console_level = MARGAUX_LOG_OFF;
     auto db = margaux_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -190,13 +190,13 @@ TEST(DatabaseCApi, DeleteElementByIdOtherElementsUnchanged) {
 
     // Delete middle element
     auto err = margaux_delete_element_by_id(db, "Configuration", id2);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     // Verify only two elements remain
     int64_t* ids = nullptr;
     size_t count = 0;
     err = margaux_read_element_ids(db, "Configuration", &ids, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 2);
     EXPECT_EQ(ids[0], id1);
     EXPECT_EQ(ids[1], id3);
@@ -206,14 +206,14 @@ TEST(DatabaseCApi, DeleteElementByIdOtherElementsUnchanged) {
     int64_t val1;
     int has_value;
     err = margaux_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id1, &val1, &has_value);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(val1, 42);
 
     // Verify third element unchanged
     int64_t val3;
     err = margaux_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id3, &val3, &has_value);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(val3, 200);
 
@@ -222,17 +222,17 @@ TEST(DatabaseCApi, DeleteElementByIdOtherElementsUnchanged) {
 
 TEST(DatabaseCApi, DeleteElementByIdNullArguments) {
     auto options = margaux_options_default();
-    options.console_level = PSR_LOG_OFF;
+    options.console_level = MARGAUX_LOG_OFF;
     auto db = margaux_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     // Null db
     auto err = margaux_delete_element_by_id(nullptr, "Configuration", 1);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     // Null collection
     err = margaux_delete_element_by_id(db, nullptr, 1);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     margaux_close(db);
 }

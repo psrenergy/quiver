@@ -1,5 +1,5 @@
-#ifndef PSR_DATABASE_H
-#define PSR_DATABASE_H
+#ifndef MARGAUX_DATABASE_H
+#define MARGAUX_DATABASE_H
 
 #include "export.h"
 #include "psr/attribute_type.h"
@@ -14,12 +14,12 @@
 
 namespace psr {
 
-struct PSR_API DatabaseOptions {
+struct MARGAUX_API DatabaseOptions {
     bool read_only = false;
     LogLevel console_level = LogLevel::info;
 };
 
-class PSR_API Database {
+class MARGAUX_API Database {
 public:
     explicit Database(const std::string& path, const DatabaseOptions& options = DatabaseOptions());
     ~Database();
@@ -160,4 +160,4 @@ private:
 
 }  // namespace psr
 
-#endif  // PSR_DATABASE_H
+#endif  // MARGAUX_DATABASE_H

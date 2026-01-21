@@ -1,5 +1,5 @@
-#ifndef PSR_RESULT_H
-#define PSR_RESULT_H
+#ifndef MARGAUX_RESULT_H
+#define MARGAUX_RESULT_H
 
 #include "export.h"
 #include "row.h"
@@ -8,7 +8,7 @@
 
 namespace psr {
 
-class PSR_API Result {
+class MARGAUX_API Result {
 public:
     Result();  // Default constructor for empty result
     Result(std::vector<std::string> columns, std::vector<Row> rows);
@@ -32,4 +32,4 @@ private:
 
 }  // namespace psr
 
-#endif  // PSR_RESULT_H
+#endif  // MARGAUX_RESULT_H

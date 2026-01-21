@@ -1,5 +1,5 @@
-#ifndef PSR_C_COMMON_H
-#define PSR_C_COMMON_H
+#ifndef MARGAUX_C_COMMON_H
+#define MARGAUX_C_COMMON_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -10,32 +10,32 @@ extern "C" {
 
 // Platform-specific export macros
 #ifdef _WIN32
-#ifdef PSR_DATABASE_C_EXPORTS
-#define PSR_C_API __declspec(dllexport)
+#ifdef MARGAUX_DATABASE_C_EXPORTS
+#define MARGAUX_C_API __declspec(dllexport)
 #else
-#define PSR_C_API __declspec(dllimport)
+#define MARGAUX_C_API __declspec(dllimport)
 #endif
 #else
-#define PSR_C_API __attribute__((visibility("default")))
+#define MARGAUX_C_API __attribute__((visibility("default")))
 #endif
 
 // Error codes
 typedef enum {
-    PSR_OK = 0,
-    PSR_ERROR_INVALID_ARGUMENT = -1,
-    PSR_ERROR_DATABASE = -2,
-    PSR_ERROR_MIGRATION = -3,
-    PSR_ERROR_SCHEMA = -4,
-    PSR_ERROR_CREATE_ELEMENT = -5,
-    PSR_ERROR_NOT_FOUND = -6,
+    MARGAUX_OK = 0,
+    MARGAUX_ERROR_INVALID_ARGUMENT = -1,
+    MARGAUX_ERROR_DATABASE = -2,
+    MARGAUX_ERROR_MIGRATION = -3,
+    MARGAUX_ERROR_SCHEMA = -4,
+    MARGAUX_ERROR_CREATE_ELEMENT = -5,
+    MARGAUX_ERROR_NOT_FOUND = -6,
 } margaux_error_t;
 
 // Utility functions
-PSR_C_API const char* margaux_error_string(margaux_error_t error);
-PSR_C_API const char* margaux_version(void);
+MARGAUX_C_API const char* margaux_error_string(margaux_error_t error);
+MARGAUX_C_API const char* margaux_version(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // PSR_C_COMMON_H
+#endif  // MARGAUX_C_COMMON_H
