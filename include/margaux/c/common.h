@@ -28,10 +28,10 @@ typedef enum {
     MARGAUX_ERROR_SCHEMA = -4,
     MARGAUX_ERROR_CREATE_ELEMENT = -5,
     MARGAUX_ERROR_NOT_FOUND = -6,
-} psr_margaux_t;
+} margaux_error_t;
 
 // Utility functions
-MARGAUX_C_API const char* psr_error_string(psr_margaux_t error);
+MARGAUX_C_API const char* psr_error_string(margaux_error_t error);
 MARGAUX_C_API const char* psr_version(void);
 
 #ifdef __cplusplus
