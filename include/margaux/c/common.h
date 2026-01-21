@@ -21,13 +21,13 @@ extern "C" {
 
 // Error codes
 typedef enum {
-    PSR_OK = 0,
-    PSR_ERROR_INVALID_ARGUMENT = -1,
-    PSR_ERROR_DATABASE = -2,
-    PSR_ERROR_MIGRATION = -3,
-    PSR_ERROR_SCHEMA = -4,
-    PSR_ERROR_CREATE_ELEMENT = -5,
-    PSR_ERROR_NOT_FOUND = -6,
+    MARGAUX_OK = 0,
+    MARGAUX_ERROR_INVALID_ARGUMENT = -1,
+    MARGAUX_ERROR_DATABASE = -2,
+    MARGAUX_ERROR_MIGRATION = -3,
+    MARGAUX_ERROR_SCHEMA = -4,
+    MARGAUX_ERROR_CREATE_ELEMENT = -5,
+    MARGAUX_ERROR_NOT_FOUND = -6,
 } psr_error_t;
 
 // Utility functions

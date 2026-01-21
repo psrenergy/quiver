@@ -29,18 +29,18 @@ void psr_lua_runner_free(psr_lua_runner_t* runner) {
 
 psr_error_t psr_lua_runner_run(psr_lua_runner_t* runner, const char* script) {
     if (!runner || !script) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         runner->last_error.clear();
         runner->runner.run(script);
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception& e) {
         runner->last_error = e.what();
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     } catch (...) {
         runner->last_error = "Unknown error";
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 

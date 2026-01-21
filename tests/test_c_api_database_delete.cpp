@@ -20,17 +20,17 @@ TEST(DatabaseCApi, DeleteElementById) {
     int64_t* ids = nullptr;
     size_t count = 0;
     auto err = psr_database_read_element_ids(db, "Configuration", &ids, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 1);
     psr_free_integer_array(ids);
 
     // Delete element
     err = psr_database_delete_element_by_id(db, "Configuration", id);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     // Verify element is gone
     err = psr_database_read_element_ids(db, "Configuration", &ids, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 0);
     EXPECT_EQ(ids, nullptr);
 
@@ -59,19 +59,19 @@ TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
     int64_t* vec_values = nullptr;
     size_t vec_count = 0;
     auto err = psr_database_read_vector_integers_by_id(db, "Collection", "value_int", id, &vec_values, &vec_count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(vec_count, 3);
     psr_free_integer_array(vec_values);
 
     // Delete element - CASCADE should delete vector rows too
     err = psr_database_delete_element_by_id(db, "Collection", id);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     // Verify element is gone
     int64_t* ids = nullptr;
     size_t count = 0;
     err = psr_database_read_element_ids(db, "Collection", &ids, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 0);
     EXPECT_EQ(ids, nullptr);
 
@@ -79,7 +79,7 @@ TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
     int64_t** vectors = nullptr;
     size_t* sizes = nullptr;
     err = psr_database_read_vector_integers(db, "Collection", "value_int", &vectors, &sizes, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 0);
     EXPECT_EQ(vectors, nullptr);
     EXPECT_EQ(sizes, nullptr);
@@ -109,19 +109,19 @@ TEST(DatabaseCApi, DeleteElementByIdWithSetData) {
     char** set_values = nullptr;
     size_t set_count = 0;
     auto err = psr_database_read_set_strings_by_id(db, "Collection", "tag", id, &set_values, &set_count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(set_count, 2);
     psr_free_string_array(set_values, set_count);
 
     // Delete element - CASCADE should delete set rows too
     err = psr_database_delete_element_by_id(db, "Collection", id);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     // Verify element is gone
     int64_t* ids = nullptr;
     size_t count = 0;
     err = psr_database_read_element_ids(db, "Collection", &ids, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 0);
     EXPECT_EQ(ids, nullptr);
 
@@ -129,7 +129,7 @@ TEST(DatabaseCApi, DeleteElementByIdWithSetData) {
     char*** sets = nullptr;
     size_t* sizes = nullptr;
     err = psr_database_read_set_strings(db, "Collection", "tag", &sets, &sizes, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 0);
     EXPECT_EQ(sets, nullptr);
     EXPECT_EQ(sizes, nullptr);
@@ -151,13 +151,13 @@ TEST(DatabaseCApi, DeleteElementByIdNonExistent) {
 
     // Delete non-existent ID - should succeed silently (SQL DELETE is idempotent)
     auto err = psr_database_delete_element_by_id(db, "Configuration", 999);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     // Verify original element still exists
     int64_t* ids = nullptr;
     size_t count = 0;
     err = psr_database_read_element_ids(db, "Configuration", &ids, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 1);
     psr_free_integer_array(ids);
 
@@ -190,13 +190,13 @@ TEST(DatabaseCApi, DeleteElementByIdOtherElementsUnchanged) {
 
     // Delete middle element
     auto err = psr_database_delete_element_by_id(db, "Configuration", id2);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     // Verify only two elements remain
     int64_t* ids = nullptr;
     size_t count = 0;
     err = psr_database_read_element_ids(db, "Configuration", &ids, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 2);
     EXPECT_EQ(ids[0], id1);
     EXPECT_EQ(ids[1], id3);
@@ -206,14 +206,14 @@ TEST(DatabaseCApi, DeleteElementByIdOtherElementsUnchanged) {
     int64_t val1;
     int has_value;
     err = psr_database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id1, &val1, &has_value);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(val1, 42);
 
     // Verify third element unchanged
     int64_t val3;
     err = psr_database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id3, &val3, &has_value);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(val3, 200);
 
@@ -228,11 +228,11 @@ TEST(DatabaseCApi, DeleteElementByIdNullArguments) {
 
     // Null db
     auto err = psr_database_delete_element_by_id(nullptr, "Configuration", 1);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     // Null collection
     err = psr_database_delete_element_by_id(db, nullptr, 1);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }

@@ -39,11 +39,11 @@ psr_error_t read_scalars_impl(const std::vector<T>& values, T** out_values, size
     *out_count = values.size();
     if (values.empty()) {
         *out_values = nullptr;
-        return PSR_OK;
+        return MARGAUX_OK;
     }
     *out_values = new T[values.size()];
     std::copy(values.begin(), values.end(), *out_values);
-    return PSR_OK;
+    return MARGAUX_OK;
 }
 
 // Helper template for reading numeric vectors
@@ -54,7 +54,7 @@ read_vectors_impl(const std::vector<std::vector<T>>& vectors, T*** out_vectors, 
     if (vectors.empty()) {
         *out_vectors = nullptr;
         *out_sizes = nullptr;
-        return PSR_OK;
+        return MARGAUX_OK;
     }
     *out_vectors = new T*[vectors.size()];
     *out_sizes = new size_t[vectors.size()];
@@ -67,7 +67,7 @@ read_vectors_impl(const std::vector<std::vector<T>>& vectors, T*** out_vectors, 
             std::copy(vectors[i].begin(), vectors[i].end(), (*out_vectors)[i]);
         }
     }
-    return PSR_OK;
+    return MARGAUX_OK;
 }
 
 // Helper template for freeing numeric vectors
@@ -171,25 +171,25 @@ MARGAUX_C_API psr_error_t psr_database_update_element(psr_database_t* db,
                                                   int64_t id,
                                                   const psr_element_t* element) {
     if (!db || !collection || !element) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         db->db.update_element(collection, id, element->element);
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
 MARGAUX_C_API psr_error_t psr_database_delete_element_by_id(psr_database_t* db, const char* collection, int64_t id) {
     if (!db || !collection) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         db->db.delete_element_by_id(collection, id);
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -199,13 +199,13 @@ MARGAUX_C_API psr_error_t psr_database_set_scalar_relation(psr_database_t* db,
                                                        const char* from_label,
                                                        const char* to_label) {
     if (!db || !collection || !attribute || !from_label || !to_label) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         db->db.set_scalar_relation(collection, attribute, from_label, to_label);
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -215,14 +215,14 @@ MARGAUX_C_API psr_error_t psr_database_read_scalar_relation(psr_database_t* db,
                                                         char*** out_values,
                                                         size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto values = db->db.read_scalar_relation(collection, attribute);
         *out_count = values.size();
         if (values.empty()) {
             *out_values = nullptr;
-            return PSR_OK;
+            return MARGAUX_OK;
         }
         *out_values = new char*[values.size()];
         for (size_t i = 0; i < values.size(); ++i) {
@@ -230,9 +230,9 @@ MARGAUX_C_API psr_error_t psr_database_read_scalar_relation(psr_database_t* db,
             std::copy(values[i].begin(), values[i].end(), (*out_values)[i]);
             (*out_values)[i][values[i].size()] = '\0';
         }
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -259,12 +259,12 @@ MARGAUX_C_API psr_error_t psr_database_read_scalar_integers(psr_database_t* db,
                                                         int64_t** out_values,
                                                         size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         return read_scalars_impl(db->db.read_scalar_integers(collection, attribute), out_values, out_count);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -274,12 +274,12 @@ MARGAUX_C_API psr_error_t psr_database_read_scalar_floats(psr_database_t* db,
                                                       double** out_values,
                                                       size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         return read_scalars_impl(db->db.read_scalar_floats(collection, attribute), out_values, out_count);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -289,7 +289,7 @@ MARGAUX_C_API psr_error_t psr_database_read_scalar_strings(psr_database_t* db,
                                                        char*** out_values,
                                                        size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
 
     try {
@@ -297,7 +297,7 @@ MARGAUX_C_API psr_error_t psr_database_read_scalar_strings(psr_database_t* db,
         *out_count = values.size();
         if (values.empty()) {
             *out_values = nullptr;
-            return PSR_OK;
+            return MARGAUX_OK;
         }
         *out_values = new char*[values.size()];
         for (size_t i = 0; i < values.size(); ++i) {
@@ -305,9 +305,9 @@ MARGAUX_C_API psr_error_t psr_database_read_scalar_strings(psr_database_t* db,
             std::copy(values[i].begin(), values[i].end(), (*out_values)[i]);
             (*out_values)[i][values[i].size()] = '\0';
         }
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -336,12 +336,12 @@ MARGAUX_C_API psr_error_t psr_database_read_vector_integers(psr_database_t* db,
                                                         size_t** out_sizes,
                                                         size_t* out_count) {
     if (!db || !collection || !attribute || !out_vectors || !out_sizes || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         return read_vectors_impl(db->db.read_vector_integers(collection, attribute), out_vectors, out_sizes, out_count);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -352,12 +352,12 @@ MARGAUX_C_API psr_error_t psr_database_read_vector_floats(psr_database_t* db,
                                                       size_t** out_sizes,
                                                       size_t* out_count) {
     if (!db || !collection || !attribute || !out_vectors || !out_sizes || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         return read_vectors_impl(db->db.read_vector_floats(collection, attribute), out_vectors, out_sizes, out_count);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -368,7 +368,7 @@ MARGAUX_C_API psr_error_t psr_database_read_vector_strings(psr_database_t* db,
                                                        size_t** out_sizes,
                                                        size_t* out_count) {
     if (!db || !collection || !attribute || !out_vectors || !out_sizes || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto vectors = db->db.read_vector_strings(collection, attribute);
@@ -376,7 +376,7 @@ MARGAUX_C_API psr_error_t psr_database_read_vector_strings(psr_database_t* db,
         if (vectors.empty()) {
             *out_vectors = nullptr;
             *out_sizes = nullptr;
-            return PSR_OK;
+            return MARGAUX_OK;
         }
         *out_vectors = new char**[vectors.size()];
         *out_sizes = new size_t[vectors.size()];
@@ -393,9 +393,9 @@ MARGAUX_C_API psr_error_t psr_database_read_vector_strings(psr_database_t* db,
                 }
             }
         }
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -432,12 +432,12 @@ MARGAUX_C_API psr_error_t psr_database_read_set_integers(psr_database_t* db,
                                                      size_t** out_sizes,
                                                      size_t* out_count) {
     if (!db || !collection || !attribute || !out_sets || !out_sizes || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         return read_vectors_impl(db->db.read_set_integers(collection, attribute), out_sets, out_sizes, out_count);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -448,12 +448,12 @@ MARGAUX_C_API psr_error_t psr_database_read_set_floats(psr_database_t* db,
                                                    size_t** out_sizes,
                                                    size_t* out_count) {
     if (!db || !collection || !attribute || !out_sets || !out_sizes || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         return read_vectors_impl(db->db.read_set_floats(collection, attribute), out_sets, out_sizes, out_count);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -464,7 +464,7 @@ MARGAUX_C_API psr_error_t psr_database_read_set_strings(psr_database_t* db,
                                                     size_t** out_sizes,
                                                     size_t* out_count) {
     if (!db || !collection || !attribute || !out_sets || !out_sizes || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto sets = db->db.read_set_strings(collection, attribute);
@@ -472,7 +472,7 @@ MARGAUX_C_API psr_error_t psr_database_read_set_strings(psr_database_t* db,
         if (sets.empty()) {
             *out_sets = nullptr;
             *out_sizes = nullptr;
-            return PSR_OK;
+            return MARGAUX_OK;
         }
         *out_sets = new char**[sets.size()];
         *out_sizes = new size_t[sets.size()];
@@ -489,9 +489,9 @@ MARGAUX_C_API psr_error_t psr_database_read_set_strings(psr_database_t* db,
                 }
             }
         }
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -504,7 +504,7 @@ MARGAUX_C_API psr_error_t psr_database_read_scalar_integers_by_id(psr_database_t
                                                               int64_t* out_value,
                                                               int* out_has_value) {
     if (!db || !collection || !attribute || !out_value || !out_has_value) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto result = db->db.read_scalar_integers_by_id(collection, attribute, id);
@@ -514,9 +514,9 @@ MARGAUX_C_API psr_error_t psr_database_read_scalar_integers_by_id(psr_database_t
         } else {
             *out_has_value = 0;
         }
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -527,7 +527,7 @@ MARGAUX_C_API psr_error_t psr_database_read_scalar_floats_by_id(psr_database_t* 
                                                             double* out_value,
                                                             int* out_has_value) {
     if (!db || !collection || !attribute || !out_value || !out_has_value) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto result = db->db.read_scalar_floats_by_id(collection, attribute, id);
@@ -537,9 +537,9 @@ MARGAUX_C_API psr_error_t psr_database_read_scalar_floats_by_id(psr_database_t* 
         } else {
             *out_has_value = 0;
         }
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -550,7 +550,7 @@ MARGAUX_C_API psr_error_t psr_database_read_scalar_strings_by_id(psr_database_t*
                                                              char** out_value,
                                                              int* out_has_value) {
     if (!db || !collection || !attribute || !out_value || !out_has_value) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto result = db->db.read_scalar_strings_by_id(collection, attribute, id);
@@ -563,9 +563,9 @@ MARGAUX_C_API psr_error_t psr_database_read_scalar_strings_by_id(psr_database_t*
             *out_value = nullptr;
             *out_has_value = 0;
         }
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -578,13 +578,13 @@ MARGAUX_C_API psr_error_t psr_database_read_vector_integers_by_id(psr_database_t
                                                               int64_t** out_values,
                                                               size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto values = db->db.read_vector_integers_by_id(collection, attribute, id);
         return read_scalars_impl(values, out_values, out_count);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -595,13 +595,13 @@ MARGAUX_C_API psr_error_t psr_database_read_vector_floats_by_id(psr_database_t* 
                                                             double** out_values,
                                                             size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto values = db->db.read_vector_floats_by_id(collection, attribute, id);
         return read_scalars_impl(values, out_values, out_count);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -612,14 +612,14 @@ MARGAUX_C_API psr_error_t psr_database_read_vector_strings_by_id(psr_database_t*
                                                              char*** out_values,
                                                              size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto values = db->db.read_vector_strings_by_id(collection, attribute, id);
         *out_count = values.size();
         if (values.empty()) {
             *out_values = nullptr;
-            return PSR_OK;
+            return MARGAUX_OK;
         }
         *out_values = new char*[values.size()];
         for (size_t i = 0; i < values.size(); ++i) {
@@ -627,9 +627,9 @@ MARGAUX_C_API psr_error_t psr_database_read_vector_strings_by_id(psr_database_t*
             std::copy(values[i].begin(), values[i].end(), (*out_values)[i]);
             (*out_values)[i][values[i].size()] = '\0';
         }
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -642,13 +642,13 @@ MARGAUX_C_API psr_error_t psr_database_read_set_integers_by_id(psr_database_t* d
                                                            int64_t** out_values,
                                                            size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto values = db->db.read_set_integers_by_id(collection, attribute, id);
         return read_scalars_impl(values, out_values, out_count);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -659,13 +659,13 @@ MARGAUX_C_API psr_error_t psr_database_read_set_floats_by_id(psr_database_t* db,
                                                          double** out_values,
                                                          size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto values = db->db.read_set_floats_by_id(collection, attribute, id);
         return read_scalars_impl(values, out_values, out_count);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -676,14 +676,14 @@ MARGAUX_C_API psr_error_t psr_database_read_set_strings_by_id(psr_database_t* db
                                                           char*** out_values,
                                                           size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto values = db->db.read_set_strings_by_id(collection, attribute, id);
         *out_count = values.size();
         if (values.empty()) {
             *out_values = nullptr;
-            return PSR_OK;
+            return MARGAUX_OK;
         }
         *out_values = new char*[values.size()];
         for (size_t i = 0; i < values.size(); ++i) {
@@ -691,9 +691,9 @@ MARGAUX_C_API psr_error_t psr_database_read_set_strings_by_id(psr_database_t* db
             std::copy(values[i].begin(), values[i].end(), (*out_values)[i]);
             (*out_values)[i][values[i].size()] = '\0';
         }
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -702,12 +702,12 @@ MARGAUX_C_API psr_error_t psr_database_read_element_ids(psr_database_t* db,
                                                     int64_t** out_ids,
                                                     size_t* out_count) {
     if (!db || !collection || !out_ids || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         return read_scalars_impl(db->db.read_element_ids(collection), out_ids, out_count);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -719,13 +719,13 @@ MARGAUX_C_API psr_error_t psr_database_update_scalar_integer(psr_database_t* db,
                                                          int64_t id,
                                                          int64_t value) {
     if (!db || !collection || !attribute) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         db->db.update_scalar_integer(collection, attribute, id, value);
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -735,13 +735,13 @@ MARGAUX_C_API psr_error_t psr_database_update_scalar_float(psr_database_t* db,
                                                        int64_t id,
                                                        double value) {
     if (!db || !collection || !attribute) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         db->db.update_scalar_float(collection, attribute, id, value);
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -751,13 +751,13 @@ MARGAUX_C_API psr_error_t psr_database_update_scalar_string(psr_database_t* db,
                                                         int64_t id,
                                                         const char* value) {
     if (!db || !collection || !attribute || !value) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         db->db.update_scalar_string(collection, attribute, id, value);
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -770,14 +770,14 @@ MARGAUX_C_API psr_error_t psr_database_update_vector_integers(psr_database_t* db
                                                           const int64_t* values,
                                                           size_t count) {
     if (!db || !collection || !attribute || (count > 0 && !values)) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         std::vector<int64_t> vec(values, values + count);
         db->db.update_vector_integers(collection, attribute, id, vec);
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -788,14 +788,14 @@ MARGAUX_C_API psr_error_t psr_database_update_vector_floats(psr_database_t* db,
                                                         const double* values,
                                                         size_t count) {
     if (!db || !collection || !attribute || (count > 0 && !values)) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         std::vector<double> vec(values, values + count);
         db->db.update_vector_floats(collection, attribute, id, vec);
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -806,7 +806,7 @@ MARGAUX_C_API psr_error_t psr_database_update_vector_strings(psr_database_t* db,
                                                          const char* const* values,
                                                          size_t count) {
     if (!db || !collection || !attribute || (count > 0 && !values)) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         std::vector<std::string> vec;
@@ -815,9 +815,9 @@ MARGAUX_C_API psr_error_t psr_database_update_vector_strings(psr_database_t* db,
             vec.emplace_back(values[i]);
         }
         db->db.update_vector_strings(collection, attribute, id, vec);
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -830,14 +830,14 @@ MARGAUX_C_API psr_error_t psr_database_update_set_integers(psr_database_t* db,
                                                        const int64_t* values,
                                                        size_t count) {
     if (!db || !collection || !attribute || (count > 0 && !values)) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         std::vector<int64_t> vec(values, values + count);
         db->db.update_set_integers(collection, attribute, id, vec);
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -848,14 +848,14 @@ MARGAUX_C_API psr_error_t psr_database_update_set_floats(psr_database_t* db,
                                                      const double* values,
                                                      size_t count) {
     if (!db || !collection || !attribute || (count > 0 && !values)) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         std::vector<double> vec(values, values + count);
         db->db.update_set_floats(collection, attribute, id, vec);
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -866,7 +866,7 @@ MARGAUX_C_API psr_error_t psr_database_update_set_strings(psr_database_t* db,
                                                       const char* const* values,
                                                       size_t count) {
     if (!db || !collection || !attribute || (count > 0 && !values)) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         std::vector<std::string> vec;
@@ -875,9 +875,9 @@ MARGAUX_C_API psr_error_t psr_database_update_set_strings(psr_database_t* db,
             vec.emplace_back(values[i]);
         }
         db->db.update_set_strings(collection, attribute, id, vec);
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 
@@ -887,7 +887,7 @@ MARGAUX_C_API psr_error_t psr_database_get_attribute_type(psr_database_t* db,
                                                       psr_data_structure_t* out_data_structure,
                                                       psr_data_type_t* out_data_type) {
     if (!db || !collection || !attribute || !out_data_structure || !out_data_type) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto attr_type = db->db.get_attribute_type(collection, attribute);
@@ -916,9 +916,9 @@ MARGAUX_C_API psr_error_t psr_database_get_attribute_type(psr_database_t* db,
             break;
         }
 
-        return PSR_OK;
+        return MARGAUX_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return MARGAUX_ERROR_DATABASE;
     }
 }
 

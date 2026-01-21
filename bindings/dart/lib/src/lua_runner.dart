@@ -58,7 +58,7 @@ class LuaRunner {
         script.toNativeUtf8(allocator: arena).cast(),
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != psr_error_t.MARGAUX_OK) {
         final errorPtr = bindings.psr_lua_runner_get_error(_ptr);
         if (errorPtr != nullptr) {
           final errorMsg = errorPtr.cast<Utf8>().toDartString();

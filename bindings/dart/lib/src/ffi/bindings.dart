@@ -1469,13 +1469,13 @@ class PsrDatabaseBindings {
 }
 
 abstract class psr_error_t {
-  static const int PSR_OK = 0;
-  static const int PSR_ERROR_INVALID_ARGUMENT = -1;
-  static const int PSR_ERROR_DATABASE = -2;
-  static const int PSR_ERROR_MIGRATION = -3;
-  static const int PSR_ERROR_SCHEMA = -4;
-  static const int PSR_ERROR_CREATE_ELEMENT = -5;
-  static const int PSR_ERROR_NOT_FOUND = -6;
+  static const int MARGAUX_OK = 0;
+  static const int MARGAUX_ERROR_INVALID_ARGUMENT = -1;
+  static const int MARGAUX_ERROR_DATABASE = -2;
+  static const int MARGAUX_ERROR_MIGRATION = -3;
+  static const int MARGAUX_ERROR_SCHEMA = -4;
+  static const int MARGAUX_ERROR_CREATE_ELEMENT = -5;
+  static const int MARGAUX_ERROR_NOT_FOUND = -6;
 }
 
 abstract class psr_log_level_t {

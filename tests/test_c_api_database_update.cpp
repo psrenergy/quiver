@@ -24,12 +24,12 @@ TEST(DatabaseCApi, UpdateScalarInteger) {
     psr_element_destroy(e);
 
     auto err = psr_database_update_scalar_integer(db, "Configuration", "integer_attribute", id, 100);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     int64_t value;
     int has_value;
     err = psr_database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id, &value, &has_value);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(value, 100);
 
@@ -49,12 +49,12 @@ TEST(DatabaseCApi, UpdateScalarFloat) {
     psr_element_destroy(e);
 
     auto err = psr_database_update_scalar_float(db, "Configuration", "float_attribute", id, 2.71);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     double value;
     int has_value;
     err = psr_database_read_scalar_floats_by_id(db, "Configuration", "float_attribute", id, &value, &has_value);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_DOUBLE_EQ(value, 2.71);
 
@@ -74,12 +74,12 @@ TEST(DatabaseCApi, UpdateScalarString) {
     psr_element_destroy(e);
 
     auto err = psr_database_update_scalar_string(db, "Configuration", "string_attribute", id, "world");
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     char* value = nullptr;
     int has_value;
     err = psr_database_read_scalar_strings_by_id(db, "Configuration", "string_attribute", id, &value, &has_value);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(value, "world");
 
@@ -111,12 +111,12 @@ TEST(DatabaseCApi, UpdateVectorIntegers) {
 
     int64_t new_values[] = {10, 20, 30, 40};
     auto err = psr_database_update_vector_integers(db, "Collection", "value_int", id, new_values, 4);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     int64_t* read_values = nullptr;
     size_t count = 0;
     err = psr_database_read_vector_integers_by_id(db, "Collection", "value_int", id, &read_values, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 4);
     EXPECT_EQ(read_values[0], 10);
     EXPECT_EQ(read_values[1], 20);
@@ -147,12 +147,12 @@ TEST(DatabaseCApi, UpdateVectorFloats) {
 
     double new_values[] = {10.5, 20.5};
     auto err = psr_database_update_vector_floats(db, "Collection", "value_float", id, new_values, 2);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     double* read_values = nullptr;
     size_t count = 0;
     err = psr_database_read_vector_floats_by_id(db, "Collection", "value_float", id, &read_values, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 2);
     EXPECT_DOUBLE_EQ(read_values[0], 10.5);
     EXPECT_DOUBLE_EQ(read_values[1], 20.5);
@@ -180,12 +180,12 @@ TEST(DatabaseCApi, UpdateVectorToEmpty) {
     psr_element_destroy(e);
 
     auto err = psr_database_update_vector_integers(db, "Collection", "value_int", id, nullptr, 0);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     int64_t* read_values = nullptr;
     size_t count = 0;
     err = psr_database_read_vector_integers_by_id(db, "Collection", "value_int", id, &read_values, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 0);
     EXPECT_EQ(read_values, nullptr);
 
@@ -216,12 +216,12 @@ TEST(DatabaseCApi, UpdateSetStrings) {
 
     const char* new_tags[] = {"new_tag1", "new_tag2", "new_tag3"};
     auto err = psr_database_update_set_strings(db, "Collection", "tag", id, new_tags, 3);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     char** read_values = nullptr;
     size_t count = 0;
     err = psr_database_read_set_strings_by_id(db, "Collection", "tag", id, &read_values, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 3);
 
     std::vector<std::string> set_values;
@@ -256,12 +256,12 @@ TEST(DatabaseCApi, UpdateSetToEmpty) {
     psr_element_destroy(e);
 
     auto err = psr_database_update_set_strings(db, "Collection", "tag", id, nullptr, 0);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     char** read_values = nullptr;
     size_t count = 0;
     err = psr_database_read_set_strings_by_id(db, "Collection", "tag", id, &read_values, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 0);
     EXPECT_EQ(read_values, nullptr);
 
@@ -289,19 +289,19 @@ TEST(DatabaseCApi, UpdateElementSingleScalar) {
     psr_element_set_integer(update, "integer_attribute", 100);
     auto err = psr_database_update_element(db, "Configuration", id, update);
     psr_element_destroy(update);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     int64_t value;
     int has_value;
     err = psr_database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id, &value, &has_value);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(value, 100);
 
     // Verify label unchanged
     char* label = nullptr;
     err = psr_database_read_scalar_strings_by_id(db, "Configuration", "label", id, &label, &has_value);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(label, "Config 1");
     delete[] label;
@@ -330,25 +330,25 @@ TEST(DatabaseCApi, UpdateElementMultipleScalars) {
     psr_element_set_string(update, "string_attribute", "world");
     auto err = psr_database_update_element(db, "Configuration", id, update);
     psr_element_destroy(update);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     int64_t integer_value;
     int has_value;
     err = psr_database_read_scalar_integers_by_id(
         db, "Configuration", "integer_attribute", id, &integer_value, &has_value);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(integer_value, 100);
 
     double float_value;
     err = psr_database_read_scalar_floats_by_id(db, "Configuration", "float_attribute", id, &float_value, &has_value);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_DOUBLE_EQ(float_value, 2.71);
 
     char* str_value = nullptr;
     err = psr_database_read_scalar_strings_by_id(db, "Configuration", "string_attribute", id, &str_value, &has_value);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(str_value, "world");
     delete[] str_value;
@@ -356,7 +356,7 @@ TEST(DatabaseCApi, UpdateElementMultipleScalars) {
     // Verify label unchanged
     char* label = nullptr;
     err = psr_database_read_scalar_strings_by_id(db, "Configuration", "label", id, &label, &has_value);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(label, "Config 1");
     delete[] label;
@@ -387,20 +387,20 @@ TEST(DatabaseCApi, UpdateElementOtherElementsUnchanged) {
     psr_element_set_integer(update, "integer_attribute", 999);
     auto err = psr_database_update_element(db, "Configuration", id1, update);
     psr_element_destroy(update);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     int64_t value;
     int has_value;
 
     // Verify first element changed
     err = psr_database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id1, &value, &has_value);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(value, 999);
 
     // Verify second element unchanged
     err = psr_database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id2, &value, &has_value);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(value, 100);
 
@@ -418,15 +418,15 @@ TEST(DatabaseCApi, UpdateElementNullArguments) {
 
     // Null db
     auto err = psr_database_update_element(nullptr, "Configuration", 1, element);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     // Null collection
     err = psr_database_update_element(db, nullptr, 1, element);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     // Null element
     err = psr_database_update_element(db, "Configuration", 1, nullptr);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_element_destroy(element);
     psr_database_close(db);
@@ -438,7 +438,7 @@ TEST(DatabaseCApi, UpdateElementNullArguments) {
 
 TEST(DatabaseCApi, UpdateScalarIntegerNullDb) {
     auto err = psr_database_update_scalar_integer(nullptr, "Configuration", "integer_attribute", 1, 42);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, UpdateScalarIntegerNullCollection) {
@@ -448,7 +448,7 @@ TEST(DatabaseCApi, UpdateScalarIntegerNullCollection) {
     ASSERT_NE(db, nullptr);
 
     auto err = psr_database_update_scalar_integer(db, nullptr, "integer_attribute", 1, 42);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
@@ -460,14 +460,14 @@ TEST(DatabaseCApi, UpdateScalarIntegerNullAttribute) {
     ASSERT_NE(db, nullptr);
 
     auto err = psr_database_update_scalar_integer(db, "Configuration", nullptr, 1, 42);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
 
 TEST(DatabaseCApi, UpdateScalarFloatNullDb) {
     auto err = psr_database_update_scalar_float(nullptr, "Configuration", "float_attribute", 1, 3.14);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, UpdateScalarFloatNullCollection) {
@@ -477,14 +477,14 @@ TEST(DatabaseCApi, UpdateScalarFloatNullCollection) {
     ASSERT_NE(db, nullptr);
 
     auto err = psr_database_update_scalar_float(db, nullptr, "float_attribute", 1, 3.14);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
 
 TEST(DatabaseCApi, UpdateScalarStringNullDb) {
     auto err = psr_database_update_scalar_string(nullptr, "Configuration", "string_attribute", 1, "test");
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, UpdateScalarStringNullCollection) {
@@ -494,7 +494,7 @@ TEST(DatabaseCApi, UpdateScalarStringNullCollection) {
     ASSERT_NE(db, nullptr);
 
     auto err = psr_database_update_scalar_string(db, nullptr, "string_attribute", 1, "test");
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
@@ -506,7 +506,7 @@ TEST(DatabaseCApi, UpdateScalarStringNullValue) {
     ASSERT_NE(db, nullptr);
 
     auto err = psr_database_update_scalar_string(db, "Configuration", "string_attribute", 1, nullptr);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
@@ -518,7 +518,7 @@ TEST(DatabaseCApi, UpdateScalarStringNullValue) {
 TEST(DatabaseCApi, UpdateVectorIntegersNullDb) {
     int64_t values[] = {1, 2, 3};
     auto err = psr_database_update_vector_integers(nullptr, "Collection", "value_int", 1, values, 3);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, UpdateVectorIntegersNullCollection) {
@@ -529,7 +529,7 @@ TEST(DatabaseCApi, UpdateVectorIntegersNullCollection) {
 
     int64_t values[] = {1, 2, 3};
     auto err = psr_database_update_vector_integers(db, nullptr, "value_int", 1, values, 3);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
@@ -542,7 +542,7 @@ TEST(DatabaseCApi, UpdateVectorIntegersNullAttribute) {
 
     int64_t values[] = {1, 2, 3};
     auto err = psr_database_update_vector_integers(db, "Collection", nullptr, 1, values, 3);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
@@ -550,7 +550,7 @@ TEST(DatabaseCApi, UpdateVectorIntegersNullAttribute) {
 TEST(DatabaseCApi, UpdateVectorFloatsNullDb) {
     double values[] = {1.0, 2.0, 3.0};
     auto err = psr_database_update_vector_floats(nullptr, "Collection", "value_float", 1, values, 3);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, UpdateVectorFloatsNullCollection) {
@@ -561,7 +561,7 @@ TEST(DatabaseCApi, UpdateVectorFloatsNullCollection) {
 
     double values[] = {1.0, 2.0, 3.0};
     auto err = psr_database_update_vector_floats(db, nullptr, "value_float", 1, values, 3);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
@@ -569,7 +569,7 @@ TEST(DatabaseCApi, UpdateVectorFloatsNullCollection) {
 TEST(DatabaseCApi, UpdateVectorStringsNullDb) {
     const char* values[] = {"a", "b", "c"};
     auto err = psr_database_update_vector_strings(nullptr, "Collection", "tag", 1, values, 3);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, UpdateVectorStringsNullCollection) {
@@ -580,7 +580,7 @@ TEST(DatabaseCApi, UpdateVectorStringsNullCollection) {
 
     const char* values[] = {"a", "b", "c"};
     auto err = psr_database_update_vector_strings(db, nullptr, "tag", 1, values, 3);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
@@ -592,7 +592,7 @@ TEST(DatabaseCApi, UpdateVectorStringsNullCollection) {
 TEST(DatabaseCApi, UpdateSetIntegersNullDb) {
     int64_t values[] = {1, 2, 3};
     auto err = psr_database_update_set_integers(nullptr, "Collection", "tag", 1, values, 3);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, UpdateSetIntegersNullCollection) {
@@ -603,7 +603,7 @@ TEST(DatabaseCApi, UpdateSetIntegersNullCollection) {
 
     int64_t values[] = {1, 2, 3};
     auto err = psr_database_update_set_integers(db, nullptr, "tag", 1, values, 3);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
@@ -611,7 +611,7 @@ TEST(DatabaseCApi, UpdateSetIntegersNullCollection) {
 TEST(DatabaseCApi, UpdateSetFloatsNullDb) {
     double values[] = {1.0, 2.0, 3.0};
     auto err = psr_database_update_set_floats(nullptr, "Collection", "tag", 1, values, 3);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, UpdateSetFloatsNullCollection) {
@@ -622,7 +622,7 @@ TEST(DatabaseCApi, UpdateSetFloatsNullCollection) {
 
     double values[] = {1.0, 2.0, 3.0};
     auto err = psr_database_update_set_floats(db, nullptr, "tag", 1, values, 3);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
@@ -630,7 +630,7 @@ TEST(DatabaseCApi, UpdateSetFloatsNullCollection) {
 TEST(DatabaseCApi, UpdateSetStringsNullDb) {
     const char* values[] = {"a", "b", "c"};
     auto err = psr_database_update_set_strings(nullptr, "Collection", "tag", 1, values, 3);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, UpdateSetStringsNullCollection) {
@@ -641,7 +641,7 @@ TEST(DatabaseCApi, UpdateSetStringsNullCollection) {
 
     const char* values[] = {"a", "b", "c"};
     auto err = psr_database_update_set_strings(db, nullptr, "tag", 1, values, 3);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
@@ -654,7 +654,7 @@ TEST(DatabaseCApi, UpdateSetStringsNullAttribute) {
 
     const char* values[] = {"a", "b", "c"};
     auto err = psr_database_update_set_strings(db, "Collection", nullptr, 1, values, 3);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }

@@ -27,34 +27,34 @@ MARGAUX_C_API void psr_element_clear(psr_element_t* element) {
 
 MARGAUX_C_API psr_error_t psr_element_set_integer(psr_element_t* element, const char* name, int64_t value) {
     if (!element || !name) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     element->element.set(name, value);
-    return PSR_OK;
+    return MARGAUX_OK;
 }
 
 MARGAUX_C_API psr_error_t psr_element_set_float(psr_element_t* element, const char* name, double value) {
     if (!element || !name) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     element->element.set(name, value);
-    return PSR_OK;
+    return MARGAUX_OK;
 }
 
 MARGAUX_C_API psr_error_t psr_element_set_string(psr_element_t* element, const char* name, const char* value) {
     if (!element || !name || !value) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     element->element.set(name, std::string(value));
-    return PSR_OK;
+    return MARGAUX_OK;
 }
 
 MARGAUX_C_API psr_error_t psr_element_set_null(psr_element_t* element, const char* name) {
     if (!element || !name) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     element->element.set_null(name);
-    return PSR_OK;
+    return MARGAUX_OK;
 }
 
 MARGAUX_C_API psr_error_t psr_element_set_array_integer(psr_element_t* element,
@@ -62,11 +62,11 @@ MARGAUX_C_API psr_error_t psr_element_set_array_integer(psr_element_t* element,
                                                     const int64_t* values,
                                                     int32_t count) {
     if (!element || !name || (!values && count > 0) || count < 0) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     std::vector<int64_t> arr(values, values + count);
     element->element.set(name, arr);
-    return PSR_OK;
+    return MARGAUX_OK;
 }
 
 MARGAUX_C_API psr_error_t psr_element_set_array_float(psr_element_t* element,
@@ -74,11 +74,11 @@ MARGAUX_C_API psr_error_t psr_element_set_array_float(psr_element_t* element,
                                                   const double* values,
                                                   int32_t count) {
     if (!element || !name || (!values && count > 0) || count < 0) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     std::vector<double> arr(values, values + count);
     element->element.set(name, arr);
-    return PSR_OK;
+    return MARGAUX_OK;
 }
 
 MARGAUX_C_API psr_error_t psr_element_set_array_string(psr_element_t* element,
@@ -86,7 +86,7 @@ MARGAUX_C_API psr_error_t psr_element_set_array_string(psr_element_t* element,
                                                    const char* const* values,
                                                    int32_t count) {
     if (!element || !name || (!values && count > 0) || count < 0) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
     std::vector<std::string> arr;
     arr.reserve(count);
@@ -94,7 +94,7 @@ MARGAUX_C_API psr_error_t psr_element_set_array_string(psr_element_t* element,
         arr.emplace_back(values[i] ? values[i] : "");
     }
     element->element.set(name, arr);
-    return PSR_OK;
+    return MARGAUX_OK;
 }
 
 MARGAUX_C_API int psr_element_has_scalars(psr_element_t* element) {

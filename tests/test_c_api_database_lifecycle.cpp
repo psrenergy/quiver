@@ -82,13 +82,13 @@ TEST_F(TempFileFixture, CloseNullDb) {
 }
 
 TEST_F(TempFileFixture, ErrorStrings) {
-    EXPECT_STREQ(psr_error_string(PSR_OK), "Success");
-    EXPECT_STREQ(psr_error_string(PSR_ERROR_INVALID_ARGUMENT), "Invalid argument");
-    EXPECT_STREQ(psr_error_string(PSR_ERROR_DATABASE), "Database error");
-    EXPECT_STREQ(psr_error_string(PSR_ERROR_MIGRATION), "Migration error");
-    EXPECT_STREQ(psr_error_string(PSR_ERROR_SCHEMA), "Schema validation error");
-    EXPECT_STREQ(psr_error_string(PSR_ERROR_CREATE_ELEMENT), "Failed to create element");
-    EXPECT_STREQ(psr_error_string(PSR_ERROR_NOT_FOUND), "Not found");
+    EXPECT_STREQ(psr_error_string(MARGAUX_OK), "Success");
+    EXPECT_STREQ(psr_error_string(MARGAUX_ERROR_INVALID_ARGUMENT), "Invalid argument");
+    EXPECT_STREQ(psr_error_string(MARGAUX_ERROR_DATABASE), "Database error");
+    EXPECT_STREQ(psr_error_string(MARGAUX_ERROR_MIGRATION), "Migration error");
+    EXPECT_STREQ(psr_error_string(MARGAUX_ERROR_SCHEMA), "Schema validation error");
+    EXPECT_STREQ(psr_error_string(MARGAUX_ERROR_CREATE_ELEMENT), "Failed to create element");
+    EXPECT_STREQ(psr_error_string(MARGAUX_ERROR_NOT_FOUND), "Not found");
     EXPECT_STREQ(psr_error_string(static_cast<psr_error_t>(-999)), "Unknown error");
 }
 
@@ -258,7 +258,7 @@ TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
 
 TEST_F(TempFileFixture, SetScalarRelationNullDb) {
     auto err = psr_database_set_scalar_relation(nullptr, "Child", "parent_id", "Child 1", "Parent 1");
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 }
 
 TEST_F(TempFileFixture, SetScalarRelationNullCollection) {
@@ -268,7 +268,7 @@ TEST_F(TempFileFixture, SetScalarRelationNullCollection) {
     ASSERT_NE(db, nullptr);
 
     auto err = psr_database_set_scalar_relation(db, nullptr, "parent_id", "Child 1", "Parent 1");
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
@@ -280,7 +280,7 @@ TEST_F(TempFileFixture, SetScalarRelationNullAttribute) {
     ASSERT_NE(db, nullptr);
 
     auto err = psr_database_set_scalar_relation(db, "Child", nullptr, "Child 1", "Parent 1");
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
@@ -292,7 +292,7 @@ TEST_F(TempFileFixture, SetScalarRelationNullFromLabel) {
     ASSERT_NE(db, nullptr);
 
     auto err = psr_database_set_scalar_relation(db, "Child", "parent_id", nullptr, "Parent 1");
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
@@ -304,7 +304,7 @@ TEST_F(TempFileFixture, SetScalarRelationNullToLabel) {
     ASSERT_NE(db, nullptr);
 
     auto err = psr_database_set_scalar_relation(db, "Child", "parent_id", "Child 1", nullptr);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
@@ -329,7 +329,7 @@ TEST_F(TempFileFixture, SetScalarRelationValid) {
 
     // Set relation
     auto err = psr_database_set_scalar_relation(db, "Child", "parent_id", "Child 1", "Parent 1");
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     psr_database_close(db);
 }
@@ -338,7 +338,7 @@ TEST_F(TempFileFixture, ReadScalarRelationNullDb) {
     char** values = nullptr;
     size_t count = 0;
     auto err = psr_database_read_scalar_relation(nullptr, "Child", "parent_id", &values, &count);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 }
 
 TEST_F(TempFileFixture, ReadScalarRelationNullCollection) {
@@ -350,7 +350,7 @@ TEST_F(TempFileFixture, ReadScalarRelationNullCollection) {
     char** values = nullptr;
     size_t count = 0;
     auto err = psr_database_read_scalar_relation(db, nullptr, "parent_id", &values, &count);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
@@ -364,7 +364,7 @@ TEST_F(TempFileFixture, ReadScalarRelationNullAttribute) {
     char** values = nullptr;
     size_t count = 0;
     auto err = psr_database_read_scalar_relation(db, "Child", nullptr, &values, &count);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
@@ -377,11 +377,11 @@ TEST_F(TempFileFixture, ReadScalarRelationNullOutput) {
 
     size_t count = 0;
     auto err = psr_database_read_scalar_relation(db, "Child", "parent_id", nullptr, &count);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     char** values = nullptr;
     err = psr_database_read_scalar_relation(db, "Child", "parent_id", &values, nullptr);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
@@ -406,13 +406,13 @@ TEST_F(TempFileFixture, ReadScalarRelationValid) {
 
     // Set relation
     auto err = psr_database_set_scalar_relation(db, "Child", "parent_id", "Child 1", "Parent 1");
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     // Read relation
     char** values = nullptr;
     size_t count = 0;
     err = psr_database_read_scalar_relation(db, "Child", "parent_id", &values, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 1);
     EXPECT_STREQ(values[0], "Parent 1");
 
@@ -472,7 +472,7 @@ TEST_F(TempFileFixture, ReadElementIdsNullDb) {
     int64_t* ids = nullptr;
     size_t count = 0;
     auto err = psr_database_read_element_ids(nullptr, "Collection", &ids, &count);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 }
 
 TEST_F(TempFileFixture, ReadElementIdsNullCollection) {
@@ -484,7 +484,7 @@ TEST_F(TempFileFixture, ReadElementIdsNullCollection) {
     int64_t* ids = nullptr;
     size_t count = 0;
     auto err = psr_database_read_element_ids(db, nullptr, &ids, &count);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
@@ -497,11 +497,11 @@ TEST_F(TempFileFixture, ReadElementIdsNullOutput) {
 
     size_t count = 0;
     auto err = psr_database_read_element_ids(db, "Collection", nullptr, &count);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     int64_t* ids = nullptr;
     err = psr_database_read_element_ids(db, "Collection", &ids, nullptr);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
@@ -530,7 +530,7 @@ TEST_F(TempFileFixture, ReadElementIdsValid) {
     int64_t* ids = nullptr;
     size_t count = 0;
     auto err = psr_database_read_element_ids(db, "Collection", &ids, &count);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 3);
 
     if (ids != nullptr) {
@@ -546,7 +546,7 @@ TEST_F(TempFileFixture, ReadElementIdsValid) {
 
 TEST_F(TempFileFixture, DeleteElementNullDb) {
     auto err = psr_database_delete_element_by_id(nullptr, "Collection", 1);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 }
 
 TEST_F(TempFileFixture, DeleteElementNullCollection) {
@@ -556,7 +556,7 @@ TEST_F(TempFileFixture, DeleteElementNullCollection) {
     ASSERT_NE(db, nullptr);
 
     auto err = psr_database_delete_element_by_id(db, nullptr, 1);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }
@@ -583,7 +583,7 @@ TEST_F(TempFileFixture, DeleteElementValid) {
 
     // Delete element
     auto err = psr_database_delete_element_by_id(db, "Collection", id);
-    EXPECT_EQ(err, PSR_OK);
+    EXPECT_EQ(err, MARGAUX_OK);
 
     // Verify element is deleted
     int64_t* ids = nullptr;
@@ -607,7 +607,7 @@ TEST_F(TempFileFixture, UpdateElementNullDb) {
     psr_element_set_string(element, "label", "New Label");
 
     auto err = psr_database_update_element(nullptr, "Collection", 1, element);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_element_destroy(element);
 }
@@ -622,7 +622,7 @@ TEST_F(TempFileFixture, UpdateElementNullCollection) {
     psr_element_set_string(element, "label", "New Label");
 
     auto err = psr_database_update_element(db, nullptr, 1, element);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_element_destroy(element);
     psr_database_close(db);
@@ -635,7 +635,7 @@ TEST_F(TempFileFixture, UpdateElementNullElement) {
     ASSERT_NE(db, nullptr);
 
     auto err = psr_database_update_element(db, "Collection", 1, nullptr);
-    EXPECT_EQ(err, PSR_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_database_close(db);
 }

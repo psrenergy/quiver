@@ -18,7 +18,7 @@ MARGAUX_C_API psr_lua_runner_t* psr_lua_runner_new(psr_database_t* db);
 MARGAUX_C_API void psr_lua_runner_free(psr_lua_runner_t* runner);
 
 // Run a Lua script
-// Returns PSR_OK on success, or an error code on failure.
+// Returns MARGAUX_OK on success, or an error code on failure.
 // If an error occurs, call psr_lua_runner_get_error() to get the error message.
 MARGAUX_C_API psr_error_t psr_lua_runner_run(psr_lua_runner_t* runner, const char* script);
 
