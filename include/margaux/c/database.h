@@ -57,232 +57,227 @@ MARGAUX_C_API int64_t database_current_version(database_t* db);
 
 // Element operations (requires element_t from element.h)
 typedef struct element element_t;
-MARGAUX_C_API int64_t database_create_element(database_t* db,
-                                                  const char* collection,
-                                                  element_t* element);
+MARGAUX_C_API int64_t database_create_element(database_t* db, const char* collection, element_t* element);
 MARGAUX_C_API margaux_error_t database_update_element(database_t* db,
-                                                          const char* collection,
-                                                          int64_t id,
-                                                          const element_t* element);
+                                                      const char* collection,
+                                                      int64_t id,
+                                                      const element_t* element);
 MARGAUX_C_API margaux_error_t database_delete_element_by_id(database_t* db, const char* collection, int64_t id);
 
 // Relation operations
 MARGAUX_C_API margaux_error_t database_set_scalar_relation(database_t* db,
-                                                               const char* collection,
-                                                               const char* attribute,
-                                                               const char* from_label,
-                                                               const char* to_label);
+                                                           const char* collection,
+                                                           const char* attribute,
+                                                           const char* from_label,
+                                                           const char* to_label);
 
 MARGAUX_C_API margaux_error_t database_read_scalar_relation(database_t* db,
-                                                                const char* collection,
-                                                                const char* attribute,
-                                                                char*** out_values,
-                                                                size_t* out_count);
+                                                            const char* collection,
+                                                            const char* attribute,
+                                                            char*** out_values,
+                                                            size_t* out_count);
 
 // Read scalar attributes
 MARGAUX_C_API margaux_error_t database_read_scalar_integers(database_t* db,
-                                                                const char* collection,
-                                                                const char* attribute,
-                                                                int64_t** out_values,
-                                                                size_t* out_count);
+                                                            const char* collection,
+                                                            const char* attribute,
+                                                            int64_t** out_values,
+                                                            size_t* out_count);
 
 MARGAUX_C_API margaux_error_t database_read_scalar_floats(database_t* db,
-                                                              const char* collection,
-                                                              const char* attribute,
-                                                              double** out_values,
-                                                              size_t* out_count);
+                                                          const char* collection,
+                                                          const char* attribute,
+                                                          double** out_values,
+                                                          size_t* out_count);
 
 MARGAUX_C_API margaux_error_t database_read_scalar_strings(database_t* db,
-                                                               const char* collection,
-                                                               const char* attribute,
-                                                               char*** out_values,
-                                                               size_t* out_count);
+                                                           const char* collection,
+                                                           const char* attribute,
+                                                           char*** out_values,
+                                                           size_t* out_count);
 
 // Read vector attributes
 MARGAUX_C_API margaux_error_t database_read_vector_integers(database_t* db,
-                                                                const char* collection,
-                                                                const char* attribute,
-                                                                int64_t*** out_vectors,
-                                                                size_t** out_sizes,
-                                                                size_t* out_count);
-
-MARGAUX_C_API margaux_error_t database_read_vector_floats(database_t* db,
-                                                              const char* collection,
-                                                              const char* attribute,
-                                                              double*** out_vectors,
-                                                              size_t** out_sizes,
-                                                              size_t* out_count);
-
-MARGAUX_C_API margaux_error_t database_read_vector_strings(database_t* db,
-                                                               const char* collection,
-                                                               const char* attribute,
-                                                               char**** out_vectors,
-                                                               size_t** out_sizes,
-                                                               size_t* out_count);
-
-// Read set attributes (same structure as vectors, uses same free functions)
-MARGAUX_C_API margaux_error_t database_read_set_integers(database_t* db,
-                                                             const char* collection,
-                                                             const char* attribute,
-                                                             int64_t*** out_sets,
-                                                             size_t** out_sizes,
-                                                             size_t* out_count);
-
-MARGAUX_C_API margaux_error_t database_read_set_floats(database_t* db,
-                                                           const char* collection,
-                                                           const char* attribute,
-                                                           double*** out_sets,
-                                                           size_t** out_sizes,
-                                                           size_t* out_count);
-
-MARGAUX_C_API margaux_error_t database_read_set_strings(database_t* db,
                                                             const char* collection,
                                                             const char* attribute,
-                                                            char**** out_sets,
+                                                            int64_t*** out_vectors,
                                                             size_t** out_sizes,
                                                             size_t* out_count);
 
+MARGAUX_C_API margaux_error_t database_read_vector_floats(database_t* db,
+                                                          const char* collection,
+                                                          const char* attribute,
+                                                          double*** out_vectors,
+                                                          size_t** out_sizes,
+                                                          size_t* out_count);
+
+MARGAUX_C_API margaux_error_t database_read_vector_strings(database_t* db,
+                                                           const char* collection,
+                                                           const char* attribute,
+                                                           char**** out_vectors,
+                                                           size_t** out_sizes,
+                                                           size_t* out_count);
+
+// Read set attributes (same structure as vectors, uses same free functions)
+MARGAUX_C_API margaux_error_t database_read_set_integers(database_t* db,
+                                                         const char* collection,
+                                                         const char* attribute,
+                                                         int64_t*** out_sets,
+                                                         size_t** out_sizes,
+                                                         size_t* out_count);
+
+MARGAUX_C_API margaux_error_t database_read_set_floats(database_t* db,
+                                                       const char* collection,
+                                                       const char* attribute,
+                                                       double*** out_sets,
+                                                       size_t** out_sizes,
+                                                       size_t* out_count);
+
+MARGAUX_C_API margaux_error_t database_read_set_strings(database_t* db,
+                                                        const char* collection,
+                                                        const char* attribute,
+                                                        char**** out_sets,
+                                                        size_t** out_sizes,
+                                                        size_t* out_count);
+
 // Read scalar attributes by element ID
 MARGAUX_C_API margaux_error_t database_read_scalar_integers_by_id(database_t* db,
-                                                                      const char* collection,
-                                                                      const char* attribute,
-                                                                      int64_t id,
-                                                                      int64_t* out_value,
-                                                                      int* out_has_value);
+                                                                  const char* collection,
+                                                                  const char* attribute,
+                                                                  int64_t id,
+                                                                  int64_t* out_value,
+                                                                  int* out_has_value);
 
 MARGAUX_C_API margaux_error_t database_read_scalar_floats_by_id(database_t* db,
-                                                                    const char* collection,
-                                                                    const char* attribute,
-                                                                    int64_t id,
-                                                                    double* out_value,
-                                                                    int* out_has_value);
+                                                                const char* collection,
+                                                                const char* attribute,
+                                                                int64_t id,
+                                                                double* out_value,
+                                                                int* out_has_value);
 
 MARGAUX_C_API margaux_error_t database_read_scalar_strings_by_id(database_t* db,
-                                                                     const char* collection,
-                                                                     const char* attribute,
-                                                                     int64_t id,
-                                                                     char** out_value,
-                                                                     int* out_has_value);
+                                                                 const char* collection,
+                                                                 const char* attribute,
+                                                                 int64_t id,
+                                                                 char** out_value,
+                                                                 int* out_has_value);
 
 // Read vector attributes by element ID
 MARGAUX_C_API margaux_error_t database_read_vector_integers_by_id(database_t* db,
-                                                                      const char* collection,
-                                                                      const char* attribute,
-                                                                      int64_t id,
-                                                                      int64_t** out_values,
-                                                                      size_t* out_count);
+                                                                  const char* collection,
+                                                                  const char* attribute,
+                                                                  int64_t id,
+                                                                  int64_t** out_values,
+                                                                  size_t* out_count);
 
 MARGAUX_C_API margaux_error_t database_read_vector_floats_by_id(database_t* db,
-                                                                    const char* collection,
-                                                                    const char* attribute,
-                                                                    int64_t id,
-                                                                    double** out_values,
-                                                                    size_t* out_count);
+                                                                const char* collection,
+                                                                const char* attribute,
+                                                                int64_t id,
+                                                                double** out_values,
+                                                                size_t* out_count);
 
 MARGAUX_C_API margaux_error_t database_read_vector_strings_by_id(database_t* db,
-                                                                     const char* collection,
-                                                                     const char* attribute,
-                                                                     int64_t id,
-                                                                     char*** out_values,
-                                                                     size_t* out_count);
+                                                                 const char* collection,
+                                                                 const char* attribute,
+                                                                 int64_t id,
+                                                                 char*** out_values,
+                                                                 size_t* out_count);
 
 // Read set attributes by element ID
 MARGAUX_C_API margaux_error_t database_read_set_integers_by_id(database_t* db,
-                                                                   const char* collection,
-                                                                   const char* attribute,
-                                                                   int64_t id,
-                                                                   int64_t** out_values,
-                                                                   size_t* out_count);
+                                                               const char* collection,
+                                                               const char* attribute,
+                                                               int64_t id,
+                                                               int64_t** out_values,
+                                                               size_t* out_count);
 
 MARGAUX_C_API margaux_error_t database_read_set_floats_by_id(database_t* db,
-                                                                 const char* collection,
-                                                                 const char* attribute,
-                                                                 int64_t id,
-                                                                 double** out_values,
-                                                                 size_t* out_count);
-
-MARGAUX_C_API margaux_error_t database_read_set_strings_by_id(database_t* db,
-                                                                  const char* collection,
-                                                                  const char* attribute,
-                                                                  int64_t id,
-                                                                  char*** out_values,
-                                                                  size_t* out_count);
-
-// Read element IDs
-MARGAUX_C_API margaux_error_t database_read_element_ids(database_t* db,
-                                                            const char* collection,
-                                                            int64_t** out_ids,
-                                                            size_t* out_count);
-
-// Attribute type query
-MARGAUX_C_API margaux_error_t database_get_attribute_type(database_t* db,
-                                                              const char* collection,
-                                                              const char* attribute,
-                                                              psr_data_structure_t* out_data_structure,
-                                                              psr_data_type_t* out_data_type);
-
-// Update scalar attributes (by element ID)
-MARGAUX_C_API margaux_error_t database_update_scalar_integer(database_t* db,
-                                                                 const char* collection,
-                                                                 const char* attribute,
-                                                                 int64_t id,
-                                                                 int64_t value);
-
-MARGAUX_C_API margaux_error_t database_update_scalar_float(database_t* db,
-                                                               const char* collection,
-                                                               const char* attribute,
-                                                               int64_t id,
-                                                               double value);
-
-MARGAUX_C_API margaux_error_t database_update_scalar_string(database_t* db,
-                                                                const char* collection,
-                                                                const char* attribute,
-                                                                int64_t id,
-                                                                const char* value);
-
-// Update vector attributes (by element ID) - replaces entire vector
-MARGAUX_C_API margaux_error_t database_update_vector_integers(database_t* db,
-                                                                  const char* collection,
-                                                                  const char* attribute,
-                                                                  int64_t id,
-                                                                  const int64_t* values,
-                                                                  size_t count);
-
-MARGAUX_C_API margaux_error_t database_update_vector_floats(database_t* db,
-                                                                const char* collection,
-                                                                const char* attribute,
-                                                                int64_t id,
-                                                                const double* values,
-                                                                size_t count);
-
-MARGAUX_C_API margaux_error_t database_update_vector_strings(database_t* db,
-                                                                 const char* collection,
-                                                                 const char* attribute,
-                                                                 int64_t id,
-                                                                 const char* const* values,
-                                                                 size_t count);
-
-// Update set attributes (by element ID) - replaces entire set
-MARGAUX_C_API margaux_error_t database_update_set_integers(database_t* db,
-                                                               const char* collection,
-                                                               const char* attribute,
-                                                               int64_t id,
-                                                               const int64_t* values,
-                                                               size_t count);
-
-MARGAUX_C_API margaux_error_t database_update_set_floats(database_t* db,
                                                              const char* collection,
                                                              const char* attribute,
                                                              int64_t id,
-                                                             const double* values,
-                                                             size_t count);
+                                                             double** out_values,
+                                                             size_t* out_count);
 
-MARGAUX_C_API margaux_error_t database_update_set_strings(database_t* db,
+MARGAUX_C_API margaux_error_t database_read_set_strings_by_id(database_t* db,
                                                               const char* collection,
                                                               const char* attribute,
                                                               int64_t id,
-                                                              const char* const* values,
+                                                              char*** out_values,
+                                                              size_t* out_count);
+
+// Read element IDs
+MARGAUX_C_API margaux_error_t database_read_element_ids(database_t* db,
+                                                        const char* collection,
+                                                        int64_t** out_ids,
+                                                        size_t* out_count);
+
+// Attribute type query
+MARGAUX_C_API margaux_error_t database_get_attribute_type(database_t* db,
+                                                          const char* collection,
+                                                          const char* attribute,
+                                                          psr_data_structure_t* out_data_structure,
+                                                          psr_data_type_t* out_data_type);
+
+// Update scalar attributes (by element ID)
+MARGAUX_C_API margaux_error_t database_update_scalar_integer(database_t* db,
+                                                             const char* collection,
+                                                             const char* attribute,
+                                                             int64_t id,
+                                                             int64_t value);
+
+MARGAUX_C_API margaux_error_t
+database_update_scalar_float(database_t* db, const char* collection, const char* attribute, int64_t id, double value);
+
+MARGAUX_C_API margaux_error_t database_update_scalar_string(database_t* db,
+                                                            const char* collection,
+                                                            const char* attribute,
+                                                            int64_t id,
+                                                            const char* value);
+
+// Update vector attributes (by element ID) - replaces entire vector
+MARGAUX_C_API margaux_error_t database_update_vector_integers(database_t* db,
+                                                              const char* collection,
+                                                              const char* attribute,
+                                                              int64_t id,
+                                                              const int64_t* values,
                                                               size_t count);
+
+MARGAUX_C_API margaux_error_t database_update_vector_floats(database_t* db,
+                                                            const char* collection,
+                                                            const char* attribute,
+                                                            int64_t id,
+                                                            const double* values,
+                                                            size_t count);
+
+MARGAUX_C_API margaux_error_t database_update_vector_strings(database_t* db,
+                                                             const char* collection,
+                                                             const char* attribute,
+                                                             int64_t id,
+                                                             const char* const* values,
+                                                             size_t count);
+
+// Update set attributes (by element ID) - replaces entire set
+MARGAUX_C_API margaux_error_t database_update_set_integers(database_t* db,
+                                                           const char* collection,
+                                                           const char* attribute,
+                                                           int64_t id,
+                                                           const int64_t* values,
+                                                           size_t count);
+
+MARGAUX_C_API margaux_error_t database_update_set_floats(database_t* db,
+                                                         const char* collection,
+                                                         const char* attribute,
+                                                         int64_t id,
+                                                         const double* values,
+                                                         size_t count);
+
+MARGAUX_C_API margaux_error_t database_update_set_strings(database_t* db,
+                                                          const char* collection,
+                                                          const char* attribute,
+                                                          int64_t id,
+                                                          const char* const* values,
+                                                          size_t count);
 
 // Memory cleanup for read results
 MARGAUX_C_API void psr_free_integer_array(int64_t* values);

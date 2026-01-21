@@ -334,8 +334,7 @@ TEST(DatabaseCApi, UpdateElementMultipleScalars) {
 
     int64_t integer_value;
     int has_value;
-    err = database_read_scalar_integers_by_id(
-        db, "Configuration", "integer_attribute", id, &integer_value, &has_value);
+    err = database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id, &integer_value, &has_value);
     EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(integer_value, 100);

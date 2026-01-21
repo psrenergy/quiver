@@ -41,9 +41,7 @@ MARGAUX_C_API margaux_error_t element_set_float(element_t* element, const char* 
     return MARGAUX_OK;
 }
 
-MARGAUX_C_API margaux_error_t element_set_string(element_t* element,
-                                                         const char* name,
-                                                         const char* value) {
+MARGAUX_C_API margaux_error_t element_set_string(element_t* element, const char* name, const char* value) {
     if (!element || !name || !value) {
         return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
@@ -60,9 +58,9 @@ MARGAUX_C_API margaux_error_t element_set_null(element_t* element, const char* n
 }
 
 MARGAUX_C_API margaux_error_t element_set_array_integer(element_t* element,
-                                                                const char* name,
-                                                                const int64_t* values,
-                                                                int32_t count) {
+                                                        const char* name,
+                                                        const int64_t* values,
+                                                        int32_t count) {
     if (!element || !name || (!values && count > 0) || count < 0) {
         return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
@@ -72,9 +70,9 @@ MARGAUX_C_API margaux_error_t element_set_array_integer(element_t* element,
 }
 
 MARGAUX_C_API margaux_error_t element_set_array_float(element_t* element,
-                                                              const char* name,
-                                                              const double* values,
-                                                              int32_t count) {
+                                                      const char* name,
+                                                      const double* values,
+                                                      int32_t count) {
     if (!element || !name || (!values && count > 0) || count < 0) {
         return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
@@ -84,9 +82,9 @@ MARGAUX_C_API margaux_error_t element_set_array_float(element_t* element,
 }
 
 MARGAUX_C_API margaux_error_t element_set_array_string(element_t* element,
-                                                               const char* name,
-                                                               const char* const* values,
-                                                               int32_t count) {
+                                                       const char* name,
+                                                       const char* const* values,
+                                                       int32_t count) {
     if (!element || !name || (!values && count > 0) || count < 0) {
         return MARGAUX_ERROR_INVALID_ARGUMENT;
     }

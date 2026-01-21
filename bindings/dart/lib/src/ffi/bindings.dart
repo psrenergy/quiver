@@ -44,8 +44,7 @@ class MargauxBindings {
 
   late final _database_options_defaultPtr =
       _lookup<ffi.NativeFunction<database_options_t Function()>>('database_options_default');
-  late final _database_options_default =
-      _database_options_defaultPtr.asFunction<database_options_t Function()>();
+  late final _database_options_default = _database_options_defaultPtr.asFunction<database_options_t Function()>();
 
   ffi.Pointer<database_t> database_open(
     ffi.Pointer<ffi.Char> path,
@@ -58,9 +57,8 @@ class MargauxBindings {
   }
 
   late final _database_openPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Pointer<database_t> Function(
-              ffi.Pointer<ffi.Char>, ffi.Pointer<database_options_t>)>>('database_open');
+          ffi.NativeFunction<ffi.Pointer<database_t> Function(ffi.Pointer<ffi.Char>, ffi.Pointer<database_options_t>)>>(
+      'database_open');
   late final _database_open = _database_openPtr
       .asFunction<ffi.Pointer<database_t> Function(ffi.Pointer<ffi.Char>, ffi.Pointer<database_options_t>)>();
 
@@ -98,8 +96,8 @@ class MargauxBindings {
 
   late final _database_from_schemaPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Pointer<database_t> Function(ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
-              ffi.Pointer<database_options_t>)>>('database_from_schema');
+          ffi.Pointer<database_t> Function(
+              ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Pointer<database_options_t>)>>('database_from_schema');
   late final _database_from_schema = _database_from_schemaPtr.asFunction<
       ffi.Pointer<database_t> Function(
           ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Pointer<database_options_t>)>();
@@ -126,8 +124,7 @@ class MargauxBindings {
 
   late final _database_is_healthyPtr =
       _lookup<ffi.NativeFunction<ffi.Int Function(ffi.Pointer<database_t>)>>('database_is_healthy');
-  late final _database_is_healthy =
-      _database_is_healthyPtr.asFunction<int Function(ffi.Pointer<database_t>)>();
+  late final _database_is_healthy = _database_is_healthyPtr.asFunction<int Function(ffi.Pointer<database_t>)>();
 
   ffi.Pointer<ffi.Char> database_path(
     ffi.Pointer<database_t> db,
@@ -139,8 +136,7 @@ class MargauxBindings {
 
   late final _database_pathPtr =
       _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<database_t>)>>('database_path');
-  late final _database_path =
-      _database_pathPtr.asFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<database_t>)>();
+  late final _database_path = _database_pathPtr.asFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<database_t>)>();
 
   int database_current_version(
     ffi.Pointer<database_t> db,
@@ -168,9 +164,9 @@ class MargauxBindings {
   }
 
   late final _database_create_elementPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int64 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>,
-              ffi.Pointer<element_t>)>>('database_create_element');
+          ffi
+          .NativeFunction<ffi.Int64 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<element_t>)>>(
+      'database_create_element');
   late final _database_create_element = _database_create_elementPtr
       .asFunction<int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<element_t>)>();
 
@@ -192,8 +188,8 @@ class MargauxBindings {
       ffi.NativeFunction<
           ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Int64,
               ffi.Pointer<element_t>)>>('database_update_element');
-  late final _database_update_element = _database_update_elementPtr.asFunction<
-      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<element_t>)>();
+  late final _database_update_element = _database_update_elementPtr
+      .asFunction<int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<element_t>)>();
 
   int database_delete_element_by_id(
     ffi.Pointer<database_t> db,
@@ -210,8 +206,8 @@ class MargauxBindings {
   late final _database_delete_element_by_idPtr =
       _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Int64)>>(
           'database_delete_element_by_id');
-  late final _database_delete_element_by_id = _database_delete_element_by_idPtr
-      .asFunction<int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, int)>();
+  late final _database_delete_element_by_id =
+      _database_delete_element_by_idPtr.asFunction<int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, int)>();
 
   int database_set_scalar_relation(
     ffi.Pointer<database_t> db,
@@ -331,12 +327,8 @@ class MargauxBindings {
 
   late final _database_read_scalar_stringsPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(
-              ffi.Pointer<database_t>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
-              ffi.Pointer<ffi.Size>)>>('database_read_scalar_strings');
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>, ffi.Pointer<ffi.Size>)>>('database_read_scalar_strings');
   late final _database_read_scalar_strings = _database_read_scalar_stringsPtr.asFunction<
       int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>, ffi.Pointer<ffi.Size>)>();
@@ -580,8 +572,8 @@ class MargauxBindings {
           ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
               ffi.Pointer<ffi.Int64>, ffi.Pointer<ffi.Int>)>>('database_read_scalar_integers_by_id');
   late final _database_read_scalar_integers_by_id = _database_read_scalar_integers_by_idPtr.asFunction<
-      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
-          ffi.Pointer<ffi.Int64>, ffi.Pointer<ffi.Int>)>();
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<ffi.Int64>,
+          ffi.Pointer<ffi.Int>)>();
 
   int database_read_scalar_floats_by_id(
     ffi.Pointer<database_t> db,
@@ -606,8 +598,8 @@ class MargauxBindings {
           ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
               ffi.Pointer<ffi.Double>, ffi.Pointer<ffi.Int>)>>('database_read_scalar_floats_by_id');
   late final _database_read_scalar_floats_by_id = _database_read_scalar_floats_by_idPtr.asFunction<
-      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
-          ffi.Pointer<ffi.Double>, ffi.Pointer<ffi.Int>)>();
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<ffi.Double>,
+          ffi.Pointer<ffi.Int>)>();
 
   int database_read_scalar_strings_by_id(
     ffi.Pointer<database_t> db,
@@ -890,8 +882,8 @@ class MargauxBindings {
       ffi.NativeFunction<
           ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
               ffi.Double)>>('database_update_scalar_float');
-  late final _database_update_scalar_float = _database_update_scalar_floatPtr.asFunction<
-      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, double)>();
+  late final _database_update_scalar_float = _database_update_scalar_floatPtr
+      .asFunction<int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, double)>();
 
   int database_update_scalar_string(
     ffi.Pointer<database_t> db,
@@ -940,8 +932,8 @@ class MargauxBindings {
           ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
               ffi.Pointer<ffi.Int64>, ffi.Size)>>('database_update_vector_integers');
   late final _database_update_vector_integers = _database_update_vector_integersPtr.asFunction<
-      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
-          ffi.Pointer<ffi.Int64>, int)>();
+      int Function(
+          ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<ffi.Int64>, int)>();
 
   int database_update_vector_floats(
     ffi.Pointer<database_t> db,
@@ -966,8 +958,8 @@ class MargauxBindings {
           ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
               ffi.Pointer<ffi.Double>, ffi.Size)>>('database_update_vector_floats');
   late final _database_update_vector_floats = _database_update_vector_floatsPtr.asFunction<
-      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
-          ffi.Pointer<ffi.Double>, int)>();
+      int Function(
+          ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<ffi.Double>, int)>();
 
   int database_update_vector_strings(
     ffi.Pointer<database_t> db,
@@ -1018,8 +1010,8 @@ class MargauxBindings {
           ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
               ffi.Pointer<ffi.Int64>, ffi.Size)>>('database_update_set_integers');
   late final _database_update_set_integers = _database_update_set_integersPtr.asFunction<
-      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
-          ffi.Pointer<ffi.Int64>, int)>();
+      int Function(
+          ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<ffi.Int64>, int)>();
 
   int database_update_set_floats(
     ffi.Pointer<database_t> db,
@@ -1044,8 +1036,8 @@ class MargauxBindings {
           ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
               ffi.Pointer<ffi.Double>, ffi.Size)>>('database_update_set_floats');
   late final _database_update_set_floats = _database_update_set_floatsPtr.asFunction<
-      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
-          ffi.Pointer<ffi.Double>, int)>();
+      int Function(
+          ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<ffi.Double>, int)>();
 
   int database_update_set_strings(
     ffi.Pointer<database_t> db,
@@ -1172,10 +1164,8 @@ class MargauxBindings {
     return _element_create();
   }
 
-  late final _element_createPtr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<element_t1> Function()>>('element_create');
-  late final _element_create =
-      _element_createPtr.asFunction<ffi.Pointer<element_t1> Function()>();
+  late final _element_createPtr = _lookup<ffi.NativeFunction<ffi.Pointer<element_t1> Function()>>('element_create');
+  late final _element_create = _element_createPtr.asFunction<ffi.Pointer<element_t1> Function()>();
 
   void element_destroy(
     ffi.Pointer<element_t1> element,
@@ -1187,8 +1177,7 @@ class MargauxBindings {
 
   late final _element_destroyPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<element_t1>)>>('element_destroy');
-  late final _element_destroy =
-      _element_destroyPtr.asFunction<void Function(ffi.Pointer<element_t1>)>();
+  late final _element_destroy = _element_destroyPtr.asFunction<void Function(ffi.Pointer<element_t1>)>();
 
   void element_clear(
     ffi.Pointer<element_t1> element,
@@ -1200,8 +1189,7 @@ class MargauxBindings {
 
   late final _element_clearPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<element_t1>)>>('element_clear');
-  late final _element_clear =
-      _element_clearPtr.asFunction<void Function(ffi.Pointer<element_t1>)>();
+  late final _element_clear = _element_clearPtr.asFunction<void Function(ffi.Pointer<element_t1>)>();
 
   int element_set_integer(
     ffi.Pointer<element_t1> element,
@@ -1215,11 +1203,11 @@ class MargauxBindings {
     );
   }
 
-  late final _element_set_integerPtr = _lookup<
-          ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>, ffi.Int64)>>(
-      'element_set_integer');
-  late final _element_set_integer = _element_set_integerPtr
-      .asFunction<int Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>, int)>();
+  late final _element_set_integerPtr =
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>, ffi.Int64)>>(
+          'element_set_integer');
+  late final _element_set_integer =
+      _element_set_integerPtr.asFunction<int Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>, int)>();
 
   int element_set_float(
     ffi.Pointer<element_t1> element,
@@ -1233,11 +1221,11 @@ class MargauxBindings {
     );
   }
 
-  late final _element_set_floatPtr = _lookup<
-          ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>, ffi.Double)>>(
-      'element_set_float');
-  late final _element_set_float = _element_set_floatPtr
-      .asFunction<int Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>, double)>();
+  late final _element_set_floatPtr =
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>, ffi.Double)>>(
+          'element_set_float');
+  late final _element_set_float =
+      _element_set_floatPtr.asFunction<int Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>, double)>();
 
   int element_set_string(
     ffi.Pointer<element_t1> element,
@@ -1252,9 +1240,9 @@ class MargauxBindings {
   }
 
   late final _element_set_stringPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>)>>('element_set_string');
+          ffi
+          .NativeFunction<ffi.Int32 Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)>>(
+      'element_set_string');
   late final _element_set_string = _element_set_stringPtr
       .asFunction<int Function(ffi.Pointer<element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)>();
 
@@ -1347,8 +1335,7 @@ class MargauxBindings {
 
   late final _element_has_scalarsPtr =
       _lookup<ffi.NativeFunction<ffi.Int Function(ffi.Pointer<element_t1>)>>('element_has_scalars');
-  late final _element_has_scalars =
-      _element_has_scalarsPtr.asFunction<int Function(ffi.Pointer<element_t1>)>();
+  late final _element_has_scalars = _element_has_scalarsPtr.asFunction<int Function(ffi.Pointer<element_t1>)>();
 
   int element_has_arrays(
     ffi.Pointer<element_t1> element,
@@ -1360,8 +1347,7 @@ class MargauxBindings {
 
   late final _element_has_arraysPtr =
       _lookup<ffi.NativeFunction<ffi.Int Function(ffi.Pointer<element_t1>)>>('element_has_arrays');
-  late final _element_has_arrays =
-      _element_has_arraysPtr.asFunction<int Function(ffi.Pointer<element_t1>)>();
+  late final _element_has_arrays = _element_has_arraysPtr.asFunction<int Function(ffi.Pointer<element_t1>)>();
 
   int element_scalar_count(
     ffi.Pointer<element_t1> element,
@@ -1373,8 +1359,7 @@ class MargauxBindings {
 
   late final _element_scalar_countPtr =
       _lookup<ffi.NativeFunction<ffi.Size Function(ffi.Pointer<element_t1>)>>('element_scalar_count');
-  late final _element_scalar_count =
-      _element_scalar_countPtr.asFunction<int Function(ffi.Pointer<element_t1>)>();
+  late final _element_scalar_count = _element_scalar_countPtr.asFunction<int Function(ffi.Pointer<element_t1>)>();
 
   int element_array_count(
     ffi.Pointer<element_t1> element,
@@ -1386,8 +1371,7 @@ class MargauxBindings {
 
   late final _element_array_countPtr =
       _lookup<ffi.NativeFunction<ffi.Size Function(ffi.Pointer<element_t1>)>>('element_array_count');
-  late final _element_array_count =
-      _element_array_countPtr.asFunction<int Function(ffi.Pointer<element_t1>)>();
+  late final _element_array_count = _element_array_countPtr.asFunction<int Function(ffi.Pointer<element_t1>)>();
 
   ffi.Pointer<ffi.Char> element_to_string(
     ffi.Pointer<element_t1> element,
@@ -1398,8 +1382,7 @@ class MargauxBindings {
   }
 
   late final _element_to_stringPtr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<element_t1>)>>(
-          'element_to_string');
+      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<element_t1>)>>('element_to_string');
   late final _element_to_string =
       _element_to_stringPtr.asFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<element_t1>)>();
 
@@ -1424,8 +1407,7 @@ class MargauxBindings {
   }
 
   late final _lua_runner_newPtr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<lua_runner_t> Function(ffi.Pointer<database_t>)>>(
-          'lua_runner_new');
+      _lookup<ffi.NativeFunction<ffi.Pointer<lua_runner_t> Function(ffi.Pointer<database_t>)>>('lua_runner_new');
   late final _lua_runner_new =
       _lua_runner_newPtr.asFunction<ffi.Pointer<lua_runner_t> Function(ffi.Pointer<database_t>)>();
 
@@ -1466,8 +1448,7 @@ class MargauxBindings {
   }
 
   late final _lua_runner_get_errorPtr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<lua_runner_t>)>>(
-          'lua_runner_get_error');
+      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<lua_runner_t>)>>('lua_runner_get_error');
   late final _lua_runner_get_error =
       _lua_runner_get_errorPtr.asFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<lua_runner_t>)>();
 }

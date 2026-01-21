@@ -238,8 +238,8 @@ TEST(DatabaseCApi, ReadVectorEmpty) {
     int64_t** integer_vectors = nullptr;
     size_t* integer_sizes = nullptr;
     size_t integer_count = 0;
-    auto err = database_read_vector_integers(
-        db, "Collection", "value_int", &integer_vectors, &integer_sizes, &integer_count);
+    auto err =
+        database_read_vector_integers(db, "Collection", "value_int", &integer_vectors, &integer_sizes, &integer_count);
     EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(integer_count, 0);
     EXPECT_EQ(integer_vectors, nullptr);
@@ -460,8 +460,7 @@ TEST(DatabaseCApi, ReadScalarIntegerById) {
 
     int64_t value;
     int has_value;
-    auto err =
-        database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id1, &value, &has_value);
+    auto err = database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id1, &value, &has_value);
 
     EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(has_value, 1);
@@ -536,8 +535,7 @@ TEST(DatabaseCApi, ReadScalarByIdNotFound) {
 
     int64_t value;
     int has_value;
-    auto err =
-        database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", 999, &value, &has_value);
+    auto err = database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", 999, &value, &has_value);
 
     EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(has_value, 0);
@@ -1117,8 +1115,7 @@ TEST(DatabaseCApi, ReadScalarIntegersByIdNullOutput) {
     ASSERT_NE(db, nullptr);
 
     int has_value;
-    auto err =
-        database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", 1, nullptr, &has_value);
+    auto err = database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", 1, nullptr, &has_value);
     EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     int64_t value;
@@ -1131,8 +1128,7 @@ TEST(DatabaseCApi, ReadScalarIntegersByIdNullOutput) {
 TEST(DatabaseCApi, ReadScalarFloatsByIdNullDb) {
     double value;
     int has_value;
-    auto err =
-        database_read_scalar_floats_by_id(nullptr, "Configuration", "float_attribute", 1, &value, &has_value);
+    auto err = database_read_scalar_floats_by_id(nullptr, "Configuration", "float_attribute", 1, &value, &has_value);
     EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 }
 
@@ -1156,8 +1152,7 @@ TEST(DatabaseCApi, ReadScalarFloatsByIdNullOutput) {
 TEST(DatabaseCApi, ReadScalarStringsByIdNullDb) {
     char* value = nullptr;
     int has_value;
-    auto err =
-        database_read_scalar_strings_by_id(nullptr, "Configuration", "string_attribute", 1, &value, &has_value);
+    auto err = database_read_scalar_strings_by_id(nullptr, "Configuration", "string_attribute", 1, &value, &has_value);
     EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
 }
 
