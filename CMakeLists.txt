@@ -12,9 +12,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Build options
-option(PSR_BUILD_SHARED "Build shared library" ON)
-option(PSR_BUILD_TESTS "Build test suite" ON)
-option(PSR_BUILD_C_API "Build C API wrapper" OFF)
+option(MARGAUX_BUILD_SHARED "Build shared library" ON)
+option(MARGAUX_BUILD_TESTS "Build test suite" ON)
+option(MARGAUX_BUILD_C_API "Build C API wrapper" OFF)
 
 # Include CMake modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -31,7 +31,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 add_subdirectory(src)
 
 # Tests
-if(PSR_BUILD_TESTS)
+if(MARGAUX_BUILD_TESTS)
     include(CTest)
     enable_testing()
     add_subdirectory(tests)

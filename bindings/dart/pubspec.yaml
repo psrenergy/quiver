@@ -16,7 +16,7 @@ dev_dependencies:
 
 ffigen:
   name: PsrDatabaseBindings
-  description: FFI bindings for PSR Database C API
+  description: FFI bindings for Margaux C API
   output: 'lib/src/ffi/bindings.dart'
   headers:
     entry-points:

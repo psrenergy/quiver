@@ -21,8 +21,8 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "PSR_BUILD_TESTS": "ON",
-        "PSR_BUILD_C_API": "ON"
+        "MARGAUX_BUILD_TESTS": "ON",
+        "MARGAUX_BUILD_C_API": "ON"
       }
     },
     {
@@ -32,7 +32,7 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "PSR_BUILD_TESTS": "OFF"
+        "MARGAUX_BUILD_TESTS": "OFF"
       }
     },
     {
@@ -48,8 +48,8 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "PSR_BUILD_TESTS": "ON",
-        "PSR_BUILD_C_API": "ON"
+        "MARGAUX_BUILD_TESTS": "ON",
+        "MARGAUX_BUILD_C_API": "ON"
       }
     },
     {
@@ -65,8 +65,8 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "PSR_BUILD_TESTS": "ON",
-        "PSR_BUILD_C_API": "ON"
+        "MARGAUX_BUILD_TESTS": "ON",
+        "MARGAUX_BUILD_C_API": "ON"
       }
     },
     {
@@ -76,9 +76,9 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "PSR_BUILD_TESTS": "ON",
-        "PSR_BUILD_C_API": "ON",
-        "PSR_BUILD_PYTHON_BINDING": "ON"
+        "MARGAUX_BUILD_TESTS": "ON",
+        "MARGAUX_BUILD_C_API": "ON",
+        "MARGAUX_BUILD_PYTHON_BINDING": "ON"
       }
     }
   ],

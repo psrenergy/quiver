@@ -59,7 +59,7 @@ Testing/
 
 .cache/
 
-PSRDatabase.jl/
+Margaux.jl/
 *.log
 *.sqlite
 nul

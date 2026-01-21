@@ -7,7 +7,7 @@ import 'ffi/library_loader.dart';
 import 'element.dart';
 import 'exceptions.dart';
 
-/// A wrapper for the PSR Database.
+/// A wrapper for Margaux.
 ///
 /// Use [Database.fromSchema] to create a new database from a SQL schema file.
 /// After use, call [close] to free native resources.

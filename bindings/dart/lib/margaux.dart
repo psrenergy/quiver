@@ -1,6 +1,6 @@
-/// Dart FFI bindings for PSR Database - SQLite wrapper library.
+/// Dart FFI bindings for Margaux
 ///
-/// This library provides a Dart interface to the PSR Database C library.
+/// This library provides a Dart interface to the Margaux C library.
 ///
 /// ## Usage
 ///

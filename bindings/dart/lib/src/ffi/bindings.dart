@@ -7,7 +7,7 @@
 // ignore_for_file: type=lint
 import 'dart:ffi' as ffi;
 
-/// FFI bindings for PSR Database C API
+/// FFI bindings for Margaux C API
 class PsrDatabaseBindings {
   /// Holds the symbol lookup function.
   final ffi.Pointer<T> Function<T extends ffi.NativeType>(String symbolName) _lookup;

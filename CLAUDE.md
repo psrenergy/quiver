@@ -1,4 +1,4 @@
-# Project: PSR Database
+# Project: Margaux
 
 SQLite wrapper library with C++ core, C API for FFI, and language bindings (Julia, Dart).
 
