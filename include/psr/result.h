@@ -6,7 +6,7 @@
 
 #include <vector>
 
-namespace psr {
+namespace margaux {
 
 class PSR_API Result {
 public:
@@ -30,6 +30,6 @@ private:
     std::vector<Row> rows_;
 };
 
-}  // namespace psr
+}  // namespace margaux
 
 #endif  // PSR_RESULT_H

@@ -2,7 +2,7 @@
 
 #include "psr/row.h"
 
-namespace psr {
+namespace margaux {
 
 Result::Result() : columns_(), rows_() {}
 
@@ -32,4 +32,4 @@ const Row& Result::at(size_t index) const {
 const Row& Result::operator[](size_t index) const {
     return rows_[index];
 }
-}  // namespace psr
+}  // namespace margaux

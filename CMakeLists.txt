@@ -55,7 +55,7 @@ configure_package_config_file(
 
 install(EXPORT psr_databaseTargets
     FILE psr_databaseTargets.cmake
-    NAMESPACE psr::
+    NAMESPACE margaux::
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/psr_database
 )
 

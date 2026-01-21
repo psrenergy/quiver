@@ -7,7 +7,7 @@
 #include <optional>
 #include <vector>
 
-namespace psr {
+namespace margaux {
 
 class PSR_API Row {
 public:
@@ -34,6 +34,6 @@ private:
     std::vector<Value> values_;
 };
 
-}  // namespace psr
+}  // namespace margaux
 
 #endif  // PSR_ROW_H

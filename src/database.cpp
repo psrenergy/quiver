@@ -92,7 +92,7 @@ std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_pat
 
 }  // anonymous namespace
 
-namespace psr {
+namespace margaux {
 
 struct Database::Impl {
     sqlite3* db = nullptr;
@@ -1408,4 +1408,4 @@ AttributeType Database::get_attribute_type(const std::string& collection, const 
     throw std::runtime_error("Attribute '" + attribute + "' not found in collection '" + collection + "'");
 }
 
-}  // namespace psr
+}  // namespace margaux

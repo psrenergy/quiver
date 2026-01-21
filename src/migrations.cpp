@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <filesystem>
 
-namespace psr {
+namespace margaux {
 
 namespace fs = std::filesystem;
 
@@ -93,4 +93,4 @@ Migrations::iterator Migrations::end() const {
     return impl_->versions.end();
 }
 
-}  // namespace psr
+}  // namespace margaux

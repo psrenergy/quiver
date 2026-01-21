@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-namespace psr {
+namespace margaux {
 
 struct PSR_API DatabaseOptions {
     bool read_only = false;
@@ -158,6 +158,6 @@ private:
     void rollback();
 };
 
-}  // namespace psr
+}  // namespace margaux
 
 #endif  // PSR_DATABASE_H

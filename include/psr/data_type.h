@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace psr {
+namespace margaux {
 
 enum class DataType { Integer, Real, Text };
 
@@ -30,6 +30,6 @@ inline const char* data_type_to_string(DataType type) {
     return "UNKNOWN";
 }
 
-}  // namespace psr
+}  // namespace margaux
 
 #endif  // PSR_DATA_TYPE_H

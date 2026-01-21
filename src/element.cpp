@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-namespace psr {
+namespace margaux {
 
 namespace {
 
@@ -126,4 +126,4 @@ std::string Element::to_string() const {
     return oss.str();
 }
 
-}  // namespace psr
+}  // namespace margaux

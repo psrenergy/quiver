@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace psr {
+namespace margaux {
 
 class PSR_API TypeValidator {
 public:
@@ -29,6 +29,6 @@ private:
     const Schema& schema_;
 };
 
-}  // namespace psr
+}  // namespace margaux
 
 #endif  // PSR_TYPE_VALIDATOR_H
