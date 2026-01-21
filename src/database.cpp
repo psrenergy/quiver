@@ -387,14 +387,15 @@ void Database::migrate_up(const std::string& migrations_path) {
 
 void Database::apply_schema(const std::string& schema_path) {
     namespace fs = std::filesystem;
+    auto canonical_schema_path = fs::canonical(schema_path).string();
 
-    if (!fs::exists(schema_path)) {
-        throw std::runtime_error("Schema file not found: " + schema_path);
+    if (!fs::exists(canonical_schema_path)) {
+        throw std::runtime_error("Schema file not found: " + canonical_schema_path);
     }
 
-    std::ifstream file(schema_path);
+    std::ifstream file(canonical_schema_path);
     if (!file.is_open()) {
-        throw std::runtime_error("Failed to open schema file: " + schema_path);
+        throw std::runtime_error("Failed to open schema file: " + canonical_schema_path);
     }
 
     std::stringstream buffer;
@@ -402,10 +403,10 @@ void Database::apply_schema(const std::string& schema_path) {
     const auto schema_sql = buffer.str();
 
     if (schema_sql.empty()) {
-        throw std::runtime_error("Schema file is empty: " + schema_path);
+        throw std::runtime_error("Schema file is empty: " + canonical_schema_path);
     }
 
-    impl_->logger->info("Applying schema from: {}", schema_path);
+    impl_->logger->info("Applying schema from: {}", canonical_schema_path);
 
     begin_transaction();
     try {
@@ -1200,6 +1201,7 @@ void Database::update_vector_integers(const std::string& collection,
         commit();
     } catch (const std::exception& e) {
         rollback();
+        impl_->logger->error("Failed to update vector {}.{} for id {}: {}", collection, attribute, id, e.what());
         throw;
     }
 
@@ -1229,6 +1231,7 @@ void Database::update_vector_floats(const std::string& collection,
         commit();
     } catch (const std::exception& e) {
         rollback();
+        impl_->logger->error("Failed to update vector {}.{} for id {}: {}", collection, attribute, id, e.what());
         throw;
     }
 
@@ -1258,6 +1261,7 @@ void Database::update_vector_strings(const std::string& collection,
         commit();
     } catch (const std::exception& e) {
         rollback();
+        impl_->logger->error("Failed to update vector {}.{} for id {}: {}", collection, attribute, id, e.what());
         throw;
     }
 
@@ -1286,6 +1290,7 @@ void Database::update_set_integers(const std::string& collection,
         commit();
     } catch (const std::exception& e) {
         rollback();
+        impl_->logger->error("Failed to update set {}.{} for id {}: {}", collection, attribute, id, e.what());
         throw;
     }
 
@@ -1314,6 +1319,7 @@ void Database::update_set_floats(const std::string& collection,
         commit();
     } catch (const std::exception& e) {
         rollback();
+        impl_->logger->error("Failed to update set {}.{} for id {}: {}", collection, attribute, id, e.what());
         throw;
     }
 
@@ -1342,6 +1348,7 @@ void Database::update_set_strings(const std::string& collection,
         commit();
     } catch (const std::exception& e) {
         rollback();
+        impl_->logger->error("Failed to update set {}.{} for id {}: {}", collection, attribute, id, e.what());
         throw;
     }
 

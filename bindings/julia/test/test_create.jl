@@ -221,6 +221,21 @@ include("fixture.jl")
 
         PSRDatabase.close!(db)
     end
+
+    @testset "Special Characters" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = PSRDatabase.from_schema(":memory:", path_schema)
+
+        special_label = "ãçéóú\$/MWh"
+        PSRDatabase.create_element!(db, "Configuration"; label = special_label)
+
+        labels = PSRDatabase.read_scalar_strings(db, "Configuration", "label")
+        @test length(labels) == 1
+        @test labels[1] == special_label
+
+        PSRDatabase.close!(db)
+    end
+
 end
 
 end
