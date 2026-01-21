@@ -110,12 +110,12 @@ mutable struct element end
 
 const element_t = element
 
-function database_create_element(db, collection, element)
-    @ccall libmargaux_c.database_create_element(db::Ptr{database_t}, collection::Ptr{Cchar}, element::Ptr{element_t})::Int64
+function database_create_element(db, collection, element_)
+    @ccall libmargaux_c.database_create_element(db::Ptr{database_t}, collection::Ptr{Cchar}, element_::Ptr{element_t})::Int64
 end
 
-function database_update_element(db, collection, id, element)
-    @ccall libmargaux_c.database_update_element(db::Ptr{database_t}, collection::Ptr{Cchar}, id::Int64, element::Ptr{element_t})::margaux_error_t
+function database_update_element(db, collection, id, element_)
+    @ccall libmargaux_c.database_update_element(db::Ptr{database_t}, collection::Ptr{Cchar}, id::Int64, element_::Ptr{element_t})::margaux_error_t
 end
 
 function database_delete_element_by_id(db, collection, id)
@@ -274,60 +274,60 @@ function element_create()
     @ccall libmargaux_c.element_create()::Ptr{element_t}
 end
 
-function element_destroy(element)
-    @ccall libmargaux_c.element_destroy(element::Ptr{element_t})::Cvoid
+function element_destroy(element_)
+    @ccall libmargaux_c.element_destroy(element_::Ptr{element_t})::Cvoid
 end
 
-function element_clear(element)
-    @ccall libmargaux_c.element_clear(element::Ptr{element_t})::Cvoid
+function element_clear(element_)
+    @ccall libmargaux_c.element_clear(element_::Ptr{element_t})::Cvoid
 end
 
-function element_set_integer(element, name, value)
-    @ccall libmargaux_c.element_set_integer(element::Ptr{element_t}, name::Ptr{Cchar}, value::Int64)::margaux_error_t
+function element_set_integer(element_, name, value)
+    @ccall libmargaux_c.element_set_integer(element_::Ptr{element_t}, name::Ptr{Cchar}, value::Int64)::margaux_error_t
 end
 
-function element_set_float(element, name, value)
-    @ccall libmargaux_c.element_set_float(element::Ptr{element_t}, name::Ptr{Cchar}, value::Cdouble)::margaux_error_t
+function element_set_float(element_, name, value)
+    @ccall libmargaux_c.element_set_float(element_::Ptr{element_t}, name::Ptr{Cchar}, value::Cdouble)::margaux_error_t
 end
 
-function element_set_string(element, name, value)
-    @ccall libmargaux_c.element_set_string(element::Ptr{element_t}, name::Ptr{Cchar}, value::Ptr{Cchar})::margaux_error_t
+function element_set_string(element_, name, value)
+    @ccall libmargaux_c.element_set_string(element_::Ptr{element_t}, name::Ptr{Cchar}, value::Ptr{Cchar})::margaux_error_t
 end
 
-function element_set_null(element, name)
-    @ccall libmargaux_c.element_set_null(element::Ptr{element_t}, name::Ptr{Cchar})::margaux_error_t
+function element_set_null(element_, name)
+    @ccall libmargaux_c.element_set_null(element_::Ptr{element_t}, name::Ptr{Cchar})::margaux_error_t
 end
 
-function element_set_array_integer(element, name, values, count)
-    @ccall libmargaux_c.element_set_array_integer(element::Ptr{element_t}, name::Ptr{Cchar}, values::Ptr{Int64}, count::Int32)::margaux_error_t
+function element_set_array_integer(element_, name, values, count)
+    @ccall libmargaux_c.element_set_array_integer(element_::Ptr{element_t}, name::Ptr{Cchar}, values::Ptr{Int64}, count::Int32)::margaux_error_t
 end
 
-function element_set_array_float(element, name, values, count)
-    @ccall libmargaux_c.element_set_array_float(element::Ptr{element_t}, name::Ptr{Cchar}, values::Ptr{Cdouble}, count::Int32)::margaux_error_t
+function element_set_array_float(element_, name, values, count)
+    @ccall libmargaux_c.element_set_array_float(element_::Ptr{element_t}, name::Ptr{Cchar}, values::Ptr{Cdouble}, count::Int32)::margaux_error_t
 end
 
-function element_set_array_string(element, name, values, count)
-    @ccall libmargaux_c.element_set_array_string(element::Ptr{element_t}, name::Ptr{Cchar}, values::Ptr{Ptr{Cchar}}, count::Int32)::margaux_error_t
+function element_set_array_string(element_, name, values, count)
+    @ccall libmargaux_c.element_set_array_string(element_::Ptr{element_t}, name::Ptr{Cchar}, values::Ptr{Ptr{Cchar}}, count::Int32)::margaux_error_t
 end
 
-function element_has_scalars(element)
-    @ccall libmargaux_c.element_has_scalars(element::Ptr{element_t})::Cint
+function element_has_scalars(element_)
+    @ccall libmargaux_c.element_has_scalars(element_::Ptr{element_t})::Cint
 end
 
-function element_has_arrays(element)
-    @ccall libmargaux_c.element_has_arrays(element::Ptr{element_t})::Cint
+function element_has_arrays(element_)
+    @ccall libmargaux_c.element_has_arrays(element_::Ptr{element_t})::Cint
 end
 
-function element_scalar_count(element)
-    @ccall libmargaux_c.element_scalar_count(element::Ptr{element_t})::Csize_t
+function element_scalar_count(element_)
+    @ccall libmargaux_c.element_scalar_count(element_::Ptr{element_t})::Csize_t
 end
 
-function element_array_count(element)
-    @ccall libmargaux_c.element_array_count(element::Ptr{element_t})::Csize_t
+function element_array_count(element_)
+    @ccall libmargaux_c.element_array_count(element_::Ptr{element_t})::Csize_t
 end
 
-function element_to_string(element)
-    @ccall libmargaux_c.element_to_string(element::Ptr{element_t})::Ptr{Cchar}
+function element_to_string(element_)
+    @ccall libmargaux_c.element_to_string(element_::Ptr{element_t})::Ptr{Cchar}
 end
 
 function margaux_string_free(str)
