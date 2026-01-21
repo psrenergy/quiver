@@ -59,7 +59,7 @@ Testing/
 
 .cache/
 
-Margaux.jl/
+DeckDatabase.jl/
 *.log
 *.sqlite
 nul

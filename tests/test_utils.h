@@ -1,5 +1,5 @@
-#ifndef MARGAUX_TEST_UTILS_H
-#define MARGAUX_TEST_UTILS_H
+#ifndef DECK_DATABASE_TEST_UTILS_H
+#define DECK_DATABASE_TEST_UTILS_H
 
 #include <filesystem>
 #include <margaux/c/database.h>
@@ -17,7 +17,7 @@ inline std::string path_from(const char* test_file, const std::string& relative)
 // Default options with logging off for tests
 inline database_options_t quiet_options() {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     return options;
 }
 
@@ -29,4 +29,4 @@ inline database_options_t quiet_options() {
 #define VALID_SCHEMA(name) SCHEMA_PATH("schemas/valid/" name)
 #define INVALID_SCHEMA(name) SCHEMA_PATH("schemas/invalid/" name)
 
-#endif  // MARGAUX_TEST_UTILS_H
+#endif  // DECK_DATABASE_TEST_UTILS_H

@@ -1,5 +1,5 @@
 # Core library sources
-set(MARGAUX_SOURCES
+set(DECK_DATABASE_SOURCES
     database.cpp
     element.cpp
     lua_runner.cpp
@@ -13,12 +13,12 @@ set(MARGAUX_SOURCES
 )
 
 # Build type
-if(MARGAUX_BUILD_SHARED)
-    add_library(margaux SHARED ${MARGAUX_SOURCES})
-    target_compile_definitions(margaux PRIVATE MARGAUX_DATABASE_EXPORTS)
+if(DECK_DATABASE_BUILD_SHARED)
+    add_library(margaux SHARED ${DECK_DATABASE_SOURCES})
+    target_compile_definitions(margaux PRIVATE DECK_DATABASE_DATABASE_EXPORTS)
 else()
-    add_library(margaux STATIC ${MARGAUX_SOURCES})
-    target_compile_definitions(margaux PUBLIC MARGAUX_DATABASE_STATIC)
+    add_library(margaux STATIC ${DECK_DATABASE_SOURCES})
+    target_compile_definitions(margaux PUBLIC DECK_DATABASE_DATABASE_STATIC)
 endif()
 
 # Include directories
@@ -72,7 +72,7 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/margaux
 )
 
 # C API wrapper (optional)
-if(MARGAUX_BUILD_C_API)
+if(DECK_DATABASE_BUILD_C_API)
     add_library(margaux_c SHARED
         c_api_common.cpp
         c_api_database.cpp
@@ -81,8 +81,8 @@ if(MARGAUX_BUILD_C_API)
     )
 
     target_compile_definitions(margaux_c PRIVATE
-        MARGAUX_DATABASE_C_EXPORTS
-        MARGAUX_VERSION="${PROJECT_VERSION}"
+        DECK_DATABASE_DATABASE_C_EXPORTS
+        DECK_DATABASE_VERSION="${PROJECT_VERSION}"
     )
 
     target_include_directories(margaux_c PUBLIC

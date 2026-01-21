@@ -1,5 +1,5 @@
-#ifndef MARGAUX_ELEMENT_H
-#define MARGAUX_ELEMENT_H
+#ifndef DECK_DATABASE_ELEMENT_H
+#define DECK_DATABASE_ELEMENT_H
 
 #include "export.h"
 #include "value.h"
@@ -10,7 +10,7 @@
 
 namespace margaux {
 
-class MARGAUX_API Element {
+class DECK_DATABASE_API Element {
 public:
     Element() = default;
 
@@ -44,4 +44,4 @@ private:
 
 }  // namespace margaux
 
-#endif  // MARGAUX_ELEMENT_H
+#endif  // DECK_DATABASE_ELEMENT_H

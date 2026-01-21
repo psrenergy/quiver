@@ -1,5 +1,5 @@
-#ifndef MARGAUX_DATA_TYPE_H
-#define MARGAUX_DATA_TYPE_H
+#ifndef DECK_DATABASE_DATA_TYPE_H
+#define DECK_DATABASE_DATA_TYPE_H
 
 #include <stdexcept>
 #include <string>
@@ -32,4 +32,4 @@ inline const char* data_type_to_string(DataType type) {
 
 }  // namespace margaux
 
-#endif  // MARGAUX_DATA_TYPE_H
+#endif  // DECK_DATABASE_DATA_TYPE_H

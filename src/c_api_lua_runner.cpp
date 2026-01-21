@@ -29,18 +29,18 @@ void lua_runner_free(lua_runner_t* runner) {
 
 margaux_error_t lua_runner_run(lua_runner_t* runner, const char* script) {
     if (!runner || !script) {
-        return MARGAUX_ERROR_INVALID_ARGUMENT;
+        return DECK_DATABASE_ERROR_INVALID_ARGUMENT;
     }
     try {
         runner->last_error.clear();
         runner->runner.run(script);
-        return MARGAUX_OK;
+        return DECK_DATABASE_OK;
     } catch (const std::exception& e) {
         runner->last_error = e.what();
-        return MARGAUX_ERROR_DATABASE;
+        return DECK_DATABASE_ERROR_DATABASE;
     } catch (...) {
         runner->last_error = "Unknown error";
-        return MARGAUX_ERROR_DATABASE;
+        return DECK_DATABASE_ERROR_DATABASE;
     }
 }
 

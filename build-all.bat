@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 REM ============================================================
-REM Build and Test All - Margaux
+REM Build and Test All - Deck Database
 REM ============================================================
 REM Builds C++ library, C API, and runs all tests:
 REM   - C++ unit tests
@@ -36,7 +36,7 @@ goto parse_args
 
 echo.
 echo ============================================================
-echo  Margaux - Build All (%BUILD_TYPE%)
+echo  Deck Database - Build All (%BUILD_TYPE%)
 echo ============================================================
 echo.
 
@@ -46,7 +46,7 @@ REM ============================================================
 echo [1/5] Building C++ library and C API...
 echo.
 
-cmake -B build -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DMARGAUX_BUILD_TESTS=ON -DMARGAUX_BUILD_C_API=ON
+cmake -B build -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DDECK_DATABASE_BUILD_TESTS=ON -DDECK_DATABASE_BUILD_C_API=ON
 if errorlevel 1 (
     echo.
     echo ERROR: CMake configuration failed

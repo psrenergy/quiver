@@ -1,5 +1,5 @@
-#ifndef MARGAUX_TYPE_VALIDATOR_H
-#define MARGAUX_TYPE_VALIDATOR_H
+#ifndef DECK_DATABASE_TYPE_VALIDATOR_H
+#define DECK_DATABASE_TYPE_VALIDATOR_H
 
 #include "data_type.h"
 #include "export.h"
@@ -11,7 +11,7 @@
 
 namespace margaux {
 
-class MARGAUX_API TypeValidator {
+class DECK_DATABASE_API TypeValidator {
 public:
     explicit TypeValidator(const Schema& schema);
 
@@ -31,4 +31,4 @@ private:
 
 }  // namespace margaux
 
-#endif  // MARGAUX_TYPE_VALIDATOR_H
+#endif  // DECK_DATABASE_TYPE_VALIDATOR_H

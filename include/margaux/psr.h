@@ -1,8 +1,8 @@
-#ifndef MARGAUX_H
-#define MARGAUX_H
+#ifndef DECK_DATABASE_H
+#define DECK_DATABASE_H
 
 #include "database.h"
 #include "element.h"
 #include "export.h"
 
-#endif  // MARGAUX_H
+#endif  // DECK_DATABASE_H

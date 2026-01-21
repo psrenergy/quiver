@@ -13,7 +13,7 @@
 
 TEST(DatabaseCApi, ReadScalarIntegers) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -33,7 +33,7 @@ TEST(DatabaseCApi, ReadScalarIntegers) {
     size_t count = 0;
     auto err = database_read_scalar_integers(db, "Configuration", "integer_attribute", &values, &count);
 
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(count, 2);
     EXPECT_EQ(values[0], 42);
     EXPECT_EQ(values[1], 100);
@@ -44,7 +44,7 @@ TEST(DatabaseCApi, ReadScalarIntegers) {
 
 TEST(DatabaseCApi, ReadScalarFloats) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -64,7 +64,7 @@ TEST(DatabaseCApi, ReadScalarFloats) {
     size_t count = 0;
     auto err = database_read_scalar_floats(db, "Configuration", "float_attribute", &values, &count);
 
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(count, 2);
     EXPECT_DOUBLE_EQ(values[0], 3.14);
     EXPECT_DOUBLE_EQ(values[1], 2.71);
@@ -75,7 +75,7 @@ TEST(DatabaseCApi, ReadScalarFloats) {
 
 TEST(DatabaseCApi, ReadScalarStrings) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -95,7 +95,7 @@ TEST(DatabaseCApi, ReadScalarStrings) {
     size_t count = 0;
     auto err = database_read_scalar_strings(db, "Configuration", "string_attribute", &values, &count);
 
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(count, 2);
     EXPECT_STREQ(values[0], "hello");
     EXPECT_STREQ(values[1], "world");
@@ -106,7 +106,7 @@ TEST(DatabaseCApi, ReadScalarStrings) {
 
 TEST(DatabaseCApi, ReadScalarEmpty) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -118,14 +118,14 @@ TEST(DatabaseCApi, ReadScalarEmpty) {
     int64_t* integer_values = nullptr;
     size_t integer_count = 0;
     auto err = database_read_scalar_integers(db, "Collection", "some_integer", &integer_values, &integer_count);
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(integer_count, 0);
     EXPECT_EQ(integer_values, nullptr);
 
     double* float_values = nullptr;
     size_t float_count = 0;
     err = database_read_scalar_floats(db, "Collection", "some_float", &float_values, &float_count);
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(float_count, 0);
     EXPECT_EQ(float_values, nullptr);
 
@@ -138,7 +138,7 @@ TEST(DatabaseCApi, ReadScalarEmpty) {
 
 TEST(DatabaseCApi, ReadVectorIntegers) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -166,7 +166,7 @@ TEST(DatabaseCApi, ReadVectorIntegers) {
     size_t count = 0;
     auto err = database_read_vector_integers(db, "Collection", "value_int", &vectors, &sizes, &count);
 
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(count, 2);
     EXPECT_EQ(sizes[0], 3);
     EXPECT_EQ(sizes[1], 2);
@@ -182,7 +182,7 @@ TEST(DatabaseCApi, ReadVectorIntegers) {
 
 TEST(DatabaseCApi, ReadVectorFloats) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -210,7 +210,7 @@ TEST(DatabaseCApi, ReadVectorFloats) {
     size_t count = 0;
     auto err = database_read_vector_floats(db, "Collection", "value_float", &vectors, &sizes, &count);
 
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(count, 2);
     EXPECT_EQ(sizes[0], 3);
     EXPECT_EQ(sizes[1], 2);
@@ -226,7 +226,7 @@ TEST(DatabaseCApi, ReadVectorFloats) {
 
 TEST(DatabaseCApi, ReadVectorEmpty) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -240,7 +240,7 @@ TEST(DatabaseCApi, ReadVectorEmpty) {
     size_t integer_count = 0;
     auto err =
         database_read_vector_integers(db, "Collection", "value_int", &integer_vectors, &integer_sizes, &integer_count);
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(integer_count, 0);
     EXPECT_EQ(integer_vectors, nullptr);
     EXPECT_EQ(integer_sizes, nullptr);
@@ -249,7 +249,7 @@ TEST(DatabaseCApi, ReadVectorEmpty) {
     size_t* float_sizes = nullptr;
     size_t float_count = 0;
     err = database_read_vector_floats(db, "Collection", "value_float", &float_vectors, &float_sizes, &float_count);
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(float_count, 0);
     EXPECT_EQ(float_vectors, nullptr);
     EXPECT_EQ(float_sizes, nullptr);
@@ -259,7 +259,7 @@ TEST(DatabaseCApi, ReadVectorEmpty) {
 
 TEST(DatabaseCApi, ReadVectorOnlyReturnsElementsWithData) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -296,7 +296,7 @@ TEST(DatabaseCApi, ReadVectorOnlyReturnsElementsWithData) {
     auto err = database_read_vector_integers(db, "Collection", "value_int", &vectors, &sizes, &count);
 
     // Only elements with vector data are returned
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(count, 2);
     EXPECT_EQ(sizes[0], 3);
     EXPECT_EQ(sizes[1], 2);
@@ -316,7 +316,7 @@ TEST(DatabaseCApi, ReadVectorOnlyReturnsElementsWithData) {
 
 TEST(DatabaseCApi, ReadSetStrings) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -344,7 +344,7 @@ TEST(DatabaseCApi, ReadSetStrings) {
     size_t count = 0;
     auto err = database_read_set_strings(db, "Collection", "tag", &sets, &sizes, &count);
 
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(count, 2);
     EXPECT_EQ(sizes[0], 2);
     EXPECT_EQ(sizes[1], 1);
@@ -366,7 +366,7 @@ TEST(DatabaseCApi, ReadSetStrings) {
 
 TEST(DatabaseCApi, ReadSetEmpty) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -380,7 +380,7 @@ TEST(DatabaseCApi, ReadSetEmpty) {
     size_t count = 0;
     auto err = database_read_set_strings(db, "Collection", "tag", &sets, &sizes, &count);
 
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(count, 0);
     EXPECT_EQ(sets, nullptr);
     EXPECT_EQ(sizes, nullptr);
@@ -390,7 +390,7 @@ TEST(DatabaseCApi, ReadSetEmpty) {
 
 TEST(DatabaseCApi, ReadSetOnlyReturnsElementsWithData) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -427,7 +427,7 @@ TEST(DatabaseCApi, ReadSetOnlyReturnsElementsWithData) {
     auto err = database_read_set_strings(db, "Collection", "tag", &sets, &sizes, &count);
 
     // Only elements with set data are returned
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(count, 2);
     EXPECT_EQ(sizes[0], 1);
     EXPECT_EQ(sizes[1], 2);
@@ -442,7 +442,7 @@ TEST(DatabaseCApi, ReadSetOnlyReturnsElementsWithData) {
 
 TEST(DatabaseCApi, ReadScalarIntegerById) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -462,12 +462,12 @@ TEST(DatabaseCApi, ReadScalarIntegerById) {
     int has_value;
     auto err = database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id1, &value, &has_value);
 
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(value, 42);
 
     err = database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id2, &value, &has_value);
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(value, 100);
 
@@ -476,7 +476,7 @@ TEST(DatabaseCApi, ReadScalarIntegerById) {
 
 TEST(DatabaseCApi, ReadScalarFloatById) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -490,7 +490,7 @@ TEST(DatabaseCApi, ReadScalarFloatById) {
     int has_value;
     auto err = database_read_scalar_floats_by_id(db, "Configuration", "float_attribute", id1, &value, &has_value);
 
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_DOUBLE_EQ(value, 3.14);
 
@@ -499,7 +499,7 @@ TEST(DatabaseCApi, ReadScalarFloatById) {
 
 TEST(DatabaseCApi, ReadScalarStringById) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -513,7 +513,7 @@ TEST(DatabaseCApi, ReadScalarStringById) {
     int has_value;
     auto err = database_read_scalar_strings_by_id(db, "Configuration", "string_attribute", id1, &value, &has_value);
 
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(value, "hello");
 
@@ -523,7 +523,7 @@ TEST(DatabaseCApi, ReadScalarStringById) {
 
 TEST(DatabaseCApi, ReadScalarByIdNotFound) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -537,7 +537,7 @@ TEST(DatabaseCApi, ReadScalarByIdNotFound) {
     int has_value;
     auto err = database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", 999, &value, &has_value);
 
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(has_value, 0);
 
     database_close(db);
@@ -549,7 +549,7 @@ TEST(DatabaseCApi, ReadScalarByIdNotFound) {
 
 TEST(DatabaseCApi, ReadVectorIntegerById) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -576,7 +576,7 @@ TEST(DatabaseCApi, ReadVectorIntegerById) {
     size_t count = 0;
     auto err = database_read_vector_integers_by_id(db, "Collection", "value_int", id1, &values, &count);
 
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(count, 3);
     EXPECT_EQ(values[0], 1);
     EXPECT_EQ(values[1], 2);
@@ -584,7 +584,7 @@ TEST(DatabaseCApi, ReadVectorIntegerById) {
     margaux_free_integer_array(values);
 
     err = database_read_vector_integers_by_id(db, "Collection", "value_int", id2, &values, &count);
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(count, 2);
     EXPECT_EQ(values[0], 10);
     EXPECT_EQ(values[1], 20);
@@ -595,7 +595,7 @@ TEST(DatabaseCApi, ReadVectorIntegerById) {
 
 TEST(DatabaseCApi, ReadVectorFloatById) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -615,7 +615,7 @@ TEST(DatabaseCApi, ReadVectorFloatById) {
     size_t count = 0;
     auto err = database_read_vector_floats_by_id(db, "Collection", "value_float", id1, &values, &count);
 
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(count, 3);
     EXPECT_DOUBLE_EQ(values[0], 1.5);
     EXPECT_DOUBLE_EQ(values[1], 2.5);
@@ -627,7 +627,7 @@ TEST(DatabaseCApi, ReadVectorFloatById) {
 
 TEST(DatabaseCApi, ReadVectorByIdEmpty) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -645,7 +645,7 @@ TEST(DatabaseCApi, ReadVectorByIdEmpty) {
     size_t count = 0;
     auto err = database_read_vector_integers_by_id(db, "Collection", "value_int", id, &values, &count);
 
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(count, 0);
     EXPECT_EQ(values, nullptr);
 
@@ -658,7 +658,7 @@ TEST(DatabaseCApi, ReadVectorByIdEmpty) {
 
 TEST(DatabaseCApi, ReadSetStringById) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -685,7 +685,7 @@ TEST(DatabaseCApi, ReadSetStringById) {
     size_t count = 0;
     auto err = database_read_set_strings_by_id(db, "Collection", "tag", id1, &values, &count);
 
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(count, 2);
     std::vector<std::string> set_values;
     for (size_t i = 0; i < count; i++) {
@@ -697,7 +697,7 @@ TEST(DatabaseCApi, ReadSetStringById) {
     margaux_free_string_array(values, count);
 
     err = database_read_set_strings_by_id(db, "Collection", "tag", id2, &values, &count);
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(count, 1);
     EXPECT_STREQ(values[0], "review");
     margaux_free_string_array(values, count);
@@ -707,7 +707,7 @@ TEST(DatabaseCApi, ReadSetStringById) {
 
 TEST(DatabaseCApi, ReadSetByIdEmpty) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -725,7 +725,7 @@ TEST(DatabaseCApi, ReadSetByIdEmpty) {
     size_t count = 0;
     auto err = database_read_set_strings_by_id(db, "Collection", "tag", id, &values, &count);
 
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(count, 0);
     EXPECT_EQ(values, nullptr);
 
@@ -738,7 +738,7 @@ TEST(DatabaseCApi, ReadSetByIdEmpty) {
 
 TEST(DatabaseCApi, ReadElementIds) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -764,7 +764,7 @@ TEST(DatabaseCApi, ReadElementIds) {
     size_t count = 0;
     auto err = database_read_element_ids(db, "Configuration", &ids, &count);
 
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(count, 3);
     EXPECT_EQ(ids[0], id1);
     EXPECT_EQ(ids[1], id2);
@@ -776,7 +776,7 @@ TEST(DatabaseCApi, ReadElementIds) {
 
 TEST(DatabaseCApi, ReadElementIdsEmpty) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -790,7 +790,7 @@ TEST(DatabaseCApi, ReadElementIdsEmpty) {
     size_t count = 0;
     auto err = database_read_element_ids(db, "Collection", &ids, &count);
 
-    EXPECT_EQ(err, MARGAUX_OK);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
     EXPECT_EQ(count, 0);
     EXPECT_EQ(ids, nullptr);
 
@@ -803,7 +803,7 @@ TEST(DatabaseCApi, ReadElementIdsEmpty) {
 
 TEST(DatabaseCApi, GetAttributeTypeScalarInteger) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -811,16 +811,16 @@ TEST(DatabaseCApi, GetAttributeTypeScalarInteger) {
     margaux_data_type_t data_type;
     auto err = database_get_attribute_type(db, "Configuration", "integer_attribute", &data_structure, &data_type);
 
-    EXPECT_EQ(err, MARGAUX_OK);
-    EXPECT_EQ(data_structure, MARGAUX_DATA_STRUCTURE_SCALAR);
-    EXPECT_EQ(data_type, MARGAUX_DATA_TYPE_INTEGER);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
+    EXPECT_EQ(data_structure, DECK_DATABASE_DATA_STRUCTURE_SCALAR);
+    EXPECT_EQ(data_type, DECK_DATABASE_DATA_TYPE_INTEGER);
 
     database_close(db);
 }
 
 TEST(DatabaseCApi, GetAttributeTypeScalarReal) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -828,16 +828,16 @@ TEST(DatabaseCApi, GetAttributeTypeScalarReal) {
     margaux_data_type_t data_type;
     auto err = database_get_attribute_type(db, "Configuration", "float_attribute", &data_structure, &data_type);
 
-    EXPECT_EQ(err, MARGAUX_OK);
-    EXPECT_EQ(data_structure, MARGAUX_DATA_STRUCTURE_SCALAR);
-    EXPECT_EQ(data_type, MARGAUX_DATA_TYPE_FLOAT);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
+    EXPECT_EQ(data_structure, DECK_DATABASE_DATA_STRUCTURE_SCALAR);
+    EXPECT_EQ(data_type, DECK_DATABASE_DATA_TYPE_FLOAT);
 
     database_close(db);
 }
 
 TEST(DatabaseCApi, GetAttributeTypeScalarText) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -845,16 +845,16 @@ TEST(DatabaseCApi, GetAttributeTypeScalarText) {
     margaux_data_type_t data_type;
     auto err = database_get_attribute_type(db, "Configuration", "string_attribute", &data_structure, &data_type);
 
-    EXPECT_EQ(err, MARGAUX_OK);
-    EXPECT_EQ(data_structure, MARGAUX_DATA_STRUCTURE_SCALAR);
-    EXPECT_EQ(data_type, MARGAUX_DATA_TYPE_STRING);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
+    EXPECT_EQ(data_structure, DECK_DATABASE_DATA_STRUCTURE_SCALAR);
+    EXPECT_EQ(data_type, DECK_DATABASE_DATA_TYPE_STRING);
 
     database_close(db);
 }
 
 TEST(DatabaseCApi, GetAttributeTypeVectorInteger) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -862,16 +862,16 @@ TEST(DatabaseCApi, GetAttributeTypeVectorInteger) {
     margaux_data_type_t data_type;
     auto err = database_get_attribute_type(db, "Collection", "value_int", &data_structure, &data_type);
 
-    EXPECT_EQ(err, MARGAUX_OK);
-    EXPECT_EQ(data_structure, MARGAUX_DATA_STRUCTURE_VECTOR);
-    EXPECT_EQ(data_type, MARGAUX_DATA_TYPE_INTEGER);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
+    EXPECT_EQ(data_structure, DECK_DATABASE_DATA_STRUCTURE_VECTOR);
+    EXPECT_EQ(data_type, DECK_DATABASE_DATA_TYPE_INTEGER);
 
     database_close(db);
 }
 
 TEST(DatabaseCApi, GetAttributeTypeVectorReal) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -879,16 +879,16 @@ TEST(DatabaseCApi, GetAttributeTypeVectorReal) {
     margaux_data_type_t data_type;
     auto err = database_get_attribute_type(db, "Collection", "value_float", &data_structure, &data_type);
 
-    EXPECT_EQ(err, MARGAUX_OK);
-    EXPECT_EQ(data_structure, MARGAUX_DATA_STRUCTURE_VECTOR);
-    EXPECT_EQ(data_type, MARGAUX_DATA_TYPE_FLOAT);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
+    EXPECT_EQ(data_structure, DECK_DATABASE_DATA_STRUCTURE_VECTOR);
+    EXPECT_EQ(data_type, DECK_DATABASE_DATA_TYPE_FLOAT);
 
     database_close(db);
 }
 
 TEST(DatabaseCApi, GetAttributeTypeSetText) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -896,16 +896,16 @@ TEST(DatabaseCApi, GetAttributeTypeSetText) {
     margaux_data_type_t data_type;
     auto err = database_get_attribute_type(db, "Collection", "tag", &data_structure, &data_type);
 
-    EXPECT_EQ(err, MARGAUX_OK);
-    EXPECT_EQ(data_structure, MARGAUX_DATA_STRUCTURE_SET);
-    EXPECT_EQ(data_type, MARGAUX_DATA_TYPE_STRING);
+    EXPECT_EQ(err, DECK_DATABASE_OK);
+    EXPECT_EQ(data_structure, DECK_DATABASE_DATA_STRUCTURE_SET);
+    EXPECT_EQ(data_type, DECK_DATABASE_DATA_TYPE_STRING);
 
     database_close(db);
 }
 
 TEST(DatabaseCApi, GetAttributeTypeNotFound) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -913,14 +913,14 @@ TEST(DatabaseCApi, GetAttributeTypeNotFound) {
     margaux_data_type_t data_type;
     auto err = database_get_attribute_type(db, "Configuration", "nonexistent", &data_structure, &data_type);
 
-    EXPECT_EQ(err, MARGAUX_ERROR_DATABASE);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_DATABASE);
 
     database_close(db);
 }
 
 TEST(DatabaseCApi, GetAttributeTypeInvalidArgument) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -929,23 +929,23 @@ TEST(DatabaseCApi, GetAttributeTypeInvalidArgument) {
 
     // Null db
     auto err = database_get_attribute_type(nullptr, "Configuration", "label", &data_structure, &data_type);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     // Null collection
     err = database_get_attribute_type(db, nullptr, "label", &data_structure, &data_type);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     // Null attribute
     err = database_get_attribute_type(db, "Configuration", nullptr, &data_structure, &data_type);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     // Null out_data_structure
     err = database_get_attribute_type(db, "Configuration", "label", nullptr, &data_type);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     // Null out_data_type
     err = database_get_attribute_type(db, "Configuration", "label", &data_structure, nullptr);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
@@ -958,50 +958,50 @@ TEST(DatabaseCApi, ReadScalarIntegersNullDb) {
     int64_t* values = nullptr;
     size_t count = 0;
     auto err = database_read_scalar_integers(nullptr, "Configuration", "integer_attribute", &values, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, ReadScalarIntegersNullCollection) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     int64_t* values = nullptr;
     size_t count = 0;
     auto err = database_read_scalar_integers(db, nullptr, "integer_attribute", &values, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
 
 TEST(DatabaseCApi, ReadScalarIntegersNullAttribute) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     int64_t* values = nullptr;
     size_t count = 0;
     auto err = database_read_scalar_integers(db, "Configuration", nullptr, &values, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
 
 TEST(DatabaseCApi, ReadScalarIntegersNullOutput) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     size_t count = 0;
     auto err = database_read_scalar_integers(db, "Configuration", "integer_attribute", nullptr, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     int64_t* values = nullptr;
     err = database_read_scalar_integers(db, "Configuration", "integer_attribute", &values, nullptr);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
@@ -1010,36 +1010,36 @@ TEST(DatabaseCApi, ReadScalarFloatsNullDb) {
     double* values = nullptr;
     size_t count = 0;
     auto err = database_read_scalar_floats(nullptr, "Configuration", "float_attribute", &values, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, ReadScalarFloatsNullCollection) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     double* values = nullptr;
     size_t count = 0;
     auto err = database_read_scalar_floats(db, nullptr, "float_attribute", &values, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
 
 TEST(DatabaseCApi, ReadScalarFloatsNullOutput) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     size_t count = 0;
     auto err = database_read_scalar_floats(db, "Configuration", "float_attribute", nullptr, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     double* values = nullptr;
     err = database_read_scalar_floats(db, "Configuration", "float_attribute", &values, nullptr);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
@@ -1048,36 +1048,36 @@ TEST(DatabaseCApi, ReadScalarStringsNullDb) {
     char** values = nullptr;
     size_t count = 0;
     auto err = database_read_scalar_strings(nullptr, "Configuration", "string_attribute", &values, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, ReadScalarStringsNullCollection) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     char** values = nullptr;
     size_t count = 0;
     auto err = database_read_scalar_strings(db, nullptr, "string_attribute", &values, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
 
 TEST(DatabaseCApi, ReadScalarStringsNullOutput) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     size_t count = 0;
     auto err = database_read_scalar_strings(db, "Configuration", "string_attribute", nullptr, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     char** values = nullptr;
     err = database_read_scalar_strings(db, "Configuration", "string_attribute", &values, nullptr);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
@@ -1091,36 +1091,36 @@ TEST(DatabaseCApi, ReadScalarIntegersByIdNullDb) {
     int has_value;
     auto err =
         database_read_scalar_integers_by_id(nullptr, "Configuration", "integer_attribute", 1, &value, &has_value);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, ReadScalarIntegersByIdNullCollection) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     int64_t value;
     int has_value;
     auto err = database_read_scalar_integers_by_id(db, nullptr, "integer_attribute", 1, &value, &has_value);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
 
 TEST(DatabaseCApi, ReadScalarIntegersByIdNullOutput) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     int has_value;
     auto err = database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", 1, nullptr, &has_value);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     int64_t value;
     err = database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", 1, &value, nullptr);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
@@ -1129,22 +1129,22 @@ TEST(DatabaseCApi, ReadScalarFloatsByIdNullDb) {
     double value;
     int has_value;
     auto err = database_read_scalar_floats_by_id(nullptr, "Configuration", "float_attribute", 1, &value, &has_value);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, ReadScalarFloatsByIdNullOutput) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     int has_value;
     auto err = database_read_scalar_floats_by_id(db, "Configuration", "float_attribute", 1, nullptr, &has_value);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     double value;
     err = database_read_scalar_floats_by_id(db, "Configuration", "float_attribute", 1, &value, nullptr);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
@@ -1153,22 +1153,22 @@ TEST(DatabaseCApi, ReadScalarStringsByIdNullDb) {
     char* value = nullptr;
     int has_value;
     auto err = database_read_scalar_strings_by_id(nullptr, "Configuration", "string_attribute", 1, &value, &has_value);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, ReadScalarStringsByIdNullOutput) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     int has_value;
     auto err = database_read_scalar_strings_by_id(db, "Configuration", "string_attribute", 1, nullptr, &has_value);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     char* value = nullptr;
     err = database_read_scalar_strings_by_id(db, "Configuration", "string_attribute", 1, &value, nullptr);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
@@ -1182,12 +1182,12 @@ TEST(DatabaseCApi, ReadVectorIntegersNullDb) {
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = database_read_vector_integers(nullptr, "Collection", "value_int", &vectors, &sizes, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, ReadVectorIntegersNullCollection) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -1195,28 +1195,28 @@ TEST(DatabaseCApi, ReadVectorIntegersNullCollection) {
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = database_read_vector_integers(db, nullptr, "value_int", &vectors, &sizes, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
 
 TEST(DatabaseCApi, ReadVectorIntegersNullOutput) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = database_read_vector_integers(db, "Collection", "value_int", nullptr, &sizes, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     int64_t** vectors = nullptr;
     err = database_read_vector_integers(db, "Collection", "value_int", &vectors, nullptr, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     err = database_read_vector_integers(db, "Collection", "value_int", &vectors, &sizes, nullptr);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
@@ -1226,26 +1226,26 @@ TEST(DatabaseCApi, ReadVectorFloatsNullDb) {
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = database_read_vector_floats(nullptr, "Collection", "value_float", &vectors, &sizes, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, ReadVectorFloatsNullOutput) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = database_read_vector_floats(db, "Collection", "value_float", nullptr, &sizes, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     double** vectors = nullptr;
     err = database_read_vector_floats(db, "Collection", "value_float", &vectors, nullptr, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     err = database_read_vector_floats(db, "Collection", "value_float", &vectors, &sizes, nullptr);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
@@ -1255,7 +1255,7 @@ TEST(DatabaseCApi, ReadVectorStringsNullDb) {
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = database_read_vector_strings(nullptr, "Collection", "tag", vectors, &sizes, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 }
 
 // ============================================================================
@@ -1266,36 +1266,36 @@ TEST(DatabaseCApi, ReadVectorIntegersByIdNullDb) {
     int64_t* values = nullptr;
     size_t count = 0;
     auto err = database_read_vector_integers_by_id(nullptr, "Collection", "value_int", 1, &values, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, ReadVectorIntegersByIdNullCollection) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     int64_t* values = nullptr;
     size_t count = 0;
     auto err = database_read_vector_integers_by_id(db, nullptr, "value_int", 1, &values, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
 
 TEST(DatabaseCApi, ReadVectorIntegersByIdNullOutput) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     size_t count = 0;
     auto err = database_read_vector_integers_by_id(db, "Collection", "value_int", 1, nullptr, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     int64_t* values = nullptr;
     err = database_read_vector_integers_by_id(db, "Collection", "value_int", 1, &values, nullptr);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
@@ -1304,22 +1304,22 @@ TEST(DatabaseCApi, ReadVectorFloatsByIdNullDb) {
     double* values = nullptr;
     size_t count = 0;
     auto err = database_read_vector_floats_by_id(nullptr, "Collection", "value_float", 1, &values, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, ReadVectorFloatsByIdNullOutput) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     size_t count = 0;
     auto err = database_read_vector_floats_by_id(db, "Collection", "value_float", 1, nullptr, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     double* values = nullptr;
     err = database_read_vector_floats_by_id(db, "Collection", "value_float", 1, &values, nullptr);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
@@ -1328,7 +1328,7 @@ TEST(DatabaseCApi, ReadVectorStringsByIdNullDb) {
     char** values = nullptr;
     size_t count = 0;
     auto err = database_read_vector_strings_by_id(nullptr, "Collection", "tag", 1, &values, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 }
 
 // ============================================================================
@@ -1340,12 +1340,12 @@ TEST(DatabaseCApi, ReadSetIntegersNullDb) {
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = database_read_set_integers(nullptr, "Collection", "tag", &sets, &sizes, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, ReadSetIntegersNullCollection) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -1353,28 +1353,28 @@ TEST(DatabaseCApi, ReadSetIntegersNullCollection) {
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = database_read_set_integers(db, nullptr, "tag", &sets, &sizes, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
 
 TEST(DatabaseCApi, ReadSetIntegersNullOutput) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = database_read_set_integers(db, "Collection", "tag", nullptr, &sizes, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     int64_t** sets = nullptr;
     err = database_read_set_integers(db, "Collection", "tag", &sets, nullptr, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     err = database_read_set_integers(db, "Collection", "tag", &sets, &sizes, nullptr);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
@@ -1384,7 +1384,7 @@ TEST(DatabaseCApi, ReadSetFloatsNullDb) {
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = database_read_set_floats(nullptr, "Collection", "tag", &sets, &sizes, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, ReadSetStringsNullDb) {
@@ -1392,12 +1392,12 @@ TEST(DatabaseCApi, ReadSetStringsNullDb) {
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = database_read_set_strings(nullptr, "Collection", "tag", &sets, &sizes, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, ReadSetStringsNullCollection) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -1405,28 +1405,28 @@ TEST(DatabaseCApi, ReadSetStringsNullCollection) {
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = database_read_set_strings(db, nullptr, "tag", &sets, &sizes, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
 
 TEST(DatabaseCApi, ReadSetStringsNullOutput) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = database_read_set_strings(db, "Collection", "tag", nullptr, &sizes, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     char*** sets = nullptr;
     err = database_read_set_strings(db, "Collection", "tag", &sets, nullptr, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     err = database_read_set_strings(db, "Collection", "tag", &sets, &sizes, nullptr);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
@@ -1439,50 +1439,50 @@ TEST(DatabaseCApi, ReadSetIntegersByIdNullDb) {
     int64_t* values = nullptr;
     size_t count = 0;
     auto err = database_read_set_integers_by_id(nullptr, "Collection", "tag", 1, &values, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, ReadSetFloatsByIdNullDb) {
     double* values = nullptr;
     size_t count = 0;
     auto err = database_read_set_floats_by_id(nullptr, "Collection", "tag", 1, &values, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, ReadSetStringsByIdNullDb) {
     char** values = nullptr;
     size_t count = 0;
     auto err = database_read_set_strings_by_id(nullptr, "Collection", "tag", 1, &values, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, ReadSetStringsByIdNullCollection) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     char** values = nullptr;
     size_t count = 0;
     auto err = database_read_set_strings_by_id(db, nullptr, "tag", 1, &values, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
 
 TEST(DatabaseCApi, ReadSetStringsByIdNullOutput) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     size_t count = 0;
     auto err = database_read_set_strings_by_id(db, "Collection", "tag", 1, nullptr, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     char** values = nullptr;
     err = database_read_set_strings_by_id(db, "Collection", "tag", 1, &values, nullptr);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
@@ -1495,36 +1495,36 @@ TEST(DatabaseCApi, ReadElementIdsNullDb) {
     int64_t* ids = nullptr;
     size_t count = 0;
     auto err = database_read_element_ids(nullptr, "Configuration", &ids, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(DatabaseCApi, ReadElementIdsNullCollection) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     int64_t* ids = nullptr;
     size_t count = 0;
     auto err = database_read_element_ids(db, nullptr, &ids, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }
 
 TEST(DatabaseCApi, ReadElementIdsNullOutput) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     size_t count = 0;
     auto err = database_read_element_ids(db, "Configuration", nullptr, &count);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     int64_t* ids = nullptr;
     err = database_read_element_ids(db, "Configuration", &ids, nullptr);
-    EXPECT_EQ(err, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     database_close(db);
 }

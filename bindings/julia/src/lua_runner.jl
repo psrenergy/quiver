@@ -15,7 +15,7 @@ end
 
 function run!(runner::LuaRunner, script::String)
     err = C.lua_runner_run(runner.ptr, script)
-    if err != C.MARGAUX_OK
+    if err != C.DECK_DATABASE_OK
         error_ptr = C.lua_runner_get_error(runner.ptr)
         if error_ptr != C_NULL
             error_msg = unsafe_string(error_ptr)

@@ -1,5 +1,5 @@
-#ifndef MARGAUX_C_API_INTERNAL_H
-#define MARGAUX_C_API_INTERNAL_H
+#ifndef DECK_DATABASE_C_API_INTERNAL_H
+#define DECK_DATABASE_C_API_INTERNAL_H
 
 #include "margaux/database.h"
 #include "margaux/element.h"
@@ -18,4 +18,4 @@ struct element {
     margaux::Element element;
 };
 
-#endif  // MARGAUX_C_API_INTERNAL_H
+#endif  // DECK_DATABASE_C_API_INTERNAL_H

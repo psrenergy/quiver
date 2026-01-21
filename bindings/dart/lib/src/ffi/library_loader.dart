@@ -23,7 +23,7 @@ DynamicLibrary get library {
   if (_cachedLibrary != null) return _cachedLibrary!;
 
   // Try custom path first
-  final customPath = Platform.environment['MARGAUX_DATABASE_LIB_PATH'];
+  final customPath = Platform.environment['DECK_DATABASE_DATABASE_LIB_PATH'];
   if (customPath != null) {
     final customFile = File('$customPath/$_libraryName');
     if (customFile.existsSync()) {

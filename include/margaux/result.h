@@ -1,5 +1,5 @@
-#ifndef MARGAUX_RESULT_H
-#define MARGAUX_RESULT_H
+#ifndef DECK_DATABASE_RESULT_H
+#define DECK_DATABASE_RESULT_H
 
 #include "export.h"
 #include "row.h"
@@ -8,7 +8,7 @@
 
 namespace margaux {
 
-class MARGAUX_API Result {
+class DECK_DATABASE_API Result {
 public:
     Result();  // Default constructor for empty result
     Result(std::vector<std::string> columns, std::vector<Row> rows);
@@ -32,4 +32,4 @@ private:
 
 }  // namespace margaux
 
-#endif  // MARGAUX_RESULT_H
+#endif  // DECK_DATABASE_RESULT_H

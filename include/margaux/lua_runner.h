@@ -1,5 +1,5 @@
-#ifndef MARGAUX_LUA_RUNNER_H
-#define MARGAUX_LUA_RUNNER_H
+#ifndef DECK_DATABASE_LUA_RUNNER_H
+#define DECK_DATABASE_LUA_RUNNER_H
 
 #include "export.h"
 
@@ -10,7 +10,7 @@ namespace margaux {
 
 class Database;
 
-class MARGAUX_API LuaRunner {
+class DECK_DATABASE_API LuaRunner {
 public:
     explicit LuaRunner(Database& db);
     ~LuaRunner();
@@ -33,4 +33,4 @@ private:
 
 }  // namespace margaux
 
-#endif  // MARGAUX_LUA_RUNNER_H
+#endif  // DECK_DATABASE_LUA_RUNNER_H

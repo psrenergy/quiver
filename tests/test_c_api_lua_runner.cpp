@@ -13,7 +13,7 @@ protected:
 
 TEST_F(LuaRunnerCApiTest, CreateAndDestroy) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -35,7 +35,7 @@ TEST_F(LuaRunnerCApiTest, CreateWithNullDb) {
 
 TEST_F(LuaRunnerCApiTest, RunSimpleScript) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -43,7 +43,7 @@ TEST_F(LuaRunnerCApiTest, RunSimpleScript) {
     ASSERT_NE(lua, nullptr);
 
     auto result = lua_runner_run(lua, "local x = 1 + 1");
-    EXPECT_EQ(result, MARGAUX_OK);
+    EXPECT_EQ(result, DECK_DATABASE_OK);
 
     lua_runner_free(lua);
     database_close(db);
@@ -51,7 +51,7 @@ TEST_F(LuaRunnerCApiTest, RunSimpleScript) {
 
 TEST_F(LuaRunnerCApiTest, RunNullScript) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -59,7 +59,7 @@ TEST_F(LuaRunnerCApiTest, RunNullScript) {
     ASSERT_NE(lua, nullptr);
 
     auto result = lua_runner_run(lua, nullptr);
-    EXPECT_EQ(result, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(result, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 
     lua_runner_free(lua);
     database_close(db);
@@ -67,12 +67,12 @@ TEST_F(LuaRunnerCApiTest, RunNullScript) {
 
 TEST_F(LuaRunnerCApiTest, RunWithNullRunner) {
     auto result = lua_runner_run(nullptr, "local x = 1");
-    EXPECT_EQ(result, MARGAUX_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(result, DECK_DATABASE_ERROR_INVALID_ARGUMENT);
 }
 
 TEST_F(LuaRunnerCApiTest, CreateElement) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -83,13 +83,13 @@ TEST_F(LuaRunnerCApiTest, CreateElement) {
         db:create_element("Configuration", { label = "Test Config" })
         db:create_element("Collection", { label = "Item 1", some_integer = 42 })
     )");
-    EXPECT_EQ(result, MARGAUX_OK);
+    EXPECT_EQ(result, DECK_DATABASE_OK);
 
     // Verify with C API read
     int64_t* values = nullptr;
     size_t count = 0;
     auto read_result = database_read_scalar_integers(db, "Collection", "some_integer", &values, &count);
-    EXPECT_EQ(read_result, MARGAUX_OK);
+    EXPECT_EQ(read_result, DECK_DATABASE_OK);
     EXPECT_EQ(count, 1);
     EXPECT_EQ(values[0], 42);
     margaux_free_integer_array(values);
@@ -100,7 +100,7 @@ TEST_F(LuaRunnerCApiTest, CreateElement) {
 
 TEST_F(LuaRunnerCApiTest, SyntaxError) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -108,7 +108,7 @@ TEST_F(LuaRunnerCApiTest, SyntaxError) {
     ASSERT_NE(lua, nullptr);
 
     auto result = lua_runner_run(lua, "invalid lua syntax !!!");
-    EXPECT_NE(result, MARGAUX_OK);
+    EXPECT_NE(result, DECK_DATABASE_OK);
 
     auto error = lua_runner_get_error(lua);
     EXPECT_NE(error, nullptr);
@@ -119,7 +119,7 @@ TEST_F(LuaRunnerCApiTest, SyntaxError) {
 
 TEST_F(LuaRunnerCApiTest, RuntimeError) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -127,7 +127,7 @@ TEST_F(LuaRunnerCApiTest, RuntimeError) {
     ASSERT_NE(lua, nullptr);
 
     auto result = lua_runner_run(lua, "error('This is a runtime error')");
-    EXPECT_NE(result, MARGAUX_OK);
+    EXPECT_NE(result, DECK_DATABASE_OK);
 
     auto error = lua_runner_get_error(lua);
     EXPECT_NE(error, nullptr);
@@ -143,7 +143,7 @@ TEST_F(LuaRunnerCApiTest, GetErrorNull) {
 
 TEST_F(LuaRunnerCApiTest, ReuseRunner) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -151,15 +151,15 @@ TEST_F(LuaRunnerCApiTest, ReuseRunner) {
     ASSERT_NE(lua, nullptr);
 
     // Run multiple scripts
-    EXPECT_EQ(lua_runner_run(lua, R"(db:create_element("Configuration", { label = "Config" }))"), MARGAUX_OK);
-    EXPECT_EQ(lua_runner_run(lua, R"(db:create_element("Collection", { label = "Item 1" }))"), MARGAUX_OK);
-    EXPECT_EQ(lua_runner_run(lua, R"(db:create_element("Collection", { label = "Item 2" }))"), MARGAUX_OK);
+    EXPECT_EQ(lua_runner_run(lua, R"(db:create_element("Configuration", { label = "Config" }))"), DECK_DATABASE_OK);
+    EXPECT_EQ(lua_runner_run(lua, R"(db:create_element("Collection", { label = "Item 1" }))"), DECK_DATABASE_OK);
+    EXPECT_EQ(lua_runner_run(lua, R"(db:create_element("Collection", { label = "Item 2" }))"), DECK_DATABASE_OK);
 
     // Verify count
     char** labels = nullptr;
     size_t count = 0;
     auto read_result = database_read_scalar_strings(db, "Collection", "label", &labels, &count);
-    EXPECT_EQ(read_result, MARGAUX_OK);
+    EXPECT_EQ(read_result, DECK_DATABASE_OK);
     EXPECT_EQ(count, 2);
     margaux_free_string_array(labels, count);
 
@@ -169,7 +169,7 @@ TEST_F(LuaRunnerCApiTest, ReuseRunner) {
 
 TEST_F(LuaRunnerCApiTest, ReadScalarIntegers) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -194,7 +194,7 @@ TEST_F(LuaRunnerCApiTest, ReadScalarIntegers) {
         assert(#integers == 1, "Expected 1 integer")
         assert(integers[1] == 100, "Expected 100")
     )");
-    EXPECT_EQ(result, MARGAUX_OK);
+    EXPECT_EQ(result, DECK_DATABASE_OK);
 
     lua_runner_free(lua);
     database_close(db);
@@ -202,7 +202,7 @@ TEST_F(LuaRunnerCApiTest, ReadScalarIntegers) {
 
 TEST_F(LuaRunnerCApiTest, CreateElementWithVectors) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -217,14 +217,14 @@ TEST_F(LuaRunnerCApiTest, CreateElementWithVectors) {
             value_float = {1.5, 2.5, 3.5}
         })
     )");
-    EXPECT_EQ(result, MARGAUX_OK);
+    EXPECT_EQ(result, DECK_DATABASE_OK);
 
     // Verify with C API read
     int64_t** vectors = nullptr;
     size_t* sizes = nullptr;
     size_t count = 0;
     auto read_result = database_read_vector_integers(db, "Collection", "value_int", &vectors, &sizes, &count);
-    EXPECT_EQ(read_result, MARGAUX_OK);
+    EXPECT_EQ(read_result, DECK_DATABASE_OK);
     EXPECT_EQ(count, 1);
     EXPECT_EQ(sizes[0], 3);
     EXPECT_EQ(vectors[0][0], 1);
@@ -238,7 +238,7 @@ TEST_F(LuaRunnerCApiTest, CreateElementWithVectors) {
 
 TEST_F(LuaRunnerCApiTest, DeleteElement) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -259,7 +259,7 @@ TEST_F(LuaRunnerCApiTest, DeleteElement) {
         ids = db:read_element_ids("Collection")
         assert(#ids == 1, "Expected 1 element after delete")
     )");
-    EXPECT_EQ(result, MARGAUX_OK);
+    EXPECT_EQ(result, DECK_DATABASE_OK);
 
     lua_runner_free(lua);
     database_close(db);
@@ -267,7 +267,7 @@ TEST_F(LuaRunnerCApiTest, DeleteElement) {
 
 TEST_F(LuaRunnerCApiTest, UpdateElement) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -283,13 +283,13 @@ TEST_F(LuaRunnerCApiTest, UpdateElement) {
         local val = db:read_scalar_integers_by_id("Collection", "some_integer", 1)
         assert(val == 999, "Expected 999 after update")
     )");
-    EXPECT_EQ(result, MARGAUX_OK);
+    EXPECT_EQ(result, DECK_DATABASE_OK);
 
     // Verify with C API
     int64_t value = 0;
     int has_value = 0;
     auto read_result = database_read_scalar_integers_by_id(db, "Collection", "some_integer", 1, &value, &has_value);
-    EXPECT_EQ(read_result, MARGAUX_OK);
+    EXPECT_EQ(read_result, DECK_DATABASE_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(value, 999);
 
@@ -303,7 +303,7 @@ TEST_F(LuaRunnerCApiTest, UpdateElement) {
 
 TEST_F(LuaRunnerCApiTest, EmptyScript) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -311,7 +311,7 @@ TEST_F(LuaRunnerCApiTest, EmptyScript) {
     ASSERT_NE(lua, nullptr);
 
     auto result = lua_runner_run(lua, "");
-    EXPECT_EQ(result, MARGAUX_OK);
+    EXPECT_EQ(result, DECK_DATABASE_OK);
 
     lua_runner_free(lua);
     database_close(db);
@@ -319,7 +319,7 @@ TEST_F(LuaRunnerCApiTest, EmptyScript) {
 
 TEST_F(LuaRunnerCApiTest, CommentOnlyScript) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -327,7 +327,7 @@ TEST_F(LuaRunnerCApiTest, CommentOnlyScript) {
     ASSERT_NE(lua, nullptr);
 
     auto result = lua_runner_run(lua, "-- this is a comment\n-- another comment");
-    EXPECT_EQ(result, MARGAUX_OK);
+    EXPECT_EQ(result, DECK_DATABASE_OK);
 
     lua_runner_free(lua);
     database_close(db);
@@ -335,7 +335,7 @@ TEST_F(LuaRunnerCApiTest, CommentOnlyScript) {
 
 TEST_F(LuaRunnerCApiTest, AssertionFailure) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -343,7 +343,7 @@ TEST_F(LuaRunnerCApiTest, AssertionFailure) {
     ASSERT_NE(lua, nullptr);
 
     auto result = lua_runner_run(lua, "assert(false, 'Test assertion failure')");
-    EXPECT_NE(result, MARGAUX_OK);
+    EXPECT_NE(result, DECK_DATABASE_OK);
 
     auto error = lua_runner_get_error(lua);
     EXPECT_NE(error, nullptr);
@@ -355,7 +355,7 @@ TEST_F(LuaRunnerCApiTest, AssertionFailure) {
 
 TEST_F(LuaRunnerCApiTest, UndefinedVariableError) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -363,7 +363,7 @@ TEST_F(LuaRunnerCApiTest, UndefinedVariableError) {
     ASSERT_NE(lua, nullptr);
 
     auto result = lua_runner_run(lua, "local x = undefined_variable + 1");
-    EXPECT_NE(result, MARGAUX_OK);
+    EXPECT_NE(result, DECK_DATABASE_OK);
 
     auto error = lua_runner_get_error(lua);
     EXPECT_NE(error, nullptr);
@@ -374,7 +374,7 @@ TEST_F(LuaRunnerCApiTest, UndefinedVariableError) {
 
 TEST_F(LuaRunnerCApiTest, ErrorClearedAfterSuccessfulRun) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -383,13 +383,13 @@ TEST_F(LuaRunnerCApiTest, ErrorClearedAfterSuccessfulRun) {
 
     // First, run a failing script
     auto result = lua_runner_run(lua, "invalid lua syntax !!!");
-    EXPECT_NE(result, MARGAUX_OK);
+    EXPECT_NE(result, DECK_DATABASE_OK);
     auto error1 = lua_runner_get_error(lua);
     EXPECT_NE(error1, nullptr);
 
     // Now run a successful script
     result = lua_runner_run(lua, "local x = 1 + 1");
-    EXPECT_EQ(result, MARGAUX_OK);
+    EXPECT_EQ(result, DECK_DATABASE_OK);
 
     lua_runner_free(lua);
     database_close(db);
@@ -397,7 +397,7 @@ TEST_F(LuaRunnerCApiTest, ErrorClearedAfterSuccessfulRun) {
 
 TEST_F(LuaRunnerCApiTest, ReadVectorIntegersFromLua) {
     auto options = database_options_default();
-    options.console_level = MARGAUX_LOG_OFF;
+    options.console_level = DECK_DATABASE_LOG_OFF;
     auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
@@ -416,7 +416,7 @@ TEST_F(LuaRunnerCApiTest, ReadVectorIntegersFromLua) {
         assert(#vectors[1] == 3, "Expected 3 values")
         assert(vectors[1][1] == 1, "Expected first value to be 1")
     )");
-    EXPECT_EQ(result, MARGAUX_OK);
+    EXPECT_EQ(result, DECK_DATABASE_OK);
 
     lua_runner_free(lua);
     database_close(db);

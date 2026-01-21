@@ -2,29 +2,29 @@
 
 extern "C" {
 
-MARGAUX_C_API const char* margaux_error_string(margaux_error_t error) {
+DECK_DATABASE_C_API const char* margaux_error_string(margaux_error_t error) {
     switch (error) {
-    case MARGAUX_OK:
+    case DECK_DATABASE_OK:
         return "Success";
-    case MARGAUX_ERROR_INVALID_ARGUMENT:
+    case DECK_DATABASE_ERROR_INVALID_ARGUMENT:
         return "Invalid argument";
-    case MARGAUX_ERROR_DATABASE:
+    case DECK_DATABASE_ERROR_DATABASE:
         return "Database error";
-    case MARGAUX_ERROR_MIGRATION:
+    case DECK_DATABASE_ERROR_MIGRATION:
         return "Migration error";
-    case MARGAUX_ERROR_SCHEMA:
+    case DECK_DATABASE_ERROR_SCHEMA:
         return "Schema validation error";
-    case MARGAUX_ERROR_CREATE_ELEMENT:
+    case DECK_DATABASE_ERROR_CREATE_ELEMENT:
         return "Failed to create element";
-    case MARGAUX_ERROR_NOT_FOUND:
+    case DECK_DATABASE_ERROR_NOT_FOUND:
         return "Not found";
     default:
         return "Unknown error";
     }
 }
 
-MARGAUX_C_API const char* margaux_version(void) {
-    return MARGAUX_VERSION;
+DECK_DATABASE_C_API const char* margaux_version(void) {
+    return DECK_DATABASE_VERSION;
 }
 
 }  // extern "C"

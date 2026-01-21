@@ -1455,13 +1455,13 @@ class MargauxBindings {
 }
 
 abstract class margaux_error_t {
-  static const int MARGAUX_OK = 0;
-  static const int MARGAUX_ERROR_INVALID_ARGUMENT = -1;
-  static const int MARGAUX_ERROR_DATABASE = -2;
-  static const int MARGAUX_ERROR_MIGRATION = -3;
-  static const int MARGAUX_ERROR_SCHEMA = -4;
-  static const int MARGAUX_ERROR_CREATE_ELEMENT = -5;
-  static const int MARGAUX_ERROR_NOT_FOUND = -6;
+  static const int DECK_DATABASE_OK = 0;
+  static const int DECK_DATABASE_ERROR_INVALID_ARGUMENT = -1;
+  static const int DECK_DATABASE_ERROR_DATABASE = -2;
+  static const int DECK_DATABASE_ERROR_MIGRATION = -3;
+  static const int DECK_DATABASE_ERROR_SCHEMA = -4;
+  static const int DECK_DATABASE_ERROR_CREATE_ELEMENT = -5;
+  static const int DECK_DATABASE_ERROR_NOT_FOUND = -6;
 }
 
 final class element extends ffi.Opaque {}
@@ -1469,11 +1469,11 @@ final class element extends ffi.Opaque {}
 typedef element_t = element;
 
 abstract class margaux_log_level_t {
-  static const int MARGAUX_LOG_DEBUG = 0;
-  static const int MARGAUX_LOG_INFO = 1;
-  static const int MARGAUX_LOG_WARN = 2;
-  static const int MARGAUX_LOG_ERROR = 3;
-  static const int MARGAUX_LOG_OFF = 4;
+  static const int DECK_DATABASE_LOG_DEBUG = 0;
+  static const int DECK_DATABASE_LOG_INFO = 1;
+  static const int DECK_DATABASE_LOG_WARN = 2;
+  static const int DECK_DATABASE_LOG_ERROR = 3;
+  static const int DECK_DATABASE_LOG_OFF = 4;
 }
 
 final class database_options_t extends ffi.Struct {
@@ -1485,15 +1485,15 @@ final class database_options_t extends ffi.Struct {
 }
 
 abstract class margaux_data_structure_t {
-  static const int MARGAUX_DATA_STRUCTURE_SCALAR = 0;
-  static const int MARGAUX_DATA_STRUCTURE_VECTOR = 1;
-  static const int MARGAUX_DATA_STRUCTURE_SET = 2;
+  static const int DECK_DATABASE_DATA_STRUCTURE_SCALAR = 0;
+  static const int DECK_DATABASE_DATA_STRUCTURE_VECTOR = 1;
+  static const int DECK_DATABASE_DATA_STRUCTURE_SET = 2;
 }
 
 abstract class margaux_data_type_t {
-  static const int MARGAUX_DATA_TYPE_INTEGER = 0;
-  static const int MARGAUX_DATA_TYPE_FLOAT = 1;
-  static const int MARGAUX_DATA_TYPE_STRING = 2;
+  static const int DECK_DATABASE_DATA_TYPE_INTEGER = 0;
+  static const int DECK_DATABASE_DATA_TYPE_FLOAT = 1;
+  static const int DECK_DATABASE_DATA_TYPE_STRING = 2;
 }
 
 final class database extends ffi.Opaque {}

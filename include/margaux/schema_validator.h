@@ -1,5 +1,5 @@
-#ifndef MARGAUX_SCHEMA_VALIDATOR_H
-#define MARGAUX_SCHEMA_VALIDATOR_H
+#ifndef DECK_DATABASE_SCHEMA_VALIDATOR_H
+#define DECK_DATABASE_SCHEMA_VALIDATOR_H
 
 #include "export.h"
 #include "schema.h"
@@ -15,7 +15,7 @@ namespace margaux {
 // - Vector tables have proper structure and FK constraints
 // - Set tables have proper UNIQUE constraints
 // - No duplicate attributes across collection and its vector tables
-class MARGAUX_API SchemaValidator {
+class DECK_DATABASE_API SchemaValidator {
 public:
     explicit SchemaValidator(const Schema& schema);
 
@@ -41,4 +41,4 @@ private:
 
 }  // namespace margaux
 
-#endif  // MARGAUX_SCHEMA_VALIDATOR_H
+#endif  // DECK_DATABASE_SCHEMA_VALIDATOR_H

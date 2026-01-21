@@ -7,7 +7,7 @@ print_using_CEnum = false
 prologue_file_path = "./prologue.jl"
 epilogue_file_path = "./epilogue.jl"
 output_ignorelist = [
-    "MARGAUX_C_API"
+    "DECK_DATABASE_C_API"
 ]
 
 [codegen]

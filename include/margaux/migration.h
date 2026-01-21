@@ -1,5 +1,5 @@
-#ifndef MARGAUX_MIGRATION_H
-#define MARGAUX_MIGRATION_H
+#ifndef DECK_DATABASE_MIGRATION_H
+#define DECK_DATABASE_MIGRATION_H
 
 #include "export.h"
 
@@ -8,7 +8,7 @@
 
 namespace margaux {
 
-class MARGAUX_API Migration {
+class DECK_DATABASE_API Migration {
 public:
     Migration(int64_t version, const std::string& path);
     ~Migration();
@@ -42,4 +42,4 @@ private:
 
 }  // namespace margaux
 
-#endif  // MARGAUX_MIGRATION_H
+#endif  // DECK_DATABASE_MIGRATION_H

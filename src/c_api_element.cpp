@@ -7,7 +7,7 @@
 
 extern "C" {
 
-MARGAUX_C_API element_t* element_create(void) {
+DECK_DATABASE_C_API element_t* element_create(void) {
     try {
         return new element();
     } catch (const std::bad_alloc&) {
@@ -15,78 +15,78 @@ MARGAUX_C_API element_t* element_create(void) {
     }
 }
 
-MARGAUX_C_API void element_destroy(element_t* element) {
+DECK_DATABASE_C_API void element_destroy(element_t* element) {
     delete element;
 }
 
-MARGAUX_C_API void element_clear(element_t* element) {
+DECK_DATABASE_C_API void element_clear(element_t* element) {
     if (element) {
         element->element.clear();
     }
 }
 
-MARGAUX_C_API margaux_error_t element_set_integer(element_t* element, const char* name, int64_t value) {
+DECK_DATABASE_C_API margaux_error_t element_set_integer(element_t* element, const char* name, int64_t value) {
     if (!element || !name) {
-        return MARGAUX_ERROR_INVALID_ARGUMENT;
+        return DECK_DATABASE_ERROR_INVALID_ARGUMENT;
     }
     element->element.set(name, value);
-    return MARGAUX_OK;
+    return DECK_DATABASE_OK;
 }
 
-MARGAUX_C_API margaux_error_t element_set_float(element_t* element, const char* name, double value) {
+DECK_DATABASE_C_API margaux_error_t element_set_float(element_t* element, const char* name, double value) {
     if (!element || !name) {
-        return MARGAUX_ERROR_INVALID_ARGUMENT;
+        return DECK_DATABASE_ERROR_INVALID_ARGUMENT;
     }
     element->element.set(name, value);
-    return MARGAUX_OK;
+    return DECK_DATABASE_OK;
 }
 
-MARGAUX_C_API margaux_error_t element_set_string(element_t* element, const char* name, const char* value) {
+DECK_DATABASE_C_API margaux_error_t element_set_string(element_t* element, const char* name, const char* value) {
     if (!element || !name || !value) {
-        return MARGAUX_ERROR_INVALID_ARGUMENT;
+        return DECK_DATABASE_ERROR_INVALID_ARGUMENT;
     }
     element->element.set(name, std::string(value));
-    return MARGAUX_OK;
+    return DECK_DATABASE_OK;
 }
 
-MARGAUX_C_API margaux_error_t element_set_null(element_t* element, const char* name) {
+DECK_DATABASE_C_API margaux_error_t element_set_null(element_t* element, const char* name) {
     if (!element || !name) {
-        return MARGAUX_ERROR_INVALID_ARGUMENT;
+        return DECK_DATABASE_ERROR_INVALID_ARGUMENT;
     }
     element->element.set_null(name);
-    return MARGAUX_OK;
+    return DECK_DATABASE_OK;
 }
 
-MARGAUX_C_API margaux_error_t element_set_array_integer(element_t* element,
+DECK_DATABASE_C_API margaux_error_t element_set_array_integer(element_t* element,
                                                         const char* name,
                                                         const int64_t* values,
                                                         int32_t count) {
     if (!element || !name || (!values && count > 0) || count < 0) {
-        return MARGAUX_ERROR_INVALID_ARGUMENT;
+        return DECK_DATABASE_ERROR_INVALID_ARGUMENT;
     }
     std::vector<int64_t> arr(values, values + count);
     element->element.set(name, arr);
-    return MARGAUX_OK;
+    return DECK_DATABASE_OK;
 }
 
-MARGAUX_C_API margaux_error_t element_set_array_float(element_t* element,
+DECK_DATABASE_C_API margaux_error_t element_set_array_float(element_t* element,
                                                       const char* name,
                                                       const double* values,
                                                       int32_t count) {
     if (!element || !name || (!values && count > 0) || count < 0) {
-        return MARGAUX_ERROR_INVALID_ARGUMENT;
+        return DECK_DATABASE_ERROR_INVALID_ARGUMENT;
     }
     std::vector<double> arr(values, values + count);
     element->element.set(name, arr);
-    return MARGAUX_OK;
+    return DECK_DATABASE_OK;
 }
 
-MARGAUX_C_API margaux_error_t element_set_array_string(element_t* element,
+DECK_DATABASE_C_API margaux_error_t element_set_array_string(element_t* element,
                                                        const char* name,
                                                        const char* const* values,
                                                        int32_t count) {
     if (!element || !name || (!values && count > 0) || count < 0) {
-        return MARGAUX_ERROR_INVALID_ARGUMENT;
+        return DECK_DATABASE_ERROR_INVALID_ARGUMENT;
     }
     std::vector<std::string> arr;
     arr.reserve(count);
@@ -94,38 +94,38 @@ MARGAUX_C_API margaux_error_t element_set_array_string(element_t* element,
         arr.emplace_back(values[i] ? values[i] : "");
     }
     element->element.set(name, arr);
-    return MARGAUX_OK;
+    return DECK_DATABASE_OK;
 }
 
-MARGAUX_C_API int element_has_scalars(element_t* element) {
+DECK_DATABASE_C_API int element_has_scalars(element_t* element) {
     if (!element) {
         return 0;
     }
     return element->element.has_scalars() ? 1 : 0;
 }
 
-MARGAUX_C_API int element_has_arrays(element_t* element) {
+DECK_DATABASE_C_API int element_has_arrays(element_t* element) {
     if (!element) {
         return 0;
     }
     return element->element.has_arrays() ? 1 : 0;
 }
 
-MARGAUX_C_API size_t element_scalar_count(element_t* element) {
+DECK_DATABASE_C_API size_t element_scalar_count(element_t* element) {
     if (!element) {
         return 0;
     }
     return element->element.scalars().size();
 }
 
-MARGAUX_C_API size_t element_array_count(element_t* element) {
+DECK_DATABASE_C_API size_t element_array_count(element_t* element) {
     if (!element) {
         return 0;
     }
     return element->element.arrays().size();
 }
 
-MARGAUX_C_API char* element_to_string(element_t* element) {
+DECK_DATABASE_C_API char* element_to_string(element_t* element) {
     if (!element) {
         return nullptr;
     }
@@ -139,7 +139,7 @@ MARGAUX_C_API char* element_to_string(element_t* element) {
     }
 }
 
-MARGAUX_C_API void margaux_string_free(char* str) {
+DECK_DATABASE_C_API void margaux_string_free(char* str) {
     delete[] str;
 }
 
