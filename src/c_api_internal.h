@@ -1,8 +1,8 @@
 #ifndef PSR_C_API_INTERNAL_H
 #define PSR_C_API_INTERNAL_H
 
-#include "psr/database.h"
-#include "psr/element.h"
+#include "margaux/database.h"
+#include "margaux/element.h"
 
 #include <string>
 

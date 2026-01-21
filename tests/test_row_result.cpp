@@ -1,10 +1,10 @@
 #include "test_utils.h"
 
 #include <gtest/gtest.h>
-#include <psr/database.h>
-#include <psr/element.h>
-#include <psr/result.h>
-#include <psr/row.h>
+#include <margaux/database.h>
+#include <margaux/element.h>
+#include <margaux/result.h>
+#include <margaux/row.h>
 
 // ============================================================================
 // Row boundary tests

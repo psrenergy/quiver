@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <psr/c/element.h>
+#include <margaux/c/element.h>
 #include <string>
 
 TEST(ElementCApi, CreateAndDestroy) {

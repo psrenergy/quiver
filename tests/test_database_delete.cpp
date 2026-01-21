@@ -1,8 +1,8 @@
 #include "test_utils.h"
 
 #include <gtest/gtest.h>
-#include <psr/database.h>
-#include <psr/element.h>
+#include <margaux/database.h>
+#include <margaux/element.h>
 
 TEST(Database, DeleteElementById) {
     auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});

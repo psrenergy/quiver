@@ -1,7 +1,7 @@
-#include "psr/lua_runner.h"
+#include "margaux/lua_runner.h"
 
-#include "psr/database.h"
-#include "psr/element.h"
+#include "margaux/database.h"
+#include "margaux/element.h"
 
 #include <sol/sol.hpp>
 #include <stdexcept>

@@ -1,6 +1,6 @@
 #include "c_api_internal.h"
-#include "psr/c/database.h"
-#include "psr/c/element.h"
+#include "margaux/c/database.h"
+#include "margaux/c/element.h"
 
 #include <new>
 #include <string>

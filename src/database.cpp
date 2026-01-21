@@ -1,10 +1,10 @@
-#include "psr/database.h"
+#include "margaux/database.h"
 
-#include "psr/migrations.h"
-#include "psr/result.h"
-#include "psr/schema.h"
-#include "psr/schema_validator.h"
-#include "psr/type_validator.h"
+#include "margaux/migrations.h"
+#include "margaux/result.h"
+#include "margaux/schema.h"
+#include "margaux/schema_validator.h"
+#include "margaux/type_validator.h"
 
 #include <atomic>
 #include <filesystem>

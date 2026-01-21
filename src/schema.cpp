@@ -1,4 +1,4 @@
-#include "psr/schema.h"
+#include "margaux/schema.h"
 
 #include <sqlite3.h>
 #include <stdexcept>

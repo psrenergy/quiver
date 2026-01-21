@@ -1,6 +1,6 @@
-#include "psr/result.h"
+#include "margaux/result.h"
 
-#include "psr/row.h"
+#include "margaux/row.h"
 
 namespace margaux {
 

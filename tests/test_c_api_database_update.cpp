@@ -2,8 +2,8 @@
 
 #include <algorithm>
 #include <gtest/gtest.h>
-#include <psr/c/database.h>
-#include <psr/c/element.h>
+#include <margaux/c/database.h>
+#include <margaux/c/element.h>
 #include <string>
 #include <vector>
 

@@ -1,9 +1,9 @@
 #include "test_utils.h"
 
 #include <gtest/gtest.h>
-#include <psr/attribute_type.h>
-#include <psr/database.h>
-#include <psr/element.h>
+#include <margaux/attribute_type.h>
+#include <margaux/database.h>
+#include <margaux/element.h>
 
 // ============================================================================
 // Read scalar tests

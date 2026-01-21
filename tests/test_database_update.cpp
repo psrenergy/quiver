@@ -1,8 +1,8 @@
 #include "test_utils.h"
 
 #include <gtest/gtest.h>
-#include <psr/database.h>
-#include <psr/element.h>
+#include <margaux/database.h>
+#include <margaux/element.h>
 
 // ============================================================================
 // Update scalar tests

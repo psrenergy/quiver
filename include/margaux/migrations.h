@@ -2,7 +2,7 @@
 #define PSR_MIGRATIONS_H
 
 #include "export.h"
-#include "psr/migration.h"
+#include "margaux/migration.h"
 
 #include <cstddef>
 #include <memory>

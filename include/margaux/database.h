@@ -2,10 +2,10 @@
 #define PSR_DATABASE_H
 
 #include "export.h"
-#include "psr/attribute_type.h"
-#include "psr/element.h"
-#include "psr/log_level.h"
-#include "psr/result.h"
+#include "margaux/attribute_type.h"
+#include "margaux/element.h"
+#include "margaux/log_level.h"
+#include "margaux/result.h"
 
 #include <memory>
 #include <optional>

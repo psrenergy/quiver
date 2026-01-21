@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <psr/element.h>
+#include <margaux/element.h>
 
 TEST(Element, DefaultEmpty) {
     margaux::Element element;

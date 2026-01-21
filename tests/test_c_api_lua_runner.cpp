@@ -1,9 +1,9 @@
 #include "test_utils.h"
 
 #include <gtest/gtest.h>
-#include <psr/c/database.h>
-#include <psr/c/element.h>
-#include <psr/c/lua_runner.h>
+#include <margaux/c/database.h>
+#include <margaux/c/element.h>
+#include <margaux/c/lua_runner.h>
 
 class LuaRunnerCApiTest : public ::testing::Test {
 protected:

@@ -3,9 +3,9 @@
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
-#include <psr/database.h>
-#include <psr/migration.h>
-#include <psr/migrations.h>
+#include <margaux/database.h>
+#include <margaux/migration.h>
+#include <margaux/migrations.h>
 
 namespace fs = std::filesystem;
 
