@@ -55,13 +55,15 @@ MARGAUX_C_API const char* psr_database_path(psr_database_t* db);
 // Version
 MARGAUX_C_API int64_t psr_database_current_version(psr_database_t* db);
 
-// Element operations (requires psr_element_t from element.h)
-typedef struct psr_element psr_element_t;
-MARGAUX_C_API int64_t psr_database_create_element(psr_database_t* db, const char* collection, psr_element_t* element);
+// Element operations (requires margaux_element_t from element.h)
+typedef struct margaux_element margaux_element_t;
+MARGAUX_C_API int64_t psr_database_create_element(psr_database_t* db,
+                                                  const char* collection,
+                                                  margaux_element_t* element);
 MARGAUX_C_API margaux_error_t psr_database_update_element(psr_database_t* db,
                                                           const char* collection,
                                                           int64_t id,
-                                                          const psr_element_t* element);
+                                                          const margaux_element_t* element);
 MARGAUX_C_API margaux_error_t psr_database_delete_element_by_id(psr_database_t* db, const char* collection, int64_t id);
 
 // Relation operations

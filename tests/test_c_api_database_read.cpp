@@ -17,17 +17,17 @@ TEST(DatabaseCApi, ReadScalarIntegers) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto e1 = psr_element_create();
-    psr_element_set_string(e1, "label", "Config 1");
-    psr_element_set_integer(e1, "integer_attribute", 42);
+    auto e1 = margaux_element_create();
+    margaux_element_set_string(e1, "label", "Config 1");
+    margaux_element_set_integer(e1, "integer_attribute", 42);
     psr_database_create_element(db, "Configuration", e1);
-    psr_element_destroy(e1);
+    margaux_element_destroy(e1);
 
-    auto e2 = psr_element_create();
-    psr_element_set_string(e2, "label", "Config 2");
-    psr_element_set_integer(e2, "integer_attribute", 100);
+    auto e2 = margaux_element_create();
+    margaux_element_set_string(e2, "label", "Config 2");
+    margaux_element_set_integer(e2, "integer_attribute", 100);
     psr_database_create_element(db, "Configuration", e2);
-    psr_element_destroy(e2);
+    margaux_element_destroy(e2);
 
     int64_t* values = nullptr;
     size_t count = 0;
@@ -48,17 +48,17 @@ TEST(DatabaseCApi, ReadScalarFloats) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto e1 = psr_element_create();
-    psr_element_set_string(e1, "label", "Config 1");
-    psr_element_set_float(e1, "float_attribute", 3.14);
+    auto e1 = margaux_element_create();
+    margaux_element_set_string(e1, "label", "Config 1");
+    margaux_element_set_float(e1, "float_attribute", 3.14);
     psr_database_create_element(db, "Configuration", e1);
-    psr_element_destroy(e1);
+    margaux_element_destroy(e1);
 
-    auto e2 = psr_element_create();
-    psr_element_set_string(e2, "label", "Config 2");
-    psr_element_set_float(e2, "float_attribute", 2.71);
+    auto e2 = margaux_element_create();
+    margaux_element_set_string(e2, "label", "Config 2");
+    margaux_element_set_float(e2, "float_attribute", 2.71);
     psr_database_create_element(db, "Configuration", e2);
-    psr_element_destroy(e2);
+    margaux_element_destroy(e2);
 
     double* values = nullptr;
     size_t count = 0;
@@ -79,17 +79,17 @@ TEST(DatabaseCApi, ReadScalarStrings) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto e1 = psr_element_create();
-    psr_element_set_string(e1, "label", "Config 1");
-    psr_element_set_string(e1, "string_attribute", "hello");
+    auto e1 = margaux_element_create();
+    margaux_element_set_string(e1, "label", "Config 1");
+    margaux_element_set_string(e1, "string_attribute", "hello");
     psr_database_create_element(db, "Configuration", e1);
-    psr_element_destroy(e1);
+    margaux_element_destroy(e1);
 
-    auto e2 = psr_element_create();
-    psr_element_set_string(e2, "label", "Config 2");
-    psr_element_set_string(e2, "string_attribute", "world");
+    auto e2 = margaux_element_create();
+    margaux_element_set_string(e2, "label", "Config 2");
+    margaux_element_set_string(e2, "string_attribute", "world");
     psr_database_create_element(db, "Configuration", e2);
-    psr_element_destroy(e2);
+    margaux_element_destroy(e2);
 
     char** values = nullptr;
     size_t count = 0;
@@ -110,10 +110,10 @@ TEST(DatabaseCApi, ReadScalarEmpty) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto config = psr_element_create();
-    psr_element_set_string(config, "label", "Test Config");
+    auto config = margaux_element_create();
+    margaux_element_set_string(config, "label", "Test Config");
     psr_database_create_element(db, "Configuration", config);
-    psr_element_destroy(config);
+    margaux_element_destroy(config);
 
     int64_t* integer_values = nullptr;
     size_t integer_count = 0;
@@ -142,24 +142,24 @@ TEST(DatabaseCApi, ReadVectorIntegers) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto config = psr_element_create();
-    psr_element_set_string(config, "label", "Test Config");
+    auto config = margaux_element_create();
+    margaux_element_set_string(config, "label", "Test Config");
     psr_database_create_element(db, "Configuration", config);
-    psr_element_destroy(config);
+    margaux_element_destroy(config);
 
-    auto e1 = psr_element_create();
-    psr_element_set_string(e1, "label", "Item 1");
+    auto e1 = margaux_element_create();
+    margaux_element_set_string(e1, "label", "Item 1");
     int64_t values1[] = {1, 2, 3};
-    psr_element_set_array_integer(e1, "value_int", values1, 3);
+    margaux_element_set_array_integer(e1, "value_int", values1, 3);
     psr_database_create_element(db, "Collection", e1);
-    psr_element_destroy(e1);
+    margaux_element_destroy(e1);
 
-    auto e2 = psr_element_create();
-    psr_element_set_string(e2, "label", "Item 2");
+    auto e2 = margaux_element_create();
+    margaux_element_set_string(e2, "label", "Item 2");
     int64_t values2[] = {10, 20};
-    psr_element_set_array_integer(e2, "value_int", values2, 2);
+    margaux_element_set_array_integer(e2, "value_int", values2, 2);
     psr_database_create_element(db, "Collection", e2);
-    psr_element_destroy(e2);
+    margaux_element_destroy(e2);
 
     int64_t** vectors = nullptr;
     size_t* sizes = nullptr;
@@ -186,24 +186,24 @@ TEST(DatabaseCApi, ReadVectorFloats) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto config = psr_element_create();
-    psr_element_set_string(config, "label", "Test Config");
+    auto config = margaux_element_create();
+    margaux_element_set_string(config, "label", "Test Config");
     psr_database_create_element(db, "Configuration", config);
-    psr_element_destroy(config);
+    margaux_element_destroy(config);
 
-    auto e1 = psr_element_create();
-    psr_element_set_string(e1, "label", "Item 1");
+    auto e1 = margaux_element_create();
+    margaux_element_set_string(e1, "label", "Item 1");
     double values1[] = {1.5, 2.5, 3.5};
-    psr_element_set_array_float(e1, "value_float", values1, 3);
+    margaux_element_set_array_float(e1, "value_float", values1, 3);
     psr_database_create_element(db, "Collection", e1);
-    psr_element_destroy(e1);
+    margaux_element_destroy(e1);
 
-    auto e2 = psr_element_create();
-    psr_element_set_string(e2, "label", "Item 2");
+    auto e2 = margaux_element_create();
+    margaux_element_set_string(e2, "label", "Item 2");
     double values2[] = {10.5, 20.5};
-    psr_element_set_array_float(e2, "value_float", values2, 2);
+    margaux_element_set_array_float(e2, "value_float", values2, 2);
     psr_database_create_element(db, "Collection", e2);
-    psr_element_destroy(e2);
+    margaux_element_destroy(e2);
 
     double** vectors = nullptr;
     size_t* sizes = nullptr;
@@ -230,10 +230,10 @@ TEST(DatabaseCApi, ReadVectorEmpty) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto config = psr_element_create();
-    psr_element_set_string(config, "label", "Test Config");
+    auto config = margaux_element_create();
+    margaux_element_set_string(config, "label", "Test Config");
     psr_database_create_element(db, "Configuration", config);
-    psr_element_destroy(config);
+    margaux_element_destroy(config);
 
     int64_t** integer_vectors = nullptr;
     size_t* integer_sizes = nullptr;
@@ -263,32 +263,32 @@ TEST(DatabaseCApi, ReadVectorOnlyReturnsElementsWithData) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto config = psr_element_create();
-    psr_element_set_string(config, "label", "Test Config");
+    auto config = margaux_element_create();
+    margaux_element_set_string(config, "label", "Test Config");
     psr_database_create_element(db, "Configuration", config);
-    psr_element_destroy(config);
+    margaux_element_destroy(config);
 
     // Element with vector data
-    auto e1 = psr_element_create();
-    psr_element_set_string(e1, "label", "Item 1");
+    auto e1 = margaux_element_create();
+    margaux_element_set_string(e1, "label", "Item 1");
     int64_t values1[] = {1, 2, 3};
-    psr_element_set_array_integer(e1, "value_int", values1, 3);
+    margaux_element_set_array_integer(e1, "value_int", values1, 3);
     psr_database_create_element(db, "Collection", e1);
-    psr_element_destroy(e1);
+    margaux_element_destroy(e1);
 
     // Element without vector data
-    auto e2 = psr_element_create();
-    psr_element_set_string(e2, "label", "Item 2");
+    auto e2 = margaux_element_create();
+    margaux_element_set_string(e2, "label", "Item 2");
     psr_database_create_element(db, "Collection", e2);
-    psr_element_destroy(e2);
+    margaux_element_destroy(e2);
 
     // Another element with vector data
-    auto e3 = psr_element_create();
-    psr_element_set_string(e3, "label", "Item 3");
+    auto e3 = margaux_element_create();
+    margaux_element_set_string(e3, "label", "Item 3");
     int64_t values3[] = {4, 5};
-    psr_element_set_array_integer(e3, "value_int", values3, 2);
+    margaux_element_set_array_integer(e3, "value_int", values3, 2);
     psr_database_create_element(db, "Collection", e3);
-    psr_element_destroy(e3);
+    margaux_element_destroy(e3);
 
     int64_t** vectors = nullptr;
     size_t* sizes = nullptr;
@@ -320,24 +320,24 @@ TEST(DatabaseCApi, ReadSetStrings) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto config = psr_element_create();
-    psr_element_set_string(config, "label", "Test Config");
+    auto config = margaux_element_create();
+    margaux_element_set_string(config, "label", "Test Config");
     psr_database_create_element(db, "Configuration", config);
-    psr_element_destroy(config);
+    margaux_element_destroy(config);
 
-    auto e1 = psr_element_create();
-    psr_element_set_string(e1, "label", "Item 1");
+    auto e1 = margaux_element_create();
+    margaux_element_set_string(e1, "label", "Item 1");
     const char* tags1[] = {"important", "urgent"};
-    psr_element_set_array_string(e1, "tag", tags1, 2);
+    margaux_element_set_array_string(e1, "tag", tags1, 2);
     psr_database_create_element(db, "Collection", e1);
-    psr_element_destroy(e1);
+    margaux_element_destroy(e1);
 
-    auto e2 = psr_element_create();
-    psr_element_set_string(e2, "label", "Item 2");
+    auto e2 = margaux_element_create();
+    margaux_element_set_string(e2, "label", "Item 2");
     const char* tags2[] = {"review"};
-    psr_element_set_array_string(e2, "tag", tags2, 1);
+    margaux_element_set_array_string(e2, "tag", tags2, 1);
     psr_database_create_element(db, "Collection", e2);
-    psr_element_destroy(e2);
+    margaux_element_destroy(e2);
 
     char*** sets = nullptr;
     size_t* sizes = nullptr;
@@ -370,10 +370,10 @@ TEST(DatabaseCApi, ReadSetEmpty) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto config = psr_element_create();
-    psr_element_set_string(config, "label", "Test Config");
+    auto config = margaux_element_create();
+    margaux_element_set_string(config, "label", "Test Config");
     psr_database_create_element(db, "Configuration", config);
-    psr_element_destroy(config);
+    margaux_element_destroy(config);
 
     char*** sets = nullptr;
     size_t* sizes = nullptr;
@@ -394,32 +394,32 @@ TEST(DatabaseCApi, ReadSetOnlyReturnsElementsWithData) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto config = psr_element_create();
-    psr_element_set_string(config, "label", "Test Config");
+    auto config = margaux_element_create();
+    margaux_element_set_string(config, "label", "Test Config");
     psr_database_create_element(db, "Configuration", config);
-    psr_element_destroy(config);
+    margaux_element_destroy(config);
 
     // Element with set data
-    auto e1 = psr_element_create();
-    psr_element_set_string(e1, "label", "Item 1");
+    auto e1 = margaux_element_create();
+    margaux_element_set_string(e1, "label", "Item 1");
     const char* tags1[] = {"important"};
-    psr_element_set_array_string(e1, "tag", tags1, 1);
+    margaux_element_set_array_string(e1, "tag", tags1, 1);
     psr_database_create_element(db, "Collection", e1);
-    psr_element_destroy(e1);
+    margaux_element_destroy(e1);
 
     // Element without set data
-    auto e2 = psr_element_create();
-    psr_element_set_string(e2, "label", "Item 2");
+    auto e2 = margaux_element_create();
+    margaux_element_set_string(e2, "label", "Item 2");
     psr_database_create_element(db, "Collection", e2);
-    psr_element_destroy(e2);
+    margaux_element_destroy(e2);
 
     // Another element with set data
-    auto e3 = psr_element_create();
-    psr_element_set_string(e3, "label", "Item 3");
+    auto e3 = margaux_element_create();
+    margaux_element_set_string(e3, "label", "Item 3");
     const char* tags3[] = {"urgent", "review"};
-    psr_element_set_array_string(e3, "tag", tags3, 2);
+    margaux_element_set_array_string(e3, "tag", tags3, 2);
     psr_database_create_element(db, "Collection", e3);
-    psr_element_destroy(e3);
+    margaux_element_destroy(e3);
 
     char*** sets = nullptr;
     size_t* sizes = nullptr;
@@ -446,17 +446,17 @@ TEST(DatabaseCApi, ReadScalarIntegerById) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto e1 = psr_element_create();
-    psr_element_set_string(e1, "label", "Config 1");
-    psr_element_set_integer(e1, "integer_attribute", 42);
+    auto e1 = margaux_element_create();
+    margaux_element_set_string(e1, "label", "Config 1");
+    margaux_element_set_integer(e1, "integer_attribute", 42);
     int64_t id1 = psr_database_create_element(db, "Configuration", e1);
-    psr_element_destroy(e1);
+    margaux_element_destroy(e1);
 
-    auto e2 = psr_element_create();
-    psr_element_set_string(e2, "label", "Config 2");
-    psr_element_set_integer(e2, "integer_attribute", 100);
+    auto e2 = margaux_element_create();
+    margaux_element_set_string(e2, "label", "Config 2");
+    margaux_element_set_integer(e2, "integer_attribute", 100);
     int64_t id2 = psr_database_create_element(db, "Configuration", e2);
-    psr_element_destroy(e2);
+    margaux_element_destroy(e2);
 
     int64_t value;
     int has_value;
@@ -481,11 +481,11 @@ TEST(DatabaseCApi, ReadScalarFloatById) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto e1 = psr_element_create();
-    psr_element_set_string(e1, "label", "Config 1");
-    psr_element_set_float(e1, "float_attribute", 3.14);
+    auto e1 = margaux_element_create();
+    margaux_element_set_string(e1, "label", "Config 1");
+    margaux_element_set_float(e1, "float_attribute", 3.14);
     int64_t id1 = psr_database_create_element(db, "Configuration", e1);
-    psr_element_destroy(e1);
+    margaux_element_destroy(e1);
 
     double value;
     int has_value;
@@ -504,11 +504,11 @@ TEST(DatabaseCApi, ReadScalarStringById) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto e1 = psr_element_create();
-    psr_element_set_string(e1, "label", "Config 1");
-    psr_element_set_string(e1, "string_attribute", "hello");
+    auto e1 = margaux_element_create();
+    margaux_element_set_string(e1, "label", "Config 1");
+    margaux_element_set_string(e1, "string_attribute", "hello");
     int64_t id1 = psr_database_create_element(db, "Configuration", e1);
-    psr_element_destroy(e1);
+    margaux_element_destroy(e1);
 
     char* value = nullptr;
     int has_value;
@@ -528,11 +528,11 @@ TEST(DatabaseCApi, ReadScalarByIdNotFound) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto e = psr_element_create();
-    psr_element_set_string(e, "label", "Config 1");
-    psr_element_set_integer(e, "integer_attribute", 42);
+    auto e = margaux_element_create();
+    margaux_element_set_string(e, "label", "Config 1");
+    margaux_element_set_integer(e, "integer_attribute", 42);
     psr_database_create_element(db, "Configuration", e);
-    psr_element_destroy(e);
+    margaux_element_destroy(e);
 
     int64_t value;
     int has_value;
@@ -555,24 +555,24 @@ TEST(DatabaseCApi, ReadVectorIntegerById) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto config = psr_element_create();
-    psr_element_set_string(config, "label", "Test Config");
+    auto config = margaux_element_create();
+    margaux_element_set_string(config, "label", "Test Config");
     psr_database_create_element(db, "Configuration", config);
-    psr_element_destroy(config);
+    margaux_element_destroy(config);
 
-    auto e1 = psr_element_create();
-    psr_element_set_string(e1, "label", "Item 1");
+    auto e1 = margaux_element_create();
+    margaux_element_set_string(e1, "label", "Item 1");
     int64_t values1[] = {1, 2, 3};
-    psr_element_set_array_integer(e1, "value_int", values1, 3);
+    margaux_element_set_array_integer(e1, "value_int", values1, 3);
     int64_t id1 = psr_database_create_element(db, "Collection", e1);
-    psr_element_destroy(e1);
+    margaux_element_destroy(e1);
 
-    auto e2 = psr_element_create();
-    psr_element_set_string(e2, "label", "Item 2");
+    auto e2 = margaux_element_create();
+    margaux_element_set_string(e2, "label", "Item 2");
     int64_t values2[] = {10, 20};
-    psr_element_set_array_integer(e2, "value_int", values2, 2);
+    margaux_element_set_array_integer(e2, "value_int", values2, 2);
     int64_t id2 = psr_database_create_element(db, "Collection", e2);
-    psr_element_destroy(e2);
+    margaux_element_destroy(e2);
 
     int64_t* values = nullptr;
     size_t count = 0;
@@ -601,17 +601,17 @@ TEST(DatabaseCApi, ReadVectorFloatById) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto config = psr_element_create();
-    psr_element_set_string(config, "label", "Test Config");
+    auto config = margaux_element_create();
+    margaux_element_set_string(config, "label", "Test Config");
     psr_database_create_element(db, "Configuration", config);
-    psr_element_destroy(config);
+    margaux_element_destroy(config);
 
-    auto e1 = psr_element_create();
-    psr_element_set_string(e1, "label", "Item 1");
+    auto e1 = margaux_element_create();
+    margaux_element_set_string(e1, "label", "Item 1");
     double values1[] = {1.5, 2.5, 3.5};
-    psr_element_set_array_float(e1, "value_float", values1, 3);
+    margaux_element_set_array_float(e1, "value_float", values1, 3);
     int64_t id1 = psr_database_create_element(db, "Collection", e1);
-    psr_element_destroy(e1);
+    margaux_element_destroy(e1);
 
     double* values = nullptr;
     size_t count = 0;
@@ -633,15 +633,15 @@ TEST(DatabaseCApi, ReadVectorByIdEmpty) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto config = psr_element_create();
-    psr_element_set_string(config, "label", "Test Config");
+    auto config = margaux_element_create();
+    margaux_element_set_string(config, "label", "Test Config");
     psr_database_create_element(db, "Configuration", config);
-    psr_element_destroy(config);
+    margaux_element_destroy(config);
 
-    auto e = psr_element_create();
-    psr_element_set_string(e, "label", "Item 1");
+    auto e = margaux_element_create();
+    margaux_element_set_string(e, "label", "Item 1");
     int64_t id = psr_database_create_element(db, "Collection", e);
-    psr_element_destroy(e);
+    margaux_element_destroy(e);
 
     int64_t* values = nullptr;
     size_t count = 0;
@@ -664,24 +664,24 @@ TEST(DatabaseCApi, ReadSetStringById) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto config = psr_element_create();
-    psr_element_set_string(config, "label", "Test Config");
+    auto config = margaux_element_create();
+    margaux_element_set_string(config, "label", "Test Config");
     psr_database_create_element(db, "Configuration", config);
-    psr_element_destroy(config);
+    margaux_element_destroy(config);
 
-    auto e1 = psr_element_create();
-    psr_element_set_string(e1, "label", "Item 1");
+    auto e1 = margaux_element_create();
+    margaux_element_set_string(e1, "label", "Item 1");
     const char* tags1[] = {"important", "urgent"};
-    psr_element_set_array_string(e1, "tag", tags1, 2);
+    margaux_element_set_array_string(e1, "tag", tags1, 2);
     int64_t id1 = psr_database_create_element(db, "Collection", e1);
-    psr_element_destroy(e1);
+    margaux_element_destroy(e1);
 
-    auto e2 = psr_element_create();
-    psr_element_set_string(e2, "label", "Item 2");
+    auto e2 = margaux_element_create();
+    margaux_element_set_string(e2, "label", "Item 2");
     const char* tags2[] = {"review"};
-    psr_element_set_array_string(e2, "tag", tags2, 1);
+    margaux_element_set_array_string(e2, "tag", tags2, 1);
     int64_t id2 = psr_database_create_element(db, "Collection", e2);
-    psr_element_destroy(e2);
+    margaux_element_destroy(e2);
 
     char** values = nullptr;
     size_t count = 0;
@@ -713,15 +713,15 @@ TEST(DatabaseCApi, ReadSetByIdEmpty) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto config = psr_element_create();
-    psr_element_set_string(config, "label", "Test Config");
+    auto config = margaux_element_create();
+    margaux_element_set_string(config, "label", "Test Config");
     psr_database_create_element(db, "Configuration", config);
-    psr_element_destroy(config);
+    margaux_element_destroy(config);
 
-    auto e = psr_element_create();
-    psr_element_set_string(e, "label", "Item 1");
+    auto e = margaux_element_create();
+    margaux_element_set_string(e, "label", "Item 1");
     int64_t id = psr_database_create_element(db, "Collection", e);
-    psr_element_destroy(e);
+    margaux_element_destroy(e);
 
     char** values = nullptr;
     size_t count = 0;
@@ -744,23 +744,23 @@ TEST(DatabaseCApi, ReadElementIds) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto e1 = psr_element_create();
-    psr_element_set_string(e1, "label", "Config 1");
-    psr_element_set_integer(e1, "integer_attribute", 42);
+    auto e1 = margaux_element_create();
+    margaux_element_set_string(e1, "label", "Config 1");
+    margaux_element_set_integer(e1, "integer_attribute", 42);
     int64_t id1 = psr_database_create_element(db, "Configuration", e1);
-    psr_element_destroy(e1);
+    margaux_element_destroy(e1);
 
-    auto e2 = psr_element_create();
-    psr_element_set_string(e2, "label", "Config 2");
-    psr_element_set_integer(e2, "integer_attribute", 100);
+    auto e2 = margaux_element_create();
+    margaux_element_set_string(e2, "label", "Config 2");
+    margaux_element_set_integer(e2, "integer_attribute", 100);
     int64_t id2 = psr_database_create_element(db, "Configuration", e2);
-    psr_element_destroy(e2);
+    margaux_element_destroy(e2);
 
-    auto e3 = psr_element_create();
-    psr_element_set_string(e3, "label", "Config 3");
-    psr_element_set_integer(e3, "integer_attribute", 200);
+    auto e3 = margaux_element_create();
+    margaux_element_set_string(e3, "label", "Config 3");
+    margaux_element_set_integer(e3, "integer_attribute", 200);
     int64_t id3 = psr_database_create_element(db, "Configuration", e3);
-    psr_element_destroy(e3);
+    margaux_element_destroy(e3);
 
     int64_t* ids = nullptr;
     size_t count = 0;
@@ -782,10 +782,10 @@ TEST(DatabaseCApi, ReadElementIdsEmpty) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto config = psr_element_create();
-    psr_element_set_string(config, "label", "Test Config");
+    auto config = margaux_element_create();
+    margaux_element_set_string(config, "label", "Test Config");
     psr_database_create_element(db, "Configuration", config);
-    psr_element_destroy(config);
+    margaux_element_destroy(config);
 
     // No Collection elements created
     int64_t* ids = nullptr;

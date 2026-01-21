@@ -11,18 +11,18 @@ import 'exceptions.dart';
 /// Elements are used to insert data into collections.
 /// After use, call [dispose] to free native memory.
 class Element {
-  final Pointer<psr_element_t1> _ptr;
+  final Pointer<margaux_element_t1> _ptr;
   bool _isDisposed = false;
 
   /// Creates a new empty element.
-  Element() : _ptr = bindings.psr_element_create() {
+  Element() : _ptr = bindings.margaux_element_create() {
     if (_ptr == nullptr) {
       throw const CreateElementException('Failed to create element');
     }
   }
 
   /// Internal pointer for FFI calls.
-  Pointer<psr_element_t1> get ptr {
+  Pointer<margaux_element_t1> get ptr {
     _ensureNotDisposed();
     return _ptr;
   }
@@ -92,7 +92,7 @@ class Element {
     _ensureNotDisposed();
     final namePtr = name.toNativeUtf8();
     try {
-      final error = bindings.psr_element_set_integer(_ptr, namePtr.cast(), value);
+      final error = bindings.margaux_element_set_integer(_ptr, namePtr.cast(), value);
       if (error != 0) {
         throw DatabaseException.fromError(error, "Failed to set int '$name'");
       }
@@ -106,7 +106,7 @@ class Element {
     _ensureNotDisposed();
     final namePtr = name.toNativeUtf8();
     try {
-      final error = bindings.psr_element_set_float(_ptr, namePtr.cast(), value);
+      final error = bindings.margaux_element_set_float(_ptr, namePtr.cast(), value);
       if (error != 0) {
         throw DatabaseException.fromError(error, "Failed to set float '$name'");
       }
@@ -121,7 +121,7 @@ class Element {
     final namePtr = name.toNativeUtf8();
     final valuePtr = value.toNativeUtf8();
     try {
-      final error = bindings.psr_element_set_string(
+      final error = bindings.margaux_element_set_string(
         _ptr,
         namePtr.cast(),
         valuePtr.cast(),
@@ -140,7 +140,7 @@ class Element {
     _ensureNotDisposed();
     final namePtr = name.toNativeUtf8();
     try {
-      final error = bindings.psr_element_set_null(_ptr, namePtr.cast());
+      final error = bindings.margaux_element_set_null(_ptr, namePtr.cast());
       if (error != 0) {
         throw DatabaseException.fromError(error, "Failed to set null '$name'");
       }
@@ -159,7 +159,7 @@ class Element {
       for (var i = 0; i < values.length; i++) {
         arrayPtr[i] = values[i];
       }
-      final error = bindings.psr_element_set_array_integer(
+      final error = bindings.margaux_element_set_array_integer(
         _ptr,
         namePtr.cast(),
         arrayPtr,
@@ -184,7 +184,7 @@ class Element {
       for (var i = 0; i < values.length; i++) {
         arrayPtr[i] = values[i];
       }
-      final error = bindings.psr_element_set_array_float(
+      final error = bindings.margaux_element_set_array_float(
         _ptr,
         namePtr.cast(),
         arrayPtr,
@@ -212,7 +212,7 @@ class Element {
         stringPtrs.add(strPtr);
         arrayPtr[i] = strPtr.cast();
       }
-      final error = bindings.psr_element_set_array_string(
+      final error = bindings.margaux_element_set_array_string(
         _ptr,
         namePtr.cast(),
         arrayPtr,
@@ -233,13 +233,13 @@ class Element {
   /// Clears all values from this element.
   void clear() {
     _ensureNotDisposed();
-    bindings.psr_element_clear(_ptr);
+    bindings.margaux_element_clear(_ptr);
   }
 
   /// Frees the native memory associated with this element.
   void dispose() {
     if (_isDisposed) return;
-    bindings.psr_element_destroy(_ptr);
+    bindings.margaux_element_destroy(_ptr);
     _isDisposed = true;
   }
 }

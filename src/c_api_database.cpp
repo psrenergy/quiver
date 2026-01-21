@@ -155,7 +155,9 @@ MARGAUX_C_API int64_t psr_database_current_version(psr_database_t* db) {
     }
 }
 
-MARGAUX_C_API int64_t psr_database_create_element(psr_database_t* db, const char* collection, psr_element_t* element) {
+MARGAUX_C_API int64_t psr_database_create_element(psr_database_t* db,
+                                                  const char* collection,
+                                                  margaux_element_t* element) {
     if (!db || !collection || !element) {
         return -1;
     }
@@ -169,7 +171,7 @@ MARGAUX_C_API int64_t psr_database_create_element(psr_database_t* db, const char
 MARGAUX_C_API margaux_error_t psr_database_update_element(psr_database_t* db,
                                                           const char* collection,
                                                           int64_t id,
-                                                          const psr_element_t* element) {
+                                                          const margaux_element_t* element) {
     if (!db || !collection || !element) {
         return MARGAUX_ERROR_INVALID_ARGUMENT;
     }

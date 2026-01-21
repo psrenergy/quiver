@@ -106,16 +106,16 @@ function psr_database_current_version(db)
     @ccall libmargaux_c.psr_database_current_version(db::Ptr{psr_database_t})::Int64
 end
 
-mutable struct psr_element end
+mutable struct margaux_element end
 
-const psr_element_t = psr_element
+const margaux_element_t = margaux_element
 
 function psr_database_create_element(db, collection, element)
-    @ccall libmargaux_c.psr_database_create_element(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, element::Ptr{psr_element_t})::Int64
+    @ccall libmargaux_c.psr_database_create_element(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, element::Ptr{margaux_element_t})::Int64
 end
 
 function psr_database_update_element(db, collection, id, element)
-    @ccall libmargaux_c.psr_database_update_element(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, id::Int64, element::Ptr{psr_element_t})::margaux_error_t
+    @ccall libmargaux_c.psr_database_update_element(db::Ptr{psr_database_t}, collection::Ptr{Cchar}, id::Int64, element::Ptr{margaux_element_t})::margaux_error_t
 end
 
 function psr_database_delete_element_by_id(db, collection, id)
@@ -270,64 +270,64 @@ function psr_free_string_vectors(vectors, sizes, count)
     @ccall libmargaux_c.psr_free_string_vectors(vectors::Ptr{Ptr{Ptr{Cchar}}}, sizes::Ptr{Csize_t}, count::Csize_t)::Cvoid
 end
 
-function psr_element_create()
-    @ccall libmargaux_c.psr_element_create()::Ptr{psr_element_t}
+function margaux_element_create()
+    @ccall libmargaux_c.margaux_element_create()::Ptr{margaux_element_t}
 end
 
-function psr_element_destroy(element)
-    @ccall libmargaux_c.psr_element_destroy(element::Ptr{psr_element_t})::Cvoid
+function margaux_element_destroy(element)
+    @ccall libmargaux_c.margaux_element_destroy(element::Ptr{margaux_element_t})::Cvoid
 end
 
-function psr_element_clear(element)
-    @ccall libmargaux_c.psr_element_clear(element::Ptr{psr_element_t})::Cvoid
+function margaux_element_clear(element)
+    @ccall libmargaux_c.margaux_element_clear(element::Ptr{margaux_element_t})::Cvoid
 end
 
-function psr_element_set_integer(element, name, value)
-    @ccall libmargaux_c.psr_element_set_integer(element::Ptr{psr_element_t}, name::Ptr{Cchar}, value::Int64)::margaux_error_t
+function margaux_element_set_integer(element, name, value)
+    @ccall libmargaux_c.margaux_element_set_integer(element::Ptr{margaux_element_t}, name::Ptr{Cchar}, value::Int64)::margaux_error_t
 end
 
-function psr_element_set_float(element, name, value)
-    @ccall libmargaux_c.psr_element_set_float(element::Ptr{psr_element_t}, name::Ptr{Cchar}, value::Cdouble)::margaux_error_t
+function margaux_element_set_float(element, name, value)
+    @ccall libmargaux_c.margaux_element_set_float(element::Ptr{margaux_element_t}, name::Ptr{Cchar}, value::Cdouble)::margaux_error_t
 end
 
-function psr_element_set_string(element, name, value)
-    @ccall libmargaux_c.psr_element_set_string(element::Ptr{psr_element_t}, name::Ptr{Cchar}, value::Ptr{Cchar})::margaux_error_t
+function margaux_element_set_string(element, name, value)
+    @ccall libmargaux_c.margaux_element_set_string(element::Ptr{margaux_element_t}, name::Ptr{Cchar}, value::Ptr{Cchar})::margaux_error_t
 end
 
-function psr_element_set_null(element, name)
-    @ccall libmargaux_c.psr_element_set_null(element::Ptr{psr_element_t}, name::Ptr{Cchar})::margaux_error_t
+function margaux_element_set_null(element, name)
+    @ccall libmargaux_c.margaux_element_set_null(element::Ptr{margaux_element_t}, name::Ptr{Cchar})::margaux_error_t
 end
 
-function psr_element_set_array_integer(element, name, values, count)
-    @ccall libmargaux_c.psr_element_set_array_integer(element::Ptr{psr_element_t}, name::Ptr{Cchar}, values::Ptr{Int64}, count::Int32)::margaux_error_t
+function margaux_element_set_array_integer(element, name, values, count)
+    @ccall libmargaux_c.margaux_element_set_array_integer(element::Ptr{margaux_element_t}, name::Ptr{Cchar}, values::Ptr{Int64}, count::Int32)::margaux_error_t
 end
 
-function psr_element_set_array_float(element, name, values, count)
-    @ccall libmargaux_c.psr_element_set_array_float(element::Ptr{psr_element_t}, name::Ptr{Cchar}, values::Ptr{Cdouble}, count::Int32)::margaux_error_t
+function margaux_element_set_array_float(element, name, values, count)
+    @ccall libmargaux_c.margaux_element_set_array_float(element::Ptr{margaux_element_t}, name::Ptr{Cchar}, values::Ptr{Cdouble}, count::Int32)::margaux_error_t
 end
 
-function psr_element_set_array_string(element, name, values, count)
-    @ccall libmargaux_c.psr_element_set_array_string(element::Ptr{psr_element_t}, name::Ptr{Cchar}, values::Ptr{Ptr{Cchar}}, count::Int32)::margaux_error_t
+function margaux_element_set_array_string(element, name, values, count)
+    @ccall libmargaux_c.margaux_element_set_array_string(element::Ptr{margaux_element_t}, name::Ptr{Cchar}, values::Ptr{Ptr{Cchar}}, count::Int32)::margaux_error_t
 end
 
-function psr_element_has_scalars(element)
-    @ccall libmargaux_c.psr_element_has_scalars(element::Ptr{psr_element_t})::Cint
+function margaux_element_has_scalars(element)
+    @ccall libmargaux_c.margaux_element_has_scalars(element::Ptr{margaux_element_t})::Cint
 end
 
-function psr_element_has_arrays(element)
-    @ccall libmargaux_c.psr_element_has_arrays(element::Ptr{psr_element_t})::Cint
+function margaux_element_has_arrays(element)
+    @ccall libmargaux_c.margaux_element_has_arrays(element::Ptr{margaux_element_t})::Cint
 end
 
-function psr_element_scalar_count(element)
-    @ccall libmargaux_c.psr_element_scalar_count(element::Ptr{psr_element_t})::Csize_t
+function margaux_element_scalar_count(element)
+    @ccall libmargaux_c.margaux_element_scalar_count(element::Ptr{margaux_element_t})::Csize_t
 end
 
-function psr_element_array_count(element)
-    @ccall libmargaux_c.psr_element_array_count(element::Ptr{psr_element_t})::Csize_t
+function margaux_element_array_count(element)
+    @ccall libmargaux_c.margaux_element_array_count(element::Ptr{margaux_element_t})::Csize_t
 end
 
-function psr_element_to_string(element)
-    @ccall libmargaux_c.psr_element_to_string(element::Ptr{psr_element_t})::Ptr{Cchar}
+function margaux_element_to_string(element)
+    @ccall libmargaux_c.margaux_element_to_string(element::Ptr{margaux_element_t})::Ptr{Cchar}
 end
 
 function psr_string_free(str)

@@ -174,16 +174,16 @@ TEST_F(LuaRunnerCApiTest, ReadScalarIntegers) {
     ASSERT_NE(db, nullptr);
 
     // Create elements with C API
-    auto config = psr_element_create();
-    psr_element_set_string(config, "label", "Config");
+    auto config = margaux_element_create();
+    margaux_element_set_string(config, "label", "Config");
     psr_database_create_element(db, "Configuration", config);
-    psr_element_destroy(config);
+    margaux_element_destroy(config);
 
-    auto elem = psr_element_create();
-    psr_element_set_string(elem, "label", "Item 1");
-    psr_element_set_integer(elem, "some_integer", 100);
+    auto elem = margaux_element_create();
+    margaux_element_set_string(elem, "label", "Item 1");
+    margaux_element_set_integer(elem, "some_integer", 100);
     psr_database_create_element(db, "Collection", elem);
-    psr_element_destroy(elem);
+    margaux_element_destroy(elem);
 
     auto lua = psr_lua_runner_new(db);
     ASSERT_NE(lua, nullptr);

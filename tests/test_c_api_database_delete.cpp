@@ -10,11 +10,11 @@ TEST(DatabaseCApi, DeleteElementById) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto e = psr_element_create();
-    psr_element_set_string(e, "label", "Config 1");
-    psr_element_set_integer(e, "integer_attribute", 42);
+    auto e = margaux_element_create();
+    margaux_element_set_string(e, "label", "Config 1");
+    margaux_element_set_integer(e, "integer_attribute", 42);
     int64_t id = psr_database_create_element(db, "Configuration", e);
-    psr_element_destroy(e);
+    margaux_element_destroy(e);
 
     // Verify element exists
     int64_t* ids = nullptr;
@@ -43,17 +43,17 @@ TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto config = psr_element_create();
-    psr_element_set_string(config, "label", "Test Config");
+    auto config = margaux_element_create();
+    margaux_element_set_string(config, "label", "Test Config");
     psr_database_create_element(db, "Configuration", config);
-    psr_element_destroy(config);
+    margaux_element_destroy(config);
 
-    auto e = psr_element_create();
-    psr_element_set_string(e, "label", "Item 1");
+    auto e = margaux_element_create();
+    margaux_element_set_string(e, "label", "Item 1");
     int64_t values[] = {1, 2, 3};
-    psr_element_set_array_integer(e, "value_int", values, 3);
+    margaux_element_set_array_integer(e, "value_int", values, 3);
     int64_t id = psr_database_create_element(db, "Collection", e);
-    psr_element_destroy(e);
+    margaux_element_destroy(e);
 
     // Verify vector data exists
     int64_t* vec_values = nullptr;
@@ -93,17 +93,17 @@ TEST(DatabaseCApi, DeleteElementByIdWithSetData) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto config = psr_element_create();
-    psr_element_set_string(config, "label", "Test Config");
+    auto config = margaux_element_create();
+    margaux_element_set_string(config, "label", "Test Config");
     psr_database_create_element(db, "Configuration", config);
-    psr_element_destroy(config);
+    margaux_element_destroy(config);
 
-    auto e = psr_element_create();
-    psr_element_set_string(e, "label", "Item 1");
+    auto e = margaux_element_create();
+    margaux_element_set_string(e, "label", "Item 1");
     const char* tags[] = {"important", "urgent"};
-    psr_element_set_array_string(e, "tag", tags, 2);
+    margaux_element_set_array_string(e, "tag", tags, 2);
     int64_t id = psr_database_create_element(db, "Collection", e);
-    psr_element_destroy(e);
+    margaux_element_destroy(e);
 
     // Verify set data exists
     char** set_values = nullptr;
@@ -143,11 +143,11 @@ TEST(DatabaseCApi, DeleteElementByIdNonExistent) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto e = psr_element_create();
-    psr_element_set_string(e, "label", "Config 1");
-    psr_element_set_integer(e, "integer_attribute", 42);
+    auto e = margaux_element_create();
+    margaux_element_set_string(e, "label", "Config 1");
+    margaux_element_set_integer(e, "integer_attribute", 42);
     psr_database_create_element(db, "Configuration", e);
-    psr_element_destroy(e);
+    margaux_element_destroy(e);
 
     // Delete non-existent ID - should succeed silently (SQL DELETE is idempotent)
     auto err = psr_database_delete_element_by_id(db, "Configuration", 999);
@@ -170,23 +170,23 @@ TEST(DatabaseCApi, DeleteElementByIdOtherElementsUnchanged) {
     auto db = psr_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    auto e1 = psr_element_create();
-    psr_element_set_string(e1, "label", "Config 1");
-    psr_element_set_integer(e1, "integer_attribute", 42);
+    auto e1 = margaux_element_create();
+    margaux_element_set_string(e1, "label", "Config 1");
+    margaux_element_set_integer(e1, "integer_attribute", 42);
     int64_t id1 = psr_database_create_element(db, "Configuration", e1);
-    psr_element_destroy(e1);
+    margaux_element_destroy(e1);
 
-    auto e2 = psr_element_create();
-    psr_element_set_string(e2, "label", "Config 2");
-    psr_element_set_integer(e2, "integer_attribute", 100);
+    auto e2 = margaux_element_create();
+    margaux_element_set_string(e2, "label", "Config 2");
+    margaux_element_set_integer(e2, "integer_attribute", 100);
     int64_t id2 = psr_database_create_element(db, "Configuration", e2);
-    psr_element_destroy(e2);
+    margaux_element_destroy(e2);
 
-    auto e3 = psr_element_create();
-    psr_element_set_string(e3, "label", "Config 3");
-    psr_element_set_integer(e3, "integer_attribute", 200);
+    auto e3 = margaux_element_create();
+    margaux_element_set_string(e3, "label", "Config 3");
+    margaux_element_set_integer(e3, "integer_attribute", 200);
     int64_t id3 = psr_database_create_element(db, "Configuration", e3);
-    psr_element_destroy(e3);
+    margaux_element_destroy(e3);
 
     // Delete middle element
     auto err = psr_database_delete_element_by_id(db, "Configuration", id2);
