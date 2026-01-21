@@ -13,7 +13,7 @@ set(PSR_SOURCES
 )
 
 # Build type
-if(PSR_BUILD_SHARED)
+if(MARGAUX_BUILD_SHARED)
     add_library(psr_database SHARED ${PSR_SOURCES})
     target_compile_definitions(psr_database PRIVATE PSR_DATABASE_EXPORTS)
 else()
@@ -72,7 +72,7 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/margaux
 )
 
 # C API wrapper (optional)
-if(PSR_BUILD_C_API)
+if(MARGAUX_BUILD_C_API)
     add_library(psr_database_c SHARED
         c_api_common.cpp
         c_api_database.cpp
