@@ -46,7 +46,7 @@ REM ============================================================
 echo [1/5] Building C++ library and C API...
 echo.
 
-cmake -B build -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DPSR_BUILD_TESTS=ON -DPSR_BUILD_C_API=ON
+cmake -B build -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DMARGAUX_BUILD_TESTS=ON -DMARGAUX_BUILD_C_API=ON
 if errorlevel 1 (
     echo.
     echo ERROR: CMake configuration failed
