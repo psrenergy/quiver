@@ -37,7 +37,7 @@ gtest_discover_tests(psr_database_tests
 )
 
 # C API tests
-if(PSR_BUILD_C_API)
+if(MARGAUX_BUILD_C_API)
     add_executable(psr_database_c_tests
         test_c_api_database_create.cpp
         test_c_api_database_delete.cpp
