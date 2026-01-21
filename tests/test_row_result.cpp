@@ -242,8 +242,8 @@ TEST(Result, MixedValueTypes) {
 // ============================================================================
 
 TEST(RowResult, ReadScalarWithNullValues) {
-    auto db =
-        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
     // Create required Configuration
     margaux::Element config;
@@ -266,7 +266,8 @@ TEST(RowResult, ReadScalarWithNullValues) {
 }
 
 TEST(RowResult, ReadScalarByIdWithNull) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     // Create element with minimal required fields
     margaux::Element e;
@@ -280,7 +281,8 @@ TEST(RowResult, ReadScalarByIdWithNull) {
 }
 
 TEST(RowResult, EmptyResultFromQuery) {
-    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
+    auto db = margaux::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     // No elements created - should return empty vectors
     auto labels = db.read_scalar_strings("Configuration", "label");
