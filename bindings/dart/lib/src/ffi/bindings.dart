@@ -38,149 +38,149 @@ class MargauxBindings {
   late final _psr_versionPtr = _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function()>>('psr_version');
   late final _psr_version = _psr_versionPtr.asFunction<ffi.Pointer<ffi.Char> Function()>();
 
-  psr_database_options_t psr_database_options_default() {
-    return _psr_database_options_default();
+  database_options_t database_options_default() {
+    return _database_options_default();
   }
 
-  late final _psr_database_options_defaultPtr =
-      _lookup<ffi.NativeFunction<psr_database_options_t Function()>>('psr_database_options_default');
-  late final _psr_database_options_default =
-      _psr_database_options_defaultPtr.asFunction<psr_database_options_t Function()>();
+  late final _database_options_defaultPtr =
+      _lookup<ffi.NativeFunction<database_options_t Function()>>('database_options_default');
+  late final _database_options_default =
+      _database_options_defaultPtr.asFunction<database_options_t Function()>();
 
-  ffi.Pointer<psr_database_t> psr_database_open(
+  ffi.Pointer<database_t> database_open(
     ffi.Pointer<ffi.Char> path,
-    ffi.Pointer<psr_database_options_t> options,
+    ffi.Pointer<database_options_t> options,
   ) {
-    return _psr_database_open(
+    return _database_open(
       path,
       options,
     );
   }
 
-  late final _psr_database_openPtr = _lookup<
+  late final _database_openPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Pointer<psr_database_t> Function(
-              ffi.Pointer<ffi.Char>, ffi.Pointer<psr_database_options_t>)>>('psr_database_open');
-  late final _psr_database_open = _psr_database_openPtr
-      .asFunction<ffi.Pointer<psr_database_t> Function(ffi.Pointer<ffi.Char>, ffi.Pointer<psr_database_options_t>)>();
+          ffi.Pointer<database_t> Function(
+              ffi.Pointer<ffi.Char>, ffi.Pointer<database_options_t>)>>('database_open');
+  late final _database_open = _database_openPtr
+      .asFunction<ffi.Pointer<database_t> Function(ffi.Pointer<ffi.Char>, ffi.Pointer<database_options_t>)>();
 
-  ffi.Pointer<psr_database_t> psr_database_from_migrations(
+  ffi.Pointer<database_t> database_from_migrations(
     ffi.Pointer<ffi.Char> db_path,
     ffi.Pointer<ffi.Char> migrations_path,
-    ffi.Pointer<psr_database_options_t> options,
+    ffi.Pointer<database_options_t> options,
   ) {
-    return _psr_database_from_migrations(
+    return _database_from_migrations(
       db_path,
       migrations_path,
       options,
     );
   }
 
-  late final _psr_database_from_migrationsPtr = _lookup<
+  late final _database_from_migrationsPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Pointer<psr_database_t> Function(ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
-              ffi.Pointer<psr_database_options_t>)>>('psr_database_from_migrations');
-  late final _psr_database_from_migrations = _psr_database_from_migrationsPtr.asFunction<
-      ffi.Pointer<psr_database_t> Function(
-          ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Pointer<psr_database_options_t>)>();
+          ffi.Pointer<database_t> Function(ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
+              ffi.Pointer<database_options_t>)>>('database_from_migrations');
+  late final _database_from_migrations = _database_from_migrationsPtr.asFunction<
+      ffi.Pointer<database_t> Function(
+          ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Pointer<database_options_t>)>();
 
-  ffi.Pointer<psr_database_t> psr_database_from_schema(
+  ffi.Pointer<database_t> database_from_schema(
     ffi.Pointer<ffi.Char> db_path,
     ffi.Pointer<ffi.Char> schema_path,
-    ffi.Pointer<psr_database_options_t> options,
+    ffi.Pointer<database_options_t> options,
   ) {
-    return _psr_database_from_schema(
+    return _database_from_schema(
       db_path,
       schema_path,
       options,
     );
   }
 
-  late final _psr_database_from_schemaPtr = _lookup<
+  late final _database_from_schemaPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Pointer<psr_database_t> Function(ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
-              ffi.Pointer<psr_database_options_t>)>>('psr_database_from_schema');
-  late final _psr_database_from_schema = _psr_database_from_schemaPtr.asFunction<
-      ffi.Pointer<psr_database_t> Function(
-          ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Pointer<psr_database_options_t>)>();
+          ffi.Pointer<database_t> Function(ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
+              ffi.Pointer<database_options_t>)>>('database_from_schema');
+  late final _database_from_schema = _database_from_schemaPtr.asFunction<
+      ffi.Pointer<database_t> Function(
+          ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Pointer<database_options_t>)>();
 
-  void psr_database_close(
-    ffi.Pointer<psr_database_t> db,
+  void database_close(
+    ffi.Pointer<database_t> db,
   ) {
-    return _psr_database_close(
+    return _database_close(
       db,
     );
   }
 
-  late final _psr_database_closePtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<psr_database_t>)>>('psr_database_close');
-  late final _psr_database_close = _psr_database_closePtr.asFunction<void Function(ffi.Pointer<psr_database_t>)>();
+  late final _database_closePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<database_t>)>>('database_close');
+  late final _database_close = _database_closePtr.asFunction<void Function(ffi.Pointer<database_t>)>();
 
-  int psr_database_is_healthy(
-    ffi.Pointer<psr_database_t> db,
+  int database_is_healthy(
+    ffi.Pointer<database_t> db,
   ) {
-    return _psr_database_is_healthy(
+    return _database_is_healthy(
       db,
     );
   }
 
-  late final _psr_database_is_healthyPtr =
-      _lookup<ffi.NativeFunction<ffi.Int Function(ffi.Pointer<psr_database_t>)>>('psr_database_is_healthy');
-  late final _psr_database_is_healthy =
-      _psr_database_is_healthyPtr.asFunction<int Function(ffi.Pointer<psr_database_t>)>();
+  late final _database_is_healthyPtr =
+      _lookup<ffi.NativeFunction<ffi.Int Function(ffi.Pointer<database_t>)>>('database_is_healthy');
+  late final _database_is_healthy =
+      _database_is_healthyPtr.asFunction<int Function(ffi.Pointer<database_t>)>();
 
-  ffi.Pointer<ffi.Char> psr_database_path(
-    ffi.Pointer<psr_database_t> db,
+  ffi.Pointer<ffi.Char> database_path(
+    ffi.Pointer<database_t> db,
   ) {
-    return _psr_database_path(
+    return _database_path(
       db,
     );
   }
 
-  late final _psr_database_pathPtr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<psr_database_t>)>>('psr_database_path');
-  late final _psr_database_path =
-      _psr_database_pathPtr.asFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<psr_database_t>)>();
+  late final _database_pathPtr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<database_t>)>>('database_path');
+  late final _database_path =
+      _database_pathPtr.asFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<database_t>)>();
 
-  int psr_database_current_version(
-    ffi.Pointer<psr_database_t> db,
+  int database_current_version(
+    ffi.Pointer<database_t> db,
   ) {
-    return _psr_database_current_version(
+    return _database_current_version(
       db,
     );
   }
 
-  late final _psr_database_current_versionPtr =
-      _lookup<ffi.NativeFunction<ffi.Int64 Function(ffi.Pointer<psr_database_t>)>>('psr_database_current_version');
-  late final _psr_database_current_version =
-      _psr_database_current_versionPtr.asFunction<int Function(ffi.Pointer<psr_database_t>)>();
+  late final _database_current_versionPtr =
+      _lookup<ffi.NativeFunction<ffi.Int64 Function(ffi.Pointer<database_t>)>>('database_current_version');
+  late final _database_current_version =
+      _database_current_versionPtr.asFunction<int Function(ffi.Pointer<database_t>)>();
 
-  int psr_database_create_element(
-    ffi.Pointer<psr_database_t> db,
+  int database_create_element(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<element_t> element,
   ) {
-    return _psr_database_create_element(
+    return _database_create_element(
       db,
       collection,
       element,
     );
   }
 
-  late final _psr_database_create_elementPtr = _lookup<
+  late final _database_create_elementPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int64 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>,
-              ffi.Pointer<element_t>)>>('psr_database_create_element');
-  late final _psr_database_create_element = _psr_database_create_elementPtr
-      .asFunction<int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<element_t>)>();
+          ffi.Int64 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>,
+              ffi.Pointer<element_t>)>>('database_create_element');
+  late final _database_create_element = _database_create_elementPtr
+      .asFunction<int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<element_t>)>();
 
-  int psr_database_update_element(
-    ffi.Pointer<psr_database_t> db,
+  int database_update_element(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     int id,
     ffi.Pointer<element_t> element,
   ) {
-    return _psr_database_update_element(
+    return _database_update_element(
       db,
       collection,
       id,
@@ -188,39 +188,39 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_update_elementPtr = _lookup<
+  late final _database_update_elementPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<element_t>)>>('psr_database_update_element');
-  late final _psr_database_update_element = _psr_database_update_elementPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<element_t>)>();
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<element_t>)>>('database_update_element');
+  late final _database_update_element = _database_update_elementPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<element_t>)>();
 
-  int psr_database_delete_element_by_id(
-    ffi.Pointer<psr_database_t> db,
+  int database_delete_element_by_id(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     int id,
   ) {
-    return _psr_database_delete_element_by_id(
+    return _database_delete_element_by_id(
       db,
       collection,
       id,
     );
   }
 
-  late final _psr_database_delete_element_by_idPtr =
-      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Int64)>>(
-          'psr_database_delete_element_by_id');
-  late final _psr_database_delete_element_by_id = _psr_database_delete_element_by_idPtr
-      .asFunction<int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, int)>();
+  late final _database_delete_element_by_idPtr =
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Int64)>>(
+          'database_delete_element_by_id');
+  late final _database_delete_element_by_id = _database_delete_element_by_idPtr
+      .asFunction<int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, int)>();
 
-  int psr_database_set_scalar_relation(
-    ffi.Pointer<psr_database_t> db,
+  int database_set_scalar_relation(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     ffi.Pointer<ffi.Char> from_label,
     ffi.Pointer<ffi.Char> to_label,
   ) {
-    return _psr_database_set_scalar_relation(
+    return _database_set_scalar_relation(
       db,
       collection,
       attribute,
@@ -229,22 +229,22 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_set_scalar_relationPtr = _lookup<
+  late final _database_set_scalar_relationPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)>>('psr_database_set_scalar_relation');
-  late final _psr_database_set_scalar_relation = _psr_database_set_scalar_relationPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)>>('database_set_scalar_relation');
+  late final _database_set_scalar_relation = _database_set_scalar_relationPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>)>();
 
-  int psr_database_read_scalar_relation(
-    ffi.Pointer<psr_database_t> db,
+  int database_read_scalar_relation(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>> out_values,
     ffi.Pointer<ffi.Size> out_count,
   ) {
-    return _psr_database_read_scalar_relation(
+    return _database_read_scalar_relation(
       db,
       collection,
       attribute,
@@ -253,26 +253,26 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_read_scalar_relationPtr = _lookup<
+  late final _database_read_scalar_relationPtr = _lookup<
       ffi.NativeFunction<
           ffi.Int32 Function(
-              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<database_t>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
-              ffi.Pointer<ffi.Size>)>>('psr_database_read_scalar_relation');
-  late final _psr_database_read_scalar_relation = _psr_database_read_scalar_relationPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Size>)>>('database_read_scalar_relation');
+  late final _database_read_scalar_relation = _database_read_scalar_relationPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>, ffi.Pointer<ffi.Size>)>();
 
-  int psr_database_read_scalar_integers(
-    ffi.Pointer<psr_database_t> db,
+  int database_read_scalar_integers(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     ffi.Pointer<ffi.Pointer<ffi.Int64>> out_values,
     ffi.Pointer<ffi.Size> out_count,
   ) {
-    return _psr_database_read_scalar_integers(
+    return _database_read_scalar_integers(
       db,
       collection,
       attribute,
@@ -281,22 +281,22 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_read_scalar_integersPtr = _lookup<
+  late final _database_read_scalar_integersPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>)>>('psr_database_read_scalar_integers');
-  late final _psr_database_read_scalar_integers = _psr_database_read_scalar_integersPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>)>>('database_read_scalar_integers');
+  late final _database_read_scalar_integers = _database_read_scalar_integersPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>)>();
 
-  int psr_database_read_scalar_floats(
-    ffi.Pointer<psr_database_t> db,
+  int database_read_scalar_floats(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     ffi.Pointer<ffi.Pointer<ffi.Double>> out_values,
     ffi.Pointer<ffi.Size> out_count,
   ) {
-    return _psr_database_read_scalar_floats(
+    return _database_read_scalar_floats(
       db,
       collection,
       attribute,
@@ -305,22 +305,22 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_read_scalar_floatsPtr = _lookup<
+  late final _database_read_scalar_floatsPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>>('psr_database_read_scalar_floats');
-  late final _psr_database_read_scalar_floats = _psr_database_read_scalar_floatsPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>>('database_read_scalar_floats');
+  late final _database_read_scalar_floats = _database_read_scalar_floatsPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>();
 
-  int psr_database_read_scalar_strings(
-    ffi.Pointer<psr_database_t> db,
+  int database_read_scalar_strings(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>> out_values,
     ffi.Pointer<ffi.Size> out_count,
   ) {
-    return _psr_database_read_scalar_strings(
+    return _database_read_scalar_strings(
       db,
       collection,
       attribute,
@@ -329,27 +329,27 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_read_scalar_stringsPtr = _lookup<
+  late final _database_read_scalar_stringsPtr = _lookup<
       ffi.NativeFunction<
           ffi.Int32 Function(
-              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<database_t>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
-              ffi.Pointer<ffi.Size>)>>('psr_database_read_scalar_strings');
-  late final _psr_database_read_scalar_strings = _psr_database_read_scalar_stringsPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Size>)>>('database_read_scalar_strings');
+  late final _database_read_scalar_strings = _database_read_scalar_stringsPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>, ffi.Pointer<ffi.Size>)>();
 
-  int psr_database_read_vector_integers(
-    ffi.Pointer<psr_database_t> db,
+  int database_read_vector_integers(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>> out_vectors,
     ffi.Pointer<ffi.Pointer<ffi.Size>> out_sizes,
     ffi.Pointer<ffi.Size> out_count,
   ) {
-    return _psr_database_read_vector_integers(
+    return _database_read_vector_integers(
       db,
       collection,
       attribute,
@@ -359,33 +359,33 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_read_vector_integersPtr = _lookup<
+  late final _database_read_vector_integersPtr = _lookup<
       ffi.NativeFunction<
           ffi.Int32 Function(
-              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<database_t>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>>,
               ffi.Pointer<ffi.Pointer<ffi.Size>>,
-              ffi.Pointer<ffi.Size>)>>('psr_database_read_vector_integers');
-  late final _psr_database_read_vector_integers = _psr_database_read_vector_integersPtr.asFunction<
+              ffi.Pointer<ffi.Size>)>>('database_read_vector_integers');
+  late final _database_read_vector_integers = _database_read_vector_integersPtr.asFunction<
       int Function(
-          ffi.Pointer<psr_database_t>,
+          ffi.Pointer<database_t>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>>,
           ffi.Pointer<ffi.Pointer<ffi.Size>>,
           ffi.Pointer<ffi.Size>)>();
 
-  int psr_database_read_vector_floats(
-    ffi.Pointer<psr_database_t> db,
+  int database_read_vector_floats(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>> out_vectors,
     ffi.Pointer<ffi.Pointer<ffi.Size>> out_sizes,
     ffi.Pointer<ffi.Size> out_count,
   ) {
-    return _psr_database_read_vector_floats(
+    return _database_read_vector_floats(
       db,
       collection,
       attribute,
@@ -395,33 +395,33 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_read_vector_floatsPtr = _lookup<
+  late final _database_read_vector_floatsPtr = _lookup<
       ffi.NativeFunction<
           ffi.Int32 Function(
-              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<database_t>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>>,
               ffi.Pointer<ffi.Pointer<ffi.Size>>,
-              ffi.Pointer<ffi.Size>)>>('psr_database_read_vector_floats');
-  late final _psr_database_read_vector_floats = _psr_database_read_vector_floatsPtr.asFunction<
+              ffi.Pointer<ffi.Size>)>>('database_read_vector_floats');
+  late final _database_read_vector_floats = _database_read_vector_floatsPtr.asFunction<
       int Function(
-          ffi.Pointer<psr_database_t>,
+          ffi.Pointer<database_t>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>>,
           ffi.Pointer<ffi.Pointer<ffi.Size>>,
           ffi.Pointer<ffi.Size>)>();
 
-  int psr_database_read_vector_strings(
-    ffi.Pointer<psr_database_t> db,
+  int database_read_vector_strings(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>> out_vectors,
     ffi.Pointer<ffi.Pointer<ffi.Size>> out_sizes,
     ffi.Pointer<ffi.Size> out_count,
   ) {
-    return _psr_database_read_vector_strings(
+    return _database_read_vector_strings(
       db,
       collection,
       attribute,
@@ -431,33 +431,33 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_read_vector_stringsPtr = _lookup<
+  late final _database_read_vector_stringsPtr = _lookup<
       ffi.NativeFunction<
           ffi.Int32 Function(
-              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<database_t>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>>,
               ffi.Pointer<ffi.Pointer<ffi.Size>>,
-              ffi.Pointer<ffi.Size>)>>('psr_database_read_vector_strings');
-  late final _psr_database_read_vector_strings = _psr_database_read_vector_stringsPtr.asFunction<
+              ffi.Pointer<ffi.Size>)>>('database_read_vector_strings');
+  late final _database_read_vector_strings = _database_read_vector_stringsPtr.asFunction<
       int Function(
-          ffi.Pointer<psr_database_t>,
+          ffi.Pointer<database_t>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>>,
           ffi.Pointer<ffi.Pointer<ffi.Size>>,
           ffi.Pointer<ffi.Size>)>();
 
-  int psr_database_read_set_integers(
-    ffi.Pointer<psr_database_t> db,
+  int database_read_set_integers(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>> out_sets,
     ffi.Pointer<ffi.Pointer<ffi.Size>> out_sizes,
     ffi.Pointer<ffi.Size> out_count,
   ) {
-    return _psr_database_read_set_integers(
+    return _database_read_set_integers(
       db,
       collection,
       attribute,
@@ -467,33 +467,33 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_read_set_integersPtr = _lookup<
+  late final _database_read_set_integersPtr = _lookup<
       ffi.NativeFunction<
           ffi.Int32 Function(
-              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<database_t>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>>,
               ffi.Pointer<ffi.Pointer<ffi.Size>>,
-              ffi.Pointer<ffi.Size>)>>('psr_database_read_set_integers');
-  late final _psr_database_read_set_integers = _psr_database_read_set_integersPtr.asFunction<
+              ffi.Pointer<ffi.Size>)>>('database_read_set_integers');
+  late final _database_read_set_integers = _database_read_set_integersPtr.asFunction<
       int Function(
-          ffi.Pointer<psr_database_t>,
+          ffi.Pointer<database_t>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>>,
           ffi.Pointer<ffi.Pointer<ffi.Size>>,
           ffi.Pointer<ffi.Size>)>();
 
-  int psr_database_read_set_floats(
-    ffi.Pointer<psr_database_t> db,
+  int database_read_set_floats(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>> out_sets,
     ffi.Pointer<ffi.Pointer<ffi.Size>> out_sizes,
     ffi.Pointer<ffi.Size> out_count,
   ) {
-    return _psr_database_read_set_floats(
+    return _database_read_set_floats(
       db,
       collection,
       attribute,
@@ -503,33 +503,33 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_read_set_floatsPtr = _lookup<
+  late final _database_read_set_floatsPtr = _lookup<
       ffi.NativeFunction<
           ffi.Int32 Function(
-              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<database_t>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>>,
               ffi.Pointer<ffi.Pointer<ffi.Size>>,
-              ffi.Pointer<ffi.Size>)>>('psr_database_read_set_floats');
-  late final _psr_database_read_set_floats = _psr_database_read_set_floatsPtr.asFunction<
+              ffi.Pointer<ffi.Size>)>>('database_read_set_floats');
+  late final _database_read_set_floats = _database_read_set_floatsPtr.asFunction<
       int Function(
-          ffi.Pointer<psr_database_t>,
+          ffi.Pointer<database_t>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>>,
           ffi.Pointer<ffi.Pointer<ffi.Size>>,
           ffi.Pointer<ffi.Size>)>();
 
-  int psr_database_read_set_strings(
-    ffi.Pointer<psr_database_t> db,
+  int database_read_set_strings(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>> out_sets,
     ffi.Pointer<ffi.Pointer<ffi.Size>> out_sizes,
     ffi.Pointer<ffi.Size> out_count,
   ) {
-    return _psr_database_read_set_strings(
+    return _database_read_set_strings(
       db,
       collection,
       attribute,
@@ -539,33 +539,33 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_read_set_stringsPtr = _lookup<
+  late final _database_read_set_stringsPtr = _lookup<
       ffi.NativeFunction<
           ffi.Int32 Function(
-              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<database_t>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>>,
               ffi.Pointer<ffi.Pointer<ffi.Size>>,
-              ffi.Pointer<ffi.Size>)>>('psr_database_read_set_strings');
-  late final _psr_database_read_set_strings = _psr_database_read_set_stringsPtr.asFunction<
+              ffi.Pointer<ffi.Size>)>>('database_read_set_strings');
+  late final _database_read_set_strings = _database_read_set_stringsPtr.asFunction<
       int Function(
-          ffi.Pointer<psr_database_t>,
+          ffi.Pointer<database_t>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>>,
           ffi.Pointer<ffi.Pointer<ffi.Size>>,
           ffi.Pointer<ffi.Size>)>();
 
-  int psr_database_read_scalar_integers_by_id(
-    ffi.Pointer<psr_database_t> db,
+  int database_read_scalar_integers_by_id(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     int id,
     ffi.Pointer<ffi.Int64> out_value,
     ffi.Pointer<ffi.Int> out_has_value,
   ) {
-    return _psr_database_read_scalar_integers_by_id(
+    return _database_read_scalar_integers_by_id(
       db,
       collection,
       attribute,
@@ -575,23 +575,23 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_read_scalar_integers_by_idPtr = _lookup<
+  late final _database_read_scalar_integers_by_idPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Int64>, ffi.Pointer<ffi.Int>)>>('psr_database_read_scalar_integers_by_id');
-  late final _psr_database_read_scalar_integers_by_id = _psr_database_read_scalar_integers_by_idPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<ffi.Int64>, ffi.Pointer<ffi.Int>)>>('database_read_scalar_integers_by_id');
+  late final _database_read_scalar_integers_by_id = _database_read_scalar_integers_by_idPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Int64>, ffi.Pointer<ffi.Int>)>();
 
-  int psr_database_read_scalar_floats_by_id(
-    ffi.Pointer<psr_database_t> db,
+  int database_read_scalar_floats_by_id(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     int id,
     ffi.Pointer<ffi.Double> out_value,
     ffi.Pointer<ffi.Int> out_has_value,
   ) {
-    return _psr_database_read_scalar_floats_by_id(
+    return _database_read_scalar_floats_by_id(
       db,
       collection,
       attribute,
@@ -601,23 +601,23 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_read_scalar_floats_by_idPtr = _lookup<
+  late final _database_read_scalar_floats_by_idPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Double>, ffi.Pointer<ffi.Int>)>>('psr_database_read_scalar_floats_by_id');
-  late final _psr_database_read_scalar_floats_by_id = _psr_database_read_scalar_floats_by_idPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<ffi.Double>, ffi.Pointer<ffi.Int>)>>('database_read_scalar_floats_by_id');
+  late final _database_read_scalar_floats_by_id = _database_read_scalar_floats_by_idPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Double>, ffi.Pointer<ffi.Int>)>();
 
-  int psr_database_read_scalar_strings_by_id(
-    ffi.Pointer<psr_database_t> db,
+  int database_read_scalar_strings_by_id(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     int id,
     ffi.Pointer<ffi.Pointer<ffi.Char>> out_value,
     ffi.Pointer<ffi.Int> out_has_value,
   ) {
-    return _psr_database_read_scalar_strings_by_id(
+    return _database_read_scalar_strings_by_id(
       db,
       collection,
       attribute,
@@ -627,23 +627,23 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_read_scalar_strings_by_idPtr = _lookup<
+  late final _database_read_scalar_strings_by_idPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Pointer<ffi.Int>)>>('psr_database_read_scalar_strings_by_id');
-  late final _psr_database_read_scalar_strings_by_id = _psr_database_read_scalar_strings_by_idPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Pointer<ffi.Int>)>>('database_read_scalar_strings_by_id');
+  late final _database_read_scalar_strings_by_id = _database_read_scalar_strings_by_idPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Pointer<ffi.Int>)>();
 
-  int psr_database_read_vector_integers_by_id(
-    ffi.Pointer<psr_database_t> db,
+  int database_read_vector_integers_by_id(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     int id,
     ffi.Pointer<ffi.Pointer<ffi.Int64>> out_values,
     ffi.Pointer<ffi.Size> out_count,
   ) {
-    return _psr_database_read_vector_integers_by_id(
+    return _database_read_vector_integers_by_id(
       db,
       collection,
       attribute,
@@ -653,23 +653,23 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_read_vector_integers_by_idPtr = _lookup<
+  late final _database_read_vector_integers_by_idPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>)>>('psr_database_read_vector_integers_by_id');
-  late final _psr_database_read_vector_integers_by_id = _psr_database_read_vector_integers_by_idPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>)>>('database_read_vector_integers_by_id');
+  late final _database_read_vector_integers_by_id = _database_read_vector_integers_by_idPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>)>();
 
-  int psr_database_read_vector_floats_by_id(
-    ffi.Pointer<psr_database_t> db,
+  int database_read_vector_floats_by_id(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     int id,
     ffi.Pointer<ffi.Pointer<ffi.Double>> out_values,
     ffi.Pointer<ffi.Size> out_count,
   ) {
-    return _psr_database_read_vector_floats_by_id(
+    return _database_read_vector_floats_by_id(
       db,
       collection,
       attribute,
@@ -679,23 +679,23 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_read_vector_floats_by_idPtr = _lookup<
+  late final _database_read_vector_floats_by_idPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>>('psr_database_read_vector_floats_by_id');
-  late final _psr_database_read_vector_floats_by_id = _psr_database_read_vector_floats_by_idPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>>('database_read_vector_floats_by_id');
+  late final _database_read_vector_floats_by_id = _database_read_vector_floats_by_idPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>();
 
-  int psr_database_read_vector_strings_by_id(
-    ffi.Pointer<psr_database_t> db,
+  int database_read_vector_strings_by_id(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     int id,
     ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>> out_values,
     ffi.Pointer<ffi.Size> out_count,
   ) {
-    return _psr_database_read_vector_strings_by_id(
+    return _database_read_vector_strings_by_id(
       db,
       collection,
       attribute,
@@ -705,28 +705,28 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_read_vector_strings_by_idPtr = _lookup<
+  late final _database_read_vector_strings_by_idPtr = _lookup<
       ffi.NativeFunction<
           ffi.Int32 Function(
-              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<database_t>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Char>,
               ffi.Int64,
               ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
-              ffi.Pointer<ffi.Size>)>>('psr_database_read_vector_strings_by_id');
-  late final _psr_database_read_vector_strings_by_id = _psr_database_read_vector_strings_by_idPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
+              ffi.Pointer<ffi.Size>)>>('database_read_vector_strings_by_id');
+  late final _database_read_vector_strings_by_id = _database_read_vector_strings_by_idPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>, ffi.Pointer<ffi.Size>)>();
 
-  int psr_database_read_set_integers_by_id(
-    ffi.Pointer<psr_database_t> db,
+  int database_read_set_integers_by_id(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     int id,
     ffi.Pointer<ffi.Pointer<ffi.Int64>> out_values,
     ffi.Pointer<ffi.Size> out_count,
   ) {
-    return _psr_database_read_set_integers_by_id(
+    return _database_read_set_integers_by_id(
       db,
       collection,
       attribute,
@@ -736,23 +736,23 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_read_set_integers_by_idPtr = _lookup<
+  late final _database_read_set_integers_by_idPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>)>>('psr_database_read_set_integers_by_id');
-  late final _psr_database_read_set_integers_by_id = _psr_database_read_set_integers_by_idPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>)>>('database_read_set_integers_by_id');
+  late final _database_read_set_integers_by_id = _database_read_set_integers_by_idPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>)>();
 
-  int psr_database_read_set_floats_by_id(
-    ffi.Pointer<psr_database_t> db,
+  int database_read_set_floats_by_id(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     int id,
     ffi.Pointer<ffi.Pointer<ffi.Double>> out_values,
     ffi.Pointer<ffi.Size> out_count,
   ) {
-    return _psr_database_read_set_floats_by_id(
+    return _database_read_set_floats_by_id(
       db,
       collection,
       attribute,
@@ -762,23 +762,23 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_read_set_floats_by_idPtr = _lookup<
+  late final _database_read_set_floats_by_idPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>>('psr_database_read_set_floats_by_id');
-  late final _psr_database_read_set_floats_by_id = _psr_database_read_set_floats_by_idPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>>('database_read_set_floats_by_id');
+  late final _database_read_set_floats_by_id = _database_read_set_floats_by_idPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>();
 
-  int psr_database_read_set_strings_by_id(
-    ffi.Pointer<psr_database_t> db,
+  int database_read_set_strings_by_id(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     int id,
     ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>> out_values,
     ffi.Pointer<ffi.Size> out_count,
   ) {
-    return _psr_database_read_set_strings_by_id(
+    return _database_read_set_strings_by_id(
       db,
       collection,
       attribute,
@@ -788,26 +788,26 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_read_set_strings_by_idPtr = _lookup<
+  late final _database_read_set_strings_by_idPtr = _lookup<
       ffi.NativeFunction<
           ffi.Int32 Function(
-              ffi.Pointer<psr_database_t>,
+              ffi.Pointer<database_t>,
               ffi.Pointer<ffi.Char>,
               ffi.Pointer<ffi.Char>,
               ffi.Int64,
               ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
-              ffi.Pointer<ffi.Size>)>>('psr_database_read_set_strings_by_id');
-  late final _psr_database_read_set_strings_by_id = _psr_database_read_set_strings_by_idPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
+              ffi.Pointer<ffi.Size>)>>('database_read_set_strings_by_id');
+  late final _database_read_set_strings_by_id = _database_read_set_strings_by_idPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>, ffi.Pointer<ffi.Size>)>();
 
-  int psr_database_read_element_ids(
-    ffi.Pointer<psr_database_t> db,
+  int database_read_element_ids(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Pointer<ffi.Int64>> out_ids,
     ffi.Pointer<ffi.Size> out_count,
   ) {
-    return _psr_database_read_element_ids(
+    return _database_read_element_ids(
       db,
       collection,
       out_ids,
@@ -815,22 +815,22 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_read_element_idsPtr = _lookup<
+  late final _database_read_element_idsPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Int64>>,
-              ffi.Pointer<ffi.Size>)>>('psr_database_read_element_ids');
-  late final _psr_database_read_element_ids = _psr_database_read_element_idsPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+              ffi.Pointer<ffi.Size>)>>('database_read_element_ids');
+  late final _database_read_element_ids = _database_read_element_idsPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Int64>>,
           ffi.Pointer<ffi.Size>)>();
 
-  int psr_database_get_attribute_type(
-    ffi.Pointer<psr_database_t> db,
+  int database_get_attribute_type(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     ffi.Pointer<ffi.Int32> out_data_structure,
     ffi.Pointer<ffi.Int32> out_data_type,
   ) {
-    return _psr_database_get_attribute_type(
+    return _database_get_attribute_type(
       db,
       collection,
       attribute,
@@ -839,22 +839,22 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_get_attribute_typePtr = _lookup<
+  late final _database_get_attribute_typePtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Int32>, ffi.Pointer<ffi.Int32>)>>('psr_database_get_attribute_type');
-  late final _psr_database_get_attribute_type = _psr_database_get_attribute_typePtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Int32>,
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
+              ffi.Pointer<ffi.Int32>, ffi.Pointer<ffi.Int32>)>>('database_get_attribute_type');
+  late final _database_get_attribute_type = _database_get_attribute_typePtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Int32>,
           ffi.Pointer<ffi.Int32>)>();
 
-  int psr_database_update_scalar_integer(
-    ffi.Pointer<psr_database_t> db,
+  int database_update_scalar_integer(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     int id,
     int value,
   ) {
-    return _psr_database_update_scalar_integer(
+    return _database_update_scalar_integer(
       db,
       collection,
       attribute,
@@ -863,21 +863,21 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_update_scalar_integerPtr = _lookup<
+  late final _database_update_scalar_integerPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Int64)>>('psr_database_update_scalar_integer');
-  late final _psr_database_update_scalar_integer = _psr_database_update_scalar_integerPtr
-      .asFunction<int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, int)>();
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Int64)>>('database_update_scalar_integer');
+  late final _database_update_scalar_integer = _database_update_scalar_integerPtr
+      .asFunction<int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, int)>();
 
-  int psr_database_update_scalar_float(
-    ffi.Pointer<psr_database_t> db,
+  int database_update_scalar_float(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     int id,
     double value,
   ) {
-    return _psr_database_update_scalar_float(
+    return _database_update_scalar_float(
       db,
       collection,
       attribute,
@@ -886,21 +886,21 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_update_scalar_floatPtr = _lookup<
+  late final _database_update_scalar_floatPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Double)>>('psr_database_update_scalar_float');
-  late final _psr_database_update_scalar_float = _psr_database_update_scalar_floatPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, double)>();
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Double)>>('database_update_scalar_float');
+  late final _database_update_scalar_float = _database_update_scalar_floatPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, double)>();
 
-  int psr_database_update_scalar_string(
-    ffi.Pointer<psr_database_t> db,
+  int database_update_scalar_string(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     int id,
     ffi.Pointer<ffi.Char> value,
   ) {
-    return _psr_database_update_scalar_string(
+    return _database_update_scalar_string(
       db,
       collection,
       attribute,
@@ -909,23 +909,23 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_update_scalar_stringPtr = _lookup<
+  late final _database_update_scalar_stringPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Char>)>>('psr_database_update_scalar_string');
-  late final _psr_database_update_scalar_string = _psr_database_update_scalar_stringPtr.asFunction<
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<ffi.Char>)>>('database_update_scalar_string');
+  late final _database_update_scalar_string = _database_update_scalar_stringPtr.asFunction<
       int Function(
-          ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<ffi.Char>)>();
+          ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<ffi.Char>)>();
 
-  int psr_database_update_vector_integers(
-    ffi.Pointer<psr_database_t> db,
+  int database_update_vector_integers(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     int id,
     ffi.Pointer<ffi.Int64> values,
     int count,
   ) {
-    return _psr_database_update_vector_integers(
+    return _database_update_vector_integers(
       db,
       collection,
       attribute,
@@ -935,23 +935,23 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_update_vector_integersPtr = _lookup<
+  late final _database_update_vector_integersPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Int64>, ffi.Size)>>('psr_database_update_vector_integers');
-  late final _psr_database_update_vector_integers = _psr_database_update_vector_integersPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<ffi.Int64>, ffi.Size)>>('database_update_vector_integers');
+  late final _database_update_vector_integers = _database_update_vector_integersPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Int64>, int)>();
 
-  int psr_database_update_vector_floats(
-    ffi.Pointer<psr_database_t> db,
+  int database_update_vector_floats(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     int id,
     ffi.Pointer<ffi.Double> values,
     int count,
   ) {
-    return _psr_database_update_vector_floats(
+    return _database_update_vector_floats(
       db,
       collection,
       attribute,
@@ -961,23 +961,23 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_update_vector_floatsPtr = _lookup<
+  late final _database_update_vector_floatsPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Double>, ffi.Size)>>('psr_database_update_vector_floats');
-  late final _psr_database_update_vector_floats = _psr_database_update_vector_floatsPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<ffi.Double>, ffi.Size)>>('database_update_vector_floats');
+  late final _database_update_vector_floats = _database_update_vector_floatsPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Double>, int)>();
 
-  int psr_database_update_vector_strings(
-    ffi.Pointer<psr_database_t> db,
+  int database_update_vector_strings(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     int id,
     ffi.Pointer<ffi.Pointer<ffi.Char>> values,
     int count,
   ) {
-    return _psr_database_update_vector_strings(
+    return _database_update_vector_strings(
       db,
       collection,
       attribute,
@@ -987,23 +987,23 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_update_vector_stringsPtr = _lookup<
+  late final _database_update_vector_stringsPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Size)>>('psr_database_update_vector_strings');
-  late final _psr_database_update_vector_strings = _psr_database_update_vector_stringsPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Size)>>('database_update_vector_strings');
+  late final _database_update_vector_strings = _database_update_vector_stringsPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Pointer<ffi.Char>>, int)>();
 
-  int psr_database_update_set_integers(
-    ffi.Pointer<psr_database_t> db,
+  int database_update_set_integers(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     int id,
     ffi.Pointer<ffi.Int64> values,
     int count,
   ) {
-    return _psr_database_update_set_integers(
+    return _database_update_set_integers(
       db,
       collection,
       attribute,
@@ -1013,23 +1013,23 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_update_set_integersPtr = _lookup<
+  late final _database_update_set_integersPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Int64>, ffi.Size)>>('psr_database_update_set_integers');
-  late final _psr_database_update_set_integers = _psr_database_update_set_integersPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<ffi.Int64>, ffi.Size)>>('database_update_set_integers');
+  late final _database_update_set_integers = _database_update_set_integersPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Int64>, int)>();
 
-  int psr_database_update_set_floats(
-    ffi.Pointer<psr_database_t> db,
+  int database_update_set_floats(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     int id,
     ffi.Pointer<ffi.Double> values,
     int count,
   ) {
-    return _psr_database_update_set_floats(
+    return _database_update_set_floats(
       db,
       collection,
       attribute,
@@ -1039,23 +1039,23 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_update_set_floatsPtr = _lookup<
+  late final _database_update_set_floatsPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Double>, ffi.Size)>>('psr_database_update_set_floats');
-  late final _psr_database_update_set_floats = _psr_database_update_set_floatsPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<ffi.Double>, ffi.Size)>>('database_update_set_floats');
+  late final _database_update_set_floats = _database_update_set_floatsPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Double>, int)>();
 
-  int psr_database_update_set_strings(
-    ffi.Pointer<psr_database_t> db,
+  int database_update_set_strings(
+    ffi.Pointer<database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
     int id,
     ffi.Pointer<ffi.Pointer<ffi.Char>> values,
     int count,
   ) {
-    return _psr_database_update_set_strings(
+    return _database_update_set_strings(
       db,
       collection,
       attribute,
@@ -1065,12 +1065,12 @@ class MargauxBindings {
     );
   }
 
-  late final _psr_database_update_set_stringsPtr = _lookup<
+  late final _database_update_set_stringsPtr = _lookup<
       ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Size)>>('psr_database_update_set_strings');
-  late final _psr_database_update_set_strings = _psr_database_update_set_stringsPtr.asFunction<
-      int Function(ffi.Pointer<psr_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
+          ffi.Int32 Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
+              ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Size)>>('database_update_set_strings');
+  late final _database_update_set_strings = _database_update_set_stringsPtr.asFunction<
+      int Function(ffi.Pointer<database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
           ffi.Pointer<ffi.Pointer<ffi.Char>>, int)>();
 
   void psr_free_integer_array(
@@ -1416,7 +1416,7 @@ class MargauxBindings {
   late final _psr_string_free = _psr_string_freePtr.asFunction<void Function(ffi.Pointer<ffi.Char>)>();
 
   ffi.Pointer<psr_lua_runner_t> psr_lua_runner_new(
-    ffi.Pointer<psr_database_t> db,
+    ffi.Pointer<database_t> db,
   ) {
     return _psr_lua_runner_new(
       db,
@@ -1424,10 +1424,10 @@ class MargauxBindings {
   }
 
   late final _psr_lua_runner_newPtr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<psr_lua_runner_t> Function(ffi.Pointer<psr_database_t>)>>(
+      _lookup<ffi.NativeFunction<ffi.Pointer<psr_lua_runner_t> Function(ffi.Pointer<database_t>)>>(
           'psr_lua_runner_new');
   late final _psr_lua_runner_new =
-      _psr_lua_runner_newPtr.asFunction<ffi.Pointer<psr_lua_runner_t> Function(ffi.Pointer<psr_database_t>)>();
+      _psr_lua_runner_newPtr.asFunction<ffi.Pointer<psr_lua_runner_t> Function(ffi.Pointer<database_t>)>();
 
   void psr_lua_runner_free(
     ffi.Pointer<psr_lua_runner_t> runner,
@@ -1490,7 +1490,7 @@ abstract class psr_log_level_t {
   static const int MARGAUX_LOG_OFF = 4;
 }
 
-final class psr_database_options_t extends ffi.Struct {
+final class database_options_t extends ffi.Struct {
   @ffi.Int()
   external int read_only;
 
@@ -1510,9 +1510,9 @@ abstract class psr_data_type_t {
   static const int MARGAUX_DATA_TYPE_STRING = 2;
 }
 
-final class psr_database extends ffi.Opaque {}
+final class database extends ffi.Opaque {}
 
-typedef psr_database_t = psr_database;
+typedef database_t = database;
 
 final class element extends ffi.Opaque {}
 

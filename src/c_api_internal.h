@@ -8,10 +8,10 @@
 
 // Internal structs shared between C API implementation files
 
-struct psr_database {
+struct database {
     margaux::Database db;
-    psr_database(const std::string& path, const margaux::DatabaseOptions& options) : db(path, options) {}
-    psr_database(margaux::Database&& database) : db(std::move(database)) {}
+    database(const std::string& path, const margaux::DatabaseOptions& options) : db(path, options) {}
+    database(margaux::Database&& database) : db(std::move(database)) {}
 };
 
 struct element {

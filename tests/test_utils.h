@@ -15,8 +15,8 @@ inline std::string path_from(const char* test_file, const std::string& relative)
 }
 
 // Default options with logging off for tests
-inline psr_database_options_t quiet_options() {
-    auto options = psr_database_options_default();
+inline database_options_t quiet_options() {
+    auto options = database_options_default();
     options.console_level = MARGAUX_LOG_OFF;
     return options;
 }

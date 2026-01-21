@@ -12,16 +12,16 @@ protected:
 };
 
 TEST_F(LuaRunnerCApiTest, CreateAndDestroy) {
-    auto options = psr_database_options_default();
+    auto options = database_options_default();
     options.console_level = MARGAUX_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto lua = psr_lua_runner_new(db);
     ASSERT_NE(lua, nullptr);
 
     psr_lua_runner_free(lua);
-    psr_database_close(db);
+    database_close(db);
 }
 
 TEST_F(LuaRunnerCApiTest, FreeNull) {
@@ -34,9 +34,9 @@ TEST_F(LuaRunnerCApiTest, CreateWithNullDb) {
 }
 
 TEST_F(LuaRunnerCApiTest, RunSimpleScript) {
-    auto options = psr_database_options_default();
+    auto options = database_options_default();
     options.console_level = MARGAUX_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto lua = psr_lua_runner_new(db);
@@ -46,13 +46,13 @@ TEST_F(LuaRunnerCApiTest, RunSimpleScript) {
     EXPECT_EQ(result, MARGAUX_OK);
 
     psr_lua_runner_free(lua);
-    psr_database_close(db);
+    database_close(db);
 }
 
 TEST_F(LuaRunnerCApiTest, RunNullScript) {
-    auto options = psr_database_options_default();
+    auto options = database_options_default();
     options.console_level = MARGAUX_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto lua = psr_lua_runner_new(db);
@@ -62,7 +62,7 @@ TEST_F(LuaRunnerCApiTest, RunNullScript) {
     EXPECT_EQ(result, MARGAUX_ERROR_INVALID_ARGUMENT);
 
     psr_lua_runner_free(lua);
-    psr_database_close(db);
+    database_close(db);
 }
 
 TEST_F(LuaRunnerCApiTest, RunWithNullRunner) {
@@ -71,9 +71,9 @@ TEST_F(LuaRunnerCApiTest, RunWithNullRunner) {
 }
 
 TEST_F(LuaRunnerCApiTest, CreateElement) {
-    auto options = psr_database_options_default();
+    auto options = database_options_default();
     options.console_level = MARGAUX_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto lua = psr_lua_runner_new(db);
@@ -88,20 +88,20 @@ TEST_F(LuaRunnerCApiTest, CreateElement) {
     // Verify with C API read
     int64_t* values = nullptr;
     size_t count = 0;
-    auto read_result = psr_database_read_scalar_integers(db, "Collection", "some_integer", &values, &count);
+    auto read_result = database_read_scalar_integers(db, "Collection", "some_integer", &values, &count);
     EXPECT_EQ(read_result, MARGAUX_OK);
     EXPECT_EQ(count, 1);
     EXPECT_EQ(values[0], 42);
     psr_free_integer_array(values);
 
     psr_lua_runner_free(lua);
-    psr_database_close(db);
+    database_close(db);
 }
 
 TEST_F(LuaRunnerCApiTest, SyntaxError) {
-    auto options = psr_database_options_default();
+    auto options = database_options_default();
     options.console_level = MARGAUX_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto lua = psr_lua_runner_new(db);
@@ -114,13 +114,13 @@ TEST_F(LuaRunnerCApiTest, SyntaxError) {
     EXPECT_NE(error, nullptr);
 
     psr_lua_runner_free(lua);
-    psr_database_close(db);
+    database_close(db);
 }
 
 TEST_F(LuaRunnerCApiTest, RuntimeError) {
-    auto options = psr_database_options_default();
+    auto options = database_options_default();
     options.console_level = MARGAUX_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto lua = psr_lua_runner_new(db);
@@ -133,7 +133,7 @@ TEST_F(LuaRunnerCApiTest, RuntimeError) {
     EXPECT_NE(error, nullptr);
 
     psr_lua_runner_free(lua);
-    psr_database_close(db);
+    database_close(db);
 }
 
 TEST_F(LuaRunnerCApiTest, GetErrorNull) {
@@ -142,9 +142,9 @@ TEST_F(LuaRunnerCApiTest, GetErrorNull) {
 }
 
 TEST_F(LuaRunnerCApiTest, ReuseRunner) {
-    auto options = psr_database_options_default();
+    auto options = database_options_default();
     options.console_level = MARGAUX_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto lua = psr_lua_runner_new(db);
@@ -158,31 +158,31 @@ TEST_F(LuaRunnerCApiTest, ReuseRunner) {
     // Verify count
     char** labels = nullptr;
     size_t count = 0;
-    auto read_result = psr_database_read_scalar_strings(db, "Collection", "label", &labels, &count);
+    auto read_result = database_read_scalar_strings(db, "Collection", "label", &labels, &count);
     EXPECT_EQ(read_result, MARGAUX_OK);
     EXPECT_EQ(count, 2);
     psr_free_string_array(labels, count);
 
     psr_lua_runner_free(lua);
-    psr_database_close(db);
+    database_close(db);
 }
 
 TEST_F(LuaRunnerCApiTest, ReadScalarIntegers) {
-    auto options = psr_database_options_default();
+    auto options = database_options_default();
     options.console_level = MARGAUX_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     // Create elements with C API
     auto config = element_create();
     element_set_string(config, "label", "Config");
-    psr_database_create_element(db, "Configuration", config);
+    database_create_element(db, "Configuration", config);
     element_destroy(config);
 
     auto elem = element_create();
     element_set_string(elem, "label", "Item 1");
     element_set_integer(elem, "some_integer", 100);
-    psr_database_create_element(db, "Collection", elem);
+    database_create_element(db, "Collection", elem);
     element_destroy(elem);
 
     auto lua = psr_lua_runner_new(db);
@@ -197,13 +197,13 @@ TEST_F(LuaRunnerCApiTest, ReadScalarIntegers) {
     EXPECT_EQ(result, MARGAUX_OK);
 
     psr_lua_runner_free(lua);
-    psr_database_close(db);
+    database_close(db);
 }
 
 TEST_F(LuaRunnerCApiTest, CreateElementWithVectors) {
-    auto options = psr_database_options_default();
+    auto options = database_options_default();
     options.console_level = MARGAUX_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto lua = psr_lua_runner_new(db);
@@ -223,7 +223,7 @@ TEST_F(LuaRunnerCApiTest, CreateElementWithVectors) {
     int64_t** vectors = nullptr;
     size_t* sizes = nullptr;
     size_t count = 0;
-    auto read_result = psr_database_read_vector_integers(db, "Collection", "value_int", &vectors, &sizes, &count);
+    auto read_result = database_read_vector_integers(db, "Collection", "value_int", &vectors, &sizes, &count);
     EXPECT_EQ(read_result, MARGAUX_OK);
     EXPECT_EQ(count, 1);
     EXPECT_EQ(sizes[0], 3);
@@ -233,13 +233,13 @@ TEST_F(LuaRunnerCApiTest, CreateElementWithVectors) {
     psr_free_integer_vectors(vectors, sizes, count);
 
     psr_lua_runner_free(lua);
-    psr_database_close(db);
+    database_close(db);
 }
 
 TEST_F(LuaRunnerCApiTest, DeleteElement) {
-    auto options = psr_database_options_default();
+    auto options = database_options_default();
     options.console_level = MARGAUX_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto lua = psr_lua_runner_new(db);
@@ -262,13 +262,13 @@ TEST_F(LuaRunnerCApiTest, DeleteElement) {
     EXPECT_EQ(result, MARGAUX_OK);
 
     psr_lua_runner_free(lua);
-    psr_database_close(db);
+    database_close(db);
 }
 
 TEST_F(LuaRunnerCApiTest, UpdateElement) {
-    auto options = psr_database_options_default();
+    auto options = database_options_default();
     options.console_level = MARGAUX_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto lua = psr_lua_runner_new(db);
@@ -288,13 +288,13 @@ TEST_F(LuaRunnerCApiTest, UpdateElement) {
     // Verify with C API
     int64_t value = 0;
     int has_value = 0;
-    auto read_result = psr_database_read_scalar_integers_by_id(db, "Collection", "some_integer", 1, &value, &has_value);
+    auto read_result = database_read_scalar_integers_by_id(db, "Collection", "some_integer", 1, &value, &has_value);
     EXPECT_EQ(read_result, MARGAUX_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(value, 999);
 
     psr_lua_runner_free(lua);
-    psr_database_close(db);
+    database_close(db);
 }
 
 // ============================================================================
@@ -302,9 +302,9 @@ TEST_F(LuaRunnerCApiTest, UpdateElement) {
 // ============================================================================
 
 TEST_F(LuaRunnerCApiTest, EmptyScript) {
-    auto options = psr_database_options_default();
+    auto options = database_options_default();
     options.console_level = MARGAUX_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto lua = psr_lua_runner_new(db);
@@ -314,13 +314,13 @@ TEST_F(LuaRunnerCApiTest, EmptyScript) {
     EXPECT_EQ(result, MARGAUX_OK);
 
     psr_lua_runner_free(lua);
-    psr_database_close(db);
+    database_close(db);
 }
 
 TEST_F(LuaRunnerCApiTest, CommentOnlyScript) {
-    auto options = psr_database_options_default();
+    auto options = database_options_default();
     options.console_level = MARGAUX_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto lua = psr_lua_runner_new(db);
@@ -330,13 +330,13 @@ TEST_F(LuaRunnerCApiTest, CommentOnlyScript) {
     EXPECT_EQ(result, MARGAUX_OK);
 
     psr_lua_runner_free(lua);
-    psr_database_close(db);
+    database_close(db);
 }
 
 TEST_F(LuaRunnerCApiTest, AssertionFailure) {
-    auto options = psr_database_options_default();
+    auto options = database_options_default();
     options.console_level = MARGAUX_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto lua = psr_lua_runner_new(db);
@@ -350,13 +350,13 @@ TEST_F(LuaRunnerCApiTest, AssertionFailure) {
     EXPECT_NE(std::string(error).find("assertion"), std::string::npos);
 
     psr_lua_runner_free(lua);
-    psr_database_close(db);
+    database_close(db);
 }
 
 TEST_F(LuaRunnerCApiTest, UndefinedVariableError) {
-    auto options = psr_database_options_default();
+    auto options = database_options_default();
     options.console_level = MARGAUX_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto lua = psr_lua_runner_new(db);
@@ -369,13 +369,13 @@ TEST_F(LuaRunnerCApiTest, UndefinedVariableError) {
     EXPECT_NE(error, nullptr);
 
     psr_lua_runner_free(lua);
-    psr_database_close(db);
+    database_close(db);
 }
 
 TEST_F(LuaRunnerCApiTest, ErrorClearedAfterSuccessfulRun) {
-    auto options = psr_database_options_default();
+    auto options = database_options_default();
     options.console_level = MARGAUX_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto lua = psr_lua_runner_new(db);
@@ -392,13 +392,13 @@ TEST_F(LuaRunnerCApiTest, ErrorClearedAfterSuccessfulRun) {
     EXPECT_EQ(result, MARGAUX_OK);
 
     psr_lua_runner_free(lua);
-    psr_database_close(db);
+    database_close(db);
 }
 
 TEST_F(LuaRunnerCApiTest, ReadVectorIntegersFromLua) {
-    auto options = psr_database_options_default();
+    auto options = database_options_default();
     options.console_level = MARGAUX_LOG_OFF;
-    auto db = psr_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    auto db = database_from_schema(":memory:", collections_schema.c_str(), &options);
     ASSERT_NE(db, nullptr);
 
     auto lua = psr_lua_runner_new(db);
@@ -419,5 +419,5 @@ TEST_F(LuaRunnerCApiTest, ReadVectorIntegersFromLua) {
     EXPECT_EQ(result, MARGAUX_OK);
 
     psr_lua_runner_free(lua);
-    psr_database_close(db);
+    database_close(db);
 }

@@ -1,5 +1,5 @@
 function create_element!(db::Database, collection::String, e::Element)
-    if C.psr_database_create_element(db.ptr, collection, e.ptr) == -1
+    if C.database_create_element(db.ptr, collection, e.ptr) == -1
         throw(DatabaseException("Failed to create element in collection $collection"))
     end
     return nothing
@@ -25,7 +25,7 @@ function set_scalar_relation!(
     from_label::String,
     to_label::String,
 )
-    err = C.psr_database_set_scalar_relation(db.ptr, collection, attribute, from_label, to_label)
+    err = C.database_set_scalar_relation(db.ptr, collection, attribute, from_label, to_label)
     if err != C.MARGAUX_OK
         throw(DatabaseException("Failed to set scalar relation '$attribute' in '$collection'"))
     end
