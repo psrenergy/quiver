@@ -2,7 +2,7 @@
 
 extern "C" {
 
-PSR_C_API const char* psr_error_string(psr_error_t error) {
+MARGAUX_C_API const char* psr_error_string(psr_error_t error) {
     switch (error) {
     case PSR_OK:
         return "Success";
@@ -23,7 +23,7 @@ PSR_C_API const char* psr_error_string(psr_error_t error) {
     }
 }
 
-PSR_C_API const char* psr_version(void) {
+MARGAUX_C_API const char* psr_version(void) {
     return PSR_VERSION;
 }
 
