@@ -11,12 +11,12 @@ extern "C" {
 // Platform-specific export macros
 #ifdef _WIN32
 #ifdef PSR_DATABASE_C_EXPORTS
-#define PSR_C_API __declspec(dllexport)
+#define MARGAUX_C_API __declspec(dllexport)
 #else
-#define PSR_C_API __declspec(dllimport)
+#define MARGAUX_C_API __declspec(dllimport)
 #endif
 #else
-#define PSR_C_API __attribute__((visibility("default")))
+#define MARGAUX_C_API __attribute__((visibility("default")))
 #endif
 
 // Error codes
@@ -31,8 +31,8 @@ typedef enum {
 } psr_error_t;
 
 // Utility functions
-PSR_C_API const char* psr_error_string(psr_error_t error);
-PSR_C_API const char* psr_version(void);
+MARGAUX_C_API const char* psr_error_string(psr_error_t error);
+MARGAUX_C_API const char* psr_version(void);
 
 #ifdef __cplusplus
 }

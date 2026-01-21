@@ -7,7 +7,7 @@
 
 extern "C" {
 
-PSR_C_API psr_element_t* psr_element_create(void) {
+MARGAUX_C_API psr_element_t* psr_element_create(void) {
     try {
         return new psr_element();
     } catch (const std::bad_alloc&) {
@@ -15,17 +15,17 @@ PSR_C_API psr_element_t* psr_element_create(void) {
     }
 }
 
-PSR_C_API void psr_element_destroy(psr_element_t* element) {
+MARGAUX_C_API void psr_element_destroy(psr_element_t* element) {
     delete element;
 }
 
-PSR_C_API void psr_element_clear(psr_element_t* element) {
+MARGAUX_C_API void psr_element_clear(psr_element_t* element) {
     if (element) {
         element->element.clear();
     }
 }
 
-PSR_C_API psr_error_t psr_element_set_integer(psr_element_t* element, const char* name, int64_t value) {
+MARGAUX_C_API psr_error_t psr_element_set_integer(psr_element_t* element, const char* name, int64_t value) {
     if (!element || !name) {
         return PSR_ERROR_INVALID_ARGUMENT;
     }
@@ -33,7 +33,7 @@ PSR_C_API psr_error_t psr_element_set_integer(psr_element_t* element, const char
     return PSR_OK;
 }
 
-PSR_C_API psr_error_t psr_element_set_float(psr_element_t* element, const char* name, double value) {
+MARGAUX_C_API psr_error_t psr_element_set_float(psr_element_t* element, const char* name, double value) {
     if (!element || !name) {
         return PSR_ERROR_INVALID_ARGUMENT;
     }
@@ -41,7 +41,7 @@ PSR_C_API psr_error_t psr_element_set_float(psr_element_t* element, const char* 
     return PSR_OK;
 }
 
-PSR_C_API psr_error_t psr_element_set_string(psr_element_t* element, const char* name, const char* value) {
+MARGAUX_C_API psr_error_t psr_element_set_string(psr_element_t* element, const char* name, const char* value) {
     if (!element || !name || !value) {
         return PSR_ERROR_INVALID_ARGUMENT;
     }
@@ -49,7 +49,7 @@ PSR_C_API psr_error_t psr_element_set_string(psr_element_t* element, const char*
     return PSR_OK;
 }
 
-PSR_C_API psr_error_t psr_element_set_null(psr_element_t* element, const char* name) {
+MARGAUX_C_API psr_error_t psr_element_set_null(psr_element_t* element, const char* name) {
     if (!element || !name) {
         return PSR_ERROR_INVALID_ARGUMENT;
     }
@@ -57,7 +57,7 @@ PSR_C_API psr_error_t psr_element_set_null(psr_element_t* element, const char* n
     return PSR_OK;
 }
 
-PSR_C_API psr_error_t psr_element_set_array_integer(psr_element_t* element,
+MARGAUX_C_API psr_error_t psr_element_set_array_integer(psr_element_t* element,
                                                     const char* name,
                                                     const int64_t* values,
                                                     int32_t count) {
@@ -69,7 +69,7 @@ PSR_C_API psr_error_t psr_element_set_array_integer(psr_element_t* element,
     return PSR_OK;
 }
 
-PSR_C_API psr_error_t psr_element_set_array_float(psr_element_t* element,
+MARGAUX_C_API psr_error_t psr_element_set_array_float(psr_element_t* element,
                                                   const char* name,
                                                   const double* values,
                                                   int32_t count) {
@@ -81,7 +81,7 @@ PSR_C_API psr_error_t psr_element_set_array_float(psr_element_t* element,
     return PSR_OK;
 }
 
-PSR_C_API psr_error_t psr_element_set_array_string(psr_element_t* element,
+MARGAUX_C_API psr_error_t psr_element_set_array_string(psr_element_t* element,
                                                    const char* name,
                                                    const char* const* values,
                                                    int32_t count) {
@@ -97,35 +97,35 @@ PSR_C_API psr_error_t psr_element_set_array_string(psr_element_t* element,
     return PSR_OK;
 }
 
-PSR_C_API int psr_element_has_scalars(psr_element_t* element) {
+MARGAUX_C_API int psr_element_has_scalars(psr_element_t* element) {
     if (!element) {
         return 0;
     }
     return element->element.has_scalars() ? 1 : 0;
 }
 
-PSR_C_API int psr_element_has_arrays(psr_element_t* element) {
+MARGAUX_C_API int psr_element_has_arrays(psr_element_t* element) {
     if (!element) {
         return 0;
     }
     return element->element.has_arrays() ? 1 : 0;
 }
 
-PSR_C_API size_t psr_element_scalar_count(psr_element_t* element) {
+MARGAUX_C_API size_t psr_element_scalar_count(psr_element_t* element) {
     if (!element) {
         return 0;
     }
     return element->element.scalars().size();
 }
 
-PSR_C_API size_t psr_element_array_count(psr_element_t* element) {
+MARGAUX_C_API size_t psr_element_array_count(psr_element_t* element) {
     if (!element) {
         return 0;
     }
     return element->element.arrays().size();
 }
 
-PSR_C_API char* psr_element_to_string(psr_element_t* element) {
+MARGAUX_C_API char* psr_element_to_string(psr_element_t* element) {
     if (!element) {
         return nullptr;
     }
@@ -139,7 +139,7 @@ PSR_C_API char* psr_element_to_string(psr_element_t* element) {
     }
 }
 
-PSR_C_API void psr_string_free(char* str) {
+MARGAUX_C_API void psr_string_free(char* str) {
     delete[] str;
 }
 
