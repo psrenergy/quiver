@@ -69,8 +69,8 @@ install(FILES
 find_program(CLANG_FORMAT clang-format)
 if(CLANG_FORMAT)
     file(GLOB_RECURSE ALL_SOURCE_FILES
-        ${CMAKE_SOURCE_DIR}/include/psr/*.h
-        ${CMAKE_SOURCE_DIR}/include/psr/c/*.h
+        ${CMAKE_SOURCE_DIR}/include/margaux/*.h
+        ${CMAKE_SOURCE_DIR}/include/margaux/c/*.h
         ${CMAKE_SOURCE_DIR}/src/*.cpp
         ${CMAKE_SOURCE_DIR}/src/*.h
         ${CMAKE_SOURCE_DIR}/tests/*.cpp

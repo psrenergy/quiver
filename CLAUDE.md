@@ -5,11 +5,11 @@ SQLite wrapper library with C++ core, C API for FFI, and language bindings (Juli
 ## Architecture
 
 ```
-include/psr/           # C++ public headers
+include/margaux/           # C++ public headers
   database.h           # Database class - main API
   element.h            # Element builder for create operations
   lua_runner.h         # Lua scripting support
-include/psr/c/         # C API headers (for FFI)
+include/margaux/c/         # C API headers (for FFI)
   database.h
   element.h
   lua_runner.h

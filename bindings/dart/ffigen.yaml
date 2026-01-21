@@ -4,15 +4,15 @@ output: 'lib/src/ffi/bindings.dart'
 
 headers:
   entry-points:
-    - '../../include/psr/c/common.h'
-    - '../../include/psr/c/database.h'
-    - '../../include/psr/c/element.h'
-    - '../../include/psr/c/lua_runner.h'
+    - '../../include/margaux/c/common.h'
+    - '../../include/margaux/c/database.h'
+    - '../../include/margaux/c/element.h'
+    - '../../include/margaux/c/lua_runner.h'
   include-directives:
-    - '../../include/psr/c/common.h'
-    - '../../include/psr/c/database.h'
-    - '../../include/psr/c/element.h'
-    - '../../include/psr/c/lua_runner.h'
+    - '../../include/margaux/c/common.h'
+    - '../../include/margaux/c/database.h'
+    - '../../include/margaux/c/element.h'
+    - '../../include/margaux/c/lua_runner.h'
 
 compiler-opts:
   - '-I../../include'
