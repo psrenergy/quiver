@@ -12,8 +12,8 @@ protected:
 };
 
 TEST_F(LuaRunnerTest, CreateElementFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    psr::LuaRunner lua(db);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    margaux::LuaRunner lua(db);
 
     lua.run(R"(
         db:create_element("Configuration", { label = "Test Config" })
@@ -29,13 +29,13 @@ TEST_F(LuaRunnerTest, CreateElementFromLua) {
 }
 
 TEST_F(LuaRunnerTest, ReadScalarStringsFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Test Config"));
-    db.create_element("Collection", psr::Element().set("label", "Item 1"));
-    db.create_element("Collection", psr::Element().set("label", "Item 2"));
+    db.create_element("Configuration", margaux::Element().set("label", "Test Config"));
+    db.create_element("Collection", margaux::Element().set("label", "Item 1"));
+    db.create_element("Collection", margaux::Element().set("label", "Item 2"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     // Read from Lua and verify count
     lua.run(R"(
@@ -47,17 +47,17 @@ TEST_F(LuaRunnerTest, ReadScalarStringsFromLua) {
 }
 
 TEST_F(LuaRunnerTest, LuaScriptError) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", psr::Element().set("label", "Test Config"));
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", margaux::Element().set("label", "Test Config"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     EXPECT_THROW({ lua.run("invalid lua syntax !!!"); }, std::runtime_error);
 }
 
 TEST_F(LuaRunnerTest, CreateElementWithArrays) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    psr::LuaRunner lua(db);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    margaux::LuaRunner lua(db);
 
     // Note: vector columns in the same table must have the same length
     lua.run(R"(
@@ -79,8 +79,8 @@ TEST_F(LuaRunnerTest, CreateElementWithArrays) {
 }
 
 TEST_F(LuaRunnerTest, ReuseRunner) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    psr::LuaRunner lua(db);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    margaux::LuaRunner lua(db);
 
     lua.run(R"(db:create_element("Configuration", { label = "Test Config" }))");
     lua.run(R"(db:create_element("Collection", { label = "Item 1" }))");
@@ -91,14 +91,14 @@ TEST_F(LuaRunnerTest, ReuseRunner) {
 }
 
 TEST_F(LuaRunnerTest, ReadScalarIntegersFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
-    db.create_element("Collection", psr::Element().set("label", "Item 1").set("some_integer", int64_t{10}));
-    db.create_element("Collection", psr::Element().set("label", "Item 2").set("some_integer", int64_t{20}));
-    db.create_element("Collection", psr::Element().set("label", "Item 3").set("some_integer", int64_t{30}));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
+    db.create_element("Collection", margaux::Element().set("label", "Item 1").set("some_integer", int64_t{10}));
+    db.create_element("Collection", margaux::Element().set("label", "Item 2").set("some_integer", int64_t{20}));
+    db.create_element("Collection", margaux::Element().set("label", "Item 3").set("some_integer", int64_t{30}));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     lua.run(R"(
         local integers = db:read_scalar_integers("Collection", "some_integer")
@@ -117,13 +117,13 @@ TEST_F(LuaRunnerTest, ReadScalarIntegersFromLua) {
 }
 
 TEST_F(LuaRunnerTest, ReadScalarFloatsFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
-    db.create_element("Collection", psr::Element().set("label", "Item 1").set("some_float", 1.5));
-    db.create_element("Collection", psr::Element().set("label", "Item 2").set("some_float", 2.5));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
+    db.create_element("Collection", margaux::Element().set("label", "Item 1").set("some_float", 1.5));
+    db.create_element("Collection", margaux::Element().set("label", "Item 2").set("some_float", 2.5));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     lua.run(R"(
         local floats = db:read_scalar_floats("Collection", "some_float")
@@ -134,15 +134,15 @@ TEST_F(LuaRunnerTest, ReadScalarFloatsFromLua) {
 }
 
 TEST_F(LuaRunnerTest, ReadVectorIntegersFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
     db.create_element("Collection",
-                      psr::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2, 3}));
+                      margaux::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2, 3}));
     db.create_element("Collection",
-                      psr::Element().set("label", "Item 2").set("value_int", std::vector<int64_t>{10, 20}));
+                      margaux::Element().set("label", "Item 2").set("value_int", std::vector<int64_t>{10, 20}));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     lua.run(R"(
         local vectors = db:read_vector_integers("Collection", "value_int")
@@ -162,13 +162,13 @@ TEST_F(LuaRunnerTest, ReadVectorIntegersFromLua) {
 }
 
 TEST_F(LuaRunnerTest, ReadVectorFloatsFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
     db.create_element("Collection",
-                      psr::Element().set("label", "Item 1").set("value_float", std::vector<double>{1.1, 2.2, 3.3}));
+                      margaux::Element().set("label", "Item 1").set("value_float", std::vector<double>{1.1, 2.2, 3.3}));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     lua.run(R"(
         local vectors = db:read_vector_floats("Collection", "value_float")
@@ -181,13 +181,13 @@ TEST_F(LuaRunnerTest, ReadVectorFloatsFromLua) {
 }
 
 TEST_F(LuaRunnerTest, ReadEmptyVectorFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
     // Create element without vector data
-    db.create_element("Collection", psr::Element().set("label", "Item 1"));
+    db.create_element("Collection", margaux::Element().set("label", "Item 1"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     // Reading vectors from elements that don't have vector data should return empty
     lua.run(R"(
@@ -197,27 +197,27 @@ TEST_F(LuaRunnerTest, ReadEmptyVectorFromLua) {
 }
 
 TEST_F(LuaRunnerTest, LuaRuntimeError) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     // Test runtime error (not syntax error)
     EXPECT_THROW({ lua.run("error('This is a runtime error')"); }, std::runtime_error);
 }
 
 TEST_F(LuaRunnerTest, LuaAssertionFailure) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     EXPECT_THROW({ lua.run("assert(false, 'Assertion failed!')"); }, std::runtime_error);
 }
 
 TEST_F(LuaRunnerTest, ComplexLuaScript) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    psr::LuaRunner lua(db);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    margaux::LuaRunner lua(db);
 
     // A more complex script that uses multiple operations
     lua.run(R"lua(
@@ -257,15 +257,15 @@ TEST_F(LuaRunnerTest, ComplexLuaScript) {
 // ============================================================================
 
 TEST_F(LuaRunnerTest, ReadScalarIntegerByIdFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
     int64_t id1 =
-        db.create_element("Collection", psr::Element().set("label", "Item 1").set("some_integer", int64_t{42}));
+        db.create_element("Collection", margaux::Element().set("label", "Item 1").set("some_integer", int64_t{42}));
     int64_t id2 =
-        db.create_element("Collection", psr::Element().set("label", "Item 2").set("some_integer", int64_t{100}));
+        db.create_element("Collection", margaux::Element().set("label", "Item 2").set("some_integer", int64_t{100}));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     std::string script = R"(
         local val1 = db:read_scalar_integers_by_id("Collection", "some_integer", )" +
@@ -279,12 +279,12 @@ TEST_F(LuaRunnerTest, ReadScalarIntegerByIdFromLua) {
 }
 
 TEST_F(LuaRunnerTest, ReadScalarFloatByIdFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
-    int64_t id1 = db.create_element("Collection", psr::Element().set("label", "Item 1").set("some_float", 3.14));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
+    int64_t id1 = db.create_element("Collection", margaux::Element().set("label", "Item 1").set("some_float", 3.14));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     std::string script = R"(
         local val1 = db:read_scalar_floats_by_id("Collection", "some_float", )" +
@@ -295,12 +295,12 @@ TEST_F(LuaRunnerTest, ReadScalarFloatByIdFromLua) {
 }
 
 TEST_F(LuaRunnerTest, ReadScalarStringByIdFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
-    int64_t id1 = db.create_element("Collection", psr::Element().set("label", "Item 1"));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
+    int64_t id1 = db.create_element("Collection", margaux::Element().set("label", "Item 1"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     std::string script = R"(
         local val1 = db:read_scalar_strings_by_id("Collection", "label", )" +
@@ -311,12 +311,12 @@ TEST_F(LuaRunnerTest, ReadScalarStringByIdFromLua) {
 }
 
 TEST_F(LuaRunnerTest, ReadScalarByIdNotFoundFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
-    db.create_element("Collection", psr::Element().set("label", "Item 1").set("some_integer", int64_t{42}));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
+    db.create_element("Collection", margaux::Element().set("label", "Item 1").set("some_integer", int64_t{42}));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     lua.run(R"(
         local val = db:read_scalar_integers_by_id("Collection", "some_integer", 999)
@@ -325,15 +325,15 @@ TEST_F(LuaRunnerTest, ReadScalarByIdNotFoundFromLua) {
 }
 
 TEST_F(LuaRunnerTest, ReadVectorIntegerByIdFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
     int64_t id1 = db.create_element(
-        "Collection", psr::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2, 3}));
+        "Collection", margaux::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2, 3}));
     int64_t id2 = db.create_element(
-        "Collection", psr::Element().set("label", "Item 2").set("value_int", std::vector<int64_t>{10, 20}));
+        "Collection", margaux::Element().set("label", "Item 2").set("value_int", std::vector<int64_t>{10, 20}));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     std::string script = R"(
         local vec1 = db:read_vector_integers_by_id("Collection", "value_int", )" +
@@ -353,14 +353,14 @@ TEST_F(LuaRunnerTest, ReadVectorIntegerByIdFromLua) {
 }
 
 TEST_F(LuaRunnerTest, ReadSetStringsByIdFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
     int64_t id1 = db.create_element(
         "Collection",
-        psr::Element().set("label", "Item 1").set("tag", std::vector<std::string>{"important", "urgent"}));
+        margaux::Element().set("label", "Item 1").set("tag", std::vector<std::string>{"important", "urgent"}));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     std::string script = R"(
         local tags = db:read_set_strings_by_id("Collection", "tag", )" +
@@ -375,14 +375,14 @@ TEST_F(LuaRunnerTest, ReadSetStringsByIdFromLua) {
 // ============================================================================
 
 TEST_F(LuaRunnerTest, ReadElementIdsFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
-    int64_t id1 = db.create_element("Collection", psr::Element().set("label", "Item 1"));
-    int64_t id2 = db.create_element("Collection", psr::Element().set("label", "Item 2"));
-    int64_t id3 = db.create_element("Collection", psr::Element().set("label", "Item 3"));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
+    int64_t id1 = db.create_element("Collection", margaux::Element().set("label", "Item 1"));
+    int64_t id2 = db.create_element("Collection", margaux::Element().set("label", "Item 2"));
+    int64_t id3 = db.create_element("Collection", margaux::Element().set("label", "Item 3"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     std::string script = R"(
         local ids = db:read_element_ids("Collection")
@@ -398,11 +398,11 @@ TEST_F(LuaRunnerTest, ReadElementIdsFromLua) {
 }
 
 TEST_F(LuaRunnerTest, ReadElementIdsEmptyFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     lua.run(R"(
         local ids = db:read_element_ids("Collection")
@@ -415,14 +415,14 @@ TEST_F(LuaRunnerTest, ReadElementIdsEmptyFromLua) {
 // ============================================================================
 
 TEST_F(LuaRunnerTest, DeleteElementByIdFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
-    db.create_element("Collection", psr::Element().set("label", "Item 1"));
-    db.create_element("Collection", psr::Element().set("label", "Item 2"));
-    db.create_element("Collection", psr::Element().set("label", "Item 3"));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
+    db.create_element("Collection", margaux::Element().set("label", "Item 1"));
+    db.create_element("Collection", margaux::Element().set("label", "Item 2"));
+    db.create_element("Collection", margaux::Element().set("label", "Item 3"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     lua.run(R"(
         local ids = db:read_element_ids("Collection")
@@ -442,15 +442,15 @@ TEST_F(LuaRunnerTest, DeleteElementByIdFromLua) {
 }
 
 TEST_F(LuaRunnerTest, DeleteElementByIdWithVectorDataFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
     db.create_element("Collection",
-                      psr::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2, 3}));
+                      margaux::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2, 3}));
     db.create_element("Collection",
-                      psr::Element().set("label", "Item 2").set("value_int", std::vector<int64_t>{4, 5, 6}));
+                      margaux::Element().set("label", "Item 2").set("value_int", std::vector<int64_t>{4, 5, 6}));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     lua.run(R"(
         db:delete_element_by_id("Collection", 1)
@@ -467,12 +467,12 @@ TEST_F(LuaRunnerTest, DeleteElementByIdWithVectorDataFromLua) {
 }
 
 TEST_F(LuaRunnerTest, DeleteElementByIdNonExistentFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
-    db.create_element("Collection", psr::Element().set("label", "Item 1"));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
+    db.create_element("Collection", margaux::Element().set("label", "Item 1"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     // Deleting non-existent element should succeed silently (idempotent)
     lua.run(R"(
@@ -484,14 +484,14 @@ TEST_F(LuaRunnerTest, DeleteElementByIdNonExistentFromLua) {
 }
 
 TEST_F(LuaRunnerTest, DeleteElementByIdOtherElementsUnchangedFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
-    db.create_element("Collection", psr::Element().set("label", "Item 1").set("some_integer", int64_t{100}));
-    db.create_element("Collection", psr::Element().set("label", "Item 2").set("some_integer", int64_t{200}));
-    db.create_element("Collection", psr::Element().set("label", "Item 3").set("some_integer", int64_t{300}));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
+    db.create_element("Collection", margaux::Element().set("label", "Item 1").set("some_integer", int64_t{100}));
+    db.create_element("Collection", margaux::Element().set("label", "Item 2").set("some_integer", int64_t{200}));
+    db.create_element("Collection", margaux::Element().set("label", "Item 3").set("some_integer", int64_t{300}));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     lua.run(R"(
         db:delete_element_by_id("Collection", 2)
@@ -519,13 +519,13 @@ TEST_F(LuaRunnerTest, DeleteElementByIdOtherElementsUnchangedFromLua) {
 // ============================================================================
 
 TEST_F(LuaRunnerTest, UpdateElementSingleScalarFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
-    db.create_element("Collection", psr::Element().set("label", "Item 1").set("some_integer", int64_t{100}));
-    db.create_element("Collection", psr::Element().set("label", "Item 2").set("some_integer", int64_t{200}));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
+    db.create_element("Collection", margaux::Element().set("label", "Item 1").set("some_integer", int64_t{100}));
+    db.create_element("Collection", margaux::Element().set("label", "Item 2").set("some_integer", int64_t{200}));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     lua.run(R"(
         db:update_element("Collection", 1, { some_integer = 999 })
@@ -549,13 +549,13 @@ TEST_F(LuaRunnerTest, UpdateElementSingleScalarFromLua) {
 }
 
 TEST_F(LuaRunnerTest, UpdateElementMultipleScalarsFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
     db.create_element("Collection",
-                      psr::Element().set("label", "Item 1").set("some_integer", int64_t{100}).set("some_float", 1.5));
+                      margaux::Element().set("label", "Item 1").set("some_integer", int64_t{100}).set("some_float", 1.5));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     lua.run(R"(
         db:update_element("Collection", 1, { some_integer = 500, some_float = 9.9 })
@@ -582,14 +582,14 @@ TEST_F(LuaRunnerTest, UpdateElementMultipleScalarsFromLua) {
 }
 
 TEST_F(LuaRunnerTest, UpdateElementOtherElementsUnchangedFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
-    db.create_element("Collection", psr::Element().set("label", "Item 1").set("some_integer", int64_t{100}));
-    db.create_element("Collection", psr::Element().set("label", "Item 2").set("some_integer", int64_t{200}));
-    db.create_element("Collection", psr::Element().set("label", "Item 3").set("some_integer", int64_t{300}));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
+    db.create_element("Collection", margaux::Element().set("label", "Item 1").set("some_integer", int64_t{100}));
+    db.create_element("Collection", margaux::Element().set("label", "Item 2").set("some_integer", int64_t{200}));
+    db.create_element("Collection", margaux::Element().set("label", "Item 3").set("some_integer", int64_t{300}));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     lua.run(R"(
         -- Update only element 2
@@ -614,16 +614,16 @@ TEST_F(LuaRunnerTest, UpdateElementOtherElementsUnchangedFromLua) {
 }
 
 TEST_F(LuaRunnerTest, UpdateElementArraysIgnoredFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
     db.create_element("Collection",
-                      psr::Element()
+                      margaux::Element()
                           .set("label", "Item 1")
                           .set("some_integer", int64_t{10})
                           .set("value_int", std::vector<int64_t>{1, 2, 3}));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     // Try to update with array values (should be ignored)
     lua.run(R"(
@@ -655,44 +655,44 @@ TEST_F(LuaRunnerTest, UpdateElementArraysIgnoredFromLua) {
 // ============================================================================
 
 TEST_F(LuaRunnerTest, UndefinedVariableError) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     EXPECT_THROW({ lua.run("local x = undefined_variable + 1"); }, std::runtime_error);
 }
 
 TEST_F(LuaRunnerTest, NilFunctionCallError) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     EXPECT_THROW({ lua.run("local f = nil; f()"); }, std::runtime_error);
 }
 
 TEST_F(LuaRunnerTest, TableIndexError) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     EXPECT_THROW({ lua.run("local t = nil; local x = t.field"); }, std::runtime_error);
 }
 
 TEST_F(LuaRunnerTest, CreateElementInvalidCollection) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     EXPECT_THROW({ lua.run(R"(db:create_element("NonexistentCollection", { label = "Test" }))"); }, std::runtime_error);
 }
 
 TEST_F(LuaRunnerTest, MultipleScriptExecutions) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    psr::LuaRunner lua(db);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    margaux::LuaRunner lua(db);
 
     lua.run(R"(db:create_element("Configuration", { label = "Config" }))");
     lua.run(R"(db:create_element("Collection", { label = "Item 1" }))");
@@ -704,40 +704,40 @@ TEST_F(LuaRunnerTest, MultipleScriptExecutions) {
 }
 
 TEST_F(LuaRunnerTest, EmptyScriptSucceeds) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     // Empty script should succeed
     lua.run("");
 }
 
 TEST_F(LuaRunnerTest, WhitespaceOnlyScriptSucceeds) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     // Whitespace only script should succeed
     lua.run("   \n\t\n   ");
 }
 
 TEST_F(LuaRunnerTest, CommentOnlyScriptSucceeds) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     // Comment only script should succeed
     lua.run("-- this is a comment\n-- another comment");
 }
 
 TEST_F(LuaRunnerTest, ReadFromNonExistentCollection) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     EXPECT_THROW(
         { lua.run(R"(local x = db:read_scalar_strings("NonexistentCollection", "label"))"); }, std::runtime_error);
@@ -748,10 +748,10 @@ TEST_F(LuaRunnerTest, ReadFromNonExistentCollection) {
 // ============================================================================
 
 TEST_F(LuaRunnerTest, ReadScalarStringsEmpty) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     // No Collection elements created, should return empty table
     lua.run(R"(
@@ -761,10 +761,10 @@ TEST_F(LuaRunnerTest, ReadScalarStringsEmpty) {
 }
 
 TEST_F(LuaRunnerTest, ReadScalarIntegersEmpty) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     lua.run(R"(
         local integers = db:read_scalar_integers("Collection", "some_integer")
@@ -773,10 +773,10 @@ TEST_F(LuaRunnerTest, ReadScalarIntegersEmpty) {
 }
 
 TEST_F(LuaRunnerTest, ReadVectorIntegersEmpty) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     lua.run(R"(
         local vectors = db:read_vector_integers("Collection", "value_int")
@@ -785,13 +785,13 @@ TEST_F(LuaRunnerTest, ReadVectorIntegersEmpty) {
 }
 
 TEST_F(LuaRunnerTest, ReadSetStringsByIdEmpty) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
 
     // Create a collection element without any set values
-    int64_t id = db.create_element("Collection", psr::Element().set("label", "Item 1"));
+    int64_t id = db.create_element("Collection", margaux::Element().set("label", "Item 1"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     std::string script = R"(
         local set = db:read_set_strings_by_id("Collection", "tag", )" +
@@ -802,8 +802,8 @@ TEST_F(LuaRunnerTest, ReadSetStringsByIdEmpty) {
 }
 
 TEST_F(LuaRunnerTest, CreateElementWithOnlyLabel) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    psr::LuaRunner lua(db);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    margaux::LuaRunner lua(db);
 
     lua.run(R"(
         db:create_element("Configuration", { label = "Test Config" })
@@ -816,8 +816,8 @@ TEST_F(LuaRunnerTest, CreateElementWithOnlyLabel) {
 }
 
 TEST_F(LuaRunnerTest, CreateElementMixedTypes) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    psr::LuaRunner lua(db);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    margaux::LuaRunner lua(db);
 
     lua.run(R"(
         db:create_element("Configuration", { label = "Test Config" })
@@ -838,13 +838,13 @@ TEST_F(LuaRunnerTest, CreateElementMixedTypes) {
 }
 
 TEST_F(LuaRunnerTest, ReadVectorIntegersByIdFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
     int64_t id1 = db.create_element(
-        "Collection", psr::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{10, 20, 30}));
+        "Collection", margaux::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{10, 20, 30}));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     std::string script = R"(
         local vec = db:read_vector_integers_by_id("Collection", "value_int", )" +
@@ -858,13 +858,13 @@ TEST_F(LuaRunnerTest, ReadVectorIntegersByIdFromLua) {
 }
 
 TEST_F(LuaRunnerTest, ReadVectorFloatsByIdFromLua) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
 
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
     int64_t id1 = db.create_element(
-        "Collection", psr::Element().set("label", "Item 1").set("value_float", std::vector<double>{1.1, 2.2, 3.3}));
+        "Collection", margaux::Element().set("label", "Item 1").set("value_float", std::vector<double>{1.1, 2.2, 3.3}));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     std::string script = R"(
         local vec = db:read_vector_floats_by_id("Collection", "value_float", )" +
@@ -882,49 +882,49 @@ TEST_F(LuaRunnerTest, ReadVectorFloatsByIdFromLua) {
 // ============================================================================
 
 TEST_F(LuaRunnerTest, CreateElementMissingLabel) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     // Attempting to create element without required label should fail
     EXPECT_THROW({ lua.run(R"(db:create_element("Collection", { some_integer = 42 }))"); }, std::runtime_error);
 }
 
 TEST_F(LuaRunnerTest, ReadNonExistentAttribute) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
-    db.create_element("Collection", psr::Element().set("label", "Item 1"));
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
+    db.create_element("Collection", margaux::Element().set("label", "Item 1"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     EXPECT_THROW({ lua.run(R"(local x = db:read_scalar_strings("Collection", "nonexistent"))"); }, std::runtime_error);
 }
 
 TEST_F(LuaRunnerTest, UpdateElementNonExistentCollection) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     EXPECT_THROW(
         { lua.run(R"(db:update_element("NonexistentCollection", 1, { label = "Test" }))"); }, std::runtime_error);
 }
 
 TEST_F(LuaRunnerTest, DeleteFromNonExistentCollection) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     EXPECT_THROW({ lua.run(R"(db:delete_element_by_id("NonexistentCollection", 1))"); }, std::runtime_error);
 }
 
 TEST_F(LuaRunnerTest, MultipleOperationsPartialFailure) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     // First operation succeeds, second should fail
     EXPECT_THROW(
@@ -943,8 +943,8 @@ TEST_F(LuaRunnerTest, MultipleOperationsPartialFailure) {
 }
 
 TEST_F(LuaRunnerTest, LuaTypeCoercionInteger) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    psr::LuaRunner lua(db);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    margaux::LuaRunner lua(db);
 
     lua.run(R"(
         db:create_element("Configuration", { label = "Config" })
@@ -960,17 +960,17 @@ TEST_F(LuaRunnerTest, LuaTypeCoercionInteger) {
 }
 
 TEST_F(LuaRunnerTest, ReadElementIdsFromNonExistentCollection) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", psr::Element().set("label", "Config"));
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", margaux::Element().set("label", "Config"));
 
-    psr::LuaRunner lua(db);
+    margaux::LuaRunner lua(db);
 
     EXPECT_THROW({ lua.run(R"(local ids = db:read_element_ids("NonexistentCollection"))"); }, std::runtime_error);
 }
 
 TEST_F(LuaRunnerTest, CreateElementWithSpecialCharactersInLabel) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    psr::LuaRunner lua(db);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    margaux::LuaRunner lua(db);
 
     lua.run(R"(
         db:create_element("Configuration", { label = "Config" })
@@ -983,8 +983,8 @@ TEST_F(LuaRunnerTest, CreateElementWithSpecialCharactersInLabel) {
 }
 
 TEST_F(LuaRunnerTest, LuaScriptWithUnicodeCharacters) {
-    auto db = psr::Database::from_schema(":memory:", collections_schema);
-    psr::LuaRunner lua(db);
+    auto db = margaux::Database::from_schema(":memory:", collections_schema);
+    margaux::LuaRunner lua(db);
 
     lua.run(R"(
         db:create_element("Configuration", { label = "配置" })

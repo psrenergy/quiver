@@ -26,24 +26,24 @@ void ensure_sqlite3_initialized() {
     std::call_once(sqlite3_init_flag, []() { sqlite3_initialize(); });
 }
 
-spdlog::level::level_enum to_spdlog_level(psr::LogLevel level) {
+spdlog::level::level_enum to_spdlog_level(margaux::LogLevel level) {
     switch (level) {
-    case psr::LogLevel::debug:
+    case margaux::LogLevel::debug:
         return spdlog::level::debug;
-    case psr::LogLevel::info:
+    case margaux::LogLevel::info:
         return spdlog::level::info;
-    case psr::LogLevel::warn:
+    case margaux::LogLevel::warn:
         return spdlog::level::warn;
-    case psr::LogLevel::error:
+    case margaux::LogLevel::error:
         return spdlog::level::err;
-    case psr::LogLevel::off:
+    case margaux::LogLevel::off:
         return spdlog::level::off;
     default:
         return spdlog::level::info;
     }
 }
 
-std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_path, psr::LogLevel console_level) {
+std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_path, margaux::LogLevel console_level) {
     namespace fs = std::filesystem;
 
     // Generate unique logger name for multiple Database instances

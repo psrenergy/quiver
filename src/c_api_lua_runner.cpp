@@ -6,10 +6,10 @@
 #include <string>
 
 struct psr_lua_runner {
-    psr::LuaRunner runner;
+    margaux::LuaRunner runner;
     std::string last_error;
 
-    explicit psr_lua_runner(psr::Database& db) : runner(db) {}
+    explicit psr_lua_runner(margaux::Database& db) : runner(db) {}
 };
 
 psr_lua_runner_t* psr_lua_runner_new(psr_database_t* db) {

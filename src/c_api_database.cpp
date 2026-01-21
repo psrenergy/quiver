@@ -7,25 +7,25 @@
 
 namespace {
 
-psr::LogLevel to_cpp_log_level(psr_log_level_t level) {
+margaux::LogLevel to_cpp_log_level(psr_log_level_t level) {
     switch (level) {
     case PSR_LOG_DEBUG:
-        return psr::LogLevel::debug;
+        return margaux::LogLevel::debug;
     case PSR_LOG_INFO:
-        return psr::LogLevel::info;
+        return margaux::LogLevel::info;
     case PSR_LOG_WARN:
-        return psr::LogLevel::warn;
+        return margaux::LogLevel::warn;
     case PSR_LOG_ERROR:
-        return psr::LogLevel::error;
+        return margaux::LogLevel::error;
     case PSR_LOG_OFF:
-        return psr::LogLevel::off;
+        return margaux::LogLevel::off;
     default:
-        return psr::LogLevel::info;
+        return margaux::LogLevel::info;
     }
 }
 
-psr::DatabaseOptions to_cpp_options(const psr_database_options_t* options) {
-    psr::DatabaseOptions cpp_options;
+margaux::DatabaseOptions to_cpp_options(const psr_database_options_t* options) {
+    margaux::DatabaseOptions cpp_options;
     if (options) {
         cpp_options.read_only = options->read_only != 0;
         cpp_options.console_level = to_cpp_log_level(options->console_level);
@@ -135,7 +135,7 @@ psr_database_from_migrations(const char* db_path, const char* migrations_path, c
 
     try {
         auto cpp_options = to_cpp_options(options);
-        auto db = psr::Database::from_migrations(db_path, migrations_path, cpp_options);
+        auto db = margaux::Database::from_migrations(db_path, migrations_path, cpp_options);
         return new psr_database(std::move(db));
     } catch (const std::bad_alloc&) {
         return nullptr;
@@ -244,7 +244,7 @@ psr_database_from_schema(const char* db_path, const char* schema_path, const psr
 
     try {
         auto cpp_options = to_cpp_options(options);
-        auto db = psr::Database::from_schema(db_path, schema_path, cpp_options);
+        auto db = margaux::Database::from_schema(db_path, schema_path, cpp_options);
         return new psr_database(std::move(db));
     } catch (const std::bad_alloc&) {
         return nullptr;
@@ -893,25 +893,25 @@ MARGAUX_C_API psr_error_t psr_database_get_attribute_type(psr_database_t* db,
         auto attr_type = db->db.get_attribute_type(collection, attribute);
 
         switch (attr_type.data_structure) {
-        case psr::DataStructure::Scalar:
+        case margaux::DataStructure::Scalar:
             *out_data_structure = PSR_DATA_STRUCTURE_SCALAR;
             break;
-        case psr::DataStructure::Vector:
+        case margaux::DataStructure::Vector:
             *out_data_structure = PSR_DATA_STRUCTURE_VECTOR;
             break;
-        case psr::DataStructure::Set:
+        case margaux::DataStructure::Set:
             *out_data_structure = PSR_DATA_STRUCTURE_SET;
             break;
         }
 
         switch (attr_type.data_type) {
-        case psr::DataType::Integer:
+        case margaux::DataType::Integer:
             *out_data_type = PSR_DATA_TYPE_INTEGER;
             break;
-        case psr::DataType::Real:
+        case margaux::DataType::Real:
             *out_data_type = PSR_DATA_TYPE_FLOAT;
             break;
-        case psr::DataType::Text:
+        case margaux::DataType::Text:
             *out_data_type = PSR_DATA_TYPE_STRING;
             break;
         }

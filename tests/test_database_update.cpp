@@ -9,9 +9,9 @@
 // ============================================================================
 
 TEST(Database, UpdateScalarInteger) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
     int64_t id = db.create_element("Configuration", e);
 
@@ -23,9 +23,9 @@ TEST(Database, UpdateScalarInteger) {
 }
 
 TEST(Database, UpdateScalarFloat) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Config 1")).set("float_attribute", 3.14);
     int64_t id = db.create_element("Configuration", e);
 
@@ -37,9 +37,9 @@ TEST(Database, UpdateScalarFloat) {
 }
 
 TEST(Database, UpdateScalarString) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Config 1")).set("string_attribute", std::string("hello"));
     int64_t id = db.create_element("Configuration", e);
 
@@ -51,13 +51,13 @@ TEST(Database, UpdateScalarString) {
 }
 
 TEST(Database, UpdateScalarMultipleElements) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element e1;
+    margaux::Element e1;
     e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
     int64_t id1 = db.create_element("Configuration", e1);
 
-    psr::Element e2;
+    margaux::Element e2;
     e2.set("label", std::string("Config 2")).set("integer_attribute", int64_t{100});
     int64_t id2 = db.create_element("Configuration", e2);
 
@@ -81,13 +81,13 @@ TEST(Database, UpdateScalarMultipleElements) {
 
 TEST(Database, UpdateVectorIntegers) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Item 1")).set("value_int", std::vector<int64_t>{1, 2, 3});
     int64_t id = db.create_element("Collection", e);
 
@@ -99,13 +99,13 @@ TEST(Database, UpdateVectorIntegers) {
 
 TEST(Database, UpdateVectorFloats) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Item 1")).set("value_float", std::vector<double>{1.5, 2.5, 3.5});
     int64_t id = db.create_element("Collection", e);
 
@@ -117,13 +117,13 @@ TEST(Database, UpdateVectorFloats) {
 
 TEST(Database, UpdateVectorToEmpty) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Item 1")).set("value_int", std::vector<int64_t>{1, 2, 3});
     int64_t id = db.create_element("Collection", e);
 
@@ -135,17 +135,17 @@ TEST(Database, UpdateVectorToEmpty) {
 
 TEST(Database, UpdateVectorMultipleElements) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
-    psr::Element e1;
+    margaux::Element e1;
     e1.set("label", std::string("Item 1")).set("value_int", std::vector<int64_t>{1, 2, 3});
     int64_t id1 = db.create_element("Collection", e1);
 
-    psr::Element e2;
+    margaux::Element e2;
     e2.set("label", std::string("Item 2")).set("value_int", std::vector<int64_t>{10, 20});
     int64_t id2 = db.create_element("Collection", e2);
 
@@ -167,13 +167,13 @@ TEST(Database, UpdateVectorMultipleElements) {
 
 TEST(Database, UpdateSetStrings) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Item 1")).set("tag", std::vector<std::string>{"important", "urgent"});
     int64_t id = db.create_element("Collection", e);
 
@@ -186,13 +186,13 @@ TEST(Database, UpdateSetStrings) {
 
 TEST(Database, UpdateSetToEmpty) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Item 1")).set("tag", std::vector<std::string>{"important", "urgent"});
     int64_t id = db.create_element("Collection", e);
 
@@ -204,17 +204,17 @@ TEST(Database, UpdateSetToEmpty) {
 
 TEST(Database, UpdateSetMultipleElements) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
-    psr::Element e1;
+    margaux::Element e1;
     e1.set("label", std::string("Item 1")).set("tag", std::vector<std::string>{"important"});
     int64_t id1 = db.create_element("Collection", e1);
 
-    psr::Element e2;
+    margaux::Element e2;
     e2.set("label", std::string("Item 2")).set("tag", std::vector<std::string>{"urgent", "review"});
     int64_t id2 = db.create_element("Collection", e2);
 
@@ -236,14 +236,14 @@ TEST(Database, UpdateSetMultipleElements) {
 // ============================================================================
 
 TEST(Database, UpdateElementSingleScalar) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
     int64_t id = db.create_element("Configuration", e);
 
     // Update single scalar attribute
-    psr::Element update;
+    margaux::Element update;
     update.set("integer_attribute", int64_t{100});
     db.update_element("Configuration", id, update);
 
@@ -258,9 +258,9 @@ TEST(Database, UpdateElementSingleScalar) {
 }
 
 TEST(Database, UpdateElementMultipleScalars) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Config 1"))
         .set("integer_attribute", int64_t{42})
         .set("float_attribute", 3.14)
@@ -268,7 +268,7 @@ TEST(Database, UpdateElementMultipleScalars) {
     int64_t id = db.create_element("Configuration", e);
 
     // Update multiple scalar attributes at once
-    psr::Element update;
+    margaux::Element update;
     update.set("integer_attribute", int64_t{100})
         .set("float_attribute", 2.71)
         .set("string_attribute", std::string("world"));
@@ -293,18 +293,18 @@ TEST(Database, UpdateElementMultipleScalars) {
 }
 
 TEST(Database, UpdateElementOtherElementsUnchanged) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element e1;
+    margaux::Element e1;
     e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
     int64_t id1 = db.create_element("Configuration", e1);
 
-    psr::Element e2;
+    margaux::Element e2;
     e2.set("label", std::string("Config 2")).set("integer_attribute", int64_t{100});
     int64_t id2 = db.create_element("Configuration", e2);
 
     // Update only first element
-    psr::Element update;
+    margaux::Element update;
     update.set("integer_attribute", int64_t{999});
     db.update_element("Configuration", id1, update);
 
@@ -321,18 +321,18 @@ TEST(Database, UpdateElementOtherElementsUnchanged) {
 
 TEST(Database, UpdateElementIgnoresArrays) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Item 1")).set("value_int", std::vector<int64_t>{1, 2, 3});
     int64_t id = db.create_element("Collection", e);
 
     // Update with element that has arrays - arrays should be ignored
-    psr::Element update;
+    margaux::Element update;
     update.set("some_integer", int64_t{42}).set("value_int", std::vector<int64_t>{10, 20, 30});
     db.update_element("Collection", id, update);
 
@@ -352,13 +352,13 @@ TEST(Database, UpdateElementIgnoresArrays) {
 
 TEST(Database, UpdateVectorSingleElement) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Item 1")).set("value_int", std::vector<int64_t>{1, 2, 3});
     int64_t id = db.create_element("Collection", e);
 
@@ -371,13 +371,13 @@ TEST(Database, UpdateVectorSingleElement) {
 
 TEST(Database, UpdateSetSingleElement) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Item 1")).set("tag", std::vector<std::string>{"important", "urgent"});
     int64_t id = db.create_element("Collection", e);
 
@@ -389,15 +389,15 @@ TEST(Database, UpdateSetSingleElement) {
 }
 
 TEST(Database, UpdateScalarInvalidCollection) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
     EXPECT_THROW(db.update_scalar_integer("NonexistentCollection", "integer_attribute", 1, 42), std::runtime_error);
 }
 
 TEST(Database, UpdateScalarInvalidAttribute) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = margaux::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
     int64_t id = db.create_element("Configuration", e);
 
@@ -406,9 +406,9 @@ TEST(Database, UpdateScalarInvalidAttribute) {
 
 TEST(Database, UpdateVectorInvalidCollection) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
@@ -417,9 +417,9 @@ TEST(Database, UpdateVectorInvalidCollection) {
 
 TEST(Database, UpdateSetInvalidCollection) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
@@ -428,14 +428,14 @@ TEST(Database, UpdateSetInvalidCollection) {
 
 TEST(Database, UpdateVectorFromEmptyToNonEmpty) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
     // Create element without vector data
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Item 1"));
     int64_t id = db.create_element("Collection", e);
 
@@ -452,14 +452,14 @@ TEST(Database, UpdateVectorFromEmptyToNonEmpty) {
 
 TEST(Database, UpdateSetFromEmptyToNonEmpty) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        margaux::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = margaux::LogLevel::off});
 
-    psr::Element config;
+    margaux::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
     // Create element without set data
-    psr::Element e;
+    margaux::Element e;
     e.set("label", std::string("Item 1"));
     int64_t id = db.create_element("Collection", e);
 
