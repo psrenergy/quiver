@@ -11,7 +11,7 @@
 
 struct sqlite3;
 
-namespace psr {
+namespace margaux {
 
 struct ColumnDefinition {
     std::string name;
@@ -86,6 +86,6 @@ private:
     static std::vector<Index> query_indexes(sqlite3* db, const std::string& table);
 };
 
-}  // namespace psr
+}  // namespace margaux
 
 #endif  // PSR_SCHEMA_H

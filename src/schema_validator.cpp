@@ -4,7 +4,7 @@
 #include <set>
 #include <stdexcept>
 
-namespace psr {
+namespace margaux {
 
 SchemaValidator::SchemaValidator(const Schema& schema) : schema_(schema) {}
 
@@ -323,4 +323,4 @@ void SchemaValidator::validate_foreign_keys() {
     }
 }
 
-}  // namespace psr
+}  // namespace margaux

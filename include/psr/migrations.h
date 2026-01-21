@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace psr {
+namespace margaux {
 
 class PSR_API Migrations {
 public:
@@ -48,6 +48,6 @@ private:
     std::unique_ptr<Impl> impl_;
 };
 
-}  // namespace psr
+}  // namespace margaux
 
 #endif  // PSR_MIGRATIONS_H

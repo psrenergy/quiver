@@ -6,7 +6,7 @@
 #include <memory>
 #include <string>
 
-namespace psr {
+namespace margaux {
 
 class PSR_API Migration {
 public:
@@ -40,6 +40,6 @@ private:
     std::unique_ptr<Impl> impl_;
 };
 
-}  // namespace psr
+}  // namespace margaux
 
 #endif  // PSR_MIGRATION_H

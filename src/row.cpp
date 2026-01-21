@@ -2,7 +2,7 @@
 
 #include "psr/value.h"
 
-namespace psr {
+namespace margaux {
 
 Row::Row(std::vector<Value> values) : values_(std::move(values)) {}
 
@@ -55,4 +55,4 @@ std::optional<std::string> Row::get_string(size_t index) const {
     return std::nullopt;
 }
 
-}  // namespace psr
+}  // namespace margaux

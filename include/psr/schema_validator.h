@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace psr {
+namespace margaux {
 
 // Validates that a schema follows PSR conventions:
 // - Configuration table exists
@@ -39,6 +39,6 @@ private:
     void validation_error(const std::string& message);
 };
 
-}  // namespace psr
+}  // namespace margaux
 
 #endif  // PSR_SCHEMA_VALIDATOR_H

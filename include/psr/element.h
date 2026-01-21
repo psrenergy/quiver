@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-namespace psr {
+namespace margaux {
 
 class PSR_API Element {
 public:
@@ -42,6 +42,6 @@ private:
     std::map<std::string, std::vector<Value>> arrays_;
 };
 
-}  // namespace psr
+}  // namespace margaux
 
 #endif  // PSR_ELEMENT_H

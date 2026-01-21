@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-namespace psr {
+namespace margaux {
 
 TypeValidator::TypeValidator(const Schema& schema) : schema_(schema) {}
 
@@ -50,4 +50,4 @@ void TypeValidator::validate_value(const std::string& context, DataType expected
         value);
 }
 
-}  // namespace psr
+}  // namespace margaux
