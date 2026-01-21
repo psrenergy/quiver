@@ -30,6 +30,6 @@ inline const char* data_type_to_string(DataType type) {
     return "UNKNOWN";
 }
 
-}  // namespace psr
+}  // namespace margaux
 
 #endif  // MARGAUX_DATA_TYPE_H

@@ -9,6 +9,6 @@ namespace margaux {
 
 using Value = std::variant<std::nullptr_t, int64_t, double, std::string>;
 
-}  // namespace psr
+}  // namespace margaux
 
 #endif  // MARGAUX_VALUE_H

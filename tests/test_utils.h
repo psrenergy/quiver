@@ -21,7 +21,7 @@ inline margaux_options_t quiet_options() {
     return options;
 }
 
-}  // namespace psr::test
+}  // namespace margaux::test
 
 // Convenience macros for common schema locations
 // Usage: SCHEMA_PATH("schemas/valid/basic.sql")

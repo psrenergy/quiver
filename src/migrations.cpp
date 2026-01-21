@@ -93,4 +93,4 @@ Migrations::iterator Migrations::end() const {
     return impl_->versions.end();
 }
 
-}  // namespace psr
+}  // namespace margaux

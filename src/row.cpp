@@ -55,4 +55,4 @@ std::optional<std::string> Row::get_string(size_t index) const {
     return std::nullopt;
 }
 
-}  // namespace psr
+}  // namespace margaux

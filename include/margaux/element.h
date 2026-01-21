@@ -42,6 +42,6 @@ private:
     std::map<std::string, std::vector<Value>> arrays_;
 };
 
-}  // namespace psr
+}  // namespace margaux
 
 #endif  // MARGAUX_ELEMENT_H

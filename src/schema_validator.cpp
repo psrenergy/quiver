@@ -323,4 +323,4 @@ void SchemaValidator::validate_foreign_keys() {
     }
 }
 
-}  // namespace psr
+}  // namespace margaux

@@ -31,6 +31,6 @@ private:
     std::unique_ptr<Impl> impl_;
 };
 
-}  // namespace psr
+}  // namespace margaux
 
 #endif  // MARGAUX_LUA_RUNNER_H

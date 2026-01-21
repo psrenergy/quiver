@@ -39,6 +39,6 @@ private:
     void validation_error(const std::string& message);
 };
 
-}  // namespace psr
+}  // namespace margaux
 
 #endif  // MARGAUX_SCHEMA_VALIDATOR_H

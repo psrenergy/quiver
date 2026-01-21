@@ -158,6 +158,6 @@ private:
     void rollback();
 };
 
-}  // namespace psr
+}  // namespace margaux
 
 #endif  // MARGAUX_DATABASE_H

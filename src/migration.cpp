@@ -96,4 +96,4 @@ bool Migration::operator>=(const Migration& other) const {
     return impl_->version >= other.impl_->version;
 }
 
-}  // namespace psr
+}  // namespace margaux

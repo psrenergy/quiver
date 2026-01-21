@@ -5,6 +5,6 @@ namespace margaux {
 
 enum class LogLevel { debug, info, warn, error, off };
 
-}  // namespace psr
+}  // namespace margaux
 
 #endif  // MARGAUX_LOG_LEVEL_H

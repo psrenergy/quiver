@@ -34,6 +34,6 @@ private:
     std::vector<Value> values_;
 };
 
-}  // namespace psr
+}  // namespace margaux
 
 #endif  // MARGAUX_ROW_H

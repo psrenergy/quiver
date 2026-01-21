@@ -29,6 +29,6 @@ private:
     const Schema& schema_;
 };
 
-}  // namespace psr
+}  // namespace margaux
 
 #endif  // MARGAUX_TYPE_VALIDATOR_H

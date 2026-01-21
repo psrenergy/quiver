@@ -30,6 +30,6 @@ private:
     std::vector<Row> rows_;
 };
 
-}  // namespace psr
+}  // namespace margaux
 
 #endif  // MARGAUX_RESULT_H

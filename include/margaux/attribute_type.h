@@ -13,6 +13,6 @@ struct MARGAUX_API AttributeType {
     DataType data_type;
 };
 
-}  // namespace psr
+}  // namespace margaux
 
 #endif  // MARGAUX_ATTRIBUTE_TYPE_H

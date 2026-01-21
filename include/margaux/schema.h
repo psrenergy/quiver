@@ -86,6 +86,6 @@ private:
     static std::vector<Index> query_indexes(sqlite3* db, const std::string& table);
 };
 
-}  // namespace psr
+}  // namespace margaux
 
 #endif  // MARGAUX_SCHEMA_H

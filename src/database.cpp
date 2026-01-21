@@ -1401,4 +1401,4 @@ AttributeType Database::get_attribute_type(const std::string& collection, const 
     throw std::runtime_error("Attribute '" + attribute + "' not found in collection '" + collection + "'");
 }
 
-}  // namespace psr
+}  // namespace margaux
