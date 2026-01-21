@@ -20,7 +20,7 @@ MARGAUX_C_API void psr_lua_runner_free(psr_lua_runner_t* runner);
 // Run a Lua script
 // Returns MARGAUX_OK on success, or an error code on failure.
 // If an error occurs, call psr_lua_runner_get_error() to get the error message.
-MARGAUX_C_API psr_margaux_t psr_lua_runner_run(psr_lua_runner_t* runner, const char* script);
+MARGAUX_C_API margaux_error_t psr_lua_runner_run(psr_lua_runner_t* runner, const char* script);
 
 // Get the last error message (or NULL if no error).
 // The returned pointer is valid until the next call to psr_lua_runner_run().

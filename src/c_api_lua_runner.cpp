@@ -27,7 +27,7 @@ void psr_lua_runner_free(psr_lua_runner_t* runner) {
     delete runner;
 }
 
-psr_margaux_t psr_lua_runner_run(psr_lua_runner_t* runner, const char* script) {
+margaux_error_t psr_lua_runner_run(psr_lua_runner_t* runner, const char* script) {
     if (!runner || !script) {
         return MARGAUX_ERROR_INVALID_ARGUMENT;
     }
