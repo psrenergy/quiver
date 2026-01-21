@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:psr_database/psr_database.dart';
+import 'package:margaux/margaux.dart';
 import 'package:test/test.dart';
 import 'package:path/path.dart' as path;
 

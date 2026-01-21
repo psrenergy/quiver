@@ -1,5 +1,5 @@
 @PACKAGE_INIT@
 
-include("${CMAKE_CURRENT_LIST_DIR}/psr_databaseTargets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/margauxTargets.cmake")
 
-check_required_components(psr_database)
+check_required_components(margaux)

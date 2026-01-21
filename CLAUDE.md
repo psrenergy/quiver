@@ -14,8 +14,8 @@ include/psr/c/         # C API headers (for FFI)
   element.h
   lua_runner.h
 src/                   # Implementation
-bindings/julia/        # Julia bindings (PSRDatabase.jl)
-bindings/dart/         # Dart bindings (psr_database)
+bindings/julia/        # Julia bindings (Margaux.jl)
+bindings/dart/         # Dart bindings (margaux)
 tests/                 # C++ tests and shared SQL schemas
 ```
 
@@ -49,8 +49,8 @@ test-all.bat             # Run all tests (assumes already built)
 
 C++ tests:
 ```bash
-./build/bin/psr_database_tests.exe      # Core library tests
-./build/bin/psr_database_c_tests.exe    # C API tests
+./build/bin/margaux_tests.exe      # Core library tests
+./build/bin/margaux_c_tests.exe    # C API tests
 ```
 
 Test files are organized by functionality:
@@ -121,7 +121,7 @@ bindings/dart/generator/generator.bat    # Dart
   ```
 
 ### Dart Notes
-- `libpsr_database_c.dll` depends on `libpsr_database.dll` - both must be in PATH
+- `libmargaux_c.dll` depends on `libmargaux.dll` - both must be in PATH
 - test.bat handles PATH setup automatically
 
 ## Schema Conventions

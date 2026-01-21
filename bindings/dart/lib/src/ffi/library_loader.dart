@@ -4,9 +4,9 @@ import 'dart:io';
 import 'bindings.dart';
 
 String get _libraryName {
-  if (Platform.isWindows) return 'libpsr_database_c.dll';
-  if (Platform.isMacOS) return 'libpsr_database_c.dylib';
-  return 'libpsr_database_c.so'; // Linux and others
+  if (Platform.isWindows) return 'libmargaux_c.dll';
+  if (Platform.isMacOS) return 'libmargaux_c.dylib';
+  return 'libmargaux_c.so'; // Linux and others
 }
 
 PsrDatabaseBindings? _cachedBindings;

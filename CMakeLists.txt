@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(psr_database
+project(margaux
     VERSION 1.0.0
     DESCRIPTION "Cross-platform C++ SQLite wrapper library"
     LANGUAGES CXX C
@@ -42,27 +42,27 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 write_basic_package_version_file(
-    "${CMAKE_CURRENT_BINARY_DIR}/psr_databaseConfigVersion.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/margauxConfigVersion.cmake"
     VERSION ${PROJECT_VERSION}
     COMPATIBILITY SameMajorVersion
 )
 
 configure_package_config_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/psr_databaseConfig.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/psr_databaseConfig.cmake"
-    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/psr_database
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/margauxConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/margauxConfig.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/margaux
 )
 
-install(EXPORT psr_databaseTargets
-    FILE psr_databaseTargets.cmake
+install(EXPORT margauxTargets
+    FILE margauxTargets.cmake
     NAMESPACE psr::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/psr_database
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/margaux
 )
 
 install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/psr_databaseConfig.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/psr_databaseConfigVersion.cmake"
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/psr_database
+    "${CMAKE_CURRENT_BINARY_DIR}/margauxConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/margauxConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/margaux
 )
 
 # Format target

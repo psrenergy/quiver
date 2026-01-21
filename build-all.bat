@@ -70,7 +70,7 @@ REM ============================================================
 echo [2/5] Running C++ tests...
 echo.
 
-"%ROOT_DIR%build\bin\psr_database_tests.exe"
+"%ROOT_DIR%build\bin\margaux_tests.exe"
 if errorlevel 1 (
     echo.
     echo ERROR: C++ tests failed
@@ -87,7 +87,7 @@ REM ============================================================
 echo [3/5] Running C API tests...
 echo.
 
-"%ROOT_DIR%build\bin\psr_database_c_tests.exe"
+"%ROOT_DIR%build\bin\margaux_c_tests.exe"
 if errorlevel 1 (
     echo.
     echo ERROR: C API tests failed

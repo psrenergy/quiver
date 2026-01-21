@@ -30,8 +30,8 @@ REM Step 1: Run C++ Tests
 REM ============================================================
 echo [1/4] Running C++ tests...
 
-if exist "%ROOT_DIR%build\bin\psr_database_tests.exe" (
-    "%ROOT_DIR%build\bin\psr_database_tests.exe"
+if exist "%ROOT_DIR%build\bin\margaux_tests.exe" (
+    "%ROOT_DIR%build\bin\margaux_tests.exe"
     if errorlevel 1 (
         SET CPP_RESULT=FAIL
         SET FAILED=1
@@ -49,8 +49,8 @@ REM Step 2: Run C API Tests
 REM ============================================================
 echo [2/4] Running C API tests...
 
-if exist "%ROOT_DIR%build\bin\psr_database_c_tests.exe" (
-    "%ROOT_DIR%build\bin\psr_database_c_tests.exe"
+if exist "%ROOT_DIR%build\bin\margaux_c_tests.exe" (
+    "%ROOT_DIR%build\bin\margaux_c_tests.exe"
     if errorlevel 1 (
         SET CAPI_RESULT=FAIL
         SET FAILED=1

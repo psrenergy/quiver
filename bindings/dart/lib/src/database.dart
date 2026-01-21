@@ -12,22 +12,22 @@ import 'exceptions.dart';
 /// Use [Database.fromSchema] to create a new database from a SQL schema file.
 /// After use, call [close] to free native resources.
 class Database {
-  Pointer<psr_database_t> _ptr;
+  Pointer<margaux_t> _ptr;
   bool _isClosed = false;
 
   Database._(this._ptr);
 
   /// Internal: Returns the native pointer for use by other library components.
-  Pointer<psr_database_t> get ptr => _ptr;
+  Pointer<margaux_t> get ptr => _ptr;
 
   /// Creates a new database from a SQL schema file.
   factory Database.fromSchema(String dbPath, String schemaPath) {
     final arena = Arena();
     try {
-      final optionsPtr = arena<psr_database_options_t>();
-      optionsPtr.ref = bindings.psr_database_options_default();
+      final optionsPtr = arena<margaux_options_t>();
+      optionsPtr.ref = bindings.margaux_options_default();
 
-      final ptr = bindings.psr_database_from_schema(
+      final ptr = bindings.margaux_from_schema(
         dbPath.toNativeUtf8(allocator: arena).cast(),
         schemaPath.toNativeUtf8(allocator: arena).cast(),
         optionsPtr,
@@ -70,7 +70,7 @@ class Database {
 
     final arena = Arena();
     try {
-      final id = bindings.psr_database_create_element(
+      final id = bindings.margaux_create_element(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         element.ptr.cast(),
@@ -92,7 +92,7 @@ class Database {
 
     final arena = Arena();
     try {
-      final err = bindings.psr_database_set_scalar_relation(
+      final err = bindings.margaux_set_scalar_relation(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -118,7 +118,7 @@ class Database {
       final outValues = arena<Pointer<Pointer<Char>>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_scalar_relation(
+      final err = bindings.margaux_read_scalar_relation(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -161,7 +161,7 @@ class Database {
       final outValues = arena<Pointer<Int64>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_scalar_integers(
+      final err = bindings.margaux_read_scalar_integers(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -195,7 +195,7 @@ class Database {
       final outValues = arena<Pointer<Double>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_scalar_floats(
+      final err = bindings.margaux_read_scalar_floats(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -229,7 +229,7 @@ class Database {
       final outValues = arena<Pointer<Pointer<Char>>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_scalar_strings(
+      final err = bindings.margaux_read_scalar_strings(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -264,7 +264,7 @@ class Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_vector_integers(
+      final err = bindings.margaux_read_vector_integers(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -308,7 +308,7 @@ class Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_vector_floats(
+      final err = bindings.margaux_read_vector_floats(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -352,7 +352,7 @@ class Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_vector_strings(
+      final err = bindings.margaux_read_vector_strings(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -396,7 +396,7 @@ class Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_set_integers(
+      final err = bindings.margaux_read_set_integers(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -440,7 +440,7 @@ class Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_set_floats(
+      final err = bindings.margaux_read_set_floats(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -484,7 +484,7 @@ class Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_set_strings(
+      final err = bindings.margaux_read_set_strings(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -530,7 +530,7 @@ class Database {
       final outValue = arena<Int64>();
       final outHasValue = arena<Int>();
 
-      final err = bindings.psr_database_read_scalar_integers_by_id(
+      final err = bindings.margaux_read_scalar_integers_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -562,7 +562,7 @@ class Database {
       final outValue = arena<Double>();
       final outHasValue = arena<Int>();
 
-      final err = bindings.psr_database_read_scalar_floats_by_id(
+      final err = bindings.margaux_read_scalar_floats_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -594,7 +594,7 @@ class Database {
       final outValue = arena<Pointer<Char>>();
       final outHasValue = arena<Int>();
 
-      final err = bindings.psr_database_read_scalar_strings_by_id(
+      final err = bindings.margaux_read_scalar_strings_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -629,7 +629,7 @@ class Database {
       final outValues = arena<Pointer<Int64>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_vector_integers_by_id(
+      final err = bindings.margaux_read_vector_integers_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -664,7 +664,7 @@ class Database {
       final outValues = arena<Pointer<Double>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_vector_floats_by_id(
+      final err = bindings.margaux_read_vector_floats_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -699,7 +699,7 @@ class Database {
       final outValues = arena<Pointer<Pointer<Char>>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_vector_strings_by_id(
+      final err = bindings.margaux_read_vector_strings_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -736,7 +736,7 @@ class Database {
       final outValues = arena<Pointer<Int64>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_set_integers_by_id(
+      final err = bindings.margaux_read_set_integers_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -771,7 +771,7 @@ class Database {
       final outValues = arena<Pointer<Double>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_set_floats_by_id(
+      final err = bindings.margaux_read_set_floats_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -806,7 +806,7 @@ class Database {
       final outValues = arena<Pointer<Pointer<Char>>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_set_strings_by_id(
+      final err = bindings.margaux_read_set_strings_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -843,7 +843,7 @@ class Database {
       final outIds = arena<Pointer<Int64>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_element_ids(
+      final err = bindings.margaux_read_element_ids(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         outIds,
@@ -876,7 +876,7 @@ class Database {
       final outDataStructure = arena<Int32>();
       final outDataType = arena<Int32>();
 
-      final err = bindings.psr_database_get_attribute_type(
+      final err = bindings.margaux_get_attribute_type(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -915,7 +915,7 @@ class Database {
 
     final arena = Arena();
     try {
-      final err = bindings.psr_database_delete_element_by_id(
+      final err = bindings.margaux_delete_element_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         id,
@@ -950,7 +950,7 @@ class Database {
     _ensureNotClosed();
     final arena = Arena();
     try {
-      final err = bindings.psr_database_update_element(
+      final err = bindings.margaux_update_element(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         id,
@@ -972,7 +972,7 @@ class Database {
 
     final arena = Arena();
     try {
-      final err = bindings.psr_database_update_scalar_integer(
+      final err = bindings.margaux_update_scalar_integer(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -994,7 +994,7 @@ class Database {
 
     final arena = Arena();
     try {
-      final err = bindings.psr_database_update_scalar_float(
+      final err = bindings.margaux_update_scalar_float(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -1016,7 +1016,7 @@ class Database {
 
     final arena = Arena();
     try {
-      final err = bindings.psr_database_update_scalar_string(
+      final err = bindings.margaux_update_scalar_string(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -1045,7 +1045,7 @@ class Database {
         nativeValues[i] = values[i];
       }
 
-      final err = bindings.psr_database_update_vector_integers(
+      final err = bindings.margaux_update_vector_integers(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -1073,7 +1073,7 @@ class Database {
         nativeValues[i] = values[i];
       }
 
-      final err = bindings.psr_database_update_vector_floats(
+      final err = bindings.margaux_update_vector_floats(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -1101,7 +1101,7 @@ class Database {
         nativePtrs[i] = values[i].toNativeUtf8(allocator: arena).cast();
       }
 
-      final err = bindings.psr_database_update_vector_strings(
+      final err = bindings.margaux_update_vector_strings(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -1131,7 +1131,7 @@ class Database {
         nativeValues[i] = values[i];
       }
 
-      final err = bindings.psr_database_update_set_integers(
+      final err = bindings.margaux_update_set_integers(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -1159,7 +1159,7 @@ class Database {
         nativeValues[i] = values[i];
       }
 
-      final err = bindings.psr_database_update_set_floats(
+      final err = bindings.margaux_update_set_floats(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -1187,7 +1187,7 @@ class Database {
         nativePtrs[i] = values[i].toNativeUtf8(allocator: arena).cast();
       }
 
-      final err = bindings.psr_database_update_set_strings(
+      final err = bindings.margaux_update_set_strings(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -1207,7 +1207,7 @@ class Database {
   /// Closes the database and frees native resources.
   void close() {
     if (_isClosed) return;
-    bindings.psr_database_close(_ptr);
+    bindings.margaux_close(_ptr);
     _isClosed = true;
   }
 }

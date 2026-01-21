@@ -12,7 +12,7 @@ extern "C" {
 typedef struct psr_lua_runner psr_lua_runner_t;
 
 // Create a new LuaRunner for the given database
-PSR_C_API psr_lua_runner_t* psr_lua_runner_new(psr_database_t* db);
+PSR_C_API psr_lua_runner_t* psr_lua_runner_new(margaux_t* db);
 
 // Destroy a LuaRunner
 PSR_C_API void psr_lua_runner_free(psr_lua_runner_t* runner);

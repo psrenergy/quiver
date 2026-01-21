@@ -14,15 +14,15 @@ set(PSR_SOURCES
 
 # Build type
 if(PSR_BUILD_SHARED)
-    add_library(psr_database SHARED ${PSR_SOURCES})
-    target_compile_definitions(psr_database PRIVATE PSR_DATABASE_EXPORTS)
+    add_library(margaux SHARED ${PSR_SOURCES})
+    target_compile_definitions(margaux PRIVATE PSR_DATABASE_EXPORTS)
 else()
-    add_library(psr_database STATIC ${PSR_SOURCES})
-    target_compile_definitions(psr_database PUBLIC PSR_DATABASE_STATIC)
+    add_library(margaux STATIC ${PSR_SOURCES})
+    target_compile_definitions(margaux PUBLIC PSR_DATABASE_STATIC)
 endif()
 
 # Include directories
-target_include_directories(psr_database
+target_include_directories(margaux
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
@@ -31,13 +31,13 @@ target_include_directories(psr_database
 )
 
 # sol2 safety settings
-target_compile_definitions(psr_database PRIVATE
+target_compile_definitions(margaux PRIVATE
     SOL_SAFE_NUMERICS=1
     SOL_SAFE_FUNCTION=1
 )
 
 # Link dependencies
-target_link_libraries(psr_database
+target_link_libraries(margaux
     PUBLIC
         SQLite::SQLite3
     PRIVATE
@@ -50,19 +50,19 @@ target_link_libraries(psr_database
 )
 
 # Set library properties
-set_target_properties(psr_database PROPERTIES
+set_target_properties(margaux PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}
-    OUTPUT_NAME psr_database
+    OUTPUT_NAME margaux
 )
 
 # Alias for use in subdirectories
-add_library(psr::database ALIAS psr_database)
+add_library(psr::database ALIAS margaux)
 
 # Installation rules
 include(GNUInstallDirs)
-install(TARGETS psr_database
-    EXPORT psr_databaseTargets
+install(TARGETS margaux
+    EXPORT margauxTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -73,37 +73,37 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/psr
 
 # C API wrapper (optional)
 if(PSR_BUILD_C_API)
-    add_library(psr_database_c SHARED
+    add_library(margaux_c SHARED
         c_api_common.cpp
         c_api_database.cpp
         c_api_element.cpp
         c_api_lua_runner.cpp
     )
 
-    target_compile_definitions(psr_database_c PRIVATE
+    target_compile_definitions(margaux_c PRIVATE
         PSR_DATABASE_C_EXPORTS
         PSR_VERSION="${PROJECT_VERSION}"
     )
 
-    target_include_directories(psr_database_c PUBLIC
+    target_include_directories(margaux_c PUBLIC
         $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
     )
 
-    target_link_libraries(psr_database_c PRIVATE
-        psr_database
+    target_link_libraries(margaux_c PRIVATE
+        margaux
         psr_compiler_options
     )
 
-    set_target_properties(psr_database_c PROPERTIES
+    set_target_properties(margaux_c PROPERTIES
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR}
     )
 
-    add_library(psr::database_c ALIAS psr_database_c)
+    add_library(psr::database_c ALIAS margaux_c)
 
-    install(TARGETS psr_database_c
-        EXPORT psr_databaseTargets
+    install(TARGETS margaux_c
+        EXPORT margauxTargets
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

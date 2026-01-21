@@ -46,7 +46,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v6
         with:
-          name: psr_database-${{ matrix.os }}-${{ matrix.build_type }}
+          name: margaux-${{ matrix.os }}-${{ matrix.build_type }}
           path: |
             build/lib/*
             build/bin/*
@@ -161,8 +161,8 @@ jobs:
 
       - name: Copy shared libraries
         run: |
-          cp build/lib/libpsr_database.so bindings/dart/
-          cp build/lib/libpsr_database_c.so bindings/dart/
+          cp build/lib/libmargaux.so bindings/dart/
+          cp build/lib/libmargaux_c.so bindings/dart/
 
       - name: Run tests (verbose)
         working-directory: bindings/dart

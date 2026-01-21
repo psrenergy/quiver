@@ -5,7 +5,7 @@
 /// ## Usage
 ///
 /// ```dart
-/// import 'package:psr_database/psr_database.dart';
+/// import 'package:margaux/margaux.dart';
 ///
 /// void main() {
 ///   final db = Database.fromSchema('test.db', 'schema.sql');
@@ -20,7 +20,7 @@
 ///   }
 /// }
 /// ```
-library psr_database;
+library margaux;
 
 export 'src/database.dart' show Database;
 export 'src/element.dart' show Element;

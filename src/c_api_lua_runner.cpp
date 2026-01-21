@@ -12,7 +12,7 @@ struct psr_lua_runner {
     explicit psr_lua_runner(psr::Database& db) : runner(db) {}
 };
 
-psr_lua_runner_t* psr_lua_runner_new(psr_database_t* db) {
+psr_lua_runner_t* psr_lua_runner_new(margaux_t* db) {
     if (!db) {
         return nullptr;
     }

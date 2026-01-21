@@ -1,5 +1,5 @@
 [general]
-library_name = "libpsr_database_c"
+library_name = "libmargaux_c"
 output_file_path = "../src/c_api.jl"
 module_name = "C"
 # jll_pkg_name = "PSRDatabase_jll"
