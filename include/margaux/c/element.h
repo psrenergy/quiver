@@ -41,9 +41,9 @@ MARGAUX_C_API int element_has_arrays(element_t* element);
 MARGAUX_C_API size_t element_scalar_count(element_t* element);
 MARGAUX_C_API size_t element_array_count(element_t* element);
 
-// Pretty print (caller must free returned string with psr_string_free)
+// Pretty print (caller must free returned string with margaux_string_free)
 MARGAUX_C_API char* element_to_string(element_t* element);
-MARGAUX_C_API void psr_string_free(char* str);
+MARGAUX_C_API void margaux_string_free(char* str);
 
 #ifdef __cplusplus
 }

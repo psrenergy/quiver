@@ -145,7 +145,7 @@ class Database {
           result.add(s.isEmpty ? null : s);
         }
       }
-      bindings.psr_free_string_array(outValues.value, count);
+      bindings.margaux_free_string_array(outValues.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -179,7 +179,7 @@ class Database {
       }
 
       final result = List<int>.generate(count, (i) => outValues.value[i]);
-      bindings.psr_free_integer_array(outValues.value);
+      bindings.margaux_free_integer_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -213,7 +213,7 @@ class Database {
       }
 
       final result = List<double>.generate(count, (i) => outValues.value[i]);
-      bindings.psr_free_float_array(outValues.value);
+      bindings.margaux_free_float_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -247,7 +247,7 @@ class Database {
       }
 
       final result = List<String>.generate(count, (i) => outValues.value[i].cast<Utf8>().toDartString());
-      bindings.psr_free_string_array(outValues.value, count);
+      bindings.margaux_free_string_array(outValues.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -291,7 +291,7 @@ class Database {
           result.add(List<int>.generate(size, (j) => outVectors.value[i][j]));
         }
       }
-      bindings.psr_free_integer_vectors(outVectors.value, outSizes.value, count);
+      bindings.margaux_free_integer_vectors(outVectors.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -335,7 +335,7 @@ class Database {
           result.add(List<double>.generate(size, (j) => outVectors.value[i][j]));
         }
       }
-      bindings.psr_free_float_vectors(outVectors.value, outSizes.value, count);
+      bindings.margaux_free_float_vectors(outVectors.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -379,7 +379,7 @@ class Database {
           result.add(List<String>.generate(size, (j) => outVectors.value[i][j].cast<Utf8>().toDartString()));
         }
       }
-      bindings.psr_free_string_vectors(outVectors.value, outSizes.value, count);
+      bindings.margaux_free_string_vectors(outVectors.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -423,7 +423,7 @@ class Database {
           result.add(List<int>.generate(size, (j) => outSets.value[i][j]));
         }
       }
-      bindings.psr_free_integer_vectors(outSets.value, outSizes.value, count);
+      bindings.margaux_free_integer_vectors(outSets.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -467,7 +467,7 @@ class Database {
           result.add(List<double>.generate(size, (j) => outSets.value[i][j]));
         }
       }
-      bindings.psr_free_float_vectors(outSets.value, outSizes.value, count);
+      bindings.margaux_free_float_vectors(outSets.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -511,7 +511,7 @@ class Database {
           result.add(List<String>.generate(size, (j) => outSets.value[i][j].cast<Utf8>().toDartString()));
         }
       }
-      bindings.psr_free_string_vectors(outSets.value, outSizes.value, count);
+      bindings.margaux_free_string_vectors(outSets.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -611,7 +611,7 @@ class Database {
         return null;
       }
       final result = outValue.value.cast<Utf8>().toDartString();
-      bindings.psr_string_free(outValue.value);
+      bindings.margaux_string_free(outValue.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -648,7 +648,7 @@ class Database {
       }
 
       final result = List<int>.generate(count, (i) => outValues.value[i]);
-      bindings.psr_free_integer_array(outValues.value);
+      bindings.margaux_free_integer_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -683,7 +683,7 @@ class Database {
       }
 
       final result = List<double>.generate(count, (i) => outValues.value[i]);
-      bindings.psr_free_float_array(outValues.value);
+      bindings.margaux_free_float_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -718,7 +718,7 @@ class Database {
       }
 
       final result = List<String>.generate(count, (i) => outValues.value[i].cast<Utf8>().toDartString());
-      bindings.psr_free_string_array(outValues.value, count);
+      bindings.margaux_free_string_array(outValues.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -755,7 +755,7 @@ class Database {
       }
 
       final result = List<int>.generate(count, (i) => outValues.value[i]);
-      bindings.psr_free_integer_array(outValues.value);
+      bindings.margaux_free_integer_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -790,7 +790,7 @@ class Database {
       }
 
       final result = List<double>.generate(count, (i) => outValues.value[i]);
-      bindings.psr_free_float_array(outValues.value);
+      bindings.margaux_free_float_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -825,7 +825,7 @@ class Database {
       }
 
       final result = List<String>.generate(count, (i) => outValues.value[i].cast<Utf8>().toDartString());
-      bindings.psr_free_string_array(outValues.value, count);
+      bindings.margaux_free_string_array(outValues.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -860,7 +860,7 @@ class Database {
       }
 
       final result = List<int>.generate(count, (i) => outIds.value[i]);
-      bindings.psr_free_integer_array(outIds.value);
+      bindings.margaux_free_integer_array(outIds.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -889,16 +889,16 @@ class Database {
       }
 
       final dataStructure = switch (outDataStructure.value) {
-        psr_data_structure_t.MARGAUX_DATA_STRUCTURE_SCALAR => 'scalar',
-        psr_data_structure_t.MARGAUX_DATA_STRUCTURE_VECTOR => 'vector',
-        psr_data_structure_t.MARGAUX_DATA_STRUCTURE_SET => 'set',
+        margaux_data_structure_t.MARGAUX_DATA_STRUCTURE_SCALAR => 'scalar',
+        margaux_data_structure_t.MARGAUX_DATA_STRUCTURE_VECTOR => 'vector',
+        margaux_data_structure_t.MARGAUX_DATA_STRUCTURE_SET => 'set',
         _ => 'unknown',
       };
 
       final dataType = switch (outDataType.value) {
-        psr_data_type_t.MARGAUX_DATA_TYPE_INTEGER => 'integer',
-        psr_data_type_t.MARGAUX_DATA_TYPE_FLOAT => 'real',
-        psr_data_type_t.MARGAUX_DATA_TYPE_STRING => 'text',
+        margaux_data_type_t.MARGAUX_DATA_TYPE_INTEGER => 'integer',
+        margaux_data_type_t.MARGAUX_DATA_TYPE_FLOAT => 'real',
+        margaux_data_type_t.MARGAUX_DATA_TYPE_STRING => 'text',
         _ => 'unknown',
       };
 

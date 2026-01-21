@@ -17,7 +17,7 @@ void main() {
   late Directory tempDir;
 
   setUp(() {
-    tempDir = Directory.systemTemp.createTempSync('psr_schema_test_');
+    tempDir = Directory.systemTemp.createTempSync('margaux_schema_test_');
     dbPath = path.join(tempDir.path, 'test.db');
   });
 

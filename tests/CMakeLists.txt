@@ -18,7 +18,7 @@ add_executable(margaux_tests
 target_link_libraries(margaux_tests
     PRIVATE
         margaux
-        psr_compiler_options
+        margaux_compiler_options
         GTest::gtest_main
         GTest::gmock
 )
@@ -52,7 +52,7 @@ if(MARGAUX_BUILD_C_API)
         PRIVATE
             margaux_c
             margaux
-            psr_compiler_options
+            margaux_compiler_options
             GTest::gtest_main
     )
 

@@ -9,7 +9,7 @@ namespace fs = std::filesystem;
 
 class TempFileFixture : public ::testing::Test {
 protected:
-    void SetUp() override { path = (fs::temp_directory_path() / "psr_test.db").string(); }
+    void SetUp() override { path = (fs::temp_directory_path() / "margaux_test.db").string(); }
     void TearDown() override {
         if (fs::exists(path))
             fs::remove(path);
@@ -82,18 +82,18 @@ TEST_F(TempFileFixture, CloseNullDb) {
 }
 
 TEST_F(TempFileFixture, ErrorStrings) {
-    EXPECT_STREQ(psr_error_string(MARGAUX_OK), "Success");
-    EXPECT_STREQ(psr_error_string(MARGAUX_ERROR_INVALID_ARGUMENT), "Invalid argument");
-    EXPECT_STREQ(psr_error_string(MARGAUX_ERROR_DATABASE), "Database error");
-    EXPECT_STREQ(psr_error_string(MARGAUX_ERROR_MIGRATION), "Migration error");
-    EXPECT_STREQ(psr_error_string(MARGAUX_ERROR_SCHEMA), "Schema validation error");
-    EXPECT_STREQ(psr_error_string(MARGAUX_ERROR_CREATE_ELEMENT), "Failed to create element");
-    EXPECT_STREQ(psr_error_string(MARGAUX_ERROR_NOT_FOUND), "Not found");
-    EXPECT_STREQ(psr_error_string(static_cast<margaux_error_t>(-999)), "Unknown error");
+    EXPECT_STREQ(margaux_error_string(MARGAUX_OK), "Success");
+    EXPECT_STREQ(margaux_error_string(MARGAUX_ERROR_INVALID_ARGUMENT), "Invalid argument");
+    EXPECT_STREQ(margaux_error_string(MARGAUX_ERROR_DATABASE), "Database error");
+    EXPECT_STREQ(margaux_error_string(MARGAUX_ERROR_MIGRATION), "Migration error");
+    EXPECT_STREQ(margaux_error_string(MARGAUX_ERROR_SCHEMA), "Schema validation error");
+    EXPECT_STREQ(margaux_error_string(MARGAUX_ERROR_CREATE_ELEMENT), "Failed to create element");
+    EXPECT_STREQ(margaux_error_string(MARGAUX_ERROR_NOT_FOUND), "Not found");
+    EXPECT_STREQ(margaux_error_string(static_cast<margaux_error_t>(-999)), "Unknown error");
 }
 
 TEST_F(TempFileFixture, Version) {
-    auto version = psr_version();
+    auto version = margaux_version();
     EXPECT_NE(version, nullptr);
     EXPECT_STREQ(version, "1.0.0");
 }
@@ -416,7 +416,7 @@ TEST_F(TempFileFixture, ReadScalarRelationValid) {
     EXPECT_EQ(count, 1);
     EXPECT_STREQ(values[0], "Parent 1");
 
-    psr_free_string_array(values, count);
+    margaux_free_string_array(values, count);
     database_close(db);
 }
 

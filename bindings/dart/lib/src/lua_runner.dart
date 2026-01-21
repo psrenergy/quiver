@@ -7,21 +7,6 @@ import 'ffi/library_loader.dart';
 import 'database.dart';
 import 'exceptions.dart';
 
-/// A Lua script runner for executing Lua scripts with access to a PSR Database.
-///
-/// Use [LuaRunner] to execute Lua scripts that can interact with the database
-/// via the `db` global object exposed to the script.
-///
-/// Example:
-/// ```dart
-/// final db = Database.fromSchema(':memory:', 'schema.sql');
-/// final lua = LuaRunner(db);
-/// lua.run('''
-///   db:create_element("Collection", { label = "Item 1" })
-/// ''');
-/// lua.dispose();
-/// db.close();
-/// ```
 class LuaRunner {
   Pointer<lua_runner_t> _ptr;
   bool _isDisposed = false;

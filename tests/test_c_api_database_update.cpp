@@ -123,7 +123,7 @@ TEST(DatabaseCApi, UpdateVectorIntegers) {
     EXPECT_EQ(read_values[2], 30);
     EXPECT_EQ(read_values[3], 40);
 
-    psr_free_integer_array(read_values);
+    margaux_free_integer_array(read_values);
     database_close(db);
 }
 
@@ -157,7 +157,7 @@ TEST(DatabaseCApi, UpdateVectorFloats) {
     EXPECT_DOUBLE_EQ(read_values[0], 10.5);
     EXPECT_DOUBLE_EQ(read_values[1], 20.5);
 
-    psr_free_float_array(read_values);
+    margaux_free_float_array(read_values);
     database_close(db);
 }
 
@@ -233,7 +233,7 @@ TEST(DatabaseCApi, UpdateSetStrings) {
     EXPECT_EQ(set_values[1], "new_tag2");
     EXPECT_EQ(set_values[2], "new_tag3");
 
-    psr_free_string_array(read_values, count);
+    margaux_free_string_array(read_values, count);
     database_close(db);
 }
 

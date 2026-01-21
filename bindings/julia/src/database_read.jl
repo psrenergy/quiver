@@ -22,7 +22,7 @@ function read_scalar_relation(db::Database, collection::String, attribute::Strin
             push!(result, isempty(s) ? nothing : s)
         end
     end
-    C.psr_free_string_array(out_values[], count)
+    C.margaux_free_string_array(out_values[], count)
     return result
 end
 
@@ -41,7 +41,7 @@ function read_scalar_integers(db::Database, collection::String, attribute::Strin
     end
 
     result = unsafe_wrap(Array, out_values[], count) |> copy
-    C.psr_free_integer_array(out_values[])
+    C.margaux_free_integer_array(out_values[])
     return result
 end
 
@@ -60,7 +60,7 @@ function read_scalar_floats(db::Database, collection::String, attribute::String)
     end
 
     result = unsafe_wrap(Array, out_values[], count) |> copy
-    C.psr_free_float_array(out_values[])
+    C.margaux_free_float_array(out_values[])
     return result
 end
 
@@ -80,7 +80,7 @@ function read_scalar_strings(db::Database, collection::String, attribute::String
 
     ptrs = unsafe_wrap(Array, out_values[], count)
     result = [unsafe_string(ptr) for ptr in ptrs]
-    C.psr_free_string_array(out_values[], count)
+    C.margaux_free_string_array(out_values[], count)
     return result
 end
 
@@ -109,7 +109,7 @@ function read_vector_integers(db::Database, collection::String, attribute::Strin
             push!(result, copy(unsafe_wrap(Array, vectors_ptr[i], sizes_ptr[i])))
         end
     end
-    C.psr_free_integer_vectors(out_vectors[], out_sizes[], count)
+    C.margaux_free_integer_vectors(out_vectors[], out_sizes[], count)
     return result
 end
 
@@ -138,7 +138,7 @@ function read_vector_floats(db::Database, collection::String, attribute::String)
             push!(result, copy(unsafe_wrap(Array, vectors_ptr[i], sizes_ptr[i])))
         end
     end
-    C.psr_free_float_vectors(out_vectors[], out_sizes[], count)
+    C.margaux_free_float_vectors(out_vectors[], out_sizes[], count)
     return result
 end
 
@@ -168,7 +168,7 @@ function read_vector_strings(db::Database, collection::String, attribute::String
             push!(result, [unsafe_string(ptr) for ptr in str_ptrs])
         end
     end
-    C.psr_free_string_vectors(out_vectors[], out_sizes[], count)
+    C.margaux_free_string_vectors(out_vectors[], out_sizes[], count)
     return result
 end
 
@@ -197,7 +197,7 @@ function read_set_integers(db::Database, collection::String, attribute::String)
             push!(result, copy(unsafe_wrap(Array, sets_ptr[i], sizes_ptr[i])))
         end
     end
-    C.psr_free_integer_vectors(out_sets[], out_sizes[], count)
+    C.margaux_free_integer_vectors(out_sets[], out_sizes[], count)
     return result
 end
 
@@ -226,7 +226,7 @@ function read_set_floats(db::Database, collection::String, attribute::String)
             push!(result, copy(unsafe_wrap(Array, sets_ptr[i], sizes_ptr[i])))
         end
     end
-    C.psr_free_float_vectors(out_sets[], out_sizes[], count)
+    C.margaux_free_float_vectors(out_sets[], out_sizes[], count)
     return result
 end
 
@@ -256,7 +256,7 @@ function read_set_strings(db::Database, collection::String, attribute::String)
             push!(result, [unsafe_string(ptr) for ptr in str_ptrs])
         end
     end
-    C.psr_free_string_vectors(out_sets[], out_sizes[], count)
+    C.margaux_free_string_vectors(out_sets[], out_sizes[], count)
     return result
 end
 
@@ -305,7 +305,7 @@ function read_scalar_strings_by_id(db::Database, collection::String, attribute::
         return nothing
     end
     result = unsafe_string(out_value[])
-    C.psr_string_free(out_value[])
+    C.margaux_string_free(out_value[])
     return result
 end
 
@@ -326,7 +326,7 @@ function read_vector_integers_by_id(db::Database, collection::String, attribute:
     end
 
     result = unsafe_wrap(Array, out_values[], count) |> copy
-    C.psr_free_integer_array(out_values[])
+    C.margaux_free_integer_array(out_values[])
     return result
 end
 
@@ -345,7 +345,7 @@ function read_vector_floats_by_id(db::Database, collection::String, attribute::S
     end
 
     result = unsafe_wrap(Array, out_values[], count) |> copy
-    C.psr_free_float_array(out_values[])
+    C.margaux_free_float_array(out_values[])
     return result
 end
 
@@ -365,7 +365,7 @@ function read_vector_strings_by_id(db::Database, collection::String, attribute::
 
     ptrs = unsafe_wrap(Array, out_values[], count)
     result = [unsafe_string(ptr) for ptr in ptrs]
-    C.psr_free_string_array(out_values[], count)
+    C.margaux_free_string_array(out_values[], count)
     return result
 end
 
@@ -386,7 +386,7 @@ function read_set_integers_by_id(db::Database, collection::String, attribute::St
     end
 
     result = unsafe_wrap(Array, out_values[], count) |> copy
-    C.psr_free_integer_array(out_values[])
+    C.margaux_free_integer_array(out_values[])
     return result
 end
 
@@ -405,7 +405,7 @@ function read_set_floats_by_id(db::Database, collection::String, attribute::Stri
     end
 
     result = unsafe_wrap(Array, out_values[], count) |> copy
-    C.psr_free_float_array(out_values[])
+    C.margaux_free_float_array(out_values[])
     return result
 end
 
@@ -425,7 +425,7 @@ function read_set_strings_by_id(db::Database, collection::String, attribute::Str
 
     ptrs = unsafe_wrap(Array, out_values[], count)
     result = [unsafe_string(ptr) for ptr in ptrs]
-    C.psr_free_string_array(out_values[], count)
+    C.margaux_free_string_array(out_values[], count)
     return result
 end
 
@@ -444,13 +444,13 @@ function read_element_ids(db::Database, collection::String)
     end
 
     result = unsafe_wrap(Array, out_ids[], count) |> copy
-    C.psr_free_integer_array(out_ids[])
+    C.margaux_free_integer_array(out_ids[])
     return result
 end
 
 function get_attribute_type(db::Database, collection::String, attribute::String)
-    out_data_structure = Ref{C.psr_data_structure_t}(C.MARGAUX_DATA_STRUCTURE_SCALAR)
-    out_data_type = Ref{C.psr_data_type_t}(C.MARGAUX_DATA_TYPE_INTEGER)
+    out_data_structure = Ref{C.margaux_data_structure_t}(C.MARGAUX_DATA_STRUCTURE_SCALAR)
+    out_data_type = Ref{C.margaux_data_type_t}(C.MARGAUX_DATA_TYPE_INTEGER)
 
     err = C.database_get_attribute_type(db.ptr, collection, attribute, out_data_structure, out_data_type)
     if err != C.MARGAUX_OK

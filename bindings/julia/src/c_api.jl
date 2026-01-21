@@ -37,15 +37,15 @@ const libmargaux_c = joinpath(@__DIR__, "..", "..", "..", "build", library_dir()
     MARGAUX_ERROR_NOT_FOUND = -6
 end
 
-function psr_error_string(error)
-    @ccall libmargaux_c.psr_error_string(error::margaux_error_t)::Ptr{Cchar}
+function margaux_error_string(error)
+    @ccall libmargaux_c.margaux_error_string(error::margaux_error_t)::Ptr{Cchar}
 end
 
-function psr_version()
-    @ccall libmargaux_c.psr_version()::Ptr{Cchar}
+function margaux_version()
+    @ccall libmargaux_c.margaux_version()::Ptr{Cchar}
 end
 
-@cenum psr_log_level_t::UInt32 begin
+@cenum margaux_log_level_t::UInt32 begin
     MARGAUX_LOG_DEBUG = 0
     MARGAUX_LOG_INFO = 1
     MARGAUX_LOG_WARN = 2
@@ -55,16 +55,16 @@ end
 
 struct database_options_t
     read_only::Cint
-    console_level::psr_log_level_t
+    console_level::margaux_log_level_t
 end
 
-@cenum psr_data_structure_t::UInt32 begin
+@cenum margaux_data_structure_t::UInt32 begin
     MARGAUX_DATA_STRUCTURE_SCALAR = 0
     MARGAUX_DATA_STRUCTURE_VECTOR = 1
     MARGAUX_DATA_STRUCTURE_SET = 2
 end
 
-@cenum psr_data_type_t::UInt32 begin
+@cenum margaux_data_type_t::UInt32 begin
     MARGAUX_DATA_TYPE_INTEGER = 0
     MARGAUX_DATA_TYPE_FLOAT = 1
     MARGAUX_DATA_TYPE_STRING = 2
@@ -207,7 +207,7 @@ function database_read_element_ids(db, collection, out_ids, out_count)
 end
 
 function database_get_attribute_type(db, collection, attribute, out_data_structure, out_data_type)
-    @ccall libmargaux_c.database_get_attribute_type(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_data_structure::Ptr{psr_data_structure_t}, out_data_type::Ptr{psr_data_type_t})::margaux_error_t
+    @ccall libmargaux_c.database_get_attribute_type(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_data_structure::Ptr{margaux_data_structure_t}, out_data_type::Ptr{margaux_data_type_t})::margaux_error_t
 end
 
 function database_update_scalar_integer(db, collection, attribute, id, value)
@@ -246,28 +246,28 @@ function database_update_set_strings(db, collection, attribute, id, values, coun
     @ccall libmargaux_c.database_update_set_strings(db::Ptr{database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Ptr{Cchar}}, count::Csize_t)::margaux_error_t
 end
 
-function psr_free_integer_array(values)
-    @ccall libmargaux_c.psr_free_integer_array(values::Ptr{Int64})::Cvoid
+function margaux_free_integer_array(values)
+    @ccall libmargaux_c.margaux_free_integer_array(values::Ptr{Int64})::Cvoid
 end
 
-function psr_free_float_array(values)
-    @ccall libmargaux_c.psr_free_float_array(values::Ptr{Cdouble})::Cvoid
+function margaux_free_float_array(values)
+    @ccall libmargaux_c.margaux_free_float_array(values::Ptr{Cdouble})::Cvoid
 end
 
-function psr_free_string_array(values, count)
-    @ccall libmargaux_c.psr_free_string_array(values::Ptr{Ptr{Cchar}}, count::Csize_t)::Cvoid
+function margaux_free_string_array(values, count)
+    @ccall libmargaux_c.margaux_free_string_array(values::Ptr{Ptr{Cchar}}, count::Csize_t)::Cvoid
 end
 
-function psr_free_integer_vectors(vectors, sizes, count)
-    @ccall libmargaux_c.psr_free_integer_vectors(vectors::Ptr{Ptr{Int64}}, sizes::Ptr{Csize_t}, count::Csize_t)::Cvoid
+function margaux_free_integer_vectors(vectors, sizes, count)
+    @ccall libmargaux_c.margaux_free_integer_vectors(vectors::Ptr{Ptr{Int64}}, sizes::Ptr{Csize_t}, count::Csize_t)::Cvoid
 end
 
-function psr_free_float_vectors(vectors, sizes, count)
-    @ccall libmargaux_c.psr_free_float_vectors(vectors::Ptr{Ptr{Cdouble}}, sizes::Ptr{Csize_t}, count::Csize_t)::Cvoid
+function margaux_free_float_vectors(vectors, sizes, count)
+    @ccall libmargaux_c.margaux_free_float_vectors(vectors::Ptr{Ptr{Cdouble}}, sizes::Ptr{Csize_t}, count::Csize_t)::Cvoid
 end
 
-function psr_free_string_vectors(vectors, sizes, count)
-    @ccall libmargaux_c.psr_free_string_vectors(vectors::Ptr{Ptr{Ptr{Cchar}}}, sizes::Ptr{Csize_t}, count::Csize_t)::Cvoid
+function margaux_free_string_vectors(vectors, sizes, count)
+    @ccall libmargaux_c.margaux_free_string_vectors(vectors::Ptr{Ptr{Ptr{Cchar}}}, sizes::Ptr{Csize_t}, count::Csize_t)::Cvoid
 end
 
 function element_create()
@@ -330,8 +330,8 @@ function element_to_string(element)
     @ccall libmargaux_c.element_to_string(element::Ptr{element_t})::Ptr{Cchar}
 end
 
-function psr_string_free(str)
-    @ccall libmargaux_c.psr_string_free(str::Ptr{Cchar})::Cvoid
+function margaux_string_free(str)
+    @ccall libmargaux_c.margaux_string_free(str::Ptr{Cchar})::Cvoid
 end
 
 mutable struct lua_runner end

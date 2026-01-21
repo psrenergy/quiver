@@ -95,7 +95,7 @@ end
 function Base.show(io::IO, e::Element)
     cstr = C.element_to_string(e.ptr)
     str = unsafe_string(cstr)
-    C.psr_string_free(cstr)
+    C.margaux_string_free(cstr)
     print(io, str)
     return nothing
 end

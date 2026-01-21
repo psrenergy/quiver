@@ -7,7 +7,7 @@
 
 namespace {
 
-margaux::LogLevel to_cpp_log_level(psr_log_level_t level) {
+margaux::LogLevel to_cpp_log_level(margaux_log_level_t level) {
     switch (level) {
     case MARGAUX_LOG_DEBUG:
         return margaux::LogLevel::debug;
@@ -311,15 +311,15 @@ MARGAUX_C_API margaux_error_t database_read_scalar_strings(database_t* db,
     }
 }
 
-MARGAUX_C_API void psr_free_integer_array(int64_t* values) {
+MARGAUX_C_API void margaux_free_integer_array(int64_t* values) {
     delete[] values;
 }
 
-MARGAUX_C_API void psr_free_float_array(double* values) {
+MARGAUX_C_API void margaux_free_float_array(double* values) {
     delete[] values;
 }
 
-MARGAUX_C_API void psr_free_string_array(char** values, size_t count) {
+MARGAUX_C_API void margaux_free_string_array(char** values, size_t count) {
     if (!values) {
         return;
     }
@@ -399,15 +399,15 @@ MARGAUX_C_API margaux_error_t database_read_vector_strings(database_t* db,
     }
 }
 
-MARGAUX_C_API void psr_free_integer_vectors(int64_t** vectors, size_t* sizes, size_t count) {
+MARGAUX_C_API void margaux_free_integer_vectors(int64_t** vectors, size_t* sizes, size_t count) {
     free_vectors_impl(vectors, sizes, count);
 }
 
-MARGAUX_C_API void psr_free_float_vectors(double** vectors, size_t* sizes, size_t count) {
+MARGAUX_C_API void margaux_free_float_vectors(double** vectors, size_t* sizes, size_t count) {
     free_vectors_impl(vectors, sizes, count);
 }
 
-MARGAUX_C_API void psr_free_string_vectors(char*** vectors, size_t* sizes, size_t count) {
+MARGAUX_C_API void margaux_free_string_vectors(char*** vectors, size_t* sizes, size_t count) {
     if (!vectors) {
         return;
     }
@@ -881,8 +881,8 @@ MARGAUX_C_API margaux_error_t database_update_set_strings(database_t* db,
 MARGAUX_C_API margaux_error_t database_get_attribute_type(database_t* db,
                                                           const char* collection,
                                                           const char* attribute,
-                                                          psr_data_structure_t* out_data_structure,
-                                                          psr_data_type_t* out_data_type) {
+                                                          margaux_data_structure_t* out_data_structure,
+                                                          margaux_data_type_t* out_data_type) {
     if (!db || !collection || !attribute || !out_data_structure || !out_data_type) {
         return MARGAUX_ERROR_INVALID_ARGUMENT;
     }

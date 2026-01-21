@@ -38,7 +38,7 @@ TEST(DatabaseCApi, ReadScalarIntegers) {
     EXPECT_EQ(values[0], 42);
     EXPECT_EQ(values[1], 100);
 
-    psr_free_integer_array(values);
+    margaux_free_integer_array(values);
     database_close(db);
 }
 
@@ -69,7 +69,7 @@ TEST(DatabaseCApi, ReadScalarFloats) {
     EXPECT_DOUBLE_EQ(values[0], 3.14);
     EXPECT_DOUBLE_EQ(values[1], 2.71);
 
-    psr_free_float_array(values);
+    margaux_free_float_array(values);
     database_close(db);
 }
 
@@ -100,7 +100,7 @@ TEST(DatabaseCApi, ReadScalarStrings) {
     EXPECT_STREQ(values[0], "hello");
     EXPECT_STREQ(values[1], "world");
 
-    psr_free_string_array(values, count);
+    margaux_free_string_array(values, count);
     database_close(db);
 }
 
@@ -176,7 +176,7 @@ TEST(DatabaseCApi, ReadVectorIntegers) {
     EXPECT_EQ(vectors[1][0], 10);
     EXPECT_EQ(vectors[1][1], 20);
 
-    psr_free_integer_vectors(vectors, sizes, count);
+    margaux_free_integer_vectors(vectors, sizes, count);
     database_close(db);
 }
 
@@ -220,7 +220,7 @@ TEST(DatabaseCApi, ReadVectorFloats) {
     EXPECT_DOUBLE_EQ(vectors[1][0], 10.5);
     EXPECT_DOUBLE_EQ(vectors[1][1], 20.5);
 
-    psr_free_float_vectors(vectors, sizes, count);
+    margaux_free_float_vectors(vectors, sizes, count);
     database_close(db);
 }
 
@@ -306,7 +306,7 @@ TEST(DatabaseCApi, ReadVectorOnlyReturnsElementsWithData) {
     EXPECT_EQ(vectors[1][0], 4);
     EXPECT_EQ(vectors[1][1], 5);
 
-    psr_free_integer_vectors(vectors, sizes, count);
+    margaux_free_integer_vectors(vectors, sizes, count);
     database_close(db);
 }
 
@@ -360,7 +360,7 @@ TEST(DatabaseCApi, ReadSetStrings) {
 
     EXPECT_STREQ(sets[1][0], "review");
 
-    psr_free_string_vectors(sets, sizes, count);
+    margaux_free_string_vectors(sets, sizes, count);
     database_close(db);
 }
 
@@ -432,7 +432,7 @@ TEST(DatabaseCApi, ReadSetOnlyReturnsElementsWithData) {
     EXPECT_EQ(sizes[0], 1);
     EXPECT_EQ(sizes[1], 2);
 
-    psr_free_string_vectors(sets, sizes, count);
+    margaux_free_string_vectors(sets, sizes, count);
     database_close(db);
 }
 
@@ -581,14 +581,14 @@ TEST(DatabaseCApi, ReadVectorIntegerById) {
     EXPECT_EQ(values[0], 1);
     EXPECT_EQ(values[1], 2);
     EXPECT_EQ(values[2], 3);
-    psr_free_integer_array(values);
+    margaux_free_integer_array(values);
 
     err = database_read_vector_integers_by_id(db, "Collection", "value_int", id2, &values, &count);
     EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 2);
     EXPECT_EQ(values[0], 10);
     EXPECT_EQ(values[1], 20);
-    psr_free_integer_array(values);
+    margaux_free_integer_array(values);
 
     database_close(db);
 }
@@ -621,7 +621,7 @@ TEST(DatabaseCApi, ReadVectorFloatById) {
     EXPECT_DOUBLE_EQ(values[1], 2.5);
     EXPECT_DOUBLE_EQ(values[2], 3.5);
 
-    psr_free_float_array(values);
+    margaux_free_float_array(values);
     database_close(db);
 }
 
@@ -694,13 +694,13 @@ TEST(DatabaseCApi, ReadSetStringById) {
     std::sort(set_values.begin(), set_values.end());
     EXPECT_EQ(set_values[0], "important");
     EXPECT_EQ(set_values[1], "urgent");
-    psr_free_string_array(values, count);
+    margaux_free_string_array(values, count);
 
     err = database_read_set_strings_by_id(db, "Collection", "tag", id2, &values, &count);
     EXPECT_EQ(err, MARGAUX_OK);
     EXPECT_EQ(count, 1);
     EXPECT_STREQ(values[0], "review");
-    psr_free_string_array(values, count);
+    margaux_free_string_array(values, count);
 
     database_close(db);
 }
@@ -770,7 +770,7 @@ TEST(DatabaseCApi, ReadElementIds) {
     EXPECT_EQ(ids[1], id2);
     EXPECT_EQ(ids[2], id3);
 
-    psr_free_integer_array(ids);
+    margaux_free_integer_array(ids);
     database_close(db);
 }
 
@@ -807,8 +807,8 @@ TEST(DatabaseCApi, GetAttributeTypeScalarInteger) {
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    psr_data_structure_t data_structure;
-    psr_data_type_t data_type;
+    margaux_data_structure_t data_structure;
+    margaux_data_type_t data_type;
     auto err = database_get_attribute_type(db, "Configuration", "integer_attribute", &data_structure, &data_type);
 
     EXPECT_EQ(err, MARGAUX_OK);
@@ -824,8 +824,8 @@ TEST(DatabaseCApi, GetAttributeTypeScalarReal) {
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    psr_data_structure_t data_structure;
-    psr_data_type_t data_type;
+    margaux_data_structure_t data_structure;
+    margaux_data_type_t data_type;
     auto err = database_get_attribute_type(db, "Configuration", "float_attribute", &data_structure, &data_type);
 
     EXPECT_EQ(err, MARGAUX_OK);
@@ -841,8 +841,8 @@ TEST(DatabaseCApi, GetAttributeTypeScalarText) {
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    psr_data_structure_t data_structure;
-    psr_data_type_t data_type;
+    margaux_data_structure_t data_structure;
+    margaux_data_type_t data_type;
     auto err = database_get_attribute_type(db, "Configuration", "string_attribute", &data_structure, &data_type);
 
     EXPECT_EQ(err, MARGAUX_OK);
@@ -858,8 +858,8 @@ TEST(DatabaseCApi, GetAttributeTypeVectorInteger) {
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    psr_data_structure_t data_structure;
-    psr_data_type_t data_type;
+    margaux_data_structure_t data_structure;
+    margaux_data_type_t data_type;
     auto err = database_get_attribute_type(db, "Collection", "value_int", &data_structure, &data_type);
 
     EXPECT_EQ(err, MARGAUX_OK);
@@ -875,8 +875,8 @@ TEST(DatabaseCApi, GetAttributeTypeVectorReal) {
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    psr_data_structure_t data_structure;
-    psr_data_type_t data_type;
+    margaux_data_structure_t data_structure;
+    margaux_data_type_t data_type;
     auto err = database_get_attribute_type(db, "Collection", "value_float", &data_structure, &data_type);
 
     EXPECT_EQ(err, MARGAUX_OK);
@@ -892,8 +892,8 @@ TEST(DatabaseCApi, GetAttributeTypeSetText) {
     auto db = database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    psr_data_structure_t data_structure;
-    psr_data_type_t data_type;
+    margaux_data_structure_t data_structure;
+    margaux_data_type_t data_type;
     auto err = database_get_attribute_type(db, "Collection", "tag", &data_structure, &data_type);
 
     EXPECT_EQ(err, MARGAUX_OK);
@@ -909,8 +909,8 @@ TEST(DatabaseCApi, GetAttributeTypeNotFound) {
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    psr_data_structure_t data_structure;
-    psr_data_type_t data_type;
+    margaux_data_structure_t data_structure;
+    margaux_data_type_t data_type;
     auto err = database_get_attribute_type(db, "Configuration", "nonexistent", &data_structure, &data_type);
 
     EXPECT_EQ(err, MARGAUX_ERROR_DATABASE);
@@ -924,8 +924,8 @@ TEST(DatabaseCApi, GetAttributeTypeInvalidArgument) {
     auto db = database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    psr_data_structure_t data_structure;
-    psr_data_type_t data_type;
+    margaux_data_structure_t data_structure;
+    margaux_data_type_t data_type;
 
     // Null db
     auto err = database_get_attribute_type(nullptr, "Configuration", "label", &data_structure, &data_type);

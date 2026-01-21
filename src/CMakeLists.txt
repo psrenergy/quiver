@@ -41,7 +41,7 @@ target_link_libraries(margaux
     PUBLIC
         SQLite::SQLite3
     PRIVATE
-        psr_compiler_options
+        margaux_compiler_options
         tomlplusplus::tomlplusplus
         spdlog::spdlog
         lua_library
@@ -92,7 +92,7 @@ if(MARGAUX_BUILD_C_API)
 
     target_link_libraries(margaux_c PRIVATE
         margaux
-        psr_compiler_options
+        margaux_compiler_options
     )
 
     set_target_properties(margaux_c PROPERTIES

@@ -92,7 +92,7 @@ TEST_F(LuaRunnerCApiTest, CreateElement) {
     EXPECT_EQ(read_result, MARGAUX_OK);
     EXPECT_EQ(count, 1);
     EXPECT_EQ(values[0], 42);
-    psr_free_integer_array(values);
+    margaux_free_integer_array(values);
 
     lua_runner_free(lua);
     database_close(db);
@@ -161,7 +161,7 @@ TEST_F(LuaRunnerCApiTest, ReuseRunner) {
     auto read_result = database_read_scalar_strings(db, "Collection", "label", &labels, &count);
     EXPECT_EQ(read_result, MARGAUX_OK);
     EXPECT_EQ(count, 2);
-    psr_free_string_array(labels, count);
+    margaux_free_string_array(labels, count);
 
     lua_runner_free(lua);
     database_close(db);
@@ -230,7 +230,7 @@ TEST_F(LuaRunnerCApiTest, CreateElementWithVectors) {
     EXPECT_EQ(vectors[0][0], 1);
     EXPECT_EQ(vectors[0][1], 2);
     EXPECT_EQ(vectors[0][2], 3);
-    psr_free_integer_vectors(vectors, sizes, count);
+    margaux_free_integer_vectors(vectors, sizes, count);
 
     lua_runner_free(lua);
     database_close(db);

@@ -139,7 +139,7 @@ MARGAUX_C_API char* element_to_string(element_t* element) {
     }
 }
 
-MARGAUX_C_API void psr_string_free(char* str) {
+MARGAUX_C_API void margaux_string_free(char* str) {
     delete[] str;
 }
 

@@ -2,7 +2,7 @@
 
 extern "C" {
 
-MARGAUX_C_API const char* psr_error_string(margaux_error_t error) {
+MARGAUX_C_API const char* margaux_error_string(margaux_error_t error) {
     switch (error) {
     case MARGAUX_OK:
         return "Success";
@@ -23,7 +23,7 @@ MARGAUX_C_API const char* psr_error_string(margaux_error_t error) {
     }
 }
 
-MARGAUX_C_API const char* psr_version(void) {
+MARGAUX_C_API const char* margaux_version(void) {
     return MARGAUX_VERSION;
 }
 

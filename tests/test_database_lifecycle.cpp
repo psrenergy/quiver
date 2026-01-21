@@ -9,7 +9,7 @@ namespace fs = std::filesystem;
 
 class TempFileFixture : public ::testing::Test {
 protected:
-    void SetUp() override { path = (fs::temp_directory_path() / "psr_test.db").string(); }
+    void SetUp() override { path = (fs::temp_directory_path() / "margaux_test.db").string(); }
     void TearDown() override {
         if (fs::exists(path))
             fs::remove(path);
@@ -108,7 +108,7 @@ TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
 class MigrationFixture : public ::testing::Test {
 protected:
     void SetUp() override {
-        path = (fs::temp_directory_path() / "psr_test.db").string();
+        path = (fs::temp_directory_path() / "margaux_test.db").string();
         migrations_path = (fs::path(__FILE__).parent_path() / "schemas" / "migrations").string();
     }
     void TearDown() override {

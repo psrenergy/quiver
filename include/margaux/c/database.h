@@ -14,12 +14,12 @@ typedef enum {
     MARGAUX_LOG_WARN = 2,
     MARGAUX_LOG_ERROR = 3,
     MARGAUX_LOG_OFF = 4,
-} psr_log_level_t;
+} margaux_log_level_t;
 
 // Database options
 typedef struct {
     int read_only;
-    psr_log_level_t console_level;
+    margaux_log_level_t console_level;
 } database_options_t;
 
 // Attribute data structure
@@ -27,14 +27,14 @@ typedef enum {
     MARGAUX_DATA_STRUCTURE_SCALAR = 0,
     MARGAUX_DATA_STRUCTURE_VECTOR = 1,
     MARGAUX_DATA_STRUCTURE_SET = 2
-} psr_data_structure_t;
+} margaux_data_structure_t;
 
 // Attribute data types
 typedef enum {
     MARGAUX_DATA_TYPE_INTEGER = 0,
     MARGAUX_DATA_TYPE_FLOAT = 1,
     MARGAUX_DATA_TYPE_STRING = 2
-} psr_data_type_t;
+} margaux_data_type_t;
 
 // Returns default options
 MARGAUX_C_API database_options_t database_options_default(void);
@@ -216,8 +216,8 @@ MARGAUX_C_API margaux_error_t database_read_element_ids(database_t* db,
 MARGAUX_C_API margaux_error_t database_get_attribute_type(database_t* db,
                                                           const char* collection,
                                                           const char* attribute,
-                                                          psr_data_structure_t* out_data_structure,
-                                                          psr_data_type_t* out_data_type);
+                                                          margaux_data_structure_t* out_data_structure,
+                                                          margaux_data_type_t* out_data_type);
 
 // Update scalar attributes (by element ID)
 MARGAUX_C_API margaux_error_t database_update_scalar_integer(database_t* db,
@@ -280,14 +280,14 @@ MARGAUX_C_API margaux_error_t database_update_set_strings(database_t* db,
                                                           size_t count);
 
 // Memory cleanup for read results
-MARGAUX_C_API void psr_free_integer_array(int64_t* values);
-MARGAUX_C_API void psr_free_float_array(double* values);
-MARGAUX_C_API void psr_free_string_array(char** values, size_t count);
+MARGAUX_C_API void margaux_free_integer_array(int64_t* values);
+MARGAUX_C_API void margaux_free_float_array(double* values);
+MARGAUX_C_API void margaux_free_string_array(char** values, size_t count);
 
 // Memory cleanup for vector read results
-MARGAUX_C_API void psr_free_integer_vectors(int64_t** vectors, size_t* sizes, size_t count);
-MARGAUX_C_API void psr_free_float_vectors(double** vectors, size_t* sizes, size_t count);
-MARGAUX_C_API void psr_free_string_vectors(char*** vectors, size_t* sizes, size_t count);
+MARGAUX_C_API void margaux_free_integer_vectors(int64_t** vectors, size_t* sizes, size_t count);
+MARGAUX_C_API void margaux_free_float_vectors(double** vectors, size_t* sizes, size_t count);
+MARGAUX_C_API void margaux_free_string_vectors(char*** vectors, size_t* sizes, size_t count);
 
 #ifdef __cplusplus
 }

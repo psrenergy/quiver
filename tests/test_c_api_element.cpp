@@ -178,7 +178,7 @@ TEST(ElementCApi, ToString) {
     EXPECT_NE(result.find("arrays:"), std::string::npos);
     EXPECT_NE(result.find("label: \"Plant 1\""), std::string::npos);
 
-    psr_string_free(str);
+    margaux_string_free(str);
     element_destroy(element);
 }
 
@@ -187,7 +187,7 @@ TEST(ElementCApi, ToStringNull) {
 }
 
 TEST(ElementCApi, StringFreeNull) {
-    psr_string_free(nullptr);
+    margaux_string_free(nullptr);
 }
 
 TEST(ElementCApi, ArrayNullErrors) {

@@ -12,7 +12,7 @@ namespace fs = std::filesystem;
 class MigrationsTestFixture : public ::testing::Test {
 protected:
     void SetUp() override {
-        temp_dir = (fs::temp_directory_path() / "psr_migrations_test").string();
+        temp_dir = (fs::temp_directory_path() / "margaux_migrations_test").string();
         migrations_path = (fs::path(__FILE__).parent_path() / "schemas" / "migrations").string();
 
         // Clean up temp directory if it exists
