@@ -43,6 +43,31 @@ class Database {
     }
   }
 
+  /// Creates a new database from a migrations directory.
+  /// The migrations directory should contain numbered subdirectories (1/, 2/, etc.)
+  /// each with an up.sql file.
+  factory Database.fromMigrations(String dbPath, String migrationsPath) {
+    final arena = Arena();
+    try {
+      final optionsPtr = arena<quiver_database_options_t>();
+      optionsPtr.ref = bindings.quiver_database_options_default();
+
+      final ptr = bindings.quiver_database_from_migrations(
+        dbPath.toNativeUtf8(allocator: arena).cast(),
+        migrationsPath.toNativeUtf8(allocator: arena).cast(),
+        optionsPtr,
+      );
+
+      if (ptr == nullptr) {
+        throw const MigrationException('Failed to create database from migrations');
+      }
+
+      return Database._(ptr);
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
   void _ensureNotClosed() {
     if (_isClosed) {
       throw const DatabaseOperationException('Database has been closed');
