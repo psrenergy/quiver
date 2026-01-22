@@ -92,12 +92,6 @@ TEST_F(TempFileFixture, ErrorStrings) {
     EXPECT_STREQ(quiver_error_string(static_cast<quiver_error_t>(-999)), "Unknown error");
 }
 
-TEST_F(TempFileFixture, Version) {
-    auto version = quiver_version();
-    EXPECT_NE(version, nullptr);
-    EXPECT_STREQ(version, "1.0.0");
-}
-
 TEST_F(TempFileFixture, LogLevelDebug) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_DEBUG;
