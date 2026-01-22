@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:psr_database/psr_database.dart';
+import 'package:quiver_database/quiver_database.dart';
 import 'package:test/test.dart';
 import 'package:path/path.dart' as path;
 
@@ -17,7 +17,7 @@ void main() {
   late Directory tempDir;
 
   setUp(() {
-    tempDir = Directory.systemTemp.createTempSync('psr_schema_test_');
+    tempDir = Directory.systemTemp.createTempSync('quiver_schema_test_');
     dbPath = path.join(tempDir.path, 'test.db');
   });
 

@@ -1,5 +1,5 @@
-#ifndef PSR_TYPE_VALIDATOR_H
-#define PSR_TYPE_VALIDATOR_H
+#ifndef QUIVER_TYPE_VALIDATOR_H
+#define QUIVER_TYPE_VALIDATOR_H
 
 #include "data_type.h"
 #include "export.h"
@@ -9,9 +9,9 @@
 #include <string>
 #include <vector>
 
-namespace psr {
+namespace quiver {
 
-class PSR_API TypeValidator {
+class QUIVER_API TypeValidator {
 public:
     explicit TypeValidator(const Schema& schema);
 
@@ -29,6 +29,6 @@ private:
     const Schema& schema_;
 };
 
-}  // namespace psr
+}  // namespace quiver
 
-#endif  // PSR_TYPE_VALIDATOR_H
+#endif  // QUIVER_TYPE_VALIDATOR_H

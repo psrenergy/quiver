@@ -1,8 +1,8 @@
-#include "psr/element.h"
+#include "quiver/element.h"
 
 #include <sstream>
 
-namespace psr {
+namespace quiver {
 
 namespace {
 
@@ -126,4 +126,4 @@ std::string Element::to_string() const {
     return oss.str();
 }
 
-}  // namespace psr
+}  // namespace quiver

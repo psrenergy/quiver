@@ -1,9 +1,9 @@
-#include "psr/migrations.h"
+#include "quiver/migrations.h"
 
 #include <algorithm>
 #include <filesystem>
 
-namespace psr {
+namespace quiver {
 
 namespace fs = std::filesystem;
 
@@ -93,4 +93,4 @@ Migrations::iterator Migrations::end() const {
     return impl_->versions.end();
 }
 
-}  // namespace psr
+}  // namespace quiver

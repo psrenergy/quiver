@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 REM ============================================================
-REM Test All - PSR Database
+REM Test All - QUIVER Database
 REM ============================================================
 REM Runs all tests (assumes already built):
 REM   - C++ unit tests
@@ -15,7 +15,7 @@ SET ROOT_DIR=%~dp0
 
 echo.
 echo ============================================================
-echo  PSR Database - Test All
+echo  QUIVER Database - Test All
 echo ============================================================
 echo.
 
@@ -30,8 +30,8 @@ REM Step 1: Run C++ Tests
 REM ============================================================
 echo [1/4] Running C++ tests...
 
-if exist "%ROOT_DIR%build\bin\psr_database_tests.exe" (
-    "%ROOT_DIR%build\bin\psr_database_tests.exe"
+if exist "%ROOT_DIR%build\bin\quiver_database_tests.exe" (
+    "%ROOT_DIR%build\bin\quiver_database_tests.exe"
     if errorlevel 1 (
         SET CPP_RESULT=FAIL
         SET FAILED=1
@@ -49,8 +49,8 @@ REM Step 2: Run C API Tests
 REM ============================================================
 echo [2/4] Running C API tests...
 
-if exist "%ROOT_DIR%build\bin\psr_database_c_tests.exe" (
-    "%ROOT_DIR%build\bin\psr_database_c_tests.exe"
+if exist "%ROOT_DIR%build\bin\quiver_database_c_tests.exe" (
+    "%ROOT_DIR%build\bin\quiver_database_c_tests.exe"
     if errorlevel 1 (
         SET CAPI_RESULT=FAIL
         SET FAILED=1

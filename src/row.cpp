@@ -1,8 +1,8 @@
-#include "psr/row.h"
+#include "quiver/row.h"
 
-#include "psr/value.h"
+#include "quiver/value.h"
 
-namespace psr {
+namespace quiver {
 
 Row::Row(std::vector<Value> values) : values_(std::move(values)) {}
 
@@ -55,4 +55,4 @@ std::optional<std::string> Row::get_string(size_t index) const {
     return std::nullopt;
 }
 
-}  // namespace psr
+}  // namespace quiver

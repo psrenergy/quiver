@@ -1,4 +1,4 @@
-import 'package:psr_database/psr_database.dart';
+import 'package:quiver_database/quiver_database.dart';
 import 'package:test/test.dart';
 import 'package:path/path.dart' as path;
 

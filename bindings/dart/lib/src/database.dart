@@ -7,27 +7,27 @@ import 'ffi/library_loader.dart';
 import 'element.dart';
 import 'exceptions.dart';
 
-/// A wrapper for the PSR Database.
+/// A wrapper for the QUIVER Database.
 ///
 /// Use [Database.fromSchema] to create a new database from a SQL schema file.
 /// After use, call [close] to free native resources.
 class Database {
-  Pointer<psr_database_t> _ptr;
+  Pointer<quiver_database_t> _ptr;
   bool _isClosed = false;
 
   Database._(this._ptr);
 
   /// Internal: Returns the native pointer for use by other library components.
-  Pointer<psr_database_t> get ptr => _ptr;
+  Pointer<quiver_database_t> get ptr => _ptr;
 
   /// Creates a new database from a SQL schema file.
   factory Database.fromSchema(String dbPath, String schemaPath) {
     final arena = Arena();
     try {
-      final optionsPtr = arena<psr_database_options_t>();
-      optionsPtr.ref = bindings.psr_database_options_default();
+      final optionsPtr = arena<quiver_database_options_t>();
+      optionsPtr.ref = bindings.quiver_database_options_default();
 
-      final ptr = bindings.psr_database_from_schema(
+      final ptr = bindings.quiver_database_from_schema(
         dbPath.toNativeUtf8(allocator: arena).cast(),
         schemaPath.toNativeUtf8(allocator: arena).cast(),
         optionsPtr,
@@ -70,7 +70,7 @@ class Database {
 
     final arena = Arena();
     try {
-      final id = bindings.psr_database_create_element(
+      final id = bindings.quiver_database_create_element(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         element.ptr.cast(),
@@ -92,7 +92,7 @@ class Database {
 
     final arena = Arena();
     try {
-      final err = bindings.psr_database_set_scalar_relation(
+      final err = bindings.quiver_database_set_scalar_relation(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -100,7 +100,7 @@ class Database {
         toLabel.toNativeUtf8(allocator: arena).cast(),
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to set scalar relation '$attribute' in '$collection'");
       }
     } finally {
@@ -118,7 +118,7 @@ class Database {
       final outValues = arena<Pointer<Pointer<Char>>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_scalar_relation(
+      final err = bindings.quiver_database_read_scalar_relation(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -126,7 +126,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to read scalar relation '$attribute' from '$collection'");
       }
 
@@ -145,7 +145,7 @@ class Database {
           result.add(s.isEmpty ? null : s);
         }
       }
-      bindings.psr_free_string_array(outValues.value, count);
+      bindings.quiver_free_string_array(outValues.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -161,7 +161,7 @@ class Database {
       final outValues = arena<Pointer<Int64>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_scalar_integers(
+      final err = bindings.quiver_database_read_scalar_integers(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -169,7 +169,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to read scalar integers from '$collection.$attribute'");
       }
 
@@ -179,7 +179,7 @@ class Database {
       }
 
       final result = List<int>.generate(count, (i) => outValues.value[i]);
-      bindings.psr_free_integer_array(outValues.value);
+      bindings.quiver_free_integer_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -195,7 +195,7 @@ class Database {
       final outValues = arena<Pointer<Double>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_scalar_floats(
+      final err = bindings.quiver_database_read_scalar_floats(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -203,7 +203,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to read scalar floats from '$collection.$attribute'");
       }
 
@@ -213,7 +213,7 @@ class Database {
       }
 
       final result = List<double>.generate(count, (i) => outValues.value[i]);
-      bindings.psr_free_float_array(outValues.value);
+      bindings.quiver_free_float_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -229,7 +229,7 @@ class Database {
       final outValues = arena<Pointer<Pointer<Char>>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_scalar_strings(
+      final err = bindings.quiver_database_read_scalar_strings(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -237,7 +237,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to read scalar strings from '$collection.$attribute'");
       }
 
@@ -247,7 +247,7 @@ class Database {
       }
 
       final result = List<String>.generate(count, (i) => outValues.value[i].cast<Utf8>().toDartString());
-      bindings.psr_free_string_array(outValues.value, count);
+      bindings.quiver_free_string_array(outValues.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -264,7 +264,7 @@ class Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_vector_integers(
+      final err = bindings.quiver_database_read_vector_integers(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -273,7 +273,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to read vector integers from '$collection.$attribute'");
       }
 
@@ -291,7 +291,7 @@ class Database {
           result.add(List<int>.generate(size, (j) => outVectors.value[i][j]));
         }
       }
-      bindings.psr_free_integer_vectors(outVectors.value, outSizes.value, count);
+      bindings.quiver_free_integer_vectors(outVectors.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -308,7 +308,7 @@ class Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_vector_floats(
+      final err = bindings.quiver_database_read_vector_floats(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -317,7 +317,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to read vector floats from '$collection.$attribute'");
       }
 
@@ -335,7 +335,7 @@ class Database {
           result.add(List<double>.generate(size, (j) => outVectors.value[i][j]));
         }
       }
-      bindings.psr_free_float_vectors(outVectors.value, outSizes.value, count);
+      bindings.quiver_free_float_vectors(outVectors.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -352,7 +352,7 @@ class Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_vector_strings(
+      final err = bindings.quiver_database_read_vector_strings(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -361,7 +361,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to read vector strings from '$collection.$attribute'");
       }
 
@@ -379,7 +379,7 @@ class Database {
           result.add(List<String>.generate(size, (j) => outVectors.value[i][j].cast<Utf8>().toDartString()));
         }
       }
-      bindings.psr_free_string_vectors(outVectors.value, outSizes.value, count);
+      bindings.quiver_free_string_vectors(outVectors.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -396,7 +396,7 @@ class Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_set_integers(
+      final err = bindings.quiver_database_read_set_integers(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -405,7 +405,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to read set integers from '$collection.$attribute'");
       }
 
@@ -423,7 +423,7 @@ class Database {
           result.add(List<int>.generate(size, (j) => outSets.value[i][j]));
         }
       }
-      bindings.psr_free_integer_vectors(outSets.value, outSizes.value, count);
+      bindings.quiver_free_integer_vectors(outSets.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -440,7 +440,7 @@ class Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_set_floats(
+      final err = bindings.quiver_database_read_set_floats(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -449,7 +449,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to read set floats from '$collection.$attribute'");
       }
 
@@ -467,7 +467,7 @@ class Database {
           result.add(List<double>.generate(size, (j) => outSets.value[i][j]));
         }
       }
-      bindings.psr_free_float_vectors(outSets.value, outSizes.value, count);
+      bindings.quiver_free_float_vectors(outSets.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -484,7 +484,7 @@ class Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_set_strings(
+      final err = bindings.quiver_database_read_set_strings(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -493,7 +493,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to read set strings from '$collection.$attribute'");
       }
 
@@ -511,7 +511,7 @@ class Database {
           result.add(List<String>.generate(size, (j) => outSets.value[i][j].cast<Utf8>().toDartString()));
         }
       }
-      bindings.psr_free_string_vectors(outSets.value, outSizes.value, count);
+      bindings.quiver_free_string_vectors(outSets.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -530,7 +530,7 @@ class Database {
       final outValue = arena<Int64>();
       final outHasValue = arena<Int>();
 
-      final err = bindings.psr_database_read_scalar_integers_by_id(
+      final err = bindings.quiver_database_read_scalar_integers_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -539,7 +539,7 @@ class Database {
         outHasValue,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to read scalar integer by id from '$collection.$attribute'");
       }
 
@@ -562,7 +562,7 @@ class Database {
       final outValue = arena<Double>();
       final outHasValue = arena<Int>();
 
-      final err = bindings.psr_database_read_scalar_floats_by_id(
+      final err = bindings.quiver_database_read_scalar_floats_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -571,7 +571,7 @@ class Database {
         outHasValue,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to read scalar float by id from '$collection.$attribute'");
       }
 
@@ -594,7 +594,7 @@ class Database {
       final outValue = arena<Pointer<Char>>();
       final outHasValue = arena<Int>();
 
-      final err = bindings.psr_database_read_scalar_strings_by_id(
+      final err = bindings.quiver_database_read_scalar_strings_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -603,7 +603,7 @@ class Database {
         outHasValue,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to read scalar string by id from '$collection.$attribute'");
       }
 
@@ -611,7 +611,7 @@ class Database {
         return null;
       }
       final result = outValue.value.cast<Utf8>().toDartString();
-      bindings.psr_string_free(outValue.value);
+      bindings.quiver_string_free(outValue.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -629,7 +629,7 @@ class Database {
       final outValues = arena<Pointer<Int64>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_vector_integers_by_id(
+      final err = bindings.quiver_database_read_vector_integers_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -638,7 +638,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to read vector integers by id from '$collection.$attribute'");
       }
 
@@ -648,7 +648,7 @@ class Database {
       }
 
       final result = List<int>.generate(count, (i) => outValues.value[i]);
-      bindings.psr_free_integer_array(outValues.value);
+      bindings.quiver_free_integer_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -664,7 +664,7 @@ class Database {
       final outValues = arena<Pointer<Double>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_vector_floats_by_id(
+      final err = bindings.quiver_database_read_vector_floats_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -673,7 +673,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to read vector floats by id from '$collection.$attribute'");
       }
 
@@ -683,7 +683,7 @@ class Database {
       }
 
       final result = List<double>.generate(count, (i) => outValues.value[i]);
-      bindings.psr_free_float_array(outValues.value);
+      bindings.quiver_free_float_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -699,7 +699,7 @@ class Database {
       final outValues = arena<Pointer<Pointer<Char>>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_vector_strings_by_id(
+      final err = bindings.quiver_database_read_vector_strings_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -708,7 +708,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to read vector strings by id from '$collection.$attribute'");
       }
 
@@ -718,7 +718,7 @@ class Database {
       }
 
       final result = List<String>.generate(count, (i) => outValues.value[i].cast<Utf8>().toDartString());
-      bindings.psr_free_string_array(outValues.value, count);
+      bindings.quiver_free_string_array(outValues.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -736,7 +736,7 @@ class Database {
       final outValues = arena<Pointer<Int64>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_set_integers_by_id(
+      final err = bindings.quiver_database_read_set_integers_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -745,7 +745,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to read set integers by id from '$collection.$attribute'");
       }
 
@@ -755,7 +755,7 @@ class Database {
       }
 
       final result = List<int>.generate(count, (i) => outValues.value[i]);
-      bindings.psr_free_integer_array(outValues.value);
+      bindings.quiver_free_integer_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -771,7 +771,7 @@ class Database {
       final outValues = arena<Pointer<Double>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_set_floats_by_id(
+      final err = bindings.quiver_database_read_set_floats_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -780,7 +780,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to read set floats by id from '$collection.$attribute'");
       }
 
@@ -790,7 +790,7 @@ class Database {
       }
 
       final result = List<double>.generate(count, (i) => outValues.value[i]);
-      bindings.psr_free_float_array(outValues.value);
+      bindings.quiver_free_float_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -806,7 +806,7 @@ class Database {
       final outValues = arena<Pointer<Pointer<Char>>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_set_strings_by_id(
+      final err = bindings.quiver_database_read_set_strings_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -815,7 +815,7 @@ class Database {
         outCount,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to read set strings by id from '$collection.$attribute'");
       }
 
@@ -825,7 +825,7 @@ class Database {
       }
 
       final result = List<String>.generate(count, (i) => outValues.value[i].cast<Utf8>().toDartString());
-      bindings.psr_free_string_array(outValues.value, count);
+      bindings.quiver_free_string_array(outValues.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -843,14 +843,14 @@ class Database {
       final outIds = arena<Pointer<Int64>>();
       final outCount = arena<Size>();
 
-      final err = bindings.psr_database_read_element_ids(
+      final err = bindings.quiver_database_read_element_ids(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         outIds,
         outCount,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to read element ids from '$collection'");
       }
 
@@ -860,7 +860,7 @@ class Database {
       }
 
       final result = List<int>.generate(count, (i) => outIds.value[i]);
-      bindings.psr_free_integer_array(outIds.value);
+      bindings.quiver_free_integer_array(outIds.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -876,7 +876,7 @@ class Database {
       final outDataStructure = arena<Int32>();
       final outDataType = arena<Int32>();
 
-      final err = bindings.psr_database_get_attribute_type(
+      final err = bindings.quiver_database_get_attribute_type(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -884,21 +884,21 @@ class Database {
         outDataType,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to get attribute type for '$collection.$attribute'");
       }
 
       final dataStructure = switch (outDataStructure.value) {
-        psr_data_structure_t.PSR_DATA_STRUCTURE_SCALAR => 'scalar',
-        psr_data_structure_t.PSR_DATA_STRUCTURE_VECTOR => 'vector',
-        psr_data_structure_t.PSR_DATA_STRUCTURE_SET => 'set',
+        quiver_data_structure_t.QUIVER_DATA_STRUCTURE_SCALAR => 'scalar',
+        quiver_data_structure_t.QUIVER_DATA_STRUCTURE_VECTOR => 'vector',
+        quiver_data_structure_t.QUIVER_DATA_STRUCTURE_SET => 'set',
         _ => 'unknown',
       };
 
       final dataType = switch (outDataType.value) {
-        psr_data_type_t.PSR_DATA_TYPE_INTEGER => 'integer',
-        psr_data_type_t.PSR_DATA_TYPE_FLOAT => 'real',
-        psr_data_type_t.PSR_DATA_TYPE_STRING => 'text',
+        quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER => 'integer',
+        quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT => 'real',
+        quiver_data_type_t.QUIVER_DATA_TYPE_STRING => 'text',
         _ => 'unknown',
       };
 
@@ -915,13 +915,13 @@ class Database {
 
     final arena = Arena();
     try {
-      final err = bindings.psr_database_delete_element_by_id(
+      final err = bindings.quiver_database_delete_element_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         id,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to delete element $id from '$collection'");
       }
     } finally {
@@ -950,13 +950,13 @@ class Database {
     _ensureNotClosed();
     final arena = Arena();
     try {
-      final err = bindings.psr_database_update_element(
+      final err = bindings.quiver_database_update_element(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         id,
         element.ptr.cast(),
       );
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to update element $id in '$collection'");
       }
     } finally {
@@ -972,7 +972,7 @@ class Database {
 
     final arena = Arena();
     try {
-      final err = bindings.psr_database_update_scalar_integer(
+      final err = bindings.quiver_database_update_scalar_integer(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -980,7 +980,7 @@ class Database {
         value,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to update scalar integer '$collection.$attribute' for id $id");
       }
     } finally {
@@ -994,7 +994,7 @@ class Database {
 
     final arena = Arena();
     try {
-      final err = bindings.psr_database_update_scalar_float(
+      final err = bindings.quiver_database_update_scalar_float(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -1002,7 +1002,7 @@ class Database {
         value,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to update scalar float '$collection.$attribute' for id $id");
       }
     } finally {
@@ -1016,7 +1016,7 @@ class Database {
 
     final arena = Arena();
     try {
-      final err = bindings.psr_database_update_scalar_string(
+      final err = bindings.quiver_database_update_scalar_string(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -1024,7 +1024,7 @@ class Database {
         value.toNativeUtf8(allocator: arena).cast(),
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to update scalar string '$collection.$attribute' for id $id");
       }
     } finally {
@@ -1045,7 +1045,7 @@ class Database {
         nativeValues[i] = values[i];
       }
 
-      final err = bindings.psr_database_update_vector_integers(
+      final err = bindings.quiver_database_update_vector_integers(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -1054,7 +1054,7 @@ class Database {
         values.length,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to update vector integers '$collection.$attribute' for id $id");
       }
     } finally {
@@ -1073,7 +1073,7 @@ class Database {
         nativeValues[i] = values[i];
       }
 
-      final err = bindings.psr_database_update_vector_floats(
+      final err = bindings.quiver_database_update_vector_floats(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -1082,7 +1082,7 @@ class Database {
         values.length,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to update vector floats '$collection.$attribute' for id $id");
       }
     } finally {
@@ -1101,7 +1101,7 @@ class Database {
         nativePtrs[i] = values[i].toNativeUtf8(allocator: arena).cast();
       }
 
-      final err = bindings.psr_database_update_vector_strings(
+      final err = bindings.quiver_database_update_vector_strings(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -1110,7 +1110,7 @@ class Database {
         values.length,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to update vector strings '$collection.$attribute' for id $id");
       }
     } finally {
@@ -1131,7 +1131,7 @@ class Database {
         nativeValues[i] = values[i];
       }
 
-      final err = bindings.psr_database_update_set_integers(
+      final err = bindings.quiver_database_update_set_integers(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -1140,7 +1140,7 @@ class Database {
         values.length,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to update set integers '$collection.$attribute' for id $id");
       }
     } finally {
@@ -1159,7 +1159,7 @@ class Database {
         nativeValues[i] = values[i];
       }
 
-      final err = bindings.psr_database_update_set_floats(
+      final err = bindings.quiver_database_update_set_floats(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -1168,7 +1168,7 @@ class Database {
         values.length,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to update set floats '$collection.$attribute' for id $id");
       }
     } finally {
@@ -1187,7 +1187,7 @@ class Database {
         nativePtrs[i] = values[i].toNativeUtf8(allocator: arena).cast();
       }
 
-      final err = bindings.psr_database_update_set_strings(
+      final err = bindings.quiver_database_update_set_strings(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -1196,7 +1196,7 @@ class Database {
         values.length,
       );
 
-      if (err != psr_error_t.PSR_OK) {
+      if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to update set strings '$collection.$attribute' for id $id");
       }
     } finally {
@@ -1207,7 +1207,7 @@ class Database {
   /// Closes the database and frees native resources.
   void close() {
     if (_isClosed) return;
-    bindings.psr_database_close(_ptr);
+    bindings.quiver_database_close(_ptr);
     _isClosed = true;
   }
 }

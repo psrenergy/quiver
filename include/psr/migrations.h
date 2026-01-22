@@ -1,17 +1,17 @@
-#ifndef PSR_MIGRATIONS_H
-#define PSR_MIGRATIONS_H
+#ifndef QUIVER_MIGRATIONS_H
+#define QUIVER_MIGRATIONS_H
 
 #include "export.h"
-#include "psr/migration.h"
+#include "quiver/migration.h"
 
 #include <cstddef>
 #include <memory>
 #include <string>
 #include <vector>
 
-namespace psr {
+namespace quiver {
 
-class PSR_API Migrations {
+class QUIVER_API Migrations {
 public:
     Migrations();
     explicit Migrations(const std::string& path);
@@ -48,6 +48,6 @@ private:
     std::unique_ptr<Impl> impl_;
 };
 
-}  // namespace psr
+}  // namespace quiver
 
-#endif  // PSR_MIGRATIONS_H
+#endif  // QUIVER_MIGRATIONS_H

@@ -1,6 +1,6 @@
 # Time Series
 
-It is possible to store time series data in your database. Time series in `PSRDatabase` are very flexible. You can have missing values, and you can have sparse data. 
+It is possible to store time series data in your database. Time series in `QUIVERDatabase` are very flexible. You can have missing values, and you can have sparse data. 
 
 There is a specific table format that must be followed. Consider the following example:
 
@@ -45,7 +45,7 @@ CREATE TABLE Resource_time_series_group2 (
 
 ## Rules 
 
-Time series in `PSRDatabase` are very flexible. You can have missing values, and you can have sparse data. 
+Time series in `QUIVERDatabase` are very flexible. You can have missing values, and you can have sparse data. 
 
 If you are querying for a time series row entry that has a missing value, it first checks if there is a data with a `date_time` earlier than the queried `date_time`. If there is, it returns the value of the previous data. If there is no data earlier than the queried `date_time`, it returns a specified value according to the type of data you are querying.
 
@@ -77,12 +77,12 @@ When creating a new element that has a time series, you can pass this informatio
 ```julia
 using DataFrames
 using Dates
-using PSRDatabase
-PSRDatabase = PSRDatabase.PSRDatabase
+using QUIVERDatabase
+QUIVERDatabase = QUIVERDatabase.QUIVERDatabase
 
-db = PSRDatabase.from_schema(db_path, path_schema)
+db = QUIVERDatabase.from_schema(db_path, path_schema)
 
-PSRDatabase.create_element!(db, "Configuration"; label = "Toy Case", value1 = 1.0)
+QUIVERDatabase.create_element!(db, "Configuration"; label = "Toy Case", value1 = 1.0)
 
 df_group1 = DataFrame(;
         date_time = [DateTime(2000), DateTime(2001), DateTime(2002)],
@@ -107,7 +107,7 @@ df_group2 = DataFrame(;
         )
 
 
-PSRDatabase.create_element!(
+QUIVERDatabase.create_element!(
     db,
     "Resource";
     label = "Resource 1",
@@ -121,20 +121,20 @@ It is also possible to insert a single row of a time series. This is useful when
 ```julia
 using DataFrames
 using Dates
-using PSRDatabase
-PSRDatabase = PSRDatabase.PSRDatabase
+using QUIVERDatabase
+QUIVERDatabase = QUIVERDatabase.QUIVERDatabase
 
-db = PSRDatabase.from_schema(db_path, path_schema)
+db = QUIVERDatabase.from_schema(db_path, path_schema)
 
-PSRDatabase.create_element!(db, "Configuration"; label = "Toy Case", value1 = 1.0)
+QUIVERDatabase.create_element!(db, "Configuration"; label = "Toy Case", value1 = 1.0)
 
-PSRDatabase.create_element!(
+QUIVERDatabase.create_element!(
     db,
     "Resource";
     label = "Resource 1"
 )
 
-PSRDatabase.add_time_series_row!(
+QUIVERDatabase.add_time_series_row!(
     db,
     "Resource",
     "some_vector1",
@@ -143,7 +143,7 @@ PSRDatabase.add_time_series_row!(
     date_time = DateTime(2000)
 )
 
-PSRDatabase.add_time_series_row!(
+QUIVERDatabase.add_time_series_row!(
     db,
     "Resource",
     "some_vector1",
@@ -161,7 +161,7 @@ You can read the information from the time series in two different ways.
 First, you can read the whole time series table for a given value, as a `DataFrame`.
 
 ```julia
-df = PSRDatabase.read_time_series_table(
+df = QUIVERDatabase.read_time_series_table(
     db,
     "Resource",
     "some_vector1",
@@ -175,7 +175,7 @@ It is also possible to read a single row of the time series in the form of an ar
 For this function, there are performance improvements when reading the data via caching the previous and next non-missing values. 
 
 ```julia
-values = PSRDatabase.read_time_series_row(
+values = QUIVERDatabase.read_time_series_row(
     db,
     "Resource",
     "some_vector1",
@@ -213,7 +213,7 @@ When updating one of the entries of a time series for a given element and attrib
 For example, consider a time series that has `block` and `data_time` dimensions.
 
 ```julia
-PSRDatabase.update_time_series_row!(
+QUIVERDatabase.update_time_series_row!(
     db,
     "Resource",
     "some_vector3",
@@ -243,7 +243,7 @@ CREATE TABLE Resource_time_series_group1 (
 This table represents a "group" that stores two time series `some_vector1` and `some_vector2`. You can delete all the data from this group by calling the following function:
 
 ```julia
-PSRDatabase.delete_time_series!(
+QUIVERDatabase.delete_time_series!(
     db,
     "Resource",
     "group1",

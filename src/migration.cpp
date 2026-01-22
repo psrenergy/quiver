@@ -1,10 +1,10 @@
-#include "psr/migration.h"
+#include "quiver/migration.h"
 
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 
-namespace psr {
+namespace quiver {
 
 namespace fs = std::filesystem;
 
@@ -96,4 +96,4 @@ bool Migration::operator>=(const Migration& other) const {
     return impl_->version >= other.impl_->version;
 }
 
-}  // namespace psr
+}  // namespace quiver

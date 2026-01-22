@@ -1,5 +1,5 @@
-#ifndef PSR_ROW_H
-#define PSR_ROW_H
+#ifndef QUIVER_ROW_H
+#define QUIVER_ROW_H
 
 #include "export.h"
 #include "value.h"
@@ -7,9 +7,9 @@
 #include <optional>
 #include <vector>
 
-namespace psr {
+namespace quiver {
 
-class PSR_API Row {
+class QUIVER_API Row {
 public:
     explicit Row(std::vector<Value> values);
 
@@ -34,6 +34,6 @@ private:
     std::vector<Value> values_;
 };
 
-}  // namespace psr
+}  // namespace quiver
 
-#endif  // PSR_ROW_H
+#endif  // QUIVER_ROW_H

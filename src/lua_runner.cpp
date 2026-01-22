@@ -1,12 +1,12 @@
-#include "psr/lua_runner.h"
+#include "quiver/lua_runner.h"
 
-#include "psr/database.h"
-#include "psr/element.h"
+#include "quiver/database.h"
+#include "quiver/element.h"
 
 #include <sol/sol.hpp>
 #include <stdexcept>
 
-namespace psr {
+namespace quiver {
 
 struct LuaRunner::Impl {
     Database& db;
@@ -413,4 +413,4 @@ void LuaRunner::run(const std::string& script) {
     }
 }
 
-}  // namespace psr
+}  // namespace quiver

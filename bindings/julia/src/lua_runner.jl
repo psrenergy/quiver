@@ -1,22 +1,22 @@
 mutable struct LuaRunner
-    ptr::Ptr{C.psr_lua_runner}
+    ptr::Ptr{C.quiver_lua_runner}
     db::Database  # Keep reference to prevent GC
 end
 
 function LuaRunner(db::Database)
-    ptr = C.psr_lua_runner_new(db.ptr)
+    ptr = C.quiver_lua_runner_new(db.ptr)
     if ptr == C_NULL
         throw(DatabaseException("Failed to create LuaRunner"))
     end
     runner = LuaRunner(ptr, db)
-    finalizer(r -> r.ptr != C_NULL && C.psr_lua_runner_free(r.ptr), runner)
+    finalizer(r -> r.ptr != C_NULL && C.quiver_lua_runner_free(r.ptr), runner)
     return runner
 end
 
 function run!(runner::LuaRunner, script::String)
-    err = C.psr_lua_runner_run(runner.ptr, script)
-    if err != C.PSR_OK
-        error_ptr = C.psr_lua_runner_get_error(runner.ptr)
+    err = C.quiver_lua_runner_run(runner.ptr, script)
+    if err != C.QUIVER_OK
+        error_ptr = C.quiver_lua_runner_get_error(runner.ptr)
         if error_ptr != C_NULL
             error_msg = unsafe_string(error_ptr)
             throw(DatabaseException("Lua error: $error_msg"))
@@ -29,7 +29,7 @@ end
 
 function close!(runner::LuaRunner)
     if runner.ptr != C_NULL
-        C.psr_lua_runner_free(runner.ptr)
+        C.quiver_lua_runner_free(runner.ptr)
         runner.ptr = C_NULL
     end
     return nothing

@@ -1,10 +1,10 @@
-#ifndef PSR_DATA_TYPE_H
-#define PSR_DATA_TYPE_H
+#ifndef QUIVER_DATA_TYPE_H
+#define QUIVER_DATA_TYPE_H
 
 #include <stdexcept>
 #include <string>
 
-namespace psr {
+namespace quiver {
 
 enum class DataType { Integer, Real, Text };
 
@@ -30,6 +30,6 @@ inline const char* data_type_to_string(DataType type) {
     return "UNKNOWN";
 }
 
-}  // namespace psr
+}  // namespace quiver
 
-#endif  // PSR_DATA_TYPE_H
+#endif  // QUIVER_DATA_TYPE_H

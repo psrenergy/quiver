@@ -1,8 +1,8 @@
-#ifndef PSR_H
-#define PSR_H
+#ifndef QUIVER_H
+#define QUIVER_H
 
 #include "database.h"
 #include "element.h"
 #include "export.h"
 
-#endif  // PSR_H
+#endif  // QUIVER_H

@@ -1,10 +1,10 @@
-#include "psr/schema_validator.h"
+#include "quiver/schema_validator.h"
 
 #include <algorithm>
 #include <set>
 #include <stdexcept>
 
-namespace psr {
+namespace quiver {
 
 SchemaValidator::SchemaValidator(const Schema& schema) : schema_(schema) {}
 
@@ -323,4 +323,4 @@ void SchemaValidator::validate_foreign_keys() {
     }
 }
 
-}  // namespace psr
+}  // namespace quiver

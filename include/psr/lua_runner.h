@@ -1,16 +1,16 @@
-#ifndef PSR_LUA_RUNNER_H
-#define PSR_LUA_RUNNER_H
+#ifndef QUIVER_LUA_RUNNER_H
+#define QUIVER_LUA_RUNNER_H
 
 #include "export.h"
 
 #include <memory>
 #include <string>
 
-namespace psr {
+namespace quiver {
 
 class Database;
 
-class PSR_API LuaRunner {
+class QUIVER_API LuaRunner {
 public:
     explicit LuaRunner(Database& db);
     ~LuaRunner();
@@ -31,6 +31,6 @@ private:
     std::unique_ptr<Impl> impl_;
 };
 
-}  // namespace psr
+}  // namespace quiver
 
-#endif  // PSR_LUA_RUNNER_H
+#endif  // QUIVER_LUA_RUNNER_H

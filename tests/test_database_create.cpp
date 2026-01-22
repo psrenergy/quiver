@@ -1,14 +1,14 @@
 #include "test_utils.h"
 
 #include <gtest/gtest.h>
-#include <psr/database.h>
-#include <psr/element.h>
+#include <quiver/database.h>
+#include <quiver/element.h>
 
 TEST(Database, CreateElementWithScalars) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
 
     // Create element
-    psr::Element element;
+    quiver::Element element;
     element.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42}).set("float_attribute", 3.14);
 
     int64_t id = db.create_element("Configuration", element);
@@ -27,15 +27,15 @@ TEST(Database, CreateElementWithScalars) {
 
 TEST(Database, CreateElementWithVector) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
 
     // Configuration required first
-    psr::Element config;
+    quiver::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
     // Create element with vector array
-    psr::Element element;
+    quiver::Element element;
     element.set("label", std::string("Item 1"))
         .set("value_int", std::vector<int64_t>{1, 2, 3})
         .set("value_float", std::vector<double>{1.5, 2.5, 3.5});
@@ -59,15 +59,15 @@ TEST(Database, CreateElementWithVector) {
 
 TEST(Database, CreateElementWithVectorGroup) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
 
     // Configuration required first
-    psr::Element config;
+    quiver::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
     // Create element with vector group containing multiple attributes per row
-    psr::Element element;
+    quiver::Element element;
     element.set("label", std::string("Item 1"))
         .set("value_int", std::vector<int64_t>{10, 20, 30})
         .set("value_float", std::vector<double>{1.5, 2.5, 3.5});
@@ -87,15 +87,15 @@ TEST(Database, CreateElementWithVectorGroup) {
 
 TEST(Database, CreateElementWithSetGroup) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
 
     // Configuration required first
-    psr::Element config;
+    quiver::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
     // Create element with set attribute
-    psr::Element element;
+    quiver::Element element;
     element.set("label", std::string("Item 1")).set("tag", std::vector<std::string>{"important", "urgent", "review"});
 
     int64_t id = db.create_element("Collection", element);
@@ -110,14 +110,14 @@ TEST(Database, CreateElementWithSetGroup) {
 }
 
 TEST(Database, CreateMultipleElements) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
 
     // Create multiple Configuration elements
-    psr::Element e1;
+    quiver::Element e1;
     e1.set("label", std::string("Config A")).set("integer_attribute", int64_t{100});
     int64_t id1 = db.create_element("Configuration", e1);
 
-    psr::Element e2;
+    quiver::Element e2;
     e2.set("label", std::string("Config B")).set("integer_attribute", int64_t{200});
     int64_t id2 = db.create_element("Configuration", e2);
 
@@ -135,13 +135,13 @@ TEST(Database, CreateMultipleElements) {
 
 TEST(Database, CreateElementSingleElementVector) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
 
-    psr::Element config;
+    quiver::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
-    psr::Element element;
+    quiver::Element element;
     element.set("label", std::string("Item 1")).set("value_int", std::vector<int64_t>{42});
 
     int64_t id = db.create_element("Collection", element);
@@ -154,13 +154,13 @@ TEST(Database, CreateElementSingleElementVector) {
 
 TEST(Database, CreateElementSingleElementSet) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
 
-    psr::Element config;
+    quiver::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
-    psr::Element element;
+    quiver::Element element;
     element.set("label", std::string("Item 1")).set("tag", std::vector<std::string>{"single_tag"});
 
     int64_t id = db.create_element("Collection", element);
@@ -172,9 +172,9 @@ TEST(Database, CreateElementSingleElementSet) {
 }
 
 TEST(Database, CreateElementInvalidCollection) {
-    auto db = psr::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = psr::LogLevel::off});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
 
-    psr::Element element;
+    quiver::Element element;
     element.set("label", std::string("Test"));
 
     EXPECT_THROW(db.create_element("NonexistentCollection", element), std::runtime_error);
@@ -182,9 +182,9 @@ TEST(Database, CreateElementInvalidCollection) {
 
 TEST(Database, CreateElementLargeVector) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
 
-    psr::Element config;
+    quiver::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
@@ -194,7 +194,7 @@ TEST(Database, CreateElementLargeVector) {
         large_vec.push_back(i);
     }
 
-    psr::Element element;
+    quiver::Element element;
     element.set("label", std::string("Item 1")).set("value_int", large_vec);
 
     int64_t id = db.create_element("Collection", element);
@@ -209,14 +209,14 @@ TEST(Database, CreateElementLargeVector) {
 
 TEST(Database, CreateElementWithNoOptionalAttributes) {
     auto db =
-        psr::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = psr::LogLevel::off});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
 
-    psr::Element config;
+    quiver::Element config;
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
     // Create element with only required label
-    psr::Element element;
+    quiver::Element element;
     element.set("label", std::string("Item 1"));
 
     int64_t id = db.create_element("Collection", element);

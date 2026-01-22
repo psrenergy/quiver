@@ -4,9 +4,9 @@ import 'dart:io';
 import 'bindings.dart';
 
 String get _libraryName {
-  if (Platform.isWindows) return 'libpsr_database_c.dll';
-  if (Platform.isMacOS) return 'libpsr_database_c.dylib';
-  return 'libpsr_database_c.so'; // Linux and others
+  if (Platform.isWindows) return 'libquiver_database_c.dll';
+  if (Platform.isMacOS) return 'libquiver_database_c.dylib';
+  return 'libquiver_database_c.so'; // Linux and others
 }
 
 PsrDatabaseBindings? _cachedBindings;
@@ -23,7 +23,7 @@ DynamicLibrary get library {
   if (_cachedLibrary != null) return _cachedLibrary!;
 
   // Try custom path first
-  final customPath = Platform.environment['PSR_DATABASE_LIB_PATH'];
+  final customPath = Platform.environment['QUIVER_DATABASE_LIB_PATH'];
   if (customPath != null) {
     final customFile = File('$customPath/$_libraryName');
     if (customFile.existsSync()) {

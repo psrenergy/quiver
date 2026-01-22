@@ -1,8 +1,8 @@
-#include "psr/result.h"
+#include "quiver/result.h"
 
-#include "psr/row.h"
+#include "quiver/row.h"
 
-namespace psr {
+namespace quiver {
 
 Result::Result() : columns_(), rows_() {}
 
@@ -32,4 +32,4 @@ const Row& Result::at(size_t index) const {
 const Row& Result::operator[](size_t index) const {
     return rows_[index];
 }
-}  // namespace psr
+}  // namespace quiver

@@ -1,31 +1,31 @@
 #include "c_api_internal.h"
-#include "psr/c/database.h"
-#include "psr/c/element.h"
+#include "quiver/c/database.h"
+#include "quiver/c/element.h"
 
 #include <new>
 #include <string>
 
 namespace {
 
-psr::LogLevel to_cpp_log_level(psr_log_level_t level) {
+quiver::LogLevel to_cpp_log_level(quiver_log_level_t level) {
     switch (level) {
-    case PSR_LOG_DEBUG:
-        return psr::LogLevel::debug;
-    case PSR_LOG_INFO:
-        return psr::LogLevel::info;
-    case PSR_LOG_WARN:
-        return psr::LogLevel::warn;
-    case PSR_LOG_ERROR:
-        return psr::LogLevel::error;
-    case PSR_LOG_OFF:
-        return psr::LogLevel::off;
+    case QUIVER_LOG_DEBUG:
+        return quiver::LogLevel::debug;
+    case QUIVER_LOG_INFO:
+        return quiver::LogLevel::info;
+    case QUIVER_LOG_WARN:
+        return quiver::LogLevel::warn;
+    case QUIVER_LOG_ERROR:
+        return quiver::LogLevel::error;
+    case QUIVER_LOG_OFF:
+        return quiver::LogLevel::off;
     default:
-        return psr::LogLevel::info;
+        return quiver::LogLevel::info;
     }
 }
 
-psr::DatabaseOptions to_cpp_options(const psr_database_options_t* options) {
-    psr::DatabaseOptions cpp_options;
+quiver::DatabaseOptions to_cpp_options(const quiver_database_options_t* options) {
+    quiver::DatabaseOptions cpp_options;
     if (options) {
         cpp_options.read_only = options->read_only != 0;
         cpp_options.console_level = to_cpp_log_level(options->console_level);
@@ -35,26 +35,26 @@ psr::DatabaseOptions to_cpp_options(const psr_database_options_t* options) {
 
 // Helper template for reading numeric scalars
 template <typename T>
-psr_error_t read_scalars_impl(const std::vector<T>& values, T** out_values, size_t* out_count) {
+quiver_error_t read_scalars_impl(const std::vector<T>& values, T** out_values, size_t* out_count) {
     *out_count = values.size();
     if (values.empty()) {
         *out_values = nullptr;
-        return PSR_OK;
+        return QUIVER_OK;
     }
     *out_values = new T[values.size()];
     std::copy(values.begin(), values.end(), *out_values);
-    return PSR_OK;
+    return QUIVER_OK;
 }
 
 // Helper template for reading numeric vectors
 template <typename T>
-psr_error_t
+quiver_error_t
 read_vectors_impl(const std::vector<std::vector<T>>& vectors, T*** out_vectors, size_t** out_sizes, size_t* out_count) {
     *out_count = vectors.size();
     if (vectors.empty()) {
         *out_vectors = nullptr;
         *out_sizes = nullptr;
-        return PSR_OK;
+        return QUIVER_OK;
     }
     *out_vectors = new T*[vectors.size()];
     *out_sizes = new size_t[vectors.size()];
@@ -67,7 +67,7 @@ read_vectors_impl(const std::vector<std::vector<T>>& vectors, T*** out_vectors, 
             std::copy(vectors[i].begin(), vectors[i].end(), (*out_vectors)[i]);
         }
     }
-    return PSR_OK;
+    return QUIVER_OK;
 }
 
 // Helper template for freeing numeric vectors
@@ -87,21 +87,21 @@ void free_vectors_impl(T** vectors, size_t* sizes, size_t count) {
 
 extern "C" {
 
-PSR_C_API psr_database_options_t psr_database_options_default(void) {
-    psr_database_options_t options;
+QUIVER_C_API quiver_database_options_t quiver_database_options_default(void) {
+    quiver_database_options_t options;
     options.read_only = 0;
-    options.console_level = PSR_LOG_INFO;
+    options.console_level = QUIVER_LOG_INFO;
     return options;
 }
 
-PSR_C_API psr_database_t* psr_database_open(const char* path, const psr_database_options_t* options) {
+QUIVER_C_API quiver_database_t* quiver_database_open(const char* path, const quiver_database_options_t* options) {
     if (!path) {
         return nullptr;
     }
 
     try {
         auto cpp_options = to_cpp_options(options);
-        return new psr_database(path, cpp_options);
+        return new quiver_database(path, cpp_options);
     } catch (const std::bad_alloc&) {
         return nullptr;
     } catch (const std::exception&) {
@@ -109,34 +109,34 @@ PSR_C_API psr_database_t* psr_database_open(const char* path, const psr_database
     }
 }
 
-PSR_C_API void psr_database_close(psr_database_t* db) {
+QUIVER_C_API void quiver_database_close(quiver_database_t* db) {
     delete db;
 }
 
-PSR_C_API int psr_database_is_healthy(psr_database_t* db) {
+QUIVER_C_API int quiver_database_is_healthy(quiver_database_t* db) {
     if (!db) {
         return 0;
     }
     return db->db.is_healthy() ? 1 : 0;
 }
 
-PSR_C_API const char* psr_database_path(psr_database_t* db) {
+QUIVER_C_API const char* quiver_database_path(quiver_database_t* db) {
     if (!db) {
         return nullptr;
     }
     return db->db.path().c_str();
 }
 
-PSR_C_API psr_database_t*
-psr_database_from_migrations(const char* db_path, const char* migrations_path, const psr_database_options_t* options) {
+QUIVER_C_API quiver_database_t*
+quiver_database_from_migrations(const char* db_path, const char* migrations_path, const quiver_database_options_t* options) {
     if (!db_path || !migrations_path) {
         return nullptr;
     }
 
     try {
         auto cpp_options = to_cpp_options(options);
-        auto db = psr::Database::from_migrations(db_path, migrations_path, cpp_options);
-        return new psr_database(std::move(db));
+        auto db = quiver::Database::from_migrations(db_path, migrations_path, cpp_options);
+        return new quiver_database(std::move(db));
     } catch (const std::bad_alloc&) {
         return nullptr;
     } catch (const std::exception&) {
@@ -144,7 +144,7 @@ psr_database_from_migrations(const char* db_path, const char* migrations_path, c
     }
 }
 
-PSR_C_API int64_t psr_database_current_version(psr_database_t* db) {
+QUIVER_C_API int64_t quiver_database_current_version(quiver_database_t* db) {
     if (!db) {
         return -1;
     }
@@ -155,7 +155,7 @@ PSR_C_API int64_t psr_database_current_version(psr_database_t* db) {
     }
 }
 
-PSR_C_API int64_t psr_database_create_element(psr_database_t* db, const char* collection, psr_element_t* element) {
+QUIVER_C_API int64_t quiver_database_create_element(quiver_database_t* db, const char* collection, quiver_element_t* element) {
     if (!db || !collection || !element) {
         return -1;
     }
@@ -166,63 +166,63 @@ PSR_C_API int64_t psr_database_create_element(psr_database_t* db, const char* co
     }
 }
 
-PSR_C_API psr_error_t psr_database_update_element(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_update_element(quiver_database_t* db,
                                                   const char* collection,
                                                   int64_t id,
-                                                  const psr_element_t* element) {
+                                                  const quiver_element_t* element) {
     if (!db || !collection || !element) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         db->db.update_element(collection, id, element->element);
-        return PSR_OK;
+        return QUIVER_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_delete_element_by_id(psr_database_t* db, const char* collection, int64_t id) {
+QUIVER_C_API quiver_error_t quiver_database_delete_element_by_id(quiver_database_t* db, const char* collection, int64_t id) {
     if (!db || !collection) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         db->db.delete_element_by_id(collection, id);
-        return PSR_OK;
+        return QUIVER_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_set_scalar_relation(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_set_scalar_relation(quiver_database_t* db,
                                                        const char* collection,
                                                        const char* attribute,
                                                        const char* from_label,
                                                        const char* to_label) {
     if (!db || !collection || !attribute || !from_label || !to_label) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         db->db.set_scalar_relation(collection, attribute, from_label, to_label);
-        return PSR_OK;
+        return QUIVER_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_scalar_relation(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_scalar_relation(quiver_database_t* db,
                                                         const char* collection,
                                                         const char* attribute,
                                                         char*** out_values,
                                                         size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto values = db->db.read_scalar_relation(collection, attribute);
         *out_count = values.size();
         if (values.empty()) {
             *out_values = nullptr;
-            return PSR_OK;
+            return QUIVER_OK;
         }
         *out_values = new char*[values.size()];
         for (size_t i = 0; i < values.size(); ++i) {
@@ -230,22 +230,22 @@ PSR_C_API psr_error_t psr_database_read_scalar_relation(psr_database_t* db,
             std::copy(values[i].begin(), values[i].end(), (*out_values)[i]);
             (*out_values)[i][values[i].size()] = '\0';
         }
-        return PSR_OK;
+        return QUIVER_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_database_t*
-psr_database_from_schema(const char* db_path, const char* schema_path, const psr_database_options_t* options) {
+QUIVER_C_API quiver_database_t*
+quiver_database_from_schema(const char* db_path, const char* schema_path, const quiver_database_options_t* options) {
     if (!db_path || !schema_path) {
         return nullptr;
     }
 
     try {
         auto cpp_options = to_cpp_options(options);
-        auto db = psr::Database::from_schema(db_path, schema_path, cpp_options);
-        return new psr_database(std::move(db));
+        auto db = quiver::Database::from_schema(db_path, schema_path, cpp_options);
+        return new quiver_database(std::move(db));
     } catch (const std::bad_alloc&) {
         return nullptr;
     } catch (const std::exception&) {
@@ -253,43 +253,43 @@ psr_database_from_schema(const char* db_path, const char* schema_path, const psr
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_scalar_integers(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_scalar_integers(quiver_database_t* db,
                                                         const char* collection,
                                                         const char* attribute,
                                                         int64_t** out_values,
                                                         size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         return read_scalars_impl(db->db.read_scalar_integers(collection, attribute), out_values, out_count);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_scalar_floats(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_scalar_floats(quiver_database_t* db,
                                                       const char* collection,
                                                       const char* attribute,
                                                       double** out_values,
                                                       size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         return read_scalars_impl(db->db.read_scalar_floats(collection, attribute), out_values, out_count);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_scalar_strings(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_scalar_strings(quiver_database_t* db,
                                                        const char* collection,
                                                        const char* attribute,
                                                        char*** out_values,
                                                        size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
 
     try {
@@ -297,7 +297,7 @@ PSR_C_API psr_error_t psr_database_read_scalar_strings(psr_database_t* db,
         *out_count = values.size();
         if (values.empty()) {
             *out_values = nullptr;
-            return PSR_OK;
+            return QUIVER_OK;
         }
         *out_values = new char*[values.size()];
         for (size_t i = 0; i < values.size(); ++i) {
@@ -305,21 +305,21 @@ PSR_C_API psr_error_t psr_database_read_scalar_strings(psr_database_t* db,
             std::copy(values[i].begin(), values[i].end(), (*out_values)[i]);
             (*out_values)[i][values[i].size()] = '\0';
         }
-        return PSR_OK;
+        return QUIVER_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API void psr_free_integer_array(int64_t* values) {
+QUIVER_C_API void quiver_free_integer_array(int64_t* values) {
     delete[] values;
 }
 
-PSR_C_API void psr_free_float_array(double* values) {
+QUIVER_C_API void quiver_free_float_array(double* values) {
     delete[] values;
 }
 
-PSR_C_API void psr_free_string_array(char** values, size_t count) {
+QUIVER_C_API void quiver_free_string_array(char** values, size_t count) {
     if (!values) {
         return;
     }
@@ -329,46 +329,46 @@ PSR_C_API void psr_free_string_array(char** values, size_t count) {
     delete[] values;
 }
 
-PSR_C_API psr_error_t psr_database_read_vector_integers(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_vector_integers(quiver_database_t* db,
                                                         const char* collection,
                                                         const char* attribute,
                                                         int64_t*** out_vectors,
                                                         size_t** out_sizes,
                                                         size_t* out_count) {
     if (!db || !collection || !attribute || !out_vectors || !out_sizes || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         return read_vectors_impl(db->db.read_vector_integers(collection, attribute), out_vectors, out_sizes, out_count);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_vector_floats(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_vector_floats(quiver_database_t* db,
                                                       const char* collection,
                                                       const char* attribute,
                                                       double*** out_vectors,
                                                       size_t** out_sizes,
                                                       size_t* out_count) {
     if (!db || !collection || !attribute || !out_vectors || !out_sizes || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         return read_vectors_impl(db->db.read_vector_floats(collection, attribute), out_vectors, out_sizes, out_count);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_vector_strings(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_vector_strings(quiver_database_t* db,
                                                        const char* collection,
                                                        const char* attribute,
                                                        char**** out_vectors,
                                                        size_t** out_sizes,
                                                        size_t* out_count) {
     if (!db || !collection || !attribute || !out_vectors || !out_sizes || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto vectors = db->db.read_vector_strings(collection, attribute);
@@ -376,7 +376,7 @@ PSR_C_API psr_error_t psr_database_read_vector_strings(psr_database_t* db,
         if (vectors.empty()) {
             *out_vectors = nullptr;
             *out_sizes = nullptr;
-            return PSR_OK;
+            return QUIVER_OK;
         }
         *out_vectors = new char**[vectors.size()];
         *out_sizes = new size_t[vectors.size()];
@@ -393,21 +393,21 @@ PSR_C_API psr_error_t psr_database_read_vector_strings(psr_database_t* db,
                 }
             }
         }
-        return PSR_OK;
+        return QUIVER_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API void psr_free_integer_vectors(int64_t** vectors, size_t* sizes, size_t count) {
+QUIVER_C_API void quiver_free_integer_vectors(int64_t** vectors, size_t* sizes, size_t count) {
     free_vectors_impl(vectors, sizes, count);
 }
 
-PSR_C_API void psr_free_float_vectors(double** vectors, size_t* sizes, size_t count) {
+QUIVER_C_API void quiver_free_float_vectors(double** vectors, size_t* sizes, size_t count) {
     free_vectors_impl(vectors, sizes, count);
 }
 
-PSR_C_API void psr_free_string_vectors(char*** vectors, size_t* sizes, size_t count) {
+QUIVER_C_API void quiver_free_string_vectors(char*** vectors, size_t* sizes, size_t count) {
     if (!vectors) {
         return;
     }
@@ -425,46 +425,46 @@ PSR_C_API void psr_free_string_vectors(char*** vectors, size_t* sizes, size_t co
 
 // Set read functions (reuse vector helpers since sets have same return structure)
 
-PSR_C_API psr_error_t psr_database_read_set_integers(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_set_integers(quiver_database_t* db,
                                                      const char* collection,
                                                      const char* attribute,
                                                      int64_t*** out_sets,
                                                      size_t** out_sizes,
                                                      size_t* out_count) {
     if (!db || !collection || !attribute || !out_sets || !out_sizes || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         return read_vectors_impl(db->db.read_set_integers(collection, attribute), out_sets, out_sizes, out_count);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_set_floats(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_set_floats(quiver_database_t* db,
                                                    const char* collection,
                                                    const char* attribute,
                                                    double*** out_sets,
                                                    size_t** out_sizes,
                                                    size_t* out_count) {
     if (!db || !collection || !attribute || !out_sets || !out_sizes || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         return read_vectors_impl(db->db.read_set_floats(collection, attribute), out_sets, out_sizes, out_count);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_set_strings(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_set_strings(quiver_database_t* db,
                                                     const char* collection,
                                                     const char* attribute,
                                                     char**** out_sets,
                                                     size_t** out_sizes,
                                                     size_t* out_count) {
     if (!db || !collection || !attribute || !out_sets || !out_sizes || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto sets = db->db.read_set_strings(collection, attribute);
@@ -472,7 +472,7 @@ PSR_C_API psr_error_t psr_database_read_set_strings(psr_database_t* db,
         if (sets.empty()) {
             *out_sets = nullptr;
             *out_sizes = nullptr;
-            return PSR_OK;
+            return QUIVER_OK;
         }
         *out_sets = new char**[sets.size()];
         *out_sizes = new size_t[sets.size()];
@@ -489,22 +489,22 @@ PSR_C_API psr_error_t psr_database_read_set_strings(psr_database_t* db,
                 }
             }
         }
-        return PSR_OK;
+        return QUIVER_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
 // Read scalar by ID functions
 
-PSR_C_API psr_error_t psr_database_read_scalar_integers_by_id(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_scalar_integers_by_id(quiver_database_t* db,
                                                               const char* collection,
                                                               const char* attribute,
                                                               int64_t id,
                                                               int64_t* out_value,
                                                               int* out_has_value) {
     if (!db || !collection || !attribute || !out_value || !out_has_value) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto result = db->db.read_scalar_integers_by_id(collection, attribute, id);
@@ -514,20 +514,20 @@ PSR_C_API psr_error_t psr_database_read_scalar_integers_by_id(psr_database_t* db
         } else {
             *out_has_value = 0;
         }
-        return PSR_OK;
+        return QUIVER_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_scalar_floats_by_id(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_scalar_floats_by_id(quiver_database_t* db,
                                                             const char* collection,
                                                             const char* attribute,
                                                             int64_t id,
                                                             double* out_value,
                                                             int* out_has_value) {
     if (!db || !collection || !attribute || !out_value || !out_has_value) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto result = db->db.read_scalar_floats_by_id(collection, attribute, id);
@@ -537,20 +537,20 @@ PSR_C_API psr_error_t psr_database_read_scalar_floats_by_id(psr_database_t* db,
         } else {
             *out_has_value = 0;
         }
-        return PSR_OK;
+        return QUIVER_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_scalar_strings_by_id(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_scalar_strings_by_id(quiver_database_t* db,
                                                              const char* collection,
                                                              const char* attribute,
                                                              int64_t id,
                                                              char** out_value,
                                                              int* out_has_value) {
     if (!db || !collection || !attribute || !out_value || !out_has_value) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto result = db->db.read_scalar_strings_by_id(collection, attribute, id);
@@ -563,63 +563,63 @@ PSR_C_API psr_error_t psr_database_read_scalar_strings_by_id(psr_database_t* db,
             *out_value = nullptr;
             *out_has_value = 0;
         }
-        return PSR_OK;
+        return QUIVER_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
 // Read vector by ID functions
 
-PSR_C_API psr_error_t psr_database_read_vector_integers_by_id(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_vector_integers_by_id(quiver_database_t* db,
                                                               const char* collection,
                                                               const char* attribute,
                                                               int64_t id,
                                                               int64_t** out_values,
                                                               size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto values = db->db.read_vector_integers_by_id(collection, attribute, id);
         return read_scalars_impl(values, out_values, out_count);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_vector_floats_by_id(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_vector_floats_by_id(quiver_database_t* db,
                                                             const char* collection,
                                                             const char* attribute,
                                                             int64_t id,
                                                             double** out_values,
                                                             size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto values = db->db.read_vector_floats_by_id(collection, attribute, id);
         return read_scalars_impl(values, out_values, out_count);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_vector_strings_by_id(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_vector_strings_by_id(quiver_database_t* db,
                                                              const char* collection,
                                                              const char* attribute,
                                                              int64_t id,
                                                              char*** out_values,
                                                              size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto values = db->db.read_vector_strings_by_id(collection, attribute, id);
         *out_count = values.size();
         if (values.empty()) {
             *out_values = nullptr;
-            return PSR_OK;
+            return QUIVER_OK;
         }
         *out_values = new char*[values.size()];
         for (size_t i = 0; i < values.size(); ++i) {
@@ -627,63 +627,63 @@ PSR_C_API psr_error_t psr_database_read_vector_strings_by_id(psr_database_t* db,
             std::copy(values[i].begin(), values[i].end(), (*out_values)[i]);
             (*out_values)[i][values[i].size()] = '\0';
         }
-        return PSR_OK;
+        return QUIVER_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
 // Read set by ID functions
 
-PSR_C_API psr_error_t psr_database_read_set_integers_by_id(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_set_integers_by_id(quiver_database_t* db,
                                                            const char* collection,
                                                            const char* attribute,
                                                            int64_t id,
                                                            int64_t** out_values,
                                                            size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto values = db->db.read_set_integers_by_id(collection, attribute, id);
         return read_scalars_impl(values, out_values, out_count);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_set_floats_by_id(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_set_floats_by_id(quiver_database_t* db,
                                                          const char* collection,
                                                          const char* attribute,
                                                          int64_t id,
                                                          double** out_values,
                                                          size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto values = db->db.read_set_floats_by_id(collection, attribute, id);
         return read_scalars_impl(values, out_values, out_count);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_set_strings_by_id(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_set_strings_by_id(quiver_database_t* db,
                                                           const char* collection,
                                                           const char* attribute,
                                                           int64_t id,
                                                           char*** out_values,
                                                           size_t* out_count) {
     if (!db || !collection || !attribute || !out_values || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto values = db->db.read_set_strings_by_id(collection, attribute, id);
         *out_count = values.size();
         if (values.empty()) {
             *out_values = nullptr;
-            return PSR_OK;
+            return QUIVER_OK;
         }
         *out_values = new char*[values.size()];
         for (size_t i = 0; i < values.size(); ++i) {
@@ -691,122 +691,122 @@ PSR_C_API psr_error_t psr_database_read_set_strings_by_id(psr_database_t* db,
             std::copy(values[i].begin(), values[i].end(), (*out_values)[i]);
             (*out_values)[i][values[i].size()] = '\0';
         }
-        return PSR_OK;
+        return QUIVER_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_read_element_ids(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_element_ids(quiver_database_t* db,
                                                     const char* collection,
                                                     int64_t** out_ids,
                                                     size_t* out_count) {
     if (!db || !collection || !out_ids || !out_count) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         return read_scalars_impl(db->db.read_element_ids(collection), out_ids, out_count);
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
 // Update scalar functions
 
-PSR_C_API psr_error_t psr_database_update_scalar_integer(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_update_scalar_integer(quiver_database_t* db,
                                                          const char* collection,
                                                          const char* attribute,
                                                          int64_t id,
                                                          int64_t value) {
     if (!db || !collection || !attribute) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         db->db.update_scalar_integer(collection, attribute, id, value);
-        return PSR_OK;
+        return QUIVER_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_update_scalar_float(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_update_scalar_float(quiver_database_t* db,
                                                        const char* collection,
                                                        const char* attribute,
                                                        int64_t id,
                                                        double value) {
     if (!db || !collection || !attribute) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         db->db.update_scalar_float(collection, attribute, id, value);
-        return PSR_OK;
+        return QUIVER_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_update_scalar_string(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_update_scalar_string(quiver_database_t* db,
                                                         const char* collection,
                                                         const char* attribute,
                                                         int64_t id,
                                                         const char* value) {
     if (!db || !collection || !attribute || !value) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         db->db.update_scalar_string(collection, attribute, id, value);
-        return PSR_OK;
+        return QUIVER_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
 // Update vector functions
 
-PSR_C_API psr_error_t psr_database_update_vector_integers(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_update_vector_integers(quiver_database_t* db,
                                                           const char* collection,
                                                           const char* attribute,
                                                           int64_t id,
                                                           const int64_t* values,
                                                           size_t count) {
     if (!db || !collection || !attribute || (count > 0 && !values)) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         std::vector<int64_t> vec(values, values + count);
         db->db.update_vector_integers(collection, attribute, id, vec);
-        return PSR_OK;
+        return QUIVER_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_update_vector_floats(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_update_vector_floats(quiver_database_t* db,
                                                         const char* collection,
                                                         const char* attribute,
                                                         int64_t id,
                                                         const double* values,
                                                         size_t count) {
     if (!db || !collection || !attribute || (count > 0 && !values)) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         std::vector<double> vec(values, values + count);
         db->db.update_vector_floats(collection, attribute, id, vec);
-        return PSR_OK;
+        return QUIVER_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_update_vector_strings(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_update_vector_strings(quiver_database_t* db,
                                                          const char* collection,
                                                          const char* attribute,
                                                          int64_t id,
                                                          const char* const* values,
                                                          size_t count) {
     if (!db || !collection || !attribute || (count > 0 && !values)) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         std::vector<std::string> vec;
@@ -815,58 +815,58 @@ PSR_C_API psr_error_t psr_database_update_vector_strings(psr_database_t* db,
             vec.emplace_back(values[i]);
         }
         db->db.update_vector_strings(collection, attribute, id, vec);
-        return PSR_OK;
+        return QUIVER_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
 // Update set functions
 
-PSR_C_API psr_error_t psr_database_update_set_integers(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_update_set_integers(quiver_database_t* db,
                                                        const char* collection,
                                                        const char* attribute,
                                                        int64_t id,
                                                        const int64_t* values,
                                                        size_t count) {
     if (!db || !collection || !attribute || (count > 0 && !values)) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         std::vector<int64_t> vec(values, values + count);
         db->db.update_set_integers(collection, attribute, id, vec);
-        return PSR_OK;
+        return QUIVER_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_update_set_floats(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_update_set_floats(quiver_database_t* db,
                                                      const char* collection,
                                                      const char* attribute,
                                                      int64_t id,
                                                      const double* values,
                                                      size_t count) {
     if (!db || !collection || !attribute || (count > 0 && !values)) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         std::vector<double> vec(values, values + count);
         db->db.update_set_floats(collection, attribute, id, vec);
-        return PSR_OK;
+        return QUIVER_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_update_set_strings(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_update_set_strings(quiver_database_t* db,
                                                       const char* collection,
                                                       const char* attribute,
                                                       int64_t id,
                                                       const char* const* values,
                                                       size_t count) {
     if (!db || !collection || !attribute || (count > 0 && !values)) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         std::vector<std::string> vec;
@@ -875,50 +875,50 @@ PSR_C_API psr_error_t psr_database_update_set_strings(psr_database_t* db,
             vec.emplace_back(values[i]);
         }
         db->db.update_set_strings(collection, attribute, id, vec);
-        return PSR_OK;
+        return QUIVER_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-PSR_C_API psr_error_t psr_database_get_attribute_type(psr_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_get_attribute_type(quiver_database_t* db,
                                                       const char* collection,
                                                       const char* attribute,
-                                                      psr_data_structure_t* out_data_structure,
-                                                      psr_data_type_t* out_data_type) {
+                                                      quiver_data_structure_t* out_data_structure,
+                                                      quiver_data_type_t* out_data_type) {
     if (!db || !collection || !attribute || !out_data_structure || !out_data_type) {
-        return PSR_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto attr_type = db->db.get_attribute_type(collection, attribute);
 
         switch (attr_type.data_structure) {
-        case psr::DataStructure::Scalar:
-            *out_data_structure = PSR_DATA_STRUCTURE_SCALAR;
+        case quiver::DataStructure::Scalar:
+            *out_data_structure = QUIVER_DATA_STRUCTURE_SCALAR;
             break;
-        case psr::DataStructure::Vector:
-            *out_data_structure = PSR_DATA_STRUCTURE_VECTOR;
+        case quiver::DataStructure::Vector:
+            *out_data_structure = QUIVER_DATA_STRUCTURE_VECTOR;
             break;
-        case psr::DataStructure::Set:
-            *out_data_structure = PSR_DATA_STRUCTURE_SET;
+        case quiver::DataStructure::Set:
+            *out_data_structure = QUIVER_DATA_STRUCTURE_SET;
             break;
         }
 
         switch (attr_type.data_type) {
-        case psr::DataType::Integer:
-            *out_data_type = PSR_DATA_TYPE_INTEGER;
+        case quiver::DataType::Integer:
+            *out_data_type = QUIVER_DATA_TYPE_INTEGER;
             break;
-        case psr::DataType::Real:
-            *out_data_type = PSR_DATA_TYPE_FLOAT;
+        case quiver::DataType::Real:
+            *out_data_type = QUIVER_DATA_TYPE_FLOAT;
             break;
-        case psr::DataType::Text:
-            *out_data_type = PSR_DATA_TYPE_STRING;
+        case quiver::DataType::Text:
+            *out_data_type = QUIVER_DATA_TYPE_STRING;
             break;
         }
 
-        return PSR_OK;
+        return QUIVER_OK;
     } catch (const std::exception&) {
-        return PSR_ERROR_DATABASE;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 

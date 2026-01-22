@@ -1,25 +1,25 @@
-#ifndef PSR_DATABASE_H
-#define PSR_DATABASE_H
+#ifndef QUIVER_DATABASE_H
+#define QUIVER_DATABASE_H
 
 #include "export.h"
-#include "psr/attribute_type.h"
-#include "psr/element.h"
-#include "psr/log_level.h"
-#include "psr/result.h"
+#include "quiver/attribute_type.h"
+#include "quiver/element.h"
+#include "quiver/log_level.h"
+#include "quiver/result.h"
 
 #include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
-namespace psr {
+namespace quiver {
 
-struct PSR_API DatabaseOptions {
+struct QUIVER_API DatabaseOptions {
     bool read_only = false;
     LogLevel console_level = LogLevel::info;
 };
 
-class PSR_API Database {
+class QUIVER_API Database {
 public:
     explicit Database(const std::string& path, const DatabaseOptions& options = DatabaseOptions());
     ~Database();
@@ -158,6 +158,6 @@ private:
     void rollback();
 };
 
-}  // namespace psr
+}  // namespace quiver
 
-#endif  // PSR_DATABASE_H
+#endif  // QUIVER_DATABASE_H

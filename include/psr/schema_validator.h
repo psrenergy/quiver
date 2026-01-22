@@ -1,5 +1,5 @@
-#ifndef PSR_SCHEMA_VALIDATOR_H
-#define PSR_SCHEMA_VALIDATOR_H
+#ifndef QUIVER_SCHEMA_VALIDATOR_H
+#define QUIVER_SCHEMA_VALIDATOR_H
 
 #include "export.h"
 #include "schema.h"
@@ -7,15 +7,15 @@
 #include <string>
 #include <vector>
 
-namespace psr {
+namespace quiver {
 
-// Validates that a schema follows PSR conventions:
+// Validates that a schema follows QUIVER conventions:
 // - Configuration table exists
 // - Collections have id/label with proper constraints
 // - Vector tables have proper structure and FK constraints
 // - Set tables have proper UNIQUE constraints
 // - No duplicate attributes across collection and its vector tables
-class PSR_API SchemaValidator {
+class QUIVER_API SchemaValidator {
 public:
     explicit SchemaValidator(const Schema& schema);
 
@@ -39,6 +39,6 @@ private:
     void validation_error(const std::string& message);
 };
 
-}  // namespace psr
+}  // namespace quiver
 
-#endif  // PSR_SCHEMA_VALIDATOR_H
+#endif  // QUIVER_SCHEMA_VALIDATOR_H

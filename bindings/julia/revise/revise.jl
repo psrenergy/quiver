@@ -6,4 +6,4 @@ using Revise
 Pkg.activate(dirname(@__DIR__))
 Pkg.instantiate()
 
-using PSRDatabase
+using QUIVERDatabase

@@ -1,6 +1,6 @@
 ---
 name: conventions
-description: SQL schema conventions for PSRDatabase. When writing SQL schemas for PSRDatabase, follow these conventions strictly.
+description: SQL schema conventions for QUIVERDatabase. When writing SQL schemas for QUIVERDatabase, follow these conventions strictly.
 ---
 
 # Collections (Tables)

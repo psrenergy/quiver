@@ -1,9 +1,9 @@
-#include "psr/schema.h"
+#include "quiver/schema.h"
 
 #include <sqlite3.h>
 #include <stdexcept>
 
-namespace psr {
+namespace quiver {
 
 // TableDefinition methods
 
@@ -286,4 +286,4 @@ std::vector<Index> Schema::query_indexes(sqlite3* db, const std::string& table) 
     return indexes;
 }
 
-}  // namespace psr
+}  // namespace quiver

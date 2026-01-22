@@ -7,7 +7,7 @@ import 'ffi/library_loader.dart';
 import 'database.dart';
 import 'exceptions.dart';
 
-/// A Lua script runner for executing Lua scripts with access to a PSR Database.
+/// A Lua script runner for executing Lua scripts with access to a QUIVER Database.
 ///
 /// Use [LuaRunner] to execute Lua scripts that can interact with the database
 /// via the `db` global object exposed to the script.
@@ -23,12 +23,12 @@ import 'exceptions.dart';
 /// db.close();
 /// ```
 class LuaRunner {
-  Pointer<psr_lua_runner_t> _ptr;
+  Pointer<quiver_lua_runner_t> _ptr;
   bool _isDisposed = false;
 
   /// Creates a new LuaRunner for the given database.
   LuaRunner(Database db) : _ptr = nullptr {
-    _ptr = bindings.psr_lua_runner_new(db.ptr);
+    _ptr = bindings.quiver_lua_runner_new(db.ptr);
     if (_ptr == nullptr) {
       throw const DatabaseOperationException('Failed to create LuaRunner');
     }
@@ -53,13 +53,13 @@ class LuaRunner {
 
     final arena = Arena();
     try {
-      final err = bindings.psr_lua_runner_run(
+      final err = bindings.quiver_lua_runner_run(
         _ptr,
         script.toNativeUtf8(allocator: arena).cast(),
       );
 
-      if (err != psr_error_t.PSR_OK) {
-        final errorPtr = bindings.psr_lua_runner_get_error(_ptr);
+      if (err != quiver_error_t.QUIVER_OK) {
+        final errorPtr = bindings.quiver_lua_runner_get_error(_ptr);
         if (errorPtr != nullptr) {
           final errorMsg = errorPtr.cast<Utf8>().toDartString();
           throw LuaException('Lua error: $errorMsg');
@@ -75,7 +75,7 @@ class LuaRunner {
   /// Disposes the LuaRunner and frees native resources.
   void dispose() {
     if (_isDisposed) return;
-    bindings.psr_lua_runner_free(_ptr);
+    bindings.quiver_lua_runner_free(_ptr);
     _isDisposed = true;
   }
 }

@@ -1,10 +1,10 @@
-#include "psr/database.h"
+#include "quiver/database.h"
 
-#include "psr/migrations.h"
-#include "psr/result.h"
-#include "psr/schema.h"
-#include "psr/schema_validator.h"
-#include "psr/type_validator.h"
+#include "quiver/migrations.h"
+#include "quiver/result.h"
+#include "quiver/schema.h"
+#include "quiver/schema_validator.h"
+#include "quiver/type_validator.h"
 
 #include <atomic>
 #include <filesystem>
@@ -26,29 +26,29 @@ void ensure_sqlite3_initialized() {
     std::call_once(sqlite3_init_flag, []() { sqlite3_initialize(); });
 }
 
-spdlog::level::level_enum to_spdlog_level(psr::LogLevel level) {
+spdlog::level::level_enum to_spdlog_level(quiver::LogLevel level) {
     switch (level) {
-    case psr::LogLevel::debug:
+    case quiver::LogLevel::debug:
         return spdlog::level::debug;
-    case psr::LogLevel::info:
+    case quiver::LogLevel::info:
         return spdlog::level::info;
-    case psr::LogLevel::warn:
+    case quiver::LogLevel::warn:
         return spdlog::level::warn;
-    case psr::LogLevel::error:
+    case quiver::LogLevel::error:
         return spdlog::level::err;
-    case psr::LogLevel::off:
+    case quiver::LogLevel::off:
         return spdlog::level::off;
     default:
         return spdlog::level::info;
     }
 }
 
-std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_path, psr::LogLevel console_level) {
+std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_path, quiver::LogLevel console_level) {
     namespace fs = std::filesystem;
 
     // Generate unique logger name for multiple Database instances
     auto id = g_logger_counter.fetch_add(1);
-    auto logger_name = "psr_database_" + std::to_string(id);
+    auto logger_name = "quiver_database_" + std::to_string(id);
 
     // Create console sink (thread-safe)
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
@@ -71,7 +71,7 @@ std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_pat
         // Create file sink (thread-safe)
         std::shared_ptr<spdlog::sinks::basic_file_sink_mt> file_sink = nullptr;
         try {
-            const auto log_file_path = (db_dir / "psr_database.log").string();
+            const auto log_file_path = (db_dir / "quiver_database.log").string();
             file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_file_path, true);
             file_sink->set_level(spdlog::level::debug);
 
@@ -92,7 +92,7 @@ std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_pat
 
 }  // anonymous namespace
 
-namespace psr {
+namespace quiver {
 
 struct Database::Impl {
     sqlite3* db = nullptr;
@@ -1408,4 +1408,4 @@ AttributeType Database::get_attribute_type(const std::string& collection, const 
     throw std::runtime_error("Attribute '" + attribute + "' not found in collection '" + collection + "'");
 }
 
-}  // namespace psr
+}  // namespace quiver

@@ -1,18 +1,18 @@
-#ifndef PSR_EXPORT_H
-#define PSR_EXPORT_H
+#ifndef QUIVER_EXPORT_H
+#define QUIVER_EXPORT_H
 
-#ifdef PSR_DATABASE_STATIC
-#define PSR_API
+#ifdef QUIVER_DATABASE_STATIC
+#define QUIVER_API
 #else
 #ifdef _WIN32
-#ifdef PSR_DATABASE_EXPORTS
-#define PSR_API __declspec(dllexport)
+#ifdef QUIVER_DATABASE_EXPORTS
+#define QUIVER_API __declspec(dllexport)
 #else
-#define PSR_API __declspec(dllimport)
+#define QUIVER_API __declspec(dllimport)
 #endif
 #else
-#define PSR_API __attribute__((visibility("default")))
+#define QUIVER_API __attribute__((visibility("default")))
 #endif
 #endif
 
-#endif  // PSR_EXPORT_H
+#endif  // QUIVER_EXPORT_H

@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 REM ============================================================
-REM Build and Test All - PSR Database
+REM Build and Test All - QUIVER Database
 REM ============================================================
 REM Builds C++ library, C API, and runs all tests:
 REM   - C++ unit tests
@@ -36,7 +36,7 @@ goto parse_args
 
 echo.
 echo ============================================================
-echo  PSR Database - Build All (%BUILD_TYPE%)
+echo  QUIVER Database - Build All (%BUILD_TYPE%)
 echo ============================================================
 echo.
 
@@ -46,7 +46,7 @@ REM ============================================================
 echo [1/5] Building C++ library and C API...
 echo.
 
-cmake -B build -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DPSR_BUILD_TESTS=ON -DPSR_BUILD_C_API=ON
+cmake -B build -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DQUIVER_BUILD_TESTS=ON -DQUIVER_BUILD_C_API=ON
 if errorlevel 1 (
     echo.
     echo ERROR: CMake configuration failed
@@ -70,7 +70,7 @@ REM ============================================================
 echo [2/5] Running C++ tests...
 echo.
 
-"%ROOT_DIR%build\bin\psr_database_tests.exe"
+"%ROOT_DIR%build\bin\quiver_database_tests.exe"
 if errorlevel 1 (
     echo.
     echo ERROR: C++ tests failed
@@ -87,7 +87,7 @@ REM ============================================================
 echo [3/5] Running C API tests...
 echo.
 
-"%ROOT_DIR%build\bin\psr_database_c_tests.exe"
+"%ROOT_DIR%build\bin\quiver_database_c_tests.exe"
 if errorlevel 1 (
     echo.
     echo ERROR: C API tests failed

@@ -59,7 +59,7 @@ Testing/
 
 .cache/
 
-PSRDatabase.jl/
+QUIVERDatabase.jl/
 *.log
 *.sqlite
 nul

@@ -1,10 +1,10 @@
-#ifndef PSR_LOG_LEVEL_H
-#define PSR_LOG_LEVEL_H
+#ifndef QUIVER_LOG_LEVEL_H
+#define QUIVER_LOG_LEVEL_H
 
-namespace psr {
+namespace quiver {
 
 enum class LogLevel { debug, info, warn, error, off };
 
-}  // namespace psr
+}  // namespace quiver
 
-#endif  // PSR_LOG_LEVEL_H
+#endif  // QUIVER_LOG_LEVEL_H

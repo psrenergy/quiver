@@ -1,5 +1,5 @@
-#ifndef PSR_SCHEMA_H
-#define PSR_SCHEMA_H
+#ifndef QUIVER_SCHEMA_H
+#define QUIVER_SCHEMA_H
 
 #include "data_type.h"
 #include "export.h"
@@ -11,7 +11,7 @@
 
 struct sqlite3;
 
-namespace psr {
+namespace quiver {
 
 struct ColumnDefinition {
     std::string name;
@@ -45,7 +45,7 @@ struct TableDefinition {
     const ColumnDefinition* get_column(const std::string& column) const;
 };
 
-class PSR_API Schema {
+class QUIVER_API Schema {
 public:
     // Factory: loads schema from database
     static Schema from_database(sqlite3* db);
@@ -86,6 +86,6 @@ private:
     static std::vector<Index> query_indexes(sqlite3* db, const std::string& table);
 };
 
-}  // namespace psr
+}  // namespace quiver
 
-#endif  // PSR_SCHEMA_H
+#endif  // QUIVER_SCHEMA_H

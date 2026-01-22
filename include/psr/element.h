@@ -1,5 +1,5 @@
-#ifndef PSR_ELEMENT_H
-#define PSR_ELEMENT_H
+#ifndef QUIVER_ELEMENT_H
+#define QUIVER_ELEMENT_H
 
 #include "export.h"
 #include "value.h"
@@ -8,9 +8,9 @@
 #include <string>
 #include <vector>
 
-namespace psr {
+namespace quiver {
 
-class PSR_API Element {
+class QUIVER_API Element {
 public:
     Element() = default;
 
@@ -42,6 +42,6 @@ private:
     std::map<std::string, std::vector<Value>> arrays_;
 };
 
-}  // namespace psr
+}  // namespace quiver
 
-#endif  // PSR_ELEMENT_H
+#endif  // QUIVER_ELEMENT_H

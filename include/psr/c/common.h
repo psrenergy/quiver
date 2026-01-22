@@ -1,5 +1,5 @@
-#ifndef PSR_C_COMMON_H
-#define PSR_C_COMMON_H
+#ifndef QUIVER_C_COMMON_H
+#define QUIVER_C_COMMON_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -10,32 +10,32 @@ extern "C" {
 
 // Platform-specific export macros
 #ifdef _WIN32
-#ifdef PSR_DATABASE_C_EXPORTS
-#define PSR_C_API __declspec(dllexport)
+#ifdef QUIVER_DATABASE_C_EXPORTS
+#define QUIVER_C_API __declspec(dllexport)
 #else
-#define PSR_C_API __declspec(dllimport)
+#define QUIVER_C_API __declspec(dllimport)
 #endif
 #else
-#define PSR_C_API __attribute__((visibility("default")))
+#define QUIVER_C_API __attribute__((visibility("default")))
 #endif
 
 // Error codes
 typedef enum {
-    PSR_OK = 0,
-    PSR_ERROR_INVALID_ARGUMENT = -1,
-    PSR_ERROR_DATABASE = -2,
-    PSR_ERROR_MIGRATION = -3,
-    PSR_ERROR_SCHEMA = -4,
-    PSR_ERROR_CREATE_ELEMENT = -5,
-    PSR_ERROR_NOT_FOUND = -6,
-} psr_error_t;
+    QUIVER_OK = 0,
+    QUIVER_ERROR_INVALID_ARGUMENT = -1,
+    QUIVER_ERROR_DATABASE = -2,
+    QUIVER_ERROR_MIGRATION = -3,
+    QUIVER_ERROR_SCHEMA = -4,
+    QUIVER_ERROR_CREATE_ELEMENT = -5,
+    QUIVER_ERROR_NOT_FOUND = -6,
+} quiver_error_t;
 
 // Utility functions
-PSR_C_API const char* psr_error_string(psr_error_t error);
-PSR_C_API const char* psr_version(void);
+QUIVER_C_API const char* quiver_error_string(quiver_error_t error);
+QUIVER_C_API const char* quiver_version(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // PSR_C_COMMON_H
+#endif  // QUIVER_C_COMMON_H

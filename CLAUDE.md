@@ -1,21 +1,21 @@
-# Project: PSR Database
+# Project: QUIVER Database
 
 SQLite wrapper library with C++ core, C API for FFI, and language bindings (Julia, Dart).
 
 ## Architecture
 
 ```
-include/psr/           # C++ public headers
+include/quiver/           # C++ public headers
   database.h           # Database class - main API
   element.h            # Element builder for create operations
   lua_runner.h         # Lua scripting support
-include/psr/c/         # C API headers (for FFI)
+include/quiver/c/         # C API headers (for FFI)
   database.h
   element.h
   lua_runner.h
 src/                   # Implementation
-bindings/julia/        # Julia bindings (PSRDatabase.jl)
-bindings/dart/         # Dart bindings (psr_database)
+bindings/julia/        # Julia bindings (QUIVERDatabase.jl)
+bindings/dart/         # Dart bindings (quiver_database)
 tests/                 # C++ tests and shared SQL schemas
 ```
 
@@ -49,8 +49,8 @@ test-all.bat             # Run all tests (assumes already built)
 
 C++ tests:
 ```bash
-./build/bin/psr_database_tests.exe      # Core library tests
-./build/bin/psr_database_c_tests.exe    # C API tests
+./build/bin/quiver_database_tests.exe      # Core library tests
+./build/bin/quiver_database_c_tests.exe    # C API tests
 ```
 
 Test files are organized by functionality:
@@ -121,7 +121,7 @@ bindings/dart/generator/generator.bat    # Dart
   ```
 
 ### Dart Notes
-- `libpsr_database_c.dll` depends on `libpsr_database.dll` - both must be in PATH
+- `libquiver_database_c.dll` depends on `libquiver_database.dll` - both must be in PATH
 - test.bat handles PATH setup automatically
 
 ## Schema Conventions

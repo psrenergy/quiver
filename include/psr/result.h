@@ -1,14 +1,14 @@
-#ifndef PSR_RESULT_H
-#define PSR_RESULT_H
+#ifndef QUIVER_RESULT_H
+#define QUIVER_RESULT_H
 
 #include "export.h"
 #include "row.h"
 
 #include <vector>
 
-namespace psr {
+namespace quiver {
 
-class PSR_API Result {
+class QUIVER_API Result {
 public:
     Result();  // Default constructor for empty result
     Result(std::vector<std::string> columns, std::vector<Row> rows);
@@ -30,6 +30,6 @@ private:
     std::vector<Row> rows_;
 };
 
-}  // namespace psr
+}  // namespace quiver
 
-#endif  // PSR_RESULT_H
+#endif  // QUIVER_RESULT_H

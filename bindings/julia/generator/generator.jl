@@ -8,9 +8,9 @@ using Libdl
 cd(@__DIR__)
 
 database_dir = joinpath(@__DIR__, "..", "..", "..")
-include_dir = joinpath(database_dir, "include", "psr", "c")
+include_dir = joinpath(database_dir, "include", "quiver", "c")
 
-Libdl.dlopen(joinpath(database_dir, "build", "bin", "libpsr_database_c.dll"))
+Libdl.dlopen(joinpath(database_dir, "build", "bin", "libquiver_database_c.dll"))
 
 headers = [
     joinpath(include_dir, header) for

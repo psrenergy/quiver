@@ -1,8 +1,8 @@
-#include "psr/type_validator.h"
+#include "quiver/type_validator.h"
 
 #include <stdexcept>
 
-namespace psr {
+namespace quiver {
 
 TypeValidator::TypeValidator(const Schema& schema) : schema_(schema) {}
 
@@ -50,4 +50,4 @@ void TypeValidator::validate_value(const std::string& context, DataType expected
         value);
 }
 
-}  // namespace psr
+}  // namespace quiver
