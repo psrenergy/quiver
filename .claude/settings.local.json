@@ -8,7 +8,11 @@
       "mcp__context7__query-docs",
       "WebFetch(domain:www.etiennetheodore.com)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:sol2.readthedocs.io)"
+      "WebFetch(domain:sol2.readthedocs.io)",
+      "WebFetch(domain:dart.dev)",
+      "WebFetch(domain:pub.dev)",
+      "WebFetch(domain:www.simonbinder.eu)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }
