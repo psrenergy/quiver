@@ -1,4 +1,4 @@
-# Project: QUIVER Database
+# Project: Quiver
 
 SQLite wrapper library with C++ core, C API for FFI, and language bindings (Julia, Dart).
 

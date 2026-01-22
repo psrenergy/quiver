@@ -7,7 +7,7 @@
 // ignore_for_file: type=lint
 import 'dart:ffi' as ffi;
 
-/// FFI bindings for QUIVER Database C API
+/// FFI bindings for Quiver C API
 class QuiverDatabaseBindings {
   /// Holds the symbol lookup function.
   final ffi.Pointer<T> Function<T extends ffi.NativeType>(String symbolName) _lookup;

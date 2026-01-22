@@ -1,5 +1,5 @@
-name: quiver
-description: Dart FFI bindings for QUIVER Database - SQLite wrapper library
+name: quiver_db
+description: Dart bindings for Quiver
 version: 0.1.0
 
 environment:
@@ -16,7 +16,7 @@ dev_dependencies:
 
 ffigen:
   name: QuiverDatabaseBindings
-  description: FFI bindings for QUIVER Database C API
+  description: FFI bindings for Quiver C API
   output: 'lib/src/ffi/bindings.dart'
   headers:
     entry-points:

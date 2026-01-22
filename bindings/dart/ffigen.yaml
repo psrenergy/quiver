@@ -1,5 +1,5 @@
 name: QuiverDatabaseBindings
-description: FFI bindings for QUIVER Database C API
+description: FFI bindings for Quiver C API
 output: 'lib/src/ffi/bindings.dart'
 
 headers:

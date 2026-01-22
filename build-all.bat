@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 REM ============================================================
-REM Build and Test All - QUIVER Database
+REM Build and Test All - Quiver
 REM ============================================================
 REM Builds C++ library, C API, and runs all tests:
 REM   - C++ unit tests
@@ -36,7 +36,7 @@ goto parse_args
 
 echo.
 echo ============================================================
-echo  QUIVER Database - Build All (%BUILD_TYPE%)
+echo  Quiver - Build All (%BUILD_TYPE%)
 echo ============================================================
 echo.
 

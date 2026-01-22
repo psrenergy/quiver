@@ -7,7 +7,7 @@ import 'ffi/library_loader.dart';
 import 'element.dart';
 import 'exceptions.dart';
 
-/// A wrapper for the QUIVER Database.
+/// A wrapper for the Quiver.
 ///
 /// Use [Database.fromSchema] to create a new database from a SQL schema file.
 /// After use, call [close] to free native resources.

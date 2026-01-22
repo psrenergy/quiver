@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 REM ============================================================
-REM Test All - QUIVER Database
+REM Test All - Quiver
 REM ============================================================
 REM Runs all tests (assumes already built):
 REM   - C++ unit tests
@@ -15,7 +15,7 @@ SET ROOT_DIR=%~dp0
 
 echo.
 echo ============================================================
-echo  QUIVER Database - Test All
+echo  Quiver - Test All
 echo ============================================================
 echo.
 

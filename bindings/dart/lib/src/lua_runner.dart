@@ -7,7 +7,7 @@ import 'ffi/library_loader.dart';
 import 'database.dart';
 import 'exceptions.dart';
 
-/// A Lua script runner for executing Lua scripts with access to a QUIVER Database.
+/// A Lua script runner for executing Lua scripts with access to a Quiver.
 ///
 /// Use [LuaRunner] to execute Lua scripts that can interact with the database
 /// via the `db` global object exposed to the script.

@@ -1,4 +1,4 @@
-/// Base exception for QUIVER Database errors.
+/// Base exception for Quiver errors.
 sealed class DatabaseException implements Exception {
   final String message;
   const DatabaseException(this.message);
