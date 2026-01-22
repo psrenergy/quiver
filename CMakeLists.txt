@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(quiver
-    VERSION 1.0.0
+    VERSION 0.2.0
     DESCRIPTION "Cross-platform C++ SQLite wrapper library"
     LANGUAGES CXX C
 )
