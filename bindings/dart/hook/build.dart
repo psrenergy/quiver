@@ -14,6 +14,14 @@ void main(List<String> args) async {
     // CMake source is at project root (two levels up from bindings/dart)
     final sourceDir = input.packageRoot.resolve('../../');
 
+    // Select generator based on target OS
+    final targetOS = input.config.code.targetOS;
+    final generator = switch (targetOS) {
+      OS.windows => Generator.vs2019,
+      OS.macOS => Generator.xcode,
+      _ => Generator.ninja,
+    };
+
     final builder = CMakeBuilder.create(
       name: 'quiver_native',
       sourceDir: sourceDir,
@@ -25,8 +33,7 @@ void main(List<String> args) async {
       },
       // Dart SDK always uses release mode
       buildMode: BuildMode.release,
-      // Use Visual Studio 2019 generator on Windows
-      generator: Generator.vs2019,
+      generator: generator,
     );
 
     await builder.run(input: input, output: output, logger: logger);
