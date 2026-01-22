@@ -17,7 +17,7 @@ void main(List<String> args) async {
     // Select generator based on target OS
     final targetOS = input.config.code.targetOS;
     final generator = switch (targetOS) {
-      OS.windows => Generator.vs2019,
+      OS.windows => Generator.vs2022,
       OS.macOS => Generator.xcode,
       _ => Generator.ninja,
     };
