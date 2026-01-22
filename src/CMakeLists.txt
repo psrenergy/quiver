@@ -62,7 +62,7 @@ add_library(quiver::database ALIAS quiver_database)
 # Installation rules
 include(GNUInstallDirs)
 install(TARGETS quiver_database
-    EXPORT quiver_databaseTargets
+    EXPORT quiverTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -103,7 +103,7 @@ if(QUIVER_BUILD_C_API)
     add_library(quiver::database_c ALIAS quiver_database_c)
 
     install(TARGETS quiver_database_c
-        EXPORT quiver_databaseTargets
+        EXPORT quiverTargets
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
