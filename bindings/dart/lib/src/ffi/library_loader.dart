@@ -9,12 +9,12 @@ String get _libraryName {
   return 'libquiver_database_c.so'; // Linux and others
 }
 
-PsrDatabaseBindings? _cachedBindings;
+QuiverDatabaseBindings? _cachedBindings;
 DynamicLibrary? _cachedLibrary;
 
 /// Gets the FFI bindings, loading the library if needed.
-PsrDatabaseBindings get bindings {
-  _cachedBindings ??= PsrDatabaseBindings(library);
+QuiverDatabaseBindings get bindings {
+  _cachedBindings ??= QuiverDatabaseBindings(library);
   return _cachedBindings!;
 }
 

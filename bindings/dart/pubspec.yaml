@@ -15,7 +15,7 @@ dev_dependencies:
   test: ^1.24.0
 
 ffigen:
-  name: PsrDatabaseBindings
+  name: QuiverDatabaseBindings
   description: FFI bindings for QUIVER Database C API
   output: 'lib/src/ffi/bindings.dart'
   headers:
