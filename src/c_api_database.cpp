@@ -1088,4 +1088,76 @@ QUIVER_C_API void quiver_free_set_metadata(quiver_set_metadata_t* metadata) {
     metadata->attribute_count = 0;
 }
 
+QUIVER_C_API quiver_error_t quiver_database_list_scalar_attributes(quiver_database_t* db,
+                                                                   const char* collection,
+                                                                   char*** out_attributes,
+                                                                   size_t* out_count) {
+    if (!db || !collection || !out_attributes || !out_count) {
+        return QUIVER_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        auto attrs = db->db.list_scalar_attributes(collection);
+        *out_count = attrs.size();
+        if (attrs.empty()) {
+            *out_attributes = nullptr;
+            return QUIVER_OK;
+        }
+        *out_attributes = new char*[attrs.size()];
+        for (size_t i = 0; i < attrs.size(); ++i) {
+            (*out_attributes)[i] = strdup_safe(attrs[i]);
+        }
+        return QUIVER_OK;
+    } catch (const std::exception&) {
+        return QUIVER_ERROR_DATABASE;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_database_list_vector_groups(quiver_database_t* db,
+                                                               const char* collection,
+                                                               char*** out_groups,
+                                                               size_t* out_count) {
+    if (!db || !collection || !out_groups || !out_count) {
+        return QUIVER_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        auto groups = db->db.list_vector_groups(collection);
+        *out_count = groups.size();
+        if (groups.empty()) {
+            *out_groups = nullptr;
+            return QUIVER_OK;
+        }
+        *out_groups = new char*[groups.size()];
+        for (size_t i = 0; i < groups.size(); ++i) {
+            (*out_groups)[i] = strdup_safe(groups[i]);
+        }
+        return QUIVER_OK;
+    } catch (const std::exception&) {
+        return QUIVER_ERROR_DATABASE;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_database_list_set_groups(quiver_database_t* db,
+                                                            const char* collection,
+                                                            char*** out_groups,
+                                                            size_t* out_count) {
+    if (!db || !collection || !out_groups || !out_count) {
+        return QUIVER_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        auto groups = db->db.list_set_groups(collection);
+        *out_count = groups.size();
+        if (groups.empty()) {
+            *out_groups = nullptr;
+            return QUIVER_OK;
+        }
+        *out_groups = new char*[groups.size()];
+        for (size_t i = 0; i < groups.size(); ++i) {
+            (*out_groups)[i] = strdup_safe(groups[i]);
+        }
+        return QUIVER_OK;
+    } catch (const std::exception&) {
+        return QUIVER_ERROR_DATABASE;
+    }
+}
+
 }  // extern "C"

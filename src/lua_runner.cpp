@@ -129,7 +129,19 @@ struct LuaRunner::Impl {
             [](Database& self,
                const std::string& collection,
                const std::string& group_name,
-               sol::this_state s) { return get_set_metadata_to_lua(self, collection, group_name, s); });
+               sol::this_state s) { return get_set_metadata_to_lua(self, collection, group_name, s); },
+            "list_scalar_attributes",
+            [](Database& self, const std::string& collection, sol::this_state s) {
+                return list_strings_to_lua(self.list_scalar_attributes(collection), s);
+            },
+            "list_vector_groups",
+            [](Database& self, const std::string& collection, sol::this_state s) {
+                return list_strings_to_lua(self.list_vector_groups(collection), s);
+            },
+            "list_set_groups",
+            [](Database& self, const std::string& collection, sol::this_state s) {
+                return list_strings_to_lua(self.list_set_groups(collection), s);
+            });
     }
 
     static Element table_to_element(sol::table values) {
@@ -407,6 +419,15 @@ struct LuaRunner::Impl {
         sol::table t = lua.create_table();
         for (size_t i = 0; i < result.size(); ++i) {
             t[i + 1] = result[i];
+        }
+        return t;
+    }
+
+    static sol::table list_strings_to_lua(const std::vector<std::string>& strings, sol::this_state s) {
+        sol::state_view lua(s);
+        sol::table t = lua.create_table();
+        for (size_t i = 0; i < strings.size(); ++i) {
+            t[i + 1] = strings[i];
         }
         return t;
     }

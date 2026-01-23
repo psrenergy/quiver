@@ -1501,4 +1501,65 @@ SetMetadata Database::get_set_metadata(const std::string& collection, const std:
     return meta;
 }
 
+std::vector<std::string> Database::list_scalar_attributes(const std::string& collection) const {
+    if (!impl_->schema) {
+        throw std::runtime_error("Cannot list scalar attributes: no schema loaded");
+    }
+
+    const auto* table_def = impl_->schema->get_table(collection);
+    if (!table_def) {
+        throw std::runtime_error("Collection not found in schema: " + collection);
+    }
+
+    std::vector<std::string> result;
+    for (const auto& [col_name, col] : table_def->columns) {
+        result.push_back(col_name);
+    }
+    return result;
+}
+
+std::vector<std::string> Database::list_vector_groups(const std::string& collection) const {
+    if (!impl_->schema) {
+        throw std::runtime_error("Cannot list vector groups: no schema loaded");
+    }
+
+    std::vector<std::string> result;
+    auto prefix = collection + "_vector_";
+
+    for (const auto& table_name : impl_->schema->table_names()) {
+        if (!impl_->schema->is_vector_table(table_name))
+            continue;
+        if (impl_->schema->get_parent_collection(table_name) != collection)
+            continue;
+
+        // Extract group name from table name
+        if (table_name.size() > prefix.size() && table_name.substr(0, prefix.size()) == prefix) {
+            result.push_back(table_name.substr(prefix.size()));
+        }
+    }
+    return result;
+}
+
+std::vector<std::string> Database::list_set_groups(const std::string& collection) const {
+    if (!impl_->schema) {
+        throw std::runtime_error("Cannot list set groups: no schema loaded");
+    }
+
+    std::vector<std::string> result;
+    auto prefix = collection + "_set_";
+
+    for (const auto& table_name : impl_->schema->table_names()) {
+        if (!impl_->schema->is_set_table(table_name))
+            continue;
+        if (impl_->schema->get_parent_collection(table_name) != collection)
+            continue;
+
+        // Extract group name from table name
+        if (table_name.size() > prefix.size() && table_name.substr(0, prefix.size()) == prefix) {
+            result.push_back(table_name.substr(prefix.size()));
+        }
+    }
+    return result;
+}
+
 }  // namespace quiver
