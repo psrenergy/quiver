@@ -30,6 +30,10 @@ void main(List<String> args) async {
         'QUIVER_BUILD_C_API': 'ON',
         'QUIVER_BUILD_TESTS': 'OFF',
         'QUIVER_BUILD_SHARED': 'ON',
+        // Pre-set try_run results for cross-compilation mode on Linux
+        // GNU strerror_r returns char* (not int), so the test succeeds (exit code 0)
+        'HAVE_GNU_STRERROR_R_EXITCODE': '0',
+        'HAVE_GNU_STRERROR_R_EXITCODE__TRYRUN_OUTPUT': '',
       },
       // Dart SDK always uses release mode
       buildMode: BuildMode.release,
