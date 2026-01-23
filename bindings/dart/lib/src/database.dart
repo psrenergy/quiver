@@ -944,7 +944,9 @@ class Database {
 
   /// Returns metadata for a scalar attribute.
   ({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue}) getScalarMetadata(
-      String collection, String attribute) {
+    String collection,
+    String attribute,
+  ) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -980,7 +982,8 @@ class Database {
   }
 
   ({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue}) _parseScalarMetadata(
-      quiver_scalar_metadata_t attr) {
+    quiver_scalar_metadata_t attr,
+  ) {
     return (
       name: attr.name.cast<Utf8>().toDartString(),
       dataType: _dataTypeToString(attr.data_type),
@@ -993,8 +996,9 @@ class Database {
   /// Returns metadata for a vector group, including all scalar attributes in the group.
   ({
     String groupName,
-    List<({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})> attributes
-  }) getVectorMetadata(String collection, String groupName) {
+    List<({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})> attributes,
+  })
+  getVectorMetadata(String collection, String groupName) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -1012,8 +1016,7 @@ class Database {
         throw DatabaseException.fromError(err, "Failed to get vector metadata for '$collection.$groupName'");
       }
 
-      final attributes =
-          <({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})>[];
+      final attributes = <({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})>[];
       final count = outMetadata.ref.attribute_count;
       for (var i = 0; i < count; i++) {
         attributes.add(_parseScalarMetadata(outMetadata.ref.attributes[i]));
@@ -1034,8 +1037,9 @@ class Database {
   /// Returns metadata for a set group, including all scalar attributes in the group.
   ({
     String groupName,
-    List<({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})> attributes
-  }) getSetMetadata(String collection, String groupName) {
+    List<({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})> attributes,
+  })
+  getSetMetadata(String collection, String groupName) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -1053,8 +1057,7 @@ class Database {
         throw DatabaseException.fromError(err, "Failed to get set metadata for '$collection.$groupName'");
       }
 
-      final attributes =
-          <({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})>[];
+      final attributes = <({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})>[];
       final count = outMetadata.ref.attribute_count;
       for (var i = 0; i < count; i++) {
         attributes.add(_parseScalarMetadata(outMetadata.ref.attributes[i]));

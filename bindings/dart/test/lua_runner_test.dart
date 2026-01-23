@@ -273,7 +273,7 @@ void main() {
         db.createElement('Configuration', {'label': 'Config'});
         db.createElement('Collection', {
           'label': 'Item 1',
-          'value_int': [1, 2, 3]
+          'value_int': [1, 2, 3],
         });
 
         final lua = LuaRunner(db);
