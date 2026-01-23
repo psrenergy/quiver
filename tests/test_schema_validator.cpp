@@ -148,38 +148,40 @@ TEST_F(SchemaValidatorFixture, GetScalarMetadataText) {
     EXPECT_EQ(meta.data_type, quiver::DataType::Text);
 }
 
-TEST_F(SchemaValidatorFixture, GetVectorMetadataInteger) {
+TEST_F(SchemaValidatorFixture, GetVectorMetadataValues) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), opts);
 
-    auto meta = db.get_vector_metadata("Collection", "value_int");
+    // Vector table is Collection_vector_values, so group name is "values"
+    auto meta = db.get_vector_metadata("Collection", "values");
 
-    EXPECT_EQ(meta.group_name, "value_int");
-    EXPECT_FALSE(meta.value_columns.empty());
-    EXPECT_EQ(meta.value_columns[0].data_type, quiver::DataType::Integer);
+    EXPECT_EQ(meta.group_name, "values");
+    EXPECT_EQ(meta.value_columns.size(), 2);  // value_int and value_float columns
+
+    // Check both columns exist with correct types (order may vary)
+    bool found_int = false, found_float = false;
+    for (const auto& col : meta.value_columns) {
+        if (col.name == "value_int") {
+            EXPECT_EQ(col.data_type, quiver::DataType::Integer);
+            found_int = true;
+        } else if (col.name == "value_float") {
+            EXPECT_EQ(col.data_type, quiver::DataType::Real);
+            found_float = true;
+        }
+    }
+    EXPECT_TRUE(found_int);
+    EXPECT_TRUE(found_float);
 }
 
-TEST_F(SchemaValidatorFixture, GetSetMetadataText) {
+TEST_F(SchemaValidatorFixture, GetSetMetadataTags) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), opts);
 
-    auto meta = db.get_set_metadata("Collection", "tag");
+    // Set table is Collection_set_tags, so group name is "tags"
+    auto meta = db.get_set_metadata("Collection", "tags");
 
-    EXPECT_EQ(meta.group_name, "tag");
+    EXPECT_EQ(meta.group_name, "tags");
     EXPECT_FALSE(meta.value_columns.empty());
+    EXPECT_EQ(meta.value_columns[0].name, "tag");
     EXPECT_EQ(meta.value_columns[0].data_type, quiver::DataType::Text);
-}
-
-// ============================================================================
-// Additional metadata tests
-// ============================================================================
-
-TEST_F(SchemaValidatorFixture, GetVectorMetadataReal) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), opts);
-
-    auto meta = db.get_vector_metadata("Collection", "value_float");
-
-    EXPECT_EQ(meta.group_name, "value_float");
-    EXPECT_FALSE(meta.value_columns.empty());
-    EXPECT_EQ(meta.value_columns[0].data_type, quiver::DataType::Real);
 }
 
 TEST_F(SchemaValidatorFixture, GetScalarMetadataForeignKeyAsInteger) {

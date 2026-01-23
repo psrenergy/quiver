@@ -115,17 +115,17 @@ void main() {
       try {
         final meta = db.getVectorMetadata('Collection', 'values');
         expect(meta.groupName, equals('values'));
-        expect(meta.attributes.length, equals(2));
+        expect(meta.valueColumns.length, equals(2));
 
-        final attrNames = meta.attributes.map((a) => a.name).toList();
-        expect(attrNames, contains('value_int'));
-        expect(attrNames, contains('value_float'));
+        final colNames = meta.valueColumns.map((a) => a.name).toList();
+        expect(colNames, contains('value_int'));
+        expect(colNames, contains('value_float'));
 
-        final valueIntAttr = meta.attributes.firstWhere((a) => a.name == 'value_int');
-        expect(valueIntAttr.dataType, equals('integer'));
+        final valueIntCol = meta.valueColumns.firstWhere((a) => a.name == 'value_int');
+        expect(valueIntCol.dataType, equals('integer'));
 
-        final valueFloatAttr = meta.attributes.firstWhere((a) => a.name == 'value_float');
-        expect(valueFloatAttr.dataType, equals('real'));
+        final valueFloatCol = meta.valueColumns.firstWhere((a) => a.name == 'value_float');
+        expect(valueFloatCol.dataType, equals('real'));
       } finally {
         db.close();
       }
@@ -156,11 +156,11 @@ void main() {
       try {
         final meta = db.getSetMetadata('Collection', 'tags');
         expect(meta.groupName, equals('tags'));
-        expect(meta.attributes.length, equals(1));
+        expect(meta.valueColumns.length, equals(1));
 
-        final tagAttr = meta.attributes[0];
-        expect(tagAttr.name, equals('tag'));
-        expect(tagAttr.dataType, equals('text'));
+        final tagCol = meta.valueColumns[0];
+        expect(tagCol.name, equals('tag'));
+        expect(tagCol.dataType, equals('text'));
       } finally {
         db.close();
       }
@@ -223,10 +223,10 @@ void main() {
 
         // Verify metadata is included
         final valuesGroup = groups.firstWhere((g) => g.groupName == 'values');
-        expect(valuesGroup.attributes.length, equals(2));
-        final attrNames = valuesGroup.attributes.map((a) => a.name).toList();
-        expect(attrNames, contains('value_int'));
-        expect(attrNames, contains('value_float'));
+        expect(valuesGroup.valueColumns.length, equals(2));
+        final colNames = valuesGroup.valueColumns.map((a) => a.name).toList();
+        expect(colNames, contains('value_int'));
+        expect(colNames, contains('value_float'));
       } finally {
         db.close();
       }
@@ -246,9 +246,9 @@ void main() {
 
         // Verify metadata is included
         final tagsGroup = groups.firstWhere((g) => g.groupName == 'tags');
-        expect(tagsGroup.attributes.length, equals(1));
-        expect(tagsGroup.attributes[0].name, equals('tag'));
-        expect(tagsGroup.attributes[0].dataType, equals('text'));
+        expect(tagsGroup.valueColumns.length, equals(1));
+        expect(tagsGroup.valueColumns[0].name, equals('tag'));
+        expect(tagsGroup.valueColumns[0].dataType, equals('text'));
       } finally {
         db.close();
       }

@@ -1134,45 +1134,6 @@ class QuiverDatabaseBindings {
         )
       >();
 
-  int quiver_database_get_attribute_type(
-    ffi.Pointer<quiver_database_t> db,
-    ffi.Pointer<ffi.Char> collection,
-    ffi.Pointer<ffi.Char> attribute,
-    ffi.Pointer<ffi.Int32> out_data_structure,
-    ffi.Pointer<ffi.Int32> out_data_type,
-  ) {
-    return _quiver_database_get_attribute_type(
-      db,
-      collection,
-      attribute,
-      out_data_structure,
-      out_data_type,
-    );
-  }
-
-  late final _quiver_database_get_attribute_typePtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Int32 Function(
-            ffi.Pointer<quiver_database_t>,
-            ffi.Pointer<ffi.Char>,
-            ffi.Pointer<ffi.Char>,
-            ffi.Pointer<ffi.Int32>,
-            ffi.Pointer<ffi.Int32>,
-          )
-        >
-      >('quiver_database_get_attribute_type');
-  late final _quiver_database_get_attribute_type = _quiver_database_get_attribute_typePtr
-      .asFunction<
-        int Function(
-          ffi.Pointer<quiver_database_t>,
-          ffi.Pointer<ffi.Char>,
-          ffi.Pointer<ffi.Char>,
-          ffi.Pointer<ffi.Int32>,
-          ffi.Pointer<ffi.Int32>,
-        )
-      >();
-
   int quiver_database_get_scalar_metadata(
     ffi.Pointer<quiver_database_t> db,
     ffi.Pointer<ffi.Char> collection,
@@ -2337,19 +2298,19 @@ final class quiver_scalar_metadata_t extends ffi.Struct {
 final class quiver_vector_metadata_t extends ffi.Struct {
   external ffi.Pointer<ffi.Char> group_name;
 
-  external ffi.Pointer<quiver_scalar_metadata_t> attributes;
+  external ffi.Pointer<quiver_scalar_metadata_t> value_columns;
 
   @ffi.Size()
-  external int attribute_count;
+  external int value_column_count;
 }
 
 final class quiver_set_metadata_t extends ffi.Struct {
   external ffi.Pointer<ffi.Char> group_name;
 
-  external ffi.Pointer<quiver_scalar_metadata_t> attributes;
+  external ffi.Pointer<quiver_scalar_metadata_t> value_columns;
 
   @ffi.Size()
-  external int attribute_count;
+  external int value_column_count;
 }
 
 typedef quiver_element_t1 = quiver_element;
