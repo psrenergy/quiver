@@ -211,12 +211,16 @@ std::vector<ColumnDefinition> Schema::query_columns(sqlite3* db, const std::stri
         ColumnDefinition col;
         const char* name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
         const char* type = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        const char* dflt_value = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
 
         col.name = name ? name : "";
         std::string type_str = type ? type : "";
         col.type = data_type_from_string(type_str);
         col.not_null = sqlite3_column_int(stmt, 3) != 0;
         col.primary_key = sqlite3_column_int(stmt, 5) != 0;
+        if (dflt_value) {
+            col.default_value = std::string(dflt_value);
+        }
 
         columns.push_back(std::move(col));
     }

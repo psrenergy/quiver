@@ -1408,4 +1408,158 @@ AttributeType Database::get_attribute_type(const std::string& collection, const 
     throw std::runtime_error("Attribute '" + attribute + "' not found in collection '" + collection + "'");
 }
 
+ScalarMetadata Database::get_scalar_metadata(const std::string& collection, const std::string& attribute) const {
+    if (!impl_->schema) {
+        throw std::runtime_error("Cannot get scalar metadata: no schema loaded");
+    }
+
+    const auto* table_def = impl_->schema->get_table(collection);
+    if (!table_def) {
+        throw std::runtime_error("Collection not found in schema: " + collection);
+    }
+
+    const auto* col = table_def->get_column(attribute);
+    if (!col) {
+        throw std::runtime_error("Scalar attribute '" + attribute + "' not found in collection '" + collection + "'");
+    }
+
+    ScalarMetadata meta;
+    meta.name = col->name;
+    meta.data_type = col->type;
+    meta.not_null = col->not_null;
+    meta.primary_key = col->primary_key;
+    meta.default_value = col->default_value;
+
+    return meta;
+}
+
+VectorMetadata Database::get_vector_metadata(const std::string& collection, const std::string& group_name) const {
+    if (!impl_->schema) {
+        throw std::runtime_error("Cannot get vector metadata: no schema loaded");
+    }
+
+    // Find the vector table for this group
+    auto vector_table = Schema::vector_table_name(collection, group_name);
+    const auto* table_def = impl_->schema->get_table(vector_table);
+
+    if (!table_def) {
+        throw std::runtime_error("Vector group '" + group_name + "' not found for collection '" + collection + "'");
+    }
+
+    VectorMetadata meta;
+    meta.group_name = group_name;
+
+    // Add all data columns (skip id and vector_index)
+    for (const auto& [col_name, col] : table_def->columns) {
+        if (col_name == "id" || col_name == "vector_index") {
+            continue;
+        }
+
+        ScalarMetadata attr;
+        attr.name = col.name;
+        attr.data_type = col.type;
+        attr.not_null = col.not_null;
+        attr.primary_key = col.primary_key;
+        attr.default_value = col.default_value;
+        meta.attributes.push_back(std::move(attr));
+    }
+
+    return meta;
+}
+
+SetMetadata Database::get_set_metadata(const std::string& collection, const std::string& group_name) const {
+    if (!impl_->schema) {
+        throw std::runtime_error("Cannot get set metadata: no schema loaded");
+    }
+
+    // Find the set table for this group
+    auto set_table = Schema::set_table_name(collection, group_name);
+    const auto* table_def = impl_->schema->get_table(set_table);
+
+    if (!table_def) {
+        throw std::runtime_error("Set group '" + group_name + "' not found for collection '" + collection + "'");
+    }
+
+    SetMetadata meta;
+    meta.group_name = group_name;
+
+    // Add all data columns (skip id)
+    for (const auto& [col_name, col] : table_def->columns) {
+        if (col_name == "id") {
+            continue;
+        }
+
+        ScalarMetadata attr;
+        attr.name = col.name;
+        attr.data_type = col.type;
+        attr.not_null = col.not_null;
+        attr.primary_key = col.primary_key;
+        attr.default_value = col.default_value;
+        meta.attributes.push_back(std::move(attr));
+    }
+
+    return meta;
+}
+
+std::vector<std::string> Database::list_scalar_attributes(const std::string& collection) const {
+    if (!impl_->schema) {
+        throw std::runtime_error("Cannot list scalar attributes: no schema loaded");
+    }
+
+    const auto* table_def = impl_->schema->get_table(collection);
+    if (!table_def) {
+        throw std::runtime_error("Collection not found in schema: " + collection);
+    }
+
+    std::vector<std::string> result;
+    for (const auto& [col_name, col] : table_def->columns) {
+        result.push_back(col_name);
+    }
+    return result;
+}
+
+std::vector<std::string> Database::list_vector_groups(const std::string& collection) const {
+    if (!impl_->schema) {
+        throw std::runtime_error("Cannot list vector groups: no schema loaded");
+    }
+
+    std::vector<std::string> result;
+    auto prefix = collection + "_vector_";
+
+    for (const auto& table_name : impl_->schema->table_names()) {
+        if (!impl_->schema->is_vector_table(table_name))
+            continue;
+        if (impl_->schema->get_parent_collection(table_name) != collection)
+            continue;
+
+        // Extract group name from table name
+        if (table_name.size() > prefix.size() && table_name.substr(0, prefix.size()) == prefix) {
+            result.push_back(table_name.substr(prefix.size()));
+        }
+    }
+    return result;
+}
+
+std::vector<std::string> Database::list_set_groups(const std::string& collection) const {
+    if (!impl_->schema) {
+        throw std::runtime_error("Cannot list set groups: no schema loaded");
+    }
+
+    std::vector<std::string> result;
+    auto prefix = collection + "_set_";
+
+    for (const auto& table_name : impl_->schema->table_names()) {
+        if (!impl_->schema->is_set_table(table_name))
+            continue;
+        if (impl_->schema->get_parent_collection(table_name) != collection)
+            continue;
+
+        // Extract group name from table name
+        if (table_name.size() > prefix.size() && table_name.substr(0, prefix.size()) == prefix) {
+            result.push_back(table_name.substr(prefix.size()));
+        }
+    }
+    return result;
+}
+
 }  // namespace quiver

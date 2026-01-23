@@ -18,6 +18,7 @@ struct ColumnDefinition {
     DataType type;
     bool not_null;
     bool primary_key;
+    std::optional<std::string> default_value;
 };
 
 struct ForeignKey {

@@ -501,7 +501,7 @@ void main() {
         db.createElement('Configuration', {'label': 'Test Config'});
         db.createElement('Collection', {
           'label': 'Item 1',
-          'value_int': [1, 2, 3]
+          'value_int': [1, 2, 3],
         });
 
         db.updateVectorIntegers('Collection', 'value_int', 1, [10, 20, 30, 40]);
@@ -522,7 +522,7 @@ void main() {
         db.createElement('Configuration', {'label': 'Test Config'});
         db.createElement('Collection', {
           'label': 'Item 1',
-          'value_int': [1, 2, 3]
+          'value_int': [1, 2, 3],
         });
 
         db.updateVectorIntegers('Collection', 'value_int', 1, [100]);
@@ -543,7 +543,7 @@ void main() {
         db.createElement('Configuration', {'label': 'Test Config'});
         db.createElement('Collection', {
           'label': 'Item 1',
-          'value_int': [1, 2, 3]
+          'value_int': [1, 2, 3],
         });
 
         db.updateVectorIntegers('Collection', 'value_int', 1, []);
@@ -585,11 +585,11 @@ void main() {
         db.createElement('Configuration', {'label': 'Test Config'});
         db.createElement('Collection', {
           'label': 'Item 1',
-          'value_int': [1, 2, 3]
+          'value_int': [1, 2, 3],
         });
         db.createElement('Collection', {
           'label': 'Item 2',
-          'value_int': [10, 20]
+          'value_int': [10, 20],
         });
 
         db.updateVectorIntegers('Collection', 'value_int', 1, [100, 200]);
@@ -628,7 +628,7 @@ void main() {
         db.createElement('Configuration', {'label': 'Test Config'});
         db.createElement('Collection', {
           'label': 'Item 1',
-          'value_float': [1.5, 2.5, 3.5]
+          'value_float': [1.5, 2.5, 3.5],
         });
 
         db.updateVectorFloats('Collection', 'value_float', 1, [10.5, 20.5]);
@@ -649,7 +649,7 @@ void main() {
         db.createElement('Configuration', {'label': 'Test Config'});
         db.createElement('Collection', {
           'label': 'Item 1',
-          'value_float': [1.0]
+          'value_float': [1.0],
         });
 
         db.updateVectorFloats('Collection', 'value_float', 1, [1.23456789, 9.87654321]);
@@ -671,7 +671,7 @@ void main() {
         db.createElement('Configuration', {'label': 'Test Config'});
         db.createElement('Collection', {
           'label': 'Item 1',
-          'value_float': [1.5, 2.5, 3.5]
+          'value_float': [1.5, 2.5, 3.5],
         });
 
         db.updateVectorFloats('Collection', 'value_float', 1, []);
@@ -698,7 +698,7 @@ void main() {
         db.createElement('Configuration', {'label': 'Test Config'});
         db.createElement('Collection', {
           'label': 'Item 1',
-          'tag': ['important', 'urgent']
+          'tag': ['important', 'urgent'],
         });
 
         db.updateSetStrings('Collection', 'tag', 1, ['new_tag1', 'new_tag2', 'new_tag3']);
@@ -719,7 +719,7 @@ void main() {
         db.createElement('Configuration', {'label': 'Test Config'});
         db.createElement('Collection', {
           'label': 'Item 1',
-          'tag': ['important', 'urgent']
+          'tag': ['important', 'urgent'],
         });
 
         db.updateSetStrings('Collection', 'tag', 1, ['single_tag']);
@@ -740,7 +740,7 @@ void main() {
         db.createElement('Configuration', {'label': 'Test Config'});
         db.createElement('Collection', {
           'label': 'Item 1',
-          'tag': ['important', 'urgent']
+          'tag': ['important', 'urgent'],
         });
 
         db.updateSetStrings('Collection', 'tag', 1, []);
@@ -782,11 +782,11 @@ void main() {
         db.createElement('Configuration', {'label': 'Test Config'});
         db.createElement('Collection', {
           'label': 'Item 1',
-          'tag': ['important']
+          'tag': ['important'],
         });
         db.createElement('Collection', {
           'label': 'Item 2',
-          'tag': ['urgent', 'review']
+          'tag': ['urgent', 'review'],
         });
 
         db.updateSetStrings('Collection', 'tag', 1, ['updated']);
@@ -807,7 +807,7 @@ void main() {
         db.createElement('Configuration', {'label': 'Test Config'});
         db.createElement('Collection', {
           'label': 'Item 1',
-          'tag': ['tag1']
+          'tag': ['tag1'],
         });
 
         db.updateSetStrings('Collection', 'tag', 1, ['日本語', '中文', '한국어']);

@@ -17,7 +17,7 @@ class QuiverDatabaseBindings {
 
   /// The symbols are looked up with [lookup].
   QuiverDatabaseBindings.fromLookup(ffi.Pointer<T> Function<T extends ffi.NativeType>(String symbolName) lookup)
-      : _lookup = lookup;
+    : _lookup = lookup;
 
   ffi.Pointer<ffi.Char> quiver_error_string(
     int error,
@@ -27,8 +27,9 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_error_stringPtr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function(ffi.Int32)>>('quiver_error_string');
+  late final _quiver_error_stringPtr = _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function(ffi.Int32)>>(
+    'quiver_error_string',
+  );
   late final _quiver_error_string = _quiver_error_stringPtr.asFunction<ffi.Pointer<ffi.Char> Function(int)>();
 
   ffi.Pointer<ffi.Char> quiver_version() {
@@ -42,10 +43,11 @@ class QuiverDatabaseBindings {
     return _quiver_database_options_default();
   }
 
-  late final _quiver_database_options_defaultPtr =
-      _lookup<ffi.NativeFunction<quiver_database_options_t Function()>>('quiver_database_options_default');
-  late final _quiver_database_options_default =
-      _quiver_database_options_defaultPtr.asFunction<quiver_database_options_t Function()>();
+  late final _quiver_database_options_defaultPtr = _lookup<ffi.NativeFunction<quiver_database_options_t Function()>>(
+    'quiver_database_options_default',
+  );
+  late final _quiver_database_options_default = _quiver_database_options_defaultPtr
+      .asFunction<quiver_database_options_t Function()>();
 
   ffi.Pointer<quiver_database_t> quiver_database_open(
     ffi.Pointer<ffi.Char> path,
@@ -57,12 +59,16 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_openPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Pointer<quiver_database_t> Function(
-              ffi.Pointer<ffi.Char>, ffi.Pointer<quiver_database_options_t>)>>('quiver_database_open');
-  late final _quiver_database_open = _quiver_database_openPtr.asFunction<
-      ffi.Pointer<quiver_database_t> Function(ffi.Pointer<ffi.Char>, ffi.Pointer<quiver_database_options_t>)>();
+  late final _quiver_database_openPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Pointer<quiver_database_t> Function(ffi.Pointer<ffi.Char>, ffi.Pointer<quiver_database_options_t>)
+        >
+      >('quiver_database_open');
+  late final _quiver_database_open = _quiver_database_openPtr
+      .asFunction<
+        ffi.Pointer<quiver_database_t> Function(ffi.Pointer<ffi.Char>, ffi.Pointer<quiver_database_options_t>)
+      >();
 
   ffi.Pointer<quiver_database_t> quiver_database_from_migrations(
     ffi.Pointer<ffi.Char> db_path,
@@ -76,13 +82,24 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_from_migrationsPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Pointer<quiver_database_t> Function(ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
-              ffi.Pointer<quiver_database_options_t>)>>('quiver_database_from_migrations');
-  late final _quiver_database_from_migrations = _quiver_database_from_migrationsPtr.asFunction<
-      ffi.Pointer<quiver_database_t> Function(
-          ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Pointer<quiver_database_options_t>)>();
+  late final _quiver_database_from_migrationsPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Pointer<quiver_database_t> Function(
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<quiver_database_options_t>,
+          )
+        >
+      >('quiver_database_from_migrations');
+  late final _quiver_database_from_migrations = _quiver_database_from_migrationsPtr
+      .asFunction<
+        ffi.Pointer<quiver_database_t> Function(
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<quiver_database_options_t>,
+        )
+      >();
 
   ffi.Pointer<quiver_database_t> quiver_database_from_schema(
     ffi.Pointer<ffi.Char> db_path,
@@ -96,13 +113,24 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_from_schemaPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Pointer<quiver_database_t> Function(ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
-              ffi.Pointer<quiver_database_options_t>)>>('quiver_database_from_schema');
-  late final _quiver_database_from_schema = _quiver_database_from_schemaPtr.asFunction<
-      ffi.Pointer<quiver_database_t> Function(
-          ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Pointer<quiver_database_options_t>)>();
+  late final _quiver_database_from_schemaPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Pointer<quiver_database_t> Function(
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<quiver_database_options_t>,
+          )
+        >
+      >('quiver_database_from_schema');
+  late final _quiver_database_from_schema = _quiver_database_from_schemaPtr
+      .asFunction<
+        ffi.Pointer<quiver_database_t> Function(
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<quiver_database_options_t>,
+        )
+      >();
 
   void quiver_database_close(
     ffi.Pointer<quiver_database_t> db,
@@ -112,10 +140,11 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_closePtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<quiver_database_t>)>>('quiver_database_close');
-  late final _quiver_database_close =
-      _quiver_database_closePtr.asFunction<void Function(ffi.Pointer<quiver_database_t>)>();
+  late final _quiver_database_closePtr = _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<quiver_database_t>)>>(
+    'quiver_database_close',
+  );
+  late final _quiver_database_close = _quiver_database_closePtr
+      .asFunction<void Function(ffi.Pointer<quiver_database_t>)>();
 
   int quiver_database_is_healthy(
     ffi.Pointer<quiver_database_t> db,
@@ -127,8 +156,8 @@ class QuiverDatabaseBindings {
 
   late final _quiver_database_is_healthyPtr =
       _lookup<ffi.NativeFunction<ffi.Int Function(ffi.Pointer<quiver_database_t>)>>('quiver_database_is_healthy');
-  late final _quiver_database_is_healthy =
-      _quiver_database_is_healthyPtr.asFunction<int Function(ffi.Pointer<quiver_database_t>)>();
+  late final _quiver_database_is_healthy = _quiver_database_is_healthyPtr
+      .asFunction<int Function(ffi.Pointer<quiver_database_t>)>();
 
   ffi.Pointer<ffi.Char> quiver_database_path(
     ffi.Pointer<quiver_database_t> db,
@@ -140,9 +169,10 @@ class QuiverDatabaseBindings {
 
   late final _quiver_database_pathPtr =
       _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<quiver_database_t>)>>(
-          'quiver_database_path');
-  late final _quiver_database_path =
-      _quiver_database_pathPtr.asFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<quiver_database_t>)>();
+        'quiver_database_path',
+      );
+  late final _quiver_database_path = _quiver_database_pathPtr
+      .asFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<quiver_database_t>)>();
 
   int quiver_database_current_version(
     ffi.Pointer<quiver_database_t> db,
@@ -154,9 +184,10 @@ class QuiverDatabaseBindings {
 
   late final _quiver_database_current_versionPtr =
       _lookup<ffi.NativeFunction<ffi.Int64 Function(ffi.Pointer<quiver_database_t>)>>(
-          'quiver_database_current_version');
-  late final _quiver_database_current_version =
-      _quiver_database_current_versionPtr.asFunction<int Function(ffi.Pointer<quiver_database_t>)>();
+        'quiver_database_current_version',
+      );
+  late final _quiver_database_current_version = _quiver_database_current_versionPtr
+      .asFunction<int Function(ffi.Pointer<quiver_database_t>)>();
 
   int quiver_database_create_element(
     ffi.Pointer<quiver_database_t> db,
@@ -170,10 +201,12 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_create_elementPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int64 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>,
-              ffi.Pointer<quiver_element_t>)>>('quiver_database_create_element');
+  late final _quiver_database_create_elementPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int64 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<quiver_element_t>)
+        >
+      >('quiver_database_create_element');
   late final _quiver_database_create_element = _quiver_database_create_elementPtr
       .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<quiver_element_t>)>();
 
@@ -191,12 +224,21 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_update_elementPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<quiver_element_t>)>>('quiver_database_update_element');
-  late final _quiver_database_update_element = _quiver_database_update_elementPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<quiver_element_t>)>();
+  late final _quiver_database_update_elementPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int64,
+            ffi.Pointer<quiver_element_t>,
+          )
+        >
+      >('quiver_database_update_element');
+  late final _quiver_database_update_element = _quiver_database_update_elementPtr
+      .asFunction<
+        int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<quiver_element_t>)
+      >();
 
   int quiver_database_delete_element_by_id(
     ffi.Pointer<quiver_database_t> db,
@@ -212,7 +254,8 @@ class QuiverDatabaseBindings {
 
   late final _quiver_database_delete_element_by_idPtr =
       _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Int64)>>(
-          'quiver_database_delete_element_by_id');
+        'quiver_database_delete_element_by_id',
+      );
   late final _quiver_database_delete_element_by_id = _quiver_database_delete_element_by_idPtr
       .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, int)>();
 
@@ -232,13 +275,28 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_set_scalar_relationPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)>>('quiver_database_set_scalar_relation');
-  late final _quiver_database_set_scalar_relation = _quiver_database_set_scalar_relationPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
-          ffi.Pointer<ffi.Char>)>();
+  late final _quiver_database_set_scalar_relationPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+          )
+        >
+      >('quiver_database_set_scalar_relation');
+  late final _quiver_database_set_scalar_relation = _quiver_database_set_scalar_relationPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+        )
+      >();
 
   int quiver_database_read_scalar_relation(
     ffi.Pointer<quiver_database_t> db,
@@ -256,17 +314,28 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_scalar_relationPtr = _lookup<
-      ffi.NativeFunction<
+  late final _quiver_database_read_scalar_relationPtr =
+      _lookup<
+        ffi.NativeFunction<
           ffi.Int32 Function(
-              ffi.Pointer<quiver_database_t>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
-              ffi.Pointer<ffi.Size>)>>('quiver_database_read_scalar_relation');
-  late final _quiver_database_read_scalar_relation = _quiver_database_read_scalar_relationPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
-          ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>, ffi.Pointer<ffi.Size>)>();
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+            ffi.Pointer<ffi.Size>,
+          )
+        >
+      >('quiver_database_read_scalar_relation');
+  late final _quiver_database_read_scalar_relation = _quiver_database_read_scalar_relationPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+          ffi.Pointer<ffi.Size>,
+        )
+      >();
 
   int quiver_database_read_scalar_integers(
     ffi.Pointer<quiver_database_t> db,
@@ -284,13 +353,28 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_scalar_integersPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>)>>('quiver_database_read_scalar_integers');
-  late final _quiver_database_read_scalar_integers = _quiver_database_read_scalar_integersPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
-          ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>)>();
+  late final _quiver_database_read_scalar_integersPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+            ffi.Pointer<ffi.Size>,
+          )
+        >
+      >('quiver_database_read_scalar_integers');
+  late final _quiver_database_read_scalar_integers = _quiver_database_read_scalar_integersPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+          ffi.Pointer<ffi.Size>,
+        )
+      >();
 
   int quiver_database_read_scalar_floats(
     ffi.Pointer<quiver_database_t> db,
@@ -308,13 +392,28 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_scalar_floatsPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>>('quiver_database_read_scalar_floats');
-  late final _quiver_database_read_scalar_floats = _quiver_database_read_scalar_floatsPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
-          ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>();
+  late final _quiver_database_read_scalar_floatsPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Double>>,
+            ffi.Pointer<ffi.Size>,
+          )
+        >
+      >('quiver_database_read_scalar_floats');
+  late final _quiver_database_read_scalar_floats = _quiver_database_read_scalar_floatsPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Pointer<ffi.Double>>,
+          ffi.Pointer<ffi.Size>,
+        )
+      >();
 
   int quiver_database_read_scalar_strings(
     ffi.Pointer<quiver_database_t> db,
@@ -332,17 +431,28 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_scalar_stringsPtr = _lookup<
-      ffi.NativeFunction<
+  late final _quiver_database_read_scalar_stringsPtr =
+      _lookup<
+        ffi.NativeFunction<
           ffi.Int32 Function(
-              ffi.Pointer<quiver_database_t>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
-              ffi.Pointer<ffi.Size>)>>('quiver_database_read_scalar_strings');
-  late final _quiver_database_read_scalar_strings = _quiver_database_read_scalar_stringsPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
-          ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>, ffi.Pointer<ffi.Size>)>();
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+            ffi.Pointer<ffi.Size>,
+          )
+        >
+      >('quiver_database_read_scalar_strings');
+  late final _quiver_database_read_scalar_strings = _quiver_database_read_scalar_stringsPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+          ffi.Pointer<ffi.Size>,
+        )
+      >();
 
   int quiver_database_read_vector_integers(
     ffi.Pointer<quiver_database_t> db,
@@ -362,23 +472,30 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_vector_integersPtr = _lookup<
-      ffi.NativeFunction<
+  late final _quiver_database_read_vector_integersPtr =
+      _lookup<
+        ffi.NativeFunction<
           ffi.Int32 Function(
-              ffi.Pointer<quiver_database_t>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>>,
-              ffi.Pointer<ffi.Pointer<ffi.Size>>,
-              ffi.Pointer<ffi.Size>)>>('quiver_database_read_vector_integers');
-  late final _quiver_database_read_vector_integers = _quiver_database_read_vector_integersPtr.asFunction<
-      int Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>>,
+            ffi.Pointer<ffi.Pointer<ffi.Size>>,
+            ffi.Pointer<ffi.Size>,
+          )
+        >
+      >('quiver_database_read_vector_integers');
+  late final _quiver_database_read_vector_integers = _quiver_database_read_vector_integersPtr
+      .asFunction<
+        int Function(
           ffi.Pointer<quiver_database_t>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>>,
           ffi.Pointer<ffi.Pointer<ffi.Size>>,
-          ffi.Pointer<ffi.Size>)>();
+          ffi.Pointer<ffi.Size>,
+        )
+      >();
 
   int quiver_database_read_vector_floats(
     ffi.Pointer<quiver_database_t> db,
@@ -398,23 +515,30 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_vector_floatsPtr = _lookup<
-      ffi.NativeFunction<
+  late final _quiver_database_read_vector_floatsPtr =
+      _lookup<
+        ffi.NativeFunction<
           ffi.Int32 Function(
-              ffi.Pointer<quiver_database_t>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>>,
-              ffi.Pointer<ffi.Pointer<ffi.Size>>,
-              ffi.Pointer<ffi.Size>)>>('quiver_database_read_vector_floats');
-  late final _quiver_database_read_vector_floats = _quiver_database_read_vector_floatsPtr.asFunction<
-      int Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>>,
+            ffi.Pointer<ffi.Pointer<ffi.Size>>,
+            ffi.Pointer<ffi.Size>,
+          )
+        >
+      >('quiver_database_read_vector_floats');
+  late final _quiver_database_read_vector_floats = _quiver_database_read_vector_floatsPtr
+      .asFunction<
+        int Function(
           ffi.Pointer<quiver_database_t>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>>,
           ffi.Pointer<ffi.Pointer<ffi.Size>>,
-          ffi.Pointer<ffi.Size>)>();
+          ffi.Pointer<ffi.Size>,
+        )
+      >();
 
   int quiver_database_read_vector_strings(
     ffi.Pointer<quiver_database_t> db,
@@ -434,23 +558,30 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_vector_stringsPtr = _lookup<
-      ffi.NativeFunction<
+  late final _quiver_database_read_vector_stringsPtr =
+      _lookup<
+        ffi.NativeFunction<
           ffi.Int32 Function(
-              ffi.Pointer<quiver_database_t>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>>,
-              ffi.Pointer<ffi.Pointer<ffi.Size>>,
-              ffi.Pointer<ffi.Size>)>>('quiver_database_read_vector_strings');
-  late final _quiver_database_read_vector_strings = _quiver_database_read_vector_stringsPtr.asFunction<
-      int Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>>,
+            ffi.Pointer<ffi.Pointer<ffi.Size>>,
+            ffi.Pointer<ffi.Size>,
+          )
+        >
+      >('quiver_database_read_vector_strings');
+  late final _quiver_database_read_vector_strings = _quiver_database_read_vector_stringsPtr
+      .asFunction<
+        int Function(
           ffi.Pointer<quiver_database_t>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>>,
           ffi.Pointer<ffi.Pointer<ffi.Size>>,
-          ffi.Pointer<ffi.Size>)>();
+          ffi.Pointer<ffi.Size>,
+        )
+      >();
 
   int quiver_database_read_set_integers(
     ffi.Pointer<quiver_database_t> db,
@@ -470,23 +601,30 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_set_integersPtr = _lookup<
-      ffi.NativeFunction<
+  late final _quiver_database_read_set_integersPtr =
+      _lookup<
+        ffi.NativeFunction<
           ffi.Int32 Function(
-              ffi.Pointer<quiver_database_t>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>>,
-              ffi.Pointer<ffi.Pointer<ffi.Size>>,
-              ffi.Pointer<ffi.Size>)>>('quiver_database_read_set_integers');
-  late final _quiver_database_read_set_integers = _quiver_database_read_set_integersPtr.asFunction<
-      int Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>>,
+            ffi.Pointer<ffi.Pointer<ffi.Size>>,
+            ffi.Pointer<ffi.Size>,
+          )
+        >
+      >('quiver_database_read_set_integers');
+  late final _quiver_database_read_set_integers = _quiver_database_read_set_integersPtr
+      .asFunction<
+        int Function(
           ffi.Pointer<quiver_database_t>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Int64>>>,
           ffi.Pointer<ffi.Pointer<ffi.Size>>,
-          ffi.Pointer<ffi.Size>)>();
+          ffi.Pointer<ffi.Size>,
+        )
+      >();
 
   int quiver_database_read_set_floats(
     ffi.Pointer<quiver_database_t> db,
@@ -506,23 +644,30 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_set_floatsPtr = _lookup<
-      ffi.NativeFunction<
+  late final _quiver_database_read_set_floatsPtr =
+      _lookup<
+        ffi.NativeFunction<
           ffi.Int32 Function(
-              ffi.Pointer<quiver_database_t>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>>,
-              ffi.Pointer<ffi.Pointer<ffi.Size>>,
-              ffi.Pointer<ffi.Size>)>>('quiver_database_read_set_floats');
-  late final _quiver_database_read_set_floats = _quiver_database_read_set_floatsPtr.asFunction<
-      int Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>>,
+            ffi.Pointer<ffi.Pointer<ffi.Size>>,
+            ffi.Pointer<ffi.Size>,
+          )
+        >
+      >('quiver_database_read_set_floats');
+  late final _quiver_database_read_set_floats = _quiver_database_read_set_floatsPtr
+      .asFunction<
+        int Function(
           ffi.Pointer<quiver_database_t>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Double>>>,
           ffi.Pointer<ffi.Pointer<ffi.Size>>,
-          ffi.Pointer<ffi.Size>)>();
+          ffi.Pointer<ffi.Size>,
+        )
+      >();
 
   int quiver_database_read_set_strings(
     ffi.Pointer<quiver_database_t> db,
@@ -542,23 +687,30 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_set_stringsPtr = _lookup<
-      ffi.NativeFunction<
+  late final _quiver_database_read_set_stringsPtr =
+      _lookup<
+        ffi.NativeFunction<
           ffi.Int32 Function(
-              ffi.Pointer<quiver_database_t>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>>,
-              ffi.Pointer<ffi.Pointer<ffi.Size>>,
-              ffi.Pointer<ffi.Size>)>>('quiver_database_read_set_strings');
-  late final _quiver_database_read_set_strings = _quiver_database_read_set_stringsPtr.asFunction<
-      int Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>>,
+            ffi.Pointer<ffi.Pointer<ffi.Size>>,
+            ffi.Pointer<ffi.Size>,
+          )
+        >
+      >('quiver_database_read_set_strings');
+  late final _quiver_database_read_set_strings = _quiver_database_read_set_stringsPtr
+      .asFunction<
+        int Function(
           ffi.Pointer<quiver_database_t>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>>,
           ffi.Pointer<ffi.Pointer<ffi.Size>>,
-          ffi.Pointer<ffi.Size>)>();
+          ffi.Pointer<ffi.Size>,
+        )
+      >();
 
   int quiver_database_read_scalar_integers_by_id(
     ffi.Pointer<quiver_database_t> db,
@@ -578,13 +730,30 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_scalar_integers_by_idPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Int64>, ffi.Pointer<ffi.Int>)>>('quiver_database_read_scalar_integers_by_id');
-  late final _quiver_database_read_scalar_integers_by_id = _quiver_database_read_scalar_integers_by_idPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
-          ffi.Pointer<ffi.Int64>, ffi.Pointer<ffi.Int>)>();
+  late final _quiver_database_read_scalar_integers_by_idPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int64,
+            ffi.Pointer<ffi.Int64>,
+            ffi.Pointer<ffi.Int>,
+          )
+        >
+      >('quiver_database_read_scalar_integers_by_id');
+  late final _quiver_database_read_scalar_integers_by_id = _quiver_database_read_scalar_integers_by_idPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          int,
+          ffi.Pointer<ffi.Int64>,
+          ffi.Pointer<ffi.Int>,
+        )
+      >();
 
   int quiver_database_read_scalar_floats_by_id(
     ffi.Pointer<quiver_database_t> db,
@@ -604,13 +773,30 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_scalar_floats_by_idPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Double>, ffi.Pointer<ffi.Int>)>>('quiver_database_read_scalar_floats_by_id');
-  late final _quiver_database_read_scalar_floats_by_id = _quiver_database_read_scalar_floats_by_idPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
-          ffi.Pointer<ffi.Double>, ffi.Pointer<ffi.Int>)>();
+  late final _quiver_database_read_scalar_floats_by_idPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int64,
+            ffi.Pointer<ffi.Double>,
+            ffi.Pointer<ffi.Int>,
+          )
+        >
+      >('quiver_database_read_scalar_floats_by_id');
+  late final _quiver_database_read_scalar_floats_by_id = _quiver_database_read_scalar_floats_by_idPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          int,
+          ffi.Pointer<ffi.Double>,
+          ffi.Pointer<ffi.Int>,
+        )
+      >();
 
   int quiver_database_read_scalar_strings_by_id(
     ffi.Pointer<quiver_database_t> db,
@@ -630,13 +816,30 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_scalar_strings_by_idPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Pointer<ffi.Int>)>>('quiver_database_read_scalar_strings_by_id');
-  late final _quiver_database_read_scalar_strings_by_id = _quiver_database_read_scalar_strings_by_idPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
-          ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Pointer<ffi.Int>)>();
+  late final _quiver_database_read_scalar_strings_by_idPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int64,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Pointer<ffi.Int>,
+          )
+        >
+      >('quiver_database_read_scalar_strings_by_id');
+  late final _quiver_database_read_scalar_strings_by_id = _quiver_database_read_scalar_strings_by_idPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          int,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          ffi.Pointer<ffi.Int>,
+        )
+      >();
 
   int quiver_database_read_vector_integers_by_id(
     ffi.Pointer<quiver_database_t> db,
@@ -656,18 +859,30 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_vector_integers_by_idPtr = _lookup<
-      ffi.NativeFunction<
+  late final _quiver_database_read_vector_integers_by_idPtr =
+      _lookup<
+        ffi.NativeFunction<
           ffi.Int32 Function(
-              ffi.Pointer<quiver_database_t>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Int64,
-              ffi.Pointer<ffi.Pointer<ffi.Int64>>,
-              ffi.Pointer<ffi.Size>)>>('quiver_database_read_vector_integers_by_id');
-  late final _quiver_database_read_vector_integers_by_id = _quiver_database_read_vector_integers_by_idPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
-          ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>)>();
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int64,
+            ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+            ffi.Pointer<ffi.Size>,
+          )
+        >
+      >('quiver_database_read_vector_integers_by_id');
+  late final _quiver_database_read_vector_integers_by_id = _quiver_database_read_vector_integers_by_idPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          int,
+          ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+          ffi.Pointer<ffi.Size>,
+        )
+      >();
 
   int quiver_database_read_vector_floats_by_id(
     ffi.Pointer<quiver_database_t> db,
@@ -687,18 +902,30 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_vector_floats_by_idPtr = _lookup<
-      ffi.NativeFunction<
+  late final _quiver_database_read_vector_floats_by_idPtr =
+      _lookup<
+        ffi.NativeFunction<
           ffi.Int32 Function(
-              ffi.Pointer<quiver_database_t>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Int64,
-              ffi.Pointer<ffi.Pointer<ffi.Double>>,
-              ffi.Pointer<ffi.Size>)>>('quiver_database_read_vector_floats_by_id');
-  late final _quiver_database_read_vector_floats_by_id = _quiver_database_read_vector_floats_by_idPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
-          ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>();
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int64,
+            ffi.Pointer<ffi.Pointer<ffi.Double>>,
+            ffi.Pointer<ffi.Size>,
+          )
+        >
+      >('quiver_database_read_vector_floats_by_id');
+  late final _quiver_database_read_vector_floats_by_id = _quiver_database_read_vector_floats_by_idPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          int,
+          ffi.Pointer<ffi.Pointer<ffi.Double>>,
+          ffi.Pointer<ffi.Size>,
+        )
+      >();
 
   int quiver_database_read_vector_strings_by_id(
     ffi.Pointer<quiver_database_t> db,
@@ -718,18 +945,30 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_vector_strings_by_idPtr = _lookup<
-      ffi.NativeFunction<
+  late final _quiver_database_read_vector_strings_by_idPtr =
+      _lookup<
+        ffi.NativeFunction<
           ffi.Int32 Function(
-              ffi.Pointer<quiver_database_t>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Int64,
-              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
-              ffi.Pointer<ffi.Size>)>>('quiver_database_read_vector_strings_by_id');
-  late final _quiver_database_read_vector_strings_by_id = _quiver_database_read_vector_strings_by_idPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
-          ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>, ffi.Pointer<ffi.Size>)>();
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int64,
+            ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+            ffi.Pointer<ffi.Size>,
+          )
+        >
+      >('quiver_database_read_vector_strings_by_id');
+  late final _quiver_database_read_vector_strings_by_id = _quiver_database_read_vector_strings_by_idPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          int,
+          ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+          ffi.Pointer<ffi.Size>,
+        )
+      >();
 
   int quiver_database_read_set_integers_by_id(
     ffi.Pointer<quiver_database_t> db,
@@ -749,13 +988,30 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_set_integers_by_idPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>)>>('quiver_database_read_set_integers_by_id');
-  late final _quiver_database_read_set_integers_by_id = _quiver_database_read_set_integers_by_idPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
-          ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>)>();
+  late final _quiver_database_read_set_integers_by_idPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int64,
+            ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+            ffi.Pointer<ffi.Size>,
+          )
+        >
+      >('quiver_database_read_set_integers_by_id');
+  late final _quiver_database_read_set_integers_by_id = _quiver_database_read_set_integers_by_idPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          int,
+          ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+          ffi.Pointer<ffi.Size>,
+        )
+      >();
 
   int quiver_database_read_set_floats_by_id(
     ffi.Pointer<quiver_database_t> db,
@@ -775,13 +1031,30 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_set_floats_by_idPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>>('quiver_database_read_set_floats_by_id');
-  late final _quiver_database_read_set_floats_by_id = _quiver_database_read_set_floats_by_idPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
-          ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>)>();
+  late final _quiver_database_read_set_floats_by_idPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int64,
+            ffi.Pointer<ffi.Pointer<ffi.Double>>,
+            ffi.Pointer<ffi.Size>,
+          )
+        >
+      >('quiver_database_read_set_floats_by_id');
+  late final _quiver_database_read_set_floats_by_id = _quiver_database_read_set_floats_by_idPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          int,
+          ffi.Pointer<ffi.Pointer<ffi.Double>>,
+          ffi.Pointer<ffi.Size>,
+        )
+      >();
 
   int quiver_database_read_set_strings_by_id(
     ffi.Pointer<quiver_database_t> db,
@@ -801,18 +1074,30 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_set_strings_by_idPtr = _lookup<
-      ffi.NativeFunction<
+  late final _quiver_database_read_set_strings_by_idPtr =
+      _lookup<
+        ffi.NativeFunction<
           ffi.Int32 Function(
-              ffi.Pointer<quiver_database_t>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>,
-              ffi.Int64,
-              ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
-              ffi.Pointer<ffi.Size>)>>('quiver_database_read_set_strings_by_id');
-  late final _quiver_database_read_set_strings_by_id = _quiver_database_read_set_strings_by_idPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
-          ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>, ffi.Pointer<ffi.Size>)>();
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int64,
+            ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+            ffi.Pointer<ffi.Size>,
+          )
+        >
+      >('quiver_database_read_set_strings_by_id');
+  late final _quiver_database_read_set_strings_by_id = _quiver_database_read_set_strings_by_idPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          int,
+          ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+          ffi.Pointer<ffi.Size>,
+        )
+      >();
 
   int quiver_database_read_element_ids(
     ffi.Pointer<quiver_database_t> db,
@@ -828,13 +1113,26 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_element_idsPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Int64>>,
-              ffi.Pointer<ffi.Size>)>>('quiver_database_read_element_ids');
-  late final _quiver_database_read_element_ids = _quiver_database_read_element_idsPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Int64>>,
-          ffi.Pointer<ffi.Size>)>();
+  late final _quiver_database_read_element_idsPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+            ffi.Pointer<ffi.Size>,
+          )
+        >
+      >('quiver_database_read_element_ids');
+  late final _quiver_database_read_element_ids = _quiver_database_read_element_idsPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Pointer<ffi.Int64>>,
+          ffi.Pointer<ffi.Size>,
+        )
+      >();
 
   int quiver_database_get_attribute_type(
     ffi.Pointer<quiver_database_t> db,
@@ -852,13 +1150,281 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_get_attribute_typePtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Int32>, ffi.Pointer<ffi.Int32>)>>('quiver_database_get_attribute_type');
-  late final _quiver_database_get_attribute_type = _quiver_database_get_attribute_typePtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Int32>,
-          ffi.Pointer<ffi.Int32>)>();
+  late final _quiver_database_get_attribute_typePtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Int32>,
+            ffi.Pointer<ffi.Int32>,
+          )
+        >
+      >('quiver_database_get_attribute_type');
+  late final _quiver_database_get_attribute_type = _quiver_database_get_attribute_typePtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Int32>,
+          ffi.Pointer<ffi.Int32>,
+        )
+      >();
+
+  int quiver_database_get_scalar_metadata(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    ffi.Pointer<quiver_scalar_metadata_t> out_metadata,
+  ) {
+    return _quiver_database_get_scalar_metadata(
+      db,
+      collection,
+      attribute,
+      out_metadata,
+    );
+  }
+
+  late final _quiver_database_get_scalar_metadataPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<quiver_scalar_metadata_t>,
+          )
+        >
+      >('quiver_database_get_scalar_metadata');
+  late final _quiver_database_get_scalar_metadata = _quiver_database_get_scalar_metadataPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<quiver_scalar_metadata_t>,
+        )
+      >();
+
+  int quiver_database_get_vector_metadata(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> group_name,
+    ffi.Pointer<quiver_vector_metadata_t> out_metadata,
+  ) {
+    return _quiver_database_get_vector_metadata(
+      db,
+      collection,
+      group_name,
+      out_metadata,
+    );
+  }
+
+  late final _quiver_database_get_vector_metadataPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<quiver_vector_metadata_t>,
+          )
+        >
+      >('quiver_database_get_vector_metadata');
+  late final _quiver_database_get_vector_metadata = _quiver_database_get_vector_metadataPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<quiver_vector_metadata_t>,
+        )
+      >();
+
+  int quiver_database_get_set_metadata(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> group_name,
+    ffi.Pointer<quiver_set_metadata_t> out_metadata,
+  ) {
+    return _quiver_database_get_set_metadata(
+      db,
+      collection,
+      group_name,
+      out_metadata,
+    );
+  }
+
+  late final _quiver_database_get_set_metadataPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<quiver_set_metadata_t>,
+          )
+        >
+      >('quiver_database_get_set_metadata');
+  late final _quiver_database_get_set_metadata = _quiver_database_get_set_metadataPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<quiver_set_metadata_t>,
+        )
+      >();
+
+  void quiver_free_scalar_metadata(
+    ffi.Pointer<quiver_scalar_metadata_t> metadata,
+  ) {
+    return _quiver_free_scalar_metadata(
+      metadata,
+    );
+  }
+
+  late final _quiver_free_scalar_metadataPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<quiver_scalar_metadata_t>)>>(
+        'quiver_free_scalar_metadata',
+      );
+  late final _quiver_free_scalar_metadata = _quiver_free_scalar_metadataPtr
+      .asFunction<void Function(ffi.Pointer<quiver_scalar_metadata_t>)>();
+
+  void quiver_free_vector_metadata(
+    ffi.Pointer<quiver_vector_metadata_t> metadata,
+  ) {
+    return _quiver_free_vector_metadata(
+      metadata,
+    );
+  }
+
+  late final _quiver_free_vector_metadataPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<quiver_vector_metadata_t>)>>(
+        'quiver_free_vector_metadata',
+      );
+  late final _quiver_free_vector_metadata = _quiver_free_vector_metadataPtr
+      .asFunction<void Function(ffi.Pointer<quiver_vector_metadata_t>)>();
+
+  void quiver_free_set_metadata(
+    ffi.Pointer<quiver_set_metadata_t> metadata,
+  ) {
+    return _quiver_free_set_metadata(
+      metadata,
+    );
+  }
+
+  late final _quiver_free_set_metadataPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<quiver_set_metadata_t>)>>('quiver_free_set_metadata');
+  late final _quiver_free_set_metadata = _quiver_free_set_metadataPtr
+      .asFunction<void Function(ffi.Pointer<quiver_set_metadata_t>)>();
+
+  int quiver_database_list_scalar_attributes(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>> out_attributes,
+    ffi.Pointer<ffi.Size> out_count,
+  ) {
+    return _quiver_database_list_scalar_attributes(
+      db,
+      collection,
+      out_attributes,
+      out_count,
+    );
+  }
+
+  late final _quiver_database_list_scalar_attributesPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+            ffi.Pointer<ffi.Size>,
+          )
+        >
+      >('quiver_database_list_scalar_attributes');
+  late final _quiver_database_list_scalar_attributes = _quiver_database_list_scalar_attributesPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+          ffi.Pointer<ffi.Size>,
+        )
+      >();
+
+  int quiver_database_list_vector_groups(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>> out_groups,
+    ffi.Pointer<ffi.Size> out_count,
+  ) {
+    return _quiver_database_list_vector_groups(
+      db,
+      collection,
+      out_groups,
+      out_count,
+    );
+  }
+
+  late final _quiver_database_list_vector_groupsPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+            ffi.Pointer<ffi.Size>,
+          )
+        >
+      >('quiver_database_list_vector_groups');
+  late final _quiver_database_list_vector_groups = _quiver_database_list_vector_groupsPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+          ffi.Pointer<ffi.Size>,
+        )
+      >();
+
+  int quiver_database_list_set_groups(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>> out_groups,
+    ffi.Pointer<ffi.Size> out_count,
+  ) {
+    return _quiver_database_list_set_groups(
+      db,
+      collection,
+      out_groups,
+      out_count,
+    );
+  }
+
+  late final _quiver_database_list_set_groupsPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+            ffi.Pointer<ffi.Size>,
+          )
+        >
+      >('quiver_database_list_set_groups');
+  late final _quiver_database_list_set_groups = _quiver_database_list_set_groupsPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
+          ffi.Pointer<ffi.Size>,
+        )
+      >();
 
   int quiver_database_update_scalar_integer(
     ffi.Pointer<quiver_database_t> db,
@@ -876,12 +1442,22 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_update_scalar_integerPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Int64)>>('quiver_database_update_scalar_integer');
-  late final _quiver_database_update_scalar_integer = _quiver_database_update_scalar_integerPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, int)>();
+  late final _quiver_database_update_scalar_integerPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int64,
+            ffi.Int64,
+          )
+        >
+      >('quiver_database_update_scalar_integer');
+  late final _quiver_database_update_scalar_integer = _quiver_database_update_scalar_integerPtr
+      .asFunction<
+        int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, int)
+      >();
 
   int quiver_database_update_scalar_float(
     ffi.Pointer<quiver_database_t> db,
@@ -899,12 +1475,22 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_update_scalar_floatPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Double)>>('quiver_database_update_scalar_float');
-  late final _quiver_database_update_scalar_float = _quiver_database_update_scalar_floatPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, double)>();
+  late final _quiver_database_update_scalar_floatPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int64,
+            ffi.Double,
+          )
+        >
+      >('quiver_database_update_scalar_float');
+  late final _quiver_database_update_scalar_float = _quiver_database_update_scalar_floatPtr
+      .asFunction<
+        int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, double)
+      >();
 
   int quiver_database_update_scalar_string(
     ffi.Pointer<quiver_database_t> db,
@@ -922,13 +1508,28 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_update_scalar_stringPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Char>)>>('quiver_database_update_scalar_string');
-  late final _quiver_database_update_scalar_string = _quiver_database_update_scalar_stringPtr.asFunction<
-      int Function(
-          ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<ffi.Char>)>();
+  late final _quiver_database_update_scalar_stringPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int64,
+            ffi.Pointer<ffi.Char>,
+          )
+        >
+      >('quiver_database_update_scalar_string');
+  late final _quiver_database_update_scalar_string = _quiver_database_update_scalar_stringPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          int,
+          ffi.Pointer<ffi.Char>,
+        )
+      >();
 
   int quiver_database_update_vector_integers(
     ffi.Pointer<quiver_database_t> db,
@@ -948,13 +1549,30 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_update_vector_integersPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Int64>, ffi.Size)>>('quiver_database_update_vector_integers');
-  late final _quiver_database_update_vector_integers = _quiver_database_update_vector_integersPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
-          ffi.Pointer<ffi.Int64>, int)>();
+  late final _quiver_database_update_vector_integersPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int64,
+            ffi.Pointer<ffi.Int64>,
+            ffi.Size,
+          )
+        >
+      >('quiver_database_update_vector_integers');
+  late final _quiver_database_update_vector_integers = _quiver_database_update_vector_integersPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          int,
+          ffi.Pointer<ffi.Int64>,
+          int,
+        )
+      >();
 
   int quiver_database_update_vector_floats(
     ffi.Pointer<quiver_database_t> db,
@@ -974,13 +1592,30 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_update_vector_floatsPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Double>, ffi.Size)>>('quiver_database_update_vector_floats');
-  late final _quiver_database_update_vector_floats = _quiver_database_update_vector_floatsPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
-          ffi.Pointer<ffi.Double>, int)>();
+  late final _quiver_database_update_vector_floatsPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int64,
+            ffi.Pointer<ffi.Double>,
+            ffi.Size,
+          )
+        >
+      >('quiver_database_update_vector_floats');
+  late final _quiver_database_update_vector_floats = _quiver_database_update_vector_floatsPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          int,
+          ffi.Pointer<ffi.Double>,
+          int,
+        )
+      >();
 
   int quiver_database_update_vector_strings(
     ffi.Pointer<quiver_database_t> db,
@@ -1000,13 +1635,30 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_update_vector_stringsPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Size)>>('quiver_database_update_vector_strings');
-  late final _quiver_database_update_vector_strings = _quiver_database_update_vector_stringsPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
-          ffi.Pointer<ffi.Pointer<ffi.Char>>, int)>();
+  late final _quiver_database_update_vector_stringsPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int64,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Size,
+          )
+        >
+      >('quiver_database_update_vector_strings');
+  late final _quiver_database_update_vector_strings = _quiver_database_update_vector_stringsPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          int,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          int,
+        )
+      >();
 
   int quiver_database_update_set_integers(
     ffi.Pointer<quiver_database_t> db,
@@ -1026,13 +1678,30 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_update_set_integersPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Int64>, ffi.Size)>>('quiver_database_update_set_integers');
-  late final _quiver_database_update_set_integers = _quiver_database_update_set_integersPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
-          ffi.Pointer<ffi.Int64>, int)>();
+  late final _quiver_database_update_set_integersPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int64,
+            ffi.Pointer<ffi.Int64>,
+            ffi.Size,
+          )
+        >
+      >('quiver_database_update_set_integers');
+  late final _quiver_database_update_set_integers = _quiver_database_update_set_integersPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          int,
+          ffi.Pointer<ffi.Int64>,
+          int,
+        )
+      >();
 
   int quiver_database_update_set_floats(
     ffi.Pointer<quiver_database_t> db,
@@ -1052,13 +1721,30 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_update_set_floatsPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Double>, ffi.Size)>>('quiver_database_update_set_floats');
-  late final _quiver_database_update_set_floats = _quiver_database_update_set_floatsPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
-          ffi.Pointer<ffi.Double>, int)>();
+  late final _quiver_database_update_set_floatsPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int64,
+            ffi.Pointer<ffi.Double>,
+            ffi.Size,
+          )
+        >
+      >('quiver_database_update_set_floats');
+  late final _quiver_database_update_set_floats = _quiver_database_update_set_floatsPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          int,
+          ffi.Pointer<ffi.Double>,
+          int,
+        )
+      >();
 
   int quiver_database_update_set_strings(
     ffi.Pointer<quiver_database_t> db,
@@ -1078,13 +1764,30 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_update_set_stringsPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int64,
-              ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Size)>>('quiver_database_update_set_strings');
-  late final _quiver_database_update_set_strings = _quiver_database_update_set_stringsPtr.asFunction<
-      int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, int,
-          ffi.Pointer<ffi.Pointer<ffi.Char>>, int)>();
+  late final _quiver_database_update_set_stringsPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int64,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Size,
+          )
+        >
+      >('quiver_database_update_set_strings');
+  late final _quiver_database_update_set_strings = _quiver_database_update_set_stringsPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          int,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          int,
+        )
+      >();
 
   void quiver_free_integer_array(
     ffi.Pointer<ffi.Int64> values,
@@ -1094,10 +1797,11 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_free_integer_arrayPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Int64>)>>('quiver_free_integer_array');
-  late final _quiver_free_integer_array =
-      _quiver_free_integer_arrayPtr.asFunction<void Function(ffi.Pointer<ffi.Int64>)>();
+  late final _quiver_free_integer_arrayPtr = _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Int64>)>>(
+    'quiver_free_integer_array',
+  );
+  late final _quiver_free_integer_array = _quiver_free_integer_arrayPtr
+      .asFunction<void Function(ffi.Pointer<ffi.Int64>)>();
 
   void quiver_free_float_array(
     ffi.Pointer<ffi.Double> values,
@@ -1107,10 +1811,11 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_free_float_arrayPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Double>)>>('quiver_free_float_array');
-  late final _quiver_free_float_array =
-      _quiver_free_float_arrayPtr.asFunction<void Function(ffi.Pointer<ffi.Double>)>();
+  late final _quiver_free_float_arrayPtr = _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Double>)>>(
+    'quiver_free_float_array',
+  );
+  late final _quiver_free_float_array = _quiver_free_float_arrayPtr
+      .asFunction<void Function(ffi.Pointer<ffi.Double>)>();
 
   void quiver_free_string_array(
     ffi.Pointer<ffi.Pointer<ffi.Char>> values,
@@ -1124,9 +1829,10 @@ class QuiverDatabaseBindings {
 
   late final _quiver_free_string_arrayPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Size)>>(
-          'quiver_free_string_array');
-  late final _quiver_free_string_array =
-      _quiver_free_string_arrayPtr.asFunction<void Function(ffi.Pointer<ffi.Pointer<ffi.Char>>, int)>();
+        'quiver_free_string_array',
+      );
+  late final _quiver_free_string_array = _quiver_free_string_arrayPtr
+      .asFunction<void Function(ffi.Pointer<ffi.Pointer<ffi.Char>>, int)>();
 
   void quiver_free_integer_vectors(
     ffi.Pointer<ffi.Pointer<ffi.Int64>> vectors,
@@ -1140,9 +1846,10 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_free_integer_vectorsPtr = _lookup<
-          ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>, ffi.Size)>>(
-      'quiver_free_integer_vectors');
+  late final _quiver_free_integer_vectorsPtr =
+      _lookup<
+        ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>, ffi.Size)>
+      >('quiver_free_integer_vectors');
   late final _quiver_free_integer_vectors = _quiver_free_integer_vectorsPtr
       .asFunction<void Function(ffi.Pointer<ffi.Pointer<ffi.Int64>>, ffi.Pointer<ffi.Size>, int)>();
 
@@ -1158,9 +1865,10 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_free_float_vectorsPtr = _lookup<
-          ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>, ffi.Size)>>(
-      'quiver_free_float_vectors');
+  late final _quiver_free_float_vectorsPtr =
+      _lookup<
+        ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>, ffi.Size)>
+      >('quiver_free_float_vectors');
   late final _quiver_free_float_vectors = _quiver_free_float_vectorsPtr
       .asFunction<void Function(ffi.Pointer<ffi.Pointer<ffi.Double>>, ffi.Pointer<ffi.Size>, int)>();
 
@@ -1176,10 +1884,12 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_free_string_vectorsPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>, ffi.Pointer<ffi.Size>,
-              ffi.Size)>>('quiver_free_string_vectors');
+  late final _quiver_free_string_vectorsPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Void Function(ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>, ffi.Pointer<ffi.Size>, ffi.Size)
+        >
+      >('quiver_free_string_vectors');
   late final _quiver_free_string_vectors = _quiver_free_string_vectorsPtr
       .asFunction<void Function(ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>, ffi.Pointer<ffi.Size>, int)>();
 
@@ -1187,8 +1897,9 @@ class QuiverDatabaseBindings {
     return _quiver_element_create();
   }
 
-  late final _quiver_element_createPtr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<quiver_element_t1> Function()>>('quiver_element_create');
+  late final _quiver_element_createPtr = _lookup<ffi.NativeFunction<ffi.Pointer<quiver_element_t1> Function()>>(
+    'quiver_element_create',
+  );
   late final _quiver_element_create = _quiver_element_createPtr.asFunction<ffi.Pointer<quiver_element_t1> Function()>();
 
   void quiver_element_destroy(
@@ -1201,8 +1912,8 @@ class QuiverDatabaseBindings {
 
   late final _quiver_element_destroyPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<quiver_element_t1>)>>('quiver_element_destroy');
-  late final _quiver_element_destroy =
-      _quiver_element_destroyPtr.asFunction<void Function(ffi.Pointer<quiver_element_t1>)>();
+  late final _quiver_element_destroy = _quiver_element_destroyPtr
+      .asFunction<void Function(ffi.Pointer<quiver_element_t1>)>();
 
   void quiver_element_clear(
     ffi.Pointer<quiver_element_t1> element,
@@ -1212,10 +1923,11 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_element_clearPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<quiver_element_t1>)>>('quiver_element_clear');
-  late final _quiver_element_clear =
-      _quiver_element_clearPtr.asFunction<void Function(ffi.Pointer<quiver_element_t1>)>();
+  late final _quiver_element_clearPtr = _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<quiver_element_t1>)>>(
+    'quiver_element_clear',
+  );
+  late final _quiver_element_clear = _quiver_element_clearPtr
+      .asFunction<void Function(ffi.Pointer<quiver_element_t1>)>();
 
   int quiver_element_set_integer(
     ffi.Pointer<quiver_element_t1> element,
@@ -1231,7 +1943,8 @@ class QuiverDatabaseBindings {
 
   late final _quiver_element_set_integerPtr =
       _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Char>, ffi.Int64)>>(
-          'quiver_element_set_integer');
+        'quiver_element_set_integer',
+      );
   late final _quiver_element_set_integer = _quiver_element_set_integerPtr
       .asFunction<int Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Char>, int)>();
 
@@ -1247,9 +1960,10 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_element_set_floatPtr = _lookup<
-          ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Char>, ffi.Double)>>(
-      'quiver_element_set_float');
+  late final _quiver_element_set_floatPtr =
+      _lookup<
+        ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Char>, ffi.Double)>
+      >('quiver_element_set_float');
   late final _quiver_element_set_float = _quiver_element_set_floatPtr
       .asFunction<int Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Char>, double)>();
 
@@ -1265,10 +1979,12 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_element_set_stringPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Char>,
-              ffi.Pointer<ffi.Char>)>>('quiver_element_set_string');
+  late final _quiver_element_set_stringPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)
+        >
+      >('quiver_element_set_string');
   late final _quiver_element_set_string = _quiver_element_set_stringPtr
       .asFunction<int Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)>();
 
@@ -1284,9 +2000,10 @@ class QuiverDatabaseBindings {
 
   late final _quiver_element_set_nullPtr =
       _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Char>)>>(
-          'quiver_element_set_null');
-  late final _quiver_element_set_null =
-      _quiver_element_set_nullPtr.asFunction<int Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Char>)>();
+        'quiver_element_set_null',
+      );
+  late final _quiver_element_set_null = _quiver_element_set_nullPtr
+      .asFunction<int Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Char>)>();
 
   int quiver_element_set_array_integer(
     ffi.Pointer<quiver_element_t1> element,
@@ -1302,10 +2019,12 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_element_set_array_integerPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Int64>,
-              ffi.Int32)>>('quiver_element_set_array_integer');
+  late final _quiver_element_set_array_integerPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Int64>, ffi.Int32)
+        >
+      >('quiver_element_set_array_integer');
   late final _quiver_element_set_array_integer = _quiver_element_set_array_integerPtr
       .asFunction<int Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Int64>, int)>();
 
@@ -1323,10 +2042,12 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_element_set_array_floatPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Double>,
-              ffi.Int32)>>('quiver_element_set_array_float');
+  late final _quiver_element_set_array_floatPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Double>, ffi.Int32)
+        >
+      >('quiver_element_set_array_float');
   late final _quiver_element_set_array_float = _quiver_element_set_array_floatPtr
       .asFunction<int Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Double>, int)>();
 
@@ -1344,12 +2065,21 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_element_set_array_stringPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Char>>,
-              ffi.Int32)>>('quiver_element_set_array_string');
-  late final _quiver_element_set_array_string = _quiver_element_set_array_stringPtr.asFunction<
-      int Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Char>>, int)>();
+  late final _quiver_element_set_array_stringPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_element_t1>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Int32,
+          )
+        >
+      >('quiver_element_set_array_string');
+  late final _quiver_element_set_array_string = _quiver_element_set_array_stringPtr
+      .asFunction<
+        int Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Char>>, int)
+      >();
 
   int quiver_element_has_scalars(
     ffi.Pointer<quiver_element_t1> element,
@@ -1361,8 +2091,8 @@ class QuiverDatabaseBindings {
 
   late final _quiver_element_has_scalarsPtr =
       _lookup<ffi.NativeFunction<ffi.Int Function(ffi.Pointer<quiver_element_t1>)>>('quiver_element_has_scalars');
-  late final _quiver_element_has_scalars =
-      _quiver_element_has_scalarsPtr.asFunction<int Function(ffi.Pointer<quiver_element_t1>)>();
+  late final _quiver_element_has_scalars = _quiver_element_has_scalarsPtr
+      .asFunction<int Function(ffi.Pointer<quiver_element_t1>)>();
 
   int quiver_element_has_arrays(
     ffi.Pointer<quiver_element_t1> element,
@@ -1374,8 +2104,8 @@ class QuiverDatabaseBindings {
 
   late final _quiver_element_has_arraysPtr =
       _lookup<ffi.NativeFunction<ffi.Int Function(ffi.Pointer<quiver_element_t1>)>>('quiver_element_has_arrays');
-  late final _quiver_element_has_arrays =
-      _quiver_element_has_arraysPtr.asFunction<int Function(ffi.Pointer<quiver_element_t1>)>();
+  late final _quiver_element_has_arrays = _quiver_element_has_arraysPtr
+      .asFunction<int Function(ffi.Pointer<quiver_element_t1>)>();
 
   int quiver_element_scalar_count(
     ffi.Pointer<quiver_element_t1> element,
@@ -1387,8 +2117,8 @@ class QuiverDatabaseBindings {
 
   late final _quiver_element_scalar_countPtr =
       _lookup<ffi.NativeFunction<ffi.Size Function(ffi.Pointer<quiver_element_t1>)>>('quiver_element_scalar_count');
-  late final _quiver_element_scalar_count =
-      _quiver_element_scalar_countPtr.asFunction<int Function(ffi.Pointer<quiver_element_t1>)>();
+  late final _quiver_element_scalar_count = _quiver_element_scalar_countPtr
+      .asFunction<int Function(ffi.Pointer<quiver_element_t1>)>();
 
   int quiver_element_array_count(
     ffi.Pointer<quiver_element_t1> element,
@@ -1400,8 +2130,8 @@ class QuiverDatabaseBindings {
 
   late final _quiver_element_array_countPtr =
       _lookup<ffi.NativeFunction<ffi.Size Function(ffi.Pointer<quiver_element_t1>)>>('quiver_element_array_count');
-  late final _quiver_element_array_count =
-      _quiver_element_array_countPtr.asFunction<int Function(ffi.Pointer<quiver_element_t1>)>();
+  late final _quiver_element_array_count = _quiver_element_array_countPtr
+      .asFunction<int Function(ffi.Pointer<quiver_element_t1>)>();
 
   ffi.Pointer<ffi.Char> quiver_element_to_string(
     ffi.Pointer<quiver_element_t1> element,
@@ -1413,9 +2143,10 @@ class QuiverDatabaseBindings {
 
   late final _quiver_element_to_stringPtr =
       _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<quiver_element_t1>)>>(
-          'quiver_element_to_string');
-  late final _quiver_element_to_string =
-      _quiver_element_to_stringPtr.asFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<quiver_element_t1>)>();
+        'quiver_element_to_string',
+      );
+  late final _quiver_element_to_string = _quiver_element_to_stringPtr
+      .asFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<quiver_element_t1>)>();
 
   void quiver_string_free(
     ffi.Pointer<ffi.Char> str,
@@ -1425,8 +2156,9 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_string_freePtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Char>)>>('quiver_string_free');
+  late final _quiver_string_freePtr = _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Char>)>>(
+    'quiver_string_free',
+  );
   late final _quiver_string_free = _quiver_string_freePtr.asFunction<void Function(ffi.Pointer<ffi.Char>)>();
 
   ffi.Pointer<quiver_lua_runner_t> quiver_lua_runner_new(
@@ -1439,9 +2171,10 @@ class QuiverDatabaseBindings {
 
   late final _quiver_lua_runner_newPtr =
       _lookup<ffi.NativeFunction<ffi.Pointer<quiver_lua_runner_t> Function(ffi.Pointer<quiver_database_t>)>>(
-          'quiver_lua_runner_new');
-  late final _quiver_lua_runner_new =
-      _quiver_lua_runner_newPtr.asFunction<ffi.Pointer<quiver_lua_runner_t> Function(ffi.Pointer<quiver_database_t>)>();
+        'quiver_lua_runner_new',
+      );
+  late final _quiver_lua_runner_new = _quiver_lua_runner_newPtr
+      .asFunction<ffi.Pointer<quiver_lua_runner_t> Function(ffi.Pointer<quiver_database_t>)>();
 
   void quiver_lua_runner_free(
     ffi.Pointer<quiver_lua_runner_t> runner,
@@ -1453,8 +2186,8 @@ class QuiverDatabaseBindings {
 
   late final _quiver_lua_runner_freePtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<quiver_lua_runner_t>)>>('quiver_lua_runner_free');
-  late final _quiver_lua_runner_free =
-      _quiver_lua_runner_freePtr.asFunction<void Function(ffi.Pointer<quiver_lua_runner_t>)>();
+  late final _quiver_lua_runner_free = _quiver_lua_runner_freePtr
+      .asFunction<void Function(ffi.Pointer<quiver_lua_runner_t>)>();
 
   int quiver_lua_runner_run(
     ffi.Pointer<quiver_lua_runner_t> runner,
@@ -1468,9 +2201,10 @@ class QuiverDatabaseBindings {
 
   late final _quiver_lua_runner_runPtr =
       _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_lua_runner_t>, ffi.Pointer<ffi.Char>)>>(
-          'quiver_lua_runner_run');
-  late final _quiver_lua_runner_run =
-      _quiver_lua_runner_runPtr.asFunction<int Function(ffi.Pointer<quiver_lua_runner_t>, ffi.Pointer<ffi.Char>)>();
+        'quiver_lua_runner_run',
+      );
+  late final _quiver_lua_runner_run = _quiver_lua_runner_runPtr
+      .asFunction<int Function(ffi.Pointer<quiver_lua_runner_t>, ffi.Pointer<ffi.Char>)>();
 
   ffi.Pointer<ffi.Char> quiver_lua_runner_get_error(
     ffi.Pointer<quiver_lua_runner_t> runner,
@@ -1482,9 +2216,10 @@ class QuiverDatabaseBindings {
 
   late final _quiver_lua_runner_get_errorPtr =
       _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<quiver_lua_runner_t>)>>(
-          'quiver_lua_runner_get_error');
-  late final _quiver_lua_runner_get_error =
-      _quiver_lua_runner_get_errorPtr.asFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<quiver_lua_runner_t>)>();
+        'quiver_lua_runner_get_error',
+      );
+  late final _quiver_lua_runner_get_error = _quiver_lua_runner_get_errorPtr
+      .asFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<quiver_lua_runner_t>)>();
 }
 
 abstract class quiver_error_t {
@@ -1532,6 +2267,40 @@ typedef quiver_database_t = quiver_database;
 final class quiver_element extends ffi.Opaque {}
 
 typedef quiver_element_t = quiver_element;
+
+final class quiver_scalar_metadata_t extends ffi.Struct {
+  external ffi.Pointer<ffi.Char> name;
+
+  @ffi.Int32()
+  external int data_type;
+
+  @ffi.Int()
+  external int not_null;
+
+  @ffi.Int()
+  external int primary_key;
+
+  external ffi.Pointer<ffi.Char> default_value;
+}
+
+final class quiver_vector_metadata_t extends ffi.Struct {
+  external ffi.Pointer<ffi.Char> group_name;
+
+  external ffi.Pointer<quiver_scalar_metadata_t> attributes;
+
+  @ffi.Size()
+  external int attribute_count;
+}
+
+final class quiver_set_metadata_t extends ffi.Struct {
+  external ffi.Pointer<ffi.Char> group_name;
+
+  external ffi.Pointer<quiver_scalar_metadata_t> attributes;
+
+  @ffi.Size()
+  external int attribute_count;
+}
+
 typedef quiver_element_t1 = quiver_element;
 
 final class quiver_lua_runner extends ffi.Opaque {}

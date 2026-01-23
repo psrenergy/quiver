@@ -114,6 +114,30 @@ struct LuaRunner::Impl {
             "update_element",
             [](Database& self, const std::string& collection, int64_t id, sol::table values) {
                 update_element_from_lua(self, collection, id, values);
+            },
+            "get_scalar_metadata",
+            [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
+                return get_scalar_metadata_to_lua(self, collection, attribute, s);
+            },
+            "get_vector_metadata",
+            [](Database& self, const std::string& collection, const std::string& group_name, sol::this_state s) {
+                return get_vector_metadata_to_lua(self, collection, group_name, s);
+            },
+            "get_set_metadata",
+            [](Database& self, const std::string& collection, const std::string& group_name, sol::this_state s) {
+                return get_set_metadata_to_lua(self, collection, group_name, s);
+            },
+            "list_scalar_attributes",
+            [](Database& self, const std::string& collection, sol::this_state s) {
+                return list_strings_to_lua(self.list_scalar_attributes(collection), s);
+            },
+            "list_vector_groups",
+            [](Database& self, const std::string& collection, sol::this_state s) {
+                return list_strings_to_lua(self.list_vector_groups(collection), s);
+            },
+            "list_set_groups",
+            [](Database& self, const std::string& collection, sol::this_state s) {
+                return list_strings_to_lua(self.list_set_groups(collection), s);
             });
     }
 
@@ -393,6 +417,96 @@ struct LuaRunner::Impl {
         for (size_t i = 0; i < result.size(); ++i) {
             t[i + 1] = result[i];
         }
+        return t;
+    }
+
+    static sol::table list_strings_to_lua(const std::vector<std::string>& strings, sol::this_state s) {
+        sol::state_view lua(s);
+        sol::table t = lua.create_table();
+        for (size_t i = 0; i < strings.size(); ++i) {
+            t[i + 1] = strings[i];
+        }
+        return t;
+    }
+
+    static std::string data_type_to_string(DataType type) {
+        switch (type) {
+        case DataType::Integer:
+            return "integer";
+        case DataType::Real:
+            return "real";
+        case DataType::Text:
+            return "text";
+        }
+        return "unknown";
+    }
+
+    static sol::table get_scalar_metadata_to_lua(Database& db,
+                                                 const std::string& collection,
+                                                 const std::string& attribute,
+                                                 sol::this_state s) {
+        sol::state_view lua(s);
+        auto meta = db.get_scalar_metadata(collection, attribute);
+        sol::table t = lua.create_table();
+        t["name"] = meta.name;
+        t["data_type"] = data_type_to_string(meta.data_type);
+        t["not_null"] = meta.not_null;
+        t["primary_key"] = meta.primary_key;
+        if (meta.default_value.has_value()) {
+            t["default_value"] = *meta.default_value;
+        } else {
+            t["default_value"] = sol::nil;
+        }
+        return t;
+    }
+
+    static sol::table scalar_metadata_to_lua(sol::state_view& lua, const ScalarMetadata& attr) {
+        sol::table t = lua.create_table();
+        t["name"] = attr.name;
+        t["data_type"] = data_type_to_string(attr.data_type);
+        t["not_null"] = attr.not_null;
+        t["primary_key"] = attr.primary_key;
+        if (attr.default_value.has_value()) {
+            t["default_value"] = *attr.default_value;
+        } else {
+            t["default_value"] = sol::nil;
+        }
+        return t;
+    }
+
+    static sol::table get_vector_metadata_to_lua(Database& db,
+                                                 const std::string& collection,
+                                                 const std::string& group_name,
+                                                 sol::this_state s) {
+        sol::state_view lua(s);
+        auto meta = db.get_vector_metadata(collection, group_name);
+        sol::table t = lua.create_table();
+        t["group_name"] = meta.group_name;
+
+        sol::table attrs = lua.create_table();
+        for (size_t i = 0; i < meta.attributes.size(); ++i) {
+            attrs[i + 1] = scalar_metadata_to_lua(lua, meta.attributes[i]);
+        }
+        t["attributes"] = attrs;
+
+        return t;
+    }
+
+    static sol::table get_set_metadata_to_lua(Database& db,
+                                              const std::string& collection,
+                                              const std::string& group_name,
+                                              sol::this_state s) {
+        sol::state_view lua(s);
+        auto meta = db.get_set_metadata(collection, group_name);
+        sol::table t = lua.create_table();
+        t["group_name"] = meta.group_name;
+
+        sol::table attrs = lua.create_table();
+        for (size_t i = 0; i < meta.attributes.size(); ++i) {
+            attrs[i + 1] = scalar_metadata_to_lua(lua, meta.attributes[i]);
+        }
+        t["attributes"] = attrs;
+
         return t;
     }
 };

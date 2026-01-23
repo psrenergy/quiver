@@ -2,6 +2,7 @@
 #define QUIVER_DATABASE_H
 
 #include "export.h"
+#include "quiver/attribute_metadata.h"
 #include "quiver/attribute_type.h"
 #include "quiver/element.h"
 #include "quiver/log_level.h"
@@ -100,6 +101,16 @@ public:
 
     // Attribute type query
     AttributeType get_attribute_type(const std::string& collection, const std::string& attribute) const;
+
+    // Attribute metadata queries
+    ScalarMetadata get_scalar_metadata(const std::string& collection, const std::string& attribute) const;
+    VectorMetadata get_vector_metadata(const std::string& collection, const std::string& group_name) const;
+    SetMetadata get_set_metadata(const std::string& collection, const std::string& group_name) const;
+
+    // List attributes/groups
+    std::vector<std::string> list_scalar_attributes(const std::string& collection) const;
+    std::vector<std::string> list_vector_groups(const std::string& collection) const;
+    std::vector<std::string> list_set_groups(const std::string& collection) const;
 
     // Update scalar attributes (by element ID)
     void update_scalar_integer(const std::string& collection, const std::string& attribute, int64_t id, int64_t value);

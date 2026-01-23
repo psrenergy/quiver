@@ -210,6 +210,62 @@ function quiver_database_get_attribute_type(db, collection, attribute, out_data_
     @ccall libquiver_c.quiver_database_get_attribute_type(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_data_structure::Ptr{quiver_data_structure_t}, out_data_type::Ptr{quiver_data_type_t})::quiver_error_t
 end
 
+struct quiver_scalar_metadata_t
+    name::Ptr{Cchar}
+    data_type::quiver_data_type_t
+    not_null::Cint
+    primary_key::Cint
+    default_value::Ptr{Cchar}
+end
+
+struct quiver_vector_metadata_t
+    group_name::Ptr{Cchar}
+    attributes::Ptr{quiver_scalar_metadata_t}
+    attribute_count::Csize_t
+end
+
+struct quiver_set_metadata_t
+    group_name::Ptr{Cchar}
+    attributes::Ptr{quiver_scalar_metadata_t}
+    attribute_count::Csize_t
+end
+
+function quiver_database_get_scalar_metadata(db, collection, attribute, out_metadata)
+    @ccall libquiver_c.quiver_database_get_scalar_metadata(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_metadata::Ptr{quiver_scalar_metadata_t})::quiver_error_t
+end
+
+function quiver_database_get_vector_metadata(db, collection, group_name, out_metadata)
+    @ccall libquiver_c.quiver_database_get_vector_metadata(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group_name::Ptr{Cchar}, out_metadata::Ptr{quiver_vector_metadata_t})::quiver_error_t
+end
+
+function quiver_database_get_set_metadata(db, collection, group_name, out_metadata)
+    @ccall libquiver_c.quiver_database_get_set_metadata(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group_name::Ptr{Cchar}, out_metadata::Ptr{quiver_set_metadata_t})::quiver_error_t
+end
+
+function quiver_free_scalar_metadata(metadata)
+    @ccall libquiver_c.quiver_free_scalar_metadata(metadata::Ptr{quiver_scalar_metadata_t})::Cvoid
+end
+
+function quiver_free_vector_metadata(metadata)
+    @ccall libquiver_c.quiver_free_vector_metadata(metadata::Ptr{quiver_vector_metadata_t})::Cvoid
+end
+
+function quiver_free_set_metadata(metadata)
+    @ccall libquiver_c.quiver_free_set_metadata(metadata::Ptr{quiver_set_metadata_t})::Cvoid
+end
+
+function quiver_database_list_scalar_attributes(db, collection, out_attributes, out_count)
+    @ccall libquiver_c.quiver_database_list_scalar_attributes(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_attributes::Ptr{Ptr{Ptr{Cchar}}}, out_count::Ptr{Csize_t})::quiver_error_t
+end
+
+function quiver_database_list_vector_groups(db, collection, out_groups, out_count)
+    @ccall libquiver_c.quiver_database_list_vector_groups(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_groups::Ptr{Ptr{Ptr{Cchar}}}, out_count::Ptr{Csize_t})::quiver_error_t
+end
+
+function quiver_database_list_set_groups(db, collection, out_groups, out_count)
+    @ccall libquiver_c.quiver_database_list_set_groups(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_groups::Ptr{Ptr{Ptr{Cchar}}}, out_count::Ptr{Csize_t})::quiver_error_t
+end
+
 function quiver_database_update_scalar_integer(db, collection, attribute, id, value)
     @ccall libquiver_c.quiver_database_update_scalar_integer(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, value::Int64)::quiver_error_t
 end
