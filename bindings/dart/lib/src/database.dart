@@ -1465,6 +1465,16 @@ class Database {
     }
   }
 
+  /// Returns the current schema version (migration number) of the database.
+  int currentVersion() {
+    _ensureNotClosed();
+    final version = bindings.quiver_database_current_version(_ptr);
+    if (version < 0) {
+      throw const DatabaseOperationException('Failed to get current version');
+    }
+    return version;
+  }  
+
   int _getValueDataType(
     List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})> valueColumns,
   ) {

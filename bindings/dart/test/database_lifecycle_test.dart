@@ -102,6 +102,36 @@ void main() {
     });
   });
 
+  group('Database currentVersion', () {
+    test('returns 0 for schema-based database', () {
+      final db = Database.fromSchema(':memory:', schemaPath);
+      try {
+        expect(db.currentVersion(), equals(0));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('returns migration count for migrations-based database', () {
+      final db = Database.fromMigrations(':memory:', migrationsPath);
+      try {
+        // Migrations folder has 3 migrations
+        expect(db.currentVersion(), equals(3));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws after close', () {
+      final db = Database.fromSchema(':memory:', schemaPath);
+      db.close();
+      expect(
+        () => db.currentVersion(),
+        throwsA(isA<DatabaseException>()),
+      );
+    });
+  });
+
   group('Database close', () {
     test('close is idempotent', () {
       final db = Database.fromSchema(':memory:', schemaPath);

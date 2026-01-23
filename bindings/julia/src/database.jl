@@ -33,3 +33,11 @@ function close!(db::Database)
     end
     return nothing
 end
+
+function current_version(db::Database)
+    version = C.quiver_database_current_version(db.ptr)
+    if version < 0
+        throw(DatabaseException("Failed to get current version"))
+    end
+    return version
+end
