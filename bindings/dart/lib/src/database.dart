@@ -1075,19 +1075,21 @@ class Database {
     }
   }
 
-  /// Lists all scalar attribute names for a collection.
-  List<String> listScalarAttributes(String collection) {
+  /// Lists all scalar attributes for a collection with full metadata.
+  List<({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})> listScalarAttributes(
+    String collection,
+  ) {
     _ensureNotClosed();
 
     final arena = Arena();
     try {
-      final outAttrs = arena<Pointer<Pointer<Char>>>();
+      final outMetadata = arena<Pointer<quiver_scalar_metadata_t>>();
       final outCount = arena<Size>();
 
       final err = bindings.quiver_database_list_scalar_attributes(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
-        outAttrs,
+        outMetadata,
         outCount,
       );
 
@@ -1096,31 +1098,40 @@ class Database {
       }
 
       final count = outCount.value;
-      if (count == 0 || outAttrs.value == nullptr) {
+      if (count == 0 || outMetadata.value == nullptr) {
         return [];
       }
 
-      final result = List<String>.generate(count, (i) => outAttrs.value[i].cast<Utf8>().toDartString());
-      bindings.quiver_free_string_array(outAttrs.value, count);
+      final result = <({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})>[];
+      for (var i = 0; i < count; i++) {
+        result.add(_parseScalarMetadata(outMetadata.value[i]));
+      }
+      bindings.quiver_free_scalar_metadata_array(outMetadata.value, count);
       return result;
     } finally {
       arena.releaseAll();
     }
   }
 
-  /// Lists all vector group names for a collection.
-  List<String> listVectorGroups(String collection) {
+  /// Lists all vector groups for a collection with full metadata.
+  List<
+    ({
+      String groupName,
+      List<({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})> attributes,
+    })
+  >
+  listVectorGroups(String collection) {
     _ensureNotClosed();
 
     final arena = Arena();
     try {
-      final outGroups = arena<Pointer<Pointer<Char>>>();
+      final outMetadata = arena<Pointer<quiver_vector_metadata_t>>();
       final outCount = arena<Size>();
 
       final err = bindings.quiver_database_list_vector_groups(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
-        outGroups,
+        outMetadata,
         outCount,
       );
 
@@ -1129,31 +1140,49 @@ class Database {
       }
 
       final count = outCount.value;
-      if (count == 0 || outGroups.value == nullptr) {
+      if (count == 0 || outMetadata.value == nullptr) {
         return [];
       }
 
-      final result = List<String>.generate(count, (i) => outGroups.value[i].cast<Utf8>().toDartString());
-      bindings.quiver_free_string_array(outGroups.value, count);
+      final result =
+          <({
+            String groupName,
+            List<({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})> attributes,
+          })>[];
+      for (var i = 0; i < count; i++) {
+        final meta = outMetadata.value[i];
+        final attributes = <({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})>[];
+        for (var j = 0; j < meta.attribute_count; j++) {
+          attributes.add(_parseScalarMetadata(meta.attributes[j]));
+        }
+        result.add((groupName: meta.group_name.cast<Utf8>().toDartString(), attributes: attributes));
+      }
+      bindings.quiver_free_vector_metadata_array(outMetadata.value, count);
       return result;
     } finally {
       arena.releaseAll();
     }
   }
 
-  /// Lists all set group names for a collection.
-  List<String> listSetGroups(String collection) {
+  /// Lists all set groups for a collection with full metadata.
+  List<
+    ({
+      String groupName,
+      List<({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})> attributes,
+    })
+  >
+  listSetGroups(String collection) {
     _ensureNotClosed();
 
     final arena = Arena();
     try {
-      final outGroups = arena<Pointer<Pointer<Char>>>();
+      final outMetadata = arena<Pointer<quiver_set_metadata_t>>();
       final outCount = arena<Size>();
 
       final err = bindings.quiver_database_list_set_groups(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
-        outGroups,
+        outMetadata,
         outCount,
       );
 
@@ -1162,12 +1191,24 @@ class Database {
       }
 
       final count = outCount.value;
-      if (count == 0 || outGroups.value == nullptr) {
+      if (count == 0 || outMetadata.value == nullptr) {
         return [];
       }
 
-      final result = List<String>.generate(count, (i) => outGroups.value[i].cast<Utf8>().toDartString());
-      bindings.quiver_free_string_array(outGroups.value, count);
+      final result =
+          <({
+            String groupName,
+            List<({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})> attributes,
+          })>[];
+      for (var i = 0; i < count; i++) {
+        final meta = outMetadata.value[i];
+        final attributes = <({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})>[];
+        for (var j = 0; j < meta.attribute_count; j++) {
+          attributes.add(_parseScalarMetadata(meta.attributes[j]));
+        }
+        result.add((groupName: meta.group_name.cast<Utf8>().toDartString(), attributes: attributes));
+      }
+      bindings.quiver_free_set_metadata_array(outMetadata.value, count);
       return result;
     } finally {
       arena.releaseAll();

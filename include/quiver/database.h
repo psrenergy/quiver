@@ -107,10 +107,10 @@ public:
     VectorMetadata get_vector_metadata(const std::string& collection, const std::string& group_name) const;
     SetMetadata get_set_metadata(const std::string& collection, const std::string& group_name) const;
 
-    // List attributes/groups
-    std::vector<std::string> list_scalar_attributes(const std::string& collection) const;
-    std::vector<std::string> list_vector_groups(const std::string& collection) const;
-    std::vector<std::string> list_set_groups(const std::string& collection) const;
+    // List attributes/groups - returns full metadata
+    std::vector<ScalarMetadata> list_scalar_attributes(const std::string& collection) const;
+    std::vector<VectorMetadata> list_vector_groups(const std::string& collection) const;
+    std::vector<SetMetadata> list_set_groups(const std::string& collection) const;
 
     // Update scalar attributes (by element ID)
     void update_scalar_integer(const std::string& collection, const std::string& attribute, int64_t id, int64_t value);

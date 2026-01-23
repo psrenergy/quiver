@@ -106,10 +106,20 @@ include("fixture.jl")
         db = Quiver.from_schema(":memory:", path_schema)
 
         attrs = Quiver.list_scalar_attributes(db, "Collection")
-        @test "id" in attrs
-        @test "label" in attrs
-        @test "some_integer" in attrs
-        @test "some_float" in attrs
+        attr_names = [attr.name for attr in attrs]
+        @test "id" in attr_names
+        @test "label" in attr_names
+        @test "some_integer" in attr_names
+        @test "some_float" in attr_names
+
+        # Verify metadata is included
+        label_attr = first(filter(a -> a.name == "label", attrs))
+        @test label_attr.data_type == :text
+        @test label_attr.not_null == true
+
+        some_int_attr = first(filter(a -> a.name == "some_integer", attrs))
+        @test some_int_attr.data_type == :integer
+        @test some_int_attr.not_null == false
 
         Quiver.close!(db)
     end
@@ -119,7 +129,15 @@ include("fixture.jl")
         db = Quiver.from_schema(":memory:", path_schema)
 
         groups = Quiver.list_vector_groups(db, "Collection")
-        @test "values" in groups
+        group_names = [g.group_name for g in groups]
+        @test "values" in group_names
+
+        # Verify metadata is included
+        values_group = first(filter(g -> g.group_name == "values", groups))
+        @test length(values_group.attributes) == 2
+        attr_names = [a.name for a in values_group.attributes]
+        @test "value_int" in attr_names
+        @test "value_float" in attr_names
 
         Quiver.close!(db)
     end
@@ -129,7 +147,14 @@ include("fixture.jl")
         db = Quiver.from_schema(":memory:", path_schema)
 
         groups = Quiver.list_set_groups(db, "Collection")
-        @test "tags" in groups
+        group_names = [g.group_name for g in groups]
+        @test "tags" in group_names
+
+        # Verify metadata is included
+        tags_group = first(filter(g -> g.group_name == "tags", groups))
+        @test length(tags_group.attributes) == 1
+        @test tags_group.attributes[1].name == "tag"
+        @test tags_group.attributes[1].data_type == :text
 
         Quiver.close!(db)
     end

@@ -266,21 +266,26 @@ QUIVER_C_API void quiver_free_scalar_metadata(quiver_scalar_metadata_t* metadata
 QUIVER_C_API void quiver_free_vector_metadata(quiver_vector_metadata_t* metadata);
 QUIVER_C_API void quiver_free_set_metadata(quiver_set_metadata_t* metadata);
 
-// List attributes/groups
+// List attributes/groups - returns full metadata
 QUIVER_C_API quiver_error_t quiver_database_list_scalar_attributes(quiver_database_t* db,
                                                                    const char* collection,
-                                                                   char*** out_attributes,
+                                                                   quiver_scalar_metadata_t** out_metadata,
                                                                    size_t* out_count);
 
 QUIVER_C_API quiver_error_t quiver_database_list_vector_groups(quiver_database_t* db,
                                                                const char* collection,
-                                                               char*** out_groups,
+                                                               quiver_vector_metadata_t** out_metadata,
                                                                size_t* out_count);
 
 QUIVER_C_API quiver_error_t quiver_database_list_set_groups(quiver_database_t* db,
                                                             const char* collection,
-                                                            char*** out_groups,
+                                                            quiver_set_metadata_t** out_metadata,
                                                             size_t* out_count);
+
+// Free metadata arrays
+QUIVER_C_API void quiver_free_scalar_metadata_array(quiver_scalar_metadata_t* metadata, size_t count);
+QUIVER_C_API void quiver_free_vector_metadata_array(quiver_vector_metadata_t* metadata, size_t count);
+QUIVER_C_API void quiver_free_set_metadata_array(quiver_set_metadata_t* metadata, size_t count);
 
 // Update scalar attributes (by element ID)
 QUIVER_C_API quiver_error_t quiver_database_update_scalar_integer(quiver_database_t* db,

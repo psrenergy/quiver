@@ -112,67 +112,113 @@ function get_set_metadata(db::Database, collection::AbstractString, group_name::
 end
 
 function list_scalar_attributes(db::Database, collection::AbstractString)
-    out_attrs = Ref(Ptr{Ptr{Cchar}}(C_NULL))
+    out_metadata = Ref(Ptr{C.quiver_scalar_metadata_t}(C_NULL))
     out_count = Ref(Csize_t(0))
-    err = C.quiver_database_list_scalar_attributes(db.ptr, collection, out_attrs, out_count)
+    err = C.quiver_database_list_scalar_attributes(db.ptr, collection, out_metadata, out_count)
     if err != C.QUIVER_OK
         throw(DatabaseException("Failed to list scalar attributes for '$collection'"))
     end
 
     count = out_count[]
-    if count == 0 || out_attrs[] == C_NULL
-        return String[]
+    if count == 0 || out_metadata[] == C_NULL
+        return ScalarMetadata[]
     end
 
-    result = String[]
+    result = ScalarMetadata[]
     for i in 1:count
-        ptr = unsafe_load(out_attrs[], i)
-        push!(result, unsafe_string(ptr))
+        meta_ptr = out_metadata[] + (i - 1) * sizeof(C.quiver_scalar_metadata_t)
+        meta = unsafe_load(Ptr{C.quiver_scalar_metadata_t}(meta_ptr))
+        push!(
+            result,
+            ScalarMetadata(
+                unsafe_string(meta.name),
+                _data_type_symbol(meta.data_type),
+                meta.not_null != 0,
+                meta.primary_key != 0,
+                meta.default_value == C_NULL ? nothing : unsafe_string(meta.default_value),
+            ),
+        )
     end
-    C.quiver_free_string_array(out_attrs[], count)
+    C.quiver_free_scalar_metadata_array(out_metadata[], count)
     return result
 end
 
 function list_vector_groups(db::Database, collection::AbstractString)
-    out_groups = Ref(Ptr{Ptr{Cchar}}(C_NULL))
+    out_metadata = Ref(Ptr{C.quiver_vector_metadata_t}(C_NULL))
     out_count = Ref(Csize_t(0))
-    err = C.quiver_database_list_vector_groups(db.ptr, collection, out_groups, out_count)
+    err = C.quiver_database_list_vector_groups(db.ptr, collection, out_metadata, out_count)
     if err != C.QUIVER_OK
         throw(DatabaseException("Failed to list vector groups for '$collection'"))
     end
 
     count = out_count[]
-    if count == 0 || out_groups[] == C_NULL
-        return String[]
+    if count == 0 || out_metadata[] == C_NULL
+        return VectorMetadata[]
     end
 
-    result = String[]
+    result = VectorMetadata[]
     for i in 1:count
-        ptr = unsafe_load(out_groups[], i)
-        push!(result, unsafe_string(ptr))
+        meta_ptr = out_metadata[] + (i - 1) * sizeof(C.quiver_vector_metadata_t)
+        meta = unsafe_load(Ptr{C.quiver_vector_metadata_t}(meta_ptr))
+
+        attributes = ScalarMetadata[]
+        for j in 1:meta.attribute_count
+            attr_ptr = meta.attributes + (j - 1) * sizeof(C.quiver_scalar_metadata_t)
+            attr = unsafe_load(Ptr{C.quiver_scalar_metadata_t}(attr_ptr))
+            push!(
+                attributes,
+                ScalarMetadata(
+                    unsafe_string(attr.name),
+                    _data_type_symbol(attr.data_type),
+                    attr.not_null != 0,
+                    attr.primary_key != 0,
+                    attr.default_value == C_NULL ? nothing : unsafe_string(attr.default_value),
+                ),
+            )
+        end
+
+        push!(result, VectorMetadata(unsafe_string(meta.group_name), attributes))
     end
-    C.quiver_free_string_array(out_groups[], count)
+    C.quiver_free_vector_metadata_array(out_metadata[], count)
     return result
 end
 
 function list_set_groups(db::Database, collection::AbstractString)
-    out_groups = Ref(Ptr{Ptr{Cchar}}(C_NULL))
+    out_metadata = Ref(Ptr{C.quiver_set_metadata_t}(C_NULL))
     out_count = Ref(Csize_t(0))
-    err = C.quiver_database_list_set_groups(db.ptr, collection, out_groups, out_count)
+    err = C.quiver_database_list_set_groups(db.ptr, collection, out_metadata, out_count)
     if err != C.QUIVER_OK
         throw(DatabaseException("Failed to list set groups for '$collection'"))
     end
 
     count = out_count[]
-    if count == 0 || out_groups[] == C_NULL
-        return String[]
+    if count == 0 || out_metadata[] == C_NULL
+        return SetMetadata[]
     end
 
-    result = String[]
+    result = SetMetadata[]
     for i in 1:count
-        ptr = unsafe_load(out_groups[], i)
-        push!(result, unsafe_string(ptr))
+        meta_ptr = out_metadata[] + (i - 1) * sizeof(C.quiver_set_metadata_t)
+        meta = unsafe_load(Ptr{C.quiver_set_metadata_t}(meta_ptr))
+
+        attributes = ScalarMetadata[]
+        for j in 1:meta.attribute_count
+            attr_ptr = meta.attributes + (j - 1) * sizeof(C.quiver_scalar_metadata_t)
+            attr = unsafe_load(Ptr{C.quiver_scalar_metadata_t}(attr_ptr))
+            push!(
+                attributes,
+                ScalarMetadata(
+                    unsafe_string(attr.name),
+                    _data_type_symbol(attr.data_type),
+                    attr.not_null != 0,
+                    attr.primary_key != 0,
+                    attr.default_value == C_NULL ? nothing : unsafe_string(attr.default_value),
+                ),
+            )
+        end
+
+        push!(result, SetMetadata(unsafe_string(meta.group_name), attributes))
     end
-    C.quiver_free_string_array(out_groups[], count)
+    C.quiver_free_set_metadata_array(out_metadata[], count)
     return result
 end

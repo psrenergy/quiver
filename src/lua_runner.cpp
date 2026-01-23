@@ -129,15 +129,15 @@ struct LuaRunner::Impl {
             },
             "list_scalar_attributes",
             [](Database& self, const std::string& collection, sol::this_state s) {
-                return list_strings_to_lua(self.list_scalar_attributes(collection), s);
+                return list_scalar_metadata_to_lua(self, collection, s);
             },
             "list_vector_groups",
             [](Database& self, const std::string& collection, sol::this_state s) {
-                return list_strings_to_lua(self.list_vector_groups(collection), s);
+                return list_vector_metadata_to_lua(self, collection, s);
             },
             "list_set_groups",
             [](Database& self, const std::string& collection, sol::this_state s) {
-                return list_strings_to_lua(self.list_set_groups(collection), s);
+                return list_set_metadata_to_lua(self, collection, s);
             });
     }
 
@@ -420,11 +420,46 @@ struct LuaRunner::Impl {
         return t;
     }
 
-    static sol::table list_strings_to_lua(const std::vector<std::string>& strings, sol::this_state s) {
+    static sol::table list_scalar_metadata_to_lua(Database& db, const std::string& collection, sol::this_state s) {
         sol::state_view lua(s);
+        auto metadata_list = db.list_scalar_attributes(collection);
         sol::table t = lua.create_table();
-        for (size_t i = 0; i < strings.size(); ++i) {
-            t[i + 1] = strings[i];
+        for (size_t i = 0; i < metadata_list.size(); ++i) {
+            t[i + 1] = scalar_metadata_to_lua(lua, metadata_list[i]);
+        }
+        return t;
+    }
+
+    static sol::table list_vector_metadata_to_lua(Database& db, const std::string& collection, sol::this_state s) {
+        sol::state_view lua(s);
+        auto metadata_list = db.list_vector_groups(collection);
+        sol::table t = lua.create_table();
+        for (size_t i = 0; i < metadata_list.size(); ++i) {
+            sol::table meta = lua.create_table();
+            meta["group_name"] = metadata_list[i].group_name;
+            sol::table attrs = lua.create_table();
+            for (size_t j = 0; j < metadata_list[i].attributes.size(); ++j) {
+                attrs[j + 1] = scalar_metadata_to_lua(lua, metadata_list[i].attributes[j]);
+            }
+            meta["attributes"] = attrs;
+            t[i + 1] = meta;
+        }
+        return t;
+    }
+
+    static sol::table list_set_metadata_to_lua(Database& db, const std::string& collection, sol::this_state s) {
+        sol::state_view lua(s);
+        auto metadata_list = db.list_set_groups(collection);
+        sol::table t = lua.create_table();
+        for (size_t i = 0; i < metadata_list.size(); ++i) {
+            sol::table meta = lua.create_table();
+            meta["group_name"] = metadata_list[i].group_name;
+            sol::table attrs = lua.create_table();
+            for (size_t j = 0; j < metadata_list[i].attributes.size(); ++j) {
+                attrs[j + 1] = scalar_metadata_to_lua(lua, metadata_list[i].attributes[j]);
+            }
+            meta["attributes"] = attrs;
+            t[i + 1] = meta;
         }
         return t;
     }

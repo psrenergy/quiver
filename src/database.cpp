@@ -1501,7 +1501,7 @@ SetMetadata Database::get_set_metadata(const std::string& collection, const std:
     return meta;
 }
 
-std::vector<std::string> Database::list_scalar_attributes(const std::string& collection) const {
+std::vector<ScalarMetadata> Database::list_scalar_attributes(const std::string& collection) const {
     if (!impl_->schema) {
         throw std::runtime_error("Cannot list scalar attributes: no schema loaded");
     }
@@ -1511,19 +1511,25 @@ std::vector<std::string> Database::list_scalar_attributes(const std::string& col
         throw std::runtime_error("Collection not found in schema: " + collection);
     }
 
-    std::vector<std::string> result;
+    std::vector<ScalarMetadata> result;
     for (const auto& [col_name, col] : table_def->columns) {
-        result.push_back(col_name);
+        ScalarMetadata meta;
+        meta.name = col.name;
+        meta.data_type = col.type;
+        meta.not_null = col.not_null;
+        meta.primary_key = col.primary_key;
+        meta.default_value = col.default_value;
+        result.push_back(std::move(meta));
     }
     return result;
 }
 
-std::vector<std::string> Database::list_vector_groups(const std::string& collection) const {
+std::vector<VectorMetadata> Database::list_vector_groups(const std::string& collection) const {
     if (!impl_->schema) {
         throw std::runtime_error("Cannot list vector groups: no schema loaded");
     }
 
-    std::vector<std::string> result;
+    std::vector<VectorMetadata> result;
     auto prefix = collection + "_vector_";
 
     for (const auto& table_name : impl_->schema->table_names()) {
@@ -1534,18 +1540,19 @@ std::vector<std::string> Database::list_vector_groups(const std::string& collect
 
         // Extract group name from table name
         if (table_name.size() > prefix.size() && table_name.substr(0, prefix.size()) == prefix) {
-            result.push_back(table_name.substr(prefix.size()));
+            auto group_name = table_name.substr(prefix.size());
+            result.push_back(get_vector_metadata(collection, group_name));
         }
     }
     return result;
 }
 
-std::vector<std::string> Database::list_set_groups(const std::string& collection) const {
+std::vector<SetMetadata> Database::list_set_groups(const std::string& collection) const {
     if (!impl_->schema) {
         throw std::runtime_error("Cannot list set groups: no schema loaded");
     }
 
-    std::vector<std::string> result;
+    std::vector<SetMetadata> result;
     auto prefix = collection + "_set_";
 
     for (const auto& table_name : impl_->schema->table_names()) {
@@ -1556,7 +1563,8 @@ std::vector<std::string> Database::list_set_groups(const std::string& collection
 
         // Extract group name from table name
         if (table_name.size() > prefix.size() && table_name.substr(0, prefix.size()) == prefix) {
-            result.push_back(table_name.substr(prefix.size()));
+            auto group_name = table_name.substr(prefix.size());
+            result.push_back(get_set_metadata(collection, group_name));
         }
     }
     return result;

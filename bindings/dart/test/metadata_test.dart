@@ -183,17 +183,27 @@ void main() {
   });
 
   group('List Scalar Attributes', () {
-    test('returns all scalar attribute names', () {
+    test('returns all scalar attributes with metadata', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
         final attrs = db.listScalarAttributes('Collection');
-        expect(attrs, contains('id'));
-        expect(attrs, contains('label'));
-        expect(attrs, contains('some_integer'));
-        expect(attrs, contains('some_float'));
+        final attrNames = attrs.map((a) => a.name).toList();
+        expect(attrNames, contains('id'));
+        expect(attrNames, contains('label'));
+        expect(attrNames, contains('some_integer'));
+        expect(attrNames, contains('some_float'));
+
+        // Verify metadata is included
+        final labelAttr = attrs.firstWhere((a) => a.name == 'label');
+        expect(labelAttr.dataType, equals('text'));
+        expect(labelAttr.notNull, isTrue);
+
+        final someIntAttr = attrs.firstWhere((a) => a.name == 'some_integer');
+        expect(someIntAttr.dataType, equals('integer'));
+        expect(someIntAttr.notNull, isFalse);
       } finally {
         db.close();
       }
@@ -201,14 +211,22 @@ void main() {
   });
 
   group('List Vector Groups', () {
-    test('returns all vector group names', () {
+    test('returns all vector groups with metadata', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
         final groups = db.listVectorGroups('Collection');
-        expect(groups, contains('values'));
+        final groupNames = groups.map((g) => g.groupName).toList();
+        expect(groupNames, contains('values'));
+
+        // Verify metadata is included
+        final valuesGroup = groups.firstWhere((g) => g.groupName == 'values');
+        expect(valuesGroup.attributes.length, equals(2));
+        final attrNames = valuesGroup.attributes.map((a) => a.name).toList();
+        expect(attrNames, contains('value_int'));
+        expect(attrNames, contains('value_float'));
       } finally {
         db.close();
       }
@@ -216,14 +234,21 @@ void main() {
   });
 
   group('List Set Groups', () {
-    test('returns all set group names', () {
+    test('returns all set groups with metadata', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
         final groups = db.listSetGroups('Collection');
-        expect(groups, contains('tags'));
+        final groupNames = groups.map((g) => g.groupName).toList();
+        expect(groupNames, contains('tags'));
+
+        // Verify metadata is included
+        final tagsGroup = groups.firstWhere((g) => g.groupName == 'tags');
+        expect(tagsGroup.attributes.length, equals(1));
+        expect(tagsGroup.attributes[0].name, equals('tag'));
+        expect(tagsGroup.attributes[0].dataType, equals('text'));
       } finally {
         db.close();
       }

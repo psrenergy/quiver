@@ -1090,21 +1090,29 @@ QUIVER_C_API void quiver_free_set_metadata(quiver_set_metadata_t* metadata) {
 
 QUIVER_C_API quiver_error_t quiver_database_list_scalar_attributes(quiver_database_t* db,
                                                                    const char* collection,
-                                                                   char*** out_attributes,
+                                                                   quiver_scalar_metadata_t** out_metadata,
                                                                    size_t* out_count) {
-    if (!db || !collection || !out_attributes || !out_count) {
+    if (!db || !collection || !out_metadata || !out_count) {
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto attrs = db->db.list_scalar_attributes(collection);
         *out_count = attrs.size();
         if (attrs.empty()) {
-            *out_attributes = nullptr;
+            *out_metadata = nullptr;
             return QUIVER_OK;
         }
-        *out_attributes = new char*[attrs.size()];
+        *out_metadata = new quiver_scalar_metadata_t[attrs.size()];
         for (size_t i = 0; i < attrs.size(); ++i) {
-            (*out_attributes)[i] = strdup_safe(attrs[i]);
+            (*out_metadata)[i].name = strdup_safe(attrs[i].name);
+            (*out_metadata)[i].data_type = to_c_data_type(attrs[i].data_type);
+            (*out_metadata)[i].not_null = attrs[i].not_null ? 1 : 0;
+            (*out_metadata)[i].primary_key = attrs[i].primary_key ? 1 : 0;
+            if (attrs[i].default_value.has_value()) {
+                (*out_metadata)[i].default_value = strdup_safe(*attrs[i].default_value);
+            } else {
+                (*out_metadata)[i].default_value = nullptr;
+            }
         }
         return QUIVER_OK;
     } catch (const std::exception&) {
@@ -1114,21 +1122,39 @@ QUIVER_C_API quiver_error_t quiver_database_list_scalar_attributes(quiver_databa
 
 QUIVER_C_API quiver_error_t quiver_database_list_vector_groups(quiver_database_t* db,
                                                                const char* collection,
-                                                               char*** out_groups,
+                                                               quiver_vector_metadata_t** out_metadata,
                                                                size_t* out_count) {
-    if (!db || !collection || !out_groups || !out_count) {
+    if (!db || !collection || !out_metadata || !out_count) {
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto groups = db->db.list_vector_groups(collection);
         *out_count = groups.size();
         if (groups.empty()) {
-            *out_groups = nullptr;
+            *out_metadata = nullptr;
             return QUIVER_OK;
         }
-        *out_groups = new char*[groups.size()];
+        *out_metadata = new quiver_vector_metadata_t[groups.size()];
         for (size_t i = 0; i < groups.size(); ++i) {
-            (*out_groups)[i] = strdup_safe(groups[i]);
+            (*out_metadata)[i].group_name = strdup_safe(groups[i].group_name);
+            (*out_metadata)[i].attribute_count = groups[i].attributes.size();
+            if (groups[i].attributes.empty()) {
+                (*out_metadata)[i].attributes = nullptr;
+            } else {
+                (*out_metadata)[i].attributes = new quiver_scalar_metadata_t[groups[i].attributes.size()];
+                for (size_t j = 0; j < groups[i].attributes.size(); ++j) {
+                    (*out_metadata)[i].attributes[j].name = strdup_safe(groups[i].attributes[j].name);
+                    (*out_metadata)[i].attributes[j].data_type = to_c_data_type(groups[i].attributes[j].data_type);
+                    (*out_metadata)[i].attributes[j].not_null = groups[i].attributes[j].not_null ? 1 : 0;
+                    (*out_metadata)[i].attributes[j].primary_key = groups[i].attributes[j].primary_key ? 1 : 0;
+                    if (groups[i].attributes[j].default_value.has_value()) {
+                        (*out_metadata)[i].attributes[j].default_value =
+                            strdup_safe(*groups[i].attributes[j].default_value);
+                    } else {
+                        (*out_metadata)[i].attributes[j].default_value = nullptr;
+                    }
+                }
+            }
         }
         return QUIVER_OK;
     } catch (const std::exception&) {
@@ -1138,26 +1164,86 @@ QUIVER_C_API quiver_error_t quiver_database_list_vector_groups(quiver_database_t
 
 QUIVER_C_API quiver_error_t quiver_database_list_set_groups(quiver_database_t* db,
                                                             const char* collection,
-                                                            char*** out_groups,
+                                                            quiver_set_metadata_t** out_metadata,
                                                             size_t* out_count) {
-    if (!db || !collection || !out_groups || !out_count) {
+    if (!db || !collection || !out_metadata || !out_count) {
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         auto groups = db->db.list_set_groups(collection);
         *out_count = groups.size();
         if (groups.empty()) {
-            *out_groups = nullptr;
+            *out_metadata = nullptr;
             return QUIVER_OK;
         }
-        *out_groups = new char*[groups.size()];
+        *out_metadata = new quiver_set_metadata_t[groups.size()];
         for (size_t i = 0; i < groups.size(); ++i) {
-            (*out_groups)[i] = strdup_safe(groups[i]);
+            (*out_metadata)[i].group_name = strdup_safe(groups[i].group_name);
+            (*out_metadata)[i].attribute_count = groups[i].attributes.size();
+            if (groups[i].attributes.empty()) {
+                (*out_metadata)[i].attributes = nullptr;
+            } else {
+                (*out_metadata)[i].attributes = new quiver_scalar_metadata_t[groups[i].attributes.size()];
+                for (size_t j = 0; j < groups[i].attributes.size(); ++j) {
+                    (*out_metadata)[i].attributes[j].name = strdup_safe(groups[i].attributes[j].name);
+                    (*out_metadata)[i].attributes[j].data_type = to_c_data_type(groups[i].attributes[j].data_type);
+                    (*out_metadata)[i].attributes[j].not_null = groups[i].attributes[j].not_null ? 1 : 0;
+                    (*out_metadata)[i].attributes[j].primary_key = groups[i].attributes[j].primary_key ? 1 : 0;
+                    if (groups[i].attributes[j].default_value.has_value()) {
+                        (*out_metadata)[i].attributes[j].default_value =
+                            strdup_safe(*groups[i].attributes[j].default_value);
+                    } else {
+                        (*out_metadata)[i].attributes[j].default_value = nullptr;
+                    }
+                }
+            }
         }
         return QUIVER_OK;
     } catch (const std::exception&) {
         return QUIVER_ERROR_DATABASE;
     }
+}
+
+QUIVER_C_API void quiver_free_scalar_metadata_array(quiver_scalar_metadata_t* metadata, size_t count) {
+    if (!metadata)
+        return;
+    for (size_t i = 0; i < count; ++i) {
+        delete[] metadata[i].name;
+        delete[] metadata[i].default_value;
+    }
+    delete[] metadata;
+}
+
+QUIVER_C_API void quiver_free_vector_metadata_array(quiver_vector_metadata_t* metadata, size_t count) {
+    if (!metadata)
+        return;
+    for (size_t i = 0; i < count; ++i) {
+        delete[] metadata[i].group_name;
+        if (metadata[i].attributes) {
+            for (size_t j = 0; j < metadata[i].attribute_count; ++j) {
+                delete[] metadata[i].attributes[j].name;
+                delete[] metadata[i].attributes[j].default_value;
+            }
+            delete[] metadata[i].attributes;
+        }
+    }
+    delete[] metadata;
+}
+
+QUIVER_C_API void quiver_free_set_metadata_array(quiver_set_metadata_t* metadata, size_t count) {
+    if (!metadata)
+        return;
+    for (size_t i = 0; i < count; ++i) {
+        delete[] metadata[i].group_name;
+        if (metadata[i].attributes) {
+            for (size_t j = 0; j < metadata[i].attribute_count; ++j) {
+                delete[] metadata[i].attributes[j].name;
+                delete[] metadata[i].attributes[j].default_value;
+            }
+            delete[] metadata[i].attributes;
+        }
+    }
+    delete[] metadata;
 }
 
 }  // extern "C"
