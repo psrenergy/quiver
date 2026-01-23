@@ -260,8 +260,6 @@ function read_set_strings(db::Database, collection::String, attribute::String)
     return result
 end
 
-# Read scalar by ID functions
-
 function read_scalar_integers_by_id(db::Database, collection::String, attribute::String, id::Int64)
     out_value = Ref{Int64}(0)
     out_has_value = Ref{Cint}(0)
@@ -308,8 +306,6 @@ function read_scalar_strings_by_id(db::Database, collection::String, attribute::
     C.quiver_string_free(out_value[])
     return result
 end
-
-# Read vector by ID functions
 
 function read_vector_integers_by_id(db::Database, collection::String, attribute::String, id::Int64)
     out_values = Ref{Ptr{Int64}}(C_NULL)
@@ -368,8 +364,6 @@ function read_vector_strings_by_id(db::Database, collection::String, attribute::
     C.quiver_free_string_array(out_values[], count)
     return result
 end
-
-# Read set by ID functions
 
 function read_set_integers_by_id(db::Database, collection::String, attribute::String, id::Int64)
     out_values = Ref{Ptr{Int64}}(C_NULL)
