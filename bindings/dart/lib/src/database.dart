@@ -931,12 +931,12 @@ class Database {
     }
   }
 
-  ({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue}) _parseScalarMetadata(
+  ({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue}) _parseScalarMetadata(
     quiver_scalar_metadata_t attr,
   ) {
     return (
       name: attr.name.cast<Utf8>().toDartString(),
-      dataType: _dataTypeToString(attr.data_type),
+      dataType: attr.data_type,
       notNull: attr.not_null != 0,
       primaryKey: attr.primary_key != 0,
       defaultValue: attr.default_value == nullptr ? null : attr.default_value.cast<Utf8>().toDartString(),
@@ -946,7 +946,7 @@ class Database {
   /// Returns metadata for a vector group, including all value columns in the group.
   ({
     String groupName,
-    List<({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})> valueColumns,
+    List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})> valueColumns,
   })
   getVectorMetadata(String collection, String groupName) {
     _ensureNotClosed();
@@ -966,7 +966,7 @@ class Database {
         throw DatabaseException.fromError(err, "Failed to get vector metadata for '$collection.$groupName'");
       }
 
-      final valueColumns = <({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})>[];
+      final valueColumns = <({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})>[];
       final count = outMetadata.ref.value_column_count;
       for (var i = 0; i < count; i++) {
         valueColumns.add(_parseScalarMetadata(outMetadata.ref.value_columns[i]));
@@ -987,7 +987,7 @@ class Database {
   /// Returns metadata for a set group, including all value columns in the group.
   ({
     String groupName,
-    List<({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})> valueColumns,
+    List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})> valueColumns,
   })
   getSetMetadata(String collection, String groupName) {
     _ensureNotClosed();
@@ -1007,7 +1007,7 @@ class Database {
         throw DatabaseException.fromError(err, "Failed to get set metadata for '$collection.$groupName'");
       }
 
-      final valueColumns = <({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})>[];
+      final valueColumns = <({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})>[];
       final count = outMetadata.ref.value_column_count;
       for (var i = 0; i < count; i++) {
         valueColumns.add(_parseScalarMetadata(outMetadata.ref.value_columns[i]));
@@ -1026,7 +1026,7 @@ class Database {
   }
 
   /// Lists all scalar attributes for a collection with full metadata.
-  List<({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})> listScalarAttributes(
+  List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})> listScalarAttributes(
     String collection,
   ) {
     _ensureNotClosed();
@@ -1052,7 +1052,7 @@ class Database {
         return [];
       }
 
-      final result = <({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})>[];
+      final result = <({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})>[];
       for (var i = 0; i < count; i++) {
         result.add(_parseScalarMetadata(outMetadata.value[i]));
       }
@@ -1067,7 +1067,7 @@ class Database {
   List<
     ({
       String groupName,
-      List<({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})> valueColumns,
+      List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})> valueColumns,
     })
   >
   listVectorGroups(String collection) {
@@ -1098,12 +1098,12 @@ class Database {
           <
             ({
               String groupName,
-              List<({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})> valueColumns,
+              List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})> valueColumns,
             })
           >[];
       for (var i = 0; i < count; i++) {
         final meta = outMetadata.value[i];
-        final valueColumns = <({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})>[];
+        final valueColumns = <({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})>[];
         for (var j = 0; j < meta.value_column_count; j++) {
           valueColumns.add(_parseScalarMetadata(meta.value_columns[j]));
         }
@@ -1120,7 +1120,7 @@ class Database {
   List<
     ({
       String groupName,
-      List<({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})> valueColumns,
+      List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})> valueColumns,
     })
   >
   listSetGroups(String collection) {
@@ -1151,12 +1151,12 @@ class Database {
           <
             ({
               String groupName,
-              List<({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})> valueColumns,
+              List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})> valueColumns,
             })
           >[];
       for (var i = 0; i < count; i++) {
         final meta = outMetadata.value[i];
-        final valueColumns = <({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})>[];
+        final valueColumns = <({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})>[];
         for (var j = 0; j < meta.value_column_count; j++) {
           valueColumns.add(_parseScalarMetadata(meta.value_columns[j]));
         }
@@ -1465,13 +1465,13 @@ class Database {
     }
   }
 
-  String _getValueDataType(
-    List<({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue})> valueColumns,
+  int _getValueDataType(
+    List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})> valueColumns,
   ) {
     if (valueColumns.isNotEmpty) {
       return valueColumns.first.dataType;
     }
-    return 'text';
+    return quiver_data_type_t.QUIVER_DATA_TYPE_STRING;
   }
 
   /// Reads all scalar attributes for an element by ID.
@@ -1483,11 +1483,11 @@ class Database {
     for (final attr in listScalarAttributes(collection)) {
       final name = attr.name;
       switch (attr.dataType) {
-        case 'integer':
+        case quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER:
           result[name] = readScalarIntegerById(collection, name, id);
-        case 'real':
+        case quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT:
           result[name] = readScalarFloatById(collection, name, id);
-        case 'text':
+        case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
           result[name] = readScalarStringById(collection, name, id);
       }
     }
@@ -1504,11 +1504,11 @@ class Database {
       final name = group.groupName;
       final dataType = _getValueDataType(group.valueColumns);
       switch (dataType) {
-        case 'integer':
+        case quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER:
           result[name] = readVectorIntegersById(collection, name, id);
-        case 'real':
+        case quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT:
           result[name] = readVectorFloatsById(collection, name, id);
-        case 'text':
+        case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
           result[name] = readVectorStringsById(collection, name, id);
       }
     }
@@ -1525,11 +1525,11 @@ class Database {
       final name = group.groupName;
       final dataType = _getValueDataType(group.valueColumns);
       switch (dataType) {
-        case 'integer':
+        case quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER:
           result[name] = readSetIntegersById(collection, name, id);
-        case 'real':
+        case quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT:
           result[name] = readSetFloatsById(collection, name, id);
-        case 'text':
+        case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
           result[name] = readSetStringsById(collection, name, id);
       }
     }
