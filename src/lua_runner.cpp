@@ -564,10 +564,8 @@ struct LuaRunner::Impl {
         return DataType::Text;
     }
 
-    static sol::table read_all_scalars_by_id_to_lua(Database& db,
-                                                    const std::string& collection,
-                                                    int64_t id,
-                                                    sol::this_state s) {
+    static sol::table
+    read_all_scalars_by_id_to_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
         sol::state_view lua(s);
         sol::table result = lua.create_table();
 
@@ -593,10 +591,8 @@ struct LuaRunner::Impl {
         return result;
     }
 
-    static sol::table read_all_vectors_by_id_to_lua(Database& db,
-                                                    const std::string& collection,
-                                                    int64_t id,
-                                                    sol::this_state s) {
+    static sol::table
+    read_all_vectors_by_id_to_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
         sol::state_view lua(s);
         sol::table result = lua.create_table();
 
@@ -631,10 +627,8 @@ struct LuaRunner::Impl {
         return result;
     }
 
-    static sol::table read_all_sets_by_id_to_lua(Database& db,
-                                                 const std::string& collection,
-                                                 int64_t id,
-                                                 sol::this_state s) {
+    static sol::table
+    read_all_sets_by_id_to_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
         sol::state_view lua(s);
         sol::table result = lua.create_table();
 
