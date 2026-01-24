@@ -892,17 +892,8 @@ class Database {
     }
   }
 
-  String _dataTypeToString(int dataType) {
-    return switch (dataType) {
-      quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER => 'integer',
-      quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT => 'real',
-      quiver_data_type_t.QUIVER_DATA_TYPE_STRING => 'text',
-      _ => 'unknown',
-    };
-  }
-
   /// Returns metadata for a scalar attribute.
-  ({String name, String dataType, bool notNull, bool primaryKey, String? defaultValue}) getScalarMetadata(
+  ({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue}) getScalarMetadata(
     String collection,
     String attribute,
   ) {
@@ -925,7 +916,7 @@ class Database {
 
       final result = (
         name: outMetadata.ref.name.cast<Utf8>().toDartString(),
-        dataType: _dataTypeToString(outMetadata.ref.data_type),
+        dataType: outMetadata.ref.data_type,
         notNull: outMetadata.ref.not_null != 0,
         primaryKey: outMetadata.ref.primary_key != 0,
         defaultValue: outMetadata.ref.default_value == nullptr

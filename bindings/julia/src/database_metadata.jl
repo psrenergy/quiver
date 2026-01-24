@@ -1,6 +1,6 @@
 struct ScalarMetadata
     name::String
-    data_type::Symbol
+    data_type::C.quiver_data_type_t
     not_null::Bool
     primary_key::Bool
     default_value::Union{String, Nothing}
@@ -16,18 +16,6 @@ struct SetMetadata
     value_columns::Vector{ScalarMetadata}
 end
 
-function _data_type_symbol(dt::C.quiver_data_type_t)
-    if dt == C.QUIVER_DATA_TYPE_INTEGER
-        return :integer
-    elseif dt == C.QUIVER_DATA_TYPE_FLOAT
-        return :real
-    elseif dt == C.QUIVER_DATA_TYPE_STRING
-        return :text
-    else
-        return :unknown
-    end
-end
-
 function get_scalar_metadata(db::Database, collection::AbstractString, attribute::AbstractString)
     metadata = Ref(C.quiver_scalar_metadata_t(C_NULL, C.QUIVER_DATA_TYPE_INTEGER, 0, 0, C_NULL))
     err = C.quiver_database_get_scalar_metadata(db.ptr, collection, attribute, metadata)
@@ -37,7 +25,7 @@ function get_scalar_metadata(db::Database, collection::AbstractString, attribute
 
     result = ScalarMetadata(
         unsafe_string(metadata[].name),
-        _data_type_symbol(metadata[].data_type),
+        metadata[].data_type,
         metadata[].not_null != 0,
         metadata[].primary_key != 0,
         metadata[].default_value == C_NULL ? nothing : unsafe_string(metadata[].default_value),
@@ -62,7 +50,7 @@ function get_vector_metadata(db::Database, collection::AbstractString, group_nam
             value_columns,
             ScalarMetadata(
                 unsafe_string(col.name),
-                _data_type_symbol(col.data_type),
+                col.data_type,
                 col.not_null != 0,
                 col.primary_key != 0,
                 col.default_value == C_NULL ? nothing : unsafe_string(col.default_value),
@@ -94,7 +82,7 @@ function get_set_metadata(db::Database, collection::AbstractString, group_name::
             value_columns,
             ScalarMetadata(
                 unsafe_string(col.name),
-                _data_type_symbol(col.data_type),
+                col.data_type,
                 col.not_null != 0,
                 col.primary_key != 0,
                 col.default_value == C_NULL ? nothing : unsafe_string(col.default_value),
@@ -132,7 +120,7 @@ function list_scalar_attributes(db::Database, collection::AbstractString)
             result,
             ScalarMetadata(
                 unsafe_string(meta.name),
-                _data_type_symbol(meta.data_type),
+                meta.data_type,
                 meta.not_null != 0,
                 meta.primary_key != 0,
                 meta.default_value == C_NULL ? nothing : unsafe_string(meta.default_value),
@@ -169,7 +157,7 @@ function list_vector_groups(db::Database, collection::AbstractString)
                 value_columns,
                 ScalarMetadata(
                     unsafe_string(col.name),
-                    _data_type_symbol(col.data_type),
+                    col.data_type,
                     col.not_null != 0,
                     col.primary_key != 0,
                     col.default_value == C_NULL ? nothing : unsafe_string(col.default_value),
@@ -209,7 +197,7 @@ function list_set_groups(db::Database, collection::AbstractString)
                 value_columns,
                 ScalarMetadata(
                     unsafe_string(col.name),
-                    _data_type_symbol(col.data_type),
+                    col.data_type,
                     col.not_null != 0,
                     col.primary_key != 0,
                     col.default_value == C_NULL ? nothing : unsafe_string(col.default_value),

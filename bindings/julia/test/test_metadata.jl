@@ -13,28 +13,28 @@ include("fixture.jl")
         # Test scalar metadata for label (NOT NULL, TEXT)
         meta = Quiver.get_scalar_metadata(db, "Collection", "label")
         @test meta.name == "label"
-        @test meta.data_type == :text
+        @test meta.data_type == Quiver.QUIVER_DATA_TYPE_STRING
         @test meta.not_null == true
         @test meta.primary_key == false
 
         # Test scalar metadata for some_integer (nullable INTEGER)
         meta = Quiver.get_scalar_metadata(db, "Collection", "some_integer")
         @test meta.name == "some_integer"
-        @test meta.data_type == :integer
+        @test meta.data_type == Quiver.QUIVER_DATA_TYPE_INTEGER
         @test meta.not_null == false
         @test meta.primary_key == false
 
         # Test scalar metadata for some_float (nullable REAL)
         meta = Quiver.get_scalar_metadata(db, "Collection", "some_float")
         @test meta.name == "some_float"
-        @test meta.data_type == :real
+        @test meta.data_type == Quiver.QUIVER_DATA_TYPE_FLOAT
         @test meta.not_null == false
         @test meta.primary_key == false
 
         # Test primary key metadata
         meta = Quiver.get_scalar_metadata(db, "Collection", "id")
         @test meta.name == "id"
-        @test meta.data_type == :integer
+        @test meta.data_type == Quiver.QUIVER_DATA_TYPE_INTEGER
         @test meta.primary_key == true
 
         Quiver.close!(db)
@@ -56,11 +56,11 @@ include("fixture.jl")
 
         # Check value_int attribute
         value_int_attr = first(filter(a -> a.name == "value_int", meta.value_columns))
-        @test value_int_attr.data_type == :integer
+        @test value_int_attr.data_type == Quiver.QUIVER_DATA_TYPE_INTEGER
 
         # Check value_float attribute
         value_float_attr = first(filter(a -> a.name == "value_float", meta.value_columns))
-        @test value_float_attr.data_type == :real
+        @test value_float_attr.data_type == Quiver.QUIVER_DATA_TYPE_FLOAT
 
         Quiver.close!(db)
     end
@@ -77,7 +77,7 @@ include("fixture.jl")
         # Check tag attribute
         tag_attr = meta.value_columns[1]
         @test tag_attr.name == "tag"
-        @test tag_attr.data_type == :text
+        @test tag_attr.data_type == Quiver.QUIVER_DATA_TYPE_STRING
 
         Quiver.close!(db)
     end
@@ -114,11 +114,11 @@ include("fixture.jl")
 
         # Verify metadata is included
         label_attr = first(filter(a -> a.name == "label", attrs))
-        @test label_attr.data_type == :text
+        @test label_attr.data_type == Quiver.QUIVER_DATA_TYPE_STRING
         @test label_attr.not_null == true
 
         some_int_attr = first(filter(a -> a.name == "some_integer", attrs))
-        @test some_int_attr.data_type == :integer
+        @test some_int_attr.data_type == Quiver.QUIVER_DATA_TYPE_INTEGER
         @test some_int_attr.not_null == false
 
         Quiver.close!(db)
@@ -154,7 +154,7 @@ include("fixture.jl")
         tags_group = first(filter(g -> g.group_name == "tags", groups))
         @test length(tags_group.value_columns) == 1
         @test tags_group.value_columns[1].name == "tag"
-        @test tags_group.value_columns[1].data_type == :text
+        @test tags_group.value_columns[1].data_type == Quiver.QUIVER_DATA_TYPE_STRING
 
         Quiver.close!(db)
     end
