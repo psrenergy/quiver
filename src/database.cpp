@@ -401,9 +401,15 @@ void Database::set_version(int64_t version) {
     impl_->logger->debug("Set database version to {}", version);
 }
 
-void Database::begin_transaction() { impl_->begin_transaction(); }
-void Database::commit() { impl_->commit(); }
-void Database::rollback() { impl_->rollback(); }
+void Database::begin_transaction() {
+    impl_->begin_transaction();
+}
+void Database::commit() {
+    impl_->commit();
+}
+void Database::rollback() {
+    impl_->rollback();
+}
 
 void Database::execute_raw(const std::string& sql) {
     char* err_msg = nullptr;
