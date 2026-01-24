@@ -1473,7 +1473,7 @@ class Database {
       throw const DatabaseOperationException('Failed to get current version');
     }
     return version;
-  }  
+  }
 
   int _getValueDataType(
     List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})> valueColumns,
