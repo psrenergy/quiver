@@ -1,8 +1,6 @@
 function update_element!(db::Database, collection::String, id::Int64, e::Element)
     err = C.quiver_database_update_element(db.ptr, collection, id, e.ptr)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to update element $id in collection $collection"))
-    end
+    check_error(err, "Failed to update element $id in collection $collection")
     return nothing
 end
 
@@ -23,25 +21,19 @@ end
 
 function update_scalar_integer!(db::Database, collection::String, attribute::String, id::Int64, value::Integer)
     err = C.quiver_database_update_scalar_integer(db.ptr, collection, attribute, id, Int64(value))
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to update scalar integer '$collection.$attribute' for id $id"))
-    end
+    check_error(err, "Failed to update scalar integer '$collection.$attribute' for id $id")
     return nothing
 end
 
 function update_scalar_float!(db::Database, collection::String, attribute::String, id::Int64, value::Real)
     err = C.quiver_database_update_scalar_float(db.ptr, collection, attribute, id, Float64(value))
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to update scalar float '$collection.$attribute' for id $id"))
-    end
+    check_error(err, "Failed to update scalar float '$collection.$attribute' for id $id")
     return nothing
 end
 
 function update_scalar_string!(db::Database, collection::String, attribute::String, id::Int64, value::String)
     err = C.quiver_database_update_scalar_string(db.ptr, collection, attribute, id, value)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to update scalar string '$collection.$attribute' for id $id"))
-    end
+    check_error(err, "Failed to update scalar string '$collection.$attribute' for id $id")
     return nothing
 end
 
@@ -63,9 +55,7 @@ function update_vector_integers!(
         integer_values,
         Csize_t(length(integer_values)),
     )
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to update vector integers '$collection.$attribute' for id $id"))
-    end
+    check_error(err, "Failed to update vector integers '$collection.$attribute' for id $id")
     return nothing
 end
 
@@ -79,9 +69,7 @@ function update_vector_floats!(db::Database, collection::String, attribute::Stri
         float_values,
         Csize_t(length(float_values)),
     )
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to update vector floats '$collection.$attribute' for id $id"))
-    end
+    check_error(err, "Failed to update vector floats '$collection.$attribute' for id $id")
     return nothing
 end
 
@@ -97,9 +85,7 @@ function update_vector_strings!(
     GC.@preserve cstrings begin
         err = C.quiver_database_update_vector_strings(db.ptr, collection, attribute, id, ptrs, Csize_t(length(values)))
     end
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to update vector strings '$collection.$attribute' for id $id"))
-    end
+    check_error(err, "Failed to update vector strings '$collection.$attribute' for id $id")
     return nothing
 end
 
@@ -115,9 +101,7 @@ function update_set_integers!(db::Database, collection::String, attribute::Strin
         integer_values,
         Csize_t(length(integer_values)),
     )
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to update set integers '$collection.$attribute' for id $id"))
-    end
+    check_error(err, "Failed to update set integers '$collection.$attribute' for id $id")
     return nothing
 end
 
@@ -131,9 +115,7 @@ function update_set_floats!(db::Database, collection::String, attribute::String,
         float_values,
         Csize_t(length(float_values)),
     )
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to update set floats '$collection.$attribute' for id $id"))
-    end
+    check_error(err, "Failed to update set floats '$collection.$attribute' for id $id")
     return nothing
 end
 
@@ -149,8 +131,6 @@ function update_set_strings!(
     GC.@preserve cstrings begin
         err = C.quiver_database_update_set_strings(db.ptr, collection, attribute, id, ptrs, Csize_t(length(values)))
     end
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to update set strings '$collection.$attribute' for id $id"))
-    end
+    check_error(err, "Failed to update set strings '$collection.$attribute' for id $id")
     return nothing
 end

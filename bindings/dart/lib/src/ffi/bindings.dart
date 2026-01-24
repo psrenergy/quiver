@@ -39,6 +39,22 @@ class QuiverDatabaseBindings {
   late final _quiver_versionPtr = _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function()>>('quiver_version');
   late final _quiver_version = _quiver_versionPtr.asFunction<ffi.Pointer<ffi.Char> Function()>();
 
+  ffi.Pointer<ffi.Char> quiver_get_last_error() {
+    return _quiver_get_last_error();
+  }
+
+  late final _quiver_get_last_errorPtr = _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function()>>(
+    'quiver_get_last_error',
+  );
+  late final _quiver_get_last_error = _quiver_get_last_errorPtr.asFunction<ffi.Pointer<ffi.Char> Function()>();
+
+  void quiver_clear_last_error() {
+    return _quiver_clear_last_error();
+  }
+
+  late final _quiver_clear_last_errorPtr = _lookup<ffi.NativeFunction<ffi.Void Function()>>('quiver_clear_last_error');
+  late final _quiver_clear_last_error = _quiver_clear_last_errorPtr.asFunction<void Function()>();
+
   quiver_database_options_t quiver_database_options_default() {
     return _quiver_database_options_default();
   }

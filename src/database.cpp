@@ -22,6 +22,58 @@ namespace {
 std::atomic<uint64_t> g_logger_counter{0};
 std::once_flag sqlite3_init_flag;
 
+// Type-specific Row value extractors for template implementations
+inline std::optional<int64_t> get_row_value(const quiver::Row& row, size_t index, int64_t*) {
+    return row.get_integer(index);
+}
+
+inline std::optional<double> get_row_value(const quiver::Row& row, size_t index, double*) {
+    return row.get_float(index);
+}
+
+inline std::optional<std::string> get_row_value(const quiver::Row& row, size_t index, std::string*) {
+    return row.get_string(index);
+}
+
+// Template for reading grouped values (vectors or sets) for all elements
+template <typename T>
+std::vector<std::vector<T>> read_grouped_values_all(const quiver::Result& result) {
+    std::vector<std::vector<T>> groups;
+    int64_t current_id = -1;
+
+    for (size_t i = 0; i < result.row_count(); ++i) {
+        auto id = result[i].get_integer(0);
+        auto val = get_row_value(result[i], 1, static_cast<T*>(nullptr));
+
+        if (!id)
+            continue;
+
+        if (*id != current_id) {
+            groups.emplace_back();
+            current_id = *id;
+        }
+
+        if (val) {
+            groups.back().push_back(*val);
+        }
+    }
+    return groups;
+}
+
+// Template for reading grouped values (vectors or sets) for a single element by ID
+template <typename T>
+std::vector<T> read_grouped_values_by_id(const quiver::Result& result) {
+    std::vector<T> values;
+    values.reserve(result.row_count());
+    for (size_t i = 0; i < result.row_count(); ++i) {
+        auto val = get_row_value(result[i], 0, static_cast<T*>(nullptr));
+        if (val) {
+            values.push_back(*val);
+        }
+    }
+    return values;
+}
+
 void ensure_sqlite3_initialized() {
     std::call_once(sqlite3_init_flag, []() { sqlite3_initialize(); });
 }
@@ -116,10 +168,69 @@ struct Database::Impl {
 
     ~Impl() {
         if (db) {
+            logger->debug("Closing database: {}", path);
             sqlite3_close_v2(db);
             db = nullptr;
+            logger->info("Database closed");
         }
     }
+
+    void begin_transaction() {
+        char* err_msg = nullptr;
+        const auto rc = sqlite3_exec(db, "BEGIN TRANSACTION;", nullptr, nullptr, &err_msg);
+        if (rc != SQLITE_OK) {
+            std::string error = err_msg ? err_msg : "Unknown error";
+            sqlite3_free(err_msg);
+            throw std::runtime_error("Failed to begin transaction: " + error);
+        }
+        logger->debug("Transaction started");
+    }
+
+    void commit() {
+        char* err_msg = nullptr;
+        const auto rc = sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &err_msg);
+        if (rc != SQLITE_OK) {
+            std::string error = err_msg ? err_msg : "Unknown error";
+            sqlite3_free(err_msg);
+            throw std::runtime_error("Failed to commit transaction: " + error);
+        }
+        logger->debug("Transaction committed");
+    }
+
+    void rollback() {
+        char* err_msg = nullptr;
+        const auto rc = sqlite3_exec(db, "ROLLBACK;", nullptr, nullptr, &err_msg);
+        if (rc != SQLITE_OK) {
+            std::string error = err_msg ? err_msg : "Unknown error";
+            sqlite3_free(err_msg);
+            logger->error("Failed to rollback transaction: {}", error);
+            // Don't throw - rollback is often called in error recovery
+        } else {
+            logger->debug("Transaction rolled back");
+        }
+    }
+
+    class TransactionGuard {
+        Impl& impl_;
+        bool committed_ = false;
+
+    public:
+        explicit TransactionGuard(Impl& impl) : impl_(impl) { impl_.begin_transaction(); }
+
+        void commit() {
+            impl_.commit();
+            committed_ = true;
+        }
+
+        ~TransactionGuard() {
+            if (!committed_) {
+                impl_.rollback();
+            }
+        }
+
+        TransactionGuard(const TransactionGuard&) = delete;
+        TransactionGuard& operator=(const TransactionGuard&) = delete;
+    };
 };
 
 Database::Database(const std::string& path, const DatabaseOptions& options) : impl_(std::make_unique<Impl>()) {
@@ -150,14 +261,7 @@ Database::Database(const std::string& path, const DatabaseOptions& options) : im
     impl_->logger->info("Database opened successfully: {}", path);
 }
 
-Database::~Database() {
-    if (impl_ && impl_->db) {
-        impl_->logger->debug("Closing database: {}", impl_->path);
-        sqlite3_close_v2(impl_->db);
-        impl_->db = nullptr;
-        impl_->logger->info("Database closed");
-    }
-}
+Database::~Database() = default;
 
 Database::Database(Database&& other) noexcept = default;
 Database& Database::operator=(Database&& other) noexcept = default;
@@ -267,8 +371,7 @@ int64_t Database::current_version() const {
 }
 
 const std::string& Database::path() const {
-    static const std::string empty;
-    return impl_ ? impl_->path : empty;
+    return impl_->path;
 }
 
 Database Database::from_migrations(const std::string& db_path,
@@ -299,38 +402,13 @@ void Database::set_version(int64_t version) {
 }
 
 void Database::begin_transaction() {
-    char* err_msg = nullptr;
-    const auto rc = sqlite3_exec(impl_->db, "BEGIN TRANSACTION;", nullptr, nullptr, &err_msg);
-    if (rc != SQLITE_OK) {
-        std::string error = err_msg ? err_msg : "Unknown error";
-        sqlite3_free(err_msg);
-        throw std::runtime_error("Failed to begin transaction: " + error);
-    }
-    impl_->logger->debug("Transaction started");
+    impl_->begin_transaction();
 }
-
 void Database::commit() {
-    char* err_msg = nullptr;
-    const auto rc = sqlite3_exec(impl_->db, "COMMIT;", nullptr, nullptr, &err_msg);
-    if (rc != SQLITE_OK) {
-        std::string error = err_msg ? err_msg : "Unknown error";
-        sqlite3_free(err_msg);
-        throw std::runtime_error("Failed to commit transaction: " + error);
-    }
-    impl_->logger->debug("Transaction committed");
+    impl_->commit();
 }
-
 void Database::rollback() {
-    char* err_msg = nullptr;
-    const auto rc = sqlite3_exec(impl_->db, "ROLLBACK;", nullptr, nullptr, &err_msg);
-    if (rc != SQLITE_OK) {
-        std::string error = err_msg ? err_msg : "Unknown error";
-        sqlite3_free(err_msg);
-        impl_->logger->error("Failed to rollback transaction: {}", error);
-        // Don't throw here - rollback is often called in error recovery
-    } else {
-        impl_->logger->debug("Transaction rolled back");
-    }
+    impl_->rollback();
 }
 
 void Database::execute_raw(const std::string& sql) {
@@ -434,14 +512,7 @@ void Database::apply_schema(const std::string& schema_path) {
 
 int64_t Database::create_element(const std::string& collection, const Element& element) {
     impl_->logger->debug("Creating element in collection: {}", collection);
-
-    // Require schema to be loaded
-    if (!impl_->schema) {
-        throw std::runtime_error("Cannot create element: no schema loaded");
-    }
-    if (!impl_->schema->has_table(collection)) {
-        throw std::runtime_error("Collection not found in schema: " + collection);
-    }
+    impl_->require_collection(collection, "create element");
 
     const auto& scalars = element.scalars();
     if (scalars.empty()) {
@@ -635,14 +706,7 @@ int64_t Database::create_element(const std::string& collection, const Element& e
 
 void Database::update_element(const std::string& collection, int64_t id, const Element& element) {
     impl_->logger->debug("Updating element {} in collection: {}", id, collection);
-
-    // Require schema to be loaded
-    if (!impl_->schema) {
-        throw std::runtime_error("Cannot update element: no schema loaded");
-    }
-    if (!impl_->schema->has_table(collection)) {
-        throw std::runtime_error("Collection not found in schema: " + collection);
-    }
+    impl_->require_collection(collection, "update element");
 
     const auto& scalars = element.scalars();
     if (scalars.empty()) {
@@ -677,13 +741,7 @@ void Database::update_element(const std::string& collection, int64_t id, const E
 
 void Database::delete_element_by_id(const std::string& collection, int64_t id) {
     impl_->logger->debug("Deleting element {} from collection: {}", id, collection);
-
-    if (!impl_->schema) {
-        throw std::runtime_error("Cannot delete element: no schema loaded");
-    }
-    if (!impl_->schema->has_table(collection)) {
-        throw std::runtime_error("Collection not found in schema: " + collection);
-    }
+    impl_->require_collection(collection, "delete element");
 
     auto sql = "DELETE FROM " + collection + " WHERE id = ?";
     execute(sql, {id});
@@ -855,285 +913,89 @@ std::vector<std::vector<int64_t>> Database::read_vector_integers(const std::stri
                                                                  const std::string& attribute) {
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + vector_table + " ORDER BY id, vector_index";
-    auto result = execute(sql);
-
-    std::vector<std::vector<int64_t>> vectors;
-    int64_t current_id = -1;
-
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto id = result[i].get_integer(0);
-        auto val = result[i].get_integer(1);
-
-        if (!id)
-            continue;
-
-        if (*id != current_id) {
-            vectors.emplace_back();
-            current_id = *id;
-        }
-
-        if (val) {
-            vectors.back().push_back(*val);
-        }
-    }
-    return vectors;
+    return read_grouped_values_all<int64_t>(execute(sql));
 }
 
 std::vector<std::vector<double>> Database::read_vector_floats(const std::string& collection,
                                                               const std::string& attribute) {
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + vector_table + " ORDER BY id, vector_index";
-    auto result = execute(sql);
-
-    std::vector<std::vector<double>> vectors;
-    int64_t current_id = -1;
-
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto id = result[i].get_integer(0);
-        auto val = result[i].get_float(1);
-
-        if (!id)
-            continue;
-
-        if (*id != current_id) {
-            vectors.emplace_back();
-            current_id = *id;
-        }
-
-        if (val) {
-            vectors.back().push_back(*val);
-        }
-    }
-    return vectors;
+    return read_grouped_values_all<double>(execute(sql));
 }
 
 std::vector<std::vector<std::string>> Database::read_vector_strings(const std::string& collection,
                                                                     const std::string& attribute) {
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + vector_table + " ORDER BY id, vector_index";
-    auto result = execute(sql);
-
-    std::vector<std::vector<std::string>> vectors;
-    int64_t current_id = -1;
-
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto id = result[i].get_integer(0);
-        auto val = result[i].get_string(1);
-
-        if (!id)
-            continue;
-
-        if (*id != current_id) {
-            vectors.emplace_back();
-            current_id = *id;
-        }
-
-        if (val) {
-            vectors.back().push_back(*val);
-        }
-    }
-    return vectors;
+    return read_grouped_values_all<std::string>(execute(sql));
 }
 
 std::vector<int64_t>
 Database::read_vector_integers_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + vector_table + " WHERE id = ? ORDER BY vector_index";
-    auto result = execute(sql, {id});
-
-    std::vector<int64_t> values;
-    values.reserve(result.row_count());
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_integer(0);
-        if (val) {
-            values.push_back(*val);
-        }
-    }
-    return values;
+    return read_grouped_values_by_id<int64_t>(execute(sql, {id}));
 }
 
 std::vector<double>
 Database::read_vector_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + vector_table + " WHERE id = ? ORDER BY vector_index";
-    auto result = execute(sql, {id});
-
-    std::vector<double> values;
-    values.reserve(result.row_count());
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_float(0);
-        if (val) {
-            values.push_back(*val);
-        }
-    }
-    return values;
+    return read_grouped_values_by_id<double>(execute(sql, {id}));
 }
 
 std::vector<std::string>
 Database::read_vector_strings_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + vector_table + " WHERE id = ? ORDER BY vector_index";
-    auto result = execute(sql, {id});
-
-    std::vector<std::string> values;
-    values.reserve(result.row_count());
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_string(0);
-        if (val) {
-            values.push_back(*val);
-        }
-    }
-    return values;
+    return read_grouped_values_by_id<std::string>(execute(sql, {id}));
 }
 
 std::vector<std::vector<int64_t>> Database::read_set_integers(const std::string& collection,
                                                               const std::string& attribute) {
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + set_table + " ORDER BY id";
-    auto result = execute(sql);
-
-    std::vector<std::vector<int64_t>> sets;
-    int64_t current_id = -1;
-
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto id = result[i].get_integer(0);
-        auto val = result[i].get_integer(1);
-
-        if (!id)
-            continue;
-
-        if (*id != current_id) {
-            sets.emplace_back();
-            current_id = *id;
-        }
-
-        if (val) {
-            sets.back().push_back(*val);
-        }
-    }
-    return sets;
+    return read_grouped_values_all<int64_t>(execute(sql));
 }
 
 std::vector<std::vector<double>> Database::read_set_floats(const std::string& collection,
                                                            const std::string& attribute) {
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + set_table + " ORDER BY id";
-    auto result = execute(sql);
-
-    std::vector<std::vector<double>> sets;
-    int64_t current_id = -1;
-
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto id = result[i].get_integer(0);
-        auto val = result[i].get_float(1);
-
-        if (!id)
-            continue;
-
-        if (*id != current_id) {
-            sets.emplace_back();
-            current_id = *id;
-        }
-
-        if (val) {
-            sets.back().push_back(*val);
-        }
-    }
-    return sets;
+    return read_grouped_values_all<double>(execute(sql));
 }
 
 std::vector<std::vector<std::string>> Database::read_set_strings(const std::string& collection,
                                                                  const std::string& attribute) {
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + set_table + " ORDER BY id";
-    auto result = execute(sql);
-
-    std::vector<std::vector<std::string>> sets;
-    int64_t current_id = -1;
-
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto id = result[i].get_integer(0);
-        auto val = result[i].get_string(1);
-
-        if (!id)
-            continue;
-
-        if (*id != current_id) {
-            sets.emplace_back();
-            current_id = *id;
-        }
-
-        if (val) {
-            sets.back().push_back(*val);
-        }
-    }
-    return sets;
+    return read_grouped_values_all<std::string>(execute(sql));
 }
 
 std::vector<int64_t>
 Database::read_set_integers_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + set_table + " WHERE id = ?";
-    auto result = execute(sql, {id});
-
-    std::vector<int64_t> values;
-    values.reserve(result.row_count());
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_integer(0);
-        if (val) {
-            values.push_back(*val);
-        }
-    }
-    return values;
+    return read_grouped_values_by_id<int64_t>(execute(sql, {id}));
 }
 
 std::vector<double>
 Database::read_set_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + set_table + " WHERE id = ?";
-    auto result = execute(sql, {id});
-
-    std::vector<double> values;
-    values.reserve(result.row_count());
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_float(0);
-        if (val) {
-            values.push_back(*val);
-        }
-    }
-    return values;
+    return read_grouped_values_by_id<double>(execute(sql, {id}));
 }
 
 std::vector<std::string>
 Database::read_set_strings_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + set_table + " WHERE id = ?";
-    auto result = execute(sql, {id});
-
-    std::vector<std::string> values;
-    values.reserve(result.row_count());
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_string(0);
-        if (val) {
-            values.push_back(*val);
-        }
-    }
-    return values;
+    return read_grouped_values_by_id<std::string>(execute(sql, {id}));
 }
 
 std::vector<int64_t> Database::read_element_ids(const std::string& collection) {
     auto sql = "SELECT id FROM " + collection;
-    auto result = execute(sql);
-
-    std::vector<int64_t> ids;
-    ids.reserve(result.row_count());
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_integer(0);
-        if (val) {
-            ids.push_back(*val);
-        }
-    }
-    return ids;
+    return read_grouped_values_by_id<int64_t>(execute(sql));
 }
 
 void Database::update_scalar_integer(const std::string& collection,
@@ -1187,24 +1049,18 @@ void Database::update_vector_integers(const std::string& collection,
 
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
 
-    begin_transaction();
-    try {
-        auto delete_sql = "DELETE FROM " + vector_table + " WHERE id = ?";
-        execute(delete_sql, {id});
+    Impl::TransactionGuard txn(*impl_);
 
-        for (size_t i = 0; i < values.size(); ++i) {
-            auto insert_sql = "INSERT INTO " + vector_table + " (id, vector_index, " + attribute + ") VALUES (?, ?, ?)";
-            int64_t vector_index = static_cast<int64_t>(i + 1);
-            execute(insert_sql, {id, vector_index, values[i]});
-        }
+    auto delete_sql = "DELETE FROM " + vector_table + " WHERE id = ?";
+    execute(delete_sql, {id});
 
-        commit();
-    } catch (const std::exception& e) {
-        rollback();
-        impl_->logger->error("Failed to update vector {}.{} for id {}: {}", collection, attribute, id, e.what());
-        throw;
+    for (size_t i = 0; i < values.size(); ++i) {
+        auto insert_sql = "INSERT INTO " + vector_table + " (id, vector_index, " + attribute + ") VALUES (?, ?, ?)";
+        int64_t vector_index = static_cast<int64_t>(i + 1);
+        execute(insert_sql, {id, vector_index, values[i]});
     }
 
+    txn.commit();
     impl_->logger->info("Updated vector {}.{} for id {} with {} values", collection, attribute, id, values.size());
 }
 
@@ -1217,24 +1073,18 @@ void Database::update_vector_floats(const std::string& collection,
 
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
 
-    begin_transaction();
-    try {
-        auto delete_sql = "DELETE FROM " + vector_table + " WHERE id = ?";
-        execute(delete_sql, {id});
+    Impl::TransactionGuard txn(*impl_);
 
-        for (size_t i = 0; i < values.size(); ++i) {
-            auto insert_sql = "INSERT INTO " + vector_table + " (id, vector_index, " + attribute + ") VALUES (?, ?, ?)";
-            int64_t vector_index = static_cast<int64_t>(i + 1);
-            execute(insert_sql, {id, vector_index, values[i]});
-        }
+    auto delete_sql = "DELETE FROM " + vector_table + " WHERE id = ?";
+    execute(delete_sql, {id});
 
-        commit();
-    } catch (const std::exception& e) {
-        rollback();
-        impl_->logger->error("Failed to update vector {}.{} for id {}: {}", collection, attribute, id, e.what());
-        throw;
+    for (size_t i = 0; i < values.size(); ++i) {
+        auto insert_sql = "INSERT INTO " + vector_table + " (id, vector_index, " + attribute + ") VALUES (?, ?, ?)";
+        int64_t vector_index = static_cast<int64_t>(i + 1);
+        execute(insert_sql, {id, vector_index, values[i]});
     }
 
+    txn.commit();
     impl_->logger->info("Updated vector {}.{} for id {} with {} values", collection, attribute, id, values.size());
 }
 
@@ -1247,24 +1097,18 @@ void Database::update_vector_strings(const std::string& collection,
 
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
 
-    begin_transaction();
-    try {
-        auto delete_sql = "DELETE FROM " + vector_table + " WHERE id = ?";
-        execute(delete_sql, {id});
+    Impl::TransactionGuard txn(*impl_);
 
-        for (size_t i = 0; i < values.size(); ++i) {
-            auto insert_sql = "INSERT INTO " + vector_table + " (id, vector_index, " + attribute + ") VALUES (?, ?, ?)";
-            int64_t vector_index = static_cast<int64_t>(i + 1);
-            execute(insert_sql, {id, vector_index, values[i]});
-        }
+    auto delete_sql = "DELETE FROM " + vector_table + " WHERE id = ?";
+    execute(delete_sql, {id});
 
-        commit();
-    } catch (const std::exception& e) {
-        rollback();
-        impl_->logger->error("Failed to update vector {}.{} for id {}: {}", collection, attribute, id, e.what());
-        throw;
+    for (size_t i = 0; i < values.size(); ++i) {
+        auto insert_sql = "INSERT INTO " + vector_table + " (id, vector_index, " + attribute + ") VALUES (?, ?, ?)";
+        int64_t vector_index = static_cast<int64_t>(i + 1);
+        execute(insert_sql, {id, vector_index, values[i]});
     }
 
+    txn.commit();
     impl_->logger->info("Updated vector {}.{} for id {} with {} values", collection, attribute, id, values.size());
 }
 
@@ -1277,23 +1121,17 @@ void Database::update_set_integers(const std::string& collection,
 
     auto set_table = impl_->schema->find_set_table(collection, attribute);
 
-    begin_transaction();
-    try {
-        auto delete_sql = "DELETE FROM " + set_table + " WHERE id = ?";
-        execute(delete_sql, {id});
+    Impl::TransactionGuard txn(*impl_);
 
-        for (const auto& value : values) {
-            auto insert_sql = "INSERT INTO " + set_table + " (id, " + attribute + ") VALUES (?, ?)";
-            execute(insert_sql, {id, value});
-        }
+    auto delete_sql = "DELETE FROM " + set_table + " WHERE id = ?";
+    execute(delete_sql, {id});
 
-        commit();
-    } catch (const std::exception& e) {
-        rollback();
-        impl_->logger->error("Failed to update set {}.{} for id {}: {}", collection, attribute, id, e.what());
-        throw;
+    for (const auto& value : values) {
+        auto insert_sql = "INSERT INTO " + set_table + " (id, " + attribute + ") VALUES (?, ?)";
+        execute(insert_sql, {id, value});
     }
 
+    txn.commit();
     impl_->logger->info("Updated set {}.{} for id {} with {} values", collection, attribute, id, values.size());
 }
 
@@ -1306,23 +1144,17 @@ void Database::update_set_floats(const std::string& collection,
 
     auto set_table = impl_->schema->find_set_table(collection, attribute);
 
-    begin_transaction();
-    try {
-        auto delete_sql = "DELETE FROM " + set_table + " WHERE id = ?";
-        execute(delete_sql, {id});
+    Impl::TransactionGuard txn(*impl_);
 
-        for (const auto& value : values) {
-            auto insert_sql = "INSERT INTO " + set_table + " (id, " + attribute + ") VALUES (?, ?)";
-            execute(insert_sql, {id, value});
-        }
+    auto delete_sql = "DELETE FROM " + set_table + " WHERE id = ?";
+    execute(delete_sql, {id});
 
-        commit();
-    } catch (const std::exception& e) {
-        rollback();
-        impl_->logger->error("Failed to update set {}.{} for id {}: {}", collection, attribute, id, e.what());
-        throw;
+    for (const auto& value : values) {
+        auto insert_sql = "INSERT INTO " + set_table + " (id, " + attribute + ") VALUES (?, ?)";
+        execute(insert_sql, {id, value});
     }
 
+    txn.commit();
     impl_->logger->info("Updated set {}.{} for id {} with {} values", collection, attribute, id, values.size());
 }
 
@@ -1335,23 +1167,17 @@ void Database::update_set_strings(const std::string& collection,
 
     auto set_table = impl_->schema->find_set_table(collection, attribute);
 
-    begin_transaction();
-    try {
-        auto delete_sql = "DELETE FROM " + set_table + " WHERE id = ?";
-        execute(delete_sql, {id});
+    Impl::TransactionGuard txn(*impl_);
 
-        for (const auto& value : values) {
-            auto insert_sql = "INSERT INTO " + set_table + " (id, " + attribute + ") VALUES (?, ?)";
-            execute(insert_sql, {id, value});
-        }
+    auto delete_sql = "DELETE FROM " + set_table + " WHERE id = ?";
+    execute(delete_sql, {id});
 
-        commit();
-    } catch (const std::exception& e) {
-        rollback();
-        impl_->logger->error("Failed to update set {}.{} for id {}: {}", collection, attribute, id, e.what());
-        throw;
+    for (const auto& value : values) {
+        auto insert_sql = "INSERT INTO " + set_table + " (id, " + attribute + ") VALUES (?, ?)";
+        execute(insert_sql, {id, value});
     }
 
+    txn.commit();
     impl_->logger->info("Updated set {}.{} for id {} with {} values", collection, attribute, id, values.size());
 }
 

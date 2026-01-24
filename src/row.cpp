@@ -23,14 +23,10 @@ const Value& Row::operator[](size_t index) const {
 }
 
 bool Row::is_null(size_t index) const {
-    if (index >= values_.size())
-        return true;
     return std::holds_alternative<std::nullptr_t>(values_[index]);
 }
 
 std::optional<int64_t> Row::get_integer(size_t index) const {
-    if (index >= values_.size())
-        return std::nullopt;
     if (const auto* val = std::get_if<int64_t>(&values_[index])) {
         return *val;
     }
@@ -38,8 +34,6 @@ std::optional<int64_t> Row::get_integer(size_t index) const {
 }
 
 std::optional<double> Row::get_float(size_t index) const {
-    if (index >= values_.size())
-        return std::nullopt;
     if (const auto* val = std::get_if<double>(&values_[index])) {
         return *val;
     }
@@ -47,8 +41,6 @@ std::optional<double> Row::get_float(size_t index) const {
 }
 
 std::optional<std::string> Row::get_string(size_t index) const {
-    if (index >= values_.size())
-        return std::nullopt;
     if (const auto* val = std::get_if<std::string>(&values_[index])) {
         return *val;
     }

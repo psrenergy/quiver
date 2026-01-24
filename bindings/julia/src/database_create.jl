@@ -1,6 +1,12 @@
 function create_element!(db::Database, collection::String, e::Element)
-    if C.quiver_database_create_element(db.ptr, collection, e.ptr) == -1
-        throw(DatabaseException("Failed to create element in collection $collection"))
+    result = C.quiver_database_create_element(db.ptr, collection, e.ptr)
+    if result == -1
+        detail = unsafe_string(C.quiver_get_last_error())
+        if isempty(detail)
+            throw(DatabaseException("Failed to create element in collection $collection"))
+        else
+            throw(DatabaseException("Failed to create element in collection $collection: $detail"))
+        end
     end
     return nothing
 end
@@ -26,8 +32,6 @@ function set_scalar_relation!(
     to_label::String,
 )
     err = C.quiver_database_set_scalar_relation(db.ptr, collection, attribute, from_label, to_label)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to set scalar relation '$attribute' in '$collection'"))
-    end
+    check_error(err, "Failed to set scalar relation '$attribute' in '$collection'")
     return nothing
 end

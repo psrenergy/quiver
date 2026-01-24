@@ -34,6 +34,11 @@ typedef enum {
 QUIVER_C_API const char* quiver_error_string(quiver_error_t error);
 QUIVER_C_API const char* quiver_version(void);
 
+// Error message capture - returns detailed error message from last operation
+// Returns empty string if no error occurred. Thread-local storage.
+QUIVER_C_API const char* quiver_get_last_error(void);
+QUIVER_C_API void quiver_clear_last_error(void);
+
 #ifdef __cplusplus
 }
 #endif

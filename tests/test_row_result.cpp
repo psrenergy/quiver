@@ -34,14 +34,6 @@ TEST(Row, OperatorBracketValidIndex) {
     EXPECT_TRUE(std::holds_alternative<double>(row[2]));
 }
 
-TEST(Row, IsNullOutOfBounds) {
-    quiver::Row row(std::vector<quiver::Value>{int64_t{42}});
-
-    // Out of bounds returns true for is_null
-    EXPECT_TRUE(row.is_null(1));
-    EXPECT_TRUE(row.is_null(100));
-}
-
 TEST(Row, IsNullTrueForNullValue) {
     quiver::Row row(std::vector<quiver::Value>{nullptr});
 
@@ -52,36 +44,6 @@ TEST(Row, IsNullFalseForNonNull) {
     quiver::Row row(std::vector<quiver::Value>{int64_t{42}});
 
     EXPECT_FALSE(row.is_null(0));
-}
-
-TEST(Row, GetIntOutOfBounds) {
-    quiver::Row row(std::vector<quiver::Value>{int64_t{42}});
-
-    auto result = row.get_integer(1);
-    EXPECT_FALSE(result.has_value());
-
-    result = row.get_integer(100);
-    EXPECT_FALSE(result.has_value());
-}
-
-TEST(Row, GetFloatOutOfBounds) {
-    quiver::Row row(std::vector<quiver::Value>{3.14});
-
-    auto result = row.get_float(1);
-    EXPECT_FALSE(result.has_value());
-
-    result = row.get_float(100);
-    EXPECT_FALSE(result.has_value());
-}
-
-TEST(Row, GetStringOutOfBounds) {
-    quiver::Row row(std::vector<quiver::Value>{std::string("test")});
-
-    auto result = row.get_string(1);
-    EXPECT_FALSE(result.has_value());
-
-    result = row.get_string(100);
-    EXPECT_FALSE(result.has_value());
 }
 
 TEST(Row, GetIntWrongType) {

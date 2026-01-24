@@ -45,6 +45,14 @@ function quiver_version()
     @ccall libquiver_c.quiver_version()::Ptr{Cchar}
 end
 
+function quiver_get_last_error()
+    @ccall libquiver_c.quiver_get_last_error()::Ptr{Cchar}
+end
+
+function quiver_clear_last_error()
+    @ccall libquiver_c.quiver_clear_last_error()::Cvoid
+end
+
 @cenum quiver_log_level_t::UInt32 begin
     QUIVER_LOG_DEBUG = 0
     QUIVER_LOG_INFO = 1

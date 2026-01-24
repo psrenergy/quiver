@@ -6,6 +6,10 @@
 
 #include <string>
 
+// Thread-local error message storage
+void quiver_set_last_error(const std::string& message);
+void quiver_set_last_error(const char* message);
+
 // Internal structs shared between C API implementation files
 
 struct quiver_database {
