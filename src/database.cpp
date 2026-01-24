@@ -22,6 +22,58 @@ namespace {
 std::atomic<uint64_t> g_logger_counter{0};
 std::once_flag sqlite3_init_flag;
 
+// Type-specific Row value extractors for template implementations
+inline std::optional<int64_t> get_row_value(const quiver::Row& row, size_t index, int64_t*) {
+    return row.get_integer(index);
+}
+
+inline std::optional<double> get_row_value(const quiver::Row& row, size_t index, double*) {
+    return row.get_float(index);
+}
+
+inline std::optional<std::string> get_row_value(const quiver::Row& row, size_t index, std::string*) {
+    return row.get_string(index);
+}
+
+// Template for reading grouped values (vectors or sets) for all elements
+template <typename T>
+std::vector<std::vector<T>> read_grouped_values_all(const quiver::Result& result) {
+    std::vector<std::vector<T>> groups;
+    int64_t current_id = -1;
+
+    for (size_t i = 0; i < result.row_count(); ++i) {
+        auto id = result[i].get_integer(0);
+        auto val = get_row_value(result[i], 1, static_cast<T*>(nullptr));
+
+        if (!id)
+            continue;
+
+        if (*id != current_id) {
+            groups.emplace_back();
+            current_id = *id;
+        }
+
+        if (val) {
+            groups.back().push_back(*val);
+        }
+    }
+    return groups;
+}
+
+// Template for reading grouped values (vectors or sets) for a single element by ID
+template <typename T>
+std::vector<T> read_grouped_values_by_id(const quiver::Result& result) {
+    std::vector<T> values;
+    values.reserve(result.row_count());
+    for (size_t i = 0; i < result.row_count(); ++i) {
+        auto val = get_row_value(result[i], 0, static_cast<T*>(nullptr));
+        if (val) {
+            values.push_back(*val);
+        }
+    }
+    return values;
+}
+
 void ensure_sqlite3_initialized() {
     std::call_once(sqlite3_init_flag, []() { sqlite3_initialize(); });
 }
@@ -855,285 +907,89 @@ std::vector<std::vector<int64_t>> Database::read_vector_integers(const std::stri
                                                                  const std::string& attribute) {
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + vector_table + " ORDER BY id, vector_index";
-    auto result = execute(sql);
-
-    std::vector<std::vector<int64_t>> vectors;
-    int64_t current_id = -1;
-
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto id = result[i].get_integer(0);
-        auto val = result[i].get_integer(1);
-
-        if (!id)
-            continue;
-
-        if (*id != current_id) {
-            vectors.emplace_back();
-            current_id = *id;
-        }
-
-        if (val) {
-            vectors.back().push_back(*val);
-        }
-    }
-    return vectors;
+    return read_grouped_values_all<int64_t>(execute(sql));
 }
 
 std::vector<std::vector<double>> Database::read_vector_floats(const std::string& collection,
                                                               const std::string& attribute) {
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + vector_table + " ORDER BY id, vector_index";
-    auto result = execute(sql);
-
-    std::vector<std::vector<double>> vectors;
-    int64_t current_id = -1;
-
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto id = result[i].get_integer(0);
-        auto val = result[i].get_float(1);
-
-        if (!id)
-            continue;
-
-        if (*id != current_id) {
-            vectors.emplace_back();
-            current_id = *id;
-        }
-
-        if (val) {
-            vectors.back().push_back(*val);
-        }
-    }
-    return vectors;
+    return read_grouped_values_all<double>(execute(sql));
 }
 
 std::vector<std::vector<std::string>> Database::read_vector_strings(const std::string& collection,
                                                                     const std::string& attribute) {
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + vector_table + " ORDER BY id, vector_index";
-    auto result = execute(sql);
-
-    std::vector<std::vector<std::string>> vectors;
-    int64_t current_id = -1;
-
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto id = result[i].get_integer(0);
-        auto val = result[i].get_string(1);
-
-        if (!id)
-            continue;
-
-        if (*id != current_id) {
-            vectors.emplace_back();
-            current_id = *id;
-        }
-
-        if (val) {
-            vectors.back().push_back(*val);
-        }
-    }
-    return vectors;
+    return read_grouped_values_all<std::string>(execute(sql));
 }
 
 std::vector<int64_t>
 Database::read_vector_integers_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + vector_table + " WHERE id = ? ORDER BY vector_index";
-    auto result = execute(sql, {id});
-
-    std::vector<int64_t> values;
-    values.reserve(result.row_count());
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_integer(0);
-        if (val) {
-            values.push_back(*val);
-        }
-    }
-    return values;
+    return read_grouped_values_by_id<int64_t>(execute(sql, {id}));
 }
 
 std::vector<double>
 Database::read_vector_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + vector_table + " WHERE id = ? ORDER BY vector_index";
-    auto result = execute(sql, {id});
-
-    std::vector<double> values;
-    values.reserve(result.row_count());
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_float(0);
-        if (val) {
-            values.push_back(*val);
-        }
-    }
-    return values;
+    return read_grouped_values_by_id<double>(execute(sql, {id}));
 }
 
 std::vector<std::string>
 Database::read_vector_strings_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + vector_table + " WHERE id = ? ORDER BY vector_index";
-    auto result = execute(sql, {id});
-
-    std::vector<std::string> values;
-    values.reserve(result.row_count());
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_string(0);
-        if (val) {
-            values.push_back(*val);
-        }
-    }
-    return values;
+    return read_grouped_values_by_id<std::string>(execute(sql, {id}));
 }
 
 std::vector<std::vector<int64_t>> Database::read_set_integers(const std::string& collection,
                                                               const std::string& attribute) {
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + set_table + " ORDER BY id";
-    auto result = execute(sql);
-
-    std::vector<std::vector<int64_t>> sets;
-    int64_t current_id = -1;
-
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto id = result[i].get_integer(0);
-        auto val = result[i].get_integer(1);
-
-        if (!id)
-            continue;
-
-        if (*id != current_id) {
-            sets.emplace_back();
-            current_id = *id;
-        }
-
-        if (val) {
-            sets.back().push_back(*val);
-        }
-    }
-    return sets;
+    return read_grouped_values_all<int64_t>(execute(sql));
 }
 
 std::vector<std::vector<double>> Database::read_set_floats(const std::string& collection,
                                                            const std::string& attribute) {
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + set_table + " ORDER BY id";
-    auto result = execute(sql);
-
-    std::vector<std::vector<double>> sets;
-    int64_t current_id = -1;
-
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto id = result[i].get_integer(0);
-        auto val = result[i].get_float(1);
-
-        if (!id)
-            continue;
-
-        if (*id != current_id) {
-            sets.emplace_back();
-            current_id = *id;
-        }
-
-        if (val) {
-            sets.back().push_back(*val);
-        }
-    }
-    return sets;
+    return read_grouped_values_all<double>(execute(sql));
 }
 
 std::vector<std::vector<std::string>> Database::read_set_strings(const std::string& collection,
                                                                  const std::string& attribute) {
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + set_table + " ORDER BY id";
-    auto result = execute(sql);
-
-    std::vector<std::vector<std::string>> sets;
-    int64_t current_id = -1;
-
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto id = result[i].get_integer(0);
-        auto val = result[i].get_string(1);
-
-        if (!id)
-            continue;
-
-        if (*id != current_id) {
-            sets.emplace_back();
-            current_id = *id;
-        }
-
-        if (val) {
-            sets.back().push_back(*val);
-        }
-    }
-    return sets;
+    return read_grouped_values_all<std::string>(execute(sql));
 }
 
 std::vector<int64_t>
 Database::read_set_integers_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + set_table + " WHERE id = ?";
-    auto result = execute(sql, {id});
-
-    std::vector<int64_t> values;
-    values.reserve(result.row_count());
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_integer(0);
-        if (val) {
-            values.push_back(*val);
-        }
-    }
-    return values;
+    return read_grouped_values_by_id<int64_t>(execute(sql, {id}));
 }
 
 std::vector<double>
 Database::read_set_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + set_table + " WHERE id = ?";
-    auto result = execute(sql, {id});
-
-    std::vector<double> values;
-    values.reserve(result.row_count());
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_float(0);
-        if (val) {
-            values.push_back(*val);
-        }
-    }
-    return values;
+    return read_grouped_values_by_id<double>(execute(sql, {id}));
 }
 
 std::vector<std::string>
 Database::read_set_strings_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + set_table + " WHERE id = ?";
-    auto result = execute(sql, {id});
-
-    std::vector<std::string> values;
-    values.reserve(result.row_count());
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_string(0);
-        if (val) {
-            values.push_back(*val);
-        }
-    }
-    return values;
+    return read_grouped_values_by_id<std::string>(execute(sql, {id}));
 }
 
 std::vector<int64_t> Database::read_element_ids(const std::string& collection) {
     auto sql = "SELECT id FROM " + collection;
-    auto result = execute(sql);
-
-    std::vector<int64_t> ids;
-    ids.reserve(result.row_count());
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_integer(0);
-        if (val) {
-            ids.push_back(*val);
-        }
-    }
-    return ids;
+    return read_grouped_values_by_id<int64_t>(execute(sql));
 }
 
 void Database::update_scalar_integer(const std::string& collection,
