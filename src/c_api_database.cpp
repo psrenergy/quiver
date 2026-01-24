@@ -311,21 +311,8 @@ QUIVER_C_API quiver_error_t quiver_database_read_scalar_strings(quiver_database_
     if (!db || !collection || !attribute || !out_values || !out_count) {
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }
-
     try {
-        auto values = db->db.read_scalar_strings(collection, attribute);
-        *out_count = values.size();
-        if (values.empty()) {
-            *out_values = nullptr;
-            return QUIVER_OK;
-        }
-        *out_values = new char*[values.size()];
-        for (size_t i = 0; i < values.size(); ++i) {
-            (*out_values)[i] = new char[values[i].size() + 1];
-            std::copy(values[i].begin(), values[i].end(), (*out_values)[i]);
-            (*out_values)[i][values[i].size()] = '\0';
-        }
-        return QUIVER_OK;
+        return copy_strings_to_c(db->db.read_scalar_strings(collection, attribute), out_values, out_count);
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
         return QUIVER_ERROR_DATABASE;
