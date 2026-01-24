@@ -48,32 +48,17 @@ Element& Element::set_null(const std::string& name) {
 }
 
 Element& Element::set(const std::string& name, const std::vector<int64_t>& values) {
-    std::vector<Value> arr;
-    arr.reserve(values.size());
-    for (const auto& v : values) {
-        arr.emplace_back(v);
-    }
-    arrays_[name] = std::move(arr);
+    arrays_[name] = std::vector<Value>(values.begin(), values.end());
     return *this;
 }
 
 Element& Element::set(const std::string& name, const std::vector<double>& values) {
-    std::vector<Value> arr;
-    arr.reserve(values.size());
-    for (const auto& v : values) {
-        arr.emplace_back(v);
-    }
-    arrays_[name] = std::move(arr);
+    arrays_[name] = std::vector<Value>(values.begin(), values.end());
     return *this;
 }
 
 Element& Element::set(const std::string& name, const std::vector<std::string>& values) {
-    std::vector<Value> arr;
-    arr.reserve(values.size());
-    for (const auto& v : values) {
-        arr.emplace_back(v);
-    }
-    arrays_[name] = std::move(arr);
+    arrays_[name] = std::vector<Value>(values.begin(), values.end());
     return *this;
 }
 
