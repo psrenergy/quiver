@@ -614,7 +614,7 @@ TEST_F(LuaRunnerTest, UpdateElementOtherElementsUnchangedFromLua) {
     EXPECT_EQ(*db.read_scalar_integers_by_id("Collection", "some_integer", 3), 300);
 }
 
-TEST_F(LuaRunnerTest, UpdateElementArraysIgnoredFromLua) {
+TEST_F(LuaRunnerTest, UpdateElementWithArraysFromLua) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -626,7 +626,7 @@ TEST_F(LuaRunnerTest, UpdateElementArraysIgnoredFromLua) {
 
     quiver::LuaRunner lua(db);
 
-    // Try to update with array values (should be ignored)
+    // Update with both scalar and array values - both should be updated
     lua.run(R"(
         db:update_element("Collection", 1, { some_integer = 999, value_int = {7, 8, 9} })
 
@@ -634,12 +634,12 @@ TEST_F(LuaRunnerTest, UpdateElementArraysIgnoredFromLua) {
         local integer_val = db:read_scalar_integers_by_id("Collection", "some_integer", 1)
         assert(integer_val == 999, "Scalar should be updated to 999")
 
-        -- Verify vector was NOT updated (arrays ignored in update_element)
+        -- Verify vector was also updated
         local vec = db:read_vector_integers_by_id("Collection", "value_int", 1)
-        assert(#vec == 3, "Vector should still have 3 elements")
-        assert(vec[1] == 1, "Vector[1] should be 1, not 7")
-        assert(vec[2] == 2, "Vector[2] should be 2, not 8")
-        assert(vec[3] == 3, "Vector[3] should be 3, not 9")
+        assert(#vec == 3, "Vector should have 3 elements")
+        assert(vec[1] == 7, "Vector[1] should be 7")
+        assert(vec[2] == 8, "Vector[2] should be 8")
+        assert(vec[3] == 9, "Vector[3] should be 9")
     )");
 
     // Verify from C++ side
@@ -648,7 +648,7 @@ TEST_F(LuaRunnerTest, UpdateElementArraysIgnoredFromLua) {
     EXPECT_EQ(*integer_value, 999);
 
     auto vec_values = db.read_vector_integers_by_id("Collection", "value_int", 1);
-    EXPECT_EQ(vec_values, (std::vector<int64_t>{1, 2, 3}));
+    EXPECT_EQ(vec_values, (std::vector<int64_t>{7, 8, 9}));
 }
 
 // ============================================================================

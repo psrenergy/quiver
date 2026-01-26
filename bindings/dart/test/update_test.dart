@@ -97,7 +97,7 @@ void main() {
       }
     });
 
-    test('arrays are ignored', () {
+    test('updates arrays', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
@@ -112,7 +112,7 @@ void main() {
           'value_int': [1, 2, 3],
         });
 
-        // Try to update with array values (should be ignored)
+        // Update with both scalar and array values - both should be updated
         db.updateElement('Collection', 1, {
           'some_integer': 999,
           'value_int': [7, 8, 9],
@@ -122,9 +122,89 @@ void main() {
         final intValue = db.readScalarIntegerById('Collection', 'some_integer', 1);
         expect(intValue, equals(999));
 
-        // Verify vector was NOT updated (arrays ignored in update_element)
+        // Verify vector was also updated
         final vecValues = db.readVectorIntegersById('Collection', 'value_int', 1);
-        expect(vecValues, equals([1, 2, 3]));
+        expect(vecValues, equals([7, 8, 9]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('updates sets', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'tag': ['important', 'urgent'],
+        });
+
+        // Update with only set attribute
+        db.updateElement('Collection', 1, {
+          'tag': ['new_tag1', 'new_tag2'],
+        });
+
+        // Verify set was updated
+        final tagValues = db.readSetStringsById('Collection', 'tag', 1);
+        expect(tagValues.toSet(), equals({'new_tag1', 'new_tag2'}));
+
+        // Verify label unchanged
+        final label = db.readScalarStringById('Collection', 'label', 1);
+        expect(label, equals('Item 1'));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('updates vectors and sets atomically', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_int': [1, 2, 3],
+          'tag': ['old_tag'],
+        });
+
+        // Update both vector and set atomically
+        db.updateElement('Collection', 1, {
+          'value_int': [100, 200],
+          'tag': ['new_tag1', 'new_tag2'],
+        });
+
+        // Verify vector was updated
+        final vec = db.readVectorIntegersById('Collection', 'value_int', 1);
+        expect(vec, equals([100, 200]));
+
+        // Verify set was updated
+        final set = db.readSetStringsById('Collection', 'tag', 1);
+        expect(set.toSet(), equals({'new_tag1', 'new_tag2'}));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws on invalid array attribute', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {'label': 'Item 1'});
+
+        expect(
+          () => db.updateElement('Collection', 1, {
+            'nonexistent_attr': [1, 2, 3],
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
       } finally {
         db.close();
       }
@@ -835,4 +915,5 @@ void main() {
       }
     });
   });
+
 }

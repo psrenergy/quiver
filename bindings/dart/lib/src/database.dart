@@ -1190,8 +1190,8 @@ class Database {
     }
   }
 
-  /// Updates an element's scalar attributes by ID using a map of values.
-  /// Note: Vector and set attributes are ignored in update operations.
+  /// Updates an element's attributes by ID using a map of values.
+  /// Handles scalars, vectors, and sets uniformly - any attributes in the map will be updated.
   void updateElement(String collection, int id, Map<String, Object?> values) {
     _ensureNotClosed();
     final element = Element();
@@ -1205,8 +1205,8 @@ class Database {
     }
   }
 
-  /// Updates an element's scalar attributes by ID using an Element builder.
-  /// Note: Vector and set attributes are ignored in update operations.
+  /// Updates an element's attributes by ID using an Element builder.
+  /// Handles scalars, vectors, and sets uniformly - any attributes in the Element will be updated.
   void updateElementFromBuilder(String collection, int id, Element element) {
     _ensureNotClosed();
     final arena = Arena();

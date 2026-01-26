@@ -326,7 +326,7 @@ TEST(Database, UpdateElementOtherElementsUnchanged) {
     EXPECT_EQ(*val2, 100);
 }
 
-TEST(Database, UpdateElementIgnoresArrays) {
+TEST(Database, UpdateElementWithArrays) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
 
@@ -338,7 +338,7 @@ TEST(Database, UpdateElementIgnoresArrays) {
     e.set("label", std::string("Item 1")).set("value_int", std::vector<int64_t>{1, 2, 3});
     int64_t id = db.create_element("Collection", e);
 
-    // Update with element that has arrays - arrays should be ignored
+    // Update with element that has both scalars and arrays - both should be updated
     quiver::Element update;
     update.set("some_integer", int64_t{42}).set("value_int", std::vector<int64_t>{10, 20, 30});
     db.update_element("Collection", id, update);
@@ -348,9 +348,86 @@ TEST(Database, UpdateElementIgnoresArrays) {
     EXPECT_TRUE(integer_val.has_value());
     EXPECT_EQ(*integer_val, 42);
 
-    // Verify vector was NOT updated (arrays should be ignored)
+    // Verify vector was also updated
     auto vec = db.read_vector_integers_by_id("Collection", "value_int", id);
-    EXPECT_EQ(vec, (std::vector<int64_t>{1, 2, 3}));
+    EXPECT_EQ(vec, (std::vector<int64_t>{10, 20, 30}));
+}
+
+TEST(Database, UpdateElementWithSetOnly) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1")).set("tag", std::vector<std::string>{"important", "urgent"});
+    int64_t id = db.create_element("Collection", e);
+
+    // Update with only set attribute
+    quiver::Element update;
+    update.set("tag", std::vector<std::string>{"new_tag1", "new_tag2"});
+    db.update_element("Collection", id, update);
+
+    // Verify set was updated
+    auto set = db.read_set_strings_by_id("Collection", "tag", id);
+    std::sort(set.begin(), set.end());
+    EXPECT_EQ(set, (std::vector<std::string>{"new_tag1", "new_tag2"}));
+
+    // Verify label unchanged
+    auto label = db.read_scalar_strings_by_id("Collection", "label", id);
+    EXPECT_TRUE(label.has_value());
+    EXPECT_EQ(*label, "Item 1");
+}
+
+TEST(Database, UpdateElementWithVectorAndSet) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1"))
+        .set("value_int", std::vector<int64_t>{1, 2, 3})
+        .set("tag", std::vector<std::string>{"old_tag"});
+    int64_t id = db.create_element("Collection", e);
+
+    // Update both vector and set atomically
+    quiver::Element update;
+    update.set("value_int", std::vector<int64_t>{100, 200})
+        .set("tag", std::vector<std::string>{"new_tag1", "new_tag2"});
+    db.update_element("Collection", id, update);
+
+    // Verify vector was updated
+    auto vec = db.read_vector_integers_by_id("Collection", "value_int", id);
+    EXPECT_EQ(vec, (std::vector<int64_t>{100, 200}));
+
+    // Verify set was updated
+    auto set = db.read_set_strings_by_id("Collection", "tag", id);
+    std::sort(set.begin(), set.end());
+    EXPECT_EQ(set, (std::vector<std::string>{"new_tag1", "new_tag2"}));
+}
+
+TEST(Database, UpdateElementInvalidArrayAttribute) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1"));
+    int64_t id = db.create_element("Collection", e);
+
+    // Try to update non-existent array attribute
+    quiver::Element update;
+    update.set("nonexistent_attr", std::vector<int64_t>{1, 2, 3});
+
+    EXPECT_THROW(db.update_element("Collection", id, update), std::runtime_error);
 }
 
 // ============================================================================

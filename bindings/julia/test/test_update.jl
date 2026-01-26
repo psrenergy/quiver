@@ -84,7 +84,7 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
-    @testset "Element Arrays Ignored" begin
+    @testset "Element With Arrays" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
@@ -97,16 +97,88 @@ include("fixture.jl")
             value_int = [1, 2, 3],
         )
 
-        # Try to update with array values (should be ignored)
+        # Update with both scalar and array values - both should be updated
         Quiver.update_element!(db, "Collection", Int64(1); some_integer = 999, value_int = [7, 8, 9])
 
         # Verify scalar was updated
         integer_value = Quiver.read_scalar_integers_by_id(db, "Collection", "some_integer", Int64(1))
         @test integer_value == 999
 
-        # Verify vector was NOT updated (arrays ignored in update_element)
+        # Verify vector was also updated
         vec_values = Quiver.read_vector_integers_by_id(db, "Collection", "value_int", Int64(1))
-        @test vec_values == [1, 2, 3]
+        @test vec_values == [7, 8, 9]
+
+        Quiver.close!(db)
+    end
+
+    @testset "Element With Set Only" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+
+        Quiver.create_element!(db, "Collection";
+            label = "Item 1",
+            tag = ["important", "urgent"],
+        )
+
+        # Update with only set attribute
+        Quiver.update_element!(db, "Collection", Int64(1); tag = ["new_tag1", "new_tag2"])
+
+        # Verify set was updated
+        tag_values = Quiver.read_set_strings_by_id(db, "Collection", "tag", Int64(1))
+        @test sort(tag_values) == sort(["new_tag1", "new_tag2"])
+
+        # Verify label unchanged
+        label = Quiver.read_scalar_strings_by_id(db, "Collection", "label", Int64(1))
+        @test label == "Item 1"
+
+        Quiver.close!(db)
+    end
+
+    @testset "Element With Vector And Set" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+
+        Quiver.create_element!(db, "Collection";
+            label = "Item 1",
+            value_int = [1, 2, 3],
+            tag = ["old_tag"],
+        )
+
+        # Update both vector and set atomically
+        Quiver.update_element!(db, "Collection", Int64(1);
+            value_int = [100, 200],
+            tag = ["new_tag1", "new_tag2"],
+        )
+
+        # Verify vector was updated
+        vec = Quiver.read_vector_integers_by_id(db, "Collection", "value_int", Int64(1))
+        @test vec == [100, 200]
+
+        # Verify set was updated
+        set_values = Quiver.read_set_strings_by_id(db, "Collection", "tag", Int64(1))
+        @test sort(set_values) == sort(["new_tag1", "new_tag2"])
+
+        Quiver.close!(db)
+    end
+
+    @testset "Element Invalid Array Attribute" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        Quiver.create_element!(db, "Collection"; label = "Item 1")
+
+        # Try to update non-existent array attribute
+        @test_throws Quiver.DatabaseException Quiver.update_element!(
+            db,
+            "Collection",
+            Int64(1);
+            nonexistent_attr = [1, 2, 3],
+        )
 
         Quiver.close!(db)
     end
