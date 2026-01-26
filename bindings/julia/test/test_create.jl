@@ -1,5 +1,6 @@
 module TestCreate
 
+using Dates
 using Quiver
 using Test
 
@@ -236,6 +237,29 @@ include("fixture.jl")
         labels = Quiver.read_scalar_strings(db, "Configuration", "label")
         @test length(labels) == 1
         @test labels[1] == special_label
+
+        Quiver.close!(db)
+    end
+
+    @testset "Native DateTime Object" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        # Create element using native DateTime object
+        dt = DateTime(2024, 3, 15, 14, 30, 45)
+        Quiver.create_element!(db, "Configuration";
+            label = "Config with DateTime",
+            date_attribute = dt,
+        )
+
+        # Verify it was stored correctly as ISO 8601 string
+        date_str = Quiver.read_scalar_strings_by_id(db, "Configuration", "date_attribute", Int64(1))
+        @test date_str == "2024-03-15T14:30:45"
+
+        # Verify read_all_scalars_by_id returns native DateTime
+        scalars = Quiver.read_all_scalars_by_id(db, "Configuration", Int64(1))
+        @test scalars["date_attribute"] isa DateTime
+        @test scalars["date_attribute"] == dt
 
         Quiver.close!(db)
     end

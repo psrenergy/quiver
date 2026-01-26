@@ -1,5 +1,6 @@
 module TestUpdate
 
+using Dates
 using Quiver
 using Test
 
@@ -295,6 +296,32 @@ include("fixture.jl")
         # Verify update
         date = Quiver.read_scalar_strings_by_id(db, "Configuration", "date_attribute", Int64(1))
         @test date == "2025-12-31T23:59:59"
+
+        Quiver.close!(db)
+    end
+
+    @testset "Native DateTime Object Update" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration";
+            label = "Config 1",
+            date_attribute = "2024-01-01T00:00:00",
+        )
+
+        # Update using native DateTime object via Element builder
+        e = Quiver.Element()
+        e["date_attribute"] = DateTime(2025, 6, 15, 12, 30, 45)
+        Quiver.update_element!(db, "Configuration", Int64(1), e)
+
+        # Verify it was stored correctly
+        date_str = Quiver.read_scalar_strings_by_id(db, "Configuration", "date_attribute", Int64(1))
+        @test date_str == "2025-06-15T12:30:45"
+
+        # Verify read_all_scalars_by_id returns native DateTime
+        scalars = Quiver.read_all_scalars_by_id(db, "Configuration", Int64(1))
+        @test scalars["date_attribute"] isa DateTime
+        @test scalars["date_attribute"] == DateTime(2025, 6, 15, 12, 30, 45)
 
         Quiver.close!(db)
     end

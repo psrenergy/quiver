@@ -307,6 +307,10 @@ function read_scalar_strings_by_id(db::Database, collection::String, attribute::
     return result
 end
 
+function read_scalar_date_time_by_id(db::Database, collection::String, attribute::String, id::Int64)
+    return string_to_date_time(read_scalar_strings_by_id(db, collection, attribute, id))
+end
+
 function read_vector_integers_by_id(db::Database, collection::String, attribute::String, id::Int64)
     out_values = Ref{Ptr{Int64}}(C_NULL)
     out_count = Ref{Csize_t}(0)
@@ -363,6 +367,10 @@ function read_vector_strings_by_id(db::Database, collection::String, attribute::
     result = [unsafe_string(ptr) for ptr in ptrs]
     C.quiver_free_string_array(out_values[], count)
     return result
+end
+
+function read_vector_date_time_by_id(db::Database, collection::String, attribute::String, id::Int64)
+    return [string_to_date_time(s) for s in read_vector_strings_by_id(db, collection, attribute, id)]
 end
 
 function read_set_integers_by_id(db::Database, collection::String, attribute::String, id::Int64)
@@ -423,6 +431,10 @@ function read_set_strings_by_id(db::Database, collection::String, attribute::Str
     return result
 end
 
+function read_set_date_time_by_id(db::Database, collection::String, attribute::String, id::Int64)
+    return [string_to_date_time(s) for s in read_set_strings_by_id(db, collection, attribute, id)]
+end
+
 function read_element_ids(db::Database, collection::String)
     out_ids = Ref{Ptr{Int64}}(C_NULL)
     out_count = Ref{Csize_t}(0)
@@ -460,8 +472,7 @@ function read_all_scalars_by_id(db::Database, collection::String, id::Int64)
         elseif attr.data_type == C.QUIVER_DATA_TYPE_STRING
             result[name] = read_scalar_strings_by_id(db, collection, name, id)
         elseif attr.data_type == C.QUIVER_DATA_TYPE_DATE_TIME
-            str_value = read_scalar_strings_by_id(db, collection, name, id)
-            result[name] = str_value === nothing ? nothing : string_to_date_time(str_value)
+            result[name] = read_scalar_date_time_by_id(db, collection, name, id)
         else
             throw(DatabaseException("Unsupported scalar data type for '$collection.$name'"))
         end
@@ -481,8 +492,7 @@ function read_all_vectors_by_id(db::Database, collection::String, id::Int64)
         elseif data_type == C.QUIVER_DATA_TYPE_STRING
             result[name] = read_vector_strings_by_id(db, collection, name, id)
         elseif data_type == C.QUIVER_DATA_TYPE_DATE_TIME
-            str_values = read_vector_strings_by_id(db, collection, name, id)
-            result[name] = [string_to_date_time(s) for s in str_values]
+            result[name] = read_vector_date_time_by_id(db, collection, name, id)
         else
             throw(DatabaseException("Unsupported vector data type for '$collection.$name'"))
         end
@@ -502,8 +512,7 @@ function read_all_sets_by_id(db::Database, collection::String, id::Int64)
         elseif data_type == C.QUIVER_DATA_TYPE_STRING
             result[name] = read_set_strings_by_id(db, collection, name, id)
         elseif data_type == C.QUIVER_DATA_TYPE_DATE_TIME
-            str_values = read_set_strings_by_id(db, collection, name, id)
-            result[name] = [string_to_date_time(s) for s in str_values]
+            result[name] = read_set_date_time_by_id(db, collection, name, id)
         else
             throw(DatabaseException("Unsupported set data type for '$collection.$name'"))
         end
