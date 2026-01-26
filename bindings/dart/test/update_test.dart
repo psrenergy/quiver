@@ -835,4 +835,257 @@ void main() {
       }
     });
   });
+
+  // ==========================================================================
+  // updateElementVectorsSets tests
+  // ==========================================================================
+
+  group('Update Element Vectors Sets', () {
+    test('updates single vector attribute', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_int': [1, 2, 3],
+        });
+
+        db.updateElementVectorsSets('Collection', 1, {
+          'value_int': [10, 20, 30, 40],
+        });
+
+        final values = db.readVectorIntegersById('Collection', 'value_int', 1);
+        expect(values, equals([10, 20, 30, 40]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('updates single set attribute', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'tag': ['important', 'urgent'],
+        });
+
+        db.updateElementVectorsSets('Collection', 1, {
+          'tag': ['new_tag1', 'new_tag2'],
+        });
+
+        final values = db.readSetStringsById('Collection', 'tag', 1);
+        expect(values.toSet(), equals({'new_tag1', 'new_tag2'}));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('updates multiple attributes atomically', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_int': [1, 2, 3],
+          'tag': ['old_tag'],
+        });
+
+        db.updateElementVectorsSets('Collection', 1, {
+          'value_int': [100, 200],
+          'tag': ['new_tag1', 'new_tag2'],
+        });
+
+        final vec = db.readVectorIntegersById('Collection', 'value_int', 1);
+        expect(vec, equals([100, 200]));
+
+        final set = db.readSetStringsById('Collection', 'tag', 1);
+        expect(set.toSet(), equals({'new_tag1', 'new_tag2'}));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('unchanged attributes remain intact', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        // Note: value_int and value_float must have same length (same vector table)
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'some_integer': 42,
+          'value_int': [1, 2, 3],
+          'value_float': [1.5, 2.5, 3.5],
+          'tag': ['tag1'],
+        });
+
+        // Only update tag, leave vectors unchanged
+        db.updateElementVectorsSets('Collection', 1, {
+          'tag': ['updated_tag'],
+        });
+
+        // Verify tag was updated
+        final tag = db.readSetStringsById('Collection', 'tag', 1);
+        expect(tag, equals(['updated_tag']));
+
+        // Verify value_int is unchanged
+        final vecInt = db.readVectorIntegersById('Collection', 'value_int', 1);
+        expect(vecInt, equals([1, 2, 3]));
+
+        // Verify value_float is unchanged
+        final vecFloat = db.readVectorFloatsById('Collection', 'value_float', 1);
+        expect(vecFloat, equals([1.5, 2.5, 3.5]));
+
+        // Verify scalar is unchanged
+        final scalar = db.readScalarIntegerById('Collection', 'some_integer', 1);
+        expect(scalar, equals(42));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('empty map is no-op', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_int': [1, 2, 3],
+        });
+
+        // Empty map should be a no-op
+        db.updateElementVectorsSets('Collection', 1, {});
+
+        // Verify data is unchanged
+        final values = db.readVectorIntegersById('Collection', 'value_int', 1);
+        expect(values, equals([1, 2, 3]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('ignores scalar attributes', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'some_integer': 42,
+          'value_int': [1, 2, 3],
+        });
+
+        // Map with both scalars and arrays - scalars should be ignored
+        db.updateElementVectorsSets('Collection', 1, {
+          'some_integer': 999, // scalar - should be ignored
+          'value_int': [100, 200], // vector - should be updated
+        });
+
+        // Verify vector was updated
+        final vec = db.readVectorIntegersById('Collection', 'value_int', 1);
+        expect(vec, equals([100, 200]));
+
+        // Verify scalar was NOT updated (scalars should be ignored)
+        final scalar = db.readScalarIntegerById('Collection', 'some_integer', 1);
+        expect(scalar, equals(42));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws on invalid attribute', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {'label': 'Item 1'});
+
+        expect(
+          () => db.updateElementVectorsSets('Collection', 1, {
+            'nonexistent_attr': [1, 2, 3],
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('other elements unchanged', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_int': [1, 2, 3],
+        });
+        db.createElement('Collection', {
+          'label': 'Item 2',
+          'value_int': [10, 20],
+        });
+
+        // Update only first element
+        db.updateElementVectorsSets('Collection', 1, {
+          'value_int': [100, 200],
+        });
+
+        // Verify first element was updated
+        expect(db.readVectorIntegersById('Collection', 'value_int', 1), equals([100, 200]));
+
+        // Verify second element is unchanged
+        expect(db.readVectorIntegersById('Collection', 'value_int', 2), equals([10, 20]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('updates using Element builder', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_int': [1, 2, 3],
+        });
+
+        final element = Element();
+        try {
+          element.set('value_int', [100, 200, 300]);
+          db.updateElementVectorsSetsFromBuilder('Collection', 1, element);
+        } finally {
+          element.dispose();
+        }
+
+        final values = db.readVectorIntegersById('Collection', 'value_int', 1);
+        expect(values, equals([100, 200, 300]));
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

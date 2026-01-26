@@ -343,6 +343,12 @@ QUIVER_C_API quiver_error_t quiver_database_update_set_strings(quiver_database_t
                                                                const char* const* values,
                                                                size_t count);
 
+// Update multiple vector/set attributes atomically (sparse update - only updates attributes in Element)
+QUIVER_C_API quiver_error_t quiver_database_update_element_vectors_sets(quiver_database_t* db,
+                                                                        const char* collection,
+                                                                        int64_t id,
+                                                                        const quiver_element_t* element);
+
 // Memory cleanup for read results
 QUIVER_C_API void quiver_free_integer_array(int64_t* values);
 QUIVER_C_API void quiver_free_float_array(double* values);

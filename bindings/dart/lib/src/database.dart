@@ -1465,6 +1465,41 @@ class Database {
     }
   }
 
+  /// Updates multiple vector/set attributes atomically using a map of values.
+  /// Scalars in the map are ignored - only vector/set attributes are updated.
+  void updateElementVectorsSets(String collection, int id, Map<String, Object?> values) {
+    _ensureNotClosed();
+    final element = Element();
+    try {
+      for (final entry in values.entries) {
+        element.set(entry.key, entry.value);
+      }
+      updateElementVectorsSetsFromBuilder(collection, id, element);
+    } finally {
+      element.dispose();
+    }
+  }
+
+  /// Updates multiple vector/set attributes atomically using an Element builder.
+  /// Scalars in the Element are ignored - only vector/set attributes are updated.
+  void updateElementVectorsSetsFromBuilder(String collection, int id, Element element) {
+    _ensureNotClosed();
+    final arena = Arena();
+    try {
+      final err = bindings.quiver_database_update_element_vectors_sets(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        id,
+        element.ptr.cast(),
+      );
+      if (err != quiver_error_t.QUIVER_OK) {
+        throw DatabaseException.fromError(err, "Failed to update vectors/sets for element $id in '$collection'");
+      }
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
   /// Returns the current schema version (migration number) of the database.
   int currentVersion() {
     _ensureNotClosed();

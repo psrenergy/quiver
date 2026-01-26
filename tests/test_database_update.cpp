@@ -483,3 +483,217 @@ TEST(Database, UpdateSetFromEmptyToNonEmpty) {
     std::sort(set.begin(), set.end());
     EXPECT_EQ(set, (std::vector<std::string>{"important", "urgent"}));
 }
+
+// ============================================================================
+// update_element_vectors_sets tests
+// ============================================================================
+
+TEST(Database, UpdateElementVectorsSetsUpdateSingleVector) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1")).set("value_int", std::vector<int64_t>{1, 2, 3});
+    int64_t id = db.create_element("Collection", e);
+
+    // Update vector using update_element_vectors_sets
+    quiver::Element update;
+    update.set("value_int", std::vector<int64_t>{10, 20, 30, 40});
+    db.update_element_vectors_sets("Collection", id, update);
+
+    auto vec = db.read_vector_integers_by_id("Collection", "value_int", id);
+    EXPECT_EQ(vec, (std::vector<int64_t>{10, 20, 30, 40}));
+}
+
+TEST(Database, UpdateElementVectorsSetsUpdateSingleSet) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1")).set("tag", std::vector<std::string>{"important", "urgent"});
+    int64_t id = db.create_element("Collection", e);
+
+    // Update set using update_element_vectors_sets
+    quiver::Element update;
+    update.set("tag", std::vector<std::string>{"new_tag1", "new_tag2"});
+    db.update_element_vectors_sets("Collection", id, update);
+
+    auto set = db.read_set_strings_by_id("Collection", "tag", id);
+    std::sort(set.begin(), set.end());
+    EXPECT_EQ(set, (std::vector<std::string>{"new_tag1", "new_tag2"}));
+}
+
+TEST(Database, UpdateElementVectorsSetsUpdateMultiple) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1"))
+        .set("value_int", std::vector<int64_t>{1, 2, 3})
+        .set("tag", std::vector<std::string>{"old_tag"});
+    int64_t id = db.create_element("Collection", e);
+
+    // Update both vector and set in one call
+    quiver::Element update;
+    update.set("value_int", std::vector<int64_t>{100, 200})
+        .set("tag", std::vector<std::string>{"new_tag1", "new_tag2"});
+    db.update_element_vectors_sets("Collection", id, update);
+
+    auto vec = db.read_vector_integers_by_id("Collection", "value_int", id);
+    EXPECT_EQ(vec, (std::vector<int64_t>{100, 200}));
+
+    auto set = db.read_set_strings_by_id("Collection", "tag", id);
+    std::sort(set.begin(), set.end());
+    EXPECT_EQ(set, (std::vector<std::string>{"new_tag1", "new_tag2"}));
+}
+
+TEST(Database, UpdateElementVectorsSetsUnchangedAttributesRemainIntact) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    // Note: value_int and value_float are in the same vector table, so must have same length
+    quiver::Element e;
+    e.set("label", std::string("Item 1"))
+        .set("some_integer", int64_t{42})
+        .set("value_int", std::vector<int64_t>{1, 2, 3})
+        .set("value_float", std::vector<double>{1.5, 2.5, 3.5})
+        .set("tag", std::vector<std::string>{"tag1"});
+    int64_t id = db.create_element("Collection", e);
+
+    // Only update tag, leave vectors unchanged
+    quiver::Element update;
+    update.set("tag", std::vector<std::string>{"updated_tag"});
+    db.update_element_vectors_sets("Collection", id, update);
+
+    // Verify tag was updated
+    auto set = db.read_set_strings_by_id("Collection", "tag", id);
+    EXPECT_EQ(set, (std::vector<std::string>{"updated_tag"}));
+
+    // Verify value_int is unchanged
+    auto vec_int = db.read_vector_integers_by_id("Collection", "value_int", id);
+    EXPECT_EQ(vec_int, (std::vector<int64_t>{1, 2, 3}));
+
+    // Verify value_float is unchanged
+    auto vec_float = db.read_vector_floats_by_id("Collection", "value_float", id);
+    EXPECT_EQ(vec_float, (std::vector<double>{1.5, 2.5, 3.5}));
+
+    // Verify scalar is unchanged
+    auto scalar = db.read_scalar_integers_by_id("Collection", "some_integer", id);
+    EXPECT_TRUE(scalar.has_value());
+    EXPECT_EQ(*scalar, 42);
+}
+
+TEST(Database, UpdateElementVectorsSetsEmptyElementIsNoOp) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1")).set("value_int", std::vector<int64_t>{1, 2, 3});
+    int64_t id = db.create_element("Collection", e);
+
+    // Empty element update should be a no-op
+    quiver::Element update;
+    db.update_element_vectors_sets("Collection", id, update);
+
+    // Verify data is unchanged
+    auto vec = db.read_vector_integers_by_id("Collection", "value_int", id);
+    EXPECT_EQ(vec, (std::vector<int64_t>{1, 2, 3}));
+}
+
+TEST(Database, UpdateElementVectorsSetsIgnoresScalars) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1"))
+        .set("some_integer", int64_t{42})
+        .set("value_int", std::vector<int64_t>{1, 2, 3});
+    int64_t id = db.create_element("Collection", e);
+
+    // Element with both scalars and arrays - scalars should be ignored
+    quiver::Element update;
+    update.set("some_integer", int64_t{999}).set("value_int", std::vector<int64_t>{100, 200});
+    db.update_element_vectors_sets("Collection", id, update);
+
+    // Verify vector was updated
+    auto vec = db.read_vector_integers_by_id("Collection", "value_int", id);
+    EXPECT_EQ(vec, (std::vector<int64_t>{100, 200}));
+
+    // Verify scalar was NOT updated (scalars should be ignored)
+    auto scalar = db.read_scalar_integers_by_id("Collection", "some_integer", id);
+    EXPECT_TRUE(scalar.has_value());
+    EXPECT_EQ(*scalar, 42);
+}
+
+TEST(Database, UpdateElementVectorsSetsInvalidAttribute) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1"));
+    int64_t id = db.create_element("Collection", e);
+
+    // Try to update non-existent attribute
+    quiver::Element update;
+    update.set("nonexistent_attr", std::vector<int64_t>{1, 2, 3});
+
+    EXPECT_THROW(db.update_element_vectors_sets("Collection", id, update), std::runtime_error);
+}
+
+TEST(Database, UpdateElementVectorsSetsOtherElementsUnchanged) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item 1")).set("value_int", std::vector<int64_t>{1, 2, 3});
+    int64_t id1 = db.create_element("Collection", e1);
+
+    quiver::Element e2;
+    e2.set("label", std::string("Item 2")).set("value_int", std::vector<int64_t>{10, 20});
+    int64_t id2 = db.create_element("Collection", e2);
+
+    // Update only first element
+    quiver::Element update;
+    update.set("value_int", std::vector<int64_t>{100, 200});
+    db.update_element_vectors_sets("Collection", id1, update);
+
+    // Verify first element was updated
+    auto vec1 = db.read_vector_integers_by_id("Collection", "value_int", id1);
+    EXPECT_EQ(vec1, (std::vector<int64_t>{100, 200}));
+
+    // Verify second element is unchanged
+    auto vec2 = db.read_vector_integers_by_id("Collection", "value_int", id2);
+    EXPECT_EQ(vec2, (std::vector<int64_t>{10, 20}));
+}

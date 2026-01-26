@@ -134,3 +134,24 @@ function update_set_strings!(
     check_error(err, "Failed to update set strings '$collection.$attribute' for id $id")
     return nothing
 end
+
+# Update multiple vector/set attributes atomically
+
+function update_element_vectors_sets!(db::Database, collection::String, id::Int64, e::Element)
+    err = C.quiver_database_update_element_vectors_sets(db.ptr, collection, id, e.ptr)
+    check_error(err, "Failed to update vectors/sets for element $id in collection $collection")
+    return nothing
+end
+
+function update_element_vectors_sets!(db::Database, collection::String, id::Int64; kwargs...)
+    e = Element()
+    for (k, v) in kwargs
+        e[String(k)] = v
+    end
+    try
+        update_element_vectors_sets!(db, collection, id, e)
+    finally
+        destroy!(e)
+    end
+    return nothing
+end
