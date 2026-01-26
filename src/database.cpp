@@ -710,7 +710,6 @@ void Database::update_element(const std::string& collection, int64_t id, const E
 
     const auto& scalars = element.scalars();
     const auto& arrays = element.arrays();
-    impl_->logger->info("update_element: scalars={}, arrays={}", scalars.size(), arrays.size());
 
     if (scalars.empty() && arrays.empty()) {
         throw std::runtime_error("Element must have at least one attribute to update");
