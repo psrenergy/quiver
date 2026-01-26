@@ -1546,6 +1546,102 @@ class Database {
     return result;
   }
 
+  /// Reads a vector group for an element by ID, returning rows as maps.
+  /// Each row contains column names mapped to their values.
+  /// Useful for multi-column vector tables.
+  List<Map<String, Object?>> readVectorGroupById(String collection, String group, int id) {
+    _ensureNotClosed();
+
+    // Get metadata for this group
+    final metadata = getVectorMetadata(collection, group);
+    final columns = metadata.valueColumns;
+
+    if (columns.isEmpty) return [];
+
+    // Read each column's data
+    final columnData = <String, List<Object>>{};
+    int rowCount = 0;
+
+    for (final col in columns) {
+      final name = col.name;
+      List<Object> values;
+
+      switch (col.dataType) {
+        case quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER:
+          values = readVectorIntegersById(collection, name, id);
+        case quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT:
+          values = readVectorFloatsById(collection, name, id);
+        case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
+          values = readVectorStringsById(collection, name, id);
+        default:
+          throw Exception('Unknown data type: ${col.dataType}');
+      }
+
+      columnData[name] = values;
+      rowCount = values.length;
+    }
+
+    // Transpose columns to rows
+    final rows = <Map<String, Object?>>[];
+    for (int i = 0; i < rowCount; i++) {
+      final row = <String, Object?>{};
+      for (final entry in columnData.entries) {
+        row[entry.key] = entry.value[i];
+      }
+      rows.add(row);
+    }
+
+    return rows;
+  }
+
+  /// Reads a set group for an element by ID, returning rows as maps.
+  /// Each row contains column names mapped to their values.
+  /// Useful for multi-column set tables.
+  List<Map<String, Object?>> readSetGroupById(String collection, String group, int id) {
+    _ensureNotClosed();
+
+    // Get metadata for this group
+    final metadata = getSetMetadata(collection, group);
+    final columns = metadata.valueColumns;
+
+    if (columns.isEmpty) return [];
+
+    // Read each column's data
+    final columnData = <String, List<Object>>{};
+    int rowCount = 0;
+
+    for (final col in columns) {
+      final name = col.name;
+      List<Object> values;
+
+      switch (col.dataType) {
+        case quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER:
+          values = readSetIntegersById(collection, name, id);
+        case quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT:
+          values = readSetFloatsById(collection, name, id);
+        case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
+          values = readSetStringsById(collection, name, id);
+        default:
+          throw Exception('Unknown data type: ${col.dataType}');
+      }
+
+      columnData[name] = values;
+      rowCount = values.length;
+    }
+
+    // Transpose columns to rows
+    final rows = <Map<String, Object?>>[];
+    for (int i = 0; i < rowCount; i++) {
+      final row = <String, Object?>{};
+      for (final entry in columnData.entries) {
+        row[entry.key] = entry.value[i];
+      }
+      rows.add(row);
+    }
+
+    return rows;
+  }
+
   /// Closes the database and frees native resources.
   void close() {
     if (_isClosed) return;
