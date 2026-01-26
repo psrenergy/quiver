@@ -2286,7 +2286,7 @@ abstract class quiver_data_type_t {
   static const int QUIVER_DATA_TYPE_INTEGER = 0;
   static const int QUIVER_DATA_TYPE_FLOAT = 1;
   static const int QUIVER_DATA_TYPE_STRING = 2;
-  static const int QUIVER_DATA_TYPE_DATETIME = 3;
+  static const int QUIVER_DATA_TYPE_DATE_TIME = 3;
 }
 
 final class quiver_database extends ffi.Opaque {}

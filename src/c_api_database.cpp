@@ -901,7 +901,7 @@ quiver_data_type_t to_c_data_type(quiver::DataType type) {
     case quiver::DataType::Text:
         return QUIVER_DATA_TYPE_STRING;
     case quiver::DataType::DateTime:
-        return QUIVER_DATA_TYPE_DATETIME;
+        return QUIVER_DATA_TYPE_DATE_TIME;
     }
     return QUIVER_DATA_TYPE_INTEGER;
 }

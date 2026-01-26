@@ -76,7 +76,7 @@ end
     QUIVER_DATA_TYPE_INTEGER = 0
     QUIVER_DATA_TYPE_FLOAT = 1
     QUIVER_DATA_TYPE_STRING = 2
-    QUIVER_DATA_TYPE_DATETIME = 3
+    QUIVER_DATA_TYPE_DATE_TIME = 3
 end
 
 function quiver_database_options_default()

@@ -1499,7 +1499,7 @@ class Database {
           result[name] = readScalarFloatById(collection, name, id);
         case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
           result[name] = readScalarStringById(collection, name, id);
-        case quiver_data_type_t.QUIVER_DATA_TYPE_DATETIME:
+        case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
           result[name] = readScalarStringById(collection, name, id);
       }
     }
@@ -1522,7 +1522,7 @@ class Database {
           result[name] = readVectorFloatsById(collection, name, id);
         case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
           result[name] = readVectorStringsById(collection, name, id);
-        case quiver_data_type_t.QUIVER_DATA_TYPE_DATETIME:
+        case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
           result[name] = readVectorStringsById(collection, name, id);
       }
     }
@@ -1545,7 +1545,7 @@ class Database {
           result[name] = readSetFloatsById(collection, name, id);
         case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
           result[name] = readSetStringsById(collection, name, id);
-        case quiver_data_type_t.QUIVER_DATA_TYPE_DATETIME:
+        case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
           result[name] = readSetStringsById(collection, name, id);
       }
     }
@@ -1579,7 +1579,7 @@ class Database {
           values = readVectorFloatsById(collection, name, id);
         case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
         values = readVectorStringsById(collection, name, id);
-        case quiver_data_type_t.QUIVER_DATA_TYPE_DATETIME:
+        case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
           values = readVectorStringsById(collection, name, id);
         default:
           throw Exception('Unknown data type: ${col.dataType}');
@@ -1629,7 +1629,7 @@ class Database {
           values = readSetFloatsById(collection, name, id);
         case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
           values = readSetStringsById(collection, name, id);
-        case quiver_data_type_t.QUIVER_DATA_TYPE_DATETIME:
+        case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
           values = readSetStringsById(collection, name, id);
         default:
           throw Exception('Unknown data type: ${col.dataType}');
