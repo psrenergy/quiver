@@ -318,10 +318,6 @@ function quiver_database_update_set_strings(db, collection, attribute, id, value
     @ccall libquiver_c.quiver_database_update_set_strings(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Ptr{Cchar}}, count::Csize_t)::quiver_error_t
 end
 
-function quiver_database_update_element_vectors_sets(db, collection, id, element)
-    @ccall libquiver_c.quiver_database_update_element_vectors_sets(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, id::Int64, element::Ptr{quiver_element_t})::quiver_error_t
-end
-
 function quiver_free_integer_array(values)
     @ccall libquiver_c.quiver_free_integer_array(values::Ptr{Int64})::Cvoid
 end

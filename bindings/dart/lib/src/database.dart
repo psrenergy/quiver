@@ -1190,8 +1190,8 @@ class Database {
     }
   }
 
-  /// Updates an element's scalar attributes by ID using a map of values.
-  /// Note: Vector and set attributes are ignored in update operations.
+  /// Updates an element's attributes by ID using a map of values.
+  /// Handles scalars, vectors, and sets uniformly - any attributes in the map will be updated.
   void updateElement(String collection, int id, Map<String, Object?> values) {
     _ensureNotClosed();
     final element = Element();
@@ -1205,8 +1205,8 @@ class Database {
     }
   }
 
-  /// Updates an element's scalar attributes by ID using an Element builder.
-  /// Note: Vector and set attributes are ignored in update operations.
+  /// Updates an element's attributes by ID using an Element builder.
+  /// Handles scalars, vectors, and sets uniformly - any attributes in the Element will be updated.
   void updateElementFromBuilder(String collection, int id, Element element) {
     _ensureNotClosed();
     final arena = Arena();
@@ -1459,41 +1459,6 @@ class Database {
 
       if (err != quiver_error_t.QUIVER_OK) {
         throw DatabaseException.fromError(err, "Failed to update set strings '$collection.$attribute' for id $id");
-      }
-    } finally {
-      arena.releaseAll();
-    }
-  }
-
-  /// Updates multiple vector/set attributes atomically using a map of values.
-  /// Scalars in the map are ignored - only vector/set attributes are updated.
-  void updateElementVectorsSets(String collection, int id, Map<String, Object?> values) {
-    _ensureNotClosed();
-    final element = Element();
-    try {
-      for (final entry in values.entries) {
-        element.set(entry.key, entry.value);
-      }
-      updateElementVectorsSetsFromBuilder(collection, id, element);
-    } finally {
-      element.dispose();
-    }
-  }
-
-  /// Updates multiple vector/set attributes atomically using an Element builder.
-  /// Scalars in the Element are ignored - only vector/set attributes are updated.
-  void updateElementVectorsSetsFromBuilder(String collection, int id, Element element) {
-    _ensureNotClosed();
-    final arena = Arena();
-    try {
-      final err = bindings.quiver_database_update_element_vectors_sets(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        id,
-        element.ptr.cast(),
-      );
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to update vectors/sets for element $id in '$collection'");
       }
     } finally {
       arena.releaseAll();

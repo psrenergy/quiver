@@ -709,33 +709,91 @@ void Database::update_element(const std::string& collection, int64_t id, const E
     impl_->require_collection(collection, "update element");
 
     const auto& scalars = element.scalars();
-    if (scalars.empty()) {
-        throw std::runtime_error("Element must have at least one scalar attribute to update");
+    const auto& arrays = element.arrays();
+    impl_->logger->info("update_element: scalars={}, arrays={}", scalars.size(), arrays.size());
+
+    if (scalars.empty() && arrays.empty()) {
+        throw std::runtime_error("Element must have at least one attribute to update");
     }
 
-    // Validate scalar types
-    for (const auto& [name, value] : scalars) {
-        impl_->type_validator->validate_scalar(collection, name, value);
-    }
+    Impl::TransactionGuard txn(*impl_);
 
-    // Build UPDATE SQL
-    auto sql = "UPDATE " + collection + " SET ";
-    std::vector<Value> params;
-
-    auto first = true;
-    for (const auto& [name, value] : scalars) {
-        if (!first) {
-            sql += ", ";
+    // Update scalars if present
+    if (!scalars.empty()) {
+        // Validate scalar types
+        for (const auto& [name, value] : scalars) {
+            impl_->type_validator->validate_scalar(collection, name, value);
         }
-        sql += name + " = ?";
-        params.push_back(value);
-        first = false;
+
+        // Build UPDATE SQL
+        auto sql = "UPDATE " + collection + " SET ";
+        std::vector<Value> params;
+
+        auto first = true;
+        for (const auto& [name, value] : scalars) {
+            if (!first) {
+                sql += ", ";
+            }
+            sql += name + " = ?";
+            params.push_back(value);
+            first = false;
+        }
+        sql += " WHERE id = ?";
+        params.push_back(id);
+
+        execute(sql, params);
     }
-    sql += " WHERE id = ?";
-    params.push_back(id);
 
-    execute(sql, params);
+    // Update vectors/sets if present
+    for (const auto& [attr_name, values] : arrays) {
+        // Try to find as vector table first
+        bool found_vector = false;
+        std::string vector_table;
+        try {
+            vector_table = impl_->schema->find_vector_table(collection, attr_name);
+            found_vector = true;
+        } catch (const std::runtime_error&) {
+            // Not a vector table, try set
+        }
 
+        if (found_vector) {
+            // Delete existing vector data
+            auto delete_sql = "DELETE FROM " + vector_table + " WHERE id = ?";
+            execute(delete_sql, {id});
+
+            // Insert new vector data
+            for (size_t i = 0; i < values.size(); ++i) {
+                auto insert_sql =
+                    "INSERT INTO " + vector_table + " (id, vector_index, " + attr_name + ") VALUES (?, ?, ?)";
+                int64_t vector_index = static_cast<int64_t>(i + 1);
+                execute(insert_sql, {id, vector_index, values[i]});
+            }
+            impl_->logger->debug("Updated vector {}.{} for id {} with {} values", collection, attr_name, id, values.size());
+            continue;
+        }
+
+        // Try to find as set table
+        std::string set_table;
+        try {
+            set_table = impl_->schema->find_set_table(collection, attr_name);
+        } catch (const std::runtime_error&) {
+            throw std::runtime_error("Attribute '" + attr_name +
+                                     "' is not a vector or set attribute in collection '" + collection + "'");
+        }
+
+        // Delete existing set data
+        auto delete_sql = "DELETE FROM " + set_table + " WHERE id = ?";
+        execute(delete_sql, {id});
+
+        // Insert new set data
+        for (const auto& value : values) {
+            auto insert_sql = "INSERT INTO " + set_table + " (id, " + attr_name + ") VALUES (?, ?)";
+            execute(insert_sql, {id, value});
+        }
+        impl_->logger->debug("Updated set {}.{} for id {} with {} values", collection, attr_name, id, values.size());
+    }
+
+    txn.commit();
     impl_->logger->info("Updated element {} in {}", id, collection);
 }
 
@@ -1179,70 +1237,6 @@ void Database::update_set_strings(const std::string& collection,
 
     txn.commit();
     impl_->logger->info("Updated set {}.{} for id {} with {} values", collection, attribute, id, values.size());
-}
-
-void Database::update_element_vectors_sets(const std::string& collection, int64_t id, const Element& element) {
-    impl_->logger->debug("Updating vectors/sets for element {} in collection: {}", id, collection);
-    impl_->require_collection(collection, "update element vectors/sets");
-
-    const auto& arrays = element.arrays();
-    if (arrays.empty()) {
-        impl_->logger->debug("No arrays to update for element {} in {}", id, collection);
-        return;
-    }
-
-    Impl::TransactionGuard txn(*impl_);
-
-    for (const auto& [attr_name, values] : arrays) {
-        // Try to find as vector table first
-        bool found_vector = false;
-        std::string vector_table;
-        try {
-            vector_table = impl_->schema->find_vector_table(collection, attr_name);
-            found_vector = true;
-        } catch (const std::runtime_error&) {
-            // Not a vector table, try set
-        }
-
-        if (found_vector) {
-            // Delete existing vector data
-            auto delete_sql = "DELETE FROM " + vector_table + " WHERE id = ?";
-            execute(delete_sql, {id});
-
-            // Insert new vector data
-            for (size_t i = 0; i < values.size(); ++i) {
-                auto insert_sql =
-                    "INSERT INTO " + vector_table + " (id, vector_index, " + attr_name + ") VALUES (?, ?, ?)";
-                int64_t vector_index = static_cast<int64_t>(i + 1);
-                execute(insert_sql, {id, vector_index, values[i]});
-            }
-            impl_->logger->debug("Updated vector {}.{} for id {} with {} values", collection, attr_name, id, values.size());
-            continue;
-        }
-
-        // Try to find as set table
-        std::string set_table;
-        try {
-            set_table = impl_->schema->find_set_table(collection, attr_name);
-        } catch (const std::runtime_error&) {
-            throw std::runtime_error("Attribute '" + attr_name +
-                                     "' is not a vector or set attribute in collection '" + collection + "'");
-        }
-
-        // Delete existing set data
-        auto delete_sql = "DELETE FROM " + set_table + " WHERE id = ?";
-        execute(delete_sql, {id});
-
-        // Insert new set data
-        for (const auto& value : values) {
-            auto insert_sql = "INSERT INTO " + set_table + " (id, " + attr_name + ") VALUES (?, ?)";
-            execute(insert_sql, {id, value});
-        }
-        impl_->logger->debug("Updated set {}.{} for id {} with {} values", collection, attr_name, id, values.size());
-    }
-
-    txn.commit();
-    impl_->logger->info("Updated vectors/sets for element {} in {} ({} attributes)", id, collection, arrays.size());
 }
 
 ScalarMetadata Database::get_scalar_metadata(const std::string& collection, const std::string& attribute) const {

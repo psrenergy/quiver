@@ -144,9 +144,6 @@ public:
                             int64_t id,
                             const std::vector<std::string>& values);
 
-    // Update multiple vector/set attributes atomically (sparse update - only updates attributes in Element)
-    void update_element_vectors_sets(const std::string& collection, int64_t id, const Element& element);
-
     const std::string& path() const;
 
 private:

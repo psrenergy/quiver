@@ -1817,36 +1817,6 @@ class QuiverDatabaseBindings {
         )
       >();
 
-  int quiver_database_update_element_vectors_sets(
-    ffi.Pointer<quiver_database_t> db,
-    ffi.Pointer<ffi.Char> collection,
-    int id,
-    ffi.Pointer<quiver_element_t> element,
-  ) {
-    return _quiver_database_update_element_vectors_sets(
-      db,
-      collection,
-      id,
-      element,
-    );
-  }
-
-  late final _quiver_database_update_element_vectors_setsPtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Int32 Function(
-            ffi.Pointer<quiver_database_t>,
-            ffi.Pointer<ffi.Char>,
-            ffi.Int64,
-            ffi.Pointer<quiver_element_t>,
-          )
-        >
-      >('quiver_database_update_element_vectors_sets');
-  late final _quiver_database_update_element_vectors_sets = _quiver_database_update_element_vectors_setsPtr
-      .asFunction<
-        int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<quiver_element_t>)
-      >();
-
   void quiver_free_integer_array(
     ffi.Pointer<ffi.Int64> values,
   ) {
