@@ -1,9 +1,12 @@
 module Quiver
 
+using Dates
+
 include("c_api.jl")
 import .C
 
 include("exceptions.jl")
+include("date_time.jl")
 include("element.jl")
 include("database.jl")
 include("database_create.jl")
