@@ -560,4 +560,3 @@ TEST(Database, UpdateSetFromEmptyToNonEmpty) {
     std::sort(set.begin(), set.end());
     EXPECT_EQ(set, (std::vector<std::string>{"important", "urgent"}));
 }
-

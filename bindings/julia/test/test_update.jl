@@ -638,7 +638,6 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
-
 end
 
 end

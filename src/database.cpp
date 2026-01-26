@@ -767,7 +767,8 @@ void Database::update_element(const std::string& collection, int64_t id, const E
                 int64_t vector_index = static_cast<int64_t>(i + 1);
                 execute(insert_sql, {id, vector_index, values[i]});
             }
-            impl_->logger->debug("Updated vector {}.{} for id {} with {} values", collection, attr_name, id, values.size());
+            impl_->logger->debug(
+                "Updated vector {}.{} for id {} with {} values", collection, attr_name, id, values.size());
             continue;
         }
 
@@ -776,8 +777,8 @@ void Database::update_element(const std::string& collection, int64_t id, const E
         try {
             set_table = impl_->schema->find_set_table(collection, attr_name);
         } catch (const std::runtime_error&) {
-            throw std::runtime_error("Attribute '" + attr_name +
-                                     "' is not a vector or set attribute in collection '" + collection + "'");
+            throw std::runtime_error("Attribute '" + attr_name + "' is not a vector or set attribute in collection '" +
+                                     collection + "'");
         }
 
         // Delete existing set data
