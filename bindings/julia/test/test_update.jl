@@ -286,7 +286,7 @@ include("fixture.jl")
 
         Quiver.create_element!(db, "Configuration";
             label = "Config 1",
-            date_attribute = "2024-01-01T00:00:00"
+            date_attribute = "2024-01-01T00:00:00",
         )
 
         # Update DateTime value

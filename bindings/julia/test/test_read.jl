@@ -282,11 +282,11 @@ include("fixture.jl")
 
         Quiver.create_element!(db, "Configuration";
             label = "Config 1",
-            date_attribute = "2024-01-15T10:30:00"
+            date_attribute = "2024-01-15T10:30:00",
         )
         Quiver.create_element!(db, "Configuration";
             label = "Config 2",
-            date_attribute = "2024-06-20T14:45:30"
+            date_attribute = "2024-06-20T14:45:30",
         )
 
         # Read all DateTime values
