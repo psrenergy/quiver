@@ -560,3 +560,22 @@ TEST(Database, UpdateSetFromEmptyToNonEmpty) {
     std::sort(set.begin(), set.end());
     EXPECT_EQ(set, (std::vector<std::string>{"important", "urgent"}));
 }
+
+// ============================================================================
+// DateTime update tests
+// ============================================================================
+
+TEST(Database, UpdateDateTimeScalar) {
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element e;
+    e.set("label", std::string("Config 1"));
+    int64_t id = db.create_element("Configuration", e);
+
+    db.update_scalar_string("Configuration", "date_attribute", id, "2024-03-17T09:00:00");
+
+    auto date = db.read_scalar_strings_by_id("Configuration", "date_attribute", id);
+    EXPECT_TRUE(date.has_value());
+    EXPECT_EQ(date.value(), "2024-03-17T09:00:00");
+}

@@ -660,3 +660,36 @@ TEST(DatabaseCApi, UpdateSetStringsNullAttribute) {
 
     quiver_database_close(db);
 }
+
+// ============================================================================
+// DateTime update tests
+// ============================================================================
+
+TEST(DatabaseCApi, UpdateDateTimeScalar) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto e = quiver_element_create();
+    quiver_element_set_string(e, "label", "Config 1");
+    quiver_element_set_string(e, "date_attribute", "2024-01-01T00:00:00");
+    int64_t id = quiver_database_create_element(db, "Configuration", e);
+    quiver_element_destroy(e);
+    EXPECT_GT(id, 0);
+
+    // Update the datetime value
+    auto err = quiver_database_update_scalar_string(db, "Configuration", "date_attribute", id, "2025-12-31T23:59:59");
+    EXPECT_EQ(err, QUIVER_OK);
+
+    // Verify the update
+    char* value = nullptr;
+    int has_value;
+    err = quiver_database_read_scalar_strings_by_id(db, "Configuration", "date_attribute", id, &value, &has_value);
+    EXPECT_EQ(err, QUIVER_OK);
+    EXPECT_EQ(has_value, 1);
+    EXPECT_STREQ(value, "2025-12-31T23:59:59");
+
+    delete[] value;
+    quiver_database_close(db);
+}

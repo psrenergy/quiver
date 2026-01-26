@@ -589,3 +589,55 @@ TEST(Database, ReadSetStringsByIdInvalidCollection) {
 
     EXPECT_THROW(db.read_set_strings_by_id("NonexistentCollection", "tag", 1), std::runtime_error);
 }
+
+// ============================================================================
+// DateTime metadata tests
+// ============================================================================
+
+TEST(Database, DateTimeAttributeMetadata) {
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+
+    auto metadata = db.get_scalar_metadata("Configuration", "date_attribute");
+    EXPECT_EQ(metadata.name, "date_attribute");
+    EXPECT_EQ(metadata.data_type, quiver::DataType::DateTime);
+    EXPECT_FALSE(metadata.not_null);
+}
+
+TEST(Database, DateTimeReadScalarString) {
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element element;
+    element.set("label", std::string("Config 1")).set("date_attribute", std::string("2024-03-15T14:30:45"));
+    db.create_element("Configuration", element);
+
+    auto dates = db.read_scalar_strings("Configuration", "date_attribute");
+    EXPECT_EQ(dates.size(), 1);
+    EXPECT_EQ(dates[0], "2024-03-15T14:30:45");
+}
+
+TEST(Database, DateTimeReadScalarStringById) {
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element element;
+    element.set("label", std::string("Config 1")).set("date_attribute", std::string("2024-03-15T14:30:45"));
+    int64_t id = db.create_element("Configuration", element);
+
+    auto date = db.read_scalar_strings_by_id("Configuration", "date_attribute", id);
+    EXPECT_TRUE(date.has_value());
+    EXPECT_EQ(date.value(), "2024-03-15T14:30:45");
+}
+
+TEST(Database, DateTimeNullable) {
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element element;
+    element.set("label", std::string("Config 1"));
+    int64_t id = db.create_element("Configuration", element);
+
+    auto date = db.read_scalar_strings_by_id("Configuration", "date_attribute", id);
+    EXPECT_FALSE(date.has_value());
+}
