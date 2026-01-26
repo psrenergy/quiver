@@ -223,7 +223,7 @@ std::vector<ColumnDefinition> Schema::query_columns(sqlite3* db, const std::stri
         }
 
         // Infer DATE_TIME type from column name for TEXT columns
-        if (col.type == DataType::Text && is_datetime_column(col.name)) {
+        if (col.type == DataType::Text && is_date_time_column(col.name)) {
             col.type = DataType::DateTime;
         }
 

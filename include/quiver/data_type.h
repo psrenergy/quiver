@@ -34,9 +34,9 @@ inline const char* data_type_to_string(DataType type) {
     return "UNKNOWN";
 }
 
-// Check if a column name indicates a datetime column
+// Check if a column name indicates a date time column
 // Columns beginning with "date_" are treated as DATE_TIME
-inline bool is_datetime_column(const std::string& name) {
+inline bool is_date_time_column(const std::string& name) {
     return name.starts_with("date_");
 }
 

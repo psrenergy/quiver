@@ -485,7 +485,7 @@ struct LuaRunner::Impl {
         case DataType::Text:
             return "text";
         case DataType::DateTime:
-            return "datetime";
+            return "date_time";
         }
         return "unknown";
     }

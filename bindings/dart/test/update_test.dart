@@ -568,7 +568,7 @@ void main() {
   });
 
   group('Update DateTime Attributes', () {
-    test('updates datetime value', () {
+    test('updates date time value', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),

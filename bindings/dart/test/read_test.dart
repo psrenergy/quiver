@@ -476,7 +476,7 @@ void main() {
   });
 
   group('Read DateTime Attributes', () {
-    test('reads datetime values from Configuration', () {
+    test('reads date time values from Configuration', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
@@ -500,7 +500,7 @@ void main() {
       }
     });
 
-    test('reads datetime by ID', () {
+    test('reads date time by ID', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
