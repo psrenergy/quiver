@@ -43,6 +43,10 @@ function Base.setindex!(el::Element, value::String, name::String)
     end
 end
 
+function Base.setindex!(el::Element, value::DateTime, name::String)
+    el[name] = date_time_to_string(value)
+end
+
 function Base.setindex!(el::Element, value::Vector{<:Integer}, name::String)
     cname = Base.cconvert(Cstring, name)
     integer_values = Int64[Int64(v) for v in value]
