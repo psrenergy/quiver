@@ -354,6 +354,66 @@ QUIVER_C_API void quiver_free_integer_vectors(int64_t** vectors, size_t* sizes, 
 QUIVER_C_API void quiver_free_float_vectors(double** vectors, size_t* sizes, size_t count);
 QUIVER_C_API void quiver_free_string_vectors(char*** vectors, size_t* sizes, size_t count);
 
+// Time series metadata
+typedef struct {
+    const char* group_name;
+    char** dimension_columns;
+    size_t dimension_count;
+    quiver_scalar_metadata_t* value_columns;
+    size_t value_column_count;
+} quiver_time_series_metadata_t;
+
+// Time series operations
+QUIVER_C_API quiver_error_t quiver_database_add_time_series_row(quiver_database_t* db,
+                                                                const char* collection,
+                                                                const char* attribute,
+                                                                int64_t element_id,
+                                                                double value,
+                                                                const char* date_time,
+                                                                const char* const* dim_names,
+                                                                const int64_t* dim_values,
+                                                                size_t dim_count);
+
+QUIVER_C_API quiver_error_t quiver_database_update_time_series_row(quiver_database_t* db,
+                                                                   const char* collection,
+                                                                   const char* attribute,
+                                                                   int64_t element_id,
+                                                                   double value,
+                                                                   const char* date_time,
+                                                                   const char* const* dim_names,
+                                                                   const int64_t* dim_values,
+                                                                   size_t dim_count);
+
+QUIVER_C_API quiver_error_t quiver_database_delete_time_series(quiver_database_t* db,
+                                                               const char* collection,
+                                                               const char* group,
+                                                               int64_t element_id);
+
+// Read time series table for one element - returns JSON string with array of row objects
+QUIVER_C_API quiver_error_t quiver_database_read_time_series_table(quiver_database_t* db,
+                                                                   const char* collection,
+                                                                   const char* group,
+                                                                   int64_t element_id,
+                                                                   char** out_json);
+
+// Time series metadata
+QUIVER_C_API quiver_error_t quiver_database_get_time_series_metadata(quiver_database_t* db,
+                                                                     const char* collection,
+                                                                     const char* group_name,
+                                                                     quiver_time_series_metadata_t* out_metadata);
+
+QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(quiver_database_t* db,
+                                                                    const char* collection,
+                                                                    quiver_time_series_metadata_t** out_metadata,
+                                                                    size_t* out_count);
+
+// Free time series metadata
+QUIVER_C_API void quiver_free_time_series_metadata(quiver_time_series_metadata_t* metadata);
+QUIVER_C_API void quiver_free_time_series_metadata_array(quiver_time_series_metadata_t* metadata, size_t count);
+
+// Free string (for JSON output)
+QUIVER_C_API void quiver_free_string(char* str);
+
 #ifdef __cplusplus
 }
 #endif

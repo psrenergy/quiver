@@ -7,8 +7,10 @@
 #include "quiver/type_validator.h"
 
 #include <atomic>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <mutex>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -1399,6 +1401,237 @@ std::vector<SetMetadata> Database::list_set_groups(const std::string& collection
         }
     }
     return result;
+}
+
+std::vector<TimeSeriesMetadata> Database::list_time_series_groups(const std::string& collection) const {
+    if (!impl_->schema) {
+        throw std::runtime_error("Cannot list time series groups: no schema loaded");
+    }
+
+    std::vector<TimeSeriesMetadata> result;
+    auto prefix = collection + "_time_series_";
+
+    for (const auto& table_name : impl_->schema->table_names()) {
+        if (!impl_->schema->is_time_series_table(table_name))
+            continue;
+        if (impl_->schema->get_parent_collection(table_name) != collection)
+            continue;
+
+        // Extract group name from table name
+        if (table_name.size() > prefix.size() && table_name.substr(0, prefix.size()) == prefix) {
+            auto group_name = table_name.substr(prefix.size());
+            result.push_back(get_time_series_metadata(collection, group_name));
+        }
+    }
+    return result;
+}
+
+TimeSeriesMetadata Database::get_time_series_metadata(const std::string& collection,
+                                                       const std::string& group_name) const {
+    if (!impl_->schema) {
+        throw std::runtime_error("Cannot get time series metadata: no schema loaded");
+    }
+
+    auto ts_table = Schema::time_series_table_name(collection, group_name);
+    const auto* table_def = impl_->schema->get_table(ts_table);
+
+    if (!table_def) {
+        throw std::runtime_error("Time series group '" + group_name + "' not found for collection '" + collection + "'");
+    }
+
+    TimeSeriesMetadata meta;
+    meta.group_name = group_name;
+    meta.dimension_columns = impl_->schema->get_time_series_dimensions(ts_table);
+
+    // Add value columns (skip id and dimension columns)
+    for (const auto& [col_name, col] : table_def->columns) {
+        if (col_name == "id") {
+            continue;
+        }
+        // Skip dimension columns
+        bool is_dimension = false;
+        for (const auto& dim : meta.dimension_columns) {
+            if (col_name == dim) {
+                is_dimension = true;
+                break;
+            }
+        }
+        if (is_dimension) {
+            continue;
+        }
+
+        ScalarMetadata attr;
+        attr.name = col.name;
+        attr.data_type = col.type;
+        attr.not_null = col.not_null;
+        attr.primary_key = col.primary_key;
+        attr.default_value = col.default_value;
+        meta.value_columns.push_back(std::move(attr));
+    }
+
+    return meta;
+}
+
+void Database::add_time_series_row(const std::string& collection,
+                                   const std::string& attribute,
+                                   int64_t element_id,
+                                   double value,
+                                   const std::string& date_time,
+                                   const std::map<std::string, int64_t>& dimensions) {
+    impl_->logger->debug("Adding time series row for {}.{} id={}", collection, attribute, element_id);
+    impl_->require_schema("add time series row");
+
+    auto ts_table = impl_->schema->find_time_series_table(collection, attribute);
+    auto expected_dims = impl_->schema->get_time_series_dimensions(ts_table);
+
+    // Build INSERT OR REPLACE SQL
+    auto sql = "INSERT OR REPLACE INTO " + ts_table + " (id, date_time";
+    std::string placeholders = "?, ?";
+    std::vector<Value> params = {element_id, date_time};
+
+    // Add dimension columns in schema order (skip date_time since already added)
+    for (const auto& dim : expected_dims) {
+        if (dim == "date_time") {
+            continue;
+        }
+        auto it = dimensions.find(dim);
+        if (it == dimensions.end()) {
+            throw std::runtime_error("Missing dimension '" + dim + "' for time series table '" + ts_table + "'");
+        }
+        sql += ", " + dim;
+        placeholders += ", ?";
+        params.push_back(it->second);
+    }
+
+    // Add attribute column
+    sql += ", " + attribute + ") VALUES (" + placeholders + ", ?)";
+    params.push_back(value);
+
+    execute(sql, params);
+    impl_->logger->info(
+        "Added time series row for {}.{} id={} date_time={}", collection, attribute, element_id, date_time);
+}
+
+void Database::update_time_series_row(const std::string& collection,
+                                      const std::string& attribute,
+                                      int64_t element_id,
+                                      double value,
+                                      const std::string& date_time,
+                                      const std::map<std::string, int64_t>& dimensions) {
+    impl_->logger->debug("Updating time series row for {}.{} id={}", collection, attribute, element_id);
+    impl_->require_schema("update time series row");
+
+    auto ts_table = impl_->schema->find_time_series_table(collection, attribute);
+    auto expected_dims = impl_->schema->get_time_series_dimensions(ts_table);
+
+    // Build UPDATE SQL
+    auto sql = "UPDATE " + ts_table + " SET " + attribute + " = ? WHERE id = ? AND date_time = ?";
+    std::vector<Value> params = {value, element_id, date_time};
+
+    // Add dimension columns to WHERE clause (skip date_time since already added)
+    for (const auto& dim : expected_dims) {
+        if (dim == "date_time") {
+            continue;
+        }
+        auto it = dimensions.find(dim);
+        if (it == dimensions.end()) {
+            throw std::runtime_error("Missing dimension '" + dim + "' for time series table '" + ts_table + "'");
+        }
+        sql += " AND " + dim + " = ?";
+        params.push_back(it->second);
+    }
+
+    execute(sql, params);
+    impl_->logger->info(
+        "Updated time series row for {}.{} id={} date_time={}", collection, attribute, element_id, date_time);
+}
+
+void Database::delete_time_series(const std::string& collection, const std::string& group, int64_t element_id) {
+    impl_->logger->debug("Deleting time series data for {}.{} id={}", collection, group, element_id);
+    impl_->require_schema("delete time series");
+
+    auto ts_table = Schema::time_series_table_name(collection, group);
+    if (!impl_->schema->has_table(ts_table)) {
+        throw std::runtime_error("Time series group '" + group + "' not found for collection '" + collection + "'");
+    }
+
+    auto sql = "DELETE FROM " + ts_table + " WHERE id = ?";
+    execute(sql, {element_id});
+
+    impl_->logger->info("Deleted time series data for {}.{} id={}", collection, group, element_id);
+}
+
+std::vector<std::map<std::string, std::variant<std::string, int64_t, double>>>
+Database::read_time_series_table(const std::string& collection, const std::string& group, int64_t element_id) {
+    impl_->require_schema("read time series table");
+
+    auto ts_table = Schema::time_series_table_name(collection, group);
+    if (!impl_->schema->has_table(ts_table)) {
+        throw std::runtime_error("Time series group '" + group + "' not found for collection '" + collection + "'");
+    }
+
+    const auto* table_def = impl_->schema->get_table(ts_table);
+    auto dimensions = impl_->schema->get_time_series_dimensions(ts_table);
+
+    // Build SELECT with all columns except id
+    std::string sql = "SELECT ";
+    std::vector<std::string> columns;
+    for (const auto& [col_name, _] : table_def->columns) {
+        if (col_name == "id") {
+            continue;
+        }
+        columns.push_back(col_name);
+    }
+
+    for (size_t i = 0; i < columns.size(); ++i) {
+        if (i > 0) {
+            sql += ", ";
+        }
+        sql += columns[i];
+    }
+
+    // Build ORDER BY - always date_time first, then other dimensions alphabetically
+    sql += " FROM " + ts_table + " WHERE id = ? ORDER BY date_time";
+    for (const auto& dim : dimensions) {
+        if (dim != "date_time") {
+            sql += ", " + dim;
+        }
+    }
+
+    auto result = execute(sql, {element_id});
+
+    std::vector<std::map<std::string, std::variant<std::string, int64_t, double>>> rows;
+    rows.reserve(result.row_count());
+
+    for (size_t i = 0; i < result.row_count(); ++i) {
+        std::map<std::string, std::variant<std::string, int64_t, double>> row;
+        for (size_t j = 0; j < columns.size(); ++j) {
+            const auto& col_name = columns[j];
+            auto col_type = impl_->schema->get_data_type(ts_table, col_name);
+
+            if (col_type == DataType::Integer) {
+                auto val = result[i].get_integer(j);
+                if (val) {
+                    row[col_name] = *val;
+                } else {
+                    row[col_name] = std::numeric_limits<int64_t>::min();
+                }
+            } else if (col_type == DataType::Real) {
+                auto val = result[i].get_float(j);
+                if (val) {
+                    row[col_name] = *val;
+                } else {
+                    row[col_name] = std::numeric_limits<double>::quiet_NaN();
+                }
+            } else {
+                auto val = result[i].get_string(j);
+                row[col_name] = val.value_or("");
+            }
+        }
+        rows.push_back(std::move(row));
+    }
+
+    return rows;
 }
 
 }  // namespace quiver

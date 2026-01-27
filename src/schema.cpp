@@ -69,6 +69,10 @@ std::string Schema::set_table_name(const std::string& collection, const std::str
     return collection + "_set_" + group;
 }
 
+std::string Schema::time_series_table_name(const std::string& collection, const std::string& group) {
+    return collection + "_time_series_" + group;
+}
+
 bool Schema::is_collection(const std::string& table) const {
     if (table == "Configuration") {
         return true;
@@ -140,6 +144,45 @@ std::string Schema::find_set_table(const std::string& collection, const std::str
     }
 
     throw std::runtime_error("Set attribute '" + attribute + "' not found for collection '" + collection + "'");
+}
+
+std::string Schema::find_time_series_table(const std::string& collection, const std::string& attribute) const {
+    // First try: Collection_time_series_attribute
+    auto ts = time_series_table_name(collection, attribute);
+    if (has_table(ts)) {
+        return ts;
+    }
+
+    // Second try: search all time series tables for the collection
+    for (const auto& table_name : table_names()) {
+        if (!is_time_series_table(table_name))
+            continue;
+        if (get_parent_collection(table_name) != collection)
+            continue;
+
+        const auto* table_def = get_table(table_name);
+        if (table_def && table_def->has_column(attribute)) {
+            return table_name;
+        }
+    }
+
+    throw std::runtime_error("Time series attribute '" + attribute + "' not found for collection '" + collection + "'");
+}
+
+std::vector<std::string> Schema::get_time_series_dimensions(const std::string& table) const {
+    const auto* table_def = get_table(table);
+    if (!table_def) {
+        throw std::runtime_error("Table not found: " + table);
+    }
+
+    std::vector<std::string> dimensions;
+    for (const auto& [col_name, col] : table_def->columns) {
+        // Include columns that are part of the primary key, excluding 'id'
+        if (col.primary_key && col_name != "id") {
+            dimensions.push_back(col_name);
+        }
+    }
+    return dimensions;
 }
 
 std::vector<std::string> Schema::table_names() const {

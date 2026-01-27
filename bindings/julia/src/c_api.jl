@@ -427,6 +427,52 @@ function quiver_lua_runner_get_error(runner)
     @ccall libquiver_c.quiver_lua_runner_get_error(runner::Ptr{quiver_lua_runner_t})::Ptr{Cchar}
 end
 
+# Time series structs and functions
+
+struct quiver_time_series_metadata_t
+    group_name::Ptr{Cchar}
+    dimension_columns::Ptr{Ptr{Cchar}}
+    dimension_count::Csize_t
+    value_columns::Ptr{quiver_scalar_metadata_t}
+    value_column_count::Csize_t
+end
+
+function quiver_database_add_time_series_row(db, collection, attribute, element_id, value, date_time, dim_names, dim_values, dim_count)
+    @ccall libquiver_c.quiver_database_add_time_series_row(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, element_id::Int64, value::Cdouble, date_time::Ptr{Cchar}, dim_names::Ptr{Ptr{Cchar}}, dim_values::Ptr{Int64}, dim_count::Csize_t)::quiver_error_t
+end
+
+function quiver_database_update_time_series_row(db, collection, attribute, element_id, value, date_time, dim_names, dim_values, dim_count)
+    @ccall libquiver_c.quiver_database_update_time_series_row(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, element_id::Int64, value::Cdouble, date_time::Ptr{Cchar}, dim_names::Ptr{Ptr{Cchar}}, dim_values::Ptr{Int64}, dim_count::Csize_t)::quiver_error_t
+end
+
+function quiver_database_delete_time_series(db, collection, group, element_id)
+    @ccall libquiver_c.quiver_database_delete_time_series(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, element_id::Int64)::quiver_error_t
+end
+
+function quiver_database_read_time_series_table(db, collection, group, element_id, out_json)
+    @ccall libquiver_c.quiver_database_read_time_series_table(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, element_id::Int64, out_json::Ptr{Ptr{Cchar}})::quiver_error_t
+end
+
+function quiver_database_get_time_series_metadata(db, collection, group_name, out_metadata)
+    @ccall libquiver_c.quiver_database_get_time_series_metadata(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group_name::Ptr{Cchar}, out_metadata::Ptr{quiver_time_series_metadata_t})::quiver_error_t
+end
+
+function quiver_database_list_time_series_groups(db, collection, out_metadata, out_count)
+    @ccall libquiver_c.quiver_database_list_time_series_groups(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_metadata::Ptr{Ptr{quiver_time_series_metadata_t}}, out_count::Ptr{Csize_t})::quiver_error_t
+end
+
+function quiver_free_time_series_metadata(metadata)
+    @ccall libquiver_c.quiver_free_time_series_metadata(metadata::Ptr{quiver_time_series_metadata_t})::Cvoid
+end
+
+function quiver_free_time_series_metadata_array(metadata, count)
+    @ccall libquiver_c.quiver_free_time_series_metadata_array(metadata::Ptr{quiver_time_series_metadata_t}, count::Csize_t)::Cvoid
+end
+
+function quiver_free_string(str)
+    @ccall libquiver_c.quiver_free_string(str::Ptr{Cchar})::Cvoid
+end
+
 #! format: on
 
 

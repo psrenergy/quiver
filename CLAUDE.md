@@ -57,15 +57,18 @@ bindings/dart/test/test.bat       # Dart tests
 ```
 
 ### Test Organization
-Test files organized by functionality:
-- `test_database_lifecycle.cpp` - open, close, move semantics, options
-- `test_database_create.cpp` - create element operations
-- `test_database_read.cpp` - read scalar/vector/set operations
-- `test_database_update.cpp` - update scalar/vector/set operations
-- `test_database_delete.cpp` - delete element operations
-- `test_database_relations.cpp` - relation operations
+Test files organized by functionality with consistent naming across all languages:
 
-C API tests follow same pattern with `test_c_api_database_*.cpp` prefix.
+|      Concept      |              C++              |                C API                |            Julia             |              Dart              |
+| ----------------- | ----------------------------- | ----------------------------------- | ---------------------------- | ------------------------------ |
+| Lifecycle         | `test_database_lifecycle.cpp` | `test_c_api_database_lifecycle.cpp` | `test_database_lifecycle.jl` | `database_lifecycle_test.dart` |
+| Schema Validation | `test_schema_validator.cpp`   | -                                   | `test_schema_validator.jl`   | `schema_validation_test.dart`  |
+| Create            | `test_database_create.cpp`    | `test_c_api_database_create.cpp`    | `test_database_create.jl`    | `database_create_test.dart`    |
+| Read              | `test_database_read.cpp`      | `test_c_api_database_read.cpp`      | `test_database_read.jl`      | `database_read_test.dart`      |
+| Update            | `test_database_update.cpp`    | `test_c_api_database_update.cpp`    | `test_database_update.jl`    | `database_update_test.dart`    |
+| Delete            | `test_database_delete.cpp`    | `test_c_api_database_delete.cpp`    | `test_database_delete.jl`    | `database_delete_test.dart`    |
+| Relations         | `test_database_relations.cpp` | -                                   | `test_database_relations.jl` | `database_relations_test.dart` |
+| Element           | `test_element.cpp`            | `test_c_api_element.cpp`            | `test_element.jl`            | `element_test.dart`            |
 
 All test schemas located in `tests/schemas/valid/` and `tests/schemas/invalid/`.
 
@@ -228,7 +231,7 @@ Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references.
 
 ### Database Class
 - Factory methods: `from_schema()`, `from_migrations()`
-- CRUD: `create_element(collection, element)`
+- CRUD: `create_element(collection, element)` - returns element ID
 - Scalar readers: `read_scalar_integers/floats/strings(collection, attribute)`
 - Vector readers: `read_vector_integers/floats/strings(collection, attribute)`
 - Set readers: `read_set_integers/floats/strings(collection, attribute)`
@@ -260,11 +263,14 @@ bindings/dart/generator/generator.bat    # Dart
 ```
 
 ### Julia Notes
+- Mutating functions use `!` suffix (e.g., `create_element!`, `close!`)
+- `create_element!` returns the `Int64` ID of the created element
 - Delete `bindings/julia/Manifest.toml` if version conflicts, then:
   ```bash
   julia --project=bindings/julia -e "using Pkg; Pkg.instantiate()"
   ```
 
 ### Dart Notes
+- `createElement` returns the `int` ID of the created element
 - `libquiver_c.dll` depends on `libquiver.dll` - both must be in PATH
 - test.bat handles PATH setup automatically

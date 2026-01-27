@@ -32,6 +32,7 @@ private:
     void validate_collection(const std::string& name);
     void validate_vector_table(const std::string& name);
     void validate_set_table(const std::string& name);
+    void validate_time_series_table(const std::string& name);
     void validate_no_duplicate_attributes();
     void validate_foreign_keys();
 

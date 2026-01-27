@@ -14,10 +14,11 @@ include("database_metadata.jl")
 include("database_read.jl")
 include("database_update.jl")
 include("database_delete.jl")
+include("database_time_series.jl")
 include("lua_runner.jl")
 
 export Element, Database, LuaRunner, DatabaseException
-export ScalarMetadata, VectorMetadata, SetMetadata
+export ScalarMetadata, VectorMetadata, SetMetadata, TimeSeriesMetadata
 export QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_FLOAT, QUIVER_DATA_TYPE_STRING
 
 # Re-export C enum constants for data types

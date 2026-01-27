@@ -32,8 +32,9 @@ void SchemaValidator::validate() {
             validate_vector_table(name);
         } else if (schema_.is_set_table(name)) {
             validate_set_table(name);
+        } else if (schema_.is_time_series_table(name)) {
+            validate_time_series_table(name);
         }
-        // Time series tables have minimal validation (just file paths)
     }
 
     validate_no_duplicate_attributes();
@@ -197,6 +198,75 @@ void SchemaValidator::validate_set_table(const std::string& name) {
     }
 }
 
+void SchemaValidator::validate_time_series_table(const std::string& name) {
+    const auto* table = schema_.get_table(name);
+    if (!table) {
+        return;
+    }
+
+    // Get parent collection
+    auto parent = schema_.get_parent_collection(name);
+    if (std::find(collections_.begin(), collections_.end(), parent) == collections_.end()) {
+        validation_error("Time series table '" + name + "' references non-existent collection '" + parent + "'");
+    }
+
+    // Must have 'id' column
+    const auto* id_col = table->get_column("id");
+    if (!id_col) {
+        validation_error("Time series table '" + name + "' must have 'id' column");
+    }
+
+    // Must have 'date_time' column with TEXT type and NOT NULL
+    const auto* date_time_col = table->get_column("date_time");
+    if (!date_time_col) {
+        validation_error("Time series table '" + name + "' must have 'date_time' column");
+    }
+    if (date_time_col && !date_time_col->not_null) {
+        validation_error("Time series table '" + name + "' date_time column must have NOT NULL constraint");
+    }
+
+    // Must have composite primary key including id and date_time
+    int pk_count = 0;
+    bool id_in_pk = false;
+    bool date_time_in_pk = false;
+    for (const auto& [col_name, col] : table->columns) {
+        if (col.primary_key) {
+            pk_count++;
+            if (col_name == "id") {
+                id_in_pk = true;
+            }
+            if (col_name == "date_time") {
+                date_time_in_pk = true;
+            }
+        }
+    }
+    if (pk_count < 2) {
+        validation_error("Time series table '" + name + "' must have composite primary key (id, date_time, ...)");
+    }
+    if (!id_in_pk) {
+        validation_error("Time series table '" + name + "' primary key must include 'id' column");
+    }
+    if (!date_time_in_pk) {
+        validation_error("Time series table '" + name + "' primary key must include 'date_time' column");
+    }
+
+    // Must have FK to parent with ON DELETE CASCADE ON UPDATE CASCADE
+    auto has_parent_fk = false;
+    for (const auto& fk : table->foreign_keys) {
+        if (fk.from_column == "id" && fk.to_table == parent) {
+            has_parent_fk = true;
+            if (fk.on_delete != "CASCADE" || fk.on_update != "CASCADE") {
+                validation_error("Time series table '" + name +
+                                 "' FK to parent must use ON DELETE CASCADE ON UPDATE CASCADE");
+            }
+            break;
+        }
+    }
+    if (!has_parent_fk) {
+        validation_error("Time series table '" + name + "' must have foreign key to parent collection '" + parent + "'");
+    }
+}
+
 void SchemaValidator::validate_no_duplicate_attributes() {
     // For each collection, gather all attribute names from collection + vector tables
     for (const auto& collection : collections_) {
@@ -298,25 +368,27 @@ void SchemaValidator::validate_foreign_keys() {
             }
 
             // Rule: FK column names should follow pattern <collection>_id or <collection>_<relation>
-            // Skip vector table id column and set table columns
-            if (!schema_.is_vector_table(table_name) || fk.from_column != "id") {
-                if (!schema_.is_set_table(table_name)) {
-                    // Check if FK column name ends with _id or matches target_relation pattern
-                    std::string target = fk.to_table;
-                    std::string target_lower = target;
-                    std::transform(target_lower.begin(), target_lower.end(), target_lower.begin(), ::tolower);
-                    std::string col_lower = fk.from_column;
-                    std::transform(col_lower.begin(), col_lower.end(), col_lower.begin(), ::tolower);
+            // Skip vector/set/time_series table id columns
+            bool is_parent_fk =
+                (schema_.is_vector_table(table_name) || schema_.is_set_table(table_name) ||
+                 schema_.is_time_series_table(table_name)) &&
+                fk.from_column == "id";
+            if (!is_parent_fk) {
+                // Check if FK column name ends with _id or matches target_relation pattern
+                std::string target = fk.to_table;
+                std::string target_lower = target;
+                std::transform(target_lower.begin(), target_lower.end(), target_lower.begin(), ::tolower);
+                std::string col_lower = fk.from_column;
+                std::transform(col_lower.begin(), col_lower.end(), col_lower.begin(), ::tolower);
 
-                    // Expected pattern: <target>_id or <target>_<something>
-                    bool valid_name = (col_lower == target_lower + "_id") ||
-                                      (col_lower.find(target_lower + "_") == 0) ||
-                                      (col_lower.find("_id") != std::string::npos);
+                // Expected pattern: <target>_id or <target>_<something>
+                bool valid_name = (col_lower == target_lower + "_id") ||
+                                  (col_lower.find(target_lower + "_") == 0) ||
+                                  (col_lower.find("_id") != std::string::npos);
 
-                    if (!valid_name) {
-                        validation_error("Foreign key column '" + fk.from_column + "' in table '" + table_name +
-                                         "' should follow naming pattern '<collection>_id'");
-                    }
+                if (!valid_name) {
+                    validation_error("Foreign key column '" + fk.from_column + "' in table '" + table_name +
+                                     "' should follow naming pattern '<collection>_id'");
                 }
             }
         }

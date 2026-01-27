@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
@@ -13,6 +14,7 @@ part 'database_delete.dart';
 part 'database_metadata.dart';
 part 'database_read.dart';
 part 'database_relations.dart';
+part 'database_time_series.dart';
 part 'database_update.dart';
 
 /// A wrapper for the Quiver database.

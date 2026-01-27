@@ -7,9 +7,11 @@
 #include "quiver/log_level.h"
 #include "quiver/result.h"
 
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace quiver {
@@ -107,6 +109,31 @@ public:
     std::vector<ScalarMetadata> list_scalar_attributes(const std::string& collection) const;
     std::vector<VectorMetadata> list_vector_groups(const std::string& collection) const;
     std::vector<SetMetadata> list_set_groups(const std::string& collection) const;
+    std::vector<TimeSeriesMetadata> list_time_series_groups(const std::string& collection) const;
+
+    // Time series metadata
+    TimeSeriesMetadata get_time_series_metadata(const std::string& collection, const std::string& group_name) const;
+
+    // Time series operations
+    void add_time_series_row(const std::string& collection,
+                             const std::string& attribute,
+                             int64_t element_id,
+                             double value,
+                             const std::string& date_time,
+                             const std::map<std::string, int64_t>& dimensions = {});
+
+    void update_time_series_row(const std::string& collection,
+                                const std::string& attribute,
+                                int64_t element_id,
+                                double value,
+                                const std::string& date_time,
+                                const std::map<std::string, int64_t>& dimensions = {});
+
+    void delete_time_series(const std::string& collection, const std::string& group, int64_t element_id);
+
+    // Read time series table for one element (returns all rows as vector of maps)
+    std::vector<std::map<std::string, std::variant<std::string, int64_t, double>>>
+    read_time_series_table(const std::string& collection, const std::string& group, int64_t element_id);
 
     // Update scalar attributes (by element ID)
     void update_scalar_integer(const std::string& collection, const std::string& attribute, int64_t id, int64_t value);

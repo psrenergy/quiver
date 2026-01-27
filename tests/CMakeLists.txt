@@ -7,6 +7,7 @@ add_executable(quiver_tests
     test_database_lifecycle.cpp
     test_database_read.cpp
     test_database_relations.cpp
+    test_database_time_series.cpp
     test_database_update.cpp
     test_element.cpp
     test_lua_runner.cpp
@@ -43,6 +44,7 @@ if(QUIVER_BUILD_C_API)
         test_c_api_database_delete.cpp
         test_c_api_database_lifecycle.cpp
         test_c_api_database_read.cpp
+        test_c_api_database_time_series.cpp
         test_c_api_database_update.cpp
         test_c_api_element.cpp
         test_c_api_lua_runner.cpp
