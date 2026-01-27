@@ -45,6 +45,7 @@ end
 
 function Base.setindex!(el::Element, value::DateTime, name::String)
     el[name] = date_time_to_string(value)
+    return nothing
 end
 
 function Base.setindex!(el::Element, value::Vector{<:Integer}, name::String)
