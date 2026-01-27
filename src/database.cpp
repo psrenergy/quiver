@@ -1052,7 +1052,7 @@ Database::read_set_strings_by_id(const std::string& collection, const std::strin
 }
 
 std::vector<int64_t> Database::read_element_ids(const std::string& collection) {
-    auto sql = "SELECT id FROM " + collection;
+    auto sql = "SELECT id FROM " + collection + " ORDER BY rowid";
     return read_grouped_values_by_id<int64_t>(execute(sql));
 }
 
