@@ -517,6 +517,28 @@ void main() {
         db.close();
       }
     });
+
+    test('readAllScalarsById returns native DateTime objects', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'date_attribute': '2024-01-15T10:30:00',
+        });
+
+        final scalars = db.readAllScalarsById('Configuration', 1);
+        expect(scalars['date_attribute'], isA<DateTime>());
+        expect(
+          scalars['date_attribute'],
+          equals(DateTime(2024, 1, 15, 10, 30, 0)),
+        );
+      } finally {
+        db.close();
+      }
+    });
   });
 
   group('Read Vector Integers by ID', () {

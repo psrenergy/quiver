@@ -641,3 +641,11 @@ TEST(Database, DateTimeNullable) {
     auto date = db.read_scalar_strings_by_id("Configuration", "date_attribute", id);
     EXPECT_FALSE(date.has_value());
 }
+
+TEST(Database, DatetimeMetadataType) {
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+
+    auto metadata = db.get_scalar_metadata("Configuration", "date_attribute");
+    EXPECT_EQ(metadata.data_type, quiver::DataType::DateTime);
+}

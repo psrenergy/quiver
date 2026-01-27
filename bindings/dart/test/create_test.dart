@@ -387,4 +387,32 @@ void main() {
       }
     });
   });
+
+  group('Create With Native DateTime', () {
+    test('creates element with native DateTime object', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        final dt = DateTime(2024, 3, 15, 14, 30, 45);
+        final id = db.createElement('Configuration', {
+          'label': 'Config with DateTime',
+          'date_attribute': dt,
+        });
+        expect(id, greaterThan(0));
+
+        // Verify it was stored correctly as ISO 8601 string
+        final dateStr = db.readScalarStringById('Configuration', 'date_attribute', 1);
+        expect(dateStr, equals('2024-03-15T14:30:45'));
+
+        // Verify readAllScalarsById returns native DateTime
+        final scalars = db.readAllScalarsById('Configuration', 1);
+        expect(scalars['date_attribute'], isA<DateTime>());
+        expect(scalars['date_attribute'], equals(dt));
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

@@ -1486,6 +1486,7 @@ class Database {
 
   /// Reads all scalar attributes for an element by ID.
   /// Returns a map of attribute name to value.
+  /// DateTime columns (prefixed with `date_`) are converted to DateTime objects.
   Map<String, Object?> readAllScalarsById(String collection, int id) {
     _ensureNotClosed();
 
@@ -1500,7 +1501,8 @@ class Database {
         case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
           result[name] = readScalarStringById(collection, name, id);
         case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
-          result[name] = readScalarStringById(collection, name, id);
+          final strValue = readScalarStringById(collection, name, id);
+          result[name] = strValue == null ? null : DateTime.parse(strValue);
       }
     }
     return result;
@@ -1508,6 +1510,7 @@ class Database {
 
   /// Reads all vector attributes for an element by ID.
   /// Returns a map of group name to list of values.
+  /// DateTime columns are converted to DateTime objects.
   Map<String, List<Object>> readAllVectorsById(String collection, int id) {
     _ensureNotClosed();
 
@@ -1523,7 +1526,8 @@ class Database {
         case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
           result[name] = readVectorStringsById(collection, name, id);
         case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
-          result[name] = readVectorStringsById(collection, name, id);
+          final strValues = readVectorStringsById(collection, name, id);
+          result[name] = strValues.map((s) => DateTime.parse(s)).toList();
       }
     }
     return result;
@@ -1531,6 +1535,7 @@ class Database {
 
   /// Reads all set attributes for an element by ID.
   /// Returns a map of group name to list of values.
+  /// DateTime columns are converted to DateTime objects.
   Map<String, List<Object>> readAllSetsById(String collection, int id) {
     _ensureNotClosed();
 
@@ -1546,7 +1551,8 @@ class Database {
         case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
           result[name] = readSetStringsById(collection, name, id);
         case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
-          result[name] = readSetStringsById(collection, name, id);
+          final strValues = readSetStringsById(collection, name, id);
+          result[name] = strValues.map((s) => DateTime.parse(s)).toList();
       }
     }
     return result;
@@ -1578,9 +1584,10 @@ class Database {
         case quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT:
           values = readVectorFloatsById(collection, name, id);
         case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
-        values = readVectorStringsById(collection, name, id);
-        case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
           values = readVectorStringsById(collection, name, id);
+        case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
+          final strValues = readVectorStringsById(collection, name, id);
+          values = strValues.map((s) => DateTime.parse(s)).toList();
         default:
           throw Exception('Unknown data type: ${col.dataType}');
       }
@@ -1630,7 +1637,8 @@ class Database {
         case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
           values = readSetStringsById(collection, name, id);
         case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
-          values = readSetStringsById(collection, name, id);
+          final strValues = readSetStringsById(collection, name, id);
+          values = strValues.map((s) => DateTime.parse(s)).toList();
         default:
           throw Exception('Unknown data type: ${col.dataType}');
       }

@@ -232,3 +232,18 @@ TEST(Database, CreateElementWithNoOptionalAttributes) {
     auto sets = db.read_set_strings("Collection", "tag");
     EXPECT_TRUE(sets.empty());
 }
+
+TEST(Database, CreateElementWithDatetime) {
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element element;
+    element.set("label", std::string("Config 1")).set("date_attribute", std::string("2024-03-15T14:30:45"));
+
+    int64_t id = db.create_element("Configuration", element);
+    EXPECT_EQ(id, 1);
+
+    auto dates = db.read_scalar_strings("Configuration", "date_attribute");
+    EXPECT_EQ(dates.size(), 1);
+    EXPECT_EQ(dates[0], "2024-03-15T14:30:45");
+}

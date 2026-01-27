@@ -6,6 +6,15 @@ import 'ffi/bindings.dart';
 import 'ffi/library_loader.dart';
 import 'exceptions.dart';
 
+/// Converts a DateTime to ISO 8601 format string (YYYY-MM-DDTHH:MM:SS).
+String _dateTimeToString(DateTime dt) =>
+    '${dt.year.toString().padLeft(4, '0')}-'
+    '${dt.month.toString().padLeft(2, '0')}-'
+    '${dt.day.toString().padLeft(2, '0')}T'
+    '${dt.hour.toString().padLeft(2, '0')}:'
+    '${dt.minute.toString().padLeft(2, '0')}:'
+    '${dt.second.toString().padLeft(2, '0')}';
+
 /// A builder for creating database elements.
 ///
 /// Elements are used to insert data into collections.
@@ -55,6 +64,8 @@ class Element {
         setFloat(name, v);
       case String v:
         setString(name, v);
+      case DateTime v:
+        setString(name, _dateTimeToString(v));
       case List<int> v:
         setArrayInteger(name, v);
       case List<double> v:

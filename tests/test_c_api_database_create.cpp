@@ -92,3 +92,28 @@ TEST(DatabaseCApi, CreateElementNullElement) {
 
     quiver_database_close(db);
 }
+
+TEST(DatabaseCApi, CreateElementWithDatetime) {
+    auto options = quiver::test::quiet_options();
+    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto element = quiver_element_create();
+    ASSERT_NE(element, nullptr);
+    quiver_element_set_string(element, "label", "Config 1");
+    quiver_element_set_string(element, "date_attribute", "2024-03-15T14:30:45");
+
+    int64_t id = quiver_database_create_element(db, "Configuration", element);
+    EXPECT_EQ(id, 1);
+
+    char** out_values = nullptr;
+    size_t out_count = 0;
+    auto err = quiver_database_read_scalar_strings(db, "Configuration", "date_attribute", &out_values, &out_count);
+    EXPECT_EQ(err, QUIVER_OK);
+    EXPECT_EQ(out_count, 1);
+    EXPECT_STREQ(out_values[0], "2024-03-15T14:30:45");
+
+    quiver_free_string_array(out_values, out_count);
+    quiver_element_destroy(element);
+    quiver_database_close(db);
+}
