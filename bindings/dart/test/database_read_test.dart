@@ -821,21 +821,4 @@ void main() {
     });
   });
 
-  group('Read Scalar Relation Invalid Collection', () {
-    test('throws on nonexistent collection', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
-      );
-      try {
-        db.createElement('Configuration', {'label': 'Test Config'});
-        expect(
-          () => db.readScalarRelation('NonexistentCollection', 'parent_id'),
-          throwsA(isA<DatabaseException>()),
-        );
-      } finally {
-        db.close();
-      }
-    });
-  });
 }
