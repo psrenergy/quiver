@@ -1,4 +1,4 @@
-module TestValidDatabaseDefinitions
+module TestSchemaValidator
 
 using Quiver
 using Test

@@ -1,4 +1,4 @@
-module TestValidDatabaseDefinitions
+module TestDatabaseLifecycle
 
 using Quiver
 using Test
