@@ -343,6 +343,14 @@ function quiver_free_string_vectors(vectors, sizes, count)
     @ccall libquiver_c.quiver_free_string_vectors(vectors::Ptr{Ptr{Ptr{Cchar}}}, sizes::Ptr{Csize_t}, count::Csize_t)::Cvoid
 end
 
+function quiver_database_export_to_csv(db, table, path)
+    @ccall libquiver_c.quiver_database_export_to_csv(db::Ptr{quiver_database_t}, table::Ptr{Cchar}, path::Ptr{Cchar})::quiver_error_t
+end
+
+function quiver_database_import_csv(db, table, path)
+    @ccall libquiver_c.quiver_database_import_csv(db::Ptr{quiver_database_t}, table::Ptr{Cchar}, path::Ptr{Cchar})::quiver_error_t
+end
+
 function quiver_element_create()
     @ccall libquiver_c.quiver_element_create()::Ptr{quiver_element_t}
 end

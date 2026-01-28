@@ -1921,6 +1921,48 @@ class QuiverDatabaseBindings {
   late final _quiver_free_string_vectors = _quiver_free_string_vectorsPtr
       .asFunction<void Function(ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>, ffi.Pointer<ffi.Size>, int)>();
 
+  int quiver_database_export_to_csv(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> table,
+    ffi.Pointer<ffi.Char> path,
+  ) {
+    return _quiver_database_export_to_csv(
+      db,
+      table,
+      path,
+    );
+  }
+
+  late final _quiver_database_export_to_csvPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)
+        >
+      >('quiver_database_export_to_csv');
+  late final _quiver_database_export_to_csv = _quiver_database_export_to_csvPtr
+      .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)>();
+
+  int quiver_database_import_csv(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> table,
+    ffi.Pointer<ffi.Char> path,
+  ) {
+    return _quiver_database_import_csv(
+      db,
+      table,
+      path,
+    );
+  }
+
+  late final _quiver_database_import_csvPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)
+        >
+      >('quiver_database_import_csv');
+  late final _quiver_database_import_csv = _quiver_database_import_csvPtr
+      .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)>();
+
   ffi.Pointer<quiver_element_t1> quiver_element_create() {
     return _quiver_element_create();
   }

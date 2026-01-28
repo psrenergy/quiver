@@ -354,6 +354,10 @@ QUIVER_C_API void quiver_free_integer_vectors(int64_t** vectors, size_t* sizes, 
 QUIVER_C_API void quiver_free_float_vectors(double** vectors, size_t* sizes, size_t count);
 QUIVER_C_API void quiver_free_string_vectors(char*** vectors, size_t* sizes, size_t count);
 
+// CSV operations
+QUIVER_C_API quiver_error_t quiver_database_export_to_csv(quiver_database_t* db, const char* table, const char* path);
+QUIVER_C_API quiver_error_t quiver_database_import_csv(quiver_database_t* db, const char* table, const char* path);
+
 #ifdef __cplusplus
 }
 #endif

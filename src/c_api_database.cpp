@@ -1219,4 +1219,30 @@ QUIVER_C_API void quiver_free_set_metadata_array(quiver_set_metadata_t* metadata
     delete[] metadata;
 }
 
+QUIVER_C_API quiver_error_t quiver_database_export_to_csv(quiver_database_t* db, const char* table, const char* path) {
+    if (!db || !table || !path) {
+        return QUIVER_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        db->db.export_to_csv(table, path);
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR_DATABASE;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_database_import_csv(quiver_database_t* db, const char* table, const char* path) {
+    if (!db || !table || !path) {
+        return QUIVER_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        db->db.import_csv(table, path);
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR_DATABASE;
+    }
+}
+
 }  // extern "C"

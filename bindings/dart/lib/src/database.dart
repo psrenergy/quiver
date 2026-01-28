@@ -9,6 +9,7 @@ import 'element.dart';
 import 'exceptions.dart';
 
 part 'database_create.dart';
+part 'database_csv.dart';
 part 'database_delete.dart';
 part 'database_metadata.dart';
 part 'database_read.dart';
