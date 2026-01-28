@@ -1,7 +1,7 @@
 part of 'database.dart';
 
 /// CSV import/export operations for Database.
-extension DatabaseCsv on Database {
+extension DatabaseCSV on Database {
   /// Exports a table to a CSV file.
   void exportToCsv(String table, String path) {
     _ensureNotClosed();

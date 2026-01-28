@@ -20,7 +20,6 @@ include("lua_runner.jl")
 export Element, Database, LuaRunner, DatabaseException
 export ScalarMetadata, VectorMetadata, SetMetadata
 export QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_FLOAT, QUIVER_DATA_TYPE_STRING
-export export_to_csv, import_csv
 
 # Re-export C enum constants for data types
 const QUIVER_DATA_TYPE_INTEGER = C.QUIVER_DATA_TYPE_INTEGER
