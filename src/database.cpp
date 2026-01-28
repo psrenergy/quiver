@@ -167,6 +167,13 @@ struct Database::Impl {
         }
     }
 
+    void load_schema_metadata() {
+        schema = std::make_unique<Schema>(Schema::from_database(db));
+        SchemaValidator validator(*schema);
+        validator.validate();
+        type_validator = std::make_unique<TypeValidator>(*schema);
+    }
+
     ~Impl() {
         if (db) {
             logger->debug("Closing database: {}", path);
@@ -445,6 +452,9 @@ void Database::migrate_up(const std::string& migrations_path) {
 
     if (pending.empty()) {
         impl_->logger->debug("Database is up to date at version {}", current);
+        if (!impl_->schema) {
+            impl_->load_schema_metadata();
+        }
         return;
     }
 
@@ -472,6 +482,7 @@ void Database::migrate_up(const std::string& migrations_path) {
         }
     }
 
+    impl_->load_schema_metadata();
     impl_->logger->info("All migrations applied successfully. Database now at version {}", current_version());
 }
 
@@ -494,17 +505,7 @@ void Database::apply_schema(const std::string& schema_path) {
     begin_transaction();
     try {
         execute_raw(schema_sql);
-
-        // Load schema metadata
-        impl_->schema = std::make_unique<Schema>(Schema::from_database(impl_->db));
-
-        // Validate schema structure
-        SchemaValidator validator(*impl_->schema);
-        validator.validate();
-
-        // Create type validator
-        impl_->type_validator = std::make_unique<TypeValidator>(*impl_->schema);
-
+        impl_->load_schema_metadata();
         commit();
     } catch (const std::exception& e) {
         rollback();
