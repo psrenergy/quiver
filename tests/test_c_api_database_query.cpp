@@ -42,8 +42,8 @@ TEST(DatabaseCApiQuery, QueryStringReturnsNoValueWhenEmpty) {
 
     char* value = nullptr;
     int has_value = 1;  // Initialize to 1 to verify it gets set to 0
-    auto err = quiver_database_query_string(
-        db, "SELECT string_attribute FROM Configuration WHERE 1 = 0", &value, &has_value);
+    auto err =
+        quiver_database_query_string(db, "SELECT string_attribute FROM Configuration WHERE 1 = 0", &value, &has_value);
 
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 0);
@@ -188,8 +188,8 @@ TEST(DatabaseCApiQuery, QueryFloatReturnsNoValueWhenEmpty) {
 
     double value = 999.0;
     int has_value = 1;
-    auto err = quiver_database_query_float(
-        db, "SELECT float_attribute FROM Configuration WHERE 1 = 0", &value, &has_value);
+    auto err =
+        quiver_database_query_float(db, "SELECT float_attribute FROM Configuration WHERE 1 = 0", &value, &has_value);
 
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 0);
