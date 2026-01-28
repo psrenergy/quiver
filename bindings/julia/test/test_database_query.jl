@@ -125,7 +125,8 @@ include("fixture.jl")
             string_attribute = "hello world",
         )
 
-        result = Quiver.query_string(db, "SELECT string_attribute FROM Configuration WHERE label = ?", Any["Test Label"])
+        result =
+            Quiver.query_string(db, "SELECT string_attribute FROM Configuration WHERE label = ?", Any["Test Label"])
         @test result == "hello world"
 
         result = Quiver.query_string(db, "SELECT string_attribute FROM Configuration WHERE label = ?", Any["NoMatch"])
@@ -177,7 +178,11 @@ include("fixture.jl")
             integer_attribute = 20,
         )
 
-        result = Quiver.query_integer(db, "SELECT integer_attribute FROM Configuration WHERE integer_attribute > ? ORDER BY integer_attribute", Any[15])
+        result = Quiver.query_integer(
+            db,
+            "SELECT integer_attribute FROM Configuration WHERE integer_attribute > ? ORDER BY integer_attribute",
+            Any[15],
+        )
         @test result == 20
 
         Quiver.close!(db)
@@ -196,7 +201,11 @@ include("fixture.jl")
             integer_attribute = 20,
         )
 
-        result = Quiver.query_integer(db, "SELECT integer_attribute FROM Configuration WHERE label = ? AND integer_attribute > ?", Any["B", 5])
+        result = Quiver.query_integer(
+            db,
+            "SELECT integer_attribute FROM Configuration WHERE label = ? AND integer_attribute > ?",
+            Any["B", 5],
+        )
         @test result == 20
 
         Quiver.close!(db)
