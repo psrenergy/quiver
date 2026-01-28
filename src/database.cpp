@@ -475,12 +475,9 @@ void Database::migrate_up(const std::string& migrations_path) {
 }
 
 void Database::apply_schema(const std::string& schema_path) {
-    namespace fs = std::filesystem;
-    auto canonical_schema_path = fs::canonical(schema_path).string();
-
-    std::ifstream file(canonical_schema_path);
+    std::ifstream file(schema_path);
     if (!file.is_open()) {
-        throw std::runtime_error("Failed to open schema file: " + canonical_schema_path);
+        throw std::runtime_error("Failed to open schema file: " + schema_path);
     }
 
     std::stringstream buffer;
@@ -488,10 +485,10 @@ void Database::apply_schema(const std::string& schema_path) {
     const auto schema_sql = buffer.str();
 
     if (schema_sql.empty()) {
-        throw std::runtime_error("Schema file is empty: " + canonical_schema_path);
+        throw std::runtime_error("Schema file is empty: " + schema_path);
     }
 
-    impl_->logger->info("Applying schema from: {}", canonical_schema_path);
+    impl_->logger->info("Applying schema from: {}", schema_path);
 
     begin_transaction();
     try {
