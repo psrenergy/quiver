@@ -192,6 +192,9 @@ TEST_F(SchemaValidatorFixture, GetScalarMetadataForeignKeyAsInteger) {
 
     EXPECT_EQ(meta.name, "parent_id");
     EXPECT_EQ(meta.data_type, quiver::DataType::Integer);
+    EXPECT_TRUE(meta.is_foreign_key);
+    EXPECT_EQ(meta.references_collection, "Parent");
+    EXPECT_EQ(meta.references_column, "id");
 }
 
 TEST_F(SchemaValidatorFixture, GetScalarMetadataSelfReference) {
@@ -202,6 +205,38 @@ TEST_F(SchemaValidatorFixture, GetScalarMetadataSelfReference) {
 
     EXPECT_EQ(meta.name, "sibling_id");
     EXPECT_EQ(meta.data_type, quiver::DataType::Integer);
+    EXPECT_TRUE(meta.is_foreign_key);
+    EXPECT_EQ(meta.references_collection, "Child");
+    EXPECT_EQ(meta.references_column, "id");
+}
+
+TEST_F(SchemaValidatorFixture, GetScalarMetadataNonForeignKey) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), opts);
+
+    auto meta = db.get_scalar_metadata("Child", "label");
+
+    EXPECT_FALSE(meta.is_foreign_key);
+    EXPECT_FALSE(meta.references_collection.has_value());
+    EXPECT_FALSE(meta.references_column.has_value());
+}
+
+TEST_F(SchemaValidatorFixture, ListScalarAttributesForeignKeys) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), opts);
+
+    auto attrs = db.list_scalar_attributes("Child");
+
+    // Find parent_id
+    auto it = std::find_if(attrs.begin(), attrs.end(), [](const auto& a) { return a.name == "parent_id"; });
+    ASSERT_NE(it, attrs.end());
+    EXPECT_TRUE(it->is_foreign_key);
+    EXPECT_EQ(it->references_collection, "Parent");
+    EXPECT_EQ(it->references_column, "id");
+
+    // Find label (not a FK)
+    it = std::find_if(attrs.begin(), attrs.end(), [](const auto& a) { return a.name == "label"; });
+    ASSERT_NE(it, attrs.end());
+    EXPECT_FALSE(it->is_foreign_key);
+    EXPECT_FALSE(it->references_collection.has_value());
 }
 
 // ============================================================================
