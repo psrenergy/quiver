@@ -91,14 +91,12 @@ void main() {
       }
     });
 
-    test('handles invalid migrations path gracefully', () {
-      // Invalid path should create a database with version 0 (no migrations applied)
-      final db = Database.fromMigrations(':memory:', 'nonexistent/path');
-      try {
-        // Database exists but has no tables from migrations
-      } finally {
-        db.close();
-      }
+    test('throws on invalid migrations path', () {
+      // Invalid path should throw MigrationException
+      expect(
+        () => Database.fromMigrations(':memory:', 'nonexistent/path'),
+        throwsA(isA<MigrationException>()),
+      );
     });
   });
 

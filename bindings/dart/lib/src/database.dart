@@ -44,7 +44,11 @@ class Database {
       );
 
       if (ptr == nullptr) {
-        throw const SchemaException('Failed to create database from schema');
+        final errorPtr = bindings.quiver_get_last_error();
+        final errorMsg = errorPtr.cast<Utf8>().toDartString();
+        throw SchemaException(
+          errorMsg.isNotEmpty ? errorMsg : 'Failed to create database from schema',
+        );
       }
 
       return Database._(ptr);
@@ -69,7 +73,11 @@ class Database {
       );
 
       if (ptr == nullptr) {
-        throw const MigrationException('Failed to create database from migrations');
+        final errorPtr = bindings.quiver_get_last_error();
+        final errorMsg = errorPtr.cast<Utf8>().toDartString();
+        throw MigrationException(
+          errorMsg.isNotEmpty ? errorMsg : 'Failed to create database from migrations',
+        );
       }
 
       return Database._(ptr);

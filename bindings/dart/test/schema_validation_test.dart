@@ -148,4 +148,23 @@ void main() {
       );
     });
   });
+
+  group('Issue Regressions', () {
+    test('issue52: rejects Configuration table without label column via migrations', () {
+      final issuesPath = path.join(testsPath, 'schemas', 'issues');
+      expect(
+        () => Database.fromMigrations(
+          ':memory:',
+          path.join(issuesPath, 'issue52'),
+        ),
+        throwsA(
+          isA<MigrationException>().having(
+            (e) => e.message,
+            'message',
+            contains('label'),
+          ),
+        ),
+      );
+    });
+  });
 }

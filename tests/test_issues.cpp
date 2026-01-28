@@ -13,6 +13,7 @@ protected:
     std::string issues_path;
 };
 
+// Issue 52: Configuration table without label column should fail validation
 TEST_F(IssuesFixture, Issue52) {
     auto migrations_path = issues_path + "/issue52";
 
