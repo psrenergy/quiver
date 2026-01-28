@@ -403,6 +403,9 @@ QUIVER_C_API quiver_error_t quiver_database_query_float_params(quiver_database_t
                                                                double* out_value,
                                                                int* out_has_value);
 
+// Schema inspection
+QUIVER_C_API quiver_error_t quiver_database_describe(quiver_database_t* db);
+
 #ifdef __cplusplus
 }
 #endif

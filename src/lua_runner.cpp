@@ -162,7 +162,9 @@ struct LuaRunner::Impl {
             "query_float",
             [](Database& self, const std::string& sql, sol::optional<sol::table> params, sol::this_state s) {
                 return query_float_to_lua(self, sql, params, s);
-            });
+            },
+            "describe",
+            [](Database& self) { self.describe(); });
     }
 
     static Element table_to_element(sol::table values) {

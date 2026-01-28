@@ -1419,4 +1419,17 @@ QUIVER_C_API quiver_error_t quiver_database_query_float_params(quiver_database_t
     }
 }
 
+QUIVER_C_API quiver_error_t quiver_database_describe(quiver_database_t* db) {
+    if (!db) {
+        return QUIVER_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        db->db.describe();
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR_DATABASE;
+    }
+}
+
 }  // extern "C"

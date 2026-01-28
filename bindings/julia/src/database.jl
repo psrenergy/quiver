@@ -41,3 +41,11 @@ function current_version(db::Database)
     end
     return version
 end
+
+function describe(db::Database)
+    result = C.quiver_database_describe(db.ptr)
+    if result != C.QUIVER_OK
+        throw(DatabaseException("Failed to describe database"))
+    end
+    return nothing
+end

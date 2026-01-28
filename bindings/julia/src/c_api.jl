@@ -376,6 +376,10 @@ function quiver_database_query_float_params(db, sql, param_types, param_values, 
     @ccall libquiver_c.quiver_database_query_float_params(db::Ptr{quiver_database_t}, sql::Ptr{Cchar}, param_types::Ptr{Cint}, param_values::Ptr{Ptr{Cvoid}}, param_count::Csize_t, out_value::Ptr{Cdouble}, out_has_value::Ptr{Cint})::quiver_error_t
 end
 
+function quiver_database_describe(db)
+    @ccall libquiver_c.quiver_database_describe(db::Ptr{quiver_database_t})::quiver_error_t
+end
+
 function quiver_element_create()
     @ccall libquiver_c.quiver_element_create()::Ptr{quiver_element_t}
 end

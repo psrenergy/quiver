@@ -146,6 +146,9 @@ public:
 
     const std::string& path() const;
 
+    // Schema inspection
+    void describe() const;
+
     // CSV operations
     void export_to_csv(const std::string& table, const std::string& path);
     void import_from_csv(const std::string& table, const std::string& path);
