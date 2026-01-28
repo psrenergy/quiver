@@ -4,6 +4,9 @@ struct ScalarMetadata
     not_null::Bool
     primary_key::Bool
     default_value::Union{String, Nothing}
+    is_foreign_key::Bool
+    references_collection::Union{String, Nothing}
+    references_column::Union{String, Nothing}
 end
 
 struct VectorMetadata
@@ -17,7 +20,7 @@ struct SetMetadata
 end
 
 function get_scalar_metadata(db::Database, collection::AbstractString, attribute::AbstractString)
-    metadata = Ref(C.quiver_scalar_metadata_t(C_NULL, C.QUIVER_DATA_TYPE_INTEGER, 0, 0, C_NULL))
+    metadata = Ref(C.quiver_scalar_metadata_t(C_NULL, C.QUIVER_DATA_TYPE_INTEGER, 0, 0, C_NULL, 0, C_NULL, C_NULL))
     err = C.quiver_database_get_scalar_metadata(db.ptr, collection, attribute, metadata)
     if err != C.QUIVER_OK
         throw(DatabaseException("Failed to get scalar metadata for '$collection.$attribute'"))
@@ -29,6 +32,9 @@ function get_scalar_metadata(db::Database, collection::AbstractString, attribute
         metadata[].not_null != 0,
         metadata[].primary_key != 0,
         metadata[].default_value == C_NULL ? nothing : unsafe_string(metadata[].default_value),
+        metadata[].is_foreign_key != 0,
+        metadata[].references_collection == C_NULL ? nothing : unsafe_string(metadata[].references_collection),
+        metadata[].references_column == C_NULL ? nothing : unsafe_string(metadata[].references_column),
     )
 
     C.quiver_free_scalar_metadata(metadata)
@@ -54,6 +60,9 @@ function get_vector_metadata(db::Database, collection::AbstractString, group_nam
                 col.not_null != 0,
                 col.primary_key != 0,
                 col.default_value == C_NULL ? nothing : unsafe_string(col.default_value),
+                col.is_foreign_key != 0,
+                col.references_collection == C_NULL ? nothing : unsafe_string(col.references_collection),
+                col.references_column == C_NULL ? nothing : unsafe_string(col.references_column),
             ),
         )
     end
@@ -86,6 +95,9 @@ function get_set_metadata(db::Database, collection::AbstractString, group_name::
                 col.not_null != 0,
                 col.primary_key != 0,
                 col.default_value == C_NULL ? nothing : unsafe_string(col.default_value),
+                col.is_foreign_key != 0,
+                col.references_collection == C_NULL ? nothing : unsafe_string(col.references_collection),
+                col.references_column == C_NULL ? nothing : unsafe_string(col.references_column),
             ),
         )
     end
@@ -124,6 +136,9 @@ function list_scalar_attributes(db::Database, collection::AbstractString)
                 meta.not_null != 0,
                 meta.primary_key != 0,
                 meta.default_value == C_NULL ? nothing : unsafe_string(meta.default_value),
+                meta.is_foreign_key != 0,
+                meta.references_collection == C_NULL ? nothing : unsafe_string(meta.references_collection),
+                meta.references_column == C_NULL ? nothing : unsafe_string(meta.references_column),
             ),
         )
     end
@@ -161,6 +176,9 @@ function list_vector_groups(db::Database, collection::AbstractString)
                     col.not_null != 0,
                     col.primary_key != 0,
                     col.default_value == C_NULL ? nothing : unsafe_string(col.default_value),
+                    col.is_foreign_key != 0,
+                    col.references_collection == C_NULL ? nothing : unsafe_string(col.references_collection),
+                    col.references_column == C_NULL ? nothing : unsafe_string(col.references_column),
                 ),
             )
         end
@@ -201,6 +219,9 @@ function list_set_groups(db::Database, collection::AbstractString)
                     col.not_null != 0,
                     col.primary_key != 0,
                     col.default_value == C_NULL ? nothing : unsafe_string(col.default_value),
+                    col.is_foreign_key != 0,
+                    col.references_collection == C_NULL ? nothing : unsafe_string(col.references_collection),
+                    col.references_column == C_NULL ? nothing : unsafe_string(col.references_column),
                 ),
             )
         end

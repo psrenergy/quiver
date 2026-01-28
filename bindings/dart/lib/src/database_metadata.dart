@@ -3,7 +3,7 @@ part of 'database.dart';
 /// Metadata operations for Database.
 extension DatabaseMetadata on Database {
   /// Returns metadata for a scalar attribute.
-  ({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue}) getScalarMetadata(
+  ({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue, bool isForeignKey, String? referencesCollection, String? referencesColumn}) getScalarMetadata(
     String collection,
     String attribute,
   ) {
@@ -32,6 +32,13 @@ extension DatabaseMetadata on Database {
         defaultValue: outMetadata.ref.default_value == nullptr
             ? null
             : outMetadata.ref.default_value.cast<Utf8>().toDartString(),
+        isForeignKey: outMetadata.ref.is_foreign_key != 0,
+        referencesCollection: outMetadata.ref.references_collection == nullptr
+            ? null
+            : outMetadata.ref.references_collection.cast<Utf8>().toDartString(),
+        referencesColumn: outMetadata.ref.references_column == nullptr
+            ? null
+            : outMetadata.ref.references_column.cast<Utf8>().toDartString(),
       );
 
       bindings.quiver_free_scalar_metadata(outMetadata);
@@ -44,7 +51,7 @@ extension DatabaseMetadata on Database {
   /// Returns metadata for a vector group, including all value columns in the group.
   ({
     String groupName,
-    List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})> valueColumns,
+    List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue, bool isForeignKey, String? referencesCollection, String? referencesColumn})> valueColumns,
   })
   getVectorMetadata(String collection, String groupName) {
     _ensureNotClosed();
@@ -64,7 +71,7 @@ extension DatabaseMetadata on Database {
         throw DatabaseException.fromError(err, "Failed to get vector metadata for '$collection.$groupName'");
       }
 
-      final valueColumns = <({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})>[];
+      final valueColumns = <({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue, bool isForeignKey, String? referencesCollection, String? referencesColumn})>[];
       final count = outMetadata.ref.value_column_count;
       for (var i = 0; i < count; i++) {
         valueColumns.add(_parseScalarMetadata(outMetadata.ref.value_columns[i]));
@@ -85,7 +92,7 @@ extension DatabaseMetadata on Database {
   /// Returns metadata for a set group, including all value columns in the group.
   ({
     String groupName,
-    List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})> valueColumns,
+    List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue, bool isForeignKey, String? referencesCollection, String? referencesColumn})> valueColumns,
   })
   getSetMetadata(String collection, String groupName) {
     _ensureNotClosed();
@@ -105,7 +112,7 @@ extension DatabaseMetadata on Database {
         throw DatabaseException.fromError(err, "Failed to get set metadata for '$collection.$groupName'");
       }
 
-      final valueColumns = <({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})>[];
+      final valueColumns = <({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue, bool isForeignKey, String? referencesCollection, String? referencesColumn})>[];
       final count = outMetadata.ref.value_column_count;
       for (var i = 0; i < count; i++) {
         valueColumns.add(_parseScalarMetadata(outMetadata.ref.value_columns[i]));
@@ -124,7 +131,7 @@ extension DatabaseMetadata on Database {
   }
 
   /// Lists all scalar attributes for a collection with full metadata.
-  List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})> listScalarAttributes(
+  List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue, bool isForeignKey, String? referencesCollection, String? referencesColumn})> listScalarAttributes(
     String collection,
   ) {
     _ensureNotClosed();
@@ -150,7 +157,7 @@ extension DatabaseMetadata on Database {
         return [];
       }
 
-      final result = <({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})>[];
+      final result = <({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue, bool isForeignKey, String? referencesCollection, String? referencesColumn})>[];
       for (var i = 0; i < count; i++) {
         result.add(_parseScalarMetadata(outMetadata.value[i]));
       }
@@ -165,7 +172,7 @@ extension DatabaseMetadata on Database {
   List<
     ({
       String groupName,
-      List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})> valueColumns,
+      List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue, bool isForeignKey, String? referencesCollection, String? referencesColumn})> valueColumns,
     })
   >
   listVectorGroups(String collection) {
@@ -196,12 +203,12 @@ extension DatabaseMetadata on Database {
           <
             ({
               String groupName,
-              List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})> valueColumns,
+              List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue, bool isForeignKey, String? referencesCollection, String? referencesColumn})> valueColumns,
             })
           >[];
       for (var i = 0; i < count; i++) {
         final meta = outMetadata.value[i];
-        final valueColumns = <({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})>[];
+        final valueColumns = <({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue, bool isForeignKey, String? referencesCollection, String? referencesColumn})>[];
         for (var j = 0; j < meta.value_column_count; j++) {
           valueColumns.add(_parseScalarMetadata(meta.value_columns[j]));
         }
@@ -218,7 +225,7 @@ extension DatabaseMetadata on Database {
   List<
     ({
       String groupName,
-      List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})> valueColumns,
+      List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue, bool isForeignKey, String? referencesCollection, String? referencesColumn})> valueColumns,
     })
   >
   listSetGroups(String collection) {
@@ -249,12 +256,12 @@ extension DatabaseMetadata on Database {
           <
             ({
               String groupName,
-              List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})> valueColumns,
+              List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue, bool isForeignKey, String? referencesCollection, String? referencesColumn})> valueColumns,
             })
           >[];
       for (var i = 0; i < count; i++) {
         final meta = outMetadata.value[i];
-        final valueColumns = <({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue})>[];
+        final valueColumns = <({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue, bool isForeignKey, String? referencesCollection, String? referencesColumn})>[];
         for (var j = 0; j < meta.value_column_count; j++) {
           valueColumns.add(_parseScalarMetadata(meta.value_columns[j]));
         }

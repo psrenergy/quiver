@@ -1267,6 +1267,15 @@ ScalarMetadata Database::get_scalar_metadata(const std::string& collection, cons
     meta.primary_key = col->primary_key;
     meta.default_value = col->default_value;
 
+    for (const auto& fk : table_def->foreign_keys) {
+        if (fk.from_column == attribute) {
+            meta.is_foreign_key = true;
+            meta.references_collection = fk.to_table;
+            meta.references_column = fk.to_column;
+            break;
+        }
+    }
+
     return meta;
 }
 
@@ -1356,6 +1365,16 @@ std::vector<ScalarMetadata> Database::list_scalar_attributes(const std::string& 
         meta.not_null = col.not_null;
         meta.primary_key = col.primary_key;
         meta.default_value = col.default_value;
+
+        for (const auto& fk : table_def->foreign_keys) {
+            if (fk.from_column == col_name) {
+                meta.is_foreign_key = true;
+                meta.references_collection = fk.to_table;
+                meta.references_column = fk.to_column;
+                break;
+            }
+        }
+
         result.push_back(std::move(meta));
     }
     return result;

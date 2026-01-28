@@ -226,6 +226,9 @@ typedef struct {
     int not_null;
     int primary_key;
     const char* default_value;  // NULL if no default
+    int is_foreign_key;
+    const char* references_collection;  // NULL if not a foreign key
+    const char* references_column;      // NULL if not a foreign key
 } quiver_scalar_metadata_t;
 
 typedef struct {
