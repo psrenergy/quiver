@@ -427,6 +427,22 @@ function quiver_lua_runner_get_error(runner)
     @ccall libquiver_c.quiver_lua_runner_get_error(runner::Ptr{quiver_lua_runner_t})::Ptr{Cchar}
 end
 
+function quiver_database_export_to_csv(db, table, path)
+    @ccall libquiver_c.quiver_database_export_to_csv(
+        db::Ptr{quiver_database_t},
+        table::Ptr{Cchar},
+        path::Ptr{Cchar}
+    )::quiver_error_t
+end
+
+function quiver_database_import_csv(db, table, path)
+    @ccall libquiver_c.quiver_database_import_csv(
+        db::Ptr{quiver_database_t},
+        table::Ptr{Cchar},
+        path::Ptr{Cchar}
+    )::quiver_error_t
+end
+
 #! format: on
 
 
