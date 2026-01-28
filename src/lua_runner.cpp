@@ -150,6 +150,18 @@ struct LuaRunner::Impl {
             "read_all_sets_by_id",
             [](Database& self, const std::string& collection, int64_t id, sol::this_state s) {
                 return read_all_sets_by_id_to_lua(self, collection, id, s);
+            },
+            "query_string",
+            [](Database& self, const std::string& sql, sol::optional<sol::table> params, sol::this_state s) {
+                return query_string_to_lua(self, sql, params, s);
+            },
+            "query_integer",
+            [](Database& self, const std::string& sql, sol::optional<sol::table> params, sol::this_state s) {
+                return query_integer_to_lua(self, sql, params, s);
+            },
+            "query_float",
+            [](Database& self, const std::string& sql, sol::optional<sol::table> params, sol::this_state s) {
+                return query_float_to_lua(self, sql, params, s);
             });
     }
 
@@ -557,6 +569,56 @@ struct LuaRunner::Impl {
         t["value_columns"] = cols;
 
         return t;
+    }
+
+    static std::vector<Value> lua_table_to_values(sol::table params) {
+        std::vector<Value> values;
+        for (size_t i = 1; i <= params.size(); ++i) {
+            sol::object val = params[i];
+            if (val.is<sol::nil_t>()) {
+                values.emplace_back(nullptr);
+            } else if (val.is<int64_t>()) {
+                values.push_back(val.as<int64_t>());
+            } else if (val.is<double>()) {
+                values.push_back(val.as<double>());
+            } else if (val.is<std::string>()) {
+                values.push_back(val.as<std::string>());
+            }
+        }
+        return values;
+    }
+
+    static sol::object
+    query_string_to_lua(Database& db, const std::string& sql, sol::optional<sol::table> params, sol::this_state s) {
+        sol::state_view lua(s);
+        auto values = params ? lua_table_to_values(*params) : std::vector<Value>{};
+        auto result = db.query_string(sql, values);
+        if (result.has_value()) {
+            return sol::make_object(lua, *result);
+        }
+        return sol::make_object(lua, sol::nil);
+    }
+
+    static sol::object
+    query_integer_to_lua(Database& db, const std::string& sql, sol::optional<sol::table> params, sol::this_state s) {
+        sol::state_view lua(s);
+        auto values = params ? lua_table_to_values(*params) : std::vector<Value>{};
+        auto result = db.query_integer(sql, values);
+        if (result.has_value()) {
+            return sol::make_object(lua, *result);
+        }
+        return sol::make_object(lua, sol::nil);
+    }
+
+    static sol::object
+    query_float_to_lua(Database& db, const std::string& sql, sol::optional<sol::table> params, sol::this_state s) {
+        sol::state_view lua(s);
+        auto values = params ? lua_table_to_values(*params) : std::vector<Value>{};
+        auto result = db.query_float(sql, values);
+        if (result.has_value()) {
+            return sol::make_object(lua, *result);
+        }
+        return sol::make_object(lua, sol::nil);
     }
 
     static DataType get_value_data_type(const std::vector<ScalarMetadata>& value_columns) {

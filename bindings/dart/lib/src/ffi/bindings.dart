@@ -2068,6 +2068,147 @@ class QuiverDatabaseBindings {
         )
       >();
 
+  int quiver_database_query_string_params(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> sql,
+    ffi.Pointer<ffi.Int> param_types,
+    ffi.Pointer<ffi.Pointer<ffi.Void>> param_values,
+    int param_count,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> out_value,
+    ffi.Pointer<ffi.Int> out_has_value,
+  ) {
+    return _quiver_database_query_string_params(
+      db,
+      sql,
+      param_types,
+      param_values,
+      param_count,
+      out_value,
+      out_has_value,
+    );
+  }
+
+  late final _quiver_database_query_string_paramsPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Int>,
+            ffi.Pointer<ffi.Pointer<ffi.Void>>,
+            ffi.Size,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Pointer<ffi.Int>,
+          )
+        >
+      >('quiver_database_query_string_params');
+  late final _quiver_database_query_string_params = _quiver_database_query_string_paramsPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Int>,
+          ffi.Pointer<ffi.Pointer<ffi.Void>>,
+          int,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          ffi.Pointer<ffi.Int>,
+        )
+      >();
+
+  int quiver_database_query_integer_params(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> sql,
+    ffi.Pointer<ffi.Int> param_types,
+    ffi.Pointer<ffi.Pointer<ffi.Void>> param_values,
+    int param_count,
+    ffi.Pointer<ffi.Int64> out_value,
+    ffi.Pointer<ffi.Int> out_has_value,
+  ) {
+    return _quiver_database_query_integer_params(
+      db,
+      sql,
+      param_types,
+      param_values,
+      param_count,
+      out_value,
+      out_has_value,
+    );
+  }
+
+  late final _quiver_database_query_integer_paramsPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Int>,
+            ffi.Pointer<ffi.Pointer<ffi.Void>>,
+            ffi.Size,
+            ffi.Pointer<ffi.Int64>,
+            ffi.Pointer<ffi.Int>,
+          )
+        >
+      >('quiver_database_query_integer_params');
+  late final _quiver_database_query_integer_params = _quiver_database_query_integer_paramsPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Int>,
+          ffi.Pointer<ffi.Pointer<ffi.Void>>,
+          int,
+          ffi.Pointer<ffi.Int64>,
+          ffi.Pointer<ffi.Int>,
+        )
+      >();
+
+  int quiver_database_query_float_params(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> sql,
+    ffi.Pointer<ffi.Int> param_types,
+    ffi.Pointer<ffi.Pointer<ffi.Void>> param_values,
+    int param_count,
+    ffi.Pointer<ffi.Double> out_value,
+    ffi.Pointer<ffi.Int> out_has_value,
+  ) {
+    return _quiver_database_query_float_params(
+      db,
+      sql,
+      param_types,
+      param_values,
+      param_count,
+      out_value,
+      out_has_value,
+    );
+  }
+
+  late final _quiver_database_query_float_paramsPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Int>,
+            ffi.Pointer<ffi.Pointer<ffi.Void>>,
+            ffi.Size,
+            ffi.Pointer<ffi.Double>,
+            ffi.Pointer<ffi.Int>,
+          )
+        >
+      >('quiver_database_query_float_params');
+  late final _quiver_database_query_float_params = _quiver_database_query_float_paramsPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Int>,
+          ffi.Pointer<ffi.Pointer<ffi.Void>>,
+          int,
+          ffi.Pointer<ffi.Double>,
+          ffi.Pointer<ffi.Int>,
+        )
+      >();
+
   ffi.Pointer<quiver_element_t1> quiver_element_create() {
     return _quiver_element_create();
   }
@@ -2434,6 +2575,7 @@ abstract class quiver_data_type_t {
   static const int QUIVER_DATA_TYPE_FLOAT = 1;
   static const int QUIVER_DATA_TYPE_STRING = 2;
   static const int QUIVER_DATA_TYPE_DATE_TIME = 3;
+  static const int QUIVER_DATA_TYPE_NULL = 4;
 }
 
 final class quiver_database extends ffi.Opaque {}

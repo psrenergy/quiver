@@ -34,7 +34,8 @@ typedef enum {
     QUIVER_DATA_TYPE_INTEGER = 0,
     QUIVER_DATA_TYPE_FLOAT = 1,
     QUIVER_DATA_TYPE_STRING = 2,
-    QUIVER_DATA_TYPE_DATE_TIME = 3
+    QUIVER_DATA_TYPE_DATE_TIME = 3,
+    QUIVER_DATA_TYPE_NULL = 4
 } quiver_data_type_t;
 
 // Returns default options
@@ -373,6 +374,34 @@ QUIVER_C_API quiver_error_t quiver_database_query_float(quiver_database_t* db,
                                                         const char* sql,
                                                         double* out_value,
                                                         int* out_has_value);
+
+// Parameterized query methods
+// param_types[i]: QUIVER_DATA_TYPE_INTEGER (0), QUIVER_DATA_TYPE_FLOAT (1),
+//                 QUIVER_DATA_TYPE_STRING (2), QUIVER_DATA_TYPE_NULL (4)
+// param_values[i]: pointer to int64_t, double, const char*, or NULL
+QUIVER_C_API quiver_error_t quiver_database_query_string_params(quiver_database_t* db,
+                                                                const char* sql,
+                                                                const int* param_types,
+                                                                const void* const* param_values,
+                                                                size_t param_count,
+                                                                char** out_value,
+                                                                int* out_has_value);
+
+QUIVER_C_API quiver_error_t quiver_database_query_integer_params(quiver_database_t* db,
+                                                                 const char* sql,
+                                                                 const int* param_types,
+                                                                 const void* const* param_values,
+                                                                 size_t param_count,
+                                                                 int64_t* out_value,
+                                                                 int* out_has_value);
+
+QUIVER_C_API quiver_error_t quiver_database_query_float_params(quiver_database_t* db,
+                                                               const char* sql,
+                                                               const int* param_types,
+                                                               const void* const* param_values,
+                                                               size_t param_count,
+                                                               double* out_value,
+                                                               int* out_has_value);
 
 #ifdef __cplusplus
 }

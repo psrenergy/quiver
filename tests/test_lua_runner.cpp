@@ -983,6 +983,105 @@ TEST_F(LuaRunnerTest, CreateElementWithSpecialCharactersInLabel) {
     EXPECT_EQ(labels[0], "Test's \"special\" chars: <>&");
 }
 
+// ============================================================================
+// Query method tests
+// ============================================================================
+
+TEST_F(LuaRunnerTest, QueryStringFromLua) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{42}));
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        local label = db:query_string("SELECT label FROM Collection WHERE label = ?", {"Item 1"})
+        assert(label == "Item 1", "Expected 'Item 1', got " .. tostring(label))
+    )");
+}
+
+TEST_F(LuaRunnerTest, QueryStringNoParamsFromLua) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        local label = db:query_string("SELECT label FROM Collection")
+        assert(label == "Item 1", "Expected 'Item 1', got " .. tostring(label))
+    )");
+}
+
+TEST_F(LuaRunnerTest, QueryStringReturnsNilFromLua) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        local result = db:query_string("SELECT label FROM Collection WHERE 1 = 0")
+        assert(result == nil, "Expected nil, got " .. tostring(result))
+    )");
+}
+
+TEST_F(LuaRunnerTest, QueryIntegerFromLua) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{42}));
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        local val = db:query_integer("SELECT some_integer FROM Collection WHERE label = ?", {"Item 1"})
+        assert(val == 42, "Expected 42, got " .. tostring(val))
+    )");
+}
+
+TEST_F(LuaRunnerTest, QueryIntegerCountFromLua) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 2"));
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        local count = db:query_integer("SELECT COUNT(*) FROM Collection")
+        assert(count == 2, "Expected 2, got " .. tostring(count))
+    )");
+}
+
+TEST_F(LuaRunnerTest, QueryFloatFromLua) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_float", 3.14));
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        local val = db:query_float("SELECT some_float FROM Collection WHERE label = ?", {"Item 1"})
+        assert(val == 3.14, "Expected 3.14, got " .. tostring(val))
+    )");
+}
+
+TEST_F(LuaRunnerTest, QueryWithMultipleParamsFromLua) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{10}));
+    db.create_element("Collection", quiver::Element().set("label", "Item 2").set("some_integer", int64_t{20}));
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        local val = db:query_integer(
+            "SELECT some_integer FROM Collection WHERE label = ? AND some_integer > ?",
+            {"Item 2", 5}
+        )
+        assert(val == 20, "Expected 20, got " .. tostring(val))
+    )");
+}
+
 TEST_F(LuaRunnerTest, LuaScriptWithUnicodeCharacters) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::LuaRunner lua(db);

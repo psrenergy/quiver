@@ -77,6 +77,7 @@ end
     QUIVER_DATA_TYPE_FLOAT = 1
     QUIVER_DATA_TYPE_STRING = 2
     QUIVER_DATA_TYPE_DATE_TIME = 3
+    QUIVER_DATA_TYPE_NULL = 4
 end
 
 function quiver_database_options_default()
@@ -361,6 +362,18 @@ end
 
 function quiver_database_query_float(db, sql, out_value, out_has_value)
     @ccall libquiver_c.quiver_database_query_float(db::Ptr{quiver_database_t}, sql::Ptr{Cchar}, out_value::Ptr{Cdouble}, out_has_value::Ptr{Cint})::quiver_error_t
+end
+
+function quiver_database_query_string_params(db, sql, param_types, param_values, param_count, out_value, out_has_value)
+    @ccall libquiver_c.quiver_database_query_string_params(db::Ptr{quiver_database_t}, sql::Ptr{Cchar}, param_types::Ptr{Cint}, param_values::Ptr{Ptr{Cvoid}}, param_count::Csize_t, out_value::Ptr{Ptr{Cchar}}, out_has_value::Ptr{Cint})::quiver_error_t
+end
+
+function quiver_database_query_integer_params(db, sql, param_types, param_values, param_count, out_value, out_has_value)
+    @ccall libquiver_c.quiver_database_query_integer_params(db::Ptr{quiver_database_t}, sql::Ptr{Cchar}, param_types::Ptr{Cint}, param_values::Ptr{Ptr{Cvoid}}, param_count::Csize_t, out_value::Ptr{Int64}, out_has_value::Ptr{Cint})::quiver_error_t
+end
+
+function quiver_database_query_float_params(db, sql, param_types, param_values, param_count, out_value, out_has_value)
+    @ccall libquiver_c.quiver_database_query_float_params(db::Ptr{quiver_database_t}, sql::Ptr{Cchar}, param_types::Ptr{Cint}, param_values::Ptr{Ptr{Cvoid}}, param_count::Csize_t, out_value::Ptr{Cdouble}, out_has_value::Ptr{Cint})::quiver_error_t
 end
 
 function quiver_element_create()

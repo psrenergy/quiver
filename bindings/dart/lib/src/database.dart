@@ -105,6 +105,39 @@ class Database {
     return quiver_data_type_t.QUIVER_DATA_TYPE_STRING;
   }
 
+  ({Pointer<Int> types, Pointer<Pointer<Void>> values}) _marshalParams(
+    Arena arena,
+    List<Object?> params,
+  ) {
+    final types = arena<Int>(params.length);
+    final values = arena<Pointer<Void>>(params.length);
+
+    for (var i = 0; i < params.length; i++) {
+      final p = params[i];
+      if (p == null) {
+        types[i] = quiver_data_type_t.QUIVER_DATA_TYPE_NULL;
+        values[i] = nullptr;
+      } else if (p is int) {
+        types[i] = quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER;
+        final ptr = arena<Int64>();
+        ptr.value = p;
+        values[i] = ptr.cast();
+      } else if (p is double) {
+        types[i] = quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT;
+        final ptr = arena<Double>();
+        ptr.value = p;
+        values[i] = ptr.cast();
+      } else if (p is String) {
+        types[i] = quiver_data_type_t.QUIVER_DATA_TYPE_STRING;
+        values[i] = p.toNativeUtf8(allocator: arena).cast();
+      } else {
+        throw ArgumentError('Unsupported parameter type: ${p.runtimeType}');
+      }
+    }
+
+    return (types: types, values: values);
+  }
+
   /// Closes the database and frees native resources.
   void close() {
     if (_isClosed) return;
