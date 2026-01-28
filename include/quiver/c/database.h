@@ -358,6 +358,22 @@ QUIVER_C_API void quiver_free_string_vectors(char*** vectors, size_t* sizes, siz
 QUIVER_C_API quiver_error_t quiver_database_export_to_csv(quiver_database_t* db, const char* table, const char* path);
 QUIVER_C_API quiver_error_t quiver_database_import_from_csv(quiver_database_t* db, const char* table, const char* path);
 
+// Query methods - execute SQL and return first row's first column
+QUIVER_C_API quiver_error_t quiver_database_query_string(quiver_database_t* db,
+                                                         const char* sql,
+                                                         char** out_value,
+                                                         int* out_has_value);
+
+QUIVER_C_API quiver_error_t quiver_database_query_integer(quiver_database_t* db,
+                                                          const char* sql,
+                                                          int64_t* out_value,
+                                                          int* out_has_value);
+
+QUIVER_C_API quiver_error_t quiver_database_query_float(quiver_database_t* db,
+                                                        const char* sql,
+                                                        double* out_value,
+                                                        int* out_has_value);
+
 #ifdef __cplusplus
 }
 #endif

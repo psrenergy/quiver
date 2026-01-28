@@ -1963,6 +1963,111 @@ class QuiverDatabaseBindings {
   late final _quiver_database_import_from_csv = _quiver_database_import_from_csvPtr
       .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)>();
 
+  int quiver_database_query_string(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> sql,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> out_value,
+    ffi.Pointer<ffi.Int> out_has_value,
+  ) {
+    return _quiver_database_query_string(
+      db,
+      sql,
+      out_value,
+      out_has_value,
+    );
+  }
+
+  late final _quiver_database_query_stringPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Pointer<ffi.Int>,
+          )
+        >
+      >('quiver_database_query_string');
+  late final _quiver_database_query_string = _quiver_database_query_stringPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          ffi.Pointer<ffi.Int>,
+        )
+      >();
+
+  int quiver_database_query_integer(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> sql,
+    ffi.Pointer<ffi.Int64> out_value,
+    ffi.Pointer<ffi.Int> out_has_value,
+  ) {
+    return _quiver_database_query_integer(
+      db,
+      sql,
+      out_value,
+      out_has_value,
+    );
+  }
+
+  late final _quiver_database_query_integerPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Int64>,
+            ffi.Pointer<ffi.Int>,
+          )
+        >
+      >('quiver_database_query_integer');
+  late final _quiver_database_query_integer = _quiver_database_query_integerPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Int64>,
+          ffi.Pointer<ffi.Int>,
+        )
+      >();
+
+  int quiver_database_query_float(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> sql,
+    ffi.Pointer<ffi.Double> out_value,
+    ffi.Pointer<ffi.Int> out_has_value,
+  ) {
+    return _quiver_database_query_float(
+      db,
+      sql,
+      out_value,
+      out_has_value,
+    );
+  }
+
+  late final _quiver_database_query_floatPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Double>,
+            ffi.Pointer<ffi.Int>,
+          )
+        >
+      >('quiver_database_query_float');
+  late final _quiver_database_query_float = _quiver_database_query_floatPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Double>,
+          ffi.Pointer<ffi.Int>,
+        )
+      >();
+
   ffi.Pointer<quiver_element_t1> quiver_element_create() {
     return _quiver_element_create();
   }
