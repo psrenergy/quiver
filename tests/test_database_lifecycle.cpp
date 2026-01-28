@@ -95,10 +95,9 @@ TEST_F(TempFileFixture, FromSchemaInvalidPath) {
 }
 
 TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
-    // Invalid migrations path results in database with version 0 (no migrations applied)
-    auto db = quiver::Database::from_migrations(
-        ":memory:", "nonexistent/migrations/", {.console_level = quiver::LogLevel::off});
-    EXPECT_EQ(db.current_version(), 0);
+    EXPECT_THROW(quiver::Database::from_migrations(
+                     ":memory:", "nonexistent/migrations/", {.console_level = quiver::LogLevel::off}),
+                 std::runtime_error);
 }
 
 // ============================================================================
@@ -256,9 +255,7 @@ TEST_F(MigrationFixture, MigrationsPendingFromHigherVersion) {
 }
 
 TEST_F(MigrationFixture, DatabaseFromMigrationsInvalidPath) {
-    // Invalid migrations path results in database with version 0 (no migrations applied)
-    auto db = quiver::Database::from_migrations(path, "nonexistent/migrations/");
-    EXPECT_EQ(db.current_version(), 0);
+    EXPECT_THROW(quiver::Database::from_migrations(path, "nonexistent/migrations/"), std::runtime_error);
 }
 
 TEST_F(MigrationFixture, MigrationVersionZero) {

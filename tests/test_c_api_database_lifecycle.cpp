@@ -240,10 +240,8 @@ TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     auto db = quiver_database_from_migrations(":memory:", "nonexistent/migrations/", &options);
-    // Invalid migrations path results in database with version 0 (no migrations applied)
-    ASSERT_NE(db, nullptr);
-    EXPECT_EQ(quiver_database_current_version(db), 0);
-    quiver_database_close(db);
+    // Invalid migrations path now returns null and sets error
+    EXPECT_EQ(db, nullptr);
 }
 
 // ============================================================================

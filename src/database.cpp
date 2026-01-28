@@ -377,6 +377,13 @@ const std::string& Database::path() const {
 Database Database::from_migrations(const std::string& db_path,
                                    const std::string& migrations_path,
                                    const DatabaseOptions& options) {
+    namespace fs = std::filesystem;
+    if (!fs::exists(migrations_path)) {
+        throw std::runtime_error("Migrations path not found: " + migrations_path);
+    }
+    if (!fs::is_directory(migrations_path)) {
+        throw std::runtime_error("Migrations path is not a directory: " + migrations_path);
+    }
     auto db = Database(db_path, options);
     db.migrate_up(migrations_path);
     return db;
@@ -384,6 +391,10 @@ Database Database::from_migrations(const std::string& db_path,
 
 Database
 Database::from_schema(const std::string& db_path, const std::string& schema_path, const DatabaseOptions& options) {
+    namespace fs = std::filesystem;
+    if (!fs::exists(schema_path)) {
+        throw std::runtime_error("Schema file not found: " + schema_path);
+    }
     auto db = Database(db_path, options);
     db.apply_schema(schema_path);
     return db;
