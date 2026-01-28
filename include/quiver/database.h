@@ -155,6 +155,11 @@ public:
     std::optional<int64_t> query_integer(const std::string& sql);
     std::optional<double> query_float(const std::string& sql);
 
+    // Parameterized query methods
+    std::optional<std::string> query_string(const std::string& sql, const std::vector<Value>& params);
+    std::optional<int64_t> query_integer(const std::string& sql, const std::vector<Value>& params);
+    std::optional<double> query_float(const std::string& sql, const std::vector<Value>& params);
+
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;

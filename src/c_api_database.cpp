@@ -1314,4 +1314,109 @@ QUIVER_C_API quiver_error_t quiver_database_query_float(quiver_database_t* db,
     }
 }
 
+// Helper to convert C param arrays to std::vector<Value>
+static std::vector<quiver::Value>
+convert_params(const int* param_types, const void* const* param_values, size_t param_count) {
+    std::vector<quiver::Value> params;
+    params.reserve(param_count);
+    for (size_t i = 0; i < param_count; ++i) {
+        switch (param_types[i]) {
+        case QUIVER_DATA_TYPE_INTEGER:
+            params.emplace_back(*static_cast<const int64_t*>(param_values[i]));
+            break;
+        case QUIVER_DATA_TYPE_FLOAT:
+            params.emplace_back(*static_cast<const double*>(param_values[i]));
+            break;
+        case QUIVER_DATA_TYPE_STRING:
+            params.emplace_back(std::string(static_cast<const char*>(param_values[i])));
+            break;
+        case QUIVER_DATA_TYPE_NULL:
+            params.emplace_back(nullptr);
+            break;
+        default:
+            throw std::runtime_error("Unknown parameter type: " + std::to_string(param_types[i]));
+        }
+    }
+    return params;
+}
+
+QUIVER_C_API quiver_error_t quiver_database_query_string_params(quiver_database_t* db,
+                                                                 const char* sql,
+                                                                 const int* param_types,
+                                                                 const void* const* param_values,
+                                                                 size_t param_count,
+                                                                 char** out_value,
+                                                                 int* out_has_value) {
+    if (!db || !sql || !out_value || !out_has_value || (param_count > 0 && (!param_types || !param_values))) {
+        return QUIVER_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        auto params = convert_params(param_types, param_values, param_count);
+        auto result = db->db.query_string(sql, params);
+        if (result.has_value()) {
+            *out_value = strdup_safe(*result);
+            *out_has_value = 1;
+        } else {
+            *out_value = nullptr;
+            *out_has_value = 0;
+        }
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR_DATABASE;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_database_query_integer_params(quiver_database_t* db,
+                                                                  const char* sql,
+                                                                  const int* param_types,
+                                                                  const void* const* param_values,
+                                                                  size_t param_count,
+                                                                  int64_t* out_value,
+                                                                  int* out_has_value) {
+    if (!db || !sql || !out_value || !out_has_value || (param_count > 0 && (!param_types || !param_values))) {
+        return QUIVER_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        auto params = convert_params(param_types, param_values, param_count);
+        auto result = db->db.query_integer(sql, params);
+        if (result.has_value()) {
+            *out_value = *result;
+            *out_has_value = 1;
+        } else {
+            *out_has_value = 0;
+        }
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR_DATABASE;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_database_query_float_params(quiver_database_t* db,
+                                                                const char* sql,
+                                                                const int* param_types,
+                                                                const void* const* param_values,
+                                                                size_t param_count,
+                                                                double* out_value,
+                                                                int* out_has_value) {
+    if (!db || !sql || !out_value || !out_has_value || (param_count > 0 && (!param_types || !param_values))) {
+        return QUIVER_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        auto params = convert_params(param_types, param_values, param_count);
+        auto result = db->db.query_float(sql, params);
+        if (result.has_value()) {
+            *out_value = *result;
+            *out_has_value = 1;
+        } else {
+            *out_has_value = 0;
+        }
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR_DATABASE;
+    }
+}
+
 }  // extern "C"

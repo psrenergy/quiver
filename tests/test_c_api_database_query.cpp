@@ -232,3 +232,186 @@ TEST(DatabaseCApiQuery, QueryFloatNullDb) {
     auto err = quiver_database_query_float(nullptr, "SELECT 1.0", &value, &has_value);
     EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
 }
+
+// ============================================================================
+// Parameterized query tests
+// ============================================================================
+
+TEST(DatabaseCApiQuery, QueryStringWithParams) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto e = quiver_element_create();
+    quiver_element_set_string(e, "label", "Test Label");
+    quiver_element_set_string(e, "string_attribute", "hello world");
+    quiver_database_create_element(db, "Configuration", e);
+    quiver_element_destroy(e);
+
+    const char* label = "Test Label";
+    int param_types[] = {QUIVER_DATA_TYPE_STRING};
+    const void* param_values[] = {label};
+
+    char* value = nullptr;
+    int has_value = 0;
+    auto err = quiver_database_query_string_params(
+        db, "SELECT string_attribute FROM Configuration WHERE label = ?",
+        param_types, param_values, 1, &value, &has_value);
+
+    EXPECT_EQ(err, QUIVER_OK);
+    EXPECT_EQ(has_value, 1);
+    EXPECT_STREQ(value, "hello world");
+
+    delete[] value;
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApiQuery, QueryIntegerWithParams) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto e = quiver_element_create();
+    quiver_element_set_string(e, "label", "Test");
+    quiver_element_set_integer(e, "integer_attribute", 42);
+    quiver_database_create_element(db, "Configuration", e);
+    quiver_element_destroy(e);
+
+    const char* label = "Test";
+    int param_types[] = {QUIVER_DATA_TYPE_STRING};
+    const void* param_values[] = {label};
+
+    int64_t value = 0;
+    int has_value = 0;
+    auto err = quiver_database_query_integer_params(
+        db, "SELECT integer_attribute FROM Configuration WHERE label = ?",
+        param_types, param_values, 1, &value, &has_value);
+
+    EXPECT_EQ(err, QUIVER_OK);
+    EXPECT_EQ(has_value, 1);
+    EXPECT_EQ(value, 42);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApiQuery, QueryFloatWithParams) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto e = quiver_element_create();
+    quiver_element_set_string(e, "label", "Test");
+    quiver_element_set_float(e, "float_attribute", 3.14159);
+    quiver_database_create_element(db, "Configuration", e);
+    quiver_element_destroy(e);
+
+    const char* label = "Test";
+    int param_types[] = {QUIVER_DATA_TYPE_STRING};
+    const void* param_values[] = {label};
+
+    double value = 0.0;
+    int has_value = 0;
+    auto err = quiver_database_query_float_params(
+        db, "SELECT float_attribute FROM Configuration WHERE label = ?",
+        param_types, param_values, 1, &value, &has_value);
+
+    EXPECT_EQ(err, QUIVER_OK);
+    EXPECT_EQ(has_value, 1);
+    EXPECT_DOUBLE_EQ(value, 3.14159);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApiQuery, QueryWithIntegerParam) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto e = quiver_element_create();
+    quiver_element_set_string(e, "label", "Test");
+    quiver_element_set_integer(e, "integer_attribute", 42);
+    quiver_database_create_element(db, "Configuration", e);
+    quiver_element_destroy(e);
+
+    int64_t min_val = 10;
+    int param_types[] = {QUIVER_DATA_TYPE_INTEGER};
+    const void* param_values[] = {&min_val};
+
+    int64_t value = 0;
+    int has_value = 0;
+    auto err = quiver_database_query_integer_params(
+        db, "SELECT integer_attribute FROM Configuration WHERE integer_attribute > ?",
+        param_types, param_values, 1, &value, &has_value);
+
+    EXPECT_EQ(err, QUIVER_OK);
+    EXPECT_EQ(has_value, 1);
+    EXPECT_EQ(value, 42);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApiQuery, QueryWithNullParam) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto e = quiver_element_create();
+    quiver_element_set_string(e, "label", "Test");
+    quiver_database_create_element(db, "Configuration", e);
+    quiver_element_destroy(e);
+
+    int param_types[] = {QUIVER_DATA_TYPE_NULL};
+    const void* param_values[] = {nullptr};
+
+    int64_t value = 0;
+    int has_value = 0;
+    auto err = quiver_database_query_integer_params(
+        db, "SELECT COUNT(*) FROM Configuration WHERE ? IS NULL",
+        param_types, param_values, 1, &value, &has_value);
+
+    EXPECT_EQ(err, QUIVER_OK);
+    EXPECT_EQ(has_value, 1);
+    EXPECT_EQ(value, 1);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApiQuery, QueryParamsNoMatch) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    auto e = quiver_element_create();
+    quiver_element_set_string(e, "label", "Test");
+    quiver_database_create_element(db, "Configuration", e);
+    quiver_element_destroy(e);
+
+    const char* label = "NoMatch";
+    int param_types[] = {QUIVER_DATA_TYPE_STRING};
+    const void* param_values[] = {label};
+
+    char* value = nullptr;
+    int has_value = 1;
+    auto err = quiver_database_query_string_params(
+        db, "SELECT label FROM Configuration WHERE label = ?",
+        param_types, param_values, 1, &value, &has_value);
+
+    EXPECT_EQ(err, QUIVER_OK);
+    EXPECT_EQ(has_value, 0);
+    EXPECT_EQ(value, nullptr);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApiQuery, QueryParamsNullDb) {
+    int64_t value = 0;
+    int has_value = 0;
+    auto err = quiver_database_query_integer_params(nullptr, "SELECT 1", nullptr, nullptr, 0, &value, &has_value);
+    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+}

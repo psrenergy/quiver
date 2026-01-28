@@ -163,3 +163,92 @@ TEST(DatabaseQuery, QueryFloatAverage) {
     ASSERT_TRUE(result.has_value());
     EXPECT_DOUBLE_EQ(*result, 15.0);
 }
+
+// ============================================================================
+// Parameterized query tests
+// ============================================================================
+
+TEST(DatabaseQuery, QueryStringWithParams) {
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element e;
+    e.set("label", std::string("Test Label")).set("string_attribute", std::string("hello world"));
+    db.create_element("Configuration", e);
+
+    auto result =
+        db.query_string("SELECT string_attribute FROM Configuration WHERE label = ?", {std::string("Test Label")});
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, "hello world");
+}
+
+TEST(DatabaseQuery, QueryStringWithParamsNoMatch) {
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element e;
+    e.set("label", std::string("Test")).set("string_attribute", std::string("hello"));
+    db.create_element("Configuration", e);
+
+    auto result =
+        db.query_string("SELECT string_attribute FROM Configuration WHERE label = ?", {std::string("NoMatch")});
+    EXPECT_FALSE(result.has_value());
+}
+
+TEST(DatabaseQuery, QueryIntegerWithParams) {
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element e;
+    e.set("label", std::string("Test")).set("integer_attribute", int64_t{42});
+    db.create_element("Configuration", e);
+
+    auto result = db.query_integer("SELECT integer_attribute FROM Configuration WHERE label = ?", {std::string("Test")});
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, 42);
+}
+
+TEST(DatabaseQuery, QueryFloatWithParams) {
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element e;
+    e.set("label", std::string("Test")).set("float_attribute", 3.14);
+    db.create_element("Configuration", e);
+
+    auto result = db.query_float("SELECT float_attribute FROM Configuration WHERE label = ?", {std::string("Test")});
+    ASSERT_TRUE(result.has_value());
+    EXPECT_DOUBLE_EQ(*result, 3.14);
+}
+
+TEST(DatabaseQuery, QueryIntegerWithMultipleParams) {
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element e1;
+    e1.set("label", std::string("A")).set("integer_attribute", int64_t{10});
+    db.create_element("Configuration", e1);
+
+    quiver::Element e2;
+    e2.set("label", std::string("B")).set("integer_attribute", int64_t{20});
+    db.create_element("Configuration", e2);
+
+    auto result = db.query_integer(
+        "SELECT integer_attribute FROM Configuration WHERE label = ? AND integer_attribute > ?",
+        {std::string("B"), int64_t{5}});
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, 20);
+}
+
+TEST(DatabaseQuery, QueryWithNullParam) {
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element e;
+    e.set("label", std::string("Test"));
+    db.create_element("Configuration", e);
+
+    auto result = db.query_integer("SELECT COUNT(*) FROM Configuration WHERE ? IS NULL", {nullptr});
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(*result, 1);
+}
