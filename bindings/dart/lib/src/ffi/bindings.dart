@@ -2209,6 +2209,19 @@ class QuiverDatabaseBindings {
         )
       >();
 
+  int quiver_database_describe(
+    ffi.Pointer<quiver_database_t> db,
+  ) {
+    return _quiver_database_describe(
+      db,
+    );
+  }
+
+  late final _quiver_database_describePtr =
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_database_t>)>>('quiver_database_describe');
+  late final _quiver_database_describe = _quiver_database_describePtr
+      .asFunction<int Function(ffi.Pointer<quiver_database_t>)>();
+
   ffi.Pointer<quiver_element_t1> quiver_element_create() {
     return _quiver_element_create();
   }
