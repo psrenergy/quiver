@@ -1232,7 +1232,9 @@ QUIVER_C_API quiver_error_t quiver_database_export_to_csv(quiver_database_t* db,
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_import_from_csv(quiver_database_t* db, const char* table, const char* path) {
+QUIVER_C_API quiver_error_t quiver_database_import_from_csv(quiver_database_t* db,
+                                                            const char* table,
+                                                            const char* path) {
     if (!db || !table || !path) {
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }
