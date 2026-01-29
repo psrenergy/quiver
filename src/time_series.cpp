@@ -49,11 +49,7 @@ namespace {
 
     }
 
-    void validate_data_length(const std::vector<double>& data, const TimeSeriesMetadata& metadata) {
-
-    }
-
-    void validate_dimensions(const std::unordered_map<std::string, int64_t>& dims, const TimeSeriesMetadata& metadata) {
+    void validate_csv_dimensions(const std::iostream& io, const TimeSeriesMetadata& metadata, const std::vector<std::string>& current_dimensions, bool aggregated_time_dimensions) {
 
     }
 

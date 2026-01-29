@@ -48,11 +48,21 @@ class QUIVER_API TimeSeriesMetadata {
     std::vector<std::string> expected_dimension_names(bool aggregated_time_dimensions) const;
 
     std::vector<int64_t> dimension_sizes_at_values(const std::vector<int64_t>& dimension_values) const;
+
+    void validate_time_dimension_values(const std::unordered_map<std::string, int64_t>& dims) const;
+
+    void validate_data_length(const std::vector<double>& data) const;
+
+    void validate_dimensions(const std::unordered_map<std::string, int64_t>& dims) const;
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
 
     void validate_metadata() const;
+
+    void validate_time_dimension_metadata() const;
+
+    void validate_time_dimension_sizes() const;
 
     // Hours
     constexpr int MAX_HOURS_IN_DAY = 24;
