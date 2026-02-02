@@ -20,26 +20,26 @@ class QUIVER_API TimeSeries {
     TimeSeries(TimeSeries&& other) noexcept;
     TimeSeries& operator=(TimeSeries&& other) noexcept;
 
+    // File handling
     static TimeSeries& open_file(const std::string& file_path, const std::string& mode, const std::optional<TimeSeriesMetadata>& metadata);
-
     void close_file();
 
+    // Data handling
     double read(const std::unordered_map<std::string, int64_t>& dims);
-
     double write(const std::vector<double>& data, const std::unordered_map<std::string, int64_t>& dims);
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
 
+    // File traversal
     int64_t calculate_file_position(const std::unordered_map<std::string, int64_t>& dims) const;
-
     void go_to_position(int64_t position);
 
     // Validations
     void validate_file_is_open() const;
     void validate_dimension_values(const std::unordered_map<std::string, int64_t>& dims);
-    // validate_time_dimension_values implemented inline inside validate_dimension_values
     void validate_data_length(const std::vector<double>& data);
+    // validate_time_dimension_values implemented inline inside validate_dimension_values
 };
 
 }  // namespace quiver
