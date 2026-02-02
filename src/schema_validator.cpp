@@ -300,7 +300,7 @@ void SchemaValidator::validate_foreign_keys() {
             // Rule: FK column names should follow pattern <collection>_id or <collection>_<relation>
             // Skip vector table id column and set table columns
             if (!schema_.is_vector_table(table_name) || fk.from_column != "id") {
-                if (!schema_.is_set_table(table_name)) {
+                if (!schema_.is_set_table(table_name) && !schema_.is_time_series_table(table_name)) {
                     // Check if FK column name ends with _id or matches target_relation pattern
                     std::string target = fk.to_table;
                     std::string target_lower = target;
