@@ -16,6 +16,9 @@ struct QUIVER_API ScalarMetadata {
     bool not_null;
     bool primary_key;
     std::optional<std::string> default_value;
+    bool is_foreign_key = false;
+    std::optional<std::string> references_collection;
+    std::optional<std::string> references_column;
 };
 
 struct QUIVER_API VectorMetadata {

@@ -124,6 +124,41 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    @testset "Foreign Key Metadata" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        # parent_id is a foreign key referencing Parent(id)
+        meta = Quiver.get_scalar_metadata(db, "Child", "parent_id")
+        @test meta.is_foreign_key == true
+        @test meta.references_collection == "Parent"
+        @test meta.references_column == "id"
+
+        # sibling_id is a self-referencing foreign key
+        meta = Quiver.get_scalar_metadata(db, "Child", "sibling_id")
+        @test meta.is_foreign_key == true
+        @test meta.references_collection == "Child"
+        @test meta.references_column == "id"
+
+        # label is not a foreign key
+        meta = Quiver.get_scalar_metadata(db, "Child", "label")
+        @test meta.is_foreign_key == false
+        @test meta.references_collection === nothing
+        @test meta.references_column === nothing
+
+        # list_scalar_attributes should also include FK info
+        attrs = Quiver.list_scalar_attributes(db, "Child")
+        parent_attr = first(filter(a -> a.name == "parent_id", attrs))
+        @test parent_attr.is_foreign_key == true
+        @test parent_attr.references_collection == "Parent"
+
+        label_attr = first(filter(a -> a.name == "label", attrs))
+        @test label_attr.is_foreign_key == false
+        @test label_attr.references_collection === nothing
+
+        Quiver.close!(db)
+    end
+
     @testset "List Vector Groups" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)

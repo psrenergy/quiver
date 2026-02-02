@@ -2612,6 +2612,13 @@ final class quiver_scalar_metadata_t extends ffi.Struct {
   external int primary_key;
 
   external ffi.Pointer<ffi.Char> default_value;
+
+  @ffi.Int()
+  external int is_foreign_key;
+
+  external ffi.Pointer<ffi.Char> references_collection;
+
+  external ffi.Pointer<ffi.Char> references_column;
 }
 
 final class quiver_vector_metadata_t extends ffi.Struct {

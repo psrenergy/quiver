@@ -1416,6 +1416,76 @@ TEST(DatabaseCApi, DateTimeAttributeMetadata) {
     quiver_database_close(db);
 }
 
+TEST(DatabaseCApi, ScalarMetadataForeignKey) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    quiver_scalar_metadata_t meta{};
+    auto err = quiver_database_get_scalar_metadata(db, "Child", "parent_id", &meta);
+    EXPECT_EQ(err, QUIVER_OK);
+    EXPECT_EQ(meta.is_foreign_key, 1);
+    EXPECT_NE(meta.references_collection, nullptr);
+    EXPECT_STREQ(meta.references_collection, "Parent");
+    EXPECT_NE(meta.references_column, nullptr);
+    EXPECT_STREQ(meta.references_column, "id");
+    quiver_free_scalar_metadata(&meta);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, ScalarMetadataNotForeignKey) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    quiver_scalar_metadata_t meta{};
+    auto err = quiver_database_get_scalar_metadata(db, "Child", "label", &meta);
+    EXPECT_EQ(err, QUIVER_OK);
+    EXPECT_EQ(meta.is_foreign_key, 0);
+    EXPECT_EQ(meta.references_collection, nullptr);
+    EXPECT_EQ(meta.references_column, nullptr);
+    quiver_free_scalar_metadata(&meta);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, ListScalarAttributesForeignKeys) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options);
+    ASSERT_NE(db, nullptr);
+
+    quiver_scalar_metadata_t* attrs = nullptr;
+    size_t count = 0;
+    auto err = quiver_database_list_scalar_attributes(db, "Child", &attrs, &count);
+    EXPECT_EQ(err, QUIVER_OK);
+
+    // Find parent_id - should be FK
+    bool found_fk = false;
+    bool found_non_fk = false;
+    for (size_t i = 0; i < count; ++i) {
+        if (std::string(attrs[i].name) == "parent_id") {
+            EXPECT_EQ(attrs[i].is_foreign_key, 1);
+            EXPECT_STREQ(attrs[i].references_collection, "Parent");
+            EXPECT_STREQ(attrs[i].references_column, "id");
+            found_fk = true;
+        }
+        if (std::string(attrs[i].name) == "label") {
+            EXPECT_EQ(attrs[i].is_foreign_key, 0);
+            EXPECT_EQ(attrs[i].references_collection, nullptr);
+            found_non_fk = true;
+        }
+    }
+    EXPECT_TRUE(found_fk);
+    EXPECT_TRUE(found_non_fk);
+
+    quiver_free_scalar_metadata_array(attrs, count);
+    quiver_database_close(db);
+}
+
 TEST(DatabaseCApi, DateTimeReadScalarString) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;

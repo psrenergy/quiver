@@ -183,6 +183,72 @@ void main() {
     });
   });
 
+  group('Foreign Key Metadata', () {
+    test('returns FK info for foreign key attribute', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      try {
+        final meta = db.getScalarMetadata('Child', 'parent_id');
+        expect(meta.isForeignKey, isTrue);
+        expect(meta.referencesCollection, equals('Parent'));
+        expect(meta.referencesColumn, equals('id'));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('returns FK info for self-referencing key', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      try {
+        final meta = db.getScalarMetadata('Child', 'sibling_id');
+        expect(meta.isForeignKey, isTrue);
+        expect(meta.referencesCollection, equals('Child'));
+        expect(meta.referencesColumn, equals('id'));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('returns no FK info for non-FK attribute', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      try {
+        final meta = db.getScalarMetadata('Child', 'label');
+        expect(meta.isForeignKey, isFalse);
+        expect(meta.referencesCollection, isNull);
+        expect(meta.referencesColumn, isNull);
+      } finally {
+        db.close();
+      }
+    });
+
+    test('list_scalar_attributes includes FK info', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      try {
+        final attrs = db.listScalarAttributes('Child');
+        final parentAttr = attrs.firstWhere((a) => a.name == 'parent_id');
+        expect(parentAttr.isForeignKey, isTrue);
+        expect(parentAttr.referencesCollection, equals('Parent'));
+
+        final labelAttr = attrs.firstWhere((a) => a.name == 'label');
+        expect(labelAttr.isForeignKey, isFalse);
+        expect(labelAttr.referencesCollection, isNull);
+      } finally {
+        db.close();
+      }
+    });
+  });
+
   group('List Scalar Attributes', () {
     test('returns all scalar attributes with metadata', () {
       final db = Database.fromSchema(

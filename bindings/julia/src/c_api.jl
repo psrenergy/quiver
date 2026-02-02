@@ -222,6 +222,9 @@ struct quiver_scalar_metadata_t
     not_null::Cint
     primary_key::Cint
     default_value::Ptr{Cchar}
+    is_foreign_key::Cint
+    references_collection::Ptr{Cchar}
+    references_column::Ptr{Cchar}
 end
 
 struct quiver_vector_metadata_t
