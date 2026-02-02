@@ -8,11 +8,6 @@
 
 namespace quiver {
 
-struct CSVReader {
-    std::istream& io;
-    bool aggregate_time_dimensions;
-};
-
 class QUIVER_API TimeSeries {
     explicit TimeSeries(const std::string& file_path, const TimeSeriesMetadata& metadata, const std::iostream& io);
     ~TimeSeries();
@@ -32,17 +27,19 @@ class QUIVER_API TimeSeries {
     double read(const std::unordered_map<std::string, int64_t>& dims);
 
     double write(const std::vector<double>& data, const std::unordered_map<std::string, int64_t>& dims);
-
-    static void csv_to_bin(const std::string& file_path);
-
-    static void bin_to_csv(const std::string& file_path, bool aggregate_time_dimensions = true);
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
 
-    void validate_file_is_open() const;
+    int64_t calculate_file_position(const std::unordered_map<std::string, int64_t>& dims) const;
 
     void go_to_position(int64_t position);
+
+    // Validations
+    void validate_file_is_open() const;
+    void validate_dimension_values(const std::unordered_map<std::string, int64_t>& dims);
+    // validate_time_dimension_values implemented inline inside validate_dimension_values
+    void validate_data_length(const std::vector<double>& data);
 };
 
 }  // namespace quiver
