@@ -1,11 +1,14 @@
-#include "quiver/time_series_metadata.h"
+#include "quiver/blob/blob.h"
+
+#include <iostream>
+#include <string>
 
 namespace {
-    TimeSeries& open_reader(const std::string& file_path) {
+    quiver::Blob& open_reader(const std::string& file_path) {
 
     }
     
-    TimeSeries& open_writer(const std::string& file_path, const TimeSeriesMetadata& metadata) {
+    quiver::Blob& open_writer(const std::string& file_path, const quiver::BlobMetadata& metadata) {
 
     }
 
@@ -18,10 +21,10 @@ namespace {
 
 namespace quiver {
 
-struct TimeSeries::Impl {
+struct Blob::Impl {
     std::iostream io;
     std::string file_path;
-    TimeSeriesMetadata metadata;
+    BlobMetadata metadata;
 };
 
 } // namespace quiver

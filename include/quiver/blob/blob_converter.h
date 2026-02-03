@@ -1,25 +1,30 @@
-#ifndef QUIVER_TIME_SERIES_CONVERTER_H
-#define QUIVER_TIME_SERIES_CONVERTER_H
+#ifndef QUIVER_BLOB_CONVERTER_H
+#define QUIVER_BLOB_CONVERTER_H
 
 #include "export.h"
+#include "blob.h"
 
-#include <vector>
+#include <cstdint>
 #include <ctime>
+#include <initializer_list>
+#include <iostream>
+#include <memory>
 #include <string>
+#include <vector>
 
 namespace quiver {
 
-class QUIVER_API TimeSeriesConverter {
-    explicit TimeSeriesConverter(const std::string& file_path, bool aggregate_time_dimensions = true);
-    ~TimeSeriesConverter();
+class QUIVER_API BlobConverter : public Blob {
+    explicit BlobConverter(const std::string& file_path, const BlobMetadata& metadata, const std::iostream& io, bool aggregate_time_dimensions = true);
+    ~BlobConverter();
 
     // Non-copyable
-    TimeSeriesConverter(const TimeSeriesConverter&) = delete;
-    TimeSeriesConverter& operator=(const TimeSeriesConverter&) = delete;
+    BlobConverter(const BlobConverter&) = delete;
+    BlobConverter& operator=(const BlobConverter&) = delete;
 
     // Movable
-    TimeSeriesConverter(TimeSeriesConverter&& other) noexcept;
-    TimeSeriesConverter& operator=(TimeSeriesConverter&& other) noexcept;
+    BlobConverter(BlobConverter&& other) noexcept;
+    BlobConverter& operator=(BlobConverter&& other) noexcept;
 
     void csv_to_bin();
 
@@ -51,4 +56,4 @@ private:
 
 }  // namespace quiver
 
-#endif  // QUIVER_TIME_SERIES_CONVERTER_H
+#endif  // QUIVER_BLOB_CONVERTER_H

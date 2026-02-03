@@ -4,6 +4,9 @@
 #include "export.h"
 #include "dimension.h"
 
+#include <cstdint>
+#include <ctime>
+#include <memory>
 #include <string>
 
 namespace quiver {

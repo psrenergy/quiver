@@ -3,6 +3,10 @@
 
 #include "export.h"
 
+#include <cstdint>
+#include <memory>
+#include <string>
+
 namespace quiver {
 
 class QUIVER_API Dimension {

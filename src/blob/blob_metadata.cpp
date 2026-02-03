@@ -1,6 +1,11 @@
-#include "quiver/time_series_metadata.h"
-#include "quiver/dimension.h"
-#include "quiver/time_dimension.h"
+#include "quiver/blob/blob_metadata.h"
+#include "quiver/blob/dimension.h"
+
+#include <cstdint>
+#include <ctime>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace {
 
@@ -8,16 +13,14 @@ namespace {
 
 namespace quiver {
 
-struct TimeSeriesMetadata::Impl {
+struct BlobMetadata::Impl {
     std::vector<std::unique_ptr<Dimension>> dimensions;
     std::time_t initial_datetime;
     std::string unit;
     std::vector<std::string> labels;
     std::string version;
     //
-    int64_t number_of_dimensions;
     int64_t number_of_time_dimensions;
-    int64_t number_of_labels;
 
 };
 

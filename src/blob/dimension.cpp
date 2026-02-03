@@ -1,5 +1,7 @@
 #include "quiver/dimension.h"
 
+#include <string>
+
 namespace {
 
 } // anonymous namespace

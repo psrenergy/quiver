@@ -1,28 +1,33 @@
-#ifndef QUIVER_TIME_SERIES_H
-#define QUIVER_TIME_SERIES_H
+#ifndef QUIVER_BLOB_H
+#define QUIVER_BLOB_H
 
 #include "export.h"
+#include "blob_metadata.h"
 
-#include <vector>
+#include <cstdint>
 #include <iostream>
+#include <memory>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace quiver {
 
-class QUIVER_API TimeSeries {
-    explicit TimeSeries(const std::string& file_path, const TimeSeriesMetadata& metadata, const std::iostream& io);
-    ~TimeSeries();
+class QUIVER_API Blob {
+    explicit Blob(const std::string& file_path, const BlobMetadata& metadata, const std::iostream& io);
+    ~Blob();
 
     // Non-copyable
-    TimeSeries(const TimeSeries&) = delete;
-    TimeSeries& operator=(const TimeSeries&) = delete;
+    Blob(const Blob&) = delete;
+    Blob& operator=(const Blob&) = delete;
 
     // Movable
-    TimeSeries(TimeSeries&& other) noexcept;
-    TimeSeries& operator=(TimeSeries&& other) noexcept;
+    Blob(Blob&& other) noexcept;
+    Blob& operator=(Blob&& other) noexcept;
 
     // File handling
-    static TimeSeries& open_file(const std::string& file_path, const std::string& mode, const std::optional<TimeSeriesMetadata>& metadata);
-    void close_file();
+    static Blob& open_file(const std::string& file_path, const std::string& mode, const std::optional<BlobMetadata>& metadata);
 
     // Data handling
     double read(const std::unordered_map<std::string, int64_t>& dims);
@@ -44,4 +49,4 @@ private:
 
 }  // namespace quiver
 
-#endif  // QUIVER_TIME_SERIES_H
+#endif  // QUIVER_BLOB_H

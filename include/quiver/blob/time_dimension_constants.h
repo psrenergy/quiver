@@ -1,8 +1,6 @@
 #ifndef QUIVER_TIME_DIMENSION_CONSTANTS_H
 #define QUIVER_TIME_DIMENSION_CONSTANTS_H
 
-#include "export.h"
-
 namespace quiver::time {
     // Hours
     constexpr int MAX_HOURS_IN_DAY = 24;

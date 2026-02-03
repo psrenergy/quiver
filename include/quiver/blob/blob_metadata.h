@@ -1,27 +1,30 @@
-#ifndef QUIVER_TIME_SERIES_METADATA_H
-#define QUIVER_TIME_SERIES_METADATA_H
+#ifndef QUIVER_BLOB_METADATA_H
+#define QUIVER_BLOB_METADATA_H
 
 #include "export.h"
 
-#include <vector>
+#include <cstdint>
 #include <ctime>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace quiver {
 
-class QUIVER_API TimeSeriesMetadata {
-    explicit TimeSeriesMetadata();
-    ~TimeSeriesMetadata();
+class QUIVER_API BlobMetadata {
+    explicit BlobMetadata();
+    ~BlobMetadata();
 
     // Non-copyable
-    TimeSeriesMetadata(const TimeSeriesMetadata&) = delete;
-    TimeSeriesMetadata& operator=(const TimeSeriesMetadata&) = delete;
+    BlobMetadata(const BlobMetadata&) = delete;
+    BlobMetadata& operator=(const BlobMetadata&) = delete;
 
     // Movable
-    TimeSeriesMetadata(TimeSeriesMetadata&& other) noexcept;
-    TimeSeriesMetadata& operator=(TimeSeriesMetadata&& other) noexcept;
+    BlobMetadata(BlobMetadata&& other) noexcept;
+    BlobMetadata& operator=(BlobMetadata&& other) noexcept;
 
     // TOML Serialization
-    static TimeSeriesMetadata& from_toml(const std::string& toml_content);
+    static BlobMetadata& from_toml(const std::string& toml_content);
     std::string to_toml() const;
 
     // Setters
@@ -54,4 +57,4 @@ private:
 
 }  // namespace quiver
 
-#endif  // QUIVER_TIME_SERIES_METADATA_H
+#endif  // QUIVER_BLOB_METADATA_H
