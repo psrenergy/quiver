@@ -519,3 +519,111 @@ function read_all_sets_by_id(db::Database, collection::String, id::Int64)
     end
     return result
 end
+
+function read_vector_group_by_id(db::Database, collection::String, group::String, id::Int64)
+    # Find the matching group from the list of vector groups
+    all_groups = list_vector_groups(db, collection)
+    metadata = nothing
+    for g in all_groups
+        if g.group_name == group
+            metadata = g
+            break
+        end
+    end
+    if metadata === nothing
+        throw(DatabaseException("Vector group '$group' not found in collection '$collection'"))
+    end
+    columns = metadata.value_columns
+
+    if isempty(columns)
+        return Vector{Dict{String, Any}}()
+    end
+
+    # Read each column's data
+    column_data = Dict{String, Vector{Any}}()
+    row_count = 0
+
+    for col in columns
+        name = col.name
+        values = if col.data_type == C.QUIVER_DATA_TYPE_INTEGER
+            read_vector_integers_by_id(db, collection, name, id)
+        elseif col.data_type == C.QUIVER_DATA_TYPE_FLOAT
+            read_vector_floats_by_id(db, collection, name, id)
+        elseif col.data_type == C.QUIVER_DATA_TYPE_STRING
+            read_vector_strings_by_id(db, collection, name, id)
+        elseif col.data_type == C.QUIVER_DATA_TYPE_DATE_TIME
+            read_vector_date_time_by_id(db, collection, name, id)
+        else
+            throw(DatabaseException("Unknown data type: $(col.data_type)"))
+        end
+
+        column_data[name] = values
+        row_count = length(values)
+    end
+
+    # Transpose columns to rows
+    rows = Vector{Dict{String, Any}}()
+    for i in 1:row_count
+        row = Dict{String, Any}()
+        for (name, values) in column_data
+            row[name] = values[i]
+        end
+        push!(rows, row)
+    end
+
+    return rows
+end
+
+function read_set_group_by_id(db::Database, collection::String, group::String, id::Int64)
+    # Find the matching group from the list of set groups
+    all_groups = list_set_groups(db, collection)
+    metadata = nothing
+    for g in all_groups
+        if g.group_name == group
+            metadata = g
+            break
+        end
+    end
+    if metadata === nothing
+        throw(DatabaseException("Set group '$group' not found in collection '$collection'"))
+    end
+    columns = metadata.value_columns
+
+    if isempty(columns)
+        return Vector{Dict{String, Any}}()
+    end
+
+    # Read each column's data
+    column_data = Dict{String, Vector{Any}}()
+    row_count = 0
+
+    for col in columns
+        name = col.name
+        values = if col.data_type == C.QUIVER_DATA_TYPE_INTEGER
+            read_set_integers_by_id(db, collection, name, id)
+        elseif col.data_type == C.QUIVER_DATA_TYPE_FLOAT
+            read_set_floats_by_id(db, collection, name, id)
+        elseif col.data_type == C.QUIVER_DATA_TYPE_STRING
+            read_set_strings_by_id(db, collection, name, id)
+        elseif col.data_type == C.QUIVER_DATA_TYPE_DATE_TIME
+            read_set_date_time_by_id(db, collection, name, id)
+        else
+            throw(DatabaseException("Unknown data type: $(col.data_type)"))
+        end
+
+        column_data[name] = values
+        row_count = length(values)
+    end
+
+    # Transpose columns to rows
+    rows = Vector{Dict{String, Any}}()
+    for i in 1:row_count
+        row = Dict{String, Any}()
+        for (name, values) in column_data
+            row[name] = values[i]
+        end
+        push!(rows, row)
+    end
+
+    return rows
+end

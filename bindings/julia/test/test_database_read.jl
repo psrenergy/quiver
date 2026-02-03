@@ -448,6 +448,39 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "Vector Group by ID" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        Quiver.create_element!(db, "Collection";
+            label = "Item 1",
+            value_int = [1, 2, 3],
+            value_float = [1.5, 2.5, 3.5],
+        )
+
+        rows = Quiver.read_vector_group_by_id(db, "Collection", "values", 1)
+        @test length(rows) == 3
+        @test rows[1]["value_int"] == 1
+        @test rows[1]["value_float"] == 1.5
+        @test rows[3]["value_int"] == 3
+        @test rows[3]["value_float"] == 3.5
+
+        Quiver.close!(db)
+    end
+
+    @testset "Vector Group by ID Empty" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+
+        rows = Quiver.read_vector_group_by_id(db, "Collection", "values", 999)
+        @test isempty(rows)
+
+        Quiver.close!(db)
+    end
 end
 
 end
