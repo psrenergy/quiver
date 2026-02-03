@@ -920,4 +920,53 @@ extension DatabaseRead on Database {
 
     return rows;
   }
+
+  // ==========================================================================
+  // Read time series by ID
+  // ==========================================================================
+
+  /// Reads a time series group for an element by ID.
+  /// Returns rows with date_time and value columns, ordered by date_time.
+  List<Map<String, Object?>> readTimeSeriesGroupById(String collection, String group, int id) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outDateTimes = arena<Pointer<Pointer<Char>>>();
+      final outValues = arena<Pointer<Double>>();
+      final outRowCount = arena<Size>();
+
+      final err = bindings.quiver_database_read_time_series_group_by_id(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        group.toNativeUtf8(allocator: arena).cast(),
+        id,
+        outDateTimes,
+        outValues,
+        outRowCount,
+      );
+
+      if (err != quiver_error_t.QUIVER_OK) {
+        throw DatabaseException.fromError(err, "Failed to read time series group '$collection.$group' for id $id");
+      }
+
+      final rowCount = outRowCount.value;
+      if (rowCount == 0 || outDateTimes.value == nullptr) {
+        return [];
+      }
+
+      final result = <Map<String, Object?>>[];
+      for (var i = 0; i < rowCount; i++) {
+        result.add({
+          'date_time': outDateTimes.value[i].cast<Utf8>().toDartString(),
+          'value': outValues.value[i],
+        });
+      }
+
+      bindings.quiver_free_time_series_data(outDateTimes.value, outValues.value, rowCount);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
 }

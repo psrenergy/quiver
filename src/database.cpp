@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <mutex>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -1424,6 +1425,192 @@ std::vector<SetMetadata> Database::list_set_groups(const std::string& collection
         }
     }
     return result;
+}
+
+std::vector<TimeSeriesMetadata> Database::list_time_series_groups(const std::string& collection) const {
+    if (!impl_->schema) {
+        throw std::runtime_error("Cannot list time series groups: no schema loaded");
+    }
+
+    std::vector<TimeSeriesMetadata> result;
+    auto prefix = collection + "_time_series_";
+
+    for (const auto& table_name : impl_->schema->table_names()) {
+        if (!impl_->schema->is_time_series_table(table_name))
+            continue;
+        if (impl_->schema->get_parent_collection(table_name) != collection)
+            continue;
+
+        // Extract group name from table name
+        if (table_name.size() > prefix.size() && table_name.substr(0, prefix.size()) == prefix) {
+            auto group_name = table_name.substr(prefix.size());
+            result.push_back(get_time_series_metadata(collection, group_name));
+        }
+    }
+    return result;
+}
+
+TimeSeriesMetadata Database::get_time_series_metadata(const std::string& collection,
+                                                       const std::string& group_name) const {
+    if (!impl_->schema) {
+        throw std::runtime_error("Cannot get time series metadata: no schema loaded");
+    }
+
+    // Find the time series table for this group
+    auto ts_table = Schema::time_series_table_name(collection, group_name);
+    const auto* table_def = impl_->schema->get_table(ts_table);
+
+    if (!table_def) {
+        throw std::runtime_error("Time series group '" + group_name + "' not found for collection '" + collection + "'");
+    }
+
+    TimeSeriesMetadata meta;
+    meta.group_name = group_name;
+
+    // Add all data columns (skip id and date_time)
+    for (const auto& [col_name, col] : table_def->columns) {
+        if (col_name == "id" || col_name == "date_time") {
+            continue;
+        }
+
+        ScalarMetadata attr;
+        attr.name = col.name;
+        attr.data_type = col.type;
+        attr.not_null = col.not_null;
+        attr.primary_key = col.primary_key;
+        attr.default_value = col.default_value;
+        meta.value_columns.push_back(std::move(attr));
+    }
+
+    return meta;
+}
+
+std::vector<std::map<std::string, Value>>
+Database::read_time_series_group_by_id(const std::string& collection, const std::string& group, int64_t id) {
+    impl_->require_schema("read time series");
+
+    auto ts_table = impl_->schema->find_time_series_table(collection, group);
+    const auto* table_def = impl_->schema->get_table(ts_table);
+    if (!table_def) {
+        throw std::runtime_error("Time series table not found: " + ts_table);
+    }
+
+    // Build column list (excluding id)
+    std::vector<std::string> columns;
+    columns.push_back("date_time");
+    for (const auto& [col_name, col] : table_def->columns) {
+        if (col_name != "id" && col_name != "date_time") {
+            columns.push_back(col_name);
+        }
+    }
+
+    // Build SELECT query
+    std::string sql = "SELECT ";
+    for (size_t i = 0; i < columns.size(); ++i) {
+        if (i > 0)
+            sql += ", ";
+        sql += columns[i];
+    }
+    sql += " FROM " + ts_table + " WHERE id = ? ORDER BY date_time";
+
+    auto result = execute(sql, {id});
+
+    std::vector<std::map<std::string, Value>> rows;
+    rows.reserve(result.row_count());
+
+    for (size_t row_idx = 0; row_idx < result.row_count(); ++row_idx) {
+        std::map<std::string, Value> row;
+        for (size_t col_idx = 0; col_idx < columns.size(); ++col_idx) {
+            const auto& col_name = columns[col_idx];
+            // Get the value from the result row
+            auto int_val = result[row_idx].get_integer(col_idx);
+            auto float_val = result[row_idx].get_float(col_idx);
+            auto str_val = result[row_idx].get_string(col_idx);
+
+            if (int_val) {
+                row[col_name] = *int_val;
+            } else if (float_val) {
+                row[col_name] = *float_val;
+            } else if (str_val) {
+                row[col_name] = *str_val;
+            } else {
+                row[col_name] = nullptr;
+            }
+        }
+        rows.push_back(std::move(row));
+    }
+
+    return rows;
+}
+
+void Database::update_time_series_group(const std::string& collection,
+                                         const std::string& group,
+                                         int64_t id,
+                                         const std::vector<std::map<std::string, Value>>& rows) {
+    impl_->logger->debug(
+        "Updating time series {}.{} for id {} with {} rows", collection, group, id, rows.size());
+    impl_->require_schema("update time series");
+
+    auto ts_table = impl_->schema->find_time_series_table(collection, group);
+
+    Impl::TransactionGuard txn(*impl_);
+
+    // Delete existing time series data for this element
+    auto delete_sql = "DELETE FROM " + ts_table + " WHERE id = ?";
+    execute(delete_sql, {id});
+
+    if (rows.empty()) {
+        txn.commit();
+        return;
+    }
+
+    // Get column names from first row (excluding date_time which we handle specially)
+    std::vector<std::string> value_columns;
+    for (const auto& [col_name, _] : rows[0]) {
+        if (col_name != "date_time") {
+            value_columns.push_back(col_name);
+        }
+    }
+
+    // Build INSERT SQL
+    auto insert_sql = "INSERT INTO " + ts_table + " (id, date_time";
+    for (const auto& col : value_columns) {
+        insert_sql += ", " + col;
+    }
+    insert_sql += ") VALUES (?";
+    for (size_t i = 0; i <= value_columns.size(); ++i) {
+        insert_sql += ", ?";
+    }
+    insert_sql += ")";
+
+    // Insert each row
+    for (const auto& row : rows) {
+        std::vector<Value> params;
+        params.push_back(id);
+
+        // date_time must be present
+        auto dt_it = row.find("date_time");
+        if (dt_it == row.end()) {
+            throw std::runtime_error("Time series row missing required 'date_time' column");
+        }
+        params.push_back(dt_it->second);
+
+        // Add value columns
+        for (const auto& col : value_columns) {
+            auto it = row.find(col);
+            if (it != row.end()) {
+                params.push_back(it->second);
+            } else {
+                params.push_back(nullptr);
+            }
+        }
+
+        execute(insert_sql, params);
+    }
+
+    txn.commit();
+    impl_->logger->info(
+        "Updated time series {}.{} for id {} with {} rows", collection, group, id, rows.size());
 }
 
 void Database::export_to_csv(const std::string& table, const std::string& path) {

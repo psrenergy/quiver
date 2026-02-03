@@ -1476,4 +1476,226 @@ QUIVER_C_API quiver_error_t quiver_database_describe(quiver_database_t* db) {
     }
 }
 
+// Time series metadata and operations
+
+QUIVER_C_API quiver_error_t quiver_database_get_time_series_metadata(quiver_database_t* db,
+                                                                      const char* collection,
+                                                                      const char* group_name,
+                                                                      quiver_time_series_metadata_t* out_metadata) {
+    if (!db || !collection || !group_name || !out_metadata) {
+        return QUIVER_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        auto meta = db->db.get_time_series_metadata(collection, group_name);
+
+        out_metadata->group_name = strdup_safe(meta.group_name);
+        out_metadata->value_column_count = meta.value_columns.size();
+
+        if (meta.value_columns.empty()) {
+            out_metadata->value_columns = nullptr;
+        } else {
+            out_metadata->value_columns = new quiver_scalar_metadata_t[meta.value_columns.size()];
+            for (size_t i = 0; i < meta.value_columns.size(); ++i) {
+                out_metadata->value_columns[i].name = strdup_safe(meta.value_columns[i].name);
+                out_metadata->value_columns[i].data_type = to_c_data_type(meta.value_columns[i].data_type);
+                out_metadata->value_columns[i].not_null = meta.value_columns[i].not_null ? 1 : 0;
+                out_metadata->value_columns[i].primary_key = meta.value_columns[i].primary_key ? 1 : 0;
+                if (meta.value_columns[i].default_value.has_value()) {
+                    out_metadata->value_columns[i].default_value = strdup_safe(*meta.value_columns[i].default_value);
+                } else {
+                    out_metadata->value_columns[i].default_value = nullptr;
+                }
+                out_metadata->value_columns[i].is_foreign_key = meta.value_columns[i].is_foreign_key ? 1 : 0;
+                out_metadata->value_columns[i].references_collection =
+                    meta.value_columns[i].references_collection.has_value()
+                        ? strdup_safe(*meta.value_columns[i].references_collection)
+                        : nullptr;
+                out_metadata->value_columns[i].references_column =
+                    meta.value_columns[i].references_column.has_value()
+                        ? strdup_safe(*meta.value_columns[i].references_column)
+                        : nullptr;
+            }
+        }
+
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR_DATABASE;
+    }
+}
+
+QUIVER_C_API void quiver_free_time_series_metadata(quiver_time_series_metadata_t* metadata) {
+    if (!metadata)
+        return;
+    delete[] metadata->group_name;
+    if (metadata->value_columns) {
+        for (size_t i = 0; i < metadata->value_column_count; ++i) {
+            delete[] metadata->value_columns[i].name;
+            delete[] metadata->value_columns[i].default_value;
+            delete[] metadata->value_columns[i].references_collection;
+            delete[] metadata->value_columns[i].references_column;
+        }
+        delete[] metadata->value_columns;
+    }
+    metadata->group_name = nullptr;
+    metadata->value_columns = nullptr;
+    metadata->value_column_count = 0;
+}
+
+QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(quiver_database_t* db,
+                                                                     const char* collection,
+                                                                     quiver_time_series_metadata_t** out_metadata,
+                                                                     size_t* out_count) {
+    if (!db || !collection || !out_metadata || !out_count) {
+        return QUIVER_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        auto groups = db->db.list_time_series_groups(collection);
+        *out_count = groups.size();
+        if (groups.empty()) {
+            *out_metadata = nullptr;
+            return QUIVER_OK;
+        }
+        *out_metadata = new quiver_time_series_metadata_t[groups.size()];
+        for (size_t i = 0; i < groups.size(); ++i) {
+            (*out_metadata)[i].group_name = strdup_safe(groups[i].group_name);
+            (*out_metadata)[i].value_column_count = groups[i].value_columns.size();
+            if (groups[i].value_columns.empty()) {
+                (*out_metadata)[i].value_columns = nullptr;
+            } else {
+                (*out_metadata)[i].value_columns = new quiver_scalar_metadata_t[groups[i].value_columns.size()];
+                for (size_t j = 0; j < groups[i].value_columns.size(); ++j) {
+                    auto& src = groups[i].value_columns[j];
+                    auto& dst = (*out_metadata)[i].value_columns[j];
+                    dst.name = strdup_safe(src.name);
+                    dst.data_type = to_c_data_type(src.data_type);
+                    dst.not_null = src.not_null ? 1 : 0;
+                    dst.primary_key = src.primary_key ? 1 : 0;
+                    dst.default_value = src.default_value.has_value() ? strdup_safe(*src.default_value) : nullptr;
+                    dst.is_foreign_key = src.is_foreign_key ? 1 : 0;
+                    dst.references_collection =
+                        src.references_collection.has_value() ? strdup_safe(*src.references_collection) : nullptr;
+                    dst.references_column =
+                        src.references_column.has_value() ? strdup_safe(*src.references_column) : nullptr;
+                }
+            }
+        }
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR_DATABASE;
+    }
+}
+
+QUIVER_C_API void quiver_free_time_series_metadata_array(quiver_time_series_metadata_t* metadata, size_t count) {
+    if (!metadata)
+        return;
+    for (size_t i = 0; i < count; ++i) {
+        delete[] metadata[i].group_name;
+        if (metadata[i].value_columns) {
+            for (size_t j = 0; j < metadata[i].value_column_count; ++j) {
+                delete[] metadata[i].value_columns[j].name;
+                delete[] metadata[i].value_columns[j].default_value;
+                delete[] metadata[i].value_columns[j].references_collection;
+                delete[] metadata[i].value_columns[j].references_column;
+            }
+            delete[] metadata[i].value_columns;
+        }
+    }
+    delete[] metadata;
+}
+
+QUIVER_C_API quiver_error_t quiver_database_read_time_series_group_by_id(quiver_database_t* db,
+                                                                          const char* collection,
+                                                                          const char* group,
+                                                                          int64_t id,
+                                                                          char*** out_date_times,
+                                                                          double** out_values,
+                                                                          size_t* out_row_count) {
+    if (!db || !collection || !group || !out_date_times || !out_values || !out_row_count) {
+        return QUIVER_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        auto rows = db->db.read_time_series_group_by_id(collection, group, id);
+        *out_row_count = rows.size();
+
+        if (rows.empty()) {
+            *out_date_times = nullptr;
+            *out_values = nullptr;
+            return QUIVER_OK;
+        }
+
+        *out_date_times = new char*[rows.size()];
+        *out_values = new double[rows.size()];
+
+        for (size_t i = 0; i < rows.size(); ++i) {
+            // Get date_time
+            auto dt_it = rows[i].find("date_time");
+            if (dt_it != rows[i].end() && std::holds_alternative<std::string>(dt_it->second)) {
+                (*out_date_times)[i] = strdup_safe(std::get<std::string>(dt_it->second));
+            } else {
+                (*out_date_times)[i] = strdup_safe("");
+            }
+
+            // Get value (assuming first non-date_time column is "value")
+            auto val_it = rows[i].find("value");
+            if (val_it != rows[i].end()) {
+                if (std::holds_alternative<double>(val_it->second)) {
+                    (*out_values)[i] = std::get<double>(val_it->second);
+                } else if (std::holds_alternative<int64_t>(val_it->second)) {
+                    (*out_values)[i] = static_cast<double>(std::get<int64_t>(val_it->second));
+                } else {
+                    (*out_values)[i] = 0.0;
+                }
+            } else {
+                (*out_values)[i] = 0.0;
+            }
+        }
+
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR_DATABASE;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_database_t* db,
+                                                                      const char* collection,
+                                                                      const char* group,
+                                                                      int64_t id,
+                                                                      const char* const* date_times,
+                                                                      const double* values,
+                                                                      size_t row_count) {
+    if (!db || !collection || !group || (row_count > 0 && (!date_times || !values))) {
+        return QUIVER_ERROR_INVALID_ARGUMENT;
+    }
+    try {
+        std::vector<std::map<std::string, quiver::Value>> rows;
+        rows.reserve(row_count);
+
+        for (size_t i = 0; i < row_count; ++i) {
+            std::map<std::string, quiver::Value> row;
+            row["date_time"] = std::string(date_times[i]);
+            row["value"] = values[i];
+            rows.push_back(std::move(row));
+        }
+
+        db->db.update_time_series_group(collection, group, id, rows);
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR_DATABASE;
+    }
+}
+
+QUIVER_C_API void quiver_free_time_series_data(char** date_times, double* values, size_t row_count) {
+    if (date_times) {
+        for (size_t i = 0; i < row_count; ++i) {
+            delete[] date_times[i];
+        }
+        delete[] date_times;
+    }
+    delete[] values;
+}
+
 }  // extern "C"

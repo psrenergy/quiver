@@ -627,3 +627,36 @@ function read_set_group_by_id(db::Database, collection::String, group::String, i
 
     return rows
 end
+
+function read_time_series_group_by_id(db::Database, collection::String, group::String, id::Int64)
+    out_date_times = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
+    out_values = Ref{Ptr{Cdouble}}(C_NULL)
+    out_row_count = Ref{Csize_t}(0)
+
+    err = C.quiver_database_read_time_series_group_by_id(
+        db.ptr, collection, group, id,
+        out_date_times, out_values, out_row_count
+    )
+    if err != C.QUIVER_OK
+        throw(DatabaseException("Failed to read time series group '$group' from '$collection' for id $id"))
+    end
+
+    row_count = out_row_count[]
+    if row_count == 0 || out_date_times[] == C_NULL
+        return Vector{Dict{String, Any}}()
+    end
+
+    date_time_ptrs = unsafe_wrap(Array, out_date_times[], row_count)
+    values = unsafe_wrap(Array, out_values[], row_count) |> copy
+
+    rows = Vector{Dict{String, Any}}()
+    for i in 1:row_count
+        push!(rows, Dict{String, Any}(
+            "date_time" => unsafe_string(date_time_ptrs[i]),
+            "value" => values[i]
+        ))
+    end
+
+    C.quiver_free_time_series_data(out_date_times[], out_values[], row_count)
+    return rows
+end

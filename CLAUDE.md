@@ -65,6 +65,7 @@ Test files organized by functionality:
 - `test_database_delete.cpp` - delete element operations
 - `test_database_query.cpp` - parameterized and non-parameterized query operations
 - `test_database_relations.cpp` - relation operations
+- `test_database_time_series.cpp` - time series read/update/metadata operations
 
 C API tests follow same pattern with `test_c_api_database_*.cpp` prefix.
 
@@ -230,6 +231,17 @@ CREATE TABLE Items_set_tags (
 ) STRICT;
 ```
 
+### Time Series Tables
+Named `{Collection}_time_series_{name}` with `date_time` ordering column:
+```sql
+CREATE TABLE Items_time_series_data (
+    id INTEGER NOT NULL REFERENCES Items(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    date_time TEXT NOT NULL,
+    value REAL NOT NULL,
+    PRIMARY KEY (id, date_time)
+) STRICT;
+```
+
 ### Foreign Keys
 Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references.
 
@@ -241,6 +253,8 @@ Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references.
 - Scalar readers: `read_scalar_integers/floats/strings(collection, attribute)`
 - Vector readers: `read_vector_integers/floats/strings(collection, attribute)`
 - Set readers: `read_set_integers/floats/strings(collection, attribute)`
+- Time series: `read_time_series_group_by_id()`, `update_time_series_group()`
+- Time series metadata: `get_time_series_metadata()`, `list_time_series_groups()`
 - Relations: `set_scalar_relation()`, `read_scalar_relation()`
 - Query: `query_string/integer/float(sql, params = {})` - parameterized SQL with positional `?` placeholders
 - Schema inspection: `describe()` - prints schema info to stdout

@@ -282,4 +282,70 @@ extension DatabaseUpdate on Database {
       arena.releaseAll();
     }
   }
+
+  // ==========================================================================
+  // Update time series attributes
+  // ==========================================================================
+
+  /// Updates a time series group by element ID (replaces all rows).
+  /// Each row must contain 'date_time' (String) and 'value' (double) keys.
+  void updateTimeSeriesGroup(String collection, String group, int id, List<Map<String, Object?>> rows) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final rowCount = rows.length;
+
+      if (rowCount == 0) {
+        final err = bindings.quiver_database_update_time_series_group(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          group.toNativeUtf8(allocator: arena).cast(),
+          id,
+          nullptr,
+          nullptr,
+          0,
+        );
+        if (err != quiver_error_t.QUIVER_OK) {
+          throw DatabaseException.fromError(err, "Failed to update time series group '$collection.$group' for id $id");
+        }
+        return;
+      }
+
+      final dateTimes = arena<Pointer<Char>>(rowCount);
+      final values = arena<Double>(rowCount);
+
+      for (var i = 0; i < rowCount; i++) {
+        final row = rows[i];
+        final dateTime = row['date_time'];
+        final value = row['value'];
+
+        if (dateTime is! String) {
+          throw ArgumentError("Row $i missing or invalid 'date_time' (must be String)");
+        }
+        if (value is! num) {
+          throw ArgumentError("Row $i missing or invalid 'value' (must be num)");
+        }
+
+        dateTimes[i] = dateTime.toNativeUtf8(allocator: arena).cast();
+        values[i] = value.toDouble();
+      }
+
+      final err = bindings.quiver_database_update_time_series_group(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        group.toNativeUtf8(allocator: arena).cast(),
+        id,
+        dateTimes,
+        values,
+        rowCount,
+      );
+
+      if (err != quiver_error_t.QUIVER_OK) {
+        throw DatabaseException.fromError(err, "Failed to update time series group '$collection.$group' for id $id");
+      }
+    } finally {
+      arena.releaseAll();
+    }
+  }
 }

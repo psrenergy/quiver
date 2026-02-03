@@ -134,3 +134,36 @@ function update_set_strings!(
     check_error(err, "Failed to update set strings '$collection.$attribute' for id $id")
     return nothing
 end
+
+# Update time series functions
+
+function update_time_series_group!(
+    db::Database,
+    collection::String,
+    group::String,
+    id::Int64,
+    rows::Vector{Dict{String, Any}},
+)
+    if isempty(rows)
+        err = C.quiver_database_update_time_series_group(
+            db.ptr, collection, group, id,
+            C_NULL, C_NULL, Csize_t(0)
+        )
+        check_error(err, "Failed to update time series '$collection.$group' for id $id")
+        return nothing
+    end
+
+    row_count = length(rows)
+    date_time_cstrings = [Base.cconvert(Cstring, String(row["date_time"])) for row in rows]
+    date_time_ptrs = [Base.unsafe_convert(Cstring, cs) for cs in date_time_cstrings]
+    values = Float64[Float64(row["value"]) for row in rows]
+
+    GC.@preserve date_time_cstrings begin
+        err = C.quiver_database_update_time_series_group(
+            db.ptr, collection, group, id,
+            date_time_ptrs, values, Csize_t(row_count)
+        )
+    end
+    check_error(err, "Failed to update time series '$collection.$group' for id $id")
+    return nothing
+end

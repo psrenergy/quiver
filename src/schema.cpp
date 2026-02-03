@@ -69,6 +69,10 @@ std::string Schema::set_table_name(const std::string& collection, const std::str
     return collection + "_set_" + group;
 }
 
+std::string Schema::time_series_table_name(const std::string& collection, const std::string& group) {
+    return collection + "_time_series_" + group;
+}
+
 bool Schema::is_collection(const std::string& table) const {
     if (table == "Configuration") {
         return true;
@@ -140,6 +144,33 @@ std::string Schema::find_set_table(const std::string& collection, const std::str
     }
 
     throw std::runtime_error("Set attribute '" + attribute + "' not found for collection '" + collection + "'");
+}
+
+std::string Schema::find_time_series_table(const std::string& collection, const std::string& group) const {
+    // First try: Collection_time_series_group
+    auto ts = time_series_table_name(collection, group);
+    if (has_table(ts)) {
+        return ts;
+    }
+
+    // Second try: search all time series tables for the collection
+    for (const auto& table_name : table_names()) {
+        if (!is_time_series_table(table_name))
+            continue;
+        if (get_parent_collection(table_name) != collection)
+            continue;
+
+        // Extract group name from table and compare
+        auto prefix = collection + "_time_series_";
+        if (table_name.size() > prefix.size() && table_name.substr(0, prefix.size()) == prefix) {
+            auto extracted_group = table_name.substr(prefix.size());
+            if (extracted_group == group) {
+                return table_name;
+            }
+        }
+    }
+
+    throw std::runtime_error("Time series group '" + group + "' not found for collection '" + collection + "'");
 }
 
 std::vector<std::string> Schema::table_names() const {

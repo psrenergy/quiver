@@ -283,4 +283,98 @@ extension DatabaseMetadata on Database {
     }
     return version;
   }
+
+  /// Returns metadata for a time series group, including all value columns in the group.
+  ({
+    String groupName,
+    List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue, bool isForeignKey, String? referencesCollection, String? referencesColumn})> valueColumns,
+  })
+  getTimeSeriesMetadata(String collection, String groupName) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outMetadata = arena<quiver_time_series_metadata_t>();
+
+      final err = bindings.quiver_database_get_time_series_metadata(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        groupName.toNativeUtf8(allocator: arena).cast(),
+        outMetadata,
+      );
+
+      if (err != quiver_error_t.QUIVER_OK) {
+        throw DatabaseException.fromError(err, "Failed to get time series metadata for '$collection.$groupName'");
+      }
+
+      final valueColumns = <({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue, bool isForeignKey, String? referencesCollection, String? referencesColumn})>[];
+      final count = outMetadata.ref.value_column_count;
+      for (var i = 0; i < count; i++) {
+        valueColumns.add(_parseScalarMetadata(outMetadata.ref.value_columns[i]));
+      }
+
+      final result = (
+        groupName: outMetadata.ref.group_name.cast<Utf8>().toDartString(),
+        valueColumns: valueColumns,
+      );
+
+      bindings.quiver_free_time_series_metadata(outMetadata);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Lists all time series groups for a collection with full metadata.
+  List<
+    ({
+      String groupName,
+      List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue, bool isForeignKey, String? referencesCollection, String? referencesColumn})> valueColumns,
+    })
+  >
+  listTimeSeriesGroups(String collection) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outMetadata = arena<Pointer<quiver_time_series_metadata_t>>();
+      final outCount = arena<Size>();
+
+      final err = bindings.quiver_database_list_time_series_groups(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        outMetadata,
+        outCount,
+      );
+
+      if (err != quiver_error_t.QUIVER_OK) {
+        throw DatabaseException.fromError(err, "Failed to list time series groups for '$collection'");
+      }
+
+      final count = outCount.value;
+      if (count == 0 || outMetadata.value == nullptr) {
+        return [];
+      }
+
+      final result =
+          <
+            ({
+              String groupName,
+              List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue, bool isForeignKey, String? referencesCollection, String? referencesColumn})> valueColumns,
+            })
+          >[];
+      for (var i = 0; i < count; i++) {
+        final meta = outMetadata.value[i];
+        final valueColumns = <({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue, bool isForeignKey, String? referencesCollection, String? referencesColumn})>[];
+        for (var j = 0; j < meta.value_column_count; j++) {
+          valueColumns.add(_parseScalarMetadata(meta.value_columns[j]));
+        }
+        result.add((groupName: meta.group_name.cast<Utf8>().toDartString(), valueColumns: valueColumns));
+      }
+      bindings.quiver_free_time_series_metadata_array(outMetadata.value, count);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
 }

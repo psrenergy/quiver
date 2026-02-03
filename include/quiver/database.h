@@ -107,6 +107,20 @@ public:
     std::vector<ScalarMetadata> list_scalar_attributes(const std::string& collection) const;
     std::vector<VectorMetadata> list_vector_groups(const std::string& collection) const;
     std::vector<SetMetadata> list_set_groups(const std::string& collection) const;
+    std::vector<TimeSeriesMetadata> list_time_series_groups(const std::string& collection) const;
+
+    // Time series metadata
+    TimeSeriesMetadata get_time_series_metadata(const std::string& collection, const std::string& group_name) const;
+
+    // Read time series group - returns rows with date_time and value columns
+    std::vector<std::map<std::string, Value>>
+    read_time_series_group_by_id(const std::string& collection, const std::string& group, int64_t id);
+
+    // Update time series group - replaces all rows for element
+    void update_time_series_group(const std::string& collection,
+                                  const std::string& group,
+                                  int64_t id,
+                                  const std::vector<std::map<std::string, Value>>& rows);
 
     // Update scalar attributes (by element ID)
     void update_scalar_integer(const std::string& collection, const std::string& attribute, int64_t id, int64_t value);

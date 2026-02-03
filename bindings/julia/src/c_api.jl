@@ -239,6 +239,12 @@ struct quiver_set_metadata_t
     value_column_count::Csize_t
 end
 
+struct quiver_time_series_metadata_t
+    group_name::Ptr{Cchar}
+    value_columns::Ptr{quiver_scalar_metadata_t}
+    value_column_count::Csize_t
+end
+
 function quiver_database_get_scalar_metadata(db, collection, attribute, out_metadata)
     @ccall libquiver_c.quiver_database_get_scalar_metadata(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_metadata::Ptr{quiver_scalar_metadata_t})::quiver_error_t
 end
@@ -249,6 +255,10 @@ end
 
 function quiver_database_get_set_metadata(db, collection, group_name, out_metadata)
     @ccall libquiver_c.quiver_database_get_set_metadata(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group_name::Ptr{Cchar}, out_metadata::Ptr{quiver_set_metadata_t})::quiver_error_t
+end
+
+function quiver_database_get_time_series_metadata(db, collection, group_name, out_metadata)
+    @ccall libquiver_c.quiver_database_get_time_series_metadata(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group_name::Ptr{Cchar}, out_metadata::Ptr{quiver_time_series_metadata_t})::quiver_error_t
 end
 
 function quiver_free_scalar_metadata(metadata)
@@ -263,6 +273,10 @@ function quiver_free_set_metadata(metadata)
     @ccall libquiver_c.quiver_free_set_metadata(metadata::Ptr{quiver_set_metadata_t})::Cvoid
 end
 
+function quiver_free_time_series_metadata(metadata)
+    @ccall libquiver_c.quiver_free_time_series_metadata(metadata::Ptr{quiver_time_series_metadata_t})::Cvoid
+end
+
 function quiver_database_list_scalar_attributes(db, collection, out_metadata, out_count)
     @ccall libquiver_c.quiver_database_list_scalar_attributes(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_metadata::Ptr{Ptr{quiver_scalar_metadata_t}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
@@ -275,6 +289,10 @@ function quiver_database_list_set_groups(db, collection, out_metadata, out_count
     @ccall libquiver_c.quiver_database_list_set_groups(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_metadata::Ptr{Ptr{quiver_set_metadata_t}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
+function quiver_database_list_time_series_groups(db, collection, out_metadata, out_count)
+    @ccall libquiver_c.quiver_database_list_time_series_groups(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_metadata::Ptr{Ptr{quiver_time_series_metadata_t}}, out_count::Ptr{Csize_t})::quiver_error_t
+end
+
 function quiver_free_scalar_metadata_array(metadata, count)
     @ccall libquiver_c.quiver_free_scalar_metadata_array(metadata::Ptr{quiver_scalar_metadata_t}, count::Csize_t)::Cvoid
 end
@@ -285,6 +303,10 @@ end
 
 function quiver_free_set_metadata_array(metadata, count)
     @ccall libquiver_c.quiver_free_set_metadata_array(metadata::Ptr{quiver_set_metadata_t}, count::Csize_t)::Cvoid
+end
+
+function quiver_free_time_series_metadata_array(metadata, count)
+    @ccall libquiver_c.quiver_free_time_series_metadata_array(metadata::Ptr{quiver_time_series_metadata_t}, count::Csize_t)::Cvoid
 end
 
 function quiver_database_update_scalar_integer(db, collection, attribute, id, value)
@@ -321,6 +343,26 @@ end
 
 function quiver_database_update_set_strings(db, collection, attribute, id, values, count)
     @ccall libquiver_c.quiver_database_update_set_strings(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Ptr{Cchar}}, count::Csize_t)::quiver_error_t
+end
+
+struct quiver_time_series_row_t
+    date_time::Ptr{Cchar}
+    column_names::Ptr{Ptr{Cchar}}
+    column_types::Ptr{Cint}
+    column_values::Ptr{Ptr{Cvoid}}
+    column_count::Csize_t
+end
+
+function quiver_database_read_time_series_group_by_id(db, collection, group, id, out_date_times, out_values, out_row_count)
+    @ccall libquiver_c.quiver_database_read_time_series_group_by_id(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, out_date_times::Ptr{Ptr{Ptr{Cchar}}}, out_values::Ptr{Ptr{Cdouble}}, out_row_count::Ptr{Csize_t})::quiver_error_t
+end
+
+function quiver_database_update_time_series_group(db, collection, group, id, date_times, values, row_count)
+    @ccall libquiver_c.quiver_database_update_time_series_group(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, date_times::Ptr{Ptr{Cchar}}, values::Ptr{Cdouble}, row_count::Csize_t)::quiver_error_t
+end
+
+function quiver_free_time_series_data(date_times, values, row_count)
+    @ccall libquiver_c.quiver_free_time_series_data(date_times::Ptr{Ptr{Cchar}}, values::Ptr{Cdouble}, row_count::Csize_t)::Cvoid
 end
 
 function quiver_free_integer_array(values)

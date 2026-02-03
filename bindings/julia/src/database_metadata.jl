@@ -231,3 +231,86 @@ function list_set_groups(db::Database, collection::AbstractString)
     C.quiver_free_set_metadata_array(out_metadata[], count)
     return result
 end
+
+struct TimeSeriesMetadata
+    group_name::String
+    value_columns::Vector{ScalarMetadata}
+end
+
+function get_time_series_metadata(db::Database, collection::AbstractString, group_name::AbstractString)
+    metadata = Ref(C.quiver_time_series_metadata_t(C_NULL, C_NULL, 0))
+    err = C.quiver_database_get_time_series_metadata(db.ptr, collection, group_name, metadata)
+    if err != C.QUIVER_OK
+        throw(DatabaseException("Failed to get time series metadata for '$collection.$group_name'"))
+    end
+
+    value_columns = ScalarMetadata[]
+    for i in 1:metadata[].value_column_count
+        col_ptr = metadata[].value_columns + (i - 1) * sizeof(C.quiver_scalar_metadata_t)
+        col = unsafe_load(Ptr{C.quiver_scalar_metadata_t}(col_ptr))
+        push!(
+            value_columns,
+            ScalarMetadata(
+                unsafe_string(col.name),
+                col.data_type,
+                col.not_null != 0,
+                col.primary_key != 0,
+                col.default_value == C_NULL ? nothing : unsafe_string(col.default_value),
+                col.is_foreign_key != 0,
+                col.references_collection == C_NULL ? nothing : unsafe_string(col.references_collection),
+                col.references_column == C_NULL ? nothing : unsafe_string(col.references_column),
+            ),
+        )
+    end
+
+    result = TimeSeriesMetadata(
+        unsafe_string(metadata[].group_name),
+        value_columns,
+    )
+
+    C.quiver_free_time_series_metadata(metadata)
+    return result
+end
+
+function list_time_series_groups(db::Database, collection::AbstractString)
+    out_metadata = Ref(Ptr{C.quiver_time_series_metadata_t}(C_NULL))
+    out_count = Ref(Csize_t(0))
+    err = C.quiver_database_list_time_series_groups(db.ptr, collection, out_metadata, out_count)
+    if err != C.QUIVER_OK
+        throw(DatabaseException("Failed to list time series groups for '$collection'"))
+    end
+
+    count = out_count[]
+    if count == 0 || out_metadata[] == C_NULL
+        return TimeSeriesMetadata[]
+    end
+
+    result = TimeSeriesMetadata[]
+    for i in 1:count
+        meta_ptr = out_metadata[] + (i - 1) * sizeof(C.quiver_time_series_metadata_t)
+        meta = unsafe_load(Ptr{C.quiver_time_series_metadata_t}(meta_ptr))
+
+        value_columns = ScalarMetadata[]
+        for j in 1:meta.value_column_count
+            col_ptr = meta.value_columns + (j - 1) * sizeof(C.quiver_scalar_metadata_t)
+            col = unsafe_load(Ptr{C.quiver_scalar_metadata_t}(col_ptr))
+            push!(
+                value_columns,
+                ScalarMetadata(
+                    unsafe_string(col.name),
+                    col.data_type,
+                    col.not_null != 0,
+                    col.primary_key != 0,
+                    col.default_value == C_NULL ? nothing : unsafe_string(col.default_value),
+                    col.is_foreign_key != 0,
+                    col.references_collection == C_NULL ? nothing : unsafe_string(col.references_collection),
+                    col.references_column == C_NULL ? nothing : unsafe_string(col.references_column),
+                ),
+            )
+        end
+
+        push!(result, TimeSeriesMetadata(unsafe_string(meta.group_name), value_columns))
+    end
+    C.quiver_free_time_series_metadata_array(out_metadata[], count)
+    return result
+end
