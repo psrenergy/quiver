@@ -1479,9 +1479,9 @@ QUIVER_C_API quiver_error_t quiver_database_describe(quiver_database_t* db) {
 // Time series metadata and operations
 
 QUIVER_C_API quiver_error_t quiver_database_get_time_series_metadata(quiver_database_t* db,
-                                                                      const char* collection,
-                                                                      const char* group_name,
-                                                                      quiver_time_series_metadata_t* out_metadata) {
+                                                                     const char* collection,
+                                                                     const char* group_name,
+                                                                     quiver_time_series_metadata_t* out_metadata) {
     if (!db || !collection || !group_name || !out_metadata) {
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }
@@ -1543,9 +1543,9 @@ QUIVER_C_API void quiver_free_time_series_metadata(quiver_time_series_metadata_t
 }
 
 QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(quiver_database_t* db,
-                                                                     const char* collection,
-                                                                     quiver_time_series_metadata_t** out_metadata,
-                                                                     size_t* out_count) {
+                                                                    const char* collection,
+                                                                    quiver_time_series_metadata_t** out_metadata,
+                                                                    size_t* out_count) {
     if (!db || !collection || !out_metadata || !out_count) {
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }
@@ -1606,12 +1606,12 @@ QUIVER_C_API void quiver_free_time_series_metadata_array(quiver_time_series_meta
 }
 
 QUIVER_C_API quiver_error_t quiver_database_read_time_series_group_by_id(quiver_database_t* db,
-                                                                          const char* collection,
-                                                                          const char* group,
-                                                                          int64_t id,
-                                                                          char*** out_date_times,
-                                                                          double** out_values,
-                                                                          size_t* out_row_count) {
+                                                                         const char* collection,
+                                                                         const char* group,
+                                                                         int64_t id,
+                                                                         char*** out_date_times,
+                                                                         double** out_values,
+                                                                         size_t* out_row_count) {
     if (!db || !collection || !group || !out_date_times || !out_values || !out_row_count) {
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }
@@ -1660,12 +1660,12 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group_by_id(quiver_
 }
 
 QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_database_t* db,
-                                                                      const char* collection,
-                                                                      const char* group,
-                                                                      int64_t id,
-                                                                      const char* const* date_times,
-                                                                      const double* values,
-                                                                      size_t row_count) {
+                                                                     const char* collection,
+                                                                     const char* group,
+                                                                     int64_t id,
+                                                                     const char* const* date_times,
+                                                                     const double* values,
+                                                                     size_t row_count) {
     if (!db || !collection || !group || (row_count > 0 && (!date_times || !values))) {
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }

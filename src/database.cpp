@@ -1451,7 +1451,7 @@ std::vector<TimeSeriesMetadata> Database::list_time_series_groups(const std::str
 }
 
 TimeSeriesMetadata Database::get_time_series_metadata(const std::string& collection,
-                                                       const std::string& group_name) const {
+                                                      const std::string& group_name) const {
     if (!impl_->schema) {
         throw std::runtime_error("Cannot get time series metadata: no schema loaded");
     }
@@ -1461,7 +1461,8 @@ TimeSeriesMetadata Database::get_time_series_metadata(const std::string& collect
     const auto* table_def = impl_->schema->get_table(ts_table);
 
     if (!table_def) {
-        throw std::runtime_error("Time series group '" + group_name + "' not found for collection '" + collection + "'");
+        throw std::runtime_error("Time series group '" + group_name + "' not found for collection '" + collection +
+                                 "'");
     }
 
     TimeSeriesMetadata meta;
@@ -1544,11 +1545,10 @@ Database::read_time_series_group_by_id(const std::string& collection, const std:
 }
 
 void Database::update_time_series_group(const std::string& collection,
-                                         const std::string& group,
-                                         int64_t id,
-                                         const std::vector<std::map<std::string, Value>>& rows) {
-    impl_->logger->debug(
-        "Updating time series {}.{} for id {} with {} rows", collection, group, id, rows.size());
+                                        const std::string& group,
+                                        int64_t id,
+                                        const std::vector<std::map<std::string, Value>>& rows) {
+    impl_->logger->debug("Updating time series {}.{} for id {} with {} rows", collection, group, id, rows.size());
     impl_->require_schema("update time series");
 
     auto ts_table = impl_->schema->find_time_series_table(collection, group);
@@ -1609,8 +1609,7 @@ void Database::update_time_series_group(const std::string& collection,
     }
 
     txn.commit();
-    impl_->logger->info(
-        "Updated time series {}.{} for id {} with {} rows", collection, group, id, rows.size());
+    impl_->logger->info("Updated time series {}.{} for id {} with {} rows", collection, group, id, rows.size());
 }
 
 void Database::export_to_csv(const std::string& table, const std::string& path) {

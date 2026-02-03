@@ -43,11 +43,17 @@ include("fixture.jl")
         id = Quiver.create_element!(db, "Collection"; label = "Item 1")
 
         # Insert time series data
-        Quiver.update_time_series_group!(db, "Collection", "data", id, [
-            Dict{String, Any}("date_time" => "2024-01-01T10:00:00", "value" => 1.5),
-            Dict{String, Any}("date_time" => "2024-01-01T11:00:00", "value" => 2.5),
-            Dict{String, Any}("date_time" => "2024-01-01T12:00:00", "value" => 3.5),
-        ])
+        Quiver.update_time_series_group!(
+            db,
+            "Collection",
+            "data",
+            id,
+            [
+                Dict{String, Any}("date_time" => "2024-01-01T10:00:00", "value" => 1.5),
+                Dict{String, Any}("date_time" => "2024-01-01T11:00:00", "value" => 2.5),
+                Dict{String, Any}("date_time" => "2024-01-01T12:00:00", "value" => 3.5),
+            ],
+        )
 
         # Read back
         rows = Quiver.read_time_series_group_by_id(db, "Collection", "data", id)
@@ -84,18 +90,30 @@ include("fixture.jl")
         id = Quiver.create_element!(db, "Collection"; label = "Item 1")
 
         # Insert initial data
-        Quiver.update_time_series_group!(db, "Collection", "data", id, [
-            Dict{String, Any}("date_time" => "2024-01-01T10:00:00", "value" => 1.0),
-        ])
+        Quiver.update_time_series_group!(
+            db,
+            "Collection",
+            "data",
+            id,
+            [
+                Dict{String, Any}("date_time" => "2024-01-01T10:00:00", "value" => 1.0),
+            ],
+        )
 
         rows = Quiver.read_time_series_group_by_id(db, "Collection", "data", id)
         @test length(rows) == 1
 
         # Replace with new data
-        Quiver.update_time_series_group!(db, "Collection", "data", id, [
-            Dict{String, Any}("date_time" => "2024-02-01T10:00:00", "value" => 10.0),
-            Dict{String, Any}("date_time" => "2024-02-01T11:00:00", "value" => 20.0),
-        ])
+        Quiver.update_time_series_group!(
+            db,
+            "Collection",
+            "data",
+            id,
+            [
+                Dict{String, Any}("date_time" => "2024-02-01T10:00:00", "value" => 10.0),
+                Dict{String, Any}("date_time" => "2024-02-01T11:00:00", "value" => 20.0),
+            ],
+        )
 
         rows = Quiver.read_time_series_group_by_id(db, "Collection", "data", id)
         @test length(rows) == 2
@@ -113,9 +131,15 @@ include("fixture.jl")
         id = Quiver.create_element!(db, "Collection"; label = "Item 1")
 
         # Insert data
-        Quiver.update_time_series_group!(db, "Collection", "data", id, [
-            Dict{String, Any}("date_time" => "2024-01-01T10:00:00", "value" => 1.0),
-        ])
+        Quiver.update_time_series_group!(
+            db,
+            "Collection",
+            "data",
+            id,
+            [
+                Dict{String, Any}("date_time" => "2024-01-01T10:00:00", "value" => 1.0),
+            ],
+        )
 
         # Clear by updating with empty
         Quiver.update_time_series_group!(db, "Collection", "data", id, Dict{String, Any}[])
@@ -134,11 +158,17 @@ include("fixture.jl")
         id = Quiver.create_element!(db, "Collection"; label = "Item 1")
 
         # Insert out of order
-        Quiver.update_time_series_group!(db, "Collection", "data", id, [
-            Dict{String, Any}("date_time" => "2024-01-03T10:00:00", "value" => 3.0),
-            Dict{String, Any}("date_time" => "2024-01-01T10:00:00", "value" => 1.0),
-            Dict{String, Any}("date_time" => "2024-01-02T10:00:00", "value" => 2.0),
-        ])
+        Quiver.update_time_series_group!(
+            db,
+            "Collection",
+            "data",
+            id,
+            [
+                Dict{String, Any}("date_time" => "2024-01-03T10:00:00", "value" => 3.0),
+                Dict{String, Any}("date_time" => "2024-01-01T10:00:00", "value" => 1.0),
+                Dict{String, Any}("date_time" => "2024-01-02T10:00:00", "value" => 2.0),
+            ],
+        )
 
         # Should be returned ordered by date_time
         rows = Quiver.read_time_series_group_by_id(db, "Collection", "data", id)

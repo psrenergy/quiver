@@ -147,7 +147,7 @@ function update_time_series_group!(
     if isempty(rows)
         err = C.quiver_database_update_time_series_group(
             db.ptr, collection, group, id,
-            C_NULL, C_NULL, Csize_t(0)
+            C_NULL, C_NULL, Csize_t(0),
         )
         check_error(err, "Failed to update time series '$collection.$group' for id $id")
         return nothing
@@ -161,7 +161,7 @@ function update_time_series_group!(
     GC.@preserve date_time_cstrings begin
         err = C.quiver_database_update_time_series_group(
             db.ptr, collection, group, id,
-            date_time_ptrs, values, Csize_t(row_count)
+            date_time_ptrs, values, Csize_t(row_count),
         )
     end
     check_error(err, "Failed to update time series '$collection.$group' for id $id")

@@ -31,8 +31,8 @@ TEST(Database, ListTimeSeriesGroups) {
 }
 
 TEST(Database, ListTimeSeriesGroupsEmpty) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
 
     // Configuration has no time series tables
     auto groups = db.list_time_series_groups("Configuration");
@@ -59,8 +59,7 @@ TEST(Database, ReadTimeSeriesGroupById) {
     std::vector<std::map<std::string, quiver::Value>> rows = {
         {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.5}},
         {{"date_time", std::string("2024-01-01T11:00:00")}, {"value", 2.5}},
-        {{"date_time", std::string("2024-01-01T12:00:00")}, {"value", 3.5}}
-    };
+        {{"date_time", std::string("2024-01-01T12:00:00")}, {"value", 3.5}}};
     db.update_time_series_group("Collection", "data", id, rows);
 
     // Read back
@@ -126,8 +125,7 @@ TEST(Database, UpdateTimeSeriesGroup) {
 
     // Insert initial data
     std::vector<std::map<std::string, quiver::Value>> rows1 = {
-        {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.0}}
-    };
+        {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.0}}};
     db.update_time_series_group("Collection", "data", id, rows1);
 
     auto result1 = db.read_time_series_group_by_id("Collection", "data", id);
@@ -136,8 +134,7 @@ TEST(Database, UpdateTimeSeriesGroup) {
     // Replace with new data
     std::vector<std::map<std::string, quiver::Value>> rows2 = {
         {{"date_time", std::string("2024-02-01T10:00:00")}, {"value", 10.0}},
-        {{"date_time", std::string("2024-02-01T11:00:00")}, {"value", 20.0}}
-    };
+        {{"date_time", std::string("2024-02-01T11:00:00")}, {"value", 20.0}}};
     db.update_time_series_group("Collection", "data", id, rows2);
 
     auto result2 = db.read_time_series_group_by_id("Collection", "data", id);
@@ -160,8 +157,7 @@ TEST(Database, UpdateTimeSeriesGroupEmpty) {
 
     // Insert some data first
     std::vector<std::map<std::string, quiver::Value>> rows = {
-        {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.0}}
-    };
+        {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.0}}};
     db.update_time_series_group("Collection", "data", id, rows);
 
     // Clear by updating with empty
@@ -188,8 +184,7 @@ TEST(Database, TimeSeriesOrdering) {
     std::vector<std::map<std::string, quiver::Value>> rows = {
         {{"date_time", std::string("2024-01-03T10:00:00")}, {"value", 3.0}},
         {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.0}},
-        {{"date_time", std::string("2024-01-02T10:00:00")}, {"value", 2.0}}
-    };
+        {{"date_time", std::string("2024-01-02T10:00:00")}, {"value", 2.0}}};
     db.update_time_series_group("Collection", "data", id, rows);
 
     // Should be returned ordered by date_time
@@ -208,15 +203,9 @@ TEST(Database, TimeSeriesGroupNotFound) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
 
-    EXPECT_THROW(
-        db.get_time_series_metadata("Collection", "nonexistent"),
-        std::runtime_error
-    );
+    EXPECT_THROW(db.get_time_series_metadata("Collection", "nonexistent"), std::runtime_error);
 
-    EXPECT_THROW(
-        db.read_time_series_group_by_id("Collection", "nonexistent", 1),
-        std::runtime_error
-    );
+    EXPECT_THROW(db.read_time_series_group_by_id("Collection", "nonexistent", 1), std::runtime_error);
 }
 
 TEST(Database, TimeSeriesCollectionNotFound) {
@@ -245,8 +234,5 @@ TEST(Database, TimeSeriesMissingDateTime) {
         {{"value", 1.0}}  // Missing date_time
     };
 
-    EXPECT_THROW(
-        db.update_time_series_group("Collection", "data", id, rows),
-        std::runtime_error
-    );
+    EXPECT_THROW(db.update_time_series_group("Collection", "data", id, rows), std::runtime_error);
 }

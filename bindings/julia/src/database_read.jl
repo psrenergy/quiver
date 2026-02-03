@@ -635,7 +635,7 @@ function read_time_series_group_by_id(db::Database, collection::String, group::S
 
     err = C.quiver_database_read_time_series_group_by_id(
         db.ptr, collection, group, id,
-        out_date_times, out_values, out_row_count
+        out_date_times, out_values, out_row_count,
     )
     if err != C.QUIVER_OK
         throw(DatabaseException("Failed to read time series group '$group' from '$collection' for id $id"))
@@ -653,7 +653,7 @@ function read_time_series_group_by_id(db::Database, collection::String, group::S
     for i in 1:row_count
         push!(rows, Dict{String, Any}(
             "date_time" => unsafe_string(date_time_ptrs[i]),
-            "value" => values[i]
+            "value" => values[i],
         ))
     end
 

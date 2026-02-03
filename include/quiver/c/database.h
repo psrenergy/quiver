@@ -266,9 +266,9 @@ QUIVER_C_API quiver_error_t quiver_database_get_set_metadata(quiver_database_t* 
                                                              quiver_set_metadata_t* out_metadata);
 
 QUIVER_C_API quiver_error_t quiver_database_get_time_series_metadata(quiver_database_t* db,
-                                                                      const char* collection,
-                                                                      const char* group_name,
-                                                                      quiver_time_series_metadata_t* out_metadata);
+                                                                     const char* collection,
+                                                                     const char* group_name,
+                                                                     quiver_time_series_metadata_t* out_metadata);
 
 // Free metadata
 QUIVER_C_API void quiver_free_scalar_metadata(quiver_scalar_metadata_t* metadata);
@@ -293,9 +293,9 @@ QUIVER_C_API quiver_error_t quiver_database_list_set_groups(quiver_database_t* d
                                                             size_t* out_count);
 
 QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(quiver_database_t* db,
-                                                                     const char* collection,
-                                                                     quiver_time_series_metadata_t** out_metadata,
-                                                                     size_t* out_count);
+                                                                    const char* collection,
+                                                                    quiver_time_series_metadata_t** out_metadata,
+                                                                    size_t* out_count);
 
 // Free metadata arrays
 QUIVER_C_API void quiver_free_scalar_metadata_array(quiver_scalar_metadata_t* metadata, size_t count);
@@ -370,7 +370,7 @@ QUIVER_C_API quiver_error_t quiver_database_update_set_strings(quiver_database_t
 typedef struct {
     const char* date_time;
     const char** column_names;
-    const int* column_types;        // QUIVER_DATA_TYPE_* values
+    const int* column_types;           // QUIVER_DATA_TYPE_* values
     const void* const* column_values;  // pointers to int64_t, double, or const char*
     size_t column_count;
 } quiver_time_series_row_t;
@@ -379,21 +379,21 @@ typedef struct {
 // out_rows: array of row structs, out_row_count: number of rows
 // Each row contains date_time string and value columns
 QUIVER_C_API quiver_error_t quiver_database_read_time_series_group_by_id(quiver_database_t* db,
-                                                                          const char* collection,
-                                                                          const char* group,
-                                                                          int64_t id,
-                                                                          char*** out_date_times,
-                                                                          double** out_values,
-                                                                          size_t* out_row_count);
+                                                                         const char* collection,
+                                                                         const char* group,
+                                                                         int64_t id,
+                                                                         char*** out_date_times,
+                                                                         double** out_values,
+                                                                         size_t* out_row_count);
 
 // Update time series group - replaces all rows for element
 QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_database_t* db,
-                                                                      const char* collection,
-                                                                      const char* group,
-                                                                      int64_t id,
-                                                                      const char* const* date_times,
-                                                                      const double* values,
-                                                                      size_t row_count);
+                                                                     const char* collection,
+                                                                     const char* group,
+                                                                     int64_t id,
+                                                                     const char* const* date_times,
+                                                                     const double* values,
+                                                                     size_t row_count);
 
 // Free time series read results
 QUIVER_C_API void quiver_free_time_series_data(char** date_times, double* values, size_t row_count);
