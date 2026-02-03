@@ -3,7 +3,7 @@ include(FetchContent)
 # SQLite via FetchContent
 FetchContent_Declare(sqlite3
     GIT_REPOSITORY https://github.com/sjinks/sqlite3-cmake.git
-    GIT_TAG v3.47.2
+    GIT_TAG v3.50.2
 )
 FetchContent_MakeAvailable(sqlite3)
 
