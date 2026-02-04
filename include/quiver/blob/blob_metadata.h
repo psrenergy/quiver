@@ -11,48 +11,22 @@
 
 namespace quiver {
 
-class QUIVER_API BlobMetadata {
-    explicit BlobMetadata();
-    ~BlobMetadata();
-
-    // Non-copyable
-    BlobMetadata(const BlobMetadata&) = delete;
-    BlobMetadata& operator=(const BlobMetadata&) = delete;
-
-    // Movable
-    BlobMetadata(BlobMetadata&& other) noexcept;
-    BlobMetadata& operator=(BlobMetadata&& other) noexcept;
+struct QUIVER_API BlobMetadata {
+    std::vector<Dimension> dimensions;
+    std::time_t initial_datetime;
+    std::string unit;
+    std::vector<std::string> labels;
+    std::string version;
+    //
+    int64_t number_of_time_dimensions;
 
     // TOML Serialization
     static BlobMetadata& from_toml(const std::string& toml_content);
     std::string to_toml() const;
 
     // Setters
-    void set_initial_datetime(const std::string& initial_datetime);
-    void set_unit(const std::string& unit);
-    void set_labels(const std::vector<std::string>& labels);
-    void set_version(const std::string& version);
     void add_dimension(const std::string& name, int64_t size);
     void add_time_dimension(const std::string& name, int64_t size, const std::string& frequency);
-
-    // Getters
-    std::vector<int64_t> time_dimension_sizes() const;
-    std::vector<int64_t> dimension_initial_values() const;
-    int64_t maximum_number_of_lines() const;
-    std::vector<std::string> time_dimension_names() const;
-    std::vector<std::string> dimension_names() const;
-    std::time_t initial_datetime() const;
-    std::string unit() const;
-    std::vector<std::string> labels() const;
-    std::string version() const;
-    int64_t number_of_dimensions() const;
-    int64_t number_of_time_dimensions() const;
-    int64_t number_of_labels() const;
-
-private:
-    struct Impl;
-    std::unique_ptr<Impl> impl_;
-
 };
 
 }  // namespace quiver
