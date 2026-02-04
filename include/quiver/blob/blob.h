@@ -32,6 +32,7 @@ class QUIVER_API Blob {
     // Data handling
     double read(const std::unordered_map<std::string, int64_t>& dims);
     double write(const std::vector<double>& data, const std::unordered_map<std::string, int64_t>& dims);
+
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
@@ -45,6 +46,12 @@ private:
     void validate_dimension_values(const std::unordered_map<std::string, int64_t>& dims);
     void validate_data_length(const std::vector<double>& data);
     // validate_time_dimension_values implemented inline inside validate_dimension_values
+
+protected:
+    // Getters
+    const BlobMetadata& get_metadata() const;
+    const std::string& get_file_path() const;
+    const std::iostream& get_io() const;
 };
 
 }  // namespace quiver
