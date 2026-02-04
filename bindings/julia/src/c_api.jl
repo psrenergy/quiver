@@ -241,6 +241,7 @@ end
 
 struct quiver_time_series_metadata_t
     group_name::Ptr{Cchar}
+    dimension_column::Ptr{Cchar}
     value_columns::Ptr{quiver_scalar_metadata_t}
     value_column_count::Csize_t
 end

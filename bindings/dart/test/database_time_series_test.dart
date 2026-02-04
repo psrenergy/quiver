@@ -20,6 +20,7 @@ void main() {
       try {
         final meta = db.getTimeSeriesMetadata('Collection', 'data');
         expect(meta.groupName, equals('data'));
+        expect(meta.dimensionColumn, equals('date_time'));
         expect(meta.valueColumns.length, equals(1));
         expect(meta.valueColumns[0].name, equals('value'));
       } finally {
@@ -36,6 +37,7 @@ void main() {
         final groups = db.listTimeSeriesGroups('Collection');
         expect(groups.length, equals(1));
         expect(groups[0].groupName, equals('data'));
+        expect(groups[0].dimensionColumn, equals('date_time'));
       } finally {
         db.close();
       }

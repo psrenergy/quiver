@@ -1468,9 +1468,15 @@ TimeSeriesMetadata Database::get_time_series_metadata(const std::string& collect
     TimeSeriesMetadata meta;
     meta.group_name = group_name;
 
-    // Add all data columns (skip id and date_time)
+    // Find the dimension column and add data columns (skip id and dimension)
     for (const auto& [col_name, col] : table_def->columns) {
-        if (col_name == "id" || col_name == "date_time") {
+        if (col_name == "id") {
+            continue;
+        }
+
+        // Dimension column is the one with DateTime type or name starting with "date_"
+        if (col.type == DataType::DateTime || is_date_time_column(col_name)) {
+            meta.dimension_column = col_name;
             continue;
         }
 

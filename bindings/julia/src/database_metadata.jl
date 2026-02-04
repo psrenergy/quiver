@@ -234,11 +234,12 @@ end
 
 struct TimeSeriesMetadata
     group_name::String
+    dimension_column::String
     value_columns::Vector{ScalarMetadata}
 end
 
 function get_time_series_metadata(db::Database, collection::AbstractString, group_name::AbstractString)
-    metadata = Ref(C.quiver_time_series_metadata_t(C_NULL, C_NULL, 0))
+    metadata = Ref(C.quiver_time_series_metadata_t(C_NULL, C_NULL, C_NULL, 0))
     err = C.quiver_database_get_time_series_metadata(db.ptr, collection, group_name, metadata)
     if err != C.QUIVER_OK
         throw(DatabaseException("Failed to get time series metadata for '$collection.$group_name'"))
@@ -265,6 +266,7 @@ function get_time_series_metadata(db::Database, collection::AbstractString, grou
 
     result = TimeSeriesMetadata(
         unsafe_string(metadata[].group_name),
+        unsafe_string(metadata[].dimension_column),
         value_columns,
     )
 
@@ -309,7 +311,10 @@ function list_time_series_groups(db::Database, collection::AbstractString)
             )
         end
 
-        push!(result, TimeSeriesMetadata(unsafe_string(meta.group_name), value_columns))
+        push!(
+            result,
+            TimeSeriesMetadata(unsafe_string(meta.group_name), unsafe_string(meta.dimension_column), value_columns),
+        )
     end
     C.quiver_free_time_series_metadata_array(out_metadata[], count)
     return result

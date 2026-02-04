@@ -3012,6 +3012,8 @@ final class quiver_set_metadata_t extends ffi.Struct {
 final class quiver_time_series_metadata_t extends ffi.Struct {
   external ffi.Pointer<ffi.Char> group_name;
 
+  external ffi.Pointer<ffi.Char> dimension_column;
+
   external ffi.Pointer<quiver_scalar_metadata_t> value_columns;
 
   @ffi.Size()

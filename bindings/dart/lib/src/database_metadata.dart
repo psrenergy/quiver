@@ -441,6 +441,7 @@ extension DatabaseMetadata on Database {
   /// Returns metadata for a time series group, including all value columns in the group.
   ({
     String groupName,
+    String dimensionColumn,
     List<
       ({
         String name,
@@ -493,6 +494,7 @@ extension DatabaseMetadata on Database {
 
       final result = (
         groupName: outMetadata.ref.group_name.cast<Utf8>().toDartString(),
+        dimensionColumn: outMetadata.ref.dimension_column.cast<Utf8>().toDartString(),
         valueColumns: valueColumns,
       );
 
@@ -507,6 +509,7 @@ extension DatabaseMetadata on Database {
   List<
     ({
       String groupName,
+      String dimensionColumn,
       List<
         ({
           String name,
@@ -550,6 +553,7 @@ extension DatabaseMetadata on Database {
           <
             ({
               String groupName,
+              String dimensionColumn,
               List<
                 ({
                   String name,
@@ -583,7 +587,11 @@ extension DatabaseMetadata on Database {
         for (var j = 0; j < meta.value_column_count; j++) {
           valueColumns.add(_parseScalarMetadata(meta.value_columns[j]));
         }
-        result.add((groupName: meta.group_name.cast<Utf8>().toDartString(), valueColumns: valueColumns));
+        result.add((
+          groupName: meta.group_name.cast<Utf8>().toDartString(),
+          dimensionColumn: meta.dimension_column.cast<Utf8>().toDartString(),
+          valueColumns: valueColumns,
+        ));
       }
       bindings.quiver_free_time_series_metadata_array(outMetadata.value, count);
       return result;

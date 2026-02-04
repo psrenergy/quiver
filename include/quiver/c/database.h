@@ -245,6 +245,7 @@ typedef struct {
 
 typedef struct {
     const char* group_name;
+    const char* dimension_column;  // The ordering column (e.g., "date_time")
     quiver_scalar_metadata_t* value_columns;
     size_t value_column_count;
 } quiver_time_series_metadata_t;

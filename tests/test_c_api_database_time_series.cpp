@@ -21,6 +21,7 @@ TEST(DatabaseCApi, GetTimeSeriesMetadata) {
 
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_STREQ(metadata.group_name, "data");
+    EXPECT_STREQ(metadata.dimension_column, "date_time");
     EXPECT_EQ(metadata.value_column_count, 1);
     EXPECT_STREQ(metadata.value_columns[0].name, "value");
     EXPECT_EQ(metadata.value_columns[0].data_type, QUIVER_DATA_TYPE_FLOAT);
@@ -42,6 +43,7 @@ TEST(DatabaseCApi, ListTimeSeriesGroups) {
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(count, 1);
     EXPECT_STREQ(metadata[0].group_name, "data");
+    EXPECT_STREQ(metadata[0].dimension_column, "date_time");
     EXPECT_EQ(metadata[0].value_column_count, 1);
 
     quiver_free_time_series_metadata_array(metadata, count);

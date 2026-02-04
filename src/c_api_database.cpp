@@ -1489,6 +1489,7 @@ QUIVER_C_API quiver_error_t quiver_database_get_time_series_metadata(quiver_data
         auto meta = db->db.get_time_series_metadata(collection, group_name);
 
         out_metadata->group_name = strdup_safe(meta.group_name);
+        out_metadata->dimension_column = strdup_safe(meta.dimension_column);
         out_metadata->value_column_count = meta.value_columns.size();
 
         if (meta.value_columns.empty()) {
@@ -1528,6 +1529,7 @@ QUIVER_C_API void quiver_free_time_series_metadata(quiver_time_series_metadata_t
     if (!metadata)
         return;
     delete[] metadata->group_name;
+    delete[] metadata->dimension_column;
     if (metadata->value_columns) {
         for (size_t i = 0; i < metadata->value_column_count; ++i) {
             delete[] metadata->value_columns[i].name;
@@ -1538,6 +1540,7 @@ QUIVER_C_API void quiver_free_time_series_metadata(quiver_time_series_metadata_t
         delete[] metadata->value_columns;
     }
     metadata->group_name = nullptr;
+    metadata->dimension_column = nullptr;
     metadata->value_columns = nullptr;
     metadata->value_column_count = 0;
 }
@@ -1559,6 +1562,7 @@ QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(quiver_datab
         *out_metadata = new quiver_time_series_metadata_t[groups.size()];
         for (size_t i = 0; i < groups.size(); ++i) {
             (*out_metadata)[i].group_name = strdup_safe(groups[i].group_name);
+            (*out_metadata)[i].dimension_column = strdup_safe(groups[i].dimension_column);
             (*out_metadata)[i].value_column_count = groups[i].value_columns.size();
             if (groups[i].value_columns.empty()) {
                 (*out_metadata)[i].value_columns = nullptr;
@@ -1592,6 +1596,7 @@ QUIVER_C_API void quiver_free_time_series_metadata_array(quiver_time_series_meta
         return;
     for (size_t i = 0; i < count; ++i) {
         delete[] metadata[i].group_name;
+        delete[] metadata[i].dimension_column;
         if (metadata[i].value_columns) {
             for (size_t j = 0; j < metadata[i].value_column_count; ++j) {
                 delete[] metadata[i].value_columns[j].name;
