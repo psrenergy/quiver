@@ -1,11 +1,7 @@
-#include "quiver/dimension.h"
+#include "quiver/blob/dimension.h"
 
 #include <string>
 
-namespace {
+namespace {}  // anonymous namespace
 
-} // anonymous namespace
-
-namespace quiver {
-
-} // namespace quiver
+namespace quiver {}  // namespace quiver

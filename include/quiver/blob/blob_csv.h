@@ -1,8 +1,8 @@
 #ifndef QUIVER_BLOB_CSV_H
 #define QUIVER_BLOB_CSV_H
 
-#include "export.h"
 #include "blob.h"
+#include "export.h"
 
 #include <cstdint>
 #include <ctime>
@@ -15,7 +15,10 @@
 namespace quiver {
 
 class QUIVER_API BlobCSV : public Blob {
-    explicit BlobCSV(const std::string& file_path, const BlobMetadata& metadata, const std::iostream& io, bool aggregate_time_dimensions = true);
+    explicit BlobCSV(const std::string& file_path,
+                     const BlobMetadata& metadata,
+                     const std::iostream& io,
+                     bool aggregate_time_dimensions = true);
     ~BlobCSV();
 
     // Non-copyable
@@ -36,9 +39,10 @@ private:
 
     // CSV Builders
     std::string build_csv_line(const std::vector<double>& data, std::initializer_list<int64_t> current_dimensions);
-    std::string build_datetime_string_from_time_dimension_values(std::initializer_list<int64_t> time_dimension_values) const;
+    std::string
+    build_datetime_string_from_time_dimension_values(std::initializer_list<int64_t> time_dimension_values) const;
     std::time_t build_datetime_from_time_dimension_values(std::initializer_list<int64_t> time_dimension_values) const;
-    
+
     // Iterators
     std::vector<int64_t> next_dimensions(std::initializer_list<int64_t> current_dimensions);
     std::vector<int64_t> dimension_sizes_at_values(std::initializer_list<int64_t> dimension_values) const;
@@ -48,10 +52,9 @@ private:
     std::iostream initialize_csv_reader();
 
     // Validations
-    void validate_dimensions(std::initializer_list<int64_t> current_dimensions); // validate_csv_dimensions
-    void validate_header(const std::string& header); //validate_csv_header
+    void validate_dimensions(std::initializer_list<int64_t> current_dimensions);  // validate_csv_dimensions
+    void validate_header(const std::string& header);                              // validate_csv_header
     std::vector<std::string> expected_dimension_names() const;
-
 };
 
 }  // namespace quiver

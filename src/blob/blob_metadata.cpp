@@ -1,10 +1,7 @@
 #include "quiver/blob/blob_metadata.h"
+
 #include "quiver/blob/dimension.h"
 
-namespace {
+namespace {}  // anonymous namespace
 
-} // anonymous namespace
-
-namespace quiver {
-
-} // namespace quiver
+namespace quiver {}  // namespace quiver

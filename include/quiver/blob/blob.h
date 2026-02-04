@@ -1,8 +1,8 @@
 #ifndef QUIVER_BLOB_H
 #define QUIVER_BLOB_H
 
-#include "export.h"
 #include "blob_metadata.h"
+#include "export.h"
 
 #include <cstdint>
 #include <iostream>
@@ -27,7 +27,8 @@ class QUIVER_API Blob {
     Blob& operator=(Blob&& other) noexcept;
 
     // File handling
-    static Blob& open_file(const std::string& file_path, const std::string& mode, const std::optional<BlobMetadata>& metadata);
+    static Blob&
+    open_file(const std::string& file_path, const std::string& mode, const std::optional<BlobMetadata>& metadata);
 
     // Data handling
     double read(const std::unordered_map<std::string, int64_t>& dims);
