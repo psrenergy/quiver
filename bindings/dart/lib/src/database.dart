@@ -92,7 +92,17 @@ class Database {
     }
   }
 
-  ({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue, bool isForeignKey, String? referencesCollection, String? referencesColumn}) _parseScalarMetadata(
+  ({
+    String name,
+    int dataType,
+    bool notNull,
+    bool primaryKey,
+    String? defaultValue,
+    bool isForeignKey,
+    String? referencesCollection,
+    String? referencesColumn,
+  })
+  _parseScalarMetadata(
     quiver_scalar_metadata_t attr,
   ) {
     return (
@@ -102,13 +112,27 @@ class Database {
       primaryKey: attr.primary_key != 0,
       defaultValue: attr.default_value == nullptr ? null : attr.default_value.cast<Utf8>().toDartString(),
       isForeignKey: attr.is_foreign_key != 0,
-      referencesCollection: attr.references_collection == nullptr ? null : attr.references_collection.cast<Utf8>().toDartString(),
+      referencesCollection: attr.references_collection == nullptr
+          ? null
+          : attr.references_collection.cast<Utf8>().toDartString(),
       referencesColumn: attr.references_column == nullptr ? null : attr.references_column.cast<Utf8>().toDartString(),
     );
   }
 
   int _getValueDataType(
-    List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue, bool isForeignKey, String? referencesCollection, String? referencesColumn})> valueColumns,
+    List<
+      ({
+        String name,
+        int dataType,
+        bool notNull,
+        bool primaryKey,
+        String? defaultValue,
+        bool isForeignKey,
+        String? referencesCollection,
+        String? referencesColumn,
+      })
+    >
+    valueColumns,
   ) {
     if (valueColumns.isNotEmpty) {
       return valueColumns.first.dataType;
