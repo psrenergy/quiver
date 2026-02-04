@@ -313,8 +313,10 @@ TEST(DatabaseCApi, ListTimeSeriesFilesColumns) {
     bool found_data_file = false;
     bool found_metadata_file = false;
     for (size_t i = 0; i < count; ++i) {
-        if (std::string(columns[i]) == "data_file") found_data_file = true;
-        if (std::string(columns[i]) == "metadata_file") found_metadata_file = true;
+        if (std::string(columns[i]) == "data_file")
+            found_data_file = true;
+        if (std::string(columns[i]) == "metadata_file")
+            found_metadata_file = true;
     }
     EXPECT_TRUE(found_data_file);
     EXPECT_TRUE(found_metadata_file);

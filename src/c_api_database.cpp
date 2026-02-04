@@ -1701,8 +1701,8 @@ QUIVER_C_API void quiver_free_time_series_data(char** date_times, double* values
 // Time series files operations
 
 QUIVER_C_API quiver_error_t quiver_database_has_time_series_files(quiver_database_t* db,
-                                                                   const char* collection,
-                                                                   int* out_result) {
+                                                                  const char* collection,
+                                                                  int* out_result) {
     if (!db || !collection || !out_result) {
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }
@@ -1716,9 +1716,9 @@ QUIVER_C_API quiver_error_t quiver_database_has_time_series_files(quiver_databas
 }
 
 QUIVER_C_API quiver_error_t quiver_database_list_time_series_files_columns(quiver_database_t* db,
-                                                                            const char* collection,
-                                                                            char*** out_columns,
-                                                                            size_t* out_count) {
+                                                                           const char* collection,
+                                                                           char*** out_columns,
+                                                                           size_t* out_count) {
     if (!db || !collection || !out_columns || !out_count) {
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }
@@ -1732,10 +1732,10 @@ QUIVER_C_API quiver_error_t quiver_database_list_time_series_files_columns(quive
 }
 
 QUIVER_C_API quiver_error_t quiver_database_read_time_series_files(quiver_database_t* db,
-                                                                    const char* collection,
-                                                                    char*** out_columns,
-                                                                    char*** out_paths,
-                                                                    size_t* out_count) {
+                                                                   const char* collection,
+                                                                   char*** out_columns,
+                                                                   char*** out_paths,
+                                                                   size_t* out_count) {
     if (!db || !collection || !out_columns || !out_paths || !out_count) {
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }
@@ -1771,10 +1771,10 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_files(quiver_databa
 }
 
 QUIVER_C_API quiver_error_t quiver_database_update_time_series_files(quiver_database_t* db,
-                                                                      const char* collection,
-                                                                      const char* const* columns,
-                                                                      const char* const* paths,
-                                                                      size_t count) {
+                                                                     const char* collection,
+                                                                     const char* const* columns,
+                                                                     const char* const* paths,
+                                                                     size_t count) {
     if (!db || !collection || (count > 0 && (!columns || !paths))) {
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }

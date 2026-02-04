@@ -218,10 +218,14 @@ include("fixture.jl")
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
-        Quiver.update_time_series_files!(db, "Collection", Dict{String, Union{String, Nothing}}(
-            "data_file" => "/path/to/data.csv",
-            "metadata_file" => "/path/to/meta.json",
-        ))
+        Quiver.update_time_series_files!(
+            db,
+            "Collection",
+            Dict{String, Union{String, Nothing}}(
+                "data_file" => "/path/to/data.csv",
+                "metadata_file" => "/path/to/meta.json",
+            ),
+        )
 
         paths = Quiver.read_time_series_files(db, "Collection")
         @test paths["data_file"] == "/path/to/data.csv"
@@ -234,10 +238,14 @@ include("fixture.jl")
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
-        Quiver.update_time_series_files!(db, "Collection", Dict{String, Union{String, Nothing}}(
-            "data_file" => "/path/to/data.csv",
-            "metadata_file" => nothing,
-        ))
+        Quiver.update_time_series_files!(
+            db,
+            "Collection",
+            Dict{String, Union{String, Nothing}}(
+                "data_file" => "/path/to/data.csv",
+                "metadata_file" => nothing,
+            ),
+        )
 
         paths = Quiver.read_time_series_files(db, "Collection")
         @test paths["data_file"] == "/path/to/data.csv"
@@ -251,16 +259,24 @@ include("fixture.jl")
         db = Quiver.from_schema(":memory:", path_schema)
 
         # First update
-        Quiver.update_time_series_files!(db, "Collection", Dict{String, Union{String, Nothing}}(
-            "data_file" => "/old/data.csv",
-            "metadata_file" => "/old/meta.json",
-        ))
+        Quiver.update_time_series_files!(
+            db,
+            "Collection",
+            Dict{String, Union{String, Nothing}}(
+                "data_file" => "/old/data.csv",
+                "metadata_file" => "/old/meta.json",
+            ),
+        )
 
         # Second update replaces
-        Quiver.update_time_series_files!(db, "Collection", Dict{String, Union{String, Nothing}}(
-            "data_file" => "/new/data.csv",
-            "metadata_file" => "/new/meta.json",
-        ))
+        Quiver.update_time_series_files!(
+            db,
+            "Collection",
+            Dict{String, Union{String, Nothing}}(
+                "data_file" => "/new/data.csv",
+                "metadata_file" => "/new/meta.json",
+            ),
+        )
 
         paths = Quiver.read_time_series_files(db, "Collection")
         @test paths["data_file"] == "/new/data.csv"
