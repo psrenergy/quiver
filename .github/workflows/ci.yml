@@ -28,11 +28,27 @@ jobs:
             -DQUIVER_BUILD_TESTS=ON `
             -DQUIVER_BUILD_C_API=ON
 
-      - name: Configure CMake (Linux/macOS)
-        if: runner.os != 'Windows'
+      - name: Configure CMake (Linux)
+        if: runner.os == 'Linux'
         run: |
           cmake -B build \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DQUIVER_BUILD_TESTS=ON \
+            -DQUIVER_BUILD_C_API=ON
+
+      - name: Install LLVM (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install llvm
+          echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
+
+      - name: Configure CMake (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
             -DQUIVER_BUILD_TESTS=ON \
             -DQUIVER_BUILD_C_API=ON
 
