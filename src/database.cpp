@@ -1612,6 +1612,123 @@ void Database::update_time_series_group(const std::string& collection,
     impl_->logger->info("Updated time series {}.{} for id {} with {} rows", collection, group, id, rows.size());
 }
 
+bool Database::has_time_series_files(const std::string& collection) const {
+    impl_->require_schema("check time series files");
+    auto tsf = Schema::time_series_files_table_name(collection);
+    return impl_->schema->has_table(tsf);
+}
+
+std::vector<std::string> Database::list_time_series_files_columns(const std::string& collection) const {
+    impl_->require_schema("list time series files columns");
+    auto tsf = Schema::time_series_files_table_name(collection);
+    const auto* table_def = impl_->schema->get_table(tsf);
+    if (!table_def) {
+        throw std::runtime_error("Time series files table not found for collection '" + collection + "'");
+    }
+
+    std::vector<std::string> columns;
+    for (const auto& [col_name, _] : table_def->columns) {
+        columns.push_back(col_name);
+    }
+    return columns;
+}
+
+std::map<std::string, std::optional<std::string>> Database::read_time_series_files(const std::string& collection) {
+    impl_->logger->debug("Reading time series files for collection: {}", collection);
+    impl_->require_schema("read time series files");
+
+    auto tsf = impl_->schema->find_time_series_files_table(collection);
+    const auto* table_def = impl_->schema->get_table(tsf);
+    if (!table_def) {
+        throw std::runtime_error("Time series files table not found: " + tsf);
+    }
+
+    // Build column list
+    std::vector<std::string> columns;
+    for (const auto& [col_name, _] : table_def->columns) {
+        columns.push_back(col_name);
+    }
+
+    if (columns.empty()) {
+        return {};
+    }
+
+    // Build SELECT query
+    std::string sql = "SELECT ";
+    for (size_t i = 0; i < columns.size(); ++i) {
+        if (i > 0)
+            sql += ", ";
+        sql += columns[i];
+    }
+    sql += " FROM " + tsf + " LIMIT 1";
+
+    auto result = execute(sql);
+
+    std::map<std::string, std::optional<std::string>> paths;
+    if (result.empty()) {
+        // No row yet - return all nulls
+        for (const auto& col : columns) {
+            paths[col] = std::nullopt;
+        }
+    } else {
+        for (size_t i = 0; i < columns.size(); ++i) {
+            auto str_val = result[0].get_string(i);
+            paths[columns[i]] = str_val;
+        }
+    }
+
+    return paths;
+}
+
+void Database::update_time_series_files(const std::string& collection,
+                                        const std::map<std::string, std::optional<std::string>>& paths) {
+    impl_->logger->debug("Updating time series files for collection: {}", collection);
+    impl_->require_schema("update time series files");
+
+    auto tsf = impl_->schema->find_time_series_files_table(collection);
+    const auto* table_def = impl_->schema->get_table(tsf);
+    if (!table_def) {
+        throw std::runtime_error("Time series files table not found: " + tsf);
+    }
+
+    if (paths.empty()) {
+        return;
+    }
+
+    Impl::TransactionGuard txn(*impl_);
+
+    // Delete existing row (singleton table)
+    auto delete_sql = "DELETE FROM " + tsf;
+    execute(delete_sql);
+
+    // Build INSERT SQL
+    std::string insert_sql = "INSERT INTO " + tsf + " (";
+    std::string placeholders;
+    std::vector<Value> params;
+
+    bool first = true;
+    for (const auto& [col_name, path] : paths) {
+        if (!first) {
+            insert_sql += ", ";
+            placeholders += ", ";
+        }
+        insert_sql += col_name;
+        placeholders += "?";
+        if (path) {
+            params.push_back(*path);
+        } else {
+            params.push_back(nullptr);
+        }
+        first = false;
+    }
+    insert_sql += ") VALUES (" + placeholders + ")";
+
+    execute(insert_sql, params);
+
+    txn.commit();
+    impl_->logger->info("Updated time series files for collection: {}", collection);
+}
+
 void Database::export_to_csv(const std::string& table, const std::string& path) {
     return;
 }

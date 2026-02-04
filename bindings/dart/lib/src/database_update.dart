@@ -348,4 +348,51 @@ extension DatabaseUpdate on Database {
       arena.releaseAll();
     }
   }
+
+  // ==========================================================================
+  // Update time series files
+  // ==========================================================================
+
+  /// Updates time series files paths for a collection.
+  /// Takes a map of column name to file path (null to clear the path).
+  void updateTimeSeriesFiles(String collection, Map<String, String?> paths) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final count = paths.length;
+
+      if (count == 0) {
+        return;
+      }
+
+      final columns = arena<Pointer<Char>>(count);
+      final pathPtrs = arena<Pointer<Char>>(count);
+
+      var i = 0;
+      for (final entry in paths.entries) {
+        columns[i] = entry.key.toNativeUtf8(allocator: arena).cast();
+        if (entry.value != null) {
+          pathPtrs[i] = entry.value!.toNativeUtf8(allocator: arena).cast();
+        } else {
+          pathPtrs[i] = nullptr;
+        }
+        i++;
+      }
+
+      final err = bindings.quiver_database_update_time_series_files(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        columns,
+        pathPtrs,
+        count,
+      );
+
+      if (err != quiver_error_t.QUIVER_OK) {
+        throw DatabaseException.fromError(err, "Failed to update time series files for '$collection'");
+      }
+    } finally {
+      arena.releaseAll();
+    }
+  }
 }

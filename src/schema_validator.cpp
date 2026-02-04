@@ -32,6 +32,8 @@ void SchemaValidator::validate() {
             validate_vector_table(name);
         } else if (schema_.is_set_table(name)) {
             validate_set_table(name);
+        } else if (schema_.is_time_series_files_table(name)) {
+            validate_time_series_files_table(name);
         }
         // Time series tables have minimal validation (just file paths)
     }
@@ -49,7 +51,8 @@ void SchemaValidator::validate_configuration_exists() {
 void SchemaValidator::validate_collection_names() {
     for (const auto& name : schema_.table_names()) {
         // Skip special tables
-        if (schema_.is_vector_table(name) || schema_.is_set_table(name) || schema_.is_time_series_table(name)) {
+        if (schema_.is_vector_table(name) || schema_.is_set_table(name) || schema_.is_time_series_table(name) ||
+            schema_.is_time_series_files_table(name)) {
             continue;
         }
 
@@ -193,6 +196,27 @@ void SchemaValidator::validate_set_table(const std::string& name) {
         // Non-FK columns should be in unique constraint
         if (unique_columns.find(col_name) == unique_columns.end()) {
             validation_error("Set table '" + name + "' column '" + col_name + "' must be part of a UNIQUE constraint");
+        }
+    }
+}
+
+void SchemaValidator::validate_time_series_files_table(const std::string& name) {
+    const auto* table = schema_.get_table(name);
+    if (!table) {
+        return;
+    }
+
+    // Get parent collection
+    auto parent = schema_.get_time_series_files_parent_collection(name);
+    if (std::find(collections_.begin(), collections_.end(), parent) == collections_.end()) {
+        validation_error("Time series files table '" + name + "' references non-existent collection '" + parent + "'");
+    }
+
+    // All columns should be TEXT type (for file paths)
+    for (const auto& [col_name, col] : table->columns) {
+        if (col.type != DataType::Text) {
+            validation_error("Time series files table '" + name + "' column '" + col_name +
+                             "' must be TEXT type (for file paths)");
         }
     }
 }

@@ -660,3 +660,35 @@ function read_time_series_group_by_id(db::Database, collection::String, group::S
     C.quiver_free_time_series_data(out_date_times[], out_values[], row_count)
     return rows
 end
+
+function read_time_series_files(db::Database, collection::String)
+    out_columns = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
+    out_paths = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
+    out_count = Ref{Csize_t}(0)
+
+    err = C.quiver_database_read_time_series_files(db.ptr, collection, out_columns, out_paths, out_count)
+    if err != C.QUIVER_OK
+        throw(DatabaseException("Failed to read time series files for '$collection'"))
+    end
+
+    count = out_count[]
+    if count == 0 || out_columns[] == C_NULL
+        return Dict{String, Union{String, Nothing}}()
+    end
+
+    column_ptrs = unsafe_wrap(Array, out_columns[], count)
+    path_ptrs = unsafe_wrap(Array, out_paths[], count)
+
+    result = Dict{String, Union{String, Nothing}}()
+    for i in 1:count
+        col_name = unsafe_string(column_ptrs[i])
+        if path_ptrs[i] == C_NULL
+            result[col_name] = nothing
+        else
+            result[col_name] = unsafe_string(path_ptrs[i])
+        end
+    end
+
+    C.quiver_free_time_series_files(out_columns[], out_paths[], count)
+    return result
+end

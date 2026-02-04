@@ -314,3 +314,32 @@ function list_time_series_groups(db::Database, collection::AbstractString)
     C.quiver_free_time_series_metadata_array(out_metadata[], count)
     return result
 end
+
+function has_time_series_files(db::Database, collection::String)
+    out_result = Ref{Cint}(0)
+    err = C.quiver_database_has_time_series_files(db.ptr, collection, out_result)
+    if err != C.QUIVER_OK
+        throw(DatabaseException("Failed to check time series files for '$collection'"))
+    end
+    return out_result[] != 0
+end
+
+function list_time_series_files_columns(db::Database, collection::String)
+    out_columns = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
+    out_count = Ref{Csize_t}(0)
+
+    err = C.quiver_database_list_time_series_files_columns(db.ptr, collection, out_columns, out_count)
+    if err != C.QUIVER_OK
+        throw(DatabaseException("Failed to list time series files columns for '$collection'"))
+    end
+
+    count = out_count[]
+    if count == 0 || out_columns[] == C_NULL
+        return String[]
+    end
+
+    ptrs = unsafe_wrap(Array, out_columns[], count)
+    result = [unsafe_string(ptr) for ptr in ptrs]
+    C.quiver_free_string_array(out_columns[], count)
+    return result
+end

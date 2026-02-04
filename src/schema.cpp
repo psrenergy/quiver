@@ -73,6 +73,10 @@ std::string Schema::time_series_table_name(const std::string& collection, const 
     return collection + "_time_series_" + group;
 }
 
+std::string Schema::time_series_files_table_name(const std::string& collection) {
+    return collection + "_time_series_files";
+}
+
 bool Schema::is_collection(const std::string& table) const {
     if (table == "Configuration") {
         return true;
@@ -89,13 +93,34 @@ bool Schema::is_set_table(const std::string& table) const {
 }
 
 bool Schema::is_time_series_table(const std::string& table) const {
-    return table.find("_time_series_") != std::string::npos;
+    // Must contain _time_series_ but not end with _time_series_files
+    if (table.find("_time_series_") == std::string::npos) {
+        return false;
+    }
+    // Exclude time_series_files tables
+    return !is_time_series_files_table(table);
+}
+
+bool Schema::is_time_series_files_table(const std::string& table) const {
+    const std::string suffix = "_time_series_files";
+    if (table.size() < suffix.size()) {
+        return false;
+    }
+    return table.compare(table.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
 
 std::string Schema::get_parent_collection(const std::string& table) const {
     auto pos = table.find('_');
     if (pos != std::string::npos) {
         return table.substr(0, pos);
+    }
+    return "";
+}
+
+std::string Schema::get_time_series_files_parent_collection(const std::string& table) const {
+    const std::string suffix = "_time_series_files";
+    if (table.size() > suffix.size() && table.compare(table.size() - suffix.size(), suffix.size(), suffix) == 0) {
+        return table.substr(0, table.size() - suffix.size());
     }
     return "";
 }
@@ -171,6 +196,14 @@ std::string Schema::find_time_series_table(const std::string& collection, const 
     }
 
     throw std::runtime_error("Time series group '" + group + "' not found for collection '" + collection + "'");
+}
+
+std::string Schema::find_time_series_files_table(const std::string& collection) const {
+    auto tsf = time_series_files_table_name(collection);
+    if (has_table(tsf)) {
+        return tsf;
+    }
+    throw std::runtime_error("Time series files table not found for collection '" + collection + "'");
 }
 
 std::vector<std::string> Schema::table_names() const {

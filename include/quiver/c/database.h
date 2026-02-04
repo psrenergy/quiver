@@ -398,6 +398,35 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
 // Free time series read results
 QUIVER_C_API void quiver_free_time_series_data(char** date_times, double* values, size_t row_count);
 
+// Time series files - singleton table storing file paths for external time series data
+// Check if collection has a time_series_files table
+QUIVER_C_API quiver_error_t quiver_database_has_time_series_files(quiver_database_t* db,
+                                                                   const char* collection,
+                                                                   int* out_result);
+
+// List columns in time series files table
+QUIVER_C_API quiver_error_t quiver_database_list_time_series_files_columns(quiver_database_t* db,
+                                                                            const char* collection,
+                                                                            char*** out_columns,
+                                                                            size_t* out_count);
+
+// Read time series files (returns parallel arrays of column names and paths)
+QUIVER_C_API quiver_error_t quiver_database_read_time_series_files(quiver_database_t* db,
+                                                                    const char* collection,
+                                                                    char*** out_columns,
+                                                                    char*** out_paths,
+                                                                    size_t* out_count);
+
+// Update time series files
+QUIVER_C_API quiver_error_t quiver_database_update_time_series_files(quiver_database_t* db,
+                                                                      const char* collection,
+                                                                      const char* const* columns,
+                                                                      const char* const* paths,
+                                                                      size_t count);
+
+// Free time series files read results
+QUIVER_C_API void quiver_free_time_series_files(char** columns, char** paths, size_t count);
+
 // Memory cleanup for read results
 QUIVER_C_API void quiver_free_integer_array(int64_t* values);
 QUIVER_C_API void quiver_free_float_array(double* values);

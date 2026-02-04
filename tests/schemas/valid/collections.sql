@@ -37,3 +37,8 @@ CREATE TABLE Collection_time_series_data (
     FOREIGN KEY (id) REFERENCES Collection(id) ON DELETE CASCADE ON UPDATE CASCADE,
     PRIMARY KEY (id, date_time)
 ) STRICT;
+
+CREATE TABLE Collection_time_series_files (
+    data_file TEXT,
+    metadata_file TEXT
+) STRICT;

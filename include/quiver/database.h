@@ -122,6 +122,13 @@ public:
                                   int64_t id,
                                   const std::vector<std::map<std::string, Value>>& rows);
 
+    // Time series files - singleton table storing file paths for external time series data
+    bool has_time_series_files(const std::string& collection) const;
+    std::vector<std::string> list_time_series_files_columns(const std::string& collection) const;
+    std::map<std::string, std::optional<std::string>> read_time_series_files(const std::string& collection);
+    void update_time_series_files(const std::string& collection,
+                                  const std::map<std::string, std::optional<std::string>>& paths);
+
     // Update scalar attributes (by element ID)
     void update_scalar_integer(const std::string& collection, const std::string& attribute, int64_t id, int64_t value);
     void update_scalar_float(const std::string& collection, const std::string& attribute, int64_t id, double value);

@@ -969,4 +969,50 @@ extension DatabaseRead on Database {
       arena.releaseAll();
     }
   }
+
+  // ==========================================================================
+  // Read time series files
+  // ==========================================================================
+
+  /// Reads time series files paths for a collection.
+  /// Returns a map of column name to file path (null if not set).
+  Map<String, String?> readTimeSeriesFiles(String collection) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outColumns = arena<Pointer<Pointer<Char>>>();
+      final outPaths = arena<Pointer<Pointer<Char>>>();
+      final outCount = arena<Size>();
+
+      final err = bindings.quiver_database_read_time_series_files(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        outColumns,
+        outPaths,
+        outCount,
+      );
+
+      if (err != quiver_error_t.QUIVER_OK) {
+        throw DatabaseException.fromError(err, "Failed to read time series files for '$collection'");
+      }
+
+      final count = outCount.value;
+      if (count == 0 || outColumns.value == nullptr) {
+        return {};
+      }
+
+      final result = <String, String?>{};
+      for (var i = 0; i < count; i++) {
+        final column = outColumns.value[i].cast<Utf8>().toDartString();
+        final path = outPaths.value[i] == nullptr ? null : outPaths.value[i].cast<Utf8>().toDartString();
+        result[column] = path;
+      }
+
+      bindings.quiver_free_time_series_files(outColumns.value, outPaths.value, count);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
 }

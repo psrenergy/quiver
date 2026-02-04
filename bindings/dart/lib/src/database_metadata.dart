@@ -377,4 +377,65 @@ extension DatabaseMetadata on Database {
       arena.releaseAll();
     }
   }
+
+  // ==========================================================================
+  // Time series files metadata
+  // ==========================================================================
+
+  /// Returns whether the collection has a time_series_files table.
+  bool hasTimeSeriesFiles(String collection) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outResult = arena<Int>();
+
+      final err = bindings.quiver_database_has_time_series_files(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        outResult,
+      );
+
+      if (err != quiver_error_t.QUIVER_OK) {
+        throw DatabaseException.fromError(err, "Failed to check time series files for '$collection'");
+      }
+
+      return outResult.value != 0;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Lists all column names in the time_series_files table for a collection.
+  List<String> listTimeSeriesFilesColumns(String collection) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outColumns = arena<Pointer<Pointer<Char>>>();
+      final outCount = arena<Size>();
+
+      final err = bindings.quiver_database_list_time_series_files_columns(
+        _ptr,
+        collection.toNativeUtf8(allocator: arena).cast(),
+        outColumns,
+        outCount,
+      );
+
+      if (err != quiver_error_t.QUIVER_OK) {
+        throw DatabaseException.fromError(err, "Failed to list time series files columns for '$collection'");
+      }
+
+      final count = outCount.value;
+      if (count == 0 || outColumns.value == nullptr) {
+        return [];
+      }
+
+      final result = List<String>.generate(count, (i) => outColumns.value[i].cast<Utf8>().toDartString());
+      bindings.quiver_free_string_array(outColumns.value, count);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
 }
