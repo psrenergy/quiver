@@ -460,10 +460,10 @@ TEST(DatabaseCApi, TimeSeriesFilesNotFound) {
 
     // Configuration has no time series files table
     auto err = quiver_database_read_time_series_files(db, "Configuration", &columns, &paths, &count);
-    EXPECT_EQ(err, QUIVER_ERROR);
+    EXPECT_EQ(err, QUIVER_ERROR_DATABASE);
 
     err = quiver_database_list_time_series_files_columns(db, "Configuration", &columns, &count);
-    EXPECT_EQ(err, QUIVER_ERROR);
+    EXPECT_EQ(err, QUIVER_ERROR_DATABASE);
 
     quiver_database_close(db);
 }

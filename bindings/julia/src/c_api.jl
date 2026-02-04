@@ -365,6 +365,26 @@ function quiver_free_time_series_data(date_times, values, row_count)
     @ccall libquiver_c.quiver_free_time_series_data(date_times::Ptr{Ptr{Cchar}}, values::Ptr{Cdouble}, row_count::Csize_t)::Cvoid
 end
 
+function quiver_database_has_time_series_files(db, collection, out_result)
+    @ccall libquiver_c.quiver_database_has_time_series_files(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_result::Ptr{Cint})::quiver_error_t
+end
+
+function quiver_database_list_time_series_files_columns(db, collection, out_columns, out_count)
+    @ccall libquiver_c.quiver_database_list_time_series_files_columns(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_columns::Ptr{Ptr{Ptr{Cchar}}}, out_count::Ptr{Csize_t})::quiver_error_t
+end
+
+function quiver_database_read_time_series_files(db, collection, out_columns, out_paths, out_count)
+    @ccall libquiver_c.quiver_database_read_time_series_files(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_columns::Ptr{Ptr{Ptr{Cchar}}}, out_paths::Ptr{Ptr{Ptr{Cchar}}}, out_count::Ptr{Csize_t})::quiver_error_t
+end
+
+function quiver_database_update_time_series_files(db, collection, columns, paths, count)
+    @ccall libquiver_c.quiver_database_update_time_series_files(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, columns::Ptr{Ptr{Cchar}}, paths::Ptr{Ptr{Cchar}}, count::Csize_t)::quiver_error_t
+end
+
+function quiver_free_time_series_files(columns, paths, count)
+    @ccall libquiver_c.quiver_free_time_series_files(columns::Ptr{Ptr{Cchar}}, paths::Ptr{Ptr{Cchar}}, count::Csize_t)::Cvoid
+end
+
 function quiver_free_integer_array(values)
     @ccall libquiver_c.quiver_free_integer_array(values::Ptr{Int64})::Cvoid
 end

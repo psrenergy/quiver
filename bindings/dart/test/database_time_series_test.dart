@@ -303,7 +303,7 @@ void main() {
       try {
         expect(
           () => db.readTimeSeriesFiles('Configuration'),
-          throwsA(isA<QuiverException>()),
+          throwsA(isA<DatabaseException>()),
         );
       } finally {
         db.close();
@@ -318,7 +318,7 @@ void main() {
       try {
         expect(
           () => db.listTimeSeriesFilesColumns('Configuration'),
-          throwsA(isA<QuiverException>()),
+          throwsA(isA<DatabaseException>()),
         );
       } finally {
         db.close();
