@@ -24,6 +24,11 @@ struct QUIVER_API BlobMetadata {
     static BlobMetadata& from_toml(const std::string& toml_content);
     std::string to_toml() const;
 
+    // Validation
+    void validate() const;
+    void validate_time_dimension_metadata() const;
+    void validate_time_dimension_sizes() const;
+
     // Setters
     void add_dimension(const std::string& name, int64_t size);
     void add_time_dimension(const std::string& name, int64_t size, const std::string& frequency);
