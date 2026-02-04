@@ -321,7 +321,7 @@ struct LuaRunner::Impl {
         if (result.has_value()) {
             return sol::make_object(lua, *result);
         }
-        return sol::make_object(lua, sol::nil);
+        return sol::make_object(lua, sol::lua_nil);
     }
 
     static sol::object read_scalar_integer_by_id_to_lua(Database& db,
@@ -334,7 +334,7 @@ struct LuaRunner::Impl {
         if (result.has_value()) {
             return sol::make_object(lua, *result);
         }
-        return sol::make_object(lua, sol::nil);
+        return sol::make_object(lua, sol::lua_nil);
     }
 
     static sol::object read_scalar_float_by_id_to_lua(Database& db,
@@ -347,7 +347,7 @@ struct LuaRunner::Impl {
         if (result.has_value()) {
             return sol::make_object(lua, *result);
         }
-        return sol::make_object(lua, sol::nil);
+        return sol::make_object(lua, sol::lua_nil);
     }
 
     // Read vector by ID helpers - return table
@@ -518,7 +518,7 @@ struct LuaRunner::Impl {
         if (meta.default_value.has_value()) {
             t["default_value"] = *meta.default_value;
         } else {
-            t["default_value"] = sol::nil;
+            t["default_value"] = sol::lua_nil;
         }
         return t;
     }
@@ -532,7 +532,7 @@ struct LuaRunner::Impl {
         if (attr.default_value.has_value()) {
             t["default_value"] = *attr.default_value;
         } else {
-            t["default_value"] = sol::nil;
+            t["default_value"] = sol::lua_nil;
         }
         return t;
     }
@@ -577,7 +577,7 @@ struct LuaRunner::Impl {
         std::vector<Value> values;
         for (size_t i = 1; i <= params.size(); ++i) {
             sol::object val = params[i];
-            if (val.is<sol::nil_t>()) {
+            if (val.is<sol::lua_nil_t>()) {
                 values.emplace_back(nullptr);
             } else if (val.is<int64_t>()) {
                 values.push_back(val.as<int64_t>());
@@ -598,7 +598,7 @@ struct LuaRunner::Impl {
         if (result.has_value()) {
             return sol::make_object(lua, *result);
         }
-        return sol::make_object(lua, sol::nil);
+        return sol::make_object(lua, sol::lua_nil);
     }
 
     static sol::object
@@ -609,7 +609,7 @@ struct LuaRunner::Impl {
         if (result.has_value()) {
             return sol::make_object(lua, *result);
         }
-        return sol::make_object(lua, sol::nil);
+        return sol::make_object(lua, sol::lua_nil);
     }
 
     static sol::object
@@ -620,7 +620,7 @@ struct LuaRunner::Impl {
         if (result.has_value()) {
             return sol::make_object(lua, *result);
         }
-        return sol::make_object(lua, sol::nil);
+        return sol::make_object(lua, sol::lua_nil);
     }
 
     static DataType get_value_data_type(const std::vector<ScalarMetadata>& value_columns) {
@@ -639,18 +639,18 @@ struct LuaRunner::Impl {
             switch (attr.data_type) {
             case DataType::Integer: {
                 auto val = db.read_scalar_integer_by_id(collection, attr.name, id);
-                result[attr.name] = val.has_value() ? sol::make_object(lua, *val) : sol::nil;
+                result[attr.name] = val.has_value() ? sol::make_object(lua, *val) : sol::lua_nil;
                 break;
             }
             case DataType::Real: {
                 auto val = db.read_scalar_float_by_id(collection, attr.name, id);
-                result[attr.name] = val.has_value() ? sol::make_object(lua, *val) : sol::nil;
+                result[attr.name] = val.has_value() ? sol::make_object(lua, *val) : sol::lua_nil;
                 break;
             }
             case DataType::Text:
             case DataType::DateTime: {
                 auto val = db.read_scalar_string_by_id(collection, attr.name, id);
-                result[attr.name] = val.has_value() ? sol::make_object(lua, *val) : sol::nil;
+                result[attr.name] = val.has_value() ? sol::make_object(lua, *val) : sol::lua_nil;
                 break;
             }
             }
