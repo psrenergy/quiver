@@ -1,5 +1,5 @@
-#ifndef QUIVER_TIME_DIMENSION_CONSTANTS_H
-#define QUIVER_TIME_DIMENSION_CONSTANTS_H
+#ifndef QUIVER_TIME_CONSTANTS_H
+#define QUIVER_TIME_CONSTANTS_H
 
 namespace quiver::time {
     // Hours
@@ -33,4 +33,4 @@ namespace quiver::time {
     constexpr int MIN_MONTHS_IN_YEAR = 12;
 }  // namespace quiver::time
 
-#endif  // QUIVER_TIME_DIMENSION_CONSTANTS_H
+#endif  // QUIVER_TIME_CONSTANTS_H

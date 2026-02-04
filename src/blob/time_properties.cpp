@@ -1,4 +1,4 @@
-#include "quiver/time_dimension.h"
+#include "quiver/time_properties.h"
 
 #include <ctime>
 #include <cstdint>
@@ -10,12 +10,5 @@ namespace {
 } // anonymous namespace
 
 namespace quiver {
-
-struct TimeDimension::Impl {
-    Frequency frequency;
-    int64_t initial_value;
-    std::unique_ptr<TimeDimension> parent_dimension;
-
-};
 
 } // namespace quiver
