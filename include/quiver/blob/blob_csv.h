@@ -1,5 +1,5 @@
-#ifndef QUIVER_BLOB_CONVERTER_H
-#define QUIVER_BLOB_CONVERTER_H
+#ifndef QUIVER_BLOB_CSV_H
+#define QUIVER_BLOB_CSV_H
 
 #include "export.h"
 #include "blob.h"
@@ -14,17 +14,17 @@
 
 namespace quiver {
 
-class QUIVER_API BlobConverter : public Blob {
-    explicit BlobConverter(const std::string& file_path, const BlobMetadata& metadata, const std::iostream& io, bool aggregate_time_dimensions = true);
-    ~BlobConverter();
+class QUIVER_API BlobCSV : public Blob {
+    explicit BlobCSV(const std::string& file_path, const BlobMetadata& metadata, const std::iostream& io, bool aggregate_time_dimensions = true);
+    ~BlobCSV();
 
     // Non-copyable
-    BlobConverter(const BlobConverter&) = delete;
-    BlobConverter& operator=(const BlobConverter&) = delete;
+    BlobCSV(const BlobCSV&) = delete;
+    BlobCSV& operator=(const BlobCSV&) = delete;
 
     // Movable
-    BlobConverter(BlobConverter&& other) noexcept;
-    BlobConverter& operator=(BlobConverter&& other) noexcept;
+    BlobCSV(BlobCSV&& other) noexcept;
+    BlobCSV& operator=(BlobCSV&& other) noexcept;
 
     void csv_to_bin();
 
@@ -56,4 +56,4 @@ private:
 
 }  // namespace quiver
 
-#endif  // QUIVER_BLOB_CONVERTER_H
+#endif  // QUIVER_BLOB_CSV_H

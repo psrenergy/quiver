@@ -1,4 +1,4 @@
-#include "quiver/blob/blob_converter.h"
+#include "quiver/blob/blob_csv.h"
 
 namespace {
 
@@ -6,7 +6,7 @@ namespace {
 
 namespace quiver {
 
-struct BlobConverter::Impl {
+struct BlobCSV::Impl {
     bool aggregate_time_dimensions;
 
 };
