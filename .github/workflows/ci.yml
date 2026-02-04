@@ -36,19 +36,19 @@ jobs:
             -DQUIVER_BUILD_TESTS=ON \
             -DQUIVER_BUILD_C_API=ON
 
-      - name: Install LLVM (macOS)
+      - name: Install GCC (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install llvm
-          echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
+          brew install gcc
+          echo "$(brew --prefix gcc)/bin" >> $GITHUB_PATH
 
       - name: Configure CMake (macOS)
         if: runner.os == 'macOS'
         run: |
           cmake -B build \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DCMAKE_C_COMPILER=clang \
-            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_C_COMPILER=gcc-14 \
+            -DCMAKE_CXX_COMPILER=g++-14 \
             -DQUIVER_BUILD_TESTS=ON \
             -DQUIVER_BUILD_C_API=ON
 
