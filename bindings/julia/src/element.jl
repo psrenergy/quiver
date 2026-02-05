@@ -16,6 +16,11 @@ function destroy!(el::Element)
     return nothing
 end
 
+function clear!(el::Element)
+    C.quiver_element_clear(el.ptr)
+    return nothing
+end
+
 function Base.setindex!(el::Element, value::Integer, name::String)
     cname = Base.cconvert(Cstring, name)
     check(C.quiver_element_set_integer(el.ptr, cname, Int64(value)))
