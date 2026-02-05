@@ -346,14 +346,6 @@ function quiver_database_update_set_strings(db, collection, attribute, id, value
     @ccall libquiver_c.quiver_database_update_set_strings(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Ptr{Cchar}}, count::Csize_t)::quiver_error_t
 end
 
-struct quiver_time_series_row_t
-    date_time::Ptr{Cchar}
-    column_names::Ptr{Ptr{Cchar}}
-    column_types::Ptr{Cint}
-    column_values::Ptr{Ptr{Cvoid}}
-    column_count::Csize_t
-end
-
 function quiver_database_read_time_series_group_by_id(db, collection, group, id, out_date_times, out_values, out_row_count)
     @ccall libquiver_c.quiver_database_read_time_series_group_by_id(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, out_date_times::Ptr{Ptr{Ptr{Cchar}}}, out_values::Ptr{Ptr{Cdouble}}, out_row_count::Ptr{Csize_t})::quiver_error_t
 end

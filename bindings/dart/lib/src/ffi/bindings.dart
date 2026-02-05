@@ -3020,19 +3020,6 @@ final class quiver_time_series_metadata_t extends ffi.Struct {
   external int value_column_count;
 }
 
-final class quiver_time_series_row_t extends ffi.Struct {
-  external ffi.Pointer<ffi.Char> date_time;
-
-  external ffi.Pointer<ffi.Pointer<ffi.Char>> column_names;
-
-  external ffi.Pointer<ffi.Int> column_types;
-
-  external ffi.Pointer<ffi.Pointer<ffi.Void>> column_values;
-
-  @ffi.Size()
-  external int column_count;
-}
-
 typedef quiver_element_t1 = quiver_element;
 
 final class quiver_lua_runner extends ffi.Opaque {}

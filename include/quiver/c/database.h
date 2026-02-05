@@ -367,15 +367,6 @@ QUIVER_C_API quiver_error_t quiver_database_update_set_strings(quiver_database_t
                                                                const char* const* values,
                                                                size_t count);
 
-// Time series row structure for C API
-typedef struct {
-    const char* date_time;
-    const char** column_names;
-    const int* column_types;           // QUIVER_DATA_TYPE_* values
-    const void* const* column_values;  // pointers to int64_t, double, or const char*
-    size_t column_count;
-} quiver_time_series_row_t;
-
 // Read time series group by element ID - returns rows with date_time and value columns
 // out_rows: array of row structs, out_row_count: number of rows
 // Each row contains date_time string and value columns
