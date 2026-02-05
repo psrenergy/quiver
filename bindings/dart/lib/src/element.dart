@@ -95,10 +95,7 @@ class Element {
     _ensureNotDisposed();
     final namePtr = name.toNativeUtf8();
     try {
-      final error = bindings.quiver_element_set_integer(_ptr, namePtr.cast(), value);
-      if (error != 0) {
-        throw DatabaseException.fromError(error, "Failed to set int '$name'");
-      }
+      check(bindings.quiver_element_set_integer(_ptr, namePtr.cast(), value));
     } finally {
       malloc.free(namePtr);
     }
@@ -109,10 +106,7 @@ class Element {
     _ensureNotDisposed();
     final namePtr = name.toNativeUtf8();
     try {
-      final error = bindings.quiver_element_set_float(_ptr, namePtr.cast(), value);
-      if (error != 0) {
-        throw DatabaseException.fromError(error, "Failed to set float '$name'");
-      }
+      check(bindings.quiver_element_set_float(_ptr, namePtr.cast(), value));
     } finally {
       malloc.free(namePtr);
     }
@@ -124,14 +118,11 @@ class Element {
     final namePtr = name.toNativeUtf8();
     final valuePtr = value.toNativeUtf8();
     try {
-      final error = bindings.quiver_element_set_string(
+      check(bindings.quiver_element_set_string(
         _ptr,
         namePtr.cast(),
         valuePtr.cast(),
-      );
-      if (error != 0) {
-        throw DatabaseException.fromError(error, "Failed to set string '$name'");
-      }
+      ));
     } finally {
       malloc.free(namePtr);
       malloc.free(valuePtr);
@@ -148,10 +139,7 @@ class Element {
     _ensureNotDisposed();
     final namePtr = name.toNativeUtf8();
     try {
-      final error = bindings.quiver_element_set_null(_ptr, namePtr.cast());
-      if (error != 0) {
-        throw DatabaseException.fromError(error, "Failed to set null '$name'");
-      }
+      check(bindings.quiver_element_set_null(_ptr, namePtr.cast()));
     } finally {
       malloc.free(namePtr);
     }
@@ -167,15 +155,12 @@ class Element {
       for (var i = 0; i < values.length; i++) {
         arrayPtr[i] = values[i];
       }
-      final error = bindings.quiver_element_set_array_integer(
+      check(bindings.quiver_element_set_array_integer(
         _ptr,
         namePtr.cast(),
         arrayPtr,
         values.length,
-      );
-      if (error != 0) {
-        throw DatabaseException.fromError(error, "Failed to set int array '$name'");
-      }
+      ));
     } finally {
       malloc.free(namePtr);
       malloc.free(arrayPtr);
@@ -192,15 +177,12 @@ class Element {
       for (var i = 0; i < values.length; i++) {
         arrayPtr[i] = values[i];
       }
-      final error = bindings.quiver_element_set_array_float(
+      check(bindings.quiver_element_set_array_float(
         _ptr,
         namePtr.cast(),
         arrayPtr,
         values.length,
-      );
-      if (error != 0) {
-        throw DatabaseException.fromError(error, "Failed to set float array '$name'");
-      }
+      ));
     } finally {
       malloc.free(namePtr);
       malloc.free(arrayPtr);
@@ -220,15 +202,12 @@ class Element {
         stringPtrs.add(strPtr);
         arrayPtr[i] = strPtr.cast();
       }
-      final error = bindings.quiver_element_set_array_string(
+      check(bindings.quiver_element_set_array_string(
         _ptr,
         namePtr.cast(),
         arrayPtr,
         values.length,
-      );
-      if (error != 0) {
-        throw DatabaseException.fromError(error, "Failed to set string array '$name'");
-      }
+      ));
     } finally {
       malloc.free(namePtr);
       for (final ptr in stringPtrs) {

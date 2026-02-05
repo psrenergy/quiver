@@ -12,16 +12,12 @@ extension DatabaseQuery on Database {
       final outValue = arena<Pointer<Char>>();
       final outHasValue = arena<Int>();
 
-      final err = bindings.quiver_database_query_string(
+      check(bindings.quiver_database_query_string(
         _ptr,
         sql.toNativeUtf8(allocator: arena).cast(),
         outValue,
         outHasValue,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, 'Failed to execute query');
-      }
+      ));
 
       if (outHasValue.value == 0 || outValue.value == nullptr) {
         return null;
@@ -45,16 +41,12 @@ extension DatabaseQuery on Database {
       final outValue = arena<Int64>();
       final outHasValue = arena<Int>();
 
-      final err = bindings.quiver_database_query_integer(
+      check(bindings.quiver_database_query_integer(
         _ptr,
         sql.toNativeUtf8(allocator: arena).cast(),
         outValue,
         outHasValue,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, 'Failed to execute query');
-      }
+      ));
 
       if (outHasValue.value == 0) {
         return null;
@@ -76,16 +68,12 @@ extension DatabaseQuery on Database {
       final outValue = arena<Double>();
       final outHasValue = arena<Int>();
 
-      final err = bindings.quiver_database_query_float(
+      check(bindings.quiver_database_query_float(
         _ptr,
         sql.toNativeUtf8(allocator: arena).cast(),
         outValue,
         outHasValue,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, 'Failed to execute query');
-      }
+      ));
 
       if (outHasValue.value == 0) {
         return null;
@@ -117,7 +105,7 @@ extension DatabaseQuery on Database {
       final outValue = arena<Pointer<Char>>();
       final outHasValue = arena<Int>();
 
-      final err = bindings.quiver_database_query_string_params(
+      check(bindings.quiver_database_query_string_params(
         _ptr,
         sql.toNativeUtf8(allocator: arena).cast(),
         nativeParams.types,
@@ -125,11 +113,7 @@ extension DatabaseQuery on Database {
         params.length,
         outValue,
         outHasValue,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, 'Failed to execute query');
-      }
+      ));
 
       if (outHasValue.value == 0 || outValue.value == nullptr) {
         return null;
@@ -154,7 +138,7 @@ extension DatabaseQuery on Database {
       final outValue = arena<Int64>();
       final outHasValue = arena<Int>();
 
-      final err = bindings.quiver_database_query_integer_params(
+      check(bindings.quiver_database_query_integer_params(
         _ptr,
         sql.toNativeUtf8(allocator: arena).cast(),
         nativeParams.types,
@@ -162,11 +146,7 @@ extension DatabaseQuery on Database {
         params.length,
         outValue,
         outHasValue,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, 'Failed to execute query');
-      }
+      ));
 
       if (outHasValue.value == 0) {
         return null;
@@ -189,7 +169,7 @@ extension DatabaseQuery on Database {
       final outValue = arena<Double>();
       final outHasValue = arena<Int>();
 
-      final err = bindings.quiver_database_query_float_params(
+      check(bindings.quiver_database_query_float_params(
         _ptr,
         sql.toNativeUtf8(allocator: arena).cast(),
         nativeParams.types,
@@ -197,11 +177,7 @@ extension DatabaseQuery on Database {
         params.length,
         outValue,
         outHasValue,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, 'Failed to execute query');
-      }
+      ));
 
       if (outHasValue.value == 0) {
         return null;

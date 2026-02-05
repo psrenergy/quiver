@@ -12,7 +12,9 @@ function from_schema(db_path, schema_path)
     options = Ref(C.quiver_database_options_t(0, C.QUIVER_LOG_DEBUG))
     ptr = C.quiver_database_from_schema(db_path, schema_path, options)
     if ptr == C_NULL
-        throw(DatabaseException("Failed to create database from schema '$schema_path'"))
+        detail = unsafe_string(C.quiver_get_last_error())
+        context = "Failed to create database from schema '$schema_path'"
+        throw(DatabaseException(isempty(detail) ? context : "$context: $detail"))
     end
     return Database(ptr)
 end
@@ -21,7 +23,9 @@ function from_migrations(db_path, migrations_path)
     options = Ref(C.quiver_database_options_t(0, C.QUIVER_LOG_DEBUG))
     ptr = C.quiver_database_from_migrations(db_path, migrations_path, options)
     if ptr == C_NULL
-        throw(DatabaseException("Failed to create database from migrations '$migrations_path'"))
+        detail = unsafe_string(C.quiver_get_last_error())
+        context = "Failed to create database from migrations '$migrations_path'"
+        throw(DatabaseException(isempty(detail) ? context : "$context: $detail"))
     end
     return Database(ptr)
 end
@@ -37,15 +41,14 @@ end
 function current_version(db::Database)
     version = C.quiver_database_current_version(db.ptr)
     if version < 0
-        throw(DatabaseException("Failed to get current version"))
+        detail = unsafe_string(C.quiver_get_last_error())
+        context = "Failed to get current version"
+        throw(DatabaseException(isempty(detail) ? context : "$context: $detail"))
     end
     return version
 end
 
 function describe(db::Database)
-    result = C.quiver_database_describe(db.ptr)
-    if result != C.QUIVER_OK
-        throw(DatabaseException("Failed to describe database"))
-    end
+    check(C.quiver_database_describe(db.ptr))
     return nothing
 end

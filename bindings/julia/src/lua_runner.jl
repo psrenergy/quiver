@@ -6,7 +6,9 @@ end
 function LuaRunner(db::Database)
     ptr = C.quiver_lua_runner_new(db.ptr)
     if ptr == C_NULL
-        throw(DatabaseException("Failed to create LuaRunner"))
+        detail = unsafe_string(C.quiver_get_last_error())
+        context = "Failed to create LuaRunner"
+        throw(DatabaseException(isempty(detail) ? context : "$context: $detail"))
     end
     runner = LuaRunner(ptr, db)
     finalizer(r -> r.ptr != C_NULL && C.quiver_lua_runner_free(r.ptr), runner)
