@@ -19,17 +19,20 @@ end
 function Base.setindex!(el::Element, value::Integer, name::String)
     cname = Base.cconvert(Cstring, name)
     check(C.quiver_element_set_integer(el.ptr, cname, Int64(value)))
+    return nothing
 end
 
 function Base.setindex!(el::Element, value::Real, name::String)
     cname = Base.cconvert(Cstring, name)
     check(C.quiver_element_set_float(el.ptr, cname, Float64(value)))
+    return nothing
 end
 
 function Base.setindex!(el::Element, value::String, name::String)
     cname = Base.cconvert(Cstring, name)
     cvalue = Base.cconvert(Cstring, value)
     check(C.quiver_element_set_string(el.ptr, cname, cvalue))
+    return nothing
 end
 
 function Base.setindex!(el::Element, value::DateTime, name::String)
@@ -40,13 +43,13 @@ end
 function Base.setindex!(el::Element, value::Vector{<:Integer}, name::String)
     cname = Base.cconvert(Cstring, name)
     integer_values = Int64[Int64(v) for v in value]
-    check(C.quiver_element_set_array_integer(el.ptr, cname, integer_values, Int32(length(integer_values))))
+    return check(C.quiver_element_set_array_integer(el.ptr, cname, integer_values, Int32(length(integer_values))))
 end
 
 function Base.setindex!(el::Element, value::Vector{<:Real}, name::String)
     cname = Base.cconvert(Cstring, name)
     float_values = Float64[Float64(v) for v in value]
-    check(C.quiver_element_set_array_float(el.ptr, cname, float_values, Int32(length(value))))
+    return check(C.quiver_element_set_array_float(el.ptr, cname, float_values, Int32(length(value))))
 end
 
 function Base.setindex!(el::Element, value::Vector{<:AbstractString}, name::String)
