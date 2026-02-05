@@ -312,10 +312,10 @@ struct LuaRunner::Impl {
 
     // Read scalar by ID helpers - return nil if not found
     static sol::object read_scalar_string_by_id_to_lua(Database& db,
-                                                        const std::string& collection,
-                                                        const std::string& attribute,
-                                                        int64_t id,
-                                                        sol::this_state s) {
+                                                       const std::string& collection,
+                                                       const std::string& attribute,
+                                                       int64_t id,
+                                                       sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_scalar_string_by_id(collection, attribute, id);
         if (result.has_value()) {
@@ -325,10 +325,10 @@ struct LuaRunner::Impl {
     }
 
     static sol::object read_scalar_integer_by_id_to_lua(Database& db,
-                                                         const std::string& collection,
-                                                         const std::string& attribute,
-                                                         int64_t id,
-                                                         sol::this_state s) {
+                                                        const std::string& collection,
+                                                        const std::string& attribute,
+                                                        int64_t id,
+                                                        sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_scalar_integer_by_id(collection, attribute, id);
         if (result.has_value()) {
@@ -338,10 +338,10 @@ struct LuaRunner::Impl {
     }
 
     static sol::object read_scalar_float_by_id_to_lua(Database& db,
-                                                       const std::string& collection,
-                                                       const std::string& attribute,
-                                                       int64_t id,
-                                                       sol::this_state s) {
+                                                      const std::string& collection,
+                                                      const std::string& attribute,
+                                                      int64_t id,
+                                                      sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_scalar_float_by_id(collection, attribute, id);
         if (result.has_value()) {

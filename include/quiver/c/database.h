@@ -149,25 +149,25 @@ QUIVER_C_API quiver_error_t quiver_database_read_set_strings(quiver_database_t* 
 
 // Read scalar attributes by element ID
 QUIVER_C_API quiver_error_t quiver_database_read_scalar_integer_by_id(quiver_database_t* db,
-                                                                       const char* collection,
-                                                                       const char* attribute,
-                                                                       int64_t id,
-                                                                       int64_t* out_value,
-                                                                       int* out_has_value);
-
-QUIVER_C_API quiver_error_t quiver_database_read_scalar_float_by_id(quiver_database_t* db,
-                                                                     const char* collection,
-                                                                     const char* attribute,
-                                                                     int64_t id,
-                                                                     double* out_value,
-                                                                     int* out_has_value);
-
-QUIVER_C_API quiver_error_t quiver_database_read_scalar_string_by_id(quiver_database_t* db,
                                                                       const char* collection,
                                                                       const char* attribute,
                                                                       int64_t id,
-                                                                      char** out_value,
+                                                                      int64_t* out_value,
                                                                       int* out_has_value);
+
+QUIVER_C_API quiver_error_t quiver_database_read_scalar_float_by_id(quiver_database_t* db,
+                                                                    const char* collection,
+                                                                    const char* attribute,
+                                                                    int64_t id,
+                                                                    double* out_value,
+                                                                    int* out_has_value);
+
+QUIVER_C_API quiver_error_t quiver_database_read_scalar_string_by_id(quiver_database_t* db,
+                                                                     const char* collection,
+                                                                     const char* attribute,
+                                                                     int64_t id,
+                                                                     char** out_value,
+                                                                     int* out_has_value);
 
 // Read vector attributes by element ID
 QUIVER_C_API quiver_error_t quiver_database_read_vector_integers_by_id(quiver_database_t* db,

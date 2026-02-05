@@ -341,15 +341,13 @@ TEST(DatabaseCApi, UpdateElementMultipleScalars) {
     EXPECT_EQ(integer_value, 100);
 
     double float_value;
-    err =
-        quiver_database_read_scalar_float_by_id(db, "Configuration", "float_attribute", id, &float_value, &has_value);
+    err = quiver_database_read_scalar_float_by_id(db, "Configuration", "float_attribute", id, &float_value, &has_value);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_DOUBLE_EQ(float_value, 2.71);
 
     char* str_value = nullptr;
-    err =
-        quiver_database_read_scalar_string_by_id(db, "Configuration", "string_attribute", id, &str_value, &has_value);
+    err = quiver_database_read_scalar_string_by_id(db, "Configuration", "string_attribute", id, &str_value, &has_value);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(str_value, "world");

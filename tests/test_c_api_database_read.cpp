@@ -490,8 +490,7 @@ TEST(DatabaseCApi, ReadScalarFloatById) {
 
     double value;
     int has_value;
-    auto err =
-        quiver_database_read_scalar_float_by_id(db, "Configuration", "float_attribute", id1, &value, &has_value);
+    auto err = quiver_database_read_scalar_float_by_id(db, "Configuration", "float_attribute", id1, &value, &has_value);
 
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 1);
@@ -941,8 +940,8 @@ TEST(DatabaseCApi, ReadScalarStringsNullOutput) {
 TEST(DatabaseCApi, ReadScalarIntegerByIdNullDb) {
     int64_t value;
     int has_value;
-    auto err = quiver_database_read_scalar_integer_by_id(
-        nullptr, "Configuration", "integer_attribute", 1, &value, &has_value);
+    auto err =
+        quiver_database_read_scalar_integer_by_id(nullptr, "Configuration", "integer_attribute", 1, &value, &has_value);
     EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
 }
 
