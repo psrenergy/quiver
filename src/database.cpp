@@ -144,6 +144,17 @@ std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_pat
     }
 }
 
+static std::string find_dimension_column(const quiver::TableDefinition& table_def) {
+    for (const auto& [col_name, col] : table_def.columns) {
+        if (col_name == "id")
+            continue;
+        if (col.type == quiver::DataType::DateTime || quiver::is_date_time_column(col_name)) {
+            return col_name;
+        }
+    }
+    throw std::runtime_error("No dimension column found in time series table");
+}
+
 }  // anonymous namespace
 
 namespace quiver {
@@ -638,19 +649,19 @@ int64_t Database::create_element(const std::string& collection, const Element& e
 
         // Insert each row with vector_index
         for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
-            int64_t vector_index = static_cast<int64_t>(row_idx + 1);
-            auto vec_sql = "INSERT INTO " + vector_table + " (id, vector_index";
+            auto vector_index = static_cast<int64_t>(row_idx + 1);
+            auto vector_sql = "INSERT INTO " + vector_table + " (id, vector_index";
             std::string vec_placeholders = "?, ?";
             std::vector<Value> vec_params = {element_id, vector_index};
 
             for (const auto& [col_name, values_ptr] : columns) {
-                vec_sql += ", " + col_name;
+                vector_sql += ", " + col_name;
                 vec_placeholders += ", ?";
                 vec_params.push_back((*values_ptr)[row_idx]);
             }
 
-            vec_sql += ") VALUES (" + vec_placeholders + ")";
-            execute(vec_sql, vec_params);
+            vector_sql += ") VALUES (" + vec_placeholders + ")";
+            execute(vector_sql, vec_params);
         }
         impl_->logger->debug("Inserted {} vector rows into {}", num_rows, vector_table);
     }
@@ -683,7 +694,7 @@ int64_t Database::create_element(const std::string& collection, const Element& e
                 set_sql += ", " + col_name;
                 set_placeholders += ", ?";
 
-                Value val = (*values_ptr)[row_idx];
+                auto val = (*values_ptr)[row_idx];
 
                 // Check if this column is a FK and value is a string (label) that needs resolution
                 for (const auto& fk : table_def->foreign_keys) {
@@ -774,7 +785,7 @@ void Database::update_element(const std::string& collection, int64_t id, const E
             for (size_t i = 0; i < values.size(); ++i) {
                 auto insert_sql =
                     "INSERT INTO " + vector_table + " (id, vector_index, " + attr_name + ") VALUES (?, ?, ?)";
-                int64_t vector_index = static_cast<int64_t>(i + 1);
+                auto vector_index = static_cast<int64_t>(i + 1);
                 execute(insert_sql, {id, vector_index, values[i]});
             }
             impl_->logger->debug(
@@ -1276,23 +1287,23 @@ ScalarMetadata Database::get_scalar_metadata(const std::string& collection, cons
         throw std::runtime_error("Scalar attribute '" + attribute + "' not found in collection '" + collection + "'");
     }
 
-    ScalarMetadata meta;
-    meta.name = col->name;
-    meta.data_type = col->type;
-    meta.not_null = col->not_null;
-    meta.primary_key = col->primary_key;
-    meta.default_value = col->default_value;
+    ScalarMetadata metadata;
+    metadata.name = col->name;
+    metadata.data_type = col->type;
+    metadata.not_null = col->not_null;
+    metadata.primary_key = col->primary_key;
+    metadata.default_value = col->default_value;
 
     for (const auto& fk : table_def->foreign_keys) {
         if (fk.from_column == attribute) {
-            meta.is_foreign_key = true;
-            meta.references_collection = fk.to_table;
-            meta.references_column = fk.to_column;
+            metadata.is_foreign_key = true;
+            metadata.references_collection = fk.to_table;
+            metadata.references_column = fk.to_column;
             break;
         }
     }
 
-    return meta;
+    return metadata;
 }
 
 VectorMetadata Database::get_vector_metadata(const std::string& collection, const std::string& group_name) const {
@@ -1308,8 +1319,8 @@ VectorMetadata Database::get_vector_metadata(const std::string& collection, cons
         throw std::runtime_error("Vector group '" + group_name + "' not found for collection '" + collection + "'");
     }
 
-    VectorMetadata meta;
-    meta.group_name = group_name;
+    VectorMetadata metadata;
+    metadata.group_name = group_name;
 
     // Add all data columns (skip id and vector_index)
     for (const auto& [col_name, col] : table_def->columns) {
@@ -1317,16 +1328,16 @@ VectorMetadata Database::get_vector_metadata(const std::string& collection, cons
             continue;
         }
 
-        ScalarMetadata attr;
-        attr.name = col.name;
-        attr.data_type = col.type;
-        attr.not_null = col.not_null;
-        attr.primary_key = col.primary_key;
-        attr.default_value = col.default_value;
-        meta.value_columns.push_back(std::move(attr));
+        ScalarMetadata attribute;
+        attribute.name = col.name;
+        attribute.data_type = col.type;
+        attribute.not_null = col.not_null;
+        attribute.primary_key = col.primary_key;
+        attribute.default_value = col.default_value;
+        metadata.value_columns.push_back(std::move(attribute));
     }
 
-    return meta;
+    return metadata;
 }
 
 SetMetadata Database::get_set_metadata(const std::string& collection, const std::string& group_name) const {
@@ -1342,8 +1353,8 @@ SetMetadata Database::get_set_metadata(const std::string& collection, const std:
         throw std::runtime_error("Set group '" + group_name + "' not found for collection '" + collection + "'");
     }
 
-    SetMetadata meta;
-    meta.group_name = group_name;
+    SetMetadata metadata;
+    metadata.group_name = group_name;
 
     // Add all data columns (skip id)
     for (const auto& [col_name, col] : table_def->columns) {
@@ -1351,16 +1362,16 @@ SetMetadata Database::get_set_metadata(const std::string& collection, const std:
             continue;
         }
 
-        ScalarMetadata attr;
-        attr.name = col.name;
-        attr.data_type = col.type;
-        attr.not_null = col.not_null;
-        attr.primary_key = col.primary_key;
-        attr.default_value = col.default_value;
-        meta.value_columns.push_back(std::move(attr));
+        ScalarMetadata attribute;
+        attribute.name = col.name;
+        attribute.data_type = col.type;
+        attribute.not_null = col.not_null;
+        attribute.primary_key = col.primary_key;
+        attribute.default_value = col.default_value;
+        metadata.value_columns.push_back(std::move(attribute));
     }
 
-    return meta;
+    return metadata;
 }
 
 std::vector<ScalarMetadata> Database::list_scalar_attributes(const std::string& collection) const {
@@ -1375,23 +1386,23 @@ std::vector<ScalarMetadata> Database::list_scalar_attributes(const std::string& 
 
     std::vector<ScalarMetadata> result;
     for (const auto& [col_name, col] : table_def->columns) {
-        ScalarMetadata meta;
-        meta.name = col.name;
-        meta.data_type = col.type;
-        meta.not_null = col.not_null;
-        meta.primary_key = col.primary_key;
-        meta.default_value = col.default_value;
+        ScalarMetadata metadata;
+        metadata.name = col.name;
+        metadata.data_type = col.type;
+        metadata.not_null = col.not_null;
+        metadata.primary_key = col.primary_key;
+        metadata.default_value = col.default_value;
 
         for (const auto& fk : table_def->foreign_keys) {
             if (fk.from_column == col_name) {
-                meta.is_foreign_key = true;
-                meta.references_collection = fk.to_table;
-                meta.references_column = fk.to_column;
+                metadata.is_foreign_key = true;
+                metadata.references_collection = fk.to_table;
+                metadata.references_column = fk.to_column;
                 break;
             }
         }
 
-        result.push_back(std::move(meta));
+        result.push_back(std::move(metadata));
     }
     return result;
 }
@@ -1480,31 +1491,26 @@ TimeSeriesMetadata Database::get_time_series_metadata(const std::string& collect
                                  "'");
     }
 
-    TimeSeriesMetadata meta;
-    meta.group_name = group_name;
+    TimeSeriesMetadata metadata;
+    metadata.group_name = group_name;
+    metadata.dimension_column = find_dimension_column(*table_def);
 
-    // Find the dimension column and add data columns (skip id and dimension)
+    // Add value columns (skip id and dimension)
     for (const auto& [col_name, col] : table_def->columns) {
-        if (col_name == "id") {
+        if (col_name == "id" || col_name == metadata.dimension_column) {
             continue;
         }
 
-        // Dimension column is the one with DateTime type or name starting with "date_"
-        if (col.type == DataType::DateTime || is_date_time_column(col_name)) {
-            meta.dimension_column = col_name;
-            continue;
-        }
-
-        ScalarMetadata attr;
-        attr.name = col.name;
-        attr.data_type = col.type;
-        attr.not_null = col.not_null;
-        attr.primary_key = col.primary_key;
-        attr.default_value = col.default_value;
-        meta.value_columns.push_back(std::move(attr));
+        ScalarMetadata attribute;
+        attribute.name = col.name;
+        attribute.data_type = col.type;
+        attribute.not_null = col.not_null;
+        attribute.primary_key = col.primary_key;
+        attribute.default_value = col.default_value;
+        metadata.value_columns.push_back(std::move(attribute));
     }
 
-    return meta;
+    return metadata;
 }
 
 std::vector<std::map<std::string, Value>>
@@ -1516,12 +1522,13 @@ Database::read_time_series_group_by_id(const std::string& collection, const std:
     if (!table_def) {
         throw std::runtime_error("Time series table not found: " + ts_table);
     }
+    auto dim_col = find_dimension_column(*table_def);
 
     // Build column list (excluding id)
     std::vector<std::string> columns;
-    columns.push_back("date_time");
+    columns.push_back(dim_col);
     for (const auto& [col_name, col] : table_def->columns) {
-        if (col_name != "id" && col_name != "date_time") {
+        if (col_name != "id" && col_name != dim_col) {
             columns.push_back(col_name);
         }
     }
@@ -1533,7 +1540,7 @@ Database::read_time_series_group_by_id(const std::string& collection, const std:
             sql += ", ";
         sql += columns[i];
     }
-    sql += " FROM " + ts_table + " WHERE id = ? ORDER BY date_time";
+    sql += " FROM " + ts_table + " WHERE id = ? ORDER BY " + dim_col;
 
     auto result = execute(sql, {id});
 
@@ -1573,6 +1580,11 @@ void Database::update_time_series_group(const std::string& collection,
     impl_->require_schema("update time series");
 
     auto ts_table = impl_->schema->find_time_series_table(collection, group);
+    const auto* table_def = impl_->schema->get_table(ts_table);
+    if (!table_def) {
+        throw std::runtime_error("Time series table not found: " + ts_table);
+    }
+    auto dim_col = find_dimension_column(*table_def);
 
     Impl::TransactionGuard txn(*impl_);
 
@@ -1585,16 +1597,16 @@ void Database::update_time_series_group(const std::string& collection,
         return;
     }
 
-    // Get column names from first row (excluding date_time which we handle specially)
+    // Get column names from first row (excluding dimension column which we handle specially)
     std::vector<std::string> value_columns;
     for (const auto& [col_name, _] : rows[0]) {
-        if (col_name != "date_time") {
+        if (col_name != dim_col) {
             value_columns.push_back(col_name);
         }
     }
 
     // Build INSERT SQL
-    auto insert_sql = "INSERT INTO " + ts_table + " (id, date_time";
+    auto insert_sql = "INSERT INTO " + ts_table + " (id, " + dim_col;
     for (const auto& col : value_columns) {
         insert_sql += ", " + col;
     }
@@ -1609,10 +1621,10 @@ void Database::update_time_series_group(const std::string& collection,
         std::vector<Value> params;
         params.push_back(id);
 
-        // date_time must be present
-        auto dt_it = row.find("date_time");
+        // Dimension column must be present
+        auto dt_it = row.find(dim_col);
         if (dt_it == row.end()) {
-            throw std::runtime_error("Time series row missing required 'date_time' column");
+            throw std::runtime_error("Time series row missing required '" + dim_col + "' column");
         }
         params.push_back(dt_it->second);
 

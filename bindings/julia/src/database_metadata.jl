@@ -127,18 +127,18 @@ function list_scalar_attributes(db::Database, collection::AbstractString)
     result = ScalarMetadata[]
     for i in 1:count
         meta_ptr = out_metadata[] + (i - 1) * sizeof(C.quiver_scalar_metadata_t)
-        meta = unsafe_load(Ptr{C.quiver_scalar_metadata_t}(meta_ptr))
+        metadata = unsafe_load(Ptr{C.quiver_scalar_metadata_t}(meta_ptr))
         push!(
             result,
             ScalarMetadata(
-                unsafe_string(meta.name),
-                meta.data_type,
-                meta.not_null != 0,
-                meta.primary_key != 0,
-                meta.default_value == C_NULL ? nothing : unsafe_string(meta.default_value),
-                meta.is_foreign_key != 0,
-                meta.references_collection == C_NULL ? nothing : unsafe_string(meta.references_collection),
-                meta.references_column == C_NULL ? nothing : unsafe_string(meta.references_column),
+                unsafe_string(metadata.name),
+                metadata.data_type,
+                metadata.not_null != 0,
+                metadata.primary_key != 0,
+                metadata.default_value == C_NULL ? nothing : unsafe_string(metadata.default_value),
+                metadata.is_foreign_key != 0,
+                metadata.references_collection == C_NULL ? nothing : unsafe_string(metadata.references_collection),
+                metadata.references_column == C_NULL ? nothing : unsafe_string(metadata.references_column),
             ),
         )
     end
@@ -162,11 +162,11 @@ function list_vector_groups(db::Database, collection::AbstractString)
     result = VectorMetadata[]
     for i in 1:count
         meta_ptr = out_metadata[] + (i - 1) * sizeof(C.quiver_vector_metadata_t)
-        meta = unsafe_load(Ptr{C.quiver_vector_metadata_t}(meta_ptr))
+        metadata = unsafe_load(Ptr{C.quiver_vector_metadata_t}(meta_ptr))
 
         value_columns = ScalarMetadata[]
-        for j in 1:meta.value_column_count
-            col_ptr = meta.value_columns + (j - 1) * sizeof(C.quiver_scalar_metadata_t)
+        for j in 1:metadata.value_column_count
+            col_ptr = metadata.value_columns + (j - 1) * sizeof(C.quiver_scalar_metadata_t)
             col = unsafe_load(Ptr{C.quiver_scalar_metadata_t}(col_ptr))
             push!(
                 value_columns,
@@ -183,7 +183,7 @@ function list_vector_groups(db::Database, collection::AbstractString)
             )
         end
 
-        push!(result, VectorMetadata(unsafe_string(meta.group_name), value_columns))
+        push!(result, VectorMetadata(unsafe_string(metadata.group_name), value_columns))
     end
     C.quiver_free_vector_metadata_array(out_metadata[], count)
     return result
@@ -205,11 +205,11 @@ function list_set_groups(db::Database, collection::AbstractString)
     result = SetMetadata[]
     for i in 1:count
         meta_ptr = out_metadata[] + (i - 1) * sizeof(C.quiver_set_metadata_t)
-        meta = unsafe_load(Ptr{C.quiver_set_metadata_t}(meta_ptr))
+        metadata = unsafe_load(Ptr{C.quiver_set_metadata_t}(meta_ptr))
 
         value_columns = ScalarMetadata[]
-        for j in 1:meta.value_column_count
-            col_ptr = meta.value_columns + (j - 1) * sizeof(C.quiver_scalar_metadata_t)
+        for j in 1:metadata.value_column_count
+            col_ptr = metadata.value_columns + (j - 1) * sizeof(C.quiver_scalar_metadata_t)
             col = unsafe_load(Ptr{C.quiver_scalar_metadata_t}(col_ptr))
             push!(
                 value_columns,
@@ -226,7 +226,7 @@ function list_set_groups(db::Database, collection::AbstractString)
             )
         end
 
-        push!(result, SetMetadata(unsafe_string(meta.group_name), value_columns))
+        push!(result, SetMetadata(unsafe_string(metadata.group_name), value_columns))
     end
     C.quiver_free_set_metadata_array(out_metadata[], count)
     return result
@@ -290,11 +290,11 @@ function list_time_series_groups(db::Database, collection::AbstractString)
     result = TimeSeriesMetadata[]
     for i in 1:count
         meta_ptr = out_metadata[] + (i - 1) * sizeof(C.quiver_time_series_metadata_t)
-        meta = unsafe_load(Ptr{C.quiver_time_series_metadata_t}(meta_ptr))
+        metadata = unsafe_load(Ptr{C.quiver_time_series_metadata_t}(meta_ptr))
 
         value_columns = ScalarMetadata[]
-        for j in 1:meta.value_column_count
-            col_ptr = meta.value_columns + (j - 1) * sizeof(C.quiver_scalar_metadata_t)
+        for j in 1:metadata.value_column_count
+            col_ptr = metadata.value_columns + (j - 1) * sizeof(C.quiver_scalar_metadata_t)
             col = unsafe_load(Ptr{C.quiver_scalar_metadata_t}(col_ptr))
             push!(
                 value_columns,
@@ -313,7 +313,11 @@ function list_time_series_groups(db::Database, collection::AbstractString)
 
         push!(
             result,
-            TimeSeriesMetadata(unsafe_string(meta.group_name), unsafe_string(meta.dimension_column), value_columns),
+            TimeSeriesMetadata(
+                unsafe_string(metadata.group_name),
+                unsafe_string(metadata.dimension_column),
+                value_columns,
+            ),
         )
     end
     C.quiver_free_time_series_metadata_array(out_metadata[], count)

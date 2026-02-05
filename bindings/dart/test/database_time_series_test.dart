@@ -18,11 +18,11 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final meta = db.getTimeSeriesMetadata('Collection', 'data');
-        expect(meta.groupName, equals('data'));
-        expect(meta.dimensionColumn, equals('date_time'));
-        expect(meta.valueColumns.length, equals(1));
-        expect(meta.valueColumns[0].name, equals('value'));
+        final metadata = db.getTimeSeriesMetadata('Collection', 'data');
+        expect(metadata.groupName, equals('data'));
+        expect(metadata.dimensionColumn, equals('date_time'));
+        expect(metadata.valueColumns.length, equals(1));
+        expect(metadata.valueColumns[0].name, equals('value'));
       } finally {
         db.close();
       }

@@ -1421,15 +1421,15 @@ TEST(DatabaseCApi, ScalarMetadataForeignKey) {
     auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    quiver_scalar_metadata_t meta{};
-    auto err = quiver_database_get_scalar_metadata(db, "Child", "parent_id", &meta);
+    quiver_scalar_metadata_t metadata{};
+    auto err = quiver_database_get_scalar_metadata(db, "Child", "parent_id", &metadata);
     EXPECT_EQ(err, QUIVER_OK);
-    EXPECT_EQ(meta.is_foreign_key, 1);
-    EXPECT_NE(meta.references_collection, nullptr);
-    EXPECT_STREQ(meta.references_collection, "Parent");
-    EXPECT_NE(meta.references_column, nullptr);
-    EXPECT_STREQ(meta.references_column, "id");
-    quiver_free_scalar_metadata(&meta);
+    EXPECT_EQ(metadata.is_foreign_key, 1);
+    EXPECT_NE(metadata.references_collection, nullptr);
+    EXPECT_STREQ(metadata.references_collection, "Parent");
+    EXPECT_NE(metadata.references_column, nullptr);
+    EXPECT_STREQ(metadata.references_column, "id");
+    quiver_free_scalar_metadata(&metadata);
 
     quiver_database_close(db);
 }
@@ -1440,13 +1440,13 @@ TEST(DatabaseCApi, ScalarMetadataNotForeignKey) {
     auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options);
     ASSERT_NE(db, nullptr);
 
-    quiver_scalar_metadata_t meta{};
-    auto err = quiver_database_get_scalar_metadata(db, "Child", "label", &meta);
+    quiver_scalar_metadata_t metadata{};
+    auto err = quiver_database_get_scalar_metadata(db, "Child", "label", &metadata);
     EXPECT_EQ(err, QUIVER_OK);
-    EXPECT_EQ(meta.is_foreign_key, 0);
-    EXPECT_EQ(meta.references_collection, nullptr);
-    EXPECT_EQ(meta.references_column, nullptr);
-    quiver_free_scalar_metadata(&meta);
+    EXPECT_EQ(metadata.is_foreign_key, 0);
+    EXPECT_EQ(metadata.references_collection, nullptr);
+    EXPECT_EQ(metadata.references_column, nullptr);
+    quiver_free_scalar_metadata(&metadata);
 
     quiver_database_close(db);
 }

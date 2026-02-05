@@ -12,12 +12,12 @@ TEST(Database, GetTimeSeriesMetadata) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
 
-    auto meta = db.get_time_series_metadata("Collection", "data");
-    EXPECT_EQ(meta.group_name, "data");
-    EXPECT_EQ(meta.dimension_column, "date_time");
-    EXPECT_EQ(meta.value_columns.size(), 1);
-    EXPECT_EQ(meta.value_columns[0].name, "value");
-    EXPECT_EQ(meta.value_columns[0].data_type, quiver::DataType::Real);
+    auto metadata = db.get_time_series_metadata("Collection", "data");
+    EXPECT_EQ(metadata.group_name, "data");
+    EXPECT_EQ(metadata.dimension_column, "date_time");
+    EXPECT_EQ(metadata.value_columns.size(), 1);
+    EXPECT_EQ(metadata.value_columns[0].name, "value");
+    EXPECT_EQ(metadata.value_columns[0].data_type, quiver::DataType::Real);
 }
 
 TEST(Database, ListTimeSeriesGroups) {

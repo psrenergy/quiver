@@ -11,31 +11,31 @@ include("fixture.jl")
         db = Quiver.from_schema(":memory:", path_schema)
 
         # Test scalar metadata for label (NOT NULL, TEXT)
-        meta = Quiver.get_scalar_metadata(db, "Collection", "label")
-        @test meta.name == "label"
-        @test meta.data_type == Quiver.QUIVER_DATA_TYPE_STRING
-        @test meta.not_null == true
-        @test meta.primary_key == false
+        metadata = Quiver.get_scalar_metadata(db, "Collection", "label")
+        @test metadata.name == "label"
+        @test metadata.data_type == Quiver.QUIVER_DATA_TYPE_STRING
+        @test metadata.not_null == true
+        @test metadata.primary_key == false
 
         # Test scalar metadata for some_integer (nullable INTEGER)
-        meta = Quiver.get_scalar_metadata(db, "Collection", "some_integer")
-        @test meta.name == "some_integer"
-        @test meta.data_type == Quiver.QUIVER_DATA_TYPE_INTEGER
-        @test meta.not_null == false
-        @test meta.primary_key == false
+        metadata = Quiver.get_scalar_metadata(db, "Collection", "some_integer")
+        @test metadata.name == "some_integer"
+        @test metadata.data_type == Quiver.QUIVER_DATA_TYPE_INTEGER
+        @test metadata.not_null == false
+        @test metadata.primary_key == false
 
         # Test scalar metadata for some_float (nullable REAL)
-        meta = Quiver.get_scalar_metadata(db, "Collection", "some_float")
-        @test meta.name == "some_float"
-        @test meta.data_type == Quiver.QUIVER_DATA_TYPE_FLOAT
-        @test meta.not_null == false
-        @test meta.primary_key == false
+        metadata = Quiver.get_scalar_metadata(db, "Collection", "some_float")
+        @test metadata.name == "some_float"
+        @test metadata.data_type == Quiver.QUIVER_DATA_TYPE_FLOAT
+        @test metadata.not_null == false
+        @test metadata.primary_key == false
 
         # Test primary key metadata
-        meta = Quiver.get_scalar_metadata(db, "Collection", "id")
-        @test meta.name == "id"
-        @test meta.data_type == Quiver.QUIVER_DATA_TYPE_INTEGER
-        @test meta.primary_key == true
+        metadata = Quiver.get_scalar_metadata(db, "Collection", "id")
+        @test metadata.name == "id"
+        @test metadata.data_type == Quiver.QUIVER_DATA_TYPE_INTEGER
+        @test metadata.primary_key == true
 
         Quiver.close!(db)
     end
@@ -45,21 +45,21 @@ include("fixture.jl")
         db = Quiver.from_schema(":memory:", path_schema)
 
         # Test vector metadata for 'values' group
-        meta = Quiver.get_vector_metadata(db, "Collection", "values")
-        @test meta.group_name == "values"
-        @test length(meta.value_columns) == 2
+        metadata = Quiver.get_vector_metadata(db, "Collection", "values")
+        @test metadata.group_name == "values"
+        @test length(metadata.value_columns) == 2
 
         # Find the attributes by name
-        attr_names = [attr.name for attr in meta.value_columns]
+        attr_names = [attribute.name for attribute in metadata.value_columns]
         @test "value_int" in attr_names
         @test "value_float" in attr_names
 
         # Check value_int attribute
-        value_int_attr = first(filter(a -> a.name == "value_int", meta.value_columns))
+        value_int_attr = first(filter(a -> a.name == "value_int", metadata.value_columns))
         @test value_int_attr.data_type == Quiver.QUIVER_DATA_TYPE_INTEGER
 
         # Check value_float attribute
-        value_float_attr = first(filter(a -> a.name == "value_float", meta.value_columns))
+        value_float_attr = first(filter(a -> a.name == "value_float", metadata.value_columns))
         @test value_float_attr.data_type == Quiver.QUIVER_DATA_TYPE_FLOAT
 
         Quiver.close!(db)
@@ -70,12 +70,12 @@ include("fixture.jl")
         db = Quiver.from_schema(":memory:", path_schema)
 
         # Test set metadata for 'tags' group
-        meta = Quiver.get_set_metadata(db, "Collection", "tags")
-        @test meta.group_name == "tags"
-        @test length(meta.value_columns) == 1
+        metadata = Quiver.get_set_metadata(db, "Collection", "tags")
+        @test metadata.group_name == "tags"
+        @test length(metadata.value_columns) == 1
 
         # Check tag attribute
-        tag_attr = meta.value_columns[1]
+        tag_attr = metadata.value_columns[1]
         @test tag_attr.name == "tag"
         @test tag_attr.data_type == Quiver.QUIVER_DATA_TYPE_STRING
 
@@ -106,7 +106,7 @@ include("fixture.jl")
         db = Quiver.from_schema(":memory:", path_schema)
 
         attrs = Quiver.list_scalar_attributes(db, "Collection")
-        attr_names = [attr.name for attr in attrs]
+        attr_names = [attribute.name for attribute in attrs]
         @test "id" in attr_names
         @test "label" in attr_names
         @test "some_integer" in attr_names
@@ -129,22 +129,22 @@ include("fixture.jl")
         db = Quiver.from_schema(":memory:", path_schema)
 
         # parent_id is a foreign key referencing Parent(id)
-        meta = Quiver.get_scalar_metadata(db, "Child", "parent_id")
-        @test meta.is_foreign_key == true
-        @test meta.references_collection == "Parent"
-        @test meta.references_column == "id"
+        metadata = Quiver.get_scalar_metadata(db, "Child", "parent_id")
+        @test metadata.is_foreign_key == true
+        @test metadata.references_collection == "Parent"
+        @test metadata.references_column == "id"
 
         # sibling_id is a self-referencing foreign key
-        meta = Quiver.get_scalar_metadata(db, "Child", "sibling_id")
-        @test meta.is_foreign_key == true
-        @test meta.references_collection == "Child"
-        @test meta.references_column == "id"
+        metadata = Quiver.get_scalar_metadata(db, "Child", "sibling_id")
+        @test metadata.is_foreign_key == true
+        @test metadata.references_collection == "Child"
+        @test metadata.references_column == "id"
 
         # label is not a foreign key
-        meta = Quiver.get_scalar_metadata(db, "Child", "label")
-        @test meta.is_foreign_key == false
-        @test meta.references_collection === nothing
-        @test meta.references_column === nothing
+        metadata = Quiver.get_scalar_metadata(db, "Child", "label")
+        @test metadata.is_foreign_key == false
+        @test metadata.references_collection === nothing
+        @test metadata.references_column === nothing
 
         # list_scalar_attributes should also include FK info
         attrs = Quiver.list_scalar_attributes(db, "Child")

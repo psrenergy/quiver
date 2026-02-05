@@ -11,10 +11,10 @@ include("fixture.jl")
         db = Quiver.from_schema(":memory:", path_schema)
 
         # get_time_series_metadata
-        meta = Quiver.get_time_series_metadata(db, "Collection", "data")
-        @test meta.group_name == "data"
-        @test length(meta.value_columns) == 1
-        @test meta.value_columns[1].name == "value"
+        metadata = Quiver.get_time_series_metadata(db, "Collection", "data")
+        @test metadata.group_name == "data"
+        @test length(metadata.value_columns) == 1
+        @test metadata.value_columns[1].name == "value"
 
         # list_time_series_groups
         groups = Quiver.list_time_series_groups(db, "Collection")
