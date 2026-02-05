@@ -13,7 +13,8 @@ include/quiver/c/         # C API headers (for FFI)
   database.h
   element.h
   lua_runner.h
-src/                      # Implementation
+src/                      # C++ implementation
+src/c/                    # C API implementation
 bindings/julia/           # Julia bindings (Quiver.jl)
 bindings/dart/            # Dart bindings (quiver)
 tests/                    # C++ tests
