@@ -232,13 +232,22 @@ CREATE TABLE Items_set_tags (
 ```
 
 ### Time Series Tables
-Named `{Collection}_time_series_{name}` with `date_time` ordering column:
+Named `{Collection}_time_series_{name}` with a dimension (ordering) column whose name starts with `date_` (e.g., `date_time`):
 ```sql
 CREATE TABLE Items_time_series_data (
     id INTEGER NOT NULL REFERENCES Items(id) ON DELETE CASCADE ON UPDATE CASCADE,
     date_time TEXT NOT NULL,
     value REAL NOT NULL,
     PRIMARY KEY (id, date_time)
+) STRICT;
+```
+
+### Time Series Files Tables
+Named `{Collection}_time_series_files`, singleton table for file path references:
+```sql
+CREATE TABLE Items_time_series_files (
+    data_file TEXT,
+    metadata_file TEXT
 ) STRICT;
 ```
 
@@ -254,7 +263,8 @@ Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references.
 - Vector readers: `read_vector_integers/floats/strings(collection, attribute)`
 - Set readers: `read_set_integers/floats/strings(collection, attribute)`
 - Time series: `read_time_series_group_by_id()`, `update_time_series_group()`
-- Time series metadata: `get_time_series_metadata()`, `list_time_series_groups()`
+- Time series metadata: `get_time_series_metadata()`, `list_time_series_groups()` - includes `dimension_column` (the ordering column name)
+- Time series files: `has_time_series_files()`, `list_time_series_files_columns()`, `read_time_series_files()`, `update_time_series_files()`
 - Relations: `set_scalar_relation()`, `read_scalar_relation()`
 - Query: `query_string/integer/float(sql, params = {})` - parameterized SQL with positional `?` placeholders
 - Schema inspection: `describe()` - prints schema info to stdout
@@ -293,3 +303,4 @@ bindings/dart/generator/generator.bat    # Dart
 ### Dart Notes
 - `libquiver_c.dll` depends on `libquiver.dll` - both must be in PATH
 - test.bat handles PATH setup automatically
+- When C API struct layouts change, clear `.dart_tool/hooks_runner/` and `.dart_tool/lib/` to force a fresh DLL rebuild
