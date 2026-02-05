@@ -27,6 +27,13 @@ else()
             -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive,-Bdynamic
         )
     endif()
+    # For older macOS versions - disable libc++ availability annotations
+    # This allows using newer C++ standard library features on older macOS
+    if(APPLE AND CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "10.15")
+        target_compile_definitions(quiver_compiler_options INTERFACE
+            _LIBCPP_DISABLE_AVAILABILITY
+        )
+    endif()
 endif()
 
 # Position independent code for shared libraries
