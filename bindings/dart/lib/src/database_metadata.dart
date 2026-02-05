@@ -23,12 +23,14 @@ extension DatabaseMetadata on Database {
     try {
       final outMetadata = arena<quiver_scalar_metadata_t>();
 
-      check(bindings.quiver_database_get_scalar_metadata(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        outMetadata,
-      ));
+      check(
+        bindings.quiver_database_get_scalar_metadata(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          outMetadata,
+        ),
+      );
 
       final result = (
         name: outMetadata.ref.name.cast<Utf8>().toDartString(),
@@ -78,12 +80,14 @@ extension DatabaseMetadata on Database {
     try {
       final outMetadata = arena<quiver_vector_metadata_t>();
 
-      check(bindings.quiver_database_get_vector_metadata(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        groupName.toNativeUtf8(allocator: arena).cast(),
-        outMetadata,
-      ));
+      check(
+        bindings.quiver_database_get_vector_metadata(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          groupName.toNativeUtf8(allocator: arena).cast(),
+          outMetadata,
+        ),
+      );
 
       final valueColumns =
           <
@@ -139,12 +143,14 @@ extension DatabaseMetadata on Database {
     try {
       final outMetadata = arena<quiver_set_metadata_t>();
 
-      check(bindings.quiver_database_get_set_metadata(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        groupName.toNativeUtf8(allocator: arena).cast(),
-        outMetadata,
-      ));
+      check(
+        bindings.quiver_database_get_set_metadata(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          groupName.toNativeUtf8(allocator: arena).cast(),
+          outMetadata,
+        ),
+      );
 
       final valueColumns =
           <
@@ -199,12 +205,14 @@ extension DatabaseMetadata on Database {
       final outMetadata = arena<Pointer<quiver_scalar_metadata_t>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_list_scalar_attributes(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        outMetadata,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_list_scalar_attributes(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          outMetadata,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outMetadata.value == nullptr) {
@@ -261,12 +269,14 @@ extension DatabaseMetadata on Database {
       final outMetadata = arena<Pointer<quiver_vector_metadata_t>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_list_vector_groups(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        outMetadata,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_list_vector_groups(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          outMetadata,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outMetadata.value == nullptr) {
@@ -346,12 +356,14 @@ extension DatabaseMetadata on Database {
       final outMetadata = arena<Pointer<quiver_set_metadata_t>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_list_set_groups(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        outMetadata,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_list_set_groups(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          outMetadata,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outMetadata.value == nullptr) {
@@ -407,11 +419,19 @@ extension DatabaseMetadata on Database {
   /// Returns the current schema version (migration number) of the database.
   int currentVersion() {
     _ensureNotClosed();
-    final version = bindings.quiver_database_current_version(_ptr);
-    if (version < 0) {
-      throw const DatabaseOperationException('Failed to get current version');
+
+    final arena = Arena();
+    try {
+      final outVersion = arena<Int64>();
+
+      check(
+        bindings.quiver_database_current_version(_ptr, outVersion),
+      );
+
+      return outVersion.value;
+    } finally {
+      arena.releaseAll();
     }
-    return version;
   }
 
   /// Returns metadata for a time series group, including all value columns in the group.
@@ -439,12 +459,14 @@ extension DatabaseMetadata on Database {
     try {
       final outMetadata = arena<quiver_time_series_metadata_t>();
 
-      check(bindings.quiver_database_get_time_series_metadata(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        groupName.toNativeUtf8(allocator: arena).cast(),
-        outMetadata,
-      ));
+      check(
+        bindings.quiver_database_get_time_series_metadata(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          groupName.toNativeUtf8(allocator: arena).cast(),
+          outMetadata,
+        ),
+      );
 
       final valueColumns =
           <
@@ -505,12 +527,14 @@ extension DatabaseMetadata on Database {
       final outMetadata = arena<Pointer<quiver_time_series_metadata_t>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_list_time_series_groups(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        outMetadata,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_list_time_series_groups(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          outMetadata,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outMetadata.value == nullptr) {
@@ -580,11 +604,13 @@ extension DatabaseMetadata on Database {
     try {
       final outResult = arena<Int>();
 
-      check(bindings.quiver_database_has_time_series_files(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        outResult,
-      ));
+      check(
+        bindings.quiver_database_has_time_series_files(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          outResult,
+        ),
+      );
 
       return outResult.value != 0;
     } finally {
@@ -601,12 +627,14 @@ extension DatabaseMetadata on Database {
       final outColumns = arena<Pointer<Pointer<Char>>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_list_time_series_files_columns(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        outColumns,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_list_time_series_files_columns(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          outColumns,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outColumns.value == nullptr) {

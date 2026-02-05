@@ -14,13 +14,16 @@
 TEST(DatabaseCApi, UpdateScalarInteger) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto e = quiver_element_create();
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
     quiver_element_set_string(e, "label", "Config 1");
     quiver_element_set_integer(e, "integer_attribute", 42);
-    int64_t id = quiver_database_create_element(db, "Configuration", e);
+    int64_t id = 0;
+    quiver_database_create_element(db, "Configuration", e, &id);
     quiver_element_destroy(e);
 
     auto err = quiver_database_update_scalar_integer(db, "Configuration", "integer_attribute", id, 100);
@@ -39,13 +42,16 @@ TEST(DatabaseCApi, UpdateScalarInteger) {
 TEST(DatabaseCApi, UpdateScalarFloat) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto e = quiver_element_create();
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
     quiver_element_set_string(e, "label", "Config 1");
     quiver_element_set_float(e, "float_attribute", 3.14);
-    int64_t id = quiver_database_create_element(db, "Configuration", e);
+    int64_t id = 0;
+    quiver_database_create_element(db, "Configuration", e, &id);
     quiver_element_destroy(e);
 
     auto err = quiver_database_update_scalar_float(db, "Configuration", "float_attribute", id, 2.71);
@@ -64,13 +70,16 @@ TEST(DatabaseCApi, UpdateScalarFloat) {
 TEST(DatabaseCApi, UpdateScalarString) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto e = quiver_element_create();
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
     quiver_element_set_string(e, "label", "Config 1");
     quiver_element_set_string(e, "string_attribute", "hello");
-    int64_t id = quiver_database_create_element(db, "Configuration", e);
+    int64_t id = 0;
+    quiver_database_create_element(db, "Configuration", e, &id);
     quiver_element_destroy(e);
 
     auto err = quiver_database_update_scalar_string(db, "Configuration", "string_attribute", id, "world");
@@ -94,19 +103,25 @@ TEST(DatabaseCApi, UpdateScalarString) {
 TEST(DatabaseCApi, UpdateVectorIntegers) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto config = quiver_element_create();
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
     quiver_element_set_string(config, "label", "Test Config");
-    quiver_database_create_element(db, "Configuration", config);
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
     quiver_element_destroy(config);
 
-    auto e = quiver_element_create();
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
     quiver_element_set_string(e, "label", "Item 1");
     int64_t values1[] = {1, 2, 3};
     quiver_element_set_array_integer(e, "value_int", values1, 3);
-    int64_t id = quiver_database_create_element(db, "Collection", e);
+    int64_t id = 0;
+    quiver_database_create_element(db, "Collection", e, &id);
     quiver_element_destroy(e);
 
     int64_t new_values[] = {10, 20, 30, 40};
@@ -130,19 +145,25 @@ TEST(DatabaseCApi, UpdateVectorIntegers) {
 TEST(DatabaseCApi, UpdateVectorFloats) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto config = quiver_element_create();
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
     quiver_element_set_string(config, "label", "Test Config");
-    quiver_database_create_element(db, "Configuration", config);
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
     quiver_element_destroy(config);
 
-    auto e = quiver_element_create();
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
     quiver_element_set_string(e, "label", "Item 1");
     double values1[] = {1.5, 2.5, 3.5};
     quiver_element_set_array_float(e, "value_float", values1, 3);
-    int64_t id = quiver_database_create_element(db, "Collection", e);
+    int64_t id = 0;
+    quiver_database_create_element(db, "Collection", e, &id);
     quiver_element_destroy(e);
 
     double new_values[] = {10.5, 20.5};
@@ -164,19 +185,25 @@ TEST(DatabaseCApi, UpdateVectorFloats) {
 TEST(DatabaseCApi, UpdateVectorToEmpty) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto config = quiver_element_create();
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
     quiver_element_set_string(config, "label", "Test Config");
-    quiver_database_create_element(db, "Configuration", config);
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
     quiver_element_destroy(config);
 
-    auto e = quiver_element_create();
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
     quiver_element_set_string(e, "label", "Item 1");
     int64_t values1[] = {1, 2, 3};
     quiver_element_set_array_integer(e, "value_int", values1, 3);
-    int64_t id = quiver_database_create_element(db, "Collection", e);
+    int64_t id = 0;
+    quiver_database_create_element(db, "Collection", e, &id);
     quiver_element_destroy(e);
 
     auto err = quiver_database_update_vector_integers(db, "Collection", "value_int", id, nullptr, 0);
@@ -199,19 +226,25 @@ TEST(DatabaseCApi, UpdateVectorToEmpty) {
 TEST(DatabaseCApi, UpdateSetStrings) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto config = quiver_element_create();
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
     quiver_element_set_string(config, "label", "Test Config");
-    quiver_database_create_element(db, "Configuration", config);
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
     quiver_element_destroy(config);
 
-    auto e = quiver_element_create();
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
     quiver_element_set_string(e, "label", "Item 1");
     const char* tags[] = {"important", "urgent"};
     quiver_element_set_array_string(e, "tag", tags, 2);
-    int64_t id = quiver_database_create_element(db, "Collection", e);
+    int64_t id = 0;
+    quiver_database_create_element(db, "Collection", e, &id);
     quiver_element_destroy(e);
 
     const char* new_tags[] = {"new_tag1", "new_tag2", "new_tag3"};
@@ -240,19 +273,25 @@ TEST(DatabaseCApi, UpdateSetStrings) {
 TEST(DatabaseCApi, UpdateSetToEmpty) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto config = quiver_element_create();
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
     quiver_element_set_string(config, "label", "Test Config");
-    quiver_database_create_element(db, "Configuration", config);
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
     quiver_element_destroy(config);
 
-    auto e = quiver_element_create();
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
     quiver_element_set_string(e, "label", "Item 1");
     const char* tags[] = {"important", "urgent"};
     quiver_element_set_array_string(e, "tag", tags, 2);
-    int64_t id = quiver_database_create_element(db, "Collection", e);
+    int64_t id = 0;
+    quiver_database_create_element(db, "Collection", e, &id);
     quiver_element_destroy(e);
 
     auto err = quiver_database_update_set_strings(db, "Collection", "tag", id, nullptr, 0);
@@ -275,17 +314,21 @@ TEST(DatabaseCApi, UpdateSetToEmpty) {
 TEST(DatabaseCApi, UpdateElementSingleScalar) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto e = quiver_element_create();
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
     quiver_element_set_string(e, "label", "Config 1");
     quiver_element_set_integer(e, "integer_attribute", 42);
-    int64_t id = quiver_database_create_element(db, "Configuration", e);
+    int64_t id = 0;
+    quiver_database_create_element(db, "Configuration", e, &id);
     quiver_element_destroy(e);
 
     // Update single scalar attribute
-    auto update = quiver_element_create();
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     quiver_element_set_integer(update, "integer_attribute", 100);
     auto err = quiver_database_update_element(db, "Configuration", id, update);
     quiver_element_destroy(update);
@@ -312,19 +355,23 @@ TEST(DatabaseCApi, UpdateElementSingleScalar) {
 TEST(DatabaseCApi, UpdateElementMultipleScalars) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto e = quiver_element_create();
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
     quiver_element_set_string(e, "label", "Config 1");
     quiver_element_set_integer(e, "integer_attribute", 42);
     quiver_element_set_float(e, "float_attribute", 3.14);
     quiver_element_set_string(e, "string_attribute", "hello");
-    int64_t id = quiver_database_create_element(db, "Configuration", e);
+    int64_t id = 0;
+    quiver_database_create_element(db, "Configuration", e, &id);
     quiver_element_destroy(e);
 
     // Update multiple scalar attributes at once
-    auto update = quiver_element_create();
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     quiver_element_set_integer(update, "integer_attribute", 100);
     quiver_element_set_float(update, "float_attribute", 2.71);
     quiver_element_set_string(update, "string_attribute", "world");
@@ -367,23 +414,29 @@ TEST(DatabaseCApi, UpdateElementMultipleScalars) {
 TEST(DatabaseCApi, UpdateElementOtherElementsUnchanged) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto e1 = quiver_element_create();
+    quiver_element_t* e1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
     quiver_element_set_string(e1, "label", "Config 1");
     quiver_element_set_integer(e1, "integer_attribute", 42);
-    int64_t id1 = quiver_database_create_element(db, "Configuration", e1);
+    int64_t id1 = 0;
+    quiver_database_create_element(db, "Configuration", e1, &id1);
     quiver_element_destroy(e1);
 
-    auto e2 = quiver_element_create();
+    quiver_element_t* e2 = nullptr;
+    ASSERT_EQ(quiver_element_create(&e2), QUIVER_OK);
     quiver_element_set_string(e2, "label", "Config 2");
     quiver_element_set_integer(e2, "integer_attribute", 100);
-    int64_t id2 = quiver_database_create_element(db, "Configuration", e2);
+    int64_t id2 = 0;
+    quiver_database_create_element(db, "Configuration", e2, &id2);
     quiver_element_destroy(e2);
 
     // Update only first element
-    auto update = quiver_element_create();
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     quiver_element_set_integer(update, "integer_attribute", 999);
     auto err = quiver_database_update_element(db, "Configuration", id1, update);
     quiver_element_destroy(update);
@@ -410,10 +463,12 @@ TEST(DatabaseCApi, UpdateElementOtherElementsUnchanged) {
 TEST(DatabaseCApi, UpdateElementNullArguments) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto element = quiver_element_create();
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
     quiver_element_set_integer(element, "integer_attribute", 42);
 
     // Null db
@@ -444,7 +499,8 @@ TEST(DatabaseCApi, UpdateScalarIntegerNullDb) {
 TEST(DatabaseCApi, UpdateScalarIntegerNullCollection) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
     auto err = quiver_database_update_scalar_integer(db, nullptr, "integer_attribute", 1, 42);
@@ -456,7 +512,8 @@ TEST(DatabaseCApi, UpdateScalarIntegerNullCollection) {
 TEST(DatabaseCApi, UpdateScalarIntegerNullAttribute) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
     auto err = quiver_database_update_scalar_integer(db, "Configuration", nullptr, 1, 42);
@@ -473,7 +530,8 @@ TEST(DatabaseCApi, UpdateScalarFloatNullDb) {
 TEST(DatabaseCApi, UpdateScalarFloatNullCollection) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
     auto err = quiver_database_update_scalar_float(db, nullptr, "float_attribute", 1, 3.14);
@@ -490,7 +548,8 @@ TEST(DatabaseCApi, UpdateScalarStringNullDb) {
 TEST(DatabaseCApi, UpdateScalarStringNullCollection) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
     auto err = quiver_database_update_scalar_string(db, nullptr, "string_attribute", 1, "test");
@@ -502,7 +561,8 @@ TEST(DatabaseCApi, UpdateScalarStringNullCollection) {
 TEST(DatabaseCApi, UpdateScalarStringNullValue) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
     auto err = quiver_database_update_scalar_string(db, "Configuration", "string_attribute", 1, nullptr);
@@ -524,7 +584,9 @@ TEST(DatabaseCApi, UpdateVectorIntegersNullDb) {
 TEST(DatabaseCApi, UpdateVectorIntegersNullCollection) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
     int64_t values[] = {1, 2, 3};
@@ -537,7 +599,9 @@ TEST(DatabaseCApi, UpdateVectorIntegersNullCollection) {
 TEST(DatabaseCApi, UpdateVectorIntegersNullAttribute) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
     int64_t values[] = {1, 2, 3};
@@ -556,7 +620,9 @@ TEST(DatabaseCApi, UpdateVectorFloatsNullDb) {
 TEST(DatabaseCApi, UpdateVectorFloatsNullCollection) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
     double values[] = {1.0, 2.0, 3.0};
@@ -575,7 +641,9 @@ TEST(DatabaseCApi, UpdateVectorStringsNullDb) {
 TEST(DatabaseCApi, UpdateVectorStringsNullCollection) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
     const char* values[] = {"a", "b", "c"};
@@ -598,7 +666,9 @@ TEST(DatabaseCApi, UpdateSetIntegersNullDb) {
 TEST(DatabaseCApi, UpdateSetIntegersNullCollection) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
     int64_t values[] = {1, 2, 3};
@@ -617,7 +687,9 @@ TEST(DatabaseCApi, UpdateSetFloatsNullDb) {
 TEST(DatabaseCApi, UpdateSetFloatsNullCollection) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
     double values[] = {1.0, 2.0, 3.0};
@@ -636,7 +708,9 @@ TEST(DatabaseCApi, UpdateSetStringsNullDb) {
 TEST(DatabaseCApi, UpdateSetStringsNullCollection) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
     const char* values[] = {"a", "b", "c"};
@@ -649,7 +723,9 @@ TEST(DatabaseCApi, UpdateSetStringsNullCollection) {
 TEST(DatabaseCApi, UpdateSetStringsNullAttribute) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
     const char* values[] = {"a", "b", "c"};
@@ -666,13 +742,16 @@ TEST(DatabaseCApi, UpdateSetStringsNullAttribute) {
 TEST(DatabaseCApi, UpdateDateTimeScalar) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto e = quiver_element_create();
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
     quiver_element_set_string(e, "label", "Config 1");
     quiver_element_set_string(e, "date_attribute", "2024-01-01T00:00:00");
-    int64_t id = quiver_database_create_element(db, "Configuration", e);
+    int64_t id = 0;
+    quiver_database_create_element(db, "Configuration", e, &id);
     quiver_element_destroy(e);
     EXPECT_GT(id, 0);
 

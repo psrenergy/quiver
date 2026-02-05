@@ -15,10 +15,17 @@ class Element {
   final Pointer<quiver_element_t1> _ptr;
   bool _isDisposed = false;
 
+  Element._(this._ptr);
+
   /// Creates a new empty element.
-  Element() : _ptr = bindings.quiver_element_create() {
-    if (_ptr == nullptr) {
-      throw const CreateElementException('Failed to create element');
+  factory Element() {
+    final arena = Arena();
+    try {
+      final outElementPtr = arena<Pointer<quiver_element_t1>>();
+      check(bindings.quiver_element_create(outElementPtr));
+      return Element._(outElementPtr.value);
+    } finally {
+      arena.releaseAll();
     }
   }
 
@@ -118,11 +125,13 @@ class Element {
     final namePtr = name.toNativeUtf8();
     final valuePtr = value.toNativeUtf8();
     try {
-      check(bindings.quiver_element_set_string(
-        _ptr,
-        namePtr.cast(),
-        valuePtr.cast(),
-      ));
+      check(
+        bindings.quiver_element_set_string(
+          _ptr,
+          namePtr.cast(),
+          valuePtr.cast(),
+        ),
+      );
     } finally {
       malloc.free(namePtr);
       malloc.free(valuePtr);
@@ -155,12 +164,14 @@ class Element {
       for (var i = 0; i < values.length; i++) {
         arrayPtr[i] = values[i];
       }
-      check(bindings.quiver_element_set_array_integer(
-        _ptr,
-        namePtr.cast(),
-        arrayPtr,
-        values.length,
-      ));
+      check(
+        bindings.quiver_element_set_array_integer(
+          _ptr,
+          namePtr.cast(),
+          arrayPtr,
+          values.length,
+        ),
+      );
     } finally {
       malloc.free(namePtr);
       malloc.free(arrayPtr);
@@ -177,12 +188,14 @@ class Element {
       for (var i = 0; i < values.length; i++) {
         arrayPtr[i] = values[i];
       }
-      check(bindings.quiver_element_set_array_float(
-        _ptr,
-        namePtr.cast(),
-        arrayPtr,
-        values.length,
-      ));
+      check(
+        bindings.quiver_element_set_array_float(
+          _ptr,
+          namePtr.cast(),
+          arrayPtr,
+          values.length,
+        ),
+      );
     } finally {
       malloc.free(namePtr);
       malloc.free(arrayPtr);
@@ -202,12 +215,14 @@ class Element {
         stringPtrs.add(strPtr);
         arrayPtr[i] = strPtr.cast();
       }
-      check(bindings.quiver_element_set_array_string(
-        _ptr,
-        namePtr.cast(),
-        arrayPtr,
-        values.length,
-      ));
+      check(
+        bindings.quiver_element_set_array_string(
+          _ptr,
+          namePtr.cast(),
+          arrayPtr,
+          values.length,
+        ),
+      );
     } finally {
       malloc.free(namePtr);
       for (final ptr in stringPtrs) {

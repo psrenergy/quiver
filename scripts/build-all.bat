@@ -105,10 +105,8 @@ REM ============================================================
 echo [4/5] Running Julia tests...
 echo.
 
-pushd "%ROOT_DIR%\bindings\julia\test"
-call test.bat
+call "%ROOT_DIR%\bindings\julia\test\test.bat"
 set JULIA_EXIT=%errorlevel%
-popd
 
 if %JULIA_EXIT% neq 0 (
     echo.
@@ -126,10 +124,8 @@ REM ============================================================
 echo [5/5] Running Dart tests...
 echo.
 
-pushd "%ROOT_DIR%\bindings\dart\test"
-call test.bat
+call "%ROOT_DIR%\bindings\dart\test\test.bat"
 set DART_EXIT=%errorlevel%
-popd
 
 if %DART_EXIT% neq 0 (
     echo.

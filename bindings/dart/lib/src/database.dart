@@ -36,14 +36,16 @@ class Database {
     try {
       final optionsPtr = arena<quiver_database_options_t>();
       optionsPtr.ref = bindings.quiver_database_options_default();
+      final outDbPtr = arena<Pointer<quiver_database_t>>();
 
-      final ptr = bindings.quiver_database_from_schema(
+      final err = bindings.quiver_database_from_schema(
         dbPath.toNativeUtf8(allocator: arena).cast(),
         schemaPath.toNativeUtf8(allocator: arena).cast(),
         optionsPtr,
+        outDbPtr,
       );
 
-      if (ptr == nullptr) {
+      if (err != quiver_error_t.QUIVER_OK) {
         final errorPtr = bindings.quiver_get_last_error();
         final errorMsg = errorPtr.cast<Utf8>().toDartString();
         throw SchemaException(
@@ -51,7 +53,7 @@ class Database {
         );
       }
 
-      return Database._(ptr);
+      return Database._(outDbPtr.value);
     } finally {
       arena.releaseAll();
     }
@@ -65,14 +67,16 @@ class Database {
     try {
       final optionsPtr = arena<quiver_database_options_t>();
       optionsPtr.ref = bindings.quiver_database_options_default();
+      final outDbPtr = arena<Pointer<quiver_database_t>>();
 
-      final ptr = bindings.quiver_database_from_migrations(
+      final err = bindings.quiver_database_from_migrations(
         dbPath.toNativeUtf8(allocator: arena).cast(),
         migrationsPath.toNativeUtf8(allocator: arena).cast(),
         optionsPtr,
+        outDbPtr,
       );
 
-      if (ptr == nullptr) {
+      if (err != quiver_error_t.QUIVER_OK) {
         final errorPtr = bindings.quiver_get_last_error();
         final errorMsg = errorPtr.cast<Utf8>().toDartString();
         throw MigrationException(
@@ -80,7 +84,7 @@ class Database {
         );
       }
 
-      return Database._(ptr);
+      return Database._(outDbPtr.value);
     } finally {
       arena.releaseAll();
     }

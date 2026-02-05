@@ -13,7 +13,8 @@ include/quiver/c/         # C API headers (for FFI)
   database.h
   element.h
   lua_runner.h
-src/                      # Implementation
+src/                      # C++ implementation
+src/c/                    # C API implementation
 bindings/julia/           # Julia bindings (Quiver.jl)
 bindings/dart/            # Dart bindings (quiver)
 tests/                    # C++ tests
@@ -28,11 +29,13 @@ tests/schemas/            # Shared SQL schemas for all tests
 - **Target Standard**: C++20 - use modern language features where they simplify logic
 - **Philosophy**: Clean code over defensive code (assume callers obey contracts, avoid excessive null checks). Simple solutions over complex abstractions. Delete unused code, do not deprecate.
 - **Intelligence**: Logic resides in C++ layer. Bindings/wrappers remain thin.
+- **Error Messages**: All error messages are defined in the C++/C API layer. Bindings retrieve and surface them — they never craft their own.
 - **Homogeneity**: Binding interfaces must be consistent and intuitive. API surface should feel uniform across wrappers.
 - **Ownership**: RAII used strictly. Ownership of pointers/resources must be explicit and unambiguous.
 - **Constraint**: Be critical. If code is already optimal, state that clearly. Do not invent useless suggestions just to provide output.
 - All public C++ methods should be bound to C API, then to Julia/Dart/Lua
 - All *.sql test schemas in `tests/schemas/`, bindings reference from there
+- **Self-Updating**: Always keep CLAUDE.md up to date with codebase changes
 
 ## Build & Test
 
@@ -136,29 +139,47 @@ static Database from_migrations(const std::string& path, const std::vector<std::
 
 ## C API Patterns
 
+### Return Codes
+All C API functions return `quiver_error_t`. Values are returned via output parameters.
+Exceptions: free/destroy functions (void), error/version utilities (direct return), and `quiver_database_options_default` (struct by value).
+
 ### Error Handling
 Try-catch with `quiver_set_last_error()`, return codes:
 ```cpp
-int quiver_some_function(QuiverDatabase* db) {
+quiver_error_t quiver_some_function(quiver_database_t* db) {
     if (!db) {
         quiver_set_last_error("Null database pointer");
-        return QUIVER_ERROR;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         // operation...
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
-        return QUIVER_ERROR;
+        return QUIVER_ERROR_DATABASE;
     }
 }
+```
+
+### Factory Functions
+Factory functions use out-parameters and return `quiver_error_t`:
+```cpp
+quiver_database_t* db = nullptr;
+quiver_error_t err = quiver_database_from_schema(db_path, schema_path, &options, &db);
+if (err != QUIVER_OK) {
+    const char* msg = quiver_get_last_error();
+    // handle error
+}
+// use db...
+quiver_database_close(db);
 ```
 
 ### Memory Management
 `new`/`delete`, provide matching `quiver_free_*` functions:
 ```cpp
-QuiverDatabase* quiver_database_open(...);
-void quiver_database_close(QuiverDatabase* db);
+// Factory functions return error code, use out-parameter for handle
+quiver_error_t quiver_database_from_schema(..., quiver_database_t** out_db);
+void quiver_database_close(quiver_database_t* db);
 
 char** quiver_read_strings(...);
 void quiver_free_strings(char** strings, int count);

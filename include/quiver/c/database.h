@@ -45,24 +45,30 @@ QUIVER_C_API quiver_database_options_t quiver_database_options_default(void);
 typedef struct quiver_database quiver_database_t;
 
 // Database lifecycle
-QUIVER_C_API quiver_database_t* quiver_database_open(const char* path, const quiver_database_options_t* options);
-QUIVER_C_API quiver_database_t* quiver_database_from_migrations(const char* db_path,
-                                                                const char* migrations_path,
-                                                                const quiver_database_options_t* options);
-QUIVER_C_API quiver_database_t*
-quiver_database_from_schema(const char* db_path, const char* schema_path, const quiver_database_options_t* options);
+QUIVER_C_API quiver_error_t quiver_database_open(const char* path,
+                                                 const quiver_database_options_t* options,
+                                                 quiver_database_t** out_db);
+QUIVER_C_API quiver_error_t quiver_database_from_migrations(const char* db_path,
+                                                            const char* migrations_path,
+                                                            const quiver_database_options_t* options,
+                                                            quiver_database_t** out_db);
+QUIVER_C_API quiver_error_t quiver_database_from_schema(const char* db_path,
+                                                        const char* schema_path,
+                                                        const quiver_database_options_t* options,
+                                                        quiver_database_t** out_db);
 QUIVER_C_API void quiver_database_close(quiver_database_t* db);
-QUIVER_C_API int quiver_database_is_healthy(quiver_database_t* db);
-QUIVER_C_API const char* quiver_database_path(quiver_database_t* db);
+QUIVER_C_API quiver_error_t quiver_database_is_healthy(quiver_database_t* db, int* out_healthy);
+QUIVER_C_API quiver_error_t quiver_database_path(quiver_database_t* db, const char** out_path);
 
 // Version
-QUIVER_C_API int64_t quiver_database_current_version(quiver_database_t* db);
+QUIVER_C_API quiver_error_t quiver_database_current_version(quiver_database_t* db, int64_t* out_version);
 
 // Element operations (requires quiver_element_t from element.h)
 typedef struct quiver_element quiver_element_t;
-QUIVER_C_API int64_t quiver_database_create_element(quiver_database_t* db,
-                                                    const char* collection,
-                                                    quiver_element_t* element);
+QUIVER_C_API quiver_error_t quiver_database_create_element(quiver_database_t* db,
+                                                           const char* collection,
+                                                           quiver_element_t* element,
+                                                           int64_t* out_id);
 QUIVER_C_API quiver_error_t quiver_database_update_element(quiver_database_t* db,
                                                            const char* collection,
                                                            int64_t id,

@@ -8,13 +8,15 @@ extension DatabaseRelations on Database {
 
     final arena = Arena();
     try {
-      check(bindings.quiver_database_set_scalar_relation(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        fromLabel.toNativeUtf8(allocator: arena).cast(),
-        toLabel.toNativeUtf8(allocator: arena).cast(),
-      ));
+      check(
+        bindings.quiver_database_set_scalar_relation(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          fromLabel.toNativeUtf8(allocator: arena).cast(),
+          toLabel.toNativeUtf8(allocator: arena).cast(),
+        ),
+      );
     } finally {
       arena.releaseAll();
     }
@@ -30,13 +32,15 @@ extension DatabaseRelations on Database {
       final outValues = arena<Pointer<Pointer<Char>>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_read_scalar_relation(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        outValues,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_read_scalar_relation(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          outValues,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outValues.value == nullptr) {

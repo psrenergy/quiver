@@ -11,7 +11,7 @@ extern "C" {
 typedef struct quiver_element quiver_element_t;
 
 // Element builder
-QUIVER_C_API quiver_element_t* quiver_element_create(void);
+QUIVER_C_API quiver_error_t quiver_element_create(quiver_element_t** out_element);
 QUIVER_C_API void quiver_element_destroy(quiver_element_t* element);
 QUIVER_C_API void quiver_element_clear(quiver_element_t* element);
 
@@ -36,13 +36,13 @@ QUIVER_C_API quiver_error_t quiver_element_set_array_string(quiver_element_t* el
                                                             int32_t count);
 
 // Accessors
-QUIVER_C_API int quiver_element_has_scalars(quiver_element_t* element);
-QUIVER_C_API int quiver_element_has_arrays(quiver_element_t* element);
-QUIVER_C_API size_t quiver_element_scalar_count(quiver_element_t* element);
-QUIVER_C_API size_t quiver_element_array_count(quiver_element_t* element);
+QUIVER_C_API quiver_error_t quiver_element_has_scalars(quiver_element_t* element, int* out_result);
+QUIVER_C_API quiver_error_t quiver_element_has_arrays(quiver_element_t* element, int* out_result);
+QUIVER_C_API quiver_error_t quiver_element_scalar_count(quiver_element_t* element, size_t* out_count);
+QUIVER_C_API quiver_error_t quiver_element_array_count(quiver_element_t* element, size_t* out_count);
 
 // Pretty print (caller must free returned string with quiver_string_free)
-QUIVER_C_API char* quiver_element_to_string(quiver_element_t* element);
+QUIVER_C_API quiver_error_t quiver_element_to_string(quiver_element_t* element, char** out_string);
 QUIVER_C_API void quiver_string_free(char* str);
 
 #ifdef __cplusplus

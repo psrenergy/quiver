@@ -1,5 +1,6 @@
-#include "c_api_internal.h"
 #include "quiver/c/database.h"
+
+#include "internal.h"
 #include "quiver/c/element.h"
 
 #include <new>
@@ -110,19 +111,24 @@ QUIVER_C_API quiver_database_options_t quiver_database_options_default(void) {
     return options;
 }
 
-QUIVER_C_API quiver_database_t* quiver_database_open(const char* path, const quiver_database_options_t* options) {
-    if (!path) {
-        return nullptr;
+QUIVER_C_API quiver_error_t quiver_database_open(const char* path,
+                                                 const quiver_database_options_t* options,
+                                                 quiver_database_t** out_db) {
+    if (!path || !out_db) {
+        quiver_set_last_error("Null argument");
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
 
     try {
         auto cpp_options = to_cpp_options(options);
-        return new quiver_database(path, cpp_options);
+        *out_db = new quiver_database(path, cpp_options);
+        return QUIVER_OK;
     } catch (const std::bad_alloc&) {
-        return nullptr;
+        quiver_set_last_error("Memory allocation failed");
+        return QUIVER_ERROR_DATABASE;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
-        return nullptr;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
@@ -130,62 +136,75 @@ QUIVER_C_API void quiver_database_close(quiver_database_t* db) {
     delete db;
 }
 
-QUIVER_C_API int quiver_database_is_healthy(quiver_database_t* db) {
-    if (!db) {
-        return 0;
+QUIVER_C_API quiver_error_t quiver_database_is_healthy(quiver_database_t* db, int* out_healthy) {
+    if (!db || !out_healthy) {
+        quiver_set_last_error("Null argument");
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
-    return db->db.is_healthy() ? 1 : 0;
+    *out_healthy = db->db.is_healthy() ? 1 : 0;
+    return QUIVER_OK;
 }
 
-QUIVER_C_API const char* quiver_database_path(quiver_database_t* db) {
-    if (!db) {
-        return nullptr;
+QUIVER_C_API quiver_error_t quiver_database_path(quiver_database_t* db, const char** out_path) {
+    if (!db || !out_path) {
+        quiver_set_last_error("Null argument");
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
-    return db->db.path().c_str();
+    *out_path = db->db.path().c_str();
+    return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_database_t* quiver_database_from_migrations(const char* db_path,
-                                                                const char* migrations_path,
-                                                                const quiver_database_options_t* options) {
-    if (!db_path || !migrations_path) {
-        return nullptr;
+QUIVER_C_API quiver_error_t quiver_database_from_migrations(const char* db_path,
+                                                            const char* migrations_path,
+                                                            const quiver_database_options_t* options,
+                                                            quiver_database_t** out_db) {
+    if (!db_path || !migrations_path || !out_db) {
+        quiver_set_last_error("Null argument");
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
 
     try {
         auto cpp_options = to_cpp_options(options);
         auto db = quiver::Database::from_migrations(db_path, migrations_path, cpp_options);
-        return new quiver_database(std::move(db));
+        *out_db = new quiver_database(std::move(db));
+        return QUIVER_OK;
     } catch (const std::bad_alloc&) {
-        return nullptr;
+        quiver_set_last_error("Memory allocation failed");
+        return QUIVER_ERROR_MIGRATION;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
-        return nullptr;
+        return QUIVER_ERROR_MIGRATION;
     }
 }
 
-QUIVER_C_API int64_t quiver_database_current_version(quiver_database_t* db) {
-    if (!db) {
-        return -1;
+QUIVER_C_API quiver_error_t quiver_database_current_version(quiver_database_t* db, int64_t* out_version) {
+    if (!db || !out_version) {
+        quiver_set_last_error("Null argument");
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
-        return db->db.current_version();
+        *out_version = db->db.current_version();
+        return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
-        return -1;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-QUIVER_C_API int64_t quiver_database_create_element(quiver_database_t* db,
-                                                    const char* collection,
-                                                    quiver_element_t* element) {
-    if (!db || !collection || !element) {
-        return -1;
+QUIVER_C_API quiver_error_t quiver_database_create_element(quiver_database_t* db,
+                                                           const char* collection,
+                                                           quiver_element_t* element,
+                                                           int64_t* out_id) {
+    if (!db || !collection || !element || !out_id) {
+        quiver_set_last_error("Null argument");
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
-        return db->db.create_element(collection, element->element);
+        *out_id = db->db.create_element(collection, element->element);
+        return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
-        return -1;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
@@ -253,21 +272,26 @@ QUIVER_C_API quiver_error_t quiver_database_read_scalar_relation(quiver_database
     }
 }
 
-QUIVER_C_API quiver_database_t*
-quiver_database_from_schema(const char* db_path, const char* schema_path, const quiver_database_options_t* options) {
-    if (!db_path || !schema_path) {
-        return nullptr;
+QUIVER_C_API quiver_error_t quiver_database_from_schema(const char* db_path,
+                                                        const char* schema_path,
+                                                        const quiver_database_options_t* options,
+                                                        quiver_database_t** out_db) {
+    if (!db_path || !schema_path || !out_db) {
+        quiver_set_last_error("Null argument");
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
 
     try {
         auto cpp_options = to_cpp_options(options);
         auto db = quiver::Database::from_schema(db_path, schema_path, cpp_options);
-        return new quiver_database(std::move(db));
+        *out_db = new quiver_database(std::move(db));
+        return QUIVER_OK;
     } catch (const std::bad_alloc&) {
-        return nullptr;
+        quiver_set_last_error("Memory allocation failed");
+        return QUIVER_ERROR_SCHEMA;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
-        return nullptr;
+        return QUIVER_ERROR_SCHEMA;
     }
 }
 

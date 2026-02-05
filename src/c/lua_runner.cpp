@@ -1,5 +1,6 @@
-#include "c_api_internal.h"
 #include "quiver/c/lua_runner.h"
+
+#include "internal.h"
 #include "quiver/lua_runner.h"
 
 #include <new>
@@ -12,14 +13,20 @@ struct quiver_lua_runner {
     explicit quiver_lua_runner(quiver::Database& db) : runner(db) {}
 };
 
-quiver_lua_runner_t* quiver_lua_runner_new(quiver_database_t* db) {
-    if (!db) {
-        return nullptr;
+quiver_error_t quiver_lua_runner_new(quiver_database_t* db, quiver_lua_runner_t** out_runner) {
+    if (!db || !out_runner) {
+        quiver_set_last_error("Null argument");
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
-        return new quiver_lua_runner(db->db);
+        *out_runner = new quiver_lua_runner(db->db);
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR_DATABASE;
     } catch (...) {
-        return nullptr;
+        quiver_set_last_error("Unknown error creating LuaRunner");
+        return QUIVER_ERROR_DATABASE;
     }
 }
 

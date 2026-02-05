@@ -1,5 +1,6 @@
-#include "c_api_internal.h"
 #include "quiver/c/element.h"
+
+#include "internal.h"
 
 #include <cstring>
 #include <new>
@@ -7,11 +8,17 @@
 
 extern "C" {
 
-QUIVER_C_API quiver_element_t* quiver_element_create(void) {
+QUIVER_C_API quiver_error_t quiver_element_create(quiver_element_t** out_element) {
+    if (!out_element) {
+        quiver_set_last_error("Null argument");
+        return QUIVER_ERROR_INVALID_ARGUMENT;
+    }
     try {
-        return new quiver_element();
+        *out_element = new quiver_element();
+        return QUIVER_OK;
     } catch (const std::bad_alloc&) {
-        return nullptr;
+        quiver_set_last_error("Memory allocation failed");
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
@@ -97,45 +104,56 @@ QUIVER_C_API quiver_error_t quiver_element_set_array_string(quiver_element_t* el
     return QUIVER_OK;
 }
 
-QUIVER_C_API int quiver_element_has_scalars(quiver_element_t* element) {
-    if (!element) {
-        return 0;
+QUIVER_C_API quiver_error_t quiver_element_has_scalars(quiver_element_t* element, int* out_result) {
+    if (!element || !out_result) {
+        quiver_set_last_error("Null argument");
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
-    return element->element.has_scalars() ? 1 : 0;
+    *out_result = element->element.has_scalars() ? 1 : 0;
+    return QUIVER_OK;
 }
 
-QUIVER_C_API int quiver_element_has_arrays(quiver_element_t* element) {
-    if (!element) {
-        return 0;
+QUIVER_C_API quiver_error_t quiver_element_has_arrays(quiver_element_t* element, int* out_result) {
+    if (!element || !out_result) {
+        quiver_set_last_error("Null argument");
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
-    return element->element.has_arrays() ? 1 : 0;
+    *out_result = element->element.has_arrays() ? 1 : 0;
+    return QUIVER_OK;
 }
 
-QUIVER_C_API size_t quiver_element_scalar_count(quiver_element_t* element) {
-    if (!element) {
-        return 0;
+QUIVER_C_API quiver_error_t quiver_element_scalar_count(quiver_element_t* element, size_t* out_count) {
+    if (!element || !out_count) {
+        quiver_set_last_error("Null argument");
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
-    return element->element.scalars().size();
+    *out_count = element->element.scalars().size();
+    return QUIVER_OK;
 }
 
-QUIVER_C_API size_t quiver_element_array_count(quiver_element_t* element) {
-    if (!element) {
-        return 0;
+QUIVER_C_API quiver_error_t quiver_element_array_count(quiver_element_t* element, size_t* out_count) {
+    if (!element || !out_count) {
+        quiver_set_last_error("Null argument");
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
-    return element->element.arrays().size();
+    *out_count = element->element.arrays().size();
+    return QUIVER_OK;
 }
 
-QUIVER_C_API char* quiver_element_to_string(quiver_element_t* element) {
-    if (!element) {
-        return nullptr;
+QUIVER_C_API quiver_error_t quiver_element_to_string(quiver_element_t* element, char** out_string) {
+    if (!element || !out_string) {
+        quiver_set_last_error("Null argument");
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         std::string str = element->element.to_string();
         char* result = new char[str.size() + 1];
         std::memcpy(result, str.c_str(), str.size() + 1);
-        return result;
+        *out_string = result;
+        return QUIVER_OK;
     } catch (const std::bad_alloc&) {
-        return nullptr;
+        quiver_set_last_error("Memory allocation failed");
+        return QUIVER_ERROR_DATABASE;
     }
 }
 

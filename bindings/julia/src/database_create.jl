@@ -1,14 +1,7 @@
 function create_element!(db::Database, collection::String, e::Element)
-    result = C.quiver_database_create_element(db.ptr, collection, e.ptr)
-    if result == -1
-        detail = unsafe_string(C.quiver_get_last_error())
-        if isempty(detail)
-            throw(DatabaseException("Failed to create element in collection $collection"))
-        else
-            throw(DatabaseException("Failed to create element in collection $collection: $detail"))
-        end
-    end
-    return Int64(result)
+    out_id = Ref{Int64}(0)
+    check(C.quiver_database_create_element(db.ptr, collection, e.ptr, out_id))
+    return out_id[]
 end
 
 function create_element!(db::Database, collection::String; kwargs...)

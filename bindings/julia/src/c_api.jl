@@ -33,8 +33,7 @@ const libquiver_c = joinpath(@__DIR__, "..", "..", "..", "build", library_dir(),
     QUIVER_ERROR_DATABASE = -2
     QUIVER_ERROR_MIGRATION = -3
     QUIVER_ERROR_SCHEMA = -4
-    QUIVER_ERROR_CREATE_ELEMENT = -5
-    QUIVER_ERROR_NOT_FOUND = -6
+    QUIVER_ERROR_NOT_FOUND = -5
 end
 
 function quiver_error_string(error)
@@ -88,40 +87,40 @@ mutable struct quiver_database end
 
 const quiver_database_t = quiver_database
 
-function quiver_database_open(path, options)
-    @ccall libquiver_c.quiver_database_open(path::Ptr{Cchar}, options::Ptr{quiver_database_options_t})::Ptr{quiver_database_t}
+function quiver_database_open(path, options, out_db)
+    @ccall libquiver_c.quiver_database_open(path::Ptr{Cchar}, options::Ptr{quiver_database_options_t}, out_db::Ptr{Ptr{quiver_database_t}})::quiver_error_t
 end
 
-function quiver_database_from_migrations(db_path, migrations_path, options)
-    @ccall libquiver_c.quiver_database_from_migrations(db_path::Ptr{Cchar}, migrations_path::Ptr{Cchar}, options::Ptr{quiver_database_options_t})::Ptr{quiver_database_t}
+function quiver_database_from_migrations(db_path, migrations_path, options, out_db)
+    @ccall libquiver_c.quiver_database_from_migrations(db_path::Ptr{Cchar}, migrations_path::Ptr{Cchar}, options::Ptr{quiver_database_options_t}, out_db::Ptr{Ptr{quiver_database_t}})::quiver_error_t
 end
 
-function quiver_database_from_schema(db_path, schema_path, options)
-    @ccall libquiver_c.quiver_database_from_schema(db_path::Ptr{Cchar}, schema_path::Ptr{Cchar}, options::Ptr{quiver_database_options_t})::Ptr{quiver_database_t}
+function quiver_database_from_schema(db_path, schema_path, options, out_db)
+    @ccall libquiver_c.quiver_database_from_schema(db_path::Ptr{Cchar}, schema_path::Ptr{Cchar}, options::Ptr{quiver_database_options_t}, out_db::Ptr{Ptr{quiver_database_t}})::quiver_error_t
 end
 
 function quiver_database_close(db)
     @ccall libquiver_c.quiver_database_close(db::Ptr{quiver_database_t})::Cvoid
 end
 
-function quiver_database_is_healthy(db)
-    @ccall libquiver_c.quiver_database_is_healthy(db::Ptr{quiver_database_t})::Cint
+function quiver_database_is_healthy(db, out_healthy)
+    @ccall libquiver_c.quiver_database_is_healthy(db::Ptr{quiver_database_t}, out_healthy::Ptr{Cint})::quiver_error_t
 end
 
-function quiver_database_path(db)
-    @ccall libquiver_c.quiver_database_path(db::Ptr{quiver_database_t})::Ptr{Cchar}
+function quiver_database_path(db, out_path)
+    @ccall libquiver_c.quiver_database_path(db::Ptr{quiver_database_t}, out_path::Ptr{Ptr{Cchar}})::quiver_error_t
 end
 
-function quiver_database_current_version(db)
-    @ccall libquiver_c.quiver_database_current_version(db::Ptr{quiver_database_t})::Int64
+function quiver_database_current_version(db, out_version)
+    @ccall libquiver_c.quiver_database_current_version(db::Ptr{quiver_database_t}, out_version::Ptr{Int64})::quiver_error_t
 end
 
 mutable struct quiver_element end
 
 const quiver_element_t = quiver_element
 
-function quiver_database_create_element(db, collection, element)
-    @ccall libquiver_c.quiver_database_create_element(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, element::Ptr{quiver_element_t})::Int64
+function quiver_database_create_element(db, collection, element, out_id)
+    @ccall libquiver_c.quiver_database_create_element(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, element::Ptr{quiver_element_t}, out_id::Ptr{Int64})::quiver_error_t
 end
 
 function quiver_database_update_element(db, collection, id, element)
@@ -438,8 +437,8 @@ function quiver_database_describe(db)
     @ccall libquiver_c.quiver_database_describe(db::Ptr{quiver_database_t})::quiver_error_t
 end
 
-function quiver_element_create()
-    @ccall libquiver_c.quiver_element_create()::Ptr{quiver_element_t}
+function quiver_element_create(out_element)
+    @ccall libquiver_c.quiver_element_create(out_element::Ptr{Ptr{quiver_element_t}})::quiver_error_t
 end
 
 function quiver_element_destroy(element)
@@ -478,24 +477,24 @@ function quiver_element_set_array_string(element, name, values, count)
     @ccall libquiver_c.quiver_element_set_array_string(element::Ptr{quiver_element_t}, name::Ptr{Cchar}, values::Ptr{Ptr{Cchar}}, count::Int32)::quiver_error_t
 end
 
-function quiver_element_has_scalars(element)
-    @ccall libquiver_c.quiver_element_has_scalars(element::Ptr{quiver_element_t})::Cint
+function quiver_element_has_scalars(element, out_result)
+    @ccall libquiver_c.quiver_element_has_scalars(element::Ptr{quiver_element_t}, out_result::Ptr{Cint})::quiver_error_t
 end
 
-function quiver_element_has_arrays(element)
-    @ccall libquiver_c.quiver_element_has_arrays(element::Ptr{quiver_element_t})::Cint
+function quiver_element_has_arrays(element, out_result)
+    @ccall libquiver_c.quiver_element_has_arrays(element::Ptr{quiver_element_t}, out_result::Ptr{Cint})::quiver_error_t
 end
 
-function quiver_element_scalar_count(element)
-    @ccall libquiver_c.quiver_element_scalar_count(element::Ptr{quiver_element_t})::Csize_t
+function quiver_element_scalar_count(element, out_count)
+    @ccall libquiver_c.quiver_element_scalar_count(element::Ptr{quiver_element_t}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
-function quiver_element_array_count(element)
-    @ccall libquiver_c.quiver_element_array_count(element::Ptr{quiver_element_t})::Csize_t
+function quiver_element_array_count(element, out_count)
+    @ccall libquiver_c.quiver_element_array_count(element::Ptr{quiver_element_t}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
-function quiver_element_to_string(element)
-    @ccall libquiver_c.quiver_element_to_string(element::Ptr{quiver_element_t})::Ptr{Cchar}
+function quiver_element_to_string(element, out_string)
+    @ccall libquiver_c.quiver_element_to_string(element::Ptr{quiver_element_t}, out_string::Ptr{Ptr{Cchar}})::quiver_error_t
 end
 
 function quiver_string_free(str)
@@ -506,8 +505,8 @@ mutable struct quiver_lua_runner end
 
 const quiver_lua_runner_t = quiver_lua_runner
 
-function quiver_lua_runner_new(db)
-    @ccall libquiver_c.quiver_lua_runner_new(db::Ptr{quiver_database_t})::Ptr{quiver_lua_runner_t}
+function quiver_lua_runner_new(db, out_runner)
+    @ccall libquiver_c.quiver_lua_runner_new(db::Ptr{quiver_database_t}, out_runner::Ptr{Ptr{quiver_lua_runner_t}})::quiver_error_t
 end
 
 function quiver_lua_runner_free(runner)

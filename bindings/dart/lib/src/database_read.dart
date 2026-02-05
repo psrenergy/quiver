@@ -15,13 +15,15 @@ extension DatabaseRead on Database {
       final outValues = arena<Pointer<Int64>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_read_scalar_integers(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        outValues,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_read_scalar_integers(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          outValues,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outValues.value == nullptr) {
@@ -45,13 +47,15 @@ extension DatabaseRead on Database {
       final outValues = arena<Pointer<Double>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_read_scalar_floats(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        outValues,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_read_scalar_floats(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          outValues,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outValues.value == nullptr) {
@@ -75,13 +79,15 @@ extension DatabaseRead on Database {
       final outValues = arena<Pointer<Pointer<Char>>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_read_scalar_strings(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        outValues,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_read_scalar_strings(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          outValues,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outValues.value == nullptr) {
@@ -106,14 +112,16 @@ extension DatabaseRead on Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_read_vector_integers(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        outVectors,
-        outSizes,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_read_vector_integers(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          outVectors,
+          outSizes,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outVectors.value == nullptr) {
@@ -146,14 +154,16 @@ extension DatabaseRead on Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_read_vector_floats(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        outVectors,
-        outSizes,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_read_vector_floats(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          outVectors,
+          outSizes,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outVectors.value == nullptr) {
@@ -186,14 +196,16 @@ extension DatabaseRead on Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_read_vector_strings(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        outVectors,
-        outSizes,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_read_vector_strings(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          outVectors,
+          outSizes,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outVectors.value == nullptr) {
@@ -226,14 +238,16 @@ extension DatabaseRead on Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_read_set_integers(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        outSets,
-        outSizes,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_read_set_integers(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          outSets,
+          outSizes,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outSets.value == nullptr) {
@@ -266,14 +280,16 @@ extension DatabaseRead on Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_read_set_floats(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        outSets,
-        outSizes,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_read_set_floats(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          outSets,
+          outSizes,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outSets.value == nullptr) {
@@ -306,14 +322,16 @@ extension DatabaseRead on Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_read_set_strings(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        outSets,
-        outSizes,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_read_set_strings(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          outSets,
+          outSizes,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outSets.value == nullptr) {
@@ -350,14 +368,16 @@ extension DatabaseRead on Database {
       final outValue = arena<Int64>();
       final outHasValue = arena<Int>();
 
-      check(bindings.quiver_database_read_scalar_integer_by_id(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        outValue,
-        outHasValue,
-      ));
+      check(
+        bindings.quiver_database_read_scalar_integer_by_id(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          outValue,
+          outHasValue,
+        ),
+      );
 
       if (outHasValue.value == 0) {
         return null;
@@ -378,14 +398,16 @@ extension DatabaseRead on Database {
       final outValue = arena<Double>();
       final outHasValue = arena<Int>();
 
-      check(bindings.quiver_database_read_scalar_float_by_id(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        outValue,
-        outHasValue,
-      ));
+      check(
+        bindings.quiver_database_read_scalar_float_by_id(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          outValue,
+          outHasValue,
+        ),
+      );
 
       if (outHasValue.value == 0) {
         return null;
@@ -406,14 +428,16 @@ extension DatabaseRead on Database {
       final outValue = arena<Pointer<Char>>();
       final outHasValue = arena<Int>();
 
-      check(bindings.quiver_database_read_scalar_string_by_id(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        outValue,
-        outHasValue,
-      ));
+      check(
+        bindings.quiver_database_read_scalar_string_by_id(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          outValue,
+          outHasValue,
+        ),
+      );
 
       if (outHasValue.value == 0 || outValue.value == nullptr) {
         return null;
@@ -446,14 +470,16 @@ extension DatabaseRead on Database {
       final outValues = arena<Pointer<Int64>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_read_vector_integers_by_id(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        outValues,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_read_vector_integers_by_id(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          outValues,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outValues.value == nullptr) {
@@ -477,14 +503,16 @@ extension DatabaseRead on Database {
       final outValues = arena<Pointer<Double>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_read_vector_floats_by_id(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        outValues,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_read_vector_floats_by_id(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          outValues,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outValues.value == nullptr) {
@@ -508,14 +536,16 @@ extension DatabaseRead on Database {
       final outValues = arena<Pointer<Pointer<Char>>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_read_vector_strings_by_id(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        outValues,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_read_vector_strings_by_id(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          outValues,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outValues.value == nullptr) {
@@ -548,14 +578,16 @@ extension DatabaseRead on Database {
       final outValues = arena<Pointer<Int64>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_read_set_integers_by_id(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        outValues,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_read_set_integers_by_id(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          outValues,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outValues.value == nullptr) {
@@ -579,14 +611,16 @@ extension DatabaseRead on Database {
       final outValues = arena<Pointer<Double>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_read_set_floats_by_id(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        outValues,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_read_set_floats_by_id(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          outValues,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outValues.value == nullptr) {
@@ -610,14 +644,16 @@ extension DatabaseRead on Database {
       final outValues = arena<Pointer<Pointer<Char>>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_read_set_strings_by_id(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        outValues,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_read_set_strings_by_id(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          outValues,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outValues.value == nullptr) {
@@ -650,12 +686,14 @@ extension DatabaseRead on Database {
       final outIds = arena<Pointer<Int64>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_read_element_ids(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        outIds,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_read_element_ids(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          outIds,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outIds.value == nullptr) {
@@ -860,15 +898,17 @@ extension DatabaseRead on Database {
       final outValues = arena<Pointer<Double>>();
       final outRowCount = arena<Size>();
 
-      check(bindings.quiver_database_read_time_series_group_by_id(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        group.toNativeUtf8(allocator: arena).cast(),
-        id,
-        outDateTimes,
-        outValues,
-        outRowCount,
-      ));
+      check(
+        bindings.quiver_database_read_time_series_group_by_id(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          group.toNativeUtf8(allocator: arena).cast(),
+          id,
+          outDateTimes,
+          outValues,
+          outRowCount,
+        ),
+      );
 
       final rowCount = outRowCount.value;
       if (rowCount == 0 || outDateTimes.value == nullptr) {
@@ -905,13 +945,15 @@ extension DatabaseRead on Database {
       final outPaths = arena<Pointer<Pointer<Char>>>();
       final outCount = arena<Size>();
 
-      check(bindings.quiver_database_read_time_series_files(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        outColumns,
-        outPaths,
-        outCount,
-      ));
+      check(
+        bindings.quiver_database_read_time_series_files(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          outColumns,
+          outPaths,
+          outCount,
+        ),
+      );
 
       final count = outCount.value;
       if (count == 0 || outColumns.value == nullptr) {

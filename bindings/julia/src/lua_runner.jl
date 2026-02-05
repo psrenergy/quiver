@@ -4,13 +4,14 @@ mutable struct LuaRunner
 end
 
 function LuaRunner(db::Database)
-    ptr = C.quiver_lua_runner_new(db.ptr)
-    if ptr == C_NULL
+    out_runner = Ref{Ptr{C.quiver_lua_runner}}(C_NULL)
+    err = C.quiver_lua_runner_new(db.ptr, out_runner)
+    if err != C.QUIVER_OK
         detail = unsafe_string(C.quiver_get_last_error())
         context = "Failed to create LuaRunner"
         throw(DatabaseException(isempty(detail) ? context : "$context: $detail"))
     end
-    runner = LuaRunner(ptr, db)
+    runner = LuaRunner(out_runner[], db)
     finalizer(r -> r.ptr != C_NULL && C.quiver_lua_runner_free(r.ptr), runner)
     return runner
 end
