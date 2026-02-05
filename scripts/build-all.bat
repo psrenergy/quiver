@@ -11,7 +11,8 @@ REM   - Julia binding tests
 REM   - Dart binding tests
 REM ============================================================
 
-SET ROOT_DIR=%~dp0
+SET ROOT_DIR=%~dp0..
+
 SET BUILD_TYPE=Debug
 
 REM Parse arguments
@@ -70,7 +71,7 @@ REM ============================================================
 echo [2/5] Running C++ tests...
 echo.
 
-"%ROOT_DIR%build\bin\quiver_tests.exe"
+"%ROOT_DIR%\build\bin\quiver_tests.exe"
 if errorlevel 1 (
     echo.
     echo ERROR: C++ tests failed
@@ -87,7 +88,7 @@ REM ============================================================
 echo [3/5] Running C API tests...
 echo.
 
-"%ROOT_DIR%build\bin\quiver_c_tests.exe"
+"%ROOT_DIR%\build\bin\quiver_c_tests.exe"
 if errorlevel 1 (
     echo.
     echo ERROR: C API tests failed
@@ -104,7 +105,7 @@ REM ============================================================
 echo [4/5] Running Julia tests...
 echo.
 
-pushd "%ROOT_DIR%bindings\julia\test"
+pushd "%ROOT_DIR%\bindings\julia\test"
 call test.bat
 set JULIA_EXIT=%errorlevel%
 popd
@@ -125,7 +126,7 @@ REM ============================================================
 echo [5/5] Running Dart tests...
 echo.
 
-pushd "%ROOT_DIR%bindings\dart\test"
+pushd "%ROOT_DIR%\bindings\dart\test"
 call test.bat
 set DART_EXIT=%errorlevel%
 popd
@@ -158,7 +159,7 @@ echo.
 exit /b 0
 
 :show_help
-echo Usage: build-all.bat [options]
+echo Usage: scripts\build-all.bat [options]
 echo.
 echo Options:
 echo   --debug     Build in Debug mode (default)

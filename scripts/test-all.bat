@@ -11,7 +11,7 @@ REM   - Julia binding tests
 REM   - Dart binding tests
 REM ============================================================
 
-SET ROOT_DIR=%~dp0
+SET ROOT_DIR=%~dp0..
 
 echo.
 echo ============================================================
@@ -30,8 +30,8 @@ REM Step 1: Run C++ Tests
 REM ============================================================
 echo [1/4] Running C++ tests...
 
-if exist "%ROOT_DIR%build\bin\quiver_tests.exe" (
-    "%ROOT_DIR%build\bin\quiver_tests.exe"
+if exist "%ROOT_DIR%\build\bin\quiver_tests.exe" (
+    "%ROOT_DIR%\build\bin\quiver_tests.exe"
     if errorlevel 1 (
         SET CPP_RESULT=FAIL
         SET FAILED=1
@@ -39,7 +39,7 @@ if exist "%ROOT_DIR%build\bin\quiver_tests.exe" (
         SET CPP_RESULT=PASS
     )
 ) else (
-    echo WARNING: C++ tests not found. Run build-all.bat first.
+    echo WARNING: C++ tests not found. Run scripts\build-all.bat first.
     SET CPP_RESULT=SKIP
 )
 echo.
@@ -49,8 +49,8 @@ REM Step 2: Run C API Tests
 REM ============================================================
 echo [2/4] Running C API tests...
 
-if exist "%ROOT_DIR%build\bin\quiver_c_tests.exe" (
-    "%ROOT_DIR%build\bin\quiver_c_tests.exe"
+if exist "%ROOT_DIR%\build\bin\quiver_c_tests.exe" (
+    "%ROOT_DIR%\build\bin\quiver_c_tests.exe"
     if errorlevel 1 (
         SET CAPI_RESULT=FAIL
         SET FAILED=1
@@ -58,7 +58,7 @@ if exist "%ROOT_DIR%build\bin\quiver_c_tests.exe" (
         SET CAPI_RESULT=PASS
     )
 ) else (
-    echo WARNING: C API tests not found. Run build-all.bat first.
+    echo WARNING: C API tests not found. Run scripts\build-all.bat first.
     SET CAPI_RESULT=SKIP
 )
 echo.
@@ -68,7 +68,7 @@ REM Step 3: Run Julia Tests
 REM ============================================================
 echo [3/4] Running Julia tests...
 
-pushd "%ROOT_DIR%bindings\julia\test"
+pushd "%ROOT_DIR%\bindings\julia\test"
 call test.bat
 if errorlevel 1 (
     SET JULIA_RESULT=FAIL
@@ -84,7 +84,7 @@ REM Step 4: Run Dart Tests
 REM ============================================================
 echo [4/4] Running Dart tests...
 
-pushd "%ROOT_DIR%bindings\dart\test"
+pushd "%ROOT_DIR%\bindings\dart\test"
 call test.bat
 if errorlevel 1 (
     SET DART_RESULT=FAIL

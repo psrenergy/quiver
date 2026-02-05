@@ -43,9 +43,9 @@ cmake --build build --config Debug
 
 ### Build and Test All
 ```bash
-build-all.bat            # Build everything + run all tests (Debug)
-build-all.bat --release  # Build in Release mode
-test-all.bat             # Run all tests (assumes already built)
+scripts/build-all.bat            # Build everything + run all tests (Debug)
+scripts/build-all.bat --release  # Build in Release mode
+scripts/test-all.bat             # Run all tests (assumes already built)
 ```
 
 ### Individual Tests
