@@ -29,8 +29,7 @@ sealed class DatabaseException implements Exception {
       -2 => DatabaseOperationException(context ?? 'Database error'),
       -3 => MigrationException(context ?? 'Migration error'),
       -4 => SchemaException(context ?? 'Schema error'),
-      -5 => CreateElementException(context ?? 'Failed to create element'),
-      -6 => NotFoundException(context ?? 'Not found'),
+      -5 => NotFoundException(context ?? 'Not found'),
       _ => UnknownDatabaseException('Unknown error: $errorCode'),
     };
   }
@@ -50,10 +49,6 @@ class MigrationException extends DatabaseException {
 
 class SchemaException extends DatabaseException {
   const SchemaException(super.message);
-}
-
-class CreateElementException extends DatabaseException {
-  const CreateElementException(super.message);
 }
 
 class NotFoundException extends DatabaseException {

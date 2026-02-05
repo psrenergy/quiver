@@ -36,8 +36,6 @@ QUIVER_C_API const char* quiver_error_string(quiver_error_t error) {
         return "Migration error";
     case QUIVER_ERROR_SCHEMA:
         return "Schema validation error";
-    case QUIVER_ERROR_CREATE_ELEMENT:
-        return "Failed to create element";
     case QUIVER_ERROR_NOT_FOUND:
         return "Not found";
     default:

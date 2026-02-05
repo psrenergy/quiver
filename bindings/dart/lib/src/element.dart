@@ -18,7 +18,7 @@ class Element {
   /// Creates a new empty element.
   Element() : _ptr = bindings.quiver_element_create() {
     if (_ptr == nullptr) {
-      throw const CreateElementException('Failed to create element');
+      throw const DatabaseOperationException('Failed to create element');
     }
   }
 

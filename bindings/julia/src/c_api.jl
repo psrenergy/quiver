@@ -33,8 +33,7 @@ const libquiver_c = joinpath(@__DIR__, "..", "..", "..", "build", library_dir(),
     QUIVER_ERROR_DATABASE = -2
     QUIVER_ERROR_MIGRATION = -3
     QUIVER_ERROR_SCHEMA = -4
-    QUIVER_ERROR_CREATE_ELEMENT = -5
-    QUIVER_ERROR_NOT_FOUND = -6
+    QUIVER_ERROR_NOT_FOUND = -5
 end
 
 function quiver_error_string(error)

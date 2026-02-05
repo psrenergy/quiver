@@ -87,7 +87,6 @@ TEST_F(TempFileFixture, ErrorStrings) {
     EXPECT_STREQ(quiver_error_string(QUIVER_ERROR_DATABASE), "Database error");
     EXPECT_STREQ(quiver_error_string(QUIVER_ERROR_MIGRATION), "Migration error");
     EXPECT_STREQ(quiver_error_string(QUIVER_ERROR_SCHEMA), "Schema validation error");
-    EXPECT_STREQ(quiver_error_string(QUIVER_ERROR_CREATE_ELEMENT), "Failed to create element");
     EXPECT_STREQ(quiver_error_string(QUIVER_ERROR_NOT_FOUND), "Not found");
     EXPECT_STREQ(quiver_error_string(static_cast<quiver_error_t>(-999)), "Unknown error");
 }
