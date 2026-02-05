@@ -70,6 +70,25 @@
       }
     },
     {
+      "name": "macos-gcc",
+      "displayName": "macOS GCC",
+      "description": "macOS build using GCC instead of Clang",
+      "inherits": "base",
+      "generator": "Unix Makefiles",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "gcc-13",
+        "CMAKE_CXX_COMPILER": "g++-13",
+        "QUIVER_BUILD_TESTS": "ON",
+        "QUIVER_BUILD_C_API": "ON"
+      }
+    },
+    {
       "name": "all-bindings",
       "displayName": "All Bindings",
       "description": "Build with all language bindings enabled",
