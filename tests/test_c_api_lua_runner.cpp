@@ -280,7 +280,7 @@ TEST_F(LuaRunnerCApiTest, UpdateElement) {
 
         db:update_element("Collection", 1, { some_integer = 999 })
 
-        local val = db:read_scalar_integers_by_id("Collection", "some_integer", 1)
+        local val = db:read_scalar_integer_by_id("Collection", "some_integer", 1)
         assert(val == 999, "Expected 999 after update")
     )");
     EXPECT_EQ(result, QUIVER_OK);
@@ -289,7 +289,7 @@ TEST_F(LuaRunnerCApiTest, UpdateElement) {
     int64_t value = 0;
     int has_value = 0;
     auto read_result =
-        quiver_database_read_scalar_integers_by_id(db, "Collection", "some_integer", 1, &value, &has_value);
+        quiver_database_read_scalar_integer_by_id(db, "Collection", "some_integer", 1, &value, &has_value);
     EXPECT_EQ(read_result, QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(value, 999);

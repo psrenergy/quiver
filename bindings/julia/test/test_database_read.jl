@@ -180,9 +180,9 @@ include("fixture.jl")
         Quiver.create_element!(db, "Configuration"; label = "Config 1", integer_attribute = 42)
         Quiver.create_element!(db, "Configuration"; label = "Config 2", integer_attribute = 100)
 
-        @test Quiver.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", 1) == 42
-        @test Quiver.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", 2) == 100
-        @test Quiver.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", 999) === nothing
+        @test Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", 1) == 42
+        @test Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", 2) == 100
+        @test Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", 999) === nothing
 
         Quiver.close!(db)
     end
@@ -194,8 +194,8 @@ include("fixture.jl")
         Quiver.create_element!(db, "Configuration"; label = "Config 1", float_attribute = 3.14)
         Quiver.create_element!(db, "Configuration"; label = "Config 2", float_attribute = 2.71)
 
-        @test Quiver.read_scalar_floats_by_id(db, "Configuration", "float_attribute", 1) == 3.14
-        @test Quiver.read_scalar_floats_by_id(db, "Configuration", "float_attribute", 2) == 2.71
+        @test Quiver.read_scalar_float_by_id(db, "Configuration", "float_attribute", 1) == 3.14
+        @test Quiver.read_scalar_float_by_id(db, "Configuration", "float_attribute", 2) == 2.71
 
         Quiver.close!(db)
     end
@@ -207,8 +207,8 @@ include("fixture.jl")
         Quiver.create_element!(db, "Configuration"; label = "Config 1", string_attribute = "hello")
         Quiver.create_element!(db, "Configuration"; label = "Config 2", string_attribute = "world")
 
-        @test Quiver.read_scalar_strings_by_id(db, "Configuration", "string_attribute", 1) == "hello"
-        @test Quiver.read_scalar_strings_by_id(db, "Configuration", "string_attribute", 2) == "world"
+        @test Quiver.read_scalar_string_by_id(db, "Configuration", "string_attribute", 1) == "hello"
+        @test Quiver.read_scalar_string_by_id(db, "Configuration", "string_attribute", 2) == "world"
 
         Quiver.close!(db)
     end
@@ -233,7 +233,7 @@ include("fixture.jl")
         @test dates[2] == "2024-06-20T14:45:30"
 
         # Read DateTime by ID
-        date = Quiver.read_scalar_strings_by_id(db, "Configuration", "date_attribute", Int64(1))
+        date = Quiver.read_scalar_string_by_id(db, "Configuration", "date_attribute", Int64(1))
         @test date == "2024-01-15T10:30:00"
 
         Quiver.close!(db)
@@ -398,9 +398,9 @@ include("fixture.jl")
         Quiver.create_element!(db, "Configuration"; label = "Config 1", integer_attribute = 42)
 
         # Read by ID that doesn't exist returns nothing
-        @test Quiver.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", 999) === nothing
-        @test Quiver.read_scalar_floats_by_id(db, "Configuration", "float_attribute", 999) === nothing
-        @test Quiver.read_scalar_strings_by_id(db, "Configuration", "string_attribute", 999) === nothing
+        @test Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", 999) === nothing
+        @test Quiver.read_scalar_float_by_id(db, "Configuration", "float_attribute", 999) === nothing
+        @test Quiver.read_scalar_string_by_id(db, "Configuration", "string_attribute", 999) === nothing
 
         Quiver.close!(db)
     end

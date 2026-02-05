@@ -28,7 +28,7 @@ TEST(DatabaseCApi, UpdateScalarInteger) {
 
     int64_t value;
     int has_value;
-    err = quiver_database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id, &value, &has_value);
+    err = quiver_database_read_scalar_integer_by_id(db, "Configuration", "integer_attribute", id, &value, &has_value);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(value, 100);
@@ -53,7 +53,7 @@ TEST(DatabaseCApi, UpdateScalarFloat) {
 
     double value;
     int has_value;
-    err = quiver_database_read_scalar_floats_by_id(db, "Configuration", "float_attribute", id, &value, &has_value);
+    err = quiver_database_read_scalar_float_by_id(db, "Configuration", "float_attribute", id, &value, &has_value);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_DOUBLE_EQ(value, 2.71);
@@ -78,7 +78,7 @@ TEST(DatabaseCApi, UpdateScalarString) {
 
     char* value = nullptr;
     int has_value;
-    err = quiver_database_read_scalar_strings_by_id(db, "Configuration", "string_attribute", id, &value, &has_value);
+    err = quiver_database_read_scalar_string_by_id(db, "Configuration", "string_attribute", id, &value, &has_value);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(value, "world");
@@ -293,14 +293,14 @@ TEST(DatabaseCApi, UpdateElementSingleScalar) {
 
     int64_t value;
     int has_value;
-    err = quiver_database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id, &value, &has_value);
+    err = quiver_database_read_scalar_integer_by_id(db, "Configuration", "integer_attribute", id, &value, &has_value);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(value, 100);
 
     // Verify label unchanged
     char* label = nullptr;
-    err = quiver_database_read_scalar_strings_by_id(db, "Configuration", "label", id, &label, &has_value);
+    err = quiver_database_read_scalar_string_by_id(db, "Configuration", "label", id, &label, &has_value);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(label, "Config 1");
@@ -334,7 +334,7 @@ TEST(DatabaseCApi, UpdateElementMultipleScalars) {
 
     int64_t integer_value;
     int has_value;
-    err = quiver_database_read_scalar_integers_by_id(
+    err = quiver_database_read_scalar_integer_by_id(
         db, "Configuration", "integer_attribute", id, &integer_value, &has_value);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 1);
@@ -342,14 +342,14 @@ TEST(DatabaseCApi, UpdateElementMultipleScalars) {
 
     double float_value;
     err =
-        quiver_database_read_scalar_floats_by_id(db, "Configuration", "float_attribute", id, &float_value, &has_value);
+        quiver_database_read_scalar_float_by_id(db, "Configuration", "float_attribute", id, &float_value, &has_value);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_DOUBLE_EQ(float_value, 2.71);
 
     char* str_value = nullptr;
     err =
-        quiver_database_read_scalar_strings_by_id(db, "Configuration", "string_attribute", id, &str_value, &has_value);
+        quiver_database_read_scalar_string_by_id(db, "Configuration", "string_attribute", id, &str_value, &has_value);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(str_value, "world");
@@ -357,7 +357,7 @@ TEST(DatabaseCApi, UpdateElementMultipleScalars) {
 
     // Verify label unchanged
     char* label = nullptr;
-    err = quiver_database_read_scalar_strings_by_id(db, "Configuration", "label", id, &label, &has_value);
+    err = quiver_database_read_scalar_string_by_id(db, "Configuration", "label", id, &label, &has_value);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(label, "Config 1");
@@ -395,13 +395,13 @@ TEST(DatabaseCApi, UpdateElementOtherElementsUnchanged) {
     int has_value;
 
     // Verify first element changed
-    err = quiver_database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id1, &value, &has_value);
+    err = quiver_database_read_scalar_integer_by_id(db, "Configuration", "integer_attribute", id1, &value, &has_value);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(value, 999);
 
     // Verify second element unchanged
-    err = quiver_database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id2, &value, &has_value);
+    err = quiver_database_read_scalar_integer_by_id(db, "Configuration", "integer_attribute", id2, &value, &has_value);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(value, 100);
@@ -685,7 +685,7 @@ TEST(DatabaseCApi, UpdateDateTimeScalar) {
     // Verify the update
     char* value = nullptr;
     int has_value;
-    err = quiver_database_read_scalar_strings_by_id(db, "Configuration", "date_attribute", id, &value, &has_value);
+    err = quiver_database_read_scalar_string_by_id(db, "Configuration", "date_attribute", id, &value, &has_value);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(value, "2025-12-31T23:59:59");

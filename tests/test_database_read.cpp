@@ -263,8 +263,8 @@ TEST(Database, ReadScalarIntegerById) {
     e2.set("label", std::string("Config 2")).set("integer_attribute", int64_t{100});
     int64_t id2 = db.create_element("Configuration", e2);
 
-    auto val1 = db.read_scalar_integers_by_id("Configuration", "integer_attribute", id1);
-    auto val2 = db.read_scalar_integers_by_id("Configuration", "integer_attribute", id2);
+    auto val1 = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id1);
+    auto val2 = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id2);
 
     EXPECT_TRUE(val1.has_value());
     EXPECT_EQ(*val1, 42);
@@ -284,8 +284,8 @@ TEST(Database, ReadScalarFloatById) {
     e2.set("label", std::string("Config 2")).set("float_attribute", 2.71);
     int64_t id2 = db.create_element("Configuration", e2);
 
-    auto val1 = db.read_scalar_floats_by_id("Configuration", "float_attribute", id1);
-    auto val2 = db.read_scalar_floats_by_id("Configuration", "float_attribute", id2);
+    auto val1 = db.read_scalar_float_by_id("Configuration", "float_attribute", id1);
+    auto val2 = db.read_scalar_float_by_id("Configuration", "float_attribute", id2);
 
     EXPECT_TRUE(val1.has_value());
     EXPECT_DOUBLE_EQ(*val1, 3.14);
@@ -305,8 +305,8 @@ TEST(Database, ReadScalarStringById) {
     e2.set("label", std::string("Config 2")).set("string_attribute", std::string("world"));
     int64_t id2 = db.create_element("Configuration", e2);
 
-    auto val1 = db.read_scalar_strings_by_id("Configuration", "string_attribute", id1);
-    auto val2 = db.read_scalar_strings_by_id("Configuration", "string_attribute", id2);
+    auto val1 = db.read_scalar_string_by_id("Configuration", "string_attribute", id1);
+    auto val2 = db.read_scalar_string_by_id("Configuration", "string_attribute", id2);
 
     EXPECT_TRUE(val1.has_value());
     EXPECT_EQ(*val1, "hello");
@@ -323,7 +323,7 @@ TEST(Database, ReadScalarByIdNotFound) {
     db.create_element("Configuration", e);
 
     // Non-existent ID
-    auto val = db.read_scalar_integers_by_id("Configuration", "integer_attribute", 999);
+    auto val = db.read_scalar_integer_by_id("Configuration", "integer_attribute", 999);
     EXPECT_FALSE(val.has_value());
 }
 
@@ -565,7 +565,7 @@ TEST(Database, ReadScalarIntegerByIdInvalidCollection) {
     auto db =
         quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
 
-    EXPECT_THROW(db.read_scalar_integers_by_id("NonexistentCollection", "integer_attribute", 1), std::runtime_error);
+    EXPECT_THROW(db.read_scalar_integer_by_id("NonexistentCollection", "integer_attribute", 1), std::runtime_error);
 }
 
 TEST(Database, ReadVectorIntegerByIdInvalidCollection) {
@@ -625,7 +625,7 @@ TEST(Database, DateTimeReadScalarStringById) {
     element.set("label", std::string("Config 1")).set("date_attribute", std::string("2024-03-15T14:30:45"));
     int64_t id = db.create_element("Configuration", element);
 
-    auto date = db.read_scalar_strings_by_id("Configuration", "date_attribute", id);
+    auto date = db.read_scalar_string_by_id("Configuration", "date_attribute", id);
     EXPECT_TRUE(date.has_value());
     EXPECT_EQ(date.value(), "2024-03-15T14:30:45");
 }
@@ -638,7 +638,7 @@ TEST(Database, DateTimeNullable) {
     element.set("label", std::string("Config 1"));
     int64_t id = db.create_element("Configuration", element);
 
-    auto date = db.read_scalar_strings_by_id("Configuration", "date_attribute", id);
+    auto date = db.read_scalar_string_by_id("Configuration", "date_attribute", id);
     EXPECT_FALSE(date.has_value());
 }
 

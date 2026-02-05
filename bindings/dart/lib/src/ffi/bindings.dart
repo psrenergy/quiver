@@ -728,7 +728,7 @@ class QuiverDatabaseBindings {
         )
       >();
 
-  int quiver_database_read_scalar_integers_by_id(
+  int quiver_database_read_scalar_integer_by_id(
     ffi.Pointer<quiver_database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
@@ -736,7 +736,7 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Int64> out_value,
     ffi.Pointer<ffi.Int> out_has_value,
   ) {
-    return _quiver_database_read_scalar_integers_by_id(
+    return _quiver_database_read_scalar_integer_by_id(
       db,
       collection,
       attribute,
@@ -746,7 +746,7 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_scalar_integers_by_idPtr =
+  late final _quiver_database_read_scalar_integer_by_idPtr =
       _lookup<
         ffi.NativeFunction<
           ffi.Int32 Function(
@@ -758,8 +758,8 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Int>,
           )
         >
-      >('quiver_database_read_scalar_integers_by_id');
-  late final _quiver_database_read_scalar_integers_by_id = _quiver_database_read_scalar_integers_by_idPtr
+      >('quiver_database_read_scalar_integer_by_id');
+  late final _quiver_database_read_scalar_integer_by_id = _quiver_database_read_scalar_integer_by_idPtr
       .asFunction<
         int Function(
           ffi.Pointer<quiver_database_t>,
@@ -771,7 +771,7 @@ class QuiverDatabaseBindings {
         )
       >();
 
-  int quiver_database_read_scalar_floats_by_id(
+  int quiver_database_read_scalar_float_by_id(
     ffi.Pointer<quiver_database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
@@ -779,7 +779,7 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Double> out_value,
     ffi.Pointer<ffi.Int> out_has_value,
   ) {
-    return _quiver_database_read_scalar_floats_by_id(
+    return _quiver_database_read_scalar_float_by_id(
       db,
       collection,
       attribute,
@@ -789,7 +789,7 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_scalar_floats_by_idPtr =
+  late final _quiver_database_read_scalar_float_by_idPtr =
       _lookup<
         ffi.NativeFunction<
           ffi.Int32 Function(
@@ -801,8 +801,8 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Int>,
           )
         >
-      >('quiver_database_read_scalar_floats_by_id');
-  late final _quiver_database_read_scalar_floats_by_id = _quiver_database_read_scalar_floats_by_idPtr
+      >('quiver_database_read_scalar_float_by_id');
+  late final _quiver_database_read_scalar_float_by_id = _quiver_database_read_scalar_float_by_idPtr
       .asFunction<
         int Function(
           ffi.Pointer<quiver_database_t>,
@@ -814,7 +814,7 @@ class QuiverDatabaseBindings {
         )
       >();
 
-  int quiver_database_read_scalar_strings_by_id(
+  int quiver_database_read_scalar_string_by_id(
     ffi.Pointer<quiver_database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> attribute,
@@ -822,7 +822,7 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Pointer<ffi.Char>> out_value,
     ffi.Pointer<ffi.Int> out_has_value,
   ) {
-    return _quiver_database_read_scalar_strings_by_id(
+    return _quiver_database_read_scalar_string_by_id(
       db,
       collection,
       attribute,
@@ -832,7 +832,7 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_read_scalar_strings_by_idPtr =
+  late final _quiver_database_read_scalar_string_by_idPtr =
       _lookup<
         ffi.NativeFunction<
           ffi.Int32 Function(
@@ -844,8 +844,8 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Int>,
           )
         >
-      >('quiver_database_read_scalar_strings_by_id');
-  late final _quiver_database_read_scalar_strings_by_id = _quiver_database_read_scalar_strings_by_idPtr
+      >('quiver_database_read_scalar_string_by_id');
+  late final _quiver_database_read_scalar_string_by_id = _quiver_database_read_scalar_string_by_idPtr
       .asFunction<
         int Function(
           ffi.Pointer<quiver_database_t>,

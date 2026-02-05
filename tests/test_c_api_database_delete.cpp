@@ -205,14 +205,14 @@ TEST(DatabaseCApi, DeleteElementByIdOtherElementsUnchanged) {
     // Verify first element unchanged
     int64_t val1;
     int has_value;
-    err = quiver_database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id1, &val1, &has_value);
+    err = quiver_database_read_scalar_integer_by_id(db, "Configuration", "integer_attribute", id1, &val1, &has_value);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(val1, 42);
 
     // Verify third element unchanged
     int64_t val3;
-    err = quiver_database_read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id3, &val3, &has_value);
+    err = quiver_database_read_scalar_integer_by_id(db, "Configuration", "integer_attribute", id3, &val3, &has_value);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(val3, 200);

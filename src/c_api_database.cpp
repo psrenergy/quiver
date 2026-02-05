@@ -511,7 +511,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_set_strings(quiver_database_t* 
 
 // Read scalar by ID functions
 
-QUIVER_C_API quiver_error_t quiver_database_read_scalar_integers_by_id(quiver_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_scalar_integer_by_id(quiver_database_t* db,
                                                                        const char* collection,
                                                                        const char* attribute,
                                                                        int64_t id,
@@ -521,7 +521,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_scalar_integers_by_id(quiver_da
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
-        auto result = db->db.read_scalar_integers_by_id(collection, attribute, id);
+        auto result = db->db.read_scalar_integer_by_id(collection, attribute, id);
         if (result.has_value()) {
             *out_value = *result;
             *out_has_value = 1;
@@ -535,7 +535,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_scalar_integers_by_id(quiver_da
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_read_scalar_floats_by_id(quiver_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_scalar_float_by_id(quiver_database_t* db,
                                                                      const char* collection,
                                                                      const char* attribute,
                                                                      int64_t id,
@@ -545,7 +545,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_scalar_floats_by_id(quiver_data
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
-        auto result = db->db.read_scalar_floats_by_id(collection, attribute, id);
+        auto result = db->db.read_scalar_float_by_id(collection, attribute, id);
         if (result.has_value()) {
             *out_value = *result;
             *out_has_value = 1;
@@ -559,7 +559,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_scalar_floats_by_id(quiver_data
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_read_scalar_strings_by_id(quiver_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_scalar_string_by_id(quiver_database_t* db,
                                                                       const char* collection,
                                                                       const char* attribute,
                                                                       int64_t id,
@@ -569,7 +569,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_scalar_strings_by_id(quiver_dat
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
-        auto result = db->db.read_scalar_strings_by_id(collection, attribute, id);
+        auto result = db->db.read_scalar_string_by_id(collection, attribute, id);
         if (result.has_value()) {
             *out_value = new char[result->size() + 1];
             std::copy(result->begin(), result->end(), *out_value);

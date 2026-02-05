@@ -122,12 +122,12 @@ TEST(Database, DeleteElementByIdOtherElementsUnchanged) {
     EXPECT_EQ(ids[1], id3);
 
     // Verify first element unchanged
-    auto val1 = db.read_scalar_integers_by_id("Configuration", "integer_attribute", id1);
+    auto val1 = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id1);
     EXPECT_TRUE(val1.has_value());
     EXPECT_EQ(*val1, 42);
 
     // Verify third element unchanged
-    auto val3 = db.read_scalar_integers_by_id("Configuration", "integer_attribute", id3);
+    auto val3 = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id3);
     EXPECT_TRUE(val3.has_value());
     EXPECT_EQ(*val3, 200);
 }

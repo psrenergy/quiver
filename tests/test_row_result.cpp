@@ -238,7 +238,7 @@ TEST(RowResult, ReadScalarByIdWithNull) {
 
     // Read optional float attribute (should be nullopt since we didn't set it)
     // Note: integer_attribute has DEFAULT 6, so we use float_attribute instead
-    auto result = db.read_scalar_floats_by_id("Configuration", "float_attribute", id);
+    auto result = db.read_scalar_float_by_id("Configuration", "float_attribute", id);
     EXPECT_FALSE(result.has_value());
 }
 

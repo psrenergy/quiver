@@ -386,7 +386,7 @@ extension DatabaseRead on Database {
       final outValue = arena<Int64>();
       final outHasValue = arena<Int>();
 
-      final err = bindings.quiver_database_read_scalar_integers_by_id(
+      final err = bindings.quiver_database_read_scalar_integer_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -418,7 +418,7 @@ extension DatabaseRead on Database {
       final outValue = arena<Double>();
       final outHasValue = arena<Int>();
 
-      final err = bindings.quiver_database_read_scalar_floats_by_id(
+      final err = bindings.quiver_database_read_scalar_float_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
@@ -450,7 +450,7 @@ extension DatabaseRead on Database {
       final outValue = arena<Pointer<Char>>();
       final outHasValue = arena<Int>();
 
-      final err = bindings.quiver_database_read_scalar_strings_by_id(
+      final err = bindings.quiver_database_read_scalar_string_by_id(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),

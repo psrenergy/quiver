@@ -19,11 +19,11 @@ include("fixture.jl")
         Quiver.update_element!(db, "Configuration", Int64(1); integer_attribute = 999)
 
         # Verify update
-        value = Quiver.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", Int64(1))
+        value = Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", Int64(1))
         @test value == 999
 
         # Verify label unchanged
-        label = Quiver.read_scalar_strings_by_id(db, "Configuration", "label", Int64(1))
+        label = Quiver.read_scalar_string_by_id(db, "Configuration", "label", Int64(1))
         @test label == "Config 1"
 
         Quiver.close!(db)
@@ -46,14 +46,14 @@ include("fixture.jl")
         Quiver.update_element!(db, "Configuration", Int64(1); integer_attribute = 500, float_attribute = 9.9)
 
         # Verify updates
-        integer_value = Quiver.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", Int64(1))
+        integer_value = Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", Int64(1))
         @test integer_value == 500
 
-        float_value = Quiver.read_scalar_floats_by_id(db, "Configuration", "float_attribute", Int64(1))
+        float_value = Quiver.read_scalar_float_by_id(db, "Configuration", "float_attribute", Int64(1))
         @test float_value == 9.9
 
         # Verify label unchanged
-        label = Quiver.read_scalar_strings_by_id(db, "Configuration", "label", Int64(1))
+        label = Quiver.read_scalar_string_by_id(db, "Configuration", "label", Int64(1))
         @test label == "Config 1"
 
         Quiver.close!(db)
@@ -72,14 +72,14 @@ include("fixture.jl")
         Quiver.update_element!(db, "Configuration", Int64(2); integer_attribute = 999)
 
         # Verify element 2 updated
-        value2 = Quiver.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", Int64(2))
+        value2 = Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", Int64(2))
         @test value2 == 999
 
         # Verify elements 1 and 3 unchanged
-        value1 = Quiver.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", Int64(1))
+        value1 = Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", Int64(1))
         @test value1 == 100
 
-        value3 = Quiver.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", Int64(3))
+        value3 = Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", Int64(3))
         @test value3 == 300
 
         Quiver.close!(db)
@@ -102,7 +102,7 @@ include("fixture.jl")
         Quiver.update_element!(db, "Collection", Int64(1); some_integer = 999, value_int = [7, 8, 9])
 
         # Verify scalar was updated
-        integer_value = Quiver.read_scalar_integers_by_id(db, "Collection", "some_integer", Int64(1))
+        integer_value = Quiver.read_scalar_integer_by_id(db, "Collection", "some_integer", Int64(1))
         @test integer_value == 999
 
         # Verify vector was also updated
@@ -131,7 +131,7 @@ include("fixture.jl")
         @test sort(tag_values) == sort(["new_tag1", "new_tag2"])
 
         # Verify label unchanged
-        label = Quiver.read_scalar_strings_by_id(db, "Collection", "label", Int64(1))
+        label = Quiver.read_scalar_string_by_id(db, "Collection", "label", Int64(1))
         @test label == "Item 1"
 
         Quiver.close!(db)
@@ -197,7 +197,7 @@ include("fixture.jl")
         Quiver.update_element!(db, "Configuration", Int64(1), e)
 
         # Verify update
-        value = Quiver.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", Int64(1))
+        value = Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", Int64(1))
         @test value == 777
 
         Quiver.close!(db)
@@ -231,7 +231,7 @@ include("fixture.jl")
         Quiver.update_element!(db, "Configuration", Int64(999); integer_attribute = 500)
 
         # Verify original element unchanged
-        value = Quiver.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", Int64(1))
+        value = Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", Int64(1))
         @test value == 100
 
         Quiver.close!(db)
@@ -261,7 +261,7 @@ include("fixture.jl")
 
         Quiver.update_element!(db, "Configuration", Int64(1); string_attribute = "updated")
 
-        value = Quiver.read_scalar_strings_by_id(db, "Configuration", "string_attribute", Int64(1))
+        value = Quiver.read_scalar_string_by_id(db, "Configuration", "string_attribute", Int64(1))
         @test value == "updated"
 
         Quiver.close!(db)
@@ -275,7 +275,7 @@ include("fixture.jl")
 
         Quiver.update_element!(db, "Configuration", Int64(1); float_attribute = 99.99)
 
-        value = Quiver.read_scalar_floats_by_id(db, "Configuration", "float_attribute", Int64(1))
+        value = Quiver.read_scalar_float_by_id(db, "Configuration", "float_attribute", Int64(1))
         @test value == 99.99
 
         Quiver.close!(db)
@@ -294,7 +294,7 @@ include("fixture.jl")
         Quiver.update_scalar_string!(db, "Configuration", "date_attribute", Int64(1), "2025-12-31T23:59:59")
 
         # Verify update
-        date = Quiver.read_scalar_strings_by_id(db, "Configuration", "date_attribute", Int64(1))
+        date = Quiver.read_scalar_string_by_id(db, "Configuration", "date_attribute", Int64(1))
         @test date == "2025-12-31T23:59:59"
 
         Quiver.close!(db)
@@ -315,7 +315,7 @@ include("fixture.jl")
         Quiver.update_element!(db, "Configuration", Int64(1), e)
 
         # Verify it was stored correctly
-        date_str = Quiver.read_scalar_strings_by_id(db, "Configuration", "date_attribute", Int64(1))
+        date_str = Quiver.read_scalar_string_by_id(db, "Configuration", "date_attribute", Int64(1))
         @test date_str == "2025-06-15T12:30:45"
 
         # Verify read_all_scalars_by_id returns native DateTime
@@ -337,8 +337,8 @@ include("fixture.jl")
         Quiver.update_element!(db, "Configuration", Int64(1); integer_attribute = 111)
         Quiver.update_element!(db, "Configuration", Int64(2); integer_attribute = 222)
 
-        @test Quiver.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", Int64(1)) == 111
-        @test Quiver.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", Int64(2)) == 222
+        @test Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", Int64(1)) == 111
+        @test Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", Int64(2)) == 222
 
         Quiver.close!(db)
     end
@@ -355,17 +355,17 @@ include("fixture.jl")
 
         # Basic update
         Quiver.update_scalar_integer!(db, "Configuration", "integer_attribute", Int64(1), 100)
-        value = Quiver.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", Int64(1))
+        value = Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", Int64(1))
         @test value == 100
 
         # Update to 0
         Quiver.update_scalar_integer!(db, "Configuration", "integer_attribute", Int64(1), 0)
-        value = Quiver.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", Int64(1))
+        value = Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", Int64(1))
         @test value == 0
 
         # Update to negative
         Quiver.update_scalar_integer!(db, "Configuration", "integer_attribute", Int64(1), -999)
-        value = Quiver.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", Int64(1))
+        value = Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", Int64(1))
         @test value == -999
 
         Quiver.close!(db)
@@ -382,10 +382,10 @@ include("fixture.jl")
         Quiver.update_scalar_integer!(db, "Configuration", "integer_attribute", Int64(1), 999)
 
         # Verify first element changed
-        @test Quiver.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", Int64(1)) == 999
+        @test Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", Int64(1)) == 999
 
         # Verify second element unchanged
-        @test Quiver.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", Int64(2)) == 100
+        @test Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", Int64(2)) == 100
 
         Quiver.close!(db)
     end
@@ -398,17 +398,17 @@ include("fixture.jl")
 
         # Basic update
         Quiver.update_scalar_float!(db, "Configuration", "float_attribute", Int64(1), 2.71)
-        value = Quiver.read_scalar_floats_by_id(db, "Configuration", "float_attribute", Int64(1))
+        value = Quiver.read_scalar_float_by_id(db, "Configuration", "float_attribute", Int64(1))
         @test value == 2.71
 
         # Update to 0.0
         Quiver.update_scalar_float!(db, "Configuration", "float_attribute", Int64(1), 0.0)
-        value = Quiver.read_scalar_floats_by_id(db, "Configuration", "float_attribute", Int64(1))
+        value = Quiver.read_scalar_float_by_id(db, "Configuration", "float_attribute", Int64(1))
         @test value == 0.0
 
         # Precision test
         Quiver.update_scalar_float!(db, "Configuration", "float_attribute", Int64(1), 1.23456789012345)
-        value = Quiver.read_scalar_floats_by_id(db, "Configuration", "float_attribute", Int64(1))
+        value = Quiver.read_scalar_float_by_id(db, "Configuration", "float_attribute", Int64(1))
         @test value ≈ 1.23456789012345
 
         Quiver.close!(db)
@@ -422,17 +422,17 @@ include("fixture.jl")
 
         # Basic update
         Quiver.update_scalar_string!(db, "Configuration", "string_attribute", Int64(1), "world")
-        value = Quiver.read_scalar_strings_by_id(db, "Configuration", "string_attribute", Int64(1))
+        value = Quiver.read_scalar_string_by_id(db, "Configuration", "string_attribute", Int64(1))
         @test value == "world"
 
         # Update to empty string
         Quiver.update_scalar_string!(db, "Configuration", "string_attribute", Int64(1), "")
-        value = Quiver.read_scalar_strings_by_id(db, "Configuration", "string_attribute", Int64(1))
+        value = Quiver.read_scalar_string_by_id(db, "Configuration", "string_attribute", Int64(1))
         @test value == ""
 
         # Unicode support
         Quiver.update_scalar_string!(db, "Configuration", "string_attribute", Int64(1), "日本語テスト")
-        value = Quiver.read_scalar_strings_by_id(db, "Configuration", "string_attribute", Int64(1))
+        value = Quiver.read_scalar_string_by_id(db, "Configuration", "string_attribute", Int64(1))
         @test value == "日本語テスト"
 
         Quiver.close!(db)

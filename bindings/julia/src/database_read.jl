@@ -260,11 +260,11 @@ function read_set_strings(db::Database, collection::String, attribute::String)
     return result
 end
 
-function read_scalar_integers_by_id(db::Database, collection::String, attribute::String, id::Int64)
+function read_scalar_integer_by_id(db::Database, collection::String, attribute::String, id::Int64)
     out_value = Ref{Int64}(0)
     out_has_value = Ref{Cint}(0)
 
-    err = C.quiver_database_read_scalar_integers_by_id(db.ptr, collection, attribute, id, out_value, out_has_value)
+    err = C.quiver_database_read_scalar_integer_by_id(db.ptr, collection, attribute, id, out_value, out_has_value)
     if err != C.QUIVER_OK
         throw(DatabaseException("Failed to read scalar integer by id from '$collection.$attribute'"))
     end
@@ -275,11 +275,11 @@ function read_scalar_integers_by_id(db::Database, collection::String, attribute:
     return out_value[]
 end
 
-function read_scalar_floats_by_id(db::Database, collection::String, attribute::String, id::Int64)
+function read_scalar_float_by_id(db::Database, collection::String, attribute::String, id::Int64)
     out_value = Ref{Float64}(0.0)
     out_has_value = Ref{Cint}(0)
 
-    err = C.quiver_database_read_scalar_floats_by_id(db.ptr, collection, attribute, id, out_value, out_has_value)
+    err = C.quiver_database_read_scalar_float_by_id(db.ptr, collection, attribute, id, out_value, out_has_value)
     if err != C.QUIVER_OK
         throw(DatabaseException("Failed to read scalar float by id from '$collection.$attribute'"))
     end
@@ -290,11 +290,11 @@ function read_scalar_floats_by_id(db::Database, collection::String, attribute::S
     return out_value[]
 end
 
-function read_scalar_strings_by_id(db::Database, collection::String, attribute::String, id::Int64)
+function read_scalar_string_by_id(db::Database, collection::String, attribute::String, id::Int64)
     out_value = Ref{Ptr{Cchar}}(C_NULL)
     out_has_value = Ref{Cint}(0)
 
-    err = C.quiver_database_read_scalar_strings_by_id(db.ptr, collection, attribute, id, out_value, out_has_value)
+    err = C.quiver_database_read_scalar_string_by_id(db.ptr, collection, attribute, id, out_value, out_has_value)
     if err != C.QUIVER_OK
         throw(DatabaseException("Failed to read scalar string by id from '$collection.$attribute'"))
     end
@@ -308,7 +308,7 @@ function read_scalar_strings_by_id(db::Database, collection::String, attribute::
 end
 
 function read_scalar_date_time_by_id(db::Database, collection::String, attribute::String, id::Int64)
-    return string_to_date_time(read_scalar_strings_by_id(db, collection, attribute, id))
+    return string_to_date_time(read_scalar_string_by_id(db, collection, attribute, id))
 end
 
 function read_vector_integers_by_id(db::Database, collection::String, attribute::String, id::Int64)
@@ -466,11 +466,11 @@ function read_all_scalars_by_id(db::Database, collection::String, id::Int64)
     for attr in list_scalar_attributes(db, collection)
         name = attr.name
         if attr.data_type == C.QUIVER_DATA_TYPE_INTEGER
-            result[name] = read_scalar_integers_by_id(db, collection, name, id)
+            result[name] = read_scalar_integer_by_id(db, collection, name, id)
         elseif attr.data_type == C.QUIVER_DATA_TYPE_FLOAT
-            result[name] = read_scalar_floats_by_id(db, collection, name, id)
+            result[name] = read_scalar_float_by_id(db, collection, name, id)
         elseif attr.data_type == C.QUIVER_DATA_TYPE_STRING
-            result[name] = read_scalar_strings_by_id(db, collection, name, id)
+            result[name] = read_scalar_string_by_id(db, collection, name, id)
         elseif attr.data_type == C.QUIVER_DATA_TYPE_DATE_TIME
             result[name] = read_scalar_date_time_by_id(db, collection, name, id)
         else

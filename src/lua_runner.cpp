@@ -49,24 +49,24 @@ struct LuaRunner::Impl {
             [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
                 return read_vector_strings_to_lua(self, collection, attribute, s);
             },
-            "read_scalar_strings_by_id",
+            "read_scalar_string_by_id",
             [](Database& self,
                const std::string& collection,
                const std::string& attribute,
                int64_t id,
-               sol::this_state s) { return read_scalar_strings_by_id_to_lua(self, collection, attribute, id, s); },
-            "read_scalar_integers_by_id",
+               sol::this_state s) { return read_scalar_string_by_id_to_lua(self, collection, attribute, id, s); },
+            "read_scalar_integer_by_id",
             [](Database& self,
                const std::string& collection,
                const std::string& attribute,
                int64_t id,
-               sol::this_state s) { return read_scalar_integers_by_id_to_lua(self, collection, attribute, id, s); },
-            "read_scalar_floats_by_id",
+               sol::this_state s) { return read_scalar_integer_by_id_to_lua(self, collection, attribute, id, s); },
+            "read_scalar_float_by_id",
             [](Database& self,
                const std::string& collection,
                const std::string& attribute,
                int64_t id,
-               sol::this_state s) { return read_scalar_floats_by_id_to_lua(self, collection, attribute, id, s); },
+               sol::this_state s) { return read_scalar_float_by_id_to_lua(self, collection, attribute, id, s); },
             "read_vector_integers_by_id",
             [](Database& self,
                const std::string& collection,
@@ -311,39 +311,39 @@ struct LuaRunner::Impl {
     }
 
     // Read scalar by ID helpers - return nil if not found
-    static sol::object read_scalar_strings_by_id_to_lua(Database& db,
+    static sol::object read_scalar_string_by_id_to_lua(Database& db,
                                                         const std::string& collection,
                                                         const std::string& attribute,
                                                         int64_t id,
                                                         sol::this_state s) {
         sol::state_view lua(s);
-        auto result = db.read_scalar_strings_by_id(collection, attribute, id);
+        auto result = db.read_scalar_string_by_id(collection, attribute, id);
         if (result.has_value()) {
             return sol::make_object(lua, *result);
         }
         return sol::make_object(lua, sol::nil);
     }
 
-    static sol::object read_scalar_integers_by_id_to_lua(Database& db,
+    static sol::object read_scalar_integer_by_id_to_lua(Database& db,
                                                          const std::string& collection,
                                                          const std::string& attribute,
                                                          int64_t id,
                                                          sol::this_state s) {
         sol::state_view lua(s);
-        auto result = db.read_scalar_integers_by_id(collection, attribute, id);
+        auto result = db.read_scalar_integer_by_id(collection, attribute, id);
         if (result.has_value()) {
             return sol::make_object(lua, *result);
         }
         return sol::make_object(lua, sol::nil);
     }
 
-    static sol::object read_scalar_floats_by_id_to_lua(Database& db,
+    static sol::object read_scalar_float_by_id_to_lua(Database& db,
                                                        const std::string& collection,
                                                        const std::string& attribute,
                                                        int64_t id,
                                                        sol::this_state s) {
         sol::state_view lua(s);
-        auto result = db.read_scalar_floats_by_id(collection, attribute, id);
+        auto result = db.read_scalar_float_by_id(collection, attribute, id);
         if (result.has_value()) {
             return sol::make_object(lua, *result);
         }
@@ -638,18 +638,18 @@ struct LuaRunner::Impl {
         for (const auto& attr : db.list_scalar_attributes(collection)) {
             switch (attr.data_type) {
             case DataType::Integer: {
-                auto val = db.read_scalar_integers_by_id(collection, attr.name, id);
+                auto val = db.read_scalar_integer_by_id(collection, attr.name, id);
                 result[attr.name] = val.has_value() ? sol::make_object(lua, *val) : sol::nil;
                 break;
             }
             case DataType::Real: {
-                auto val = db.read_scalar_floats_by_id(collection, attr.name, id);
+                auto val = db.read_scalar_float_by_id(collection, attr.name, id);
                 result[attr.name] = val.has_value() ? sol::make_object(lua, *val) : sol::nil;
                 break;
             }
             case DataType::Text:
             case DataType::DateTime: {
-                auto val = db.read_scalar_strings_by_id(collection, attr.name, id);
+                auto val = db.read_scalar_string_by_id(collection, attr.name, id);
                 result[attr.name] = val.has_value() ? sol::make_object(lua, *val) : sol::nil;
                 break;
             }

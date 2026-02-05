@@ -85,10 +85,10 @@ include("fixture.jl")
         @test id > 0
 
         # Verify the element was created correctly
-        @test Quiver.read_scalar_strings_by_id(db, "Configuration", "label", id) == "Config via Builder"
-        @test Quiver.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id) == 42
-        @test Quiver.read_scalar_floats_by_id(db, "Configuration", "float_attribute", id) == 3.14
-        @test Quiver.read_scalar_strings_by_id(db, "Configuration", "string_attribute", id) == "hello"
+        @test Quiver.read_scalar_string_by_id(db, "Configuration", "label", id) == "Config via Builder"
+        @test Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", id) == 42
+        @test Quiver.read_scalar_float_by_id(db, "Configuration", "float_attribute", id) == 3.14
+        @test Quiver.read_scalar_string_by_id(db, "Configuration", "string_attribute", id) == "hello"
 
         Quiver.close!(db)
     end

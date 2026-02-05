@@ -283,7 +283,7 @@ TEST_F(SchemaValidatorFixture, CreateElementWithDefaultValue) {
     int64_t id = db.create_element("Configuration", e);
 
     // Read back the default value
-    auto val = db.read_scalar_integers_by_id("Configuration", "integer_attribute", id);
+    auto val = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id);
     EXPECT_TRUE(val.has_value());
     EXPECT_EQ(*val, 6);
 }
@@ -296,7 +296,7 @@ TEST_F(SchemaValidatorFixture, CreateElementWithNullableColumn) {
     e.set("label", std::string("Test")).set_null("float_attribute");
     int64_t id = db.create_element("Configuration", e);
 
-    auto val = db.read_scalar_floats_by_id("Configuration", "float_attribute", id);
+    auto val = db.read_scalar_float_by_id("Configuration", "float_attribute", id);
     EXPECT_FALSE(val.has_value());  // NULL
 }
 

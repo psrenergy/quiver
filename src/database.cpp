@@ -945,7 +945,7 @@ std::vector<std::string> Database::read_scalar_strings(const std::string& collec
 }
 
 std::optional<int64_t>
-Database::read_scalar_integers_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+Database::read_scalar_integer_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto sql = "SELECT " + attribute + " FROM " + collection + " WHERE id = ?";
     auto result = execute(sql, {id});
 
@@ -956,7 +956,7 @@ Database::read_scalar_integers_by_id(const std::string& collection, const std::s
 }
 
 std::optional<double>
-Database::read_scalar_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+Database::read_scalar_float_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto sql = "SELECT " + attribute + " FROM " + collection + " WHERE id = ?";
     auto result = execute(sql, {id});
 
@@ -967,7 +967,7 @@ Database::read_scalar_floats_by_id(const std::string& collection, const std::str
 }
 
 std::optional<std::string>
-Database::read_scalar_strings_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+Database::read_scalar_string_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto sql = "SELECT " + attribute + " FROM " + collection + " WHERE id = ?";
     auto result = execute(sql, {id});
 
