@@ -2,7 +2,9 @@
 
 #include "quiver/database.h"
 #include "quiver/element.h"
+#include "quiver/value.h"
 
+#include <map>
 #include <sol/sol.hpp>
 #include <stdexcept>
 
@@ -164,7 +166,187 @@ struct LuaRunner::Impl {
                 return query_float_to_lua(self, sql, params, s);
             },
             "describe",
-            [](Database& self) { self.describe(); });
+            [](Database& self) { self.describe(); },
+            // Group 1: Database info
+            "is_healthy",
+            [](Database& self) { return self.is_healthy(); },
+            "current_version",
+            [](Database& self) { return self.current_version(); },
+            "path",
+            [](Database& self) -> const std::string& { return self.path(); },
+            // Group 2: Scalar updates
+            "update_scalar_integer",
+            [](Database& self, const std::string& collection, const std::string& attribute, int64_t id, int64_t value) {
+                self.update_scalar_integer(collection, attribute, id, value);
+            },
+            "update_scalar_float",
+            [](Database& self, const std::string& collection, const std::string& attribute, int64_t id, double value) {
+                self.update_scalar_float(collection, attribute, id, value);
+            },
+            "update_scalar_string",
+            [](Database& self,
+               const std::string& collection,
+               const std::string& attribute,
+               int64_t id,
+               const std::string& value) { self.update_scalar_string(collection, attribute, id, value); },
+            // Group 3: Vector updates
+            "update_vector_integers",
+            [](Database& self,
+               const std::string& collection,
+               const std::string& attribute,
+               int64_t id,
+               sol::table values) { self.update_vector_integers(collection, attribute, id, lua_table_to_int64_vector(values)); },
+            "update_vector_floats",
+            [](Database& self,
+               const std::string& collection,
+               const std::string& attribute,
+               int64_t id,
+               sol::table values) { self.update_vector_floats(collection, attribute, id, lua_table_to_double_vector(values)); },
+            "update_vector_strings",
+            [](Database& self,
+               const std::string& collection,
+               const std::string& attribute,
+               int64_t id,
+               sol::table values) { self.update_vector_strings(collection, attribute, id, lua_table_to_string_vector(values)); },
+            // Group 4: Set updates
+            "update_set_integers",
+            [](Database& self,
+               const std::string& collection,
+               const std::string& attribute,
+               int64_t id,
+               sol::table values) { self.update_set_integers(collection, attribute, id, lua_table_to_int64_vector(values)); },
+            "update_set_floats",
+            [](Database& self,
+               const std::string& collection,
+               const std::string& attribute,
+               int64_t id,
+               sol::table values) { self.update_set_floats(collection, attribute, id, lua_table_to_double_vector(values)); },
+            "update_set_strings",
+            [](Database& self,
+               const std::string& collection,
+               const std::string& attribute,
+               int64_t id,
+               sol::table values) { self.update_set_strings(collection, attribute, id, lua_table_to_string_vector(values)); },
+            // Group 5: Bulk set reads
+            "read_set_integers",
+            [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
+                return read_set_integers_to_lua(self, collection, attribute, s);
+            },
+            "read_set_floats",
+            [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
+                return read_set_floats_to_lua(self, collection, attribute, s);
+            },
+            "read_set_strings",
+            [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
+                return read_set_strings_to_lua(self, collection, attribute, s);
+            },
+            // Group 6: Relations
+            "set_scalar_relation",
+            [](Database& self,
+               const std::string& collection,
+               const std::string& attribute,
+               const std::string& from_label,
+               const std::string& to_label) { self.set_scalar_relation(collection, attribute, from_label, to_label); },
+            "read_scalar_relation",
+            [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
+                return read_scalar_relation_to_lua(self, collection, attribute, s);
+            },
+            // Group 7: Time series metadata
+            "get_time_series_metadata",
+            [](Database& self, const std::string& collection, const std::string& group_name, sol::this_state s) {
+                return get_time_series_metadata_to_lua(self, collection, group_name, s);
+            },
+            "list_time_series_groups",
+            [](Database& self, const std::string& collection, sol::this_state s) {
+                return list_time_series_groups_to_lua(self, collection, s);
+            },
+            // Group 8: Time series data
+            "read_time_series_group_by_id",
+            [](Database& self,
+               const std::string& collection,
+               const std::string& group,
+               int64_t id,
+               sol::this_state s) { return read_time_series_group_by_id_to_lua(self, collection, group, id, s); },
+            "update_time_series_group",
+            [](Database& self,
+               const std::string& collection,
+               const std::string& group,
+               int64_t id,
+               sol::table rows) { update_time_series_group_from_lua(self, collection, group, id, rows); },
+            // Group 9: Time series files
+            "has_time_series_files",
+            [](Database& self, const std::string& collection) { return self.has_time_series_files(collection); },
+            "list_time_series_files_columns",
+            [](Database& self, const std::string& collection, sol::this_state s) {
+                return list_time_series_files_columns_to_lua(self, collection, s);
+            },
+            "read_time_series_files",
+            [](Database& self, const std::string& collection, sol::this_state s) {
+                return read_time_series_files_to_lua(self, collection, s);
+            },
+            "update_time_series_files",
+            [](Database& self, const std::string& collection, sol::table paths) {
+                update_time_series_files_from_lua(self, collection, paths);
+            });
+    }
+
+    // ========================================================================
+    // Conversion helpers
+    // ========================================================================
+
+    static std::vector<int64_t> lua_table_to_int64_vector(sol::table t) {
+        std::vector<int64_t> result;
+        for (size_t i = 1; i <= t.size(); ++i) {
+            result.push_back(t.get<int64_t>(i));
+        }
+        return result;
+    }
+
+    static std::vector<double> lua_table_to_double_vector(sol::table t) {
+        std::vector<double> result;
+        for (size_t i = 1; i <= t.size(); ++i) {
+            result.push_back(t.get<double>(i));
+        }
+        return result;
+    }
+
+    static std::vector<std::string> lua_table_to_string_vector(sol::table t) {
+        std::vector<std::string> result;
+        for (size_t i = 1; i <= t.size(); ++i) {
+            result.push_back(t.get<std::string>(i));
+        }
+        return result;
+    }
+
+    static sol::object value_to_lua_object(sol::state_view& lua, const Value& val) {
+        return std::visit(
+            [&](auto&& arg) -> sol::object {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_same_v<T, std::nullptr_t>) {
+                    return sol::make_object(lua, sol::lua_nil);
+                } else {
+                    return sol::make_object(lua, arg);
+                }
+            },
+            val);
+    }
+
+    static std::map<std::string, Value> lua_table_to_value_map(sol::table t) {
+        std::map<std::string, Value> result;
+        for (auto& pair : t) {
+            auto key = pair.first.as<std::string>();
+            sol::object val = pair.second;
+            if (val.is<sol::lua_nil_t>()) {
+                result[key] = nullptr;
+            } else if (val.is<int64_t>()) {
+                result[key] = val.as<int64_t>();
+            } else if (val.is<double>()) {
+                result[key] = val.as<double>();
+            } else if (val.is<std::string>()) {
+                result[key] = val.as<std::string>();
+            }
+        }
+        return result;
     }
 
     static Element table_to_element(sol::table values) {
@@ -730,6 +912,196 @@ struct LuaRunner::Impl {
             result[group.group_name] = set;
         }
         return result;
+    }
+
+    // ========================================================================
+    // Bulk set reads (same pattern as read_vector_*_to_lua)
+    // ========================================================================
+
+    static sol::table read_set_integers_to_lua(Database& db,
+                                               const std::string& collection,
+                                               const std::string& attribute,
+                                               sol::this_state s) {
+        sol::state_view lua(s);
+        auto result = db.read_set_integers(collection, attribute);
+        auto outer = lua.create_table();
+        for (size_t i = 0; i < result.size(); ++i) {
+            auto inner = lua.create_table();
+            for (size_t j = 0; j < result[i].size(); ++j) {
+                inner[j + 1] = result[i][j];
+            }
+            outer[i + 1] = inner;
+        }
+        return outer;
+    }
+
+    static sol::table read_set_floats_to_lua(Database& db,
+                                             const std::string& collection,
+                                             const std::string& attribute,
+                                             sol::this_state s) {
+        sol::state_view lua(s);
+        auto result = db.read_set_floats(collection, attribute);
+        auto outer = lua.create_table();
+        for (size_t i = 0; i < result.size(); ++i) {
+            auto inner = lua.create_table();
+            for (size_t j = 0; j < result[i].size(); ++j) {
+                inner[j + 1] = result[i][j];
+            }
+            outer[i + 1] = inner;
+        }
+        return outer;
+    }
+
+    static sol::table read_set_strings_to_lua(Database& db,
+                                              const std::string& collection,
+                                              const std::string& attribute,
+                                              sol::this_state s) {
+        sol::state_view lua(s);
+        auto result = db.read_set_strings(collection, attribute);
+        auto outer = lua.create_table();
+        for (size_t i = 0; i < result.size(); ++i) {
+            auto inner = lua.create_table();
+            for (size_t j = 0; j < result[i].size(); ++j) {
+                inner[j + 1] = result[i][j];
+            }
+            outer[i + 1] = inner;
+        }
+        return outer;
+    }
+
+    // ========================================================================
+    // Relations
+    // ========================================================================
+
+    static sol::table read_scalar_relation_to_lua(Database& db,
+                                                  const std::string& collection,
+                                                  const std::string& attribute,
+                                                  sol::this_state s) {
+        sol::state_view lua(s);
+        auto result = db.read_scalar_relation(collection, attribute);
+        auto t = lua.create_table();
+        for (size_t i = 0; i < result.size(); ++i) {
+            t[i + 1] = result[i];
+        }
+        return t;
+    }
+
+    // ========================================================================
+    // Time series metadata
+    // ========================================================================
+
+    static sol::table time_series_metadata_to_lua(sol::state_view& lua, const TimeSeriesMetadata& metadata) {
+        auto t = lua.create_table();
+        t["group_name"] = metadata.group_name;
+        t["dimension_column"] = metadata.dimension_column;
+        auto cols = lua.create_table();
+        for (size_t i = 0; i < metadata.value_columns.size(); ++i) {
+            cols[i + 1] = scalar_metadata_to_lua(lua, metadata.value_columns[i]);
+        }
+        t["value_columns"] = cols;
+        return t;
+    }
+
+    static sol::table get_time_series_metadata_to_lua(Database& db,
+                                                      const std::string& collection,
+                                                      const std::string& group_name,
+                                                      sol::this_state s) {
+        sol::state_view lua(s);
+        auto metadata = db.get_time_series_metadata(collection, group_name);
+        return time_series_metadata_to_lua(lua, metadata);
+    }
+
+    static sol::table list_time_series_groups_to_lua(Database& db, const std::string& collection, sol::this_state s) {
+        sol::state_view lua(s);
+        auto metadata_list = db.list_time_series_groups(collection);
+        auto t = lua.create_table();
+        for (size_t i = 0; i < metadata_list.size(); ++i) {
+            t[i + 1] = time_series_metadata_to_lua(lua, metadata_list[i]);
+        }
+        return t;
+    }
+
+    // ========================================================================
+    // Time series data
+    // ========================================================================
+
+    static sol::table read_time_series_group_by_id_to_lua(Database& db,
+                                                          const std::string& collection,
+                                                          const std::string& group,
+                                                          int64_t id,
+                                                          sol::this_state s) {
+        sol::state_view lua(s);
+        auto rows = db.read_time_series_group_by_id(collection, group, id);
+        auto t = lua.create_table();
+        for (size_t i = 0; i < rows.size(); ++i) {
+            auto row = lua.create_table();
+            for (const auto& [key, val] : rows[i]) {
+                row[key] = value_to_lua_object(lua, val);
+            }
+            t[i + 1] = row;
+        }
+        return t;
+    }
+
+    static void update_time_series_group_from_lua(Database& db,
+                                                  const std::string& collection,
+                                                  const std::string& group,
+                                                  int64_t id,
+                                                  sol::table rows) {
+        std::vector<std::map<std::string, Value>> cpp_rows;
+        for (size_t i = 1; i <= rows.size(); ++i) {
+            sol::table row = rows[i];
+            cpp_rows.push_back(lua_table_to_value_map(row));
+        }
+        db.update_time_series_group(collection, group, id, cpp_rows);
+    }
+
+    // ========================================================================
+    // Time series files
+    // ========================================================================
+
+    static sol::table list_time_series_files_columns_to_lua(Database& db,
+                                                            const std::string& collection,
+                                                            sol::this_state s) {
+        sol::state_view lua(s);
+        auto columns = db.list_time_series_files_columns(collection);
+        auto t = lua.create_table();
+        for (size_t i = 0; i < columns.size(); ++i) {
+            t[i + 1] = columns[i];
+        }
+        return t;
+    }
+
+    static sol::table read_time_series_files_to_lua(Database& db,
+                                                    const std::string& collection,
+                                                    sol::this_state s) {
+        sol::state_view lua(s);
+        auto files = db.read_time_series_files(collection);
+        auto t = lua.create_table();
+        for (const auto& [key, val] : files) {
+            if (val.has_value()) {
+                t[key] = *val;
+            } else {
+                t[key] = sol::lua_nil;
+            }
+        }
+        return t;
+    }
+
+    static void update_time_series_files_from_lua(Database& db,
+                                                  const std::string& collection,
+                                                  sol::table paths) {
+        std::map<std::string, std::optional<std::string>> cpp_paths;
+        for (auto& pair : paths) {
+            auto key = pair.first.as<std::string>();
+            sol::object val = pair.second;
+            if (val.is<sol::lua_nil_t>()) {
+                cpp_paths[key] = std::nullopt;
+            } else {
+                cpp_paths[key] = val.as<std::string>();
+            }
+        }
+        db.update_time_series_files(collection, cpp_paths);
     }
 };
 
