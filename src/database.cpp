@@ -146,7 +146,8 @@ std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_pat
 
 static std::string find_dimension_column(const quiver::TableDefinition& table_def) {
     for (const auto& [col_name, col] : table_def.columns) {
-        if (col_name == "id") continue;
+        if (col_name == "id")
+            continue;
         if (col.type == quiver::DataType::DateTime || quiver::is_date_time_column(col_name)) {
             return col_name;
         }
