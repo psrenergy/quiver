@@ -650,18 +650,18 @@ int64_t Database::create_element(const std::string& collection, const Element& e
         // Insert each row with vector_index
         for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
             int64_t vector_index = static_cast<int64_t>(row_idx + 1);
-            auto vec_sql = "INSERT INTO " + vector_table + " (id, vector_index";
+            auto vector_sql = "INSERT INTO " + vector_table + " (id, vector_index";
             std::string vec_placeholders = "?, ?";
             std::vector<Value> vec_params = {element_id, vector_index};
 
             for (const auto& [col_name, values_ptr] : columns) {
-                vec_sql += ", " + col_name;
+                vector_sql += ", " + col_name;
                 vec_placeholders += ", ?";
                 vec_params.push_back((*values_ptr)[row_idx]);
             }
 
-            vec_sql += ") VALUES (" + vec_placeholders + ")";
-            execute(vec_sql, vec_params);
+            vector_sql += ") VALUES (" + vec_placeholders + ")";
+            execute(vector_sql, vec_params);
         }
         impl_->logger->debug("Inserted {} vector rows into {}", num_rows, vector_table);
     }
