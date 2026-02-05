@@ -1621,6 +1621,10 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group_by_id(quiver_
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
+        auto meta = db->db.get_time_series_metadata(collection, group);
+        const auto& dim_col = meta.dimension_column;
+        std::string val_col = meta.value_columns.empty() ? "value" : meta.value_columns[0].name;
+
         auto rows = db->db.read_time_series_group_by_id(collection, group, id);
         *out_row_count = rows.size();
 
@@ -1634,16 +1638,16 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group_by_id(quiver_
         *out_values = new double[rows.size()];
 
         for (size_t i = 0; i < rows.size(); ++i) {
-            // Get date_time
-            auto dt_it = rows[i].find("date_time");
+            // Get dimension column
+            auto dt_it = rows[i].find(dim_col);
             if (dt_it != rows[i].end() && std::holds_alternative<std::string>(dt_it->second)) {
                 (*out_date_times)[i] = strdup_safe(std::get<std::string>(dt_it->second));
             } else {
                 (*out_date_times)[i] = strdup_safe("");
             }
 
-            // Get value (assuming first non-date_time column is "value")
-            auto val_it = rows[i].find("value");
+            // Get value column
+            auto val_it = rows[i].find(val_col);
             if (val_it != rows[i].end()) {
                 if (std::holds_alternative<double>(val_it->second)) {
                     (*out_values)[i] = std::get<double>(val_it->second);
@@ -1675,13 +1679,17 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
+        auto meta = db->db.get_time_series_metadata(collection, group);
+        const auto& dim_col = meta.dimension_column;
+        std::string val_col = meta.value_columns.empty() ? "value" : meta.value_columns[0].name;
+
         std::vector<std::map<std::string, quiver::Value>> rows;
         rows.reserve(row_count);
 
         for (size_t i = 0; i < row_count; ++i) {
             std::map<std::string, quiver::Value> row;
-            row["date_time"] = std::string(date_times[i]);
-            row["value"] = values[i];
+            row[dim_col] = std::string(date_times[i]);
+            row[val_col] = values[i];
             rows.push_back(std::move(row));
         }
 

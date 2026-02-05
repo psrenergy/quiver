@@ -144,6 +144,16 @@ std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_pat
     }
 }
 
+static std::string find_dimension_column(const quiver::TableDefinition& table_def) {
+    for (const auto& [col_name, col] : table_def.columns) {
+        if (col_name == "id") continue;
+        if (col.type == quiver::DataType::DateTime || quiver::is_date_time_column(col_name)) {
+            return col_name;
+        }
+    }
+    throw std::runtime_error("No dimension column found in time series table");
+}
+
 }  // anonymous namespace
 
 namespace quiver {
@@ -1482,16 +1492,11 @@ TimeSeriesMetadata Database::get_time_series_metadata(const std::string& collect
 
     TimeSeriesMetadata meta;
     meta.group_name = group_name;
+    meta.dimension_column = find_dimension_column(*table_def);
 
-    // Find the dimension column and add data columns (skip id and dimension)
+    // Add value columns (skip id and dimension)
     for (const auto& [col_name, col] : table_def->columns) {
-        if (col_name == "id") {
-            continue;
-        }
-
-        // Dimension column is the one with DateTime type or name starting with "date_"
-        if (col.type == DataType::DateTime || is_date_time_column(col_name)) {
-            meta.dimension_column = col_name;
+        if (col_name == "id" || col_name == meta.dimension_column) {
             continue;
         }
 
@@ -1516,12 +1521,13 @@ Database::read_time_series_group_by_id(const std::string& collection, const std:
     if (!table_def) {
         throw std::runtime_error("Time series table not found: " + ts_table);
     }
+    auto dim_col = find_dimension_column(*table_def);
 
     // Build column list (excluding id)
     std::vector<std::string> columns;
-    columns.push_back("date_time");
+    columns.push_back(dim_col);
     for (const auto& [col_name, col] : table_def->columns) {
-        if (col_name != "id" && col_name != "date_time") {
+        if (col_name != "id" && col_name != dim_col) {
             columns.push_back(col_name);
         }
     }
@@ -1533,7 +1539,7 @@ Database::read_time_series_group_by_id(const std::string& collection, const std:
             sql += ", ";
         sql += columns[i];
     }
-    sql += " FROM " + ts_table + " WHERE id = ? ORDER BY date_time";
+    sql += " FROM " + ts_table + " WHERE id = ? ORDER BY " + dim_col;
 
     auto result = execute(sql, {id});
 
@@ -1573,6 +1579,11 @@ void Database::update_time_series_group(const std::string& collection,
     impl_->require_schema("update time series");
 
     auto ts_table = impl_->schema->find_time_series_table(collection, group);
+    const auto* table_def = impl_->schema->get_table(ts_table);
+    if (!table_def) {
+        throw std::runtime_error("Time series table not found: " + ts_table);
+    }
+    auto dim_col = find_dimension_column(*table_def);
 
     Impl::TransactionGuard txn(*impl_);
 
@@ -1585,16 +1596,16 @@ void Database::update_time_series_group(const std::string& collection,
         return;
     }
 
-    // Get column names from first row (excluding date_time which we handle specially)
+    // Get column names from first row (excluding dimension column which we handle specially)
     std::vector<std::string> value_columns;
     for (const auto& [col_name, _] : rows[0]) {
-        if (col_name != "date_time") {
+        if (col_name != dim_col) {
             value_columns.push_back(col_name);
         }
     }
 
     // Build INSERT SQL
-    auto insert_sql = "INSERT INTO " + ts_table + " (id, date_time";
+    auto insert_sql = "INSERT INTO " + ts_table + " (id, " + dim_col;
     for (const auto& col : value_columns) {
         insert_sql += ", " + col;
     }
@@ -1609,10 +1620,10 @@ void Database::update_time_series_group(const std::string& collection,
         std::vector<Value> params;
         params.push_back(id);
 
-        // date_time must be present
-        auto dt_it = row.find("date_time");
+        // Dimension column must be present
+        auto dt_it = row.find(dim_col);
         if (dt_it == row.end()) {
-            throw std::runtime_error("Time series row missing required 'date_time' column");
+            throw std::runtime_error("Time series row missing required '" + dim_col + "' column");
         }
         params.push_back(dt_it->second);
 
