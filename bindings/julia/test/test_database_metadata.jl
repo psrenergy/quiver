@@ -50,7 +50,7 @@ include("fixture.jl")
         @test length(meta.value_columns) == 2
 
         # Find the attributes by name
-        attr_names = [attr.name for attr in meta.value_columns]
+        attr_names = [attribute.name for attribute in meta.value_columns]
         @test "value_int" in attr_names
         @test "value_float" in attr_names
 
@@ -106,7 +106,7 @@ include("fixture.jl")
         db = Quiver.from_schema(":memory:", path_schema)
 
         attrs = Quiver.list_scalar_attributes(db, "Collection")
-        attr_names = [attr.name for attr in attrs]
+        attr_names = [attribute.name for attribute in attrs]
         @test "id" in attr_names
         @test "label" in attr_names
         @test "some_integer" in attr_names

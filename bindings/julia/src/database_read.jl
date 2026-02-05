@@ -463,15 +463,15 @@ end
 
 function read_all_scalars_by_id(db::Database, collection::String, id::Int64)
     result = Dict{String, Any}()
-    for attr in list_scalar_attributes(db, collection)
-        name = attr.name
-        if attr.data_type == C.QUIVER_DATA_TYPE_INTEGER
+    for attribute in list_scalar_attributes(db, collection)
+        name = attribute.name
+        if attribute.data_type == C.QUIVER_DATA_TYPE_INTEGER
             result[name] = read_scalar_integer_by_id(db, collection, name, id)
-        elseif attr.data_type == C.QUIVER_DATA_TYPE_FLOAT
+        elseif attribute.data_type == C.QUIVER_DATA_TYPE_FLOAT
             result[name] = read_scalar_float_by_id(db, collection, name, id)
-        elseif attr.data_type == C.QUIVER_DATA_TYPE_STRING
+        elseif attribute.data_type == C.QUIVER_DATA_TYPE_STRING
             result[name] = read_scalar_string_by_id(db, collection, name, id)
-        elseif attr.data_type == C.QUIVER_DATA_TYPE_DATE_TIME
+        elseif attribute.data_type == C.QUIVER_DATA_TYPE_DATE_TIME
             result[name] = read_scalar_date_time_by_id(db, collection, name, id)
         else
             throw(DatabaseException("Unsupported scalar data type for '$collection.$name'"))

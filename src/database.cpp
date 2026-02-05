@@ -1328,13 +1328,13 @@ VectorMetadata Database::get_vector_metadata(const std::string& collection, cons
             continue;
         }
 
-        ScalarMetadata attr;
-        attr.name = col.name;
-        attr.data_type = col.type;
-        attr.not_null = col.not_null;
-        attr.primary_key = col.primary_key;
-        attr.default_value = col.default_value;
-        meta.value_columns.push_back(std::move(attr));
+        ScalarMetadata attribute;
+        attribute.name = col.name;
+        attribute.data_type = col.type;
+        attribute.not_null = col.not_null;
+        attribute.primary_key = col.primary_key;
+        attribute.default_value = col.default_value;
+        meta.value_columns.push_back(std::move(attribute));
     }
 
     return meta;
@@ -1362,13 +1362,13 @@ SetMetadata Database::get_set_metadata(const std::string& collection, const std:
             continue;
         }
 
-        ScalarMetadata attr;
-        attr.name = col.name;
-        attr.data_type = col.type;
-        attr.not_null = col.not_null;
-        attr.primary_key = col.primary_key;
-        attr.default_value = col.default_value;
-        meta.value_columns.push_back(std::move(attr));
+        ScalarMetadata attribute;
+        attribute.name = col.name;
+        attribute.data_type = col.type;
+        attribute.not_null = col.not_null;
+        attribute.primary_key = col.primary_key;
+        attribute.default_value = col.default_value;
+        meta.value_columns.push_back(std::move(attribute));
     }
 
     return meta;
@@ -1501,13 +1501,13 @@ TimeSeriesMetadata Database::get_time_series_metadata(const std::string& collect
             continue;
         }
 
-        ScalarMetadata attr;
-        attr.name = col.name;
-        attr.data_type = col.type;
-        attr.not_null = col.not_null;
-        attr.primary_key = col.primary_key;
-        attr.default_value = col.default_value;
-        meta.value_columns.push_back(std::move(attr));
+        ScalarMetadata attribute;
+        attribute.name = col.name;
+        attribute.data_type = col.type;
+        attribute.not_null = col.not_null;
+        attribute.primary_key = col.primary_key;
+        attribute.default_value = col.default_value;
+        meta.value_columns.push_back(std::move(attribute));
     }
 
     return meta;

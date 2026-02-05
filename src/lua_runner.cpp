@@ -523,14 +523,14 @@ struct LuaRunner::Impl {
         return t;
     }
 
-    static sol::table scalar_metadata_to_lua(sol::state_view& lua, const ScalarMetadata& attr) {
+    static sol::table scalar_metadata_to_lua(sol::state_view& lua, const ScalarMetadata& attribute) {
         sol::table t = lua.create_table();
-        t["name"] = attr.name;
-        t["data_type"] = data_type_to_string(attr.data_type);
-        t["not_null"] = attr.not_null;
-        t["primary_key"] = attr.primary_key;
-        if (attr.default_value.has_value()) {
-            t["default_value"] = *attr.default_value;
+        t["name"] = attribute.name;
+        t["data_type"] = data_type_to_string(attribute.data_type);
+        t["not_null"] = attribute.not_null;
+        t["primary_key"] = attribute.primary_key;
+        if (attribute.default_value.has_value()) {
+            t["default_value"] = *attribute.default_value;
         } else {
             t["default_value"] = sol::lua_nil;
         }
@@ -635,22 +635,22 @@ struct LuaRunner::Impl {
         sol::state_view lua(s);
         sol::table result = lua.create_table();
 
-        for (const auto& attr : db.list_scalar_attributes(collection)) {
-            switch (attr.data_type) {
+        for (const auto& attribute : db.list_scalar_attributes(collection)) {
+            switch (attribute.data_type) {
             case DataType::Integer: {
-                auto val = db.read_scalar_integer_by_id(collection, attr.name, id);
-                result[attr.name] = val.has_value() ? sol::make_object(lua, *val) : sol::lua_nil;
+                auto val = db.read_scalar_integer_by_id(collection, attribute.name, id);
+                result[attribute.name] = val.has_value() ? sol::make_object(lua, *val) : sol::lua_nil;
                 break;
             }
             case DataType::Real: {
-                auto val = db.read_scalar_float_by_id(collection, attr.name, id);
-                result[attr.name] = val.has_value() ? sol::make_object(lua, *val) : sol::lua_nil;
+                auto val = db.read_scalar_float_by_id(collection, attribute.name, id);
+                result[attribute.name] = val.has_value() ? sol::make_object(lua, *val) : sol::lua_nil;
                 break;
             }
             case DataType::Text:
             case DataType::DateTime: {
-                auto val = db.read_scalar_string_by_id(collection, attr.name, id);
-                result[attr.name] = val.has_value() ? sol::make_object(lua, *val) : sol::lua_nil;
+                auto val = db.read_scalar_string_by_id(collection, attribute.name, id);
+                result[attribute.name] = val.has_value() ? sol::make_object(lua, *val) : sol::lua_nil;
                 break;
             }
             }

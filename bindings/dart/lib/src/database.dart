@@ -103,19 +103,19 @@ class Database {
     String? referencesColumn,
   })
   _parseScalarMetadata(
-    quiver_scalar_metadata_t attr,
+    quiver_scalar_metadata_t attribute,
   ) {
     return (
-      name: attr.name.cast<Utf8>().toDartString(),
-      dataType: attr.data_type,
-      notNull: attr.not_null != 0,
-      primaryKey: attr.primary_key != 0,
-      defaultValue: attr.default_value == nullptr ? null : attr.default_value.cast<Utf8>().toDartString(),
-      isForeignKey: attr.is_foreign_key != 0,
-      referencesCollection: attr.references_collection == nullptr
+      name: attribute.name.cast<Utf8>().toDartString(),
+      dataType: attribute.data_type,
+      notNull: attribute.not_null != 0,
+      primaryKey: attribute.primary_key != 0,
+      defaultValue: attribute.default_value == nullptr ? null : attribute.default_value.cast<Utf8>().toDartString(),
+      isForeignKey: attribute.is_foreign_key != 0,
+      referencesCollection: attribute.references_collection == nullptr
           ? null
-          : attr.references_collection.cast<Utf8>().toDartString(),
-      referencesColumn: attr.references_column == nullptr ? null : attr.references_column.cast<Utf8>().toDartString(),
+          : attribute.references_collection.cast<Utf8>().toDartString(),
+      referencesColumn: attribute.references_column == nullptr ? null : attribute.references_column.cast<Utf8>().toDartString(),
     );
   }
 

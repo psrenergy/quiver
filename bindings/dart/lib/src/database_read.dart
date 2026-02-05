@@ -757,9 +757,9 @@ extension DatabaseRead on Database {
     _ensureNotClosed();
 
     final result = <String, Object?>{};
-    for (final attr in listScalarAttributes(collection)) {
-      final name = attr.name;
-      switch (attr.dataType) {
+    for (final attribute in listScalarAttributes(collection)) {
+      final name = attribute.name;
+      switch (attribute.dataType) {
         case quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER:
           result[name] = readScalarIntegerById(collection, name, id);
         case quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT:
