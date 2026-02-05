@@ -23,12 +23,14 @@ extension DatabaseUpdate on Database {
     _ensureNotClosed();
     final arena = Arena();
     try {
-      check(bindings.quiver_database_update_element(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        id,
-        element.ptr.cast(),
-      ));
+      check(
+        bindings.quiver_database_update_element(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          id,
+          element.ptr.cast(),
+        ),
+      );
     } finally {
       arena.releaseAll();
     }
@@ -44,13 +46,15 @@ extension DatabaseUpdate on Database {
 
     final arena = Arena();
     try {
-      check(bindings.quiver_database_update_scalar_integer(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        value,
-      ));
+      check(
+        bindings.quiver_database_update_scalar_integer(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          value,
+        ),
+      );
     } finally {
       arena.releaseAll();
     }
@@ -62,13 +66,15 @@ extension DatabaseUpdate on Database {
 
     final arena = Arena();
     try {
-      check(bindings.quiver_database_update_scalar_float(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        value,
-      ));
+      check(
+        bindings.quiver_database_update_scalar_float(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          value,
+        ),
+      );
     } finally {
       arena.releaseAll();
     }
@@ -80,13 +86,15 @@ extension DatabaseUpdate on Database {
 
     final arena = Arena();
     try {
-      check(bindings.quiver_database_update_scalar_string(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        value.toNativeUtf8(allocator: arena).cast(),
-      ));
+      check(
+        bindings.quiver_database_update_scalar_string(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          value.toNativeUtf8(allocator: arena).cast(),
+        ),
+      );
     } finally {
       arena.releaseAll();
     }
@@ -107,14 +115,16 @@ extension DatabaseUpdate on Database {
         nativeValues[i] = values[i];
       }
 
-      check(bindings.quiver_database_update_vector_integers(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        nativeValues,
-        values.length,
-      ));
+      check(
+        bindings.quiver_database_update_vector_integers(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          nativeValues,
+          values.length,
+        ),
+      );
     } finally {
       arena.releaseAll();
     }
@@ -131,14 +141,16 @@ extension DatabaseUpdate on Database {
         nativeValues[i] = values[i];
       }
 
-      check(bindings.quiver_database_update_vector_floats(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        nativeValues,
-        values.length,
-      ));
+      check(
+        bindings.quiver_database_update_vector_floats(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          nativeValues,
+          values.length,
+        ),
+      );
     } finally {
       arena.releaseAll();
     }
@@ -155,14 +167,16 @@ extension DatabaseUpdate on Database {
         nativePtrs[i] = values[i].toNativeUtf8(allocator: arena).cast();
       }
 
-      check(bindings.quiver_database_update_vector_strings(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        nativePtrs,
-        values.length,
-      ));
+      check(
+        bindings.quiver_database_update_vector_strings(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          nativePtrs,
+          values.length,
+        ),
+      );
     } finally {
       arena.releaseAll();
     }
@@ -183,14 +197,16 @@ extension DatabaseUpdate on Database {
         nativeValues[i] = values[i];
       }
 
-      check(bindings.quiver_database_update_set_integers(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        nativeValues,
-        values.length,
-      ));
+      check(
+        bindings.quiver_database_update_set_integers(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          nativeValues,
+          values.length,
+        ),
+      );
     } finally {
       arena.releaseAll();
     }
@@ -207,14 +223,16 @@ extension DatabaseUpdate on Database {
         nativeValues[i] = values[i];
       }
 
-      check(bindings.quiver_database_update_set_floats(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        nativeValues,
-        values.length,
-      ));
+      check(
+        bindings.quiver_database_update_set_floats(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          nativeValues,
+          values.length,
+        ),
+      );
     } finally {
       arena.releaseAll();
     }
@@ -231,14 +249,16 @@ extension DatabaseUpdate on Database {
         nativePtrs[i] = values[i].toNativeUtf8(allocator: arena).cast();
       }
 
-      check(bindings.quiver_database_update_set_strings(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        nativePtrs,
-        values.length,
-      ));
+      check(
+        bindings.quiver_database_update_set_strings(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          nativePtrs,
+          values.length,
+        ),
+      );
     } finally {
       arena.releaseAll();
     }
@@ -258,15 +278,17 @@ extension DatabaseUpdate on Database {
       final rowCount = rows.length;
 
       if (rowCount == 0) {
-        check(bindings.quiver_database_update_time_series_group(
-          _ptr,
-          collection.toNativeUtf8(allocator: arena).cast(),
-          group.toNativeUtf8(allocator: arena).cast(),
-          id,
-          nullptr,
-          nullptr,
-          0,
-        ));
+        check(
+          bindings.quiver_database_update_time_series_group(
+            _ptr,
+            collection.toNativeUtf8(allocator: arena).cast(),
+            group.toNativeUtf8(allocator: arena).cast(),
+            id,
+            nullptr,
+            nullptr,
+            0,
+          ),
+        );
         return;
       }
 
@@ -289,15 +311,17 @@ extension DatabaseUpdate on Database {
         values[i] = value.toDouble();
       }
 
-      check(bindings.quiver_database_update_time_series_group(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        group.toNativeUtf8(allocator: arena).cast(),
-        id,
-        dateTimes,
-        values,
-        rowCount,
-      ));
+      check(
+        bindings.quiver_database_update_time_series_group(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          group.toNativeUtf8(allocator: arena).cast(),
+          id,
+          dateTimes,
+          values,
+          rowCount,
+        ),
+      );
     } finally {
       arena.releaseAll();
     }
@@ -334,13 +358,15 @@ extension DatabaseUpdate on Database {
         i++;
       }
 
-      check(bindings.quiver_database_update_time_series_files(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        columns,
-        pathPtrs,
-        count,
-      ));
+      check(
+        bindings.quiver_database_update_time_series_files(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          columns,
+          pathPtrs,
+          count,
+        ),
+      );
     } finally {
       arena.releaseAll();
     }

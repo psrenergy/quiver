@@ -118,11 +118,13 @@ class Element {
     final namePtr = name.toNativeUtf8();
     final valuePtr = value.toNativeUtf8();
     try {
-      check(bindings.quiver_element_set_string(
-        _ptr,
-        namePtr.cast(),
-        valuePtr.cast(),
-      ));
+      check(
+        bindings.quiver_element_set_string(
+          _ptr,
+          namePtr.cast(),
+          valuePtr.cast(),
+        ),
+      );
     } finally {
       malloc.free(namePtr);
       malloc.free(valuePtr);
@@ -155,12 +157,14 @@ class Element {
       for (var i = 0; i < values.length; i++) {
         arrayPtr[i] = values[i];
       }
-      check(bindings.quiver_element_set_array_integer(
-        _ptr,
-        namePtr.cast(),
-        arrayPtr,
-        values.length,
-      ));
+      check(
+        bindings.quiver_element_set_array_integer(
+          _ptr,
+          namePtr.cast(),
+          arrayPtr,
+          values.length,
+        ),
+      );
     } finally {
       malloc.free(namePtr);
       malloc.free(arrayPtr);
@@ -177,12 +181,14 @@ class Element {
       for (var i = 0; i < values.length; i++) {
         arrayPtr[i] = values[i];
       }
-      check(bindings.quiver_element_set_array_float(
-        _ptr,
-        namePtr.cast(),
-        arrayPtr,
-        values.length,
-      ));
+      check(
+        bindings.quiver_element_set_array_float(
+          _ptr,
+          namePtr.cast(),
+          arrayPtr,
+          values.length,
+        ),
+      );
     } finally {
       malloc.free(namePtr);
       malloc.free(arrayPtr);
@@ -202,12 +208,14 @@ class Element {
         stringPtrs.add(strPtr);
         arrayPtr[i] = strPtr.cast();
       }
-      check(bindings.quiver_element_set_array_string(
-        _ptr,
-        namePtr.cast(),
-        arrayPtr,
-        values.length,
-      ));
+      check(
+        bindings.quiver_element_set_array_string(
+          _ptr,
+          namePtr.cast(),
+          arrayPtr,
+          values.length,
+        ),
+      );
     } finally {
       malloc.free(namePtr);
       for (final ptr in stringPtrs) {
