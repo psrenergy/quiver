@@ -185,9 +185,6 @@ class Database {
   /// Prints schema information to stdout.
   void describe() {
     _ensureNotClosed();
-    final result = bindings.quiver_database_describe(_ptr);
-    if (result != quiver_error_t.QUIVER_OK) {
-      throw const DatabaseOperationException('Failed to describe database');
-    }
+    check(bindings.quiver_database_describe(_ptr));
   }
 }

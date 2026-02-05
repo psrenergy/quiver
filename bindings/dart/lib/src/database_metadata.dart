@@ -23,16 +23,12 @@ extension DatabaseMetadata on Database {
     try {
       final outMetadata = arena<quiver_scalar_metadata_t>();
 
-      final err = bindings.quiver_database_get_scalar_metadata(
+      check(bindings.quiver_database_get_scalar_metadata(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         attribute.toNativeUtf8(allocator: arena).cast(),
         outMetadata,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to get scalar metadata for '$collection.$attribute'");
-      }
+      ));
 
       final result = (
         name: outMetadata.ref.name.cast<Utf8>().toDartString(),
@@ -82,16 +78,12 @@ extension DatabaseMetadata on Database {
     try {
       final outMetadata = arena<quiver_vector_metadata_t>();
 
-      final err = bindings.quiver_database_get_vector_metadata(
+      check(bindings.quiver_database_get_vector_metadata(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         groupName.toNativeUtf8(allocator: arena).cast(),
         outMetadata,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to get vector metadata for '$collection.$groupName'");
-      }
+      ));
 
       final valueColumns =
           <
@@ -147,16 +139,12 @@ extension DatabaseMetadata on Database {
     try {
       final outMetadata = arena<quiver_set_metadata_t>();
 
-      final err = bindings.quiver_database_get_set_metadata(
+      check(bindings.quiver_database_get_set_metadata(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         groupName.toNativeUtf8(allocator: arena).cast(),
         outMetadata,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to get set metadata for '$collection.$groupName'");
-      }
+      ));
 
       final valueColumns =
           <
@@ -211,16 +199,12 @@ extension DatabaseMetadata on Database {
       final outMetadata = arena<Pointer<quiver_scalar_metadata_t>>();
       final outCount = arena<Size>();
 
-      final err = bindings.quiver_database_list_scalar_attributes(
+      check(bindings.quiver_database_list_scalar_attributes(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         outMetadata,
         outCount,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to list scalar attributes for '$collection'");
-      }
+      ));
 
       final count = outCount.value;
       if (count == 0 || outMetadata.value == nullptr) {
@@ -277,16 +261,12 @@ extension DatabaseMetadata on Database {
       final outMetadata = arena<Pointer<quiver_vector_metadata_t>>();
       final outCount = arena<Size>();
 
-      final err = bindings.quiver_database_list_vector_groups(
+      check(bindings.quiver_database_list_vector_groups(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         outMetadata,
         outCount,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to list vector groups for '$collection'");
-      }
+      ));
 
       final count = outCount.value;
       if (count == 0 || outMetadata.value == nullptr) {
@@ -366,16 +346,12 @@ extension DatabaseMetadata on Database {
       final outMetadata = arena<Pointer<quiver_set_metadata_t>>();
       final outCount = arena<Size>();
 
-      final err = bindings.quiver_database_list_set_groups(
+      check(bindings.quiver_database_list_set_groups(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         outMetadata,
         outCount,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to list set groups for '$collection'");
-      }
+      ));
 
       final count = outCount.value;
       if (count == 0 || outMetadata.value == nullptr) {
