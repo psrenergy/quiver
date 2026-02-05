@@ -770,3 +770,37 @@ TEST(DatabaseCApi, UpdateDateTimeScalar) {
     delete[] value;
     quiver_database_close(db);
 }
+
+// ============================================================================
+// Null string element tests
+// ============================================================================
+
+TEST(DatabaseCApi, UpdateVectorStringsNullElement) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    const char* values[] = {"a", nullptr, "c"};
+    auto err = quiver_database_update_vector_strings(db, "Collection", "tag", 1, values, 3);
+    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateSetStringsNullElement) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    const char* values[] = {"a", nullptr, "c"};
+    auto err = quiver_database_update_set_strings(db, "Collection", "tag", 1, values, 3);
+    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+
+    quiver_database_close(db);
+}

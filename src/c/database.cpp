@@ -841,6 +841,10 @@ QUIVER_C_API quiver_error_t quiver_database_update_vector_strings(quiver_databas
         std::vector<std::string> vec;
         vec.reserve(count);
         for (size_t i = 0; i < count; ++i) {
+            if (!values[i]) {
+                quiver_set_last_error("Null string pointer in values");
+                return QUIVER_ERROR_INVALID_ARGUMENT;
+            }
             vec.emplace_back(values[i]);
         }
         db->db.update_vector_strings(collection, attribute, id, vec);
@@ -904,6 +908,10 @@ QUIVER_C_API quiver_error_t quiver_database_update_set_strings(quiver_database_t
         std::vector<std::string> vec;
         vec.reserve(count);
         for (size_t i = 0; i < count; ++i) {
+            if (!values[i]) {
+                quiver_set_last_error("Null string pointer in values");
+                return QUIVER_ERROR_INVALID_ARGUMENT;
+            }
             vec.emplace_back(values[i]);
         }
         db->db.update_set_strings(collection, attribute, id, vec);
@@ -1398,6 +1406,9 @@ convert_params(const int* param_types, const void* const* param_values, size_t p
             params.emplace_back(*static_cast<const double*>(param_values[i]));
             break;
         case QUIVER_DATA_TYPE_STRING:
+            if (!param_values[i]) {
+                throw std::runtime_error("Null string pointer in parameter at index " + std::to_string(i));
+            }
             params.emplace_back(std::string(static_cast<const char*>(param_values[i])));
             break;
         case QUIVER_DATA_TYPE_NULL:

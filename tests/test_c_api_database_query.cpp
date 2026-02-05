@@ -471,3 +471,23 @@ TEST(DatabaseCApiQuery, QueryParamsNullDb) {
     auto err = quiver_database_query_integer_params(nullptr, "SELECT 1", nullptr, nullptr, 0, &value, &has_value);
     EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
 }
+
+TEST(DatabaseCApiQuery, QueryParamsNullStringElement) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    int param_types[] = {QUIVER_DATA_TYPE_STRING};
+    const void* param_values[] = {nullptr};
+
+    char* value = nullptr;
+    int has_value = 0;
+    auto err = quiver_database_query_string_params(
+        db, "SELECT label FROM Configuration WHERE label = ?", param_types, param_values, 1, &value, &has_value);
+
+    EXPECT_EQ(err, QUIVER_ERROR_DATABASE);
+
+    quiver_database_close(db);
+}
