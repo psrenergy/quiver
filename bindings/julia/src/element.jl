@@ -10,14 +10,14 @@ end
 
 function destroy!(el::Element)
     if el.ptr != C_NULL
-        C.quiver_element_destroy(el.ptr)
+        check(C.quiver_element_destroy(el.ptr))
         el.ptr = C_NULL
     end
     return nothing
 end
 
 function clear!(el::Element)
-    C.quiver_element_clear(el.ptr)
+    check(C.quiver_element_clear(el.ptr))
     return nothing
 end
 

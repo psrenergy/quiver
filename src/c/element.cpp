@@ -22,14 +22,22 @@ QUIVER_C_API quiver_error_t quiver_element_create(quiver_element_t** out_element
     }
 }
 
-QUIVER_C_API void quiver_element_destroy(quiver_element_t* element) {
+QUIVER_C_API quiver_error_t quiver_element_destroy(quiver_element_t* element) {
+    if (!element) {
+        quiver_set_last_error("Null element pointer");
+        return QUIVER_ERROR_INVALID_ARGUMENT;
+    }
     delete element;
+    return QUIVER_OK;
 }
 
-QUIVER_C_API void quiver_element_clear(quiver_element_t* element) {
-    if (element) {
-        element->element.clear();
+QUIVER_C_API quiver_error_t quiver_element_clear(quiver_element_t* element) {
+    if (!element) {
+        quiver_set_last_error("Null element pointer");
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
+    element->element.clear();
+    return QUIVER_OK;
 }
 
 QUIVER_C_API quiver_error_t quiver_element_set_integer(quiver_element_t* element, const char* name, int64_t value) {

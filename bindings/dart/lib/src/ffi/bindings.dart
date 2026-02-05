@@ -2647,7 +2647,7 @@ class QuiverDatabaseBindings {
   late final _quiver_element_create = _quiver_element_createPtr
       .asFunction<int Function(ffi.Pointer<ffi.Pointer<quiver_element_t1>>)>();
 
-  void quiver_element_destroy(
+  int quiver_element_destroy(
     ffi.Pointer<quiver_element_t1> element,
   ) {
     return _quiver_element_destroy(
@@ -2656,11 +2656,11 @@ class QuiverDatabaseBindings {
   }
 
   late final _quiver_element_destroyPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<quiver_element_t1>)>>('quiver_element_destroy');
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_element_t1>)>>('quiver_element_destroy');
   late final _quiver_element_destroy = _quiver_element_destroyPtr
-      .asFunction<void Function(ffi.Pointer<quiver_element_t1>)>();
+      .asFunction<int Function(ffi.Pointer<quiver_element_t1>)>();
 
-  void quiver_element_clear(
+  int quiver_element_clear(
     ffi.Pointer<quiver_element_t1> element,
   ) {
     return _quiver_element_clear(
@@ -2668,11 +2668,11 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_element_clearPtr = _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<quiver_element_t1>)>>(
+  late final _quiver_element_clearPtr = _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_element_t1>)>>(
     'quiver_element_clear',
   );
   late final _quiver_element_clear = _quiver_element_clearPtr
-      .asFunction<void Function(ffi.Pointer<quiver_element_t1>)>();
+      .asFunction<int Function(ffi.Pointer<quiver_element_t1>)>();
 
   int quiver_element_set_integer(
     ffi.Pointer<quiver_element_t1> element,

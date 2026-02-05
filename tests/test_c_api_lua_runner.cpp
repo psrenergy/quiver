@@ -194,7 +194,7 @@ TEST_F(LuaRunnerCApiTest, ReadScalarIntegers) {
     quiver_element_set_string(config, "label", "Config");
     int64_t tmp_id1 = 0;
     quiver_database_create_element(db, "Configuration", config, &tmp_id1);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     quiver_element_t* elem = nullptr;
     ASSERT_EQ(quiver_element_create(&elem), QUIVER_OK);
@@ -202,7 +202,7 @@ TEST_F(LuaRunnerCApiTest, ReadScalarIntegers) {
     quiver_element_set_integer(elem, "some_integer", 100);
     int64_t tmp_id2 = 0;
     quiver_database_create_element(db, "Collection", elem, &tmp_id2);
-    quiver_element_destroy(elem);
+    EXPECT_EQ(quiver_element_destroy(elem), QUIVER_OK);
 
     quiver_lua_runner_t* lua = nullptr;
     ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);

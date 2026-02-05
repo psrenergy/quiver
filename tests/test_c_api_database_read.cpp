@@ -24,7 +24,7 @@ TEST(DatabaseCApi, ReadScalarIntegers) {
     quiver_element_set_integer(e1, "integer_attribute", 42);
     int64_t tmp_id1 = 0;
     quiver_database_create_element(db, "Configuration", e1, &tmp_id1);
-    quiver_element_destroy(e1);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
     quiver_element_t* e2 = nullptr;
     ASSERT_EQ(quiver_element_create(&e2), QUIVER_OK);
@@ -32,7 +32,7 @@ TEST(DatabaseCApi, ReadScalarIntegers) {
     quiver_element_set_integer(e2, "integer_attribute", 100);
     int64_t tmp_id2 = 0;
     quiver_database_create_element(db, "Configuration", e2, &tmp_id2);
-    quiver_element_destroy(e2);
+    EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
 
     int64_t* values = nullptr;
     size_t count = 0;
@@ -60,7 +60,7 @@ TEST(DatabaseCApi, ReadScalarFloats) {
     quiver_element_set_float(e1, "float_attribute", 3.14);
     int64_t tmp_id1 = 0;
     quiver_database_create_element(db, "Configuration", e1, &tmp_id1);
-    quiver_element_destroy(e1);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
     quiver_element_t* e2 = nullptr;
     ASSERT_EQ(quiver_element_create(&e2), QUIVER_OK);
@@ -68,7 +68,7 @@ TEST(DatabaseCApi, ReadScalarFloats) {
     quiver_element_set_float(e2, "float_attribute", 2.71);
     int64_t tmp_id2 = 0;
     quiver_database_create_element(db, "Configuration", e2, &tmp_id2);
-    quiver_element_destroy(e2);
+    EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
 
     double* values = nullptr;
     size_t count = 0;
@@ -96,7 +96,7 @@ TEST(DatabaseCApi, ReadScalarStrings) {
     quiver_element_set_string(e1, "string_attribute", "hello");
     int64_t tmp_id1 = 0;
     quiver_database_create_element(db, "Configuration", e1, &tmp_id1);
-    quiver_element_destroy(e1);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
     quiver_element_t* e2 = nullptr;
     ASSERT_EQ(quiver_element_create(&e2), QUIVER_OK);
@@ -104,7 +104,7 @@ TEST(DatabaseCApi, ReadScalarStrings) {
     quiver_element_set_string(e2, "string_attribute", "world");
     int64_t tmp_id2 = 0;
     quiver_database_create_element(db, "Configuration", e2, &tmp_id2);
-    quiver_element_destroy(e2);
+    EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
 
     char** values = nullptr;
     size_t count = 0;
@@ -132,7 +132,7 @@ TEST(DatabaseCApi, ReadScalarEmpty) {
     quiver_element_set_string(config, "label", "Test Config");
     int64_t tmp_id = 0;
     quiver_database_create_element(db, "Configuration", config, &tmp_id);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     int64_t* integer_values = nullptr;
     size_t integer_count = 0;
@@ -168,7 +168,7 @@ TEST(DatabaseCApi, ReadVectorIntegers) {
     quiver_element_set_string(config, "label", "Test Config");
     int64_t tmp_id1 = 0;
     quiver_database_create_element(db, "Configuration", config, &tmp_id1);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     quiver_element_t* e1 = nullptr;
     ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
@@ -177,7 +177,7 @@ TEST(DatabaseCApi, ReadVectorIntegers) {
     quiver_element_set_array_integer(e1, "value_int", values1, 3);
     int64_t tmp_id2 = 0;
     quiver_database_create_element(db, "Collection", e1, &tmp_id2);
-    quiver_element_destroy(e1);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
     quiver_element_t* e2 = nullptr;
     ASSERT_EQ(quiver_element_create(&e2), QUIVER_OK);
@@ -186,7 +186,7 @@ TEST(DatabaseCApi, ReadVectorIntegers) {
     quiver_element_set_array_integer(e2, "value_int", values2, 2);
     int64_t tmp_id3 = 0;
     quiver_database_create_element(db, "Collection", e2, &tmp_id3);
-    quiver_element_destroy(e2);
+    EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
 
     int64_t** vectors = nullptr;
     size_t* sizes = nullptr;
@@ -220,7 +220,7 @@ TEST(DatabaseCApi, ReadVectorFloats) {
     quiver_element_set_string(config, "label", "Test Config");
     int64_t tmp_id1 = 0;
     quiver_database_create_element(db, "Configuration", config, &tmp_id1);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     quiver_element_t* e1 = nullptr;
     ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
@@ -229,7 +229,7 @@ TEST(DatabaseCApi, ReadVectorFloats) {
     quiver_element_set_array_float(e1, "value_float", values1, 3);
     int64_t tmp_id2 = 0;
     quiver_database_create_element(db, "Collection", e1, &tmp_id2);
-    quiver_element_destroy(e1);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
     quiver_element_t* e2 = nullptr;
     ASSERT_EQ(quiver_element_create(&e2), QUIVER_OK);
@@ -238,7 +238,7 @@ TEST(DatabaseCApi, ReadVectorFloats) {
     quiver_element_set_array_float(e2, "value_float", values2, 2);
     int64_t tmp_id3 = 0;
     quiver_database_create_element(db, "Collection", e2, &tmp_id3);
-    quiver_element_destroy(e2);
+    EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
 
     double** vectors = nullptr;
     size_t* sizes = nullptr;
@@ -272,7 +272,7 @@ TEST(DatabaseCApi, ReadVectorEmpty) {
     quiver_element_set_string(config, "label", "Test Config");
     int64_t tmp_id = 0;
     quiver_database_create_element(db, "Configuration", config, &tmp_id);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     int64_t** integer_vectors = nullptr;
     size_t* integer_sizes = nullptr;
@@ -310,7 +310,7 @@ TEST(DatabaseCApi, ReadVectorOnlyReturnsElementsWithData) {
     quiver_element_set_string(config, "label", "Test Config");
     int64_t tmp_id1 = 0;
     quiver_database_create_element(db, "Configuration", config, &tmp_id1);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     // Element with vector data
     quiver_element_t* e1 = nullptr;
@@ -320,7 +320,7 @@ TEST(DatabaseCApi, ReadVectorOnlyReturnsElementsWithData) {
     quiver_element_set_array_integer(e1, "value_int", values1, 3);
     int64_t tmp_id2 = 0;
     quiver_database_create_element(db, "Collection", e1, &tmp_id2);
-    quiver_element_destroy(e1);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
     // Element without vector data
     quiver_element_t* e2 = nullptr;
@@ -328,7 +328,7 @@ TEST(DatabaseCApi, ReadVectorOnlyReturnsElementsWithData) {
     quiver_element_set_string(e2, "label", "Item 2");
     int64_t tmp_id3 = 0;
     quiver_database_create_element(db, "Collection", e2, &tmp_id3);
-    quiver_element_destroy(e2);
+    EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
 
     // Another element with vector data
     quiver_element_t* e3 = nullptr;
@@ -338,7 +338,7 @@ TEST(DatabaseCApi, ReadVectorOnlyReturnsElementsWithData) {
     quiver_element_set_array_integer(e3, "value_int", values3, 2);
     int64_t tmp_id4 = 0;
     quiver_database_create_element(db, "Collection", e3, &tmp_id4);
-    quiver_element_destroy(e3);
+    EXPECT_EQ(quiver_element_destroy(e3), QUIVER_OK);
 
     int64_t** vectors = nullptr;
     size_t* sizes = nullptr;
@@ -377,7 +377,7 @@ TEST(DatabaseCApi, ReadSetStrings) {
     quiver_element_set_string(config, "label", "Test Config");
     int64_t tmp_id1 = 0;
     quiver_database_create_element(db, "Configuration", config, &tmp_id1);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     quiver_element_t* e1 = nullptr;
     ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
@@ -386,7 +386,7 @@ TEST(DatabaseCApi, ReadSetStrings) {
     quiver_element_set_array_string(e1, "tag", tags1, 2);
     int64_t tmp_id2 = 0;
     quiver_database_create_element(db, "Collection", e1, &tmp_id2);
-    quiver_element_destroy(e1);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
     quiver_element_t* e2 = nullptr;
     ASSERT_EQ(quiver_element_create(&e2), QUIVER_OK);
@@ -395,7 +395,7 @@ TEST(DatabaseCApi, ReadSetStrings) {
     quiver_element_set_array_string(e2, "tag", tags2, 1);
     int64_t tmp_id3 = 0;
     quiver_database_create_element(db, "Collection", e2, &tmp_id3);
-    quiver_element_destroy(e2);
+    EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
 
     char*** sets = nullptr;
     size_t* sizes = nullptr;
@@ -435,7 +435,7 @@ TEST(DatabaseCApi, ReadSetEmpty) {
     quiver_element_set_string(config, "label", "Test Config");
     int64_t tmp_id = 0;
     quiver_database_create_element(db, "Configuration", config, &tmp_id);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     char*** sets = nullptr;
     size_t* sizes = nullptr;
@@ -463,7 +463,7 @@ TEST(DatabaseCApi, ReadSetOnlyReturnsElementsWithData) {
     quiver_element_set_string(config, "label", "Test Config");
     int64_t tmp_id1 = 0;
     quiver_database_create_element(db, "Configuration", config, &tmp_id1);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     // Element with set data
     quiver_element_t* e1 = nullptr;
@@ -473,7 +473,7 @@ TEST(DatabaseCApi, ReadSetOnlyReturnsElementsWithData) {
     quiver_element_set_array_string(e1, "tag", tags1, 1);
     int64_t tmp_id2 = 0;
     quiver_database_create_element(db, "Collection", e1, &tmp_id2);
-    quiver_element_destroy(e1);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
     // Element without set data
     quiver_element_t* e2 = nullptr;
@@ -481,7 +481,7 @@ TEST(DatabaseCApi, ReadSetOnlyReturnsElementsWithData) {
     quiver_element_set_string(e2, "label", "Item 2");
     int64_t tmp_id3 = 0;
     quiver_database_create_element(db, "Collection", e2, &tmp_id3);
-    quiver_element_destroy(e2);
+    EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
 
     // Another element with set data
     quiver_element_t* e3 = nullptr;
@@ -491,7 +491,7 @@ TEST(DatabaseCApi, ReadSetOnlyReturnsElementsWithData) {
     quiver_element_set_array_string(e3, "tag", tags3, 2);
     int64_t tmp_id4 = 0;
     quiver_database_create_element(db, "Collection", e3, &tmp_id4);
-    quiver_element_destroy(e3);
+    EXPECT_EQ(quiver_element_destroy(e3), QUIVER_OK);
 
     char*** sets = nullptr;
     size_t* sizes = nullptr;
@@ -525,7 +525,7 @@ TEST(DatabaseCApi, ReadScalarIntegerById) {
     quiver_element_set_integer(e1, "integer_attribute", 42);
     int64_t id1 = 0;
     quiver_database_create_element(db, "Configuration", e1, &id1);
-    quiver_element_destroy(e1);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
     quiver_element_t* e2 = nullptr;
     ASSERT_EQ(quiver_element_create(&e2), QUIVER_OK);
@@ -533,7 +533,7 @@ TEST(DatabaseCApi, ReadScalarIntegerById) {
     quiver_element_set_integer(e2, "integer_attribute", 100);
     int64_t id2 = 0;
     quiver_database_create_element(db, "Configuration", e2, &id2);
-    quiver_element_destroy(e2);
+    EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
 
     int64_t value;
     int has_value;
@@ -565,7 +565,7 @@ TEST(DatabaseCApi, ReadScalarFloatById) {
     quiver_element_set_float(e1, "float_attribute", 3.14);
     int64_t id1 = 0;
     quiver_database_create_element(db, "Configuration", e1, &id1);
-    quiver_element_destroy(e1);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
     double value;
     int has_value;
@@ -591,7 +591,7 @@ TEST(DatabaseCApi, ReadScalarStringById) {
     quiver_element_set_string(e1, "string_attribute", "hello");
     int64_t id1 = 0;
     quiver_database_create_element(db, "Configuration", e1, &id1);
-    quiver_element_destroy(e1);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
     char* value = nullptr;
     int has_value;
@@ -619,7 +619,7 @@ TEST(DatabaseCApi, ReadScalarByIdNotFound) {
     quiver_element_set_integer(e, "integer_attribute", 42);
     int64_t tmp_id = 0;
     quiver_database_create_element(db, "Configuration", e, &tmp_id);
-    quiver_element_destroy(e);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
     int64_t value;
     int has_value;
@@ -649,7 +649,7 @@ TEST(DatabaseCApi, ReadVectorIntegerById) {
     quiver_element_set_string(config, "label", "Test Config");
     int64_t tmp_id = 0;
     quiver_database_create_element(db, "Configuration", config, &tmp_id);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     quiver_element_t* e1 = nullptr;
     ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
@@ -658,7 +658,7 @@ TEST(DatabaseCApi, ReadVectorIntegerById) {
     quiver_element_set_array_integer(e1, "value_int", values1, 3);
     int64_t id1 = 0;
     quiver_database_create_element(db, "Collection", e1, &id1);
-    quiver_element_destroy(e1);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
     quiver_element_t* e2 = nullptr;
     ASSERT_EQ(quiver_element_create(&e2), QUIVER_OK);
@@ -667,7 +667,7 @@ TEST(DatabaseCApi, ReadVectorIntegerById) {
     quiver_element_set_array_integer(e2, "value_int", values2, 2);
     int64_t id2 = 0;
     quiver_database_create_element(db, "Collection", e2, &id2);
-    quiver_element_destroy(e2);
+    EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
 
     int64_t* values = nullptr;
     size_t count = 0;
@@ -703,7 +703,7 @@ TEST(DatabaseCApi, ReadVectorFloatById) {
     quiver_element_set_string(config, "label", "Test Config");
     int64_t tmp_id = 0;
     quiver_database_create_element(db, "Configuration", config, &tmp_id);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     quiver_element_t* e1 = nullptr;
     ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
@@ -712,7 +712,7 @@ TEST(DatabaseCApi, ReadVectorFloatById) {
     quiver_element_set_array_float(e1, "value_float", values1, 3);
     int64_t id1 = 0;
     quiver_database_create_element(db, "Collection", e1, &id1);
-    quiver_element_destroy(e1);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
     double* values = nullptr;
     size_t count = 0;
@@ -741,14 +741,14 @@ TEST(DatabaseCApi, ReadVectorByIdEmpty) {
     quiver_element_set_string(config, "label", "Test Config");
     int64_t tmp_id = 0;
     quiver_database_create_element(db, "Configuration", config, &tmp_id);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     quiver_element_t* e = nullptr;
     ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
     quiver_element_set_string(e, "label", "Item 1");
     int64_t id = 0;
     quiver_database_create_element(db, "Collection", e, &id);
-    quiver_element_destroy(e);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
     int64_t* values = nullptr;
     size_t count = 0;
@@ -778,7 +778,7 @@ TEST(DatabaseCApi, ReadSetStringById) {
     quiver_element_set_string(config, "label", "Test Config");
     int64_t tmp_id = 0;
     quiver_database_create_element(db, "Configuration", config, &tmp_id);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     quiver_element_t* e1 = nullptr;
     ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
@@ -787,7 +787,7 @@ TEST(DatabaseCApi, ReadSetStringById) {
     quiver_element_set_array_string(e1, "tag", tags1, 2);
     int64_t id1 = 0;
     quiver_database_create_element(db, "Collection", e1, &id1);
-    quiver_element_destroy(e1);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
     quiver_element_t* e2 = nullptr;
     ASSERT_EQ(quiver_element_create(&e2), QUIVER_OK);
@@ -796,7 +796,7 @@ TEST(DatabaseCApi, ReadSetStringById) {
     quiver_element_set_array_string(e2, "tag", tags2, 1);
     int64_t id2 = 0;
     quiver_database_create_element(db, "Collection", e2, &id2);
-    quiver_element_destroy(e2);
+    EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
 
     char** values = nullptr;
     size_t count = 0;
@@ -835,14 +835,14 @@ TEST(DatabaseCApi, ReadSetByIdEmpty) {
     quiver_element_set_string(config, "label", "Test Config");
     int64_t tmp_id = 0;
     quiver_database_create_element(db, "Configuration", config, &tmp_id);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     quiver_element_t* e = nullptr;
     ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
     quiver_element_set_string(e, "label", "Item 1");
     int64_t id = 0;
     quiver_database_create_element(db, "Collection", e, &id);
-    quiver_element_destroy(e);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
     char** values = nullptr;
     size_t count = 0;
@@ -872,7 +872,7 @@ TEST(DatabaseCApi, ReadElementIds) {
     quiver_element_set_integer(e1, "integer_attribute", 42);
     int64_t id1 = 0;
     quiver_database_create_element(db, "Configuration", e1, &id1);
-    quiver_element_destroy(e1);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
     quiver_element_t* e2 = nullptr;
     ASSERT_EQ(quiver_element_create(&e2), QUIVER_OK);
@@ -880,7 +880,7 @@ TEST(DatabaseCApi, ReadElementIds) {
     quiver_element_set_integer(e2, "integer_attribute", 100);
     int64_t id2 = 0;
     quiver_database_create_element(db, "Configuration", e2, &id2);
-    quiver_element_destroy(e2);
+    EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
 
     quiver_element_t* e3 = nullptr;
     ASSERT_EQ(quiver_element_create(&e3), QUIVER_OK);
@@ -888,7 +888,7 @@ TEST(DatabaseCApi, ReadElementIds) {
     quiver_element_set_integer(e3, "integer_attribute", 200);
     int64_t id3 = 0;
     quiver_database_create_element(db, "Configuration", e3, &id3);
-    quiver_element_destroy(e3);
+    EXPECT_EQ(quiver_element_destroy(e3), QUIVER_OK);
 
     int64_t* ids = nullptr;
     size_t count = 0;
@@ -917,7 +917,7 @@ TEST(DatabaseCApi, ReadElementIdsEmpty) {
     quiver_element_set_string(config, "label", "Test Config");
     int64_t tmp_id = 0;
     quiver_database_create_element(db, "Configuration", config, &tmp_id);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     // No Collection elements created
     int64_t* ids = nullptr;
@@ -1669,7 +1669,7 @@ TEST(DatabaseCApi, DateTimeReadScalarString) {
     quiver_element_set_string(e, "date_attribute", "2024-03-17T09:30:00");
     int64_t id = 0;
     quiver_database_create_element(db, "Configuration", e, &id);
-    quiver_element_destroy(e);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
     EXPECT_GT(id, 0);
 
     // Read the datetime value

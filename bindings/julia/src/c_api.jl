@@ -442,11 +442,11 @@ function quiver_element_create(out_element)
 end
 
 function quiver_element_destroy(element)
-    @ccall libquiver_c.quiver_element_destroy(element::Ptr{quiver_element_t})::Cvoid
+    @ccall libquiver_c.quiver_element_destroy(element::Ptr{quiver_element_t})::quiver_error_t
 end
 
 function quiver_element_clear(element)
-    @ccall libquiver_c.quiver_element_clear(element::Ptr{quiver_element_t})::Cvoid
+    @ccall libquiver_c.quiver_element_clear(element::Ptr{quiver_element_t})::quiver_error_t
 end
 
 function quiver_element_set_integer(element, name, value)

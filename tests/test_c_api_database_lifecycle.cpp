@@ -340,7 +340,7 @@ TEST_F(TempFileFixture, SetScalarRelationValid) {
     quiver_element_set_string(parent, "label", "Parent 1");
     int64_t parent_id = 0;
     quiver_database_create_element(db, "Parent", parent, &parent_id);
-    quiver_element_destroy(parent);
+    EXPECT_EQ(quiver_element_destroy(parent), QUIVER_OK);
 
     // Create child
     quiver_element_t* child = nullptr;
@@ -348,7 +348,7 @@ TEST_F(TempFileFixture, SetScalarRelationValid) {
     quiver_element_set_string(child, "label", "Child 1");
     int64_t child_id = 0;
     quiver_database_create_element(db, "Child", child, &child_id);
-    quiver_element_destroy(child);
+    EXPECT_EQ(quiver_element_destroy(child), QUIVER_OK);
 
     // Set relation
     auto err = quiver_database_set_scalar_relation(db, "Child", "parent_id", "Child 1", "Parent 1");
@@ -425,7 +425,7 @@ TEST_F(TempFileFixture, ReadScalarRelationValid) {
     quiver_element_set_string(parent, "label", "Parent 1");
     int64_t parent_id = 0;
     quiver_database_create_element(db, "Parent", parent, &parent_id);
-    quiver_element_destroy(parent);
+    EXPECT_EQ(quiver_element_destroy(parent), QUIVER_OK);
 
     // Create child
     quiver_element_t* child = nullptr;
@@ -433,7 +433,7 @@ TEST_F(TempFileFixture, ReadScalarRelationValid) {
     quiver_element_set_string(child, "label", "Child 1");
     int64_t child_id = 0;
     quiver_database_create_element(db, "Child", child, &child_id);
-    quiver_element_destroy(child);
+    EXPECT_EQ(quiver_element_destroy(child), QUIVER_OK);
 
     // Set relation
     auto err = quiver_database_set_scalar_relation(db, "Child", "parent_id", "Child 1", "Parent 1");
@@ -468,7 +468,7 @@ TEST_F(TempFileFixture, CreateElementInNonExistentCollection) {
     quiver_element_set_string(element, "label", "Test");
     int64_t id = 0;
     EXPECT_NE(quiver_database_create_element(db, "NonexistentCollection", element, &id), QUIVER_OK);
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 
     quiver_database_close(db);
 }
@@ -560,7 +560,7 @@ TEST_F(TempFileFixture, ReadElementIdsValid) {
     quiver_element_set_string(config, "label", "Config");
     int64_t config_id = 0;
     quiver_database_create_element(db, "Configuration", config, &config_id);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     // Create some elements
     for (int i = 1; i <= 3; ++i) {
@@ -569,7 +569,7 @@ TEST_F(TempFileFixture, ReadElementIdsValid) {
         quiver_element_set_string(element, "label", ("Item " + std::to_string(i)).c_str());
         int64_t elem_id = 0;
         quiver_database_create_element(db, "Collection", element, &elem_id);
-        quiver_element_destroy(element);
+        EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     }
 
     // Read element IDs
@@ -623,7 +623,7 @@ TEST_F(TempFileFixture, DeleteElementValid) {
     quiver_element_set_string(config, "label", "Config");
     int64_t config_id = 0;
     quiver_database_create_element(db, "Configuration", config, &config_id);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     // Create element
     quiver_element_t* element = nullptr;
@@ -631,7 +631,7 @@ TEST_F(TempFileFixture, DeleteElementValid) {
     quiver_element_set_string(element, "label", "Item 1");
     int64_t id = 0;
     EXPECT_EQ(quiver_database_create_element(db, "Collection", element, &id), QUIVER_OK);
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 
     EXPECT_GT(id, 0);
 
@@ -664,7 +664,7 @@ TEST_F(TempFileFixture, UpdateElementNullDb) {
     auto err = quiver_database_update_element(nullptr, "Collection", 1, element);
     EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST_F(TempFileFixture, UpdateElementNullCollection) {
@@ -682,7 +682,7 @@ TEST_F(TempFileFixture, UpdateElementNullCollection) {
     auto err = quiver_database_update_element(db, nullptr, 1, element);
     EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     quiver_database_close(db);
 }
 
