@@ -223,13 +223,13 @@ include("fixture.jl")
             "Collection",
             Dict{String, Union{String, Nothing}}(
                 "data_file" => "/path/to/data.csv",
-                "metadata_file" => "/path/to/metadata.json",
+                "metadata_file" => "/path/to/meta.json",
             ),
         )
 
         paths = Quiver.read_time_series_files(db, "Collection")
         @test paths["data_file"] == "/path/to/data.csv"
-        @test paths["metadata_file"] == "/path/to/metadata.json"
+        @test paths["metadata_file"] == "/path/to/meta.json"
 
         Quiver.close!(db)
     end
@@ -264,7 +264,7 @@ include("fixture.jl")
             "Collection",
             Dict{String, Union{String, Nothing}}(
                 "data_file" => "/old/data.csv",
-                "metadata_file" => "/old/metadata.json",
+                "metadata_file" => "/old/meta.json",
             ),
         )
 
@@ -274,13 +274,13 @@ include("fixture.jl")
             "Collection",
             Dict{String, Union{String, Nothing}}(
                 "data_file" => "/new/data.csv",
-                "metadata_file" => "/new/metadata.json",
+                "metadata_file" => "/new/meta.json",
             ),
         )
 
         paths = Quiver.read_time_series_files(db, "Collection")
         @test paths["data_file"] == "/new/data.csv"
-        @test paths["metadata_file"] == "/new/metadata.json"
+        @test paths["metadata_file"] == "/new/meta.json"
 
         Quiver.close!(db)
     end

@@ -277,7 +277,7 @@ TEST(Database, UpdateAndReadTimeSeriesFiles) {
 
     std::map<std::string, std::optional<std::string>> paths;
     paths["data_file"] = "/path/to/data.csv";
-    paths["metadata_file"] = "/path/to/metadata.json";
+    paths["metadata_file"] = "/path/to/meta.json";
 
     db.update_time_series_files("Collection", paths);
 
@@ -286,7 +286,7 @@ TEST(Database, UpdateAndReadTimeSeriesFiles) {
     EXPECT_TRUE(result["data_file"].has_value());
     EXPECT_EQ(result["data_file"].value(), "/path/to/data.csv");
     EXPECT_TRUE(result["metadata_file"].has_value());
-    EXPECT_EQ(result["metadata_file"].value(), "/path/to/metadata.json");
+    EXPECT_EQ(result["metadata_file"].value(), "/path/to/meta.json");
 }
 
 TEST(Database, UpdateTimeSeriesFilesWithNulls) {
@@ -312,18 +312,18 @@ TEST(Database, UpdateTimeSeriesFilesReplace) {
     // First update
     std::map<std::string, std::optional<std::string>> paths1;
     paths1["data_file"] = "/old/data.csv";
-    paths1["metadata_file"] = "/old/metadata.json";
+    paths1["metadata_file"] = "/old/meta.json";
     db.update_time_series_files("Collection", paths1);
 
     // Second update replaces
     std::map<std::string, std::optional<std::string>> paths2;
     paths2["data_file"] = "/new/data.csv";
-    paths2["metadata_file"] = "/new/metadata.json";
+    paths2["metadata_file"] = "/new/meta.json";
     db.update_time_series_files("Collection", paths2);
 
     auto result = db.read_time_series_files("Collection");
     EXPECT_EQ(result["data_file"].value(), "/new/data.csv");
-    EXPECT_EQ(result["metadata_file"].value(), "/new/metadata.json");
+    EXPECT_EQ(result["metadata_file"].value(), "/new/meta.json");
 }
 
 TEST(Database, TimeSeriesFilesNotFound) {

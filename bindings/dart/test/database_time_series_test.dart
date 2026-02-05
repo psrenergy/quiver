@@ -241,12 +241,12 @@ void main() {
       try {
         db.updateTimeSeriesFiles('Collection', {
           'data_file': '/path/to/data.csv',
-          'metadata_file': '/path/to/metadata.json',
+          'metadata_file': '/path/to/meta.json',
         });
 
         final paths = db.readTimeSeriesFiles('Collection');
         expect(paths['data_file'], equals('/path/to/data.csv'));
-        expect(paths['metadata_file'], equals('/path/to/metadata.json'));
+        expect(paths['metadata_file'], equals('/path/to/meta.json'));
       } finally {
         db.close();
       }
@@ -280,18 +280,18 @@ void main() {
         // First update
         db.updateTimeSeriesFiles('Collection', {
           'data_file': '/old/data.csv',
-          'metadata_file': '/old/metadata.json',
+          'metadata_file': '/old/meta.json',
         });
 
         // Second update replaces
         db.updateTimeSeriesFiles('Collection', {
           'data_file': '/new/data.csv',
-          'metadata_file': '/new/metadata.json',
+          'metadata_file': '/new/meta.json',
         });
 
         final paths = db.readTimeSeriesFiles('Collection');
         expect(paths['data_file'], equals('/new/data.csv'));
-        expect(paths['metadata_file'], equals('/new/metadata.json'));
+        expect(paths['metadata_file'], equals('/new/meta.json'));
       } finally {
         db.close();
       }
