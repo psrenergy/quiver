@@ -2,8 +2,7 @@ function read_scalar_relation(db::Database, collection::String, attribute::Strin
     out_values = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.quiver_database_read_scalar_relation(db.ptr, collection, attribute, out_values, out_count)
-    check_error(err)
+    check(C.quiver_database_read_scalar_relation(db.ptr, collection, attribute, out_values, out_count))
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
@@ -28,8 +27,7 @@ function read_scalar_integers(db::Database, collection::String, attribute::Strin
     out_values = Ref{Ptr{Int64}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.quiver_database_read_scalar_integers(db.ptr, collection, attribute, out_values, out_count)
-    check_error(err)
+    check(C.quiver_database_read_scalar_integers(db.ptr, collection, attribute, out_values, out_count))
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
@@ -45,8 +43,7 @@ function read_scalar_floats(db::Database, collection::String, attribute::String)
     out_values = Ref{Ptr{Float64}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.quiver_database_read_scalar_floats(db.ptr, collection, attribute, out_values, out_count)
-    check_error(err)
+    check(C.quiver_database_read_scalar_floats(db.ptr, collection, attribute, out_values, out_count))
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
@@ -62,8 +59,7 @@ function read_scalar_strings(db::Database, collection::String, attribute::String
     out_values = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.quiver_database_read_scalar_strings(db.ptr, collection, attribute, out_values, out_count)
-    check_error(err)
+    check(C.quiver_database_read_scalar_strings(db.ptr, collection, attribute, out_values, out_count))
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
@@ -81,8 +77,7 @@ function read_vector_integers(db::Database, collection::String, attribute::Strin
     out_sizes = Ref{Ptr{Csize_t}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.quiver_database_read_vector_integers(db.ptr, collection, attribute, out_vectors, out_sizes, out_count)
-    check_error(err)
+    check(C.quiver_database_read_vector_integers(db.ptr, collection, attribute, out_vectors, out_sizes, out_count))
 
     count = out_count[]
     if count == 0 || out_vectors[] == C_NULL
@@ -108,8 +103,7 @@ function read_vector_floats(db::Database, collection::String, attribute::String)
     out_sizes = Ref{Ptr{Csize_t}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.quiver_database_read_vector_floats(db.ptr, collection, attribute, out_vectors, out_sizes, out_count)
-    check_error(err)
+    check(C.quiver_database_read_vector_floats(db.ptr, collection, attribute, out_vectors, out_sizes, out_count))
 
     count = out_count[]
     if count == 0 || out_vectors[] == C_NULL
@@ -135,8 +129,7 @@ function read_vector_strings(db::Database, collection::String, attribute::String
     out_sizes = Ref{Ptr{Csize_t}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.quiver_database_read_vector_strings(db.ptr, collection, attribute, out_vectors, out_sizes, out_count)
-    check_error(err)
+    check(C.quiver_database_read_vector_strings(db.ptr, collection, attribute, out_vectors, out_sizes, out_count))
 
     count = out_count[]
     if count == 0 || out_vectors[] == C_NULL
@@ -163,8 +156,7 @@ function read_set_integers(db::Database, collection::String, attribute::String)
     out_sizes = Ref{Ptr{Csize_t}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.quiver_database_read_set_integers(db.ptr, collection, attribute, out_sets, out_sizes, out_count)
-    check_error(err)
+    check(C.quiver_database_read_set_integers(db.ptr, collection, attribute, out_sets, out_sizes, out_count))
 
     count = out_count[]
     if count == 0 || out_sets[] == C_NULL
@@ -190,8 +182,7 @@ function read_set_floats(db::Database, collection::String, attribute::String)
     out_sizes = Ref{Ptr{Csize_t}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.quiver_database_read_set_floats(db.ptr, collection, attribute, out_sets, out_sizes, out_count)
-    check_error(err)
+    check(C.quiver_database_read_set_floats(db.ptr, collection, attribute, out_sets, out_sizes, out_count))
 
     count = out_count[]
     if count == 0 || out_sets[] == C_NULL
@@ -217,8 +208,7 @@ function read_set_strings(db::Database, collection::String, attribute::String)
     out_sizes = Ref{Ptr{Csize_t}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.quiver_database_read_set_strings(db.ptr, collection, attribute, out_sets, out_sizes, out_count)
-    check_error(err)
+    check(C.quiver_database_read_set_strings(db.ptr, collection, attribute, out_sets, out_sizes, out_count))
 
     count = out_count[]
     if count == 0 || out_sets[] == C_NULL
@@ -244,8 +234,7 @@ function read_scalar_integer_by_id(db::Database, collection::String, attribute::
     out_value = Ref{Int64}(0)
     out_has_value = Ref{Cint}(0)
 
-    err = C.quiver_database_read_scalar_integer_by_id(db.ptr, collection, attribute, id, out_value, out_has_value)
-    check_error(err)
+    check(C.quiver_database_read_scalar_integer_by_id(db.ptr, collection, attribute, id, out_value, out_has_value))
 
     if out_has_value[] == 0
         return nothing
@@ -257,8 +246,7 @@ function read_scalar_float_by_id(db::Database, collection::String, attribute::St
     out_value = Ref{Float64}(0.0)
     out_has_value = Ref{Cint}(0)
 
-    err = C.quiver_database_read_scalar_float_by_id(db.ptr, collection, attribute, id, out_value, out_has_value)
-    check_error(err)
+    check(C.quiver_database_read_scalar_float_by_id(db.ptr, collection, attribute, id, out_value, out_has_value))
 
     if out_has_value[] == 0
         return nothing
@@ -270,8 +258,7 @@ function read_scalar_string_by_id(db::Database, collection::String, attribute::S
     out_value = Ref{Ptr{Cchar}}(C_NULL)
     out_has_value = Ref{Cint}(0)
 
-    err = C.quiver_database_read_scalar_string_by_id(db.ptr, collection, attribute, id, out_value, out_has_value)
-    check_error(err)
+    check(C.quiver_database_read_scalar_string_by_id(db.ptr, collection, attribute, id, out_value, out_has_value))
 
     if out_has_value[] == 0 || out_value[] == C_NULL
         return nothing
@@ -289,8 +276,7 @@ function read_vector_integers_by_id(db::Database, collection::String, attribute:
     out_values = Ref{Ptr{Int64}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.quiver_database_read_vector_integers_by_id(db.ptr, collection, attribute, id, out_values, out_count)
-    check_error(err)
+    check(C.quiver_database_read_vector_integers_by_id(db.ptr, collection, attribute, id, out_values, out_count))
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
@@ -306,8 +292,7 @@ function read_vector_floats_by_id(db::Database, collection::String, attribute::S
     out_values = Ref{Ptr{Float64}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.quiver_database_read_vector_floats_by_id(db.ptr, collection, attribute, id, out_values, out_count)
-    check_error(err)
+    check(C.quiver_database_read_vector_floats_by_id(db.ptr, collection, attribute, id, out_values, out_count))
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
@@ -323,8 +308,7 @@ function read_vector_strings_by_id(db::Database, collection::String, attribute::
     out_values = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.quiver_database_read_vector_strings_by_id(db.ptr, collection, attribute, id, out_values, out_count)
-    check_error(err)
+    check(C.quiver_database_read_vector_strings_by_id(db.ptr, collection, attribute, id, out_values, out_count))
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
@@ -345,8 +329,7 @@ function read_set_integers_by_id(db::Database, collection::String, attribute::St
     out_values = Ref{Ptr{Int64}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.quiver_database_read_set_integers_by_id(db.ptr, collection, attribute, id, out_values, out_count)
-    check_error(err)
+    check(C.quiver_database_read_set_integers_by_id(db.ptr, collection, attribute, id, out_values, out_count))
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
@@ -362,8 +345,7 @@ function read_set_floats_by_id(db::Database, collection::String, attribute::Stri
     out_values = Ref{Ptr{Float64}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.quiver_database_read_set_floats_by_id(db.ptr, collection, attribute, id, out_values, out_count)
-    check_error(err)
+    check(C.quiver_database_read_set_floats_by_id(db.ptr, collection, attribute, id, out_values, out_count))
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
@@ -379,8 +361,7 @@ function read_set_strings_by_id(db::Database, collection::String, attribute::Str
     out_values = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.quiver_database_read_set_strings_by_id(db.ptr, collection, attribute, id, out_values, out_count)
-    check_error(err)
+    check(C.quiver_database_read_set_strings_by_id(db.ptr, collection, attribute, id, out_values, out_count))
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
@@ -401,8 +382,7 @@ function read_element_ids(db::Database, collection::String)
     out_ids = Ref{Ptr{Int64}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.quiver_database_read_element_ids(db.ptr, collection, out_ids, out_count)
-    check_error(err)
+    check(C.quiver_database_read_element_ids(db.ptr, collection, out_ids, out_count))
 
     count = out_count[]
     if count == 0 || out_ids[] == C_NULL
@@ -593,11 +573,10 @@ function read_time_series_group_by_id(db::Database, collection::String, group::S
     out_values = Ref{Ptr{Cdouble}}(C_NULL)
     out_row_count = Ref{Csize_t}(0)
 
-    err = C.quiver_database_read_time_series_group_by_id(
+    check(C.quiver_database_read_time_series_group_by_id(
         db.ptr, collection, group, id,
         out_date_times, out_values, out_row_count,
-    )
-    check_error(err)
+    ))
 
     row_count = out_row_count[]
     if row_count == 0 || out_date_times[] == C_NULL
@@ -624,8 +603,7 @@ function read_time_series_files(db::Database, collection::String)
     out_paths = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
     out_count = Ref{Csize_t}(0)
 
-    err = C.quiver_database_read_time_series_files(db.ptr, collection, out_columns, out_paths, out_count)
-    check_error(err)
+    check(C.quiver_database_read_time_series_files(db.ptr, collection, out_columns, out_paths, out_count))
 
     count = out_count[]
     if count == 0 || out_columns[] == C_NULL

@@ -49,7 +49,6 @@ function current_version(db::Database)
 end
 
 function describe(db::Database)
-    result = C.quiver_database_describe(db.ptr)
-    check_error(result)
+    check(C.quiver_database_describe(db.ptr))
     return nothing
 end
