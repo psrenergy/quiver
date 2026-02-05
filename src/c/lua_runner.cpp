@@ -1,4 +1,4 @@
-#include "c_api_internal.h"
+#include "internal.h"
 #include "quiver/c/lua_runner.h"
 #include "quiver/lua_runner.h"
 

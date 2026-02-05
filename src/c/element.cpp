@@ -1,4 +1,4 @@
-#include "c_api_internal.h"
+#include "internal.h"
 #include "quiver/c/element.h"
 
 #include <cstring>
