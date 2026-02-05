@@ -65,86 +65,96 @@ class QuiverDatabaseBindings {
   late final _quiver_database_options_default = _quiver_database_options_defaultPtr
       .asFunction<quiver_database_options_t Function()>();
 
-  ffi.Pointer<quiver_database_t> quiver_database_open(
+  int quiver_database_open(
     ffi.Pointer<ffi.Char> path,
     ffi.Pointer<quiver_database_options_t> options,
+    ffi.Pointer<ffi.Pointer<quiver_database_t>> out_db,
   ) {
     return _quiver_database_open(
       path,
       options,
+      out_db,
     );
   }
 
   late final _quiver_database_openPtr =
       _lookup<
         ffi.NativeFunction<
-          ffi.Pointer<quiver_database_t> Function(ffi.Pointer<ffi.Char>, ffi.Pointer<quiver_database_options_t>)
+          ffi.Int32 Function(ffi.Pointer<ffi.Char>, ffi.Pointer<quiver_database_options_t>, ffi.Pointer<ffi.Pointer<quiver_database_t>>)
         >
       >('quiver_database_open');
   late final _quiver_database_open = _quiver_database_openPtr
       .asFunction<
-        ffi.Pointer<quiver_database_t> Function(ffi.Pointer<ffi.Char>, ffi.Pointer<quiver_database_options_t>)
+        int Function(ffi.Pointer<ffi.Char>, ffi.Pointer<quiver_database_options_t>, ffi.Pointer<ffi.Pointer<quiver_database_t>>)
       >();
 
-  ffi.Pointer<quiver_database_t> quiver_database_from_migrations(
+  int quiver_database_from_migrations(
     ffi.Pointer<ffi.Char> db_path,
     ffi.Pointer<ffi.Char> migrations_path,
     ffi.Pointer<quiver_database_options_t> options,
+    ffi.Pointer<ffi.Pointer<quiver_database_t>> out_db,
   ) {
     return _quiver_database_from_migrations(
       db_path,
       migrations_path,
       options,
+      out_db,
     );
   }
 
   late final _quiver_database_from_migrationsPtr =
       _lookup<
         ffi.NativeFunction<
-          ffi.Pointer<quiver_database_t> Function(
+          ffi.Int32 Function(
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<quiver_database_options_t>,
+            ffi.Pointer<ffi.Pointer<quiver_database_t>>,
           )
         >
       >('quiver_database_from_migrations');
   late final _quiver_database_from_migrations = _quiver_database_from_migrationsPtr
       .asFunction<
-        ffi.Pointer<quiver_database_t> Function(
+        int Function(
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<quiver_database_options_t>,
+          ffi.Pointer<ffi.Pointer<quiver_database_t>>,
         )
       >();
 
-  ffi.Pointer<quiver_database_t> quiver_database_from_schema(
+  int quiver_database_from_schema(
     ffi.Pointer<ffi.Char> db_path,
     ffi.Pointer<ffi.Char> schema_path,
     ffi.Pointer<quiver_database_options_t> options,
+    ffi.Pointer<ffi.Pointer<quiver_database_t>> out_db,
   ) {
     return _quiver_database_from_schema(
       db_path,
       schema_path,
       options,
+      out_db,
     );
   }
 
   late final _quiver_database_from_schemaPtr =
       _lookup<
         ffi.NativeFunction<
-          ffi.Pointer<quiver_database_t> Function(
+          ffi.Int32 Function(
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<quiver_database_options_t>,
+            ffi.Pointer<ffi.Pointer<quiver_database_t>>,
           )
         >
       >('quiver_database_from_schema');
   late final _quiver_database_from_schema = _quiver_database_from_schemaPtr
       .asFunction<
-        ffi.Pointer<quiver_database_t> Function(
+        int Function(
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<quiver_database_options_t>,
+          ffi.Pointer<ffi.Pointer<quiver_database_t>>,
         )
       >();
 
@@ -164,31 +174,35 @@ class QuiverDatabaseBindings {
 
   int quiver_database_is_healthy(
     ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Int> out_healthy,
   ) {
     return _quiver_database_is_healthy(
       db,
+      out_healthy,
     );
   }
 
   late final _quiver_database_is_healthyPtr =
-      _lookup<ffi.NativeFunction<ffi.Int Function(ffi.Pointer<quiver_database_t>)>>('quiver_database_is_healthy');
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Int>)>>('quiver_database_is_healthy');
   late final _quiver_database_is_healthy = _quiver_database_is_healthyPtr
-      .asFunction<int Function(ffi.Pointer<quiver_database_t>)>();
+      .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Int>)>();
 
-  ffi.Pointer<ffi.Char> quiver_database_path(
+  int quiver_database_path(
     ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> out_path,
   ) {
     return _quiver_database_path(
       db,
+      out_path,
     );
   }
 
   late final _quiver_database_pathPtr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<quiver_database_t>)>>(
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Pointer<ffi.Char>>)>>(
         'quiver_database_path',
       );
   late final _quiver_database_path = _quiver_database_pathPtr
-      .asFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<quiver_database_t>)>();
+      .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Pointer<ffi.Char>>)>();
 
   int quiver_database_current_version(
     ffi.Pointer<quiver_database_t> db,

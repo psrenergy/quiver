@@ -7,10 +7,12 @@
 TEST(DatabaseCApi, DeleteElementById) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto e = quiver_element_create();
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
     quiver_element_set_string(e, "label", "Config 1");
     quiver_element_set_integer(e, "integer_attribute", 42);
     int64_t id = 0;
@@ -41,16 +43,19 @@ TEST(DatabaseCApi, DeleteElementById) {
 TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto config = quiver_element_create();
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
     quiver_element_set_string(config, "label", "Test Config");
     int64_t _id = 0;
     quiver_database_create_element(db, "Configuration", config, &_id);
     quiver_element_destroy(config);
 
-    auto e = quiver_element_create();
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
     quiver_element_set_string(e, "label", "Item 1");
     int64_t values[] = {1, 2, 3};
     quiver_element_set_array_integer(e, "value_int", values, 3);
@@ -93,16 +98,19 @@ TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
 TEST(DatabaseCApi, DeleteElementByIdWithSetData) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto config = quiver_element_create();
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
     quiver_element_set_string(config, "label", "Test Config");
     int64_t _id = 0;
     quiver_database_create_element(db, "Configuration", config, &_id);
     quiver_element_destroy(config);
 
-    auto e = quiver_element_create();
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
     quiver_element_set_string(e, "label", "Item 1");
     const char* tags[] = {"important", "urgent"};
     quiver_element_set_array_string(e, "tag", tags, 2);
@@ -145,10 +153,12 @@ TEST(DatabaseCApi, DeleteElementByIdWithSetData) {
 TEST(DatabaseCApi, DeleteElementByIdNonExistent) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto e = quiver_element_create();
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
     quiver_element_set_string(e, "label", "Config 1");
     quiver_element_set_integer(e, "integer_attribute", 42);
     int64_t _id = 0;
@@ -173,24 +183,28 @@ TEST(DatabaseCApi, DeleteElementByIdNonExistent) {
 TEST(DatabaseCApi, DeleteElementByIdOtherElementsUnchanged) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto e1 = quiver_element_create();
+    quiver_element_t* e1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
     quiver_element_set_string(e1, "label", "Config 1");
     quiver_element_set_integer(e1, "integer_attribute", 42);
     int64_t id1 = 0;
     quiver_database_create_element(db, "Configuration", e1, &id1);
     quiver_element_destroy(e1);
 
-    auto e2 = quiver_element_create();
+    quiver_element_t* e2 = nullptr;
+    ASSERT_EQ(quiver_element_create(&e2), QUIVER_OK);
     quiver_element_set_string(e2, "label", "Config 2");
     quiver_element_set_integer(e2, "integer_attribute", 100);
     int64_t id2 = 0;
     quiver_database_create_element(db, "Configuration", e2, &id2);
     quiver_element_destroy(e2);
 
-    auto e3 = quiver_element_create();
+    quiver_element_t* e3 = nullptr;
+    ASSERT_EQ(quiver_element_create(&e3), QUIVER_OK);
     quiver_element_set_string(e3, "label", "Config 3");
     quiver_element_set_integer(e3, "integer_attribute", 200);
     int64_t id3 = 0;
@@ -232,7 +246,8 @@ TEST(DatabaseCApi, DeleteElementByIdOtherElementsUnchanged) {
 TEST(DatabaseCApi, DeleteElementByIdNullArguments) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
     // Null db
