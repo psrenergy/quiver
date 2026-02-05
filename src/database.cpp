@@ -649,7 +649,7 @@ int64_t Database::create_element(const std::string& collection, const Element& e
 
         // Insert each row with vector_index
         for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
-            int64_t vector_index = static_cast<int64_t>(row_idx + 1);
+            auto vector_index = static_cast<int64_t>(row_idx + 1);
             auto vector_sql = "INSERT INTO " + vector_table + " (id, vector_index";
             std::string vec_placeholders = "?, ?";
             std::vector<Value> vec_params = {element_id, vector_index};
@@ -694,7 +694,7 @@ int64_t Database::create_element(const std::string& collection, const Element& e
                 set_sql += ", " + col_name;
                 set_placeholders += ", ?";
 
-                Value val = (*values_ptr)[row_idx];
+                auto val = (*values_ptr)[row_idx];
 
                 // Check if this column is a FK and value is a string (label) that needs resolution
                 for (const auto& fk : table_def->foreign_keys) {
@@ -785,7 +785,7 @@ void Database::update_element(const std::string& collection, int64_t id, const E
             for (size_t i = 0; i < values.size(); ++i) {
                 auto insert_sql =
                     "INSERT INTO " + vector_table + " (id, vector_index, " + attr_name + ") VALUES (?, ?, ?)";
-                int64_t vector_index = static_cast<int64_t>(i + 1);
+                auto vector_index = static_cast<int64_t>(i + 1);
                 execute(insert_sql, {id, vector_index, values[i]});
             }
             impl_->logger->debug(

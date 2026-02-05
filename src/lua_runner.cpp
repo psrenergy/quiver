@@ -170,12 +170,12 @@ struct LuaRunner::Impl {
     static Element table_to_element(sol::table values) {
         Element element;
         for (auto pair : values) {
-            sol::object key = pair.first;
-            sol::object val = pair.second;
-            std::string k = key.as<std::string>();
+            auto key = pair.first;
+            auto val = pair.second;
+            auto k = key.as<std::string>();
 
             if (val.is<sol::table>()) {
-                sol::table arr = val.as<sol::table>();
+                auto arr = val.as<sol::table>();
                 if (arr.size() > 0) {
                     sol::object first = arr[1];
                     if (first.is<int64_t>()) {
@@ -211,12 +211,12 @@ struct LuaRunner::Impl {
 
     static int64_t
     create_element_from_lua(Database& db, const std::string& collection, sol::table values, sol::this_state) {
-        Element element = table_to_element(values);
+        auto element = table_to_element(values);
         return db.create_element(collection, element);
     }
 
     static void update_element_from_lua(Database& db, const std::string& collection, int64_t id, sol::table values) {
-        Element element = table_to_element(values);
+        auto element = table_to_element(values);
         db.update_element(collection, id, element);
     }
 
@@ -226,7 +226,7 @@ struct LuaRunner::Impl {
                                                  sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_scalar_strings(collection, attribute);
-        sol::table t = lua.create_table();
+        auto t = lua.create_table();
         for (size_t i = 0; i < result.size(); ++i) {
             t[i + 1] = result[i];
         }
@@ -239,7 +239,7 @@ struct LuaRunner::Impl {
                                                   sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_scalar_integers(collection, attribute);
-        sol::table t = lua.create_table();
+        auto t = lua.create_table();
         for (size_t i = 0; i < result.size(); ++i) {
             t[i + 1] = result[i];
         }
@@ -252,7 +252,7 @@ struct LuaRunner::Impl {
                                                 sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_scalar_floats(collection, attribute);
-        sol::table t = lua.create_table();
+        auto t = lua.create_table();
         for (size_t i = 0; i < result.size(); ++i) {
             t[i + 1] = result[i];
         }
@@ -265,9 +265,9 @@ struct LuaRunner::Impl {
                                                   sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_vector_integers(collection, attribute);
-        sol::table outer = lua.create_table();
+        auto outer = lua.create_table();
         for (size_t i = 0; i < result.size(); ++i) {
-            sol::table inner = lua.create_table();
+            auto inner = lua.create_table();
             for (size_t j = 0; j < result[i].size(); ++j) {
                 inner[j + 1] = result[i][j];
             }
@@ -282,9 +282,9 @@ struct LuaRunner::Impl {
                                                 sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_vector_floats(collection, attribute);
-        sol::table outer = lua.create_table();
+        auto outer = lua.create_table();
         for (size_t i = 0; i < result.size(); ++i) {
-            sol::table inner = lua.create_table();
+            auto inner = lua.create_table();
             for (size_t j = 0; j < result[i].size(); ++j) {
                 inner[j + 1] = result[i][j];
             }
@@ -299,9 +299,9 @@ struct LuaRunner::Impl {
                                                  sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_vector_strings(collection, attribute);
-        sol::table outer = lua.create_table();
+        auto outer = lua.create_table();
         for (size_t i = 0; i < result.size(); ++i) {
-            sol::table inner = lua.create_table();
+            auto inner = lua.create_table();
             for (size_t j = 0; j < result[i].size(); ++j) {
                 inner[j + 1] = result[i][j];
             }
@@ -358,7 +358,7 @@ struct LuaRunner::Impl {
                                                         sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_vector_integers_by_id(collection, attribute, id);
-        sol::table t = lua.create_table();
+        auto t = lua.create_table();
         for (size_t i = 0; i < result.size(); ++i) {
             t[i + 1] = result[i];
         }
@@ -372,7 +372,7 @@ struct LuaRunner::Impl {
                                                       sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_vector_floats_by_id(collection, attribute, id);
-        sol::table t = lua.create_table();
+        auto t = lua.create_table();
         for (size_t i = 0; i < result.size(); ++i) {
             t[i + 1] = result[i];
         }
@@ -386,7 +386,7 @@ struct LuaRunner::Impl {
                                                        sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_vector_strings_by_id(collection, attribute, id);
-        sol::table t = lua.create_table();
+        auto t = lua.create_table();
         for (size_t i = 0; i < result.size(); ++i) {
             t[i + 1] = result[i];
         }
@@ -401,7 +401,7 @@ struct LuaRunner::Impl {
                                                      sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_set_integers_by_id(collection, attribute, id);
-        sol::table t = lua.create_table();
+        auto t = lua.create_table();
         for (size_t i = 0; i < result.size(); ++i) {
             t[i + 1] = result[i];
         }
@@ -415,7 +415,7 @@ struct LuaRunner::Impl {
                                                    sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_set_floats_by_id(collection, attribute, id);
-        sol::table t = lua.create_table();
+        auto t = lua.create_table();
         for (size_t i = 0; i < result.size(); ++i) {
             t[i + 1] = result[i];
         }
@@ -429,7 +429,7 @@ struct LuaRunner::Impl {
                                                     sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_set_strings_by_id(collection, attribute, id);
-        sol::table t = lua.create_table();
+        auto t = lua.create_table();
         for (size_t i = 0; i < result.size(); ++i) {
             t[i + 1] = result[i];
         }
@@ -439,7 +439,7 @@ struct LuaRunner::Impl {
     static sol::table read_element_ids_to_lua(Database& db, const std::string& collection, sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_element_ids(collection);
-        sol::table t = lua.create_table();
+        auto t = lua.create_table();
         for (size_t i = 0; i < result.size(); ++i) {
             t[i + 1] = result[i];
         }
@@ -449,7 +449,7 @@ struct LuaRunner::Impl {
     static sol::table list_scalar_metadata_to_lua(Database& db, const std::string& collection, sol::this_state s) {
         sol::state_view lua(s);
         auto metadata_list = db.list_scalar_attributes(collection);
-        sol::table t = lua.create_table();
+        auto t = lua.create_table();
         for (size_t i = 0; i < metadata_list.size(); ++i) {
             t[i + 1] = scalar_metadata_to_lua(lua, metadata_list[i]);
         }
@@ -459,11 +459,11 @@ struct LuaRunner::Impl {
     static sol::table list_vector_metadata_to_lua(Database& db, const std::string& collection, sol::this_state s) {
         sol::state_view lua(s);
         auto metadata_list = db.list_vector_groups(collection);
-        sol::table t = lua.create_table();
+        auto t = lua.create_table();
         for (size_t i = 0; i < metadata_list.size(); ++i) {
-            sol::table metadata = lua.create_table();
+            auto metadata = lua.create_table();
             metadata["group_name"] = metadata_list[i].group_name;
-            sol::table cols = lua.create_table();
+            auto cols = lua.create_table();
             for (size_t j = 0; j < metadata_list[i].value_columns.size(); ++j) {
                 cols[j + 1] = scalar_metadata_to_lua(lua, metadata_list[i].value_columns[j]);
             }
@@ -476,11 +476,11 @@ struct LuaRunner::Impl {
     static sol::table list_set_metadata_to_lua(Database& db, const std::string& collection, sol::this_state s) {
         sol::state_view lua(s);
         auto metadata_list = db.list_set_groups(collection);
-        sol::table t = lua.create_table();
+        auto t = lua.create_table();
         for (size_t i = 0; i < metadata_list.size(); ++i) {
-            sol::table metadata = lua.create_table();
+            auto metadata = lua.create_table();
             metadata["group_name"] = metadata_list[i].group_name;
-            sol::table cols = lua.create_table();
+            auto cols = lua.create_table();
             for (size_t j = 0; j < metadata_list[i].value_columns.size(); ++j) {
                 cols[j + 1] = scalar_metadata_to_lua(lua, metadata_list[i].value_columns[j]);
             }
@@ -510,7 +510,7 @@ struct LuaRunner::Impl {
                                                  sol::this_state s) {
         sol::state_view lua(s);
         auto metadata = db.get_scalar_metadata(collection, attribute);
-        sol::table t = lua.create_table();
+        auto t = lua.create_table();
         t["name"] = metadata.name;
         t["data_type"] = data_type_to_string(metadata.data_type);
         t["not_null"] = metadata.not_null;
@@ -524,7 +524,7 @@ struct LuaRunner::Impl {
     }
 
     static sol::table scalar_metadata_to_lua(sol::state_view& lua, const ScalarMetadata& attribute) {
-        sol::table t = lua.create_table();
+        auto t = lua.create_table();
         t["name"] = attribute.name;
         t["data_type"] = data_type_to_string(attribute.data_type);
         t["not_null"] = attribute.not_null;
@@ -543,10 +543,10 @@ struct LuaRunner::Impl {
                                                  sol::this_state s) {
         sol::state_view lua(s);
         auto metadata = db.get_vector_metadata(collection, group_name);
-        sol::table t = lua.create_table();
+        auto t = lua.create_table();
         t["group_name"] = metadata.group_name;
 
-        sol::table cols = lua.create_table();
+        auto cols = lua.create_table();
         for (size_t i = 0; i < metadata.value_columns.size(); ++i) {
             cols[i + 1] = scalar_metadata_to_lua(lua, metadata.value_columns[i]);
         }
@@ -561,10 +561,10 @@ struct LuaRunner::Impl {
                                               sol::this_state s) {
         sol::state_view lua(s);
         auto metadata = db.get_set_metadata(collection, group_name);
-        sol::table t = lua.create_table();
+        auto t = lua.create_table();
         t["group_name"] = metadata.group_name;
 
-        sol::table cols = lua.create_table();
+        auto cols = lua.create_table();
         for (size_t i = 0; i < metadata.value_columns.size(); ++i) {
             cols[i + 1] = scalar_metadata_to_lua(lua, metadata.value_columns[i]);
         }
@@ -633,7 +633,7 @@ struct LuaRunner::Impl {
     static sol::table
     read_all_scalars_by_id_to_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
         sol::state_view lua(s);
-        sol::table result = lua.create_table();
+        auto result = lua.create_table();
 
         for (const auto& attribute : db.list_scalar_attributes(collection)) {
             switch (attribute.data_type) {
@@ -661,11 +661,11 @@ struct LuaRunner::Impl {
     static sol::table
     read_all_vectors_by_id_to_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
         sol::state_view lua(s);
-        sol::table result = lua.create_table();
+        auto result = lua.create_table();
 
         for (const auto& group : db.list_vector_groups(collection)) {
-            sol::table vec = lua.create_table();
-            DataType data_type = get_value_data_type(group.value_columns);
+            auto vec = lua.create_table();
+            auto data_type = get_value_data_type(group.value_columns);
             switch (data_type) {
             case DataType::Integer: {
                 auto values = db.read_vector_integers_by_id(collection, group.group_name, id);
@@ -698,11 +698,11 @@ struct LuaRunner::Impl {
     static sol::table
     read_all_sets_by_id_to_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
         sol::state_view lua(s);
-        sol::table result = lua.create_table();
+        auto result = lua.create_table();
 
         for (const auto& group : db.list_set_groups(collection)) {
-            sol::table set = lua.create_table();
-            DataType data_type = get_value_data_type(group.value_columns);
+            auto set = lua.create_table();
+            auto data_type = get_value_data_type(group.value_columns);
             switch (data_type) {
             case DataType::Integer: {
                 auto values = db.read_set_integers_by_id(collection, group.group_name, id);

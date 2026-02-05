@@ -120,7 +120,7 @@ void SchemaValidator::validate_vector_table(const std::string& name) {
 
     // id should NOT be primary key alone (composite PK required)
     if (id_col && id_col->primary_key) {
-        int pk_count = 0;
+        auto pk_count = 0;
         for (const auto& [_, col] : table->columns) {
             if (col.primary_key) {
                 pk_count++;
@@ -326,14 +326,14 @@ void SchemaValidator::validate_foreign_keys() {
             if (!schema_.is_vector_table(table_name) || fk.from_column != "id") {
                 if (!schema_.is_set_table(table_name) && !schema_.is_time_series_table(table_name)) {
                     // Check if FK column name ends with _id or matches target_relation pattern
-                    std::string target = fk.to_table;
-                    std::string target_lower = target;
+                    auto target = fk.to_table;
+                    auto target_lower = target;
                     std::transform(target_lower.begin(), target_lower.end(), target_lower.begin(), ::tolower);
-                    std::string col_lower = fk.from_column;
+                    auto col_lower = fk.from_column;
                     std::transform(col_lower.begin(), col_lower.end(), col_lower.begin(), ::tolower);
 
                     // Expected pattern: <target>_id or <target>_<something>
-                    bool valid_name = (col_lower == target_lower + "_id") ||
+                    auto valid_name = (col_lower == target_lower + "_id") ||
                                       (col_lower.find(target_lower + "_") == 0) ||
                                       (col_lower.find("_id") != std::string::npos);
 

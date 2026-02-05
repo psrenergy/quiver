@@ -264,7 +264,7 @@ void Schema::load_from_database(sqlite3* db) {
 
 std::vector<ColumnDefinition> Schema::query_columns(sqlite3* db, const std::string& table) {
     std::vector<ColumnDefinition> columns;
-    std::string sql = "PRAGMA table_info(" + table + ")";
+    auto sql = "PRAGMA table_info(" + table + ")";
 
     sqlite3_stmt* stmt = nullptr;
     if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
@@ -299,7 +299,7 @@ std::vector<ColumnDefinition> Schema::query_columns(sqlite3* db, const std::stri
 
 std::vector<ForeignKey> Schema::query_foreign_keys(sqlite3* db, const std::string& table) {
     std::vector<ForeignKey> fks;
-    std::string sql = "PRAGMA foreign_key_list(" + table + ")";
+    auto sql = "PRAGMA foreign_key_list(" + table + ")";
 
     sqlite3_stmt* stmt = nullptr;
     if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
@@ -328,7 +328,7 @@ std::vector<ForeignKey> Schema::query_foreign_keys(sqlite3* db, const std::strin
 
 std::vector<Index> Schema::query_indexes(sqlite3* db, const std::string& table) {
     std::vector<Index> indexes;
-    std::string sql = "PRAGMA index_list(" + table + ")";
+    auto sql = "PRAGMA index_list(" + table + ")";
 
     sqlite3_stmt* stmt = nullptr;
     if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
@@ -342,7 +342,7 @@ std::vector<Index> Schema::query_indexes(sqlite3* db, const std::string& table) 
         idx.unique = sqlite3_column_int(stmt, 2) != 0;
 
         // Get columns for this index
-        std::string idx_sql = "PRAGMA index_info(" + idx.name + ")";
+        auto idx_sql = "PRAGMA index_info(" + idx.name + ")";
         sqlite3_stmt* idx_stmt = nullptr;
         if (sqlite3_prepare_v2(db, idx_sql.c_str(), -1, &idx_stmt, nullptr) == SQLITE_OK) {
             while (sqlite3_step(idx_stmt) == SQLITE_ROW) {
