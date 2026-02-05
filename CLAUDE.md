@@ -35,6 +35,7 @@ tests/schemas/            # Shared SQL schemas for all tests
 - **Constraint**: Be critical. If code is already optimal, state that clearly. Do not invent useless suggestions just to provide output.
 - All public C++ methods should be bound to C API, then to Julia/Dart/Lua
 - All *.sql test schemas in `tests/schemas/`, bindings reference from there
+- **Self-Updating**: Always keep CLAUDE.md up to date with codebase changes
 
 ## Build & Test
 

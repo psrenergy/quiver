@@ -12,7 +12,7 @@ extern "C" {
 typedef struct quiver_lua_runner quiver_lua_runner_t;
 
 // Create a new LuaRunner for the given database
-QUIVER_C_API quiver_lua_runner_t* quiver_lua_runner_new(quiver_database_t* db);
+QUIVER_C_API quiver_error_t quiver_lua_runner_new(quiver_database_t* db, quiver_lua_runner_t** out_runner);
 
 // Destroy a LuaRunner
 QUIVER_C_API void quiver_lua_runner_free(quiver_lua_runner_t* runner);
