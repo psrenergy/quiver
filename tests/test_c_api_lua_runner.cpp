@@ -261,10 +261,12 @@ TEST_F(LuaRunnerCApiTest, CreateElementWithVectors) {
 TEST_F(LuaRunnerCApiTest, DeleteElement) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto lua = quiver_lua_runner_new(db);
+    quiver_lua_runner_t* lua = nullptr;
+    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     // Create and delete elements
@@ -290,10 +292,12 @@ TEST_F(LuaRunnerCApiTest, DeleteElement) {
 TEST_F(LuaRunnerCApiTest, UpdateElement) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto lua = quiver_lua_runner_new(db);
+    quiver_lua_runner_t* lua = nullptr;
+    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     auto result = quiver_lua_runner_run(lua, R"(
@@ -327,10 +331,12 @@ TEST_F(LuaRunnerCApiTest, UpdateElement) {
 TEST_F(LuaRunnerCApiTest, EmptyScript) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto lua = quiver_lua_runner_new(db);
+    quiver_lua_runner_t* lua = nullptr;
+    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     auto result = quiver_lua_runner_run(lua, "");
@@ -343,10 +349,12 @@ TEST_F(LuaRunnerCApiTest, EmptyScript) {
 TEST_F(LuaRunnerCApiTest, CommentOnlyScript) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto lua = quiver_lua_runner_new(db);
+    quiver_lua_runner_t* lua = nullptr;
+    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     auto result = quiver_lua_runner_run(lua, "-- this is a comment\n-- another comment");
@@ -359,10 +367,12 @@ TEST_F(LuaRunnerCApiTest, CommentOnlyScript) {
 TEST_F(LuaRunnerCApiTest, AssertionFailure) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto lua = quiver_lua_runner_new(db);
+    quiver_lua_runner_t* lua = nullptr;
+    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     auto result = quiver_lua_runner_run(lua, "assert(false, 'Test assertion failure')");
@@ -379,10 +389,12 @@ TEST_F(LuaRunnerCApiTest, AssertionFailure) {
 TEST_F(LuaRunnerCApiTest, UndefinedVariableError) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto lua = quiver_lua_runner_new(db);
+    quiver_lua_runner_t* lua = nullptr;
+    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     auto result = quiver_lua_runner_run(lua, "local x = undefined_variable + 1");
@@ -398,10 +410,12 @@ TEST_F(LuaRunnerCApiTest, UndefinedVariableError) {
 TEST_F(LuaRunnerCApiTest, ErrorClearedAfterSuccessfulRun) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto lua = quiver_lua_runner_new(db);
+    quiver_lua_runner_t* lua = nullptr;
+    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     // First, run a failing script
@@ -421,10 +435,12 @@ TEST_F(LuaRunnerCApiTest, ErrorClearedAfterSuccessfulRun) {
 TEST_F(LuaRunnerCApiTest, ReadVectorIntegersFromLua) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", collections_schema.c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto lua = quiver_lua_runner_new(db);
+    quiver_lua_runner_t* lua = nullptr;
+    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
     ASSERT_NE(lua, nullptr);
 
     auto result = quiver_lua_runner_run(lua, R"(
