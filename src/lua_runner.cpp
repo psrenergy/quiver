@@ -195,38 +195,50 @@ struct LuaRunner::Impl {
                const std::string& collection,
                const std::string& attribute,
                int64_t id,
-               sol::table values) { self.update_vector_integers(collection, attribute, id, lua_table_to_int64_vector(values)); },
+               sol::table values) {
+                self.update_vector_integers(collection, attribute, id, lua_table_to_int64_vector(values));
+            },
             "update_vector_floats",
             [](Database& self,
                const std::string& collection,
                const std::string& attribute,
                int64_t id,
-               sol::table values) { self.update_vector_floats(collection, attribute, id, lua_table_to_double_vector(values)); },
+               sol::table values) {
+                self.update_vector_floats(collection, attribute, id, lua_table_to_double_vector(values));
+            },
             "update_vector_strings",
             [](Database& self,
                const std::string& collection,
                const std::string& attribute,
                int64_t id,
-               sol::table values) { self.update_vector_strings(collection, attribute, id, lua_table_to_string_vector(values)); },
+               sol::table values) {
+                self.update_vector_strings(collection, attribute, id, lua_table_to_string_vector(values));
+            },
             // Group 4: Set updates
             "update_set_integers",
             [](Database& self,
                const std::string& collection,
                const std::string& attribute,
                int64_t id,
-               sol::table values) { self.update_set_integers(collection, attribute, id, lua_table_to_int64_vector(values)); },
+               sol::table values) {
+                self.update_set_integers(collection, attribute, id, lua_table_to_int64_vector(values));
+            },
             "update_set_floats",
             [](Database& self,
                const std::string& collection,
                const std::string& attribute,
                int64_t id,
-               sol::table values) { self.update_set_floats(collection, attribute, id, lua_table_to_double_vector(values)); },
+               sol::table values) {
+                self.update_set_floats(collection, attribute, id, lua_table_to_double_vector(values));
+            },
             "update_set_strings",
             [](Database& self,
                const std::string& collection,
                const std::string& attribute,
                int64_t id,
-               sol::table values) { self.update_set_strings(collection, attribute, id, lua_table_to_string_vector(values)); },
+               sol::table values) {
+                self.update_set_strings(collection, attribute, id, lua_table_to_string_vector(values));
+            },
             // Group 5: Bulk set reads
             "read_set_integers",
             [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
@@ -262,17 +274,13 @@ struct LuaRunner::Impl {
             },
             // Group 8: Time series data
             "read_time_series_group_by_id",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& group,
-               int64_t id,
-               sol::this_state s) { return read_time_series_group_by_id_to_lua(self, collection, group, id, s); },
+            [](Database& self, const std::string& collection, const std::string& group, int64_t id, sol::this_state s) {
+                return read_time_series_group_by_id_to_lua(self, collection, group, id, s);
+            },
             "update_time_series_group",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& group,
-               int64_t id,
-               sol::table rows) { update_time_series_group_from_lua(self, collection, group, id, rows); },
+            [](Database& self, const std::string& collection, const std::string& group, int64_t id, sol::table rows) {
+                update_time_series_group_from_lua(self, collection, group, id, rows);
+            },
             // Group 9: Time series files
             "has_time_series_files",
             [](Database& self, const std::string& collection) { return self.has_time_series_files(collection); },
@@ -1060,9 +1068,8 @@ struct LuaRunner::Impl {
     // Time series files
     // ========================================================================
 
-    static sol::table list_time_series_files_columns_to_lua(Database& db,
-                                                            const std::string& collection,
-                                                            sol::this_state s) {
+    static sol::table
+    list_time_series_files_columns_to_lua(Database& db, const std::string& collection, sol::this_state s) {
         sol::state_view lua(s);
         auto columns = db.list_time_series_files_columns(collection);
         auto t = lua.create_table();
@@ -1072,9 +1079,7 @@ struct LuaRunner::Impl {
         return t;
     }
 
-    static sol::table read_time_series_files_to_lua(Database& db,
-                                                    const std::string& collection,
-                                                    sol::this_state s) {
+    static sol::table read_time_series_files_to_lua(Database& db, const std::string& collection, sol::this_state s) {
         sol::state_view lua(s);
         auto files = db.read_time_series_files(collection);
         auto t = lua.create_table();
@@ -1088,9 +1093,7 @@ struct LuaRunner::Impl {
         return t;
     }
 
-    static void update_time_series_files_from_lua(Database& db,
-                                                  const std::string& collection,
-                                                  sol::table paths) {
+    static void update_time_series_files_from_lua(Database& db, const std::string& collection, sol::table paths) {
         std::map<std::string, std::optional<std::string>> cpp_paths;
         for (auto& pair : paths) {
             auto key = pair.first.as<std::string>();

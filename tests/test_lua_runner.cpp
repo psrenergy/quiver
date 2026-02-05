@@ -1241,9 +1241,11 @@ TEST_F(LuaRunnerTest, UpdateVectorFloatsFromLua) {
 TEST_F(LuaRunnerTest, UpdateVectorStringsFromLua) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element(
-        "Collection",
-        quiver::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1}).set("value_float", std::vector<double>{1.0}));
+    db.create_element("Collection",
+                      quiver::Element()
+                          .set("label", "Item 1")
+                          .set("value_int", std::vector<int64_t>{1})
+                          .set("value_float", std::vector<double>{1.0}));
 
     quiver::LuaRunner lua(db);
 
@@ -1263,9 +1265,8 @@ TEST_F(LuaRunnerTest, UpdateVectorStringsFromLua) {
 TEST_F(LuaRunnerTest, UpdateSetStringsFromLua) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element(
-        "Collection",
-        quiver::Element().set("label", "Item 1").set("tag", std::vector<std::string>{"alpha", "beta"}));
+    db.create_element("Collection",
+                      quiver::Element().set("label", "Item 1").set("tag", std::vector<std::string>{"alpha", "beta"}));
 
     quiver::LuaRunner lua(db);
 
@@ -1282,12 +1283,10 @@ TEST_F(LuaRunnerTest, UpdateSetStringsFromLua) {
 TEST_F(LuaRunnerTest, ReadSetStringsAllFromLua) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element(
-        "Collection",
-        quiver::Element().set("label", "Item 1").set("tag", std::vector<std::string>{"a", "b"}));
-    db.create_element(
-        "Collection",
-        quiver::Element().set("label", "Item 2").set("tag", std::vector<std::string>{"c", "d", "e"}));
+    db.create_element("Collection",
+                      quiver::Element().set("label", "Item 1").set("tag", std::vector<std::string>{"a", "b"}));
+    db.create_element("Collection",
+                      quiver::Element().set("label", "Item 2").set("tag", std::vector<std::string>{"c", "d", "e"}));
 
     quiver::LuaRunner lua(db);
 
