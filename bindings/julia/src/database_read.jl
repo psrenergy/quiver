@@ -3,9 +3,7 @@ function read_scalar_relation(db::Database, collection::String, attribute::Strin
     out_count = Ref{Csize_t}(0)
 
     err = C.quiver_database_read_scalar_relation(db.ptr, collection, attribute, out_values, out_count)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to read scalar relation '$attribute' from '$collection'"))
-    end
+    check_error(err, "Failed to read scalar relation '$attribute' from '$collection'")
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
@@ -31,9 +29,7 @@ function read_scalar_integers(db::Database, collection::String, attribute::Strin
     out_count = Ref{Csize_t}(0)
 
     err = C.quiver_database_read_scalar_integers(db.ptr, collection, attribute, out_values, out_count)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to read scalar integers from '$collection.$attribute'"))
-    end
+    check_error(err, "Failed to read scalar integers from '$collection.$attribute'")
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
@@ -50,9 +46,7 @@ function read_scalar_floats(db::Database, collection::String, attribute::String)
     out_count = Ref{Csize_t}(0)
 
     err = C.quiver_database_read_scalar_floats(db.ptr, collection, attribute, out_values, out_count)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to read scalar floats from '$collection.$attribute'"))
-    end
+    check_error(err, "Failed to read scalar floats from '$collection.$attribute'")
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
@@ -69,9 +63,7 @@ function read_scalar_strings(db::Database, collection::String, attribute::String
     out_count = Ref{Csize_t}(0)
 
     err = C.quiver_database_read_scalar_strings(db.ptr, collection, attribute, out_values, out_count)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to read scalar strings from '$collection.$attribute'"))
-    end
+    check_error(err, "Failed to read scalar strings from '$collection.$attribute'")
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
@@ -90,9 +82,7 @@ function read_vector_integers(db::Database, collection::String, attribute::Strin
     out_count = Ref{Csize_t}(0)
 
     err = C.quiver_database_read_vector_integers(db.ptr, collection, attribute, out_vectors, out_sizes, out_count)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to read vector integers from '$collection.$attribute'"))
-    end
+    check_error(err, "Failed to read vector integers from '$collection.$attribute'")
 
     count = out_count[]
     if count == 0 || out_vectors[] == C_NULL
@@ -119,9 +109,7 @@ function read_vector_floats(db::Database, collection::String, attribute::String)
     out_count = Ref{Csize_t}(0)
 
     err = C.quiver_database_read_vector_floats(db.ptr, collection, attribute, out_vectors, out_sizes, out_count)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to read vector floats from '$collection.$attribute'"))
-    end
+    check_error(err, "Failed to read vector floats from '$collection.$attribute'")
 
     count = out_count[]
     if count == 0 || out_vectors[] == C_NULL
@@ -148,9 +136,7 @@ function read_vector_strings(db::Database, collection::String, attribute::String
     out_count = Ref{Csize_t}(0)
 
     err = C.quiver_database_read_vector_strings(db.ptr, collection, attribute, out_vectors, out_sizes, out_count)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to read vector strings from '$collection.$attribute'"))
-    end
+    check_error(err, "Failed to read vector strings from '$collection.$attribute'")
 
     count = out_count[]
     if count == 0 || out_vectors[] == C_NULL
@@ -178,9 +164,7 @@ function read_set_integers(db::Database, collection::String, attribute::String)
     out_count = Ref{Csize_t}(0)
 
     err = C.quiver_database_read_set_integers(db.ptr, collection, attribute, out_sets, out_sizes, out_count)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to read set integers from '$collection.$attribute'"))
-    end
+    check_error(err, "Failed to read set integers from '$collection.$attribute'")
 
     count = out_count[]
     if count == 0 || out_sets[] == C_NULL
@@ -207,9 +191,7 @@ function read_set_floats(db::Database, collection::String, attribute::String)
     out_count = Ref{Csize_t}(0)
 
     err = C.quiver_database_read_set_floats(db.ptr, collection, attribute, out_sets, out_sizes, out_count)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to read set floats from '$collection.$attribute'"))
-    end
+    check_error(err, "Failed to read set floats from '$collection.$attribute'")
 
     count = out_count[]
     if count == 0 || out_sets[] == C_NULL
@@ -236,9 +218,7 @@ function read_set_strings(db::Database, collection::String, attribute::String)
     out_count = Ref{Csize_t}(0)
 
     err = C.quiver_database_read_set_strings(db.ptr, collection, attribute, out_sets, out_sizes, out_count)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to read set strings from '$collection.$attribute'"))
-    end
+    check_error(err, "Failed to read set strings from '$collection.$attribute'")
 
     count = out_count[]
     if count == 0 || out_sets[] == C_NULL
@@ -265,9 +245,7 @@ function read_scalar_integer_by_id(db::Database, collection::String, attribute::
     out_has_value = Ref{Cint}(0)
 
     err = C.quiver_database_read_scalar_integer_by_id(db.ptr, collection, attribute, id, out_value, out_has_value)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to read scalar integer by id from '$collection.$attribute'"))
-    end
+    check_error(err, "Failed to read scalar integer by id from '$collection.$attribute'")
 
     if out_has_value[] == 0
         return nothing
@@ -280,9 +258,7 @@ function read_scalar_float_by_id(db::Database, collection::String, attribute::St
     out_has_value = Ref{Cint}(0)
 
     err = C.quiver_database_read_scalar_float_by_id(db.ptr, collection, attribute, id, out_value, out_has_value)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to read scalar float by id from '$collection.$attribute'"))
-    end
+    check_error(err, "Failed to read scalar float by id from '$collection.$attribute'")
 
     if out_has_value[] == 0
         return nothing
@@ -295,9 +271,7 @@ function read_scalar_string_by_id(db::Database, collection::String, attribute::S
     out_has_value = Ref{Cint}(0)
 
     err = C.quiver_database_read_scalar_string_by_id(db.ptr, collection, attribute, id, out_value, out_has_value)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to read scalar string by id from '$collection.$attribute'"))
-    end
+    check_error(err, "Failed to read scalar string by id from '$collection.$attribute'")
 
     if out_has_value[] == 0 || out_value[] == C_NULL
         return nothing
@@ -316,9 +290,7 @@ function read_vector_integers_by_id(db::Database, collection::String, attribute:
     out_count = Ref{Csize_t}(0)
 
     err = C.quiver_database_read_vector_integers_by_id(db.ptr, collection, attribute, id, out_values, out_count)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to read vector integers by id from '$collection.$attribute'"))
-    end
+    check_error(err, "Failed to read vector integers by id from '$collection.$attribute'")
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
@@ -335,9 +307,7 @@ function read_vector_floats_by_id(db::Database, collection::String, attribute::S
     out_count = Ref{Csize_t}(0)
 
     err = C.quiver_database_read_vector_floats_by_id(db.ptr, collection, attribute, id, out_values, out_count)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to read vector floats by id from '$collection.$attribute'"))
-    end
+    check_error(err, "Failed to read vector floats by id from '$collection.$attribute'")
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
@@ -354,9 +324,7 @@ function read_vector_strings_by_id(db::Database, collection::String, attribute::
     out_count = Ref{Csize_t}(0)
 
     err = C.quiver_database_read_vector_strings_by_id(db.ptr, collection, attribute, id, out_values, out_count)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to read vector strings by id from '$collection.$attribute'"))
-    end
+    check_error(err, "Failed to read vector strings by id from '$collection.$attribute'")
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
@@ -378,9 +346,7 @@ function read_set_integers_by_id(db::Database, collection::String, attribute::St
     out_count = Ref{Csize_t}(0)
 
     err = C.quiver_database_read_set_integers_by_id(db.ptr, collection, attribute, id, out_values, out_count)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to read set integers by id from '$collection.$attribute'"))
-    end
+    check_error(err, "Failed to read set integers by id from '$collection.$attribute'")
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
@@ -397,9 +363,7 @@ function read_set_floats_by_id(db::Database, collection::String, attribute::Stri
     out_count = Ref{Csize_t}(0)
 
     err = C.quiver_database_read_set_floats_by_id(db.ptr, collection, attribute, id, out_values, out_count)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to read set floats by id from '$collection.$attribute'"))
-    end
+    check_error(err, "Failed to read set floats by id from '$collection.$attribute'")
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
@@ -416,9 +380,7 @@ function read_set_strings_by_id(db::Database, collection::String, attribute::Str
     out_count = Ref{Csize_t}(0)
 
     err = C.quiver_database_read_set_strings_by_id(db.ptr, collection, attribute, id, out_values, out_count)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to read set strings by id from '$collection.$attribute'"))
-    end
+    check_error(err, "Failed to read set strings by id from '$collection.$attribute'")
 
     count = out_count[]
     if count == 0 || out_values[] == C_NULL
@@ -440,9 +402,7 @@ function read_element_ids(db::Database, collection::String)
     out_count = Ref{Csize_t}(0)
 
     err = C.quiver_database_read_element_ids(db.ptr, collection, out_ids, out_count)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to read element ids from '$collection'"))
-    end
+    check_error(err, "Failed to read element ids from '$collection'")
 
     count = out_count[]
     if count == 0 || out_ids[] == C_NULL
@@ -637,9 +597,7 @@ function read_time_series_group_by_id(db::Database, collection::String, group::S
         db.ptr, collection, group, id,
         out_date_times, out_values, out_row_count,
     )
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to read time series group '$group' from '$collection' for id $id"))
-    end
+    check_error(err, "Failed to read time series group '$group' from '$collection' for id $id")
 
     row_count = out_row_count[]
     if row_count == 0 || out_date_times[] == C_NULL
@@ -667,9 +625,7 @@ function read_time_series_files(db::Database, collection::String)
     out_count = Ref{Csize_t}(0)
 
     err = C.quiver_database_read_time_series_files(db.ptr, collection, out_columns, out_paths, out_count)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to read time series files for '$collection'"))
-    end
+    check_error(err, "Failed to read time series files for '$collection'")
 
     count = out_count[]
     if count == 0 || out_columns[] == C_NULL
