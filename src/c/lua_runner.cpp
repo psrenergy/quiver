@@ -1,5 +1,6 @@
-#include "internal.h"
 #include "quiver/c/lua_runner.h"
+
+#include "internal.h"
 #include "quiver/lua_runner.h"
 
 #include <new>

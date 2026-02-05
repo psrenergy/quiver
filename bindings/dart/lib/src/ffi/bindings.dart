@@ -2943,8 +2943,7 @@ abstract class quiver_error_t {
   static const int QUIVER_ERROR_DATABASE = -2;
   static const int QUIVER_ERROR_MIGRATION = -3;
   static const int QUIVER_ERROR_SCHEMA = -4;
-  static const int QUIVER_ERROR_CREATE_ELEMENT = -5;
-  static const int QUIVER_ERROR_NOT_FOUND = -6;
+  static const int QUIVER_ERROR_NOT_FOUND = -5;
 }
 
 abstract class quiver_log_level_t {

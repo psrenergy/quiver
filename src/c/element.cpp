@@ -1,5 +1,6 @@
-#include "internal.h"
 #include "quiver/c/element.h"
+
+#include "internal.h"
 
 #include <cstring>
 #include <new>
