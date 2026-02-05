@@ -439,16 +439,12 @@ extension DatabaseMetadata on Database {
     try {
       final outMetadata = arena<quiver_time_series_metadata_t>();
 
-      final err = bindings.quiver_database_get_time_series_metadata(
+      check(bindings.quiver_database_get_time_series_metadata(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         groupName.toNativeUtf8(allocator: arena).cast(),
         outMetadata,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to get time series metadata for '$collection.$groupName'");
-      }
+      ));
 
       final valueColumns =
           <
@@ -509,16 +505,12 @@ extension DatabaseMetadata on Database {
       final outMetadata = arena<Pointer<quiver_time_series_metadata_t>>();
       final outCount = arena<Size>();
 
-      final err = bindings.quiver_database_list_time_series_groups(
+      check(bindings.quiver_database_list_time_series_groups(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         outMetadata,
         outCount,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to list time series groups for '$collection'");
-      }
+      ));
 
       final count = outCount.value;
       if (count == 0 || outMetadata.value == nullptr) {
@@ -588,15 +580,11 @@ extension DatabaseMetadata on Database {
     try {
       final outResult = arena<Int>();
 
-      final err = bindings.quiver_database_has_time_series_files(
+      check(bindings.quiver_database_has_time_series_files(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         outResult,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to check time series files for '$collection'");
-      }
+      ));
 
       return outResult.value != 0;
     } finally {
@@ -613,16 +601,12 @@ extension DatabaseMetadata on Database {
       final outColumns = arena<Pointer<Pointer<Char>>>();
       final outCount = arena<Size>();
 
-      final err = bindings.quiver_database_list_time_series_files_columns(
+      check(bindings.quiver_database_list_time_series_files_columns(
         _ptr,
         collection.toNativeUtf8(allocator: arena).cast(),
         outColumns,
         outCount,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to list time series files columns for '$collection'");
-      }
+      ));
 
       final count = outCount.value;
       if (count == 0 || outColumns.value == nullptr) {
