@@ -68,15 +68,13 @@ REM Step 3: Run Julia Tests
 REM ============================================================
 echo [3/4] Running Julia tests...
 
-pushd "%ROOT_DIR%\bindings\julia\test"
-call test.bat
+call "%ROOT_DIR%\bindings\julia\test\test.bat"
 if errorlevel 1 (
     SET JULIA_RESULT=FAIL
     SET FAILED=1
 ) else (
     SET JULIA_RESULT=PASS
 )
-popd
 echo.
 
 REM ============================================================
@@ -84,15 +82,13 @@ REM Step 4: Run Dart Tests
 REM ============================================================
 echo [4/4] Running Dart tests...
 
-pushd "%ROOT_DIR%\bindings\dart\test"
-call test.bat
+call "%ROOT_DIR%\bindings\dart\test\test.bat"
 if errorlevel 1 (
     SET DART_RESULT=FAIL
     SET FAILED=1
 ) else (
     SET DART_RESULT=PASS
 )
-popd
 echo.
 
 REM ============================================================
