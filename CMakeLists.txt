@@ -73,6 +73,10 @@ if(CLANG_FORMAT)
         ${CMAKE_SOURCE_DIR}/include/quiver/c/*.h
         ${CMAKE_SOURCE_DIR}/src/*.cpp
         ${CMAKE_SOURCE_DIR}/src/*.h
+        ${CMAKE_SOURCE_DIR}/src/blob/*.cpp
+        ${CMAKE_SOURCE_DIR}/src/blob/*.h
+        ${CMAKE_SOURCE_DIR}/src/c/*.c
+        ${CMAKE_SOURCE_DIR}/src/c/*.h
         ${CMAKE_SOURCE_DIR}/tests/*.cpp
         ${CMAKE_SOURCE_DIR}/tests/*.h
     )
