@@ -139,29 +139,47 @@ static Database from_migrations(const std::string& path, const std::vector<std::
 
 ## C API Patterns
 
+### Return Codes
+All C API functions return `quiver_error_t`. Values are returned via output parameters.
+Exceptions: free/destroy functions (void), error/version utilities (direct return), and `quiver_database_options_default` (struct by value).
+
 ### Error Handling
 Try-catch with `quiver_set_last_error()`, return codes:
 ```cpp
-int quiver_some_function(QuiverDatabase* db) {
+quiver_error_t quiver_some_function(quiver_database_t* db) {
     if (!db) {
         quiver_set_last_error("Null database pointer");
-        return QUIVER_ERROR;
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
         // operation...
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
-        return QUIVER_ERROR;
+        return QUIVER_ERROR_DATABASE;
     }
 }
+```
+
+### Factory Functions
+Factory functions use out-parameters and return `quiver_error_t`:
+```cpp
+quiver_database_t* db = nullptr;
+quiver_error_t err = quiver_database_from_schema(db_path, schema_path, &options, &db);
+if (err != QUIVER_OK) {
+    const char* msg = quiver_get_last_error();
+    // handle error
+}
+// use db...
+quiver_database_close(db);
 ```
 
 ### Memory Management
 `new`/`delete`, provide matching `quiver_free_*` functions:
 ```cpp
-QuiverDatabase* quiver_database_open(...);
-void quiver_database_close(QuiverDatabase* db);
+// Factory functions return error code, use out-parameter for handle
+quiver_error_t quiver_database_from_schema(..., quiver_database_t** out_db);
+void quiver_database_close(quiver_database_t* db);
 
 char** quiver_read_strings(...);
 void quiver_free_strings(char** strings, int count);

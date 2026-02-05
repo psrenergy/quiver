@@ -2622,14 +2622,18 @@ class QuiverDatabaseBindings {
   late final _quiver_database_describe = _quiver_database_describePtr
       .asFunction<int Function(ffi.Pointer<quiver_database_t>)>();
 
-  ffi.Pointer<quiver_element_t1> quiver_element_create() {
-    return _quiver_element_create();
+  int quiver_element_create(
+    ffi.Pointer<ffi.Pointer<quiver_element_t1>> out_element,
+  ) {
+    return _quiver_element_create(
+      out_element,
+    );
   }
 
-  late final _quiver_element_createPtr = _lookup<ffi.NativeFunction<ffi.Pointer<quiver_element_t1> Function()>>(
+  late final _quiver_element_createPtr = _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Pointer<quiver_element_t1>>)>>(
     'quiver_element_create',
   );
-  late final _quiver_element_create = _quiver_element_createPtr.asFunction<ffi.Pointer<quiver_element_t1> Function()>();
+  late final _quiver_element_create = _quiver_element_createPtr.asFunction<int Function(ffi.Pointer<ffi.Pointer<quiver_element_t1>>)>();
 
   void quiver_element_destroy(
     ffi.Pointer<quiver_element_t1> element,
@@ -2812,70 +2816,80 @@ class QuiverDatabaseBindings {
 
   int quiver_element_has_scalars(
     ffi.Pointer<quiver_element_t1> element,
+    ffi.Pointer<ffi.Int> out_result,
   ) {
     return _quiver_element_has_scalars(
       element,
+      out_result,
     );
   }
 
   late final _quiver_element_has_scalarsPtr =
-      _lookup<ffi.NativeFunction<ffi.Int Function(ffi.Pointer<quiver_element_t1>)>>('quiver_element_has_scalars');
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Int>)>>('quiver_element_has_scalars');
   late final _quiver_element_has_scalars = _quiver_element_has_scalarsPtr
-      .asFunction<int Function(ffi.Pointer<quiver_element_t1>)>();
+      .asFunction<int Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Int>)>();
 
   int quiver_element_has_arrays(
     ffi.Pointer<quiver_element_t1> element,
+    ffi.Pointer<ffi.Int> out_result,
   ) {
     return _quiver_element_has_arrays(
       element,
+      out_result,
     );
   }
 
   late final _quiver_element_has_arraysPtr =
-      _lookup<ffi.NativeFunction<ffi.Int Function(ffi.Pointer<quiver_element_t1>)>>('quiver_element_has_arrays');
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Int>)>>('quiver_element_has_arrays');
   late final _quiver_element_has_arrays = _quiver_element_has_arraysPtr
-      .asFunction<int Function(ffi.Pointer<quiver_element_t1>)>();
+      .asFunction<int Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Int>)>();
 
   int quiver_element_scalar_count(
     ffi.Pointer<quiver_element_t1> element,
+    ffi.Pointer<ffi.Size> out_count,
   ) {
     return _quiver_element_scalar_count(
       element,
+      out_count,
     );
   }
 
   late final _quiver_element_scalar_countPtr =
-      _lookup<ffi.NativeFunction<ffi.Size Function(ffi.Pointer<quiver_element_t1>)>>('quiver_element_scalar_count');
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Size>)>>('quiver_element_scalar_count');
   late final _quiver_element_scalar_count = _quiver_element_scalar_countPtr
-      .asFunction<int Function(ffi.Pointer<quiver_element_t1>)>();
+      .asFunction<int Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Size>)>();
 
   int quiver_element_array_count(
     ffi.Pointer<quiver_element_t1> element,
+    ffi.Pointer<ffi.Size> out_count,
   ) {
     return _quiver_element_array_count(
       element,
+      out_count,
     );
   }
 
   late final _quiver_element_array_countPtr =
-      _lookup<ffi.NativeFunction<ffi.Size Function(ffi.Pointer<quiver_element_t1>)>>('quiver_element_array_count');
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Size>)>>('quiver_element_array_count');
   late final _quiver_element_array_count = _quiver_element_array_countPtr
-      .asFunction<int Function(ffi.Pointer<quiver_element_t1>)>();
+      .asFunction<int Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Size>)>();
 
-  ffi.Pointer<ffi.Char> quiver_element_to_string(
+  int quiver_element_to_string(
     ffi.Pointer<quiver_element_t1> element,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> out_string,
   ) {
     return _quiver_element_to_string(
       element,
+      out_string,
     );
   }
 
   late final _quiver_element_to_stringPtr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<quiver_element_t1>)>>(
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Pointer<ffi.Char>>)>>(
         'quiver_element_to_string',
       );
   late final _quiver_element_to_string = _quiver_element_to_stringPtr
-      .asFunction<ffi.Pointer<ffi.Char> Function(ffi.Pointer<quiver_element_t1>)>();
+      .asFunction<int Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Pointer<ffi.Char>>)>();
 
   void quiver_string_free(
     ffi.Pointer<ffi.Char> str,
@@ -2890,20 +2904,22 @@ class QuiverDatabaseBindings {
   );
   late final _quiver_string_free = _quiver_string_freePtr.asFunction<void Function(ffi.Pointer<ffi.Char>)>();
 
-  ffi.Pointer<quiver_lua_runner_t> quiver_lua_runner_new(
+  int quiver_lua_runner_new(
     ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Pointer<quiver_lua_runner_t>> out_runner,
   ) {
     return _quiver_lua_runner_new(
       db,
+      out_runner,
     );
   }
 
   late final _quiver_lua_runner_newPtr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<quiver_lua_runner_t> Function(ffi.Pointer<quiver_database_t>)>>(
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Pointer<quiver_lua_runner_t>>)>>(
         'quiver_lua_runner_new',
       );
   late final _quiver_lua_runner_new = _quiver_lua_runner_newPtr
-      .asFunction<ffi.Pointer<quiver_lua_runner_t> Function(ffi.Pointer<quiver_database_t>)>();
+      .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Pointer<quiver_lua_runner_t>>)>();
 
   void quiver_lua_runner_free(
     ffi.Pointer<quiver_lua_runner_t> runner,

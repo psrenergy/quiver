@@ -15,10 +15,20 @@ class Element {
   final Pointer<quiver_element_t1> _ptr;
   bool _isDisposed = false;
 
+  Element._(this._ptr);
+
   /// Creates a new empty element.
-  Element() : _ptr = bindings.quiver_element_create() {
-    if (_ptr == nullptr) {
-      throw const DatabaseOperationException('Failed to create element');
+  factory Element() {
+    final arena = Arena();
+    try {
+      final outElementPtr = arena<Pointer<quiver_element_t1>>();
+      final err = bindings.quiver_element_create(outElementPtr);
+      if (err != quiver_error_t.QUIVER_OK) {
+        throw const DatabaseOperationException('Failed to create element');
+      }
+      return Element._(outElementPtr.value);
+    } finally {
+      arena.releaseAll();
     }
   }
 

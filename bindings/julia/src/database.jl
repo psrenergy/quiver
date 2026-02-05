@@ -10,24 +10,16 @@ end
 
 function from_schema(db_path, schema_path)
     options = Ref(C.quiver_database_options_t(0, C.QUIVER_LOG_DEBUG))
-    ptr = C.quiver_database_from_schema(db_path, schema_path, options)
-    if ptr == C_NULL
-        detail = unsafe_string(C.quiver_get_last_error())
-        context = "Failed to create database from schema '$schema_path'"
-        throw(DatabaseException(isempty(detail) ? context : "$context: $detail"))
-    end
-    return Database(ptr)
+    out_db = Ref{Ptr{C.quiver_database}}(C_NULL)
+    check(C.quiver_database_from_schema(db_path, schema_path, options, out_db))
+    return Database(out_db[])
 end
 
 function from_migrations(db_path, migrations_path)
     options = Ref(C.quiver_database_options_t(0, C.QUIVER_LOG_DEBUG))
-    ptr = C.quiver_database_from_migrations(db_path, migrations_path, options)
-    if ptr == C_NULL
-        detail = unsafe_string(C.quiver_get_last_error())
-        context = "Failed to create database from migrations '$migrations_path'"
-        throw(DatabaseException(isempty(detail) ? context : "$context: $detail"))
-    end
-    return Database(ptr)
+    out_db = Ref{Ptr{C.quiver_database}}(C_NULL)
+    check(C.quiver_database_from_migrations(db_path, migrations_path, options, out_db))
+    return Database(out_db[])
 end
 
 function close!(db::Database)

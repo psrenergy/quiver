@@ -505,8 +505,8 @@ mutable struct quiver_lua_runner end
 
 const quiver_lua_runner_t = quiver_lua_runner
 
-function quiver_lua_runner_new(db)
-    @ccall libquiver_c.quiver_lua_runner_new(db::Ptr{quiver_database_t})::Ptr{quiver_lua_runner_t}
+function quiver_lua_runner_new(db, out_runner)
+    @ccall libquiver_c.quiver_lua_runner_new(db::Ptr{quiver_database_t}, out_runner::Ptr{Ptr{quiver_lua_runner_t}})::quiver_error_t
 end
 
 function quiver_lua_runner_free(runner)

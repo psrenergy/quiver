@@ -2,11 +2,12 @@ mutable struct Element
     ptr::Ptr{C.quiver_element}
 
     function Element()
-        ptr = C.quiver_element_create()
-        if ptr == C_NULL
+        out_element = Ref{Ptr{C.quiver_element}}(C_NULL)
+        err = C.quiver_element_create(out_element)
+        if err != C.QUIVER_OK
             error("Failed to create Element")
         end
-        return new(ptr)
+        return new(out_element[])
     end
 end
 
@@ -98,9 +99,14 @@ function Base.setindex!(el::Element, value::Vector{Any}, name::String)
 end
 
 function Base.show(io::IO, e::Element)
-    cstr = C.quiver_element_to_string(e.ptr)
-    str = unsafe_string(cstr)
-    C.quiver_string_free(cstr)
+    out_string = Ref{Ptr{Cchar}}(C_NULL)
+    err = C.quiver_element_to_string(e.ptr, out_string)
+    if err != C.QUIVER_OK
+        print(io, "<Element: error getting string representation>")
+        return nothing
+    end
+    str = unsafe_string(out_string[])
+    C.quiver_string_free(out_string[])
     print(io, str)
     return nothing
 end
