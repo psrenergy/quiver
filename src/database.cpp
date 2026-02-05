@@ -1043,6 +1043,7 @@ std::vector<std::vector<double>> Database::read_set_floats(const std::string& co
 
 std::vector<std::vector<std::string>> Database::read_set_strings(const std::string& collection,
                                                                  const std::string& attribute) {
+    impl_->require_schema("read set");
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + set_table + " ORDER BY id";
     return read_grouped_values_all<std::string>(execute(sql));
@@ -1050,6 +1051,7 @@ std::vector<std::vector<std::string>> Database::read_set_strings(const std::stri
 
 std::vector<int64_t>
 Database::read_set_integers_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+    impl_->require_schema("read set");
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + set_table + " WHERE id = ?";
     return read_grouped_values_by_id<int64_t>(execute(sql, {id}));
@@ -1057,6 +1059,7 @@ Database::read_set_integers_by_id(const std::string& collection, const std::stri
 
 std::vector<double>
 Database::read_set_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+    impl_->require_schema("read set");
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + set_table + " WHERE id = ?";
     return read_grouped_values_by_id<double>(execute(sql, {id}));
@@ -1064,6 +1067,7 @@ Database::read_set_floats_by_id(const std::string& collection, const std::string
 
 std::vector<std::string>
 Database::read_set_strings_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+    impl_->require_schema("read set");
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + set_table + " WHERE id = ?";
     return read_grouped_values_by_id<std::string>(execute(sql, {id}));
