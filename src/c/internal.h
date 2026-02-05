@@ -22,4 +22,14 @@ struct quiver_element {
     quiver::Element element;
 };
 
+// Validates a pointer argument is non-null. Sets descriptive error and returns QUIVER_ERROR_INVALID_ARGUMENT.
+// Uses stringification to auto-generate messages like "Null argument: db", "Null argument: collection".
+#define QUIVER_REQUIRE(ptr) \
+    do { \
+        if (!(ptr)) { \
+            quiver_set_last_error("Null argument: " #ptr); \
+            return QUIVER_ERROR_INVALID_ARGUMENT; \
+        } \
+    } while (0)
+
 #endif  // QUIVER_C_API_INTERNAL_H
