@@ -2,7 +2,7 @@ import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
 
-import 'ffi/bindings.dart';
+import 'ffi/library_loader.dart';
 
 /// Check for C API errors and throw the appropriate DatabaseException.
 void check(int err) {
