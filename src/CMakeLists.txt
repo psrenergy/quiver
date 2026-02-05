@@ -36,6 +36,11 @@ target_compile_definitions(quiver PRIVATE
     SOL_SAFE_FUNCTION=1
 )
 
+# MSVC needs /bigobj for sol2 heavy template instantiations
+if(MSVC)
+    set_source_files_properties(lua_runner.cpp PROPERTIES COMPILE_OPTIONS "/bigobj")
+endif()
+
 # Link dependencies
 target_link_libraries(quiver
     PUBLIC
