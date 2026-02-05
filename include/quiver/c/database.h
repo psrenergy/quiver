@@ -56,13 +56,14 @@ QUIVER_C_API int quiver_database_is_healthy(quiver_database_t* db);
 QUIVER_C_API const char* quiver_database_path(quiver_database_t* db);
 
 // Version
-QUIVER_C_API int64_t quiver_database_current_version(quiver_database_t* db);
+QUIVER_C_API quiver_error_t quiver_database_current_version(quiver_database_t* db, int64_t* out_version);
 
 // Element operations (requires quiver_element_t from element.h)
 typedef struct quiver_element quiver_element_t;
-QUIVER_C_API int64_t quiver_database_create_element(quiver_database_t* db,
-                                                    const char* collection,
-                                                    quiver_element_t* element);
+QUIVER_C_API quiver_error_t quiver_database_create_element(quiver_database_t* db,
+                                                           const char* collection,
+                                                           quiver_element_t* element,
+                                                           int64_t* out_id);
 QUIVER_C_API quiver_error_t quiver_database_update_element(quiver_database_t* db,
                                                            const char* collection,
                                                            int64_t id,

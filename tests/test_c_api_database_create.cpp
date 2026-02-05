@@ -17,7 +17,8 @@ TEST(DatabaseCApi, CreateElementWithScalars) {
     quiver_element_set_integer(element, "integer_attribute", 42);
     quiver_element_set_float(element, "float_attribute", 3.14);
 
-    int64_t id = quiver_database_create_element(db, "Configuration", element);
+    int64_t id = 0;
+    EXPECT_EQ(quiver_database_create_element(db, "Configuration", element, &id), QUIVER_OK);
     EXPECT_EQ(id, 1);
 
     quiver_element_destroy(element);
@@ -35,7 +36,8 @@ TEST(DatabaseCApi, CreateElementWithVector) {
     auto config = quiver_element_create();
     ASSERT_NE(config, nullptr);
     quiver_element_set_string(config, "label", "Test Config");
-    quiver_database_create_element(db, "Configuration", config);
+    int64_t config_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &config_id);
     quiver_element_destroy(config);
 
     // Create Collection with vector
@@ -46,7 +48,8 @@ TEST(DatabaseCApi, CreateElementWithVector) {
     int64_t values[] = {1, 2, 3};
     quiver_element_set_array_integer(element, "value_int", values, 3);
 
-    int64_t id = quiver_database_create_element(db, "Collection", element);
+    int64_t id = 0;
+    EXPECT_EQ(quiver_database_create_element(db, "Collection", element, &id), QUIVER_OK);
     EXPECT_EQ(id, 1);
 
     quiver_element_destroy(element);
@@ -58,8 +61,8 @@ TEST(DatabaseCApi, CreateElementNullDb) {
     ASSERT_NE(element, nullptr);
     quiver_element_set_string(element, "label", "Test");
 
-    int64_t id = quiver_database_create_element(nullptr, "Plant", element);
-    EXPECT_EQ(id, -1);
+    int64_t id = 0;
+    EXPECT_EQ(quiver_database_create_element(nullptr, "Plant", element, &id), QUIVER_ERROR_INVALID_ARGUMENT);
 
     quiver_element_destroy(element);
 }
@@ -74,8 +77,8 @@ TEST(DatabaseCApi, CreateElementNullCollection) {
     ASSERT_NE(element, nullptr);
     quiver_element_set_string(element, "label", "Test");
 
-    int64_t id = quiver_database_create_element(db, nullptr, element);
-    EXPECT_EQ(id, -1);
+    int64_t id = 0;
+    EXPECT_EQ(quiver_database_create_element(db, nullptr, element, &id), QUIVER_ERROR_INVALID_ARGUMENT);
 
     quiver_element_destroy(element);
     quiver_database_close(db);
@@ -87,8 +90,8 @@ TEST(DatabaseCApi, CreateElementNullElement) {
     auto db = quiver_database_open(":memory:", &options);
     ASSERT_NE(db, nullptr);
 
-    int64_t id = quiver_database_create_element(db, "Plant", nullptr);
-    EXPECT_EQ(id, -1);
+    int64_t id = 0;
+    EXPECT_EQ(quiver_database_create_element(db, "Plant", nullptr, &id), QUIVER_ERROR_INVALID_ARGUMENT);
 
     quiver_database_close(db);
 }
@@ -103,7 +106,8 @@ TEST(DatabaseCApi, CreateElementWithDatetime) {
     quiver_element_set_string(element, "label", "Config 1");
     quiver_element_set_string(element, "date_attribute", "2024-03-15T14:30:45");
 
-    int64_t id = quiver_database_create_element(db, "Configuration", element);
+    int64_t id = 0;
+    EXPECT_EQ(quiver_database_create_element(db, "Configuration", element, &id), QUIVER_OK);
     EXPECT_EQ(id, 1);
 
     char** out_values = nullptr;

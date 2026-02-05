@@ -419,11 +419,19 @@ extension DatabaseMetadata on Database {
   /// Returns the current schema version (migration number) of the database.
   int currentVersion() {
     _ensureNotClosed();
-    final version = bindings.quiver_database_current_version(_ptr);
-    if (version < 0) {
-      throw const DatabaseOperationException('Failed to get current version');
+
+    final arena = Arena();
+    try {
+      final outVersion = arena<Int64>();
+
+      check(
+        bindings.quiver_database_current_version(_ptr, outVersion),
+      );
+
+      return outVersion.value;
+    } finally {
+      arena.releaseAll();
     }
-    return version;
   }
 
   /// Returns metadata for a time series group, including all value columns in the group.

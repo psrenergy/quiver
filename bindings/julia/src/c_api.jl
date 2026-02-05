@@ -112,16 +112,16 @@ function quiver_database_path(db)
     @ccall libquiver_c.quiver_database_path(db::Ptr{quiver_database_t})::Ptr{Cchar}
 end
 
-function quiver_database_current_version(db)
-    @ccall libquiver_c.quiver_database_current_version(db::Ptr{quiver_database_t})::Int64
+function quiver_database_current_version(db, out_version)
+    @ccall libquiver_c.quiver_database_current_version(db::Ptr{quiver_database_t}, out_version::Ptr{Int64})::quiver_error_t
 end
 
 mutable struct quiver_element end
 
 const quiver_element_t = quiver_element
 
-function quiver_database_create_element(db, collection, element)
-    @ccall libquiver_c.quiver_database_create_element(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, element::Ptr{quiver_element_t})::Int64
+function quiver_database_create_element(db, collection, element, out_id)
+    @ccall libquiver_c.quiver_database_create_element(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, element::Ptr{quiver_element_t}, out_id::Ptr{Int64})::quiver_error_t
 end
 
 function quiver_database_update_element(db, collection, id, element)

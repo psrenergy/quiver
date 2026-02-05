@@ -80,13 +80,15 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupById) {
     // Create config
     auto config = quiver_element_create();
     quiver_element_set_string(config, "label", "Test Config");
-    quiver_database_create_element(db, "Configuration", config);
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
     quiver_element_destroy(config);
 
     // Create element
     auto e1 = quiver_element_create();
     quiver_element_set_string(e1, "label", "Item 1");
-    auto id = quiver_database_create_element(db, "Collection", e1);
+    int64_t id = 0;
+    quiver_database_create_element(db, "Collection", e1, &id);
     quiver_element_destroy(e1);
 
     // Insert time series data
@@ -124,13 +126,15 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupByIdEmpty) {
     // Create config
     auto config = quiver_element_create();
     quiver_element_set_string(config, "label", "Test Config");
-    quiver_database_create_element(db, "Configuration", config);
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
     quiver_element_destroy(config);
 
     // Create element
     auto e1 = quiver_element_create();
     quiver_element_set_string(e1, "label", "Item 1");
-    auto id = quiver_database_create_element(db, "Collection", e1);
+    int64_t id = 0;
+    quiver_database_create_element(db, "Collection", e1, &id);
     quiver_element_destroy(e1);
 
     // Read without inserting data
@@ -161,13 +165,15 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroup) {
     // Create config
     auto config = quiver_element_create();
     quiver_element_set_string(config, "label", "Test Config");
-    quiver_database_create_element(db, "Configuration", config);
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
     quiver_element_destroy(config);
 
     // Create element
     auto e1 = quiver_element_create();
     quiver_element_set_string(e1, "label", "Item 1");
-    auto id = quiver_database_create_element(db, "Collection", e1);
+    int64_t id = 0;
+    quiver_database_create_element(db, "Collection", e1, &id);
     quiver_element_destroy(e1);
 
     // Insert initial data
@@ -207,13 +213,15 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupClear) {
     // Create config
     auto config = quiver_element_create();
     quiver_element_set_string(config, "label", "Test Config");
-    quiver_database_create_element(db, "Configuration", config);
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
     quiver_element_destroy(config);
 
     // Create element
     auto e1 = quiver_element_create();
     quiver_element_set_string(e1, "label", "Item 1");
-    auto id = quiver_database_create_element(db, "Collection", e1);
+    int64_t id = 0;
+    quiver_database_create_element(db, "Collection", e1, &id);
     quiver_element_destroy(e1);
 
     // Insert data

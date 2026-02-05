@@ -177,8 +177,8 @@ TEST_F(TempFileFixture, OpenReadOnly) {
 // ============================================================================
 
 TEST_F(TempFileFixture, CurrentVersionNullDb) {
-    auto version = quiver_database_current_version(nullptr);
-    EXPECT_EQ(version, -1);
+    int64_t version = 0;
+    EXPECT_EQ(quiver_database_current_version(nullptr, &version), QUIVER_ERROR_INVALID_ARGUMENT);
 }
 
 TEST_F(TempFileFixture, CurrentVersionValid) {
@@ -187,7 +187,8 @@ TEST_F(TempFileFixture, CurrentVersionValid) {
     auto db = quiver_database_open(":memory:", &options);
     ASSERT_NE(db, nullptr);
 
-    auto version = quiver_database_current_version(db);
+    int64_t version = -1;
+    EXPECT_EQ(quiver_database_current_version(db, &version), QUIVER_OK);
     EXPECT_EQ(version, 0);
 
     quiver_database_close(db);
@@ -310,13 +311,15 @@ TEST_F(TempFileFixture, SetScalarRelationValid) {
     // Create parent
     auto parent = quiver_element_create();
     quiver_element_set_string(parent, "label", "Parent 1");
-    quiver_database_create_element(db, "Parent", parent);
+    int64_t parent_id = 0;
+    quiver_database_create_element(db, "Parent", parent, &parent_id);
     quiver_element_destroy(parent);
 
     // Create child
     auto child = quiver_element_create();
     quiver_element_set_string(child, "label", "Child 1");
-    quiver_database_create_element(db, "Child", child);
+    int64_t child_id = 0;
+    quiver_database_create_element(db, "Child", child, &child_id);
     quiver_element_destroy(child);
 
     // Set relation
@@ -387,13 +390,15 @@ TEST_F(TempFileFixture, ReadScalarRelationValid) {
     // Create parent
     auto parent = quiver_element_create();
     quiver_element_set_string(parent, "label", "Parent 1");
-    quiver_database_create_element(db, "Parent", parent);
+    int64_t parent_id = 0;
+    quiver_database_create_element(db, "Parent", parent, &parent_id);
     quiver_element_destroy(parent);
 
     // Create child
     auto child = quiver_element_create();
     quiver_element_set_string(child, "label", "Child 1");
-    quiver_database_create_element(db, "Child", child);
+    int64_t child_id = 0;
+    quiver_database_create_element(db, "Child", child, &child_id);
     quiver_element_destroy(child);
 
     // Set relation
@@ -425,10 +430,9 @@ TEST_F(TempFileFixture, CreateElementInNonExistentCollection) {
     // Try to create element in non-existent collection - should fail
     auto element = quiver_element_create();
     quiver_element_set_string(element, "label", "Test");
-    auto id = quiver_database_create_element(db, "NonexistentCollection", element);
+    int64_t id = 0;
+    EXPECT_NE(quiver_database_create_element(db, "NonexistentCollection", element, &id), QUIVER_OK);
     quiver_element_destroy(element);
-
-    EXPECT_EQ(id, -1);
 
     quiver_database_close(db);
 }
@@ -507,14 +511,16 @@ TEST_F(TempFileFixture, ReadElementIdsValid) {
     // Create Configuration first
     auto config = quiver_element_create();
     quiver_element_set_string(config, "label", "Config");
-    quiver_database_create_element(db, "Configuration", config);
+    int64_t config_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &config_id);
     quiver_element_destroy(config);
 
     // Create some elements
     for (int i = 1; i <= 3; ++i) {
         auto element = quiver_element_create();
         quiver_element_set_string(element, "label", ("Item " + std::to_string(i)).c_str());
-        quiver_database_create_element(db, "Collection", element);
+        int64_t elem_id = 0;
+        quiver_database_create_element(db, "Collection", element, &elem_id);
         quiver_element_destroy(element);
     }
 
@@ -562,13 +568,15 @@ TEST_F(TempFileFixture, DeleteElementValid) {
     // Create Configuration first
     auto config = quiver_element_create();
     quiver_element_set_string(config, "label", "Config");
-    quiver_database_create_element(db, "Configuration", config);
+    int64_t config_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &config_id);
     quiver_element_destroy(config);
 
     // Create element
     auto element = quiver_element_create();
     quiver_element_set_string(element, "label", "Item 1");
-    int64_t id = quiver_database_create_element(db, "Collection", element);
+    int64_t id = 0;
+    EXPECT_EQ(quiver_database_create_element(db, "Collection", element, &id), QUIVER_OK);
     quiver_element_destroy(element);
 
     EXPECT_GT(id, 0);

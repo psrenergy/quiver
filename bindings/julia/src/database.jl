@@ -39,13 +39,9 @@ function close!(db::Database)
 end
 
 function current_version(db::Database)
-    version = C.quiver_database_current_version(db.ptr)
-    if version < 0
-        detail = unsafe_string(C.quiver_get_last_error())
-        context = "Failed to get current version"
-        throw(DatabaseException(isempty(detail) ? context : "$context: $detail"))
-    end
-    return version
+    out_version = Ref{Int64}(0)
+    check(C.quiver_database_current_version(db.ptr, out_version))
+    return out_version[]
 end
 
 function describe(db::Database)

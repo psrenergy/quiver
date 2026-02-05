@@ -18,7 +18,8 @@ TEST(DatabaseCApiQuery, QueryStringReturnsValue) {
     auto e = quiver_element_create();
     quiver_element_set_string(e, "label", "Test Label");
     quiver_element_set_string(e, "string_attribute", "hello world");
-    quiver_database_create_element(db, "Configuration", e);
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", e, &tmp_id);
     quiver_element_destroy(e);
 
     char* value = nullptr;
@@ -86,7 +87,8 @@ TEST(DatabaseCApiQuery, QueryIntegerReturnsValue) {
     auto e = quiver_element_create();
     quiver_element_set_string(e, "label", "Test");
     quiver_element_set_integer(e, "integer_attribute", 42);
-    quiver_database_create_element(db, "Configuration", e);
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", e, &tmp_id);
     quiver_element_destroy(e);
 
     int64_t value = 0;
@@ -126,12 +128,14 @@ TEST(DatabaseCApiQuery, QueryIntegerCount) {
 
     auto e1 = quiver_element_create();
     quiver_element_set_string(e1, "label", "A");
-    quiver_database_create_element(db, "Configuration", e1);
+    int64_t tmp_id1 = 0;
+    quiver_database_create_element(db, "Configuration", e1, &tmp_id1);
     quiver_element_destroy(e1);
 
     auto e2 = quiver_element_create();
     quiver_element_set_string(e2, "label", "B");
-    quiver_database_create_element(db, "Configuration", e2);
+    int64_t tmp_id2 = 0;
+    quiver_database_create_element(db, "Configuration", e2, &tmp_id2);
     quiver_element_destroy(e2);
 
     int64_t value = 0;
@@ -165,7 +169,8 @@ TEST(DatabaseCApiQuery, QueryFloatReturnsValue) {
     auto e = quiver_element_create();
     quiver_element_set_string(e, "label", "Test");
     quiver_element_set_float(e, "float_attribute", 3.14159);
-    quiver_database_create_element(db, "Configuration", e);
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", e, &tmp_id);
     quiver_element_destroy(e);
 
     double value = 0.0;
@@ -206,13 +211,15 @@ TEST(DatabaseCApiQuery, QueryFloatAverage) {
     auto e1 = quiver_element_create();
     quiver_element_set_string(e1, "label", "A");
     quiver_element_set_float(e1, "float_attribute", 10.0);
-    quiver_database_create_element(db, "Configuration", e1);
+    int64_t tmp_id1 = 0;
+    quiver_database_create_element(db, "Configuration", e1, &tmp_id1);
     quiver_element_destroy(e1);
 
     auto e2 = quiver_element_create();
     quiver_element_set_string(e2, "label", "B");
     quiver_element_set_float(e2, "float_attribute", 20.0);
-    quiver_database_create_element(db, "Configuration", e2);
+    int64_t tmp_id2 = 0;
+    quiver_database_create_element(db, "Configuration", e2, &tmp_id2);
     quiver_element_destroy(e2);
 
     double value = 0.0;
@@ -246,7 +253,8 @@ TEST(DatabaseCApiQuery, QueryStringWithParams) {
     auto e = quiver_element_create();
     quiver_element_set_string(e, "label", "Test Label");
     quiver_element_set_string(e, "string_attribute", "hello world");
-    quiver_database_create_element(db, "Configuration", e);
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", e, &tmp_id);
     quiver_element_destroy(e);
 
     const char* label = "Test Label";
@@ -280,7 +288,8 @@ TEST(DatabaseCApiQuery, QueryIntegerWithParams) {
     auto e = quiver_element_create();
     quiver_element_set_string(e, "label", "Test");
     quiver_element_set_integer(e, "integer_attribute", 42);
-    quiver_database_create_element(db, "Configuration", e);
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", e, &tmp_id);
     quiver_element_destroy(e);
 
     const char* label = "Test";
@@ -313,7 +322,8 @@ TEST(DatabaseCApiQuery, QueryFloatWithParams) {
     auto e = quiver_element_create();
     quiver_element_set_string(e, "label", "Test");
     quiver_element_set_float(e, "float_attribute", 3.14159);
-    quiver_database_create_element(db, "Configuration", e);
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", e, &tmp_id);
     quiver_element_destroy(e);
 
     const char* label = "Test";
@@ -346,7 +356,8 @@ TEST(DatabaseCApiQuery, QueryWithIntegerParam) {
     auto e = quiver_element_create();
     quiver_element_set_string(e, "label", "Test");
     quiver_element_set_integer(e, "integer_attribute", 42);
-    quiver_database_create_element(db, "Configuration", e);
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", e, &tmp_id);
     quiver_element_destroy(e);
 
     int64_t min_val = 10;
@@ -379,7 +390,8 @@ TEST(DatabaseCApiQuery, QueryWithNullParam) {
 
     auto e = quiver_element_create();
     quiver_element_set_string(e, "label", "Test");
-    quiver_database_create_element(db, "Configuration", e);
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", e, &tmp_id);
     quiver_element_destroy(e);
 
     int param_types[] = {QUIVER_DATA_TYPE_NULL};
@@ -405,7 +417,8 @@ TEST(DatabaseCApiQuery, QueryParamsNoMatch) {
 
     auto e = quiver_element_create();
     quiver_element_set_string(e, "label", "Test");
-    quiver_database_create_element(db, "Configuration", e);
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", e, &tmp_id);
     quiver_element_destroy(e);
 
     const char* label = "NoMatch";

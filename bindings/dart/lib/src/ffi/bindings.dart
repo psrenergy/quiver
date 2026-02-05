@@ -192,39 +192,55 @@ class QuiverDatabaseBindings {
 
   int quiver_database_current_version(
     ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Int64> out_version,
   ) {
     return _quiver_database_current_version(
       db,
+      out_version,
     );
   }
 
   late final _quiver_database_current_versionPtr =
-      _lookup<ffi.NativeFunction<ffi.Int64 Function(ffi.Pointer<quiver_database_t>)>>(
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Int64>)>>(
         'quiver_database_current_version',
       );
   late final _quiver_database_current_version = _quiver_database_current_versionPtr
-      .asFunction<int Function(ffi.Pointer<quiver_database_t>)>();
+      .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Int64>)>();
 
   int quiver_database_create_element(
     ffi.Pointer<quiver_database_t> db,
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<quiver_element_t> element,
+    ffi.Pointer<ffi.Int64> out_id,
   ) {
     return _quiver_database_create_element(
       db,
       collection,
       element,
+      out_id,
     );
   }
 
   late final _quiver_database_create_elementPtr =
       _lookup<
         ffi.NativeFunction<
-          ffi.Int64 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<quiver_element_t>)
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<quiver_element_t>,
+            ffi.Pointer<ffi.Int64>,
+          )
         >
       >('quiver_database_create_element');
   late final _quiver_database_create_element = _quiver_database_create_elementPtr
-      .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<quiver_element_t>)>();
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<quiver_element_t>,
+          ffi.Pointer<ffi.Int64>,
+        )
+      >();
 
   int quiver_database_update_element(
     ffi.Pointer<quiver_database_t> db,

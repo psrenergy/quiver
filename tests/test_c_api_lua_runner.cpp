@@ -176,13 +176,15 @@ TEST_F(LuaRunnerCApiTest, ReadScalarIntegers) {
     // Create elements with C API
     auto config = quiver_element_create();
     quiver_element_set_string(config, "label", "Config");
-    quiver_database_create_element(db, "Configuration", config);
+    int64_t tmp_id1 = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id1);
     quiver_element_destroy(config);
 
     auto elem = quiver_element_create();
     quiver_element_set_string(elem, "label", "Item 1");
     quiver_element_set_integer(elem, "some_integer", 100);
-    quiver_database_create_element(db, "Collection", elem);
+    int64_t tmp_id2 = 0;
+    quiver_database_create_element(db, "Collection", elem, &tmp_id2);
     quiver_element_destroy(elem);
 
     auto lua = quiver_lua_runner_new(db);

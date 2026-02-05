@@ -163,29 +163,34 @@ QUIVER_C_API quiver_database_t* quiver_database_from_migrations(const char* db_p
     }
 }
 
-QUIVER_C_API int64_t quiver_database_current_version(quiver_database_t* db) {
-    if (!db) {
-        return -1;
+QUIVER_C_API quiver_error_t quiver_database_current_version(quiver_database_t* db, int64_t* out_version) {
+    if (!db || !out_version) {
+        quiver_set_last_error("Null argument");
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
-        return db->db.current_version();
+        *out_version = db->db.current_version();
+        return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
-        return -1;
+        return QUIVER_ERROR_DATABASE;
     }
 }
 
-QUIVER_C_API int64_t quiver_database_create_element(quiver_database_t* db,
-                                                    const char* collection,
-                                                    quiver_element_t* element) {
-    if (!db || !collection || !element) {
-        return -1;
+QUIVER_C_API quiver_error_t quiver_database_create_element(quiver_database_t* db,
+                                                           const char* collection,
+                                                           quiver_element_t* element,
+                                                           int64_t* out_id) {
+    if (!db || !collection || !element || !out_id) {
+        quiver_set_last_error("Null argument");
+        return QUIVER_ERROR_INVALID_ARGUMENT;
     }
     try {
-        return db->db.create_element(collection, element->element);
+        *out_id = db->db.create_element(collection, element->element);
+        return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
-        return -1;
+        return QUIVER_ERROR_CREATE_ELEMENT;
     }
 }
 
