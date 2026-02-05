@@ -969,7 +969,8 @@ QUIVER_C_API quiver_error_t quiver_database_get_vector_metadata(quiver_database_
                 out_metadata->value_columns[i].not_null = metadata.value_columns[i].not_null ? 1 : 0;
                 out_metadata->value_columns[i].primary_key = metadata.value_columns[i].primary_key ? 1 : 0;
                 if (metadata.value_columns[i].default_value.has_value()) {
-                    out_metadata->value_columns[i].default_value = strdup_safe(*metadata.value_columns[i].default_value);
+                    out_metadata->value_columns[i].default_value =
+                        strdup_safe(*metadata.value_columns[i].default_value);
                 } else {
                     out_metadata->value_columns[i].default_value = nullptr;
                 }
@@ -1015,7 +1016,8 @@ QUIVER_C_API quiver_error_t quiver_database_get_set_metadata(quiver_database_t* 
                 out_metadata->value_columns[i].not_null = metadata.value_columns[i].not_null ? 1 : 0;
                 out_metadata->value_columns[i].primary_key = metadata.value_columns[i].primary_key ? 1 : 0;
                 if (metadata.value_columns[i].default_value.has_value()) {
-                    out_metadata->value_columns[i].default_value = strdup_safe(*metadata.value_columns[i].default_value);
+                    out_metadata->value_columns[i].default_value =
+                        strdup_safe(*metadata.value_columns[i].default_value);
                 } else {
                     out_metadata->value_columns[i].default_value = nullptr;
                 }
@@ -1502,7 +1504,8 @@ QUIVER_C_API quiver_error_t quiver_database_get_time_series_metadata(quiver_data
                 out_metadata->value_columns[i].not_null = metadata.value_columns[i].not_null ? 1 : 0;
                 out_metadata->value_columns[i].primary_key = metadata.value_columns[i].primary_key ? 1 : 0;
                 if (metadata.value_columns[i].default_value.has_value()) {
-                    out_metadata->value_columns[i].default_value = strdup_safe(*metadata.value_columns[i].default_value);
+                    out_metadata->value_columns[i].default_value =
+                        strdup_safe(*metadata.value_columns[i].default_value);
                 } else {
                     out_metadata->value_columns[i].default_value = nullptr;
                 }

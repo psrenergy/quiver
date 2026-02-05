@@ -313,7 +313,11 @@ function list_time_series_groups(db::Database, collection::AbstractString)
 
         push!(
             result,
-            TimeSeriesMetadata(unsafe_string(metadata.group_name), unsafe_string(metadata.dimension_column), value_columns),
+            TimeSeriesMetadata(
+                unsafe_string(metadata.group_name),
+                unsafe_string(metadata.dimension_column),
+                value_columns,
+            ),
         )
     end
     C.quiver_free_time_series_metadata_array(out_metadata[], count)
