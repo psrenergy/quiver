@@ -112,8 +112,8 @@ QUIVER_C_API quiver_database_options_t quiver_database_options_default(void) {
 }
 
 QUIVER_C_API quiver_error_t quiver_database_open(const char* path,
-                                                  const quiver_database_options_t* options,
-                                                  quiver_database_t** out_db) {
+                                                 const quiver_database_options_t* options,
+                                                 quiver_database_t** out_db) {
     if (!path || !out_db) {
         quiver_set_last_error("Null argument");
         return QUIVER_ERROR_INVALID_ARGUMENT;
@@ -155,9 +155,9 @@ QUIVER_C_API quiver_error_t quiver_database_path(quiver_database_t* db, const ch
 }
 
 QUIVER_C_API quiver_error_t quiver_database_from_migrations(const char* db_path,
-                                                             const char* migrations_path,
-                                                             const quiver_database_options_t* options,
-                                                             quiver_database_t** out_db) {
+                                                            const char* migrations_path,
+                                                            const quiver_database_options_t* options,
+                                                            quiver_database_t** out_db) {
     if (!db_path || !migrations_path || !out_db) {
         quiver_set_last_error("Null argument");
         return QUIVER_ERROR_INVALID_ARGUMENT;
@@ -273,9 +273,9 @@ QUIVER_C_API quiver_error_t quiver_database_read_scalar_relation(quiver_database
 }
 
 QUIVER_C_API quiver_error_t quiver_database_from_schema(const char* db_path,
-                                                         const char* schema_path,
-                                                         const quiver_database_options_t* options,
-                                                         quiver_database_t** out_db) {
+                                                        const char* schema_path,
+                                                        const quiver_database_options_t* options,
+                                                        quiver_database_t** out_db) {
     if (!db_path || !schema_path || !out_db) {
         quiver_set_last_error("Null argument");
         return QUIVER_ERROR_INVALID_ARGUMENT;
