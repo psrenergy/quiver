@@ -22,10 +22,7 @@ class Element {
     final arena = Arena();
     try {
       final outElementPtr = arena<Pointer<quiver_element_t1>>();
-      final err = bindings.quiver_element_create(outElementPtr);
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw const DatabaseOperationException('Failed to create element');
-      }
+      check(bindings.quiver_element_create(outElementPtr));
       return Element._(outElementPtr.value);
     } finally {
       arena.releaseAll();

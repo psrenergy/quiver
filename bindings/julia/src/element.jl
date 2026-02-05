@@ -3,10 +3,7 @@ mutable struct Element
 
     function Element()
         out_element = Ref{Ptr{C.quiver_element}}(C_NULL)
-        err = C.quiver_element_create(out_element)
-        if err != C.QUIVER_OK
-            error("Failed to create Element")
-        end
+        check(C.quiver_element_create(out_element))
         return new(out_element[])
     end
 end
@@ -21,27 +18,18 @@ end
 
 function Base.setindex!(el::Element, value::Integer, name::String)
     cname = Base.cconvert(Cstring, name)
-    err = C.quiver_element_set_integer(el.ptr, cname, Int64(value))
-    if err != C.QUIVER_OK
-        error("Failed to set int value for '$name'")
-    end
+    check(C.quiver_element_set_integer(el.ptr, cname, Int64(value)))
 end
 
 function Base.setindex!(el::Element, value::Real, name::String)
     cname = Base.cconvert(Cstring, name)
-    err = C.quiver_element_set_float(el.ptr, cname, Float64(value))
-    if err != C.QUIVER_OK
-        error("Failed to set float value for '$name'")
-    end
+    check(C.quiver_element_set_float(el.ptr, cname, Float64(value)))
 end
 
 function Base.setindex!(el::Element, value::String, name::String)
     cname = Base.cconvert(Cstring, name)
     cvalue = Base.cconvert(Cstring, value)
-    err = C.quiver_element_set_string(el.ptr, cname, cvalue)
-    if err != C.QUIVER_OK
-        error("Failed to set string value for '$name'")
-    end
+    check(C.quiver_element_set_string(el.ptr, cname, cvalue))
 end
 
 function Base.setindex!(el::Element, value::DateTime, name::String)
@@ -52,19 +40,13 @@ end
 function Base.setindex!(el::Element, value::Vector{<:Integer}, name::String)
     cname = Base.cconvert(Cstring, name)
     integer_values = Int64[Int64(v) for v in value]
-    err = C.quiver_element_set_array_integer(el.ptr, cname, integer_values, Int32(length(integer_values)))
-    if err != C.QUIVER_OK
-        error("Failed to set array<int> value for '$name'")
-    end
+    check(C.quiver_element_set_array_integer(el.ptr, cname, integer_values, Int32(length(integer_values))))
 end
 
 function Base.setindex!(el::Element, value::Vector{<:Real}, name::String)
     cname = Base.cconvert(Cstring, name)
     float_values = Float64[Float64(v) for v in value]
-    err = C.quiver_element_set_array_float(el.ptr, cname, float_values, Int32(length(value)))
-    if err != C.QUIVER_OK
-        error("Failed to set array<float> value for '$name'")
-    end
+    check(C.quiver_element_set_array_float(el.ptr, cname, float_values, Int32(length(value))))
 end
 
 function Base.setindex!(el::Element, value::Vector{<:AbstractString}, name::String)
@@ -73,10 +55,7 @@ function Base.setindex!(el::Element, value::Vector{<:AbstractString}, name::Stri
     cstrings = [Base.cconvert(Cstring, s) for s in value]
     ptrs = [Base.unsafe_convert(Cstring, cs) for cs in cstrings]
     GC.@preserve cstrings begin
-        err = C.quiver_element_set_array_string(el.ptr, cname, ptrs, Int32(length(value)))
-    end
-    if err != C.QUIVER_OK
-        error("Failed to set array<string> value for '$name'")
+        check(C.quiver_element_set_array_string(el.ptr, cname, ptrs, Int32(length(value))))
     end
 end
 
