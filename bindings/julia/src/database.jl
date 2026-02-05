@@ -50,6 +50,6 @@ end
 
 function describe(db::Database)
     result = C.quiver_database_describe(db.ptr)
-    check_error(result, "Failed to describe database")
+    check_error(result)
     return nothing
 end

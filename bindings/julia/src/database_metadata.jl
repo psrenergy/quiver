@@ -22,7 +22,7 @@ end
 function get_scalar_metadata(db::Database, collection::AbstractString, attribute::AbstractString)
     metadata = Ref(C.quiver_scalar_metadata_t(C_NULL, C.QUIVER_DATA_TYPE_INTEGER, 0, 0, C_NULL, 0, C_NULL, C_NULL))
     err = C.quiver_database_get_scalar_metadata(db.ptr, collection, attribute, metadata)
-    check_error(err, "Failed to get scalar metadata for '$collection.$attribute'")
+    check_error(err)
 
     result = ScalarMetadata(
         unsafe_string(metadata[].name),
@@ -42,7 +42,7 @@ end
 function get_vector_metadata(db::Database, collection::AbstractString, group_name::AbstractString)
     metadata = Ref(C.quiver_vector_metadata_t(C_NULL, C_NULL, 0))
     err = C.quiver_database_get_vector_metadata(db.ptr, collection, group_name, metadata)
-    check_error(err, "Failed to get vector metadata for '$collection.$group_name'")
+    check_error(err)
 
     value_columns = ScalarMetadata[]
     for i in 1:metadata[].value_column_count
@@ -75,7 +75,7 @@ end
 function get_set_metadata(db::Database, collection::AbstractString, group_name::AbstractString)
     metadata = Ref(C.quiver_set_metadata_t(C_NULL, C_NULL, 0))
     err = C.quiver_database_get_set_metadata(db.ptr, collection, group_name, metadata)
-    check_error(err, "Failed to get set metadata for '$collection.$group_name'")
+    check_error(err)
 
     value_columns = ScalarMetadata[]
     for i in 1:metadata[].value_column_count
@@ -109,7 +109,7 @@ function list_scalar_attributes(db::Database, collection::AbstractString)
     out_metadata = Ref(Ptr{C.quiver_scalar_metadata_t}(C_NULL))
     out_count = Ref(Csize_t(0))
     err = C.quiver_database_list_scalar_attributes(db.ptr, collection, out_metadata, out_count)
-    check_error(err, "Failed to list scalar attributes for '$collection'")
+    check_error(err)
 
     count = out_count[]
     if count == 0 || out_metadata[] == C_NULL
@@ -142,7 +142,7 @@ function list_vector_groups(db::Database, collection::AbstractString)
     out_metadata = Ref(Ptr{C.quiver_vector_metadata_t}(C_NULL))
     out_count = Ref(Csize_t(0))
     err = C.quiver_database_list_vector_groups(db.ptr, collection, out_metadata, out_count)
-    check_error(err, "Failed to list vector groups for '$collection'")
+    check_error(err)
 
     count = out_count[]
     if count == 0 || out_metadata[] == C_NULL
@@ -183,7 +183,7 @@ function list_set_groups(db::Database, collection::AbstractString)
     out_metadata = Ref(Ptr{C.quiver_set_metadata_t}(C_NULL))
     out_count = Ref(Csize_t(0))
     err = C.quiver_database_list_set_groups(db.ptr, collection, out_metadata, out_count)
-    check_error(err, "Failed to list set groups for '$collection'")
+    check_error(err)
 
     count = out_count[]
     if count == 0 || out_metadata[] == C_NULL
@@ -229,7 +229,7 @@ end
 function get_time_series_metadata(db::Database, collection::AbstractString, group_name::AbstractString)
     metadata = Ref(C.quiver_time_series_metadata_t(C_NULL, C_NULL, C_NULL, 0))
     err = C.quiver_database_get_time_series_metadata(db.ptr, collection, group_name, metadata)
-    check_error(err, "Failed to get time series metadata for '$collection.$group_name'")
+    check_error(err)
 
     value_columns = ScalarMetadata[]
     for i in 1:metadata[].value_column_count
@@ -264,7 +264,7 @@ function list_time_series_groups(db::Database, collection::AbstractString)
     out_metadata = Ref(Ptr{C.quiver_time_series_metadata_t}(C_NULL))
     out_count = Ref(Csize_t(0))
     err = C.quiver_database_list_time_series_groups(db.ptr, collection, out_metadata, out_count)
-    check_error(err, "Failed to list time series groups for '$collection'")
+    check_error(err)
 
     count = out_count[]
     if count == 0 || out_metadata[] == C_NULL
@@ -311,7 +311,7 @@ end
 function has_time_series_files(db::Database, collection::String)
     out_result = Ref{Cint}(0)
     err = C.quiver_database_has_time_series_files(db.ptr, collection, out_result)
-    check_error(err, "Failed to check time series files for '$collection'")
+    check_error(err)
     return out_result[] != 0
 end
 
@@ -320,7 +320,7 @@ function list_time_series_files_columns(db::Database, collection::String)
     out_count = Ref{Csize_t}(0)
 
     err = C.quiver_database_list_time_series_files_columns(db.ptr, collection, out_columns, out_count)
-    check_error(err, "Failed to list time series files columns for '$collection'")
+    check_error(err)
 
     count = out_count[]
     if count == 0 || out_columns[] == C_NULL

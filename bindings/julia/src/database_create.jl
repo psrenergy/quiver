@@ -31,6 +31,6 @@ function set_scalar_relation!(
     to_label::String,
 )
     err = C.quiver_database_set_scalar_relation(db.ptr, collection, attribute, from_label, to_label)
-    check_error(err, "Failed to set scalar relation '$attribute' in '$collection'")
+    check_error(err)
     return nothing
 end

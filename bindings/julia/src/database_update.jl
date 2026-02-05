@@ -1,6 +1,6 @@
 function update_element!(db::Database, collection::String, id::Int64, e::Element)
     err = C.quiver_database_update_element(db.ptr, collection, id, e.ptr)
-    check_error(err, "Failed to update element $id in collection $collection")
+    check_error(err)
     return nothing
 end
 
@@ -21,19 +21,19 @@ end
 
 function update_scalar_integer!(db::Database, collection::String, attribute::String, id::Int64, value::Integer)
     err = C.quiver_database_update_scalar_integer(db.ptr, collection, attribute, id, Int64(value))
-    check_error(err, "Failed to update scalar integer '$collection.$attribute' for id $id")
+    check_error(err)
     return nothing
 end
 
 function update_scalar_float!(db::Database, collection::String, attribute::String, id::Int64, value::Real)
     err = C.quiver_database_update_scalar_float(db.ptr, collection, attribute, id, Float64(value))
-    check_error(err, "Failed to update scalar float '$collection.$attribute' for id $id")
+    check_error(err)
     return nothing
 end
 
 function update_scalar_string!(db::Database, collection::String, attribute::String, id::Int64, value::String)
     err = C.quiver_database_update_scalar_string(db.ptr, collection, attribute, id, value)
-    check_error(err, "Failed to update scalar string '$collection.$attribute' for id $id")
+    check_error(err)
     return nothing
 end
 
@@ -55,7 +55,7 @@ function update_vector_integers!(
         integer_values,
         Csize_t(length(integer_values)),
     )
-    check_error(err, "Failed to update vector integers '$collection.$attribute' for id $id")
+    check_error(err)
     return nothing
 end
 
@@ -69,7 +69,7 @@ function update_vector_floats!(db::Database, collection::String, attribute::Stri
         float_values,
         Csize_t(length(float_values)),
     )
-    check_error(err, "Failed to update vector floats '$collection.$attribute' for id $id")
+    check_error(err)
     return nothing
 end
 
@@ -85,7 +85,7 @@ function update_vector_strings!(
     GC.@preserve cstrings begin
         err = C.quiver_database_update_vector_strings(db.ptr, collection, attribute, id, ptrs, Csize_t(length(values)))
     end
-    check_error(err, "Failed to update vector strings '$collection.$attribute' for id $id")
+    check_error(err)
     return nothing
 end
 
@@ -101,7 +101,7 @@ function update_set_integers!(db::Database, collection::String, attribute::Strin
         integer_values,
         Csize_t(length(integer_values)),
     )
-    check_error(err, "Failed to update set integers '$collection.$attribute' for id $id")
+    check_error(err)
     return nothing
 end
 
@@ -115,7 +115,7 @@ function update_set_floats!(db::Database, collection::String, attribute::String,
         float_values,
         Csize_t(length(float_values)),
     )
-    check_error(err, "Failed to update set floats '$collection.$attribute' for id $id")
+    check_error(err)
     return nothing
 end
 
@@ -131,7 +131,7 @@ function update_set_strings!(
     GC.@preserve cstrings begin
         err = C.quiver_database_update_set_strings(db.ptr, collection, attribute, id, ptrs, Csize_t(length(values)))
     end
-    check_error(err, "Failed to update set strings '$collection.$attribute' for id $id")
+    check_error(err)
     return nothing
 end
 
@@ -149,7 +149,7 @@ function update_time_series_group!(
             db.ptr, collection, group, id,
             C_NULL, C_NULL, Csize_t(0),
         )
-        check_error(err, "Failed to update time series '$collection.$group' for id $id")
+        check_error(err)
         return nothing
     end
 
@@ -164,7 +164,7 @@ function update_time_series_group!(
             date_time_ptrs, values, Csize_t(row_count),
         )
     end
-    check_error(err, "Failed to update time series '$collection.$group' for id $id")
+    check_error(err)
     return nothing
 end
 
@@ -199,6 +199,6 @@ function update_time_series_files!(db::Database, collection::String, paths::Dict
             column_ptrs, path_ptrs, Csize_t(count),
         )
     end
-    check_error(err, "Failed to update time series files for '$collection'")
+    check_error(err)
     return nothing
 end
