@@ -461,14 +461,14 @@ struct LuaRunner::Impl {
         auto metadata_list = db.list_vector_groups(collection);
         sol::table t = lua.create_table();
         for (size_t i = 0; i < metadata_list.size(); ++i) {
-            sol::table meta = lua.create_table();
-            meta["group_name"] = metadata_list[i].group_name;
+            sol::table metadata = lua.create_table();
+            metadata["group_name"] = metadata_list[i].group_name;
             sol::table cols = lua.create_table();
             for (size_t j = 0; j < metadata_list[i].value_columns.size(); ++j) {
                 cols[j + 1] = scalar_metadata_to_lua(lua, metadata_list[i].value_columns[j]);
             }
-            meta["value_columns"] = cols;
-            t[i + 1] = meta;
+            metadata["value_columns"] = cols;
+            t[i + 1] = metadata;
         }
         return t;
     }
@@ -478,14 +478,14 @@ struct LuaRunner::Impl {
         auto metadata_list = db.list_set_groups(collection);
         sol::table t = lua.create_table();
         for (size_t i = 0; i < metadata_list.size(); ++i) {
-            sol::table meta = lua.create_table();
-            meta["group_name"] = metadata_list[i].group_name;
+            sol::table metadata = lua.create_table();
+            metadata["group_name"] = metadata_list[i].group_name;
             sol::table cols = lua.create_table();
             for (size_t j = 0; j < metadata_list[i].value_columns.size(); ++j) {
                 cols[j + 1] = scalar_metadata_to_lua(lua, metadata_list[i].value_columns[j]);
             }
-            meta["value_columns"] = cols;
-            t[i + 1] = meta;
+            metadata["value_columns"] = cols;
+            t[i + 1] = metadata;
         }
         return t;
     }
@@ -509,14 +509,14 @@ struct LuaRunner::Impl {
                                                  const std::string& attribute,
                                                  sol::this_state s) {
         sol::state_view lua(s);
-        auto meta = db.get_scalar_metadata(collection, attribute);
+        auto metadata = db.get_scalar_metadata(collection, attribute);
         sol::table t = lua.create_table();
-        t["name"] = meta.name;
-        t["data_type"] = data_type_to_string(meta.data_type);
-        t["not_null"] = meta.not_null;
-        t["primary_key"] = meta.primary_key;
-        if (meta.default_value.has_value()) {
-            t["default_value"] = *meta.default_value;
+        t["name"] = metadata.name;
+        t["data_type"] = data_type_to_string(metadata.data_type);
+        t["not_null"] = metadata.not_null;
+        t["primary_key"] = metadata.primary_key;
+        if (metadata.default_value.has_value()) {
+            t["default_value"] = *metadata.default_value;
         } else {
             t["default_value"] = sol::lua_nil;
         }
@@ -542,13 +542,13 @@ struct LuaRunner::Impl {
                                                  const std::string& group_name,
                                                  sol::this_state s) {
         sol::state_view lua(s);
-        auto meta = db.get_vector_metadata(collection, group_name);
+        auto metadata = db.get_vector_metadata(collection, group_name);
         sol::table t = lua.create_table();
-        t["group_name"] = meta.group_name;
+        t["group_name"] = metadata.group_name;
 
         sol::table cols = lua.create_table();
-        for (size_t i = 0; i < meta.value_columns.size(); ++i) {
-            cols[i + 1] = scalar_metadata_to_lua(lua, meta.value_columns[i]);
+        for (size_t i = 0; i < metadata.value_columns.size(); ++i) {
+            cols[i + 1] = scalar_metadata_to_lua(lua, metadata.value_columns[i]);
         }
         t["value_columns"] = cols;
 
@@ -560,13 +560,13 @@ struct LuaRunner::Impl {
                                               const std::string& group_name,
                                               sol::this_state s) {
         sol::state_view lua(s);
-        auto meta = db.get_set_metadata(collection, group_name);
+        auto metadata = db.get_set_metadata(collection, group_name);
         sol::table t = lua.create_table();
-        t["group_name"] = meta.group_name;
+        t["group_name"] = metadata.group_name;
 
         sol::table cols = lua.create_table();
-        for (size_t i = 0; i < meta.value_columns.size(); ++i) {
-            cols[i + 1] = scalar_metadata_to_lua(lua, meta.value_columns[i]);
+        for (size_t i = 0; i < metadata.value_columns.size(); ++i) {
+            cols[i + 1] = scalar_metadata_to_lua(lua, metadata.value_columns[i]);
         }
         t["value_columns"] = cols;
 

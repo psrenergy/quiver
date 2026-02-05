@@ -11,10 +11,10 @@ include("fixture.jl")
         db = Quiver.from_schema(":memory:", path_schema)
 
         # get_time_series_metadata
-        meta = Quiver.get_time_series_metadata(db, "Collection", "data")
-        @test meta.group_name == "data"
-        @test length(meta.value_columns) == 1
-        @test meta.value_columns[1].name == "value"
+        metadata = Quiver.get_time_series_metadata(db, "Collection", "data")
+        @test metadata.group_name == "data"
+        @test length(metadata.value_columns) == 1
+        @test metadata.value_columns[1].name == "value"
 
         # list_time_series_groups
         groups = Quiver.list_time_series_groups(db, "Collection")
@@ -223,13 +223,13 @@ include("fixture.jl")
             "Collection",
             Dict{String, Union{String, Nothing}}(
                 "data_file" => "/path/to/data.csv",
-                "metadata_file" => "/path/to/meta.json",
+                "metadata_file" => "/path/to/metadata.json",
             ),
         )
 
         paths = Quiver.read_time_series_files(db, "Collection")
         @test paths["data_file"] == "/path/to/data.csv"
-        @test paths["metadata_file"] == "/path/to/meta.json"
+        @test paths["metadata_file"] == "/path/to/metadata.json"
 
         Quiver.close!(db)
     end
@@ -264,7 +264,7 @@ include("fixture.jl")
             "Collection",
             Dict{String, Union{String, Nothing}}(
                 "data_file" => "/old/data.csv",
-                "metadata_file" => "/old/meta.json",
+                "metadata_file" => "/old/metadata.json",
             ),
         )
 
@@ -274,13 +274,13 @@ include("fixture.jl")
             "Collection",
             Dict{String, Union{String, Nothing}}(
                 "data_file" => "/new/data.csv",
-                "metadata_file" => "/new/meta.json",
+                "metadata_file" => "/new/metadata.json",
             ),
         )
 
         paths = Quiver.read_time_series_files(db, "Collection")
         @test paths["data_file"] == "/new/data.csv"
-        @test paths["metadata_file"] == "/new/meta.json"
+        @test paths["metadata_file"] == "/new/metadata.json"
 
         Quiver.close!(db)
     end

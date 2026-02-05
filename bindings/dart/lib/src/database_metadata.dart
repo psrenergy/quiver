@@ -313,7 +313,7 @@ extension DatabaseMetadata on Database {
             })
           >[];
       for (var i = 0; i < count; i++) {
-        final meta = outMetadata.value[i];
+        final metadata = outMetadata.value[i];
         final valueColumns =
             <
               ({
@@ -327,10 +327,10 @@ extension DatabaseMetadata on Database {
                 String? referencesColumn,
               })
             >[];
-        for (var j = 0; j < meta.value_column_count; j++) {
-          valueColumns.add(_parseScalarMetadata(meta.value_columns[j]));
+        for (var j = 0; j < metadata.value_column_count; j++) {
+          valueColumns.add(_parseScalarMetadata(metadata.value_columns[j]));
         }
-        result.add((groupName: meta.group_name.cast<Utf8>().toDartString(), valueColumns: valueColumns));
+        result.add((groupName: metadata.group_name.cast<Utf8>().toDartString(), valueColumns: valueColumns));
       }
       bindings.quiver_free_vector_metadata_array(outMetadata.value, count);
       return result;
@@ -402,7 +402,7 @@ extension DatabaseMetadata on Database {
             })
           >[];
       for (var i = 0; i < count; i++) {
-        final meta = outMetadata.value[i];
+        final metadata = outMetadata.value[i];
         final valueColumns =
             <
               ({
@@ -416,10 +416,10 @@ extension DatabaseMetadata on Database {
                 String? referencesColumn,
               })
             >[];
-        for (var j = 0; j < meta.value_column_count; j++) {
-          valueColumns.add(_parseScalarMetadata(meta.value_columns[j]));
+        for (var j = 0; j < metadata.value_column_count; j++) {
+          valueColumns.add(_parseScalarMetadata(metadata.value_columns[j]));
         }
-        result.add((groupName: meta.group_name.cast<Utf8>().toDartString(), valueColumns: valueColumns));
+        result.add((groupName: metadata.group_name.cast<Utf8>().toDartString(), valueColumns: valueColumns));
       }
       bindings.quiver_free_set_metadata_array(outMetadata.value, count);
       return result;
@@ -570,7 +570,7 @@ extension DatabaseMetadata on Database {
             })
           >[];
       for (var i = 0; i < count; i++) {
-        final meta = outMetadata.value[i];
+        final metadata = outMetadata.value[i];
         final valueColumns =
             <
               ({
@@ -584,12 +584,12 @@ extension DatabaseMetadata on Database {
                 String? referencesColumn,
               })
             >[];
-        for (var j = 0; j < meta.value_column_count; j++) {
-          valueColumns.add(_parseScalarMetadata(meta.value_columns[j]));
+        for (var j = 0; j < metadata.value_column_count; j++) {
+          valueColumns.add(_parseScalarMetadata(metadata.value_columns[j]));
         }
         result.add((
-          groupName: meta.group_name.cast<Utf8>().toDartString(),
-          dimensionColumn: meta.dimension_column.cast<Utf8>().toDartString(),
+          groupName: metadata.group_name.cast<Utf8>().toDartString(),
+          dimensionColumn: metadata.dimension_column.cast<Utf8>().toDartString(),
           valueColumns: valueColumns,
         ));
       }

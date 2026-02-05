@@ -1287,23 +1287,23 @@ ScalarMetadata Database::get_scalar_metadata(const std::string& collection, cons
         throw std::runtime_error("Scalar attribute '" + attribute + "' not found in collection '" + collection + "'");
     }
 
-    ScalarMetadata meta;
-    meta.name = col->name;
-    meta.data_type = col->type;
-    meta.not_null = col->not_null;
-    meta.primary_key = col->primary_key;
-    meta.default_value = col->default_value;
+    ScalarMetadata metadata;
+    metadata.name = col->name;
+    metadata.data_type = col->type;
+    metadata.not_null = col->not_null;
+    metadata.primary_key = col->primary_key;
+    metadata.default_value = col->default_value;
 
     for (const auto& fk : table_def->foreign_keys) {
         if (fk.from_column == attribute) {
-            meta.is_foreign_key = true;
-            meta.references_collection = fk.to_table;
-            meta.references_column = fk.to_column;
+            metadata.is_foreign_key = true;
+            metadata.references_collection = fk.to_table;
+            metadata.references_column = fk.to_column;
             break;
         }
     }
 
-    return meta;
+    return metadata;
 }
 
 VectorMetadata Database::get_vector_metadata(const std::string& collection, const std::string& group_name) const {
@@ -1319,8 +1319,8 @@ VectorMetadata Database::get_vector_metadata(const std::string& collection, cons
         throw std::runtime_error("Vector group '" + group_name + "' not found for collection '" + collection + "'");
     }
 
-    VectorMetadata meta;
-    meta.group_name = group_name;
+    VectorMetadata metadata;
+    metadata.group_name = group_name;
 
     // Add all data columns (skip id and vector_index)
     for (const auto& [col_name, col] : table_def->columns) {
@@ -1334,10 +1334,10 @@ VectorMetadata Database::get_vector_metadata(const std::string& collection, cons
         attribute.not_null = col.not_null;
         attribute.primary_key = col.primary_key;
         attribute.default_value = col.default_value;
-        meta.value_columns.push_back(std::move(attribute));
+        metadata.value_columns.push_back(std::move(attribute));
     }
 
-    return meta;
+    return metadata;
 }
 
 SetMetadata Database::get_set_metadata(const std::string& collection, const std::string& group_name) const {
@@ -1353,8 +1353,8 @@ SetMetadata Database::get_set_metadata(const std::string& collection, const std:
         throw std::runtime_error("Set group '" + group_name + "' not found for collection '" + collection + "'");
     }
 
-    SetMetadata meta;
-    meta.group_name = group_name;
+    SetMetadata metadata;
+    metadata.group_name = group_name;
 
     // Add all data columns (skip id)
     for (const auto& [col_name, col] : table_def->columns) {
@@ -1368,10 +1368,10 @@ SetMetadata Database::get_set_metadata(const std::string& collection, const std:
         attribute.not_null = col.not_null;
         attribute.primary_key = col.primary_key;
         attribute.default_value = col.default_value;
-        meta.value_columns.push_back(std::move(attribute));
+        metadata.value_columns.push_back(std::move(attribute));
     }
 
-    return meta;
+    return metadata;
 }
 
 std::vector<ScalarMetadata> Database::list_scalar_attributes(const std::string& collection) const {
@@ -1386,23 +1386,23 @@ std::vector<ScalarMetadata> Database::list_scalar_attributes(const std::string& 
 
     std::vector<ScalarMetadata> result;
     for (const auto& [col_name, col] : table_def->columns) {
-        ScalarMetadata meta;
-        meta.name = col.name;
-        meta.data_type = col.type;
-        meta.not_null = col.not_null;
-        meta.primary_key = col.primary_key;
-        meta.default_value = col.default_value;
+        ScalarMetadata metadata;
+        metadata.name = col.name;
+        metadata.data_type = col.type;
+        metadata.not_null = col.not_null;
+        metadata.primary_key = col.primary_key;
+        metadata.default_value = col.default_value;
 
         for (const auto& fk : table_def->foreign_keys) {
             if (fk.from_column == col_name) {
-                meta.is_foreign_key = true;
-                meta.references_collection = fk.to_table;
-                meta.references_column = fk.to_column;
+                metadata.is_foreign_key = true;
+                metadata.references_collection = fk.to_table;
+                metadata.references_column = fk.to_column;
                 break;
             }
         }
 
-        result.push_back(std::move(meta));
+        result.push_back(std::move(metadata));
     }
     return result;
 }
@@ -1491,13 +1491,13 @@ TimeSeriesMetadata Database::get_time_series_metadata(const std::string& collect
                                  "'");
     }
 
-    TimeSeriesMetadata meta;
-    meta.group_name = group_name;
-    meta.dimension_column = find_dimension_column(*table_def);
+    TimeSeriesMetadata metadata;
+    metadata.group_name = group_name;
+    metadata.dimension_column = find_dimension_column(*table_def);
 
     // Add value columns (skip id and dimension)
     for (const auto& [col_name, col] : table_def->columns) {
-        if (col_name == "id" || col_name == meta.dimension_column) {
+        if (col_name == "id" || col_name == metadata.dimension_column) {
             continue;
         }
 
@@ -1507,10 +1507,10 @@ TimeSeriesMetadata Database::get_time_series_metadata(const std::string& collect
         attribute.not_null = col.not_null;
         attribute.primary_key = col.primary_key;
         attribute.default_value = col.default_value;
-        meta.value_columns.push_back(std::move(attribute));
+        metadata.value_columns.push_back(std::move(attribute));
     }
 
-    return meta;
+    return metadata;
 }
 
 std::vector<std::map<std::string, Value>>

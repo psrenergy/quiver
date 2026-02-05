@@ -12,12 +12,12 @@ TEST(Database, GetTimeSeriesMetadata) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
 
-    auto meta = db.get_time_series_metadata("Collection", "data");
-    EXPECT_EQ(meta.group_name, "data");
-    EXPECT_EQ(meta.dimension_column, "date_time");
-    EXPECT_EQ(meta.value_columns.size(), 1);
-    EXPECT_EQ(meta.value_columns[0].name, "value");
-    EXPECT_EQ(meta.value_columns[0].data_type, quiver::DataType::Real);
+    auto metadata = db.get_time_series_metadata("Collection", "data");
+    EXPECT_EQ(metadata.group_name, "data");
+    EXPECT_EQ(metadata.dimension_column, "date_time");
+    EXPECT_EQ(metadata.value_columns.size(), 1);
+    EXPECT_EQ(metadata.value_columns[0].name, "value");
+    EXPECT_EQ(metadata.value_columns[0].data_type, quiver::DataType::Real);
 }
 
 TEST(Database, ListTimeSeriesGroups) {
@@ -277,7 +277,7 @@ TEST(Database, UpdateAndReadTimeSeriesFiles) {
 
     std::map<std::string, std::optional<std::string>> paths;
     paths["data_file"] = "/path/to/data.csv";
-    paths["metadata_file"] = "/path/to/meta.json";
+    paths["metadata_file"] = "/path/to/metadata.json";
 
     db.update_time_series_files("Collection", paths);
 
@@ -286,7 +286,7 @@ TEST(Database, UpdateAndReadTimeSeriesFiles) {
     EXPECT_TRUE(result["data_file"].has_value());
     EXPECT_EQ(result["data_file"].value(), "/path/to/data.csv");
     EXPECT_TRUE(result["metadata_file"].has_value());
-    EXPECT_EQ(result["metadata_file"].value(), "/path/to/meta.json");
+    EXPECT_EQ(result["metadata_file"].value(), "/path/to/metadata.json");
 }
 
 TEST(Database, UpdateTimeSeriesFilesWithNulls) {
@@ -312,18 +312,18 @@ TEST(Database, UpdateTimeSeriesFilesReplace) {
     // First update
     std::map<std::string, std::optional<std::string>> paths1;
     paths1["data_file"] = "/old/data.csv";
-    paths1["metadata_file"] = "/old/meta.json";
+    paths1["metadata_file"] = "/old/metadata.json";
     db.update_time_series_files("Collection", paths1);
 
     // Second update replaces
     std::map<std::string, std::optional<std::string>> paths2;
     paths2["data_file"] = "/new/data.csv";
-    paths2["metadata_file"] = "/new/meta.json";
+    paths2["metadata_file"] = "/new/metadata.json";
     db.update_time_series_files("Collection", paths2);
 
     auto result = db.read_time_series_files("Collection");
     EXPECT_EQ(result["data_file"].value(), "/new/data.csv");
-    EXPECT_EQ(result["metadata_file"].value(), "/new/meta.json");
+    EXPECT_EQ(result["metadata_file"].value(), "/new/metadata.json");
 }
 
 TEST(Database, TimeSeriesFilesNotFound) {

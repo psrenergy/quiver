@@ -18,11 +18,11 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final meta = db.getTimeSeriesMetadata('Collection', 'data');
-        expect(meta.groupName, equals('data'));
-        expect(meta.dimensionColumn, equals('date_time'));
-        expect(meta.valueColumns.length, equals(1));
-        expect(meta.valueColumns[0].name, equals('value'));
+        final metadata = db.getTimeSeriesMetadata('Collection', 'data');
+        expect(metadata.groupName, equals('data'));
+        expect(metadata.dimensionColumn, equals('date_time'));
+        expect(metadata.valueColumns.length, equals(1));
+        expect(metadata.valueColumns[0].name, equals('value'));
       } finally {
         db.close();
       }
@@ -241,12 +241,12 @@ void main() {
       try {
         db.updateTimeSeriesFiles('Collection', {
           'data_file': '/path/to/data.csv',
-          'metadata_file': '/path/to/meta.json',
+          'metadata_file': '/path/to/metadata.json',
         });
 
         final paths = db.readTimeSeriesFiles('Collection');
         expect(paths['data_file'], equals('/path/to/data.csv'));
-        expect(paths['metadata_file'], equals('/path/to/meta.json'));
+        expect(paths['metadata_file'], equals('/path/to/metadata.json'));
       } finally {
         db.close();
       }
@@ -280,18 +280,18 @@ void main() {
         // First update
         db.updateTimeSeriesFiles('Collection', {
           'data_file': '/old/data.csv',
-          'metadata_file': '/old/meta.json',
+          'metadata_file': '/old/metadata.json',
         });
 
         // Second update replaces
         db.updateTimeSeriesFiles('Collection', {
           'data_file': '/new/data.csv',
-          'metadata_file': '/new/meta.json',
+          'metadata_file': '/new/metadata.json',
         });
 
         final paths = db.readTimeSeriesFiles('Collection');
         expect(paths['data_file'], equals('/new/data.csv'));
-        expect(paths['metadata_file'], equals('/new/meta.json'));
+        expect(paths['metadata_file'], equals('/new/metadata.json'));
       } finally {
         db.close();
       }
