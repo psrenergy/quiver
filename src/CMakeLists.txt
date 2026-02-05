@@ -37,10 +37,10 @@ target_compile_definitions(quiver PRIVATE
 )
 
 # MSVC needs /bigobj for sol2 heavy template instantiations
-# MinGW/GCC needs -Wa,-mbig-obj for the same reason
+# Other Windows compilers need -Wa,-mbig-obj for the same reason
 if(MSVC)
     set_source_files_properties(lua_runner.cpp PROPERTIES COMPILE_OPTIONS "/bigobj")
-elseif(MINGW)
+elseif(WIN32)
     set_source_files_properties(lua_runner.cpp PROPERTIES COMPILE_OPTIONS "-Wa,-mbig-obj")
 endif()
 
