@@ -115,7 +115,9 @@ class Database {
       referencesCollection: attribute.references_collection == nullptr
           ? null
           : attribute.references_collection.cast<Utf8>().toDartString(),
-      referencesColumn: attribute.references_column == nullptr ? null : attribute.references_column.cast<Utf8>().toDartString(),
+      referencesColumn: attribute.references_column == nullptr
+          ? null
+          : attribute.references_column.cast<Utf8>().toDartString(),
     );
   }
 
