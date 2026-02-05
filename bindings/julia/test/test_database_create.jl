@@ -253,7 +253,7 @@ include("fixture.jl")
         )
 
         # Verify it was stored correctly as ISO 8601 string
-        date_str = Quiver.read_scalar_strings_by_id(db, "Configuration", "date_attribute", Int64(1))
+        date_str = Quiver.read_scalar_string_by_id(db, "Configuration", "date_attribute", Int64(1))
         @test date_str == "2024-03-15T14:30:45"
 
         # Verify read_all_scalars_by_id returns native DateTime

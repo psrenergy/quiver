@@ -820,4 +820,45 @@ void main() {
       }
     });
   });
+
+  group('Read Vector Group by ID', () {
+    test('readVectorGroupById returns all columns as rows', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_int': [1, 2, 3],
+          'value_float': [1.5, 2.5, 3.5],
+        });
+
+        final rows = db.readVectorGroupById('Collection', 'values', 1);
+        expect(rows.length, equals(3));
+        expect(rows[0]['value_int'], equals(1));
+        expect(rows[0]['value_float'], equals(1.5));
+        expect(rows[2]['value_int'], equals(3));
+        expect(rows[2]['value_float'], equals(3.5));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('readVectorGroupById returns empty list for nonexistent id', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+
+        final rows = db.readVectorGroupById('Collection', 'values', 999);
+        expect(rows, isEmpty);
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

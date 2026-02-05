@@ -268,9 +268,9 @@ TEST_F(LuaRunnerTest, ReadScalarIntegerByIdFromLua) {
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        local val1 = db:read_scalar_integers_by_id("Collection", "some_integer", )" +
+        local val1 = db:read_scalar_integer_by_id("Collection", "some_integer", )" +
                          std::to_string(id1) + R"()
-        local val2 = db:read_scalar_integers_by_id("Collection", "some_integer", )" +
+        local val2 = db:read_scalar_integer_by_id("Collection", "some_integer", )" +
                          std::to_string(id2) + R"()
         assert(val1 == 42, "Expected 42, got " .. tostring(val1))
         assert(val2 == 100, "Expected 100, got " .. tostring(val2))
@@ -287,7 +287,7 @@ TEST_F(LuaRunnerTest, ReadScalarFloatByIdFromLua) {
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        local val1 = db:read_scalar_floats_by_id("Collection", "some_float", )" +
+        local val1 = db:read_scalar_float_by_id("Collection", "some_float", )" +
                          std::to_string(id1) + R"()
         assert(val1 == 3.14, "Expected 3.14, got " .. tostring(val1))
     )";
@@ -303,7 +303,7 @@ TEST_F(LuaRunnerTest, ReadScalarStringByIdFromLua) {
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        local val1 = db:read_scalar_strings_by_id("Collection", "label", )" +
+        local val1 = db:read_scalar_string_by_id("Collection", "label", )" +
                          std::to_string(id1) + R"()
         assert(val1 == "Item 1", "Expected 'Item 1', got " .. tostring(val1))
     )";
@@ -319,7 +319,7 @@ TEST_F(LuaRunnerTest, ReadScalarByIdNotFoundFromLua) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        local val = db:read_scalar_integers_by_id("Collection", "some_integer", 999)
+        local val = db:read_scalar_integer_by_id("Collection", "some_integer", 999)
         assert(val == nil, "Expected nil for non-existent ID")
     )");
 }
@@ -530,20 +530,20 @@ TEST_F(LuaRunnerTest, UpdateElementSingleScalarFromLua) {
     lua.run(R"(
         db:update_element("Collection", 1, { some_integer = 999 })
 
-        local val = db:read_scalar_integers_by_id("Collection", "some_integer", 1)
+        local val = db:read_scalar_integer_by_id("Collection", "some_integer", 1)
         assert(val == 999, "Expected 999, got " .. tostring(val))
 
         -- Verify label unchanged
-        local label = db:read_scalar_strings_by_id("Collection", "label", 1)
+        local label = db:read_scalar_string_by_id("Collection", "label", 1)
         assert(label == "Item 1", "Label should be unchanged")
     )");
 
     // Verify from C++ side
-    auto value = db.read_scalar_integers_by_id("Collection", "some_integer", 1);
+    auto value = db.read_scalar_integer_by_id("Collection", "some_integer", 1);
     EXPECT_TRUE(value.has_value());
     EXPECT_EQ(*value, 999);
 
-    auto label = db.read_scalar_strings_by_id("Collection", "label", 1);
+    auto label = db.read_scalar_string_by_id("Collection", "label", 1);
     EXPECT_TRUE(label.has_value());
     EXPECT_EQ(*label, "Item 1");
 }
@@ -561,23 +561,23 @@ TEST_F(LuaRunnerTest, UpdateElementMultipleScalarsFromLua) {
     lua.run(R"(
         db:update_element("Collection", 1, { some_integer = 500, some_float = 9.9 })
 
-        local integer_val = db:read_scalar_integers_by_id("Collection", "some_integer", 1)
+        local integer_val = db:read_scalar_integer_by_id("Collection", "some_integer", 1)
         assert(integer_val == 500, "Expected integer 500, got " .. tostring(integer_val))
 
-        local float_val = db:read_scalar_floats_by_id("Collection", "some_float", 1)
+        local float_val = db:read_scalar_float_by_id("Collection", "some_float", 1)
         assert(float_val == 9.9, "Expected float 9.9, got " .. tostring(float_val))
 
         -- Verify label unchanged
-        local label = db:read_scalar_strings_by_id("Collection", "label", 1)
+        local label = db:read_scalar_string_by_id("Collection", "label", 1)
         assert(label == "Item 1", "Label should be unchanged")
     )");
 
     // Verify from C++ side
-    auto integer_value = db.read_scalar_integers_by_id("Collection", "some_integer", 1);
+    auto integer_value = db.read_scalar_integer_by_id("Collection", "some_integer", 1);
     EXPECT_TRUE(integer_value.has_value());
     EXPECT_EQ(*integer_value, 500);
 
-    auto float_value = db.read_scalar_floats_by_id("Collection", "some_float", 1);
+    auto float_value = db.read_scalar_float_by_id("Collection", "some_float", 1);
     EXPECT_TRUE(float_value.has_value());
     EXPECT_DOUBLE_EQ(*float_value, 9.9);
 }
@@ -597,21 +597,21 @@ TEST_F(LuaRunnerTest, UpdateElementOtherElementsUnchangedFromLua) {
         db:update_element("Collection", 2, { some_integer = 999 })
 
         -- Verify element 2 updated
-        local val2 = db:read_scalar_integers_by_id("Collection", "some_integer", 2)
+        local val2 = db:read_scalar_integer_by_id("Collection", "some_integer", 2)
         assert(val2 == 999, "Element 2 should be updated to 999")
 
         -- Verify elements 1 and 3 unchanged
-        local val1 = db:read_scalar_integers_by_id("Collection", "some_integer", 1)
+        local val1 = db:read_scalar_integer_by_id("Collection", "some_integer", 1)
         assert(val1 == 100, "Element 1 should be unchanged at 100")
 
-        local val3 = db:read_scalar_integers_by_id("Collection", "some_integer", 3)
+        local val3 = db:read_scalar_integer_by_id("Collection", "some_integer", 3)
         assert(val3 == 300, "Element 3 should be unchanged at 300")
     )");
 
     // Verify from C++ side
-    EXPECT_EQ(*db.read_scalar_integers_by_id("Collection", "some_integer", 1), 100);
-    EXPECT_EQ(*db.read_scalar_integers_by_id("Collection", "some_integer", 2), 999);
-    EXPECT_EQ(*db.read_scalar_integers_by_id("Collection", "some_integer", 3), 300);
+    EXPECT_EQ(*db.read_scalar_integer_by_id("Collection", "some_integer", 1), 100);
+    EXPECT_EQ(*db.read_scalar_integer_by_id("Collection", "some_integer", 2), 999);
+    EXPECT_EQ(*db.read_scalar_integer_by_id("Collection", "some_integer", 3), 300);
 }
 
 TEST_F(LuaRunnerTest, UpdateElementWithArraysFromLua) {
@@ -631,7 +631,7 @@ TEST_F(LuaRunnerTest, UpdateElementWithArraysFromLua) {
         db:update_element("Collection", 1, { some_integer = 999, value_int = {7, 8, 9} })
 
         -- Verify scalar was updated
-        local integer_val = db:read_scalar_integers_by_id("Collection", "some_integer", 1)
+        local integer_val = db:read_scalar_integer_by_id("Collection", "some_integer", 1)
         assert(integer_val == 999, "Scalar should be updated to 999")
 
         -- Verify vector was also updated
@@ -643,7 +643,7 @@ TEST_F(LuaRunnerTest, UpdateElementWithArraysFromLua) {
     )");
 
     // Verify from C++ side
-    auto integer_value = db.read_scalar_integers_by_id("Collection", "some_integer", 1);
+    auto integer_value = db.read_scalar_integer_by_id("Collection", "some_integer", 1);
     EXPECT_TRUE(integer_value.has_value());
     EXPECT_EQ(*integer_value, 999);
 

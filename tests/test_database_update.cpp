@@ -18,7 +18,7 @@ TEST(Database, UpdateScalarInteger) {
 
     db.update_scalar_integer("Configuration", "integer_attribute", id, 100);
 
-    auto val = db.read_scalar_integers_by_id("Configuration", "integer_attribute", id);
+    auto val = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id);
     EXPECT_TRUE(val.has_value());
     EXPECT_EQ(*val, 100);
 }
@@ -33,7 +33,7 @@ TEST(Database, UpdateScalarFloat) {
 
     db.update_scalar_float("Configuration", "float_attribute", id, 2.71);
 
-    auto val = db.read_scalar_floats_by_id("Configuration", "float_attribute", id);
+    auto val = db.read_scalar_float_by_id("Configuration", "float_attribute", id);
     EXPECT_TRUE(val.has_value());
     EXPECT_DOUBLE_EQ(*val, 2.71);
 }
@@ -48,7 +48,7 @@ TEST(Database, UpdateScalarString) {
 
     db.update_scalar_string("Configuration", "string_attribute", id, "world");
 
-    auto val = db.read_scalar_strings_by_id("Configuration", "string_attribute", id);
+    auto val = db.read_scalar_string_by_id("Configuration", "string_attribute", id);
     EXPECT_TRUE(val.has_value());
     EXPECT_EQ(*val, "world");
 }
@@ -69,12 +69,12 @@ TEST(Database, UpdateScalarMultipleElements) {
     db.update_scalar_integer("Configuration", "integer_attribute", id1, 999);
 
     // Verify first element changed
-    auto val1 = db.read_scalar_integers_by_id("Configuration", "integer_attribute", id1);
+    auto val1 = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id1);
     EXPECT_TRUE(val1.has_value());
     EXPECT_EQ(*val1, 999);
 
     // Verify second element unchanged
-    auto val2 = db.read_scalar_integers_by_id("Configuration", "integer_attribute", id2);
+    auto val2 = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id2);
     EXPECT_TRUE(val2.has_value());
     EXPECT_EQ(*val2, 100);
 }
@@ -252,12 +252,12 @@ TEST(Database, UpdateElementSingleScalar) {
     update.set("integer_attribute", int64_t{100});
     db.update_element("Configuration", id, update);
 
-    auto val = db.read_scalar_integers_by_id("Configuration", "integer_attribute", id);
+    auto val = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id);
     EXPECT_TRUE(val.has_value());
     EXPECT_EQ(*val, 100);
 
     // Verify label unchanged
-    auto label = db.read_scalar_strings_by_id("Configuration", "label", id);
+    auto label = db.read_scalar_string_by_id("Configuration", "label", id);
     EXPECT_TRUE(label.has_value());
     EXPECT_EQ(*label, "Config 1");
 }
@@ -280,20 +280,20 @@ TEST(Database, UpdateElementMultipleScalars) {
         .set("string_attribute", std::string("world"));
     db.update_element("Configuration", id, update);
 
-    auto integer_val = db.read_scalar_integers_by_id("Configuration", "integer_attribute", id);
+    auto integer_val = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id);
     EXPECT_TRUE(integer_val.has_value());
     EXPECT_EQ(*integer_val, 100);
 
-    auto float_val = db.read_scalar_floats_by_id("Configuration", "float_attribute", id);
+    auto float_val = db.read_scalar_float_by_id("Configuration", "float_attribute", id);
     EXPECT_TRUE(float_val.has_value());
     EXPECT_DOUBLE_EQ(*float_val, 2.71);
 
-    auto str_val = db.read_scalar_strings_by_id("Configuration", "string_attribute", id);
+    auto str_val = db.read_scalar_string_by_id("Configuration", "string_attribute", id);
     EXPECT_TRUE(str_val.has_value());
     EXPECT_EQ(*str_val, "world");
 
     // Verify label unchanged
-    auto label = db.read_scalar_strings_by_id("Configuration", "label", id);
+    auto label = db.read_scalar_string_by_id("Configuration", "label", id);
     EXPECT_TRUE(label.has_value());
     EXPECT_EQ(*label, "Config 1");
 }
@@ -316,12 +316,12 @@ TEST(Database, UpdateElementOtherElementsUnchanged) {
     db.update_element("Configuration", id1, update);
 
     // Verify first element changed
-    auto val1 = db.read_scalar_integers_by_id("Configuration", "integer_attribute", id1);
+    auto val1 = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id1);
     EXPECT_TRUE(val1.has_value());
     EXPECT_EQ(*val1, 999);
 
     // Verify second element unchanged
-    auto val2 = db.read_scalar_integers_by_id("Configuration", "integer_attribute", id2);
+    auto val2 = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id2);
     EXPECT_TRUE(val2.has_value());
     EXPECT_EQ(*val2, 100);
 }
@@ -344,7 +344,7 @@ TEST(Database, UpdateElementWithArrays) {
     db.update_element("Collection", id, update);
 
     // Verify scalar was updated
-    auto integer_val = db.read_scalar_integers_by_id("Collection", "some_integer", id);
+    auto integer_val = db.read_scalar_integer_by_id("Collection", "some_integer", id);
     EXPECT_TRUE(integer_val.has_value());
     EXPECT_EQ(*integer_val, 42);
 
@@ -376,7 +376,7 @@ TEST(Database, UpdateElementWithSetOnly) {
     EXPECT_EQ(set, (std::vector<std::string>{"new_tag1", "new_tag2"}));
 
     // Verify label unchanged
-    auto label = db.read_scalar_strings_by_id("Collection", "label", id);
+    auto label = db.read_scalar_string_by_id("Collection", "label", id);
     EXPECT_TRUE(label.has_value());
     EXPECT_EQ(*label, "Item 1");
 }
@@ -575,7 +575,7 @@ TEST(Database, UpdateDateTimeScalar) {
 
     db.update_scalar_string("Configuration", "date_attribute", id, "2024-03-17T09:00:00");
 
-    auto date = db.read_scalar_strings_by_id("Configuration", "date_attribute", id);
+    auto date = db.read_scalar_string_by_id("Configuration", "date_attribute", id);
     EXPECT_TRUE(date.has_value());
     EXPECT_EQ(date.value(), "2024-03-17T09:00:00");
 }

@@ -63,11 +63,11 @@ public:
 
     // Read scalar attributes (by element ID)
     std::optional<int64_t>
-    read_scalar_integers_by_id(const std::string& collection, const std::string& attribute, int64_t id);
+    read_scalar_integer_by_id(const std::string& collection, const std::string& attribute, int64_t id);
     std::optional<double>
-    read_scalar_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id);
+    read_scalar_float_by_id(const std::string& collection, const std::string& attribute, int64_t id);
     std::optional<std::string>
-    read_scalar_strings_by_id(const std::string& collection, const std::string& attribute, int64_t id);
+    read_scalar_string_by_id(const std::string& collection, const std::string& attribute, int64_t id);
 
     // Read vector attributes (all elements)
     std::vector<std::vector<int64_t>> read_vector_integers(const std::string& collection, const std::string& attribute);
@@ -107,6 +107,27 @@ public:
     std::vector<ScalarMetadata> list_scalar_attributes(const std::string& collection) const;
     std::vector<VectorMetadata> list_vector_groups(const std::string& collection) const;
     std::vector<SetMetadata> list_set_groups(const std::string& collection) const;
+    std::vector<TimeSeriesMetadata> list_time_series_groups(const std::string& collection) const;
+
+    // Time series metadata
+    TimeSeriesMetadata get_time_series_metadata(const std::string& collection, const std::string& group_name) const;
+
+    // Read time series group - returns rows with date_time and value columns
+    std::vector<std::map<std::string, Value>>
+    read_time_series_group_by_id(const std::string& collection, const std::string& group, int64_t id);
+
+    // Update time series group - replaces all rows for element
+    void update_time_series_group(const std::string& collection,
+                                  const std::string& group,
+                                  int64_t id,
+                                  const std::vector<std::map<std::string, Value>>& rows);
+
+    // Time series files - singleton table storing file paths for external time series data
+    bool has_time_series_files(const std::string& collection) const;
+    std::vector<std::string> list_time_series_files_columns(const std::string& collection) const;
+    std::map<std::string, std::optional<std::string>> read_time_series_files(const std::string& collection);
+    void update_time_series_files(const std::string& collection,
+                                  const std::map<std::string, std::optional<std::string>>& paths);
 
     // Update scalar attributes (by element ID)
     void update_scalar_integer(const std::string& collection, const std::string& attribute, int64_t id, int64_t value);

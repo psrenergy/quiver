@@ -31,6 +31,12 @@ struct QUIVER_API SetMetadata {
     std::vector<ScalarMetadata> value_columns;
 };
 
+struct QUIVER_API TimeSeriesMetadata {
+    std::string group_name;
+    std::string dimension_column;               // The ordering column (e.g., "date_time")
+    std::vector<ScalarMetadata> value_columns;  // Excludes id and dimension column
+};
+
 }  // namespace quiver
 
 #endif  // QUIVER_ATTRIBUTE_METADATA_H
