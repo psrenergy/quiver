@@ -573,10 +573,12 @@ function read_time_series_group_by_id(db::Database, collection::String, group::S
     out_values = Ref{Ptr{Cdouble}}(C_NULL)
     out_row_count = Ref{Csize_t}(0)
 
-    check(C.quiver_database_read_time_series_group_by_id(
-        db.ptr, collection, group, id,
-        out_date_times, out_values, out_row_count,
-    ))
+    check(
+        C.quiver_database_read_time_series_group_by_id(
+            db.ptr, collection, group, id,
+            out_date_times, out_values, out_row_count,
+        ),
+    )
 
     row_count = out_row_count[]
     if row_count == 0 || out_date_times[] == C_NULL

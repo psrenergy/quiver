@@ -110,15 +110,17 @@ function query_string(db::Database, sql::String, params::Vector)
     out_value = Ref{Ptr{Cchar}}(C_NULL)
     out_has_value = Ref{Cint}(0)
 
-    check(C.quiver_database_query_string_params(
-        db.ptr,
-        sql,
-        param_types,
-        param_values,
-        length(params),
-        out_value,
-        out_has_value,
-    ))
+    check(
+        C.quiver_database_query_string_params(
+            db.ptr,
+            sql,
+            param_types,
+            param_values,
+            length(params),
+            out_value,
+            out_has_value,
+        ),
+    )
 
     if out_has_value[] == 0 || out_value[] == C_NULL
         return nothing
@@ -139,15 +141,17 @@ function query_integer(db::Database, sql::String, params::Vector)
     out_value = Ref{Int64}(0)
     out_has_value = Ref{Cint}(0)
 
-    check(C.quiver_database_query_integer_params(
-        db.ptr,
-        sql,
-        param_types,
-        param_values,
-        length(params),
-        out_value,
-        out_has_value,
-    ))
+    check(
+        C.quiver_database_query_integer_params(
+            db.ptr,
+            sql,
+            param_types,
+            param_values,
+            length(params),
+            out_value,
+            out_has_value,
+        ),
+    )
 
     if out_has_value[] == 0
         return nothing
@@ -166,15 +170,17 @@ function query_float(db::Database, sql::String, params::Vector)
     out_value = Ref{Float64}(0.0)
     out_has_value = Ref{Cint}(0)
 
-    check(C.quiver_database_query_float_params(
-        db.ptr,
-        sql,
-        param_types,
-        param_values,
-        length(params),
-        out_value,
-        out_has_value,
-    ))
+    check(
+        C.quiver_database_query_float_params(
+            db.ptr,
+            sql,
+            param_types,
+            param_values,
+            length(params),
+            out_value,
+            out_has_value,
+        ),
+    )
 
     if out_has_value[] == 0
         return nothing

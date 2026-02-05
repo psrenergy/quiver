@@ -43,27 +43,31 @@ function update_vector_integers!(
     values::Vector{<:Integer},
 )
     integer_values = Int64[Int64(v) for v in values]
-    check(C.quiver_database_update_vector_integers(
-        db.ptr,
-        collection,
-        attribute,
-        id,
-        integer_values,
-        Csize_t(length(integer_values)),
-    ))
+    check(
+        C.quiver_database_update_vector_integers(
+            db.ptr,
+            collection,
+            attribute,
+            id,
+            integer_values,
+            Csize_t(length(integer_values)),
+        ),
+    )
     return nothing
 end
 
 function update_vector_floats!(db::Database, collection::String, attribute::String, id::Int64, values::Vector{<:Real})
     float_values = Float64[Float64(v) for v in values]
-    check(C.quiver_database_update_vector_floats(
-        db.ptr,
-        collection,
-        attribute,
-        id,
-        float_values,
-        Csize_t(length(float_values)),
-    ))
+    check(
+        C.quiver_database_update_vector_floats(
+            db.ptr,
+            collection,
+            attribute,
+            id,
+            float_values,
+            Csize_t(length(float_values)),
+        ),
+    )
     return nothing
 end
 
@@ -86,27 +90,31 @@ end
 
 function update_set_integers!(db::Database, collection::String, attribute::String, id::Int64, values::Vector{<:Integer})
     integer_values = Int64[Int64(v) for v in values]
-    check(C.quiver_database_update_set_integers(
-        db.ptr,
-        collection,
-        attribute,
-        id,
-        integer_values,
-        Csize_t(length(integer_values)),
-    ))
+    check(
+        C.quiver_database_update_set_integers(
+            db.ptr,
+            collection,
+            attribute,
+            id,
+            integer_values,
+            Csize_t(length(integer_values)),
+        ),
+    )
     return nothing
 end
 
 function update_set_floats!(db::Database, collection::String, attribute::String, id::Int64, values::Vector{<:Real})
     float_values = Float64[Float64(v) for v in values]
-    check(C.quiver_database_update_set_floats(
-        db.ptr,
-        collection,
-        attribute,
-        id,
-        float_values,
-        Csize_t(length(float_values)),
-    ))
+    check(
+        C.quiver_database_update_set_floats(
+            db.ptr,
+            collection,
+            attribute,
+            id,
+            float_values,
+            Csize_t(length(float_values)),
+        ),
+    )
     return nothing
 end
 
@@ -148,10 +156,12 @@ function update_time_series_group!(
     values = Float64[Float64(row["value"]) for row in rows]
 
     GC.@preserve date_time_cstrings begin
-        check(C.quiver_database_update_time_series_group(
-            db.ptr, collection, group, id,
-            date_time_ptrs, values, Csize_t(row_count),
-        ))
+        check(
+            C.quiver_database_update_time_series_group(
+                db.ptr, collection, group, id,
+                date_time_ptrs, values, Csize_t(row_count),
+            ),
+        )
     end
     return nothing
 end
