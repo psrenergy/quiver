@@ -27,7 +27,7 @@ TEST_F(LuaRunnerCApiTest, CreateAndDestroy) {
 }
 
 TEST_F(LuaRunnerCApiTest, FreeNull) {
-    quiver_lua_runner_free(nullptr);
+    EXPECT_EQ(quiver_lua_runner_free(nullptr), QUIVER_OK);
 }
 
 TEST_F(LuaRunnerCApiTest, CreateWithNullDb) {
@@ -120,7 +120,8 @@ TEST_F(LuaRunnerCApiTest, SyntaxError) {
     auto result = quiver_lua_runner_run(lua, "invalid lua syntax !!!");
     EXPECT_NE(result, QUIVER_OK);
 
-    auto error = quiver_lua_runner_get_error(lua);
+    const char* error = nullptr;
+    ASSERT_EQ(quiver_lua_runner_get_error(lua, &error), QUIVER_OK);
     EXPECT_NE(error, nullptr);
 
     quiver_lua_runner_free(lua);
@@ -141,7 +142,8 @@ TEST_F(LuaRunnerCApiTest, RuntimeError) {
     auto result = quiver_lua_runner_run(lua, "error('This is a runtime error')");
     EXPECT_NE(result, QUIVER_OK);
 
-    auto error = quiver_lua_runner_get_error(lua);
+    const char* error = nullptr;
+    ASSERT_EQ(quiver_lua_runner_get_error(lua, &error), QUIVER_OK);
     EXPECT_NE(error, nullptr);
 
     quiver_lua_runner_free(lua);
@@ -149,8 +151,8 @@ TEST_F(LuaRunnerCApiTest, RuntimeError) {
 }
 
 TEST_F(LuaRunnerCApiTest, GetErrorNull) {
-    auto error = quiver_lua_runner_get_error(nullptr);
-    EXPECT_EQ(error, nullptr);
+    const char* error = nullptr;
+    EXPECT_EQ(quiver_lua_runner_get_error(nullptr, &error), QUIVER_ERROR_INVALID_ARGUMENT);
 }
 
 TEST_F(LuaRunnerCApiTest, ReuseRunner) {
@@ -194,7 +196,7 @@ TEST_F(LuaRunnerCApiTest, ReadScalarIntegers) {
     quiver_element_set_string(config, "label", "Config");
     int64_t tmp_id1 = 0;
     quiver_database_create_element(db, "Configuration", config, &tmp_id1);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     quiver_element_t* elem = nullptr;
     ASSERT_EQ(quiver_element_create(&elem), QUIVER_OK);
@@ -202,7 +204,7 @@ TEST_F(LuaRunnerCApiTest, ReadScalarIntegers) {
     quiver_element_set_integer(elem, "some_integer", 100);
     int64_t tmp_id2 = 0;
     quiver_database_create_element(db, "Collection", elem, &tmp_id2);
-    quiver_element_destroy(elem);
+    EXPECT_EQ(quiver_element_destroy(elem), QUIVER_OK);
 
     quiver_lua_runner_t* lua = nullptr;
     ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
@@ -378,7 +380,8 @@ TEST_F(LuaRunnerCApiTest, AssertionFailure) {
     auto result = quiver_lua_runner_run(lua, "assert(false, 'Test assertion failure')");
     EXPECT_NE(result, QUIVER_OK);
 
-    auto error = quiver_lua_runner_get_error(lua);
+    const char* error = nullptr;
+    ASSERT_EQ(quiver_lua_runner_get_error(lua, &error), QUIVER_OK);
     EXPECT_NE(error, nullptr);
     EXPECT_NE(std::string(error).find("assertion"), std::string::npos);
 
@@ -400,7 +403,8 @@ TEST_F(LuaRunnerCApiTest, UndefinedVariableError) {
     auto result = quiver_lua_runner_run(lua, "local x = undefined_variable + 1");
     EXPECT_NE(result, QUIVER_OK);
 
-    auto error = quiver_lua_runner_get_error(lua);
+    const char* error = nullptr;
+    ASSERT_EQ(quiver_lua_runner_get_error(lua, &error), QUIVER_OK);
     EXPECT_NE(error, nullptr);
 
     quiver_lua_runner_free(lua);
@@ -421,7 +425,8 @@ TEST_F(LuaRunnerCApiTest, ErrorClearedAfterSuccessfulRun) {
     // First, run a failing script
     auto result = quiver_lua_runner_run(lua, "invalid lua syntax !!!");
     EXPECT_NE(result, QUIVER_OK);
-    auto error1 = quiver_lua_runner_get_error(lua);
+    const char* error1 = nullptr;
+    ASSERT_EQ(quiver_lua_runner_get_error(lua, &error1), QUIVER_OK);
     EXPECT_NE(error1, nullptr);
 
     // Now run a successful script

@@ -23,7 +23,7 @@ TEST(DatabaseCApi, CreateElementWithScalars) {
     EXPECT_EQ(quiver_database_create_element(db, "Configuration", element, &id), QUIVER_OK);
     EXPECT_EQ(id, 1);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     quiver_database_close(db);
 }
 
@@ -43,7 +43,7 @@ TEST(DatabaseCApi, CreateElementWithVector) {
     quiver_element_set_string(config, "label", "Test Config");
     int64_t config_id = 0;
     quiver_database_create_element(db, "Configuration", config, &config_id);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     // Create Collection with vector
     quiver_element_t* element = nullptr;
@@ -58,7 +58,7 @@ TEST(DatabaseCApi, CreateElementWithVector) {
     EXPECT_EQ(quiver_database_create_element(db, "Collection", element, &id), QUIVER_OK);
     EXPECT_EQ(id, 1);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     quiver_database_close(db);
 }
 
@@ -71,7 +71,7 @@ TEST(DatabaseCApi, CreateElementNullDb) {
     int64_t id = 0;
     EXPECT_EQ(quiver_database_create_element(nullptr, "Plant", element, &id), QUIVER_ERROR_INVALID_ARGUMENT);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(DatabaseCApi, CreateElementNullCollection) {
@@ -89,7 +89,7 @@ TEST(DatabaseCApi, CreateElementNullCollection) {
     int64_t id = 0;
     EXPECT_EQ(quiver_database_create_element(db, nullptr, element, &id), QUIVER_ERROR_INVALID_ARGUMENT);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     quiver_database_close(db);
 }
 
@@ -130,6 +130,6 @@ TEST(DatabaseCApi, CreateElementWithDatetime) {
     EXPECT_STREQ(out_values[0], "2024-03-15T14:30:45");
 
     quiver_free_string_array(out_values, out_count);
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     quiver_database_close(db);
 }

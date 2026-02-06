@@ -57,12 +57,12 @@ TEST_F(TempFileFixture, MoveAssignment) {
 }
 
 TEST_F(TempFileFixture, LogLevelDebug) {
-    quiver::Database db(":memory:", {.console_level = quiver::LogLevel::debug});
+    quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_DEBUG});
     EXPECT_TRUE(db.is_healthy());
 }
 
 TEST_F(TempFileFixture, LogLevelOff) {
-    quiver::Database db(":memory:", {.console_level = quiver::LogLevel::off});
+    quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
     EXPECT_TRUE(db.is_healthy());
 }
 
@@ -75,7 +75,7 @@ TEST_F(TempFileFixture, CreatesFileOnDisk) {
 }
 
 TEST_F(TempFileFixture, CurrentVersion) {
-    quiver::Database db(":memory:", {.console_level = quiver::LogLevel::off});
+    quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
     EXPECT_EQ(db.current_version(), 0);
 }
 
@@ -85,18 +85,18 @@ TEST_F(TempFileFixture, CurrentVersion) {
 
 TEST_F(TempFileFixture, FromSchemaFileNotFound) {
     EXPECT_THROW(quiver::Database::from_schema(
-                     ":memory:", "nonexistent/path/schema.sql", {.console_level = quiver::LogLevel::off}),
+                     ":memory:", "nonexistent/path/schema.sql", {.read_only = 0, .console_level = QUIVER_LOG_OFF}),
                  std::runtime_error);
 }
 
 TEST_F(TempFileFixture, FromSchemaInvalidPath) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", "", {.console_level = quiver::LogLevel::off}),
+    EXPECT_THROW(quiver::Database::from_schema(":memory:", "", {.read_only = 0, .console_level = QUIVER_LOG_OFF}),
                  std::runtime_error);
 }
 
 TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
     EXPECT_THROW(quiver::Database::from_migrations(
-                     ":memory:", "nonexistent/migrations/", {.console_level = quiver::LogLevel::off}),
+                     ":memory:", "nonexistent/migrations/", {.read_only = 0, .console_level = QUIVER_LOG_OFF}),
                  std::runtime_error);
 }
 
@@ -308,12 +308,12 @@ TEST_F(MigrationFixture, FromMigrationsLoadsSchemaMetadata) {
     auto db = quiver::Database::from_migrations(":memory:", migrations_path);
 
     // list_scalar_attributes requires schema to be loaded
-    auto attrs = db.list_scalar_attributes("Test1");
-    EXPECT_FALSE(attrs.empty());
+    auto attributes = db.list_scalar_attributes("Test1");
+    EXPECT_FALSE(attributes.empty());
 
     // Verify expected columns exist
     bool has_id = false, has_label = false, has_name = false;
-    for (const auto& attribute : attrs) {
+    for (const auto& attribute : attributes) {
         if (attribute.name == "id")
             has_id = true;
         if (attribute.name == "label")
@@ -362,8 +362,8 @@ TEST_F(MigrationFixture, FromMigrationsLoadsSchemaWhenAlreadyUpToDate) {
     auto db = quiver::Database::from_migrations(path, migrations_path);
 
     // Schema should be loaded even though no migrations were applied
-    auto attrs = db.list_scalar_attributes("Test3");
-    EXPECT_FALSE(attrs.empty());
+    auto attributes = db.list_scalar_attributes("Test3");
+    EXPECT_FALSE(attributes.empty());
 
     // Verify we can create elements
     auto id = db.create_element("Test3", quiver::Element().set("label", "item1").set("capacity", int64_t{42}));

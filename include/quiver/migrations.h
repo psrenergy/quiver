@@ -5,7 +5,6 @@
 #include "quiver/migration.h"
 
 #include <cstddef>
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -15,13 +14,6 @@ class QUIVER_API Migrations {
 public:
     Migrations();
     explicit Migrations(const std::string& path);
-    ~Migrations();
-
-    // Copy and move
-    Migrations(const Migrations& other);
-    Migrations& operator=(const Migrations& other);
-    Migrations(Migrations&& other) noexcept;
-    Migrations& operator=(Migrations&& other) noexcept;
 
     // Access all migrations (sorted by version)
     const std::vector<Migration>& all() const;
@@ -44,8 +36,7 @@ public:
     iterator end() const;
 
 private:
-    struct Impl;
-    std::unique_ptr<Impl> impl_;
+    std::vector<Migration> versions_;
 };
 
 }  // namespace quiver

@@ -90,7 +90,7 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupById) {
     quiver_element_set_string(config, "label", "Test Config");
     int64_t tmp_id = 0;
     quiver_database_create_element(db, "Configuration", config, &tmp_id);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     // Create element
     quiver_element_t* e1 = nullptr;
@@ -98,7 +98,7 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupById) {
     quiver_element_set_string(e1, "label", "Item 1");
     int64_t id = 0;
     quiver_database_create_element(db, "Collection", e1, &id);
-    quiver_element_destroy(e1);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
     // Insert time series data
     const char* date_times[] = {"2024-01-01T10:00:00", "2024-01-01T11:00:00", "2024-01-01T12:00:00"};
@@ -140,7 +140,7 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupByIdEmpty) {
     quiver_element_set_string(config, "label", "Test Config");
     int64_t tmp_id = 0;
     quiver_database_create_element(db, "Configuration", config, &tmp_id);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     // Create element
     quiver_element_t* e1 = nullptr;
@@ -148,7 +148,7 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupByIdEmpty) {
     quiver_element_set_string(e1, "label", "Item 1");
     int64_t id = 0;
     quiver_database_create_element(db, "Collection", e1, &id);
-    quiver_element_destroy(e1);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
     // Read without inserting data
     char** out_date_times = nullptr;
@@ -183,7 +183,7 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroup) {
     quiver_element_set_string(config, "label", "Test Config");
     int64_t tmp_id = 0;
     quiver_database_create_element(db, "Configuration", config, &tmp_id);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     // Create element
     quiver_element_t* e1 = nullptr;
@@ -191,7 +191,7 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroup) {
     quiver_element_set_string(e1, "label", "Item 1");
     int64_t id = 0;
     quiver_database_create_element(db, "Collection", e1, &id);
-    quiver_element_destroy(e1);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
     // Insert initial data
     const char* date_times1[] = {"2024-01-01T10:00:00"};
@@ -235,7 +235,7 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupClear) {
     quiver_element_set_string(config, "label", "Test Config");
     int64_t tmp_id = 0;
     quiver_database_create_element(db, "Configuration", config, &tmp_id);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     // Create element
     quiver_element_t* e1 = nullptr;
@@ -243,7 +243,7 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupClear) {
     quiver_element_set_string(e1, "label", "Item 1");
     int64_t id = 0;
     quiver_database_create_element(db, "Collection", e1, &id);
-    quiver_element_destroy(e1);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
     // Insert data
     const char* date_times[] = {"2024-01-01T10:00:00"};

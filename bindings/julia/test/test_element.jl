@@ -69,6 +69,17 @@ include("fixture.jl")
         Quiver.destroy!(el)
     end
 
+    @testset "Clear Element" begin
+        el = Quiver.Element()
+        el["label"] = "Test"
+        el["value"] = 42
+        Quiver.clear!(el)
+        # After clear, element can be reused with new values
+        el["label"] = "Reused"
+        Quiver.destroy!(el)
+        @test true
+    end
+
     @testset "Create Element with Builder" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
         db = Quiver.from_schema(":memory:", path_schema)

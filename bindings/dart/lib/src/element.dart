@@ -235,13 +235,13 @@ class Element {
   /// Clears all values from this element.
   void clear() {
     _ensureNotDisposed();
-    bindings.quiver_element_clear(_ptr);
+    check(bindings.quiver_element_clear(_ptr));
   }
 
   /// Frees the native memory associated with this element.
   void dispose() {
     if (_isDisposed) return;
-    bindings.quiver_element_destroy(_ptr);
+    check(bindings.quiver_element_destroy(_ptr));
     _isDisposed = true;
   }
 }

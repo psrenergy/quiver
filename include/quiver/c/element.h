@@ -12,8 +12,8 @@ typedef struct quiver_element quiver_element_t;
 
 // Element builder
 QUIVER_C_API quiver_error_t quiver_element_create(quiver_element_t** out_element);
-QUIVER_C_API void quiver_element_destroy(quiver_element_t* element);
-QUIVER_C_API void quiver_element_clear(quiver_element_t* element);
+QUIVER_C_API quiver_error_t quiver_element_destroy(quiver_element_t* element);
+QUIVER_C_API quiver_error_t quiver_element_clear(quiver_element_t* element);
 
 // Scalar setters
 QUIVER_C_API quiver_error_t quiver_element_set_integer(quiver_element_t* element, const char* name, int64_t value);
@@ -43,7 +43,7 @@ QUIVER_C_API quiver_error_t quiver_element_array_count(quiver_element_t* element
 
 // Pretty print (caller must free returned string with quiver_string_free)
 QUIVER_C_API quiver_error_t quiver_element_to_string(quiver_element_t* element, char** out_string);
-QUIVER_C_API void quiver_string_free(char* str);
+QUIVER_C_API quiver_error_t quiver_string_free(char* str);
 
 #ifdef __cplusplus
 }

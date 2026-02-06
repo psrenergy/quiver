@@ -14,10 +14,9 @@ struct quiver_lua_runner {
 };
 
 quiver_error_t quiver_lua_runner_new(quiver_database_t* db, quiver_lua_runner_t** out_runner) {
-    if (!db || !out_runner) {
-        quiver_set_last_error("Null argument");
-        return QUIVER_ERROR_INVALID_ARGUMENT;
-    }
+    QUIVER_REQUIRE(db);
+    QUIVER_REQUIRE(out_runner);
+
     try {
         *out_runner = new quiver_lua_runner(db->db);
         return QUIVER_OK;
@@ -30,14 +29,15 @@ quiver_error_t quiver_lua_runner_new(quiver_database_t* db, quiver_lua_runner_t*
     }
 }
 
-void quiver_lua_runner_free(quiver_lua_runner_t* runner) {
+quiver_error_t quiver_lua_runner_free(quiver_lua_runner_t* runner) {
     delete runner;
+    return QUIVER_OK;
 }
 
 quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, const char* script) {
-    if (!runner || !script) {
-        return QUIVER_ERROR_INVALID_ARGUMENT;
-    }
+    QUIVER_REQUIRE(runner);
+    QUIVER_REQUIRE(script);
+
     try {
         runner->last_error.clear();
         runner->runner.run(script);
@@ -51,9 +51,9 @@ quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, const char* sc
     }
 }
 
-const char* quiver_lua_runner_get_error(quiver_lua_runner_t* runner) {
-    if (!runner || runner->last_error.empty()) {
-        return nullptr;
-    }
-    return runner->last_error.c_str();
+quiver_error_t quiver_lua_runner_get_error(quiver_lua_runner_t* runner, const char** out_error) {
+    QUIVER_REQUIRE(runner);
+    QUIVER_REQUIRE(out_error);
+    *out_error = runner->last_error.empty() ? nullptr : runner->last_error.c_str();
+    return QUIVER_OK;
 }

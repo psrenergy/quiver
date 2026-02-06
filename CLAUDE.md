@@ -10,6 +10,7 @@ include/quiver/           # C++ public headers
   element.h               # Element builder for create operations
   lua_runner.h            # Lua scripting support
 include/quiver/c/         # C API headers (for FFI)
+  options.h               # Canonical DatabaseOptions/LogLevel types (shared by C++ and C)
   database.h
   element.h
   lua_runner.h
@@ -25,7 +26,7 @@ tests/schemas/            # Shared SQL schemas for all tests
 
 - **Human-Centric**: Codebase optimized for human readability, not machine parsing
 - **Status**: WIP project - breaking changes acceptable, no backwards compatibility required
-- **ABI Stability**: Verify correct usage of Pimpl idiom
+- **ABI Stability**: Use Pimpl only when hiding private dependencies; plain value types use Rule of Zero
 - **Target Standard**: C++20 - use modern language features where they simplify logic
 - **Philosophy**: Clean code over defensive code (assume callers obey contracts, avoid excessive null checks). Simple solutions over complex abstractions. Delete unused code, do not deprecate.
 - **Intelligence**: Logic resides in C++ layer. Bindings/wrappers remain thin.
@@ -76,8 +77,8 @@ All test schemas located in `tests/schemas/valid/` and `tests/schemas/invalid/`.
 
 ## C++ Patterns
 
-### Pimpl
-All implementation in `Database::Impl`, public header hides dependencies:
+### Pimpl vs Value Types
+Pimpl is used only for classes that hide private dependencies (e.g., `Database`, `LuaRunner` hide sqlite3/lua headers):
 ```cpp
 // database.h (public)
 class Database {
@@ -91,6 +92,8 @@ struct Database::Impl {
     // all implementation details
 };
 ```
+
+Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor).
 
 ### Transactions
 Use `Impl::TransactionGuard` RAII or `impl_->with_transaction(lambda)`:
@@ -141,7 +144,7 @@ static Database from_migrations(const std::string& path, const std::vector<std::
 
 ### Return Codes
 All C API functions return `quiver_error_t`. Values are returned via output parameters.
-Exceptions: free/destroy functions (void), error/version utilities (direct return), and `quiver_database_options_default` (struct by value).
+Exceptions: `quiver_get_last_error`, `quiver_error_string`, `quiver_version`, `quiver_clear_last_error`, `quiver_database_options_default` (utility functions with direct return).
 
 ### Error Handling
 Try-catch with `quiver_set_last_error()`, return codes:

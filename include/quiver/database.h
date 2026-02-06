@@ -3,8 +3,8 @@
 
 #include "export.h"
 #include "quiver/attribute_metadata.h"
+#include "quiver/c/options.h"
 #include "quiver/element.h"
-#include "quiver/log_level.h"
 #include "quiver/result.h"
 
 #include <memory>
@@ -14,14 +14,15 @@
 
 namespace quiver {
 
-struct QUIVER_API DatabaseOptions {
-    bool read_only = false;
-    LogLevel console_level = LogLevel::info;
-};
+using DatabaseOptions = quiver_database_options_t;
+
+inline DatabaseOptions default_database_options() {
+    return {0, QUIVER_LOG_INFO};
+}
 
 class QUIVER_API Database {
 public:
-    explicit Database(const std::string& path, const DatabaseOptions& options = DatabaseOptions());
+    explicit Database(const std::string& path, const DatabaseOptions& options = default_database_options());
     ~Database();
 
     // Non-copyable
@@ -34,11 +35,11 @@ public:
 
     static Database from_migrations(const std::string& db_path,
                                     const std::string& migrations_path,
-                                    const DatabaseOptions& options = DatabaseOptions());
+                                    const DatabaseOptions& options = default_database_options());
 
     static Database from_schema(const std::string& db_path,
                                 const std::string& schema_path,
-                                const DatabaseOptions& options = DatabaseOptions());
+                                const DatabaseOptions& options = default_database_options());
     bool is_healthy() const;
 
     int64_t current_version() const;

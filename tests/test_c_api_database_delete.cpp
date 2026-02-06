@@ -17,7 +17,7 @@ TEST(DatabaseCApi, DeleteElementById) {
     quiver_element_set_integer(e, "integer_attribute", 42);
     int64_t id = 0;
     quiver_database_create_element(db, "Configuration", e, &id);
-    quiver_element_destroy(e);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
     // Verify element exists
     int64_t* ids = nullptr;
@@ -53,7 +53,7 @@ TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
     quiver_element_set_string(config, "label", "Test Config");
     int64_t _id = 0;
     quiver_database_create_element(db, "Configuration", config, &_id);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     quiver_element_t* e = nullptr;
     ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
@@ -62,7 +62,7 @@ TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
     quiver_element_set_array_integer(e, "value_int", values, 3);
     int64_t id = 0;
     quiver_database_create_element(db, "Collection", e, &id);
-    quiver_element_destroy(e);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
     // Verify vector data exists
     int64_t* vec_values = nullptr;
@@ -109,7 +109,7 @@ TEST(DatabaseCApi, DeleteElementByIdWithSetData) {
     quiver_element_set_string(config, "label", "Test Config");
     int64_t _id = 0;
     quiver_database_create_element(db, "Configuration", config, &_id);
-    quiver_element_destroy(config);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     quiver_element_t* e = nullptr;
     ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
@@ -118,7 +118,7 @@ TEST(DatabaseCApi, DeleteElementByIdWithSetData) {
     quiver_element_set_array_string(e, "tag", tags, 2);
     int64_t id = 0;
     quiver_database_create_element(db, "Collection", e, &id);
-    quiver_element_destroy(e);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
     // Verify set data exists
     char** set_values = nullptr;
@@ -165,7 +165,7 @@ TEST(DatabaseCApi, DeleteElementByIdNonExistent) {
     quiver_element_set_integer(e, "integer_attribute", 42);
     int64_t _id = 0;
     quiver_database_create_element(db, "Configuration", e, &_id);
-    quiver_element_destroy(e);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
     // Delete non-existent ID - should succeed silently (SQL DELETE is idempotent)
     auto err = quiver_database_delete_element_by_id(db, "Configuration", 999);
@@ -195,7 +195,7 @@ TEST(DatabaseCApi, DeleteElementByIdOtherElementsUnchanged) {
     quiver_element_set_integer(e1, "integer_attribute", 42);
     int64_t id1 = 0;
     quiver_database_create_element(db, "Configuration", e1, &id1);
-    quiver_element_destroy(e1);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
     quiver_element_t* e2 = nullptr;
     ASSERT_EQ(quiver_element_create(&e2), QUIVER_OK);
@@ -203,7 +203,7 @@ TEST(DatabaseCApi, DeleteElementByIdOtherElementsUnchanged) {
     quiver_element_set_integer(e2, "integer_attribute", 100);
     int64_t id2 = 0;
     quiver_database_create_element(db, "Configuration", e2, &id2);
-    quiver_element_destroy(e2);
+    EXPECT_EQ(quiver_element_destroy(e2), QUIVER_OK);
 
     quiver_element_t* e3 = nullptr;
     ASSERT_EQ(quiver_element_create(&e3), QUIVER_OK);
@@ -211,7 +211,7 @@ TEST(DatabaseCApi, DeleteElementByIdOtherElementsUnchanged) {
     quiver_element_set_integer(e3, "integer_attribute", 200);
     int64_t id3 = 0;
     quiver_database_create_element(db, "Configuration", e3, &id3);
-    quiver_element_destroy(e3);
+    EXPECT_EQ(quiver_element_destroy(e3), QUIVER_OK);
 
     // Delete middle element
     auto err = quiver_database_delete_element_by_id(db, "Configuration", id2);

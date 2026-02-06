@@ -6,11 +6,11 @@ TEST(ElementCApi, CreateAndDestroy) {
     quiver_element_t* element = nullptr;
     ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
     ASSERT_NE(element, nullptr);
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, DestroyNull) {
-    quiver_element_destroy(nullptr);
+    EXPECT_EQ(quiver_element_destroy(nullptr), QUIVER_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(ElementCApi, EmptyElement) {
@@ -34,7 +34,7 @@ TEST(ElementCApi, EmptyElement) {
     EXPECT_EQ(quiver_element_array_count(element, &array_count), QUIVER_OK);
     EXPECT_EQ(array_count, 0);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, SetInt) {
@@ -50,7 +50,7 @@ TEST(ElementCApi, SetInt) {
     EXPECT_EQ(quiver_element_scalar_count(element, &scalar_count), QUIVER_OK);
     EXPECT_EQ(scalar_count, 1);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, SetFloat) {
@@ -63,7 +63,7 @@ TEST(ElementCApi, SetFloat) {
     EXPECT_EQ(quiver_element_has_scalars(element, &has_scalars), QUIVER_OK);
     EXPECT_EQ(has_scalars, 1);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, SetString) {
@@ -76,7 +76,7 @@ TEST(ElementCApi, SetString) {
     EXPECT_EQ(quiver_element_has_scalars(element, &has_scalars), QUIVER_OK);
     EXPECT_EQ(has_scalars, 1);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, SetNull) {
@@ -89,7 +89,7 @@ TEST(ElementCApi, SetNull) {
     EXPECT_EQ(quiver_element_has_scalars(element, &has_scalars), QUIVER_OK);
     EXPECT_EQ(has_scalars, 1);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, SetArrayInt) {
@@ -106,7 +106,7 @@ TEST(ElementCApi, SetArrayInt) {
     EXPECT_EQ(quiver_element_array_count(element, &array_count), QUIVER_OK);
     EXPECT_EQ(array_count, 1);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, SetArrayFloat) {
@@ -123,7 +123,7 @@ TEST(ElementCApi, SetArrayFloat) {
     EXPECT_EQ(quiver_element_array_count(element, &array_count), QUIVER_OK);
     EXPECT_EQ(array_count, 1);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, SetArrayString) {
@@ -140,7 +140,7 @@ TEST(ElementCApi, SetArrayString) {
     EXPECT_EQ(quiver_element_array_count(element, &array_count), QUIVER_OK);
     EXPECT_EQ(array_count, 1);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, Clear) {
@@ -159,14 +159,18 @@ TEST(ElementCApi, Clear) {
     EXPECT_EQ(quiver_element_has_arrays(element, &has_arrays), QUIVER_OK);
     EXPECT_EQ(has_arrays, 1);
 
-    quiver_element_clear(element);
+    EXPECT_EQ(quiver_element_clear(element), QUIVER_OK);
 
     EXPECT_EQ(quiver_element_has_scalars(element, &has_scalars), QUIVER_OK);
     EXPECT_EQ(has_scalars, 0);
     EXPECT_EQ(quiver_element_has_arrays(element, &has_arrays), QUIVER_OK);
     EXPECT_EQ(has_arrays, 0);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
+}
+
+TEST(ElementCApi, ClearNull) {
+    EXPECT_EQ(quiver_element_clear(nullptr), QUIVER_ERROR_INVALID_ARGUMENT);
 }
 
 TEST(ElementCApi, NullElementErrors) {
@@ -186,7 +190,7 @@ TEST(ElementCApi, NullNameErrors) {
     EXPECT_EQ(quiver_element_set_string(element, nullptr, "y"), QUIVER_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(quiver_element_set_null(element, nullptr), QUIVER_ERROR_INVALID_ARGUMENT);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, NullAccessors) {
@@ -213,7 +217,7 @@ TEST(ElementCApi, MultipleScalars) {
     EXPECT_EQ(quiver_element_scalar_count(element, &scalar_count), QUIVER_OK);
     EXPECT_EQ(scalar_count, 3);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, ToString) {
@@ -238,7 +242,7 @@ TEST(ElementCApi, ToString) {
     EXPECT_NE(result.find("label: \"Plant 1\""), std::string::npos);
 
     quiver_string_free(str);
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, ToStringNull) {
@@ -247,7 +251,7 @@ TEST(ElementCApi, ToStringNull) {
 }
 
 TEST(ElementCApi, StringFreeNull) {
-    quiver_string_free(nullptr);
+    EXPECT_EQ(quiver_string_free(nullptr), QUIVER_OK);
 }
 
 TEST(ElementCApi, ArrayNullErrors) {
@@ -267,5 +271,5 @@ TEST(ElementCApi, ArrayNullErrors) {
     EXPECT_EQ(quiver_element_set_array_integer(element, "x", nullptr, 3), QUIVER_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(quiver_element_set_array_float(element, "x", nullptr, 3), QUIVER_ERROR_INVALID_ARGUMENT);
     EXPECT_EQ(quiver_element_set_array_string(element, "x", nullptr, 3), QUIVER_ERROR_INVALID_ARGUMENT);
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
