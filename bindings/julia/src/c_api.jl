@@ -218,19 +218,7 @@ struct quiver_scalar_metadata_t
     references_column::Ptr{Cchar}
 end
 
-struct quiver_vector_metadata_t
-    group_name::Ptr{Cchar}
-    value_columns::Ptr{quiver_scalar_metadata_t}
-    value_column_count::Csize_t
-end
-
-struct quiver_set_metadata_t
-    group_name::Ptr{Cchar}
-    value_columns::Ptr{quiver_scalar_metadata_t}
-    value_column_count::Csize_t
-end
-
-struct quiver_time_series_metadata_t
+struct quiver_group_metadata_t
     group_name::Ptr{Cchar}
     dimension_column::Ptr{Cchar}
     value_columns::Ptr{quiver_scalar_metadata_t}
@@ -242,31 +230,23 @@ function quiver_database_get_scalar_metadata(db, collection, attribute, out_meta
 end
 
 function quiver_database_get_vector_metadata(db, collection, group_name, out_metadata)
-    @ccall libquiver_c.quiver_database_get_vector_metadata(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group_name::Ptr{Cchar}, out_metadata::Ptr{quiver_vector_metadata_t})::quiver_error_t
+    @ccall libquiver_c.quiver_database_get_vector_metadata(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group_name::Ptr{Cchar}, out_metadata::Ptr{quiver_group_metadata_t})::quiver_error_t
 end
 
 function quiver_database_get_set_metadata(db, collection, group_name, out_metadata)
-    @ccall libquiver_c.quiver_database_get_set_metadata(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group_name::Ptr{Cchar}, out_metadata::Ptr{quiver_set_metadata_t})::quiver_error_t
+    @ccall libquiver_c.quiver_database_get_set_metadata(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group_name::Ptr{Cchar}, out_metadata::Ptr{quiver_group_metadata_t})::quiver_error_t
 end
 
 function quiver_database_get_time_series_metadata(db, collection, group_name, out_metadata)
-    @ccall libquiver_c.quiver_database_get_time_series_metadata(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group_name::Ptr{Cchar}, out_metadata::Ptr{quiver_time_series_metadata_t})::quiver_error_t
+    @ccall libquiver_c.quiver_database_get_time_series_metadata(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group_name::Ptr{Cchar}, out_metadata::Ptr{quiver_group_metadata_t})::quiver_error_t
 end
 
 function quiver_free_scalar_metadata(metadata)
     @ccall libquiver_c.quiver_free_scalar_metadata(metadata::Ptr{quiver_scalar_metadata_t})::quiver_error_t
 end
 
-function quiver_free_vector_metadata(metadata)
-    @ccall libquiver_c.quiver_free_vector_metadata(metadata::Ptr{quiver_vector_metadata_t})::quiver_error_t
-end
-
-function quiver_free_set_metadata(metadata)
-    @ccall libquiver_c.quiver_free_set_metadata(metadata::Ptr{quiver_set_metadata_t})::quiver_error_t
-end
-
-function quiver_free_time_series_metadata(metadata)
-    @ccall libquiver_c.quiver_free_time_series_metadata(metadata::Ptr{quiver_time_series_metadata_t})::quiver_error_t
+function quiver_free_group_metadata(metadata)
+    @ccall libquiver_c.quiver_free_group_metadata(metadata::Ptr{quiver_group_metadata_t})::quiver_error_t
 end
 
 function quiver_database_list_scalar_attributes(db, collection, out_metadata, out_count)
@@ -274,31 +254,23 @@ function quiver_database_list_scalar_attributes(db, collection, out_metadata, ou
 end
 
 function quiver_database_list_vector_groups(db, collection, out_metadata, out_count)
-    @ccall libquiver_c.quiver_database_list_vector_groups(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_metadata::Ptr{Ptr{quiver_vector_metadata_t}}, out_count::Ptr{Csize_t})::quiver_error_t
+    @ccall libquiver_c.quiver_database_list_vector_groups(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_metadata::Ptr{Ptr{quiver_group_metadata_t}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
 function quiver_database_list_set_groups(db, collection, out_metadata, out_count)
-    @ccall libquiver_c.quiver_database_list_set_groups(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_metadata::Ptr{Ptr{quiver_set_metadata_t}}, out_count::Ptr{Csize_t})::quiver_error_t
+    @ccall libquiver_c.quiver_database_list_set_groups(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_metadata::Ptr{Ptr{quiver_group_metadata_t}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
 function quiver_database_list_time_series_groups(db, collection, out_metadata, out_count)
-    @ccall libquiver_c.quiver_database_list_time_series_groups(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_metadata::Ptr{Ptr{quiver_time_series_metadata_t}}, out_count::Ptr{Csize_t})::quiver_error_t
+    @ccall libquiver_c.quiver_database_list_time_series_groups(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_metadata::Ptr{Ptr{quiver_group_metadata_t}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
 function quiver_free_scalar_metadata_array(metadata, count)
     @ccall libquiver_c.quiver_free_scalar_metadata_array(metadata::Ptr{quiver_scalar_metadata_t}, count::Csize_t)::quiver_error_t
 end
 
-function quiver_free_vector_metadata_array(metadata, count)
-    @ccall libquiver_c.quiver_free_vector_metadata_array(metadata::Ptr{quiver_vector_metadata_t}, count::Csize_t)::quiver_error_t
-end
-
-function quiver_free_set_metadata_array(metadata, count)
-    @ccall libquiver_c.quiver_free_set_metadata_array(metadata::Ptr{quiver_set_metadata_t}, count::Csize_t)::quiver_error_t
-end
-
-function quiver_free_time_series_metadata_array(metadata, count)
-    @ccall libquiver_c.quiver_free_time_series_metadata_array(metadata::Ptr{quiver_time_series_metadata_t}, count::Csize_t)::quiver_error_t
+function quiver_free_group_metadata_array(metadata, count)
+    @ccall libquiver_c.quiver_free_group_metadata_array(metadata::Ptr{quiver_group_metadata_t}, count::Csize_t)::quiver_error_t
 end
 
 function quiver_database_update_scalar_integer(db, collection, attribute, id, value)

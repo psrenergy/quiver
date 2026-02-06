@@ -146,6 +146,47 @@ class Database {
     return quiver_data_type_t.QUIVER_DATA_TYPE_STRING;
   }
 
+  ({
+    String groupName,
+    String dimensionColumn,
+    List<
+      ({
+        String name,
+        int dataType,
+        bool notNull,
+        bool primaryKey,
+        String? defaultValue,
+        bool isForeignKey,
+        String? referencesCollection,
+        String? referencesColumn,
+      })
+    >
+    valueColumns,
+  })
+  _parseGroupMetadata(quiver_group_metadata_t metadata) {
+    final valueColumns =
+        <
+          ({
+            String name,
+            int dataType,
+            bool notNull,
+            bool primaryKey,
+            String? defaultValue,
+            bool isForeignKey,
+            String? referencesCollection,
+            String? referencesColumn,
+          })
+        >[];
+    for (var i = 0; i < metadata.value_column_count; i++) {
+      valueColumns.add(_parseScalarMetadata(metadata.value_columns[i]));
+    }
+    return (
+      groupName: metadata.group_name.cast<Utf8>().toDartString(),
+      dimensionColumn: metadata.dimension_column == nullptr ? '' : metadata.dimension_column.cast<Utf8>().toDartString(),
+      valueColumns: valueColumns,
+    );
+  }
+
   ({Pointer<Int> types, Pointer<Pointer<Void>> values}) _marshalParams(
     Arena arena,
     List<Object?> params,

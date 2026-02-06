@@ -21,20 +21,10 @@ struct QUIVER_API ScalarMetadata {
     std::optional<std::string> references_column;
 };
 
-struct QUIVER_API VectorMetadata {
+struct QUIVER_API GroupMetadata {
     std::string group_name;
+    std::string dimension_column;               // Empty for vector/set groups; ordering column for time series
     std::vector<ScalarMetadata> value_columns;
-};
-
-struct QUIVER_API SetMetadata {
-    std::string group_name;
-    std::vector<ScalarMetadata> value_columns;
-};
-
-struct QUIVER_API TimeSeriesMetadata {
-    std::string group_name;
-    std::string dimension_column;               // The ordering column (e.g., "date_time")
-    std::vector<ScalarMetadata> value_columns;  // Excludes id and dimension column
 };
 
 }  // namespace quiver

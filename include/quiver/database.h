@@ -101,17 +101,17 @@ public:
 
     // Attribute metadata queries
     ScalarMetadata get_scalar_metadata(const std::string& collection, const std::string& attribute) const;
-    VectorMetadata get_vector_metadata(const std::string& collection, const std::string& group_name) const;
-    SetMetadata get_set_metadata(const std::string& collection, const std::string& group_name) const;
+    GroupMetadata get_vector_metadata(const std::string& collection, const std::string& group_name) const;
+    GroupMetadata get_set_metadata(const std::string& collection, const std::string& group_name) const;
 
     // List attributes/groups - returns full metadata
     std::vector<ScalarMetadata> list_scalar_attributes(const std::string& collection) const;
-    std::vector<VectorMetadata> list_vector_groups(const std::string& collection) const;
-    std::vector<SetMetadata> list_set_groups(const std::string& collection) const;
-    std::vector<TimeSeriesMetadata> list_time_series_groups(const std::string& collection) const;
+    std::vector<GroupMetadata> list_vector_groups(const std::string& collection) const;
+    std::vector<GroupMetadata> list_set_groups(const std::string& collection) const;
+    std::vector<GroupMetadata> list_time_series_groups(const std::string& collection) const;
 
     // Time series metadata
-    TimeSeriesMetadata get_time_series_metadata(const std::string& collection, const std::string& group_name) const;
+    GroupMetadata get_time_series_metadata(const std::string& collection, const std::string& group_name) const;
 
     // Read time series group - returns rows with date_time and value columns
     std::vector<std::map<std::string, Value>>

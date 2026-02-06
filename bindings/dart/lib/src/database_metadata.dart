@@ -32,22 +32,7 @@ extension DatabaseMetadata on Database {
         ),
       );
 
-      final result = (
-        name: outMetadata.ref.name.cast<Utf8>().toDartString(),
-        dataType: outMetadata.ref.data_type,
-        notNull: outMetadata.ref.not_null != 0,
-        primaryKey: outMetadata.ref.primary_key != 0,
-        defaultValue: outMetadata.ref.default_value == nullptr
-            ? null
-            : outMetadata.ref.default_value.cast<Utf8>().toDartString(),
-        isForeignKey: outMetadata.ref.is_foreign_key != 0,
-        referencesCollection: outMetadata.ref.references_collection == nullptr
-            ? null
-            : outMetadata.ref.references_collection.cast<Utf8>().toDartString(),
-        referencesColumn: outMetadata.ref.references_column == nullptr
-            ? null
-            : outMetadata.ref.references_column.cast<Utf8>().toDartString(),
-      );
+      final result = _parseScalarMetadata(outMetadata.ref);
 
       bindings.quiver_free_scalar_metadata(outMetadata);
       return result;
@@ -59,6 +44,7 @@ extension DatabaseMetadata on Database {
   /// Returns metadata for a vector group, including all value columns in the group.
   ({
     String groupName,
+    String dimensionColumn,
     List<
       ({
         String name,
@@ -78,7 +64,7 @@ extension DatabaseMetadata on Database {
 
     final arena = Arena();
     try {
-      final outMetadata = arena<quiver_vector_metadata_t>();
+      final outMetadata = arena<quiver_group_metadata_t>();
 
       check(
         bindings.quiver_database_get_vector_metadata(
@@ -89,30 +75,9 @@ extension DatabaseMetadata on Database {
         ),
       );
 
-      final valueColumns =
-          <
-            ({
-              String name,
-              int dataType,
-              bool notNull,
-              bool primaryKey,
-              String? defaultValue,
-              bool isForeignKey,
-              String? referencesCollection,
-              String? referencesColumn,
-            })
-          >[];
-      final count = outMetadata.ref.value_column_count;
-      for (var i = 0; i < count; i++) {
-        valueColumns.add(_parseScalarMetadata(outMetadata.ref.value_columns[i]));
-      }
+      final result = _parseGroupMetadata(outMetadata.ref);
 
-      final result = (
-        groupName: outMetadata.ref.group_name.cast<Utf8>().toDartString(),
-        valueColumns: valueColumns,
-      );
-
-      bindings.quiver_free_vector_metadata(outMetadata);
+      bindings.quiver_free_group_metadata(outMetadata);
       return result;
     } finally {
       arena.releaseAll();
@@ -122,6 +87,7 @@ extension DatabaseMetadata on Database {
   /// Returns metadata for a set group, including all value columns in the group.
   ({
     String groupName,
+    String dimensionColumn,
     List<
       ({
         String name,
@@ -141,7 +107,7 @@ extension DatabaseMetadata on Database {
 
     final arena = Arena();
     try {
-      final outMetadata = arena<quiver_set_metadata_t>();
+      final outMetadata = arena<quiver_group_metadata_t>();
 
       check(
         bindings.quiver_database_get_set_metadata(
@@ -152,30 +118,9 @@ extension DatabaseMetadata on Database {
         ),
       );
 
-      final valueColumns =
-          <
-            ({
-              String name,
-              int dataType,
-              bool notNull,
-              bool primaryKey,
-              String? defaultValue,
-              bool isForeignKey,
-              String? referencesCollection,
-              String? referencesColumn,
-            })
-          >[];
-      final count = outMetadata.ref.value_column_count;
-      for (var i = 0; i < count; i++) {
-        valueColumns.add(_parseScalarMetadata(outMetadata.ref.value_columns[i]));
-      }
+      final result = _parseGroupMetadata(outMetadata.ref);
 
-      final result = (
-        groupName: outMetadata.ref.group_name.cast<Utf8>().toDartString(),
-        valueColumns: valueColumns,
-      );
-
-      bindings.quiver_free_set_metadata(outMetadata);
+      bindings.quiver_free_group_metadata(outMetadata);
       return result;
     } finally {
       arena.releaseAll();
@@ -246,6 +191,7 @@ extension DatabaseMetadata on Database {
   List<
     ({
       String groupName,
+      String dimensionColumn,
       List<
         ({
           String name,
@@ -266,7 +212,7 @@ extension DatabaseMetadata on Database {
 
     final arena = Arena();
     try {
-      final outMetadata = arena<Pointer<quiver_vector_metadata_t>>();
+      final outMetadata = arena<Pointer<quiver_group_metadata_t>>();
       final outCount = arena<Size>();
 
       check(
@@ -287,6 +233,7 @@ extension DatabaseMetadata on Database {
           <
             ({
               String groupName,
+              String dimensionColumn,
               List<
                 ({
                   String name,
@@ -303,26 +250,9 @@ extension DatabaseMetadata on Database {
             })
           >[];
       for (var i = 0; i < count; i++) {
-        final metadata = outMetadata.value[i];
-        final valueColumns =
-            <
-              ({
-                String name,
-                int dataType,
-                bool notNull,
-                bool primaryKey,
-                String? defaultValue,
-                bool isForeignKey,
-                String? referencesCollection,
-                String? referencesColumn,
-              })
-            >[];
-        for (var j = 0; j < metadata.value_column_count; j++) {
-          valueColumns.add(_parseScalarMetadata(metadata.value_columns[j]));
-        }
-        result.add((groupName: metadata.group_name.cast<Utf8>().toDartString(), valueColumns: valueColumns));
+        result.add(_parseGroupMetadata(outMetadata.value[i]));
       }
-      bindings.quiver_free_vector_metadata_array(outMetadata.value, count);
+      bindings.quiver_free_group_metadata_array(outMetadata.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -333,6 +263,7 @@ extension DatabaseMetadata on Database {
   List<
     ({
       String groupName,
+      String dimensionColumn,
       List<
         ({
           String name,
@@ -353,7 +284,7 @@ extension DatabaseMetadata on Database {
 
     final arena = Arena();
     try {
-      final outMetadata = arena<Pointer<quiver_set_metadata_t>>();
+      final outMetadata = arena<Pointer<quiver_group_metadata_t>>();
       final outCount = arena<Size>();
 
       check(
@@ -374,6 +305,7 @@ extension DatabaseMetadata on Database {
           <
             ({
               String groupName,
+              String dimensionColumn,
               List<
                 ({
                   String name,
@@ -390,26 +322,9 @@ extension DatabaseMetadata on Database {
             })
           >[];
       for (var i = 0; i < count; i++) {
-        final metadata = outMetadata.value[i];
-        final valueColumns =
-            <
-              ({
-                String name,
-                int dataType,
-                bool notNull,
-                bool primaryKey,
-                String? defaultValue,
-                bool isForeignKey,
-                String? referencesCollection,
-                String? referencesColumn,
-              })
-            >[];
-        for (var j = 0; j < metadata.value_column_count; j++) {
-          valueColumns.add(_parseScalarMetadata(metadata.value_columns[j]));
-        }
-        result.add((groupName: metadata.group_name.cast<Utf8>().toDartString(), valueColumns: valueColumns));
+        result.add(_parseGroupMetadata(outMetadata.value[i]));
       }
-      bindings.quiver_free_set_metadata_array(outMetadata.value, count);
+      bindings.quiver_free_group_metadata_array(outMetadata.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -457,7 +372,7 @@ extension DatabaseMetadata on Database {
 
     final arena = Arena();
     try {
-      final outMetadata = arena<quiver_time_series_metadata_t>();
+      final outMetadata = arena<quiver_group_metadata_t>();
 
       check(
         bindings.quiver_database_get_time_series_metadata(
@@ -468,31 +383,9 @@ extension DatabaseMetadata on Database {
         ),
       );
 
-      final valueColumns =
-          <
-            ({
-              String name,
-              int dataType,
-              bool notNull,
-              bool primaryKey,
-              String? defaultValue,
-              bool isForeignKey,
-              String? referencesCollection,
-              String? referencesColumn,
-            })
-          >[];
-      final count = outMetadata.ref.value_column_count;
-      for (var i = 0; i < count; i++) {
-        valueColumns.add(_parseScalarMetadata(outMetadata.ref.value_columns[i]));
-      }
+      final result = _parseGroupMetadata(outMetadata.ref);
 
-      final result = (
-        groupName: outMetadata.ref.group_name.cast<Utf8>().toDartString(),
-        dimensionColumn: outMetadata.ref.dimension_column.cast<Utf8>().toDartString(),
-        valueColumns: valueColumns,
-      );
-
-      bindings.quiver_free_time_series_metadata(outMetadata);
+      bindings.quiver_free_group_metadata(outMetadata);
       return result;
     } finally {
       arena.releaseAll();
@@ -524,7 +417,7 @@ extension DatabaseMetadata on Database {
 
     final arena = Arena();
     try {
-      final outMetadata = arena<Pointer<quiver_time_series_metadata_t>>();
+      final outMetadata = arena<Pointer<quiver_group_metadata_t>>();
       final outCount = arena<Size>();
 
       check(
@@ -562,30 +455,9 @@ extension DatabaseMetadata on Database {
             })
           >[];
       for (var i = 0; i < count; i++) {
-        final metadata = outMetadata.value[i];
-        final valueColumns =
-            <
-              ({
-                String name,
-                int dataType,
-                bool notNull,
-                bool primaryKey,
-                String? defaultValue,
-                bool isForeignKey,
-                String? referencesCollection,
-                String? referencesColumn,
-              })
-            >[];
-        for (var j = 0; j < metadata.value_column_count; j++) {
-          valueColumns.add(_parseScalarMetadata(metadata.value_columns[j]));
-        }
-        result.add((
-          groupName: metadata.group_name.cast<Utf8>().toDartString(),
-          dimensionColumn: metadata.dimension_column.cast<Utf8>().toDartString(),
-          valueColumns: valueColumns,
-        ));
+        result.add(_parseGroupMetadata(outMetadata.value[i]));
       }
-      bindings.quiver_free_time_series_metadata_array(outMetadata.value, count);
+      bindings.quiver_free_group_metadata_array(outMetadata.value, count);
       return result;
     } finally {
       arena.releaseAll();

@@ -922,6 +922,50 @@ char* strdup_safe(const std::string& str) {
     result[str.size()] = '\0';
     return result;
 }
+
+void convert_scalar_to_c(const quiver::ScalarMetadata& src, quiver_scalar_metadata_t& dst) {
+    dst.name = strdup_safe(src.name);
+    dst.data_type = to_c_data_type(src.data_type);
+    dst.not_null = src.not_null ? 1 : 0;
+    dst.primary_key = src.primary_key ? 1 : 0;
+    dst.default_value = src.default_value.has_value() ? strdup_safe(*src.default_value) : nullptr;
+    dst.is_foreign_key = src.is_foreign_key ? 1 : 0;
+    dst.references_collection =
+        src.references_collection.has_value() ? strdup_safe(*src.references_collection) : nullptr;
+    dst.references_column = src.references_column.has_value() ? strdup_safe(*src.references_column) : nullptr;
+}
+
+void free_scalar_fields(quiver_scalar_metadata_t& m) {
+    delete[] m.name;
+    delete[] m.default_value;
+    delete[] m.references_collection;
+    delete[] m.references_column;
+}
+
+void convert_group_to_c(const quiver::GroupMetadata& src, quiver_group_metadata_t& dst) {
+    dst.group_name = strdup_safe(src.group_name);
+    dst.dimension_column = src.dimension_column.empty() ? nullptr : strdup_safe(src.dimension_column);
+    dst.value_column_count = src.value_columns.size();
+    if (src.value_columns.empty()) {
+        dst.value_columns = nullptr;
+    } else {
+        dst.value_columns = new quiver_scalar_metadata_t[src.value_columns.size()];
+        for (size_t i = 0; i < src.value_columns.size(); ++i) {
+            convert_scalar_to_c(src.value_columns[i], dst.value_columns[i]);
+        }
+    }
+}
+
+void free_group_fields(quiver_group_metadata_t& m) {
+    delete[] m.group_name;
+    delete[] m.dimension_column;
+    if (m.value_columns) {
+        for (size_t i = 0; i < m.value_column_count; ++i) {
+            free_scalar_fields(m.value_columns[i]);
+        }
+        delete[] m.value_columns;
+    }
+}
 }  // namespace
 
 QUIVER_C_API quiver_error_t quiver_database_get_scalar_metadata(quiver_database_t* db,
@@ -931,23 +975,7 @@ QUIVER_C_API quiver_error_t quiver_database_get_scalar_metadata(quiver_database_
     QUIVER_REQUIRE(db, collection, attribute, out_metadata);
 
     try {
-        auto metadata = db->db.get_scalar_metadata(collection, attribute);
-
-        out_metadata->name = strdup_safe(metadata.name);
-        out_metadata->data_type = to_c_data_type(metadata.data_type);
-        out_metadata->not_null = metadata.not_null ? 1 : 0;
-        out_metadata->primary_key = metadata.primary_key ? 1 : 0;
-        if (metadata.default_value.has_value()) {
-            out_metadata->default_value = strdup_safe(*metadata.default_value);
-        } else {
-            out_metadata->default_value = nullptr;
-        }
-        out_metadata->is_foreign_key = metadata.is_foreign_key ? 1 : 0;
-        out_metadata->references_collection =
-            metadata.references_collection.has_value() ? strdup_safe(*metadata.references_collection) : nullptr;
-        out_metadata->references_column =
-            metadata.references_column.has_value() ? strdup_safe(*metadata.references_column) : nullptr;
-
+        convert_scalar_to_c(db->db.get_scalar_metadata(collection, attribute), *out_metadata);
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
@@ -958,42 +986,11 @@ QUIVER_C_API quiver_error_t quiver_database_get_scalar_metadata(quiver_database_
 QUIVER_C_API quiver_error_t quiver_database_get_vector_metadata(quiver_database_t* db,
                                                                 const char* collection,
                                                                 const char* group_name,
-                                                                quiver_vector_metadata_t* out_metadata) {
+                                                                quiver_group_metadata_t* out_metadata) {
     QUIVER_REQUIRE(db, collection, group_name, out_metadata);
 
     try {
-        auto metadata = db->db.get_vector_metadata(collection, group_name);
-
-        out_metadata->group_name = strdup_safe(metadata.group_name);
-        out_metadata->value_column_count = metadata.value_columns.size();
-
-        if (metadata.value_columns.empty()) {
-            out_metadata->value_columns = nullptr;
-        } else {
-            out_metadata->value_columns = new quiver_scalar_metadata_t[metadata.value_columns.size()];
-            for (size_t i = 0; i < metadata.value_columns.size(); ++i) {
-                out_metadata->value_columns[i].name = strdup_safe(metadata.value_columns[i].name);
-                out_metadata->value_columns[i].data_type = to_c_data_type(metadata.value_columns[i].data_type);
-                out_metadata->value_columns[i].not_null = metadata.value_columns[i].not_null ? 1 : 0;
-                out_metadata->value_columns[i].primary_key = metadata.value_columns[i].primary_key ? 1 : 0;
-                if (metadata.value_columns[i].default_value.has_value()) {
-                    out_metadata->value_columns[i].default_value =
-                        strdup_safe(*metadata.value_columns[i].default_value);
-                } else {
-                    out_metadata->value_columns[i].default_value = nullptr;
-                }
-                out_metadata->value_columns[i].is_foreign_key = metadata.value_columns[i].is_foreign_key ? 1 : 0;
-                out_metadata->value_columns[i].references_collection =
-                    metadata.value_columns[i].references_collection.has_value()
-                        ? strdup_safe(*metadata.value_columns[i].references_collection)
-                        : nullptr;
-                out_metadata->value_columns[i].references_column =
-                    metadata.value_columns[i].references_column.has_value()
-                        ? strdup_safe(*metadata.value_columns[i].references_column)
-                        : nullptr;
-            }
-        }
-
+        convert_group_to_c(db->db.get_vector_metadata(collection, group_name), *out_metadata);
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
@@ -1004,42 +1001,11 @@ QUIVER_C_API quiver_error_t quiver_database_get_vector_metadata(quiver_database_
 QUIVER_C_API quiver_error_t quiver_database_get_set_metadata(quiver_database_t* db,
                                                              const char* collection,
                                                              const char* group_name,
-                                                             quiver_set_metadata_t* out_metadata) {
+                                                             quiver_group_metadata_t* out_metadata) {
     QUIVER_REQUIRE(db, collection, group_name, out_metadata);
 
     try {
-        auto metadata = db->db.get_set_metadata(collection, group_name);
-
-        out_metadata->group_name = strdup_safe(metadata.group_name);
-        out_metadata->value_column_count = metadata.value_columns.size();
-
-        if (metadata.value_columns.empty()) {
-            out_metadata->value_columns = nullptr;
-        } else {
-            out_metadata->value_columns = new quiver_scalar_metadata_t[metadata.value_columns.size()];
-            for (size_t i = 0; i < metadata.value_columns.size(); ++i) {
-                out_metadata->value_columns[i].name = strdup_safe(metadata.value_columns[i].name);
-                out_metadata->value_columns[i].data_type = to_c_data_type(metadata.value_columns[i].data_type);
-                out_metadata->value_columns[i].not_null = metadata.value_columns[i].not_null ? 1 : 0;
-                out_metadata->value_columns[i].primary_key = metadata.value_columns[i].primary_key ? 1 : 0;
-                if (metadata.value_columns[i].default_value.has_value()) {
-                    out_metadata->value_columns[i].default_value =
-                        strdup_safe(*metadata.value_columns[i].default_value);
-                } else {
-                    out_metadata->value_columns[i].default_value = nullptr;
-                }
-                out_metadata->value_columns[i].is_foreign_key = metadata.value_columns[i].is_foreign_key ? 1 : 0;
-                out_metadata->value_columns[i].references_collection =
-                    metadata.value_columns[i].references_collection.has_value()
-                        ? strdup_safe(*metadata.value_columns[i].references_collection)
-                        : nullptr;
-                out_metadata->value_columns[i].references_column =
-                    metadata.value_columns[i].references_column.has_value()
-                        ? strdup_safe(*metadata.value_columns[i].references_column)
-                        : nullptr;
-            }
-        }
-
+        convert_group_to_c(db->db.get_set_metadata(collection, group_name), *out_metadata);
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
@@ -1050,10 +1016,7 @@ QUIVER_C_API quiver_error_t quiver_database_get_set_metadata(quiver_database_t* 
 QUIVER_C_API quiver_error_t quiver_free_scalar_metadata(quiver_scalar_metadata_t* metadata) {
     QUIVER_REQUIRE(metadata);
 
-    delete[] metadata->name;
-    delete[] metadata->default_value;
-    delete[] metadata->references_collection;
-    delete[] metadata->references_column;
+    free_scalar_fields(*metadata);
     metadata->name = nullptr;
     metadata->default_value = nullptr;
     metadata->references_collection = nullptr;
@@ -1061,39 +1024,12 @@ QUIVER_C_API quiver_error_t quiver_free_scalar_metadata(quiver_scalar_metadata_t
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t quiver_free_vector_metadata(quiver_vector_metadata_t* metadata) {
+QUIVER_C_API quiver_error_t quiver_free_group_metadata(quiver_group_metadata_t* metadata) {
     QUIVER_REQUIRE(metadata);
 
-    delete[] metadata->group_name;
-    if (metadata->value_columns) {
-        for (size_t i = 0; i < metadata->value_column_count; ++i) {
-            delete[] metadata->value_columns[i].name;
-            delete[] metadata->value_columns[i].default_value;
-            delete[] metadata->value_columns[i].references_collection;
-            delete[] metadata->value_columns[i].references_column;
-        }
-        delete[] metadata->value_columns;
-    }
+    free_group_fields(*metadata);
     metadata->group_name = nullptr;
-    metadata->value_columns = nullptr;
-    metadata->value_column_count = 0;
-    return QUIVER_OK;
-}
-
-QUIVER_C_API quiver_error_t quiver_free_set_metadata(quiver_set_metadata_t* metadata) {
-    QUIVER_REQUIRE(metadata);
-
-    delete[] metadata->group_name;
-    if (metadata->value_columns) {
-        for (size_t i = 0; i < metadata->value_column_count; ++i) {
-            delete[] metadata->value_columns[i].name;
-            delete[] metadata->value_columns[i].default_value;
-            delete[] metadata->value_columns[i].references_collection;
-            delete[] metadata->value_columns[i].references_column;
-        }
-        delete[] metadata->value_columns;
-    }
-    metadata->group_name = nullptr;
+    metadata->dimension_column = nullptr;
     metadata->value_columns = nullptr;
     metadata->value_column_count = 0;
     return QUIVER_OK;
@@ -1114,21 +1050,7 @@ QUIVER_C_API quiver_error_t quiver_database_list_scalar_attributes(quiver_databa
         }
         *out_metadata = new quiver_scalar_metadata_t[attributes.size()];
         for (size_t i = 0; i < attributes.size(); ++i) {
-            (*out_metadata)[i].name = strdup_safe(attributes[i].name);
-            (*out_metadata)[i].data_type = to_c_data_type(attributes[i].data_type);
-            (*out_metadata)[i].not_null = attributes[i].not_null ? 1 : 0;
-            (*out_metadata)[i].primary_key = attributes[i].primary_key ? 1 : 0;
-            if (attributes[i].default_value.has_value()) {
-                (*out_metadata)[i].default_value = strdup_safe(*attributes[i].default_value);
-            } else {
-                (*out_metadata)[i].default_value = nullptr;
-            }
-            (*out_metadata)[i].is_foreign_key = attributes[i].is_foreign_key ? 1 : 0;
-            (*out_metadata)[i].references_collection = attributes[i].references_collection.has_value()
-                                                           ? strdup_safe(*attributes[i].references_collection)
-                                                           : nullptr;
-            (*out_metadata)[i].references_column =
-                attributes[i].references_column.has_value() ? strdup_safe(*attributes[i].references_column) : nullptr;
+            convert_scalar_to_c(attributes[i], (*out_metadata)[i]);
         }
         return QUIVER_OK;
     } catch (const std::exception& e) {
@@ -1139,7 +1061,7 @@ QUIVER_C_API quiver_error_t quiver_database_list_scalar_attributes(quiver_databa
 
 QUIVER_C_API quiver_error_t quiver_database_list_vector_groups(quiver_database_t* db,
                                                                const char* collection,
-                                                               quiver_vector_metadata_t** out_metadata,
+                                                               quiver_group_metadata_t** out_metadata,
                                                                size_t* out_count) {
     QUIVER_REQUIRE(db, collection, out_metadata, out_count);
 
@@ -1150,29 +1072,9 @@ QUIVER_C_API quiver_error_t quiver_database_list_vector_groups(quiver_database_t
             *out_metadata = nullptr;
             return QUIVER_OK;
         }
-        *out_metadata = new quiver_vector_metadata_t[groups.size()];
+        *out_metadata = new quiver_group_metadata_t[groups.size()];
         for (size_t i = 0; i < groups.size(); ++i) {
-            (*out_metadata)[i].group_name = strdup_safe(groups[i].group_name);
-            (*out_metadata)[i].value_column_count = groups[i].value_columns.size();
-            if (groups[i].value_columns.empty()) {
-                (*out_metadata)[i].value_columns = nullptr;
-            } else {
-                (*out_metadata)[i].value_columns = new quiver_scalar_metadata_t[groups[i].value_columns.size()];
-                for (size_t j = 0; j < groups[i].value_columns.size(); ++j) {
-                    auto& src = groups[i].value_columns[j];
-                    auto& dst = (*out_metadata)[i].value_columns[j];
-                    dst.name = strdup_safe(src.name);
-                    dst.data_type = to_c_data_type(src.data_type);
-                    dst.not_null = src.not_null ? 1 : 0;
-                    dst.primary_key = src.primary_key ? 1 : 0;
-                    dst.default_value = src.default_value.has_value() ? strdup_safe(*src.default_value) : nullptr;
-                    dst.is_foreign_key = src.is_foreign_key ? 1 : 0;
-                    dst.references_collection =
-                        src.references_collection.has_value() ? strdup_safe(*src.references_collection) : nullptr;
-                    dst.references_column =
-                        src.references_column.has_value() ? strdup_safe(*src.references_column) : nullptr;
-                }
-            }
+            convert_group_to_c(groups[i], (*out_metadata)[i]);
         }
         return QUIVER_OK;
     } catch (const std::exception& e) {
@@ -1183,7 +1085,7 @@ QUIVER_C_API quiver_error_t quiver_database_list_vector_groups(quiver_database_t
 
 QUIVER_C_API quiver_error_t quiver_database_list_set_groups(quiver_database_t* db,
                                                             const char* collection,
-                                                            quiver_set_metadata_t** out_metadata,
+                                                            quiver_group_metadata_t** out_metadata,
                                                             size_t* out_count) {
     QUIVER_REQUIRE(db, collection, out_metadata, out_count);
 
@@ -1194,29 +1096,9 @@ QUIVER_C_API quiver_error_t quiver_database_list_set_groups(quiver_database_t* d
             *out_metadata = nullptr;
             return QUIVER_OK;
         }
-        *out_metadata = new quiver_set_metadata_t[groups.size()];
+        *out_metadata = new quiver_group_metadata_t[groups.size()];
         for (size_t i = 0; i < groups.size(); ++i) {
-            (*out_metadata)[i].group_name = strdup_safe(groups[i].group_name);
-            (*out_metadata)[i].value_column_count = groups[i].value_columns.size();
-            if (groups[i].value_columns.empty()) {
-                (*out_metadata)[i].value_columns = nullptr;
-            } else {
-                (*out_metadata)[i].value_columns = new quiver_scalar_metadata_t[groups[i].value_columns.size()];
-                for (size_t j = 0; j < groups[i].value_columns.size(); ++j) {
-                    auto& src = groups[i].value_columns[j];
-                    auto& dst = (*out_metadata)[i].value_columns[j];
-                    dst.name = strdup_safe(src.name);
-                    dst.data_type = to_c_data_type(src.data_type);
-                    dst.not_null = src.not_null ? 1 : 0;
-                    dst.primary_key = src.primary_key ? 1 : 0;
-                    dst.default_value = src.default_value.has_value() ? strdup_safe(*src.default_value) : nullptr;
-                    dst.is_foreign_key = src.is_foreign_key ? 1 : 0;
-                    dst.references_collection =
-                        src.references_collection.has_value() ? strdup_safe(*src.references_collection) : nullptr;
-                    dst.references_column =
-                        src.references_column.has_value() ? strdup_safe(*src.references_column) : nullptr;
-                }
-            }
+            convert_group_to_c(groups[i], (*out_metadata)[i]);
         }
         return QUIVER_OK;
     } catch (const std::exception& e) {
@@ -1229,48 +1111,17 @@ QUIVER_C_API quiver_error_t quiver_free_scalar_metadata_array(quiver_scalar_meta
     QUIVER_REQUIRE(metadata);
 
     for (size_t i = 0; i < count; ++i) {
-        delete[] metadata[i].name;
-        delete[] metadata[i].default_value;
-        delete[] metadata[i].references_collection;
-        delete[] metadata[i].references_column;
+        free_scalar_fields(metadata[i]);
     }
     delete[] metadata;
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t quiver_free_vector_metadata_array(quiver_vector_metadata_t* metadata, size_t count) {
+QUIVER_C_API quiver_error_t quiver_free_group_metadata_array(quiver_group_metadata_t* metadata, size_t count) {
     QUIVER_REQUIRE(metadata);
 
     for (size_t i = 0; i < count; ++i) {
-        delete[] metadata[i].group_name;
-        if (metadata[i].value_columns) {
-            for (size_t j = 0; j < metadata[i].value_column_count; ++j) {
-                delete[] metadata[i].value_columns[j].name;
-                delete[] metadata[i].value_columns[j].default_value;
-                delete[] metadata[i].value_columns[j].references_collection;
-                delete[] metadata[i].value_columns[j].references_column;
-            }
-            delete[] metadata[i].value_columns;
-        }
-    }
-    delete[] metadata;
-    return QUIVER_OK;
-}
-
-QUIVER_C_API quiver_error_t quiver_free_set_metadata_array(quiver_set_metadata_t* metadata, size_t count) {
-    QUIVER_REQUIRE(metadata);
-
-    for (size_t i = 0; i < count; ++i) {
-        delete[] metadata[i].group_name;
-        if (metadata[i].value_columns) {
-            for (size_t j = 0; j < metadata[i].value_column_count; ++j) {
-                delete[] metadata[i].value_columns[j].name;
-                delete[] metadata[i].value_columns[j].default_value;
-                delete[] metadata[i].value_columns[j].references_collection;
-                delete[] metadata[i].value_columns[j].references_column;
-            }
-            delete[] metadata[i].value_columns;
-        }
+        free_group_fields(metadata[i]);
     }
     delete[] metadata;
     return QUIVER_OK;
@@ -1501,43 +1352,11 @@ QUIVER_C_API quiver_error_t quiver_database_describe(quiver_database_t* db) {
 QUIVER_C_API quiver_error_t quiver_database_get_time_series_metadata(quiver_database_t* db,
                                                                      const char* collection,
                                                                      const char* group_name,
-                                                                     quiver_time_series_metadata_t* out_metadata) {
+                                                                     quiver_group_metadata_t* out_metadata) {
     QUIVER_REQUIRE(db, collection, group_name, out_metadata);
 
     try {
-        auto metadata = db->db.get_time_series_metadata(collection, group_name);
-
-        out_metadata->group_name = strdup_safe(metadata.group_name);
-        out_metadata->dimension_column = strdup_safe(metadata.dimension_column);
-        out_metadata->value_column_count = metadata.value_columns.size();
-
-        if (metadata.value_columns.empty()) {
-            out_metadata->value_columns = nullptr;
-        } else {
-            out_metadata->value_columns = new quiver_scalar_metadata_t[metadata.value_columns.size()];
-            for (size_t i = 0; i < metadata.value_columns.size(); ++i) {
-                out_metadata->value_columns[i].name = strdup_safe(metadata.value_columns[i].name);
-                out_metadata->value_columns[i].data_type = to_c_data_type(metadata.value_columns[i].data_type);
-                out_metadata->value_columns[i].not_null = metadata.value_columns[i].not_null ? 1 : 0;
-                out_metadata->value_columns[i].primary_key = metadata.value_columns[i].primary_key ? 1 : 0;
-                if (metadata.value_columns[i].default_value.has_value()) {
-                    out_metadata->value_columns[i].default_value =
-                        strdup_safe(*metadata.value_columns[i].default_value);
-                } else {
-                    out_metadata->value_columns[i].default_value = nullptr;
-                }
-                out_metadata->value_columns[i].is_foreign_key = metadata.value_columns[i].is_foreign_key ? 1 : 0;
-                out_metadata->value_columns[i].references_collection =
-                    metadata.value_columns[i].references_collection.has_value()
-                        ? strdup_safe(*metadata.value_columns[i].references_collection)
-                        : nullptr;
-                out_metadata->value_columns[i].references_column =
-                    metadata.value_columns[i].references_column.has_value()
-                        ? strdup_safe(*metadata.value_columns[i].references_column)
-                        : nullptr;
-            }
-        }
-
+        convert_group_to_c(db->db.get_time_series_metadata(collection, group_name), *out_metadata);
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
@@ -1545,30 +1364,9 @@ QUIVER_C_API quiver_error_t quiver_database_get_time_series_metadata(quiver_data
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_free_time_series_metadata(quiver_time_series_metadata_t* metadata) {
-    QUIVER_REQUIRE(metadata);
-
-    delete[] metadata->group_name;
-    delete[] metadata->dimension_column;
-    if (metadata->value_columns) {
-        for (size_t i = 0; i < metadata->value_column_count; ++i) {
-            delete[] metadata->value_columns[i].name;
-            delete[] metadata->value_columns[i].default_value;
-            delete[] metadata->value_columns[i].references_collection;
-            delete[] metadata->value_columns[i].references_column;
-        }
-        delete[] metadata->value_columns;
-    }
-    metadata->group_name = nullptr;
-    metadata->dimension_column = nullptr;
-    metadata->value_columns = nullptr;
-    metadata->value_column_count = 0;
-    return QUIVER_OK;
-}
-
 QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(quiver_database_t* db,
                                                                     const char* collection,
-                                                                    quiver_time_series_metadata_t** out_metadata,
+                                                                    quiver_group_metadata_t** out_metadata,
                                                                     size_t* out_count) {
     QUIVER_REQUIRE(db, collection, out_metadata, out_count);
 
@@ -1579,57 +1377,15 @@ QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(quiver_datab
             *out_metadata = nullptr;
             return QUIVER_OK;
         }
-        *out_metadata = new quiver_time_series_metadata_t[groups.size()];
+        *out_metadata = new quiver_group_metadata_t[groups.size()];
         for (size_t i = 0; i < groups.size(); ++i) {
-            (*out_metadata)[i].group_name = strdup_safe(groups[i].group_name);
-            (*out_metadata)[i].dimension_column = strdup_safe(groups[i].dimension_column);
-            (*out_metadata)[i].value_column_count = groups[i].value_columns.size();
-            if (groups[i].value_columns.empty()) {
-                (*out_metadata)[i].value_columns = nullptr;
-            } else {
-                (*out_metadata)[i].value_columns = new quiver_scalar_metadata_t[groups[i].value_columns.size()];
-                for (size_t j = 0; j < groups[i].value_columns.size(); ++j) {
-                    auto& src = groups[i].value_columns[j];
-                    auto& dst = (*out_metadata)[i].value_columns[j];
-                    dst.name = strdup_safe(src.name);
-                    dst.data_type = to_c_data_type(src.data_type);
-                    dst.not_null = src.not_null ? 1 : 0;
-                    dst.primary_key = src.primary_key ? 1 : 0;
-                    dst.default_value = src.default_value.has_value() ? strdup_safe(*src.default_value) : nullptr;
-                    dst.is_foreign_key = src.is_foreign_key ? 1 : 0;
-                    dst.references_collection =
-                        src.references_collection.has_value() ? strdup_safe(*src.references_collection) : nullptr;
-                    dst.references_column =
-                        src.references_column.has_value() ? strdup_safe(*src.references_column) : nullptr;
-                }
-            }
+            convert_group_to_c(groups[i], (*out_metadata)[i]);
         }
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
         return QUIVER_ERROR;
     }
-}
-
-QUIVER_C_API quiver_error_t quiver_free_time_series_metadata_array(quiver_time_series_metadata_t* metadata,
-                                                                   size_t count) {
-    QUIVER_REQUIRE(metadata);
-
-    for (size_t i = 0; i < count; ++i) {
-        delete[] metadata[i].group_name;
-        delete[] metadata[i].dimension_column;
-        if (metadata[i].value_columns) {
-            for (size_t j = 0; j < metadata[i].value_column_count; ++j) {
-                delete[] metadata[i].value_columns[j].name;
-                delete[] metadata[i].value_columns[j].default_value;
-                delete[] metadata[i].value_columns[j].references_collection;
-                delete[] metadata[i].value_columns[j].references_column;
-            }
-            delete[] metadata[i].value_columns;
-        }
-    }
-    delete[] metadata;
-    return QUIVER_OK;
 }
 
 QUIVER_C_API quiver_error_t quiver_database_read_time_series_group_by_id(quiver_database_t* db,
