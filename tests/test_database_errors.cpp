@@ -9,7 +9,7 @@
 // ============================================================================
 
 TEST(DatabaseErrors, CreateElementNoSchema) {
-    quiver::Database db(":memory:", {.console_level = QUIVER_LOG_OFF});
+    quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element element;
     element.set("label", std::string("Test"));
@@ -18,7 +18,7 @@ TEST(DatabaseErrors, CreateElementNoSchema) {
 }
 
 TEST(DatabaseErrors, CreateElementCollectionNotFound) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element element;
     element.set("label", std::string("Test"));
@@ -27,7 +27,7 @@ TEST(DatabaseErrors, CreateElementCollectionNotFound) {
 }
 
 TEST(DatabaseErrors, CreateElementEmptyElement) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element element;  // Empty element with no scalars
 
@@ -36,7 +36,7 @@ TEST(DatabaseErrors, CreateElementEmptyElement) {
 
 TEST(DatabaseErrors, CreateElementEmptyArray) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     // Create required Configuration first
     quiver::Element config;
@@ -55,7 +55,7 @@ TEST(DatabaseErrors, CreateElementEmptyArray) {
 // ============================================================================
 
 TEST(DatabaseErrors, UpdateElementNoSchema) {
-    quiver::Database db(":memory:", {.console_level = QUIVER_LOG_OFF});
+    quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element element;
     element.set("label", std::string("Test"));
@@ -64,7 +64,7 @@ TEST(DatabaseErrors, UpdateElementNoSchema) {
 }
 
 TEST(DatabaseErrors, UpdateElementCollectionNotFound) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element element;
     element.set("label", std::string("Test"));
@@ -73,7 +73,7 @@ TEST(DatabaseErrors, UpdateElementCollectionNotFound) {
 }
 
 TEST(DatabaseErrors, UpdateElementEmptyElement) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     // Create an element first
     quiver::Element original;
@@ -91,13 +91,13 @@ TEST(DatabaseErrors, UpdateElementEmptyElement) {
 // ============================================================================
 
 TEST(DatabaseErrors, DeleteElementNoSchema) {
-    quiver::Database db(":memory:", {.console_level = QUIVER_LOG_OFF});
+    quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     EXPECT_THROW(db.delete_element_by_id("Configuration", 1), std::runtime_error);
 }
 
 TEST(DatabaseErrors, DeleteElementCollectionNotFound) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     EXPECT_THROW(db.delete_element_by_id("NonexistentCollection", 1), std::runtime_error);
 }
@@ -107,20 +107,20 @@ TEST(DatabaseErrors, DeleteElementCollectionNotFound) {
 // ============================================================================
 
 TEST(DatabaseErrors, ReadScalarIntegersNoSchema) {
-    quiver::Database db(":memory:", {.console_level = QUIVER_LOG_OFF});
+    quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     // Without schema, executing SQL directly will fail due to missing table
     EXPECT_THROW(db.read_scalar_integers("Configuration", "integer_attribute"), std::runtime_error);
 }
 
 TEST(DatabaseErrors, ReadScalarFloatsNoSchema) {
-    quiver::Database db(":memory:", {.console_level = QUIVER_LOG_OFF});
+    quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     EXPECT_THROW(db.read_scalar_floats("Configuration", "float_attribute"), std::runtime_error);
 }
 
 TEST(DatabaseErrors, ReadScalarStringsNoSchema) {
-    quiver::Database db(":memory:", {.console_level = QUIVER_LOG_OFF});
+    quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     EXPECT_THROW(db.read_scalar_strings("Configuration", "label"), std::runtime_error);
 }
@@ -134,7 +134,7 @@ TEST(DatabaseErrors, ReadScalarStringsNoSchema) {
 
 TEST(DatabaseErrors, ReadVectorIntegersCollectionNotFound) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     // Create required Configuration
     quiver::Element config;
@@ -146,7 +146,7 @@ TEST(DatabaseErrors, ReadVectorIntegersCollectionNotFound) {
 
 TEST(DatabaseErrors, ReadVectorFloatsCollectionNotFound) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element config;
     config.set("label", std::string("Config"));
@@ -164,7 +164,7 @@ TEST(DatabaseErrors, ReadVectorFloatsCollectionNotFound) {
 
 TEST(DatabaseErrors, ReadSetStringsCollectionNotFound) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element config;
     config.set("label", std::string("Config"));
@@ -178,14 +178,14 @@ TEST(DatabaseErrors, ReadSetStringsCollectionNotFound) {
 // ============================================================================
 
 TEST(DatabaseErrors, SetScalarRelationNoSchema) {
-    quiver::Database db(":memory:", {.console_level = QUIVER_LOG_OFF});
+    quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     EXPECT_THROW(db.set_scalar_relation("Child", "parent_id", "Child 1", "Parent 1"), std::runtime_error);
 }
 
 TEST(DatabaseErrors, SetScalarRelationCollectionNotFound) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = QUIVER_LOG_OFF});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     EXPECT_THROW(db.set_scalar_relation("NonexistentCollection", "parent_id", "Child 1", "Parent 1"),
                  std::runtime_error);
@@ -193,7 +193,7 @@ TEST(DatabaseErrors, SetScalarRelationCollectionNotFound) {
 
 TEST(DatabaseErrors, SetScalarRelationNotForeignKey) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = QUIVER_LOG_OFF});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     // 'label' is not a foreign key
     EXPECT_THROW(db.set_scalar_relation("Child", "label", "Child 1", "Parent 1"), std::runtime_error);
@@ -201,7 +201,7 @@ TEST(DatabaseErrors, SetScalarRelationNotForeignKey) {
 
 TEST(DatabaseErrors, SetScalarRelationTargetNotFound) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = QUIVER_LOG_OFF});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     // Create parent and child
     quiver::Element parent;
@@ -217,21 +217,21 @@ TEST(DatabaseErrors, SetScalarRelationTargetNotFound) {
 }
 
 TEST(DatabaseErrors, ReadScalarRelationNoSchema) {
-    quiver::Database db(":memory:", {.console_level = QUIVER_LOG_OFF});
+    quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     EXPECT_THROW(db.read_scalar_relation("Child", "parent_id"), std::runtime_error);
 }
 
 TEST(DatabaseErrors, ReadScalarRelationCollectionNotFound) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = QUIVER_LOG_OFF});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     EXPECT_THROW(db.read_scalar_relation("NonexistentCollection", "parent_id"), std::runtime_error);
 }
 
 TEST(DatabaseErrors, ReadScalarRelationNotForeignKey) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = QUIVER_LOG_OFF});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     // 'label' is not a foreign key
     EXPECT_THROW(db.read_scalar_relation("Child", "label"), std::runtime_error);
@@ -242,19 +242,19 @@ TEST(DatabaseErrors, ReadScalarRelationNotForeignKey) {
 // ============================================================================
 
 TEST(DatabaseErrors, UpdateScalarIntegerNoSchema) {
-    quiver::Database db(":memory:", {.console_level = QUIVER_LOG_OFF});
+    quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     EXPECT_THROW(db.update_scalar_integer("Configuration", "integer_attribute", 1, 42), std::exception);
 }
 
 TEST(DatabaseErrors, UpdateScalarFloatNoSchema) {
-    quiver::Database db(":memory:", {.console_level = QUIVER_LOG_OFF});
+    quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     EXPECT_THROW(db.update_scalar_float("Configuration", "float_attribute", 1, 3.14), std::exception);
 }
 
 TEST(DatabaseErrors, UpdateScalarStringNoSchema) {
-    quiver::Database db(":memory:", {.console_level = QUIVER_LOG_OFF});
+    quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     EXPECT_THROW(db.update_scalar_string("Configuration", "label", 1, "new value"), std::exception);
 }
@@ -268,7 +268,7 @@ TEST(DatabaseErrors, UpdateScalarStringNoSchema) {
 
 TEST(DatabaseErrors, UpdateVectorIntegersCollectionNotFound) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element config;
     config.set("label", std::string("Config"));
@@ -279,7 +279,7 @@ TEST(DatabaseErrors, UpdateVectorIntegersCollectionNotFound) {
 
 TEST(DatabaseErrors, UpdateVectorFloatsCollectionNotFound) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element config;
     config.set("label", std::string("Config"));
@@ -297,7 +297,7 @@ TEST(DatabaseErrors, UpdateVectorFloatsCollectionNotFound) {
 
 TEST(DatabaseErrors, UpdateSetStringsCollectionNotFound) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element config;
     config.set("label", std::string("Config"));
@@ -311,7 +311,7 @@ TEST(DatabaseErrors, UpdateSetStringsCollectionNotFound) {
 // ============================================================================
 
 TEST(DatabaseErrors, ReadScalarIntegersAttributeNotFound) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e;
     e.set("label", std::string("Test"));
@@ -322,7 +322,7 @@ TEST(DatabaseErrors, ReadScalarIntegersAttributeNotFound) {
 }
 
 TEST(DatabaseErrors, ReadScalarFloatsAttributeNotFound) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e;
     e.set("label", std::string("Test"));
@@ -332,7 +332,7 @@ TEST(DatabaseErrors, ReadScalarFloatsAttributeNotFound) {
 }
 
 TEST(DatabaseErrors, ReadScalarStringsAttributeNotFound) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e;
     e.set("label", std::string("Test"));
@@ -347,7 +347,7 @@ TEST(DatabaseErrors, ReadScalarStringsAttributeNotFound) {
 
 TEST(DatabaseErrors, ReadVectorIntegersAttributeNotFound) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element config;
     config.set("label", std::string("Config"));
@@ -358,7 +358,7 @@ TEST(DatabaseErrors, ReadVectorIntegersAttributeNotFound) {
 
 TEST(DatabaseErrors, ReadVectorFloatsAttributeNotFound) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element config;
     config.set("label", std::string("Config"));
@@ -369,7 +369,7 @@ TEST(DatabaseErrors, ReadVectorFloatsAttributeNotFound) {
 
 TEST(DatabaseErrors, ReadVectorStringsAttributeNotFound) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element config;
     config.set("label", std::string("Config"));
@@ -384,7 +384,7 @@ TEST(DatabaseErrors, ReadVectorStringsAttributeNotFound) {
 
 TEST(DatabaseErrors, ReadSetIntegersAttributeNotFound) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element config;
     config.set("label", std::string("Config"));
@@ -395,7 +395,7 @@ TEST(DatabaseErrors, ReadSetIntegersAttributeNotFound) {
 
 TEST(DatabaseErrors, ReadSetFloatsAttributeNotFound) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element config;
     config.set("label", std::string("Config"));
@@ -409,12 +409,12 @@ TEST(DatabaseErrors, ReadSetFloatsAttributeNotFound) {
 // ============================================================================
 
 TEST(DatabaseErrors, ApplySchemaEmptyPath) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", "", {.console_level = QUIVER_LOG_OFF}), std::runtime_error);
+    EXPECT_THROW(quiver::Database::from_schema(":memory:", "", {.read_only = 0, .console_level = QUIVER_LOG_OFF}), std::runtime_error);
 }
 
 TEST(DatabaseErrors, ApplySchemaFileNotFound) {
     EXPECT_THROW(
-        quiver::Database::from_schema(":memory:", "nonexistent/path/schema.sql", {.console_level = QUIVER_LOG_OFF}),
+        quiver::Database::from_schema(":memory:", "nonexistent/path/schema.sql", {.read_only = 0, .console_level = QUIVER_LOG_OFF}),
         std::runtime_error);
 }
 
@@ -423,19 +423,19 @@ TEST(DatabaseErrors, ApplySchemaFileNotFound) {
 // ============================================================================
 
 TEST(DatabaseErrors, UpdateScalarIntegerCollectionNotFound) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     EXPECT_THROW(db.update_scalar_integer("NonexistentCollection", "value", 1, 42), std::runtime_error);
 }
 
 TEST(DatabaseErrors, UpdateScalarFloatCollectionNotFound) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     EXPECT_THROW(db.update_scalar_float("NonexistentCollection", "value", 1, 3.14), std::runtime_error);
 }
 
 TEST(DatabaseErrors, UpdateScalarStringCollectionNotFound) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     EXPECT_THROW(db.update_scalar_string("NonexistentCollection", "value", 1, "test"), std::runtime_error);
 }
@@ -445,7 +445,7 @@ TEST(DatabaseErrors, UpdateScalarStringCollectionNotFound) {
 // ============================================================================
 
 TEST(DatabaseErrors, ReadElementIdsNoSchema) {
-    quiver::Database db(":memory:", {.console_level = QUIVER_LOG_OFF});
+    quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     // Without schema, executing SQL will fail due to missing table
     EXPECT_THROW(db.read_element_ids("Configuration"), std::runtime_error);

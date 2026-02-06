@@ -57,12 +57,12 @@ TEST_F(TempFileFixture, MoveAssignment) {
 }
 
 TEST_F(TempFileFixture, LogLevelDebug) {
-    quiver::Database db(":memory:", {.console_level = QUIVER_LOG_DEBUG});
+    quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_DEBUG});
     EXPECT_TRUE(db.is_healthy());
 }
 
 TEST_F(TempFileFixture, LogLevelOff) {
-    quiver::Database db(":memory:", {.console_level = QUIVER_LOG_OFF});
+    quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
     EXPECT_TRUE(db.is_healthy());
 }
 
@@ -75,7 +75,7 @@ TEST_F(TempFileFixture, CreatesFileOnDisk) {
 }
 
 TEST_F(TempFileFixture, CurrentVersion) {
-    quiver::Database db(":memory:", {.console_level = QUIVER_LOG_OFF});
+    quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
     EXPECT_EQ(db.current_version(), 0);
 }
 
@@ -85,17 +85,17 @@ TEST_F(TempFileFixture, CurrentVersion) {
 
 TEST_F(TempFileFixture, FromSchemaFileNotFound) {
     EXPECT_THROW(
-        quiver::Database::from_schema(":memory:", "nonexistent/path/schema.sql", {.console_level = QUIVER_LOG_OFF}),
+        quiver::Database::from_schema(":memory:", "nonexistent/path/schema.sql", {.read_only = 0, .console_level = QUIVER_LOG_OFF}),
         std::runtime_error);
 }
 
 TEST_F(TempFileFixture, FromSchemaInvalidPath) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", "", {.console_level = QUIVER_LOG_OFF}), std::runtime_error);
+    EXPECT_THROW(quiver::Database::from_schema(":memory:", "", {.read_only = 0, .console_level = QUIVER_LOG_OFF}), std::runtime_error);
 }
 
 TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
     EXPECT_THROW(
-        quiver::Database::from_migrations(":memory:", "nonexistent/migrations/", {.console_level = QUIVER_LOG_OFF}),
+        quiver::Database::from_migrations(":memory:", "nonexistent/migrations/", {.read_only = 0, .console_level = QUIVER_LOG_OFF}),
         std::runtime_error);
 }
 

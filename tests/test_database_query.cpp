@@ -9,7 +9,7 @@
 // ============================================================================
 
 TEST(DatabaseQuery, QueryStringReturnsValue) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e;
     e.set("label", std::string("Test Label")).set("string_attribute", std::string("hello world"));
@@ -21,14 +21,14 @@ TEST(DatabaseQuery, QueryStringReturnsValue) {
 }
 
 TEST(DatabaseQuery, QueryStringReturnsNulloptWhenEmpty) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     auto result = db.query_string("SELECT string_attribute FROM Configuration WHERE 1 = 0");
     EXPECT_FALSE(result.has_value());
 }
 
 TEST(DatabaseQuery, QueryStringReturnsFirstRow) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e1;
     e1.set("label", std::string("First")).set("string_attribute", std::string("first value"));
@@ -48,7 +48,7 @@ TEST(DatabaseQuery, QueryStringReturnsFirstRow) {
 // ============================================================================
 
 TEST(DatabaseQuery, QueryIntegerReturnsValue) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e;
     e.set("label", std::string("Test")).set("integer_attribute", int64_t{42});
@@ -60,14 +60,14 @@ TEST(DatabaseQuery, QueryIntegerReturnsValue) {
 }
 
 TEST(DatabaseQuery, QueryIntegerReturnsNulloptWhenEmpty) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     auto result = db.query_integer("SELECT integer_attribute FROM Configuration WHERE 1 = 0");
     EXPECT_FALSE(result.has_value());
 }
 
 TEST(DatabaseQuery, QueryIntegerReturnsFirstRow) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e1;
     e1.set("label", std::string("A")).set("integer_attribute", int64_t{100});
@@ -83,7 +83,7 @@ TEST(DatabaseQuery, QueryIntegerReturnsFirstRow) {
 }
 
 TEST(DatabaseQuery, QueryIntegerCount) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e1;
     e1.set("label", std::string("A"));
@@ -103,7 +103,7 @@ TEST(DatabaseQuery, QueryIntegerCount) {
 // ============================================================================
 
 TEST(DatabaseQuery, QueryFloatReturnsValue) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e;
     e.set("label", std::string("Test")).set("float_attribute", 3.14159);
@@ -115,14 +115,14 @@ TEST(DatabaseQuery, QueryFloatReturnsValue) {
 }
 
 TEST(DatabaseQuery, QueryFloatReturnsNulloptWhenEmpty) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     auto result = db.query_float("SELECT float_attribute FROM Configuration WHERE 1 = 0");
     EXPECT_FALSE(result.has_value());
 }
 
 TEST(DatabaseQuery, QueryFloatReturnsFirstRow) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e1;
     e1.set("label", std::string("A")).set("float_attribute", 1.5);
@@ -138,7 +138,7 @@ TEST(DatabaseQuery, QueryFloatReturnsFirstRow) {
 }
 
 TEST(DatabaseQuery, QueryFloatAverage) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e1;
     e1.set("label", std::string("A")).set("float_attribute", 10.0);
@@ -158,7 +158,7 @@ TEST(DatabaseQuery, QueryFloatAverage) {
 // ============================================================================
 
 TEST(DatabaseQuery, QueryStringWithParams) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e;
     e.set("label", std::string("Test Label")).set("string_attribute", std::string("hello world"));
@@ -171,7 +171,7 @@ TEST(DatabaseQuery, QueryStringWithParams) {
 }
 
 TEST(DatabaseQuery, QueryStringWithParamsNoMatch) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e;
     e.set("label", std::string("Test")).set("string_attribute", std::string("hello"));
@@ -183,7 +183,7 @@ TEST(DatabaseQuery, QueryStringWithParamsNoMatch) {
 }
 
 TEST(DatabaseQuery, QueryIntegerWithParams) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e;
     e.set("label", std::string("Test")).set("integer_attribute", int64_t{42});
@@ -196,7 +196,7 @@ TEST(DatabaseQuery, QueryIntegerWithParams) {
 }
 
 TEST(DatabaseQuery, QueryFloatWithParams) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e;
     e.set("label", std::string("Test")).set("float_attribute", 3.14);
@@ -208,7 +208,7 @@ TEST(DatabaseQuery, QueryFloatWithParams) {
 }
 
 TEST(DatabaseQuery, QueryIntegerWithMultipleParams) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e1;
     e1.set("label", std::string("A")).set("integer_attribute", int64_t{10});
@@ -226,7 +226,7 @@ TEST(DatabaseQuery, QueryIntegerWithMultipleParams) {
 }
 
 TEST(DatabaseQuery, QueryWithNullParam) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e;
     e.set("label", std::string("Test"));

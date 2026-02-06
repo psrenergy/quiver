@@ -5,7 +5,7 @@
 
 class SchemaValidatorFixture : public ::testing::Test {
 protected:
-    quiver::DatabaseOptions opts{.console_level = QUIVER_LOG_OFF};
+    quiver::DatabaseOptions opts{.read_only = 0, .console_level = QUIVER_LOG_OFF};
 };
 
 // Valid schemas
