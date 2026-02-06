@@ -50,28 +50,12 @@ std::string Migration::down_sql() const {
     return buffer.str();
 }
 
-bool Migration::operator<(const Migration& other) const {
-    return version_ < other.version_;
+std::strong_ordering Migration::operator<=>(const Migration& other) const {
+    return version_ <=> other.version_;
 }
 
 bool Migration::operator==(const Migration& other) const {
     return version_ == other.version_;
-}
-
-bool Migration::operator!=(const Migration& other) const {
-    return version_ != other.version_;
-}
-
-bool Migration::operator>(const Migration& other) const {
-    return version_ > other.version_;
-}
-
-bool Migration::operator<=(const Migration& other) const {
-    return version_ <= other.version_;
-}
-
-bool Migration::operator>=(const Migration& other) const {
-    return version_ >= other.version_;
 }
 
 }  // namespace quiver

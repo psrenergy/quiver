@@ -3,6 +3,7 @@
 
 #include "export.h"
 
+#include <compare>
 #include <cstdint>
 #include <string>
 
@@ -21,12 +22,8 @@ public:
     std::string down_sql() const;
 
     // Comparison operators (for sorting by version)
-    bool operator<(const Migration& other) const;
+    std::strong_ordering operator<=>(const Migration& other) const;
     bool operator==(const Migration& other) const;
-    bool operator!=(const Migration& other) const;
-    bool operator>(const Migration& other) const;
-    bool operator<=(const Migration& other) const;
-    bool operator>=(const Migration& other) const;
 
 private:
     int64_t version_;
