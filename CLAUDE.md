@@ -10,7 +10,7 @@ include/quiver/           # C++ public headers
   element.h               # Element builder for create operations
   lua_runner.h            # Lua scripting support
 include/quiver/c/         # C API headers (for FFI)
-  options.h               # Canonical DatabaseOptions/LogLevel (shared by C++ and C)
+  options.h               # Canonical DatabaseOptions/LogLevel types (shared by C++ and C)
   database.h
   element.h
   lua_runner.h

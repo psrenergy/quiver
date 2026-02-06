@@ -59,10 +59,9 @@ class QuiverDatabaseBindings {
     return _quiver_database_options_default();
   }
 
-  late final _quiver_database_options_defaultPtr =
-      _lookup<ffi.NativeFunction<quiver_database_options_t Function()>>(
-        'quiver_database_options_default',
-      );
+  late final _quiver_database_options_defaultPtr = _lookup<ffi.NativeFunction<quiver_database_options_t Function()>>(
+    'quiver_database_options_default',
+  );
   late final _quiver_database_options_default = _quiver_database_options_defaultPtr
       .asFunction<quiver_database_options_t Function()>();
 
@@ -2999,20 +2998,20 @@ abstract class quiver_error_t {
   static const int QUIVER_ERROR_NOT_FOUND = -5;
 }
 
-abstract class quiver_log_level_t {
-  static const int QUIVER_LOG_DEBUG = 0;
-  static const int QUIVER_LOG_INFO = 1;
-  static const int QUIVER_LOG_WARN = 2;
-  static const int QUIVER_LOG_ERROR = 3;
-  static const int QUIVER_LOG_OFF = 4;
-}
-
 final class quiver_database_options_t extends ffi.Struct {
   @ffi.Int()
   external int read_only;
 
   @ffi.Int32()
   external int console_level;
+}
+
+abstract class quiver_log_level_t {
+  static const int QUIVER_LOG_DEBUG = 0;
+  static const int QUIVER_LOG_INFO = 1;
+  static const int QUIVER_LOG_WARN = 2;
+  static const int QUIVER_LOG_ERROR = 3;
+  static const int QUIVER_LOG_OFF = 4;
 }
 
 abstract class quiver_data_structure_t {

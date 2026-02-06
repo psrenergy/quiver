@@ -80,7 +80,7 @@ quiver_error_t copy_strings_to_c(const std::vector<std::string>& values, char***
 extern "C" {
 
 QUIVER_C_API quiver_database_options_t quiver_database_options_default(void) {
-    return {0, QUIVER_LOG_INFO};
+    return quiver::default_options();
 }
 
 QUIVER_C_API quiver_error_t quiver_database_open(const char* path,
@@ -90,7 +90,7 @@ QUIVER_C_API quiver_error_t quiver_database_open(const char* path,
     QUIVER_REQUIRE(out_db);
 
     try {
-        quiver_database_options_t opts{};
+        auto opts = quiver::default_options();
         if (options) opts = *options;
         *out_db = new quiver_database(path, opts);
         return QUIVER_OK;
@@ -133,7 +133,7 @@ QUIVER_C_API quiver_error_t quiver_database_from_migrations(const char* db_path,
     QUIVER_REQUIRE(out_db);
 
     try {
-        quiver_database_options_t opts{};
+        auto opts = quiver::default_options();
         if (options) opts = *options;
         auto db = quiver::Database::from_migrations(db_path, migrations_path, opts);
         *out_db = new quiver_database(std::move(db));
@@ -258,7 +258,7 @@ QUIVER_C_API quiver_error_t quiver_database_from_schema(const char* db_path,
     QUIVER_REQUIRE(out_db);
 
     try {
-        quiver_database_options_t opts{};
+        auto opts = quiver::default_options();
         if (options) opts = *options;
         auto db = quiver::Database::from_schema(db_path, schema_path, opts);
         *out_db = new quiver_database(std::move(db));
