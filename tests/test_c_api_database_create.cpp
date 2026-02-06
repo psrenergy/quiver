@@ -6,7 +6,8 @@
 
 TEST(DatabaseCApi, CreateElementWithScalars) {
     // Test: Use C API to create element with schema
-    auto options = quiver_database_options_default();
+    quiver_database_options_t options;
+    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
@@ -29,7 +30,8 @@ TEST(DatabaseCApi, CreateElementWithScalars) {
 
 TEST(DatabaseCApi, CreateElementWithVector) {
     // Test: Use C API to create element with array using schema
-    auto options = quiver_database_options_default();
+    quiver_database_options_t options;
+    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
@@ -75,7 +77,8 @@ TEST(DatabaseCApi, CreateElementNullDb) {
 }
 
 TEST(DatabaseCApi, CreateElementNullCollection) {
-    auto options = quiver_database_options_default();
+    quiver_database_options_t options;
+    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_open(":memory:", &options, &db), QUIVER_OK);
@@ -94,7 +97,8 @@ TEST(DatabaseCApi, CreateElementNullCollection) {
 }
 
 TEST(DatabaseCApi, CreateElementNullElement) {
-    auto options = quiver_database_options_default();
+    quiver_database_options_t options;
+    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_open(":memory:", &options, &db), QUIVER_OK);

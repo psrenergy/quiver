@@ -251,7 +251,7 @@ TEST(ElementCApi, ToStringNull) {
 }
 
 TEST(ElementCApi, StringFreeNull) {
-    quiver_string_free(nullptr);
+    EXPECT_EQ(quiver_string_free(nullptr), QUIVER_OK);
 }
 
 TEST(ElementCApi, ArrayNullErrors) {
