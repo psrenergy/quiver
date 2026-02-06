@@ -35,7 +35,7 @@ class Database {
     final arena = Arena();
     try {
       final optionsPtr = arena<quiver_database_options_t>();
-      bindings.quiver_database_options_default(optionsPtr);
+      optionsPtr.ref = bindings.quiver_database_options_default();
       final outDbPtr = arena<Pointer<quiver_database_t>>();
 
       final err = bindings.quiver_database_from_schema(
@@ -66,7 +66,7 @@ class Database {
     final arena = Arena();
     try {
       final optionsPtr = arena<quiver_database_options_t>();
-      bindings.quiver_database_options_default(optionsPtr);
+      optionsPtr.ref = bindings.quiver_database_options_default();
       final outDbPtr = arena<Pointer<quiver_database_t>>();
 
       final err = bindings.quiver_database_from_migrations(

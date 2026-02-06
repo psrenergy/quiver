@@ -55,20 +55,16 @@ class QuiverDatabaseBindings {
   late final _quiver_clear_last_errorPtr = _lookup<ffi.NativeFunction<ffi.Void Function()>>('quiver_clear_last_error');
   late final _quiver_clear_last_error = _quiver_clear_last_errorPtr.asFunction<void Function()>();
 
-  int quiver_database_options_default(
-    ffi.Pointer<quiver_database_options_t> out_options,
-  ) {
-    return _quiver_database_options_default(
-      out_options,
-    );
+  quiver_database_options_t quiver_database_options_default() {
+    return _quiver_database_options_default();
   }
 
   late final _quiver_database_options_defaultPtr =
-      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_database_options_t>)>>(
+      _lookup<ffi.NativeFunction<quiver_database_options_t Function()>>(
         'quiver_database_options_default',
       );
   late final _quiver_database_options_default = _quiver_database_options_defaultPtr
-      .asFunction<int Function(ffi.Pointer<quiver_database_options_t>)>();
+      .asFunction<quiver_database_options_t Function()>();
 
   int quiver_database_open(
     ffi.Pointer<ffi.Char> path,

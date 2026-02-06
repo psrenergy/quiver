@@ -79,8 +79,8 @@ end
     QUIVER_DATA_TYPE_NULL = 4
 end
 
-function quiver_database_options_default(out_options)
-    @ccall libquiver_c.quiver_database_options_default(out_options::Ptr{quiver_database_options_t})::quiver_error_t
+function quiver_database_options_default()
+    @ccall libquiver_c.quiver_database_options_default()::quiver_database_options_t
 end
 
 mutable struct quiver_database end

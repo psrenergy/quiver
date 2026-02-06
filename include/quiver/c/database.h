@@ -24,9 +24,6 @@ typedef enum {
     QUIVER_DATA_TYPE_NULL = 4
 } quiver_data_type_t;
 
-// Returns default options
-QUIVER_C_API quiver_database_options_t quiver_database_options_default(void);
-
 // Opaque handle type
 typedef struct quiver_database quiver_database_t;
 

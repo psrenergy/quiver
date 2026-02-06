@@ -1,6 +1,8 @@
 #ifndef QUIVER_C_OPTIONS_H
 #define QUIVER_C_OPTIONS_H
 
+#include "common.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -18,12 +20,8 @@ typedef struct {
     quiver_log_level_t console_level;
 } quiver_database_options_t;
 
-static inline quiver_database_options_t quiver_database_options_default_value(void) {
-    quiver_database_options_t opts;
-    opts.read_only = 0;
-    opts.console_level = QUIVER_LOG_INFO;
-    return opts;
-}
+// Returns default options
+QUIVER_C_API quiver_database_options_t quiver_database_options_default(void);
 
 #ifdef __cplusplus
 }
