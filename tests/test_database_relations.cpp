@@ -5,8 +5,8 @@
 #include <quiver/element.h>
 
 TEST(Database, SetScalarRelation) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = QUIVER_LOG_OFF});
 
     // Create parent
     quiver::Element parent;
@@ -28,8 +28,8 @@ TEST(Database, SetScalarRelation) {
 }
 
 TEST(Database, SetScalarRelationSelfReference) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = QUIVER_LOG_OFF});
 
     // Create two children
     quiver::Element child1;
@@ -56,8 +56,8 @@ TEST(Database, SetScalarRelationSelfReference) {
 // ============================================================================
 
 TEST(Database, ReadScalarRelationWithNulls) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = QUIVER_LOG_OFF});
 
     // Create parent
     quiver::Element parent;
@@ -81,8 +81,8 @@ TEST(Database, ReadScalarRelationWithNulls) {
 }
 
 TEST(Database, ReadScalarRelationMixedNullsAndValues) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = QUIVER_LOG_OFF});
 
     // Create parent
     quiver::Element parent;
@@ -108,8 +108,8 @@ TEST(Database, ReadScalarRelationMixedNullsAndValues) {
 }
 
 TEST(Database, ReadScalarRelationEmpty) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = QUIVER_LOG_OFF});
 
     // No children created yet
     auto relations = db.read_scalar_relation("Child", "parent_id");
@@ -121,8 +121,8 @@ TEST(Database, ReadScalarRelationEmpty) {
 // ============================================================================
 
 TEST(Database, SetScalarRelationMultipleChildren) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = QUIVER_LOG_OFF});
 
     // Create parent
     quiver::Element parent;
@@ -154,8 +154,8 @@ TEST(Database, SetScalarRelationMultipleChildren) {
 }
 
 TEST(Database, SetScalarRelationOverwrite) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = QUIVER_LOG_OFF});
 
     // Create two parents
     quiver::Element parent1;

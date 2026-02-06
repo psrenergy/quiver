@@ -9,8 +9,8 @@
 // ============================================================================
 
 TEST(Database, GetTimeSeriesMetadata) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
 
     auto metadata = db.get_time_series_metadata("Collection", "data");
     EXPECT_EQ(metadata.group_name, "data");
@@ -21,8 +21,8 @@ TEST(Database, GetTimeSeriesMetadata) {
 }
 
 TEST(Database, ListTimeSeriesGroups) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
 
     auto groups = db.list_time_series_groups("Collection");
     EXPECT_EQ(groups.size(), 1);
@@ -33,8 +33,7 @@ TEST(Database, ListTimeSeriesGroups) {
 }
 
 TEST(Database, ListTimeSeriesGroupsEmpty) {
-    auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
 
     // Configuration has no time series tables
     auto groups = db.list_time_series_groups("Configuration");
@@ -46,8 +45,8 @@ TEST(Database, ListTimeSeriesGroupsEmpty) {
 // ============================================================================
 
 TEST(Database, ReadTimeSeriesGroupById) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -80,8 +79,8 @@ TEST(Database, ReadTimeSeriesGroupById) {
 }
 
 TEST(Database, ReadTimeSeriesGroupByIdEmpty) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -97,8 +96,8 @@ TEST(Database, ReadTimeSeriesGroupByIdEmpty) {
 }
 
 TEST(Database, ReadTimeSeriesGroupByIdNonexistent) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -114,8 +113,8 @@ TEST(Database, ReadTimeSeriesGroupByIdNonexistent) {
 // ============================================================================
 
 TEST(Database, UpdateTimeSeriesGroup) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -146,8 +145,8 @@ TEST(Database, UpdateTimeSeriesGroup) {
 }
 
 TEST(Database, UpdateTimeSeriesGroupEmpty) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -171,8 +170,8 @@ TEST(Database, UpdateTimeSeriesGroupEmpty) {
 }
 
 TEST(Database, TimeSeriesOrdering) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -202,8 +201,8 @@ TEST(Database, TimeSeriesOrdering) {
 // ============================================================================
 
 TEST(Database, TimeSeriesGroupNotFound) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
 
     EXPECT_THROW(db.get_time_series_metadata("Collection", "nonexistent"), std::runtime_error);
 
@@ -211,8 +210,8 @@ TEST(Database, TimeSeriesGroupNotFound) {
 }
 
 TEST(Database, TimeSeriesCollectionNotFound) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
 
     // Nonexistent collection returns empty list (matches list_vector_groups behavior)
     auto groups = db.list_time_series_groups("NonexistentCollection");
@@ -220,8 +219,8 @@ TEST(Database, TimeSeriesCollectionNotFound) {
 }
 
 TEST(Database, TimeSeriesMissingDateTime) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -244,16 +243,16 @@ TEST(Database, TimeSeriesMissingDateTime) {
 // ============================================================================
 
 TEST(Database, HasTimeSeriesFiles) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
 
     EXPECT_TRUE(db.has_time_series_files("Collection"));
     EXPECT_FALSE(db.has_time_series_files("Configuration"));
 }
 
 TEST(Database, ListTimeSeriesFilesColumns) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
 
     auto columns = db.list_time_series_files_columns("Collection");
     EXPECT_EQ(columns.size(), 2);
@@ -262,8 +261,8 @@ TEST(Database, ListTimeSeriesFilesColumns) {
 }
 
 TEST(Database, ReadTimeSeriesFilesEmpty) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
 
     auto paths = db.read_time_series_files("Collection");
     EXPECT_EQ(paths.size(), 2);
@@ -272,8 +271,8 @@ TEST(Database, ReadTimeSeriesFilesEmpty) {
 }
 
 TEST(Database, UpdateAndReadTimeSeriesFiles) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
 
     std::map<std::string, std::optional<std::string>> paths;
     paths["data_file"] = "/path/to/data.csv";
@@ -290,8 +289,8 @@ TEST(Database, UpdateAndReadTimeSeriesFiles) {
 }
 
 TEST(Database, UpdateTimeSeriesFilesWithNulls) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
 
     std::map<std::string, std::optional<std::string>> paths;
     paths["data_file"] = "/path/to/data.csv";
@@ -306,8 +305,8 @@ TEST(Database, UpdateTimeSeriesFilesWithNulls) {
 }
 
 TEST(Database, UpdateTimeSeriesFilesReplace) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
 
     // First update
     std::map<std::string, std::optional<std::string>> paths1;
@@ -327,8 +326,8 @@ TEST(Database, UpdateTimeSeriesFilesReplace) {
 }
 
 TEST(Database, TimeSeriesFilesNotFound) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
 
     EXPECT_THROW(db.read_time_series_files("Configuration"), std::runtime_error);
     EXPECT_THROW(db.list_time_series_files_columns("Configuration"), std::runtime_error);

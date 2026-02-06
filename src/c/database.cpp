@@ -80,7 +80,7 @@ quiver_error_t copy_strings_to_c(const std::vector<std::string>& values, char***
 extern "C" {
 
 QUIVER_C_API quiver_database_options_t quiver_database_options_default(void) {
-    return quiver::default_options();
+    return quiver::default_database_options();
 }
 
 QUIVER_C_API quiver_error_t quiver_database_open(const char* path,
@@ -90,8 +90,9 @@ QUIVER_C_API quiver_error_t quiver_database_open(const char* path,
     QUIVER_REQUIRE(out_db);
 
     try {
-        auto opts = quiver::default_options();
-        if (options) opts = *options;
+        auto opts = quiver::default_database_options();
+        if (options)
+            opts = *options;
         *out_db = new quiver_database(path, opts);
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
@@ -133,8 +134,9 @@ QUIVER_C_API quiver_error_t quiver_database_from_migrations(const char* db_path,
     QUIVER_REQUIRE(out_db);
 
     try {
-        auto opts = quiver::default_options();
-        if (options) opts = *options;
+        auto opts = quiver::default_database_options();
+        if (options)
+            opts = *options;
         auto db = quiver::Database::from_migrations(db_path, migrations_path, opts);
         *out_db = new quiver_database(std::move(db));
         return QUIVER_OK;
@@ -258,8 +260,9 @@ QUIVER_C_API quiver_error_t quiver_database_from_schema(const char* db_path,
     QUIVER_REQUIRE(out_db);
 
     try {
-        auto opts = quiver::default_options();
-        if (options) opts = *options;
+        auto opts = quiver::default_database_options();
+        if (options)
+            opts = *options;
         auto db = quiver::Database::from_schema(db_path, schema_path, opts);
         *out_db = new quiver_database(std::move(db));
         return QUIVER_OK;
@@ -455,7 +458,7 @@ QUIVER_C_API quiver_error_t quiver_free_float_vectors(double** vectors, size_t* 
 QUIVER_C_API quiver_error_t quiver_free_string_vectors(char*** vectors, size_t* sizes, size_t count) {
     QUIVER_REQUIRE(vectors);
     QUIVER_REQUIRE(sizes);
-    
+
     for (size_t i = 0; i < count; ++i) {
         if (vectors[i]) {
             for (size_t j = 0; j < sizes[i]; ++j) {
@@ -1250,8 +1253,9 @@ QUIVER_C_API quiver_error_t quiver_database_list_scalar_attributes(quiver_databa
                 (*out_metadata)[i].default_value = nullptr;
             }
             (*out_metadata)[i].is_foreign_key = attributes[i].is_foreign_key ? 1 : 0;
-            (*out_metadata)[i].references_collection =
-                attributes[i].references_collection.has_value() ? strdup_safe(*attributes[i].references_collection) : nullptr;
+            (*out_metadata)[i].references_collection = attributes[i].references_collection.has_value()
+                                                           ? strdup_safe(*attributes[i].references_collection)
+                                                           : nullptr;
             (*out_metadata)[i].references_column =
                 attributes[i].references_column.has_value() ? strdup_safe(*attributes[i].references_column) : nullptr;
         }
@@ -1770,7 +1774,8 @@ QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(quiver_datab
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_free_time_series_metadata_array(quiver_time_series_metadata_t* metadata, size_t count) {
+QUIVER_C_API quiver_error_t quiver_free_time_series_metadata_array(quiver_time_series_metadata_t* metadata,
+                                                                   size_t count) {
     QUIVER_REQUIRE(metadata);
 
     for (size_t i = 0; i < count; ++i) {
@@ -2018,15 +2023,15 @@ QUIVER_C_API quiver_error_t quiver_free_time_series_files(char** columns, char**
     QUIVER_REQUIRE(columns);
     QUIVER_REQUIRE(paths);
 
-        for (size_t i = 0; i < count; ++i) {
-            delete[] columns[i];
-        }
-        delete[] columns;
-    
-        for (size_t i = 0; i < count; ++i) {
-            delete[] paths[i];
-        }
-        delete[] paths;
+    for (size_t i = 0; i < count; ++i) {
+        delete[] columns[i];
+    }
+    delete[] columns;
+
+    for (size_t i = 0; i < count; ++i) {
+        delete[] paths[i];
+    }
+    delete[] paths;
     return QUIVER_OK;
 }
 

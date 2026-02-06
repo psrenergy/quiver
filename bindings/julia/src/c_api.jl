@@ -65,6 +65,10 @@ struct quiver_database_options_t
     console_level::quiver_log_level_t
 end
 
+function quiver_database_options_default()
+    @ccall libquiver_c.quiver_database_options_default()::quiver_database_options_t
+end
+
 @cenum quiver_data_structure_t::UInt32 begin
     QUIVER_DATA_STRUCTURE_SCALAR = 0
     QUIVER_DATA_STRUCTURE_VECTOR = 1
@@ -77,10 +81,6 @@ end
     QUIVER_DATA_TYPE_STRING = 2
     QUIVER_DATA_TYPE_DATE_TIME = 3
     QUIVER_DATA_TYPE_NULL = 4
-end
-
-function quiver_database_options_default()
-    @ccall libquiver_c.quiver_database_options_default()::quiver_database_options_t
 end
 
 mutable struct quiver_database end

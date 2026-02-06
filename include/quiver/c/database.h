@@ -294,7 +294,8 @@ QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(quiver_datab
 QUIVER_C_API quiver_error_t quiver_free_scalar_metadata_array(quiver_scalar_metadata_t* metadata, size_t count);
 QUIVER_C_API quiver_error_t quiver_free_vector_metadata_array(quiver_vector_metadata_t* metadata, size_t count);
 QUIVER_C_API quiver_error_t quiver_free_set_metadata_array(quiver_set_metadata_t* metadata, size_t count);
-QUIVER_C_API quiver_error_t quiver_free_time_series_metadata_array(quiver_time_series_metadata_t* metadata, size_t count);
+QUIVER_C_API quiver_error_t quiver_free_time_series_metadata_array(quiver_time_series_metadata_t* metadata,
+                                                                   size_t count);
 
 // Update scalar attributes (by element ID)
 QUIVER_C_API quiver_error_t quiver_database_update_scalar_integer(quiver_database_t* db,
