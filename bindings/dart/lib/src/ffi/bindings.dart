@@ -19,19 +19,6 @@ class QuiverDatabaseBindings {
   QuiverDatabaseBindings.fromLookup(ffi.Pointer<T> Function<T extends ffi.NativeType>(String symbolName) lookup)
     : _lookup = lookup;
 
-  ffi.Pointer<ffi.Char> quiver_error_string(
-    int error,
-  ) {
-    return _quiver_error_string(
-      error,
-    );
-  }
-
-  late final _quiver_error_stringPtr = _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Char> Function(ffi.Int32)>>(
-    'quiver_error_string',
-  );
-  late final _quiver_error_string = _quiver_error_stringPtr.asFunction<ffi.Pointer<ffi.Char> Function(int)>();
-
   ffi.Pointer<ffi.Char> quiver_version() {
     return _quiver_version();
   }
@@ -2991,11 +2978,7 @@ class QuiverDatabaseBindings {
 
 abstract class quiver_error_t {
   static const int QUIVER_OK = 0;
-  static const int QUIVER_ERROR_INVALID_ARGUMENT = -1;
-  static const int QUIVER_ERROR_DATABASE = -2;
-  static const int QUIVER_ERROR_MIGRATION = -3;
-  static const int QUIVER_ERROR_SCHEMA = -4;
-  static const int QUIVER_ERROR_NOT_FOUND = -5;
+  static const int QUIVER_ERROR = 1;
 }
 
 final class quiver_database_options_t extends ffi.Struct {

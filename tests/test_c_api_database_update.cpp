@@ -473,15 +473,15 @@ TEST(DatabaseCApi, UpdateElementNullArguments) {
 
     // Null db
     auto err = quiver_database_update_element(nullptr, "Configuration", 1, element);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     // Null collection
     err = quiver_database_update_element(db, nullptr, 1, element);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     // Null element
     err = quiver_database_update_element(db, "Configuration", 1, nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     quiver_database_close(db);
@@ -493,7 +493,7 @@ TEST(DatabaseCApi, UpdateElementNullArguments) {
 
 TEST(DatabaseCApi, UpdateScalarIntegerNullDb) {
     auto err = quiver_database_update_scalar_integer(nullptr, "Configuration", "integer_attribute", 1, 42);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, UpdateScalarIntegerNullCollection) {
@@ -504,7 +504,7 @@ TEST(DatabaseCApi, UpdateScalarIntegerNullCollection) {
     ASSERT_NE(db, nullptr);
 
     auto err = quiver_database_update_scalar_integer(db, nullptr, "integer_attribute", 1, 42);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -517,14 +517,14 @@ TEST(DatabaseCApi, UpdateScalarIntegerNullAttribute) {
     ASSERT_NE(db, nullptr);
 
     auto err = quiver_database_update_scalar_integer(db, "Configuration", nullptr, 1, 42);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
 
 TEST(DatabaseCApi, UpdateScalarFloatNullDb) {
     auto err = quiver_database_update_scalar_float(nullptr, "Configuration", "float_attribute", 1, 3.14);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, UpdateScalarFloatNullCollection) {
@@ -535,14 +535,14 @@ TEST(DatabaseCApi, UpdateScalarFloatNullCollection) {
     ASSERT_NE(db, nullptr);
 
     auto err = quiver_database_update_scalar_float(db, nullptr, "float_attribute", 1, 3.14);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
 
 TEST(DatabaseCApi, UpdateScalarStringNullDb) {
     auto err = quiver_database_update_scalar_string(nullptr, "Configuration", "string_attribute", 1, "test");
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, UpdateScalarStringNullCollection) {
@@ -553,7 +553,7 @@ TEST(DatabaseCApi, UpdateScalarStringNullCollection) {
     ASSERT_NE(db, nullptr);
 
     auto err = quiver_database_update_scalar_string(db, nullptr, "string_attribute", 1, "test");
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -566,7 +566,7 @@ TEST(DatabaseCApi, UpdateScalarStringNullValue) {
     ASSERT_NE(db, nullptr);
 
     auto err = quiver_database_update_scalar_string(db, "Configuration", "string_attribute", 1, nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -578,7 +578,7 @@ TEST(DatabaseCApi, UpdateScalarStringNullValue) {
 TEST(DatabaseCApi, UpdateVectorIntegersNullDb) {
     int64_t values[] = {1, 2, 3};
     auto err = quiver_database_update_vector_integers(nullptr, "Collection", "value_int", 1, values, 3);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, UpdateVectorIntegersNullCollection) {
@@ -591,7 +591,7 @@ TEST(DatabaseCApi, UpdateVectorIntegersNullCollection) {
 
     int64_t values[] = {1, 2, 3};
     auto err = quiver_database_update_vector_integers(db, nullptr, "value_int", 1, values, 3);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -606,7 +606,7 @@ TEST(DatabaseCApi, UpdateVectorIntegersNullAttribute) {
 
     int64_t values[] = {1, 2, 3};
     auto err = quiver_database_update_vector_integers(db, "Collection", nullptr, 1, values, 3);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -614,7 +614,7 @@ TEST(DatabaseCApi, UpdateVectorIntegersNullAttribute) {
 TEST(DatabaseCApi, UpdateVectorFloatsNullDb) {
     double values[] = {1.0, 2.0, 3.0};
     auto err = quiver_database_update_vector_floats(nullptr, "Collection", "value_float", 1, values, 3);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, UpdateVectorFloatsNullCollection) {
@@ -627,7 +627,7 @@ TEST(DatabaseCApi, UpdateVectorFloatsNullCollection) {
 
     double values[] = {1.0, 2.0, 3.0};
     auto err = quiver_database_update_vector_floats(db, nullptr, "value_float", 1, values, 3);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -635,7 +635,7 @@ TEST(DatabaseCApi, UpdateVectorFloatsNullCollection) {
 TEST(DatabaseCApi, UpdateVectorStringsNullDb) {
     const char* values[] = {"a", "b", "c"};
     auto err = quiver_database_update_vector_strings(nullptr, "Collection", "tag", 1, values, 3);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, UpdateVectorStringsNullCollection) {
@@ -648,7 +648,7 @@ TEST(DatabaseCApi, UpdateVectorStringsNullCollection) {
 
     const char* values[] = {"a", "b", "c"};
     auto err = quiver_database_update_vector_strings(db, nullptr, "tag", 1, values, 3);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -660,7 +660,7 @@ TEST(DatabaseCApi, UpdateVectorStringsNullCollection) {
 TEST(DatabaseCApi, UpdateSetIntegersNullDb) {
     int64_t values[] = {1, 2, 3};
     auto err = quiver_database_update_set_integers(nullptr, "Collection", "tag", 1, values, 3);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, UpdateSetIntegersNullCollection) {
@@ -673,7 +673,7 @@ TEST(DatabaseCApi, UpdateSetIntegersNullCollection) {
 
     int64_t values[] = {1, 2, 3};
     auto err = quiver_database_update_set_integers(db, nullptr, "tag", 1, values, 3);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -681,7 +681,7 @@ TEST(DatabaseCApi, UpdateSetIntegersNullCollection) {
 TEST(DatabaseCApi, UpdateSetFloatsNullDb) {
     double values[] = {1.0, 2.0, 3.0};
     auto err = quiver_database_update_set_floats(nullptr, "Collection", "tag", 1, values, 3);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, UpdateSetFloatsNullCollection) {
@@ -694,7 +694,7 @@ TEST(DatabaseCApi, UpdateSetFloatsNullCollection) {
 
     double values[] = {1.0, 2.0, 3.0};
     auto err = quiver_database_update_set_floats(db, nullptr, "tag", 1, values, 3);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -702,7 +702,7 @@ TEST(DatabaseCApi, UpdateSetFloatsNullCollection) {
 TEST(DatabaseCApi, UpdateSetStringsNullDb) {
     const char* values[] = {"a", "b", "c"};
     auto err = quiver_database_update_set_strings(nullptr, "Collection", "tag", 1, values, 3);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, UpdateSetStringsNullCollection) {
@@ -715,7 +715,7 @@ TEST(DatabaseCApi, UpdateSetStringsNullCollection) {
 
     const char* values[] = {"a", "b", "c"};
     auto err = quiver_database_update_set_strings(db, nullptr, "tag", 1, values, 3);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -730,7 +730,7 @@ TEST(DatabaseCApi, UpdateSetStringsNullAttribute) {
 
     const char* values[] = {"a", "b", "c"};
     auto err = quiver_database_update_set_strings(db, "Collection", nullptr, 1, values, 3);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -785,7 +785,7 @@ TEST(DatabaseCApi, UpdateVectorStringsNullElement) {
 
     const char* values[] = {"a", nullptr, "c"};
     auto err = quiver_database_update_vector_strings(db, "Collection", "tag", 1, values, 3);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -800,7 +800,7 @@ TEST(DatabaseCApi, UpdateSetStringsNullElement) {
 
     const char* values[] = {"a", nullptr, "c"};
     auto err = quiver_database_update_set_strings(db, "Collection", "tag", 1, values, 3);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }

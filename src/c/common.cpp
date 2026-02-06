@@ -25,25 +25,6 @@ QUIVER_C_API void quiver_clear_last_error(void) {
     g_last_error.clear();
 }
 
-QUIVER_C_API const char* quiver_error_string(quiver_error_t error) {
-    switch (error) {
-    case QUIVER_OK:
-        return "Success";
-    case QUIVER_ERROR_INVALID_ARGUMENT:
-        return "Invalid argument";
-    case QUIVER_ERROR_DATABASE:
-        return "Database error";
-    case QUIVER_ERROR_MIGRATION:
-        return "Migration error";
-    case QUIVER_ERROR_SCHEMA:
-        return "Schema validation error";
-    case QUIVER_ERROR_NOT_FOUND:
-        return "Not found";
-    default:
-        return "Unknown error";
-    }
-}
-
 QUIVER_C_API const char* quiver_version(void) {
     return QUIVER_VERSION;
 }

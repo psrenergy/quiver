@@ -48,7 +48,7 @@ class Database {
       if (err != quiver_error_t.QUIVER_OK) {
         final errorPtr = bindings.quiver_get_last_error();
         final errorMsg = errorPtr.cast<Utf8>().toDartString();
-        throw SchemaException(
+        throw DatabaseException(
           errorMsg.isNotEmpty ? errorMsg : 'Failed to create database from schema',
         );
       }
@@ -79,7 +79,7 @@ class Database {
       if (err != quiver_error_t.QUIVER_OK) {
         final errorPtr = bindings.quiver_get_last_error();
         final errorMsg = errorPtr.cast<Utf8>().toDartString();
-        throw MigrationException(
+        throw DatabaseException(
           errorMsg.isNotEmpty ? errorMsg : 'Failed to create database from migrations',
         );
       }
@@ -92,7 +92,7 @@ class Database {
 
   void _ensureNotClosed() {
     if (_isClosed) {
-      throw const DatabaseOperationException('Database has been closed');
+      throw const DatabaseException('Database has been closed');
     }
   }
 

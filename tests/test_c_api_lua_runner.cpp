@@ -32,7 +32,7 @@ TEST_F(LuaRunnerCApiTest, FreeNull) {
 
 TEST_F(LuaRunnerCApiTest, CreateWithNullDb) {
     quiver_lua_runner_t* lua = nullptr;
-    EXPECT_EQ(quiver_lua_runner_new(nullptr, &lua), QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(quiver_lua_runner_new(nullptr, &lua), QUIVER_ERROR);
 }
 
 TEST_F(LuaRunnerCApiTest, RunSimpleScript) {
@@ -65,7 +65,7 @@ TEST_F(LuaRunnerCApiTest, RunNullScript) {
     ASSERT_NE(lua, nullptr);
 
     auto result = quiver_lua_runner_run(lua, nullptr);
-    EXPECT_EQ(result, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(result, QUIVER_ERROR);
 
     quiver_lua_runner_free(lua);
     quiver_database_close(db);
@@ -73,7 +73,7 @@ TEST_F(LuaRunnerCApiTest, RunNullScript) {
 
 TEST_F(LuaRunnerCApiTest, RunWithNullRunner) {
     auto result = quiver_lua_runner_run(nullptr, "local x = 1");
-    EXPECT_EQ(result, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(result, QUIVER_ERROR);
 }
 
 TEST_F(LuaRunnerCApiTest, CreateElement) {
@@ -152,7 +152,7 @@ TEST_F(LuaRunnerCApiTest, RuntimeError) {
 
 TEST_F(LuaRunnerCApiTest, GetErrorNull) {
     const char* error = nullptr;
-    EXPECT_EQ(quiver_lua_runner_get_error(nullptr, &error), QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(quiver_lua_runner_get_error(nullptr, &error), QUIVER_ERROR);
 }
 
 TEST_F(LuaRunnerCApiTest, ReuseRunner) {

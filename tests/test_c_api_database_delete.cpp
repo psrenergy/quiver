@@ -254,11 +254,11 @@ TEST(DatabaseCApi, DeleteElementByIdNullArguments) {
 
     // Null db
     auto err = quiver_database_delete_element_by_id(nullptr, "Configuration", 1);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     // Null collection
     err = quiver_database_delete_element_by_id(db, nullptr, 1);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }

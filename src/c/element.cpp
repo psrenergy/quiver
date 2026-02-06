@@ -16,7 +16,7 @@ QUIVER_C_API quiver_error_t quiver_element_create(quiver_element_t** out_element
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
         quiver_set_last_error("Memory allocation failed");
-        return QUIVER_ERROR_DATABASE;
+        return QUIVER_ERROR;
     }
 }
 
@@ -70,7 +70,7 @@ QUIVER_C_API quiver_error_t quiver_element_set_array_integer(quiver_element_t* e
 
     if ((!values && count > 0) || count < 0) {
         quiver_set_last_error("Invalid values/count combination");
-        return QUIVER_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR;
     }
     std::vector<int64_t> arr(values, values + count);
     element->element.set(name, arr);
@@ -85,7 +85,7 @@ QUIVER_C_API quiver_error_t quiver_element_set_array_float(quiver_element_t* ele
 
     if ((!values && count > 0) || count < 0) {
         quiver_set_last_error("Invalid values/count combination");
-        return QUIVER_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR;
     }
     std::vector<double> arr(values, values + count);
     element->element.set(name, arr);
@@ -100,7 +100,7 @@ QUIVER_C_API quiver_error_t quiver_element_set_array_string(quiver_element_t* el
 
     if ((!values && count > 0) || count < 0) {
         quiver_set_last_error("Invalid values/count combination");
-        return QUIVER_ERROR_INVALID_ARGUMENT;
+        return QUIVER_ERROR;
     }
     std::vector<std::string> arr;
     arr.reserve(count);
@@ -150,7 +150,7 @@ QUIVER_C_API quiver_error_t quiver_element_to_string(quiver_element_t* element, 
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
         quiver_set_last_error("Memory allocation failed");
-        return QUIVER_ERROR_DATABASE;
+        return QUIVER_ERROR;
     }
 }
 

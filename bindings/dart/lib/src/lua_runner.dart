@@ -35,7 +35,7 @@ class LuaRunner {
       if (err != quiver_error_t.QUIVER_OK) {
         final errorPtr = bindings.quiver_get_last_error();
         final errorMsg = errorPtr.cast<Utf8>().toDartString();
-        throw DatabaseOperationException(
+        throw DatabaseException(
           errorMsg.isNotEmpty ? errorMsg : 'Failed to create LuaRunner',
         );
       }
@@ -47,7 +47,7 @@ class LuaRunner {
 
   void _ensureNotDisposed() {
     if (_isDisposed) {
-      throw const DatabaseOperationException('LuaRunner has been disposed');
+      throw const DatabaseException('LuaRunner has been disposed');
     }
   }
 

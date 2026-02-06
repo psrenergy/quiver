@@ -21,10 +21,10 @@ quiver_error_t quiver_lua_runner_new(quiver_database_t* db, quiver_lua_runner_t*
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
-        return QUIVER_ERROR_DATABASE;
+        return QUIVER_ERROR;
     } catch (...) {
         quiver_set_last_error("Unknown error creating LuaRunner");
-        return QUIVER_ERROR_DATABASE;
+        return QUIVER_ERROR;
     }
 }
 
@@ -42,10 +42,10 @@ quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, const char* sc
         return QUIVER_OK;
     } catch (const std::exception& e) {
         runner->last_error = e.what();
-        return QUIVER_ERROR_DATABASE;
+        return QUIVER_ERROR;
     } catch (...) {
         runner->last_error = "Unknown error";
-        return QUIVER_ERROR_DATABASE;
+        return QUIVER_ERROR;
     }
 }
 

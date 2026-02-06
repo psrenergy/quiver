@@ -92,10 +92,10 @@ void main() {
     });
 
     test('throws on invalid migrations path', () {
-      // Invalid path should throw MigrationException
+      // Invalid path should throw DatabaseException
       expect(
         () => Database.fromMigrations(':memory:', 'nonexistent/path'),
-        throwsA(isA<MigrationException>()),
+        throwsA(isA<DatabaseException>()),
       );
     });
   });

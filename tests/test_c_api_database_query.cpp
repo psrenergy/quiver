@@ -60,7 +60,7 @@ TEST(DatabaseCApiQuery, QueryStringNullDb) {
     char* value = nullptr;
     int has_value = 0;
     auto err = quiver_database_query_string(nullptr, "SELECT 1", &value, &has_value);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApiQuery, QueryStringNullSql) {
@@ -73,7 +73,7 @@ TEST(DatabaseCApiQuery, QueryStringNullSql) {
     char* value = nullptr;
     int has_value = 0;
     auto err = quiver_database_query_string(db, nullptr, &value, &has_value);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -163,7 +163,7 @@ TEST(DatabaseCApiQuery, QueryIntegerNullDb) {
     int64_t value = 0;
     int has_value = 0;
     auto err = quiver_database_query_integer(nullptr, "SELECT 1", &value, &has_value);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 // ============================================================================
@@ -253,7 +253,7 @@ TEST(DatabaseCApiQuery, QueryFloatNullDb) {
     double value = 0.0;
     int has_value = 0;
     auto err = quiver_database_query_float(nullptr, "SELECT 1.0", &value, &has_value);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 // ============================================================================
@@ -469,7 +469,7 @@ TEST(DatabaseCApiQuery, QueryParamsNullDb) {
     int64_t value = 0;
     int has_value = 0;
     auto err = quiver_database_query_integer_params(nullptr, "SELECT 1", nullptr, nullptr, 0, &value, &has_value);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApiQuery, QueryParamsNullStringElement) {
@@ -487,7 +487,7 @@ TEST(DatabaseCApiQuery, QueryParamsNullStringElement) {
     auto err = quiver_database_query_string_params(
         db, "SELECT label FROM Configuration WHERE label = ?", param_types, param_values, 1, &value, &has_value);
 
-    EXPECT_EQ(err, QUIVER_ERROR_DATABASE);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
