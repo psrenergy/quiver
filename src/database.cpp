@@ -80,24 +80,24 @@ void ensure_sqlite3_initialized() {
     std::call_once(sqlite3_init_flag, []() { sqlite3_initialize(); });
 }
 
-spdlog::level::level_enum to_spdlog_level(quiver::LogLevel level) {
+spdlog::level::level_enum to_spdlog_level(quiver_log_level_t level) {
     switch (level) {
-    case quiver::LogLevel::debug:
+    case QUIVER_LOG_DEBUG:
         return spdlog::level::debug;
-    case quiver::LogLevel::info:
+    case QUIVER_LOG_INFO:
         return spdlog::level::info;
-    case quiver::LogLevel::warn:
+    case QUIVER_LOG_WARN:
         return spdlog::level::warn;
-    case quiver::LogLevel::error:
+    case QUIVER_LOG_ERROR:
         return spdlog::level::err;
-    case quiver::LogLevel::off:
+    case QUIVER_LOG_OFF:
         return spdlog::level::off;
     default:
         return spdlog::level::info;
     }
 }
 
-std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_path, quiver::LogLevel console_level) {
+std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_path, quiver_log_level_t console_level) {
     namespace fs = std::filesystem;
 
     // Generate unique logger name for multiple Database instances
