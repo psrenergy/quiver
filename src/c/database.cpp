@@ -80,7 +80,7 @@ quiver_error_t copy_strings_to_c(const std::vector<std::string>& values, char***
 extern "C" {
 
 QUIVER_C_API quiver_database_options_t quiver_database_options_default(void) {
-    return quiver_database_options_default_value();
+    return {0, QUIVER_LOG_INFO};
 }
 
 QUIVER_C_API quiver_error_t quiver_database_open(const char* path,
