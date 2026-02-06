@@ -1707,8 +1707,7 @@ QUIVER_C_API quiver_error_t quiver_database_get_time_series_metadata(quiver_data
 }
 
 QUIVER_C_API quiver_error_t quiver_free_time_series_metadata(quiver_time_series_metadata_t* metadata) {
-    if (!metadata)
-        return QUIVER_OK;
+    QUIVER_REQUIRE(metadata);
 
     delete[] metadata->group_name;
     delete[] metadata->dimension_column;
@@ -1777,8 +1776,7 @@ QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(quiver_datab
 }
 
 QUIVER_C_API quiver_error_t quiver_free_time_series_metadata_array(quiver_time_series_metadata_t* metadata, size_t count) {
-    if (!metadata)
-        return QUIVER_OK;
+    QUIVER_REQUIRE(metadata);
 
     for (size_t i = 0; i < count; ++i) {
         delete[] metadata[i].group_name;
@@ -1814,7 +1812,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group_by_id(quiver_
     try {
         auto metadata = db->db.get_time_series_metadata(collection, group);
         const auto& dim_col = metadata.dimension_column;
-        std::string val_col = metadata.value_columns.empty() ? "value" : metadata.value_columns[0].name;
+        auto val_col = metadata.value_columns.empty() ? "value" : metadata.value_columns[0].name;
 
         auto rows = db->db.read_time_series_group_by_id(collection, group, id);
         *out_row_count = rows.size();
@@ -1878,7 +1876,7 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
     try {
         auto metadata = db->db.get_time_series_metadata(collection, group);
         const auto& dim_col = metadata.dimension_column;
-        std::string val_col = metadata.value_columns.empty() ? "value" : metadata.value_columns[0].name;
+        auto val_col = metadata.value_columns.empty() ? "value" : metadata.value_columns[0].name;
 
         std::vector<std::map<std::string, quiver::Value>> rows;
         rows.reserve(row_count);
@@ -1899,6 +1897,9 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
 }
 
 QUIVER_C_API quiver_error_t quiver_free_time_series_data(char** date_times, double* values, size_t row_count) {
+    QUIVER_REQUIRE(values);
+    QUIVER_REQUIRE(date_times);
+
     if (date_times) {
         for (size_t i = 0; i < row_count; ++i) {
             delete[] date_times[i];
@@ -2019,18 +2020,18 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_files(quiver_data
 }
 
 QUIVER_C_API quiver_error_t quiver_free_time_series_files(char** columns, char** paths, size_t count) {
-    if (columns) {
+    QUIVER_REQUIRE(columns);
+    QUIVER_REQUIRE(paths);
+
         for (size_t i = 0; i < count; ++i) {
             delete[] columns[i];
         }
         delete[] columns;
-    }
-    if (paths) {
+    
         for (size_t i = 0; i < count; ++i) {
             delete[] paths[i];
         }
         delete[] paths;
-    }
     return QUIVER_OK;
 }
 
