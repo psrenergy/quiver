@@ -8,40 +8,18 @@ namespace quiver {
 
 namespace fs = std::filesystem;
 
-struct Migration::Impl {
-    int64_t version;
-    std::string path;
-
-    Impl(int64_t v, const std::string& p) : version(v), path(p) {}
-    Impl(const Impl& other) : version(other.version), path(other.path) {}
-};
-
-Migration::Migration(int64_t version, const std::string& path) : impl_(std::make_unique<Impl>(version, path)) {}
-
-Migration::~Migration() = default;
-
-Migration::Migration(const Migration& other) : impl_(std::make_unique<Impl>(*other.impl_)) {}
-
-Migration& Migration::operator=(const Migration& other) {
-    if (this != &other) {
-        impl_ = std::make_unique<Impl>(*other.impl_);
-    }
-    return *this;
-}
-
-Migration::Migration(Migration&& other) noexcept = default;
-Migration& Migration::operator=(Migration&& other) noexcept = default;
+Migration::Migration(int64_t version, const std::string& path) : version_(version), path_(path) {}
 
 int64_t Migration::version() const {
-    return impl_->version;
+    return version_;
 }
 
 const std::string& Migration::path() const {
-    return impl_->path;
+    return path_;
 }
 
 std::string Migration::up_sql() const {
-    fs::path sql_path = fs::path(impl_->path) / "up.sql";
+    auto sql_path = fs::path(path_) / "up.sql";
     if (!fs::exists(sql_path)) {
         return "";
     }
@@ -57,7 +35,7 @@ std::string Migration::up_sql() const {
 }
 
 std::string Migration::down_sql() const {
-    const auto sql_path = fs::path(impl_->path) / "down.sql";
+    const auto sql_path = fs::path(path_) / "down.sql";
     if (!fs::exists(sql_path)) {
         return "";
     }
@@ -72,28 +50,12 @@ std::string Migration::down_sql() const {
     return buffer.str();
 }
 
-bool Migration::operator<(const Migration& other) const {
-    return impl_->version < other.impl_->version;
+std::strong_ordering Migration::operator<=>(const Migration& other) const {
+    return version_ <=> other.version_;
 }
 
 bool Migration::operator==(const Migration& other) const {
-    return impl_->version == other.impl_->version;
-}
-
-bool Migration::operator!=(const Migration& other) const {
-    return impl_->version != other.impl_->version;
-}
-
-bool Migration::operator>(const Migration& other) const {
-    return impl_->version > other.impl_->version;
-}
-
-bool Migration::operator<=(const Migration& other) const {
-    return impl_->version <= other.impl_->version;
-}
-
-bool Migration::operator>=(const Migration& other) const {
-    return impl_->version >= other.impl_->version;
+    return version_ == other.version_;
 }
 
 }  // namespace quiver

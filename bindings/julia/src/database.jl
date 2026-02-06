@@ -9,21 +9,17 @@ mutable struct Database
 end
 
 function from_schema(db_path, schema_path)
-    options = Ref(C.quiver_database_options_t(0, C.QUIVER_LOG_DEBUG))
-    ptr = C.quiver_database_from_schema(db_path, schema_path, options)
-    if ptr == C_NULL
-        throw(DatabaseException("Failed to create database from schema '$schema_path'"))
-    end
-    return Database(ptr)
+    options = Ref(C.quiver_database_options_default())
+    out_db = Ref{Ptr{C.quiver_database}}(C_NULL)
+    check(C.quiver_database_from_schema(db_path, schema_path, options, out_db))
+    return Database(out_db[])
 end
 
 function from_migrations(db_path, migrations_path)
-    options = Ref(C.quiver_database_options_t(0, C.QUIVER_LOG_DEBUG))
-    ptr = C.quiver_database_from_migrations(db_path, migrations_path, options)
-    if ptr == C_NULL
-        throw(DatabaseException("Failed to create database from migrations '$migrations_path'"))
-    end
-    return Database(ptr)
+    options = Ref(C.quiver_database_options_default())
+    out_db = Ref{Ptr{C.quiver_database}}(C_NULL)
+    check(C.quiver_database_from_migrations(db_path, migrations_path, options, out_db))
+    return Database(out_db[])
 end
 
 function close!(db::Database)
@@ -35,17 +31,12 @@ function close!(db::Database)
 end
 
 function current_version(db::Database)
-    version = C.quiver_database_current_version(db.ptr)
-    if version < 0
-        throw(DatabaseException("Failed to get current version"))
-    end
-    return version
+    out_version = Ref{Int64}(0)
+    check(C.quiver_database_current_version(db.ptr, out_version))
+    return out_version[]
 end
 
 function describe(db::Database)
-    result = C.quiver_database_describe(db.ptr)
-    if result != C.QUIVER_OK
-        throw(DatabaseException("Failed to describe database"))
-    end
+    check(C.quiver_database_describe(db.ptr))
     return nothing
 end

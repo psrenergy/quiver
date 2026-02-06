@@ -14,7 +14,7 @@ void main() {
           path.join(issuesPath, 'issue52'),
         ),
         throwsA(
-          isA<MigrationException>().having(
+          isA<DatabaseException>().having(
             (e) => e.message,
             'message',
             contains('label'),

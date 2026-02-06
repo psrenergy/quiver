@@ -5,8 +5,8 @@
 #include <quiver/element.h>
 
 TEST(Database, DeleteElementById) {
-    auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e;
     e.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
@@ -26,7 +26,7 @@ TEST(Database, DeleteElementById) {
 
 TEST(Database, DeleteElementByIdWithVectorData) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -54,7 +54,7 @@ TEST(Database, DeleteElementByIdWithVectorData) {
 
 TEST(Database, DeleteElementByIdWithSetData) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -81,8 +81,8 @@ TEST(Database, DeleteElementByIdWithSetData) {
 }
 
 TEST(Database, DeleteElementByIdNonExistent) {
-    auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e;
     e.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
@@ -97,8 +97,8 @@ TEST(Database, DeleteElementByIdNonExistent) {
 }
 
 TEST(Database, DeleteElementByIdOtherElementsUnchanged) {
-    auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e1;
     e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
@@ -122,12 +122,12 @@ TEST(Database, DeleteElementByIdOtherElementsUnchanged) {
     EXPECT_EQ(ids[1], id3);
 
     // Verify first element unchanged
-    auto val1 = db.read_scalar_integers_by_id("Configuration", "integer_attribute", id1);
+    auto val1 = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id1);
     EXPECT_TRUE(val1.has_value());
     EXPECT_EQ(*val1, 42);
 
     // Verify third element unchanged
-    auto val3 = db.read_scalar_integers_by_id("Configuration", "integer_attribute", id3);
+    auto val3 = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id3);
     EXPECT_TRUE(val3.has_value());
     EXPECT_EQ(*val3, 200);
 }

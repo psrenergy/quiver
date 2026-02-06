@@ -19,7 +19,7 @@ include("database_delete.jl")
 include("lua_runner.jl")
 
 export Element, Database, LuaRunner, DatabaseException
-export ScalarMetadata, VectorMetadata, SetMetadata
+export ScalarMetadata, GroupMetadata
 export QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_FLOAT, QUIVER_DATA_TYPE_STRING
 
 # Re-export C enum constants for data types

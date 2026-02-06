@@ -36,22 +36,24 @@ class Database {
     try {
       final optionsPtr = arena<quiver_database_options_t>();
       optionsPtr.ref = bindings.quiver_database_options_default();
+      final outDbPtr = arena<Pointer<quiver_database_t>>();
 
-      final ptr = bindings.quiver_database_from_schema(
+      final err = bindings.quiver_database_from_schema(
         dbPath.toNativeUtf8(allocator: arena).cast(),
         schemaPath.toNativeUtf8(allocator: arena).cast(),
         optionsPtr,
+        outDbPtr,
       );
 
-      if (ptr == nullptr) {
+      if (err != quiver_error_t.QUIVER_OK) {
         final errorPtr = bindings.quiver_get_last_error();
         final errorMsg = errorPtr.cast<Utf8>().toDartString();
-        throw SchemaException(
+        throw DatabaseException(
           errorMsg.isNotEmpty ? errorMsg : 'Failed to create database from schema',
         );
       }
 
-      return Database._(ptr);
+      return Database._(outDbPtr.value);
     } finally {
       arena.releaseAll();
     }
@@ -65,22 +67,24 @@ class Database {
     try {
       final optionsPtr = arena<quiver_database_options_t>();
       optionsPtr.ref = bindings.quiver_database_options_default();
+      final outDbPtr = arena<Pointer<quiver_database_t>>();
 
-      final ptr = bindings.quiver_database_from_migrations(
+      final err = bindings.quiver_database_from_migrations(
         dbPath.toNativeUtf8(allocator: arena).cast(),
         migrationsPath.toNativeUtf8(allocator: arena).cast(),
         optionsPtr,
+        outDbPtr,
       );
 
-      if (ptr == nullptr) {
+      if (err != quiver_error_t.QUIVER_OK) {
         final errorPtr = bindings.quiver_get_last_error();
         final errorMsg = errorPtr.cast<Utf8>().toDartString();
-        throw MigrationException(
+        throw DatabaseException(
           errorMsg.isNotEmpty ? errorMsg : 'Failed to create database from migrations',
         );
       }
 
-      return Database._(ptr);
+      return Database._(outDbPtr.value);
     } finally {
       arena.releaseAll();
     }
@@ -88,32 +92,101 @@ class Database {
 
   void _ensureNotClosed() {
     if (_isClosed) {
-      throw const DatabaseOperationException('Database has been closed');
+      throw const DatabaseException('Database has been closed');
     }
   }
 
-  ({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue, bool isForeignKey, String? referencesCollection, String? referencesColumn}) _parseScalarMetadata(
-    quiver_scalar_metadata_t attr,
+  ({
+    String name,
+    int dataType,
+    bool notNull,
+    bool primaryKey,
+    String? defaultValue,
+    bool isForeignKey,
+    String? referencesCollection,
+    String? referencesColumn,
+  })
+  _parseScalarMetadata(
+    quiver_scalar_metadata_t attribute,
   ) {
     return (
-      name: attr.name.cast<Utf8>().toDartString(),
-      dataType: attr.data_type,
-      notNull: attr.not_null != 0,
-      primaryKey: attr.primary_key != 0,
-      defaultValue: attr.default_value == nullptr ? null : attr.default_value.cast<Utf8>().toDartString(),
-      isForeignKey: attr.is_foreign_key != 0,
-      referencesCollection: attr.references_collection == nullptr ? null : attr.references_collection.cast<Utf8>().toDartString(),
-      referencesColumn: attr.references_column == nullptr ? null : attr.references_column.cast<Utf8>().toDartString(),
+      name: attribute.name.cast<Utf8>().toDartString(),
+      dataType: attribute.data_type,
+      notNull: attribute.not_null != 0,
+      primaryKey: attribute.primary_key != 0,
+      defaultValue: attribute.default_value == nullptr ? null : attribute.default_value.cast<Utf8>().toDartString(),
+      isForeignKey: attribute.is_foreign_key != 0,
+      referencesCollection: attribute.references_collection == nullptr
+          ? null
+          : attribute.references_collection.cast<Utf8>().toDartString(),
+      referencesColumn: attribute.references_column == nullptr
+          ? null
+          : attribute.references_column.cast<Utf8>().toDartString(),
     );
   }
 
   int _getValueDataType(
-    List<({String name, int dataType, bool notNull, bool primaryKey, String? defaultValue, bool isForeignKey, String? referencesCollection, String? referencesColumn})> valueColumns,
+    List<
+      ({
+        String name,
+        int dataType,
+        bool notNull,
+        bool primaryKey,
+        String? defaultValue,
+        bool isForeignKey,
+        String? referencesCollection,
+        String? referencesColumn,
+      })
+    >
+    valueColumns,
   ) {
     if (valueColumns.isNotEmpty) {
       return valueColumns.first.dataType;
     }
     return quiver_data_type_t.QUIVER_DATA_TYPE_STRING;
+  }
+
+  ({
+    String groupName,
+    String dimensionColumn,
+    List<
+      ({
+        String name,
+        int dataType,
+        bool notNull,
+        bool primaryKey,
+        String? defaultValue,
+        bool isForeignKey,
+        String? referencesCollection,
+        String? referencesColumn,
+      })
+    >
+    valueColumns,
+  })
+  _parseGroupMetadata(quiver_group_metadata_t metadata) {
+    final valueColumns =
+        <
+          ({
+            String name,
+            int dataType,
+            bool notNull,
+            bool primaryKey,
+            String? defaultValue,
+            bool isForeignKey,
+            String? referencesCollection,
+            String? referencesColumn,
+          })
+        >[];
+    for (var i = 0; i < metadata.value_column_count; i++) {
+      valueColumns.add(_parseScalarMetadata(metadata.value_columns[i]));
+    }
+    return (
+      groupName: metadata.group_name.cast<Utf8>().toDartString(),
+      dimensionColumn: metadata.dimension_column == nullptr
+          ? ''
+          : metadata.dimension_column.cast<Utf8>().toDartString(),
+      valueColumns: valueColumns,
+    );
   }
 
   ({Pointer<Int> types, Pointer<Pointer<Void>> values}) _marshalParams(
@@ -159,9 +232,6 @@ class Database {
   /// Prints schema information to stdout.
   void describe() {
     _ensureNotClosed();
-    final result = bindings.quiver_database_describe(_ptr);
-    if (result != quiver_error_t.QUIVER_OK) {
-      throw const DatabaseOperationException('Failed to describe database');
-    }
+    check(bindings.quiver_database_describe(_ptr));
   }
 }

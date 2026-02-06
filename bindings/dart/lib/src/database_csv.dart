@@ -7,14 +7,13 @@ extension DatabaseCSV on Database {
     _ensureNotClosed();
     final arena = Arena();
     try {
-      final err = bindings.quiver_database_export_to_csv(
-        _ptr,
-        table.toNativeUtf8(allocator: arena).cast(),
-        path.toNativeUtf8(allocator: arena).cast(),
+      check(
+        bindings.quiver_database_export_to_csv(
+          _ptr,
+          table.toNativeUtf8(allocator: arena).cast(),
+          path.toNativeUtf8(allocator: arena).cast(),
+        ),
       );
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to export table '$table' to '$path'");
-      }
     } finally {
       arena.releaseAll();
     }
@@ -25,14 +24,13 @@ extension DatabaseCSV on Database {
     _ensureNotClosed();
     final arena = Arena();
     try {
-      final err = bindings.quiver_database_import_from_csv(
-        _ptr,
-        table.toNativeUtf8(allocator: arena).cast(),
-        path.toNativeUtf8(allocator: arena).cast(),
+      check(
+        bindings.quiver_database_import_from_csv(
+          _ptr,
+          table.toNativeUtf8(allocator: arena).cast(),
+          path.toNativeUtf8(allocator: arena).cast(),
+        ),
       );
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to import CSV from '$path' into table '$table'");
-      }
     } finally {
       arena.releaseAll();
     }

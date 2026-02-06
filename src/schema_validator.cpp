@@ -32,6 +32,8 @@ void SchemaValidator::validate() {
             validate_vector_table(name);
         } else if (schema_.is_set_table(name)) {
             validate_set_table(name);
+        } else if (schema_.is_time_series_files_table(name)) {
+            validate_time_series_files_table(name);
         }
         // Time series tables have minimal validation (just file paths)
     }
@@ -49,7 +51,8 @@ void SchemaValidator::validate_configuration_exists() {
 void SchemaValidator::validate_collection_names() {
     for (const auto& name : schema_.table_names()) {
         // Skip special tables
-        if (schema_.is_vector_table(name) || schema_.is_set_table(name) || schema_.is_time_series_table(name)) {
+        if (schema_.is_vector_table(name) || schema_.is_set_table(name) || schema_.is_time_series_table(name) ||
+            schema_.is_time_series_files_table(name)) {
             continue;
         }
 
@@ -117,7 +120,7 @@ void SchemaValidator::validate_vector_table(const std::string& name) {
 
     // id should NOT be primary key alone (composite PK required)
     if (id_col && id_col->primary_key) {
-        int pk_count = 0;
+        auto pk_count = 0;
         for (const auto& [_, col] : table->columns) {
             if (col.primary_key) {
                 pk_count++;
@@ -193,6 +196,27 @@ void SchemaValidator::validate_set_table(const std::string& name) {
         // Non-FK columns should be in unique constraint
         if (unique_columns.find(col_name) == unique_columns.end()) {
             validation_error("Set table '" + name + "' column '" + col_name + "' must be part of a UNIQUE constraint");
+        }
+    }
+}
+
+void SchemaValidator::validate_time_series_files_table(const std::string& name) {
+    const auto* table = schema_.get_table(name);
+    if (!table) {
+        return;
+    }
+
+    // Get parent collection
+    auto parent = schema_.get_time_series_files_parent_collection(name);
+    if (std::find(collections_.begin(), collections_.end(), parent) == collections_.end()) {
+        validation_error("Time series files table '" + name + "' references non-existent collection '" + parent + "'");
+    }
+
+    // All columns should be TEXT type (for file paths)
+    for (const auto& [col_name, col] : table->columns) {
+        if (col.type != DataType::Text) {
+            validation_error("Time series files table '" + name + "' column '" + col_name +
+                             "' must be TEXT type (for file paths)");
         }
     }
 }
@@ -300,16 +324,16 @@ void SchemaValidator::validate_foreign_keys() {
             // Rule: FK column names should follow pattern <collection>_id or <collection>_<relation>
             // Skip vector table id column and set table columns
             if (!schema_.is_vector_table(table_name) || fk.from_column != "id") {
-                if (!schema_.is_set_table(table_name)) {
+                if (!schema_.is_set_table(table_name) && !schema_.is_time_series_table(table_name)) {
                     // Check if FK column name ends with _id or matches target_relation pattern
-                    std::string target = fk.to_table;
-                    std::string target_lower = target;
+                    auto target = fk.to_table;
+                    auto target_lower = target;
                     std::transform(target_lower.begin(), target_lower.end(), target_lower.begin(), ::tolower);
-                    std::string col_lower = fk.from_column;
+                    auto col_lower = fk.from_column;
                     std::transform(col_lower.begin(), col_lower.end(), col_lower.begin(), ::tolower);
 
                     // Expected pattern: <target>_id or <target>_<something>
-                    bool valid_name = (col_lower == target_lower + "_id") ||
+                    auto valid_name = (col_lower == target_lower + "_id") ||
                                       (col_lower.find(target_lower + "_") == 0) ||
                                       (col_lower.find("_id") != std::string::npos);
 

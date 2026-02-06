@@ -38,6 +38,14 @@ target_compile_definitions(quiver PRIVATE
     SOL_SAFE_FUNCTION=1
 )
 
+# MSVC needs /bigobj for sol2 heavy template instantiations
+# Other Windows compilers need -Wa,-mbig-obj for the same reason
+if(MSVC)
+    set_source_files_properties(lua_runner.cpp PROPERTIES COMPILE_OPTIONS "/bigobj")
+elseif(WIN32)
+    set_source_files_properties(lua_runner.cpp PROPERTIES COMPILE_OPTIONS "-Wa,-mbig-obj")
+endif()
+
 # Link dependencies
 target_link_libraries(quiver
     PUBLIC
@@ -76,10 +84,10 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/quiver
 # C API wrapper (optional)
 if(QUIVER_BUILD_C_API)
     add_library(quiver_c SHARED
-        c_api_common.cpp
-        c_api_database.cpp
-        c_api_element.cpp
-        c_api_lua_runner.cpp
+        c/common.cpp
+        c/database.cpp
+        c/element.cpp
+        c/lua_runner.cpp
     )
 
     target_compile_definitions(quiver_c PRIVATE

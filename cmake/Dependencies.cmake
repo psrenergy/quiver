@@ -17,7 +17,7 @@ FetchContent_MakeAvailable(tomlplusplus)
 # spdlog for logging
 FetchContent_Declare(spdlog
     GIT_REPOSITORY https://github.com/gabime/spdlog.git
-    GIT_TAG v1.15.0
+    GIT_TAG v1.17.0
 )
 FetchContent_MakeAvailable(spdlog)
 
@@ -34,7 +34,7 @@ FetchContent_MakeAvailable(lua)
 # sol2 for Lua C++ bindings
 FetchContent_Declare(sol2
     GIT_REPOSITORY https://github.com/ThePhD/sol2.git
-    GIT_TAG v3.3.1
+    GIT_TAG v3.5.0
 )
 FetchContent_MakeAvailable(sol2)
 
@@ -42,7 +42,7 @@ FetchContent_MakeAvailable(sol2)
 if(QUIVER_BUILD_TESTS)
     FetchContent_Declare(googletest
         GIT_REPOSITORY https://github.com/google/googletest.git
-        GIT_TAG v1.15.2
+        GIT_TAG v1.17.0
     )
     # Prevent overriding parent project's compiler/linker settings on Windows
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)

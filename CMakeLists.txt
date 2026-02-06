@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(quiver
-    VERSION 0.2.0
+    VERSION 0.3.0
     DESCRIPTION "Quiver library"
     LANGUAGES CXX C
 )
@@ -73,6 +73,10 @@ if(CLANG_FORMAT)
         ${CMAKE_SOURCE_DIR}/include/quiver/c/*.h
         ${CMAKE_SOURCE_DIR}/src/*.cpp
         ${CMAKE_SOURCE_DIR}/src/*.h
+        ${CMAKE_SOURCE_DIR}/src/blob/*.cpp
+        ${CMAKE_SOURCE_DIR}/src/blob/*.h
+        ${CMAKE_SOURCE_DIR}/src/c/*.c
+        ${CMAKE_SOURCE_DIR}/src/c/*.h
         ${CMAKE_SOURCE_DIR}/tests/*.cpp
         ${CMAKE_SOURCE_DIR}/tests/*.h
     )

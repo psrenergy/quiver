@@ -22,16 +22,10 @@ extern "C" {
 // Error codes
 typedef enum {
     QUIVER_OK = 0,
-    QUIVER_ERROR_INVALID_ARGUMENT = -1,
-    QUIVER_ERROR_DATABASE = -2,
-    QUIVER_ERROR_MIGRATION = -3,
-    QUIVER_ERROR_SCHEMA = -4,
-    QUIVER_ERROR_CREATE_ELEMENT = -5,
-    QUIVER_ERROR_NOT_FOUND = -6,
+    QUIVER_ERROR = 1,
 } quiver_error_t;
 
 // Utility functions
-QUIVER_C_API const char* quiver_error_string(quiver_error_t error);
 QUIVER_C_API const char* quiver_version(void);
 
 // Error message capture - returns detailed error message from last operation

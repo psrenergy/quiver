@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <mutex>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -79,24 +80,24 @@ void ensure_sqlite3_initialized() {
     std::call_once(sqlite3_init_flag, []() { sqlite3_initialize(); });
 }
 
-spdlog::level::level_enum to_spdlog_level(quiver::LogLevel level) {
+spdlog::level::level_enum to_spdlog_level(quiver_log_level_t level) {
     switch (level) {
-    case quiver::LogLevel::debug:
+    case QUIVER_LOG_DEBUG:
         return spdlog::level::debug;
-    case quiver::LogLevel::info:
+    case QUIVER_LOG_INFO:
         return spdlog::level::info;
-    case quiver::LogLevel::warn:
+    case QUIVER_LOG_WARN:
         return spdlog::level::warn;
-    case quiver::LogLevel::error:
+    case QUIVER_LOG_ERROR:
         return spdlog::level::err;
-    case quiver::LogLevel::off:
+    case QUIVER_LOG_OFF:
         return spdlog::level::off;
     default:
         return spdlog::level::info;
     }
 }
 
-std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_path, quiver::LogLevel console_level) {
+std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_path, quiver_log_level_t console_level) {
     namespace fs = std::filesystem;
 
     // Generate unique logger name for multiple Database instances
@@ -143,9 +144,24 @@ std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_pat
     }
 }
 
+static std::string find_dimension_column(const quiver::TableDefinition& table_def) {
+    for (const auto& [col_name, col] : table_def.columns) {
+        if (col_name == "id")
+            continue;
+        if (col.type == quiver::DataType::DateTime || quiver::is_date_time_column(col_name)) {
+            return col_name;
+        }
+    }
+    throw std::runtime_error("No dimension column found in time series table");
+}
+
 }  // anonymous namespace
 
 namespace quiver {
+
+static ScalarMetadata scalar_metadata_from_column(const ColumnDefinition& col) {
+    return {col.name, col.type, col.not_null, col.primary_key, col.default_value};
+}
 
 struct Database::Impl {
     sqlite3* db = nullptr;
@@ -279,11 +295,12 @@ bool Database::is_healthy() const {
 }
 
 Result Database::execute(const std::string& sql, const std::vector<Value>& params) {
-    sqlite3_stmt* stmt = nullptr;
-    auto rc = sqlite3_prepare_v2(impl_->db, sql.c_str(), -1, &stmt, nullptr);
+    sqlite3_stmt* raw_stmt = nullptr;
+    auto rc = sqlite3_prepare_v2(impl_->db, sql.c_str(), -1, &raw_stmt, nullptr);
     if (rc != SQLITE_OK) {
         throw std::runtime_error("Failed to prepare statement: " + std::string(sqlite3_errmsg(impl_->db)));
     }
+    std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)> stmt(raw_stmt, sqlite3_finalize);
 
     // Bind parameters
     for (size_t i = 0; i < params.size(); ++i) {
@@ -294,13 +311,13 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
             [&](auto&& arg) {
                 using T = std::decay_t<decltype(arg)>;
                 if constexpr (std::is_same_v<T, std::nullptr_t>) {
-                    sqlite3_bind_null(stmt, idx);
+                    sqlite3_bind_null(stmt.get(), idx);
                 } else if constexpr (std::is_same_v<T, int64_t>) {
-                    sqlite3_bind_int64(stmt, idx, arg);
+                    sqlite3_bind_int64(stmt.get(), idx, arg);
                 } else if constexpr (std::is_same_v<T, double>) {
-                    sqlite3_bind_double(stmt, idx, arg);
+                    sqlite3_bind_double(stmt.get(), idx, arg);
                 } else if constexpr (std::is_same_v<T, std::string>) {
-                    sqlite3_bind_text(stmt, idx, arg.c_str(), static_cast<int>(arg.size()), SQLITE_TRANSIENT);
+                    sqlite3_bind_text(stmt.get(), idx, arg.c_str(), static_cast<int>(arg.size()), SQLITE_TRANSIENT);
                 }
             },
             param);
@@ -308,30 +325,30 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
 
     // Get column info
     std::vector<std::string> columns;
-    const auto col_count = sqlite3_column_count(stmt);
+    const auto col_count = sqlite3_column_count(stmt.get());
     columns.reserve(col_count);
     for (int i = 0; i < col_count; ++i) {
-        const char* name = sqlite3_column_name(stmt, i);
+        const char* name = sqlite3_column_name(stmt.get(), i);
         columns.emplace_back(name ? name : "");
     }
 
     // Execute and fetch results
     std::vector<Row> rows;
-    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+    while ((rc = sqlite3_step(stmt.get())) == SQLITE_ROW) {
         std::vector<Value> values;
         values.reserve(col_count);
 
         for (int i = 0; i < col_count; ++i) {
-            auto type = sqlite3_column_type(stmt, i);
+            auto type = sqlite3_column_type(stmt.get(), i);
             switch (type) {
             case SQLITE_INTEGER:
-                values.emplace_back(sqlite3_column_int64(stmt, i));
+                values.emplace_back(sqlite3_column_int64(stmt.get(), i));
                 break;
             case SQLITE_FLOAT:
-                values.emplace_back(sqlite3_column_double(stmt, i));
+                values.emplace_back(sqlite3_column_double(stmt.get(), i));
                 break;
             case SQLITE_TEXT: {
-                const char* text = reinterpret_cast<const char*>(sqlite3_column_text(stmt, i));
+                const char* text = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), i));
                 values.emplace_back(std::string(text ? text : ""));
                 break;
             }
@@ -347,8 +364,6 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
         }
         rows.emplace_back(std::move(values));
     }
-
-    sqlite3_finalize(stmt);
 
     if (rc != SQLITE_DONE) {
         throw std::runtime_error("Failed to execute statement: " + std::string(sqlite3_errmsg(impl_->db)));
@@ -530,6 +545,8 @@ int64_t Database::create_element(const std::string& collection, const Element& e
         impl_->type_validator->validate_scalar(collection, name, value);
     }
 
+    Impl::TransactionGuard txn(*impl_);
+
     // Build INSERT SQL for main collection table
     auto sql = "INSERT INTO " + collection + " (";
     std::string placeholders;
@@ -635,19 +652,19 @@ int64_t Database::create_element(const std::string& collection, const Element& e
 
         // Insert each row with vector_index
         for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
-            int64_t vector_index = static_cast<int64_t>(row_idx + 1);
-            auto vec_sql = "INSERT INTO " + vector_table + " (id, vector_index";
+            auto vector_index = static_cast<int64_t>(row_idx + 1);
+            auto vector_sql = "INSERT INTO " + vector_table + " (id, vector_index";
             std::string vec_placeholders = "?, ?";
             std::vector<Value> vec_params = {element_id, vector_index};
 
             for (const auto& [col_name, values_ptr] : columns) {
-                vec_sql += ", " + col_name;
+                vector_sql += ", " + col_name;
                 vec_placeholders += ", ?";
                 vec_params.push_back((*values_ptr)[row_idx]);
             }
 
-            vec_sql += ") VALUES (" + vec_placeholders + ")";
-            execute(vec_sql, vec_params);
+            vector_sql += ") VALUES (" + vec_placeholders + ")";
+            execute(vector_sql, vec_params);
         }
         impl_->logger->debug("Inserted {} vector rows into {}", num_rows, vector_table);
     }
@@ -680,7 +697,7 @@ int64_t Database::create_element(const std::string& collection, const Element& e
                 set_sql += ", " + col_name;
                 set_placeholders += ", ?";
 
-                Value val = (*values_ptr)[row_idx];
+                auto val = (*values_ptr)[row_idx];
 
                 // Check if this column is a FK and value is a string (label) that needs resolution
                 for (const auto& fk : table_def->foreign_keys) {
@@ -706,6 +723,7 @@ int64_t Database::create_element(const std::string& collection, const Element& e
         impl_->logger->debug("Inserted {} set rows for table {}", num_rows, set_table);
     }
 
+    txn.commit();
     impl_->logger->info("Created element {} in {}", element_id, collection);
     return element_id;
 }
@@ -770,7 +788,7 @@ void Database::update_element(const std::string& collection, int64_t id, const E
             for (size_t i = 0; i < values.size(); ++i) {
                 auto insert_sql =
                     "INSERT INTO " + vector_table + " (id, vector_index, " + attr_name + ") VALUES (?, ?, ?)";
-                int64_t vector_index = static_cast<int64_t>(i + 1);
+                auto vector_index = static_cast<int64_t>(i + 1);
                 execute(insert_sql, {id, vector_index, values[i]});
             }
             impl_->logger->debug(
@@ -941,7 +959,7 @@ std::vector<std::string> Database::read_scalar_strings(const std::string& collec
 }
 
 std::optional<int64_t>
-Database::read_scalar_integers_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+Database::read_scalar_integer_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto sql = "SELECT " + attribute + " FROM " + collection + " WHERE id = ?";
     auto result = execute(sql, {id});
 
@@ -952,7 +970,7 @@ Database::read_scalar_integers_by_id(const std::string& collection, const std::s
 }
 
 std::optional<double>
-Database::read_scalar_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+Database::read_scalar_float_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto sql = "SELECT " + attribute + " FROM " + collection + " WHERE id = ?";
     auto result = execute(sql, {id});
 
@@ -963,7 +981,7 @@ Database::read_scalar_floats_by_id(const std::string& collection, const std::str
 }
 
 std::optional<std::string>
-Database::read_scalar_strings_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+Database::read_scalar_string_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
     auto sql = "SELECT " + attribute + " FROM " + collection + " WHERE id = ?";
     auto result = execute(sql, {id});
 
@@ -975,6 +993,7 @@ Database::read_scalar_strings_by_id(const std::string& collection, const std::st
 
 std::vector<std::vector<int64_t>> Database::read_vector_integers(const std::string& collection,
                                                                  const std::string& attribute) {
+    impl_->require_schema("read vector");
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + vector_table + " ORDER BY id, vector_index";
     return read_grouped_values_all<int64_t>(execute(sql));
@@ -982,6 +1001,7 @@ std::vector<std::vector<int64_t>> Database::read_vector_integers(const std::stri
 
 std::vector<std::vector<double>> Database::read_vector_floats(const std::string& collection,
                                                               const std::string& attribute) {
+    impl_->require_schema("read vector");
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + vector_table + " ORDER BY id, vector_index";
     return read_grouped_values_all<double>(execute(sql));
@@ -989,6 +1009,7 @@ std::vector<std::vector<double>> Database::read_vector_floats(const std::string&
 
 std::vector<std::vector<std::string>> Database::read_vector_strings(const std::string& collection,
                                                                     const std::string& attribute) {
+    impl_->require_schema("read vector");
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + vector_table + " ORDER BY id, vector_index";
     return read_grouped_values_all<std::string>(execute(sql));
@@ -996,6 +1017,7 @@ std::vector<std::vector<std::string>> Database::read_vector_strings(const std::s
 
 std::vector<int64_t>
 Database::read_vector_integers_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+    impl_->require_schema("read vector");
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + vector_table + " WHERE id = ? ORDER BY vector_index";
     return read_grouped_values_by_id<int64_t>(execute(sql, {id}));
@@ -1003,6 +1025,7 @@ Database::read_vector_integers_by_id(const std::string& collection, const std::s
 
 std::vector<double>
 Database::read_vector_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+    impl_->require_schema("read vector");
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + vector_table + " WHERE id = ? ORDER BY vector_index";
     return read_grouped_values_by_id<double>(execute(sql, {id}));
@@ -1010,6 +1033,7 @@ Database::read_vector_floats_by_id(const std::string& collection, const std::str
 
 std::vector<std::string>
 Database::read_vector_strings_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+    impl_->require_schema("read vector");
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + vector_table + " WHERE id = ? ORDER BY vector_index";
     return read_grouped_values_by_id<std::string>(execute(sql, {id}));
@@ -1017,6 +1041,7 @@ Database::read_vector_strings_by_id(const std::string& collection, const std::st
 
 std::vector<std::vector<int64_t>> Database::read_set_integers(const std::string& collection,
                                                               const std::string& attribute) {
+    impl_->require_schema("read set");
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + set_table + " ORDER BY id";
     return read_grouped_values_all<int64_t>(execute(sql));
@@ -1024,6 +1049,7 @@ std::vector<std::vector<int64_t>> Database::read_set_integers(const std::string&
 
 std::vector<std::vector<double>> Database::read_set_floats(const std::string& collection,
                                                            const std::string& attribute) {
+    impl_->require_schema("read set");
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + set_table + " ORDER BY id";
     return read_grouped_values_all<double>(execute(sql));
@@ -1031,6 +1057,7 @@ std::vector<std::vector<double>> Database::read_set_floats(const std::string& co
 
 std::vector<std::vector<std::string>> Database::read_set_strings(const std::string& collection,
                                                                  const std::string& attribute) {
+    impl_->require_schema("read set");
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT id, " + attribute + " FROM " + set_table + " ORDER BY id";
     return read_grouped_values_all<std::string>(execute(sql));
@@ -1038,6 +1065,7 @@ std::vector<std::vector<std::string>> Database::read_set_strings(const std::stri
 
 std::vector<int64_t>
 Database::read_set_integers_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+    impl_->require_schema("read set");
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + set_table + " WHERE id = ?";
     return read_grouped_values_by_id<int64_t>(execute(sql, {id}));
@@ -1045,6 +1073,7 @@ Database::read_set_integers_by_id(const std::string& collection, const std::stri
 
 std::vector<double>
 Database::read_set_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+    impl_->require_schema("read set");
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + set_table + " WHERE id = ?";
     return read_grouped_values_by_id<double>(execute(sql, {id}));
@@ -1052,6 +1081,7 @@ Database::read_set_floats_by_id(const std::string& collection, const std::string
 
 std::vector<std::string>
 Database::read_set_strings_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+    impl_->require_schema("read set");
     auto set_table = impl_->schema->find_set_table(collection, attribute);
     auto sql = "SELECT " + attribute + " FROM " + set_table + " WHERE id = ?";
     return read_grouped_values_by_id<std::string>(execute(sql, {id}));
@@ -1260,26 +1290,21 @@ ScalarMetadata Database::get_scalar_metadata(const std::string& collection, cons
         throw std::runtime_error("Scalar attribute '" + attribute + "' not found in collection '" + collection + "'");
     }
 
-    ScalarMetadata meta;
-    meta.name = col->name;
-    meta.data_type = col->type;
-    meta.not_null = col->not_null;
-    meta.primary_key = col->primary_key;
-    meta.default_value = col->default_value;
+    auto metadata = scalar_metadata_from_column(*col);
 
     for (const auto& fk : table_def->foreign_keys) {
         if (fk.from_column == attribute) {
-            meta.is_foreign_key = true;
-            meta.references_collection = fk.to_table;
-            meta.references_column = fk.to_column;
+            metadata.is_foreign_key = true;
+            metadata.references_collection = fk.to_table;
+            metadata.references_column = fk.to_column;
             break;
         }
     }
 
-    return meta;
+    return metadata;
 }
 
-VectorMetadata Database::get_vector_metadata(const std::string& collection, const std::string& group_name) const {
+GroupMetadata Database::get_vector_metadata(const std::string& collection, const std::string& group_name) const {
     if (!impl_->schema) {
         throw std::runtime_error("Cannot get vector metadata: no schema loaded");
     }
@@ -1292,8 +1317,8 @@ VectorMetadata Database::get_vector_metadata(const std::string& collection, cons
         throw std::runtime_error("Vector group '" + group_name + "' not found for collection '" + collection + "'");
     }
 
-    VectorMetadata meta;
-    meta.group_name = group_name;
+    GroupMetadata metadata;
+    metadata.group_name = group_name;
 
     // Add all data columns (skip id and vector_index)
     for (const auto& [col_name, col] : table_def->columns) {
@@ -1301,19 +1326,13 @@ VectorMetadata Database::get_vector_metadata(const std::string& collection, cons
             continue;
         }
 
-        ScalarMetadata attr;
-        attr.name = col.name;
-        attr.data_type = col.type;
-        attr.not_null = col.not_null;
-        attr.primary_key = col.primary_key;
-        attr.default_value = col.default_value;
-        meta.value_columns.push_back(std::move(attr));
+        metadata.value_columns.push_back(scalar_metadata_from_column(col));
     }
 
-    return meta;
+    return metadata;
 }
 
-SetMetadata Database::get_set_metadata(const std::string& collection, const std::string& group_name) const {
+GroupMetadata Database::get_set_metadata(const std::string& collection, const std::string& group_name) const {
     if (!impl_->schema) {
         throw std::runtime_error("Cannot get set metadata: no schema loaded");
     }
@@ -1326,8 +1345,8 @@ SetMetadata Database::get_set_metadata(const std::string& collection, const std:
         throw std::runtime_error("Set group '" + group_name + "' not found for collection '" + collection + "'");
     }
 
-    SetMetadata meta;
-    meta.group_name = group_name;
+    GroupMetadata metadata;
+    metadata.group_name = group_name;
 
     // Add all data columns (skip id)
     for (const auto& [col_name, col] : table_def->columns) {
@@ -1335,16 +1354,10 @@ SetMetadata Database::get_set_metadata(const std::string& collection, const std:
             continue;
         }
 
-        ScalarMetadata attr;
-        attr.name = col.name;
-        attr.data_type = col.type;
-        attr.not_null = col.not_null;
-        attr.primary_key = col.primary_key;
-        attr.default_value = col.default_value;
-        meta.value_columns.push_back(std::move(attr));
+        metadata.value_columns.push_back(scalar_metadata_from_column(col));
     }
 
-    return meta;
+    return metadata;
 }
 
 std::vector<ScalarMetadata> Database::list_scalar_attributes(const std::string& collection) const {
@@ -1359,33 +1372,28 @@ std::vector<ScalarMetadata> Database::list_scalar_attributes(const std::string& 
 
     std::vector<ScalarMetadata> result;
     for (const auto& [col_name, col] : table_def->columns) {
-        ScalarMetadata meta;
-        meta.name = col.name;
-        meta.data_type = col.type;
-        meta.not_null = col.not_null;
-        meta.primary_key = col.primary_key;
-        meta.default_value = col.default_value;
+        auto metadata = scalar_metadata_from_column(col);
 
         for (const auto& fk : table_def->foreign_keys) {
             if (fk.from_column == col_name) {
-                meta.is_foreign_key = true;
-                meta.references_collection = fk.to_table;
-                meta.references_column = fk.to_column;
+                metadata.is_foreign_key = true;
+                metadata.references_collection = fk.to_table;
+                metadata.references_column = fk.to_column;
                 break;
             }
         }
 
-        result.push_back(std::move(meta));
+        result.push_back(std::move(metadata));
     }
     return result;
 }
 
-std::vector<VectorMetadata> Database::list_vector_groups(const std::string& collection) const {
+std::vector<GroupMetadata> Database::list_vector_groups(const std::string& collection) const {
     if (!impl_->schema) {
         throw std::runtime_error("Cannot list vector groups: no schema loaded");
     }
 
-    std::vector<VectorMetadata> result;
+    std::vector<GroupMetadata> result;
     auto prefix = collection + "_vector_";
 
     for (const auto& table_name : impl_->schema->table_names()) {
@@ -1403,12 +1411,12 @@ std::vector<VectorMetadata> Database::list_vector_groups(const std::string& coll
     return result;
 }
 
-std::vector<SetMetadata> Database::list_set_groups(const std::string& collection) const {
+std::vector<GroupMetadata> Database::list_set_groups(const std::string& collection) const {
     if (!impl_->schema) {
         throw std::runtime_error("Cannot list set groups: no schema loaded");
     }
 
-    std::vector<SetMetadata> result;
+    std::vector<GroupMetadata> result;
     auto prefix = collection + "_set_";
 
     for (const auto& table_name : impl_->schema->table_names()) {
@@ -1470,11 +1478,314 @@ void Database::export_to_csv(const std::string& table,
     quiver::write_csv(path, columns, data, fk_labels, date_format_map, enum_map);
 }
 
+std::vector<GroupMetadata> Database::list_time_series_groups(const std::string& collection) const {
+    if (!impl_->schema) {
+        throw std::runtime_error("Cannot list time series groups: no schema loaded");
+    }
+
+    std::vector<GroupMetadata> result;
+    auto prefix = collection + "_time_series_";
+
+    for (const auto& table_name : impl_->schema->table_names()) {
+        if (!impl_->schema->is_time_series_table(table_name))
+            continue;
+        if (impl_->schema->get_parent_collection(table_name) != collection)
+            continue;
+
+        // Extract group name from table name
+        if (table_name.size() > prefix.size() && table_name.substr(0, prefix.size()) == prefix) {
+            auto group_name = table_name.substr(prefix.size());
+            result.push_back(get_time_series_metadata(collection, group_name));
+        }
+    }
+    return result;
+}
+
 void Database::import_from_csv(const std::string& table, const std::string& path) {
     impl_->logger->debug("Importing table {} from CSV at path '{}'", table, path);
     impl_->require_collection(table, "import from CSV");
     // TODO: implement
 }
+
+GroupMetadata Database::get_time_series_metadata(const std::string& collection, const std::string& group_name) const {
+    if (!impl_->schema) {
+        throw std::runtime_error("Cannot get time series metadata: no schema loaded");
+    }
+
+    // Find the time series table for this group
+    auto ts_table = Schema::time_series_table_name(collection, group_name);
+    const auto* table_def = impl_->schema->get_table(ts_table);
+
+    if (!table_def) {
+        throw std::runtime_error("Time series group '" + group_name + "' not found for collection '" + collection +
+                                 "'");
+    }
+
+    GroupMetadata metadata;
+    metadata.group_name = group_name;
+    metadata.dimension_column = find_dimension_column(*table_def);
+
+    // Add value columns (skip id and dimension)
+    for (const auto& [col_name, col] : table_def->columns) {
+        if (col_name == "id" || col_name == metadata.dimension_column) {
+            continue;
+        }
+
+        metadata.value_columns.push_back(scalar_metadata_from_column(col));
+    }
+
+    return metadata;
+}
+
+std::vector<std::map<std::string, Value>>
+Database::read_time_series_group_by_id(const std::string& collection, const std::string& group, int64_t id) {
+    impl_->require_schema("read time series");
+
+    auto ts_table = impl_->schema->find_time_series_table(collection, group);
+    const auto* table_def = impl_->schema->get_table(ts_table);
+    if (!table_def) {
+        throw std::runtime_error("Time series table not found: " + ts_table);
+    }
+    auto dim_col = find_dimension_column(*table_def);
+
+    // Build column list (excluding id)
+    std::vector<std::string> columns;
+    columns.push_back(dim_col);
+    for (const auto& [col_name, col] : table_def->columns) {
+        if (col_name != "id" && col_name != dim_col) {
+            columns.push_back(col_name);
+        }
+    }
+
+    // Build SELECT query
+    std::string sql = "SELECT ";
+    for (size_t i = 0; i < columns.size(); ++i) {
+        if (i > 0)
+            sql += ", ";
+        sql += columns[i];
+    }
+    sql += " FROM " + ts_table + " WHERE id = ? ORDER BY " + dim_col;
+
+    auto result = execute(sql, {id});
+
+    std::vector<std::map<std::string, Value>> rows;
+    rows.reserve(result.row_count());
+
+    for (size_t row_idx = 0; row_idx < result.row_count(); ++row_idx) {
+        std::map<std::string, Value> row;
+        for (size_t col_idx = 0; col_idx < columns.size(); ++col_idx) {
+            const auto& col_name = columns[col_idx];
+            // Get the value from the result row
+            auto int_val = result[row_idx].get_integer(col_idx);
+            auto float_val = result[row_idx].get_float(col_idx);
+            auto str_val = result[row_idx].get_string(col_idx);
+
+            if (int_val) {
+                row[col_name] = *int_val;
+            } else if (float_val) {
+                row[col_name] = *float_val;
+            } else if (str_val) {
+                row[col_name] = *str_val;
+            } else {
+                row[col_name] = nullptr;
+            }
+        }
+        rows.push_back(std::move(row));
+    }
+
+    return rows;
+}
+
+void Database::update_time_series_group(const std::string& collection,
+                                        const std::string& group,
+                                        int64_t id,
+                                        const std::vector<std::map<std::string, Value>>& rows) {
+    impl_->logger->debug("Updating time series {}.{} for id {} with {} rows", collection, group, id, rows.size());
+    impl_->require_schema("update time series");
+
+    auto ts_table = impl_->schema->find_time_series_table(collection, group);
+    const auto* table_def = impl_->schema->get_table(ts_table);
+    if (!table_def) {
+        throw std::runtime_error("Time series table not found: " + ts_table);
+    }
+    auto dim_col = find_dimension_column(*table_def);
+
+    Impl::TransactionGuard txn(*impl_);
+
+    // Delete existing time series data for this element
+    auto delete_sql = "DELETE FROM " + ts_table + " WHERE id = ?";
+    execute(delete_sql, {id});
+
+    if (rows.empty()) {
+        txn.commit();
+        return;
+    }
+
+    // Get column names from first row (excluding dimension column which we handle specially)
+    std::vector<std::string> value_columns;
+    for (const auto& [col_name, _] : rows[0]) {
+        if (col_name != dim_col) {
+            value_columns.push_back(col_name);
+        }
+    }
+
+    // Build INSERT SQL
+    auto insert_sql = "INSERT INTO " + ts_table + " (id, " + dim_col;
+    for (const auto& col : value_columns) {
+        insert_sql += ", " + col;
+    }
+    insert_sql += ") VALUES (?";
+    for (size_t i = 0; i <= value_columns.size(); ++i) {
+        insert_sql += ", ?";
+    }
+    insert_sql += ")";
+
+    // Insert each row
+    for (const auto& row : rows) {
+        std::vector<Value> params;
+        params.push_back(id);
+
+        // Dimension column must be present
+        auto dt_it = row.find(dim_col);
+        if (dt_it == row.end()) {
+            throw std::runtime_error("Time series row missing required '" + dim_col + "' column");
+        }
+        params.push_back(dt_it->second);
+
+        // Add value columns
+        for (const auto& col : value_columns) {
+            auto it = row.find(col);
+            if (it != row.end()) {
+                params.push_back(it->second);
+            } else {
+                params.push_back(nullptr);
+            }
+        }
+
+        execute(insert_sql, params);
+    }
+
+    txn.commit();
+    impl_->logger->info("Updated time series {}.{} for id {} with {} rows", collection, group, id, rows.size());
+}
+
+bool Database::has_time_series_files(const std::string& collection) const {
+    impl_->require_schema("check time series files");
+    auto tsf = Schema::time_series_files_table_name(collection);
+    return impl_->schema->has_table(tsf);
+}
+
+std::vector<std::string> Database::list_time_series_files_columns(const std::string& collection) const {
+    impl_->require_schema("list time series files columns");
+    auto tsf = Schema::time_series_files_table_name(collection);
+    const auto* table_def = impl_->schema->get_table(tsf);
+    if (!table_def) {
+        throw std::runtime_error("Time series files table not found for collection '" + collection + "'");
+    }
+
+    std::vector<std::string> columns;
+    for (const auto& [col_name, _] : table_def->columns) {
+        columns.push_back(col_name);
+    }
+    return columns;
+}
+
+std::map<std::string, std::optional<std::string>> Database::read_time_series_files(const std::string& collection) {
+    impl_->logger->debug("Reading time series files for collection: {}", collection);
+    impl_->require_schema("read time series files");
+
+    auto tsf = impl_->schema->find_time_series_files_table(collection);
+    const auto* table_def = impl_->schema->get_table(tsf);
+    if (!table_def) {
+        throw std::runtime_error("Time series files table not found: " + tsf);
+    }
+
+    // Build column list
+    std::vector<std::string> columns;
+    for (const auto& [col_name, _] : table_def->columns) {
+        columns.push_back(col_name);
+    }
+
+    if (columns.empty()) {
+        return {};
+    }
+
+    // Build SELECT query
+    std::string sql = "SELECT ";
+    for (size_t i = 0; i < columns.size(); ++i) {
+        if (i > 0)
+            sql += ", ";
+        sql += columns[i];
+    }
+    sql += " FROM " + tsf + " LIMIT 1";
+
+    auto result = execute(sql);
+
+    std::map<std::string, std::optional<std::string>> paths;
+    if (result.empty()) {
+        // No row yet - return all nulls
+        for (const auto& col : columns) {
+            paths[col] = std::nullopt;
+        }
+    } else {
+        for (size_t i = 0; i < columns.size(); ++i) {
+            auto str_val = result[0].get_string(i);
+            paths[columns[i]] = str_val;
+        }
+    }
+
+    return paths;
+}
+
+void Database::update_time_series_files(const std::string& collection,
+                                        const std::map<std::string, std::optional<std::string>>& paths) {
+    impl_->logger->debug("Updating time series files for collection: {}", collection);
+    impl_->require_schema("update time series files");
+
+    auto tsf = impl_->schema->find_time_series_files_table(collection);
+    const auto* table_def = impl_->schema->get_table(tsf);
+    if (!table_def) {
+        throw std::runtime_error("Time series files table not found: " + tsf);
+    }
+
+    if (paths.empty()) {
+        return;
+    }
+
+    Impl::TransactionGuard txn(*impl_);
+
+    // Delete existing row (singleton table)
+    auto delete_sql = "DELETE FROM " + tsf;
+    execute(delete_sql);
+
+    // Build INSERT SQL
+    std::string insert_sql = "INSERT INTO " + tsf + " (";
+    std::string placeholders;
+    std::vector<Value> params;
+
+    bool first = true;
+    for (const auto& [col_name, path] : paths) {
+        if (!first) {
+            insert_sql += ", ";
+            placeholders += ", ";
+        }
+        insert_sql += col_name;
+        placeholders += "?";
+        if (path) {
+            params.push_back(*path);
+        } else {
+            params.push_back(nullptr);
+        }
+        first = false;
+    }
+    insert_sql += ") VALUES (" + placeholders + ")";
+
+    execute(insert_sql, params);
+
+    txn.commit();
+    impl_->logger->info("Updated time series files for collection: {}", collection);
+}
+
 
 std::optional<std::string> Database::query_string(const std::string& sql, const std::vector<Value>& params) {
     auto result = execute(sql, params);

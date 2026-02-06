@@ -9,15 +9,13 @@ extension DatabaseDelete on Database {
 
     final arena = Arena();
     try {
-      final err = bindings.quiver_database_delete_element_by_id(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        id,
+      check(
+        bindings.quiver_database_delete_element_by_id(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          id,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to delete element $id from '$collection'");
-      }
     } finally {
       arena.releaseAll();
     }

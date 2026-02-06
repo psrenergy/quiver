@@ -12,7 +12,7 @@ namespace fs = std::filesystem;
 
 TEST(Database, ExportToCsvBasicCollection) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
 
     // Create elements
     quiver::Element e1;
@@ -58,7 +58,7 @@ TEST(Database, ExportToCsvBasicCollection) {
 
 TEST(Database, ExportToCsvEmptyCollection) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
 
     auto csv_path = "quiver_export_empty.csv";
     db.export_to_csv("Configuration", csv_path);
@@ -80,7 +80,7 @@ TEST(Database, ExportToCsvEmptyCollection) {
 
 TEST(Database, ExportToCsvResolveForeignKeys) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"),
-                                            {.console_level = quiver::LogLevel::off});
+                                            {.console_level = QUIVER_LOG_OFF});
 
     quiver::Element p1;
     p1.set("label", std::string("Parent 1"));
@@ -131,7 +131,7 @@ TEST(Database, ExportToCsvResolveForeignKeys) {
 
 TEST(Database, ExportToCsvNullForeignKey) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"),
-                                            {.console_level = quiver::LogLevel::off});
+                                            {.console_level = QUIVER_LOG_OFF});
 
     quiver::Element c1;
     c1.set("label", std::string("Orphan"));
@@ -155,7 +155,7 @@ TEST(Database, ExportToCsvNullForeignKey) {
 
 TEST(Database, ExportToCsvVectorTableResolveForeignKeys) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"),
-                                            {.console_level = quiver::LogLevel::off});
+                                            {.console_level = QUIVER_LOG_OFF});
 
     quiver::Element p1;
     p1.set("label", std::string("Parent 1"));
@@ -188,7 +188,7 @@ TEST(Database, ExportToCsvVectorTableResolveForeignKeys) {
 
 TEST(Database, ExportToCsvSetTableResolveForeignKeys) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"),
-                                            {.console_level = quiver::LogLevel::off});
+                                            {.console_level = QUIVER_LOG_OFF});
 
     quiver::Element p1;
     p1.set("label", std::string("Parent 1"));
@@ -227,7 +227,7 @@ TEST(Database, ExportToCsvSetTableResolveForeignKeys) {
 
 TEST(Database, ExportToCsvVectorIndexAsNormalValue) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"),
-                                            {.console_level = quiver::LogLevel::off});
+                                            {.console_level = QUIVER_LOG_OFF});
 
     quiver::Element e1;
     e1.set("label", std::string("Item 1"));
@@ -263,7 +263,7 @@ TEST(Database, ExportToCsvVectorIndexAsNormalValue) {
 
 TEST(Database, ExportToCsvQuotesFieldsWithCommas) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
 
     quiver::Element e1;
     e1.set("label", std::string("Item, with comma"));
@@ -289,7 +289,7 @@ TEST(Database, ExportToCsvQuotesFieldsWithCommas) {
 
 TEST(Database, ExportToCsvTimeSeriesTable) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"),
-                                            {.console_level = quiver::LogLevel::off});
+                                            {.console_level = QUIVER_LOG_OFF});
 
     quiver::Element e1;
     e1.set("label", std::string("Item 1"));
@@ -326,7 +326,7 @@ TEST(Database, ExportToCsvTimeSeriesTable) {
 
 TEST(Database, ExportToCsvDateTimeCustomFormat) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"),
-                                            {.console_level = quiver::LogLevel::off});
+                                            {.console_level = QUIVER_LOG_OFF});
 
     quiver::Element e1;
     e1.set("label", std::string("Item 1"));
@@ -353,7 +353,7 @@ TEST(Database, ExportToCsvDateTimeCustomFormat) {
 
 TEST(Database, ExportToCsvEnumResolution) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
 
     quiver::Element e1;
     e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{1});
@@ -381,7 +381,7 @@ TEST(Database, ExportToCsvEnumResolution) {
 
 TEST(Database, ExportToCsvEnumInvalidIdThrows) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
 
     quiver::Element e1;
     e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{99});
@@ -397,7 +397,7 @@ TEST(Database, ExportToCsvEnumInvalidIdThrows) {
 
 TEST(Database, ExportToCsvLatin1Encoding) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
 
     // "Café" is UTF-8: C a f \xC3\xA9
     quiver::Element e1;
@@ -421,7 +421,7 @@ TEST(Database, ExportToCsvLatin1Encoding) {
 
 TEST(Database, ExportToCsvNonExistentCollectionThrows) {
     auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
 
     auto csv_path = "quiver_export_invalid.csv";
     EXPECT_THROW(db.export_to_csv("NonExistent", csv_path), std::runtime_error);

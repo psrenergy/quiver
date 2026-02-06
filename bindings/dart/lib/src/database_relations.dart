@@ -8,17 +8,15 @@ extension DatabaseRelations on Database {
 
     final arena = Arena();
     try {
-      final err = bindings.quiver_database_set_scalar_relation(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        fromLabel.toNativeUtf8(allocator: arena).cast(),
-        toLabel.toNativeUtf8(allocator: arena).cast(),
+      check(
+        bindings.quiver_database_set_scalar_relation(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          fromLabel.toNativeUtf8(allocator: arena).cast(),
+          toLabel.toNativeUtf8(allocator: arena).cast(),
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to set scalar relation '$attribute' in '$collection'");
-      }
     } finally {
       arena.releaseAll();
     }
@@ -34,17 +32,15 @@ extension DatabaseRelations on Database {
       final outValues = arena<Pointer<Pointer<Char>>>();
       final outCount = arena<Size>();
 
-      final err = bindings.quiver_database_read_scalar_relation(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        outValues,
-        outCount,
+      check(
+        bindings.quiver_database_read_scalar_relation(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          outValues,
+          outCount,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to read scalar relation '$attribute' from '$collection'");
-      }
 
       final count = outCount.value;
       if (count == 0 || outValues.value == nullptr) {

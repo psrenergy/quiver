@@ -64,7 +64,7 @@ void main() {
           dbPath,
           path.join(invalidPath, 'no_configuration.sql'),
         ),
-        throwsA(isA<SchemaException>()),
+        throwsA(isA<DatabaseException>()),
       );
     });
 
@@ -74,7 +74,7 @@ void main() {
           dbPath,
           path.join(invalidPath, 'label_not_null.sql'),
         ),
-        throwsA(isA<SchemaException>()),
+        throwsA(isA<DatabaseException>()),
       );
     });
 
@@ -84,7 +84,7 @@ void main() {
           dbPath,
           path.join(invalidPath, 'label_not_unique.sql'),
         ),
-        throwsA(isA<SchemaException>()),
+        throwsA(isA<DatabaseException>()),
       );
     });
 
@@ -94,7 +94,7 @@ void main() {
           dbPath,
           path.join(invalidPath, 'label_wrong_type.sql'),
         ),
-        throwsA(isA<SchemaException>()),
+        throwsA(isA<DatabaseException>()),
       );
     });
 
@@ -104,7 +104,7 @@ void main() {
           dbPath,
           path.join(invalidPath, 'duplicate_attribute.sql'),
         ),
-        throwsA(isA<SchemaException>()),
+        throwsA(isA<DatabaseException>()),
       );
     });
 
@@ -114,7 +114,7 @@ void main() {
           dbPath,
           path.join(invalidPath, 'vector_no_index.sql'),
         ),
-        throwsA(isA<SchemaException>()),
+        throwsA(isA<DatabaseException>()),
       );
     });
 
@@ -124,7 +124,7 @@ void main() {
           dbPath,
           path.join(invalidPath, 'set_no_unique.sql'),
         ),
-        throwsA(isA<SchemaException>()),
+        throwsA(isA<DatabaseException>()),
       );
     });
 
@@ -134,7 +134,7 @@ void main() {
           dbPath,
           path.join(invalidPath, 'fk_not_null_set_null.sql'),
         ),
-        throwsA(isA<SchemaException>()),
+        throwsA(isA<DatabaseException>()),
       );
     });
 
@@ -144,7 +144,7 @@ void main() {
           dbPath,
           path.join(invalidPath, 'fk_actions.sql'),
         ),
-        throwsA(isA<SchemaException>()),
+        throwsA(isA<DatabaseException>()),
       );
     });
   });

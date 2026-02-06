@@ -8,19 +8,22 @@ TEST(DatabaseCApi, CreateElementWithScalars) {
     // Test: Use C API to create element with schema
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto element = quiver_element_create();
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
     ASSERT_NE(element, nullptr);
     quiver_element_set_string(element, "label", "Config 1");
     quiver_element_set_integer(element, "integer_attribute", 42);
     quiver_element_set_float(element, "float_attribute", 3.14);
 
-    int64_t id = quiver_database_create_element(db, "Configuration", element);
+    int64_t id = 0;
+    EXPECT_EQ(quiver_database_create_element(db, "Configuration", element, &id), QUIVER_OK);
     EXPECT_EQ(id, 1);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     quiver_database_close(db);
 }
 
@@ -28,82 +31,95 @@ TEST(DatabaseCApi, CreateElementWithVector) {
     // Test: Use C API to create element with array using schema
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
     // Create Configuration first
-    auto config = quiver_element_create();
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
     ASSERT_NE(config, nullptr);
     quiver_element_set_string(config, "label", "Test Config");
-    quiver_database_create_element(db, "Configuration", config);
-    quiver_element_destroy(config);
+    int64_t config_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &config_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
 
     // Create Collection with vector
-    auto element = quiver_element_create();
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
     ASSERT_NE(element, nullptr);
     quiver_element_set_string(element, "label", "Item 1");
 
     int64_t values[] = {1, 2, 3};
     quiver_element_set_array_integer(element, "value_int", values, 3);
 
-    int64_t id = quiver_database_create_element(db, "Collection", element);
+    int64_t id = 0;
+    EXPECT_EQ(quiver_database_create_element(db, "Collection", element, &id), QUIVER_OK);
     EXPECT_EQ(id, 1);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     quiver_database_close(db);
 }
 
 TEST(DatabaseCApi, CreateElementNullDb) {
-    auto element = quiver_element_create();
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
     ASSERT_NE(element, nullptr);
     quiver_element_set_string(element, "label", "Test");
 
-    int64_t id = quiver_database_create_element(nullptr, "Plant", element);
-    EXPECT_EQ(id, -1);
+    int64_t id = 0;
+    EXPECT_EQ(quiver_database_create_element(nullptr, "Plant", element, &id), QUIVER_ERROR);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(DatabaseCApi, CreateElementNullCollection) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_open(":memory:", &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_open(":memory:", &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto element = quiver_element_create();
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
     ASSERT_NE(element, nullptr);
     quiver_element_set_string(element, "label", "Test");
 
-    int64_t id = quiver_database_create_element(db, nullptr, element);
-    EXPECT_EQ(id, -1);
+    int64_t id = 0;
+    EXPECT_EQ(quiver_database_create_element(db, nullptr, element, &id), QUIVER_ERROR);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     quiver_database_close(db);
 }
 
 TEST(DatabaseCApi, CreateElementNullElement) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
-    auto db = quiver_database_open(":memory:", &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_open(":memory:", &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    int64_t id = quiver_database_create_element(db, "Plant", nullptr);
-    EXPECT_EQ(id, -1);
+    int64_t id = 0;
+    EXPECT_EQ(quiver_database_create_element(db, "Plant", nullptr, &id), QUIVER_ERROR);
 
     quiver_database_close(db);
 }
 
 TEST(DatabaseCApi, CreateElementWithDatetime) {
     auto options = quiver::test::quiet_options();
-    auto db = quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options);
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto element = quiver_element_create();
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
     ASSERT_NE(element, nullptr);
     quiver_element_set_string(element, "label", "Config 1");
     quiver_element_set_string(element, "date_attribute", "2024-03-15T14:30:45");
 
-    int64_t id = quiver_database_create_element(db, "Configuration", element);
+    int64_t id = 0;
+    EXPECT_EQ(quiver_database_create_element(db, "Configuration", element, &id), QUIVER_OK);
     EXPECT_EQ(id, 1);
 
     char** out_values = nullptr;
@@ -114,6 +130,6 @@ TEST(DatabaseCApi, CreateElementWithDatetime) {
     EXPECT_STREQ(out_values[0], "2024-03-15T14:30:45");
 
     quiver_free_string_array(out_values, out_count);
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     quiver_database_close(db);
 }

@@ -2,25 +2,14 @@
 #define QUIVER_C_DATABASE_H
 
 #include "common.h"
+#include "options.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// Log levels for console output
-typedef enum {
-    QUIVER_LOG_DEBUG = 0,
-    QUIVER_LOG_INFO = 1,
-    QUIVER_LOG_WARN = 2,
-    QUIVER_LOG_ERROR = 3,
-    QUIVER_LOG_OFF = 4,
-} quiver_log_level_t;
-
-// Database options
-typedef struct {
-    int read_only;
-    quiver_log_level_t console_level;
-} quiver_database_options_t;
+// Default options
+QUIVER_C_API quiver_database_options_t quiver_database_options_default(void);
 
 // Attribute data structure
 typedef enum {
@@ -38,31 +27,34 @@ typedef enum {
     QUIVER_DATA_TYPE_NULL = 4
 } quiver_data_type_t;
 
-// Returns default options
-QUIVER_C_API quiver_database_options_t quiver_database_options_default(void);
-
 // Opaque handle type
 typedef struct quiver_database quiver_database_t;
 
 // Database lifecycle
-QUIVER_C_API quiver_database_t* quiver_database_open(const char* path, const quiver_database_options_t* options);
-QUIVER_C_API quiver_database_t* quiver_database_from_migrations(const char* db_path,
-                                                                const char* migrations_path,
-                                                                const quiver_database_options_t* options);
-QUIVER_C_API quiver_database_t*
-quiver_database_from_schema(const char* db_path, const char* schema_path, const quiver_database_options_t* options);
-QUIVER_C_API void quiver_database_close(quiver_database_t* db);
-QUIVER_C_API int quiver_database_is_healthy(quiver_database_t* db);
-QUIVER_C_API const char* quiver_database_path(quiver_database_t* db);
+QUIVER_C_API quiver_error_t quiver_database_open(const char* path,
+                                                 const quiver_database_options_t* options,
+                                                 quiver_database_t** out_db);
+QUIVER_C_API quiver_error_t quiver_database_from_migrations(const char* db_path,
+                                                            const char* migrations_path,
+                                                            const quiver_database_options_t* options,
+                                                            quiver_database_t** out_db);
+QUIVER_C_API quiver_error_t quiver_database_from_schema(const char* db_path,
+                                                        const char* schema_path,
+                                                        const quiver_database_options_t* options,
+                                                        quiver_database_t** out_db);
+QUIVER_C_API quiver_error_t quiver_database_close(quiver_database_t* db);
+QUIVER_C_API quiver_error_t quiver_database_is_healthy(quiver_database_t* db, int* out_healthy);
+QUIVER_C_API quiver_error_t quiver_database_path(quiver_database_t* db, const char** out_path);
 
 // Version
-QUIVER_C_API int64_t quiver_database_current_version(quiver_database_t* db);
+QUIVER_C_API quiver_error_t quiver_database_current_version(quiver_database_t* db, int64_t* out_version);
 
 // Element operations (requires quiver_element_t from element.h)
 typedef struct quiver_element quiver_element_t;
-QUIVER_C_API int64_t quiver_database_create_element(quiver_database_t* db,
-                                                    const char* collection,
-                                                    quiver_element_t* element);
+QUIVER_C_API quiver_error_t quiver_database_create_element(quiver_database_t* db,
+                                                           const char* collection,
+                                                           quiver_element_t* element,
+                                                           int64_t* out_id);
 QUIVER_C_API quiver_error_t quiver_database_update_element(quiver_database_t* db,
                                                            const char* collection,
                                                            int64_t id,
@@ -148,26 +140,26 @@ QUIVER_C_API quiver_error_t quiver_database_read_set_strings(quiver_database_t* 
                                                              size_t* out_count);
 
 // Read scalar attributes by element ID
-QUIVER_C_API quiver_error_t quiver_database_read_scalar_integers_by_id(quiver_database_t* db,
-                                                                       const char* collection,
-                                                                       const char* attribute,
-                                                                       int64_t id,
-                                                                       int64_t* out_value,
-                                                                       int* out_has_value);
-
-QUIVER_C_API quiver_error_t quiver_database_read_scalar_floats_by_id(quiver_database_t* db,
-                                                                     const char* collection,
-                                                                     const char* attribute,
-                                                                     int64_t id,
-                                                                     double* out_value,
-                                                                     int* out_has_value);
-
-QUIVER_C_API quiver_error_t quiver_database_read_scalar_strings_by_id(quiver_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_scalar_integer_by_id(quiver_database_t* db,
                                                                       const char* collection,
                                                                       const char* attribute,
                                                                       int64_t id,
-                                                                      char** out_value,
+                                                                      int64_t* out_value,
                                                                       int* out_has_value);
+
+QUIVER_C_API quiver_error_t quiver_database_read_scalar_float_by_id(quiver_database_t* db,
+                                                                    const char* collection,
+                                                                    const char* attribute,
+                                                                    int64_t id,
+                                                                    double* out_value,
+                                                                    int* out_has_value);
+
+QUIVER_C_API quiver_error_t quiver_database_read_scalar_string_by_id(quiver_database_t* db,
+                                                                     const char* collection,
+                                                                     const char* attribute,
+                                                                     int64_t id,
+                                                                     char** out_value,
+                                                                     int* out_has_value);
 
 // Read vector attributes by element ID
 QUIVER_C_API quiver_error_t quiver_database_read_vector_integers_by_id(quiver_database_t* db,
@@ -233,15 +225,10 @@ typedef struct {
 
 typedef struct {
     const char* group_name;
+    const char* dimension_column;  // NULL for vector/set groups; ordering column for time series
     quiver_scalar_metadata_t* value_columns;
     size_t value_column_count;
-} quiver_vector_metadata_t;
-
-typedef struct {
-    const char* group_name;
-    quiver_scalar_metadata_t* value_columns;
-    size_t value_column_count;
-} quiver_set_metadata_t;
+} quiver_group_metadata_t;
 
 // Attribute metadata queries
 QUIVER_C_API quiver_error_t quiver_database_get_scalar_metadata(quiver_database_t* db,
@@ -252,17 +239,21 @@ QUIVER_C_API quiver_error_t quiver_database_get_scalar_metadata(quiver_database_
 QUIVER_C_API quiver_error_t quiver_database_get_vector_metadata(quiver_database_t* db,
                                                                 const char* collection,
                                                                 const char* group_name,
-                                                                quiver_vector_metadata_t* out_metadata);
+                                                                quiver_group_metadata_t* out_metadata);
 
 QUIVER_C_API quiver_error_t quiver_database_get_set_metadata(quiver_database_t* db,
                                                              const char* collection,
                                                              const char* group_name,
-                                                             quiver_set_metadata_t* out_metadata);
+                                                             quiver_group_metadata_t* out_metadata);
+
+QUIVER_C_API quiver_error_t quiver_database_get_time_series_metadata(quiver_database_t* db,
+                                                                     const char* collection,
+                                                                     const char* group_name,
+                                                                     quiver_group_metadata_t* out_metadata);
 
 // Free metadata
-QUIVER_C_API void quiver_free_scalar_metadata(quiver_scalar_metadata_t* metadata);
-QUIVER_C_API void quiver_free_vector_metadata(quiver_vector_metadata_t* metadata);
-QUIVER_C_API void quiver_free_set_metadata(quiver_set_metadata_t* metadata);
+QUIVER_C_API quiver_error_t quiver_free_scalar_metadata(quiver_scalar_metadata_t* metadata);
+QUIVER_C_API quiver_error_t quiver_free_group_metadata(quiver_group_metadata_t* metadata);
 
 // List attributes/groups - returns full metadata
 QUIVER_C_API quiver_error_t quiver_database_list_scalar_attributes(quiver_database_t* db,
@@ -272,18 +263,22 @@ QUIVER_C_API quiver_error_t quiver_database_list_scalar_attributes(quiver_databa
 
 QUIVER_C_API quiver_error_t quiver_database_list_vector_groups(quiver_database_t* db,
                                                                const char* collection,
-                                                               quiver_vector_metadata_t** out_metadata,
+                                                               quiver_group_metadata_t** out_metadata,
                                                                size_t* out_count);
 
 QUIVER_C_API quiver_error_t quiver_database_list_set_groups(quiver_database_t* db,
                                                             const char* collection,
-                                                            quiver_set_metadata_t** out_metadata,
+                                                            quiver_group_metadata_t** out_metadata,
                                                             size_t* out_count);
 
+QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(quiver_database_t* db,
+                                                                    const char* collection,
+                                                                    quiver_group_metadata_t** out_metadata,
+                                                                    size_t* out_count);
+
 // Free metadata arrays
-QUIVER_C_API void quiver_free_scalar_metadata_array(quiver_scalar_metadata_t* metadata, size_t count);
-QUIVER_C_API void quiver_free_vector_metadata_array(quiver_vector_metadata_t* metadata, size_t count);
-QUIVER_C_API void quiver_free_set_metadata_array(quiver_set_metadata_t* metadata, size_t count);
+QUIVER_C_API quiver_error_t quiver_free_scalar_metadata_array(quiver_scalar_metadata_t* metadata, size_t count);
+QUIVER_C_API quiver_error_t quiver_free_group_metadata_array(quiver_group_metadata_t* metadata, size_t count);
 
 // Update scalar attributes (by element ID)
 QUIVER_C_API quiver_error_t quiver_database_update_scalar_integer(quiver_database_t* db,
@@ -348,15 +343,67 @@ QUIVER_C_API quiver_error_t quiver_database_update_set_strings(quiver_database_t
                                                                const char* const* values,
                                                                size_t count);
 
+// Read time series group by element ID - returns rows with date_time and value columns
+// out_rows: array of row structs, out_row_count: number of rows
+// Each row contains date_time string and value columns
+QUIVER_C_API quiver_error_t quiver_database_read_time_series_group_by_id(quiver_database_t* db,
+                                                                         const char* collection,
+                                                                         const char* group,
+                                                                         int64_t id,
+                                                                         char*** out_date_times,
+                                                                         double** out_values,
+                                                                         size_t* out_row_count);
+
+// Update time series group - replaces all rows for element
+QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_database_t* db,
+                                                                     const char* collection,
+                                                                     const char* group,
+                                                                     int64_t id,
+                                                                     const char* const* date_times,
+                                                                     const double* values,
+                                                                     size_t row_count);
+
+// Free time series read results
+QUIVER_C_API quiver_error_t quiver_free_time_series_data(char** date_times, double* values, size_t row_count);
+
+// Time series files - singleton table storing file paths for external time series data
+// Check if collection has a time_series_files table
+QUIVER_C_API quiver_error_t quiver_database_has_time_series_files(quiver_database_t* db,
+                                                                  const char* collection,
+                                                                  int* out_result);
+
+// List columns in time series files table
+QUIVER_C_API quiver_error_t quiver_database_list_time_series_files_columns(quiver_database_t* db,
+                                                                           const char* collection,
+                                                                           char*** out_columns,
+                                                                           size_t* out_count);
+
+// Read time series files (returns parallel arrays of column names and paths)
+QUIVER_C_API quiver_error_t quiver_database_read_time_series_files(quiver_database_t* db,
+                                                                   const char* collection,
+                                                                   char*** out_columns,
+                                                                   char*** out_paths,
+                                                                   size_t* out_count);
+
+// Update time series files
+QUIVER_C_API quiver_error_t quiver_database_update_time_series_files(quiver_database_t* db,
+                                                                     const char* collection,
+                                                                     const char* const* columns,
+                                                                     const char* const* paths,
+                                                                     size_t count);
+
+// Free time series files read results
+QUIVER_C_API quiver_error_t quiver_free_time_series_files(char** columns, char** paths, size_t count);
+
 // Memory cleanup for read results
-QUIVER_C_API void quiver_free_integer_array(int64_t* values);
-QUIVER_C_API void quiver_free_float_array(double* values);
-QUIVER_C_API void quiver_free_string_array(char** values, size_t count);
+QUIVER_C_API quiver_error_t quiver_free_integer_array(int64_t* values);
+QUIVER_C_API quiver_error_t quiver_free_float_array(double* values);
+QUIVER_C_API quiver_error_t quiver_free_string_array(char** values, size_t count);
 
 // Memory cleanup for vector read results
-QUIVER_C_API void quiver_free_integer_vectors(int64_t** vectors, size_t* sizes, size_t count);
-QUIVER_C_API void quiver_free_float_vectors(double** vectors, size_t* sizes, size_t count);
-QUIVER_C_API void quiver_free_string_vectors(char*** vectors, size_t* sizes, size_t count);
+QUIVER_C_API quiver_error_t quiver_free_integer_vectors(int64_t** vectors, size_t* sizes, size_t count);
+QUIVER_C_API quiver_error_t quiver_free_float_vectors(double** vectors, size_t* sizes, size_t count);
+QUIVER_C_API quiver_error_t quiver_free_string_vectors(char*** vectors, size_t* sizes, size_t count);
 
 // CSV operations
 QUIVER_C_API quiver_error_t quiver_database_export_to_csv(quiver_database_t* db, const char* table, const char* path);

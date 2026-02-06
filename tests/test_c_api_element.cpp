@@ -3,164 +3,226 @@
 #include <string>
 
 TEST(ElementCApi, CreateAndDestroy) {
-    auto element = quiver_element_create();
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
     ASSERT_NE(element, nullptr);
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, DestroyNull) {
-    quiver_element_destroy(nullptr);
+    EXPECT_EQ(quiver_element_destroy(nullptr), QUIVER_ERROR);
 }
 
 TEST(ElementCApi, EmptyElement) {
-    auto element = quiver_element_create();
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
     ASSERT_NE(element, nullptr);
 
-    EXPECT_EQ(quiver_element_has_scalars(element), 0);
-    EXPECT_EQ(quiver_element_has_arrays(element), 0);
-    EXPECT_EQ(quiver_element_scalar_count(element), 0);
-    EXPECT_EQ(quiver_element_array_count(element), 0);
+    int has_scalars = 0;
+    EXPECT_EQ(quiver_element_has_scalars(element, &has_scalars), QUIVER_OK);
+    EXPECT_EQ(has_scalars, 0);
 
-    quiver_element_destroy(element);
+    int has_arrays = 0;
+    EXPECT_EQ(quiver_element_has_arrays(element, &has_arrays), QUIVER_OK);
+    EXPECT_EQ(has_arrays, 0);
+
+    size_t scalar_count = 0;
+    EXPECT_EQ(quiver_element_scalar_count(element, &scalar_count), QUIVER_OK);
+    EXPECT_EQ(scalar_count, 0);
+
+    size_t array_count = 0;
+    EXPECT_EQ(quiver_element_array_count(element, &array_count), QUIVER_OK);
+    EXPECT_EQ(array_count, 0);
+
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, SetInt) {
-    auto element = quiver_element_create();
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
     ASSERT_NE(element, nullptr);
 
     EXPECT_EQ(quiver_element_set_integer(element, "count", 42), QUIVER_OK);
-    EXPECT_EQ(quiver_element_has_scalars(element), 1);
-    EXPECT_EQ(quiver_element_scalar_count(element), 1);
+    int has_scalars = 0;
+    EXPECT_EQ(quiver_element_has_scalars(element, &has_scalars), QUIVER_OK);
+    EXPECT_EQ(has_scalars, 1);
+    size_t scalar_count = 0;
+    EXPECT_EQ(quiver_element_scalar_count(element, &scalar_count), QUIVER_OK);
+    EXPECT_EQ(scalar_count, 1);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, SetFloat) {
-    auto element = quiver_element_create();
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
     ASSERT_NE(element, nullptr);
 
     EXPECT_EQ(quiver_element_set_float(element, "value", 3.14), QUIVER_OK);
-    EXPECT_EQ(quiver_element_has_scalars(element), 1);
+    int has_scalars = 0;
+    EXPECT_EQ(quiver_element_has_scalars(element, &has_scalars), QUIVER_OK);
+    EXPECT_EQ(has_scalars, 1);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, SetString) {
-    auto element = quiver_element_create();
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
     ASSERT_NE(element, nullptr);
 
     EXPECT_EQ(quiver_element_set_string(element, "label", "Plant 1"), QUIVER_OK);
-    EXPECT_EQ(quiver_element_has_scalars(element), 1);
+    int has_scalars = 0;
+    EXPECT_EQ(quiver_element_has_scalars(element, &has_scalars), QUIVER_OK);
+    EXPECT_EQ(has_scalars, 1);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, SetNull) {
-    auto element = quiver_element_create();
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
     ASSERT_NE(element, nullptr);
 
     EXPECT_EQ(quiver_element_set_null(element, "empty"), QUIVER_OK);
-    EXPECT_EQ(quiver_element_has_scalars(element), 1);
+    int has_scalars = 0;
+    EXPECT_EQ(quiver_element_has_scalars(element, &has_scalars), QUIVER_OK);
+    EXPECT_EQ(has_scalars, 1);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, SetArrayInt) {
-    auto element = quiver_element_create();
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
     ASSERT_NE(element, nullptr);
 
     int64_t values[] = {10, 20, 30};
     EXPECT_EQ(quiver_element_set_array_integer(element, "counts", values, 3), QUIVER_OK);
-    EXPECT_EQ(quiver_element_has_arrays(element), 1);
-    EXPECT_EQ(quiver_element_array_count(element), 1);
+    int has_arrays = 0;
+    EXPECT_EQ(quiver_element_has_arrays(element, &has_arrays), QUIVER_OK);
+    EXPECT_EQ(has_arrays, 1);
+    size_t array_count = 0;
+    EXPECT_EQ(quiver_element_array_count(element, &array_count), QUIVER_OK);
+    EXPECT_EQ(array_count, 1);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, SetArrayFloat) {
-    auto element = quiver_element_create();
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
     ASSERT_NE(element, nullptr);
 
     double values[] = {1.5, 2.5, 3.5};
     EXPECT_EQ(quiver_element_set_array_float(element, "costs", values, 3), QUIVER_OK);
-    EXPECT_EQ(quiver_element_has_arrays(element), 1);
-    EXPECT_EQ(quiver_element_array_count(element), 1);
+    int has_arrays = 0;
+    EXPECT_EQ(quiver_element_has_arrays(element, &has_arrays), QUIVER_OK);
+    EXPECT_EQ(has_arrays, 1);
+    size_t array_count = 0;
+    EXPECT_EQ(quiver_element_array_count(element, &array_count), QUIVER_OK);
+    EXPECT_EQ(array_count, 1);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, SetArrayString) {
-    auto element = quiver_element_create();
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
     ASSERT_NE(element, nullptr);
 
     const char* values[] = {"important", "urgent", "review"};
     EXPECT_EQ(quiver_element_set_array_string(element, "tags", values, 3), QUIVER_OK);
-    EXPECT_EQ(quiver_element_has_arrays(element), 1);
-    EXPECT_EQ(quiver_element_array_count(element), 1);
+    int has_arrays = 0;
+    EXPECT_EQ(quiver_element_has_arrays(element, &has_arrays), QUIVER_OK);
+    EXPECT_EQ(has_arrays, 1);
+    size_t array_count = 0;
+    EXPECT_EQ(quiver_element_array_count(element, &array_count), QUIVER_OK);
+    EXPECT_EQ(array_count, 1);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, Clear) {
-    auto element = quiver_element_create();
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
     ASSERT_NE(element, nullptr);
 
     quiver_element_set_integer(element, "id", 1);
     double values[] = {1.0, 2.0};
     quiver_element_set_array_float(element, "data", values, 2);
 
-    EXPECT_EQ(quiver_element_has_scalars(element), 1);
-    EXPECT_EQ(quiver_element_has_arrays(element), 1);
+    int has_scalars = 0;
+    EXPECT_EQ(quiver_element_has_scalars(element, &has_scalars), QUIVER_OK);
+    EXPECT_EQ(has_scalars, 1);
+    int has_arrays = 0;
+    EXPECT_EQ(quiver_element_has_arrays(element, &has_arrays), QUIVER_OK);
+    EXPECT_EQ(has_arrays, 1);
 
-    quiver_element_clear(element);
+    EXPECT_EQ(quiver_element_clear(element), QUIVER_OK);
 
-    EXPECT_EQ(quiver_element_has_scalars(element), 0);
-    EXPECT_EQ(quiver_element_has_arrays(element), 0);
+    EXPECT_EQ(quiver_element_has_scalars(element, &has_scalars), QUIVER_OK);
+    EXPECT_EQ(has_scalars, 0);
+    EXPECT_EQ(quiver_element_has_arrays(element, &has_arrays), QUIVER_OK);
+    EXPECT_EQ(has_arrays, 0);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
+}
+
+TEST(ElementCApi, ClearNull) {
+    EXPECT_EQ(quiver_element_clear(nullptr), QUIVER_ERROR);
 }
 
 TEST(ElementCApi, NullElementErrors) {
-    EXPECT_EQ(quiver_element_set_integer(nullptr, "x", 1), QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_element_set_float(nullptr, "x", 1.0), QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_element_set_string(nullptr, "x", "y"), QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_element_set_null(nullptr, "x"), QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(quiver_element_set_integer(nullptr, "x", 1), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_set_float(nullptr, "x", 1.0), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_set_string(nullptr, "x", "y"), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_set_null(nullptr, "x"), QUIVER_ERROR);
 }
 
 TEST(ElementCApi, NullNameErrors) {
-    auto element = quiver_element_create();
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
     ASSERT_NE(element, nullptr);
 
-    EXPECT_EQ(quiver_element_set_integer(element, nullptr, 1), QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_element_set_float(element, nullptr, 1.0), QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_element_set_string(element, nullptr, "y"), QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_element_set_null(element, nullptr), QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(quiver_element_set_integer(element, nullptr, 1), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_set_float(element, nullptr, 1.0), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_set_string(element, nullptr, "y"), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_set_null(element, nullptr), QUIVER_ERROR);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, NullAccessors) {
-    EXPECT_EQ(quiver_element_has_scalars(nullptr), 0);
-    EXPECT_EQ(quiver_element_has_arrays(nullptr), 0);
-    EXPECT_EQ(quiver_element_scalar_count(nullptr), 0);
-    EXPECT_EQ(quiver_element_array_count(nullptr), 0);
+    int has_scalars = 0;
+    EXPECT_EQ(quiver_element_has_scalars(nullptr, &has_scalars), QUIVER_ERROR);
+    int has_arrays = 0;
+    EXPECT_EQ(quiver_element_has_arrays(nullptr, &has_arrays), QUIVER_ERROR);
+    size_t scalar_count = 0;
+    EXPECT_EQ(quiver_element_scalar_count(nullptr, &scalar_count), QUIVER_ERROR);
+    size_t array_count = 0;
+    EXPECT_EQ(quiver_element_array_count(nullptr, &array_count), QUIVER_ERROR);
 }
 
 TEST(ElementCApi, MultipleScalars) {
-    auto element = quiver_element_create();
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
     ASSERT_NE(element, nullptr);
 
     quiver_element_set_string(element, "label", "Plant 1");
     quiver_element_set_float(element, "capacity", 50.0);
     quiver_element_set_integer(element, "id", 1);
 
-    EXPECT_EQ(quiver_element_scalar_count(element), 3);
+    size_t scalar_count = 0;
+    EXPECT_EQ(quiver_element_scalar_count(element, &scalar_count), QUIVER_OK);
+    EXPECT_EQ(scalar_count, 3);
 
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, ToString) {
-    auto element = quiver_element_create();
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
     ASSERT_NE(element, nullptr);
 
     quiver_element_set_string(element, "label", "Plant 1");
@@ -169,7 +231,8 @@ TEST(ElementCApi, ToString) {
     double costs[] = {1.5, 2.5};
     quiver_element_set_array_float(element, "costs", costs, 2);
 
-    char* str = quiver_element_to_string(element);
+    char* str = nullptr;
+    ASSERT_EQ(quiver_element_to_string(element, &str), QUIVER_OK);
     ASSERT_NE(str, nullptr);
 
     std::string result(str);
@@ -179,15 +242,16 @@ TEST(ElementCApi, ToString) {
     EXPECT_NE(result.find("label: \"Plant 1\""), std::string::npos);
 
     quiver_string_free(str);
-    quiver_element_destroy(element);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
 TEST(ElementCApi, ToStringNull) {
-    EXPECT_EQ(quiver_element_to_string(nullptr), nullptr);
+    char* str = nullptr;
+    EXPECT_EQ(quiver_element_to_string(nullptr, &str), QUIVER_ERROR);
 }
 
 TEST(ElementCApi, StringFreeNull) {
-    quiver_string_free(nullptr);
+    EXPECT_EQ(quiver_string_free(nullptr), QUIVER_OK);
 }
 
 TEST(ElementCApi, ArrayNullErrors) {
@@ -195,16 +259,17 @@ TEST(ElementCApi, ArrayNullErrors) {
     double float_values[] = {1.0, 2.0, 3.0};
     const char* string_values[] = {"a", "b", "c"};
 
-    EXPECT_EQ(quiver_element_set_array_integer(nullptr, "x", integer_values, 3), QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_element_set_array_float(nullptr, "x", float_values, 3), QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_element_set_array_string(nullptr, "x", string_values, 3), QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(quiver_element_set_array_integer(nullptr, "x", integer_values, 3), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_set_array_float(nullptr, "x", float_values, 3), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_set_array_string(nullptr, "x", string_values, 3), QUIVER_ERROR);
 
-    auto element = quiver_element_create();
-    EXPECT_EQ(quiver_element_set_array_integer(element, nullptr, integer_values, 3), QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_element_set_array_float(element, nullptr, float_values, 3), QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_element_set_array_string(element, nullptr, string_values, 3), QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_element_set_array_integer(element, "x", nullptr, 3), QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_element_set_array_float(element, "x", nullptr, 3), QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_element_set_array_string(element, "x", nullptr, 3), QUIVER_ERROR_INVALID_ARGUMENT);
-    quiver_element_destroy(element);
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
+    EXPECT_EQ(quiver_element_set_array_integer(element, nullptr, integer_values, 3), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_set_array_float(element, nullptr, float_values, 3), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_set_array_string(element, nullptr, string_values, 3), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_set_array_integer(element, "x", nullptr, 3), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_set_array_float(element, "x", nullptr, 3), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_set_array_string(element, "x", nullptr, 3), QUIVER_ERROR);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
