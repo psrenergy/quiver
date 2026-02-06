@@ -871,6 +871,7 @@ QUIVER_C_API quiver_error_t quiver_database_update_vector_integers(quiver_databa
         quiver_set_last_error("Null values with non-zero count");
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }
+
     try {
         std::vector<int64_t> vec(values, values + count);
         db->db.update_vector_integers(collection, attribute, id, vec);
@@ -895,6 +896,7 @@ QUIVER_C_API quiver_error_t quiver_database_update_vector_floats(quiver_database
         quiver_set_last_error("Null values with non-zero count");
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }
+
     try {
         std::vector<double> vec(values, values + count);
         db->db.update_vector_floats(collection, attribute, id, vec);
@@ -919,6 +921,7 @@ QUIVER_C_API quiver_error_t quiver_database_update_vector_strings(quiver_databas
         quiver_set_last_error("Null values with non-zero count");
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }
+    
     try {
         std::vector<std::string> vec;
         vec.reserve(count);
