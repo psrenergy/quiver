@@ -50,8 +50,8 @@ quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, const char* sc
 }
 
 quiver_error_t quiver_lua_runner_get_error(quiver_lua_runner_t* runner, const char** out_error) {
-    QUIVER_REQUIRE(runner,out_error);
-    
+    QUIVER_REQUIRE(runner, out_error);
+
     *out_error = runner->last_error.empty() ? nullptr : runner->last_error.c_str();
     return QUIVER_OK;
 }

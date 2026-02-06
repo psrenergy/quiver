@@ -111,14 +111,14 @@ QUIVER_C_API quiver_error_t quiver_database_close(quiver_database_t* db) {
 }
 
 QUIVER_C_API quiver_error_t quiver_database_is_healthy(quiver_database_t* db, int* out_healthy) {
-    QUIVER_REQUIRE(db,out_healthy);
+    QUIVER_REQUIRE(db, out_healthy);
 
     *out_healthy = db->db.is_healthy() ? 1 : 0;
     return QUIVER_OK;
 }
 
 QUIVER_C_API quiver_error_t quiver_database_path(quiver_database_t* db, const char** out_path) {
-    QUIVER_REQUIRE(db,out_path);
+    QUIVER_REQUIRE(db, out_path);
 
     *out_path = db->db.path().c_str();
     return QUIVER_OK;
@@ -128,7 +128,7 @@ QUIVER_C_API quiver_error_t quiver_database_from_migrations(const char* db_path,
                                                             const char* migrations_path,
                                                             const quiver_database_options_t* options,
                                                             quiver_database_t** out_db) {
-    QUIVER_REQUIRE(db_path,migrations_path,out_db);
+    QUIVER_REQUIRE(db_path, migrations_path, out_db);
 
     try {
         if (options) {
@@ -150,7 +150,7 @@ QUIVER_C_API quiver_error_t quiver_database_from_migrations(const char* db_path,
 }
 
 QUIVER_C_API quiver_error_t quiver_database_current_version(quiver_database_t* db, int64_t* out_version) {
-    QUIVER_REQUIRE(db,out_version);
+    QUIVER_REQUIRE(db, out_version);
 
     try {
         *out_version = db->db.current_version();
@@ -165,7 +165,7 @@ QUIVER_C_API quiver_error_t quiver_database_create_element(quiver_database_t* db
                                                            const char* collection,
                                                            quiver_element_t* element,
                                                            int64_t* out_id) {
-    QUIVER_REQUIRE(db,collection,element,out_id);
+    QUIVER_REQUIRE(db, collection, element, out_id);
 
     try {
         *out_id = db->db.create_element(collection, element->element);
@@ -180,7 +180,7 @@ QUIVER_C_API quiver_error_t quiver_database_update_element(quiver_database_t* db
                                                            const char* collection,
                                                            int64_t id,
                                                            const quiver_element_t* element) {
-    QUIVER_REQUIRE(db,collection,element);
+    QUIVER_REQUIRE(db, collection, element);
 
     try {
         db->db.update_element(collection, id, element->element);
@@ -194,7 +194,7 @@ QUIVER_C_API quiver_error_t quiver_database_update_element(quiver_database_t* db
 QUIVER_C_API quiver_error_t quiver_database_delete_element_by_id(quiver_database_t* db,
                                                                  const char* collection,
                                                                  int64_t id) {
-    QUIVER_REQUIRE(db,collection);
+    QUIVER_REQUIRE(db, collection);
 
     try {
         db->db.delete_element_by_id(collection, id);
@@ -210,7 +210,7 @@ QUIVER_C_API quiver_error_t quiver_database_set_scalar_relation(quiver_database_
                                                                 const char* attribute,
                                                                 const char* from_label,
                                                                 const char* to_label) {
-    QUIVER_REQUIRE(db,collection, attribute, from_label, to_label);
+    QUIVER_REQUIRE(db, collection, attribute, from_label, to_label);
 
     try {
         db->db.set_scalar_relation(collection, attribute, from_label, to_label);
@@ -226,7 +226,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_scalar_relation(quiver_database
                                                                  const char* attribute,
                                                                  char*** out_values,
                                                                  size_t* out_count) {
-    QUIVER_REQUIRE(db,collection,attribute,out_values,out_count);
+    QUIVER_REQUIRE(db, collection, attribute, out_values, out_count);
 
     try {
         return copy_strings_to_c(db->db.read_scalar_relation(collection, attribute), out_values, out_count);
