@@ -3,7 +3,7 @@
 
 #include "export.h"
 
-#include <memory>
+#include <cstdint>
 #include <string>
 
 namespace quiver {
@@ -11,13 +11,6 @@ namespace quiver {
 class QUIVER_API Migration {
 public:
     Migration(int64_t version, const std::string& path);
-    ~Migration();
-
-    // Copy and move
-    Migration(const Migration& other);
-    Migration& operator=(const Migration& other);
-    Migration(Migration&& other) noexcept;
-    Migration& operator=(Migration&& other) noexcept;
 
     // Accessors
     int64_t version() const;
@@ -36,8 +29,8 @@ public:
     bool operator>=(const Migration& other) const;
 
 private:
-    struct Impl;
-    std::unique_ptr<Impl> impl_;
+    int64_t version_;
+    std::string path_;
 };
 
 }  // namespace quiver
