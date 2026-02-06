@@ -79,8 +79,8 @@ end
     QUIVER_DATA_TYPE_NULL = 4
 end
 
-function quiver_database_options_default()
-    @ccall libquiver_c.quiver_database_options_default()::quiver_database_options_t
+function quiver_database_options_default(out_options)
+    @ccall libquiver_c.quiver_database_options_default(out_options::Ptr{quiver_database_options_t})::quiver_error_t
 end
 
 mutable struct quiver_database end
@@ -100,7 +100,7 @@ function quiver_database_from_schema(db_path, schema_path, options, out_db)
 end
 
 function quiver_database_close(db)
-    @ccall libquiver_c.quiver_database_close(db::Ptr{quiver_database_t})::Cvoid
+    @ccall libquiver_c.quiver_database_close(db::Ptr{quiver_database_t})::quiver_error_t
 end
 
 function quiver_database_is_healthy(db, out_healthy)
@@ -262,19 +262,19 @@ function quiver_database_get_time_series_metadata(db, collection, group_name, ou
 end
 
 function quiver_free_scalar_metadata(metadata)
-    @ccall libquiver_c.quiver_free_scalar_metadata(metadata::Ptr{quiver_scalar_metadata_t})::Cvoid
+    @ccall libquiver_c.quiver_free_scalar_metadata(metadata::Ptr{quiver_scalar_metadata_t})::quiver_error_t
 end
 
 function quiver_free_vector_metadata(metadata)
-    @ccall libquiver_c.quiver_free_vector_metadata(metadata::Ptr{quiver_vector_metadata_t})::Cvoid
+    @ccall libquiver_c.quiver_free_vector_metadata(metadata::Ptr{quiver_vector_metadata_t})::quiver_error_t
 end
 
 function quiver_free_set_metadata(metadata)
-    @ccall libquiver_c.quiver_free_set_metadata(metadata::Ptr{quiver_set_metadata_t})::Cvoid
+    @ccall libquiver_c.quiver_free_set_metadata(metadata::Ptr{quiver_set_metadata_t})::quiver_error_t
 end
 
 function quiver_free_time_series_metadata(metadata)
-    @ccall libquiver_c.quiver_free_time_series_metadata(metadata::Ptr{quiver_time_series_metadata_t})::Cvoid
+    @ccall libquiver_c.quiver_free_time_series_metadata(metadata::Ptr{quiver_time_series_metadata_t})::quiver_error_t
 end
 
 function quiver_database_list_scalar_attributes(db, collection, out_metadata, out_count)
@@ -294,19 +294,19 @@ function quiver_database_list_time_series_groups(db, collection, out_metadata, o
 end
 
 function quiver_free_scalar_metadata_array(metadata, count)
-    @ccall libquiver_c.quiver_free_scalar_metadata_array(metadata::Ptr{quiver_scalar_metadata_t}, count::Csize_t)::Cvoid
+    @ccall libquiver_c.quiver_free_scalar_metadata_array(metadata::Ptr{quiver_scalar_metadata_t}, count::Csize_t)::quiver_error_t
 end
 
 function quiver_free_vector_metadata_array(metadata, count)
-    @ccall libquiver_c.quiver_free_vector_metadata_array(metadata::Ptr{quiver_vector_metadata_t}, count::Csize_t)::Cvoid
+    @ccall libquiver_c.quiver_free_vector_metadata_array(metadata::Ptr{quiver_vector_metadata_t}, count::Csize_t)::quiver_error_t
 end
 
 function quiver_free_set_metadata_array(metadata, count)
-    @ccall libquiver_c.quiver_free_set_metadata_array(metadata::Ptr{quiver_set_metadata_t}, count::Csize_t)::Cvoid
+    @ccall libquiver_c.quiver_free_set_metadata_array(metadata::Ptr{quiver_set_metadata_t}, count::Csize_t)::quiver_error_t
 end
 
 function quiver_free_time_series_metadata_array(metadata, count)
-    @ccall libquiver_c.quiver_free_time_series_metadata_array(metadata::Ptr{quiver_time_series_metadata_t}, count::Csize_t)::Cvoid
+    @ccall libquiver_c.quiver_free_time_series_metadata_array(metadata::Ptr{quiver_time_series_metadata_t}, count::Csize_t)::quiver_error_t
 end
 
 function quiver_database_update_scalar_integer(db, collection, attribute, id, value)
@@ -354,7 +354,7 @@ function quiver_database_update_time_series_group(db, collection, group, id, dat
 end
 
 function quiver_free_time_series_data(date_times, values, row_count)
-    @ccall libquiver_c.quiver_free_time_series_data(date_times::Ptr{Ptr{Cchar}}, values::Ptr{Cdouble}, row_count::Csize_t)::Cvoid
+    @ccall libquiver_c.quiver_free_time_series_data(date_times::Ptr{Ptr{Cchar}}, values::Ptr{Cdouble}, row_count::Csize_t)::quiver_error_t
 end
 
 function quiver_database_has_time_series_files(db, collection, out_result)
@@ -374,31 +374,31 @@ function quiver_database_update_time_series_files(db, collection, columns, paths
 end
 
 function quiver_free_time_series_files(columns, paths, count)
-    @ccall libquiver_c.quiver_free_time_series_files(columns::Ptr{Ptr{Cchar}}, paths::Ptr{Ptr{Cchar}}, count::Csize_t)::Cvoid
+    @ccall libquiver_c.quiver_free_time_series_files(columns::Ptr{Ptr{Cchar}}, paths::Ptr{Ptr{Cchar}}, count::Csize_t)::quiver_error_t
 end
 
 function quiver_free_integer_array(values)
-    @ccall libquiver_c.quiver_free_integer_array(values::Ptr{Int64})::Cvoid
+    @ccall libquiver_c.quiver_free_integer_array(values::Ptr{Int64})::quiver_error_t
 end
 
 function quiver_free_float_array(values)
-    @ccall libquiver_c.quiver_free_float_array(values::Ptr{Cdouble})::Cvoid
+    @ccall libquiver_c.quiver_free_float_array(values::Ptr{Cdouble})::quiver_error_t
 end
 
 function quiver_free_string_array(values, count)
-    @ccall libquiver_c.quiver_free_string_array(values::Ptr{Ptr{Cchar}}, count::Csize_t)::Cvoid
+    @ccall libquiver_c.quiver_free_string_array(values::Ptr{Ptr{Cchar}}, count::Csize_t)::quiver_error_t
 end
 
 function quiver_free_integer_vectors(vectors, sizes, count)
-    @ccall libquiver_c.quiver_free_integer_vectors(vectors::Ptr{Ptr{Int64}}, sizes::Ptr{Csize_t}, count::Csize_t)::Cvoid
+    @ccall libquiver_c.quiver_free_integer_vectors(vectors::Ptr{Ptr{Int64}}, sizes::Ptr{Csize_t}, count::Csize_t)::quiver_error_t
 end
 
 function quiver_free_float_vectors(vectors, sizes, count)
-    @ccall libquiver_c.quiver_free_float_vectors(vectors::Ptr{Ptr{Cdouble}}, sizes::Ptr{Csize_t}, count::Csize_t)::Cvoid
+    @ccall libquiver_c.quiver_free_float_vectors(vectors::Ptr{Ptr{Cdouble}}, sizes::Ptr{Csize_t}, count::Csize_t)::quiver_error_t
 end
 
 function quiver_free_string_vectors(vectors, sizes, count)
-    @ccall libquiver_c.quiver_free_string_vectors(vectors::Ptr{Ptr{Ptr{Cchar}}}, sizes::Ptr{Csize_t}, count::Csize_t)::Cvoid
+    @ccall libquiver_c.quiver_free_string_vectors(vectors::Ptr{Ptr{Ptr{Cchar}}}, sizes::Ptr{Csize_t}, count::Csize_t)::quiver_error_t
 end
 
 function quiver_database_export_to_csv(db, table, path)
