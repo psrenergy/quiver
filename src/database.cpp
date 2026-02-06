@@ -291,11 +291,12 @@ bool Database::is_healthy() const {
 }
 
 Result Database::execute(const std::string& sql, const std::vector<Value>& params) {
-    sqlite3_stmt* stmt = nullptr;
-    auto rc = sqlite3_prepare_v2(impl_->db, sql.c_str(), -1, &stmt, nullptr);
+    sqlite3_stmt* raw_stmt = nullptr;
+    auto rc = sqlite3_prepare_v2(impl_->db, sql.c_str(), -1, &raw_stmt, nullptr);
     if (rc != SQLITE_OK) {
         throw std::runtime_error("Failed to prepare statement: " + std::string(sqlite3_errmsg(impl_->db)));
     }
+    std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)> stmt(raw_stmt, sqlite3_finalize);
 
     // Bind parameters
     for (size_t i = 0; i < params.size(); ++i) {
@@ -306,13 +307,13 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
             [&](auto&& arg) {
                 using T = std::decay_t<decltype(arg)>;
                 if constexpr (std::is_same_v<T, std::nullptr_t>) {
-                    sqlite3_bind_null(stmt, idx);
+                    sqlite3_bind_null(stmt.get(), idx);
                 } else if constexpr (std::is_same_v<T, int64_t>) {
-                    sqlite3_bind_int64(stmt, idx, arg);
+                    sqlite3_bind_int64(stmt.get(), idx, arg);
                 } else if constexpr (std::is_same_v<T, double>) {
-                    sqlite3_bind_double(stmt, idx, arg);
+                    sqlite3_bind_double(stmt.get(), idx, arg);
                 } else if constexpr (std::is_same_v<T, std::string>) {
-                    sqlite3_bind_text(stmt, idx, arg.c_str(), static_cast<int>(arg.size()), SQLITE_TRANSIENT);
+                    sqlite3_bind_text(stmt.get(), idx, arg.c_str(), static_cast<int>(arg.size()), SQLITE_TRANSIENT);
                 }
             },
             param);
@@ -320,30 +321,30 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
 
     // Get column info
     std::vector<std::string> columns;
-    const auto col_count = sqlite3_column_count(stmt);
+    const auto col_count = sqlite3_column_count(stmt.get());
     columns.reserve(col_count);
     for (int i = 0; i < col_count; ++i) {
-        const char* name = sqlite3_column_name(stmt, i);
+        const char* name = sqlite3_column_name(stmt.get(), i);
         columns.emplace_back(name ? name : "");
     }
 
     // Execute and fetch results
     std::vector<Row> rows;
-    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+    while ((rc = sqlite3_step(stmt.get())) == SQLITE_ROW) {
         std::vector<Value> values;
         values.reserve(col_count);
 
         for (int i = 0; i < col_count; ++i) {
-            auto type = sqlite3_column_type(stmt, i);
+            auto type = sqlite3_column_type(stmt.get(), i);
             switch (type) {
             case SQLITE_INTEGER:
-                values.emplace_back(sqlite3_column_int64(stmt, i));
+                values.emplace_back(sqlite3_column_int64(stmt.get(), i));
                 break;
             case SQLITE_FLOAT:
-                values.emplace_back(sqlite3_column_double(stmt, i));
+                values.emplace_back(sqlite3_column_double(stmt.get(), i));
                 break;
             case SQLITE_TEXT: {
-                const char* text = reinterpret_cast<const char*>(sqlite3_column_text(stmt, i));
+                const char* text = reinterpret_cast<const char*>(sqlite3_column_text(stmt.get(), i));
                 values.emplace_back(std::string(text ? text : ""));
                 break;
             }
@@ -359,8 +360,6 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
         }
         rows.emplace_back(std::move(values));
     }
-
-    sqlite3_finalize(stmt);
 
     if (rc != SQLITE_DONE) {
         throw std::runtime_error("Failed to execute statement: " + std::string(sqlite3_errmsg(impl_->db)));
