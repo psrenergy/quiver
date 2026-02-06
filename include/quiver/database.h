@@ -16,13 +16,9 @@ namespace quiver {
 
 using DatabaseOptions = quiver_database_options_t;
 
-inline DatabaseOptions default_options() {
-    return quiver_database_options_default_value();
-}
-
 class QUIVER_API Database {
 public:
-    explicit Database(const std::string& path, const DatabaseOptions& options = default_options());
+    explicit Database(const std::string& path, const DatabaseOptions& options = quiver_database_options_default());
     ~Database();
 
     // Non-copyable

@@ -16,8 +16,7 @@ inline std::string path_from(const char* test_file, const std::string& relative)
 
 // Default options with logging off for tests
 inline quiver_database_options_t quiet_options() {
-    quiver_database_options_t options;
-    quiver_database_options_default(&options);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     return options;
 }

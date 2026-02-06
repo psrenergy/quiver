@@ -79,10 +79,8 @@ quiver_error_t copy_strings_to_c(const std::vector<std::string>& values, char***
 
 extern "C" {
 
-QUIVER_C_API quiver_error_t quiver_database_options_default(quiver_database_options_t* out_options) {
-    QUIVER_REQUIRE(out_options);
-    *out_options = quiver_database_options_default_value();
-    return QUIVER_OK;
+QUIVER_C_API quiver_database_options_t quiver_database_options_default(void) {
+    return quiver_database_options_default_value();
 }
 
 QUIVER_C_API quiver_error_t quiver_database_open(const char* path,
