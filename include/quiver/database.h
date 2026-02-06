@@ -4,7 +4,7 @@
 #include "export.h"
 #include "quiver/attribute_metadata.h"
 #include "quiver/element.h"
-#include "quiver/log_level.h"
+#include "quiver/c/options.h"
 #include "quiver/result.h"
 
 #include <memory>
@@ -14,10 +14,7 @@
 
 namespace quiver {
 
-struct QUIVER_API DatabaseOptions {
-    bool read_only = false;
-    LogLevel console_level = LogLevel::info;
-};
+using DatabaseOptions = quiver_database_options_t;
 
 class QUIVER_API Database {
 public:
