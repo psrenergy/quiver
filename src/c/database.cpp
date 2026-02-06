@@ -1599,6 +1599,7 @@ QUIVER_C_API quiver_error_t quiver_database_query_integer_params(quiver_database
         quiver_set_last_error("Null param_types or param_values with non-zero param_count");
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }
+
     try {
         auto params = convert_params(param_types, param_values, param_count);
         auto result = db->db.query_integer(sql, params);
@@ -1877,6 +1878,7 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
         quiver_set_last_error("Null date_times or values with non-zero row_count");
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }
+    
     try {
         auto metadata = db->db.get_time_series_metadata(collection, group);
         const auto& dim_col = metadata.dimension_column;
