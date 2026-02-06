@@ -141,7 +141,7 @@ static Database from_migrations(const std::string& path, const std::vector<std::
 
 ### Return Codes
 All C API functions return `quiver_error_t`. Values are returned via output parameters.
-Exceptions: free functions (void), error/version utilities (direct return), and `quiver_database_options_default` (struct by value).
+Exceptions: `quiver_get_last_error`, `quiver_error_string`, `quiver_version`, `quiver_clear_last_error` (utility functions with direct return).
 
 ### Error Handling
 Try-catch with `quiver_set_last_error()`, return codes:
