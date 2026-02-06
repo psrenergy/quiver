@@ -26,7 +26,7 @@ tests/schemas/            # Shared SQL schemas for all tests
 
 - **Human-Centric**: Codebase optimized for human readability, not machine parsing
 - **Status**: WIP project - breaking changes acceptable, no backwards compatibility required
-- **ABI Stability**: Verify correct usage of Pimpl idiom
+- **ABI Stability**: Use Pimpl only when hiding private dependencies; plain value types use Rule of Zero
 - **Target Standard**: C++20 - use modern language features where they simplify logic
 - **Philosophy**: Clean code over defensive code (assume callers obey contracts, avoid excessive null checks). Simple solutions over complex abstractions. Delete unused code, do not deprecate.
 - **Intelligence**: Logic resides in C++ layer. Bindings/wrappers remain thin.
@@ -77,8 +77,8 @@ All test schemas located in `tests/schemas/valid/` and `tests/schemas/invalid/`.
 
 ## C++ Patterns
 
-### Pimpl
-All implementation in `Database::Impl`, public header hides dependencies:
+### Pimpl vs Value Types
+Pimpl is used only for classes that hide private dependencies (e.g., `Database`, `LuaRunner` hide sqlite3/lua headers):
 ```cpp
 // database.h (public)
 class Database {
@@ -92,6 +92,8 @@ struct Database::Impl {
     // all implementation details
 };
 ```
+
+Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor).
 
 ### Transactions
 Use `Impl::TransactionGuard` RAII or `impl_->with_transaction(lambda)`:
