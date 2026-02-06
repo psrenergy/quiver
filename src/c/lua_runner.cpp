@@ -16,6 +16,7 @@ struct quiver_lua_runner {
 quiver_error_t quiver_lua_runner_new(quiver_database_t* db, quiver_lua_runner_t** out_runner) {
     QUIVER_REQUIRE(db);
     QUIVER_REQUIRE(out_runner);
+
     try {
         *out_runner = new quiver_lua_runner(db->db);
         return QUIVER_OK;
@@ -35,6 +36,7 @@ void quiver_lua_runner_free(quiver_lua_runner_t* runner) {
 quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, const char* script) {
     QUIVER_REQUIRE(runner);
     QUIVER_REQUIRE(script);
+    
     try {
         runner->last_error.clear();
         runner->runner.run(script);
