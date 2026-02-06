@@ -126,7 +126,7 @@ TEST_F(LuaRunnerCApiTest, SyntaxError) {
     EXPECT_NE(result, QUIVER_OK);
 
     const char* error = nullptr;
-    EXPECT_EQ(quiver_lua_runner_get_error(lua, &error), QUIVER_OK);
+    ASSERT_EQ(quiver_lua_runner_get_error(lua, &error), QUIVER_OK);
     EXPECT_NE(error, nullptr);
 
     quiver_lua_runner_free(lua);
@@ -149,7 +149,7 @@ TEST_F(LuaRunnerCApiTest, RuntimeError) {
     EXPECT_NE(result, QUIVER_OK);
 
     const char* error = nullptr;
-    EXPECT_EQ(quiver_lua_runner_get_error(lua, &error), QUIVER_OK);
+    ASSERT_EQ(quiver_lua_runner_get_error(lua, &error), QUIVER_OK);
     EXPECT_NE(error, nullptr);
 
     quiver_lua_runner_free(lua);
@@ -395,7 +395,7 @@ TEST_F(LuaRunnerCApiTest, AssertionFailure) {
     EXPECT_NE(result, QUIVER_OK);
 
     const char* error = nullptr;
-    EXPECT_EQ(quiver_lua_runner_get_error(lua, &error), QUIVER_OK);
+    ASSERT_EQ(quiver_lua_runner_get_error(lua, &error), QUIVER_OK);
     EXPECT_NE(error, nullptr);
     EXPECT_NE(std::string(error).find("assertion"), std::string::npos);
 
@@ -419,7 +419,7 @@ TEST_F(LuaRunnerCApiTest, UndefinedVariableError) {
     EXPECT_NE(result, QUIVER_OK);
 
     const char* error = nullptr;
-    EXPECT_EQ(quiver_lua_runner_get_error(lua, &error), QUIVER_OK);
+    ASSERT_EQ(quiver_lua_runner_get_error(lua, &error), QUIVER_OK);
     EXPECT_NE(error, nullptr);
 
     quiver_lua_runner_free(lua);
@@ -441,7 +441,8 @@ TEST_F(LuaRunnerCApiTest, ErrorClearedAfterSuccessfulRun) {
     // First, run a failing script
     auto result = quiver_lua_runner_run(lua, "invalid lua syntax !!!");
     EXPECT_NE(result, QUIVER_OK);
-    auto error1 = quiver_lua_runner_get_error(lua);
+    const char* error1 = nullptr;
+    ASSERT_EQ(quiver_lua_runner_get_error(lua, &error1), QUIVER_OK);
     EXPECT_NE(error1, nullptr);
 
     // Now run a successful script

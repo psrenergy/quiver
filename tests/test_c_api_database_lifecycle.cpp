@@ -171,11 +171,15 @@ TEST_F(TempFileFixture, CreatesFileOnDisk) {
 }
 
 TEST_F(TempFileFixture, DefaultOptions) {
-    quiver_database_options_t options;
+    quiver_database_options_t options = {};
     ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
 
     EXPECT_EQ(options.read_only, 0);
     EXPECT_EQ(options.console_level, QUIVER_LOG_INFO);
+}
+
+TEST_F(TempFileFixture, DefaultOptionsNullOut) {
+    EXPECT_EQ(quiver_database_options_default(nullptr), QUIVER_ERROR_INVALID_ARGUMENT);
 }
 
 TEST_F(TempFileFixture, OpenWithNullOptions) {

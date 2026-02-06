@@ -29,15 +29,14 @@ quiver_error_t quiver_lua_runner_new(quiver_database_t* db, quiver_lua_runner_t*
     }
 }
 
-quiver_error_t quiver_lua_runner_free(quiver_lua_runner_t* runner) {
+void quiver_lua_runner_free(quiver_lua_runner_t* runner) {
     delete runner;
-    return QUIVER_OK;
 }
 
 quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, const char* script) {
     QUIVER_REQUIRE(runner);
     QUIVER_REQUIRE(script);
-    
+
     try {
         runner->last_error.clear();
         runner->runner.run(script);
@@ -51,13 +50,9 @@ quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, const char* sc
     }
 }
 
-quiver_error_t quiver_lua_runner_get_error(quiver_lua_runner_t* runner, const char** out_error) {
-    QUIVER_REQUIRE(runner, out_error);
-
-    if (runner->last_error.empty()) {
-        *out_error = nullptr;
-    } else {
-        *out_error = runner->last_error.c_str();
+const char* quiver_lua_runner_get_error(quiver_lua_runner_t* runner) {
+    if (!runner || runner->last_error.empty()) {
+        return nullptr;
     }
-    return QUIVER_OK;
+    return runner->last_error.c_str();
 }

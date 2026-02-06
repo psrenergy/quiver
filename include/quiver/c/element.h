@@ -43,7 +43,7 @@ QUIVER_C_API quiver_error_t quiver_element_array_count(quiver_element_t* element
 
 // Pretty print (caller must free returned string with quiver_string_free)
 QUIVER_C_API quiver_error_t quiver_element_to_string(quiver_element_t* element, char** out_string);
-QUIVER_C_API quiver_error_t quiver_string_free(char* str);
+QUIVER_C_API void quiver_string_free(char* str);
 
 #ifdef __cplusplus
 }
