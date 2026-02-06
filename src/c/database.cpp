@@ -1916,7 +1916,7 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
     }
 }
 
-QUIVER_C_API void quiver_free_time_series_data(char** date_times, double* values, size_t row_count) {
+QUIVER_C_API quiver_error_t quiver_free_time_series_data(char** date_times, double* values, size_t row_count) {
     if (date_times) {
         for (size_t i = 0; i < row_count; ++i) {
             delete[] date_times[i];
@@ -1924,6 +1924,7 @@ QUIVER_C_API void quiver_free_time_series_data(char** date_times, double* values
         delete[] date_times;
     }
     delete[] values;
+    return QUIVER_OK;
 }
 
 // Time series files operations
@@ -2035,7 +2036,7 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_files(quiver_data
     }
 }
 
-QUIVER_C_API void quiver_free_time_series_files(char** columns, char** paths, size_t count) {
+QUIVER_C_API quiver_error_t quiver_free_time_series_files(char** columns, char** paths, size_t count) {
     if (columns) {
         for (size_t i = 0; i < count; ++i) {
             delete[] columns[i];
@@ -2048,6 +2049,7 @@ QUIVER_C_API void quiver_free_time_series_files(char** columns, char** paths, si
         }
         delete[] paths;
     }
+    return QUIVER_OK;
 }
 
 }  // extern "C"
