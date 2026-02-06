@@ -138,8 +138,9 @@ QUIVER_C_API quiver_error_t quiver_database_from_migrations(const char* db_path,
     QUIVER_REQUIRE(out_db);
 
     try {
-        auto cpp_options = to_cpp_options(options);
-        auto db = quiver::Database::from_migrations(db_path, migrations_path, cpp_options);
+        quiver_database_options_t opts{};
+        if (options) opts = *options;
+        auto db = quiver::Database::from_migrations(db_path, migrations_path, opts);
         *out_db = new quiver_database(std::move(db));
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
@@ -262,8 +263,9 @@ QUIVER_C_API quiver_error_t quiver_database_from_schema(const char* db_path,
     QUIVER_REQUIRE(out_db);
 
     try {
-        auto cpp_options = to_cpp_options(options);
-        auto db = quiver::Database::from_schema(db_path, schema_path, cpp_options);
+        quiver_database_options_t opts{};
+        if (options) opts = *options;
+        auto db = quiver::Database::from_schema(db_path, schema_path, opts);
         *out_db = new quiver_database(std::move(db));
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
@@ -1174,8 +1176,7 @@ QUIVER_C_API quiver_error_t quiver_database_get_set_metadata(quiver_database_t* 
 }
 
 QUIVER_C_API quiver_error_t quiver_free_scalar_metadata(quiver_scalar_metadata_t* metadata) {
-    if (!metadata)
-        return QUIVER_OK;
+    QUIVER_REQUIRE(metadata);
 
     delete[] metadata->name;
     delete[] metadata->default_value;
@@ -1189,8 +1190,7 @@ QUIVER_C_API quiver_error_t quiver_free_scalar_metadata(quiver_scalar_metadata_t
 }
 
 QUIVER_C_API quiver_error_t quiver_free_vector_metadata(quiver_vector_metadata_t* metadata) {
-    if (!metadata)
-        return QUIVER_OK;
+    QUIVER_REQUIRE(metadata);
 
     delete[] metadata->group_name;
     if (metadata->value_columns) {
@@ -1209,8 +1209,7 @@ QUIVER_C_API quiver_error_t quiver_free_vector_metadata(quiver_vector_metadata_t
 }
 
 QUIVER_C_API quiver_error_t quiver_free_set_metadata(quiver_set_metadata_t* metadata) {
-    if (!metadata)
-        return QUIVER_OK;
+    QUIVER_REQUIRE(metadata);
 
     delete[] metadata->group_name;
     if (metadata->value_columns) {
@@ -1363,8 +1362,7 @@ QUIVER_C_API quiver_error_t quiver_database_list_set_groups(quiver_database_t* d
 }
 
 QUIVER_C_API quiver_error_t quiver_free_scalar_metadata_array(quiver_scalar_metadata_t* metadata, size_t count) {
-    if (!metadata)
-        return QUIVER_OK;
+    QUIVER_REQUIRE(metadata);
 
     for (size_t i = 0; i < count; ++i) {
         delete[] metadata[i].name;
@@ -1377,8 +1375,7 @@ QUIVER_C_API quiver_error_t quiver_free_scalar_metadata_array(quiver_scalar_meta
 }
 
 QUIVER_C_API quiver_error_t quiver_free_vector_metadata_array(quiver_vector_metadata_t* metadata, size_t count) {
-    if (!metadata)
-        return QUIVER_OK;
+    QUIVER_REQUIRE(metadata);
 
     for (size_t i = 0; i < count; ++i) {
         delete[] metadata[i].group_name;
@@ -1397,8 +1394,7 @@ QUIVER_C_API quiver_error_t quiver_free_vector_metadata_array(quiver_vector_meta
 }
 
 QUIVER_C_API quiver_error_t quiver_free_set_metadata_array(quiver_set_metadata_t* metadata, size_t count) {
-    if (!metadata)
-        return QUIVER_OK;
+    QUIVER_REQUIRE(metadata);
 
     for (size_t i = 0; i < count; ++i) {
         delete[] metadata[i].group_name;
