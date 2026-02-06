@@ -3,8 +3,8 @@
 
 #include "export.h"
 #include "quiver/attribute_metadata.h"
-#include "quiver/csv.h"
 #include "quiver/c/options.h"
+#include "quiver/csv.h"
 #include "quiver/element.h"
 #include "quiver/result.h"
 

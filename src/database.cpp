@@ -1450,8 +1450,10 @@ void Database::export_to_csv(const std::string& table,
         columns.push_back("label");
     }
     for (const auto& [col_name, col] : table_def->columns) {
-        if (col_name == "id" && has_label) continue;
-        if (col_name == "label") continue;
+        if (col_name == "id" && has_label)
+            continue;
+        if (col_name == "label")
+            continue;
         columns.push_back(col_name);
     }
 
@@ -1459,7 +1461,8 @@ void Database::export_to_csv(const std::string& table,
     FkLabelMap fk_labels;
     for (const auto& fk : table_def->foreign_keys) {
         const auto* target = impl_->schema->get_table(fk.to_table);
-        if (!target || !target->has_column("label")) continue;
+        if (!target || !target->has_column("label"))
+            continue;
         auto& lookup = fk_labels[fk.from_column];
         for (auto& row : execute("SELECT id, label FROM " + fk.to_table)) {
             lookup[*row.get_integer(0)] = *row.get_string(1);
@@ -1469,7 +1472,8 @@ void Database::export_to_csv(const std::string& table,
     // Query all data
     std::string sql = "SELECT ";
     for (size_t i = 0; i < columns.size(); ++i) {
-        if (i > 0) sql += ", ";
+        if (i > 0)
+            sql += ", ";
         sql += columns[i];
     }
     sql += " FROM " + table;
@@ -1785,7 +1789,6 @@ void Database::update_time_series_files(const std::string& collection,
     txn.commit();
     impl_->logger->info("Updated time series files for collection: {}", collection);
 }
-
 
 std::optional<std::string> Database::query_string(const std::string& sql, const std::vector<Value>& params) {
     auto result = execute(sql, params);

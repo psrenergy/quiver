@@ -11,7 +11,8 @@ namespace quiver {
 // Returns the Unicode code point, or -1 for invalid sequences.
 static int decode_utf8(const std::string& s, size_t& i) {
     unsigned char b = s[i];
-    if (b <= 0x7F) return b;
+    if (b <= 0x7F)
+        return b;
     // Count leading 1-bits to determine sequence length (2, 3, or 4 bytes)
     int len = (b < 0xE0) ? 2 : (b < 0xF0) ? 3 : 4;
     int cp = b & (0x3F >> len);  // extract payload bits from leading byte
@@ -36,7 +37,8 @@ static void write_csv_field(std::ofstream& out, const std::string& field) {
     if (latin1.find_first_of(",\"\n") != std::string::npos) {
         out << '"';
         for (char c : latin1) {
-            if (c == '"') out << '"';
+            if (c == '"')
+                out << '"';
             out << c;
         }
         out << '"';
@@ -49,7 +51,8 @@ static std::string format_datetime(const std::string& iso_value, const std::stri
     std::tm tm = {};
     std::istringstream ss(iso_value);
     ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%S");
-    if (ss.fail()) return iso_value;
+    if (ss.fail())
+        return iso_value;
 
     std::ostringstream out;
     out << std::put_time(&tm, fmt.c_str());
@@ -67,14 +70,16 @@ void write_csv(const std::string& path,
     csv_file << "sep=,\n";
 
     for (size_t i = 0; i < columns.size(); ++i) {
-        if (i > 0) csv_file << ",";
+        if (i > 0)
+            csv_file << ",";
         csv_file << columns[i];
     }
     csv_file << "\n";
 
     for (size_t i = 0; i < data.row_count(); ++i) {
         for (size_t j = 0; j < data.column_count(); ++j) {
-            if (j > 0) csv_file << ",";
+            if (j > 0)
+                csv_file << ",";
             const auto& col = columns[j];
             const auto& val = data[i].at(j);
 
@@ -88,7 +93,8 @@ void write_csv(const std::string& path,
             }
 
             // 2. NULL -> empty
-            if (std::holds_alternative<std::nullptr_t>(val)) continue;
+            if (std::holds_alternative<std::nullptr_t>(val))
+                continue;
 
             // 3. DateTime formatting (date_ prefix)
             if (col.starts_with("date_")) {
