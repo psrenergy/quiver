@@ -225,22 +225,10 @@ typedef struct {
 
 typedef struct {
     const char* group_name;
+    const char* dimension_column;  // NULL for vector/set groups; ordering column for time series
     quiver_scalar_metadata_t* value_columns;
     size_t value_column_count;
-} quiver_vector_metadata_t;
-
-typedef struct {
-    const char* group_name;
-    quiver_scalar_metadata_t* value_columns;
-    size_t value_column_count;
-} quiver_set_metadata_t;
-
-typedef struct {
-    const char* group_name;
-    const char* dimension_column;  // The ordering column (e.g., "date_time")
-    quiver_scalar_metadata_t* value_columns;
-    size_t value_column_count;
-} quiver_time_series_metadata_t;
+} quiver_group_metadata_t;
 
 // Attribute metadata queries
 QUIVER_C_API quiver_error_t quiver_database_get_scalar_metadata(quiver_database_t* db,
@@ -251,23 +239,21 @@ QUIVER_C_API quiver_error_t quiver_database_get_scalar_metadata(quiver_database_
 QUIVER_C_API quiver_error_t quiver_database_get_vector_metadata(quiver_database_t* db,
                                                                 const char* collection,
                                                                 const char* group_name,
-                                                                quiver_vector_metadata_t* out_metadata);
+                                                                quiver_group_metadata_t* out_metadata);
 
 QUIVER_C_API quiver_error_t quiver_database_get_set_metadata(quiver_database_t* db,
                                                              const char* collection,
                                                              const char* group_name,
-                                                             quiver_set_metadata_t* out_metadata);
+                                                             quiver_group_metadata_t* out_metadata);
 
 QUIVER_C_API quiver_error_t quiver_database_get_time_series_metadata(quiver_database_t* db,
                                                                      const char* collection,
                                                                      const char* group_name,
-                                                                     quiver_time_series_metadata_t* out_metadata);
+                                                                     quiver_group_metadata_t* out_metadata);
 
 // Free metadata
 QUIVER_C_API quiver_error_t quiver_free_scalar_metadata(quiver_scalar_metadata_t* metadata);
-QUIVER_C_API quiver_error_t quiver_free_vector_metadata(quiver_vector_metadata_t* metadata);
-QUIVER_C_API quiver_error_t quiver_free_set_metadata(quiver_set_metadata_t* metadata);
-QUIVER_C_API quiver_error_t quiver_free_time_series_metadata(quiver_time_series_metadata_t* metadata);
+QUIVER_C_API quiver_error_t quiver_free_group_metadata(quiver_group_metadata_t* metadata);
 
 // List attributes/groups - returns full metadata
 QUIVER_C_API quiver_error_t quiver_database_list_scalar_attributes(quiver_database_t* db,
@@ -277,25 +263,22 @@ QUIVER_C_API quiver_error_t quiver_database_list_scalar_attributes(quiver_databa
 
 QUIVER_C_API quiver_error_t quiver_database_list_vector_groups(quiver_database_t* db,
                                                                const char* collection,
-                                                               quiver_vector_metadata_t** out_metadata,
+                                                               quiver_group_metadata_t** out_metadata,
                                                                size_t* out_count);
 
 QUIVER_C_API quiver_error_t quiver_database_list_set_groups(quiver_database_t* db,
                                                             const char* collection,
-                                                            quiver_set_metadata_t** out_metadata,
+                                                            quiver_group_metadata_t** out_metadata,
                                                             size_t* out_count);
 
 QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(quiver_database_t* db,
                                                                     const char* collection,
-                                                                    quiver_time_series_metadata_t** out_metadata,
+                                                                    quiver_group_metadata_t** out_metadata,
                                                                     size_t* out_count);
 
 // Free metadata arrays
 QUIVER_C_API quiver_error_t quiver_free_scalar_metadata_array(quiver_scalar_metadata_t* metadata, size_t count);
-QUIVER_C_API quiver_error_t quiver_free_vector_metadata_array(quiver_vector_metadata_t* metadata, size_t count);
-QUIVER_C_API quiver_error_t quiver_free_set_metadata_array(quiver_set_metadata_t* metadata, size_t count);
-QUIVER_C_API quiver_error_t quiver_free_time_series_metadata_array(quiver_time_series_metadata_t* metadata,
-                                                                   size_t count);
+QUIVER_C_API quiver_error_t quiver_free_group_metadata_array(quiver_group_metadata_t* metadata, size_t count);
 
 // Update scalar attributes (by element ID)
 QUIVER_C_API quiver_error_t quiver_database_update_scalar_integer(quiver_database_t* db,

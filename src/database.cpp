@@ -159,6 +159,10 @@ static std::string find_dimension_column(const quiver::TableDefinition& table_de
 
 namespace quiver {
 
+static ScalarMetadata scalar_metadata_from_column(const ColumnDefinition& col) {
+    return {col.name, col.type, col.not_null, col.primary_key, col.default_value};
+}
+
 struct Database::Impl {
     sqlite3* db = nullptr;
     std::string path;
@@ -1286,12 +1290,7 @@ ScalarMetadata Database::get_scalar_metadata(const std::string& collection, cons
         throw std::runtime_error("Scalar attribute '" + attribute + "' not found in collection '" + collection + "'");
     }
 
-    ScalarMetadata metadata;
-    metadata.name = col->name;
-    metadata.data_type = col->type;
-    metadata.not_null = col->not_null;
-    metadata.primary_key = col->primary_key;
-    metadata.default_value = col->default_value;
+    auto metadata = scalar_metadata_from_column(*col);
 
     for (const auto& fk : table_def->foreign_keys) {
         if (fk.from_column == attribute) {
@@ -1305,7 +1304,7 @@ ScalarMetadata Database::get_scalar_metadata(const std::string& collection, cons
     return metadata;
 }
 
-VectorMetadata Database::get_vector_metadata(const std::string& collection, const std::string& group_name) const {
+GroupMetadata Database::get_vector_metadata(const std::string& collection, const std::string& group_name) const {
     if (!impl_->schema) {
         throw std::runtime_error("Cannot get vector metadata: no schema loaded");
     }
@@ -1318,7 +1317,7 @@ VectorMetadata Database::get_vector_metadata(const std::string& collection, cons
         throw std::runtime_error("Vector group '" + group_name + "' not found for collection '" + collection + "'");
     }
 
-    VectorMetadata metadata;
+    GroupMetadata metadata;
     metadata.group_name = group_name;
 
     // Add all data columns (skip id and vector_index)
@@ -1327,19 +1326,13 @@ VectorMetadata Database::get_vector_metadata(const std::string& collection, cons
             continue;
         }
 
-        ScalarMetadata attribute;
-        attribute.name = col.name;
-        attribute.data_type = col.type;
-        attribute.not_null = col.not_null;
-        attribute.primary_key = col.primary_key;
-        attribute.default_value = col.default_value;
-        metadata.value_columns.push_back(std::move(attribute));
+        metadata.value_columns.push_back(scalar_metadata_from_column(col));
     }
 
     return metadata;
 }
 
-SetMetadata Database::get_set_metadata(const std::string& collection, const std::string& group_name) const {
+GroupMetadata Database::get_set_metadata(const std::string& collection, const std::string& group_name) const {
     if (!impl_->schema) {
         throw std::runtime_error("Cannot get set metadata: no schema loaded");
     }
@@ -1352,7 +1345,7 @@ SetMetadata Database::get_set_metadata(const std::string& collection, const std:
         throw std::runtime_error("Set group '" + group_name + "' not found for collection '" + collection + "'");
     }
 
-    SetMetadata metadata;
+    GroupMetadata metadata;
     metadata.group_name = group_name;
 
     // Add all data columns (skip id)
@@ -1361,13 +1354,7 @@ SetMetadata Database::get_set_metadata(const std::string& collection, const std:
             continue;
         }
 
-        ScalarMetadata attribute;
-        attribute.name = col.name;
-        attribute.data_type = col.type;
-        attribute.not_null = col.not_null;
-        attribute.primary_key = col.primary_key;
-        attribute.default_value = col.default_value;
-        metadata.value_columns.push_back(std::move(attribute));
+        metadata.value_columns.push_back(scalar_metadata_from_column(col));
     }
 
     return metadata;
@@ -1385,12 +1372,7 @@ std::vector<ScalarMetadata> Database::list_scalar_attributes(const std::string& 
 
     std::vector<ScalarMetadata> result;
     for (const auto& [col_name, col] : table_def->columns) {
-        ScalarMetadata metadata;
-        metadata.name = col.name;
-        metadata.data_type = col.type;
-        metadata.not_null = col.not_null;
-        metadata.primary_key = col.primary_key;
-        metadata.default_value = col.default_value;
+        auto metadata = scalar_metadata_from_column(col);
 
         for (const auto& fk : table_def->foreign_keys) {
             if (fk.from_column == col_name) {
@@ -1406,12 +1388,12 @@ std::vector<ScalarMetadata> Database::list_scalar_attributes(const std::string& 
     return result;
 }
 
-std::vector<VectorMetadata> Database::list_vector_groups(const std::string& collection) const {
+std::vector<GroupMetadata> Database::list_vector_groups(const std::string& collection) const {
     if (!impl_->schema) {
         throw std::runtime_error("Cannot list vector groups: no schema loaded");
     }
 
-    std::vector<VectorMetadata> result;
+    std::vector<GroupMetadata> result;
     auto prefix = collection + "_vector_";
 
     for (const auto& table_name : impl_->schema->table_names()) {
@@ -1429,12 +1411,12 @@ std::vector<VectorMetadata> Database::list_vector_groups(const std::string& coll
     return result;
 }
 
-std::vector<SetMetadata> Database::list_set_groups(const std::string& collection) const {
+std::vector<GroupMetadata> Database::list_set_groups(const std::string& collection) const {
     if (!impl_->schema) {
         throw std::runtime_error("Cannot list set groups: no schema loaded");
     }
 
-    std::vector<SetMetadata> result;
+    std::vector<GroupMetadata> result;
     auto prefix = collection + "_set_";
 
     for (const auto& table_name : impl_->schema->table_names()) {
@@ -1452,12 +1434,12 @@ std::vector<SetMetadata> Database::list_set_groups(const std::string& collection
     return result;
 }
 
-std::vector<TimeSeriesMetadata> Database::list_time_series_groups(const std::string& collection) const {
+std::vector<GroupMetadata> Database::list_time_series_groups(const std::string& collection) const {
     if (!impl_->schema) {
         throw std::runtime_error("Cannot list time series groups: no schema loaded");
     }
 
-    std::vector<TimeSeriesMetadata> result;
+    std::vector<GroupMetadata> result;
     auto prefix = collection + "_time_series_";
 
     for (const auto& table_name : impl_->schema->table_names()) {
@@ -1475,8 +1457,7 @@ std::vector<TimeSeriesMetadata> Database::list_time_series_groups(const std::str
     return result;
 }
 
-TimeSeriesMetadata Database::get_time_series_metadata(const std::string& collection,
-                                                      const std::string& group_name) const {
+GroupMetadata Database::get_time_series_metadata(const std::string& collection, const std::string& group_name) const {
     if (!impl_->schema) {
         throw std::runtime_error("Cannot get time series metadata: no schema loaded");
     }
@@ -1490,7 +1471,7 @@ TimeSeriesMetadata Database::get_time_series_metadata(const std::string& collect
                                  "'");
     }
 
-    TimeSeriesMetadata metadata;
+    GroupMetadata metadata;
     metadata.group_name = group_name;
     metadata.dimension_column = find_dimension_column(*table_def);
 
@@ -1500,13 +1481,7 @@ TimeSeriesMetadata Database::get_time_series_metadata(const std::string& collect
             continue;
         }
 
-        ScalarMetadata attribute;
-        attribute.name = col.name;
-        attribute.data_type = col.type;
-        attribute.not_null = col.not_null;
-        attribute.primary_key = col.primary_key;
-        attribute.default_value = col.default_value;
-        metadata.value_columns.push_back(std::move(attribute));
+        metadata.value_columns.push_back(scalar_metadata_from_column(col));
     }
 
     return metadata;

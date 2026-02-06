@@ -998,7 +998,7 @@ struct LuaRunner::Impl {
     // Time series metadata
     // ========================================================================
 
-    static sol::table time_series_metadata_to_lua(sol::state_view& lua, const TimeSeriesMetadata& metadata) {
+    static sol::table time_series_metadata_to_lua(sol::state_view& lua, const GroupMetadata& metadata) {
         auto t = lua.create_table();
         t["group_name"] = metadata.group_name;
         t["dimension_column"] = metadata.dimension_column;

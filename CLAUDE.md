@@ -7,6 +7,7 @@ SQLite wrapper library with C++ core, C API for FFI, and language bindings (Juli
 ```
 include/quiver/           # C++ public headers
   database.h              # Database class - main API
+  attribute_metadata.h    # ScalarMetadata, GroupMetadata types
   element.h               # Element builder for create operations
   lua_runner.h            # Lua scripting support
 include/quiver/c/         # C API headers (for FFI)
@@ -93,7 +94,7 @@ struct Database::Impl {
 };
 ```
 
-Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor).
+Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`, `GroupMetadata`, `ScalarMetadata`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor).
 
 ### Transactions
 Use `Impl::TransactionGuard` RAII or `impl_->with_transaction(lambda)`:
@@ -187,6 +188,16 @@ char** quiver_read_strings(...);
 void quiver_free_strings(char** strings, int count);
 ```
 
+### Metadata Types
+Unified `quiver_group_metadata_t` for vector, set, and time series groups. `dimension_column` is `NULL` for vectors/sets, populated for time series. Single free functions:
+```cpp
+quiver_free_scalar_metadata(quiver_scalar_metadata_t*)
+quiver_free_group_metadata(quiver_group_metadata_t*)
+quiver_free_scalar_metadata_array(quiver_scalar_metadata_t*, size_t)
+quiver_free_group_metadata_array(quiver_group_metadata_t*, size_t)
+```
+Internal helpers `convert_scalar_to_c`, `convert_group_to_c`, `free_scalar_fields`, `free_group_fields` in `src/c/database.cpp` avoid duplication.
+
 ### String Handling
 Always null-terminate, use `strdup_safe()`:
 ```cpp
@@ -279,8 +290,9 @@ Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references.
 - Vector readers: `read_vector_integers/floats/strings(collection, attribute)`
 - Set readers: `read_set_integers/floats/strings(collection, attribute)`
 - Time series: `read_time_series_group_by_id()`, `update_time_series_group()`
-- Time series metadata: `get_time_series_metadata()`, `list_time_series_groups()` - includes `dimension_column` (the ordering column name)
 - Time series files: `has_time_series_files()`, `list_time_series_files_columns()`, `read_time_series_files()`, `update_time_series_files()`
+- Metadata: `get_scalar_metadata()`, `get_vector_metadata()`, `get_set_metadata()`, `get_time_series_metadata()` — all group metadata returns unified `GroupMetadata` with `dimension_column` (populated for time series, empty for vectors/sets)
+- List groups: `list_scalar_attributes()`, `list_vector_groups()`, `list_set_groups()`, `list_time_series_groups()`
 - Relations: `set_scalar_relation()`, `read_scalar_relation()`
 - Query: `query_string/integer/float(sql, params = {})` - parameterized SQL with positional `?` placeholders
 - Schema inspection: `describe()` - prints schema info to stdout

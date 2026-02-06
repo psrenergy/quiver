@@ -18,7 +18,7 @@ TEST(DatabaseCApi, GetTimeSeriesMetadata) {
               QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_time_series_metadata_t metadata;
+    quiver_group_metadata_t metadata;
     auto err = quiver_database_get_time_series_metadata(db, "Collection", "data", &metadata);
 
     EXPECT_EQ(err, QUIVER_OK);
@@ -28,7 +28,7 @@ TEST(DatabaseCApi, GetTimeSeriesMetadata) {
     EXPECT_STREQ(metadata.value_columns[0].name, "value");
     EXPECT_EQ(metadata.value_columns[0].data_type, QUIVER_DATA_TYPE_FLOAT);
 
-    quiver_free_time_series_metadata(&metadata);
+    quiver_free_group_metadata(&metadata);
     quiver_database_close(db);
 }
 
@@ -40,7 +40,7 @@ TEST(DatabaseCApi, ListTimeSeriesGroups) {
               QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_time_series_metadata_t* metadata = nullptr;
+    quiver_group_metadata_t* metadata = nullptr;
     size_t count = 0;
     auto err = quiver_database_list_time_series_groups(db, "Collection", &metadata, &count);
 
@@ -50,7 +50,7 @@ TEST(DatabaseCApi, ListTimeSeriesGroups) {
     EXPECT_STREQ(metadata[0].dimension_column, "date_time");
     EXPECT_EQ(metadata[0].value_column_count, 1);
 
-    quiver_free_time_series_metadata_array(metadata, count);
+    quiver_free_group_metadata_array(metadata, count);
     quiver_database_close(db);
 }
 
@@ -61,7 +61,7 @@ TEST(DatabaseCApi, ListTimeSeriesGroupsEmpty) {
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_time_series_metadata_t* metadata = nullptr;
+    quiver_group_metadata_t* metadata = nullptr;
     size_t count = 0;
     auto err = quiver_database_list_time_series_groups(db, "Configuration", &metadata, &count);
 
@@ -280,13 +280,13 @@ TEST(DatabaseCApi, TimeSeriesNullArguments) {
               QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_time_series_metadata_t metadata;
+    quiver_group_metadata_t metadata;
     EXPECT_EQ(quiver_database_get_time_series_metadata(nullptr, "Collection", "data", &metadata), QUIVER_ERROR);
     EXPECT_EQ(quiver_database_get_time_series_metadata(db, nullptr, "data", &metadata), QUIVER_ERROR);
     EXPECT_EQ(quiver_database_get_time_series_metadata(db, "Collection", nullptr, &metadata), QUIVER_ERROR);
     EXPECT_EQ(quiver_database_get_time_series_metadata(db, "Collection", "data", nullptr), QUIVER_ERROR);
 
-    quiver_time_series_metadata_t* groups = nullptr;
+    quiver_group_metadata_t* groups = nullptr;
     size_t count = 0;
     EXPECT_EQ(quiver_database_list_time_series_groups(nullptr, "Collection", &groups, &count), QUIVER_ERROR);
     EXPECT_EQ(quiver_database_list_time_series_groups(db, nullptr, &groups, &count), QUIVER_ERROR);
