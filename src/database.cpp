@@ -1,4 +1,4 @@
-#include "quiver/database.h"
+﻿#include "quiver/database.h"
 
 #include "quiver/migrations.h"
 #include "quiver/result.h"
@@ -1441,6 +1441,54 @@ std::vector<GroupMetadata> Database::list_set_groups(const std::string& collecti
     return result;
 }
 
+void Database::export_to_csv(const std::string& table,
+                             const std::string& path,
+                             const DateFormatMap& date_format_map,
+                             const EnumMap& enum_map) {
+    impl_->logger->debug("Exporting table {} to CSV at path '{}'", table, path);
+    impl_->require_collection(table, "export to CSV");
+
+    const auto* table_def = impl_->schema->get_table(table);
+
+    // Build export columns (label first, skip id if table has label)
+    bool has_label = table_def->has_column("label");
+    std::vector<std::string> columns;
+    if (has_label) {
+        columns.push_back("label");
+    }
+    for (const auto& [col_name, col] : table_def->columns) {
+        if (col_name == "id" && has_label)
+            continue;
+        if (col_name == "label")
+            continue;
+        columns.push_back(col_name);
+    }
+
+    // Build id->label lookup for FK columns whose target table has a label
+    FkLabelMap fk_labels;
+    for (const auto& fk : table_def->foreign_keys) {
+        const auto* target = impl_->schema->get_table(fk.to_table);
+        if (!target || !target->has_column("label"))
+            continue;
+        auto& lookup = fk_labels[fk.from_column];
+        for (auto& row : execute("SELECT id, label FROM " + fk.to_table)) {
+            lookup[*row.get_integer(0)] = *row.get_string(1);
+        }
+    }
+
+    // Query all data
+    std::string sql = "SELECT ";
+    for (size_t i = 0; i < columns.size(); ++i) {
+        if (i > 0)
+            sql += ", ";
+        sql += columns[i];
+    }
+    sql += " FROM " + table;
+    auto data = execute(sql);
+
+    quiver::write_csv(path, columns, data, fk_labels, date_format_map, enum_map);
+}
+
 std::vector<GroupMetadata> Database::list_time_series_groups(const std::string& collection) const {
     if (!impl_->schema) {
         throw std::runtime_error("Cannot list time series groups: no schema loaded");
@@ -1462,6 +1510,12 @@ std::vector<GroupMetadata> Database::list_time_series_groups(const std::string& 
         }
     }
     return result;
+}
+
+void Database::import_from_csv(const std::string& table, const std::string& path) {
+    impl_->logger->debug("Importing table {} from CSV at path '{}'", table, path);
+    impl_->require_collection(table, "import from CSV");
+    // TODO: implement
 }
 
 GroupMetadata Database::get_time_series_metadata(const std::string& collection, const std::string& group_name) const {
@@ -1741,14 +1795,6 @@ void Database::update_time_series_files(const std::string& collection,
 
     txn.commit();
     impl_->logger->info("Updated time series files for collection: {}", collection);
-}
-
-void Database::export_to_csv(const std::string& table, const std::string& path) {
-    return;
-}
-
-void Database::import_from_csv(const std::string& table, const std::string& path) {
-    return;
 }
 
 std::optional<std::string> Database::query_string(const std::string& sql, const std::vector<Value>& params) {

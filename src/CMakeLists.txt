@@ -1,5 +1,6 @@
 # Core library sources
 set(QUIVER_SOURCES
+    csv.cpp
     database.cpp
     element.cpp
     lua_runner.cpp
@@ -10,6 +11,7 @@ set(QUIVER_SOURCES
     schema.cpp
     schema_validator.cpp
     type_validator.cpp
+    value.cpp
 )
 
 # Build type
