@@ -1,7 +1,6 @@
 #include "test_utils.h"
 
 #include <gtest/gtest.h>
-#include <quiver/attribute_type.h>
 #include <quiver/database.h>
 #include <quiver/element.h>
 
