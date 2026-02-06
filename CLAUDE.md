@@ -165,6 +165,7 @@ quiver_error_t quiver_some_function(quiver_database_t* db) {
 ### Factory Functions
 Factory functions use out-parameters and return `quiver_error_t`:
 ```cpp
+auto options = quiver_database_options_default();
 quiver_database_t* db = nullptr;
 quiver_error_t err = quiver_database_from_schema(db_path, schema_path, &options, &db);
 if (err != QUIVER_OK) {
