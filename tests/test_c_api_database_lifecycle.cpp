@@ -49,7 +49,7 @@ TEST_F(TempFileFixture, OpenNullPath) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
-    EXPECT_EQ(quiver_database_open(nullptr, &options, &db), QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(quiver_database_open(nullptr, &options, &db), QUIVER_ERROR);
 }
 
 TEST_F(TempFileFixture, DatabasePath) {
@@ -82,26 +82,16 @@ TEST_F(TempFileFixture, DatabasePathInMemory) {
 
 TEST_F(TempFileFixture, DatabasePathNullDb) {
     const char* db_path = nullptr;
-    EXPECT_EQ(quiver_database_path(nullptr, &db_path), QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(quiver_database_path(nullptr, &db_path), QUIVER_ERROR);
 }
 
 TEST_F(TempFileFixture, IsOpenNullDb) {
     int healthy = 0;
-    EXPECT_EQ(quiver_database_is_healthy(nullptr, &healthy), QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(quiver_database_is_healthy(nullptr, &healthy), QUIVER_ERROR);
 }
 
 TEST_F(TempFileFixture, CloseNullDb) {
     EXPECT_EQ(quiver_database_close(nullptr), QUIVER_OK);
-}
-
-TEST_F(TempFileFixture, ErrorStrings) {
-    EXPECT_STREQ(quiver_error_string(QUIVER_OK), "Success");
-    EXPECT_STREQ(quiver_error_string(QUIVER_ERROR_INVALID_ARGUMENT), "Invalid argument");
-    EXPECT_STREQ(quiver_error_string(QUIVER_ERROR_DATABASE), "Database error");
-    EXPECT_STREQ(quiver_error_string(QUIVER_ERROR_MIGRATION), "Migration error");
-    EXPECT_STREQ(quiver_error_string(QUIVER_ERROR_SCHEMA), "Schema validation error");
-    EXPECT_STREQ(quiver_error_string(QUIVER_ERROR_NOT_FOUND), "Not found");
-    EXPECT_STREQ(quiver_error_string(static_cast<quiver_error_t>(-999)), "Unknown error");
 }
 
 TEST_F(TempFileFixture, LogLevelDebug) {
@@ -198,7 +188,7 @@ TEST_F(TempFileFixture, OpenReadOnly) {
 
 TEST_F(TempFileFixture, CurrentVersionNullDb) {
     int64_t version = 0;
-    EXPECT_EQ(quiver_database_current_version(nullptr, &version), QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(quiver_database_current_version(nullptr, &version), QUIVER_ERROR);
 }
 
 TEST_F(TempFileFixture, CurrentVersionValid) {
@@ -223,14 +213,14 @@ TEST_F(TempFileFixture, FromSchemaNullDbPath) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
-    EXPECT_EQ(quiver_database_from_schema(nullptr, "schema.sql", &options, &db), QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(quiver_database_from_schema(nullptr, "schema.sql", &options, &db), QUIVER_ERROR);
 }
 
 TEST_F(TempFileFixture, FromSchemaNullSchemaPath) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
-    EXPECT_EQ(quiver_database_from_schema(":memory:", nullptr, &options, &db), QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(quiver_database_from_schema(":memory:", nullptr, &options, &db), QUIVER_ERROR);
 }
 
 TEST_F(TempFileFixture, FromSchemaInvalidPath) {
@@ -248,14 +238,14 @@ TEST_F(TempFileFixture, FromMigrationsNullDbPath) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
-    EXPECT_EQ(quiver_database_from_migrations(nullptr, "migrations/", &options, &db), QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(quiver_database_from_migrations(nullptr, "migrations/", &options, &db), QUIVER_ERROR);
 }
 
 TEST_F(TempFileFixture, FromMigrationsNullMigrationsPath) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
-    EXPECT_EQ(quiver_database_from_migrations(":memory:", nullptr, &options, &db), QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(quiver_database_from_migrations(":memory:", nullptr, &options, &db), QUIVER_ERROR);
 }
 
 TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
@@ -272,7 +262,7 @@ TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
 
 TEST_F(TempFileFixture, SetScalarRelationNullDb) {
     auto err = quiver_database_set_scalar_relation(nullptr, "Child", "parent_id", "Child 1", "Parent 1");
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST_F(TempFileFixture, SetScalarRelationNullCollection) {
@@ -283,7 +273,7 @@ TEST_F(TempFileFixture, SetScalarRelationNullCollection) {
     ASSERT_NE(db, nullptr);
 
     auto err = quiver_database_set_scalar_relation(db, nullptr, "parent_id", "Child 1", "Parent 1");
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -296,7 +286,7 @@ TEST_F(TempFileFixture, SetScalarRelationNullAttribute) {
     ASSERT_NE(db, nullptr);
 
     auto err = quiver_database_set_scalar_relation(db, "Child", nullptr, "Child 1", "Parent 1");
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -309,7 +299,7 @@ TEST_F(TempFileFixture, SetScalarRelationNullFromLabel) {
     ASSERT_NE(db, nullptr);
 
     auto err = quiver_database_set_scalar_relation(db, "Child", "parent_id", nullptr, "Parent 1");
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -322,7 +312,7 @@ TEST_F(TempFileFixture, SetScalarRelationNullToLabel) {
     ASSERT_NE(db, nullptr);
 
     auto err = quiver_database_set_scalar_relation(db, "Child", "parent_id", "Child 1", nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -361,7 +351,7 @@ TEST_F(TempFileFixture, ReadScalarRelationNullDb) {
     char** values = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_scalar_relation(nullptr, "Child", "parent_id", &values, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST_F(TempFileFixture, ReadScalarRelationNullCollection) {
@@ -374,7 +364,7 @@ TEST_F(TempFileFixture, ReadScalarRelationNullCollection) {
     char** values = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_scalar_relation(db, nullptr, "parent_id", &values, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -389,7 +379,7 @@ TEST_F(TempFileFixture, ReadScalarRelationNullAttribute) {
     char** values = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_scalar_relation(db, "Child", nullptr, &values, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -403,11 +393,11 @@ TEST_F(TempFileFixture, ReadScalarRelationNullOutput) {
 
     size_t count = 0;
     auto err = quiver_database_read_scalar_relation(db, "Child", "parent_id", nullptr, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     char** values = nullptr;
     err = quiver_database_read_scalar_relation(db, "Child", "parent_id", &values, nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -508,7 +498,7 @@ TEST_F(TempFileFixture, ReadElementIdsNullDb) {
     int64_t* ids = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_element_ids(nullptr, "Collection", &ids, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST_F(TempFileFixture, ReadElementIdsNullCollection) {
@@ -522,7 +512,7 @@ TEST_F(TempFileFixture, ReadElementIdsNullCollection) {
     int64_t* ids = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_element_ids(db, nullptr, &ids, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -537,11 +527,11 @@ TEST_F(TempFileFixture, ReadElementIdsNullOutput) {
 
     size_t count = 0;
     auto err = quiver_database_read_element_ids(db, "Collection", nullptr, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     int64_t* ids = nullptr;
     err = quiver_database_read_element_ids(db, "Collection", &ids, nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -592,7 +582,7 @@ TEST_F(TempFileFixture, ReadElementIdsValid) {
 
 TEST_F(TempFileFixture, DeleteElementNullDb) {
     auto err = quiver_database_delete_element_by_id(nullptr, "Collection", 1);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST_F(TempFileFixture, DeleteElementNullCollection) {
@@ -604,7 +594,7 @@ TEST_F(TempFileFixture, DeleteElementNullCollection) {
     ASSERT_NE(db, nullptr);
 
     auto err = quiver_database_delete_element_by_id(db, nullptr, 1);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -662,7 +652,7 @@ TEST_F(TempFileFixture, UpdateElementNullDb) {
     quiver_element_set_string(element, "label", "New Label");
 
     auto err = quiver_database_update_element(nullptr, "Collection", 1, element);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
@@ -680,7 +670,7 @@ TEST_F(TempFileFixture, UpdateElementNullCollection) {
     quiver_element_set_string(element, "label", "New Label");
 
     auto err = quiver_database_update_element(db, nullptr, 1, element);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     quiver_database_close(db);
@@ -695,7 +685,7 @@ TEST_F(TempFileFixture, UpdateElementNullElement) {
     ASSERT_NE(db, nullptr);
 
     auto err = quiver_database_update_element(db, "Collection", 1, nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }

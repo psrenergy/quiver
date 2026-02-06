@@ -14,18 +14,17 @@ struct quiver_lua_runner {
 };
 
 quiver_error_t quiver_lua_runner_new(quiver_database_t* db, quiver_lua_runner_t** out_runner) {
-    QUIVER_REQUIRE(db);
-    QUIVER_REQUIRE(out_runner);
+    QUIVER_REQUIRE(db, out_runner);
 
     try {
         *out_runner = new quiver_lua_runner(db->db);
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
-        return QUIVER_ERROR_DATABASE;
+        return QUIVER_ERROR;
     } catch (...) {
         quiver_set_last_error("Unknown error creating LuaRunner");
-        return QUIVER_ERROR_DATABASE;
+        return QUIVER_ERROR;
     }
 }
 
@@ -35,8 +34,7 @@ quiver_error_t quiver_lua_runner_free(quiver_lua_runner_t* runner) {
 }
 
 quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, const char* script) {
-    QUIVER_REQUIRE(runner);
-    QUIVER_REQUIRE(script);
+    QUIVER_REQUIRE(runner, script);
 
     try {
         runner->last_error.clear();
@@ -44,16 +42,16 @@ quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, const char* sc
         return QUIVER_OK;
     } catch (const std::exception& e) {
         runner->last_error = e.what();
-        return QUIVER_ERROR_DATABASE;
+        return QUIVER_ERROR;
     } catch (...) {
         runner->last_error = "Unknown error";
-        return QUIVER_ERROR_DATABASE;
+        return QUIVER_ERROR;
     }
 }
 
 quiver_error_t quiver_lua_runner_get_error(quiver_lua_runner_t* runner, const char** out_error) {
-    QUIVER_REQUIRE(runner);
-    QUIVER_REQUIRE(out_error);
+    QUIVER_REQUIRE(runner, out_error);
+
     *out_error = runner->last_error.empty() ? nullptr : runner->last_error.c_str();
     return QUIVER_OK;
 }

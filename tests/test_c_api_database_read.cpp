@@ -939,7 +939,7 @@ TEST(DatabaseCApi, ReadScalarIntegersNullDb) {
     int64_t* values = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_scalar_integers(nullptr, "Configuration", "integer_attribute", &values, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, ReadScalarIntegersNullCollection) {
@@ -952,7 +952,7 @@ TEST(DatabaseCApi, ReadScalarIntegersNullCollection) {
     int64_t* values = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_scalar_integers(db, nullptr, "integer_attribute", &values, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -967,7 +967,7 @@ TEST(DatabaseCApi, ReadScalarIntegersNullAttribute) {
     int64_t* values = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_scalar_integers(db, "Configuration", nullptr, &values, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -981,11 +981,11 @@ TEST(DatabaseCApi, ReadScalarIntegersNullOutput) {
 
     size_t count = 0;
     auto err = quiver_database_read_scalar_integers(db, "Configuration", "integer_attribute", nullptr, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     int64_t* values = nullptr;
     err = quiver_database_read_scalar_integers(db, "Configuration", "integer_attribute", &values, nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -994,7 +994,7 @@ TEST(DatabaseCApi, ReadScalarFloatsNullDb) {
     double* values = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_scalar_floats(nullptr, "Configuration", "float_attribute", &values, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, ReadScalarFloatsNullCollection) {
@@ -1007,7 +1007,7 @@ TEST(DatabaseCApi, ReadScalarFloatsNullCollection) {
     double* values = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_scalar_floats(db, nullptr, "float_attribute", &values, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -1021,11 +1021,11 @@ TEST(DatabaseCApi, ReadScalarFloatsNullOutput) {
 
     size_t count = 0;
     auto err = quiver_database_read_scalar_floats(db, "Configuration", "float_attribute", nullptr, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     double* values = nullptr;
     err = quiver_database_read_scalar_floats(db, "Configuration", "float_attribute", &values, nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -1034,7 +1034,7 @@ TEST(DatabaseCApi, ReadScalarStringsNullDb) {
     char** values = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_scalar_strings(nullptr, "Configuration", "string_attribute", &values, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, ReadScalarStringsNullCollection) {
@@ -1047,7 +1047,7 @@ TEST(DatabaseCApi, ReadScalarStringsNullCollection) {
     char** values = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_scalar_strings(db, nullptr, "string_attribute", &values, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -1061,11 +1061,11 @@ TEST(DatabaseCApi, ReadScalarStringsNullOutput) {
 
     size_t count = 0;
     auto err = quiver_database_read_scalar_strings(db, "Configuration", "string_attribute", nullptr, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     char** values = nullptr;
     err = quiver_database_read_scalar_strings(db, "Configuration", "string_attribute", &values, nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -1079,7 +1079,7 @@ TEST(DatabaseCApi, ReadScalarIntegerByIdNullDb) {
     int has_value;
     auto err =
         quiver_database_read_scalar_integer_by_id(nullptr, "Configuration", "integer_attribute", 1, &value, &has_value);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, ReadScalarIntegerByIdNullCollection) {
@@ -1092,7 +1092,7 @@ TEST(DatabaseCApi, ReadScalarIntegerByIdNullCollection) {
     int64_t value;
     int has_value;
     auto err = quiver_database_read_scalar_integer_by_id(db, nullptr, "integer_attribute", 1, &value, &has_value);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -1107,11 +1107,11 @@ TEST(DatabaseCApi, ReadScalarIntegerByIdNullOutput) {
     int has_value;
     auto err =
         quiver_database_read_scalar_integer_by_id(db, "Configuration", "integer_attribute", 1, nullptr, &has_value);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     int64_t value;
     err = quiver_database_read_scalar_integer_by_id(db, "Configuration", "integer_attribute", 1, &value, nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -1121,7 +1121,7 @@ TEST(DatabaseCApi, ReadScalarFloatByIdNullDb) {
     int has_value;
     auto err =
         quiver_database_read_scalar_float_by_id(nullptr, "Configuration", "float_attribute", 1, &value, &has_value);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, ReadScalarFloatByIdNullOutput) {
@@ -1133,11 +1133,11 @@ TEST(DatabaseCApi, ReadScalarFloatByIdNullOutput) {
 
     int has_value;
     auto err = quiver_database_read_scalar_float_by_id(db, "Configuration", "float_attribute", 1, nullptr, &has_value);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     double value;
     err = quiver_database_read_scalar_float_by_id(db, "Configuration", "float_attribute", 1, &value, nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -1147,7 +1147,7 @@ TEST(DatabaseCApi, ReadScalarStringByIdNullDb) {
     int has_value;
     auto err =
         quiver_database_read_scalar_string_by_id(nullptr, "Configuration", "string_attribute", 1, &value, &has_value);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, ReadScalarStringByIdNullOutput) {
@@ -1160,11 +1160,11 @@ TEST(DatabaseCApi, ReadScalarStringByIdNullOutput) {
     int has_value;
     auto err =
         quiver_database_read_scalar_string_by_id(db, "Configuration", "string_attribute", 1, nullptr, &has_value);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     char* value = nullptr;
     err = quiver_database_read_scalar_string_by_id(db, "Configuration", "string_attribute", 1, &value, nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -1178,7 +1178,7 @@ TEST(DatabaseCApi, ReadVectorIntegersNullDb) {
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_vector_integers(nullptr, "Collection", "value_int", &vectors, &sizes, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, ReadVectorIntegersNullCollection) {
@@ -1193,7 +1193,7 @@ TEST(DatabaseCApi, ReadVectorIntegersNullCollection) {
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_vector_integers(db, nullptr, "value_int", &vectors, &sizes, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -1209,14 +1209,14 @@ TEST(DatabaseCApi, ReadVectorIntegersNullOutput) {
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_vector_integers(db, "Collection", "value_int", nullptr, &sizes, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     int64_t** vectors = nullptr;
     err = quiver_database_read_vector_integers(db, "Collection", "value_int", &vectors, nullptr, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     err = quiver_database_read_vector_integers(db, "Collection", "value_int", &vectors, &sizes, nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -1226,7 +1226,7 @@ TEST(DatabaseCApi, ReadVectorFloatsNullDb) {
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_vector_floats(nullptr, "Collection", "value_float", &vectors, &sizes, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, ReadVectorFloatsNullOutput) {
@@ -1240,14 +1240,14 @@ TEST(DatabaseCApi, ReadVectorFloatsNullOutput) {
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_vector_floats(db, "Collection", "value_float", nullptr, &sizes, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     double** vectors = nullptr;
     err = quiver_database_read_vector_floats(db, "Collection", "value_float", &vectors, nullptr, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     err = quiver_database_read_vector_floats(db, "Collection", "value_float", &vectors, &sizes, nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -1257,7 +1257,7 @@ TEST(DatabaseCApi, ReadVectorStringsNullDb) {
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_vector_strings(nullptr, "Collection", "tag", vectors, &sizes, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 // ============================================================================
@@ -1268,7 +1268,7 @@ TEST(DatabaseCApi, ReadVectorIntegersByIdNullDb) {
     int64_t* values = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_vector_integers_by_id(nullptr, "Collection", "value_int", 1, &values, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, ReadVectorIntegersByIdNullCollection) {
@@ -1282,7 +1282,7 @@ TEST(DatabaseCApi, ReadVectorIntegersByIdNullCollection) {
     int64_t* values = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_vector_integers_by_id(db, nullptr, "value_int", 1, &values, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -1297,11 +1297,11 @@ TEST(DatabaseCApi, ReadVectorIntegersByIdNullOutput) {
 
     size_t count = 0;
     auto err = quiver_database_read_vector_integers_by_id(db, "Collection", "value_int", 1, nullptr, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     int64_t* values = nullptr;
     err = quiver_database_read_vector_integers_by_id(db, "Collection", "value_int", 1, &values, nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -1310,7 +1310,7 @@ TEST(DatabaseCApi, ReadVectorFloatsByIdNullDb) {
     double* values = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_vector_floats_by_id(nullptr, "Collection", "value_float", 1, &values, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, ReadVectorFloatsByIdNullOutput) {
@@ -1323,11 +1323,11 @@ TEST(DatabaseCApi, ReadVectorFloatsByIdNullOutput) {
 
     size_t count = 0;
     auto err = quiver_database_read_vector_floats_by_id(db, "Collection", "value_float", 1, nullptr, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     double* values = nullptr;
     err = quiver_database_read_vector_floats_by_id(db, "Collection", "value_float", 1, &values, nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -1336,7 +1336,7 @@ TEST(DatabaseCApi, ReadVectorStringsByIdNullDb) {
     char** values = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_vector_strings_by_id(nullptr, "Collection", "tag", 1, &values, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 // ============================================================================
@@ -1348,7 +1348,7 @@ TEST(DatabaseCApi, ReadSetIntegersNullDb) {
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_set_integers(nullptr, "Collection", "tag", &sets, &sizes, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, ReadSetIntegersNullCollection) {
@@ -1363,7 +1363,7 @@ TEST(DatabaseCApi, ReadSetIntegersNullCollection) {
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_set_integers(db, nullptr, "tag", &sets, &sizes, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -1379,14 +1379,14 @@ TEST(DatabaseCApi, ReadSetIntegersNullOutput) {
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_set_integers(db, "Collection", "tag", nullptr, &sizes, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     int64_t** sets = nullptr;
     err = quiver_database_read_set_integers(db, "Collection", "tag", &sets, nullptr, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     err = quiver_database_read_set_integers(db, "Collection", "tag", &sets, &sizes, nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -1396,7 +1396,7 @@ TEST(DatabaseCApi, ReadSetFloatsNullDb) {
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_set_floats(nullptr, "Collection", "tag", &sets, &sizes, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, ReadSetStringsNullDb) {
@@ -1404,7 +1404,7 @@ TEST(DatabaseCApi, ReadSetStringsNullDb) {
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_set_strings(nullptr, "Collection", "tag", &sets, &sizes, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, ReadSetStringsNullCollection) {
@@ -1419,7 +1419,7 @@ TEST(DatabaseCApi, ReadSetStringsNullCollection) {
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_set_strings(db, nullptr, "tag", &sets, &sizes, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -1435,14 +1435,14 @@ TEST(DatabaseCApi, ReadSetStringsNullOutput) {
     size_t* sizes = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_set_strings(db, "Collection", "tag", nullptr, &sizes, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     char*** sets = nullptr;
     err = quiver_database_read_set_strings(db, "Collection", "tag", &sets, nullptr, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     err = quiver_database_read_set_strings(db, "Collection", "tag", &sets, &sizes, nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -1455,21 +1455,21 @@ TEST(DatabaseCApi, ReadSetIntegersByIdNullDb) {
     int64_t* values = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_set_integers_by_id(nullptr, "Collection", "tag", 1, &values, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, ReadSetFloatsByIdNullDb) {
     double* values = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_set_floats_by_id(nullptr, "Collection", "tag", 1, &values, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, ReadSetStringsByIdNullDb) {
     char** values = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_set_strings_by_id(nullptr, "Collection", "tag", 1, &values, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, ReadSetStringsByIdNullCollection) {
@@ -1483,7 +1483,7 @@ TEST(DatabaseCApi, ReadSetStringsByIdNullCollection) {
     char** values = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_set_strings_by_id(db, nullptr, "tag", 1, &values, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -1498,11 +1498,11 @@ TEST(DatabaseCApi, ReadSetStringsByIdNullOutput) {
 
     size_t count = 0;
     auto err = quiver_database_read_set_strings_by_id(db, "Collection", "tag", 1, nullptr, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     char** values = nullptr;
     err = quiver_database_read_set_strings_by_id(db, "Collection", "tag", 1, &values, nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -1515,7 +1515,7 @@ TEST(DatabaseCApi, ReadElementIdsNullDb) {
     int64_t* ids = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_element_ids(nullptr, "Configuration", &ids, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 }
 
 TEST(DatabaseCApi, ReadElementIdsNullCollection) {
@@ -1528,7 +1528,7 @@ TEST(DatabaseCApi, ReadElementIdsNullCollection) {
     int64_t* ids = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_element_ids(db, nullptr, &ids, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -1542,11 +1542,11 @@ TEST(DatabaseCApi, ReadElementIdsNullOutput) {
 
     size_t count = 0;
     auto err = quiver_database_read_element_ids(db, "Configuration", nullptr, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     int64_t* ids = nullptr;
     err = quiver_database_read_element_ids(db, "Configuration", &ids, nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }

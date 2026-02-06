@@ -143,23 +143,21 @@ static Database from_migrations(const std::string& path, const std::vector<std::
 ## C API Patterns
 
 ### Return Codes
-All C API functions return `quiver_error_t`. Values are returned via output parameters.
-Exceptions: `quiver_get_last_error`, `quiver_error_string`, `quiver_version`, `quiver_clear_last_error`, `quiver_database_options_default` (utility functions with direct return).
+All C API functions return binary `quiver_error_t` (`QUIVER_OK = 0` or `QUIVER_ERROR = 1`). Values are returned via output parameters.
+Exceptions: `quiver_get_last_error`, `quiver_version`, `quiver_clear_last_error`, `quiver_database_options_default` (utility functions with direct return).
 
 ### Error Handling
-Try-catch with `quiver_set_last_error()`, return codes:
+Try-catch with `quiver_set_last_error()`, binary return codes. Error details come from `quiver_get_last_error()`:
 ```cpp
 quiver_error_t quiver_some_function(quiver_database_t* db) {
-    if (!db) {
-        quiver_set_last_error("Null database pointer");
-        return QUIVER_ERROR_INVALID_ARGUMENT;
-    }
+    QUIVER_REQUIRE(db);
+
     try {
         // operation...
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
-        return QUIVER_ERROR_DATABASE;
+        return QUIVER_ERROR;
     }
 }
 ```
@@ -167,6 +165,7 @@ quiver_error_t quiver_some_function(quiver_database_t* db) {
 ### Factory Functions
 Factory functions use out-parameters and return `quiver_error_t`:
 ```cpp
+auto options = quiver_database_options_default();
 quiver_database_t* db = nullptr;
 quiver_error_t err = quiver_database_from_schema(db_path, schema_path, &options, &db);
 if (err != QUIVER_OK) {
@@ -196,13 +195,6 @@ static char* strdup_safe(const std::string& str) {
     std::memcpy(result, str.c_str(), str.size() + 1);
     return result;
 }
-```
-
-### Null Checks
-Validate all pointer arguments first:
-```cpp
-if (!db) { quiver_set_last_error("Null db"); return QUIVER_ERROR; }
-if (!collection) { quiver_set_last_error("Null collection"); return QUIVER_ERROR; }
 ```
 
 ### Parameterized Queries

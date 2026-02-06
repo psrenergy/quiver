@@ -281,29 +281,25 @@ TEST(DatabaseCApi, TimeSeriesNullArguments) {
     ASSERT_NE(db, nullptr);
 
     quiver_time_series_metadata_t metadata;
-    EXPECT_EQ(quiver_database_get_time_series_metadata(nullptr, "Collection", "data", &metadata),
-              QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_database_get_time_series_metadata(db, nullptr, "data", &metadata), QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_database_get_time_series_metadata(db, "Collection", nullptr, &metadata),
-              QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_database_get_time_series_metadata(db, "Collection", "data", nullptr),
-              QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(quiver_database_get_time_series_metadata(nullptr, "Collection", "data", &metadata), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_get_time_series_metadata(db, nullptr, "data", &metadata), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_get_time_series_metadata(db, "Collection", nullptr, &metadata), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_get_time_series_metadata(db, "Collection", "data", nullptr), QUIVER_ERROR);
 
     quiver_time_series_metadata_t* groups = nullptr;
     size_t count = 0;
-    EXPECT_EQ(quiver_database_list_time_series_groups(nullptr, "Collection", &groups, &count),
-              QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_database_list_time_series_groups(db, nullptr, &groups, &count), QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(quiver_database_list_time_series_groups(nullptr, "Collection", &groups, &count), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_list_time_series_groups(db, nullptr, &groups, &count), QUIVER_ERROR);
 
     char** out_date_times = nullptr;
     double* out_values = nullptr;
     size_t row_count = 0;
     EXPECT_EQ(quiver_database_read_time_series_group_by_id(
                   nullptr, "Collection", "data", 1, &out_date_times, &out_values, &row_count),
-              QUIVER_ERROR_INVALID_ARGUMENT);
+              QUIVER_ERROR);
     EXPECT_EQ(
         quiver_database_read_time_series_group_by_id(db, nullptr, "data", 1, &out_date_times, &out_values, &row_count),
-        QUIVER_ERROR_INVALID_ARGUMENT);
+        QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -507,10 +503,10 @@ TEST(DatabaseCApi, TimeSeriesFilesNotFound) {
 
     // Configuration has no time series files table
     auto err = quiver_database_read_time_series_files(db, "Configuration", &columns, &paths, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_DATABASE);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     err = quiver_database_list_time_series_files_columns(db, "Configuration", &columns, &count);
-    EXPECT_EQ(err, QUIVER_ERROR_DATABASE);
+    EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -524,43 +520,30 @@ TEST(DatabaseCApi, TimeSeriesFilesNullArguments) {
     ASSERT_NE(db, nullptr);
 
     int result = 0;
-    EXPECT_EQ(quiver_database_has_time_series_files(nullptr, "Collection", &result), QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_database_has_time_series_files(db, nullptr, &result), QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_database_has_time_series_files(db, "Collection", nullptr), QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(quiver_database_has_time_series_files(nullptr, "Collection", &result), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_has_time_series_files(db, nullptr, &result), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_has_time_series_files(db, "Collection", nullptr), QUIVER_ERROR);
 
     char** columns = nullptr;
     size_t count = 0;
-    EXPECT_EQ(quiver_database_list_time_series_files_columns(nullptr, "Collection", &columns, &count),
-              QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_database_list_time_series_files_columns(db, nullptr, &columns, &count),
-              QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_database_list_time_series_files_columns(db, "Collection", nullptr, &count),
-              QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_database_list_time_series_files_columns(db, "Collection", &columns, nullptr),
-              QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(quiver_database_list_time_series_files_columns(nullptr, "Collection", &columns, &count), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_list_time_series_files_columns(db, nullptr, &columns, &count), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_list_time_series_files_columns(db, "Collection", nullptr, &count), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_list_time_series_files_columns(db, "Collection", &columns, nullptr), QUIVER_ERROR);
 
     char** paths = nullptr;
-    EXPECT_EQ(quiver_database_read_time_series_files(nullptr, "Collection", &columns, &paths, &count),
-              QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_database_read_time_series_files(db, nullptr, &columns, &paths, &count),
-              QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_database_read_time_series_files(db, "Collection", nullptr, &paths, &count),
-              QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_database_read_time_series_files(db, "Collection", &columns, nullptr, &count),
-              QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_database_read_time_series_files(db, "Collection", &columns, &paths, nullptr),
-              QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(quiver_database_read_time_series_files(nullptr, "Collection", &columns, &paths, &count), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_read_time_series_files(db, nullptr, &columns, &paths, &count), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_read_time_series_files(db, "Collection", nullptr, &paths, &count), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_read_time_series_files(db, "Collection", &columns, nullptr, &count), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_read_time_series_files(db, "Collection", &columns, &paths, nullptr), QUIVER_ERROR);
 
     const char* in_columns[] = {"data_file"};
     const char* in_paths[] = {"/path"};
-    EXPECT_EQ(quiver_database_update_time_series_files(nullptr, "Collection", in_columns, in_paths, 1),
-              QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_database_update_time_series_files(db, nullptr, in_columns, in_paths, 1),
-              QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_database_update_time_series_files(db, "Collection", nullptr, in_paths, 1),
-              QUIVER_ERROR_INVALID_ARGUMENT);
-    EXPECT_EQ(quiver_database_update_time_series_files(db, "Collection", in_columns, nullptr, 1),
-              QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(quiver_database_update_time_series_files(nullptr, "Collection", in_columns, in_paths, 1), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_time_series_files(db, nullptr, in_columns, in_paths, 1), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_time_series_files(db, "Collection", nullptr, in_paths, 1), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_update_time_series_files(db, "Collection", in_columns, nullptr, 1), QUIVER_ERROR);
 
     quiver_database_close(db);
 }

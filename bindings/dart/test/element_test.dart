@@ -90,7 +90,7 @@ void main() {
       try {
         expect(
           () => element.set('values', []),
-          throwsA(isA<InvalidArgumentException>()),
+          throwsA(isA<DatabaseException>()),
         );
       } finally {
         element.dispose();
@@ -184,7 +184,7 @@ void main() {
       element.dispose();
       expect(
         () => element.set('value', 42),
-        throwsA(isA<DatabaseOperationException>()),
+        throwsA(isA<DatabaseException>()),
       );
     });
   });

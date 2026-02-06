@@ -69,7 +69,7 @@ TEST(DatabaseCApi, CreateElementNullDb) {
     quiver_element_set_string(element, "label", "Test");
 
     int64_t id = 0;
-    EXPECT_EQ(quiver_database_create_element(nullptr, "Plant", element, &id), QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(quiver_database_create_element(nullptr, "Plant", element, &id), QUIVER_ERROR);
 
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
@@ -87,7 +87,7 @@ TEST(DatabaseCApi, CreateElementNullCollection) {
     quiver_element_set_string(element, "label", "Test");
 
     int64_t id = 0;
-    EXPECT_EQ(quiver_database_create_element(db, nullptr, element, &id), QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(quiver_database_create_element(db, nullptr, element, &id), QUIVER_ERROR);
 
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     quiver_database_close(db);
@@ -101,7 +101,7 @@ TEST(DatabaseCApi, CreateElementNullElement) {
     ASSERT_NE(db, nullptr);
 
     int64_t id = 0;
-    EXPECT_EQ(quiver_database_create_element(db, "Plant", nullptr, &id), QUIVER_ERROR_INVALID_ARGUMENT);
+    EXPECT_EQ(quiver_database_create_element(db, "Plant", nullptr, &id), QUIVER_ERROR);
 
     quiver_database_close(db);
 }

@@ -37,7 +37,7 @@ class Element {
 
   void _ensureNotDisposed() {
     if (_isDisposed) {
-      throw const DatabaseOperationException('Element has been disposed');
+      throw const DatabaseException('Element has been disposed');
     }
   }
 
@@ -72,11 +72,11 @@ class Element {
       case List<String> v:
         setArrayString(name, v);
       case List v when v.isEmpty:
-        throw InvalidArgumentException("Empty list not allowed for '$name'");
+        throw DatabaseException("Empty list not allowed for '$name'");
       case List v:
         _setMixedList(name, v);
       default:
-        throw InvalidArgumentException(
+        throw DatabaseException(
           "Unsupported type ${value.runtimeType} for '$name'",
         );
     }
@@ -91,7 +91,7 @@ class Element {
     } else if (first is String) {
       setArrayString(name, values.cast<String>());
     } else {
-      throw InvalidArgumentException(
+      throw DatabaseException(
         "Unsupported array element type ${first.runtimeType} for '$name'",
       );
     }
