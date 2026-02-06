@@ -16,11 +16,11 @@ TEST(Database, ExportToCsvBasicCollection) {
 
     // Create elements
     quiver::Element e1;
-    e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42}).set("float_attribute", 3.14);
+    e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42}).set("float_attribute", 3.14).set("boolean_attribute", int64_t{1});
     db.create_element("Configuration", e1);
 
     quiver::Element e2;
-    e2.set("label", std::string("Config 2")).set("integer_attribute", int64_t{100}).set("float_attribute", 2.71);
+    e2.set("label", std::string("Config 2")).set("integer_attribute", int64_t{100}).set("float_attribute", 2.71).set("date_attribute", std::string("2024-01-01"));
     db.create_element("Configuration", e2);
 
     auto csv_path = (fs::temp_directory_path() / "quiver_export_basic.csv").string();
@@ -76,6 +76,347 @@ TEST(Database, ExportToCsvEmptyCollection) {
     ASSERT_EQ(lines.size(), 2);
     EXPECT_EQ(lines[0], "sep=,");
     EXPECT_NE(lines[1].find("label"), std::string::npos);
+}
+
+TEST(Database, ExportToCsvResolveForeignKeys) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"),
+                                            {.console_level = quiver::LogLevel::off});
+
+    quiver::Element p1;
+    p1.set("label", std::string("Parent 1"));
+    db.create_element("Parent", p1);
+
+    quiver::Element p2;
+    p2.set("label", std::string("Parent 2"));
+    db.create_element("Parent", p2);
+
+    quiver::Element c1;
+    c1.set("label", std::string("Child 1"));
+    db.create_element("Child", c1);
+
+    quiver::Element c2;
+    c2.set("label", std::string("Child 2"));
+    db.create_element("Child", c2);
+
+    db.set_scalar_relation("Child", "parent_id", "Child 1", "Parent 1");
+    db.set_scalar_relation("Child", "parent_id", "Child 2", "Parent 2");
+    db.set_scalar_relation("Child", "sibling_id", "Child 2", "Child 1");
+
+    auto csv_path = (fs::temp_directory_path() / "quiver_export_fk.csv").string();
+    db.export_to_csv("Child", csv_path);
+
+    std::ifstream file(csv_path);
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(file, line)) {
+        lines.push_back(line);
+    }
+    file.close();
+    fs::remove(csv_path);
+
+    ASSERT_EQ(lines.size(), 4);  // sep + header + 2 rows
+
+    // Header keeps original FK column names
+    EXPECT_NE(lines[1].find("parent_id"), std::string::npos);
+    EXPECT_NE(lines[1].find("sibling_id"), std::string::npos);
+
+    // Row data should contain resolved labels, not integer IDs
+    EXPECT_NE(lines[2].find("Child 1"), std::string::npos);
+    EXPECT_NE(lines[2].find("Parent 1"), std::string::npos);
+
+    EXPECT_NE(lines[3].find("Child 2"), std::string::npos);
+    EXPECT_NE(lines[3].find("Parent 2"), std::string::npos);
+    EXPECT_NE(lines[3].find("Child 1"), std::string::npos);  // sibling resolved
+}
+
+TEST(Database, ExportToCsvNullForeignKey) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"),
+                                            {.console_level = quiver::LogLevel::off});
+
+    quiver::Element c1;
+    c1.set("label", std::string("Orphan"));
+    db.create_element("Child", c1);
+
+    auto csv_path = (fs::temp_directory_path() / "quiver_export_fk_null.csv").string();
+    db.export_to_csv("Child", csv_path);
+
+    std::ifstream file(csv_path);
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(file, line)) {
+        lines.push_back(line);
+    }
+    file.close();
+    fs::remove(csv_path);
+
+    ASSERT_EQ(lines.size(), 3);  // sep + header + 1 row
+    EXPECT_NE(lines[2].find("Orphan"), std::string::npos);
+}
+
+TEST(Database, ExportToCsvVectorTableResolveForeignKeys) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"),
+                                            {.console_level = quiver::LogLevel::off});
+
+    quiver::Element p1;
+    p1.set("label", std::string("Parent 1"));
+    db.create_element("Parent", p1);
+
+    quiver::Element c1;
+    c1.set("label", std::string("Child 1"));
+    db.create_element("Child", c1);
+
+    db.update_vector_integers("Child", "parent_ref", 1, {1, 1});
+
+    auto csv_path = (fs::temp_directory_path() / "quiver_export_vector_fk.csv").string();
+    db.export_to_csv("Child_vector_refs", csv_path);
+
+    std::ifstream file(csv_path);
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(file, line)) {
+        lines.push_back(line);
+    }
+    file.close();
+    fs::remove(csv_path);
+
+    ASSERT_EQ(lines.size(), 4);  // sep + header + 2 rows
+
+    // FK columns should resolve to labels
+    EXPECT_NE(lines[2].find("Child 1"), std::string::npos);
+    EXPECT_NE(lines[2].find("Parent 1"), std::string::npos);
+}
+
+TEST(Database, ExportToCsvSetTableResolveForeignKeys) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"),
+                                            {.console_level = quiver::LogLevel::off});
+
+    quiver::Element p1;
+    p1.set("label", std::string("Parent 1"));
+    db.create_element("Parent", p1);
+
+    quiver::Element p2;
+    p2.set("label", std::string("Parent 2"));
+    db.create_element("Parent", p2);
+
+    quiver::Element c1;
+    c1.set("label", std::string("Child 1"));
+    db.create_element("Child", c1);
+
+    db.update_set_integers("Child", "parent_ref", 1, {1, 2});
+
+    auto csv_path = (fs::temp_directory_path() / "quiver_export_set_fk.csv").string();
+    db.export_to_csv("Child_set_parents", csv_path);
+
+    std::ifstream file(csv_path);
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(file, line)) {
+        lines.push_back(line);
+    }
+    file.close();
+    fs::remove(csv_path);
+
+    ASSERT_EQ(lines.size(), 4);  // sep + header + 2 rows
+
+    // FK columns should resolve to labels
+    EXPECT_NE(lines[2].find("Child 1"), std::string::npos);
+    EXPECT_NE(lines[2].find("Parent 1"), std::string::npos);
+    EXPECT_NE(lines[3].find("Child 1"), std::string::npos);
+    EXPECT_NE(lines[3].find("Parent 2"), std::string::npos);
+}
+
+TEST(Database, ExportToCsvVectorIndexAsNormalValue) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"),
+                                            {.console_level = quiver::LogLevel::off});
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item 1"));
+    db.create_element("Collection", e1);
+
+    db.update_vector_integers("Collection", "value_int", 1, {10, 20, 30});
+
+    auto csv_path = (fs::temp_directory_path() / "quiver_export_vecidx.csv").string();
+    db.export_to_csv("Collection_vector_values", csv_path);
+
+    std::ifstream file(csv_path);
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(file, line)) {
+        lines.push_back(line);
+    }
+    file.close();
+    fs::remove(csv_path);
+
+    ASSERT_EQ(lines.size(), 5);  // sep + header + 3 rows
+
+    // Header should contain vector_index
+    EXPECT_NE(lines[1].find("vector_index"), std::string::npos);
+
+    // vector_index values should be integers 1, 2, 3
+    EXPECT_NE(lines[2].find("1"), std::string::npos);
+    EXPECT_NE(lines[3].find("2"), std::string::npos);
+    EXPECT_NE(lines[4].find("3"), std::string::npos);
+
+    // id column should resolve to parent label
+    EXPECT_NE(lines[2].find("Item 1"), std::string::npos);
+}
+
+TEST(Database, ExportToCsvQuotesFieldsWithCommas) {
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item, with comma"));
+    db.create_element("Configuration", e1);
+
+    auto csv_path = (fs::temp_directory_path() / "quiver_export_quoting.csv").string();
+    db.export_to_csv("Configuration", csv_path);
+
+    std::ifstream file(csv_path);
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(file, line)) {
+        lines.push_back(line);
+    }
+    file.close();
+    fs::remove(csv_path);
+
+    ASSERT_EQ(lines.size(), 3);  // sep + header + 1 row
+
+    // Field with comma should be quoted per RFC 4180
+    EXPECT_NE(lines[2].find("\"Item, with comma\""), std::string::npos);
+}
+
+TEST(Database, ExportToCsvTimeSeriesTable) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"),
+                                            {.console_level = quiver::LogLevel::off});
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item 1"));
+    db.create_element("Collection", e1);
+
+    // Insert time series data directly
+    db.query_string("INSERT INTO Collection_time_series_data VALUES (1, '2024-01-15T10:30:00', 42.5)");
+    db.query_string("INSERT INTO Collection_time_series_data VALUES (1, '2024-01-15T11:00:00', 37.2)");
+
+    auto csv_path = (fs::temp_directory_path() / "quiver_export_ts.csv").string();
+    db.export_to_csv("Collection_time_series_data", csv_path);
+
+    std::ifstream file(csv_path);
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(file, line)) {
+        lines.push_back(line);
+    }
+    file.close();
+    fs::remove(csv_path);
+
+    ASSERT_EQ(lines.size(), 4);  // sep + header + 2 rows
+
+    // collection_id FK should resolve to parent label
+    EXPECT_NE(lines[2].find("Item 1"), std::string::npos);
+
+    // date_time should be exported (default format = ISO 8601)
+    EXPECT_NE(lines[2].find("2024-01-15T10:30:00"), std::string::npos);
+    EXPECT_NE(lines[3].find("2024-01-15T11:00:00"), std::string::npos);
+
+    // value should be exported as-is
+    EXPECT_NE(lines[2].find("42.5"), std::string::npos);
+}
+
+TEST(Database, ExportToCsvDateTimeCustomFormat) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"),
+                                            {.console_level = quiver::LogLevel::off});
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item 1"));
+    db.create_element("Collection", e1);
+
+    db.query_string("INSERT INTO Collection_time_series_data VALUES (1, '2024-01-15T10:30:00', 42.5)");
+
+    auto csv_path = (fs::temp_directory_path() / "quiver_export_datefmt.csv").string();
+    db.export_to_csv("Collection_time_series_data", csv_path, {{"date_time", "%Y-%m"}});
+
+    std::ifstream file(csv_path);
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(file, line)) {
+        lines.push_back(line);
+    }
+    file.close();
+    fs::remove(csv_path);
+
+    ASSERT_EQ(lines.size(), 3);  // sep + header + 1 row
+    EXPECT_NE(lines[2].find("2024-01"), std::string::npos);
+    EXPECT_EQ(lines[2].find("10:30"), std::string::npos);  // time should be gone
+}
+
+TEST(Database, ExportToCsvEnumResolution) {
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element e1;
+    e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{1});
+    db.create_element("Configuration", e1);
+
+    auto csv_path = (fs::temp_directory_path() / "quiver_export_enum.csv").string();
+    quiver::EnumMap enums = {
+        {"integer_attribute", {{1, "Active"}, {2, "Inactive"}}}
+    };
+    db.export_to_csv("Configuration", csv_path, {}, enums);
+
+    std::ifstream file(csv_path);
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(file, line)) {
+        lines.push_back(line);
+    }
+    file.close();
+    fs::remove(csv_path);
+
+    ASSERT_EQ(lines.size(), 3);  // sep + header + 1 row
+    EXPECT_NE(lines[2].find("Active"), std::string::npos);
+    EXPECT_EQ(lines[2].find(",1,"), std::string::npos);  // raw integer should not appear
+}
+
+TEST(Database, ExportToCsvEnumInvalidIdThrows) {
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+
+    quiver::Element e1;
+    e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{99});
+    db.create_element("Configuration", e1);
+
+    auto csv_path = (fs::temp_directory_path() / "quiver_export_enum_bad.csv").string();
+    quiver::EnumMap enums = {
+        {"integer_attribute", {{1, "Active"}}}
+    };
+    EXPECT_THROW(db.export_to_csv("Configuration", csv_path, {}, enums), std::runtime_error);
+    fs::remove(csv_path);
+}
+
+TEST(Database, ExportToCsvLatin1Encoding) {
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+
+    // "Café" is UTF-8: C a f \xC3\xA9
+    quiver::Element e1;
+    e1.set("label", std::string("Caf\xC3\xA9"));
+    db.create_element("Configuration", e1);
+
+    auto csv_path = (fs::temp_directory_path() / "quiver_export_latin1.csv").string();
+    db.export_to_csv("Configuration", csv_path);
+
+    // Read raw bytes
+    std::ifstream file(csv_path, std::ios::binary);
+    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    file.close();
+    fs::remove(csv_path);
+
+    // In Latin-1, é is a single byte 0xE9
+    EXPECT_NE(content.find("Caf\xE9"), std::string::npos);
+    // UTF-8 sequence 0xC3 0xA9 should NOT be present
+    EXPECT_EQ(content.find("Caf\xC3\xA9"), std::string::npos);
 }
 
 TEST(Database, ExportToCsvNonExistentCollectionThrows) {

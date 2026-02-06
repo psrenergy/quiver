@@ -1,4 +1,4 @@
-#include "quiver/database.h"
+﻿#include "quiver/database.h"
 
 #include "quiver/migrations.h"
 #include "quiver/result.h"
@@ -1426,63 +1426,54 @@ std::vector<SetMetadata> Database::list_set_groups(const std::string& collection
     return result;
 }
 
-void Database::export_to_csv(const std::string& table, const std::string& path) {
+void Database::export_to_csv(const std::string& table,
+                             const std::string& path,
+                             const DateFormatMap& date_format_map,
+                             const EnumMap& enum_map) {
     impl_->logger->debug("Exporting table {} to CSV at path '{}'", table, path);
     impl_->require_collection(table, "export to CSV");
-    
 
     const auto* table_def = impl_->schema->get_table(table);
-    if (!table_def) {
-        throw std::runtime_error("Table not found in schema: " + table);
+
+    // Build export columns (label first, skip id if table has label)
+    bool has_label = table_def->has_column("label");
+    std::vector<std::string> columns;
+    if (has_label) {
+        columns.push_back("label");
     }
-    bool skip_id = table_def->has_column("label");
-    std::vector<std::string> export_columns;
     for (const auto& [col_name, col] : table_def->columns) {
-        if (skip_id && col_name == "id") continue;
-        export_columns.push_back(col_name);
+        if (col_name == "id" && has_label) continue;
+        if (col_name == "label") continue;
+        columns.push_back(col_name);
     }
 
-    // Query data (excluding id)
+    // Build id->label lookup for FK columns whose target table has a label
+    FkLabelMap fk_labels;
+    for (const auto& fk : table_def->foreign_keys) {
+        const auto* target = impl_->schema->get_table(fk.to_table);
+        if (!target || !target->has_column("label")) continue;
+        auto& lookup = fk_labels[fk.from_column];
+        for (auto& row : execute("SELECT id, label FROM " + fk.to_table)) {
+            lookup[*row.get_integer(0)] = *row.get_string(1);
+        }
+    }
+
+    // Query all data
     std::string sql = "SELECT ";
-    for (size_t i = 0; i < export_columns.size(); ++i) {
+    for (size_t i = 0; i < columns.size(); ++i) {
         if (i > 0) sql += ", ";
-        sql += export_columns[i];
+        sql += columns[i];
     }
     sql += " FROM " + table;
-    auto result = execute(sql);
+    auto data = execute(sql);
 
-    // Write to CSV
-    std::ofstream csv_file;
-    csv_file.open(path);
-    csv_file << "sep=,\n";
-
-    // Write header
-    for (size_t i = 0; i < export_columns.size(); ++i) {
-        if (i > 0) csv_file << ",";
-        csv_file << export_columns[i];
-    }
-    csv_file << "\n";
-
-    // Write rows
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        for (size_t j = 0; j < result.column_count(); ++j) {
-            if (j > 0) csv_file << ",";
-            csv_file << result[i].at(j);
-        }
-        csv_file << "\n";
-    }
-    csv_file.close();
-
-
-
-
-
-
-    return;
+    quiver::write_csv(path, columns, data, fk_labels, date_format_map, enum_map);
 }
 
 void Database::import_from_csv(const std::string& table, const std::string& path) {
-    return;
+    impl_->logger->debug("Importing table {} from CSV at path '{}'", table, path);
+    impl_->require_collection(table, "import from CSV");
+    // TODO: implement
 }
 
 std::optional<std::string> Database::query_string(const std::string& sql, const std::vector<Value>& params) {

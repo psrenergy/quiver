@@ -1,5 +1,6 @@
 # Core library sources
 set(QUIVER_SOURCES
+    csv.cpp
     database.cpp
     element.cpp
     lua_runner.cpp
