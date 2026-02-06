@@ -8,32 +8,6 @@
 
 namespace {
 
-quiver::LogLevel to_cpp_log_level(quiver_log_level_t level) {
-    switch (level) {
-    case QUIVER_LOG_DEBUG:
-        return quiver::LogLevel::debug;
-    case QUIVER_LOG_INFO:
-        return quiver::LogLevel::info;
-    case QUIVER_LOG_WARN:
-        return quiver::LogLevel::warn;
-    case QUIVER_LOG_ERROR:
-        return quiver::LogLevel::error;
-    case QUIVER_LOG_OFF:
-        return quiver::LogLevel::off;
-    default:
-        return quiver::LogLevel::info;
-    }
-}
-
-quiver::DatabaseOptions to_cpp_options(const quiver_database_options_t* options) {
-    quiver::DatabaseOptions cpp_options;
-    if (options) {
-        cpp_options.read_only = options->read_only != 0;
-        cpp_options.console_level = to_cpp_log_level(options->console_level);
-    }
-    return cpp_options;
-}
-
 // Helper template for reading numeric scalars
 template <typename T>
 quiver_error_t read_scalars_impl(const std::vector<T>& values, T** out_values, size_t* out_count) {
@@ -119,8 +93,9 @@ QUIVER_C_API quiver_error_t quiver_database_open(const char* path,
     QUIVER_REQUIRE(out_db);
 
     try {
-        auto cpp_options = to_cpp_options(options);
-        *out_db = new quiver_database(path, cpp_options);
+        quiver_database_options_t opts{};
+        if (options) opts = *options;
+        *out_db = new quiver_database(path, opts);
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
         quiver_set_last_error("Memory allocation failed");
@@ -481,9 +456,9 @@ QUIVER_C_API quiver_error_t quiver_free_float_vectors(double** vectors, size_t* 
 }
 
 QUIVER_C_API quiver_error_t quiver_free_string_vectors(char*** vectors, size_t* sizes, size_t count) {
-    if (!vectors) {
-        return QUIVER_OK;
-    }
+    QUIVER_REQUIRE(vectors);
+    QUIVER_REQUIRE(sizes);
+    
     for (size_t i = 0; i < count; ++i) {
         if (vectors[i]) {
             for (size_t j = 0; j < sizes[i]; ++j) {
@@ -1059,7 +1034,7 @@ quiver_data_type_t to_c_data_type(quiver::DataType type) {
 }
 
 char* strdup_safe(const std::string& str) {
-    char* result = new char[str.size() + 1];
+    auto result = new char[str.size() + 1];
     std::copy(str.begin(), str.end(), result);
     result[str.size()] = '\0';
     return result;
