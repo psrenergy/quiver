@@ -914,6 +914,7 @@ std::vector<std::string> Database::read_scalar_relation(const std::string& colle
 }
 
 std::vector<int64_t> Database::read_scalar_integers(const std::string& collection, const std::string& attribute) {
+    impl_->require_collection(collection, "read scalar");
     auto sql = "SELECT " + attribute + " FROM " + collection;
     auto result = execute(sql);
 
@@ -929,6 +930,7 @@ std::vector<int64_t> Database::read_scalar_integers(const std::string& collectio
 }
 
 std::vector<double> Database::read_scalar_floats(const std::string& collection, const std::string& attribute) {
+    impl_->require_collection(collection, "read scalar");
     auto sql = "SELECT " + attribute + " FROM " + collection;
     auto result = execute(sql);
 
@@ -944,6 +946,7 @@ std::vector<double> Database::read_scalar_floats(const std::string& collection, 
 }
 
 std::vector<std::string> Database::read_scalar_strings(const std::string& collection, const std::string& attribute) {
+    impl_->require_collection(collection, "read scalar");
     auto sql = "SELECT " + attribute + " FROM " + collection;
     auto result = execute(sql);
 
@@ -960,6 +963,7 @@ std::vector<std::string> Database::read_scalar_strings(const std::string& collec
 
 std::optional<int64_t>
 Database::read_scalar_integer_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+    impl_->require_collection(collection, "read scalar");
     auto sql = "SELECT " + attribute + " FROM " + collection + " WHERE id = ?";
     auto result = execute(sql, {id});
 
@@ -971,6 +975,7 @@ Database::read_scalar_integer_by_id(const std::string& collection, const std::st
 
 std::optional<double>
 Database::read_scalar_float_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+    impl_->require_collection(collection, "read scalar");
     auto sql = "SELECT " + attribute + " FROM " + collection + " WHERE id = ?";
     auto result = execute(sql, {id});
 
@@ -982,6 +987,7 @@ Database::read_scalar_float_by_id(const std::string& collection, const std::stri
 
 std::optional<std::string>
 Database::read_scalar_string_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
+    impl_->require_collection(collection, "read scalar");
     auto sql = "SELECT " + attribute + " FROM " + collection + " WHERE id = ?";
     auto result = execute(sql, {id});
 
@@ -1088,6 +1094,7 @@ Database::read_set_strings_by_id(const std::string& collection, const std::strin
 }
 
 std::vector<int64_t> Database::read_element_ids(const std::string& collection) {
+    impl_->require_collection(collection, "read element ids");
     auto sql = "SELECT id FROM " + collection + " ORDER BY rowid";
     return read_grouped_values_by_id<int64_t>(execute(sql));
 }
