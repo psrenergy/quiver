@@ -196,13 +196,6 @@ static char* strdup_safe(const std::string& str) {
 }
 ```
 
-### Null Checks
-Validate all pointer arguments first:
-```cpp
-if (!db) { quiver_set_last_error("Null db"); return QUIVER_ERROR; }
-if (!collection) { quiver_set_last_error("Null collection"); return QUIVER_ERROR; }
-```
-
 ### Parameterized Queries
 `_params` variants use parallel arrays for typed parameters:
 ```c
