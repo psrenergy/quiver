@@ -498,7 +498,7 @@ function quiver_element_to_string(element, out_string)
 end
 
 function quiver_string_free(str)
-    @ccall libquiver_c.quiver_string_free(str::Ptr{Cchar})::Cvoid
+    @ccall libquiver_c.quiver_string_free(str::Ptr{Cchar})::quiver_error_t
 end
 
 mutable struct quiver_lua_runner end
@@ -510,15 +510,15 @@ function quiver_lua_runner_new(db, out_runner)
 end
 
 function quiver_lua_runner_free(runner)
-    @ccall libquiver_c.quiver_lua_runner_free(runner::Ptr{quiver_lua_runner_t})::Cvoid
+    @ccall libquiver_c.quiver_lua_runner_free(runner::Ptr{quiver_lua_runner_t})::quiver_error_t
 end
 
 function quiver_lua_runner_run(runner, script)
     @ccall libquiver_c.quiver_lua_runner_run(runner::Ptr{quiver_lua_runner_t}, script::Ptr{Cchar})::quiver_error_t
 end
 
-function quiver_lua_runner_get_error(runner)
-    @ccall libquiver_c.quiver_lua_runner_get_error(runner::Ptr{quiver_lua_runner_t})::Ptr{Cchar}
+function quiver_lua_runner_get_error(runner, out_error)
+    @ccall libquiver_c.quiver_lua_runner_get_error(runner::Ptr{quiver_lua_runner_t}, out_error::Ptr{Ptr{Cchar}})::quiver_error_t
 end
 
 #! format: on
