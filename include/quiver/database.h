@@ -31,11 +31,11 @@ public:
 
     static Database from_migrations(const std::string& db_path,
                                     const std::string& migrations_path,
-                                    const DatabaseOptions& options = default_options());
+                                    const DatabaseOptions& options = quiver_database_options_default());
 
     static Database from_schema(const std::string& db_path,
                                 const std::string& schema_path,
-                                const DatabaseOptions& options = default_options());
+                                const DatabaseOptions& options = quiver_database_options_default());
     bool is_healthy() const;
 
     int64_t current_version() const;

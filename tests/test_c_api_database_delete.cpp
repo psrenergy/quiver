@@ -5,8 +5,7 @@
 #include <quiver/c/element.h>
 
 TEST(DatabaseCApi, DeleteElementById) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
@@ -42,8 +41,7 @@ TEST(DatabaseCApi, DeleteElementById) {
 }
 
 TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
@@ -99,8 +97,7 @@ TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
 }
 
 TEST(DatabaseCApi, DeleteElementByIdWithSetData) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
@@ -156,8 +153,7 @@ TEST(DatabaseCApi, DeleteElementByIdWithSetData) {
 }
 
 TEST(DatabaseCApi, DeleteElementByIdNonExistent) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
@@ -187,8 +183,7 @@ TEST(DatabaseCApi, DeleteElementByIdNonExistent) {
 }
 
 TEST(DatabaseCApi, DeleteElementByIdOtherElementsUnchanged) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
@@ -251,8 +246,7 @@ TEST(DatabaseCApi, DeleteElementByIdOtherElementsUnchanged) {
 }
 
 TEST(DatabaseCApi, DeleteElementByIdNullArguments) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);

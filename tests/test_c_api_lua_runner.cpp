@@ -12,8 +12,7 @@ protected:
 };
 
 TEST_F(LuaRunnerCApiTest, CreateAndDestroy) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
@@ -37,8 +36,7 @@ TEST_F(LuaRunnerCApiTest, CreateWithNullDb) {
 }
 
 TEST_F(LuaRunnerCApiTest, RunSimpleScript) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
@@ -56,8 +54,7 @@ TEST_F(LuaRunnerCApiTest, RunSimpleScript) {
 }
 
 TEST_F(LuaRunnerCApiTest, RunNullScript) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
@@ -80,8 +77,7 @@ TEST_F(LuaRunnerCApiTest, RunWithNullRunner) {
 }
 
 TEST_F(LuaRunnerCApiTest, CreateElement) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
@@ -111,8 +107,7 @@ TEST_F(LuaRunnerCApiTest, CreateElement) {
 }
 
 TEST_F(LuaRunnerCApiTest, SyntaxError) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
@@ -134,8 +129,7 @@ TEST_F(LuaRunnerCApiTest, SyntaxError) {
 }
 
 TEST_F(LuaRunnerCApiTest, RuntimeError) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
@@ -162,8 +156,7 @@ TEST_F(LuaRunnerCApiTest, GetErrorNull) {
 }
 
 TEST_F(LuaRunnerCApiTest, ReuseRunner) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
@@ -191,8 +184,7 @@ TEST_F(LuaRunnerCApiTest, ReuseRunner) {
 }
 
 TEST_F(LuaRunnerCApiTest, ReadScalarIntegers) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
@@ -231,8 +223,7 @@ TEST_F(LuaRunnerCApiTest, ReadScalarIntegers) {
 }
 
 TEST_F(LuaRunnerCApiTest, CreateElementWithVectors) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
@@ -270,8 +261,7 @@ TEST_F(LuaRunnerCApiTest, CreateElementWithVectors) {
 }
 
 TEST_F(LuaRunnerCApiTest, DeleteElement) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
@@ -302,8 +292,7 @@ TEST_F(LuaRunnerCApiTest, DeleteElement) {
 }
 
 TEST_F(LuaRunnerCApiTest, UpdateElement) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
@@ -342,8 +331,7 @@ TEST_F(LuaRunnerCApiTest, UpdateElement) {
 // ============================================================================
 
 TEST_F(LuaRunnerCApiTest, EmptyScript) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
@@ -361,8 +349,7 @@ TEST_F(LuaRunnerCApiTest, EmptyScript) {
 }
 
 TEST_F(LuaRunnerCApiTest, CommentOnlyScript) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
@@ -380,8 +367,7 @@ TEST_F(LuaRunnerCApiTest, CommentOnlyScript) {
 }
 
 TEST_F(LuaRunnerCApiTest, AssertionFailure) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
@@ -404,8 +390,7 @@ TEST_F(LuaRunnerCApiTest, AssertionFailure) {
 }
 
 TEST_F(LuaRunnerCApiTest, UndefinedVariableError) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
@@ -427,8 +412,7 @@ TEST_F(LuaRunnerCApiTest, UndefinedVariableError) {
 }
 
 TEST_F(LuaRunnerCApiTest, ErrorClearedAfterSuccessfulRun) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
@@ -454,8 +438,7 @@ TEST_F(LuaRunnerCApiTest, ErrorClearedAfterSuccessfulRun) {
 }
 
 TEST_F(LuaRunnerCApiTest, ReadVectorIntegersFromLua) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);

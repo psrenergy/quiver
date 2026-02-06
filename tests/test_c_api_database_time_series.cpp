@@ -11,8 +11,7 @@
 // ============================================================================
 
 TEST(DatabaseCApi, GetTimeSeriesMetadata) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
@@ -34,8 +33,7 @@ TEST(DatabaseCApi, GetTimeSeriesMetadata) {
 }
 
 TEST(DatabaseCApi, ListTimeSeriesGroups) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
@@ -57,8 +55,7 @@ TEST(DatabaseCApi, ListTimeSeriesGroups) {
 }
 
 TEST(DatabaseCApi, ListTimeSeriesGroupsEmpty) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
@@ -80,8 +77,7 @@ TEST(DatabaseCApi, ListTimeSeriesGroupsEmpty) {
 // ============================================================================
 
 TEST(DatabaseCApi, ReadTimeSeriesGroupById) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
@@ -131,8 +127,7 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupById) {
 }
 
 TEST(DatabaseCApi, ReadTimeSeriesGroupByIdEmpty) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
@@ -175,8 +170,7 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupByIdEmpty) {
 // ============================================================================
 
 TEST(DatabaseCApi, UpdateTimeSeriesGroup) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
@@ -228,8 +222,7 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroup) {
 }
 
 TEST(DatabaseCApi, UpdateTimeSeriesGroupClear) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
@@ -280,8 +273,7 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupClear) {
 // ============================================================================
 
 TEST(DatabaseCApi, TimeSeriesNullArguments) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
@@ -321,8 +313,7 @@ TEST(DatabaseCApi, TimeSeriesNullArguments) {
 // ============================================================================
 
 TEST(DatabaseCApi, HasTimeSeriesFiles) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
@@ -342,8 +333,7 @@ TEST(DatabaseCApi, HasTimeSeriesFiles) {
 }
 
 TEST(DatabaseCApi, ListTimeSeriesFilesColumns) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
@@ -373,8 +363,7 @@ TEST(DatabaseCApi, ListTimeSeriesFilesColumns) {
 }
 
 TEST(DatabaseCApi, ReadTimeSeriesFilesEmpty) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
@@ -398,8 +387,7 @@ TEST(DatabaseCApi, ReadTimeSeriesFilesEmpty) {
 }
 
 TEST(DatabaseCApi, UpdateAndReadTimeSeriesFiles) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
@@ -433,8 +421,7 @@ TEST(DatabaseCApi, UpdateAndReadTimeSeriesFiles) {
 }
 
 TEST(DatabaseCApi, UpdateTimeSeriesFilesWithNulls) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
@@ -468,8 +455,7 @@ TEST(DatabaseCApi, UpdateTimeSeriesFilesWithNulls) {
 }
 
 TEST(DatabaseCApi, UpdateTimeSeriesFilesReplace) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
@@ -508,8 +494,7 @@ TEST(DatabaseCApi, UpdateTimeSeriesFilesReplace) {
 }
 
 TEST(DatabaseCApi, TimeSeriesFilesNotFound) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
@@ -531,8 +516,7 @@ TEST(DatabaseCApi, TimeSeriesFilesNotFound) {
 }
 
 TEST(DatabaseCApi, TimeSeriesFilesNullArguments) {
-    quiver_database_options_t options;
-    ASSERT_EQ(quiver_database_options_default(&options), QUIVER_OK);
+    auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
