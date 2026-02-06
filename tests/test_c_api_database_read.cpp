@@ -1562,24 +1562,24 @@ TEST(DatabaseCApi, DateTimeAttributeMetadata) {
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_scalar_metadata_t* attrs = nullptr;
+    quiver_scalar_metadata_t* attributes = nullptr;
     size_t count = 0;
-    auto err = quiver_database_list_scalar_attributes(db, "Configuration", &attrs, &count);
+    auto err = quiver_database_list_scalar_attributes(db, "Configuration", &attributes, &count);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_GT(count, 0);
 
     // Find date_attribute and verify it has DATE_TIME type
     bool found_date_attr = false;
     for (size_t i = 0; i < count; ++i) {
-        if (std::string(attrs[i].name) == "date_attribute") {
-            EXPECT_EQ(attrs[i].data_type, QUIVER_DATA_TYPE_DATE_TIME);
+        if (std::string(attributes[i].name) == "date_attribute") {
+            EXPECT_EQ(attributes[i].data_type, QUIVER_DATA_TYPE_DATE_TIME);
             found_date_attr = true;
             break;
         }
     }
     EXPECT_TRUE(found_date_attr);
 
-    quiver_free_scalar_metadata_array(attrs, count);
+    quiver_free_scalar_metadata_array(attributes, count);
     quiver_database_close(db);
 }
 
@@ -1628,31 +1628,31 @@ TEST(DatabaseCApi, ListScalarAttributesForeignKeys) {
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    quiver_scalar_metadata_t* attrs = nullptr;
+    quiver_scalar_metadata_t* attributes = nullptr;
     size_t count = 0;
-    auto err = quiver_database_list_scalar_attributes(db, "Child", &attrs, &count);
+    auto err = quiver_database_list_scalar_attributes(db, "Child", &attributes, &count);
     EXPECT_EQ(err, QUIVER_OK);
 
     // Find parent_id - should be FK
     bool found_fk = false;
     bool found_non_fk = false;
     for (size_t i = 0; i < count; ++i) {
-        if (std::string(attrs[i].name) == "parent_id") {
-            EXPECT_EQ(attrs[i].is_foreign_key, 1);
-            EXPECT_STREQ(attrs[i].references_collection, "Parent");
-            EXPECT_STREQ(attrs[i].references_column, "id");
+        if (std::string(attributes[i].name) == "parent_id") {
+            EXPECT_EQ(attributes[i].is_foreign_key, 1);
+            EXPECT_STREQ(attributes[i].references_collection, "Parent");
+            EXPECT_STREQ(attributes[i].references_column, "id");
             found_fk = true;
         }
-        if (std::string(attrs[i].name) == "label") {
-            EXPECT_EQ(attrs[i].is_foreign_key, 0);
-            EXPECT_EQ(attrs[i].references_collection, nullptr);
+        if (std::string(attributes[i].name) == "label") {
+            EXPECT_EQ(attributes[i].is_foreign_key, 0);
+            EXPECT_EQ(attributes[i].references_collection, nullptr);
             found_non_fk = true;
         }
     }
     EXPECT_TRUE(found_fk);
     EXPECT_TRUE(found_non_fk);
 
-    quiver_free_scalar_metadata_array(attrs, count);
+    quiver_free_scalar_metadata_array(attributes, count);
     quiver_database_close(db);
 }
 

@@ -223,18 +223,18 @@ TEST_F(SchemaValidatorFixture, GetScalarMetadataNonForeignKey) {
 TEST_F(SchemaValidatorFixture, ListScalarAttributesForeignKeys) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), opts);
 
-    auto attrs = db.list_scalar_attributes("Child");
+    auto attributes = db.list_scalar_attributes("Child");
 
     // Find parent_id
-    auto it = std::find_if(attrs.begin(), attrs.end(), [](const auto& a) { return a.name == "parent_id"; });
-    ASSERT_NE(it, attrs.end());
+    auto it = std::find_if(attributes.begin(), attributes.end(), [](const auto& a) { return a.name == "parent_id"; });
+    ASSERT_NE(it, attributes.end());
     EXPECT_TRUE(it->is_foreign_key);
     EXPECT_EQ(it->references_collection, "Parent");
     EXPECT_EQ(it->references_column, "id");
 
     // Find label (not a FK)
-    it = std::find_if(attrs.begin(), attrs.end(), [](const auto& a) { return a.name == "label"; });
-    ASSERT_NE(it, attrs.end());
+    it = std::find_if(attributes.begin(), attributes.end(), [](const auto& a) { return a.name == "label"; });
+    ASSERT_NE(it, attributes.end());
     EXPECT_FALSE(it->is_foreign_key);
     EXPECT_FALSE(it->references_collection.has_value());
 }

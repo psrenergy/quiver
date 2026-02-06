@@ -235,12 +235,12 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
       );
       try {
-        final attrs = db.listScalarAttributes('Child');
-        final parentAttr = attrs.firstWhere((a) => a.name == 'parent_id');
+        final attributes = db.listScalarAttributes('Child');
+        final parentAttr = attributes.firstWhere((a) => a.name == 'parent_id');
         expect(parentAttr.isForeignKey, isTrue);
         expect(parentAttr.referencesCollection, equals('Parent'));
 
-        final labelAttr = attrs.firstWhere((a) => a.name == 'label');
+        final labelAttr = attributes.firstWhere((a) => a.name == 'label');
         expect(labelAttr.isForeignKey, isFalse);
         expect(labelAttr.referencesCollection, isNull);
       } finally {
@@ -256,19 +256,19 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final attrs = db.listScalarAttributes('Collection');
-        final attrNames = attrs.map((a) => a.name).toList();
+        final attributes = db.listScalarAttributes('Collection');
+        final attrNames = attributes.map((a) => a.name).toList();
         expect(attrNames, contains('id'));
         expect(attrNames, contains('label'));
         expect(attrNames, contains('some_integer'));
         expect(attrNames, contains('some_float'));
 
         // Verify metadata is included
-        final labelAttr = attrs.firstWhere((a) => a.name == 'label');
+        final labelAttr = attributes.firstWhere((a) => a.name == 'label');
         expect(labelAttr.dataType, equals(quiver_data_type_t.QUIVER_DATA_TYPE_STRING));
         expect(labelAttr.notNull, isTrue);
 
-        final someIntAttr = attrs.firstWhere((a) => a.name == 'some_integer');
+        final someIntAttr = attributes.firstWhere((a) => a.name == 'some_integer');
         expect(someIntAttr.dataType, equals(quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER));
         expect(someIntAttr.notNull, isFalse);
       } finally {

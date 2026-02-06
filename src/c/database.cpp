@@ -921,7 +921,7 @@ QUIVER_C_API quiver_error_t quiver_database_update_vector_strings(quiver_databas
         quiver_set_last_error("Null values with non-zero count");
         return QUIVER_ERROR_INVALID_ARGUMENT;
     }
-    
+
     try {
         std::vector<std::string> vec;
         vec.reserve(count);
@@ -1243,28 +1243,28 @@ QUIVER_C_API quiver_error_t quiver_database_list_scalar_attributes(quiver_databa
     QUIVER_REQUIRE(out_count);
 
     try {
-        auto attrs = db->db.list_scalar_attributes(collection);
-        *out_count = attrs.size();
-        if (attrs.empty()) {
+        auto attributes = db->db.list_scalar_attributes(collection);
+        *out_count = attributes.size();
+        if (attributes.empty()) {
             *out_metadata = nullptr;
             return QUIVER_OK;
         }
-        *out_metadata = new quiver_scalar_metadata_t[attrs.size()];
-        for (size_t i = 0; i < attrs.size(); ++i) {
-            (*out_metadata)[i].name = strdup_safe(attrs[i].name);
-            (*out_metadata)[i].data_type = to_c_data_type(attrs[i].data_type);
-            (*out_metadata)[i].not_null = attrs[i].not_null ? 1 : 0;
-            (*out_metadata)[i].primary_key = attrs[i].primary_key ? 1 : 0;
-            if (attrs[i].default_value.has_value()) {
-                (*out_metadata)[i].default_value = strdup_safe(*attrs[i].default_value);
+        *out_metadata = new quiver_scalar_metadata_t[attributes.size()];
+        for (size_t i = 0; i < attributes.size(); ++i) {
+            (*out_metadata)[i].name = strdup_safe(attributes[i].name);
+            (*out_metadata)[i].data_type = to_c_data_type(attributes[i].data_type);
+            (*out_metadata)[i].not_null = attributes[i].not_null ? 1 : 0;
+            (*out_metadata)[i].primary_key = attributes[i].primary_key ? 1 : 0;
+            if (attributes[i].default_value.has_value()) {
+                (*out_metadata)[i].default_value = strdup_safe(*attributes[i].default_value);
             } else {
                 (*out_metadata)[i].default_value = nullptr;
             }
-            (*out_metadata)[i].is_foreign_key = attrs[i].is_foreign_key ? 1 : 0;
+            (*out_metadata)[i].is_foreign_key = attributes[i].is_foreign_key ? 1 : 0;
             (*out_metadata)[i].references_collection =
-                attrs[i].references_collection.has_value() ? strdup_safe(*attrs[i].references_collection) : nullptr;
+                attributes[i].references_collection.has_value() ? strdup_safe(*attributes[i].references_collection) : nullptr;
             (*out_metadata)[i].references_column =
-                attrs[i].references_column.has_value() ? strdup_safe(*attrs[i].references_column) : nullptr;
+                attributes[i].references_column.has_value() ? strdup_safe(*attributes[i].references_column) : nullptr;
         }
         return QUIVER_OK;
     } catch (const std::exception& e) {
