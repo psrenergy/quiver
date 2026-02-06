@@ -73,15 +73,16 @@ read_vectors_impl(const std::vector<std::vector<T>>& vectors, T*** out_vectors, 
 
 // Helper template for freeing numeric vectors
 template <typename T>
-void free_vectors_impl(T** vectors, size_t* sizes, size_t count) {
+quiver_error_t free_vectors_impl(T** vectors, size_t* sizes, size_t count) {
     (void)sizes;  // unused for numeric types
     if (!vectors)
-        return;
+        return QUIVER_OK;
     for (size_t i = 0; i < count; ++i) {
         delete[] vectors[i];
     }
     delete[] vectors;
     delete[] sizes;
+    return QUIVER_OK;
 }
 
 // Helper to copy a vector of strings to C-style array
@@ -104,11 +105,11 @@ quiver_error_t copy_strings_to_c(const std::vector<std::string>& values, char***
 
 extern "C" {
 
-QUIVER_C_API quiver_database_options_t quiver_database_options_default(void) {
-    quiver_database_options_t options;
-    options.read_only = 0;
-    options.console_level = QUIVER_LOG_INFO;
-    return options;
+QUIVER_C_API quiver_error_t quiver_database_options_default(quiver_database_options_t* out_options) {
+    QUIVER_REQUIRE(out_options);
+    out_options->read_only = 0;
+    out_options->console_level = QUIVER_LOG_INFO;
+    return QUIVER_OK;
 }
 
 QUIVER_C_API quiver_error_t quiver_database_open(const char* path,
@@ -130,8 +131,9 @@ QUIVER_C_API quiver_error_t quiver_database_open(const char* path,
     }
 }
 
-QUIVER_C_API void quiver_database_close(quiver_database_t* db) {
+QUIVER_C_API quiver_error_t quiver_database_close(quiver_database_t* db) {
     delete db;
+    return QUIVER_OK;
 }
 
 QUIVER_C_API quiver_error_t quiver_database_is_healthy(quiver_database_t* db, int* out_healthy) {
@@ -353,22 +355,25 @@ QUIVER_C_API quiver_error_t quiver_database_read_scalar_strings(quiver_database_
     }
 }
 
-QUIVER_C_API void quiver_free_integer_array(int64_t* values) {
+QUIVER_C_API quiver_error_t quiver_free_integer_array(int64_t* values) {
     delete[] values;
+    return QUIVER_OK;
 }
 
-QUIVER_C_API void quiver_free_float_array(double* values) {
+QUIVER_C_API quiver_error_t quiver_free_float_array(double* values) {
     delete[] values;
+    return QUIVER_OK;
 }
 
-QUIVER_C_API void quiver_free_string_array(char** values, size_t count) {
+QUIVER_C_API quiver_error_t quiver_free_string_array(char** values, size_t count) {
     if (!values) {
-        return;
+        return QUIVER_OK;
     }
     for (size_t i = 0; i < count; ++i) {
         delete[] values[i];
     }
     delete[] values;
+    return QUIVER_OK;
 }
 
 QUIVER_C_API quiver_error_t quiver_database_read_vector_integers(quiver_database_t* db,
@@ -456,17 +461,17 @@ QUIVER_C_API quiver_error_t quiver_database_read_vector_strings(quiver_database_
     }
 }
 
-QUIVER_C_API void quiver_free_integer_vectors(int64_t** vectors, size_t* sizes, size_t count) {
-    free_vectors_impl(vectors, sizes, count);
+QUIVER_C_API quiver_error_t quiver_free_integer_vectors(int64_t** vectors, size_t* sizes, size_t count) {
+    return free_vectors_impl(vectors, sizes, count);
 }
 
-QUIVER_C_API void quiver_free_float_vectors(double** vectors, size_t* sizes, size_t count) {
-    free_vectors_impl(vectors, sizes, count);
+QUIVER_C_API quiver_error_t quiver_free_float_vectors(double** vectors, size_t* sizes, size_t count) {
+    return free_vectors_impl(vectors, sizes, count);
 }
 
-QUIVER_C_API void quiver_free_string_vectors(char*** vectors, size_t* sizes, size_t count) {
+QUIVER_C_API quiver_error_t quiver_free_string_vectors(char*** vectors, size_t* sizes, size_t count) {
     if (!vectors) {
-        return;
+        return QUIVER_OK;
     }
     for (size_t i = 0; i < count; ++i) {
         if (vectors[i]) {
@@ -478,6 +483,7 @@ QUIVER_C_API void quiver_free_string_vectors(char*** vectors, size_t* sizes, siz
     }
     delete[] vectors;
     delete[] sizes;
+    return QUIVER_OK;
 }
 
 // Set read functions (reuse vector helpers since sets have same return structure)
@@ -1181,9 +1187,9 @@ QUIVER_C_API quiver_error_t quiver_database_get_set_metadata(quiver_database_t* 
     }
 }
 
-QUIVER_C_API void quiver_free_scalar_metadata(quiver_scalar_metadata_t* metadata) {
+QUIVER_C_API quiver_error_t quiver_free_scalar_metadata(quiver_scalar_metadata_t* metadata) {
     if (!metadata)
-        return;
+        return QUIVER_OK;
 
     delete[] metadata->name;
     delete[] metadata->default_value;
@@ -1193,11 +1199,12 @@ QUIVER_C_API void quiver_free_scalar_metadata(quiver_scalar_metadata_t* metadata
     metadata->default_value = nullptr;
     metadata->references_collection = nullptr;
     metadata->references_column = nullptr;
+    return QUIVER_OK;
 }
 
-QUIVER_C_API void quiver_free_vector_metadata(quiver_vector_metadata_t* metadata) {
+QUIVER_C_API quiver_error_t quiver_free_vector_metadata(quiver_vector_metadata_t* metadata) {
     if (!metadata)
-        return;
+        return QUIVER_OK;
 
     delete[] metadata->group_name;
     if (metadata->value_columns) {
@@ -1212,11 +1219,12 @@ QUIVER_C_API void quiver_free_vector_metadata(quiver_vector_metadata_t* metadata
     metadata->group_name = nullptr;
     metadata->value_columns = nullptr;
     metadata->value_column_count = 0;
+    return QUIVER_OK;
 }
 
-QUIVER_C_API void quiver_free_set_metadata(quiver_set_metadata_t* metadata) {
+QUIVER_C_API quiver_error_t quiver_free_set_metadata(quiver_set_metadata_t* metadata) {
     if (!metadata)
-        return;
+        return QUIVER_OK;
 
     delete[] metadata->group_name;
     if (metadata->value_columns) {
@@ -1231,6 +1239,7 @@ QUIVER_C_API void quiver_free_set_metadata(quiver_set_metadata_t* metadata) {
     metadata->group_name = nullptr;
     metadata->value_columns = nullptr;
     metadata->value_column_count = 0;
+    return QUIVER_OK;
 }
 
 QUIVER_C_API quiver_error_t quiver_database_list_scalar_attributes(quiver_database_t* db,
@@ -1367,9 +1376,9 @@ QUIVER_C_API quiver_error_t quiver_database_list_set_groups(quiver_database_t* d
     }
 }
 
-QUIVER_C_API void quiver_free_scalar_metadata_array(quiver_scalar_metadata_t* metadata, size_t count) {
+QUIVER_C_API quiver_error_t quiver_free_scalar_metadata_array(quiver_scalar_metadata_t* metadata, size_t count) {
     if (!metadata)
-        return;
+        return QUIVER_OK;
 
     for (size_t i = 0; i < count; ++i) {
         delete[] metadata[i].name;
@@ -1378,11 +1387,12 @@ QUIVER_C_API void quiver_free_scalar_metadata_array(quiver_scalar_metadata_t* me
         delete[] metadata[i].references_column;
     }
     delete[] metadata;
+    return QUIVER_OK;
 }
 
-QUIVER_C_API void quiver_free_vector_metadata_array(quiver_vector_metadata_t* metadata, size_t count) {
+QUIVER_C_API quiver_error_t quiver_free_vector_metadata_array(quiver_vector_metadata_t* metadata, size_t count) {
     if (!metadata)
-        return;
+        return QUIVER_OK;
 
     for (size_t i = 0; i < count; ++i) {
         delete[] metadata[i].group_name;
@@ -1397,11 +1407,12 @@ QUIVER_C_API void quiver_free_vector_metadata_array(quiver_vector_metadata_t* me
         }
     }
     delete[] metadata;
+    return QUIVER_OK;
 }
 
-QUIVER_C_API void quiver_free_set_metadata_array(quiver_set_metadata_t* metadata, size_t count) {
+QUIVER_C_API quiver_error_t quiver_free_set_metadata_array(quiver_set_metadata_t* metadata, size_t count) {
     if (!metadata)
-        return;
+        return QUIVER_OK;
 
     for (size_t i = 0; i < count; ++i) {
         delete[] metadata[i].group_name;
@@ -1416,6 +1427,7 @@ QUIVER_C_API void quiver_free_set_metadata_array(quiver_set_metadata_t* metadata
         }
     }
     delete[] metadata;
+    return QUIVER_OK;
 }
 
 QUIVER_C_API quiver_error_t quiver_database_export_to_csv(quiver_database_t* db, const char* table, const char* path) {
@@ -1712,9 +1724,9 @@ QUIVER_C_API quiver_error_t quiver_database_get_time_series_metadata(quiver_data
     }
 }
 
-QUIVER_C_API void quiver_free_time_series_metadata(quiver_time_series_metadata_t* metadata) {
+QUIVER_C_API quiver_error_t quiver_free_time_series_metadata(quiver_time_series_metadata_t* metadata) {
     if (!metadata)
-        return;
+        return QUIVER_OK;
 
     delete[] metadata->group_name;
     delete[] metadata->dimension_column;
@@ -1731,6 +1743,7 @@ QUIVER_C_API void quiver_free_time_series_metadata(quiver_time_series_metadata_t
     metadata->dimension_column = nullptr;
     metadata->value_columns = nullptr;
     metadata->value_column_count = 0;
+    return QUIVER_OK;
 }
 
 QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(quiver_database_t* db,
@@ -1781,9 +1794,9 @@ QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(quiver_datab
     }
 }
 
-QUIVER_C_API void quiver_free_time_series_metadata_array(quiver_time_series_metadata_t* metadata, size_t count) {
+QUIVER_C_API quiver_error_t quiver_free_time_series_metadata_array(quiver_time_series_metadata_t* metadata, size_t count) {
     if (!metadata)
-        return;
+        return QUIVER_OK;
 
     for (size_t i = 0; i < count; ++i) {
         delete[] metadata[i].group_name;
@@ -1799,6 +1812,7 @@ QUIVER_C_API void quiver_free_time_series_metadata_array(quiver_time_series_meta
         }
     }
     delete[] metadata;
+    return QUIVER_OK;
 }
 
 QUIVER_C_API quiver_error_t quiver_database_read_time_series_group_by_id(quiver_database_t* db,
