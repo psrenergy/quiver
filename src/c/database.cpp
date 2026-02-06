@@ -86,7 +86,8 @@ QUIVER_C_API quiver_database_options_t quiver_database_options_default(void) {
 QUIVER_C_API quiver_error_t quiver_database_open(const char* path,
                                                  const quiver_database_options_t* options,
                                                  quiver_database_t** out_db) {
-    QUIVER_REQUIRE(path, out_db);
+    QUIVER_REQUIRE(path);
+    QUIVER_REQUIRE(out_db);
 
     try {
         if (options) {
@@ -111,14 +112,16 @@ QUIVER_C_API quiver_error_t quiver_database_close(quiver_database_t* db) {
 }
 
 QUIVER_C_API quiver_error_t quiver_database_is_healthy(quiver_database_t* db, int* out_healthy) {
-    QUIVER_REQUIRE(db, out_healthy);
+    QUIVER_REQUIRE(db);
+    QUIVER_REQUIRE(out_healthy);
 
     *out_healthy = db->db.is_healthy() ? 1 : 0;
     return QUIVER_OK;
 }
 
 QUIVER_C_API quiver_error_t quiver_database_path(quiver_database_t* db, const char** out_path) {
-    QUIVER_REQUIRE(db, out_path);
+    QUIVER_REQUIRE(db);
+    QUIVER_REQUIRE(out_path);
 
     *out_path = db->db.path().c_str();
     return QUIVER_OK;
@@ -128,7 +131,9 @@ QUIVER_C_API quiver_error_t quiver_database_from_migrations(const char* db_path,
                                                             const char* migrations_path,
                                                             const quiver_database_options_t* options,
                                                             quiver_database_t** out_db) {
-    QUIVER_REQUIRE(db_path, migrations_path, out_db);
+    QUIVER_REQUIRE(db_path);
+    QUIVER_REQUIRE(migrations_path);
+    QUIVER_REQUIRE(out_db);
 
     try {
         if (options) {
