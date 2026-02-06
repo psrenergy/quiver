@@ -16,8 +16,8 @@ namespace quiver {
 
 using DatabaseOptions = quiver_database_options_t;
 
-inline constexpr DatabaseOptions default_options() {
-    return {0, QUIVER_LOG_INFO};
+inline DatabaseOptions default_options() {
+    return quiver_database_options_default_value();
 }
 
 class QUIVER_API Database {

@@ -18,6 +18,13 @@ typedef struct {
     quiver_log_level_t console_level;
 } quiver_database_options_t;
 
+static inline quiver_database_options_t quiver_database_options_default_value(void) {
+    quiver_database_options_t opts;
+    opts.read_only = 0;
+    opts.console_level = QUIVER_LOG_INFO;
+    return opts;
+}
+
 #ifdef __cplusplus
 }
 #endif

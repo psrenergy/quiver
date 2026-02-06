@@ -81,8 +81,7 @@ extern "C" {
 
 QUIVER_C_API quiver_error_t quiver_database_options_default(quiver_database_options_t* out_options) {
     QUIVER_REQUIRE(out_options);
-    out_options->read_only = 0;
-    out_options->console_level = QUIVER_LOG_INFO;
+    *out_options = quiver_database_options_default_value();
     return QUIVER_OK;
 }
 
@@ -107,8 +106,6 @@ QUIVER_C_API quiver_error_t quiver_database_open(const char* path,
 }
 
 QUIVER_C_API quiver_error_t quiver_database_close(quiver_database_t* db) {
-    QUIVER_REQUIRE(db);
-
     delete db;
     return QUIVER_OK;
 }
