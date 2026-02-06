@@ -182,7 +182,9 @@ class Database {
     }
     return (
       groupName: metadata.group_name.cast<Utf8>().toDartString(),
-      dimensionColumn: metadata.dimension_column == nullptr ? '' : metadata.dimension_column.cast<Utf8>().toDartString(),
+      dimensionColumn: metadata.dimension_column == nullptr
+          ? ''
+          : metadata.dimension_column.cast<Utf8>().toDartString(),
       valueColumns: valueColumns,
     );
   }

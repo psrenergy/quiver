@@ -23,7 +23,7 @@ struct QUIVER_API ScalarMetadata {
 
 struct QUIVER_API GroupMetadata {
     std::string group_name;
-    std::string dimension_column;               // Empty for vector/set groups; ordering column for time series
+    std::string dimension_column;  // Empty for vector/set groups; ordering column for time series
     std::vector<ScalarMetadata> value_columns;
 };
 

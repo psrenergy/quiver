@@ -1457,8 +1457,7 @@ std::vector<GroupMetadata> Database::list_time_series_groups(const std::string& 
     return result;
 }
 
-GroupMetadata Database::get_time_series_metadata(const std::string& collection,
-                                                      const std::string& group_name) const {
+GroupMetadata Database::get_time_series_metadata(const std::string& collection, const std::string& group_name) const {
     if (!impl_->schema) {
         throw std::runtime_error("Cannot get time series metadata: no schema loaded");
     }
