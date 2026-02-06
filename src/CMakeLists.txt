@@ -10,6 +10,7 @@ set(QUIVER_SOURCES
     schema.cpp
     schema_validator.cpp
     type_validator.cpp
+    value.cpp
 )
 
 # Build type

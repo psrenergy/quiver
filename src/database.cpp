@@ -1427,6 +1427,57 @@ std::vector<SetMetadata> Database::list_set_groups(const std::string& collection
 }
 
 void Database::export_to_csv(const std::string& table, const std::string& path) {
+    impl_->logger->debug("Exporting table {} to CSV at path '{}'", table, path);
+    impl_->require_collection(table, "export to CSV");
+    
+
+    const auto* table_def = impl_->schema->get_table(table);
+    if (!table_def) {
+        throw std::runtime_error("Table not found in schema: " + table);
+    }
+    bool skip_id = table_def->has_column("label");
+    std::vector<std::string> export_columns;
+    for (const auto& [col_name, col] : table_def->columns) {
+        if (skip_id && col_name == "id") continue;
+        export_columns.push_back(col_name);
+    }
+
+    // Query data (excluding id)
+    std::string sql = "SELECT ";
+    for (size_t i = 0; i < export_columns.size(); ++i) {
+        if (i > 0) sql += ", ";
+        sql += export_columns[i];
+    }
+    sql += " FROM " + table;
+    auto result = execute(sql);
+
+    // Write to CSV
+    std::ofstream csv_file;
+    csv_file.open(path);
+    csv_file << "sep=,\n";
+
+    // Write header
+    for (size_t i = 0; i < export_columns.size(); ++i) {
+        if (i > 0) csv_file << ",";
+        csv_file << export_columns[i];
+    }
+    csv_file << "\n";
+
+    // Write rows
+    for (size_t i = 0; i < result.row_count(); ++i) {
+        for (size_t j = 0; j < result.column_count(); ++j) {
+            if (j > 0) csv_file << ",";
+            csv_file << result[i].at(j);
+        }
+        csv_file << "\n";
+    }
+    csv_file.close();
+
+
+
+
+
+
     return;
 }
 
