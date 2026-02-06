@@ -90,10 +90,12 @@ QUIVER_C_API quiver_error_t quiver_database_open(const char* path,
     QUIVER_REQUIRE(out_db);
 
     try {
-        auto opts = quiver::default_database_options();
-        if (options)
-            opts = *options;
-        *out_db = new quiver_database(path, opts);
+        if (options) {
+            *out_db = new quiver_database(path, *options);
+        } else {
+            auto default_options = quiver::default_database_options();
+            *out_db = new quiver_database(path, default_options);
+        }
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
         quiver_set_last_error("Memory allocation failed");
@@ -134,11 +136,14 @@ QUIVER_C_API quiver_error_t quiver_database_from_migrations(const char* db_path,
     QUIVER_REQUIRE(out_db);
 
     try {
-        auto opts = quiver::default_database_options();
-        if (options)
-            opts = *options;
-        auto db = quiver::Database::from_migrations(db_path, migrations_path, opts);
-        *out_db = new quiver_database(std::move(db));
+        if (options) {
+            auto db = quiver::Database::from_migrations(db_path, migrations_path, *options);
+            *out_db = new quiver_database(std::move(db));
+        } else {
+            auto default_options = quiver::default_database_options();
+            auto db = quiver::Database::from_migrations(db_path, migrations_path, default_options);
+            *out_db = new quiver_database(std::move(db));
+        }
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
         quiver_set_last_error("Memory allocation failed");
@@ -260,11 +265,14 @@ QUIVER_C_API quiver_error_t quiver_database_from_schema(const char* db_path,
     QUIVER_REQUIRE(out_db);
 
     try {
-        auto opts = quiver::default_database_options();
-        if (options)
-            opts = *options;
-        auto db = quiver::Database::from_schema(db_path, schema_path, opts);
-        *out_db = new quiver_database(std::move(db));
+        if (options) {
+            auto db = quiver::Database::from_schema(db_path, schema_path, *options);
+            *out_db = new quiver_database(std::move(db));
+        } else {
+            auto default_options = quiver::default_database_options();
+            auto db = quiver::Database::from_schema(db_path, schema_path, default_options);
+            *out_db = new quiver_database(std::move(db));
+        }
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
         quiver_set_last_error("Memory allocation failed");
