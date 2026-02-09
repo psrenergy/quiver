@@ -74,7 +74,7 @@ Deferred to future milestone. Tracked but not in current roadmap.
 
 | Feature | Reason |
 |---------|--------|
-| New database operations | Refactoring only — no new features beyond current API surface |
+| New database operations | Refactoring only -- no new features beyond current API surface |
 | Performance optimization | Focus is consistency, not speed |
 | New language bindings (Python, etc.) | Stabilize existing bindings first |
 | C++20 modules | Breaks FFI generator toolchain (Dart ffigen, Julia Clang.jl parse C headers) |
@@ -88,37 +88,37 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DECP-01 | — | Pending |
-| DECP-02 | — | Pending |
-| DECP-03 | — | Pending |
-| DECP-04 | — | Pending |
-| DECP-05 | — | Pending |
-| DECP-06 | — | Pending |
-| NAME-01 | — | Pending |
-| NAME-02 | — | Pending |
-| NAME-03 | — | Pending |
-| NAME-04 | — | Pending |
-| NAME-05 | — | Pending |
-| NAME-06 | — | Pending |
-| ERRH-01 | — | Pending |
-| ERRH-02 | — | Pending |
-| ERRH-03 | — | Pending |
-| ERRH-04 | — | Pending |
-| ERRH-05 | — | Pending |
-| HYGN-01 | — | Pending |
-| HYGN-02 | — | Pending |
-| HYGN-03 | — | Pending |
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| TEST-03 | — | Pending |
-| TEST-04 | — | Pending |
-| TEST-05 | — | Pending |
+| DECP-01 | Phase 2 | Pending |
+| DECP-02 | Phase 1 | Pending |
+| DECP-03 | Phase 4 | Pending |
+| DECP-04 | Phase 4 | Pending |
+| DECP-05 | Phase 2 | Pending |
+| DECP-06 | Phase 4 | Pending |
+| NAME-01 | Phase 3 | Pending |
+| NAME-02 | Phase 5 | Pending |
+| NAME-03 | Phase 6 | Pending |
+| NAME-04 | Phase 7 | Pending |
+| NAME-05 | Phase 8 | Pending |
+| NAME-06 | Phase 10 | Pending |
+| ERRH-01 | Phase 3 | Pending |
+| ERRH-02 | Phase 5 | Pending |
+| ERRH-03 | Phase 6 | Pending |
+| ERRH-04 | Phase 7 | Pending |
+| ERRH-05 | Phase 8 | Pending |
+| HYGN-01 | Phase 9 | Pending |
+| HYGN-02 | Phase 9 | Pending |
+| HYGN-03 | Phase 9 | Pending |
+| TEST-01 | Phase 10 | Pending |
+| TEST-02 | Phase 10 | Pending |
+| TEST-03 | Phase 10 | Pending |
+| TEST-04 | Phase 10 | Pending |
+| TEST-05 | Phase 10 | Pending |
 
 **Coverage:**
 - v1 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25 ⚠️
+- Mapped to phases: 25
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-09*
-*Last updated: 2026-02-09 after initial definition*
+*Last updated: 2026-02-09 after roadmap creation*
