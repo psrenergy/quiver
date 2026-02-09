@@ -35,6 +35,8 @@ struct Index {
     std::vector<std::string> columns;
 };
 
+enum class GroupTableType { Vector, Set, TimeSeries };
+
 struct TableDefinition {
     std::string name;
     std::map<std::string, ColumnDefinition> columns;
@@ -85,6 +87,13 @@ public:
     std::string find_set_table(const std::string& collection, const std::string& attribute) const;
     std::string find_time_series_table(const std::string& collection, const std::string& group) const;
     std::string find_time_series_files_table(const std::string& collection) const;
+
+    // Find which group table contains a given column (for routing in create_element/update_element)
+    struct TableMatch {
+        std::string table_name;
+        GroupTableType type;
+    };
+    std::optional<TableMatch> find_table_for_column(const std::string& collection, const std::string& column) const;
 
     // All tables/collections
     std::vector<std::string> table_names() const;
