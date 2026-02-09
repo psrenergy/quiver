@@ -22,5 +22,24 @@ void main() {
         ),
       );
     });
+
+    test('issue 59', () {
+      final db = Database.fromMigrations(
+        ':memory:',
+        path.join(issuesPath, 'issue59'),
+      );
+      try {
+        final id = db.createElement('Collection', {
+          'label': 'label',
+          'some_time_series': {
+            'date_time': [DateTime(1990, 1, 1)],
+            'some_time_series_float': [1.0],
+            'some_time_series_integer': [1],
+          },
+        });
+      } finally {
+        db.close();
+      }
+    });
   });
 }
