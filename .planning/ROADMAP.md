@@ -35,10 +35,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. No public header in `include/quiver/` has changed
   4. All existing C++ tests pass (`quiver_tests.exe` green)
   5. `src/database_impl.h` is not reachable from any public include path (verified by include structure)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 01-01: Extract Database::Impl to internal header
+- [ ] 01-01-PLAN.md -- Extract Database::Impl struct to src/database_impl.h internal header
 
 ### Phase 2: C++ Core File Decomposition
 **Goal**: The monolithic database.cpp is split into focused modules where each file handles one category of operations, and developers can navigate directly to the file for any operation type
