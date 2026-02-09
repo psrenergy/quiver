@@ -1,5 +1,6 @@
 #include "quiver/csv.h"
 
+#include <algorithm>
 #include <fstream>
 #include <iomanip>
 #include <rapidcsv.h>
@@ -101,6 +102,130 @@ void write_csv(const std::string& path,
     csv_file << "sep=,\n";
     doc.Save(csv_file);
     csv_file.close();
+}
+
+CsvData read_csv(const std::string& path,
+                 const ColumnTypeMap& column_types,
+                 const FkLabelMap& fk_labels,
+                 const DateFormatMap& date_format_map,
+                 const EnumMap& enum_map) {
+    // Detect separator
+    std::ifstream csv_file(path);
+    std::string first_line;
+    std::getline(csv_file, first_line);
+    char separator = ',';
+    bool has_sep_line = false;
+
+    if (first_line.starts_with("sep=") && first_line.size() > 4) {
+        separator = first_line[4];
+        has_sep_line = true;
+    } else {
+        // Sniff header line: pick the most frequent delimiter candidate
+        const char candidates[] = {',', ';', '\t', '|'};
+        size_t best_count = 0;
+        for (char c : candidates) {
+            auto count = static_cast<size_t>(std::count(first_line.begin(), first_line.end(), c));
+            if (count > best_count) {
+                best_count = count;
+                separator = c;
+            }
+        }
+    }
+    csv_file.close();
+
+    // If sep= line exists, skip it (row 1 becomes header)
+    auto label_params = has_sep_line ? rapidcsv::LabelParams(1, -1) : rapidcsv::LabelParams(0, -1);
+    rapidcsv::Document doc(path, label_params, rapidcsv::SeparatorParams(separator, false, false));
+
+    // Process each column: resolve FKs, enums, date formats
+    for (size_t j = 0; j < doc.GetColumnCount(); ++j) {
+        const auto& col = doc.GetColumnName(j);
+
+        // Reverse FK resolution: label -> id string
+        auto fk_it = fk_labels.find(col);
+        if (fk_it != fk_labels.end()) {
+            auto& lookup = fk_it->second;
+            for (size_t i = 0; i < doc.GetRowCount(); ++i) {
+                auto cell = doc.GetCell<std::string>(j, i);
+                if (cell.empty())
+                    continue;
+                int64_t id = -1;
+                for (const auto& [fk_id, label] : lookup) {
+                    if (label == cell) {
+                        id = fk_id;
+                        break;
+                    }
+                }
+                if (id == -1) {
+                    throw std::runtime_error("Label '" + cell + "' not found in FK mapping for column " + col);
+                }
+                doc.SetCell<std::string>(j, i, std::to_string(id));
+            }
+            continue;
+        }
+
+        // Enum resolution: label -> id string (cross-locale)
+        if (enum_map.contains(col)) {
+            for (size_t i = 0; i < doc.GetRowCount(); ++i) {
+                auto cell = doc.GetCell<std::string>(j, i);
+                if (cell.empty())
+                    continue;
+                auto id_opt = enum_map.find_enum_id(col, cell);
+                if (!id_opt) {
+                    throw std::runtime_error("Enum label '" + cell + "' not found in mapping for column " + col);
+                }
+                doc.SetCell<std::string>(j, i, std::to_string(*id_opt));
+            }
+            continue;
+        }
+
+        // DateTime: parse to ISO 8601
+        if (col.starts_with("date_")) {
+            for (size_t i = 0; i < doc.GetRowCount(); ++i) {
+                auto cell = doc.GetCell<std::string>(j, i);
+                if (cell.empty())
+                    continue;
+                auto iso_value = format_datetime(cell, "%Y-%m-%dT%H:%M:%S");
+                doc.SetCell<std::string>(j, i, iso_value);
+            }
+            continue;
+        }
+    }
+
+    // Build CsvData with type coercion
+    CsvData result;
+    for (size_t j = 0; j < doc.GetColumnCount(); ++j) {
+        result.columns.push_back(doc.GetColumnName(j));
+    }
+    for (size_t i = 0; i < doc.GetRowCount(); ++i) {
+        std::vector<Value> row;
+        row.reserve(doc.GetColumnCount());
+        for (size_t j = 0; j < doc.GetColumnCount(); ++j) {
+            auto cell = doc.GetCell<std::string>(j, i);
+            if (cell.empty()) {
+                row.push_back(nullptr);
+                continue;
+            }
+            auto type_it = column_types.find(result.columns[j]);
+            if (type_it != column_types.end()) {
+                switch (type_it->second) {
+                case DataType::Integer:
+                    row.push_back(std::stoll(cell));
+                    break;
+                case DataType::Real:
+                    row.push_back(std::stod(cell));
+                    break;
+                default:
+                    row.push_back(cell);
+                    break;
+                }
+            } else {
+                row.push_back(cell);
+            }
+        }
+        result.rows.push_back(std::move(row));
+    }
+    return result;
 }
 
 }  // namespace quiver

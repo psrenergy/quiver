@@ -1525,13 +1525,8 @@ void Database::export_to_csv(const std::string& table,
     // Build export columns (label first, skip id if table has label)
     bool has_label = table_def->has_column("label");
     std::vector<std::string> columns;
-    if (has_label) {
-        columns.push_back("label");
-    }
     for (const auto& [col_name, col] : table_def->columns) {
         if (col_name == "id" && has_label)
-            continue;
-        if (col_name == "label")
             continue;
         columns.push_back(col_name);
     }
@@ -1561,6 +1556,77 @@ void Database::export_to_csv(const std::string& table,
     quiver::write_csv(path, columns, data, fk_labels, date_format_map, enum_map);
 }
 
+void Database::import_from_csv(const std::string& table,
+                               const std::string& path,
+                               const DateFormatMap& date_format_map,
+                               const EnumMap& enum_map) {
+    impl_->logger->debug("Importing table {} from CSV at path '{}'", table, path);
+
+    if (!impl_->schema || !impl_->schema->has_table(table)) {
+        throw std::runtime_error("Table not found in schema: " + table);
+    }
+
+    const auto* table_def = impl_->schema->get_table(table);
+
+    // Build FK label map for reverse resolution
+    FkLabelMap fk_labels;
+    for (const auto& fk : table_def->foreign_keys) {
+        const auto* target = impl_->schema->get_table(fk.to_table);
+        if (!target || !target->has_column("label"))
+            continue;
+        auto& lookup = fk_labels[fk.from_column];
+        for (auto& row : execute("SELECT id, label FROM " + fk.to_table)) {
+            lookup[*row.get_integer(0)] = *row.get_string(1);
+        }
+    }
+
+    // Build column type map for type coercion in read_csv
+    ColumnTypeMap column_types;
+    for (const auto& [col_name, col] : table_def->columns) {
+        column_types[col_name] = col.type;
+    }
+
+    auto csv_data = quiver::read_csv(path, column_types, fk_labels, date_format_map, enum_map);
+
+    // Disable FK constraints (must be outside transaction per SQLite docs)
+    execute_raw("PRAGMA foreign_keys = OFF");
+
+    try {
+        Impl::TransactionGuard txn(*impl_);
+
+        // Delete all existing rows (safe - FK constraints are off)
+        execute("DELETE FROM " + table);
+
+        if (!csv_data.rows.empty()) {
+            // Build parameterized INSERT template
+            std::string insert_sql = "INSERT INTO " + table + " (";
+            std::string placeholders;
+            for (size_t i = 0; i < csv_data.columns.size(); ++i) {
+                if (i > 0) {
+                    insert_sql += ", ";
+                    placeholders += ", ";
+                }
+                insert_sql += csv_data.columns[i];
+                placeholders += "?";
+            }
+            insert_sql += ") VALUES (" + placeholders + ")";
+
+            for (const auto& row : csv_data.rows) {
+                execute(insert_sql, row);
+            }
+        }
+
+        txn.commit();
+    } catch (...) {
+        // TransactionGuard destructor already rolled back during stack unwinding
+        execute_raw("PRAGMA foreign_keys = ON");
+        throw;
+    }
+
+    execute_raw("PRAGMA foreign_keys = ON");
+    impl_->logger->info("Imported table {} from CSV at path '{}'", table, path);
+}
+
 std::vector<GroupMetadata> Database::list_time_series_groups(const std::string& collection) const {
     if (!impl_->schema) {
         throw std::runtime_error("Cannot list time series groups: no schema loaded");
@@ -1582,12 +1648,6 @@ std::vector<GroupMetadata> Database::list_time_series_groups(const std::string& 
         }
     }
     return result;
-}
-
-void Database::import_from_csv(const std::string& table, const std::string& path) {
-    impl_->logger->debug("Importing table {} from CSV at path '{}'", table, path);
-    impl_->require_collection(table, "import from CSV");
-    // TODO: implement
 }
 
 GroupMetadata Database::get_time_series_metadata(const std::string& collection, const std::string& group_name) const {
