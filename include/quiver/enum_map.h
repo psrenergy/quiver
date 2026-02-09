@@ -20,8 +20,12 @@ public:
 
     bool contains(const std::string& column) const;
     std::string get_first_locale() const;
-    std::optional<std::string> get_enum_label(const std::string& column, int64_t id, const std::string& locale) const;
-    std::optional<int64_t> get_enum_id(const std::string& column, const std::string& locale, const std::string& label) const;
+    std::optional<std::string> get_enum_label(const std::string& column,
+                                              int64_t id,
+                                              const std::string& locale) const;
+    std::optional<int64_t> get_enum_id(const std::string& column,
+                                      const std::string& locale,
+                                      const std::string& label) const;
     std::optional<int64_t> find_enum_id(const std::string& column, const std::string& label) const;
     bool empty() const;
 
