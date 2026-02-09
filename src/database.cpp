@@ -1,5 +1,4 @@
 #include "database_impl.h"
-
 #include "quiver/migrations.h"
 #include "quiver/result.h"
 
