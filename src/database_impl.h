@@ -7,9 +7,9 @@
 #include "quiver/type_validator.h"
 
 #include <memory>
-#include <string>
 #include <spdlog/spdlog.h>
 #include <sqlite3.h>
+#include <string>
 
 namespace quiver {
 
