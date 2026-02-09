@@ -23,13 +23,13 @@ void main() {
       );
     });
 
-    test('issue 59', () {
+    test('issue 70', () {
       final db = Database.fromMigrations(
         ':memory:',
-        path.join(issuesPath, 'issue59'),
+        path.join(issuesPath, 'issue70'),
       );
       try {
-        final id = db.createElement('Collection', {
+        db.createElement('Collection', {
           'label': 'label',
           'some_time_series': {
             'date_time': [DateTime(1990, 1, 1)],
