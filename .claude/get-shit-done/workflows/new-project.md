@@ -6,33 +6,6 @@ Initialize a new project through unified flow: questioning, research (optional),
 Read all files referenced by the invoking prompt's execution_context before starting.
 </required_reading>
 
-<auto_mode>
-## Auto Mode Detection
-
-Check if `--auto` flag is present in $ARGUMENTS.
-
-**If auto mode:**
-- Skip brownfield mapping offer (assume greenfield)
-- Skip deep questioning (extract context from provided document)
-- Config questions still required (Step 5)
-- After config: run Steps 6-9 automatically with smart defaults:
-  - Research: Always yes
-  - Requirements: Include all table stakes + features from provided document
-  - Requirements approval: Auto-approve
-  - Roadmap approval: Auto-approve
-
-**Document requirement:**
-Auto mode requires an idea document via @ reference (e.g., `/gsd:new-project --auto @prd.md`). If no document provided, error:
-
-```
-Error: --auto requires an idea document via @ reference.
-
-Usage: /gsd:new-project --auto @your-idea.md
-
-The document should describe what you want to build.
-```
-</auto_mode>
-
 <process>
 
 ## 1. Setup
@@ -54,8 +27,6 @@ git init
 
 ## 2. Brownfield Offer
 
-**If auto mode:** Skip to Step 4 (assume greenfield, synthesize PROJECT.md from provided document).
-
 **If `needs_codebase_map` is true** (from init — existing code detected but no codebase map):
 
 Use AskUserQuestion:
@@ -74,8 +45,6 @@ Exit command.
 **If "Skip mapping" OR `needs_codebase_map` is false:** Continue to Step 3.
 
 ## 3. Deep Questioning
-
-**If auto mode:** Skip. Extract project context from provided document instead and proceed to Step 4.
 
 **Display stage banner:**
 
@@ -130,8 +99,6 @@ If "Keep exploring" — ask what they want to add, or identify gaps and probe na
 Loop until "Create PROJECT.md" selected.
 
 ## 4. Write PROJECT.md
-
-**If auto mode:** Synthesize from provided document. No "Ready?" gate was shown — proceed directly to commit.
 
 Synthesize all context into `.planning/PROJECT.md` using the template from `templates/project.md`.
 
@@ -352,8 +319,6 @@ node ./.claude/get-shit-done/bin/gsd-tools.js commit "chore: add project config"
 Use models from init: `researcher_model`, `synthesizer_model`, `roadmapper_model`.
 
 ## 6. Research Decision
-
-**If auto mode:** Default to "Research first" without asking.
 
 Use AskUserQuestion:
 - header: "Research"
@@ -616,16 +581,7 @@ Read PROJECT.md and extract:
 
 **If research exists:** Read research/FEATURES.md and extract feature categories.
 
-**If auto mode:**
-- Auto-include all table stakes features (users expect these)
-- Include features explicitly mentioned in provided document
-- Auto-defer differentiators not mentioned in document
-- Skip per-category AskUserQuestion loops
-- Skip "Any additions?" question
-- Skip requirements approval gate
-- Generate REQUIREMENTS.md and commit directly
-
-**Present features by category (interactive mode only):**
+**Present features by category:**
 
 ```
 Here are the features for [domain]:
@@ -712,7 +668,7 @@ Reject vague requirements. Push for specificity:
 - "Handle authentication" → "User can log in with email/password and stay logged in across sessions"
 - "Support sharing" → "User can share post via link that opens in recipient's browser"
 
-**Present full requirements list (interactive mode only):**
+**Present full requirements list:**
 
 Show every requirement (not counts) for user confirmation:
 
@@ -835,9 +791,7 @@ Success criteria:
 ---
 ```
 
-**If auto mode:** Skip approval gate — auto-approve and commit directly.
-
-**CRITICAL: Ask for approval before committing (interactive mode only):**
+**CRITICAL: Ask for approval before committing:**
 
 Use AskUserQuestion:
 - header: "Roadmap"
@@ -870,7 +824,7 @@ Use AskUserQuestion:
 
 **If "Review full file":** Display raw `cat .planning/ROADMAP.md`, then re-ask.
 
-**Commit roadmap (after approval or auto mode):**
+**Commit roadmap (after approval):**
 
 ```bash
 node ./.claude/get-shit-done/bin/gsd-tools.js commit "docs: create roadmap ([N] phases)" --files .planning/ROADMAP.md .planning/STATE.md .planning/REQUIREMENTS.md

@@ -534,7 +534,8 @@ fi
 Create git tag:
 
 ```bash
-git tag -a v[X.Y] -m "v[X.Y] [Name]
+git tag -a v[X.Y] -m "$(cat <<'EOF'
+v[X.Y] [Name]
 
 Delivered: [One sentence]
 
@@ -543,7 +544,9 @@ Key accomplishments:
 - [Item 2]
 - [Item 3]
 
-See .planning/MILESTONES.md for full details."
+See .planning/MILESTONES.md for full details.
+EOF
+)"
 ```
 
 Confirm: "Tagged: v[X.Y]"
