@@ -83,15 +83,15 @@ void write_csv(const std::string& path,
             }
 
             // 4. Enum resolution
-            auto enum_it = enum_map.find(col);
-            if (enum_it != enum_map.end()) {
+            if (enum_map.contains(col)) {
                 if (auto* id = std::get_if<int64_t>(&val)) {
-                    auto label_it = enum_it->second.find(*id);
-                    if (label_it == enum_it->second.end()) {
+                    auto locale = enum_map.get_first_locale();
+                    auto label = enum_map.get_enum_label(col, *id, locale);
+                    if (!label) {
                         throw std::runtime_error("Enum ID " + std::to_string(*id) +
                                                  " not found in mapping for column " + col);
                     }
-                    cell = utf8_to_latin1(label_it->second);
+                    cell = utf8_to_latin1(*label);
                     doc.SetCell<std::string>(j, i, cell);
                     continue;
                 }

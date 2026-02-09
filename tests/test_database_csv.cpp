@@ -362,7 +362,7 @@ TEST(Database, ExportToCsvEnumResolution) {
     db.create_element("Configuration", e1);
 
     auto csv_path = (fs::temp_directory_path() / "quiver_export_enum.csv").string();
-    quiver::EnumMap enums = {{"integer_attribute", {{1, "Active"}, {2, "Inactive"}}}};
+    quiver::EnumMap enums(quiver::EnumMap::Data{{"integer_attribute", {{"en", {{"Active", 1}, {"Inactive", 2}}}}}});
     db.export_to_csv("Configuration", csv_path, {}, enums);
 
     std::ifstream file(csv_path);
@@ -387,7 +387,7 @@ TEST(Database, ExportToCsvEnumInvalidIdThrows) {
     db.create_element("Configuration", e1);
 
     auto csv_path = (fs::temp_directory_path() / "quiver_export_enum_bad.csv").string();
-    quiver::EnumMap enums = {{"integer_attribute", {{1, "Active"}}}};
+    quiver::EnumMap enums(quiver::EnumMap::Data{{"integer_attribute", {{"en", {{"Active", 1}}}}}});
     EXPECT_THROW(db.export_to_csv("Configuration", csv_path, {}, enums), std::runtime_error);
     fs::remove(csv_path);
 }
@@ -413,6 +413,33 @@ TEST(Database, ExportToCsvLatin1Encoding) {
     EXPECT_NE(content.find("Caf\xE9"), std::string::npos);
     // UTF-8 sequence 0xC3 0xA9 should NOT be present
     EXPECT_EQ(content.find("Caf\xC3\xA9"), std::string::npos);
+}
+
+TEST(Database, ExportToCsvEnumMultiLocale) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+
+    quiver::Element e1;
+    e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{1});
+    db.create_element("Configuration", e1);
+
+    auto csv_path = (fs::temp_directory_path() / "quiver_export_enum_locale.csv").string();
+    quiver::EnumMap enums(quiver::EnumMap::Data{
+        {"integer_attribute", {{"en", {{"Active", 1}, {"Inactive", 2}}}, {"pt", {{"Ativo", 1}, {"Inativo", 2}}}}}});
+    db.export_to_csv("Configuration", csv_path, {}, enums);
+
+    std::ifstream file(csv_path);
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(file, line)) {
+        lines.push_back(line);
+    }
+    file.close();
+    fs::remove(csv_path);
+
+    ASSERT_EQ(lines.size(), 3);  // sep + header + 1 row
+    // First locale ("en") should be used for export
+    EXPECT_NE(lines[2].find("Active"), std::string::npos);
+    EXPECT_EQ(lines[2].find("Ativo"), std::string::npos);
 }
 
 TEST(Database, ExportToCsvNonExistentCollectionThrows) {

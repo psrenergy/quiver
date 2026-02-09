@@ -1,6 +1,7 @@
 #ifndef QUIVER_CSV_H
 #define QUIVER_CSV_H
 
+#include "enum_map.h"
 #include "result.h"
 #include "value.h"
 
@@ -11,7 +12,6 @@
 namespace quiver {
 
 using DateFormatMap = std::map<std::string, std::string>;
-using EnumMap = std::map<std::string, std::map<int64_t, std::string>>;
 using FkLabelMap = std::map<std::string, std::map<int64_t, std::string>>;
 
 void write_csv(const std::string& path,

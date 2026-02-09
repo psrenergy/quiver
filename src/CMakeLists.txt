@@ -3,6 +3,7 @@ set(QUIVER_SOURCES
     csv.cpp
     database.cpp
     element.cpp
+    enum_map.cpp
     lua_runner.cpp
     migration.cpp
     migrations.cpp
