@@ -460,6 +460,64 @@ TEST(DatabaseCApi, UpdateElementOtherElementsUnchanged) {
     quiver_database_close(db);
 }
 
+TEST(DatabaseCApi, UpdateElementWithTimeSeries) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    // Create Configuration first
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t config_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Configuration", config, &config_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    // Create element with initial time series
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+    quiver_element_set_string(e, "label", "Item 1");
+    const char* dates1[] = {"2024-01-01T10:00:00", "2024-01-02T10:00:00"};
+    quiver_element_set_array_string(e, "date_time", dates1, 2);
+    double vals1[] = {1.0, 2.0};
+    quiver_element_set_array_float(e, "value", vals1, 2);
+    int64_t id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Collection", e, &id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+
+    // Update time series via update_element
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
+    const char* dates2[] = {"2025-06-01T00:00:00", "2025-06-02T00:00:00", "2025-06-03T00:00:00"};
+    quiver_element_set_array_string(update, "date_time", dates2, 3);
+    double vals2[] = {10.0, 20.0, 30.0};
+    quiver_element_set_array_float(update, "value", vals2, 3);
+    auto err = quiver_database_update_element(db, "Collection", id, update);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
+    EXPECT_EQ(err, QUIVER_OK);
+
+    // Verify via read_time_series_group_by_id
+    char** out_date_times = nullptr;
+    double* out_values = nullptr;
+    size_t out_count = 0;
+    ASSERT_EQ(quiver_database_read_time_series_group_by_id(db, "Collection", "data", id, &out_date_times, &out_values,
+                                                           &out_count),
+              QUIVER_OK);
+    EXPECT_EQ(out_count, 3);
+    EXPECT_STREQ(out_date_times[0], "2025-06-01T00:00:00");
+    EXPECT_STREQ(out_date_times[1], "2025-06-02T00:00:00");
+    EXPECT_STREQ(out_date_times[2], "2025-06-03T00:00:00");
+    EXPECT_DOUBLE_EQ(out_values[0], 10.0);
+    EXPECT_DOUBLE_EQ(out_values[1], 20.0);
+    EXPECT_DOUBLE_EQ(out_values[2], 30.0);
+
+    quiver_free_string_array(out_date_times, out_count);
+    delete[] out_values;
+    quiver_database_close(db);
+}
+
 TEST(DatabaseCApi, UpdateElementNullArguments) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;

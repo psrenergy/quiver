@@ -576,58 +576,31 @@ int64_t Database::create_element(const std::string& collection, const Element& e
     std::map<std::string, std::map<std::string, const std::vector<Value>*>> set_table_columns;
     // Build a map of vector table -> (column_name -> array values)
     std::map<std::string, std::map<std::string, const std::vector<Value>*>> vector_table_columns;
+    // Build a map of time series table -> (column_name -> array values)
+    std::map<std::string, std::map<std::string, const std::vector<Value>*>> time_series_table_columns;
 
     for (const auto& [array_name, values] : arrays) {
         if (values.empty()) {
             throw std::runtime_error("Empty array not allowed for '" + array_name + "'");
         }
 
-        // Check if this is a single-column vector table (Collection_vector_arrayname)
-        auto vector_table = Schema::vector_table_name(collection, array_name);
-        if (impl_->schema->has_table(vector_table)) {
-            vector_table_columns[vector_table][array_name] = &values;
-            continue;
-        }
-
-        // Check if this array_name is a column in any vector table for the collection
-        bool found_vector_table = false;
-        for (const auto& table_name : impl_->schema->table_names()) {
-            if (!impl_->schema->is_vector_table(table_name))
-                continue;
-            if (impl_->schema->get_parent_collection(table_name) != collection)
-                continue;
-
-            const auto* table_def = impl_->schema->get_table(table_name);
-            if (table_def && table_def->has_column(array_name)) {
-                vector_table_columns[table_name][array_name] = &values;
-                found_vector_table = true;
-                break;
-            }
-        }
-
-        if (found_vector_table) {
-            continue;
-        }
-
-        // Check if this array_name is a column in any set table
-        bool found_set_table = false;
-        for (const auto& table_name : impl_->schema->table_names()) {
-            if (!impl_->schema->is_set_table(table_name))
-                continue;
-            if (impl_->schema->get_parent_collection(table_name) != collection)
-                continue;
-
-            const auto* table_def = impl_->schema->get_table(table_name);
-            if (table_def && table_def->has_column(array_name)) {
-                set_table_columns[table_name][array_name] = &values;
-                found_set_table = true;
-                break;
-            }
-        }
-
-        if (!found_set_table) {
+        auto match = impl_->schema->find_table_for_column(collection, array_name);
+        if (!match) {
             throw std::runtime_error("Array '" + array_name +
-                                     "' does not match any vector or set table for collection '" + collection + "'");
+                                     "' does not match any vector, set, or time series table for collection '" +
+                                     collection + "'");
+        }
+
+        switch (match->type) {
+        case GroupTableType::Vector:
+            vector_table_columns[match->table_name][array_name] = &values;
+            break;
+        case GroupTableType::Set:
+            set_table_columns[match->table_name][array_name] = &values;
+            break;
+        case GroupTableType::TimeSeries:
+            time_series_table_columns[match->table_name][array_name] = &values;
+            break;
         }
     }
 
@@ -676,9 +649,10 @@ int64_t Database::create_element(const std::string& collection, const Element& e
             throw std::runtime_error("Set table not found: " + set_table);
         }
 
-        // Verify all arrays have same length
+        // Verify all arrays have same length and valid types
         size_t num_rows = 0;
         for (const auto& [col_name, values_ptr] : columns) {
+            impl_->type_validator->validate_array(set_table, col_name, *values_ptr);
             if (num_rows == 0) {
                 num_rows = values_ptr->size();
             } else if (values_ptr->size() != num_rows) {
@@ -721,6 +695,43 @@ int64_t Database::create_element(const std::string& collection, const Element& e
             execute(set_sql, set_params);
         }
         impl_->logger->debug("Inserted {} set rows for table {}", num_rows, set_table);
+    }
+
+    // Insert time series table data - zip arrays together into rows (no vector_index)
+    for (const auto& [ts_table, columns] : time_series_table_columns) {
+        const auto* table_def = impl_->schema->get_table(ts_table);
+        if (!table_def) {
+            throw std::runtime_error("Time series table not found: " + ts_table);
+        }
+
+        // Verify all arrays have same length and valid types
+        size_t num_rows = 0;
+        for (const auto& [col_name, values_ptr] : columns) {
+            impl_->type_validator->validate_array(ts_table, col_name, *values_ptr);
+            if (num_rows == 0) {
+                num_rows = values_ptr->size();
+            } else if (values_ptr->size() != num_rows) {
+                throw std::runtime_error("Time series columns in table '" + ts_table +
+                                         "' must have the same length, but got different lengths for columns");
+            }
+        }
+
+        // Insert each row
+        for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
+            auto ts_sql = "INSERT INTO " + ts_table + " (id";
+            std::string ts_placeholders = "?";
+            std::vector<Value> ts_params = {element_id};
+
+            for (const auto& [col_name, values_ptr] : columns) {
+                ts_sql += ", " + col_name;
+                ts_placeholders += ", ?";
+                ts_params.push_back((*values_ptr)[row_idx]);
+            }
+
+            ts_sql += ") VALUES (" + ts_placeholders + ")";
+            execute(ts_sql, ts_params);
+        }
+        impl_->logger->debug("Inserted {} time series rows into {}", num_rows, ts_table);
     }
 
     txn.commit();
@@ -767,54 +778,118 @@ void Database::update_element(const std::string& collection, int64_t id, const E
         execute(sql, params);
     }
 
-    // Update vectors/sets if present
+    // Route arrays to their tables (grouped by table name)
+    std::map<std::string, std::map<std::string, const std::vector<Value>*>> vector_table_columns;
+    std::map<std::string, std::map<std::string, const std::vector<Value>*>> set_table_columns;
+    std::map<std::string, std::map<std::string, const std::vector<Value>*>> time_series_table_columns;
+
     for (const auto& [attr_name, values] : arrays) {
-        // Try to find as vector table first
-        bool found_vector = false;
-        std::string vector_table;
-        try {
-            vector_table = impl_->schema->find_vector_table(collection, attr_name);
-            found_vector = true;
-        } catch (const std::runtime_error&) {
-            // Not a vector table, try set
+        auto match = impl_->schema->find_table_for_column(collection, attr_name);
+        if (!match) {
+            throw std::runtime_error("Attribute '" + attr_name +
+                                     "' is not a vector, set, or time series attribute in collection '" + collection +
+                                     "'");
         }
 
-        if (found_vector) {
-            // Delete existing vector data
-            auto delete_sql = "DELETE FROM " + vector_table + " WHERE id = ?";
-            execute(delete_sql, {id});
+        switch (match->type) {
+        case GroupTableType::Vector:
+            vector_table_columns[match->table_name][attr_name] = &values;
+            break;
+        case GroupTableType::Set:
+            set_table_columns[match->table_name][attr_name] = &values;
+            break;
+        case GroupTableType::TimeSeries:
+            time_series_table_columns[match->table_name][attr_name] = &values;
+            break;
+        }
+    }
 
-            // Insert new vector data
-            for (size_t i = 0; i < values.size(); ++i) {
-                auto insert_sql =
-                    "INSERT INTO " + vector_table + " (id, vector_index, " + attr_name + ") VALUES (?, ?, ?)";
-                auto vector_index = static_cast<int64_t>(i + 1);
-                execute(insert_sql, {id, vector_index, values[i]});
+    // Update vector tables
+    for (const auto& [table, columns] : vector_table_columns) {
+        execute("DELETE FROM " + table + " WHERE id = ?", {id});
+
+        size_t num_rows = 0;
+        for (const auto& [col_name, values_ptr] : columns) {
+            if (num_rows == 0) {
+                num_rows = values_ptr->size();
+            } else if (values_ptr->size() != num_rows) {
+                throw std::runtime_error("Vector columns in table '" + table +
+                                         "' must have the same length");
             }
-            impl_->logger->debug(
-                "Updated vector {}.{} for id {} with {} values", collection, attr_name, id, values.size());
-            continue;
         }
 
-        // Try to find as set table
-        std::string set_table;
-        try {
-            set_table = impl_->schema->find_set_table(collection, attr_name);
-        } catch (const std::runtime_error&) {
-            throw std::runtime_error("Attribute '" + attr_name + "' is not a vector or set attribute in collection '" +
-                                     collection + "'");
+        for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
+            auto vector_index = static_cast<int64_t>(row_idx + 1);
+            auto sql = "INSERT INTO " + table + " (id, vector_index";
+            std::string placeholders = "?, ?";
+            std::vector<Value> params = {id, vector_index};
+            for (const auto& [col_name, values_ptr] : columns) {
+                sql += ", " + col_name;
+                placeholders += ", ?";
+                params.push_back((*values_ptr)[row_idx]);
+            }
+            sql += ") VALUES (" + placeholders + ")";
+            execute(sql, params);
+        }
+        impl_->logger->debug("Updated vector table {} for id {} with {} rows", table, id, num_rows);
+    }
+
+    // Update set tables
+    for (const auto& [table, columns] : set_table_columns) {
+        execute("DELETE FROM " + table + " WHERE id = ?", {id});
+
+        size_t num_rows = 0;
+        for (const auto& [col_name, values_ptr] : columns) {
+            if (num_rows == 0) {
+                num_rows = values_ptr->size();
+            } else if (values_ptr->size() != num_rows) {
+                throw std::runtime_error("Set columns in table '" + table +
+                                         "' must have the same length");
+            }
         }
 
-        // Delete existing set data
-        auto delete_sql = "DELETE FROM " + set_table + " WHERE id = ?";
-        execute(delete_sql, {id});
-
-        // Insert new set data
-        for (const auto& value : values) {
-            auto insert_sql = "INSERT INTO " + set_table + " (id, " + attr_name + ") VALUES (?, ?)";
-            execute(insert_sql, {id, value});
+        for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
+            auto sql = "INSERT INTO " + table + " (id";
+            std::string placeholders = "?";
+            std::vector<Value> params = {id};
+            for (const auto& [col_name, values_ptr] : columns) {
+                sql += ", " + col_name;
+                placeholders += ", ?";
+                params.push_back((*values_ptr)[row_idx]);
+            }
+            sql += ") VALUES (" + placeholders + ")";
+            execute(sql, params);
         }
-        impl_->logger->debug("Updated set {}.{} for id {} with {} values", collection, attr_name, id, values.size());
+        impl_->logger->debug("Updated set table {} for id {} with {} rows", table, id, num_rows);
+    }
+
+    // Update time series tables
+    for (const auto& [table, columns] : time_series_table_columns) {
+        execute("DELETE FROM " + table + " WHERE id = ?", {id});
+
+        size_t num_rows = 0;
+        for (const auto& [col_name, values_ptr] : columns) {
+            if (num_rows == 0) {
+                num_rows = values_ptr->size();
+            } else if (values_ptr->size() != num_rows) {
+                throw std::runtime_error("Time series columns in table '" + table +
+                                         "' must have the same length");
+            }
+        }
+
+        for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
+            auto sql = "INSERT INTO " + table + " (id";
+            std::string placeholders = "?";
+            std::vector<Value> params = {id};
+            for (const auto& [col_name, values_ptr] : columns) {
+                sql += ", " + col_name;
+                placeholders += ", ?";
+                params.push_back((*values_ptr)[row_idx]);
+            }
+            sql += ") VALUES (" + placeholders + ")";
+            execute(sql, params);
+        }
+        impl_->logger->debug("Updated time series table {} for id {} with {} rows", table, id, num_rows);
     }
 
     txn.commit();

@@ -411,6 +411,42 @@ TEST(Database, UpdateElementWithVectorAndSet) {
     EXPECT_EQ(set, (std::vector<std::string>{"new_tag1", "new_tag2"}));
 }
 
+TEST(Database, UpdateElementWithTimeSeries) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1"))
+        .set("date_time", std::vector<std::string>{"2024-01-01T10:00:00", "2024-01-02T10:00:00"})
+        .set("value", std::vector<double>{1.0, 2.0});
+    int64_t id = db.create_element("Collection", e);
+
+    // Update time series via update_element
+    quiver::Element update;
+    update.set("date_time", std::vector<std::string>{"2025-06-01T00:00:00", "2025-06-02T00:00:00", "2025-06-03T00:00:00"})
+        .set("value", std::vector<double>{10.0, 20.0, 30.0});
+    db.update_element("Collection", id, update);
+
+    // Verify time series was updated
+    auto rows = db.read_time_series_group_by_id("Collection", "data", id);
+    EXPECT_EQ(rows.size(), 3);
+    EXPECT_EQ(std::get<std::string>(rows[0].at("date_time")), "2025-06-01T00:00:00");
+    EXPECT_EQ(std::get<std::string>(rows[1].at("date_time")), "2025-06-02T00:00:00");
+    EXPECT_EQ(std::get<std::string>(rows[2].at("date_time")), "2025-06-03T00:00:00");
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("value")), 10.0);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[1].at("value")), 20.0);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[2].at("value")), 30.0);
+
+    // Verify label unchanged
+    auto label = db.read_scalar_string_by_id("Collection", "label", id);
+    EXPECT_TRUE(label.has_value());
+    EXPECT_EQ(*label, "Item 1");
+}
+
 TEST(Database, UpdateElementInvalidArrayAttribute) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});

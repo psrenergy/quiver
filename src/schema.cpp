@@ -206,6 +206,35 @@ std::string Schema::find_time_series_files_table(const std::string& collection) 
     throw std::runtime_error("Time series files table not found for collection '" + collection + "'");
 }
 
+std::optional<Schema::TableMatch>
+Schema::find_table_for_column(const std::string& collection, const std::string& column) const {
+    // Check vector: direct name match first, then scan
+    auto vt = vector_table_name(collection, column);
+    if (has_table(vt)) {
+        return TableMatch{vt, GroupTableType::Vector};
+    }
+
+    for (const auto& [name, table] : tables_) {
+        if (get_parent_collection(name) != collection)
+            continue;
+
+        if (!table.has_column(column))
+            continue;
+
+        if (is_vector_table(name)) {
+            return TableMatch{name, GroupTableType::Vector};
+        }
+        if (is_set_table(name)) {
+            return TableMatch{name, GroupTableType::Set};
+        }
+        if (is_time_series_table(name)) {
+            return TableMatch{name, GroupTableType::TimeSeries};
+        }
+    }
+
+    return std::nullopt;
+}
+
 std::vector<std::string> Schema::table_names() const {
     std::vector<std::string> names;
     names.reserve(tables_.size());
