@@ -90,6 +90,31 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    @testset "Collections with Time Series" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+
+        Quiver.create_element!(db, "Collection";
+            label = "Item 1",
+            date_time = [DateTime(2024, 1, 1, 10), DateTime(2024, 1, 2, 10), DateTime(2024, 1, 3, 10)],
+            value = [1.5, 2.5, 3.5],
+        )
+
+        # Verify time series data was persisted
+        rows = Quiver.read_time_series_group_by_id(db, "Collection", "data", Int64(1))
+        @test length(rows) == 3
+        @test rows[1]["date_time"] == "2024-01-01T10:00:00"
+        @test rows[2]["date_time"] == "2024-01-02T10:00:00"
+        @test rows[3]["date_time"] == "2024-01-03T10:00:00"
+        @test rows[1]["value"] == 1.5
+        @test rows[2]["value"] == 2.5
+        @test rows[3]["value"] == 3.5
+
+        Quiver.close!(db)
+    end
+
     @testset "Reject Invalid Element" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
         db = Quiver.from_schema(":memory:", path_schema)

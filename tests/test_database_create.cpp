@@ -234,6 +234,35 @@ TEST(Database, CreateElementWithNoOptionalAttributes) {
     EXPECT_TRUE(sets.empty());
 }
 
+TEST(Database, CreateElementWithTimeSeries) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    // Configuration required first
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    // Create element with time series arrays
+    quiver::Element element;
+    element.set("label", std::string("Item 1"))
+        .set("date_time", std::vector<std::string>{"2024-01-01T10:00:00", "2024-01-02T10:00:00", "2024-01-03T10:00:00"})
+        .set("value", std::vector<double>{1.5, 2.5, 3.5});
+
+    int64_t id = db.create_element("Collection", element);
+    EXPECT_EQ(id, 1);
+
+    // Verify using read_time_series_group_by_id
+    auto rows = db.read_time_series_group_by_id("Collection", "data", id);
+    EXPECT_EQ(rows.size(), 3);
+    EXPECT_EQ(std::get<std::string>(rows[0].at("date_time")), "2024-01-01T10:00:00");
+    EXPECT_EQ(std::get<std::string>(rows[1].at("date_time")), "2024-01-02T10:00:00");
+    EXPECT_EQ(std::get<std::string>(rows[2].at("date_time")), "2024-01-03T10:00:00");
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("value")), 1.5);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[1].at("value")), 2.5);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[2].at("value")), 3.5);
+}
+
 TEST(Database, CreateElementWithDatetime) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
