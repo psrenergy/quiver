@@ -50,10 +50,11 @@ Plans:
   3. Every split file includes `src/database_impl.h` and compiles as part of the library
   4. All existing C++ tests pass with zero behavior changes (`quiver_tests.exe` green)
   5. No public header in `include/quiver/` has changed
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: Split database.cpp into functional modules
+- [ ] 02-01-PLAN.md -- Extract shared helpers and CRUD operations (create, read, update, delete)
+- [ ] 02-02-PLAN.md -- Extract remaining operations (metadata, time series, query, relations, describe)
 
 ### Phase 3: C++ Naming and Error Standardization
 **Goal**: All C++ public methods follow a single, documented naming convention and throw exceptions with consistent types and message formats
@@ -184,7 +185,7 @@ Note: Phases 6, 7 both depend on Phase 5. Phase 8 depends on Phase 3. Phase 10 d
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. C++ Impl Header Extraction | 1/1 | Complete | 2026-02-09 |
-| 2. C++ Core File Decomposition | 0/1 | Not started | - |
+| 2. C++ Core File Decomposition | 0/2 | Not started | - |
 | 3. C++ Naming and Error Standardization | 0/2 | Not started | - |
 | 4. C API File Decomposition | 0/2 | Not started | - |
 | 5. C API Naming and Error Standardization | 0/2 | Not started | - |
