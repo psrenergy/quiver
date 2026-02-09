@@ -392,29 +392,6 @@ TEST(Database, ExportToCsvEnumInvalidIdThrows) {
     fs::remove(csv_path);
 }
 
-TEST(Database, ExportToCsvLatin1Encoding) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
-
-    // "Café" is UTF-8: C a f \xC3\xA9
-    quiver::Element e1;
-    e1.set("label", std::string("Caf\xC3\xA9"));
-    db.create_element("Configuration", e1);
-
-    auto csv_path = (fs::temp_directory_path() / "quiver_export_latin1.csv").string();
-    db.export_to_csv("Configuration", csv_path);
-
-    // Read raw bytes
-    std::ifstream file(csv_path, std::ios::binary);
-    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    file.close();
-    fs::remove(csv_path);
-
-    // In Latin-1, é is a single byte 0xE9
-    EXPECT_NE(content.find("Caf\xE9"), std::string::npos);
-    // UTF-8 sequence 0xC3 0xA9 should NOT be present
-    EXPECT_EQ(content.find("Caf\xC3\xA9"), std::string::npos);
-}
-
 TEST(Database, ExportToCsvEnumMultiLocale) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
 

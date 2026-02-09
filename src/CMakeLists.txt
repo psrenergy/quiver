@@ -58,7 +58,6 @@ target_link_libraries(quiver
         lua_library
         sol2
         rapidcsv
-        simdutf
         ${CMAKE_DL_LIBS}
 )
 

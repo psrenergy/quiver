@@ -3,20 +3,10 @@
 #include <fstream>
 #include <iomanip>
 #include <rapidcsv.h>
-#include <simdutf.h>
 #include <sstream>
 #include <stdexcept>
 
 namespace quiver {
-
-static std::string utf8_to_latin1(const std::string& utf8) {
-    std::string out(utf8.size(), '\0');
-    size_t written = simdutf::convert_utf8_to_latin1(utf8.data(), utf8.size(), out.data());
-    if (written == 0)
-        return utf8;
-    out.resize(written);
-    return out;
-}
 
 static std::string format_datetime(const std::string& iso_value, const std::string& fmt) {
     std::tm tm = {};
@@ -59,7 +49,7 @@ void write_csv(const std::string& path,
             auto fk_it = fk_labels.find(col);
             if (fk_it != fk_labels.end()) {
                 if (auto* id = std::get_if<int64_t>(&val)) {
-                    cell = utf8_to_latin1(fk_it->second.at(*id));
+                    cell = fk_it->second.at(*id);
                     doc.SetCell<std::string>(j, i, cell);
                     continue;
                 }
@@ -76,7 +66,7 @@ void write_csv(const std::string& path,
                 if (auto* str = std::get_if<std::string>(&val)) {
                     auto fmt_it = date_format_map.find(col);
                     auto fmt = fmt_it != date_format_map.end() ? fmt_it->second : "%Y-%m-%dT%H:%M:%S";
-                    cell = utf8_to_latin1(format_datetime(*str, fmt));
+                    cell = format_datetime(*str, fmt);
                     doc.SetCell<std::string>(j, i, cell);
                     continue;
                 }
@@ -91,7 +81,7 @@ void write_csv(const std::string& path,
                         throw std::runtime_error("Enum ID " + std::to_string(*id) +
                                                  " not found in mapping for column " + col);
                     }
-                    cell = utf8_to_latin1(*label);
+                    cell = *label;
                     doc.SetCell<std::string>(j, i, cell);
                     continue;
                 }
@@ -99,7 +89,7 @@ void write_csv(const std::string& path,
 
             // 5. String or numeric value
             if (auto* str = std::get_if<std::string>(&val)) {
-                cell = utf8_to_latin1(*str);
+                cell = *str;
             } else {
                 cell = value_to_string(val);
             }
