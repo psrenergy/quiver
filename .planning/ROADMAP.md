@@ -12,7 +12,7 @@ This roadmap transforms Quiver from a working but inconsistently organized libra
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: C++ Impl Header Extraction** - Extract Database::Impl into private internal header to enable file decomposition
+- [x] **Phase 1: C++ Impl Header Extraction** - Extract Database::Impl into private internal header to enable file decomposition ✓ (2026-02-09)
 - [ ] **Phase 2: C++ Core File Decomposition** - Split monolithic database.cpp into focused modules by operation type
 - [ ] **Phase 3: C++ Naming and Error Standardization** - Standardize C++ method names and exception patterns
 - [ ] **Phase 4: C API File Decomposition** - Split monolithic C API database.cpp with shared helper extraction
@@ -35,10 +35,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. No public header in `include/quiver/` has changed
   4. All existing C++ tests pass (`quiver_tests.exe` green)
   5. `src/database_impl.h` is not reachable from any public include path (verified by include structure)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 01-01: Extract Database::Impl to internal header
+- [x] 01-01-PLAN.md -- Extract Database::Impl struct to src/database_impl.h internal header ✓
 
 ### Phase 2: C++ Core File Decomposition
 **Goal**: The monolithic database.cpp is split into focused modules where each file handles one category of operations, and developers can navigate directly to the file for any operation type
@@ -183,7 +183,7 @@ Note: Phases 6, 7 both depend on Phase 5. Phase 8 depends on Phase 3. Phase 10 d
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. C++ Impl Header Extraction | 0/1 | Not started | - |
+| 1. C++ Impl Header Extraction | 1/1 | Complete | 2026-02-09 |
 | 2. C++ Core File Decomposition | 0/1 | Not started | - |
 | 3. C++ Naming and Error Standardization | 0/2 | Not started | - |
 | 4. C API File Decomposition | 0/2 | Not started | - |
