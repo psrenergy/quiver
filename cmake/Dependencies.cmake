@@ -38,6 +38,23 @@ FetchContent_Declare(sol2
 )
 FetchContent_MakeAvailable(sol2)
 
+# simdutf for Unicode conversion
+FetchContent_Declare(simdutf
+    GIT_REPOSITORY https://github.com/simdutf/simdutf.git
+    GIT_TAG v8.0.0
+)
+set(SIMDUTF_TESTS OFF CACHE BOOL "" FORCE)
+set(SIMDUTF_BENCHMARKS OFF CACHE BOOL "" FORCE)
+set(SIMDUTF_TOOLS OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(simdutf)
+
+# rapidcsv for CSV I/O
+FetchContent_Declare(rapidcsv
+    GIT_REPOSITORY https://github.com/d99kris/rapidcsv.git
+    GIT_TAG v8.90
+)
+FetchContent_MakeAvailable(rapidcsv)
+
 # GoogleTest for testing
 if(QUIVER_BUILD_TESTS)
     FetchContent_Declare(googletest
