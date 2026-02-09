@@ -1,4 +1,5 @@
 #include "database_impl.h"
+#include "database_internal.h"
 #include "quiver/migrations.h"
 #include "quiver/result.h"
 
@@ -19,58 +20,6 @@ namespace {
 
 std::atomic<uint64_t> g_logger_counter{0};
 std::once_flag sqlite3_init_flag;
-
-// Type-specific Row value extractors for template implementations
-inline std::optional<int64_t> get_row_value(const quiver::Row& row, size_t index, int64_t*) {
-    return row.get_integer(index);
-}
-
-inline std::optional<double> get_row_value(const quiver::Row& row, size_t index, double*) {
-    return row.get_float(index);
-}
-
-inline std::optional<std::string> get_row_value(const quiver::Row& row, size_t index, std::string*) {
-    return row.get_string(index);
-}
-
-// Template for reading grouped values (vectors or sets) for all elements
-template <typename T>
-std::vector<std::vector<T>> read_grouped_values_all(const quiver::Result& result) {
-    std::vector<std::vector<T>> groups;
-    int64_t current_id = -1;
-
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto id = result[i].get_integer(0);
-        auto val = get_row_value(result[i], 1, static_cast<T*>(nullptr));
-
-        if (!id)
-            continue;
-
-        if (*id != current_id) {
-            groups.emplace_back();
-            current_id = *id;
-        }
-
-        if (val) {
-            groups.back().push_back(*val);
-        }
-    }
-    return groups;
-}
-
-// Template for reading grouped values (vectors or sets) for a single element by ID
-template <typename T>
-std::vector<T> read_grouped_values_by_id(const quiver::Result& result) {
-    std::vector<T> values;
-    values.reserve(result.row_count());
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = get_row_value(result[i], 0, static_cast<T*>(nullptr));
-        if (val) {
-            values.push_back(*val);
-        }
-    }
-    return values;
-}
 
 void ensure_sqlite3_initialized() {
     std::call_once(sqlite3_init_flag, []() { sqlite3_initialize(); });
@@ -140,24 +89,9 @@ std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_pat
     }
 }
 
-static std::string find_dimension_column(const quiver::TableDefinition& table_def) {
-    for (const auto& [col_name, col] : table_def.columns) {
-        if (col_name == "id")
-            continue;
-        if (col.type == quiver::DataType::DateTime || quiver::is_date_time_column(col_name)) {
-            return col_name;
-        }
-    }
-    throw std::runtime_error("No dimension column found in time series table");
-}
-
 }  // anonymous namespace
 
 namespace quiver {
-
-static ScalarMetadata scalar_metadata_from_column(const ColumnDefinition& col) {
-    return {col.name, col.type, col.not_null, col.primary_key, col.default_value};
-}
 
 Database::Database(const std::string& path, const DatabaseOptions& options) : impl_(std::make_unique<Impl>()) {
     impl_->path = path;
@@ -433,378 +367,6 @@ void Database::apply_schema(const std::string& schema_path) {
     impl_->logger->info("Schema applied successfully");
 }
 
-int64_t Database::create_element(const std::string& collection, const Element& element) {
-    impl_->logger->debug("Creating element in collection: {}", collection);
-    impl_->require_collection(collection, "create element");
-
-    const auto& scalars = element.scalars();
-    if (scalars.empty()) {
-        throw std::runtime_error("Element must have at least one scalar attribute");
-    }
-
-    // Validate scalar types
-    for (const auto& [name, value] : scalars) {
-        impl_->type_validator->validate_scalar(collection, name, value);
-    }
-
-    Impl::TransactionGuard txn(*impl_);
-
-    // Build INSERT SQL for main collection table
-    auto sql = "INSERT INTO " + collection + " (";
-    std::string placeholders;
-    std::vector<Value> params;
-
-    auto first = true;
-    for (const auto& [name, value] : scalars) {
-        if (!first) {
-            sql += ", ";
-            placeholders += ", ";
-        }
-        sql += name;
-        placeholders += "?";
-        params.push_back(value);
-        first = false;
-    }
-    sql += ") VALUES (" + placeholders + ")";
-
-    execute(sql, params);
-    const auto element_id = sqlite3_last_insert_rowid(impl_->db);
-    impl_->logger->debug("Inserted element with id: {}", element_id);
-
-    // Process arrays - route to vector or set tables based on schema
-    const auto& arrays = element.arrays();
-
-    // Build a map of set table -> (column_name -> array values)
-    std::map<std::string, std::map<std::string, const std::vector<Value>*>> set_table_columns;
-    // Build a map of vector table -> (column_name -> array values)
-    std::map<std::string, std::map<std::string, const std::vector<Value>*>> vector_table_columns;
-    // Build a map of time series table -> (column_name -> array values)
-    std::map<std::string, std::map<std::string, const std::vector<Value>*>> time_series_table_columns;
-
-    for (const auto& [array_name, values] : arrays) {
-        if (values.empty()) {
-            throw std::runtime_error("Empty array not allowed for '" + array_name + "'");
-        }
-
-        auto match = impl_->schema->find_table_for_column(collection, array_name);
-        if (!match) {
-            throw std::runtime_error("Array '" + array_name +
-                                     "' does not match any vector, set, or time series table for collection '" +
-                                     collection + "'");
-        }
-
-        switch (match->type) {
-        case GroupTableType::Vector:
-            vector_table_columns[match->table_name][array_name] = &values;
-            break;
-        case GroupTableType::Set:
-            set_table_columns[match->table_name][array_name] = &values;
-            break;
-        case GroupTableType::TimeSeries:
-            time_series_table_columns[match->table_name][array_name] = &values;
-            break;
-        }
-    }
-
-    // Insert vector table data - zip arrays together into rows with vector_index
-    for (const auto& [vector_table, columns] : vector_table_columns) {
-        const auto* table_def = impl_->schema->get_table(vector_table);
-        if (!table_def) {
-            throw std::runtime_error("Vector table not found: " + vector_table);
-        }
-
-        // Verify all arrays have same length
-        size_t num_rows = 0;
-        for (const auto& [col_name, values_ptr] : columns) {
-            impl_->type_validator->validate_array(vector_table, col_name, *values_ptr);
-            if (num_rows == 0) {
-                num_rows = values_ptr->size();
-            } else if (values_ptr->size() != num_rows) {
-                throw std::runtime_error("Vector columns in table '" + vector_table +
-                                         "' must have the same length, but got different lengths for columns");
-            }
-        }
-
-        // Insert each row with vector_index
-        for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
-            auto vector_index = static_cast<int64_t>(row_idx + 1);
-            auto vector_sql = "INSERT INTO " + vector_table + " (id, vector_index";
-            std::string vec_placeholders = "?, ?";
-            std::vector<Value> vec_params = {element_id, vector_index};
-
-            for (const auto& [col_name, values_ptr] : columns) {
-                vector_sql += ", " + col_name;
-                vec_placeholders += ", ?";
-                vec_params.push_back((*values_ptr)[row_idx]);
-            }
-
-            vector_sql += ") VALUES (" + vec_placeholders + ")";
-            execute(vector_sql, vec_params);
-        }
-        impl_->logger->debug("Inserted {} vector rows into {}", num_rows, vector_table);
-    }
-
-    // Insert set table data - zip arrays together into rows
-    for (const auto& [set_table, columns] : set_table_columns) {
-        const auto* table_def = impl_->schema->get_table(set_table);
-        if (!table_def) {
-            throw std::runtime_error("Set table not found: " + set_table);
-        }
-
-        // Verify all arrays have same length and valid types
-        size_t num_rows = 0;
-        for (const auto& [col_name, values_ptr] : columns) {
-            impl_->type_validator->validate_array(set_table, col_name, *values_ptr);
-            if (num_rows == 0) {
-                num_rows = values_ptr->size();
-            } else if (values_ptr->size() != num_rows) {
-                throw std::runtime_error("Set columns in table '" + set_table +
-                                         "' must have the same length, but got different lengths for columns");
-            }
-        }
-
-        // Insert each row
-        for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
-            auto set_sql = "INSERT INTO " + set_table + " (id";
-            std::string set_placeholders = "?";
-            std::vector<Value> set_params = {element_id};
-
-            for (const auto& [col_name, values_ptr] : columns) {
-                set_sql += ", " + col_name;
-                set_placeholders += ", ?";
-
-                auto val = (*values_ptr)[row_idx];
-
-                // Check if this column is a FK and value is a string (label) that needs resolution
-                for (const auto& fk : table_def->foreign_keys) {
-                    if (fk.from_column == col_name && std::holds_alternative<std::string>(val)) {
-                        const std::string& label = std::get<std::string>(val);
-                        // Look up the ID by label using direct SQL query
-                        auto lookup_sql = "SELECT id FROM " + fk.to_table + " WHERE label = ?";
-                        auto lookup_result = execute(lookup_sql, {label});
-                        if (lookup_result.empty() || !lookup_result[0].get_integer(0)) {
-                            throw std::runtime_error("Failed to resolve label '" + label + "' to ID in table '" +
-                                                     fk.to_table + "'");
-                        }
-                        val = lookup_result[0].get_integer(0).value();
-                        break;
-                    }
-                }
-
-                set_params.push_back(val);
-            }
-            set_sql += ") VALUES (" + set_placeholders + ")";
-            execute(set_sql, set_params);
-        }
-        impl_->logger->debug("Inserted {} set rows for table {}", num_rows, set_table);
-    }
-
-    // Insert time series table data - zip arrays together into rows (no vector_index)
-    for (const auto& [ts_table, columns] : time_series_table_columns) {
-        const auto* table_def = impl_->schema->get_table(ts_table);
-        if (!table_def) {
-            throw std::runtime_error("Time series table not found: " + ts_table);
-        }
-
-        // Verify all arrays have same length and valid types
-        size_t num_rows = 0;
-        for (const auto& [col_name, values_ptr] : columns) {
-            impl_->type_validator->validate_array(ts_table, col_name, *values_ptr);
-            if (num_rows == 0) {
-                num_rows = values_ptr->size();
-            } else if (values_ptr->size() != num_rows) {
-                throw std::runtime_error("Time series columns in table '" + ts_table +
-                                         "' must have the same length, but got different lengths for columns");
-            }
-        }
-
-        // Insert each row
-        for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
-            auto ts_sql = "INSERT INTO " + ts_table + " (id";
-            std::string ts_placeholders = "?";
-            std::vector<Value> ts_params = {element_id};
-
-            for (const auto& [col_name, values_ptr] : columns) {
-                ts_sql += ", " + col_name;
-                ts_placeholders += ", ?";
-                ts_params.push_back((*values_ptr)[row_idx]);
-            }
-
-            ts_sql += ") VALUES (" + ts_placeholders + ")";
-            execute(ts_sql, ts_params);
-        }
-        impl_->logger->debug("Inserted {} time series rows into {}", num_rows, ts_table);
-    }
-
-    txn.commit();
-    impl_->logger->info("Created element {} in {}", element_id, collection);
-    return element_id;
-}
-
-void Database::update_element(const std::string& collection, int64_t id, const Element& element) {
-    impl_->logger->debug("Updating element {} in collection: {}", id, collection);
-    impl_->require_collection(collection, "update element");
-
-    const auto& scalars = element.scalars();
-    const auto& arrays = element.arrays();
-
-    if (scalars.empty() && arrays.empty()) {
-        throw std::runtime_error("Element must have at least one attribute to update");
-    }
-
-    Impl::TransactionGuard txn(*impl_);
-
-    // Update scalars if present
-    if (!scalars.empty()) {
-        // Validate scalar types
-        for (const auto& [name, value] : scalars) {
-            impl_->type_validator->validate_scalar(collection, name, value);
-        }
-
-        // Build UPDATE SQL
-        auto sql = "UPDATE " + collection + " SET ";
-        std::vector<Value> params;
-
-        auto first = true;
-        for (const auto& [name, value] : scalars) {
-            if (!first) {
-                sql += ", ";
-            }
-            sql += name + " = ?";
-            params.push_back(value);
-            first = false;
-        }
-        sql += " WHERE id = ?";
-        params.push_back(id);
-
-        execute(sql, params);
-    }
-
-    // Route arrays to their tables (grouped by table name)
-    std::map<std::string, std::map<std::string, const std::vector<Value>*>> vector_table_columns;
-    std::map<std::string, std::map<std::string, const std::vector<Value>*>> set_table_columns;
-    std::map<std::string, std::map<std::string, const std::vector<Value>*>> time_series_table_columns;
-
-    for (const auto& [attr_name, values] : arrays) {
-        auto match = impl_->schema->find_table_for_column(collection, attr_name);
-        if (!match) {
-            throw std::runtime_error("Attribute '" + attr_name +
-                                     "' is not a vector, set, or time series attribute in collection '" + collection +
-                                     "'");
-        }
-
-        switch (match->type) {
-        case GroupTableType::Vector:
-            vector_table_columns[match->table_name][attr_name] = &values;
-            break;
-        case GroupTableType::Set:
-            set_table_columns[match->table_name][attr_name] = &values;
-            break;
-        case GroupTableType::TimeSeries:
-            time_series_table_columns[match->table_name][attr_name] = &values;
-            break;
-        }
-    }
-
-    // Update vector tables
-    for (const auto& [table, columns] : vector_table_columns) {
-        execute("DELETE FROM " + table + " WHERE id = ?", {id});
-
-        size_t num_rows = 0;
-        for (const auto& [col_name, values_ptr] : columns) {
-            if (num_rows == 0) {
-                num_rows = values_ptr->size();
-            } else if (values_ptr->size() != num_rows) {
-                throw std::runtime_error("Vector columns in table '" + table + "' must have the same length");
-            }
-        }
-
-        for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
-            auto vector_index = static_cast<int64_t>(row_idx + 1);
-            auto sql = "INSERT INTO " + table + " (id, vector_index";
-            std::string placeholders = "?, ?";
-            std::vector<Value> params = {id, vector_index};
-            for (const auto& [col_name, values_ptr] : columns) {
-                sql += ", " + col_name;
-                placeholders += ", ?";
-                params.push_back((*values_ptr)[row_idx]);
-            }
-            sql += ") VALUES (" + placeholders + ")";
-            execute(sql, params);
-        }
-        impl_->logger->debug("Updated vector table {} for id {} with {} rows", table, id, num_rows);
-    }
-
-    // Update set tables
-    for (const auto& [table, columns] : set_table_columns) {
-        execute("DELETE FROM " + table + " WHERE id = ?", {id});
-
-        size_t num_rows = 0;
-        for (const auto& [col_name, values_ptr] : columns) {
-            if (num_rows == 0) {
-                num_rows = values_ptr->size();
-            } else if (values_ptr->size() != num_rows) {
-                throw std::runtime_error("Set columns in table '" + table + "' must have the same length");
-            }
-        }
-
-        for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
-            auto sql = "INSERT INTO " + table + " (id";
-            std::string placeholders = "?";
-            std::vector<Value> params = {id};
-            for (const auto& [col_name, values_ptr] : columns) {
-                sql += ", " + col_name;
-                placeholders += ", ?";
-                params.push_back((*values_ptr)[row_idx]);
-            }
-            sql += ") VALUES (" + placeholders + ")";
-            execute(sql, params);
-        }
-        impl_->logger->debug("Updated set table {} for id {} with {} rows", table, id, num_rows);
-    }
-
-    // Update time series tables
-    for (const auto& [table, columns] : time_series_table_columns) {
-        execute("DELETE FROM " + table + " WHERE id = ?", {id});
-
-        size_t num_rows = 0;
-        for (const auto& [col_name, values_ptr] : columns) {
-            if (num_rows == 0) {
-                num_rows = values_ptr->size();
-            } else if (values_ptr->size() != num_rows) {
-                throw std::runtime_error("Time series columns in table '" + table + "' must have the same length");
-            }
-        }
-
-        for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
-            auto sql = "INSERT INTO " + table + " (id";
-            std::string placeholders = "?";
-            std::vector<Value> params = {id};
-            for (const auto& [col_name, values_ptr] : columns) {
-                sql += ", " + col_name;
-                placeholders += ", ?";
-                params.push_back((*values_ptr)[row_idx]);
-            }
-            sql += ") VALUES (" + placeholders + ")";
-            execute(sql, params);
-        }
-        impl_->logger->debug("Updated time series table {} for id {} with {} rows", table, id, num_rows);
-    }
-
-    txn.commit();
-    impl_->logger->info("Updated element {} in {}", id, collection);
-}
-
-void Database::delete_element_by_id(const std::string& collection, int64_t id) {
-    impl_->logger->debug("Deleting element {} from collection: {}", id, collection);
-    impl_->require_collection(collection, "delete element");
-
-    auto sql = "DELETE FROM " + collection + " WHERE id = ?";
-    execute(sql, {id});
-
-    impl_->logger->info("Deleted element {} from {}", id, collection);
-}
-
 void Database::set_scalar_relation(const std::string& collection,
                                    const std::string& attribute,
                                    const std::string& from_label,
@@ -887,375 +449,6 @@ std::vector<std::string> Database::read_scalar_relation(const std::string& colle
     return labels;
 }
 
-std::vector<int64_t> Database::read_scalar_integers(const std::string& collection, const std::string& attribute) {
-    impl_->require_collection(collection, "read scalar");
-    auto sql = "SELECT " + attribute + " FROM " + collection;
-    auto result = execute(sql);
-
-    std::vector<int64_t> values;
-    values.reserve(result.row_count());
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_integer(0);
-        if (val) {
-            values.push_back(*val);
-        }
-    }
-    return values;
-}
-
-std::vector<double> Database::read_scalar_floats(const std::string& collection, const std::string& attribute) {
-    impl_->require_collection(collection, "read scalar");
-    auto sql = "SELECT " + attribute + " FROM " + collection;
-    auto result = execute(sql);
-
-    std::vector<double> values;
-    values.reserve(result.row_count());
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_float(0);
-        if (val) {
-            values.push_back(*val);
-        }
-    }
-    return values;
-}
-
-std::vector<std::string> Database::read_scalar_strings(const std::string& collection, const std::string& attribute) {
-    impl_->require_collection(collection, "read scalar");
-    auto sql = "SELECT " + attribute + " FROM " + collection;
-    auto result = execute(sql);
-
-    std::vector<std::string> values;
-    values.reserve(result.row_count());
-    for (size_t i = 0; i < result.row_count(); ++i) {
-        auto val = result[i].get_string(0);
-        if (val) {
-            values.push_back(*val);
-        }
-    }
-    return values;
-}
-
-std::optional<int64_t>
-Database::read_scalar_integer_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
-    impl_->require_collection(collection, "read scalar");
-    auto sql = "SELECT " + attribute + " FROM " + collection + " WHERE id = ?";
-    auto result = execute(sql, {id});
-
-    if (result.empty()) {
-        return std::nullopt;
-    }
-    return result[0].get_integer(0);
-}
-
-std::optional<double>
-Database::read_scalar_float_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
-    impl_->require_collection(collection, "read scalar");
-    auto sql = "SELECT " + attribute + " FROM " + collection + " WHERE id = ?";
-    auto result = execute(sql, {id});
-
-    if (result.empty()) {
-        return std::nullopt;
-    }
-    return result[0].get_float(0);
-}
-
-std::optional<std::string>
-Database::read_scalar_string_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
-    impl_->require_collection(collection, "read scalar");
-    auto sql = "SELECT " + attribute + " FROM " + collection + " WHERE id = ?";
-    auto result = execute(sql, {id});
-
-    if (result.empty()) {
-        return std::nullopt;
-    }
-    return result[0].get_string(0);
-}
-
-std::vector<std::vector<int64_t>> Database::read_vector_integers(const std::string& collection,
-                                                                 const std::string& attribute) {
-    impl_->require_schema("read vector");
-    auto vector_table = impl_->schema->find_vector_table(collection, attribute);
-    auto sql = "SELECT id, " + attribute + " FROM " + vector_table + " ORDER BY id, vector_index";
-    return read_grouped_values_all<int64_t>(execute(sql));
-}
-
-std::vector<std::vector<double>> Database::read_vector_floats(const std::string& collection,
-                                                              const std::string& attribute) {
-    impl_->require_schema("read vector");
-    auto vector_table = impl_->schema->find_vector_table(collection, attribute);
-    auto sql = "SELECT id, " + attribute + " FROM " + vector_table + " ORDER BY id, vector_index";
-    return read_grouped_values_all<double>(execute(sql));
-}
-
-std::vector<std::vector<std::string>> Database::read_vector_strings(const std::string& collection,
-                                                                    const std::string& attribute) {
-    impl_->require_schema("read vector");
-    auto vector_table = impl_->schema->find_vector_table(collection, attribute);
-    auto sql = "SELECT id, " + attribute + " FROM " + vector_table + " ORDER BY id, vector_index";
-    return read_grouped_values_all<std::string>(execute(sql));
-}
-
-std::vector<int64_t>
-Database::read_vector_integers_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
-    impl_->require_schema("read vector");
-    auto vector_table = impl_->schema->find_vector_table(collection, attribute);
-    auto sql = "SELECT " + attribute + " FROM " + vector_table + " WHERE id = ? ORDER BY vector_index";
-    return read_grouped_values_by_id<int64_t>(execute(sql, {id}));
-}
-
-std::vector<double>
-Database::read_vector_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
-    impl_->require_schema("read vector");
-    auto vector_table = impl_->schema->find_vector_table(collection, attribute);
-    auto sql = "SELECT " + attribute + " FROM " + vector_table + " WHERE id = ? ORDER BY vector_index";
-    return read_grouped_values_by_id<double>(execute(sql, {id}));
-}
-
-std::vector<std::string>
-Database::read_vector_strings_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
-    impl_->require_schema("read vector");
-    auto vector_table = impl_->schema->find_vector_table(collection, attribute);
-    auto sql = "SELECT " + attribute + " FROM " + vector_table + " WHERE id = ? ORDER BY vector_index";
-    return read_grouped_values_by_id<std::string>(execute(sql, {id}));
-}
-
-std::vector<std::vector<int64_t>> Database::read_set_integers(const std::string& collection,
-                                                              const std::string& attribute) {
-    impl_->require_schema("read set");
-    auto set_table = impl_->schema->find_set_table(collection, attribute);
-    auto sql = "SELECT id, " + attribute + " FROM " + set_table + " ORDER BY id";
-    return read_grouped_values_all<int64_t>(execute(sql));
-}
-
-std::vector<std::vector<double>> Database::read_set_floats(const std::string& collection,
-                                                           const std::string& attribute) {
-    impl_->require_schema("read set");
-    auto set_table = impl_->schema->find_set_table(collection, attribute);
-    auto sql = "SELECT id, " + attribute + " FROM " + set_table + " ORDER BY id";
-    return read_grouped_values_all<double>(execute(sql));
-}
-
-std::vector<std::vector<std::string>> Database::read_set_strings(const std::string& collection,
-                                                                 const std::string& attribute) {
-    impl_->require_schema("read set");
-    auto set_table = impl_->schema->find_set_table(collection, attribute);
-    auto sql = "SELECT id, " + attribute + " FROM " + set_table + " ORDER BY id";
-    return read_grouped_values_all<std::string>(execute(sql));
-}
-
-std::vector<int64_t>
-Database::read_set_integers_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
-    impl_->require_schema("read set");
-    auto set_table = impl_->schema->find_set_table(collection, attribute);
-    auto sql = "SELECT " + attribute + " FROM " + set_table + " WHERE id = ?";
-    return read_grouped_values_by_id<int64_t>(execute(sql, {id}));
-}
-
-std::vector<double>
-Database::read_set_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
-    impl_->require_schema("read set");
-    auto set_table = impl_->schema->find_set_table(collection, attribute);
-    auto sql = "SELECT " + attribute + " FROM " + set_table + " WHERE id = ?";
-    return read_grouped_values_by_id<double>(execute(sql, {id}));
-}
-
-std::vector<std::string>
-Database::read_set_strings_by_id(const std::string& collection, const std::string& attribute, int64_t id) {
-    impl_->require_schema("read set");
-    auto set_table = impl_->schema->find_set_table(collection, attribute);
-    auto sql = "SELECT " + attribute + " FROM " + set_table + " WHERE id = ?";
-    return read_grouped_values_by_id<std::string>(execute(sql, {id}));
-}
-
-std::vector<int64_t> Database::read_element_ids(const std::string& collection) {
-    impl_->require_collection(collection, "read element ids");
-    auto sql = "SELECT id FROM " + collection + " ORDER BY rowid";
-    return read_grouped_values_by_id<int64_t>(execute(sql));
-}
-
-void Database::update_scalar_integer(const std::string& collection,
-                                     const std::string& attribute,
-                                     int64_t id,
-                                     int64_t value) {
-    impl_->logger->debug("Updating {}.{} for id {} to {}", collection, attribute, id, value);
-    impl_->require_collection(collection, "update scalar");
-    impl_->type_validator->validate_scalar(collection, attribute, value);
-
-    auto sql = "UPDATE " + collection + " SET " + attribute + " = ? WHERE id = ?";
-    execute(sql, {value, id});
-
-    impl_->logger->info("Updated {}.{} for id {} to {}", collection, attribute, id, value);
-}
-
-void Database::update_scalar_float(const std::string& collection,
-                                   const std::string& attribute,
-                                   int64_t id,
-                                   double value) {
-    impl_->logger->debug("Updating {}.{} for id {} to {}", collection, attribute, id, value);
-    impl_->require_collection(collection, "update scalar");
-    impl_->type_validator->validate_scalar(collection, attribute, value);
-
-    auto sql = "UPDATE " + collection + " SET " + attribute + " = ? WHERE id = ?";
-    execute(sql, {value, id});
-
-    impl_->logger->info("Updated {}.{} for id {} to {}", collection, attribute, id, value);
-}
-
-void Database::update_scalar_string(const std::string& collection,
-                                    const std::string& attribute,
-                                    int64_t id,
-                                    const std::string& value) {
-    impl_->logger->debug("Updating {}.{} for id {} to '{}'", collection, attribute, id, value);
-    impl_->require_collection(collection, "update scalar");
-    impl_->type_validator->validate_scalar(collection, attribute, value);
-
-    auto sql = "UPDATE " + collection + " SET " + attribute + " = ? WHERE id = ?";
-    execute(sql, {value, id});
-
-    impl_->logger->info("Updated {}.{} for id {} to '{}'", collection, attribute, id, value);
-}
-
-void Database::update_vector_integers(const std::string& collection,
-                                      const std::string& attribute,
-                                      int64_t id,
-                                      const std::vector<int64_t>& values) {
-    impl_->logger->debug("Updating vector {}.{} for id {} with {} values", collection, attribute, id, values.size());
-    impl_->require_schema("update vector");
-
-    auto vector_table = impl_->schema->find_vector_table(collection, attribute);
-
-    Impl::TransactionGuard txn(*impl_);
-
-    auto delete_sql = "DELETE FROM " + vector_table + " WHERE id = ?";
-    execute(delete_sql, {id});
-
-    for (size_t i = 0; i < values.size(); ++i) {
-        auto insert_sql = "INSERT INTO " + vector_table + " (id, vector_index, " + attribute + ") VALUES (?, ?, ?)";
-        int64_t vector_index = static_cast<int64_t>(i + 1);
-        execute(insert_sql, {id, vector_index, values[i]});
-    }
-
-    txn.commit();
-    impl_->logger->info("Updated vector {}.{} for id {} with {} values", collection, attribute, id, values.size());
-}
-
-void Database::update_vector_floats(const std::string& collection,
-                                    const std::string& attribute,
-                                    int64_t id,
-                                    const std::vector<double>& values) {
-    impl_->logger->debug("Updating vector {}.{} for id {} with {} values", collection, attribute, id, values.size());
-    impl_->require_schema("update vector");
-
-    auto vector_table = impl_->schema->find_vector_table(collection, attribute);
-
-    Impl::TransactionGuard txn(*impl_);
-
-    auto delete_sql = "DELETE FROM " + vector_table + " WHERE id = ?";
-    execute(delete_sql, {id});
-
-    for (size_t i = 0; i < values.size(); ++i) {
-        auto insert_sql = "INSERT INTO " + vector_table + " (id, vector_index, " + attribute + ") VALUES (?, ?, ?)";
-        int64_t vector_index = static_cast<int64_t>(i + 1);
-        execute(insert_sql, {id, vector_index, values[i]});
-    }
-
-    txn.commit();
-    impl_->logger->info("Updated vector {}.{} for id {} with {} values", collection, attribute, id, values.size());
-}
-
-void Database::update_vector_strings(const std::string& collection,
-                                     const std::string& attribute,
-                                     int64_t id,
-                                     const std::vector<std::string>& values) {
-    impl_->logger->debug("Updating vector {}.{} for id {} with {} values", collection, attribute, id, values.size());
-    impl_->require_schema("update vector");
-
-    auto vector_table = impl_->schema->find_vector_table(collection, attribute);
-
-    Impl::TransactionGuard txn(*impl_);
-
-    auto delete_sql = "DELETE FROM " + vector_table + " WHERE id = ?";
-    execute(delete_sql, {id});
-
-    for (size_t i = 0; i < values.size(); ++i) {
-        auto insert_sql = "INSERT INTO " + vector_table + " (id, vector_index, " + attribute + ") VALUES (?, ?, ?)";
-        int64_t vector_index = static_cast<int64_t>(i + 1);
-        execute(insert_sql, {id, vector_index, values[i]});
-    }
-
-    txn.commit();
-    impl_->logger->info("Updated vector {}.{} for id {} with {} values", collection, attribute, id, values.size());
-}
-
-void Database::update_set_integers(const std::string& collection,
-                                   const std::string& attribute,
-                                   int64_t id,
-                                   const std::vector<int64_t>& values) {
-    impl_->logger->debug("Updating set {}.{} for id {} with {} values", collection, attribute, id, values.size());
-    impl_->require_schema("update set");
-
-    auto set_table = impl_->schema->find_set_table(collection, attribute);
-
-    Impl::TransactionGuard txn(*impl_);
-
-    auto delete_sql = "DELETE FROM " + set_table + " WHERE id = ?";
-    execute(delete_sql, {id});
-
-    for (const auto& value : values) {
-        auto insert_sql = "INSERT INTO " + set_table + " (id, " + attribute + ") VALUES (?, ?)";
-        execute(insert_sql, {id, value});
-    }
-
-    txn.commit();
-    impl_->logger->info("Updated set {}.{} for id {} with {} values", collection, attribute, id, values.size());
-}
-
-void Database::update_set_floats(const std::string& collection,
-                                 const std::string& attribute,
-                                 int64_t id,
-                                 const std::vector<double>& values) {
-    impl_->logger->debug("Updating set {}.{} for id {} with {} values", collection, attribute, id, values.size());
-    impl_->require_schema("update set");
-
-    auto set_table = impl_->schema->find_set_table(collection, attribute);
-
-    Impl::TransactionGuard txn(*impl_);
-
-    auto delete_sql = "DELETE FROM " + set_table + " WHERE id = ?";
-    execute(delete_sql, {id});
-
-    for (const auto& value : values) {
-        auto insert_sql = "INSERT INTO " + set_table + " (id, " + attribute + ") VALUES (?, ?)";
-        execute(insert_sql, {id, value});
-    }
-
-    txn.commit();
-    impl_->logger->info("Updated set {}.{} for id {} with {} values", collection, attribute, id, values.size());
-}
-
-void Database::update_set_strings(const std::string& collection,
-                                  const std::string& attribute,
-                                  int64_t id,
-                                  const std::vector<std::string>& values) {
-    impl_->logger->debug("Updating set {}.{} for id {} with {} values", collection, attribute, id, values.size());
-    impl_->require_schema("update set");
-
-    auto set_table = impl_->schema->find_set_table(collection, attribute);
-
-    Impl::TransactionGuard txn(*impl_);
-
-    auto delete_sql = "DELETE FROM " + set_table + " WHERE id = ?";
-    execute(delete_sql, {id});
-
-    for (const auto& value : values) {
-        auto insert_sql = "INSERT INTO " + set_table + " (id, " + attribute + ") VALUES (?, ?)";
-        execute(insert_sql, {id, value});
-    }
-
-    txn.commit();
-    impl_->logger->info("Updated set {}.{} for id {} with {} values", collection, attribute, id, values.size());
-}
-
 ScalarMetadata Database::get_scalar_metadata(const std::string& collection, const std::string& attribute) const {
     if (!impl_->schema) {
         throw std::runtime_error("Cannot get scalar metadata: no schema loaded");
@@ -1271,7 +464,7 @@ ScalarMetadata Database::get_scalar_metadata(const std::string& collection, cons
         throw std::runtime_error("Scalar attribute '" + attribute + "' not found in collection '" + collection + "'");
     }
 
-    auto metadata = scalar_metadata_from_column(*col);
+    auto metadata = internal::scalar_metadata_from_column(*col);
 
     for (const auto& fk : table_def->foreign_keys) {
         if (fk.from_column == attribute) {
@@ -1307,7 +500,7 @@ GroupMetadata Database::get_vector_metadata(const std::string& collection, const
             continue;
         }
 
-        metadata.value_columns.push_back(scalar_metadata_from_column(col));
+        metadata.value_columns.push_back(internal::scalar_metadata_from_column(col));
     }
 
     return metadata;
@@ -1335,7 +528,7 @@ GroupMetadata Database::get_set_metadata(const std::string& collection, const st
             continue;
         }
 
-        metadata.value_columns.push_back(scalar_metadata_from_column(col));
+        metadata.value_columns.push_back(internal::scalar_metadata_from_column(col));
     }
 
     return metadata;
@@ -1353,7 +546,7 @@ std::vector<ScalarMetadata> Database::list_scalar_attributes(const std::string& 
 
     std::vector<ScalarMetadata> result;
     for (const auto& [col_name, col] : table_def->columns) {
-        auto metadata = scalar_metadata_from_column(col);
+        auto metadata = internal::scalar_metadata_from_column(col);
 
         for (const auto& fk : table_def->foreign_keys) {
             if (fk.from_column == col_name) {
@@ -1454,7 +647,7 @@ GroupMetadata Database::get_time_series_metadata(const std::string& collection, 
 
     GroupMetadata metadata;
     metadata.group_name = group_name;
-    metadata.dimension_column = find_dimension_column(*table_def);
+    metadata.dimension_column = internal::find_dimension_column(*table_def);
 
     // Add value columns (skip id and dimension)
     for (const auto& [col_name, col] : table_def->columns) {
@@ -1462,7 +655,7 @@ GroupMetadata Database::get_time_series_metadata(const std::string& collection, 
             continue;
         }
 
-        metadata.value_columns.push_back(scalar_metadata_from_column(col));
+        metadata.value_columns.push_back(internal::scalar_metadata_from_column(col));
     }
 
     return metadata;
@@ -1477,7 +670,7 @@ Database::read_time_series_group_by_id(const std::string& collection, const std:
     if (!table_def) {
         throw std::runtime_error("Time series table not found: " + ts_table);
     }
-    auto dim_col = find_dimension_column(*table_def);
+    auto dim_col = internal::find_dimension_column(*table_def);
 
     // Build column list (excluding id)
     std::vector<std::string> columns;
@@ -1539,7 +732,7 @@ void Database::update_time_series_group(const std::string& collection,
     if (!table_def) {
         throw std::runtime_error("Time series table not found: " + ts_table);
     }
-    auto dim_col = find_dimension_column(*table_def);
+    auto dim_col = internal::find_dimension_column(*table_def);
 
     Impl::TransactionGuard txn(*impl_);
 
