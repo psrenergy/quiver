@@ -427,7 +427,8 @@ TEST(Database, UpdateElementWithTimeSeries) {
 
     // Update time series via update_element
     quiver::Element update;
-    update.set("date_time", std::vector<std::string>{"2025-06-01T00:00:00", "2025-06-02T00:00:00", "2025-06-03T00:00:00"})
+    update
+        .set("date_time", std::vector<std::string>{"2025-06-01T00:00:00", "2025-06-02T00:00:00", "2025-06-03T00:00:00"})
         .set("value", std::vector<double>{10.0, 20.0, 30.0});
     db.update_element("Collection", id, update);
 

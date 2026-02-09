@@ -813,8 +813,7 @@ void Database::update_element(const std::string& collection, int64_t id, const E
             if (num_rows == 0) {
                 num_rows = values_ptr->size();
             } else if (values_ptr->size() != num_rows) {
-                throw std::runtime_error("Vector columns in table '" + table +
-                                         "' must have the same length");
+                throw std::runtime_error("Vector columns in table '" + table + "' must have the same length");
             }
         }
 
@@ -843,8 +842,7 @@ void Database::update_element(const std::string& collection, int64_t id, const E
             if (num_rows == 0) {
                 num_rows = values_ptr->size();
             } else if (values_ptr->size() != num_rows) {
-                throw std::runtime_error("Set columns in table '" + table +
-                                         "' must have the same length");
+                throw std::runtime_error("Set columns in table '" + table + "' must have the same length");
             }
         }
 
@@ -872,8 +870,7 @@ void Database::update_element(const std::string& collection, int64_t id, const E
             if (num_rows == 0) {
                 num_rows = values_ptr->size();
             } else if (values_ptr->size() != num_rows) {
-                throw std::runtime_error("Time series columns in table '" + table +
-                                         "' must have the same length");
+                throw std::runtime_error("Time series columns in table '" + table + "' must have the same length");
             }
         }
 
