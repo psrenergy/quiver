@@ -889,7 +889,7 @@ extension DatabaseRead on Database {
 
   /// Reads a time series group for an element by ID.
   /// Returns rows with date_time and value columns, ordered by date_time.
-  List<Map<String, Object?>> readTimeSeriesGroupById(String collection, String group, int id) {
+  List<Map<String, Object?>> readTimeSeriesGroup(String collection, String group, int id) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -899,7 +899,7 @@ extension DatabaseRead on Database {
       final outRowCount = arena<Size>();
 
       check(
-        bindings.quiver_database_read_time_series_group_by_id(
+        bindings.quiver_database_read_time_series_group(
           _ptr,
           collection.toNativeUtf8(allocator: arena).cast(),
           group.toNativeUtf8(allocator: arena).cast(),

@@ -23,6 +23,6 @@ function set_scalar_relation!(
     from_label::String,
     to_label::String,
 )
-    check(C.quiver_database_set_scalar_relation(db.ptr, collection, attribute, from_label, to_label))
+    check(C.quiver_database_update_scalar_relation(db.ptr, collection, attribute, from_label, to_label))
     return nothing
 end

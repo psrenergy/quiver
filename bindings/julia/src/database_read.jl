@@ -568,13 +568,13 @@ function read_set_group_by_id(db::Database, collection::String, group::String, i
     return rows
 end
 
-function read_time_series_group_by_id(db::Database, collection::String, group::String, id::Int64)
+function read_time_series_group(db::Database, collection::String, group::String, id::Int64)
     out_date_times = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
     out_values = Ref{Ptr{Cdouble}}(C_NULL)
     out_row_count = Ref{Csize_t}(0)
 
     check(
-        C.quiver_database_read_time_series_group_by_id(
+        C.quiver_database_read_time_series_group(
             db.ptr, collection, group, id,
             out_date_times, out_values, out_row_count,
         ),

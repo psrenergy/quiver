@@ -58,7 +58,7 @@ void main() {
   });
 
   group('Time Series Read', () {
-    test('readTimeSeriesGroupById returns ordered rows', () {
+    test('readTimeSeriesGroup returns ordered rows', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
@@ -74,7 +74,7 @@ void main() {
           {'date_time': '2024-01-01T12:00:00', 'value': 3.5},
         ]);
 
-        final rows = db.readTimeSeriesGroupById('Collection', 'data', id);
+        final rows = db.readTimeSeriesGroup('Collection', 'data', id);
         expect(rows.length, equals(3));
         expect(rows[0]['date_time'], equals('2024-01-01T10:00:00'));
         expect(rows[0]['value'], equals(1.5));
@@ -87,7 +87,7 @@ void main() {
       }
     });
 
-    test('readTimeSeriesGroupById returns empty for no data', () {
+    test('readTimeSeriesGroup returns empty for no data', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
@@ -96,7 +96,7 @@ void main() {
         db.createElement('Configuration', {'label': 'Test Config'});
         final id = db.createElement('Collection', {'label': 'Item 1'});
 
-        final rows = db.readTimeSeriesGroupById('Collection', 'data', id);
+        final rows = db.readTimeSeriesGroup('Collection', 'data', id);
         expect(rows, isEmpty);
       } finally {
         db.close();
@@ -119,7 +119,7 @@ void main() {
           {'date_time': '2024-01-01T10:00:00', 'value': 1.0},
         ]);
 
-        var rows = db.readTimeSeriesGroupById('Collection', 'data', id);
+        var rows = db.readTimeSeriesGroup('Collection', 'data', id);
         expect(rows.length, equals(1));
 
         // Replace with new data
@@ -128,7 +128,7 @@ void main() {
           {'date_time': '2024-02-01T11:00:00', 'value': 20.0},
         ]);
 
-        rows = db.readTimeSeriesGroupById('Collection', 'data', id);
+        rows = db.readTimeSeriesGroup('Collection', 'data', id);
         expect(rows.length, equals(2));
         expect(rows[0]['date_time'], equals('2024-02-01T10:00:00'));
         expect(rows[0]['value'], equals(10.0));
@@ -154,7 +154,7 @@ void main() {
         // Clear
         db.updateTimeSeriesGroup('Collection', 'data', id, []);
 
-        final rows = db.readTimeSeriesGroupById('Collection', 'data', id);
+        final rows = db.readTimeSeriesGroup('Collection', 'data', id);
         expect(rows, isEmpty);
       } finally {
         db.close();
@@ -177,7 +177,7 @@ void main() {
           {'date_time': '2024-01-02T10:00:00', 'value': 2.0},
         ]);
 
-        final rows = db.readTimeSeriesGroupById('Collection', 'data', id);
+        final rows = db.readTimeSeriesGroup('Collection', 'data', id);
         expect(rows.length, equals(3));
         // Should be ordered by date_time
         expect(rows[0]['date_time'], equals('2024-01-01T10:00:00'));
