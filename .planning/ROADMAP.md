@@ -153,11 +153,11 @@ Plans:
   2. A `.clang-tidy` configuration file exists with `readability-identifier-naming`, `bugprone-*`, `modernize-*`, `performance-*` checks enabled
   3. Running clang-tidy against the codebase produces zero errors (suppressions are documented for intentional exceptions)
   4. All test suites continue to pass after hygiene changes
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 09-01: Replace SQL string concatenation with validated identifiers
-- [ ] 09-02: Add clang-tidy configuration and fix violations
+- [ ] 09-01-PLAN.md -- Add identifier validation to all SQL concatenation sites with require_column helper and PRAGMA guards
+- [ ] 09-02-PLAN.md -- Create .clang-tidy configuration, add CMake tidy target, fix violations
 
 ### Phase 10: Cross-Layer Documentation and Final Verification
 **Goal**: Naming conventions are documented with cross-layer mapping examples in CLAUDE.md, and the full test suite across all layers passes as a final gate
