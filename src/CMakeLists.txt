@@ -1,6 +1,15 @@
 # Core library sources
 set(QUIVER_SOURCES
     database.cpp
+    database_create.cpp
+    database_read.cpp
+    database_update.cpp
+    database_delete.cpp
+    database_metadata.cpp
+    database_time_series.cpp
+    database_query.cpp
+    database_relations.cpp
+    database_describe.cpp
     element.cpp
     lua_runner.cpp
     migration.cpp
