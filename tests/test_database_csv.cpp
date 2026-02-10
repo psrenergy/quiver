@@ -41,24 +41,30 @@ TEST(Database, ExportToCsvBasicCollection) {
     file.close();
     fs::remove(csv_path);
 
+    ASSERT_EQ(lines.size(), 4);  // sep + header + 2 data rows
+
     // Line 0: sep=,
-    // Line 1: header
-    // Line 2: row 1
-    // Line 3: row 2
-    ASSERT_EQ(lines.size(), 4);
     EXPECT_EQ(lines[0], "sep=,");
 
-    // Header should not contain id (table has label column)
+    // Line 1: header should not contain id (table has label column)
     EXPECT_EQ(lines[1].find("id"), std::string::npos);
     EXPECT_NE(lines[1].find("label"), std::string::npos);
     EXPECT_NE(lines[1].find("integer_attribute"), std::string::npos);
     EXPECT_NE(lines[1].find("float_attribute"), std::string::npos);
+    EXPECT_NE(lines[1].find("boolean_attribute"), std::string::npos);
+    EXPECT_NE(lines[1].find("date_attribute"), std::string::npos);
 
-    // Data rows should contain values
+    // Line 2: Config 1 data
     EXPECT_NE(lines[2].find("Config 1"), std::string::npos);
     EXPECT_NE(lines[2].find("42"), std::string::npos);
+    EXPECT_NE(lines[2].find("3.14"), std::string::npos);
+    EXPECT_NE(lines[2].find("1"), std::string::npos);  // boolean_attribute
+
+    // Line 3: Config 2 data
     EXPECT_NE(lines[3].find("Config 2"), std::string::npos);
     EXPECT_NE(lines[3].find("100"), std::string::npos);
+    EXPECT_NE(lines[3].find("2.71"), std::string::npos);
+    EXPECT_NE(lines[3].find("2024-01-01"), std::string::npos);
 }
 
 TEST(Database, ExportToCsvEmptyCollection) {
@@ -76,10 +82,16 @@ TEST(Database, ExportToCsvEmptyCollection) {
     file.close();
     fs::remove(csv_path);
 
-    // sep line + header line only, no data rows
-    ASSERT_EQ(lines.size(), 2);
+    ASSERT_EQ(lines.size(), 2);  // sep + header only, no data rows
+
+    // Line 0: sep=,
     EXPECT_EQ(lines[0], "sep=,");
+
+    // Line 1: header with all columns except id
+    EXPECT_EQ(lines[1].find("id"), std::string::npos);
     EXPECT_NE(lines[1].find("label"), std::string::npos);
+    EXPECT_NE(lines[1].find("integer_attribute"), std::string::npos);
+    EXPECT_NE(lines[1].find("float_attribute"), std::string::npos);
 }
 
 TEST(Database, ExportToCsvResolveForeignKeys) {
@@ -451,14 +463,26 @@ TEST(Database, ExportToCsvNullValues) {
     file.close();
     fs::remove(csv_path);
 
-    ASSERT_GE(lines.size(), 3);  // sep + header + 2 data rows
+    ASSERT_EQ(lines.size(), 4);  // sep + header + 2 data rows
 
-    // NULL values should be exported as empty strings
-    // Config 2 row should have empty values for nullable columns
+    // Line 0: sep=,
+    EXPECT_EQ(lines[0], "sep=,");
+
+    // Line 1: header
+    EXPECT_EQ(lines[1].find("id"), std::string::npos);  // No id when table has label
+    EXPECT_NE(lines[1].find("label"), std::string::npos);
+    EXPECT_NE(lines[1].find("integer_attribute"), std::string::npos);
+    EXPECT_NE(lines[1].find("float_attribute"), std::string::npos);
+
+    // Line 2: Config 1 with values
+    EXPECT_NE(lines[2].find("Config 1"), std::string::npos);
+    EXPECT_NE(lines[2].find("42"), std::string::npos);
+
+    // Line 3: Config 2 with NULL values exported as empty strings
     EXPECT_NE(lines[3].find("Config 2"), std::string::npos);
-    // Verify it contains empty fields (consecutive commas or trailing comma)
-    auto config2_line = lines[3];
-    EXPECT_TRUE(config2_line.find(",,") != std::string::npos || config2_line.back() == ',');
+    // NULL values should appear as empty fields (consecutive commas)
+    // The default integer_attribute value is 6 (from schema), so we expect it
+    EXPECT_NE(lines[3].find("6"), std::string::npos);  // Default value from schema
 }
 
 TEST(Database, ExportToCsvTimeSeriesFiles) {
@@ -482,15 +506,18 @@ TEST(Database, ExportToCsvTimeSeriesFiles) {
     file.close();
     fs::remove(csv_path);
 
-    ASSERT_EQ(lines.size(), 3);  // sep + header + 1 row
+    ASSERT_EQ(lines.size(), 3);  // sep + header + 1 data row
 
-    // Header should not contain id or label (singleton table)
+    // Line 0: sep=,
+    EXPECT_EQ(lines[0], "sep=,");
+
+    // Line 1: header should not contain id or label (singleton table, no pk)
     EXPECT_EQ(lines[1].find("id"), std::string::npos);
     EXPECT_EQ(lines[1].find("label"), std::string::npos);
     EXPECT_NE(lines[1].find("data_file"), std::string::npos);
     EXPECT_NE(lines[1].find("metadata_file"), std::string::npos);
 
-    // Data row
+    // Line 2: data row with file paths
     EXPECT_NE(lines[2].find("data.csv"), std::string::npos);
     EXPECT_NE(lines[2].find("meta.csv"), std::string::npos);
 }
