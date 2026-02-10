@@ -1,7 +1,6 @@
-#include "quiver/c/database.h"
-
 #include "database_helpers.h"
 #include "internal.h"
+#include "quiver/c/database.h"
 
 #include <map>
 #include <optional>
