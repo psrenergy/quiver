@@ -139,10 +139,10 @@ Plans:
   2. All Lua error handling uses pcall/error patterns that surface C++ exception messages
   3. No custom error messages are crafted in Lua code -- all errors originate from C++
   4. Lua scripting tests pass through LuaRunner
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 08-01: Standardize Lua binding names and error handling
+- [ ] 08-01-PLAN.md -- Rename delete_element_by_id to delete_element in Lua bindings and update tests
 
 ### Phase 9: Code Hygiene
 **Goal**: SQL string concatenation is eliminated from schema queries, clang-tidy is integrated, and the codebase passes static analysis checks
