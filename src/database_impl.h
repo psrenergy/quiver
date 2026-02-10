@@ -33,6 +33,18 @@ struct Database::Impl {
         }
     }
 
+    void require_column(const std::string& table, const std::string& column, const char* operation) const {
+        require_schema(operation);
+        const auto* table_def = schema->get_table(table);
+        if (!table_def) {
+            throw std::runtime_error(std::string("Cannot ") + operation + ": table not found: " + table);
+        }
+        if (!table_def->has_column(column)) {
+            throw std::runtime_error(std::string("Cannot ") + operation +
+                                      ": column '" + column + "' not found in table '" + table + "'");
+        }
+    }
+
     void load_schema_metadata() {
         schema = std::make_unique<Schema>(Schema::from_database(db));
         SchemaValidator validator(*schema);

@@ -1,9 +1,18 @@
 #include "quiver/schema.h"
 
+#include <algorithm>
+#include <cctype>
 #include <sqlite3.h>
 #include <stdexcept>
 
 namespace quiver {
+
+static bool is_safe_identifier(const std::string& name) {
+    if (name.empty()) return false;
+    return std::all_of(name.begin(), name.end(), [](char c) {
+        return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
+    });
+}
 
 // TableDefinition methods
 
@@ -292,6 +301,9 @@ void Schema::load_from_database(sqlite3* db) {
 }
 
 std::vector<ColumnDefinition> Schema::query_columns(sqlite3* db, const std::string& table) {
+    if (!is_safe_identifier(table)) {
+        throw std::runtime_error("Cannot query columns: invalid table name: " + table);
+    }
     std::vector<ColumnDefinition> columns;
     auto sql = "PRAGMA table_info(" + table + ")";
 
@@ -327,6 +339,9 @@ std::vector<ColumnDefinition> Schema::query_columns(sqlite3* db, const std::stri
 }
 
 std::vector<ForeignKey> Schema::query_foreign_keys(sqlite3* db, const std::string& table) {
+    if (!is_safe_identifier(table)) {
+        throw std::runtime_error("Cannot query foreign keys: invalid table name: " + table);
+    }
     std::vector<ForeignKey> fks;
     auto sql = "PRAGMA foreign_key_list(" + table + ")";
 
@@ -356,6 +371,9 @@ std::vector<ForeignKey> Schema::query_foreign_keys(sqlite3* db, const std::strin
 }
 
 std::vector<Index> Schema::query_indexes(sqlite3* db, const std::string& table) {
+    if (!is_safe_identifier(table)) {
+        throw std::runtime_error("Cannot query indexes: invalid table name: " + table);
+    }
     std::vector<Index> indexes;
     auto sql = "PRAGMA index_list(" + table + ")";
 
@@ -371,6 +389,7 @@ std::vector<Index> Schema::query_indexes(sqlite3* db, const std::string& table) 
         idx.unique = sqlite3_column_int(stmt, 2) != 0;
 
         // Get columns for this index
+        if (!is_safe_identifier(idx.name)) continue;
         auto idx_sql = "PRAGMA index_info(" + idx.name + ")";
         sqlite3_stmt* idx_stmt = nullptr;
         if (sqlite3_prepare_v2(db, idx_sql.c_str(), -1, &idx_stmt, nullptr) == SQLITE_OK) {

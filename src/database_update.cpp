@@ -211,6 +211,7 @@ void Database::update_vector_integers(const std::string& collection,
     impl_->require_collection(collection, "update_vector_integers");
 
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
+    impl_->require_column(vector_table, attribute, "update_vector_integers");
 
     Impl::TransactionGuard txn(*impl_);
 
@@ -235,6 +236,7 @@ void Database::update_vector_floats(const std::string& collection,
     impl_->require_collection(collection, "update_vector_floats");
 
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
+    impl_->require_column(vector_table, attribute, "update_vector_floats");
 
     Impl::TransactionGuard txn(*impl_);
 
@@ -259,6 +261,7 @@ void Database::update_vector_strings(const std::string& collection,
     impl_->require_collection(collection, "update_vector_strings");
 
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
+    impl_->require_column(vector_table, attribute, "update_vector_strings");
 
     Impl::TransactionGuard txn(*impl_);
 
@@ -283,6 +286,7 @@ void Database::update_set_integers(const std::string& collection,
     impl_->require_collection(collection, "update_set_integers");
 
     auto set_table = impl_->schema->find_set_table(collection, attribute);
+    impl_->require_column(set_table, attribute, "update_set_integers");
 
     Impl::TransactionGuard txn(*impl_);
 
@@ -306,6 +310,7 @@ void Database::update_set_floats(const std::string& collection,
     impl_->require_collection(collection, "update_set_floats");
 
     auto set_table = impl_->schema->find_set_table(collection, attribute);
+    impl_->require_column(set_table, attribute, "update_set_floats");
 
     Impl::TransactionGuard txn(*impl_);
 
@@ -329,6 +334,7 @@ void Database::update_set_strings(const std::string& collection,
     impl_->require_collection(collection, "update_set_strings");
 
     auto set_table = impl_->schema->find_set_table(collection, attribute);
+    impl_->require_column(set_table, attribute, "update_set_strings");
 
     Impl::TransactionGuard txn(*impl_);
 
