@@ -125,10 +125,10 @@ Plans:
   2. Dart method names map predictably from C API names (e.g., `quiver_database_read_scalar_integers` -> `readScalarIntegers`)
   3. All Dart error handling retrieves and surfaces C API error messages -- no custom error strings defined in Dart code
   4. Dart test suite passes (`bindings/dart/test/test.bat` green)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 07-01: Standardize Dart binding names and error handling
+- [ ] 07-01-PLAN.md -- Rename deleteElementById, standardize all error handling across Dart bindings
 
 ### Phase 8: Lua Bindings Standardization
 **Goal**: Lua bindings use consistent naming matching C++ method names and surface errors uniformly through pcall/error patterns
