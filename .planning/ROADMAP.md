@@ -81,11 +81,11 @@ Plans:
   3. Separate C API implementation files exist matching the C++ decomposition structure
   4. Every alloc/free pair is co-located in the same translation unit
   5. All existing C API tests pass with zero behavior changes (`quiver_c_tests.exe` green)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: Extract C API helper templates into shared header
-- [ ] 04-02: Split C API database.cpp into functional modules
+- [ ] 04-01-PLAN.md -- Extract helpers into database_helpers.h, split CRUD/read/relations into separate files
+- [ ] 04-02-PLAN.md -- Extract update/metadata/query/time_series, finalize lifecycle-only database.cpp
 
 ### Phase 5: C API Naming and Error Standardization
 **Goal**: All C API function names follow a single `quiver_{entity}_{operation}` convention and every function uses the try-catch-set_last_error pattern consistently
