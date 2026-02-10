@@ -428,7 +428,7 @@ TEST_F(LuaRunnerTest, DeleteElementByIdFromLua) {
         local ids = db:read_element_ids("Collection")
         assert(#ids == 3, "Expected 3 elements before delete")
 
-        db:delete_element_by_id("Collection", 2)
+        db:delete_element("Collection", 2)
 
         ids = db:read_element_ids("Collection")
         assert(#ids == 2, "Expected 2 elements after delete")
@@ -453,7 +453,7 @@ TEST_F(LuaRunnerTest, DeleteElementByIdWithVectorDataFromLua) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:delete_element_by_id("Collection", 1)
+        db:delete_element("Collection", 1)
 
         local ids = db:read_element_ids("Collection")
         assert(#ids == 1, "Expected 1 element after delete")
@@ -476,7 +476,7 @@ TEST_F(LuaRunnerTest, DeleteElementByIdNonExistentFromLua) {
 
     // Deleting non-existent element should succeed silently (idempotent)
     lua.run(R"(
-        db:delete_element_by_id("Collection", 999)
+        db:delete_element("Collection", 999)
 
         local ids = db:read_element_ids("Collection")
         assert(#ids == 1, "Original element should still exist")
@@ -494,7 +494,7 @@ TEST_F(LuaRunnerTest, DeleteElementByIdOtherElementsUnchangedFromLua) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:delete_element_by_id("Collection", 2)
+        db:delete_element("Collection", 2)
 
         local labels = db:read_scalar_strings("Collection", "label")
         assert(#labels == 2, "Expected 2 labels after delete")
@@ -918,7 +918,7 @@ TEST_F(LuaRunnerTest, DeleteFromNonExistentCollection) {
 
     quiver::LuaRunner lua(db);
 
-    EXPECT_THROW({ lua.run(R"(db:delete_element_by_id("NonexistentCollection", 1))"); }, std::runtime_error);
+    EXPECT_THROW({ lua.run(R"(db:delete_element("NonexistentCollection", 1))"); }, std::runtime_error);
 }
 
 TEST_F(LuaRunnerTest, MultipleOperationsPartialFailure) {
