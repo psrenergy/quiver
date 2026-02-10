@@ -170,11 +170,10 @@ Plans:
   4. C API test suite passes (`quiver_c_tests.exe` green)
   5. Julia test suite passes (`bindings/julia/test/test.bat` green)
   6. Dart test suite passes (`bindings/dart/test/test.bat` green)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 10-01: Document cross-layer naming conventions in CLAUDE.md
-- [ ] 10-02: Final full-stack verification
+- [ ] 10-01-PLAN.md -- Document cross-layer naming conventions in CLAUDE.md and run full-stack verification
 
 ## Progress
 
@@ -193,4 +192,4 @@ Note: Phases 6, 7 both depend on Phase 5. Phase 8 depends on Phase 3. Phase 10 d
 | 7. Dart Bindings Standardization | 1/1 | Complete | 2026-02-10 |
 | 8. Lua Bindings Standardization | 1/1 | Complete | 2026-02-10 |
 | 9. Code Hygiene | 0/2 | Not started | - |
-| 10. Cross-Layer Documentation and Final Verification | 0/2 | Not started | - |
+| 10. Cross-Layer Documentation and Final Verification | 0/1 | Not started | - |
