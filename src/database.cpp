@@ -189,9 +189,9 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
                 values.emplace_back(nullptr);
                 break;
             case SQLITE_BLOB:
-                throw std::runtime_error("Blob not implemented");
+                throw std::runtime_error("Failed to execute statement: BLOB type not supported");
             default:
-                throw std::runtime_error("Type not implemented");
+                throw std::runtime_error("Failed to execute statement: unknown column type");
                 break;
             }
         }
@@ -219,7 +219,7 @@ int64_t Database::current_version() const {
         user_version = sqlite3_column_int(stmt, 0);
     } else {
         sqlite3_finalize(stmt);
-        throw std::runtime_error("Failed to retrieve user_version: " + std::string(sqlite3_errmsg(impl_->db)));
+        throw std::runtime_error("Failed to read user_version: " + std::string(sqlite3_errmsg(impl_->db)));
     }
 
     sqlite3_finalize(stmt);
@@ -238,7 +238,7 @@ Database Database::from_migrations(const std::string& db_path,
         throw std::runtime_error("Migrations path not found: " + migrations_path);
     }
     if (!fs::is_directory(migrations_path)) {
-        throw std::runtime_error("Migrations path is not a directory: " + migrations_path);
+        throw std::runtime_error("Cannot migrate_up: path is not a directory: " + migrations_path);
     }
     auto db = Database(db_path, options);
     db.migrate_up(migrations_path);
@@ -314,7 +314,7 @@ void Database::migrate_up(const std::string& migrations_path) {
 
         const auto up_sql = migration.up_sql();
         if (up_sql.empty()) {
-            throw std::runtime_error("Migration " + std::to_string(migration.version()) + " has no up.sql file");
+            throw std::runtime_error("Cannot migrate_up: migration " + std::to_string(migration.version()) + " has no up.sql file");
         }
 
         begin_transaction();
@@ -326,7 +326,7 @@ void Database::migrate_up(const std::string& migrations_path) {
         } catch (const std::exception& e) {
             rollback();
             impl_->logger->error("Migration {} failed: {}", migration.version(), e.what());
-            throw std::runtime_error("Migration " + std::to_string(migration.version()) + " failed: " + e.what());
+            throw std::runtime_error("Failed to migrate_up: migration " + std::to_string(migration.version()) + ": " + e.what());
         }
     }
 
@@ -337,7 +337,7 @@ void Database::migrate_up(const std::string& migrations_path) {
 void Database::apply_schema(const std::string& schema_path) {
     std::ifstream file(schema_path);
     if (!file.is_open()) {
-        throw std::runtime_error("Failed to open schema file: " + schema_path);
+        throw std::runtime_error("Failed to apply_schema: could not open file: " + schema_path);
     }
 
     std::stringstream buffer;
@@ -345,7 +345,7 @@ void Database::apply_schema(const std::string& schema_path) {
     const auto schema_sql = buffer.str();
 
     if (schema_sql.empty()) {
-        throw std::runtime_error("Schema file is empty: " + schema_path);
+        throw std::runtime_error("Cannot apply_schema: schema file is empty: " + schema_path);
     }
 
     impl_->logger->info("Applying schema from: {}", schema_path);

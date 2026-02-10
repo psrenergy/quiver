@@ -8,14 +8,9 @@ void Database::update_scalar_relation(const std::string& collection,
                                    const std::string& to_label) {
     impl_->logger->debug("Setting relation {}.{} from '{}' to '{}'", collection, attribute, from_label, to_label);
 
-    if (!impl_->schema) {
-        throw std::runtime_error("Cannot set relation: no schema loaded");
-    }
+    impl_->require_collection(collection, "update_scalar_relation");
 
     const auto* table_def = impl_->schema->get_table(collection);
-    if (!table_def) {
-        throw std::runtime_error("Collection not found in schema: " + collection);
-    }
 
     // Find the foreign key with the given attribute name
     std::string to_table;
@@ -27,15 +22,15 @@ void Database::update_scalar_relation(const std::string& collection,
     }
 
     if (to_table.empty()) {
-        throw std::runtime_error("Attribute '" + attribute + "' is not a foreign key in collection '" + collection +
-                                 "'");
+        throw std::runtime_error("Cannot update_scalar_relation: attribute '" + attribute +
+                                 "' is not a foreign key in collection '" + collection + "'");
     }
 
     // Look up the target ID by label
     auto lookup_sql = "SELECT id FROM " + to_table + " WHERE label = ?";
     auto lookup_result = execute(lookup_sql, {to_label});
     if (lookup_result.empty() || !lookup_result[0].get_integer(0)) {
-        throw std::runtime_error("Target element with label '" + to_label + "' not found in '" + to_table + "'");
+        throw std::runtime_error("Target element not found: '" + to_label + "' in collection '" + to_table + "'");
     }
     auto to_id = lookup_result[0].get_integer(0).value();
 
@@ -48,14 +43,9 @@ void Database::update_scalar_relation(const std::string& collection,
 }
 
 std::vector<std::string> Database::read_scalar_relation(const std::string& collection, const std::string& attribute) {
-    if (!impl_->schema) {
-        throw std::runtime_error("Cannot read relation: no schema loaded");
-    }
+    impl_->require_collection(collection, "read_scalar_relation");
 
     const auto* table_def = impl_->schema->get_table(collection);
-    if (!table_def) {
-        throw std::runtime_error("Collection not found in schema: " + collection);
-    }
 
     // Find the foreign key with the given attribute name
     std::string to_table;
@@ -67,8 +57,8 @@ std::vector<std::string> Database::read_scalar_relation(const std::string& colle
     }
 
     if (to_table.empty()) {
-        throw std::runtime_error("Attribute '" + attribute + "' is not a foreign key in collection '" + collection +
-                                 "'");
+        throw std::runtime_error("Cannot read_scalar_relation: attribute '" + attribute +
+                                 "' is not a foreign key in collection '" + collection + "'");
     }
 
     // LEFT JOIN to get target labels (NULL for unset relations)

@@ -112,11 +112,36 @@ impl_->with_transaction([&]() {
 });
 ```
 
+### Naming Convention
+Public Database methods follow `verb_[category_]type[_by_id]` pattern:
+- **Verbs:** create, read, update, delete, get, list, has, query, describe, export, import
+- **`_by_id` suffix:** Only for reads where both "all elements" and "single element" variants exist (e.g., `read_scalar_integers` vs `read_scalar_integer_by_id`)
+- **Singular vs plural:** Type name matches return cardinality (`read_scalar_integers` returns vector, `read_scalar_integer_by_id` returns optional)
+- **Examples:** `create_element`, `read_vector_floats_by_id`, `get_scalar_metadata`, `list_time_series_groups`, `update_scalar_relation`
+
 ### Error Handling
-Exceptions with descriptive messages, no error codes:
+All `throw std::runtime_error(...)` in the C++ layer use exactly 3 message patterns:
+
+**Pattern 1 -- Precondition failure:** `"Cannot {operation}: {reason}"`
 ```cpp
-throw std::runtime_error("Collection not found: " + name);
+throw std::runtime_error("Cannot create_element: element must have at least one scalar attribute");
+throw std::runtime_error("Cannot update_scalar_relation: attribute 'x' is not a foreign key in collection 'Y'");
 ```
+
+**Pattern 2 -- Not found:** `"{Entity} not found: {identifier}"`
+```cpp
+throw std::runtime_error("Scalar attribute not found: 'value' in collection 'Items'");
+throw std::runtime_error("Schema file not found: path/to/schema.sql");
+throw std::runtime_error("Time series table not found: Items_time_series_data");
+```
+
+**Pattern 3 -- Operation failure:** `"Failed to {operation}: {reason}"`
+```cpp
+throw std::runtime_error("Failed to open database: " + sqlite3_errmsg(db));
+throw std::runtime_error("Failed to execute statement: " + sqlite3_errmsg(db));
+```
+
+No ad-hoc formats. Downstream layers (C API, bindings) can rely on consistent error structure.
 
 ### Logging
 spdlog with debug/info/warn/error levels:

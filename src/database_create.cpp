@@ -6,11 +6,11 @@ namespace quiver {
 
 int64_t Database::create_element(const std::string& collection, const Element& element) {
     impl_->logger->debug("Creating element in collection: {}", collection);
-    impl_->require_collection(collection, "create element");
+    impl_->require_collection(collection, "create_element");
 
     const auto& scalars = element.scalars();
     if (scalars.empty()) {
-        throw std::runtime_error("Element must have at least one scalar attribute");
+        throw std::runtime_error("Cannot create_element: element must have at least one scalar attribute");
     }
 
     // Validate scalar types
@@ -54,13 +54,13 @@ int64_t Database::create_element(const std::string& collection, const Element& e
 
     for (const auto& [array_name, values] : arrays) {
         if (values.empty()) {
-            throw std::runtime_error("Empty array not allowed for '" + array_name + "'");
+            throw std::runtime_error("Cannot create_element: empty array not allowed for '" + array_name + "'");
         }
 
         auto match = impl_->schema->find_table_for_column(collection, array_name);
         if (!match) {
-            throw std::runtime_error("Array '" + array_name +
-                                     "' does not match any vector, set, or time series table for collection '" +
+            throw std::runtime_error("Cannot create_element: array '" + array_name +
+                                     "' does not match any vector, set, or time series table in collection '" +
                                      collection + "'");
         }
 
@@ -91,8 +91,8 @@ int64_t Database::create_element(const std::string& collection, const Element& e
             if (num_rows == 0) {
                 num_rows = values_ptr->size();
             } else if (values_ptr->size() != num_rows) {
-                throw std::runtime_error("Vector columns in table '" + vector_table +
-                                         "' must have the same length, but got different lengths for columns");
+                throw std::runtime_error("Cannot create_element: vector columns in table '" + vector_table +
+                                         "' must have the same length");
             }
         }
 
@@ -129,8 +129,8 @@ int64_t Database::create_element(const std::string& collection, const Element& e
             if (num_rows == 0) {
                 num_rows = values_ptr->size();
             } else if (values_ptr->size() != num_rows) {
-                throw std::runtime_error("Set columns in table '" + set_table +
-                                         "' must have the same length, but got different lengths for columns");
+                throw std::runtime_error("Cannot create_element: set columns in table '" + set_table +
+                                         "' must have the same length");
             }
         }
 
@@ -184,8 +184,8 @@ int64_t Database::create_element(const std::string& collection, const Element& e
             if (num_rows == 0) {
                 num_rows = values_ptr->size();
             } else if (values_ptr->size() != num_rows) {
-                throw std::runtime_error("Time series columns in table '" + ts_table +
-                                         "' must have the same length, but got different lengths for columns");
+                throw std::runtime_error("Cannot create_element: time series columns in table '" + ts_table +
+                                         "' must have the same length");
             }
         }
 
