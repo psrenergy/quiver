@@ -59,9 +59,7 @@ QUIVER_C_API quiver_error_t quiver_database_update_element(quiver_database_t* db
                                                            const char* collection,
                                                            int64_t id,
                                                            const quiver_element_t* element);
-QUIVER_C_API quiver_error_t quiver_database_delete_element(quiver_database_t* db,
-                                                           const char* collection,
-                                                           int64_t id);
+QUIVER_C_API quiver_error_t quiver_database_delete_element(quiver_database_t* db, const char* collection, int64_t id);
 
 // Relation operations
 QUIVER_C_API quiver_error_t quiver_database_update_scalar_relation(quiver_database_t* db,
@@ -277,7 +275,8 @@ QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(quiver_datab
                                                                     size_t* out_count);
 
 // Free metadata arrays
-QUIVER_C_API quiver_error_t quiver_database_free_scalar_metadata_array(quiver_scalar_metadata_t* metadata, size_t count);
+QUIVER_C_API quiver_error_t quiver_database_free_scalar_metadata_array(quiver_scalar_metadata_t* metadata,
+                                                                       size_t count);
 QUIVER_C_API quiver_error_t quiver_database_free_group_metadata_array(quiver_group_metadata_t* metadata, size_t count);
 
 // Update scalar attributes (by element ID)

@@ -2159,9 +2159,10 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_free_integer_arrayPtr = _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Int64>)>>(
-    'quiver_database_free_integer_array',
-  );
+  late final _quiver_database_free_integer_arrayPtr =
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Int64>)>>(
+        'quiver_database_free_integer_array',
+      );
   late final _quiver_database_free_integer_array = _quiver_database_free_integer_arrayPtr
       .asFunction<int Function(ffi.Pointer<ffi.Int64>)>();
 
@@ -2173,10 +2174,12 @@ class QuiverDatabaseBindings {
     );
   }
 
-  late final _quiver_database_free_float_arrayPtr = _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Double>)>>(
-    'quiver_database_free_float_array',
-  );
-  late final _quiver_database_free_float_array = _quiver_database_free_float_arrayPtr.asFunction<int Function(ffi.Pointer<ffi.Double>)>();
+  late final _quiver_database_free_float_arrayPtr =
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Double>)>>(
+        'quiver_database_free_float_array',
+      );
+  late final _quiver_database_free_float_array = _quiver_database_free_float_arrayPtr
+      .asFunction<int Function(ffi.Pointer<ffi.Double>)>();
 
   int quiver_database_free_string_array(
     ffi.Pointer<ffi.Pointer<ffi.Char>> values,
@@ -2845,7 +2848,8 @@ class QuiverDatabaseBindings {
   late final _quiver_element_free_stringPtr = _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Char>)>>(
     'quiver_element_free_string',
   );
-  late final _quiver_element_free_string = _quiver_element_free_stringPtr.asFunction<int Function(ffi.Pointer<ffi.Char>)>();
+  late final _quiver_element_free_string = _quiver_element_free_stringPtr
+      .asFunction<int Function(ffi.Pointer<ffi.Char>)>();
 
   int quiver_lua_runner_new(
     ffi.Pointer<quiver_database_t> db,
