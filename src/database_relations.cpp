@@ -3,9 +3,9 @@
 namespace quiver {
 
 void Database::update_scalar_relation(const std::string& collection,
-                                   const std::string& attribute,
-                                   const std::string& from_label,
-                                   const std::string& to_label) {
+                                      const std::string& attribute,
+                                      const std::string& from_label,
+                                      const std::string& to_label) {
     impl_->logger->debug("Setting relation {}.{} from '{}' to '{}'", collection, attribute, from_label, to_label);
 
     impl_->require_collection(collection, "update_scalar_relation");

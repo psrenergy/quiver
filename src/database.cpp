@@ -314,7 +314,8 @@ void Database::migrate_up(const std::string& migrations_path) {
 
         const auto up_sql = migration.up_sql();
         if (up_sql.empty()) {
-            throw std::runtime_error("Cannot migrate_up: migration " + std::to_string(migration.version()) + " has no up.sql file");
+            throw std::runtime_error("Cannot migrate_up: migration " + std::to_string(migration.version()) +
+                                     " has no up.sql file");
         }
 
         begin_transaction();
@@ -326,7 +327,8 @@ void Database::migrate_up(const std::string& migrations_path) {
         } catch (const std::exception& e) {
             rollback();
             impl_->logger->error("Migration {} failed: {}", migration.version(), e.what());
-            throw std::runtime_error("Failed to migrate_up: migration " + std::to_string(migration.version()) + ": " + e.what());
+            throw std::runtime_error("Failed to migrate_up: migration " + std::to_string(migration.version()) + ": " +
+                                     e.what());
         }
     }
 

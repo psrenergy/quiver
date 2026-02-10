@@ -110,8 +110,8 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupById) {
     char** out_date_times = nullptr;
     double* out_values = nullptr;
     size_t row_count = 0;
-    err = quiver_database_read_time_series_group(
-        db, "Collection", "data", id, &out_date_times, &out_values, &row_count);
+    err =
+        quiver_database_read_time_series_group(db, "Collection", "data", id, &out_date_times, &out_values, &row_count);
 
     EXPECT_EQ(err, QUIVER_OK);
     ASSERT_EQ(row_count, 3);
@@ -154,8 +154,8 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupByIdEmpty) {
     char** out_date_times = nullptr;
     double* out_values = nullptr;
     size_t row_count = 0;
-    auto err = quiver_database_read_time_series_group(
-        db, "Collection", "data", id, &out_date_times, &out_values, &row_count);
+    auto err =
+        quiver_database_read_time_series_group(db, "Collection", "data", id, &out_date_times, &out_values, &row_count);
 
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(row_count, 0);
@@ -209,8 +209,8 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroup) {
     char** out_date_times = nullptr;
     double* out_values = nullptr;
     size_t row_count = 0;
-    err = quiver_database_read_time_series_group(
-        db, "Collection", "data", id, &out_date_times, &out_values, &row_count);
+    err =
+        quiver_database_read_time_series_group(db, "Collection", "data", id, &out_date_times, &out_values, &row_count);
 
     EXPECT_EQ(err, QUIVER_OK);
     ASSERT_EQ(row_count, 2);
@@ -259,8 +259,8 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupClear) {
     char** out_date_times = nullptr;
     double* out_values = nullptr;
     size_t row_count = 0;
-    err = quiver_database_read_time_series_group(
-        db, "Collection", "data", id, &out_date_times, &out_values, &row_count);
+    err =
+        quiver_database_read_time_series_group(db, "Collection", "data", id, &out_date_times, &out_values, &row_count);
 
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(row_count, 0);
@@ -297,9 +297,8 @@ TEST(DatabaseCApi, TimeSeriesNullArguments) {
     EXPECT_EQ(quiver_database_read_time_series_group(
                   nullptr, "Collection", "data", 1, &out_date_times, &out_values, &row_count),
               QUIVER_ERROR);
-    EXPECT_EQ(
-        quiver_database_read_time_series_group(db, nullptr, "data", 1, &out_date_times, &out_values, &row_count),
-        QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_read_time_series_group(db, nullptr, "data", 1, &out_date_times, &out_values, &row_count),
+              QUIVER_ERROR);
 
     quiver_database_close(db);
 }

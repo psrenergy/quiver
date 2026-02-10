@@ -140,9 +140,9 @@ TEST(DatabaseCApi, CreateElementWithTimeSeries) {
     char** out_date_times = nullptr;
     double* out_values = nullptr;
     size_t out_count = 0;
-    ASSERT_EQ(quiver_database_read_time_series_group(
-                  db, "Collection", "data", id, &out_date_times, &out_values, &out_count),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_read_time_series_group(db, "Collection", "data", id, &out_date_times, &out_values, &out_count),
+        QUIVER_OK);
     EXPECT_EQ(out_count, 3);
     EXPECT_STREQ(out_date_times[0], "2024-01-01T10:00:00");
     EXPECT_STREQ(out_date_times[1], "2024-01-02T10:00:00");

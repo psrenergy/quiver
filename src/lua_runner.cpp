@@ -110,9 +110,7 @@ struct LuaRunner::Impl {
                 return read_element_ids_to_lua(self, collection, s);
             },
             "delete_element_by_id",
-            [](Database& self, const std::string& collection, int64_t id) {
-                self.delete_element(collection, id);
-            },
+            [](Database& self, const std::string& collection, int64_t id) { self.delete_element(collection, id); },
             "update_element",
             [](Database& self, const std::string& collection, int64_t id, sol::table values) {
                 update_element_from_lua(self, collection, id, values);
@@ -258,7 +256,9 @@ struct LuaRunner::Impl {
                const std::string& collection,
                const std::string& attribute,
                const std::string& from_label,
-               const std::string& to_label) { self.update_scalar_relation(collection, attribute, from_label, to_label); },
+               const std::string& to_label) {
+                self.update_scalar_relation(collection, attribute, from_label, to_label);
+            },
             "read_scalar_relation",
             [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
                 return read_scalar_relation_to_lua(self, collection, attribute, s);

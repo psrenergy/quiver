@@ -206,10 +206,10 @@ QUIVER_C_API quiver_error_t quiver_database_delete_element_by_id(quiver_database
 }
 
 QUIVER_C_API quiver_error_t quiver_database_update_scalar_relation(quiver_database_t* db,
-                                                                const char* collection,
-                                                                const char* attribute,
-                                                                const char* from_label,
-                                                                const char* to_label) {
+                                                                   const char* collection,
+                                                                   const char* attribute,
+                                                                   const char* from_label,
+                                                                   const char* to_label) {
     QUIVER_REQUIRE(db, collection, attribute, from_label, to_label);
 
     try {
@@ -1139,9 +1139,7 @@ QUIVER_C_API quiver_error_t quiver_database_export_csv(quiver_database_t* db, co
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_import_csv(quiver_database_t* db,
-                                                            const char* table,
-                                                            const char* path) {
+QUIVER_C_API quiver_error_t quiver_database_import_csv(quiver_database_t* db, const char* table, const char* path) {
     QUIVER_REQUIRE(db, table, path);
 
     try {
@@ -1389,12 +1387,12 @@ QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(quiver_datab
 }
 
 QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_database_t* db,
-                                                                         const char* collection,
-                                                                         const char* group,
-                                                                         int64_t id,
-                                                                         char*** out_date_times,
-                                                                         double** out_values,
-                                                                         size_t* out_row_count) {
+                                                                   const char* collection,
+                                                                   const char* group,
+                                                                   int64_t id,
+                                                                   char*** out_date_times,
+                                                                   double** out_values,
+                                                                   size_t* out_row_count) {
     QUIVER_REQUIRE(db, collection, group, out_date_times, out_values, out_row_count);
 
     try {

@@ -65,10 +65,10 @@ QUIVER_C_API quiver_error_t quiver_database_delete_element_by_id(quiver_database
 
 // Relation operations
 QUIVER_C_API quiver_error_t quiver_database_update_scalar_relation(quiver_database_t* db,
-                                                                const char* collection,
-                                                                const char* attribute,
-                                                                const char* from_label,
-                                                                const char* to_label);
+                                                                   const char* collection,
+                                                                   const char* attribute,
+                                                                   const char* from_label,
+                                                                   const char* to_label);
 
 QUIVER_C_API quiver_error_t quiver_database_read_scalar_relation(quiver_database_t* db,
                                                                  const char* collection,
@@ -347,12 +347,12 @@ QUIVER_C_API quiver_error_t quiver_database_update_set_strings(quiver_database_t
 // out_rows: array of row structs, out_row_count: number of rows
 // Each row contains date_time string and value columns
 QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_database_t* db,
-                                                                         const char* collection,
-                                                                         const char* group,
-                                                                         int64_t id,
-                                                                         char*** out_date_times,
-                                                                         double** out_values,
-                                                                         size_t* out_row_count);
+                                                                   const char* collection,
+                                                                   const char* group,
+                                                                   int64_t id,
+                                                                   char*** out_date_times,
+                                                                   double** out_values,
+                                                                   size_t* out_row_count);
 
 // Update time series group - replaces all rows for element
 QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_database_t* db,
