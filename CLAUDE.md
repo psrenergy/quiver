@@ -213,23 +213,28 @@ quiver_database_close(db);
 ```
 
 ### Memory Management
-`new`/`delete`, provide matching `quiver_free_*` functions:
+`new`/`delete`, provide matching `quiver_{entity}_free_*` functions:
 ```cpp
 // Factory functions return error code, use out-parameter for handle
 quiver_error_t quiver_database_from_schema(..., quiver_database_t** out_db);
 void quiver_database_close(quiver_database_t* db);
 
-char** quiver_read_strings(...);
-void quiver_free_strings(char** strings, int count);
+// Database entity free functions (arrays, vectors, metadata, time series)
+quiver_database_free_integer_array(int64_t*)
+quiver_database_free_float_array(double*)
+quiver_database_free_string_array(char**, size_t)
+
+// Element entity free function (strings returned by element/query operations)
+quiver_element_free_string(char*)
 ```
 
 ### Metadata Types
 Unified `quiver_group_metadata_t` for vector, set, and time series groups. `dimension_column` is `NULL` for vectors/sets, populated for time series. Single free functions:
 ```cpp
-quiver_free_scalar_metadata(quiver_scalar_metadata_t*)
-quiver_free_group_metadata(quiver_group_metadata_t*)
-quiver_free_scalar_metadata_array(quiver_scalar_metadata_t*, size_t)
-quiver_free_group_metadata_array(quiver_group_metadata_t*, size_t)
+quiver_database_free_scalar_metadata(quiver_scalar_metadata_t*)
+quiver_database_free_group_metadata(quiver_group_metadata_t*)
+quiver_database_free_scalar_metadata_array(quiver_scalar_metadata_t*, size_t)
+quiver_database_free_group_metadata_array(quiver_group_metadata_t*, size_t)
 ```
 Internal helpers `convert_scalar_to_c`, `convert_group_to_c`, `free_scalar_fields`, `free_group_fields` in `src/c/database_helpers.h` avoid duplication.
 
