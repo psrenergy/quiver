@@ -53,21 +53,21 @@ QUIVER_C_API quiver_error_t quiver_database_read_scalar_strings(quiver_database_
 
 // Free scalar arrays
 
-QUIVER_C_API quiver_error_t quiver_free_integer_array(int64_t* values) {
+QUIVER_C_API quiver_error_t quiver_database_free_integer_array(int64_t* values) {
     QUIVER_REQUIRE(values);
 
     delete[] values;
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t quiver_free_float_array(double* values) {
+QUIVER_C_API quiver_error_t quiver_database_free_float_array(double* values) {
     QUIVER_REQUIRE(values);
 
     delete[] values;
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t quiver_free_string_array(char** values, size_t count) {
+QUIVER_C_API quiver_error_t quiver_database_free_string_array(char** values, size_t count) {
     QUIVER_REQUIRE(values);
 
     for (size_t i = 0; i < count; ++i) {
@@ -151,19 +151,19 @@ QUIVER_C_API quiver_error_t quiver_database_read_vector_strings(quiver_database_
 
 // Free vector arrays
 
-QUIVER_C_API quiver_error_t quiver_free_integer_vectors(int64_t** vectors, size_t* sizes, size_t count) {
+QUIVER_C_API quiver_error_t quiver_database_free_integer_vectors(int64_t** vectors, size_t* sizes, size_t count) {
     QUIVER_REQUIRE(vectors, sizes);
 
     return free_vectors_impl(vectors, sizes, count);
 }
 
-QUIVER_C_API quiver_error_t quiver_free_float_vectors(double** vectors, size_t* sizes, size_t count) {
+QUIVER_C_API quiver_error_t quiver_database_free_float_vectors(double** vectors, size_t* sizes, size_t count) {
     QUIVER_REQUIRE(vectors, sizes);
 
     return free_vectors_impl(vectors, sizes, count);
 }
 
-QUIVER_C_API quiver_error_t quiver_free_string_vectors(char*** vectors, size_t* sizes, size_t count) {
+QUIVER_C_API quiver_error_t quiver_database_free_string_vectors(char*** vectors, size_t* sizes, size_t count) {
     QUIVER_REQUIRE(vectors, sizes);
 
     for (size_t i = 0; i < count; ++i) {

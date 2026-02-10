@@ -149,7 +149,7 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
 
 // Time series free functions (co-located with read)
 
-QUIVER_C_API quiver_error_t quiver_free_time_series_data(char** date_times, double* values, size_t row_count) {
+QUIVER_C_API quiver_error_t quiver_database_free_time_series_data(char** date_times, double* values, size_t row_count) {
     QUIVER_REQUIRE(values, date_times);
 
     if (date_times) {
@@ -261,7 +261,7 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_files(quiver_data
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_free_time_series_files(char** columns, char** paths, size_t count) {
+QUIVER_C_API quiver_error_t quiver_database_free_time_series_files(char** columns, char** paths, size_t count) {
     QUIVER_REQUIRE(columns, paths);
 
     for (size_t i = 0; i < count; ++i) {

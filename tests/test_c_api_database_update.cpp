@@ -138,7 +138,7 @@ TEST(DatabaseCApi, UpdateVectorIntegers) {
     EXPECT_EQ(read_values[2], 30);
     EXPECT_EQ(read_values[3], 40);
 
-    quiver_free_integer_array(read_values);
+    quiver_database_free_integer_array(read_values);
     quiver_database_close(db);
 }
 
@@ -178,7 +178,7 @@ TEST(DatabaseCApi, UpdateVectorFloats) {
     EXPECT_DOUBLE_EQ(read_values[0], 10.5);
     EXPECT_DOUBLE_EQ(read_values[1], 20.5);
 
-    quiver_free_float_array(read_values);
+    quiver_database_free_float_array(read_values);
     quiver_database_close(db);
 }
 
@@ -266,7 +266,7 @@ TEST(DatabaseCApi, UpdateSetStrings) {
     EXPECT_EQ(set_values[1], "new_tag2");
     EXPECT_EQ(set_values[2], "new_tag3");
 
-    quiver_free_string_array(read_values, count);
+    quiver_database_free_string_array(read_values, count);
     quiver_database_close(db);
 }
 
@@ -513,7 +513,7 @@ TEST(DatabaseCApi, UpdateElementWithTimeSeries) {
     EXPECT_DOUBLE_EQ(out_values[1], 20.0);
     EXPECT_DOUBLE_EQ(out_values[2], 30.0);
 
-    quiver_free_string_array(out_date_times, out_count);
+    quiver_database_free_string_array(out_date_times, out_count);
     delete[] out_values;
     quiver_database_close(db);
 }

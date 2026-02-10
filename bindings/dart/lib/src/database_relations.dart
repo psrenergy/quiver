@@ -57,7 +57,7 @@ extension DatabaseRelations on Database {
           result.add(s.isEmpty ? null : s);
         }
       }
-      bindings.quiver_free_string_array(outValues.value, count);
+      bindings.quiver_database_free_string_array(outValues.value, count);
       return result;
     } finally {
       arena.releaseAll();

@@ -10,7 +10,7 @@ extension DatabaseDelete on Database {
     final arena = Arena();
     try {
       check(
-        bindings.quiver_database_delete_element_by_id(
+        bindings.quiver_database_delete_element(
           _ptr,
           collection.toNativeUtf8(allocator: arena).cast(),
           id,
