@@ -1034,10 +1034,10 @@ struct LuaRunner::Impl {
     // ========================================================================
 
     static sol::table read_time_series_group_to_lua(Database& db,
-                                                          const std::string& collection,
-                                                          const std::string& group,
-                                                          int64_t id,
-                                                          sol::this_state s) {
+                                                    const std::string& collection,
+                                                    const std::string& group,
+                                                    int64_t id,
+                                                    sol::this_state s) {
         sol::state_view lua(s);
         auto rows = db.read_time_series_group(collection, group, id);
         auto t = lua.create_table();
