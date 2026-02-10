@@ -267,6 +267,14 @@ void Database::update_time_series_files(const std::string& collection,
         return;
     }
 
+    // Validate caller-provided column names
+    for (const auto& [col_name, path] : paths) {
+        if (!table_def->has_column(col_name)) {
+            throw std::runtime_error("Cannot update_time_series_files: column '" + col_name +
+                                      "' not found in table '" + tsf + "'");
+        }
+    }
+
     Impl::TransactionGuard txn(*impl_);
 
     // Delete existing row (singleton table)
