@@ -813,7 +813,7 @@ extension DatabaseRead on Database {
         case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
           values = readVectorDateTimesById(collection, name, id);
         default:
-          throw Exception('Unknown data type: ${col.dataType}');
+          throw ArgumentError('Unknown data type: ${col.dataType}');
       }
 
       columnData[name] = values;
@@ -863,7 +863,7 @@ extension DatabaseRead on Database {
         case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
           values = readSetDateTimesById(collection, name, id);
         default:
-          throw Exception('Unknown data type: ${col.dataType}');
+          throw ArgumentError('Unknown data type: ${col.dataType}');
       }
 
       columnData[name] = values;

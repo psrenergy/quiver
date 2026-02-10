@@ -414,7 +414,7 @@ function read_all_scalars_by_id(db::Database, collection::String, id::Int64)
         elseif attribute.data_type == C.QUIVER_DATA_TYPE_DATE_TIME
             result[name] = read_scalar_date_time_by_id(db, collection, name, id)
         else
-            throw(DatabaseException("Unsupported scalar data type for '$collection.$name'"))
+            throw(ArgumentError("Unsupported scalar data type $(attribute.data_type) for '$collection.$name'"))
         end
     end
     return result
@@ -434,7 +434,7 @@ function read_all_vectors_by_id(db::Database, collection::String, id::Int64)
         elseif data_type == C.QUIVER_DATA_TYPE_DATE_TIME
             result[name] = read_vector_date_time_by_id(db, collection, name, id)
         else
-            throw(DatabaseException("Unsupported vector data type for '$collection.$name'"))
+            throw(ArgumentError("Unsupported vector data type $(data_type) for '$collection.$name'"))
         end
     end
     return result
@@ -454,25 +454,14 @@ function read_all_sets_by_id(db::Database, collection::String, id::Int64)
         elseif data_type == C.QUIVER_DATA_TYPE_DATE_TIME
             result[name] = read_set_date_time_by_id(db, collection, name, id)
         else
-            throw(DatabaseException("Unsupported set data type for '$collection.$name'"))
+            throw(ArgumentError("Unsupported set data type $(data_type) for '$collection.$name'"))
         end
     end
     return result
 end
 
 function read_vector_group_by_id(db::Database, collection::String, group::String, id::Int64)
-    # Find the matching group from the list of vector groups
-    all_groups = list_vector_groups(db, collection)
-    metadata = nothing
-    for g in all_groups
-        if g.group_name == group
-            metadata = g
-            break
-        end
-    end
-    if metadata === nothing
-        throw(DatabaseException("Vector group '$group' not found in collection '$collection'"))
-    end
+    metadata = get_vector_metadata(db, collection, group)
     columns = metadata.value_columns
 
     if isempty(columns)
@@ -494,7 +483,7 @@ function read_vector_group_by_id(db::Database, collection::String, group::String
         elseif col.data_type == C.QUIVER_DATA_TYPE_DATE_TIME
             read_vector_date_time_by_id(db, collection, name, id)
         else
-            throw(DatabaseException("Unknown data type: $(col.data_type)"))
+            throw(ArgumentError("Unsupported data type $(col.data_type) for column '$(col.name)'"))
         end
 
         column_data[name] = values
@@ -515,18 +504,7 @@ function read_vector_group_by_id(db::Database, collection::String, group::String
 end
 
 function read_set_group_by_id(db::Database, collection::String, group::String, id::Int64)
-    # Find the matching group from the list of set groups
-    all_groups = list_set_groups(db, collection)
-    metadata = nothing
-    for g in all_groups
-        if g.group_name == group
-            metadata = g
-            break
-        end
-    end
-    if metadata === nothing
-        throw(DatabaseException("Set group '$group' not found in collection '$collection'"))
-    end
+    metadata = get_set_metadata(db, collection, group)
     columns = metadata.value_columns
 
     if isempty(columns)
@@ -548,7 +526,7 @@ function read_set_group_by_id(db::Database, collection::String, group::String, i
         elseif col.data_type == C.QUIVER_DATA_TYPE_DATE_TIME
             read_set_date_time_by_id(db, collection, name, id)
         else
-            throw(DatabaseException("Unknown data type: $(col.data_type)"))
+            throw(ArgumentError("Unsupported data type $(col.data_type) for column '$(col.name)'"))
         end
 
         column_data[name] = values

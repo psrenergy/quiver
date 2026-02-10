@@ -125,7 +125,7 @@ void main() {
       db.close();
       expect(
         () => db.currentVersion(),
-        throwsA(isA<DatabaseException>()),
+        throwsA(isA<StateError>()),
       );
     });
   });
@@ -143,7 +143,7 @@ void main() {
       db.close();
       expect(
         () => db.createElement('Configuration', {'label': 'Test'}),
-        throwsA(isA<DatabaseException>()),
+        throwsA(isA<StateError>()),
       );
     });
   });

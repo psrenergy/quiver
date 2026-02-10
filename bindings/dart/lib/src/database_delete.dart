@@ -4,7 +4,7 @@ part of 'database.dart';
 extension DatabaseDelete on Database {
   /// Deletes an element by ID from a collection.
   /// CASCADE DELETE handles cleanup of related vector/set tables.
-  void deleteElementById(String collection, int id) {
+  void deleteElement(String collection, int id) {
     _ensureNotClosed();
 
     final arena = Arena();

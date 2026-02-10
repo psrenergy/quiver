@@ -280,7 +280,7 @@ TEST_F(LuaRunnerCApiTest, DeleteElement) {
         local ids = db:read_element_ids("Collection")
         assert(#ids == 2, "Expected 2 elements before delete")
 
-        db:delete_element_by_id("Collection", 1)
+        db:delete_element("Collection", 1)
 
         ids = db:read_element_ids("Collection")
         assert(#ids == 1, "Expected 1 element after delete")

@@ -65,7 +65,7 @@ include("fixture.jl")
 
     @testset "Empty Array Rejected" begin
         el = Quiver.Element()
-        @test_throws Quiver.DatabaseException el["values"] = Any[]
+        @test_throws ArgumentError el["values"] = Any[]
         Quiver.destroy!(el)
     end
 

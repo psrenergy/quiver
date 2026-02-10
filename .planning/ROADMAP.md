@@ -17,9 +17,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: C++ Naming and Error Standardization** - Standardize C++ method names and exception patterns ✓ (2026-02-10)
 - [x] **Phase 4: C API File Decomposition** - Split monolithic C API database.cpp with shared helper extraction ✓ (2026-02-10)
 - [x] **Phase 5: C API Naming and Error Standardization** - Standardize C API function names and error handling patterns ✓ (2026-02-10)
-- [ ] **Phase 6: Julia Bindings Standardization** - Standardize Julia binding names and error surfacing
-- [ ] **Phase 7: Dart Bindings Standardization** - Standardize Dart binding names and error surfacing
-- [ ] **Phase 8: Lua Bindings Standardization** - Standardize Lua binding names and error surfacing
+- [x] **Phase 6: Julia Bindings Standardization** - Standardize Julia binding names and error surfacing ✓ (2026-02-10)
+- [x] **Phase 7: Dart Bindings Standardization** - Standardize Dart binding names and error surfacing ✓ (2026-02-10)
+- [x] **Phase 8: Lua Bindings Standardization** - Standardize Lua binding names and error surfacing ✓ (2026-02-10)
 - [ ] **Phase 9: Code Hygiene** - SQL injection mitigation, clang-tidy integration, static analysis cleanup
 - [ ] **Phase 10: Cross-Layer Documentation and Final Verification** - Document naming conventions, validate full test suite across all layers
 
@@ -111,10 +111,10 @@ Plans:
   2. Julia function names map predictably from C API names (e.g., `quiver_database_read_scalar_integers` -> `read_scalar_integers`)
   3. All Julia error handling retrieves and surfaces C API error messages -- no custom error strings defined in Julia code
   4. Julia test suite passes (`bindings/julia/test/test.bat` green)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 06-01: Standardize Julia binding names and error handling
+- [x] 06-01-PLAN.md -- Rename delete_element_by_id! and standardize all error handling across Julia bindings ✓
 
 ### Phase 7: Dart Bindings Standardization
 **Goal**: Dart bindings use idiomatic Dart naming conventions while mapping predictably to C API, and surface all C API errors uniformly without crafting custom messages
@@ -125,10 +125,10 @@ Plans:
   2. Dart method names map predictably from C API names (e.g., `quiver_database_read_scalar_integers` -> `readScalarIntegers`)
   3. All Dart error handling retrieves and surfaces C API error messages -- no custom error strings defined in Dart code
   4. Dart test suite passes (`bindings/dart/test/test.bat` green)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 07-01: Standardize Dart binding names and error handling
+- [x] 07-01-PLAN.md -- Rename deleteElementById, standardize all error handling across Dart bindings ✓
 
 ### Phase 8: Lua Bindings Standardization
 **Goal**: Lua bindings use consistent naming matching C++ method names and surface errors uniformly through pcall/error patterns
@@ -139,10 +139,10 @@ Plans:
   2. All Lua error handling uses pcall/error patterns that surface C++ exception messages
   3. No custom error messages are crafted in Lua code -- all errors originate from C++
   4. Lua scripting tests pass through LuaRunner
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 08-01: Standardize Lua binding names and error handling
+- [x] 08-01-PLAN.md -- Rename delete_element_by_id to delete_element in Lua bindings and update tests ✓
 
 ### Phase 9: Code Hygiene
 **Goal**: SQL string concatenation is eliminated from schema queries, clang-tidy is integrated, and the codebase passes static analysis checks
@@ -153,11 +153,11 @@ Plans:
   2. A `.clang-tidy` configuration file exists with `readability-identifier-naming`, `bugprone-*`, `modernize-*`, `performance-*` checks enabled
   3. Running clang-tidy against the codebase produces zero errors (suppressions are documented for intentional exceptions)
   4. All test suites continue to pass after hygiene changes
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 09-01: Replace SQL string concatenation with validated identifiers
-- [ ] 09-02: Add clang-tidy configuration and fix violations
+- [ ] 09-01-PLAN.md -- Add identifier validation to all SQL concatenation sites with require_column helper and PRAGMA guards
+- [ ] 09-02-PLAN.md -- Create .clang-tidy configuration, add CMake tidy target, fix violations
 
 ### Phase 10: Cross-Layer Documentation and Final Verification
 **Goal**: Naming conventions are documented with cross-layer mapping examples in CLAUDE.md, and the full test suite across all layers passes as a final gate
@@ -189,8 +189,8 @@ Note: Phases 6, 7 both depend on Phase 5. Phase 8 depends on Phase 3. Phase 10 d
 | 3. C++ Naming and Error Standardization | 2/2 | Complete | 2026-02-10 |
 | 4. C API File Decomposition | 2/2 | Complete | 2026-02-10 |
 | 5. C API Naming and Error Standardization | 2/2 | Complete | 2026-02-10 |
-| 6. Julia Bindings Standardization | 0/1 | Not started | - |
-| 7. Dart Bindings Standardization | 0/1 | Not started | - |
-| 8. Lua Bindings Standardization | 0/1 | Not started | - |
+| 6. Julia Bindings Standardization | 1/1 | Complete | 2026-02-10 |
+| 7. Dart Bindings Standardization | 1/1 | Complete | 2026-02-10 |
+| 8. Lua Bindings Standardization | 1/1 | Complete | 2026-02-10 |
 | 9. Code Hygiene | 0/2 | Not started | - |
 | 10. Cross-Layer Documentation and Final Verification | 0/2 | Not started | - |
