@@ -110,7 +110,7 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupById) {
     char** out_date_times = nullptr;
     double* out_values = nullptr;
     size_t row_count = 0;
-    err = quiver_database_read_time_series_group_by_id(
+    err = quiver_database_read_time_series_group(
         db, "Collection", "data", id, &out_date_times, &out_values, &row_count);
 
     EXPECT_EQ(err, QUIVER_OK);
@@ -154,7 +154,7 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupByIdEmpty) {
     char** out_date_times = nullptr;
     double* out_values = nullptr;
     size_t row_count = 0;
-    auto err = quiver_database_read_time_series_group_by_id(
+    auto err = quiver_database_read_time_series_group(
         db, "Collection", "data", id, &out_date_times, &out_values, &row_count);
 
     EXPECT_EQ(err, QUIVER_OK);
@@ -209,7 +209,7 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroup) {
     char** out_date_times = nullptr;
     double* out_values = nullptr;
     size_t row_count = 0;
-    err = quiver_database_read_time_series_group_by_id(
+    err = quiver_database_read_time_series_group(
         db, "Collection", "data", id, &out_date_times, &out_values, &row_count);
 
     EXPECT_EQ(err, QUIVER_OK);
@@ -259,7 +259,7 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupClear) {
     char** out_date_times = nullptr;
     double* out_values = nullptr;
     size_t row_count = 0;
-    err = quiver_database_read_time_series_group_by_id(
+    err = quiver_database_read_time_series_group(
         db, "Collection", "data", id, &out_date_times, &out_values, &row_count);
 
     EXPECT_EQ(err, QUIVER_OK);
@@ -294,11 +294,11 @@ TEST(DatabaseCApi, TimeSeriesNullArguments) {
     char** out_date_times = nullptr;
     double* out_values = nullptr;
     size_t row_count = 0;
-    EXPECT_EQ(quiver_database_read_time_series_group_by_id(
+    EXPECT_EQ(quiver_database_read_time_series_group(
                   nullptr, "Collection", "data", 1, &out_date_times, &out_values, &row_count),
               QUIVER_ERROR);
     EXPECT_EQ(
-        quiver_database_read_time_series_group_by_id(db, nullptr, "data", 1, &out_date_times, &out_values, &row_count),
+        quiver_database_read_time_series_group(db, nullptr, "data", 1, &out_date_times, &out_values, &row_count),
         QUIVER_ERROR);
 
     quiver_database_close(db);

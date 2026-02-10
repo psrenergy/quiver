@@ -205,7 +205,7 @@ QUIVER_C_API quiver_error_t quiver_database_delete_element_by_id(quiver_database
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_set_scalar_relation(quiver_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_update_scalar_relation(quiver_database_t* db,
                                                                 const char* collection,
                                                                 const char* attribute,
                                                                 const char* from_label,
@@ -1127,7 +1127,7 @@ QUIVER_C_API quiver_error_t quiver_free_group_metadata_array(quiver_group_metada
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t quiver_database_export_to_csv(quiver_database_t* db, const char* table, const char* path) {
+QUIVER_C_API quiver_error_t quiver_database_export_csv(quiver_database_t* db, const char* table, const char* path) {
     QUIVER_REQUIRE(db, table, path);
 
     try {
@@ -1139,7 +1139,7 @@ QUIVER_C_API quiver_error_t quiver_database_export_to_csv(quiver_database_t* db,
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_import_from_csv(quiver_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_import_csv(quiver_database_t* db,
                                                             const char* table,
                                                             const char* path) {
     QUIVER_REQUIRE(db, table, path);
@@ -1388,7 +1388,7 @@ QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(quiver_datab
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_read_time_series_group_by_id(quiver_database_t* db,
+QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_database_t* db,
                                                                          const char* collection,
                                                                          const char* group,
                                                                          int64_t id,

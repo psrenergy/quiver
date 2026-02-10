@@ -261,7 +261,7 @@ TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
 // ============================================================================
 
 TEST_F(TempFileFixture, SetScalarRelationNullDb) {
-    auto err = quiver_database_set_scalar_relation(nullptr, "Child", "parent_id", "Child 1", "Parent 1");
+    auto err = quiver_database_update_scalar_relation(nullptr, "Child", "parent_id", "Child 1", "Parent 1");
     EXPECT_EQ(err, QUIVER_ERROR);
 }
 
@@ -272,7 +272,7 @@ TEST_F(TempFileFixture, SetScalarRelationNullCollection) {
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto err = quiver_database_set_scalar_relation(db, nullptr, "parent_id", "Child 1", "Parent 1");
+    auto err = quiver_database_update_scalar_relation(db, nullptr, "parent_id", "Child 1", "Parent 1");
     EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
@@ -285,7 +285,7 @@ TEST_F(TempFileFixture, SetScalarRelationNullAttribute) {
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto err = quiver_database_set_scalar_relation(db, "Child", nullptr, "Child 1", "Parent 1");
+    auto err = quiver_database_update_scalar_relation(db, "Child", nullptr, "Child 1", "Parent 1");
     EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
@@ -298,7 +298,7 @@ TEST_F(TempFileFixture, SetScalarRelationNullFromLabel) {
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto err = quiver_database_set_scalar_relation(db, "Child", "parent_id", nullptr, "Parent 1");
+    auto err = quiver_database_update_scalar_relation(db, "Child", "parent_id", nullptr, "Parent 1");
     EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
@@ -311,7 +311,7 @@ TEST_F(TempFileFixture, SetScalarRelationNullToLabel) {
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto err = quiver_database_set_scalar_relation(db, "Child", "parent_id", "Child 1", nullptr);
+    auto err = quiver_database_update_scalar_relation(db, "Child", "parent_id", "Child 1", nullptr);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
@@ -341,7 +341,7 @@ TEST_F(TempFileFixture, SetScalarRelationValid) {
     EXPECT_EQ(quiver_element_destroy(child), QUIVER_OK);
 
     // Set relation
-    auto err = quiver_database_set_scalar_relation(db, "Child", "parent_id", "Child 1", "Parent 1");
+    auto err = quiver_database_update_scalar_relation(db, "Child", "parent_id", "Child 1", "Parent 1");
     EXPECT_EQ(err, QUIVER_OK);
 
     quiver_database_close(db);
@@ -426,7 +426,7 @@ TEST_F(TempFileFixture, ReadScalarRelationValid) {
     EXPECT_EQ(quiver_element_destroy(child), QUIVER_OK);
 
     // Set relation
-    auto err = quiver_database_set_scalar_relation(db, "Child", "parent_id", "Child 1", "Parent 1");
+    auto err = quiver_database_update_scalar_relation(db, "Child", "parent_id", "Child 1", "Parent 1");
     EXPECT_EQ(err, QUIVER_OK);
 
     // Read relation
