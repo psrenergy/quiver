@@ -9,11 +9,11 @@ Requirements for this refactoring milestone. Each maps to roadmap phases.
 
 ### File Decomposition
 
-- [ ] **DECP-01**: C++ `database.cpp` (1934 lines) split into functional modules by operation type (lifecycle, create, read, update, delete, metadata, time series, query, relations, describe)
+- [x] **DECP-01**: C++ `database.cpp` (1934 lines) split into functional modules by operation type (lifecycle, create, read, update, delete, metadata, time series, query, relations, describe) ✓ (Phase 2)
 - [x] **DECP-02**: Internal `database_impl.h` header extracted so split files share `Database::Impl` without exposing it publicly ✓ (Phase 1)
 - [ ] **DECP-03**: C API `src/c/database.cpp` (1612 lines) split into functional modules mirroring C++ structure
 - [ ] **DECP-04**: C API helper templates (marshaling, strdup_safe, metadata converters) extracted into shared internal header
-- [ ] **DECP-05**: All existing C++ tests pass after decomposition with zero public header changes
+- [x] **DECP-05**: All existing C++ tests pass after decomposition with zero public header changes ✓ (Phase 2)
 - [ ] **DECP-06**: All existing C API tests pass after decomposition with zero public header changes
 
 ### Naming Consistency
@@ -88,11 +88,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DECP-01 | Phase 2 | Pending |
+| DECP-01 | Phase 2 | Complete ✓ |
 | DECP-02 | Phase 1 | Complete ✓ |
 | DECP-03 | Phase 4 | Pending |
 | DECP-04 | Phase 4 | Pending |
-| DECP-05 | Phase 2 | Pending |
+| DECP-05 | Phase 2 | Complete ✓ |
 | DECP-06 | Phase 4 | Pending |
 | NAME-01 | Phase 3 | Pending |
 | NAME-02 | Phase 5 | Pending |
