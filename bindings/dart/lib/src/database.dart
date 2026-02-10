@@ -38,12 +38,14 @@ class Database {
       optionsPtr.ref = bindings.quiver_database_options_default();
       final outDbPtr = arena<Pointer<quiver_database_t>>();
 
-      check(bindings.quiver_database_from_schema(
-        dbPath.toNativeUtf8(allocator: arena).cast(),
-        schemaPath.toNativeUtf8(allocator: arena).cast(),
-        optionsPtr,
-        outDbPtr,
-      ));
+      check(
+        bindings.quiver_database_from_schema(
+          dbPath.toNativeUtf8(allocator: arena).cast(),
+          schemaPath.toNativeUtf8(allocator: arena).cast(),
+          optionsPtr,
+          outDbPtr,
+        ),
+      );
 
       return Database._(outDbPtr.value);
     } finally {
@@ -61,12 +63,14 @@ class Database {
       optionsPtr.ref = bindings.quiver_database_options_default();
       final outDbPtr = arena<Pointer<quiver_database_t>>();
 
-      check(bindings.quiver_database_from_migrations(
-        dbPath.toNativeUtf8(allocator: arena).cast(),
-        migrationsPath.toNativeUtf8(allocator: arena).cast(),
-        optionsPtr,
-        outDbPtr,
-      ));
+      check(
+        bindings.quiver_database_from_migrations(
+          dbPath.toNativeUtf8(allocator: arena).cast(),
+          migrationsPath.toNativeUtf8(allocator: arena).cast(),
+          optionsPtr,
+          outDbPtr,
+        ),
+      );
 
       return Database._(outDbPtr.value);
     } finally {
