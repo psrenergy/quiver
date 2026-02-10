@@ -1,9 +1,9 @@
 #ifndef QUIVER_C_DATABASE_HELPERS_H
 #define QUIVER_C_DATABASE_HELPERS_H
 
+#include "internal.h"
 #include "quiver/c/database.h"
 #include "quiver/database.h"
-#include "internal.h"
 
 #include <cstring>
 #include <string>
