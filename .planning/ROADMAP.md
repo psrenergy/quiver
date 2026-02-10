@@ -111,10 +111,10 @@ Plans:
   2. Julia function names map predictably from C API names (e.g., `quiver_database_read_scalar_integers` -> `read_scalar_integers`)
   3. All Julia error handling retrieves and surfaces C API error messages -- no custom error strings defined in Julia code
   4. Julia test suite passes (`bindings/julia/test/test.bat` green)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 06-01: Standardize Julia binding names and error handling
+- [ ] 06-01-PLAN.md -- Rename delete_element_by_id! and standardize all error handling across Julia bindings
 
 ### Phase 7: Dart Bindings Standardization
 **Goal**: Dart bindings use idiomatic Dart naming conventions while mapping predictably to C API, and surface all C API errors uniformly without crafting custom messages
