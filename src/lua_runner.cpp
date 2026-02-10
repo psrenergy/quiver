@@ -251,7 +251,7 @@ struct LuaRunner::Impl {
                 return read_set_strings_to_lua(self, collection, attribute, s);
             },
             // Group 6: Relations
-            "set_scalar_relation",
+            "update_scalar_relation",
             [](Database& self,
                const std::string& collection,
                const std::string& attribute,
@@ -273,9 +273,9 @@ struct LuaRunner::Impl {
                 return list_time_series_groups_to_lua(self, collection, s);
             },
             // Group 8: Time series data
-            "read_time_series_group_by_id",
+            "read_time_series_group",
             [](Database& self, const std::string& collection, const std::string& group, int64_t id, sol::this_state s) {
-                return read_time_series_group_by_id_to_lua(self, collection, group, id, s);
+                return read_time_series_group_to_lua(self, collection, group, id, s);
             },
             "update_time_series_group",
             [](Database& self, const std::string& collection, const std::string& group, int64_t id, sol::table rows) {
@@ -1033,7 +1033,7 @@ struct LuaRunner::Impl {
     // Time series data
     // ========================================================================
 
-    static sol::table read_time_series_group_by_id_to_lua(Database& db,
+    static sol::table read_time_series_group_to_lua(Database& db,
                                                           const std::string& collection,
                                                           const std::string& group,
                                                           int64_t id,

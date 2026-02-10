@@ -1317,7 +1317,7 @@ TEST_F(LuaRunnerRelationsTest, SetScalarRelationFromLua) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:set_scalar_relation("Child", "parent_id", "Child 1", "Parent A")
+        db:update_scalar_relation("Child", "parent_id", "Child 1", "Parent A")
     )");
 
     auto relations = db.read_scalar_relation("Child", "parent_id");
@@ -1399,7 +1399,7 @@ TEST_F(LuaRunnerTest, ReadTimeSeriesGroupByIdFromLua) {
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        local rows = db:read_time_series_group_by_id("Collection", "data", )" +
+        local rows = db:read_time_series_group("Collection", "data", )" +
                          std::to_string(id) + R"()
         assert(#rows == 2, "Expected 2 rows, got " .. #rows)
         assert(rows[1].date_time == "2024-01-01", "Expected date_time '2024-01-01'")

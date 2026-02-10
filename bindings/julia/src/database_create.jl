@@ -16,7 +16,7 @@ function create_element!(db::Database, collection::String; kwargs...)
     end
 end
 
-function set_scalar_relation!(
+function update_scalar_relation!(
     db::Database,
     collection::String,
     attribute::String,

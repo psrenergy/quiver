@@ -498,7 +498,7 @@ TEST(DatabaseCApi, UpdateElementWithTimeSeries) {
     EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
     EXPECT_EQ(err, QUIVER_OK);
 
-    // Verify via read_time_series_group_by_id
+    // Verify via read_time_series_group
     char** out_date_times = nullptr;
     double* out_values = nullptr;
     size_t out_count = 0;
