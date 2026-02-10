@@ -97,14 +97,14 @@ TEST(DatabaseErrors, UpdateElementEmptyElement) {
 TEST(DatabaseErrors, DeleteElementNoSchema) {
     quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
-    EXPECT_THROW(db.delete_element_by_id("Configuration", 1), std::runtime_error);
+    EXPECT_THROW(db.delete_element("Configuration", 1), std::runtime_error);
 }
 
 TEST(DatabaseErrors, DeleteElementCollectionNotFound) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
-    EXPECT_THROW(db.delete_element_by_id("NonexistentCollection", 1), std::runtime_error);
+    EXPECT_THROW(db.delete_element("NonexistentCollection", 1), std::runtime_error);
 }
 
 // ============================================================================
@@ -185,14 +185,14 @@ TEST(DatabaseErrors, ReadSetStringsCollectionNotFound) {
 TEST(DatabaseErrors, SetScalarRelationNoSchema) {
     quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
-    EXPECT_THROW(db.set_scalar_relation("Child", "parent_id", "Child 1", "Parent 1"), std::runtime_error);
+    EXPECT_THROW(db.update_scalar_relation("Child", "parent_id", "Child 1", "Parent 1"), std::runtime_error);
 }
 
 TEST(DatabaseErrors, SetScalarRelationCollectionNotFound) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
-    EXPECT_THROW(db.set_scalar_relation("NonexistentCollection", "parent_id", "Child 1", "Parent 1"),
+    EXPECT_THROW(db.update_scalar_relation("NonexistentCollection", "parent_id", "Child 1", "Parent 1"),
                  std::runtime_error);
 }
 
@@ -201,7 +201,7 @@ TEST(DatabaseErrors, SetScalarRelationNotForeignKey) {
         ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     // 'label' is not a foreign key
-    EXPECT_THROW(db.set_scalar_relation("Child", "label", "Child 1", "Parent 1"), std::runtime_error);
+    EXPECT_THROW(db.update_scalar_relation("Child", "label", "Child 1", "Parent 1"), std::runtime_error);
 }
 
 TEST(DatabaseErrors, SetScalarRelationTargetNotFound) {
@@ -218,7 +218,7 @@ TEST(DatabaseErrors, SetScalarRelationTargetNotFound) {
     db.create_element("Child", child);
 
     // Try to set relation to nonexistent parent
-    EXPECT_THROW(db.set_scalar_relation("Child", "parent_id", "Child 1", "Nonexistent Parent"), std::runtime_error);
+    EXPECT_THROW(db.update_scalar_relation("Child", "parent_id", "Child 1", "Nonexistent Parent"), std::runtime_error);
 }
 
 TEST(DatabaseErrors, ReadScalarRelationNoSchema) {

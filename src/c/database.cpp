@@ -197,7 +197,7 @@ QUIVER_C_API quiver_error_t quiver_database_delete_element_by_id(quiver_database
     QUIVER_REQUIRE(db, collection);
 
     try {
-        db->db.delete_element_by_id(collection, id);
+        db->db.delete_element(collection, id);
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
@@ -213,7 +213,7 @@ QUIVER_C_API quiver_error_t quiver_database_set_scalar_relation(quiver_database_
     QUIVER_REQUIRE(db, collection, attribute, from_label, to_label);
 
     try {
-        db->db.set_scalar_relation(collection, attribute, from_label, to_label);
+        db->db.update_scalar_relation(collection, attribute, from_label, to_label);
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
@@ -1131,7 +1131,7 @@ QUIVER_C_API quiver_error_t quiver_database_export_to_csv(quiver_database_t* db,
     QUIVER_REQUIRE(db, table, path);
 
     try {
-        db->db.export_to_csv(table, path);
+        db->db.export_csv(table, path);
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
@@ -1145,7 +1145,7 @@ QUIVER_C_API quiver_error_t quiver_database_import_from_csv(quiver_database_t* d
     QUIVER_REQUIRE(db, table, path);
 
     try {
-        db->db.import_from_csv(table, path);
+        db->db.import_csv(table, path);
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
@@ -1402,7 +1402,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group_by_id(quiver_
         const auto& dim_col = metadata.dimension_column;
         auto val_col = metadata.value_columns.empty() ? "value" : metadata.value_columns[0].name;
 
-        auto rows = db->db.read_time_series_group_by_id(collection, group, id);
+        auto rows = db->db.read_time_series_group(collection, group, id);
         *out_row_count = rows.size();
 
         if (rows.empty()) {

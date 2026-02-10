@@ -2,7 +2,7 @@
 
 namespace quiver {
 
-void Database::set_scalar_relation(const std::string& collection,
+void Database::update_scalar_relation(const std::string& collection,
                                    const std::string& attribute,
                                    const std::string& from_label,
                                    const std::string& to_label) {

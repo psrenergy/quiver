@@ -57,7 +57,7 @@ GroupMetadata Database::get_time_series_metadata(const std::string& collection, 
 }
 
 std::vector<std::map<std::string, Value>>
-Database::read_time_series_group_by_id(const std::string& collection, const std::string& group, int64_t id) {
+Database::read_time_series_group(const std::string& collection, const std::string& group, int64_t id) {
     impl_->require_schema("read time series");
 
     auto ts_table = impl_->schema->find_time_series_table(collection, group);
