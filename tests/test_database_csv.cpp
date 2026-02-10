@@ -425,3 +425,72 @@ TEST(Database, ExportToCsvNonExistentCollectionThrows) {
     auto csv_path = "quiver_export_invalid.csv";
     EXPECT_THROW(db.export_to_csv("NonExistent", csv_path), std::runtime_error);
 }
+
+TEST(Database, ExportToCsvNullValues) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+
+    // Create element with NULL values
+    quiver::Element e1;
+    e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
+    db.create_element("Configuration", e1);
+
+    quiver::Element e2;
+    e2.set("label", std::string("Config 2"));  // Other attributes are NULL
+    db.create_element("Configuration", e2);
+
+    auto csv_path = (fs::temp_directory_path() / "quiver_export_nulls.csv").string();
+    db.export_to_csv("Configuration", csv_path);
+
+    // Read CSV back
+    std::ifstream file(csv_path);
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(file, line)) {
+        lines.push_back(line);
+    }
+    file.close();
+    fs::remove(csv_path);
+
+    ASSERT_GE(lines.size(), 3);  // sep + header + 2 data rows
+
+    // NULL values should be exported as empty strings
+    // Config 2 row should have empty values for nullable columns
+    EXPECT_NE(lines[3].find("Config 2"), std::string::npos);
+    // Verify it contains empty fields (consecutive commas or trailing comma)
+    auto config2_line = lines[3];
+    EXPECT_TRUE(config2_line.find(",,") != std::string::npos || config2_line.back() == ',');
+}
+
+TEST(Database, ExportToCsvTimeSeriesFiles) {
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
+
+    // Insert time series file references
+    db.query_string(
+        "INSERT INTO Collection_time_series_files (data_file, metadata_file) VALUES ('data.csv', 'meta.csv')");
+
+    auto csv_path = (fs::temp_directory_path() / "quiver_export_ts_files.csv").string();
+    db.export_to_csv("Collection_time_series_files", csv_path);
+
+    // Read CSV back
+    std::ifstream file(csv_path);
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(file, line)) {
+        lines.push_back(line);
+    }
+    file.close();
+    fs::remove(csv_path);
+
+    ASSERT_EQ(lines.size(), 3);  // sep + header + 1 row
+
+    // Header should not contain id or label (singleton table)
+    EXPECT_EQ(lines[1].find("id"), std::string::npos);
+    EXPECT_EQ(lines[1].find("label"), std::string::npos);
+    EXPECT_NE(lines[1].find("data_file"), std::string::npos);
+    EXPECT_NE(lines[1].find("metadata_file"), std::string::npos);
+
+    // Data row
+    EXPECT_NE(lines[2].find("data.csv"), std::string::npos);
+    EXPECT_NE(lines[2].find("meta.csv"), std::string::npos);
+}
