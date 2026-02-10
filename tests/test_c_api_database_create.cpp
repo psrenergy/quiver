@@ -151,7 +151,7 @@ TEST(DatabaseCApi, CreateElementWithTimeSeries) {
     EXPECT_DOUBLE_EQ(out_values[1], 2.5);
     EXPECT_DOUBLE_EQ(out_values[2], 3.5);
 
-    quiver_free_string_array(out_date_times, out_count);
+    quiver_database_free_string_array(out_date_times, out_count);
     delete[] out_values;
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     quiver_database_close(db);
@@ -180,7 +180,7 @@ TEST(DatabaseCApi, CreateElementWithDatetime) {
     EXPECT_EQ(out_count, 1);
     EXPECT_STREQ(out_values[0], "2024-03-15T14:30:45");
 
-    quiver_free_string_array(out_values, out_count);
+    quiver_database_free_string_array(out_values, out_count);
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     quiver_database_close(db);
 }

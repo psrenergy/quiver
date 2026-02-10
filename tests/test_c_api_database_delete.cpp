@@ -25,10 +25,10 @@ TEST(DatabaseCApi, DeleteElementById) {
     auto err = quiver_database_read_element_ids(db, "Configuration", &ids, &count);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(count, 1);
-    quiver_free_integer_array(ids);
+    quiver_database_free_integer_array(ids);
 
     // Delete element
-    err = quiver_database_delete_element_by_id(db, "Configuration", id);
+    err = quiver_database_delete_element(db, "Configuration", id);
     EXPECT_EQ(err, QUIVER_OK);
 
     // Verify element is gone
@@ -70,10 +70,10 @@ TEST(DatabaseCApi, DeleteElementByIdWithVectorData) {
     auto err = quiver_database_read_vector_integers_by_id(db, "Collection", "value_int", id, &vec_values, &vec_count);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(vec_count, 3);
-    quiver_free_integer_array(vec_values);
+    quiver_database_free_integer_array(vec_values);
 
     // Delete element - CASCADE should delete vector rows too
-    err = quiver_database_delete_element_by_id(db, "Collection", id);
+    err = quiver_database_delete_element(db, "Collection", id);
     EXPECT_EQ(err, QUIVER_OK);
 
     // Verify element is gone
@@ -126,10 +126,10 @@ TEST(DatabaseCApi, DeleteElementByIdWithSetData) {
     auto err = quiver_database_read_set_strings_by_id(db, "Collection", "tag", id, &set_values, &set_count);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(set_count, 2);
-    quiver_free_string_array(set_values, set_count);
+    quiver_database_free_string_array(set_values, set_count);
 
     // Delete element - CASCADE should delete set rows too
-    err = quiver_database_delete_element_by_id(db, "Collection", id);
+    err = quiver_database_delete_element(db, "Collection", id);
     EXPECT_EQ(err, QUIVER_OK);
 
     // Verify element is gone
@@ -168,7 +168,7 @@ TEST(DatabaseCApi, DeleteElementByIdNonExistent) {
     EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
     // Delete non-existent ID - should succeed silently (SQL DELETE is idempotent)
-    auto err = quiver_database_delete_element_by_id(db, "Configuration", 999);
+    auto err = quiver_database_delete_element(db, "Configuration", 999);
     EXPECT_EQ(err, QUIVER_OK);
 
     // Verify original element still exists
@@ -177,7 +177,7 @@ TEST(DatabaseCApi, DeleteElementByIdNonExistent) {
     err = quiver_database_read_element_ids(db, "Configuration", &ids, &count);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(count, 1);
-    quiver_free_integer_array(ids);
+    quiver_database_free_integer_array(ids);
 
     quiver_database_close(db);
 }
@@ -214,7 +214,7 @@ TEST(DatabaseCApi, DeleteElementByIdOtherElementsUnchanged) {
     EXPECT_EQ(quiver_element_destroy(e3), QUIVER_OK);
 
     // Delete middle element
-    auto err = quiver_database_delete_element_by_id(db, "Configuration", id2);
+    auto err = quiver_database_delete_element(db, "Configuration", id2);
     EXPECT_EQ(err, QUIVER_OK);
 
     // Verify only two elements remain
@@ -225,7 +225,7 @@ TEST(DatabaseCApi, DeleteElementByIdOtherElementsUnchanged) {
     EXPECT_EQ(count, 2);
     EXPECT_EQ(ids[0], id1);
     EXPECT_EQ(ids[1], id3);
-    quiver_free_integer_array(ids);
+    quiver_database_free_integer_array(ids);
 
     // Verify first element unchanged
     int64_t val1;
@@ -253,11 +253,11 @@ TEST(DatabaseCApi, DeleteElementByIdNullArguments) {
     ASSERT_NE(db, nullptr);
 
     // Null db
-    auto err = quiver_database_delete_element_by_id(nullptr, "Configuration", 1);
+    auto err = quiver_database_delete_element(nullptr, "Configuration", 1);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     // Null collection
-    err = quiver_database_delete_element_by_id(db, nullptr, 1);
+    err = quiver_database_delete_element(db, nullptr, 1);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
