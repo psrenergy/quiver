@@ -65,11 +65,11 @@ Plans:
   2. All exceptions thrown use `std::runtime_error` with a consistent message format that includes the operation name and the reason for failure
   3. No two methods use different naming styles for the same kind of operation (e.g., all reads use `read_`, all updates use `update_`)
   4. All existing C++ tests pass after renaming (updated to match new names)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: Audit and standardize C++ method names
-- [ ] 03-02: Standardize C++ exception patterns
+- [ ] 03-01-PLAN.md -- Rename 5 deviant C++ method names and update all call sites
+- [ ] 03-02-PLAN.md -- Standardize all error messages to 3 patterns and update CLAUDE.md
 
 ### Phase 4: C API File Decomposition
 **Goal**: The monolithic C API database.cpp is split into focused modules mirroring C++ structure, with shared helper templates extracted into a common internal header
