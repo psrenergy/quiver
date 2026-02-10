@@ -100,7 +100,7 @@ TEST_F(LuaRunnerCApiTest, CreateElement) {
     EXPECT_EQ(read_result, QUIVER_OK);
     EXPECT_EQ(count, 1);
     EXPECT_EQ(values[0], 42);
-    quiver_free_integer_array(values);
+    quiver_database_free_integer_array(values);
 
     quiver_lua_runner_free(lua);
     quiver_database_close(db);
@@ -177,7 +177,7 @@ TEST_F(LuaRunnerCApiTest, ReuseRunner) {
     auto read_result = quiver_database_read_scalar_strings(db, "Collection", "label", &labels, &count);
     EXPECT_EQ(read_result, QUIVER_OK);
     EXPECT_EQ(count, 2);
-    quiver_free_string_array(labels, count);
+    quiver_database_free_string_array(labels, count);
 
     quiver_lua_runner_free(lua);
     quiver_database_close(db);
@@ -254,7 +254,7 @@ TEST_F(LuaRunnerCApiTest, CreateElementWithVectors) {
     EXPECT_EQ(vectors[0][0], 1);
     EXPECT_EQ(vectors[0][1], 2);
     EXPECT_EQ(vectors[0][2], 3);
-    quiver_free_integer_vectors(vectors, sizes, count);
+    quiver_database_free_integer_vectors(vectors, sizes, count);
 
     quiver_lua_runner_free(lua);
     quiver_database_close(db);

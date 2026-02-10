@@ -105,7 +105,7 @@ function Base.show(io::IO, e::Element)
         return nothing
     end
     str = unsafe_string(out_string[])
-    C.quiver_string_free(out_string[])
+    C.quiver_element_free_string(out_string[])
     print(io, str)
     return nothing
 end

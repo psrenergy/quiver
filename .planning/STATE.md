@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Core value:** Every public C++ method is reachable from every binding through uniform, predictable patterns
-**Current focus:** Phase 4 complete - C API file decomposition done, ready for Phase 5
+**Current focus:** Phase 5 complete - C API naming standardization done. Ready for Phase 6.
 
 ## Current Position
 
-Phase: 4 of 10 (C API File Decomposition) -- COMPLETE
+Phase: 5 of 10 (C API Naming and Error Standardization) -- COMPLETE
 Plan: 2 of 2 in current phase (all plans complete)
-Status: Phase 4 complete, ready for Phase 5
-Last activity: 2026-02-10 -- Completed 04-02 Extract Update/Metadata/Query/TimeSeries (5min)
+Status: Phase 5 complete. Ready for Phase 6 (Julia Binding Standardization)
+Last activity: 2026-02-10 -- Completed 05-02 Propagate renames to bindings (6min)
 
-Progress: [####......] 40%
+Progress: [#####.....] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
-- Average duration: 10.9min
-- Total execution time: 1.3 hours
+- Total plans completed: 9
+- Average duration: 10.8min
+- Total execution time: 1.6 hours
 
 **By Phase:**
 
@@ -31,9 +31,10 @@ Progress: [####......] 40%
 | 02-cpp-core-file-decomposition | 2 | 17min | 8.5min |
 | 03-cpp-naming-error-standardization | 2 | 32min | 16min |
 | 04-c-api-file-decomposition | 2 | 24min | 12min |
+| 05-c-api-naming-error-standardization | 2/2 | 21min | 10.5min |
 
 **Recent Trend:**
-- Last 5 plans: 6min, 10min, 22min, 19min, 5min
+- Last 5 plans: 22min, 19min, 5min, 15min, 6min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -66,6 +67,11 @@ Recent decisions affecting current work:
 - Phase 4: convert_params moved to database_query.cpp as file-local static
 - Phase 4: All alloc/free pairs co-located in their respective operation files (metadata in database_metadata.cpp, time series in database_time_series.cpp)
 - Phase 4: database.cpp trimmed to 157 lines (lifecycle-only), full C API decomposition complete
+- Phase 5: All 12 quiver_free_* functions get quiver_database_ entity prefix
+- Phase 5: quiver_string_free renamed to quiver_element_free_string (element entity, not database)
+- Phase 5: quiver_database_delete_element_by_id drops _by_id suffix matching C++ rename from Phase 3
+- Phase 5: Julia/Dart bindings already had new names; verified correct rather than re-running generators
+- Phase 5: All C API implementation files now use extern "C" block and QUIVER_C_API consistently
 
 ### Pending Todos
 
@@ -78,5 +84,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed 04-02-PLAN.md (Phase 4 complete, ready for Phase 5)
+Stopped at: Completed 05-02-PLAN.md, Phase 5 complete
 Resume file: None

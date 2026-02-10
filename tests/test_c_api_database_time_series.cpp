@@ -28,7 +28,7 @@ TEST(DatabaseCApi, GetTimeSeriesMetadata) {
     EXPECT_STREQ(metadata.value_columns[0].name, "value");
     EXPECT_EQ(metadata.value_columns[0].data_type, QUIVER_DATA_TYPE_FLOAT);
 
-    quiver_free_group_metadata(&metadata);
+    quiver_database_free_group_metadata(&metadata);
     quiver_database_close(db);
 }
 
@@ -50,7 +50,7 @@ TEST(DatabaseCApi, ListTimeSeriesGroups) {
     EXPECT_STREQ(metadata[0].dimension_column, "date_time");
     EXPECT_EQ(metadata[0].value_column_count, 1);
 
-    quiver_free_group_metadata_array(metadata, count);
+    quiver_database_free_group_metadata_array(metadata, count);
     quiver_database_close(db);
 }
 
@@ -122,7 +122,7 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupById) {
     EXPECT_STREQ(out_date_times[2], "2024-01-01T12:00:00");
     EXPECT_DOUBLE_EQ(out_values[2], 3.5);
 
-    quiver_free_time_series_data(out_date_times, out_values, row_count);
+    quiver_database_free_time_series_data(out_date_times, out_values, row_count);
     quiver_database_close(db);
 }
 
@@ -217,7 +217,7 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroup) {
     EXPECT_STREQ(out_date_times[0], "2024-02-01T10:00:00");
     EXPECT_DOUBLE_EQ(out_values[0], 10.0);
 
-    quiver_free_time_series_data(out_date_times, out_values, row_count);
+    quiver_database_free_time_series_data(out_date_times, out_values, row_count);
     quiver_database_close(db);
 }
 
@@ -353,7 +353,7 @@ TEST(DatabaseCApi, ListTimeSeriesFilesColumns) {
     EXPECT_TRUE(found_data_file);
     EXPECT_TRUE(found_metadata_file);
 
-    quiver_free_string_array(columns, count);
+    quiver_database_free_string_array(columns, count);
     quiver_database_close(db);
 }
 
@@ -377,7 +377,7 @@ TEST(DatabaseCApi, ReadTimeSeriesFilesEmpty) {
         EXPECT_EQ(paths[i], nullptr);
     }
 
-    quiver_free_time_series_files(columns, paths, count);
+    quiver_database_free_time_series_files(columns, paths, count);
     quiver_database_close(db);
 }
 
@@ -411,7 +411,7 @@ TEST(DatabaseCApi, UpdateAndReadTimeSeriesFiles) {
         }
     }
 
-    quiver_free_time_series_files(out_columns, out_paths, out_count);
+    quiver_database_free_time_series_files(out_columns, out_paths, out_count);
     quiver_database_close(db);
 }
 
@@ -445,7 +445,7 @@ TEST(DatabaseCApi, UpdateTimeSeriesFilesWithNulls) {
         }
     }
 
-    quiver_free_time_series_files(out_columns, out_paths, out_count);
+    quiver_database_free_time_series_files(out_columns, out_paths, out_count);
     quiver_database_close(db);
 }
 
@@ -484,7 +484,7 @@ TEST(DatabaseCApi, UpdateTimeSeriesFilesReplace) {
         }
     }
 
-    quiver_free_time_series_files(out_columns, out_paths, out_count);
+    quiver_database_free_time_series_files(out_columns, out_paths, out_count);
     quiver_database_close(db);
 }
 

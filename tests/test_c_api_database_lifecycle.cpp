@@ -437,7 +437,7 @@ TEST_F(TempFileFixture, ReadScalarRelationValid) {
     EXPECT_EQ(count, 1);
     EXPECT_STREQ(values[0], "Parent 1");
 
-    quiver_free_string_array(values, count);
+    quiver_database_free_string_array(values, count);
     quiver_database_close(db);
 }
 
@@ -570,7 +570,7 @@ TEST_F(TempFileFixture, ReadElementIdsValid) {
     EXPECT_EQ(count, 3);
 
     if (ids != nullptr) {
-        quiver_free_integer_array(ids);
+        quiver_database_free_integer_array(ids);
     }
 
     quiver_database_close(db);
@@ -581,7 +581,7 @@ TEST_F(TempFileFixture, ReadElementIdsValid) {
 // ============================================================================
 
 TEST_F(TempFileFixture, DeleteElementNullDb) {
-    auto err = quiver_database_delete_element_by_id(nullptr, "Collection", 1);
+    auto err = quiver_database_delete_element(nullptr, "Collection", 1);
     EXPECT_EQ(err, QUIVER_ERROR);
 }
 
@@ -593,7 +593,7 @@ TEST_F(TempFileFixture, DeleteElementNullCollection) {
               QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto err = quiver_database_delete_element_by_id(db, nullptr, 1);
+    auto err = quiver_database_delete_element(db, nullptr, 1);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
@@ -626,7 +626,7 @@ TEST_F(TempFileFixture, DeleteElementValid) {
     EXPECT_GT(id, 0);
 
     // Delete element
-    auto err = quiver_database_delete_element_by_id(db, "Collection", id);
+    auto err = quiver_database_delete_element(db, "Collection", id);
     EXPECT_EQ(err, QUIVER_OK);
 
     // Verify element is deleted
@@ -636,7 +636,7 @@ TEST_F(TempFileFixture, DeleteElementValid) {
     EXPECT_EQ(count, 0);
 
     if (ids != nullptr) {
-        quiver_free_integer_array(ids);
+        quiver_database_free_integer_array(ids);
     }
 
     quiver_database_close(db);

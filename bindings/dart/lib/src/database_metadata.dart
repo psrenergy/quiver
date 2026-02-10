@@ -34,7 +34,7 @@ extension DatabaseMetadata on Database {
 
       final result = _parseScalarMetadata(outMetadata.ref);
 
-      bindings.quiver_free_scalar_metadata(outMetadata);
+      bindings.quiver_database_free_scalar_metadata(outMetadata);
       return result;
     } finally {
       arena.releaseAll();
@@ -77,7 +77,7 @@ extension DatabaseMetadata on Database {
 
       final result = _parseGroupMetadata(outMetadata.ref);
 
-      bindings.quiver_free_group_metadata(outMetadata);
+      bindings.quiver_database_free_group_metadata(outMetadata);
       return result;
     } finally {
       arena.releaseAll();
@@ -120,7 +120,7 @@ extension DatabaseMetadata on Database {
 
       final result = _parseGroupMetadata(outMetadata.ref);
 
-      bindings.quiver_free_group_metadata(outMetadata);
+      bindings.quiver_database_free_group_metadata(outMetadata);
       return result;
     } finally {
       arena.releaseAll();
@@ -180,7 +180,7 @@ extension DatabaseMetadata on Database {
       for (var i = 0; i < count; i++) {
         result.add(_parseScalarMetadata(outMetadata.value[i]));
       }
-      bindings.quiver_free_scalar_metadata_array(outMetadata.value, count);
+      bindings.quiver_database_free_scalar_metadata_array(outMetadata.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -252,7 +252,7 @@ extension DatabaseMetadata on Database {
       for (var i = 0; i < count; i++) {
         result.add(_parseGroupMetadata(outMetadata.value[i]));
       }
-      bindings.quiver_free_group_metadata_array(outMetadata.value, count);
+      bindings.quiver_database_free_group_metadata_array(outMetadata.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -324,7 +324,7 @@ extension DatabaseMetadata on Database {
       for (var i = 0; i < count; i++) {
         result.add(_parseGroupMetadata(outMetadata.value[i]));
       }
-      bindings.quiver_free_group_metadata_array(outMetadata.value, count);
+      bindings.quiver_database_free_group_metadata_array(outMetadata.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -385,7 +385,7 @@ extension DatabaseMetadata on Database {
 
       final result = _parseGroupMetadata(outMetadata.ref);
 
-      bindings.quiver_free_group_metadata(outMetadata);
+      bindings.quiver_database_free_group_metadata(outMetadata);
       return result;
     } finally {
       arena.releaseAll();
@@ -457,7 +457,7 @@ extension DatabaseMetadata on Database {
       for (var i = 0; i < count; i++) {
         result.add(_parseGroupMetadata(outMetadata.value[i]));
       }
-      bindings.quiver_free_group_metadata_array(outMetadata.value, count);
+      bindings.quiver_database_free_group_metadata_array(outMetadata.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -514,7 +514,7 @@ extension DatabaseMetadata on Database {
       }
 
       final result = List<String>.generate(count, (i) => outColumns.value[i].cast<Utf8>().toDartString());
-      bindings.quiver_free_string_array(outColumns.value, count);
+      bindings.quiver_database_free_string_array(outColumns.value, count);
       return result;
     } finally {
       arena.releaseAll();

@@ -43,7 +43,7 @@ TEST(DatabaseCApi, ReadScalarIntegers) {
     EXPECT_EQ(values[0], 42);
     EXPECT_EQ(values[1], 100);
 
-    quiver_free_integer_array(values);
+    quiver_database_free_integer_array(values);
     quiver_database_close(db);
 }
 
@@ -79,7 +79,7 @@ TEST(DatabaseCApi, ReadScalarFloats) {
     EXPECT_DOUBLE_EQ(values[0], 3.14);
     EXPECT_DOUBLE_EQ(values[1], 2.71);
 
-    quiver_free_float_array(values);
+    quiver_database_free_float_array(values);
     quiver_database_close(db);
 }
 
@@ -115,7 +115,7 @@ TEST(DatabaseCApi, ReadScalarStrings) {
     EXPECT_STREQ(values[0], "hello");
     EXPECT_STREQ(values[1], "world");
 
-    quiver_free_string_array(values, count);
+    quiver_database_free_string_array(values, count);
     quiver_database_close(db);
 }
 
@@ -203,7 +203,7 @@ TEST(DatabaseCApi, ReadVectorIntegers) {
     EXPECT_EQ(vectors[1][0], 10);
     EXPECT_EQ(vectors[1][1], 20);
 
-    quiver_free_integer_vectors(vectors, sizes, count);
+    quiver_database_free_integer_vectors(vectors, sizes, count);
     quiver_database_close(db);
 }
 
@@ -255,7 +255,7 @@ TEST(DatabaseCApi, ReadVectorFloats) {
     EXPECT_DOUBLE_EQ(vectors[1][0], 10.5);
     EXPECT_DOUBLE_EQ(vectors[1][1], 20.5);
 
-    quiver_free_float_vectors(vectors, sizes, count);
+    quiver_database_free_float_vectors(vectors, sizes, count);
     quiver_database_close(db);
 }
 
@@ -356,7 +356,7 @@ TEST(DatabaseCApi, ReadVectorOnlyReturnsElementsWithData) {
     EXPECT_EQ(vectors[1][0], 4);
     EXPECT_EQ(vectors[1][1], 5);
 
-    quiver_free_integer_vectors(vectors, sizes, count);
+    quiver_database_free_integer_vectors(vectors, sizes, count);
     quiver_database_close(db);
 }
 
@@ -418,7 +418,7 @@ TEST(DatabaseCApi, ReadSetStrings) {
 
     EXPECT_STREQ(sets[1][0], "review");
 
-    quiver_free_string_vectors(sets, sizes, count);
+    quiver_database_free_string_vectors(sets, sizes, count);
     quiver_database_close(db);
 }
 
@@ -504,7 +504,7 @@ TEST(DatabaseCApi, ReadSetOnlyReturnsElementsWithData) {
     EXPECT_EQ(sizes[0], 1);
     EXPECT_EQ(sizes[1], 2);
 
-    quiver_free_string_vectors(sets, sizes, count);
+    quiver_database_free_string_vectors(sets, sizes, count);
     quiver_database_close(db);
 }
 
@@ -678,14 +678,14 @@ TEST(DatabaseCApi, ReadVectorIntegerById) {
     EXPECT_EQ(values[0], 1);
     EXPECT_EQ(values[1], 2);
     EXPECT_EQ(values[2], 3);
-    quiver_free_integer_array(values);
+    quiver_database_free_integer_array(values);
 
     err = quiver_database_read_vector_integers_by_id(db, "Collection", "value_int", id2, &values, &count);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(count, 2);
     EXPECT_EQ(values[0], 10);
     EXPECT_EQ(values[1], 20);
-    quiver_free_integer_array(values);
+    quiver_database_free_integer_array(values);
 
     quiver_database_close(db);
 }
@@ -724,7 +724,7 @@ TEST(DatabaseCApi, ReadVectorFloatById) {
     EXPECT_DOUBLE_EQ(values[1], 2.5);
     EXPECT_DOUBLE_EQ(values[2], 3.5);
 
-    quiver_free_float_array(values);
+    quiver_database_free_float_array(values);
     quiver_database_close(db);
 }
 
@@ -811,13 +811,13 @@ TEST(DatabaseCApi, ReadSetStringById) {
     std::sort(set_values.begin(), set_values.end());
     EXPECT_EQ(set_values[0], "important");
     EXPECT_EQ(set_values[1], "urgent");
-    quiver_free_string_array(values, count);
+    quiver_database_free_string_array(values, count);
 
     err = quiver_database_read_set_strings_by_id(db, "Collection", "tag", id2, &values, &count);
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(count, 1);
     EXPECT_STREQ(values[0], "review");
-    quiver_free_string_array(values, count);
+    quiver_database_free_string_array(values, count);
 
     quiver_database_close(db);
 }
@@ -900,7 +900,7 @@ TEST(DatabaseCApi, ReadElementIds) {
     EXPECT_EQ(ids[1], id2);
     EXPECT_EQ(ids[2], id3);
 
-    quiver_free_integer_array(ids);
+    quiver_database_free_integer_array(ids);
     quiver_database_close(db);
 }
 
@@ -1579,7 +1579,7 @@ TEST(DatabaseCApi, DateTimeAttributeMetadata) {
     }
     EXPECT_TRUE(found_date_attr);
 
-    quiver_free_scalar_metadata_array(attributes, count);
+    quiver_database_free_scalar_metadata_array(attributes, count);
     quiver_database_close(db);
 }
 
@@ -1598,7 +1598,7 @@ TEST(DatabaseCApi, ScalarMetadataForeignKey) {
     EXPECT_STREQ(metadata.references_collection, "Parent");
     EXPECT_NE(metadata.references_column, nullptr);
     EXPECT_STREQ(metadata.references_column, "id");
-    quiver_free_scalar_metadata(&metadata);
+    quiver_database_free_scalar_metadata(&metadata);
 
     quiver_database_close(db);
 }
@@ -1616,7 +1616,7 @@ TEST(DatabaseCApi, ScalarMetadataNotForeignKey) {
     EXPECT_EQ(metadata.is_foreign_key, 0);
     EXPECT_EQ(metadata.references_collection, nullptr);
     EXPECT_EQ(metadata.references_column, nullptr);
-    quiver_free_scalar_metadata(&metadata);
+    quiver_database_free_scalar_metadata(&metadata);
 
     quiver_database_close(db);
 }
@@ -1652,7 +1652,7 @@ TEST(DatabaseCApi, ListScalarAttributesForeignKeys) {
     EXPECT_TRUE(found_fk);
     EXPECT_TRUE(found_non_fk);
 
-    quiver_free_scalar_metadata_array(attributes, count);
+    quiver_database_free_scalar_metadata_array(attributes, count);
     quiver_database_close(db);
 }
 

@@ -241,7 +241,7 @@ TEST(ElementCApi, ToString) {
     EXPECT_NE(result.find("arrays:"), std::string::npos);
     EXPECT_NE(result.find("label: \"Plant 1\""), std::string::npos);
 
-    quiver_string_free(str);
+    quiver_element_free_string(str);
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
 }
 
@@ -251,7 +251,7 @@ TEST(ElementCApi, ToStringNull) {
 }
 
 TEST(ElementCApi, StringFreeNull) {
-    EXPECT_EQ(quiver_string_free(nullptr), QUIVER_OK);
+    EXPECT_EQ(quiver_element_free_string(nullptr), QUIVER_OK);
 }
 
 TEST(ElementCApi, ArrayNullErrors) {

@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: C++ Core File Decomposition** - Split monolithic database.cpp into focused modules by operation type ✓ (2026-02-09)
 - [x] **Phase 3: C++ Naming and Error Standardization** - Standardize C++ method names and exception patterns ✓ (2026-02-10)
 - [x] **Phase 4: C API File Decomposition** - Split monolithic C API database.cpp with shared helper extraction ✓ (2026-02-10)
-- [ ] **Phase 5: C API Naming and Error Standardization** - Standardize C API function names and error handling patterns
+- [x] **Phase 5: C API Naming and Error Standardization** - Standardize C API function names and error handling patterns ✓ (2026-02-10)
 - [ ] **Phase 6: Julia Bindings Standardization** - Standardize Julia binding names and error surfacing
 - [ ] **Phase 7: Dart Bindings Standardization** - Standardize Dart binding names and error surfacing
 - [ ] **Phase 8: Lua Bindings Standardization** - Standardize Lua binding names and error surfacing
@@ -96,11 +96,11 @@ Plans:
   2. Every C API function that can fail uses the `QUIVER_REQUIRE` macro for precondition checks and returns `QUIVER_OK`/`QUIVER_ERROR`
   3. C API header files updated with consistent naming; Julia/Dart generators re-run successfully
   4. All existing C API tests pass after renaming (updated to match new names)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 05-01: Audit and standardize C API function names
-- [ ] 05-02: Standardize C API error handling patterns
+- [x] 05-01-PLAN.md -- Rename 14 C API functions in headers, implementations, and tests ✓
+- [x] 05-02-PLAN.md -- Regenerate Julia/Dart bindings, normalize lua_runner.cpp, update CLAUDE.md ✓
 
 ### Phase 6: Julia Bindings Standardization
 **Goal**: Julia bindings use idiomatic Julia naming conventions while mapping predictably to C API, and surface all C API errors uniformly without crafting custom messages
@@ -188,7 +188,7 @@ Note: Phases 6, 7 both depend on Phase 5. Phase 8 depends on Phase 3. Phase 10 d
 | 2. C++ Core File Decomposition | 2/2 | Complete | 2026-02-09 |
 | 3. C++ Naming and Error Standardization | 2/2 | Complete | 2026-02-10 |
 | 4. C API File Decomposition | 2/2 | Complete | 2026-02-10 |
-| 5. C API Naming and Error Standardization | 0/2 | Not started | - |
+| 5. C API Naming and Error Standardization | 2/2 | Complete | 2026-02-10 |
 | 6. Julia Bindings Standardization | 0/1 | Not started | - |
 | 7. Dart Bindings Standardization | 0/1 | Not started | - |
 | 8. Lua Bindings Standardization | 0/1 | Not started | - |

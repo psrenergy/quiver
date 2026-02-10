@@ -13,7 +13,9 @@ struct quiver_lua_runner {
     explicit quiver_lua_runner(quiver::Database& db) : runner(db) {}
 };
 
-quiver_error_t quiver_lua_runner_new(quiver_database_t* db, quiver_lua_runner_t** out_runner) {
+extern "C" {
+
+QUIVER_C_API quiver_error_t quiver_lua_runner_new(quiver_database_t* db, quiver_lua_runner_t** out_runner) {
     QUIVER_REQUIRE(db, out_runner);
 
     try {
@@ -28,12 +30,12 @@ quiver_error_t quiver_lua_runner_new(quiver_database_t* db, quiver_lua_runner_t*
     }
 }
 
-quiver_error_t quiver_lua_runner_free(quiver_lua_runner_t* runner) {
+QUIVER_C_API quiver_error_t quiver_lua_runner_free(quiver_lua_runner_t* runner) {
     delete runner;
     return QUIVER_OK;
 }
 
-quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, const char* script) {
+QUIVER_C_API quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, const char* script) {
     QUIVER_REQUIRE(runner, script);
 
     try {
@@ -49,9 +51,11 @@ quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, const char* sc
     }
 }
 
-quiver_error_t quiver_lua_runner_get_error(quiver_lua_runner_t* runner, const char** out_error) {
+QUIVER_C_API quiver_error_t quiver_lua_runner_get_error(quiver_lua_runner_t* runner, const char** out_error) {
     QUIVER_REQUIRE(runner, out_error);
 
     *out_error = runner->last_error.empty() ? nullptr : runner->last_error.c_str();
     return QUIVER_OK;
 }
+
+}  // extern "C"

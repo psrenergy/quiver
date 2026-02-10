@@ -53,7 +53,7 @@ QUIVER_C_API quiver_error_t quiver_database_get_set_metadata(quiver_database_t* 
 
 // Metadata free functions (co-located with get/list)
 
-QUIVER_C_API quiver_error_t quiver_free_scalar_metadata(quiver_scalar_metadata_t* metadata) {
+QUIVER_C_API quiver_error_t quiver_database_free_scalar_metadata(quiver_scalar_metadata_t* metadata) {
     QUIVER_REQUIRE(metadata);
 
     free_scalar_fields(*metadata);
@@ -64,7 +64,7 @@ QUIVER_C_API quiver_error_t quiver_free_scalar_metadata(quiver_scalar_metadata_t
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t quiver_free_group_metadata(quiver_group_metadata_t* metadata) {
+QUIVER_C_API quiver_error_t quiver_database_free_group_metadata(quiver_group_metadata_t* metadata) {
     QUIVER_REQUIRE(metadata);
 
     free_group_fields(*metadata);
@@ -151,7 +151,8 @@ QUIVER_C_API quiver_error_t quiver_database_list_set_groups(quiver_database_t* d
 
 // Metadata array free functions (co-located with list)
 
-QUIVER_C_API quiver_error_t quiver_free_scalar_metadata_array(quiver_scalar_metadata_t* metadata, size_t count) {
+QUIVER_C_API quiver_error_t quiver_database_free_scalar_metadata_array(quiver_scalar_metadata_t* metadata,
+                                                                       size_t count) {
     QUIVER_REQUIRE(metadata);
 
     for (size_t i = 0; i < count; ++i) {
@@ -161,7 +162,7 @@ QUIVER_C_API quiver_error_t quiver_free_scalar_metadata_array(quiver_scalar_meta
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t quiver_free_group_metadata_array(quiver_group_metadata_t* metadata, size_t count) {
+QUIVER_C_API quiver_error_t quiver_database_free_group_metadata_array(quiver_group_metadata_t* metadata, size_t count) {
     QUIVER_REQUIRE(metadata);
 
     for (size_t i = 0; i < count; ++i) {
