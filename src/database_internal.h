@@ -73,7 +73,7 @@ inline std::string find_dimension_column(const TableDefinition& table_def) {
             return col_name;
         }
     }
-    throw std::runtime_error("No dimension column found in time series table");
+    throw std::runtime_error("Dimension column not found: time series table '" + table_def.name + "'");
 }
 
 // Convert a ColumnDefinition to ScalarMetadata

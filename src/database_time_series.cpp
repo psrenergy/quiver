@@ -4,9 +4,7 @@
 namespace quiver {
 
 std::vector<GroupMetadata> Database::list_time_series_groups(const std::string& collection) const {
-    if (!impl_->schema) {
-        throw std::runtime_error("Cannot list time series groups: no schema loaded");
-    }
+    impl_->require_schema("list_time_series_groups");
 
     std::vector<GroupMetadata> result;
     auto prefix = collection + "_time_series_";
@@ -27,16 +25,14 @@ std::vector<GroupMetadata> Database::list_time_series_groups(const std::string& 
 }
 
 GroupMetadata Database::get_time_series_metadata(const std::string& collection, const std::string& group_name) const {
-    if (!impl_->schema) {
-        throw std::runtime_error("Cannot get time series metadata: no schema loaded");
-    }
+    impl_->require_collection(collection, "get_time_series_metadata");
 
     // Find the time series table for this group
     auto ts_table = Schema::time_series_table_name(collection, group_name);
     const auto* table_def = impl_->schema->get_table(ts_table);
 
     if (!table_def) {
-        throw std::runtime_error("Time series group '" + group_name + "' not found for collection '" + collection +
+        throw std::runtime_error("Time series group not found: '" + group_name + "' in collection '" + collection +
                                  "'");
     }
 
@@ -57,8 +53,8 @@ GroupMetadata Database::get_time_series_metadata(const std::string& collection, 
 }
 
 std::vector<std::map<std::string, Value>>
-Database::read_time_series_group_by_id(const std::string& collection, const std::string& group, int64_t id) {
-    impl_->require_schema("read time series");
+Database::read_time_series_group(const std::string& collection, const std::string& group, int64_t id) {
+    impl_->require_collection(collection, "read_time_series_group");
 
     auto ts_table = impl_->schema->find_time_series_table(collection, group);
     const auto* table_def = impl_->schema->get_table(ts_table);
@@ -120,7 +116,7 @@ void Database::update_time_series_group(const std::string& collection,
                                         int64_t id,
                                         const std::vector<std::map<std::string, Value>>& rows) {
     impl_->logger->debug("Updating time series {}.{} for id {} with {} rows", collection, group, id, rows.size());
-    impl_->require_schema("update time series");
+    impl_->require_collection(collection, "update_time_series_group");
 
     auto ts_table = impl_->schema->find_time_series_table(collection, group);
     const auto* table_def = impl_->schema->get_table(ts_table);
@@ -167,7 +163,7 @@ void Database::update_time_series_group(const std::string& collection,
         // Dimension column must be present
         auto dt_it = row.find(dim_col);
         if (dt_it == row.end()) {
-            throw std::runtime_error("Time series row missing required '" + dim_col + "' column");
+            throw std::runtime_error("Cannot update_time_series_group: row missing required '" + dim_col + "' column");
         }
         params.push_back(dt_it->second);
 
@@ -189,17 +185,17 @@ void Database::update_time_series_group(const std::string& collection,
 }
 
 bool Database::has_time_series_files(const std::string& collection) const {
-    impl_->require_schema("check time series files");
+    impl_->require_collection(collection, "has_time_series_files");
     auto tsf = Schema::time_series_files_table_name(collection);
     return impl_->schema->has_table(tsf);
 }
 
 std::vector<std::string> Database::list_time_series_files_columns(const std::string& collection) const {
-    impl_->require_schema("list time series files columns");
+    impl_->require_collection(collection, "list_time_series_files_columns");
     auto tsf = Schema::time_series_files_table_name(collection);
     const auto* table_def = impl_->schema->get_table(tsf);
     if (!table_def) {
-        throw std::runtime_error("Time series files table not found for collection '" + collection + "'");
+        throw std::runtime_error("Time series files table not found: " + tsf);
     }
 
     std::vector<std::string> columns;
@@ -211,7 +207,7 @@ std::vector<std::string> Database::list_time_series_files_columns(const std::str
 
 std::map<std::string, std::optional<std::string>> Database::read_time_series_files(const std::string& collection) {
     impl_->logger->debug("Reading time series files for collection: {}", collection);
-    impl_->require_schema("read time series files");
+    impl_->require_collection(collection, "read_time_series_files");
 
     auto tsf = impl_->schema->find_time_series_files_table(collection);
     const auto* table_def = impl_->schema->get_table(tsf);
@@ -259,7 +255,7 @@ std::map<std::string, std::optional<std::string>> Database::read_time_series_fil
 void Database::update_time_series_files(const std::string& collection,
                                         const std::map<std::string, std::optional<std::string>>& paths) {
     impl_->logger->debug("Updating time series files for collection: {}", collection);
-    impl_->require_schema("update time series files");
+    impl_->require_collection(collection, "update_time_series_files");
 
     auto tsf = impl_->schema->find_time_series_files_table(collection);
     const auto* table_def = impl_->schema->get_table(tsf);

@@ -6,13 +6,13 @@ namespace quiver {
 
 void Database::update_element(const std::string& collection, int64_t id, const Element& element) {
     impl_->logger->debug("Updating element {} in collection: {}", id, collection);
-    impl_->require_collection(collection, "update element");
+    impl_->require_collection(collection, "update_element");
 
     const auto& scalars = element.scalars();
     const auto& arrays = element.arrays();
 
     if (scalars.empty() && arrays.empty()) {
-        throw std::runtime_error("Element must have at least one attribute to update");
+        throw std::runtime_error("Cannot update_element: element must have at least one attribute to update");
     }
 
     Impl::TransactionGuard txn(*impl_);
@@ -51,7 +51,7 @@ void Database::update_element(const std::string& collection, int64_t id, const E
     for (const auto& [attr_name, values] : arrays) {
         auto match = impl_->schema->find_table_for_column(collection, attr_name);
         if (!match) {
-            throw std::runtime_error("Attribute '" + attr_name +
+            throw std::runtime_error("Cannot update_element: attribute '" + attr_name +
                                      "' is not a vector, set, or time series attribute in collection '" + collection +
                                      "'");
         }
@@ -78,7 +78,8 @@ void Database::update_element(const std::string& collection, int64_t id, const E
             if (num_rows == 0) {
                 num_rows = values_ptr->size();
             } else if (values_ptr->size() != num_rows) {
-                throw std::runtime_error("Vector columns in table '" + table + "' must have the same length");
+                throw std::runtime_error("Cannot update_element: vector columns in table '" + table +
+                                         "' must have the same length");
             }
         }
 
@@ -107,7 +108,8 @@ void Database::update_element(const std::string& collection, int64_t id, const E
             if (num_rows == 0) {
                 num_rows = values_ptr->size();
             } else if (values_ptr->size() != num_rows) {
-                throw std::runtime_error("Set columns in table '" + table + "' must have the same length");
+                throw std::runtime_error("Cannot update_element: set columns in table '" + table +
+                                         "' must have the same length");
             }
         }
 
@@ -135,7 +137,8 @@ void Database::update_element(const std::string& collection, int64_t id, const E
             if (num_rows == 0) {
                 num_rows = values_ptr->size();
             } else if (values_ptr->size() != num_rows) {
-                throw std::runtime_error("Time series columns in table '" + table + "' must have the same length");
+                throw std::runtime_error("Cannot update_element: time series columns in table '" + table +
+                                         "' must have the same length");
             }
         }
 
@@ -163,7 +166,7 @@ void Database::update_scalar_integer(const std::string& collection,
                                      int64_t id,
                                      int64_t value) {
     impl_->logger->debug("Updating {}.{} for id {} to {}", collection, attribute, id, value);
-    impl_->require_collection(collection, "update scalar");
+    impl_->require_collection(collection, "update_scalar");
     impl_->type_validator->validate_scalar(collection, attribute, value);
 
     auto sql = "UPDATE " + collection + " SET " + attribute + " = ? WHERE id = ?";
@@ -177,7 +180,7 @@ void Database::update_scalar_float(const std::string& collection,
                                    int64_t id,
                                    double value) {
     impl_->logger->debug("Updating {}.{} for id {} to {}", collection, attribute, id, value);
-    impl_->require_collection(collection, "update scalar");
+    impl_->require_collection(collection, "update_scalar");
     impl_->type_validator->validate_scalar(collection, attribute, value);
 
     auto sql = "UPDATE " + collection + " SET " + attribute + " = ? WHERE id = ?";
@@ -191,7 +194,7 @@ void Database::update_scalar_string(const std::string& collection,
                                     int64_t id,
                                     const std::string& value) {
     impl_->logger->debug("Updating {}.{} for id {} to '{}'", collection, attribute, id, value);
-    impl_->require_collection(collection, "update scalar");
+    impl_->require_collection(collection, "update_scalar");
     impl_->type_validator->validate_scalar(collection, attribute, value);
 
     auto sql = "UPDATE " + collection + " SET " + attribute + " = ? WHERE id = ?";
@@ -205,7 +208,7 @@ void Database::update_vector_integers(const std::string& collection,
                                       int64_t id,
                                       const std::vector<int64_t>& values) {
     impl_->logger->debug("Updating vector {}.{} for id {} with {} values", collection, attribute, id, values.size());
-    impl_->require_schema("update vector");
+    impl_->require_collection(collection, "update_vector_integers");
 
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
 
@@ -229,7 +232,7 @@ void Database::update_vector_floats(const std::string& collection,
                                     int64_t id,
                                     const std::vector<double>& values) {
     impl_->logger->debug("Updating vector {}.{} for id {} with {} values", collection, attribute, id, values.size());
-    impl_->require_schema("update vector");
+    impl_->require_collection(collection, "update_vector_floats");
 
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
 
@@ -253,7 +256,7 @@ void Database::update_vector_strings(const std::string& collection,
                                      int64_t id,
                                      const std::vector<std::string>& values) {
     impl_->logger->debug("Updating vector {}.{} for id {} with {} values", collection, attribute, id, values.size());
-    impl_->require_schema("update vector");
+    impl_->require_collection(collection, "update_vector_strings");
 
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
 
@@ -277,7 +280,7 @@ void Database::update_set_integers(const std::string& collection,
                                    int64_t id,
                                    const std::vector<int64_t>& values) {
     impl_->logger->debug("Updating set {}.{} for id {} with {} values", collection, attribute, id, values.size());
-    impl_->require_schema("update set");
+    impl_->require_collection(collection, "update_set_integers");
 
     auto set_table = impl_->schema->find_set_table(collection, attribute);
 
@@ -300,7 +303,7 @@ void Database::update_set_floats(const std::string& collection,
                                  int64_t id,
                                  const std::vector<double>& values) {
     impl_->logger->debug("Updating set {}.{} for id {} with {} values", collection, attribute, id, values.size());
-    impl_->require_schema("update set");
+    impl_->require_collection(collection, "update_set_floats");
 
     auto set_table = impl_->schema->find_set_table(collection, attribute);
 
@@ -323,7 +326,7 @@ void Database::update_set_strings(const std::string& collection,
                                   int64_t id,
                                   const std::vector<std::string>& values) {
     impl_->logger->debug("Updating set {}.{} for id {} with {} values", collection, attribute, id, values.size());
-    impl_->require_schema("update set");
+    impl_->require_collection(collection, "update_set_strings");
 
     auto set_table = impl_->schema->find_set_table(collection, attribute);
 

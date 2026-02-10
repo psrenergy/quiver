@@ -64,11 +64,11 @@ QUIVER_C_API quiver_error_t quiver_database_delete_element_by_id(quiver_database
                                                                  int64_t id);
 
 // Relation operations
-QUIVER_C_API quiver_error_t quiver_database_set_scalar_relation(quiver_database_t* db,
-                                                                const char* collection,
-                                                                const char* attribute,
-                                                                const char* from_label,
-                                                                const char* to_label);
+QUIVER_C_API quiver_error_t quiver_database_update_scalar_relation(quiver_database_t* db,
+                                                                   const char* collection,
+                                                                   const char* attribute,
+                                                                   const char* from_label,
+                                                                   const char* to_label);
 
 QUIVER_C_API quiver_error_t quiver_database_read_scalar_relation(quiver_database_t* db,
                                                                  const char* collection,
@@ -346,13 +346,13 @@ QUIVER_C_API quiver_error_t quiver_database_update_set_strings(quiver_database_t
 // Read time series group by element ID - returns rows with date_time and value columns
 // out_rows: array of row structs, out_row_count: number of rows
 // Each row contains date_time string and value columns
-QUIVER_C_API quiver_error_t quiver_database_read_time_series_group_by_id(quiver_database_t* db,
-                                                                         const char* collection,
-                                                                         const char* group,
-                                                                         int64_t id,
-                                                                         char*** out_date_times,
-                                                                         double** out_values,
-                                                                         size_t* out_row_count);
+QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_database_t* db,
+                                                                   const char* collection,
+                                                                   const char* group,
+                                                                   int64_t id,
+                                                                   char*** out_date_times,
+                                                                   double** out_values,
+                                                                   size_t* out_row_count);
 
 // Update time series group - replaces all rows for element
 QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_database_t* db,
@@ -406,8 +406,8 @@ QUIVER_C_API quiver_error_t quiver_free_float_vectors(double** vectors, size_t* 
 QUIVER_C_API quiver_error_t quiver_free_string_vectors(char*** vectors, size_t* sizes, size_t count);
 
 // CSV operations
-QUIVER_C_API quiver_error_t quiver_database_export_to_csv(quiver_database_t* db, const char* table, const char* path);
-QUIVER_C_API quiver_error_t quiver_database_import_from_csv(quiver_database_t* db, const char* table, const char* path);
+QUIVER_C_API quiver_error_t quiver_database_export_csv(quiver_database_t* db, const char* table, const char* path);
+QUIVER_C_API quiver_error_t quiver_database_import_csv(quiver_database_t* db, const char* table, const char* path);
 
 // Query methods - execute SQL and return first row's first column
 QUIVER_C_API quiver_error_t quiver_database_query_string(quiver_database_t* db,

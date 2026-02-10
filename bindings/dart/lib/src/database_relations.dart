@@ -3,13 +3,13 @@ part of 'database.dart';
 /// Relation operations for Database.
 extension DatabaseRelations on Database {
   /// Sets a scalar relation (foreign key) between two elements by their labels.
-  void setScalarRelation(String collection, String attribute, String fromLabel, String toLabel) {
+  void updateScalarRelation(String collection, String attribute, String fromLabel, String toLabel) {
     _ensureNotClosed();
 
     final arena = Arena();
     try {
       check(
-        bindings.quiver_database_set_scalar_relation(
+        bindings.quiver_database_update_scalar_relation(
           _ptr,
           collection.toNativeUtf8(allocator: arena).cast(),
           attribute.toNativeUtf8(allocator: arena).cast(),

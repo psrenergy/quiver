@@ -2,9 +2,9 @@
 
 namespace quiver {
 
-void Database::delete_element_by_id(const std::string& collection, int64_t id) {
+void Database::delete_element(const std::string& collection, int64_t id) {
     impl_->logger->debug("Deleting element {} from collection: {}", id, collection);
-    impl_->require_collection(collection, "delete element");
+    impl_->require_collection(collection, "delete_element");
 
     auto sql = "DELETE FROM " + collection + " WHERE id = ?";
     execute(sql, {id});

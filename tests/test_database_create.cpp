@@ -252,8 +252,8 @@ TEST(Database, CreateElementWithTimeSeries) {
     int64_t id = db.create_element("Collection", element);
     EXPECT_EQ(id, 1);
 
-    // Verify using read_time_series_group_by_id
-    auto rows = db.read_time_series_group_by_id("Collection", "data", id);
+    // Verify using read_time_series_group
+    auto rows = db.read_time_series_group("Collection", "data", id);
     EXPECT_EQ(rows.size(), 3);
     EXPECT_EQ(std::get<std::string>(rows[0].at("date_time")), "2024-01-01T10:00:00");
     EXPECT_EQ(std::get<std::string>(rows[1].at("date_time")), "2024-01-02T10:00:00");

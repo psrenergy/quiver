@@ -56,7 +56,7 @@ include("fixture.jl")
         )
 
         # Read back
-        rows = Quiver.read_time_series_group_by_id(db, "Collection", "data", id)
+        rows = Quiver.read_time_series_group(db, "Collection", "data", id)
         @test length(rows) == 3
         @test rows[1]["date_time"] == "2024-01-01T10:00:00"
         @test rows[1]["value"] == 1.5
@@ -76,7 +76,7 @@ include("fixture.jl")
         id = Quiver.create_element!(db, "Collection"; label = "Item 1")
 
         # No time series data inserted
-        rows = Quiver.read_time_series_group_by_id(db, "Collection", "data", id)
+        rows = Quiver.read_time_series_group(db, "Collection", "data", id)
         @test isempty(rows)
 
         Quiver.close!(db)
@@ -100,7 +100,7 @@ include("fixture.jl")
             ],
         )
 
-        rows = Quiver.read_time_series_group_by_id(db, "Collection", "data", id)
+        rows = Quiver.read_time_series_group(db, "Collection", "data", id)
         @test length(rows) == 1
 
         # Replace with new data
@@ -115,7 +115,7 @@ include("fixture.jl")
             ],
         )
 
-        rows = Quiver.read_time_series_group_by_id(db, "Collection", "data", id)
+        rows = Quiver.read_time_series_group(db, "Collection", "data", id)
         @test length(rows) == 2
         @test rows[1]["date_time"] == "2024-02-01T10:00:00"
         @test rows[1]["value"] == 10.0
@@ -144,7 +144,7 @@ include("fixture.jl")
         # Clear by updating with empty
         Quiver.update_time_series_group!(db, "Collection", "data", id, Dict{String, Any}[])
 
-        rows = Quiver.read_time_series_group_by_id(db, "Collection", "data", id)
+        rows = Quiver.read_time_series_group(db, "Collection", "data", id)
         @test isempty(rows)
 
         Quiver.close!(db)
@@ -171,7 +171,7 @@ include("fixture.jl")
         )
 
         # Should be returned ordered by date_time
-        rows = Quiver.read_time_series_group_by_id(db, "Collection", "data", id)
+        rows = Quiver.read_time_series_group(db, "Collection", "data", id)
         @test length(rows) == 3
         @test rows[1]["date_time"] == "2024-01-01T10:00:00"
         @test rows[2]["date_time"] == "2024-01-02T10:00:00"

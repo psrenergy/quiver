@@ -88,11 +88,11 @@ void Database::describe() const {
     }
 }
 
-void Database::export_to_csv(const std::string& table, const std::string& path) {
+void Database::export_csv(const std::string& table, const std::string& path) {
     return;
 }
 
-void Database::import_from_csv(const std::string& table, const std::string& path) {
+void Database::import_csv(const std::string& table, const std::string& path) {
     return;
 }
 

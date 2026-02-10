@@ -110,9 +110,7 @@ struct LuaRunner::Impl {
                 return read_element_ids_to_lua(self, collection, s);
             },
             "delete_element_by_id",
-            [](Database& self, const std::string& collection, int64_t id) {
-                self.delete_element_by_id(collection, id);
-            },
+            [](Database& self, const std::string& collection, int64_t id) { self.delete_element(collection, id); },
             "update_element",
             [](Database& self, const std::string& collection, int64_t id, sol::table values) {
                 update_element_from_lua(self, collection, id, values);
@@ -253,12 +251,14 @@ struct LuaRunner::Impl {
                 return read_set_strings_to_lua(self, collection, attribute, s);
             },
             // Group 6: Relations
-            "set_scalar_relation",
+            "update_scalar_relation",
             [](Database& self,
                const std::string& collection,
                const std::string& attribute,
                const std::string& from_label,
-               const std::string& to_label) { self.set_scalar_relation(collection, attribute, from_label, to_label); },
+               const std::string& to_label) {
+                self.update_scalar_relation(collection, attribute, from_label, to_label);
+            },
             "read_scalar_relation",
             [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
                 return read_scalar_relation_to_lua(self, collection, attribute, s);
@@ -273,9 +273,9 @@ struct LuaRunner::Impl {
                 return list_time_series_groups_to_lua(self, collection, s);
             },
             // Group 8: Time series data
-            "read_time_series_group_by_id",
+            "read_time_series_group",
             [](Database& self, const std::string& collection, const std::string& group, int64_t id, sol::this_state s) {
-                return read_time_series_group_by_id_to_lua(self, collection, group, id, s);
+                return read_time_series_group_to_lua(self, collection, group, id, s);
             },
             "update_time_series_group",
             [](Database& self, const std::string& collection, const std::string& group, int64_t id, sol::table rows) {
@@ -1033,13 +1033,13 @@ struct LuaRunner::Impl {
     // Time series data
     // ========================================================================
 
-    static sol::table read_time_series_group_by_id_to_lua(Database& db,
-                                                          const std::string& collection,
-                                                          const std::string& group,
-                                                          int64_t id,
-                                                          sol::this_state s) {
+    static sol::table read_time_series_group_to_lua(Database& db,
+                                                    const std::string& collection,
+                                                    const std::string& group,
+                                                    int64_t id,
+                                                    sol::this_state s) {
         sol::state_view lua(s);
-        auto rows = db.read_time_series_group_by_id(collection, group, id);
+        auto rows = db.read_time_series_group(collection, group, id);
         auto t = lua.create_table();
         for (size_t i = 0; i < rows.size(); ++i) {
             auto row = lua.create_table();

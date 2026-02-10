@@ -30,8 +30,8 @@ void main() {
         db.createElement('Child', {'label': 'Child 3'});
 
         // Set relations
-        db.setScalarRelation('Child', 'parent_id', 'Child 1', 'Parent 1');
-        db.setScalarRelation('Child', 'parent_id', 'Child 3', 'Parent 2');
+        db.updateScalarRelation('Child', 'parent_id', 'Child 1', 'Parent 1');
+        db.updateScalarRelation('Child', 'parent_id', 'Child 3', 'Parent 2');
 
         // Read relations
         final labels = db.readScalarRelation('Child', 'parent_id');
@@ -59,7 +59,7 @@ void main() {
         db.createElement('Child', {'label': 'Child 2'});
 
         // Set sibling relation (self-reference)
-        db.setScalarRelation('Child', 'sibling_id', 'Child 1', 'Child 2');
+        db.updateScalarRelation('Child', 'sibling_id', 'Child 1', 'Child 2');
 
         // Read sibling relations
         final labels = db.readScalarRelation('Child', 'sibling_id');
