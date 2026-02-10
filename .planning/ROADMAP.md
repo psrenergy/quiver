@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: C++ Impl Header Extraction** - Extract Database::Impl into private internal header to enable file decomposition ✓ (2026-02-09)
 - [x] **Phase 2: C++ Core File Decomposition** - Split monolithic database.cpp into focused modules by operation type ✓ (2026-02-09)
 - [x] **Phase 3: C++ Naming and Error Standardization** - Standardize C++ method names and exception patterns ✓ (2026-02-10)
-- [ ] **Phase 4: C API File Decomposition** - Split monolithic C API database.cpp with shared helper extraction
+- [x] **Phase 4: C API File Decomposition** - Split monolithic C API database.cpp with shared helper extraction ✓ (2026-02-10)
 - [ ] **Phase 5: C API Naming and Error Standardization** - Standardize C API function names and error handling patterns
 - [ ] **Phase 6: Julia Bindings Standardization** - Standardize Julia binding names and error surfacing
 - [ ] **Phase 7: Dart Bindings Standardization** - Standardize Dart binding names and error surfacing
@@ -84,8 +84,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md -- Extract helpers into database_helpers.h, split CRUD/read/relations into separate files
-- [ ] 04-02-PLAN.md -- Extract update/metadata/query/time_series, finalize lifecycle-only database.cpp
+- [x] 04-01-PLAN.md -- Extract helpers into database_helpers.h, split CRUD/read/relations into separate files ✓
+- [x] 04-02-PLAN.md -- Extract update/metadata/query/time_series, finalize lifecycle-only database.cpp ✓
 
 ### Phase 5: C API Naming and Error Standardization
 **Goal**: All C API function names follow a single `quiver_{entity}_{operation}` convention and every function uses the try-catch-set_last_error pattern consistently
@@ -187,7 +187,7 @@ Note: Phases 6, 7 both depend on Phase 5. Phase 8 depends on Phase 3. Phase 10 d
 | 1. C++ Impl Header Extraction | 1/1 | Complete | 2026-02-09 |
 | 2. C++ Core File Decomposition | 2/2 | Complete | 2026-02-09 |
 | 3. C++ Naming and Error Standardization | 2/2 | Complete | 2026-02-10 |
-| 4. C API File Decomposition | 0/2 | Not started | - |
+| 4. C API File Decomposition | 2/2 | Complete | 2026-02-10 |
 | 5. C API Naming and Error Standardization | 0/2 | Not started | - |
 | 6. Julia Bindings Standardization | 0/1 | Not started | - |
 | 7. Dart Bindings Standardization | 0/1 | Not started | - |
