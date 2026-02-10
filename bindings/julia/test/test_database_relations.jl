@@ -22,8 +22,8 @@ include("fixture.jl")
         Quiver.create_element!(db, "Child"; label = "Child 3")
 
         # Set relations
-        Quiver.set_scalar_relation!(db, "Child", "parent_id", "Child 1", "Parent 1")
-        Quiver.set_scalar_relation!(db, "Child", "parent_id", "Child 3", "Parent 2")
+        Quiver.update_scalar_relation!(db, "Child", "parent_id", "Child 1", "Parent 1")
+        Quiver.update_scalar_relation!(db, "Child", "parent_id", "Child 3", "Parent 2")
 
         # Read relations
         labels = Quiver.read_scalar_relation(db, "Child", "parent_id")
@@ -46,7 +46,7 @@ include("fixture.jl")
         Quiver.create_element!(db, "Child"; label = "Child 2")
 
         # Set sibling relation (self-reference)
-        Quiver.set_scalar_relation!(db, "Child", "sibling_id", "Child 1", "Child 2")
+        Quiver.update_scalar_relation!(db, "Child", "sibling_id", "Child 1", "Child 2")
 
         # Read sibling relations
         labels = Quiver.read_scalar_relation(db, "Child", "sibling_id")

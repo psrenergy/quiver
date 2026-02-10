@@ -103,7 +103,7 @@ include("fixture.jl")
         )
 
         # Verify time series data was persisted
-        rows = Quiver.read_time_series_group_by_id(db, "Collection", "data", Int64(1))
+        rows = Quiver.read_time_series_group(db, "Collection", "data", Int64(1))
         @test length(rows) == 3
         @test rows[1]["date_time"] == "2024-01-01T10:00:00"
         @test rows[2]["date_time"] == "2024-01-02T10:00:00"

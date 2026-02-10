@@ -17,7 +17,7 @@ TEST(Database, DeleteElementById) {
     EXPECT_EQ(ids.size(), 1);
 
     // Delete element
-    db.delete_element_by_id("Configuration", id);
+    db.delete_element("Configuration", id);
 
     // Verify element is gone
     ids = db.read_element_ids("Configuration");
@@ -41,7 +41,7 @@ TEST(Database, DeleteElementByIdWithVectorData) {
     EXPECT_EQ(vec.size(), 3);
 
     // Delete element - CASCADE should delete vector rows too
-    db.delete_element_by_id("Collection", id);
+    db.delete_element("Collection", id);
 
     // Verify element is gone
     auto ids = db.read_element_ids("Collection");
@@ -69,7 +69,7 @@ TEST(Database, DeleteElementByIdWithSetData) {
     EXPECT_EQ(set.size(), 2);
 
     // Delete element - CASCADE should delete set rows too
-    db.delete_element_by_id("Collection", id);
+    db.delete_element("Collection", id);
 
     // Verify element is gone
     auto ids = db.read_element_ids("Collection");
@@ -89,7 +89,7 @@ TEST(Database, DeleteElementByIdNonExistent) {
     db.create_element("Configuration", e);
 
     // Delete non-existent ID - should succeed silently (SQL DELETE is idempotent)
-    db.delete_element_by_id("Configuration", 999);
+    db.delete_element("Configuration", 999);
 
     // Verify original element still exists
     auto ids = db.read_element_ids("Configuration");
@@ -113,7 +113,7 @@ TEST(Database, DeleteElementByIdOtherElementsUnchanged) {
     int64_t id3 = db.create_element("Configuration", e3);
 
     // Delete middle element
-    db.delete_element_by_id("Configuration", id2);
+    db.delete_element("Configuration", id2);
 
     // Verify only two elements remain
     auto ids = db.read_element_ids("Configuration");

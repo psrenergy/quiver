@@ -29,7 +29,7 @@ TEST(Database, ExportToCsvBasicCollection) {
     db.create_element("Configuration", e2);
 
     auto csv_path = (fs::temp_directory_path() / "quiver_export_basic.csv").string();
-    db.export_to_csv("Configuration", csv_path);
+    db.export_csv("Configuration", csv_path);
 
     // Read CSV back
     std::ifstream file(csv_path);
@@ -65,7 +65,7 @@ TEST(Database, ExportToCsvEmptyCollection) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
 
     auto csv_path = "quiver_export_empty.csv";
-    db.export_to_csv("Configuration", csv_path);
+    db.export_csv("Configuration", csv_path);
 
     std::ifstream file(csv_path);
     std::vector<std::string> lines;
@@ -102,12 +102,12 @@ TEST(Database, ExportToCsvResolveForeignKeys) {
     c2.set("label", std::string("Child 2"));
     db.create_element("Child", c2);
 
-    db.set_scalar_relation("Child", "parent_id", "Child 1", "Parent 1");
-    db.set_scalar_relation("Child", "parent_id", "Child 2", "Parent 2");
-    db.set_scalar_relation("Child", "sibling_id", "Child 2", "Child 1");
+    db.update_scalar_relation("Child", "parent_id", "Child 1", "Parent 1");
+    db.update_scalar_relation("Child", "parent_id", "Child 2", "Parent 2");
+    db.update_scalar_relation("Child", "sibling_id", "Child 2", "Child 1");
 
     auto csv_path = (fs::temp_directory_path() / "quiver_export_fk.csv").string();
-    db.export_to_csv("Child", csv_path);
+    db.export_csv("Child", csv_path);
 
     std::ifstream file(csv_path);
     std::vector<std::string> lines;
@@ -142,7 +142,7 @@ TEST(Database, ExportToCsvNullForeignKey) {
     db.create_element("Child", c1);
 
     auto csv_path = (fs::temp_directory_path() / "quiver_export_fk_null.csv").string();
-    db.export_to_csv("Child", csv_path);
+    db.export_csv("Child", csv_path);
 
     std::ifstream file(csv_path);
     std::vector<std::string> lines;
@@ -172,7 +172,7 @@ TEST(Database, ExportToCsvVectorTableResolveForeignKeys) {
     db.update_vector_integers("Child", "parent_ref", 1, {1, 1});
 
     auto csv_path = (fs::temp_directory_path() / "quiver_export_vector_fk.csv").string();
-    db.export_to_csv("Child_vector_refs", csv_path);
+    db.export_csv("Child_vector_refs", csv_path);
 
     std::ifstream file(csv_path);
     std::vector<std::string> lines;
@@ -209,7 +209,7 @@ TEST(Database, ExportToCsvSetTableResolveForeignKeys) {
     db.update_set_integers("Child", "parent_ref", 1, {1, 2});
 
     auto csv_path = (fs::temp_directory_path() / "quiver_export_set_fk.csv").string();
-    db.export_to_csv("Child_set_parents", csv_path);
+    db.export_csv("Child_set_parents", csv_path);
 
     std::ifstream file(csv_path);
     std::vector<std::string> lines;
@@ -240,7 +240,7 @@ TEST(Database, ExportToCsvVectorIndexAsNormalValue) {
     db.update_vector_integers("Collection", "value_int", 1, {10, 20, 30});
 
     auto csv_path = (fs::temp_directory_path() / "quiver_export_vecidx.csv").string();
-    db.export_to_csv("Collection_vector_values", csv_path);
+    db.export_csv("Collection_vector_values", csv_path);
 
     std::ifstream file(csv_path);
     std::vector<std::string> lines;
@@ -273,7 +273,7 @@ TEST(Database, ExportToCsvQuotesFieldsWithCommas) {
     db.create_element("Configuration", e1);
 
     auto csv_path = (fs::temp_directory_path() / "quiver_export_quoting.csv").string();
-    db.export_to_csv("Configuration", csv_path);
+    db.export_csv("Configuration", csv_path);
 
     std::ifstream file(csv_path);
     std::vector<std::string> lines;
@@ -303,7 +303,7 @@ TEST(Database, ExportToCsvTimeSeriesTable) {
     db.query_string("INSERT INTO Collection_time_series_data VALUES (1, '2024-01-15T11:00:00', 37.2)");
 
     auto csv_path = (fs::temp_directory_path() / "quiver_export_ts.csv").string();
-    db.export_to_csv("Collection_time_series_data", csv_path);
+    db.export_csv("Collection_time_series_data", csv_path);
 
     std::ifstream file(csv_path);
     std::vector<std::string> lines;
@@ -338,7 +338,7 @@ TEST(Database, ExportToCsvDateTimeCustomFormat) {
     db.query_string("INSERT INTO Collection_time_series_data VALUES (1, '2024-01-15T10:30:00', 42.5)");
 
     auto csv_path = (fs::temp_directory_path() / "quiver_export_datefmt.csv").string();
-    db.export_to_csv("Collection_time_series_data", csv_path, {{"date_time", "%Y-%m"}});
+    db.export_csv("Collection_time_series_data", csv_path, {{"date_time", "%Y-%m"}});
 
     std::ifstream file(csv_path);
     std::vector<std::string> lines;
@@ -363,7 +363,7 @@ TEST(Database, ExportToCsvEnumResolution) {
 
     auto csv_path = (fs::temp_directory_path() / "quiver_export_enum.csv").string();
     quiver::EnumMap enums(quiver::EnumMap::Data{{"integer_attribute", {{"en", {{"Active", 1}, {"Inactive", 2}}}}}});
-    db.export_to_csv("Configuration", csv_path, {}, enums);
+    db.export_csv("Configuration", csv_path, {}, enums);
 
     std::ifstream file(csv_path);
     std::vector<std::string> lines;
@@ -388,7 +388,7 @@ TEST(Database, ExportToCsvEnumInvalidIdThrows) {
 
     auto csv_path = (fs::temp_directory_path() / "quiver_export_enum_bad.csv").string();
     quiver::EnumMap enums(quiver::EnumMap::Data{{"integer_attribute", {{"en", {{"Active", 1}}}}}});
-    EXPECT_THROW(db.export_to_csv("Configuration", csv_path, {}, enums), std::runtime_error);
+    EXPECT_THROW(db.export_csv("Configuration", csv_path, {}, enums), std::runtime_error);
     fs::remove(csv_path);
 }
 
@@ -402,7 +402,7 @@ TEST(Database, ExportToCsvEnumMultiLocale) {
     auto csv_path = (fs::temp_directory_path() / "quiver_export_enum_locale.csv").string();
     quiver::EnumMap enums(quiver::EnumMap::Data{
         {"integer_attribute", {{"en", {{"Active", 1}, {"Inactive", 2}}}, {"pt", {{"Ativo", 1}, {"Inativo", 2}}}}}});
-    db.export_to_csv("Configuration", csv_path, {}, enums);
+    db.export_csv("Configuration", csv_path, {}, enums);
 
     std::ifstream file(csv_path);
     std::vector<std::string> lines;
@@ -423,7 +423,7 @@ TEST(Database, ExportToCsvNonExistentCollectionThrows) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
 
     auto csv_path = "quiver_export_invalid.csv";
-    EXPECT_THROW(db.export_to_csv("NonExistent", csv_path), std::runtime_error);
+    EXPECT_THROW(db.export_csv("NonExistent", csv_path), std::runtime_error);
 }
 
 TEST(Database, ExportToCsvNullValues) {
@@ -439,7 +439,7 @@ TEST(Database, ExportToCsvNullValues) {
     db.create_element("Configuration", e2);
 
     auto csv_path = (fs::temp_directory_path() / "quiver_export_nulls.csv").string();
-    db.export_to_csv("Configuration", csv_path);
+    db.export_csv("Configuration", csv_path);
 
     // Read CSV back
     std::ifstream file(csv_path);
@@ -470,7 +470,7 @@ TEST(Database, ExportToCsvTimeSeriesFiles) {
         "INSERT INTO Collection_time_series_files (data_file, metadata_file) VALUES ('data.csv', 'meta.csv')");
 
     auto csv_path = (fs::temp_directory_path() / "quiver_export_ts_files.csv").string();
-    db.export_to_csv("Collection_time_series_files", csv_path);
+    db.export_csv("Collection_time_series_files", csv_path);
 
     // Read CSV back
     std::ifstream file(csv_path);

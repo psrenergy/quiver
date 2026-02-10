@@ -433,7 +433,7 @@ TEST(Database, UpdateElementWithTimeSeries) {
     db.update_element("Collection", id, update);
 
     // Verify time series was updated
-    auto rows = db.read_time_series_group_by_id("Collection", "data", id);
+    auto rows = db.read_time_series_group("Collection", "data", id);
     EXPECT_EQ(rows.size(), 3);
     EXPECT_EQ(std::get<std::string>(rows[0].at("date_time")), "2025-06-01T00:00:00");
     EXPECT_EQ(std::get<std::string>(rows[1].at("date_time")), "2025-06-02T00:00:00");

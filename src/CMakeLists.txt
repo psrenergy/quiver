@@ -2,6 +2,15 @@
 set(QUIVER_SOURCES
     csv.cpp
     database.cpp
+    database_create.cpp
+    database_read.cpp
+    database_update.cpp
+    database_delete.cpp
+    database_metadata.cpp
+    database_time_series.cpp
+    database_query.cpp
+    database_relations.cpp
+    database_describe.cpp
     element.cpp
     enum_map.cpp
     lua_runner.cpp
@@ -88,6 +97,13 @@ if(QUIVER_BUILD_C_API)
     add_library(quiver_c SHARED
         c/common.cpp
         c/database.cpp
+        c/database_create.cpp
+        c/database_read.cpp
+        c/database_update.cpp
+        c/database_metadata.cpp
+        c/database_query.cpp
+        c/database_time_series.cpp
+        c/database_relations.cpp
         c/element.cpp
         c/lua_runner.cpp
     )

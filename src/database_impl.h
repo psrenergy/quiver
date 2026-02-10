@@ -29,7 +29,7 @@ struct Database::Impl {
     void require_collection(const std::string& collection, const char* operation) const {
         require_schema(operation);
         if (!schema->has_table(collection)) {
-            throw std::runtime_error("Collection not found in schema: " + collection);
+            throw std::runtime_error(std::string("Cannot ") + operation + ": collection not found: " + collection);
         }
     }
 

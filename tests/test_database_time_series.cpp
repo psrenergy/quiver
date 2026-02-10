@@ -65,7 +65,7 @@ TEST(Database, ReadTimeSeriesGroupById) {
     db.update_time_series_group("Collection", "data", id, rows);
 
     // Read back
-    auto result = db.read_time_series_group_by_id("Collection", "data", id);
+    auto result = db.read_time_series_group("Collection", "data", id);
     ASSERT_EQ(result.size(), 3);
 
     // Check ordering by date_time
@@ -92,7 +92,7 @@ TEST(Database, ReadTimeSeriesGroupByIdEmpty) {
     auto id = db.create_element("Collection", e1);
 
     // No time series data inserted
-    auto result = db.read_time_series_group_by_id("Collection", "data", id);
+    auto result = db.read_time_series_group("Collection", "data", id);
     EXPECT_TRUE(result.empty());
 }
 
@@ -105,7 +105,7 @@ TEST(Database, ReadTimeSeriesGroupByIdNonexistent) {
     db.create_element("Configuration", config);
 
     // Read from nonexistent element
-    auto result = db.read_time_series_group_by_id("Collection", "data", 999);
+    auto result = db.read_time_series_group("Collection", "data", 999);
     EXPECT_TRUE(result.empty());
 }
 
@@ -130,7 +130,7 @@ TEST(Database, UpdateTimeSeriesGroup) {
         {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.0}}};
     db.update_time_series_group("Collection", "data", id, rows1);
 
-    auto result1 = db.read_time_series_group_by_id("Collection", "data", id);
+    auto result1 = db.read_time_series_group("Collection", "data", id);
     ASSERT_EQ(result1.size(), 1);
 
     // Replace with new data
@@ -139,7 +139,7 @@ TEST(Database, UpdateTimeSeriesGroup) {
         {{"date_time", std::string("2024-02-01T11:00:00")}, {"value", 20.0}}};
     db.update_time_series_group("Collection", "data", id, rows2);
 
-    auto result2 = db.read_time_series_group_by_id("Collection", "data", id);
+    auto result2 = db.read_time_series_group("Collection", "data", id);
     ASSERT_EQ(result2.size(), 2);
     EXPECT_EQ(std::get<std::string>(result2[0]["date_time"]), "2024-02-01T10:00:00");
     EXPECT_DOUBLE_EQ(std::get<double>(result2[0]["value"]), 10.0);
@@ -166,7 +166,7 @@ TEST(Database, UpdateTimeSeriesGroupEmpty) {
     std::vector<std::map<std::string, quiver::Value>> empty_rows;
     db.update_time_series_group("Collection", "data", id, empty_rows);
 
-    auto result = db.read_time_series_group_by_id("Collection", "data", id);
+    auto result = db.read_time_series_group("Collection", "data", id);
     EXPECT_TRUE(result.empty());
 }
 
@@ -190,7 +190,7 @@ TEST(Database, TimeSeriesOrdering) {
     db.update_time_series_group("Collection", "data", id, rows);
 
     // Should be returned ordered by date_time
-    auto result = db.read_time_series_group_by_id("Collection", "data", id);
+    auto result = db.read_time_series_group("Collection", "data", id);
     ASSERT_EQ(result.size(), 3);
     EXPECT_EQ(std::get<std::string>(result[0]["date_time"]), "2024-01-01T10:00:00");
     EXPECT_EQ(std::get<std::string>(result[1]["date_time"]), "2024-01-02T10:00:00");
@@ -207,7 +207,7 @@ TEST(Database, TimeSeriesGroupNotFound) {
 
     EXPECT_THROW(db.get_time_series_metadata("Collection", "nonexistent"), std::runtime_error);
 
-    EXPECT_THROW(db.read_time_series_group_by_id("Collection", "nonexistent", 1), std::runtime_error);
+    EXPECT_THROW(db.read_time_series_group("Collection", "nonexistent", 1), std::runtime_error);
 }
 
 TEST(Database, TimeSeriesCollectionNotFound) {

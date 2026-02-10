@@ -27,7 +27,7 @@ end
 const libquiver_c = joinpath(@__DIR__, "..", "..", "..", "build", library_dir(), library_name())
 
 
-@cenum quiver_error_t::Int32 begin
+@cenum quiver_error_t::UInt32 begin
     QUIVER_OK = 0
     QUIVER_ERROR = 1
 end
@@ -123,8 +123,8 @@ function quiver_database_delete_element_by_id(db, collection, id)
     @ccall libquiver_c.quiver_database_delete_element_by_id(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, id::Int64)::quiver_error_t
 end
 
-function quiver_database_set_scalar_relation(db, collection, attribute, from_label, to_label)
-    @ccall libquiver_c.quiver_database_set_scalar_relation(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, from_label::Ptr{Cchar}, to_label::Ptr{Cchar})::quiver_error_t
+function quiver_database_update_scalar_relation(db, collection, attribute, from_label, to_label)
+    @ccall libquiver_c.quiver_database_update_scalar_relation(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, from_label::Ptr{Cchar}, to_label::Ptr{Cchar})::quiver_error_t
 end
 
 function quiver_database_read_scalar_relation(db, collection, attribute, out_values, out_count)
@@ -309,8 +309,8 @@ function quiver_database_update_set_strings(db, collection, attribute, id, value
     @ccall libquiver_c.quiver_database_update_set_strings(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Ptr{Cchar}}, count::Csize_t)::quiver_error_t
 end
 
-function quiver_database_read_time_series_group_by_id(db, collection, group, id, out_date_times, out_values, out_row_count)
-    @ccall libquiver_c.quiver_database_read_time_series_group_by_id(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, out_date_times::Ptr{Ptr{Ptr{Cchar}}}, out_values::Ptr{Ptr{Cdouble}}, out_row_count::Ptr{Csize_t})::quiver_error_t
+function quiver_database_read_time_series_group(db, collection, group, id, out_date_times, out_values, out_row_count)
+    @ccall libquiver_c.quiver_database_read_time_series_group(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, out_date_times::Ptr{Ptr{Ptr{Cchar}}}, out_values::Ptr{Ptr{Cdouble}}, out_row_count::Ptr{Csize_t})::quiver_error_t
 end
 
 function quiver_database_update_time_series_group(db, collection, group, id, date_times, values, row_count)
@@ -365,12 +365,12 @@ function quiver_free_string_vectors(vectors, sizes, count)
     @ccall libquiver_c.quiver_free_string_vectors(vectors::Ptr{Ptr{Ptr{Cchar}}}, sizes::Ptr{Csize_t}, count::Csize_t)::quiver_error_t
 end
 
-function quiver_database_export_to_csv(db, table, path)
-    @ccall libquiver_c.quiver_database_export_to_csv(db::Ptr{quiver_database_t}, table::Ptr{Cchar}, path::Ptr{Cchar})::quiver_error_t
+function quiver_database_export_csv(db, table, path)
+    @ccall libquiver_c.quiver_database_export_csv(db::Ptr{quiver_database_t}, table::Ptr{Cchar}, path::Ptr{Cchar})::quiver_error_t
 end
 
-function quiver_database_import_from_csv(db, table, path)
-    @ccall libquiver_c.quiver_database_import_from_csv(db::Ptr{quiver_database_t}, table::Ptr{Cchar}, path::Ptr{Cchar})::quiver_error_t
+function quiver_database_import_csv(db, table, path)
+    @ccall libquiver_c.quiver_database_import_csv(db::Ptr{quiver_database_t}, table::Ptr{Cchar}, path::Ptr{Cchar})::quiver_error_t
 end
 
 function quiver_database_query_string(db, sql, out_value, out_has_value)

@@ -13,9 +13,9 @@ This roadmap transforms Quiver from a working but inconsistently organized libra
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: C++ Impl Header Extraction** - Extract Database::Impl into private internal header to enable file decomposition ✓ (2026-02-09)
-- [ ] **Phase 2: C++ Core File Decomposition** - Split monolithic database.cpp into focused modules by operation type
-- [ ] **Phase 3: C++ Naming and Error Standardization** - Standardize C++ method names and exception patterns
-- [ ] **Phase 4: C API File Decomposition** - Split monolithic C API database.cpp with shared helper extraction
+- [x] **Phase 2: C++ Core File Decomposition** - Split monolithic database.cpp into focused modules by operation type ✓ (2026-02-09)
+- [x] **Phase 3: C++ Naming and Error Standardization** - Standardize C++ method names and exception patterns ✓ (2026-02-10)
+- [x] **Phase 4: C API File Decomposition** - Split monolithic C API database.cpp with shared helper extraction ✓ (2026-02-10)
 - [ ] **Phase 5: C API Naming and Error Standardization** - Standardize C API function names and error handling patterns
 - [ ] **Phase 6: Julia Bindings Standardization** - Standardize Julia binding names and error surfacing
 - [ ] **Phase 7: Dart Bindings Standardization** - Standardize Dart binding names and error surfacing
@@ -50,10 +50,11 @@ Plans:
   3. Every split file includes `src/database_impl.h` and compiles as part of the library
   4. All existing C++ tests pass with zero behavior changes (`quiver_tests.exe` green)
   5. No public header in `include/quiver/` has changed
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: Split database.cpp into functional modules
+- [x] 02-01-PLAN.md -- Extract shared helpers and CRUD operations (create, read, update, delete) ✓
+- [x] 02-02-PLAN.md -- Extract remaining operations (metadata, time series, query, relations, describe) ✓
 
 ### Phase 3: C++ Naming and Error Standardization
 **Goal**: All C++ public methods follow a single, documented naming convention and throw exceptions with consistent types and message formats
@@ -64,11 +65,11 @@ Plans:
   2. All exceptions thrown use `std::runtime_error` with a consistent message format that includes the operation name and the reason for failure
   3. No two methods use different naming styles for the same kind of operation (e.g., all reads use `read_`, all updates use `update_`)
   4. All existing C++ tests pass after renaming (updated to match new names)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: Audit and standardize C++ method names
-- [ ] 03-02: Standardize C++ exception patterns
+- [x] 03-01-PLAN.md -- Rename 5 deviant C++ method names and update all call sites ✓
+- [x] 03-02-PLAN.md -- Standardize all error messages to 3 patterns and update CLAUDE.md ✓
 
 ### Phase 4: C API File Decomposition
 **Goal**: The monolithic C API database.cpp is split into focused modules mirroring C++ structure, with shared helper templates extracted into a common internal header
@@ -80,11 +81,11 @@ Plans:
   3. Separate C API implementation files exist matching the C++ decomposition structure
   4. Every alloc/free pair is co-located in the same translation unit
   5. All existing C API tests pass with zero behavior changes (`quiver_c_tests.exe` green)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: Extract C API helper templates into shared header
-- [ ] 04-02: Split C API database.cpp into functional modules
+- [x] 04-01-PLAN.md -- Extract helpers into database_helpers.h, split CRUD/read/relations into separate files ✓
+- [x] 04-02-PLAN.md -- Extract update/metadata/query/time_series, finalize lifecycle-only database.cpp ✓
 
 ### Phase 5: C API Naming and Error Standardization
 **Goal**: All C API function names follow a single `quiver_{entity}_{operation}` convention and every function uses the try-catch-set_last_error pattern consistently
@@ -184,9 +185,9 @@ Note: Phases 6, 7 both depend on Phase 5. Phase 8 depends on Phase 3. Phase 10 d
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. C++ Impl Header Extraction | 1/1 | Complete | 2026-02-09 |
-| 2. C++ Core File Decomposition | 0/1 | Not started | - |
-| 3. C++ Naming and Error Standardization | 0/2 | Not started | - |
-| 4. C API File Decomposition | 0/2 | Not started | - |
+| 2. C++ Core File Decomposition | 2/2 | Complete | 2026-02-09 |
+| 3. C++ Naming and Error Standardization | 2/2 | Complete | 2026-02-10 |
+| 4. C API File Decomposition | 2/2 | Complete | 2026-02-10 |
 | 5. C API Naming and Error Standardization | 0/2 | Not started | - |
 | 6. Julia Bindings Standardization | 0/1 | Not started | - |
 | 7. Dart Bindings Standardization | 0/1 | Not started | - |

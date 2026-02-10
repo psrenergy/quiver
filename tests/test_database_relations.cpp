@@ -19,7 +19,7 @@ TEST(Database, SetScalarRelation) {
     db.create_element("Child", child);
 
     // Set the relation
-    db.set_scalar_relation("Child", "parent_id", "Child 1", "Parent 1");
+    db.update_scalar_relation("Child", "parent_id", "Child 1", "Parent 1");
 
     // Verify the relation was set using public read API
     auto relations = db.read_scalar_relation("Child", "parent_id");
@@ -41,7 +41,7 @@ TEST(Database, SetScalarRelationSelfReference) {
     db.create_element("Child", child2);
 
     // Set self-referential relation (sibling)
-    db.set_scalar_relation("Child", "sibling_id", "Child 1", "Child 2");
+    db.update_scalar_relation("Child", "sibling_id", "Child 1", "Child 2");
 
     // Verify the relation was set using public read API
     auto relations = db.read_scalar_relation("Child", "sibling_id");
@@ -99,7 +99,7 @@ TEST(Database, ReadScalarRelationMixedNullsAndValues) {
     db.create_element("Child", child2);
 
     // Set relation for only one child
-    db.set_scalar_relation("Child", "parent_id", "Child 1", "Parent 1");
+    db.update_scalar_relation("Child", "parent_id", "Child 1", "Parent 1");
 
     auto relations = db.read_scalar_relation("Child", "parent_id");
     EXPECT_EQ(relations.size(), 2);
@@ -143,8 +143,8 @@ TEST(Database, SetScalarRelationMultipleChildren) {
     db.create_element("Child", child3);
 
     // Set relations for multiple children
-    db.set_scalar_relation("Child", "parent_id", "Child 1", "Parent 1");
-    db.set_scalar_relation("Child", "parent_id", "Child 3", "Parent 1");
+    db.update_scalar_relation("Child", "parent_id", "Child 1", "Parent 1");
+    db.update_scalar_relation("Child", "parent_id", "Child 3", "Parent 1");
 
     auto relations = db.read_scalar_relation("Child", "parent_id");
     EXPECT_EQ(relations.size(), 3);
@@ -172,13 +172,13 @@ TEST(Database, SetScalarRelationOverwrite) {
     db.create_element("Child", child);
 
     // Set initial relation
-    db.set_scalar_relation("Child", "parent_id", "Child 1", "Parent 1");
+    db.update_scalar_relation("Child", "parent_id", "Child 1", "Parent 1");
 
     auto relations = db.read_scalar_relation("Child", "parent_id");
     EXPECT_EQ(relations[0], "Parent 1");
 
     // Overwrite relation
-    db.set_scalar_relation("Child", "parent_id", "Child 1", "Parent 2");
+    db.update_scalar_relation("Child", "parent_id", "Child 1", "Parent 2");
 
     relations = db.read_scalar_relation("Child", "parent_id");
     EXPECT_EQ(relations[0], "Parent 2");

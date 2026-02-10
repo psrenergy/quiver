@@ -48,13 +48,13 @@ public:
     // Element operations
     int64_t create_element(const std::string& collection, const Element& element);
     void update_element(const std::string& collection, int64_t id, const Element& element);
-    void delete_element_by_id(const std::string& collection, int64_t id);
+    void delete_element(const std::string& collection, int64_t id);
 
     // Relation operations
-    void set_scalar_relation(const std::string& collection,
-                             const std::string& attribute,
-                             const std::string& from_label,
-                             const std::string& to_label);
+    void update_scalar_relation(const std::string& collection,
+                                const std::string& attribute,
+                                const std::string& from_label,
+                                const std::string& to_label);
 
     std::vector<std::string> read_scalar_relation(const std::string& collection, const std::string& attribute);
 
@@ -116,7 +116,7 @@ public:
 
     // Read time series group - returns rows with date_time and value columns
     std::vector<std::map<std::string, Value>>
-    read_time_series_group_by_id(const std::string& collection, const std::string& group, int64_t id);
+    read_time_series_group(const std::string& collection, const std::string& group, int64_t id);
 
     // Update time series group - replaces all rows for element
     void update_time_series_group(const std::string& collection,
@@ -173,11 +173,11 @@ public:
     void describe() const;
 
     // CSV operations
-    void export_to_csv(const std::string& table,
-                       const std::string& path,
-                       const DateFormatMap& date_format_map = {},
-                       const EnumMap& enum_map = {});
-    void import_from_csv(const std::string& table, const std::string& path);
+    void export_csv(const std::string& table,
+                    const std::string& path,
+                    const DateFormatMap& date_format_map = {},
+                    const EnumMap& enum_map = {});
+    void import_csv(const std::string& table, const std::string& path);
 
     // Query methods - execute SQL and return first row's first column
     std::optional<std::string> query_string(const std::string& sql, const std::vector<Value>& params = {});
