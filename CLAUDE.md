@@ -17,6 +17,16 @@ include/quiver/c/         # C API headers (for FFI)
   lua_runner.h
 src/                      # C++ implementation
 src/c/                    # C API implementation
+  internal.h              # Shared structs (quiver_database, quiver_element), QUIVER_REQUIRE macro
+  database_helpers.h      # Marshaling templates, strdup_safe, metadata converters
+  database.cpp            # Lifecycle: open, close, factory methods, describe, CSV
+  database_create.cpp     # Element CRUD: create, update, delete
+  database_read.cpp       # All read operations + co-located free functions
+  database_update.cpp     # All scalar/vector/set update operations
+  database_metadata.cpp   # Metadata get/list + co-located free functions
+  database_query.cpp      # Query operations (plain and parameterized)
+  database_time_series.cpp # Time series operations + co-located free functions
+  database_relations.cpp  # Relation operations
 bindings/julia/           # Julia bindings (Quiver.jl)
 bindings/dart/            # Dart bindings (quiver)
 tests/                    # C++ tests
@@ -221,7 +231,10 @@ quiver_free_group_metadata(quiver_group_metadata_t*)
 quiver_free_scalar_metadata_array(quiver_scalar_metadata_t*, size_t)
 quiver_free_group_metadata_array(quiver_group_metadata_t*, size_t)
 ```
-Internal helpers `convert_scalar_to_c`, `convert_group_to_c`, `free_scalar_fields`, `free_group_fields` in `src/c/database.cpp` avoid duplication.
+Internal helpers `convert_scalar_to_c`, `convert_group_to_c`, `free_scalar_fields`, `free_group_fields` in `src/c/database_helpers.h` avoid duplication.
+
+### Alloc/Free Co-location
+Every allocation function and its corresponding free function live in the same translation unit. Read alloc/free pairs in `database_read.cpp`, metadata alloc/free pairs in `database_metadata.cpp`, time series alloc/free pairs in `database_time_series.cpp`.
 
 ### String Handling
 Always null-terminate, use `strdup_safe()`:
