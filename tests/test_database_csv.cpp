@@ -521,3 +521,16 @@ TEST(Database, ExportToCsvTimeSeriesFiles) {
     EXPECT_NE(lines[2].find("data.csv"), std::string::npos);
     EXPECT_NE(lines[2].find("meta.csv"), std::string::npos);
 }
+
+TEST(Database, ExportToCsvInvalidPathThrows) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+
+    quiver::Element e1;
+    e1.set("label", std::string("Config 1"));
+    db.create_element("Configuration", e1);
+
+    // Try to write to an invalid/inaccessible path
+    // On Windows, paths with invalid characters or non-existent directories should fail
+    auto invalid_path = "Z:/nonexistent_drive/invalid_path/file.csv";
+    EXPECT_THROW(db.export_csv("Configuration", invalid_path), std::runtime_error);
+}

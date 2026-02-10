@@ -101,6 +101,9 @@ void write_csv(const std::string& path,
     csv_file << "sep=,\n";
     doc.Save(csv_file);
     csv_file.close();
+    if (!csv_file.good()) {
+        throw std::runtime_error("Failed to write CSV file at path: " + path);
+    }
 }
 
 }  // namespace quiver
