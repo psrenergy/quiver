@@ -38,20 +38,12 @@ class Database {
       optionsPtr.ref = bindings.quiver_database_options_default();
       final outDbPtr = arena<Pointer<quiver_database_t>>();
 
-      final err = bindings.quiver_database_from_schema(
+      check(bindings.quiver_database_from_schema(
         dbPath.toNativeUtf8(allocator: arena).cast(),
         schemaPath.toNativeUtf8(allocator: arena).cast(),
         optionsPtr,
         outDbPtr,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        final errorPtr = bindings.quiver_get_last_error();
-        final errorMsg = errorPtr.cast<Utf8>().toDartString();
-        throw DatabaseException(
-          errorMsg.isNotEmpty ? errorMsg : 'Failed to create database from schema',
-        );
-      }
+      ));
 
       return Database._(outDbPtr.value);
     } finally {
@@ -69,20 +61,12 @@ class Database {
       optionsPtr.ref = bindings.quiver_database_options_default();
       final outDbPtr = arena<Pointer<quiver_database_t>>();
 
-      final err = bindings.quiver_database_from_migrations(
+      check(bindings.quiver_database_from_migrations(
         dbPath.toNativeUtf8(allocator: arena).cast(),
         migrationsPath.toNativeUtf8(allocator: arena).cast(),
         optionsPtr,
         outDbPtr,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        final errorPtr = bindings.quiver_get_last_error();
-        final errorMsg = errorPtr.cast<Utf8>().toDartString();
-        throw DatabaseException(
-          errorMsg.isNotEmpty ? errorMsg : 'Failed to create database from migrations',
-        );
-      }
+      ));
 
       return Database._(outDbPtr.value);
     } finally {
@@ -92,7 +76,7 @@ class Database {
 
   void _ensureNotClosed() {
     if (_isClosed) {
-      throw const DatabaseException('Database has been closed');
+      throw StateError('Database has been closed');
     }
   }
 
