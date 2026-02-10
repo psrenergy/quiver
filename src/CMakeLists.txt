@@ -95,6 +95,10 @@ if(QUIVER_BUILD_C_API)
         c/database.cpp
         c/database_create.cpp
         c/database_read.cpp
+        c/database_update.cpp
+        c/database_metadata.cpp
+        c/database_query.cpp
+        c/database_time_series.cpp
         c/database_relations.cpp
         c/element.cpp
         c/lua_runner.cpp
