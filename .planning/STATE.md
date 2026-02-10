@@ -11,7 +11,7 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 Phase: 8 of 10 (Lua Bindings Standardization)
 Plan: 1 of 1 in current phase (all plans complete)
-Status: Phase 8 complete. Ready for Phase 9 (Dart Bindings Standardization)
+Status: Phase 8 complete. Ready for Phase 9 (Code Hygiene)
 Last activity: 2026-02-10 -- Completed 08-01 Lua bindings naming standardization (4min)
 
 Progress: [########..] 80%
