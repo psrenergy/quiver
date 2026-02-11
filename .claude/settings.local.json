@@ -4,7 +4,8 @@
       "Bash(findstr:*)",
       "Bash(powershell -Command:*)",
       "Bash(handle64.exe:*)",
-      "Bash(dart test:*)"
+      "Bash(dart test:*)",
+      "Bash(cmake --build:*)"
     ]
   }
 }

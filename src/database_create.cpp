@@ -57,23 +57,25 @@ int64_t Database::create_element(const std::string& collection, const Element& e
             throw std::runtime_error("Cannot create_element: empty array not allowed for '" + array_name + "'");
         }
 
-        auto match = impl_->schema->find_table_for_column(collection, array_name);
-        if (!match) {
+        auto matches = impl_->schema->find_all_tables_for_column(collection, array_name);
+        if (matches.empty()) {
             throw std::runtime_error("Cannot create_element: array '" + array_name +
                                      "' does not match any vector, set, or time series table in collection '" +
                                      collection + "'");
         }
 
-        switch (match->type) {
-        case GroupTableType::Vector:
-            vector_table_columns[match->table_name][array_name] = &values;
-            break;
-        case GroupTableType::Set:
-            set_table_columns[match->table_name][array_name] = &values;
-            break;
-        case GroupTableType::TimeSeries:
-            time_series_table_columns[match->table_name][array_name] = &values;
-            break;
+        for (const auto& match : matches) {
+            switch (match.type) {
+            case GroupTableType::Vector:
+                vector_table_columns[match.table_name][array_name] = &values;
+                break;
+            case GroupTableType::Set:
+                set_table_columns[match.table_name][array_name] = &values;
+                break;
+            case GroupTableType::TimeSeries:
+                time_series_table_columns[match.table_name][array_name] = &values;
+                break;
+            }
         }
     }
 
