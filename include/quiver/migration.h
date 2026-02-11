@@ -11,7 +11,7 @@ namespace quiver {
 
 class QUIVER_API Migration {
 public:
-    Migration(int64_t version, const std::string& path);
+    Migration(int64_t version, std::string path);
 
     // Accessors
     int64_t version() const;

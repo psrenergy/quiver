@@ -102,7 +102,17 @@ void main() {
       expect(
         () => Database.fromSchema(
           dbPath,
-          path.join(invalidPath, 'duplicate_attribute.sql'),
+          path.join(invalidPath, 'duplicate_attribute_vector.sql'),
+        ),
+        throwsA(isA<DatabaseException>()),
+      );
+    });
+
+    test('rejects schema with duplicate attribute in time series', () {
+      expect(
+        () => Database.fromSchema(
+          dbPath,
+          path.join(invalidPath, 'duplicate_attribute_time_series.sql'),
         ),
         throwsA(isA<DatabaseException>()),
       );

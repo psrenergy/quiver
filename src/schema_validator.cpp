@@ -222,7 +222,8 @@ void SchemaValidator::validate_time_series_files_table(const std::string& name) 
 }
 
 void SchemaValidator::validate_no_duplicate_attributes() {
-    // For each collection, gather all attribute names from collection + vector tables
+    // For each collection, gather all attribute names from scalar columns and all group tables
+    // (vector, set, time series) and reject any duplicates.
     for (const auto& collection : collections_) {
         if (collection == "Configuration") {
             continue;
@@ -242,37 +243,49 @@ void SchemaValidator::validate_no_duplicate_attributes() {
             }
         }
 
-        // Check vector tables for duplicates
+        // Check all group tables (vector, set, time series) for duplicates
         for (const auto& table_name : schema_.table_names()) {
-            if (!schema_.is_vector_table(table_name)) {
+            const auto is_vector = schema_.is_vector_table(table_name);
+            const auto is_set = schema_.is_set_table(table_name);
+            const auto is_ts = schema_.is_time_series_table(table_name);
+
+            if (!is_vector && !is_set && !is_ts) {
                 continue;
             }
             if (schema_.get_parent_collection(table_name) != collection) {
                 continue;
             }
 
-            const auto* vec_table = schema_.get_table(table_name);
-            if (!vec_table) {
+            const auto* group_table = schema_.get_table(table_name);
+            if (!group_table) {
                 continue;
             }
 
-            // Get FK column names for this vector table
+            // Get FK column names
             std::set<std::string> fk_cols;
-            for (const auto& fk : vec_table->foreign_keys) {
+            for (const auto& fk : group_table->foreign_keys) {
                 fk_cols.insert(fk.from_column);
             }
 
-            for (const auto& [col_name, _] : vec_table->columns) {
-                // Skip id, vector_index, and FK columns
-                if (col_name == "id" || col_name == "vector_index" || fk_cols.count(col_name) > 0) {
+            for (const auto& [col_name, _] : group_table->columns) {
+                // Skip structural columns common to all group types
+                if (col_name == "id" || fk_cols.count(col_name) > 0) {
                     continue;
                 }
 
-                // Check if attribute already exists in collection
-                if (attributes.count(col_name) > 0) {
-                    validation_error("Duplicate attribute '" + col_name + "' in collection '" + collection +
-                                     "' and vector table '" + table_name + "'");
+                // Skip type-specific structural columns
+                if (is_vector && col_name == "vector_index") {
+                    continue;
                 }
+                if (is_ts && col_name.starts_with("date_")) {
+                    continue;
+                }
+
+                if (attributes.count(col_name) > 0) {
+                    validation_error("Duplicate attribute '" + col_name + "' found in table '" + table_name +
+                                     "' (already defined in collection '" + collection + "')");
+                }
+                attributes.insert(col_name);
             }
         }
     }
@@ -334,7 +347,7 @@ void SchemaValidator::validate_foreign_keys() {
 
                     // Expected pattern: <target>_id or <target>_<something>
                     auto valid_name = (col_lower == target_lower + "_id") ||
-                                      (col_lower.find(target_lower + "_") == 0) ||
+                                      (col_lower.starts_with(target_lower + "_")) ||
                                       (col_lower.find("_id") != std::string::npos);
 
                     if (!valid_name) {

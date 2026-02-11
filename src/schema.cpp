@@ -1,9 +1,18 @@
 #include "quiver/schema.h"
 
+#include <algorithm>
+#include <cctype>
 #include <sqlite3.h>
 #include <stdexcept>
+#include <string_view>
 
 namespace quiver {
+
+static bool is_safe_identifier(const std::string& name) {
+    if (name.empty())
+        return false;
+    return std::ranges::all_of(name, [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_'; });
+}
 
 // TableDefinition methods
 
@@ -102,11 +111,7 @@ bool Schema::is_time_series_table(const std::string& table) const {
 }
 
 bool Schema::is_time_series_files_table(const std::string& table) const {
-    const std::string suffix = "_time_series_files";
-    if (table.size() < suffix.size()) {
-        return false;
-    }
-    return table.compare(table.size() - suffix.size(), suffix.size(), suffix) == 0;
+    return table.ends_with("_time_series_files");
 }
 
 std::string Schema::get_parent_collection(const std::string& table) const {
@@ -118,8 +123,8 @@ std::string Schema::get_parent_collection(const std::string& table) const {
 }
 
 std::string Schema::get_time_series_files_parent_collection(const std::string& table) const {
-    const std::string suffix = "_time_series_files";
-    if (table.size() > suffix.size() && table.compare(table.size() - suffix.size(), suffix.size(), suffix) == 0) {
+    constexpr std::string_view suffix = "_time_series_files";
+    if (table.ends_with(suffix)) {
         return table.substr(0, table.size() - suffix.size());
     }
     return "";
@@ -187,7 +192,7 @@ std::string Schema::find_time_series_table(const std::string& collection, const 
 
         // Extract group name from table and compare
         auto prefix = collection + "_time_series_";
-        if (table_name.size() > prefix.size() && table_name.substr(0, prefix.size()) == prefix) {
+        if (table_name.starts_with(prefix)) {
             auto extracted_group = table_name.substr(prefix.size());
             if (extracted_group == group) {
                 return table_name;
@@ -211,7 +216,7 @@ std::optional<Schema::TableMatch> Schema::find_table_for_column(const std::strin
     // Check vector: direct name match first, then scan
     auto vt = vector_table_name(collection, column);
     if (has_table(vt)) {
-        return TableMatch{vt, GroupTableType::Vector};
+        return TableMatch{.table_name = vt, .type = GroupTableType::Vector};
     }
 
     for (const auto& [name, table] : tables_) {
@@ -222,13 +227,13 @@ std::optional<Schema::TableMatch> Schema::find_table_for_column(const std::strin
             continue;
 
         if (is_vector_table(name)) {
-            return TableMatch{name, GroupTableType::Vector};
+            return TableMatch{.table_name = name, .type = GroupTableType::Vector};
         }
         if (is_set_table(name)) {
-            return TableMatch{name, GroupTableType::Set};
+            return TableMatch{.table_name = name, .type = GroupTableType::Set};
         }
         if (is_time_series_table(name)) {
-            return TableMatch{name, GroupTableType::TimeSeries};
+            return TableMatch{.table_name = name, .type = GroupTableType::TimeSeries};
         }
     }
 
@@ -292,6 +297,9 @@ void Schema::load_from_database(sqlite3* db) {
 }
 
 std::vector<ColumnDefinition> Schema::query_columns(sqlite3* db, const std::string& table) {
+    if (!is_safe_identifier(table)) {
+        throw std::runtime_error("Cannot query columns: invalid table name: " + table);
+    }
     std::vector<ColumnDefinition> columns;
     auto sql = "PRAGMA table_info(" + table + ")";
 
@@ -327,6 +335,9 @@ std::vector<ColumnDefinition> Schema::query_columns(sqlite3* db, const std::stri
 }
 
 std::vector<ForeignKey> Schema::query_foreign_keys(sqlite3* db, const std::string& table) {
+    if (!is_safe_identifier(table)) {
+        throw std::runtime_error("Cannot query foreign keys: invalid table name: " + table);
+    }
     std::vector<ForeignKey> fks;
     auto sql = "PRAGMA foreign_key_list(" + table + ")";
 
@@ -356,6 +367,9 @@ std::vector<ForeignKey> Schema::query_foreign_keys(sqlite3* db, const std::strin
 }
 
 std::vector<Index> Schema::query_indexes(sqlite3* db, const std::string& table) {
+    if (!is_safe_identifier(table)) {
+        throw std::runtime_error("Cannot query indexes: invalid table name: " + table);
+    }
     std::vector<Index> indexes;
     auto sql = "PRAGMA index_list(" + table + ")";
 
@@ -371,6 +385,8 @@ std::vector<Index> Schema::query_indexes(sqlite3* db, const std::string& table) 
         idx.unique = sqlite3_column_int(stmt, 2) != 0;
 
         // Get columns for this index
+        if (!is_safe_identifier(idx.name))
+            continue;
         auto idx_sql = "PRAGMA index_info(" + idx.name + ")";
         sqlite3_stmt* idx_stmt = nullptr;
         if (sqlite3_prepare_v2(db, idx_sql.c_str(), -1, &idx_stmt, nullptr) == SQLITE_OK) {

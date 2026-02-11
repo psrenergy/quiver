@@ -1,5 +1,6 @@
 #include "test_utils.h"
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/element.h>
@@ -647,4 +648,44 @@ TEST(Database, DatetimeMetadataType) {
 
     auto metadata = db.get_scalar_metadata("Configuration", "date_attribute");
     EXPECT_EQ(metadata.data_type, quiver::DataType::DateTime);
+}
+
+// ============================================================================
+// Identifier validation tests
+// ============================================================================
+
+TEST(Database, ReadScalarIntegersInvalidColumnThrows) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    EXPECT_THROW(
+        {
+            try {
+                db.read_scalar_integers("Configuration", "nonexistent_column");
+            } catch (const std::runtime_error& e) {
+                EXPECT_THAT(std::string(e.what()), testing::HasSubstr("not found"));
+                throw;
+            }
+        },
+        std::runtime_error);
+}
+
+TEST(Database, ReadVectorIntegersInvalidColumnThrows) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    EXPECT_THROW(
+        {
+            try {
+                db.read_vector_integers("Collection", "nonexistent_column");
+            } catch (const std::runtime_error& e) {
+                EXPECT_THAT(std::string(e.what()), testing::HasSubstr("not found"));
+                throw;
+            }
+        },
+        std::runtime_error);
 }

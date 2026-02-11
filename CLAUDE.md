@@ -356,6 +356,69 @@ lua.run(R"(
 )");
 ```
 
+## Cross-Layer Naming Conventions
+
+### Transformation Rules
+
+| From C++ | To C API | To Julia | To Dart | To Lua |
+|----------|----------|----------|---------|--------|
+| `method_name` | `quiver_database_method_name` | `method_name` (+ `!` if mutating) | `methodName` | `method_name` |
+| `Database::from_schema()` | `quiver_database_from_schema()` | `from_schema()` | `Database.fromSchema()` | N/A |
+
+- **C++ to C API:** Prefix `quiver_database_` to the C++ method name. Example: `create_element` -> `quiver_database_create_element`
+- **C++ to Julia:** Same name. Add `!` suffix for mutating operations (create, update, delete). Example: `create_element` -> `create_element!`, `read_scalar_integers` -> `read_scalar_integers`
+- **C++ to Dart:** Convert `snake_case` to `camelCase`. Example: `read_scalar_integers` -> `readScalarIntegers`. Factory methods use Dart named constructors: `from_schema` -> `Database.fromSchema()`
+- **C++ to Lua:** Same name exactly (1:1 match). Example: `read_scalar_integers` -> `read_scalar_integers`. Lua has no lifecycle methods (open/close) -- database is provided as `db` userdata by LuaRunner.
+
+### Representative Cross-Layer Examples
+
+| Category | C++ | C API | Julia | Dart | Lua |
+|----------|-----|-------|-------|------|-----|
+| Factory | `Database::from_schema()` | `quiver_database_from_schema()` | `from_schema()` | `Database.fromSchema()` | N/A |
+| Create | `create_element()` | `quiver_database_create_element()` | `create_element!()` | `createElement()` | `create_element()` |
+| Read scalar | `read_scalar_integers()` | `quiver_database_read_scalar_integers()` | `read_scalar_integers()` | `readScalarIntegers()` | `read_scalar_integers()` |
+| Read by ID | `read_scalar_integer_by_id()` | `quiver_database_read_scalar_integer_by_id()` | `read_scalar_integer_by_id()` | `readScalarIntegerById()` | `read_scalar_integer_by_id()` |
+| Update scalar | `update_scalar_integer()` | `quiver_database_update_scalar_integer()` | `update_scalar_integer!()` | `updateScalarInteger()` | `update_scalar_integer()` |
+| Update vector | `update_vector_strings()` | `quiver_database_update_vector_strings()` | `update_vector_strings!()` | `updateVectorStrings()` | `update_vector_strings()` |
+| Delete | `delete_element()` | `quiver_database_delete_element()` | `delete_element!()` | `deleteElement()` | `delete_element()` |
+| Metadata | `get_scalar_metadata()` | `quiver_database_get_scalar_metadata()` | `get_scalar_metadata()` | `getScalarMetadata()` | `get_scalar_metadata()` |
+| List groups | `list_vector_groups()` | `quiver_database_list_vector_groups()` | `list_vector_groups()` | `listVectorGroups()` | `list_vector_groups()` |
+| Time series | `read_time_series_group()` | `quiver_database_read_time_series_group()` | `read_time_series_group()` | `readTimeSeriesGroup()` | `read_time_series_group()` |
+| Query | `query_string()` | `quiver_database_query_string()` | `query_string()` | `queryString()` | `query_string()` |
+| Relations | `update_scalar_relation()` | `quiver_database_update_scalar_relation()` | `update_scalar_relation!()` | `updateScalarRelation()` | `update_scalar_relation()` |
+| CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | N/A |
+| Describe | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |
+
+The transformation rules are mechanical. Given any C++ method name, you can derive the equivalent in any layer without consulting a lookup table.
+
+### Binding-Only Convenience Methods
+
+Julia, Dart, and Lua provide additional convenience methods that compose core operations. These have no direct C++ or C API counterpart.
+
+**DateTime wrappers (Julia and Dart only):**
+
+| Julia | Dart | Wraps |
+|-------|------|-------|
+| `read_scalar_date_time_by_id` | `readScalarDateTimeById` | string read + date parsing |
+| `read_vector_date_time_by_id` | `readVectorDateTimesById` | string vector read + date parsing |
+| `read_set_date_time_by_id` | `readSetDateTimesById` | string set read + date parsing |
+| `query_date_time` | `queryDateTime` | string query + date parsing |
+
+**Composite read helpers (Julia, Dart, and Lua):**
+
+| Julia | Dart | Lua | Wraps |
+|-------|------|-----|-------|
+| `read_all_scalars_by_id` | `readAllScalarsById` | `read_all_scalars_by_id` | `list_scalar_attributes` + typed reads |
+| `read_all_vectors_by_id` | `readAllVectorsById` | `read_all_vectors_by_id` | `list_vector_groups` + typed reads |
+| `read_all_sets_by_id` | `readAllSetsById` | `read_all_sets_by_id` | `list_set_groups` + typed reads |
+
+**Multi-column group readers (Julia and Dart only):**
+
+| Julia | Dart | Wraps |
+|-------|------|-------|
+| `read_vector_group_by_id` | `readVectorGroupById` | metadata + per-column vector reads |
+| `read_set_group_by_id` | `readSetGroupById` | metadata + per-column set reads |
+
 ## Bindings
 
 ### Regenerating FFI Bindings
