@@ -11,7 +11,11 @@ Checks: >
   -modernize-use-trailing-return-type,
   -modernize-avoid-c-arrays,
   -bugprone-narrowing-conversions,
-  -modernize-use-nodiscard
+  -modernize-use-nodiscard,
+  -modernize-use-ranges,
+  -modernize-use-designated-initializers,
+  -performance-inefficient-string-concatenation,
+  -performance-enum-size
 
 WarningsAsErrors: ''
 

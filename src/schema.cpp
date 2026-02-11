@@ -4,12 +4,13 @@
 #include <cctype>
 #include <sqlite3.h>
 #include <stdexcept>
+#include <string_view>
 
 namespace quiver {
 
 static bool is_safe_identifier(const std::string& name) {
     if (name.empty()) return false;
-    return std::all_of(name.begin(), name.end(), [](char c) {
+    return std::ranges::all_of(name, [](char c) {
         return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
     });
 }
@@ -111,11 +112,7 @@ bool Schema::is_time_series_table(const std::string& table) const {
 }
 
 bool Schema::is_time_series_files_table(const std::string& table) const {
-    const std::string suffix = "_time_series_files";
-    if (table.size() < suffix.size()) {
-        return false;
-    }
-    return table.compare(table.size() - suffix.size(), suffix.size(), suffix) == 0;
+    return table.ends_with("_time_series_files");
 }
 
 std::string Schema::get_parent_collection(const std::string& table) const {
@@ -127,8 +124,8 @@ std::string Schema::get_parent_collection(const std::string& table) const {
 }
 
 std::string Schema::get_time_series_files_parent_collection(const std::string& table) const {
-    const std::string suffix = "_time_series_files";
-    if (table.size() > suffix.size() && table.compare(table.size() - suffix.size(), suffix.size(), suffix) == 0) {
+    constexpr std::string_view suffix = "_time_series_files";
+    if (table.ends_with(suffix)) {
         return table.substr(0, table.size() - suffix.size());
     }
     return "";
@@ -196,7 +193,7 @@ std::string Schema::find_time_series_table(const std::string& collection, const 
 
         // Extract group name from table and compare
         auto prefix = collection + "_time_series_";
-        if (table_name.size() > prefix.size() && table_name.substr(0, prefix.size()) == prefix) {
+        if (table_name.starts_with(prefix)) {
             auto extracted_group = table_name.substr(prefix.size());
             if (extracted_group == group) {
                 return table_name;
@@ -220,7 +217,7 @@ std::optional<Schema::TableMatch> Schema::find_table_for_column(const std::strin
     // Check vector: direct name match first, then scan
     auto vt = vector_table_name(collection, column);
     if (has_table(vt)) {
-        return TableMatch{vt, GroupTableType::Vector};
+        return TableMatch{.table_name = vt, .type = GroupTableType::Vector};
     }
 
     for (const auto& [name, table] : tables_) {
@@ -231,13 +228,13 @@ std::optional<Schema::TableMatch> Schema::find_table_for_column(const std::strin
             continue;
 
         if (is_vector_table(name)) {
-            return TableMatch{name, GroupTableType::Vector};
+            return TableMatch{.table_name = name, .type = GroupTableType::Vector};
         }
         if (is_set_table(name)) {
-            return TableMatch{name, GroupTableType::Set};
+            return TableMatch{.table_name = name, .type = GroupTableType::Set};
         }
         if (is_time_series_table(name)) {
-            return TableMatch{name, GroupTableType::TimeSeries};
+            return TableMatch{.table_name = name, .type = GroupTableType::TimeSeries};
         }
     }
 

@@ -38,7 +38,7 @@ void Database::update_element(const std::string& collection, int64_t id, const E
             first = false;
         }
         sql += " WHERE id = ?";
-        params.push_back(id);
+        params.emplace_back(id);
 
         execute(sql, params);
     }
@@ -220,7 +220,7 @@ void Database::update_vector_integers(const std::string& collection,
 
     for (size_t i = 0; i < values.size(); ++i) {
         auto insert_sql = "INSERT INTO " + vector_table + " (id, vector_index, " + attribute + ") VALUES (?, ?, ?)";
-        int64_t vector_index = static_cast<int64_t>(i + 1);
+        auto vector_index = static_cast<int64_t>(i + 1);
         execute(insert_sql, {id, vector_index, values[i]});
     }
 
@@ -245,7 +245,7 @@ void Database::update_vector_floats(const std::string& collection,
 
     for (size_t i = 0; i < values.size(); ++i) {
         auto insert_sql = "INSERT INTO " + vector_table + " (id, vector_index, " + attribute + ") VALUES (?, ?, ?)";
-        int64_t vector_index = static_cast<int64_t>(i + 1);
+        auto vector_index = static_cast<int64_t>(i + 1);
         execute(insert_sql, {id, vector_index, values[i]});
     }
 
@@ -270,7 +270,7 @@ void Database::update_vector_strings(const std::string& collection,
 
     for (size_t i = 0; i < values.size(); ++i) {
         auto insert_sql = "INSERT INTO " + vector_table + " (id, vector_index, " + attribute + ") VALUES (?, ?, ?)";
-        int64_t vector_index = static_cast<int64_t>(i + 1);
+        auto vector_index = static_cast<int64_t>(i + 1);
         execute(insert_sql, {id, vector_index, values[i]});
     }
 

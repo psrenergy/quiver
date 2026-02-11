@@ -16,7 +16,7 @@ std::vector<GroupMetadata> Database::list_time_series_groups(const std::string& 
             continue;
 
         // Extract group name from table name
-        if (table_name.size() > prefix.size() && table_name.substr(0, prefix.size()) == prefix) {
+        if (table_name.starts_with(prefix)) {
             auto group_name = table_name.substr(prefix.size());
             result.push_back(get_time_series_metadata(collection, group_name));
         }
@@ -158,22 +158,22 @@ void Database::update_time_series_group(const std::string& collection,
     // Insert each row
     for (const auto& row : rows) {
         std::vector<Value> params;
-        params.push_back(id);
+        params.emplace_back(id);
 
         // Dimension column must be present
         auto dt_it = row.find(dim_col);
         if (dt_it == row.end()) {
             throw std::runtime_error("Cannot update_time_series_group: row missing required '" + dim_col + "' column");
         }
-        params.push_back(dt_it->second);
+        params.emplace_back(dt_it->second);
 
         // Add value columns
         for (const auto& col : value_columns) {
             auto it = row.find(col);
             if (it != row.end()) {
-                params.push_back(it->second);
+                params.emplace_back(it->second);
             } else {
-                params.push_back(nullptr);
+                params.emplace_back(nullptr);
             }
         }
 
@@ -199,6 +199,7 @@ std::vector<std::string> Database::list_time_series_files_columns(const std::str
     }
 
     std::vector<std::string> columns;
+    columns.reserve(table_def->columns.size());
     for (const auto& [col_name, _] : table_def->columns) {
         columns.push_back(col_name);
     }
@@ -217,6 +218,7 @@ std::map<std::string, std::optional<std::string>> Database::read_time_series_fil
 
     // Build column list
     std::vector<std::string> columns;
+    columns.reserve(table_def->columns.size());
     for (const auto& [col_name, _] : table_def->columns) {
         columns.push_back(col_name);
     }
@@ -295,9 +297,9 @@ void Database::update_time_series_files(const std::string& collection,
         insert_sql += col_name;
         placeholders += "?";
         if (path) {
-            params.push_back(*path);
+            params.emplace_back(*path);
         } else {
-            params.push_back(nullptr);
+            params.emplace_back(nullptr);
         }
         first = false;
     }

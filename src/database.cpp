@@ -150,7 +150,7 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
                 } else if constexpr (std::is_same_v<T, double>) {
                     sqlite3_bind_double(stmt.get(), idx, arg);
                 } else if constexpr (std::is_same_v<T, std::string>) {
-                    sqlite3_bind_text(stmt.get(), idx, arg.c_str(), static_cast<int>(arg.size()), SQLITE_TRANSIENT);
+                    sqlite3_bind_text(stmt.get(), idx, arg.c_str(), static_cast<int>(arg.size()), SQLITE_TRANSIENT); // NOLINT(performance-no-int-to-ptr) SQLite macro
                 }
             },
             param);
@@ -202,7 +202,7 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
         throw std::runtime_error("Failed to execute statement: " + std::string(sqlite3_errmsg(impl_->db)));
     }
 
-    return Result(std::move(columns), std::move(rows));
+    return {std::move(columns), std::move(rows)};
 }
 
 int64_t Database::current_version() const {

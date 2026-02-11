@@ -334,7 +334,7 @@ void SchemaValidator::validate_foreign_keys() {
 
                     // Expected pattern: <target>_id or <target>_<something>
                     auto valid_name = (col_lower == target_lower + "_id") ||
-                                      (col_lower.find(target_lower + "_") == 0) ||
+                                      (col_lower.starts_with(target_lower + "_")) ||
                                       (col_lower.find("_id") != std::string::npos);
 
                     if (!valid_name) {
