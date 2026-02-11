@@ -21,7 +21,8 @@ struct LuaRunner::Impl {
     }
 
     void bind_database() {
-        // NOLINTBEGIN(performance-unnecessary-value-param) sol2 lambda bindings require pass-by-value for type deduction
+        // NOLINTBEGIN(performance-unnecessary-value-param) sol2 lambda bindings require pass-by-value for type
+        // deduction
         lua.new_usertype<Database>(
             "Database",
             "create_element",
@@ -1096,7 +1097,8 @@ struct LuaRunner::Impl {
         return t;
     }
 
-    static void update_time_series_files_from_lua(Database& db, const std::string& collection, const sol::table& paths) {
+    static void
+    update_time_series_files_from_lua(Database& db, const std::string& collection, const sol::table& paths) {
         std::map<std::string, std::optional<std::string>> cpp_paths;
         for (auto& pair : paths) {
             auto key = pair.first.as<std::string>();

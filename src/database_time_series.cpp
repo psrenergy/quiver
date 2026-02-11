@@ -272,8 +272,8 @@ void Database::update_time_series_files(const std::string& collection,
     // Validate caller-provided column names
     for (const auto& [col_name, path] : paths) {
         if (!table_def->has_column(col_name)) {
-            throw std::runtime_error("Cannot update_time_series_files: column '" + col_name +
-                                      "' not found in table '" + tsf + "'");
+            throw std::runtime_error("Cannot update_time_series_files: column '" + col_name + "' not found in table '" +
+                                     tsf + "'");
         }
     }
 

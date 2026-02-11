@@ -9,10 +9,9 @@
 namespace quiver {
 
 static bool is_safe_identifier(const std::string& name) {
-    if (name.empty()) return false;
-    return std::ranges::all_of(name, [](char c) {
-        return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
-    });
+    if (name.empty())
+        return false;
+    return std::ranges::all_of(name, [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_'; });
 }
 
 // TableDefinition methods
@@ -386,7 +385,8 @@ std::vector<Index> Schema::query_indexes(sqlite3* db, const std::string& table) 
         idx.unique = sqlite3_column_int(stmt, 2) != 0;
 
         // Get columns for this index
-        if (!is_safe_identifier(idx.name)) continue;
+        if (!is_safe_identifier(idx.name))
+            continue;
         auto idx_sql = "PRAGMA index_info(" + idx.name + ")";
         sqlite3_stmt* idx_stmt = nullptr;
         if (sqlite3_prepare_v2(db, idx_sql.c_str(), -1, &idx_stmt, nullptr) == SQLITE_OK) {

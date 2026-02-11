@@ -40,8 +40,8 @@ struct Database::Impl {
             throw std::runtime_error(std::string("Cannot ") + operation + ": table not found: " + table);
         }
         if (!table_def->has_column(column)) {
-            throw std::runtime_error(std::string("Cannot ") + operation +
-                                      ": column '" + column + "' not found in table '" + table + "'");
+            throw std::runtime_error(std::string("Cannot ") + operation + ": column '" + column +
+                                     "' not found in table '" + table + "'");
         }
     }
 

@@ -150,7 +150,11 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
                 } else if constexpr (std::is_same_v<T, double>) {
                     sqlite3_bind_double(stmt.get(), idx, arg);
                 } else if constexpr (std::is_same_v<T, std::string>) {
-                    sqlite3_bind_text(stmt.get(), idx, arg.c_str(), static_cast<int>(arg.size()), SQLITE_TRANSIENT); // NOLINT(performance-no-int-to-ptr) SQLite macro
+                    sqlite3_bind_text(stmt.get(),
+                                      idx,
+                                      arg.c_str(),
+                                      static_cast<int>(arg.size()),
+                                      SQLITE_TRANSIENT);  // NOLINT(performance-no-int-to-ptr) SQLite macro
                 }
             },
             param);

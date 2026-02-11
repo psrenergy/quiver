@@ -157,7 +157,9 @@ int64_t Database::create_element(const std::string& collection, const Element& e
                             throw std::runtime_error("Failed to resolve label '" + label + "' to ID in table '" +
                                                      fk.to_table + "'");
                         }
-                        val = lookup_result[0].get_integer(0).value(); // NOLINT(bugprone-unchecked-optional-access) checked on line 156
+                        val = lookup_result[0]
+                                  .get_integer(0)
+                                  .value();  // NOLINT(bugprone-unchecked-optional-access) checked on line 156
                         break;
                     }
                 }
