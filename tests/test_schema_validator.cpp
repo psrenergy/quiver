@@ -47,6 +47,11 @@ TEST_F(SchemaValidatorFixture, InvalidDuplicateAttribute) {
                  std::runtime_error);
 }
 
+TEST_F(SchemaValidatorFixture, InvalidDuplicateAttributeTimeSeries) {
+    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("duplicate_attribute_time_series.sql"), opts),
+                 std::runtime_error);
+}
+
 TEST_F(SchemaValidatorFixture, InvalidVectorNoIndex) {
     EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("vector_no_index.sql"), opts),
                  std::runtime_error);
