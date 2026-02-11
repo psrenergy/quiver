@@ -9,7 +9,6 @@ CREATE TABLE Configuration (
 CREATE TABLE Collection (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     label TEXT UNIQUE NOT NULL,
-    value INTEGER
 ) STRICT;
 
 CREATE TABLE Collection_time_series_group1 (
