@@ -35,9 +35,9 @@ Requirements for this refactoring milestone. Each maps to roadmap phases.
 
 ### Code Hygiene
 
-- [ ] **HYGN-01**: SQL string concatenation in schema queries replaced with parameterized equivalents or validated identifiers
-- [ ] **HYGN-02**: `.clang-tidy` configuration added with `readability-identifier-naming`, `bugprone-*`, `modernize-*`, `performance-*` checks
-- [ ] **HYGN-03**: Existing code passes clang-tidy checks (or suppressions documented for intentional exceptions)
+- [x] **HYGN-01**: SQL string concatenation in schema queries replaced with parameterized equivalents or validated identifiers ✓ (Phase 9)
+- [x] **HYGN-02**: `.clang-tidy` configuration added with `readability-identifier-naming`, `bugprone-*`, `modernize-*`, `performance-*` checks ✓ (Phase 9)
+- [x] **HYGN-03**: Existing code passes clang-tidy checks (or suppressions documented for intentional exceptions) ✓ (Phase 9)
 
 ### Testing
 
