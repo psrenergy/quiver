@@ -102,7 +102,7 @@ void main() {
       expect(
         () => Database.fromSchema(
           dbPath,
-          path.join(invalidPath, 'duplicate_attribute.sql'),
+          path.join(invalidPath, 'duplicate_attribute_vector.sql'),
         ),
         throwsA(isA<DatabaseException>()),
       );
