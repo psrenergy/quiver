@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Core value:** Every public C++ method is reachable from every binding through uniform, predictable patterns
-**Current focus:** Phase 9 Plan 1 complete - Identifier validation added to all SQL concatenation sites.
+**Current focus:** Phase 9 complete - clang-tidy static analysis integrated with zero project-code warnings.
 
 ## Current Position
 
 Phase: 9 of 10 (Code Hygiene)
-Plan: 1 of 2 in current phase
-Status: 09-01 complete. Ready for 09-02.
-Last activity: 2026-02-10 -- Completed 09-01 identifier validation plan (13min)
+Plan: 2 of 2 in current phase (complete)
+Status: Phase 9 complete. Ready for Phase 10.
+Last activity: 2026-02-10 -- Completed 09-02 clang-tidy integration plan (30min)
 
-Progress: [########..] 85%
+Progress: [#########.] 90%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
-- Average duration: 10.5min
-- Total execution time: 2.3 hours
+- Total plans completed: 14
+- Average duration: 11min
+- Total execution time: 2.8 hours
 
 **By Phase:**
 
@@ -35,11 +35,11 @@ Progress: [########..] 85%
 | 06-julia-bindings-standardization | 1/1 | 11min | 11min |
 | 07-dart-bindings-standardization | 1/1 | 14min | 14min |
 | 08-lua-bindings-standardization | 1/1 | 4min | 4min |
-| 09-code-hygiene | 1/2 | 13min | 13min |
+| 09-code-hygiene | 2/2 | 43min | 21.5min |
 
 **Recent Trend:**
-- Last 5 plans: 6min, 11min, 4min, 14min, 13min
-- Trend: stable
+- Last 5 plans: 11min, 4min, 14min, 13min, 30min
+- Trend: stable (30min reflects clang-tidy analysis time)
 
 *Updated after each plan completion*
 
@@ -86,6 +86,10 @@ Recent decisions affecting current work:
 - Phase 9: is_safe_identifier uses alphanumeric+underscore character class for PRAGMA table/index names
 - Phase 9: Scalar update paths already validated by TypeValidator -- no additional validation needed
 - Phase 9: Time series read/update column names from schema metadata (trusted); only update_time_series_files needed caller-provided validation
+- Phase 9: Disabled performance-inefficient-string-concatenation globally -- SQL string building with + is pervasive
+- Phase 9: Disabled modernize-use-ranges globally -- std::ranges migration is a separate effort
+- Phase 9: NOLINTBEGIN/END for sol2 lambda bindings -- sol2 requires pass-by-value for type deduction
+- Phase 9: GCC -fno-keep-inline-dllexport flag causes clang-tidy compiler error -- expected on MinGW, does not prevent analysis
 
 ### Pending Todos
 
@@ -98,5 +102,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-10
-Stopped at: Completed 09-01-PLAN.md
+Stopped at: Completed 09-02-PLAN.md (Phase 9 complete)
 Resume file: None
