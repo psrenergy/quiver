@@ -5,7 +5,9 @@
       "Bash(powershell -Command:*)",
       "Bash(handle64.exe:*)",
       "Bash(dart test:*)",
-      "Bash(cmake --build:*)"
+      "Bash(cmake --build:*)",
+      "Bash(./build/bin/quiver_tests.exe:*)",
+      "Bash(./build/bin/quiver_c_tests.exe:*)"
     ]
   }
 }
