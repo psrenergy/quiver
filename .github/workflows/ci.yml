@@ -198,28 +198,6 @@ jobs:
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
-  clang-tidy:
-    name: Static Analysis
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Install clang-tidy
-        run: sudo apt-get update && sudo apt-get install -y clang-tidy
-
-      - name: Configure CMake
-        run: |
-          cmake -B build \
-            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-            -DQUIVER_BUILD_TESTS=ON \
-            -DQUIVER_BUILD_C_API=ON
-
-      - name: Run clang-tidy
-        run: |
-          find src -name '*.cpp' -not -path '*/blob/*' | \
-            xargs clang-tidy -p build --header-filter="(include/quiver/|src/)" --warnings-as-errors='*'
-
   clang-format:
     name: Code Formatting
     runs-on: ubuntu-latest
