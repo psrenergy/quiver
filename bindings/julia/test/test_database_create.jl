@@ -129,24 +129,24 @@ include("fixture.jl")
         )
 
         # Verify temperature group
-        rows = Quiver.read_time_series_group(db, "Sensor", "temperature", Int64(1))
+        temp_rows = Quiver.read_time_series_group(db, "Sensor", "temperature", Int64(1))
         @test length(temp_rows) == 3
-        @test rows[1]["date_time"] == "2024-01-01T10:00:00"
-        @test rows[2]["date_time"] == "2024-01-02T10:00:00"
-        @test rows[3]["date_time"] == "2024-01-03T10:00:00"
-        @test rows[1]["temperature"] == 20.0
-        @test rows[2]["temperature"] == 21.5
-        @test rows[3]["temperature"] == 22.0
+        @test temp_rows[1]["date_time"] == "2024-01-01T10:00:00"
+        @test temp_rows[2]["date_time"] == "2024-01-02T10:00:00"
+        @test temp_rows[3]["date_time"] == "2024-01-03T10:00:00"
+        @test temp_rows[1]["temperature"] == 20.0
+        @test temp_rows[2]["temperature"] == 21.5
+        @test temp_rows[3]["temperature"] == 22.0
 
         # Verify humidity group
-        rows = Quiver.read_time_series_group(db, "Sensor", "humidity", Int64(1))
+        hum_rows = Quiver.read_time_series_group(db, "Sensor", "humidity", Int64(1))
         @test length(hum_rows) == 3
-        @test rows[1]["date_time"] == "2024-01-01T10:00:00"
-        @test rows[2]["date_time"] == "2024-01-02T10:00:00"
-        @test rows[3]["date_time"] == "2024-01-03T10:00:00"
-        @test rows[1]["humidity"] == 45.0
-        @test rows[2]["humidity"] == 50.0
-        @test rows[3]["humidity"] == 55.0
+        @test hum_rows[1]["date_time"] == "2024-01-01T10:00:00"
+        @test hum_rows[2]["date_time"] == "2024-01-02T10:00:00"
+        @test hum_rows[3]["date_time"] == "2024-01-03T10:00:00"
+        @test hum_rows[1]["humidity"] == 45.0
+        @test hum_rows[2]["humidity"] == 50.0
+        @test hum_rows[3]["humidity"] == 55.0
 
         Quiver.close!(db)
     end
