@@ -1,32 +1,20 @@
 @echo off
-setlocal enabledelayedexpansion
 
 SET ROOT=%~dp0..
 SET BUILD=%ROOT%\build
-SET FAILED=0
+SET RUN_CLANG_TIDY=C:\Program Files\LLVM\bin\run-clang-tidy
+
+if not exist "%RUN_CLANG_TIDY%" (
+    echo Error: run-clang-tidy not found at %RUN_CLANG_TIDY%
+    exit /b 1
+)
 
 echo Running clang-tidy...
+echo.
 
 REM Strip MinGW-specific flags that clang-tidy doesn't understand
 REM (cmake configure regenerates compile_commands.json, so in-place edit is safe)
 powershell -Command "(Get-Content '%BUILD%\compile_commands.json') -replace '-fno-keep-inline-dllexport','' | Set-Content '%BUILD%\compile_commands.json'"
 
-echo.
-
-for /r "%ROOT%\src" %%f in (*.cpp) do (
-    echo "%%f" | findstr /i "\\blob\\" >nul
-    if !ERRORLEVEL! neq 0 (
-        echo   %%~nxf
-        clang-tidy -p "%BUILD%" --header-filter="(include/quiver/|src/)" "%%f" 2>nul
-        if !ERRORLEVEL! neq 0 set FAILED=1
-    )
-)
-
-if %FAILED% neq 0 (
-    echo.
-    echo clang-tidy found issues
-    exit /b 1
-)
-
-echo.
-echo Static analysis complete.
+uv run python "%RUN_CLANG_TIDY%" -p "%BUILD%" -header-filter="(include/quiver/|quiver/src/)" -quiet "quiver[\\/]src[\\/](?!blob)"
+exit /b %ERRORLEVEL%
