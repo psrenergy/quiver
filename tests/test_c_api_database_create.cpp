@@ -194,8 +194,8 @@ TEST(DatabaseCApi, CreateElementWithMultiTimeSeries) {
     char** out_temp_dates = nullptr;
     double* out_temp_values = nullptr;
     size_t out_temp_count = 0;
-    ASSERT_EQ(quiver_database_read_time_series_group(db, "Sensor", "temperature", id, &out_temp_dates,
-                                                     &out_temp_values, &out_temp_count),
+    ASSERT_EQ(quiver_database_read_time_series_group(
+                  db, "Sensor", "temperature", id, &out_temp_dates, &out_temp_values, &out_temp_count),
               QUIVER_OK);
     EXPECT_EQ(out_temp_count, 3);
     EXPECT_STREQ(out_temp_dates[0], "2024-01-01T10:00:00");
@@ -210,8 +210,8 @@ TEST(DatabaseCApi, CreateElementWithMultiTimeSeries) {
     char** out_hum_dates = nullptr;
     double* out_hum_values = nullptr;
     size_t out_hum_count = 0;
-    ASSERT_EQ(quiver_database_read_time_series_group(db, "Sensor", "humidity", id, &out_hum_dates, &out_hum_values,
-                                                     &out_hum_count),
+    ASSERT_EQ(quiver_database_read_time_series_group(
+                  db, "Sensor", "humidity", id, &out_hum_dates, &out_hum_values, &out_hum_count),
               QUIVER_OK);
     EXPECT_EQ(out_hum_count, 3);
     EXPECT_STREQ(out_hum_dates[0], "2024-01-01T10:00:00");

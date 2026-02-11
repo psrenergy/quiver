@@ -240,8 +240,8 @@ std::optional<Schema::TableMatch> Schema::find_table_for_column(const std::strin
     return std::nullopt;
 }
 
-std::vector<Schema::TableMatch> Schema::find_all_tables_for_column(
-    const std::string& collection, const std::string& column) const {
+std::vector<Schema::TableMatch> Schema::find_all_tables_for_column(const std::string& collection,
+                                                                   const std::string& column) const {
     std::vector<TableMatch> matches;
 
     // Check vector: direct name match first
@@ -251,9 +251,12 @@ std::vector<Schema::TableMatch> Schema::find_all_tables_for_column(
     }
 
     for (const auto& [name, table] : tables_) {
-        if (get_parent_collection(name) != collection) continue;
-        if (!table.has_column(column)) continue;
-        if (name == vt) continue;  // already added above
+        if (get_parent_collection(name) != collection)
+            continue;
+        if (!table.has_column(column))
+            continue;
+        if (name == vt)
+            continue;  // already added above
 
         if (is_vector_table(name)) {
             matches.push_back({.table_name = name, .type = GroupTableType::Vector});
