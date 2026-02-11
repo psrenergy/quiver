@@ -88,14 +88,12 @@ if(CLANG_FORMAT)
     )
 endif()
 
-# Tidy target
+# Tidy target — runs clang-tidy via script to avoid command-line length limits on Windows
 find_program(CLANG_TIDY clang-tidy)
 if(CLANG_TIDY)
     add_custom_target(tidy
-        COMMAND ${CLANG_TIDY}
-            -p ${CMAKE_BINARY_DIR}
-            "--header-filter=(include/quiver/|src/)"
-            ${ALL_SOURCE_FILES}
+        COMMAND ${CMAKE_SOURCE_DIR}/scripts/tidy.bat
         COMMENT "Running clang-tidy"
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
 endif()

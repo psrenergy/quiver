@@ -27,8 +27,8 @@ Migrations::Migrations(const std::string& path) {
                 const auto migration_path = entry.path().string();
                 versions_.emplace_back(migration_version, migration_path);
             }
-        } catch (
-            const std::exception&) {  // NOLINT(bugprone-empty-catch) intentionally skip non-numeric directory names
+        } catch (  // NOLINT(bugprone-empty-catch) intentionally skip non-numeric directory names
+            const std::exception&) {
         }
     }
 
