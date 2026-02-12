@@ -49,23 +49,25 @@ void Database::update_element(const std::string& collection, int64_t id, const E
     std::map<std::string, std::map<std::string, const std::vector<Value>*>> time_series_table_columns;
 
     for (const auto& [attr_name, values] : arrays) {
-        auto match = impl_->schema->find_table_for_column(collection, attr_name);
-        if (!match) {
+        auto matches = impl_->schema->find_all_tables_for_column(collection, attr_name);
+        if (matches.empty()) {
             throw std::runtime_error("Cannot update_element: attribute '" + attr_name +
                                      "' is not a vector, set, or time series attribute in collection '" + collection +
                                      "'");
         }
 
-        switch (match->type) {
-        case GroupTableType::Vector:
-            vector_table_columns[match->table_name][attr_name] = &values;
-            break;
-        case GroupTableType::Set:
-            set_table_columns[match->table_name][attr_name] = &values;
-            break;
-        case GroupTableType::TimeSeries:
-            time_series_table_columns[match->table_name][attr_name] = &values;
-            break;
+        for (const auto& match : matches) {
+            switch (match.type) {
+            case GroupTableType::Vector:
+                vector_table_columns[match.table_name][attr_name] = &values;
+                break;
+            case GroupTableType::Set:
+                set_table_columns[match.table_name][attr_name] = &values;
+                break;
+            case GroupTableType::TimeSeries:
+                time_series_table_columns[match.table_name][attr_name] = &values;
+                break;
+            }
         }
     }
 

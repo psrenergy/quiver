@@ -388,6 +388,68 @@ void main() {
     });
   });
 
+  group('Create With Multiple Time Series Groups', () {
+    test('creates element with shared dimension across two time series tables', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'multi_time_series.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Sensor', {
+          'label': 'Sensor 1',
+          'date_time': ['2024-01-01T10:00:00', '2024-01-02T10:00:00', '2024-01-03T10:00:00'],
+          'temperature': [20.0, 21.5, 22.0],
+          'humidity': [45.0, 50.0, 55.0],
+        });
+        expect(id, greaterThan(0));
+
+        // Verify temperature group
+        final tempRows = db.readTimeSeriesGroup('Sensor', 'temperature', id);
+        expect(tempRows.length, equals(3));
+        expect(tempRows[0]['date_time'], equals('2024-01-01T10:00:00'));
+        expect(tempRows[1]['date_time'], equals('2024-01-02T10:00:00'));
+        expect(tempRows[2]['date_time'], equals('2024-01-03T10:00:00'));
+        expect(tempRows[0]['temperature'], equals(20.0));
+        expect(tempRows[1]['temperature'], equals(21.5));
+        expect(tempRows[2]['temperature'], equals(22.0));
+
+        // Verify humidity group
+        final humRows = db.readTimeSeriesGroup('Sensor', 'humidity', id);
+        expect(humRows.length, equals(3));
+        expect(humRows[0]['date_time'], equals('2024-01-01T10:00:00'));
+        expect(humRows[1]['date_time'], equals('2024-01-02T10:00:00'));
+        expect(humRows[2]['date_time'], equals('2024-01-03T10:00:00'));
+        expect(humRows[0]['humidity'], equals(45.0));
+        expect(humRows[1]['humidity'], equals(50.0));
+        expect(humRows[2]['humidity'], equals(55.0));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('rejects mismatched lengths across time series groups', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'multi_time_series.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        expect(
+          () => db.createElement('Sensor', {
+            'label': 'Sensor 1',
+            'date_time': ['2024-01-01T10:00:00', '2024-01-02T10:00:00', '2024-01-03T10:00:00'],
+            'temperature': [20.0, 21.5, 22.0],
+            'humidity': [45.0, 50.0],
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
+
   group('Create With Native DateTime', () {
     test('creates element with native DateTime object', () {
       final db = Database.fromSchema(

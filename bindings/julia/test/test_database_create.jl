@@ -115,6 +115,58 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    @testset "Multiple Time Series Groups with Shared Dimension" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "multi_time_series.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+
+        Quiver.create_element!(db, "Sensor";
+            label = "Sensor 1",
+            date_time = [DateTime(2024, 1, 1, 10), DateTime(2024, 1, 2, 10), DateTime(2024, 1, 3, 10)],
+            temperature = [20.0, 21.5, 22.0],
+            humidity = [45.0, 50.0, 55.0],
+        )
+
+        # Verify temperature group
+        temp_rows = Quiver.read_time_series_group(db, "Sensor", "temperature", Int64(1))
+        @test length(temp_rows) == 3
+        @test temp_rows[1]["date_time"] == "2024-01-01T10:00:00"
+        @test temp_rows[2]["date_time"] == "2024-01-02T10:00:00"
+        @test temp_rows[3]["date_time"] == "2024-01-03T10:00:00"
+        @test temp_rows[1]["temperature"] == 20.0
+        @test temp_rows[2]["temperature"] == 21.5
+        @test temp_rows[3]["temperature"] == 22.0
+
+        # Verify humidity group
+        hum_rows = Quiver.read_time_series_group(db, "Sensor", "humidity", Int64(1))
+        @test length(hum_rows) == 3
+        @test hum_rows[1]["date_time"] == "2024-01-01T10:00:00"
+        @test hum_rows[2]["date_time"] == "2024-01-02T10:00:00"
+        @test hum_rows[3]["date_time"] == "2024-01-03T10:00:00"
+        @test hum_rows[1]["humidity"] == 45.0
+        @test hum_rows[2]["humidity"] == 50.0
+        @test hum_rows[3]["humidity"] == 55.0
+
+        Quiver.close!(db)
+    end
+
+    @testset "Multiple Time Series Groups Mismatched Lengths" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "multi_time_series.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+
+        @test_throws Quiver.DatabaseException Quiver.create_element!(db, "Sensor";
+            label = "Sensor 1",
+            date_time = [DateTime(2024, 1, 1, 10), DateTime(2024, 1, 2, 10), DateTime(2024, 1, 3, 10)],
+            temperature = [20.0, 21.5, 22.0],
+            humidity = [45.0, 50.0],
+        )
+
+        Quiver.close!(db)
+    end
+
     @testset "Reject Invalid Element" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
         db = Quiver.from_schema(":memory:", path_schema)

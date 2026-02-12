@@ -87,6 +87,7 @@ public:
         GroupTableType type;
     };
     std::optional<TableMatch> find_table_for_column(const std::string& collection, const std::string& column) const;
+    std::vector<TableMatch> find_all_tables_for_column(const std::string& collection, const std::string& column) const;
 
     // All tables/collections
     std::vector<std::string> table_names() const;

@@ -1,503 +1,543 @@
-# Architecture Research
+# Architecture Patterns
 
-**Domain:** C++20 library refactoring with C FFI and multi-language bindings
-**Researched:** 2026-02-09
-**Confidence:** HIGH (based on direct codebase analysis; decomposition patterns are well-established in C++ practice)
+**Domain:** Multi-column time series update interface redesign across C++/C API/FFI bindings
+**Researched:** 2026-02-12
+**Confidence:** HIGH (based on direct codebase analysis of all layers)
 
-## Current State Analysis
+## Problem Statement
 
-### Line Counts (Monoliths)
+The C++ layer already supports multi-column time series via `vector<map<string, Value>>`, but the C API hardcodes a single-value-column assumption: `const char** date_times, const double* values, size_t row_count`. This means:
 
-| File | Lines | Responsibility |
-|------|-------|----------------|
-| `src/database.cpp` | 1934 | Everything: lifecycle, CRUD, reads, updates, metadata, queries, describe, CSV, time series, time series files, relations |
-| `src/c/database.cpp` | 1612 | 1:1 C wrapper for every C++ Database method, plus memory helpers, type converters, metadata converters |
+1. Time series tables with multiple value columns (e.g., `temperature REAL, humidity REAL`) cannot be written through the C API.
+2. Time series tables with non-float value columns (e.g., `INTEGER`, `TEXT`) cannot be written through the C API.
+3. Both Julia and Dart bindings inherit this limitation because they call the C API.
+4. Lua bypasses the C API (calls C++ directly via sol2) and already supports multi-column writes.
 
-Both files are monoliths that mix unrelated concerns. Every new feature added to Database grows both files linearly.
+The read side has the same limitation: `quiver_database_read_time_series_group` returns `char** date_times, double* values` -- single column, float-only. Both read and update need redesign.
 
-### Functional Regions in `src/database.cpp`
+## Current Architecture (What Exists)
 
-Careful analysis of the file reveals these distinct functional regions:
+### Layer-by-Layer Data Flow for Time Series Update
 
-| Region | Lines (approx) | Responsibility |
-|--------|----------------|----------------|
-| Anonymous namespace helpers | 1-158 | Logger creation, row extractors, template helpers, sqlite init |
-| `Database::Impl` struct | 166-258 | sqlite3 handle, schema, type_validator, transaction guard, transaction ops |
-| Lifecycle | 260-296 | Constructor, destructor, move ops, is_healthy |
-| SQL execution core | 297-456 | `execute()`, `execute_raw()`, `current_version()`, `set_version()`, `begin_transaction()`, `commit()`, `rollback()` |
-| Schema/migration application | 458-532 | `migrate_up()`, `apply_schema()`, factory methods (`from_schema`, `from_migrations`) |
-| Element CRUD | 534-903 | `create_element()` (207 lines), `update_element()` (152 lines), `delete_element_by_id()` |
-| Relations | 906-986 | `set_scalar_relation()`, `read_scalar_relation()` |
-| Scalar reads | 988-1070 | `read_scalar_integers/floats/strings`, by-id variants |
-| Vector reads | 1072-1118 | `read_vector_integers/floats/strings`, by-id variants |
-| Set reads | 1120-1172 | `read_set_integers/floats/strings`, by-id variants, `read_element_ids()` |
-| Scalar updates | 1174-1214 | `update_scalar_integer/float/string` |
-| Vector updates | 1216-1286 | `update_vector_integers/floats/strings` |
-| Set updates | 1288-1355 | `update_set_integers/floats/strings` |
-| Metadata | 1357-1567 | `get_scalar_metadata`, `get_vector_metadata`, `get_set_metadata`, `get_time_series_metadata`, `list_*` methods |
-| Time series | 1569-1699 | `read_time_series_group_by_id`, `update_time_series_group` |
-| Time series files | 1701-1816 | `has_time_series_files`, `list_time_series_files_columns`, `read_time_series_files`, `update_time_series_files` |
-| Query methods | 1826-1848 | `query_string/integer/float` |
-| Describe | 1850-1934 | `describe()` (schema inspection output) |
-| CSV stubs | 1818-1824 | `export_to_csv`, `import_from_csv` (empty stubs) |
+```
+Julia/Dart binding
+  |
+  |  Binding takes List<Map<String, Object?>> (Dart) or Vector{Dict} (Julia)
+  |  but extracts only "date_time" and "value" keys, discards everything else
+  |
+  v
+C API: quiver_database_update_time_series_group(
+    db, collection, group, id,
+    const char** date_times,   // dimension column values
+    const double* values,      // single value column (float only)
+    size_t row_count
+)
+  |
+  |  C API reconstructs vector<map<string, Value>> with exactly 2 columns
+  |  by looking up metadata for dimension_column and first value_column
+  |
+  v
+C++ Database::update_time_series_group(
+    collection, group, id,
+    const vector<map<string, Value>>& rows   // fully flexible, multi-column
+)
+  |
+  |  Builds parameterized INSERT with all columns from first row
+  |
+  v
+SQLite (supports any schema the user defined)
+```
 
-### Functional Regions in `src/c/database.cpp`
+### Layer-by-Layer Data Flow for Time Series Read
 
-| Region | Lines (approx) | Responsibility |
-|--------|----------------|----------------|
-| Template helpers | 1-78 | `read_scalars_impl`, `read_vectors_impl`, `free_vectors_impl`, `copy_strings_to_c` |
-| Lifecycle | 80-162 | open, close, from_schema, from_migrations, is_healthy, path, version |
-| Element CRUD | 164-262 | create, update, delete, relations |
-| Scalar reads | 264-331 | all + by-id, free functions |
-| Vector reads | 333-429 | all + by-id, free functions |
-| Set reads | 431-501 | all + by-id (reuses vector helpers) |
-| Scalar by-id reads | 503-679 | integer/float/string by-id, vector by-id, set by-id |
-| Updates (scalar) | 695-743 | scalar integer/float/string |
-| Updates (vector) | 745-822 | vector integer/float/string |
-| Updates (set) | 824-901 | set integer/float/string |
-| Metadata helpers + API | 903-1128 | `to_c_data_type`, `strdup_safe`, `convert_scalar_to_c`, `convert_group_to_c`, free helpers, all metadata/list APIs |
-| CSV | 1130-1154 | export/import stubs |
-| Query | 1156-1336 | query_string/integer/float, parameterized variants, `convert_params` |
-| Describe | 1338-1348 | describe wrapper |
-| Time series metadata + ops | 1350-1496 | time series metadata, read, update, free |
-| Time series files | 1498-1612 | has, list_columns, read, update, free |
+```
+C++ Database::read_time_series_group(collection, group, id)
+  -> Returns vector<map<string, Value>>  (all columns, all types)
+  |
+  v
+C API: quiver_database_read_time_series_group(...)
+  -> Extracts dimension_column as char**, first value_column as double*
+  -> Drops all other columns, coerces integers to double
+  |
+  v
+Julia/Dart binding
+  -> Reconstructs List<Map<String, Object?>> with only "date_time" and "value"
+```
+
+### Bottleneck
+
+The C API is the bottleneck. It flattens a rich multi-column multi-type structure into a rigid 2-column float-only interface. The C++ layer above and SQLite below both support the full schema.
+
+### Existing Precedent: Parameterized Query Pattern
+
+The parameterized query C API already solves a similar problem -- passing heterogeneously-typed data through a C FFI boundary:
+
+```c
+// param_types[i]: QUIVER_DATA_TYPE_INTEGER(0), FLOAT(1), STRING(2), NULL(4)
+// param_values[i]: pointer to int64_t, double, const char*, or NULL
+quiver_database_query_string_params(db, sql,
+    param_types, param_values, param_count,
+    &out_value, &out_has_value);
+```
+
+This uses typed parallel arrays: `const int* param_types` + `const void* const* param_values` + `size_t param_count`. The C API implementation (`convert_params` in `database_query.cpp`) switches on type to reconstruct `vector<Value>`.
 
 ## Recommended Architecture
 
-### System Overview
+### Design Decision: Columnar Typed Arrays (Not Row-Oriented)
 
-```
-                         Bindings (Julia, Dart, Lua)
-                                   |
-                            [Generated FFI]
-                                   |
-                    include/quiver/c/*.h  (C headers)
-                                   |
-                         src/c/*.cpp  (C wrappers)
-                                   |
-                    include/quiver/*.h  (C++ headers)
-                                   |
-                         src/*.cpp  (C++ implementation)
-                                   |
-                   [sqlite3, spdlog, sol2, toml++]
-```
+The parameterized query pattern passes one value per parameter. Time series passes N rows x M columns of data. Two approaches are possible:
 
-The layering is clean and correct. The problem is not the layer architecture -- it is that `database.cpp` and `src/c/database.cpp` are monoliths within their respective layers.
+**Option A: Row-oriented (follow query param pattern exactly)**
+Pass `column_count * row_count` typed values in a flat array. Each "cell" is a (type, value) pair. The C API reconstructs the 2D structure.
 
-### Component Boundaries (Proposed Decomposition)
+**Option B: Columnar typed arrays**
+Pass each column as a separate typed array. Column names + types describe the schema; column data arrays contain the values. Each column is homogeneous (all ints, all floats, or all strings), which matches SQLite's per-column type affinity and avoids `void*` pointer indirection for every cell.
 
-Split `Database::Impl` method bodies across multiple `.cpp` files that all share the same `Impl` struct definition. The public header (`database.h`) stays unchanged. A single private header declares the `Impl` struct.
+**Recommendation: Option B (columnar).** Reasons:
 
-| Component File | Responsibility | Estimated Lines | Communicates With |
-|----------------|---------------|-----------------|-------------------|
-| `src/database_impl.h` (NEW, private) | `Database::Impl` struct definition, `TransactionGuard` | ~100 | All database_*.cpp files |
-| `src/database.cpp` (slimmed) | Constructor, destructor, move ops, `is_healthy()`, `path()`, `execute()`, `execute_raw()`, `current_version()`, transaction delegates, factory methods, `apply_schema()`, `migrate_up()` | ~300 | database_impl.h |
-| `src/database_create.cpp` (NEW) | `create_element()`, `update_element()`, `delete_element_by_id()` | ~400 | database_impl.h |
-| `src/database_read.cpp` (NEW) | All `read_scalar_*`, `read_vector_*`, `read_set_*`, `read_element_ids()` | ~200 | database_impl.h |
-| `src/database_update.cpp` (NEW) | All `update_scalar_*`, `update_vector_*`, `update_set_*` | ~200 | database_impl.h |
-| `src/database_metadata.cpp` (NEW) | `get_scalar_metadata`, `get_vector_metadata`, `get_set_metadata`, `get_time_series_metadata`, all `list_*` methods, `describe()` | ~250 | database_impl.h |
-| `src/database_time_series.cpp` (NEW) | `read_time_series_group_by_id`, `update_time_series_group`, time series files operations | ~200 | database_impl.h |
-| `src/database_relations.cpp` (NEW) | `set_scalar_relation()`, `read_scalar_relation()` | ~80 | database_impl.h |
-| `src/database_query.cpp` (NEW) | `query_string/integer/float` | ~30 | database_impl.h |
-| `src/database_csv.cpp` (NEW) | `export_to_csv`, `import_from_csv` (stubs now, future growth) | ~10 | database_impl.h |
+1. **Type safety per column.** A column is either all `int64_t*`, all `double*`, or all `const char**`. No `void*` casting per cell. The type array has `column_count` entries (not `row_count * column_count`).
+2. **FFI friendliness.** Julia and Dart FFI can pass native arrays directly (`Ptr{Cdouble}`, `Pointer<Double>`). Row-oriented `void*` arrays require per-cell pointer boxing in bindings, which is awkward and error-prone.
+3. **Matches the read direction.** Reads naturally produce columnar data (a SQL column maps to one C array). Symmetry between read and write simplifies the mental model.
+4. **SQLite affinity.** SQLite columns have a single declared type. Columnar layout matches this -- one type per column, not one type per cell.
+5. **Performance.** Columnar arrays are cache-friendly for the common case of iterating all values in a column. Row-oriented `void*` indirection is a pointer chase per cell.
 
-Similarly for the C API:
+### New C API Signatures
 
-| Component File | Responsibility | Estimated Lines |
-|----------------|---------------|-----------------|
-| `src/c/database_helpers.h` (NEW, private) | Template helpers (`read_scalars_impl`, `read_vectors_impl`, `free_vectors_impl`, `copy_strings_to_c`), `strdup_safe`, metadata converters | ~200 |
-| `src/c/database.cpp` (slimmed) | Lifecycle, element CRUD, relations | ~250 |
-| `src/c/database_read.cpp` (NEW) | All scalar/vector/set read functions + free functions | ~350 |
-| `src/c/database_update.cpp` (NEW) | All scalar/vector/set update functions | ~200 |
-| `src/c/database_metadata.cpp` (NEW) | Metadata get/list/free functions | ~200 |
-| `src/c/database_time_series.cpp` (NEW) | Time series read/update/free + files operations | ~200 |
-| `src/c/database_query.cpp` (NEW) | Query functions, `convert_params`, parameterized variants | ~200 |
+#### Update
 
-### Data Flow
-
-```
-[Binding Call]
-    |
-    v
-[C API function] -- validates pointers (QUIVER_REQUIRE) -- try/catch wrapper
-    |
-    v
-[Database public method] -- validates schema/collection -- delegates to Impl
-    |
-    v
-[Database::Impl] -- owns sqlite3*, Schema*, TypeValidator*, logger
-    |                  provides TransactionGuard, execute(), require_*()
-    v
-[sqlite3 API]
+```c
+// Replaces: quiver_database_update_time_series_group
+quiver_error_t quiver_database_update_time_series_group(
+    quiver_database_t* db,
+    const char* collection,
+    const char* group,
+    int64_t id,
+    const char* const* column_names,     // [column_count] column names
+    const int* column_types,             // [column_count] QUIVER_DATA_TYPE_* enum
+    const void* const* column_data,      // [column_count] typed array pointers
+    size_t column_count,
+    size_t row_count
+);
 ```
 
-### Key Data Flows
+Where `column_data[i]` points to:
+- `const int64_t*` array of `row_count` elements if `column_types[i] == QUIVER_DATA_TYPE_INTEGER`
+- `const double*` array of `row_count` elements if `column_types[i] == QUIVER_DATA_TYPE_FLOAT`
+- `const char* const*` array of `row_count` elements if `column_types[i] == QUIVER_DATA_TYPE_STRING`
 
-1. **Read path:** C API -> Database method -> `impl_->require_collection()` -> build SQL -> `execute()` -> extract from `Result` -> return to C API -> marshal to C types via template helpers -> return to binding
-2. **Write path:** C API -> Database method -> `impl_->type_validator->validate_*()` -> `TransactionGuard` -> build SQL -> `execute()` -> `txn.commit()` -> return
-3. **Metadata path:** C API -> Database method -> `impl_->schema->get_table()` -> build metadata struct -> C API marshals with `convert_scalar_to_c`/`convert_group_to_c` -> return
+The dimension column (e.g., `date_time`) is included as one of the named columns. The C API no longer needs to know which column is the dimension -- it passes all columns uniformly and the C++ layer handles ordering.
 
-## Architectural Patterns
+#### Read
 
-### Pattern 1: Split Pimpl Implementation Across Files
-
-**What:** A single class with Pimpl (`Database`) has its method bodies distributed across multiple `.cpp` files. All files include the same private header that defines the `Impl` struct.
-
-**When to use:** When a Pimpl class grows beyond ~500 lines and its methods partition into coherent functional groups.
-
-**Trade-offs:**
-- Pro: Each file has a single responsibility; easier to navigate, review, and modify
-- Pro: Compile-time improvement (change to read logic only recompiles `database_read.cpp`)
-- Pro: Git history becomes clearer (diffs scoped to functional area)
-- Con: One more private header to maintain
-- Con: Must keep the Impl struct definition in sync
-
-**Example:**
-
-```cpp
-// src/database_impl.h (private, not installed)
-#ifndef QUIVER_DATABASE_IMPL_H
-#define QUIVER_DATABASE_IMPL_H
-
-#include "quiver/database.h"
-#include "quiver/schema.h"
-#include "quiver/type_validator.h"
-
-#include <spdlog/spdlog.h>
-#include <sqlite3.h>
-
-namespace quiver {
-
-struct Database::Impl {
-    sqlite3* db = nullptr;
-    std::string path;
-    std::shared_ptr<spdlog::logger> logger;
-    std::unique_ptr<Schema> schema;
-    std::unique_ptr<TypeValidator> type_validator;
-
-    void require_schema(const char* operation) const;
-    void require_collection(const std::string& collection, const char* operation) const;
-    void load_schema_metadata();
-    void begin_transaction();
-    void commit();
-    void rollback();
-
-    ~Impl();
-
-    class TransactionGuard {
-        Impl& impl_;
-        bool committed_ = false;
-    public:
-        explicit TransactionGuard(Impl& impl);
-        void commit();
-        ~TransactionGuard();
-        TransactionGuard(const TransactionGuard&) = delete;
-        TransactionGuard& operator=(const TransactionGuard&) = delete;
-    };
-};
-
-}  // namespace quiver
-
-#endif
+```c
+// Replaces: quiver_database_read_time_series_group
+quiver_error_t quiver_database_read_time_series_group(
+    quiver_database_t* db,
+    const char* collection,
+    const char* group,
+    int64_t id,
+    char*** out_column_names,            // [*out_column_count] allocated column names
+    int** out_column_types,              // [*out_column_count] QUIVER_DATA_TYPE_* values
+    void*** out_column_data,             // [*out_column_count] typed array pointers
+    size_t* out_column_count,
+    size_t* out_row_count
+);
 ```
 
-```cpp
-// src/database_read.cpp
-#include "database_impl.h"
+Where `out_column_data[i]` is:
+- `int64_t*` array of `*out_row_count` elements if `out_column_types[i] == QUIVER_DATA_TYPE_INTEGER`
+- `double*` array of `*out_row_count` elements if `out_column_types[i] == QUIVER_DATA_TYPE_FLOAT`
+- `char**` array of `*out_row_count` elements if `out_column_types[i] == QUIVER_DATA_TYPE_STRING`
 
-namespace {
-// Template helpers stay local to the translation unit that needs them
-template <typename T>
-std::vector<std::vector<T>> read_grouped_values_all(const quiver::Result& result) { ... }
+#### Free
+
+```c
+// Replaces: quiver_database_free_time_series_data
+quiver_error_t quiver_database_free_time_series_data(
+    char** column_names,
+    int* column_types,
+    void** column_data,
+    size_t column_count,
+    size_t row_count
+);
+```
+
+The free function uses `column_types` to determine how to free each `column_data[i]`: `delete[] (int64_t*)`, `delete[] (double*)`, or `delete[] each string then delete[] the char** array`.
+
+### C API Implementation (database_time_series.cpp)
+
+The C API marshaling layer converts between columnar C arrays and the C++ row-oriented `vector<map<string, Value>>`:
+
+**Update direction (columnar -> row-oriented):**
+```
+For each row r in 0..row_count:
+    map<string, Value> row;
+    For each column c in 0..column_count:
+        row[column_names[c]] = extract_typed_value(column_types[c], column_data[c], r);
+    rows.push_back(row);
+Call db->db.update_time_series_group(collection, group, id, rows);
+```
+
+**Read direction (row-oriented -> columnar):**
+```
+auto rows = db->db.read_time_series_group(collection, group, id);
+auto metadata = db->db.get_time_series_metadata(collection, group);
+// Use metadata to determine column names and types (not row content)
+Allocate column arrays based on metadata types and row count.
+For each row r:
+    For each column c:
+        Store rows[r][column_names[c]] into typed column_data[c][r];
+```
+
+### C++ Layer
+
+**No changes needed.** `Database::update_time_series_group` already takes `vector<map<string, Value>>` and `Database::read_time_series_group` already returns `vector<map<string, Value>>`. The C++ interface is already fully general.
+
+### Lua Layer
+
+**No changes needed.** `update_time_series_group_from_lua` calls C++ directly via sol2, converting Lua tables to `vector<map<string, Value>>`. `read_time_series_group_to_lua` returns the full multi-column data as Lua tables. Lua already supports the full interface.
+
+### Julia Binding Changes
+
+**Current (hardcoded two columns):**
+```julia
+function update_time_series_group!(db, collection, group, id, rows::Vector{Dict{String, Any}})
+    date_time_ptrs = [String(row["date_time"]) for row in rows]
+    values = Float64[Float64(row["value"]) for row in rows]
+    C.quiver_database_update_time_series_group(db.ptr, collection, group, id,
+        date_time_ptrs, values, row_count)
+end
+```
+
+**New (columnar, schema-driven):**
+```julia
+function update_time_series_group!(db, collection, group, id, rows::Vector{Dict{String, Any}})
+    if isempty(rows)
+        # Call C API with column_count=0, row_count=0
+        return nothing
+    end
+
+    metadata = get_time_series_metadata(db, collection, group)
+    # Build column lists from metadata (dimension_column + value_columns)
+    column_names = [metadata.dimension_column; [vc.name for vc in metadata.value_columns]]
+    column_types = [metadata_type_to_quiver_type(dim_type); [vc.data_type for vc ...]]
+
+    # For each column, extract typed array from rows
+    column_data = [extract_column(rows, name, type) for (name, type) in zip(column_names, column_types)]
+
+    # Call new C API
+    C.quiver_database_update_time_series_group(db.ptr, collection, group, id,
+        column_names_ptrs, column_types_arr, column_data_ptrs,
+        length(column_names), length(rows))
+end
+```
+
+The key change: instead of hardcoding `"date_time"` and `"value"`, the binding queries metadata to discover column names and types, then marshals each column as a typed array.
+
+**Alternative (simpler, kwargs-style):**
+```julia
+function update_time_series_group!(db, collection, group, id; kwargs...)
+    # kwargs like: date_time=["2024-01-01", "2024-01-02"], temperature=[20.5, 21.0]
+    # Each kwarg is a column name -> array of values
+end
+```
+
+This kwargs convenience method can wrap the Dict-based method.
+
+### Dart Binding Changes
+
+**Current (hardcoded two columns):**
+```dart
+void updateTimeSeriesGroup(String collection, String group, int id,
+    List<Map<String, Object?>> rows) {
+    // Extracts 'date_time' and 'value' only
+    dateTimes[i] = dateTime.toNativeUtf8();
+    values[i] = value.toDouble();
+    bindings.quiver_database_update_time_series_group(...);
 }
+```
 
-namespace quiver {
-
-std::vector<int64_t> Database::read_scalar_integers(const std::string& collection,
-                                                      const std::string& attribute) {
-    impl_->require_collection(collection, "read scalar");
-    auto sql = "SELECT " + attribute + " FROM " + collection;
-    auto result = execute(sql);
-    // ...
+**New (columnar, schema-driven):**
+```dart
+void updateTimeSeriesGroup(String collection, String group, int id,
+    List<Map<String, Object?>> rows) {
+    // Query metadata for column names and types
+    final metadata = getTimeSeriesMetadata(collection, group);
+    // Marshal each column as typed native array
+    // Call new C API with column_names, column_types, column_data arrays
 }
-
-// ... all other read methods
-
-}  // namespace quiver
 ```
 
-### Pattern 2: C API Helper Header
+Same pattern as Julia: metadata-driven column discovery, typed marshaling per column.
 
-**What:** Extract reusable template helpers and conversion functions from the C API monolith into a private header.
+## Component Boundaries
 
-**When to use:** When multiple C API source files need the same marshaling templates (read_scalars_impl, copy_strings_to_c, etc.).
+### Components Changed
 
-**Trade-offs:**
-- Pro: Eliminates duplication as the C API splits across files
-- Pro: Each C API file focuses on its functional domain
-- Con: Header-only templates increase include cost (marginal for internal headers)
+| Component | File(s) | Change Type | Description |
+|-----------|---------|-------------|-------------|
+| C API time series header | `include/quiver/c/database.h` | **MODIFIED** | New signatures for read/update/free |
+| C API time series impl | `src/c/database_time_series.cpp` | **MODIFIED** | New columnar marshaling logic |
+| C API helpers | `src/c/database_helpers.h` | **MODIFIED** | Add columnar marshaling helper functions |
+| Julia FFI declarations | `bindings/julia/src/c_api.jl` | **REGENERATED** | New ccall signatures |
+| Julia update | `bindings/julia/src/database_update.jl` | **MODIFIED** | Columnar marshaling, metadata-driven |
+| Julia read | `bindings/julia/src/database_read.jl` | **MODIFIED** | Columnar unmarshaling |
+| Dart FFI bindings | `bindings/dart/lib/src/ffi/bindings.dart` | **REGENERATED** | New FFI signatures |
+| Dart update | `bindings/dart/lib/src/database_update.dart` | **MODIFIED** | Columnar marshaling, metadata-driven |
+| Dart read | `bindings/dart/lib/src/database_read.dart` | **MODIFIED** | Columnar unmarshaling |
 
-**Example:**
+### Components Unchanged
 
+| Component | Reason |
+|-----------|--------|
+| C++ Database class (`include/quiver/database.h`) | Already supports multi-column via `vector<map<string, Value>>` |
+| C++ time series impl (`src/database_time_series.cpp`) | Already handles arbitrary columns |
+| Lua bindings (`src/lua_runner.cpp`) | Calls C++ directly, already multi-column |
+| C++ tests (`test_database_time_series.cpp`) | Test C++ layer which is unchanged |
+| All schema files | Schema definitions are not affected |
+| All non-time-series C API functions | Unrelated |
+
+## Data Flow (New Design)
+
+### Update Path
+
+```
+Julia: update_time_series_group!(db, "Sensor", "readings", 1,
+    [Dict("date_time" => "2024-01-01", "temperature" => 20.5, "humidity" => 65.0), ...])
+
+Dart: updateTimeSeriesGroup(db, "Sensor", "readings", 1,
+    [{"date_time": "2024-01-01", "temperature": 20.5, "humidity": 65.0}, ...])
+
+  |  Binding queries metadata to discover columns:
+  |    dimension_column = "date_time" (TEXT)
+  |    value_columns = [{name: "temperature", type: REAL}, {name: "humidity", type: REAL}]
+  |
+  |  Marshals to columnar arrays:
+  |    column_names  = ["date_time", "temperature", "humidity"]
+  |    column_types  = [STRING, FLOAT, FLOAT]
+  |    column_data   = [char**{"2024-01-01",...}, double*{20.5,...}, double*{65.0,...}]
+  |    column_count  = 3
+  |    row_count     = N
+  |
+  v
+C API: quiver_database_update_time_series_group(
+    db, "Sensor", "readings", 1,
+    column_names, column_types, column_data,
+    column_count=3, row_count=N)
+
+  |  Converts columnar -> row-oriented:
+  |    for each row: map<string, Value> with all columns
+  |
+  v
+C++ Database::update_time_series_group(
+    "Sensor", "readings", 1,
+    [{date_time: "2024-01-01", temperature: 20.5, humidity: 65.0}, ...])
+
+  |
+  v
+SQLite: INSERT INTO Sensor_time_series_readings (id, date_time, temperature, humidity)
+        VALUES (1, ?, ?, ?)
+```
+
+### Read Path
+
+```
+C++ Database::read_time_series_group("Sensor", "readings", 1)
+  -> Returns [{date_time: "2024-01-01", temperature: 20.5, humidity: 65.0}, ...]
+  |
+  v
+C API: Uses metadata to build typed columnar output:
+  out_column_names  = ["date_time", "temperature", "humidity"]
+  out_column_types  = [STRING, FLOAT, FLOAT]
+  out_column_data   = [char**{...}, double*{...}, double*{...}]
+  out_column_count  = 3
+  out_row_count     = N
+  |
+  v
+Julia/Dart: Unmarshal columnar arrays back to List<Map<String, Object?>>
+  -> [{date_time: "2024-01-01", temperature: 20.5, humidity: 65.0}, ...]
+```
+
+## Patterns to Follow
+
+### Pattern 1: Metadata-Driven Marshaling
+
+**What:** Use `get_time_series_metadata` to discover column names and types at runtime, then marshal/unmarshal accordingly. Never hardcode column names in bindings.
+
+**When:** Any time data crosses the C API boundary for variable-schema tables.
+
+**Why:** The schema is defined by the user's SQL file, not by the library code. Column names and types are only known at runtime. Metadata provides the contract.
+
+**Example (C API update implementation):**
 ```cpp
-// src/c/database_helpers.h (private)
-#ifndef QUIVER_C_DATABASE_HELPERS_H
-#define QUIVER_C_DATABASE_HELPERS_H
-
-#include "internal.h"
-#include <string>
-#include <vector>
-
-// Reusable marshaling templates
-template <typename T>
-quiver_error_t read_scalars_impl(const std::vector<T>& values, T** out, size_t* count) { ... }
-
-template <typename T>
-quiver_error_t read_vectors_impl(const std::vector<std::vector<T>>& vecs, T*** out, size_t** sizes, size_t* count) { ... }
-
-char* strdup_safe(const std::string& str);
-void convert_scalar_to_c(const quiver::ScalarMetadata& src, quiver_scalar_metadata_t& dst);
-void convert_group_to_c(const quiver::GroupMetadata& src, quiver_group_metadata_t& dst);
-void free_scalar_fields(quiver_scalar_metadata_t& m);
-void free_group_fields(quiver_group_metadata_t& m);
-quiver_data_type_t to_c_data_type(quiver::DataType type);
-quiver_error_t copy_strings_to_c(const std::vector<std::string>& values, char*** out, size_t* count);
-
-#endif
+quiver_error_t quiver_database_update_time_series_group(
+    quiver_database_t* db, const char* collection, const char* group, int64_t id,
+    const char* const* column_names, const int* column_types,
+    const void* const* column_data, size_t column_count, size_t row_count) {
+    QUIVER_REQUIRE(db, collection, group);
+    if (row_count > 0 && (!column_names || !column_types || !column_data)) {
+        quiver_set_last_error("Null column arrays with non-zero row_count");
+        return QUIVER_ERROR;
+    }
+    try {
+        std::vector<std::map<std::string, quiver::Value>> rows;
+        rows.reserve(row_count);
+        for (size_t r = 0; r < row_count; ++r) {
+            std::map<std::string, quiver::Value> row;
+            for (size_t c = 0; c < column_count; ++c) {
+                switch (column_types[c]) {
+                case QUIVER_DATA_TYPE_INTEGER:
+                    row[column_names[c]] = static_cast<const int64_t*>(column_data[c])[r];
+                    break;
+                case QUIVER_DATA_TYPE_FLOAT:
+                    row[column_names[c]] = static_cast<const double*>(column_data[c])[r];
+                    break;
+                case QUIVER_DATA_TYPE_STRING:
+                    row[column_names[c]] = std::string(
+                        static_cast<const char* const*>(column_data[c])[r]);
+                    break;
+                }
+            }
+            rows.push_back(std::move(row));
+        }
+        db->db.update_time_series_group(collection, group, id, rows);
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
 ```
 
-### Pattern 3: Mirror C++ File Organization in C API
+### Pattern 2: Co-located Alloc/Free for Columnar Data
 
-**What:** For every `src/database_X.cpp`, create a corresponding `src/c/database_X.cpp`. This makes it trivial to find the C wrapper for any C++ method.
+**What:** The read function allocates columnar arrays; the free function deallocates them. Both live in `src/c/database_time_series.cpp`, following the existing alloc/free co-location principle.
 
-**When to use:** Always, in this codebase. The 1:1 mapping between C++ methods and C functions is a fundamental architectural invariant.
+**When:** Always for C API functions that return allocated memory.
 
-**Trade-offs:**
-- Pro: Predictable navigation -- developers always know where to find the C wrapper
-- Pro: Parallel file names reinforce the layer separation
-- Con: More files (but each is small and focused)
+**Why:** The free function needs to know the column types to correctly deallocate each column's data array (string columns need per-element deletion; numeric columns are a single `delete[]`).
 
-## Recommended Project Structure
+### Pattern 3: Reuse Existing Type Enum
 
-```
-include/quiver/
-    database.h              # Public C++ header (UNCHANGED)
-    attribute_metadata.h    # ScalarMetadata, GroupMetadata (UNCHANGED)
-    element.h               # Element builder (UNCHANGED)
-    lua_runner.h            # Lua scripting (UNCHANGED)
-    ...                     # Other public headers (UNCHANGED)
+**What:** Use the existing `quiver_data_type_t` enum (`QUIVER_DATA_TYPE_INTEGER=0, FLOAT=1, STRING=2`) for column types. Do not introduce a new enum.
 
-include/quiver/c/
-    database.h              # Public C header (UNCHANGED)
-    element.h               # (UNCHANGED)
-    lua_runner.h            # (UNCHANGED)
-    ...
+**When:** Any new C API function that needs to express data types.
 
-src/
-    database_impl.h         # (NEW) Private Impl struct definition
-    database.cpp            # Lifecycle, execute(), factories, schema/migration
-    database_create.cpp     # (NEW) create_element, update_element, delete_element_by_id
-    database_read.cpp       # (NEW) All read_scalar_*, read_vector_*, read_set_*, read_element_ids
-    database_update.cpp     # (NEW) All update_scalar_*, update_vector_*, update_set_*
-    database_metadata.cpp   # (NEW) get_*_metadata, list_*, describe()
-    database_time_series.cpp# (NEW) Time series + time series files operations
-    database_relations.cpp  # (NEW) set_scalar_relation, read_scalar_relation
-    database_query.cpp      # (NEW) query_string/integer/float
-    database_csv.cpp        # (NEW) export/import CSV stubs
-    element.cpp             # (UNCHANGED)
-    lua_runner.cpp          # (UNCHANGED)
-    schema.cpp              # (UNCHANGED)
-    schema_validator.cpp    # (UNCHANGED)
-    type_validator.cpp      # (UNCHANGED)
-    migration.cpp           # (UNCHANGED)
-    migrations.cpp          # (UNCHANGED)
-    result.cpp              # (UNCHANGED)
-    row.cpp                 # (UNCHANGED)
+**Why:** Consistency with the parameterized query API. The enum is already defined in `include/quiver/c/database.h` and understood by all bindings.
 
-src/c/
-    internal.h              # (UNCHANGED) quiver_database struct, QUIVER_REQUIRE macros
-    database_helpers.h      # (NEW) Template helpers, strdup_safe, metadata converters
-    common.cpp              # (UNCHANGED)
-    database.cpp            # Lifecycle, element CRUD, relations
-    database_read.cpp       # (NEW) All read C wrappers + free functions
-    database_update.cpp     # (NEW) All update C wrappers
-    database_metadata.cpp   # (NEW) Metadata get/list/free C wrappers
-    database_time_series.cpp# (NEW) Time series C wrappers
-    database_query.cpp      # (NEW) Query C wrappers + convert_params
-    element.cpp             # (UNCHANGED)
-    lua_runner.cpp          # (UNCHANGED)
-```
+## Anti-Patterns to Avoid
 
-### Structure Rationale
+### Anti-Pattern 1: Hardcoding Column Names in Bindings
 
-- **`database_impl.h`:** The single private header that all `database_*.cpp` files include. Contains the `Impl` struct with `sqlite3*`, `Schema*`, `TypeValidator*`, `logger`, `TransactionGuard`. This is the only file that `#include <sqlite3.h>` and `#include <spdlog/spdlog.h>` for the Database implementation, preserving the Pimpl encapsulation.
-- **Functional file split:** Each `database_*.cpp` maps to a logical API surface (read, update, create, metadata, etc.). This mirrors how the test files are already organized (`test_database_read.cpp`, `test_database_create.cpp`, etc.), making it easy to find the implementation for any tested behavior.
-- **C API mirrors C++:** `src/c/database_read.cpp` wraps the functions implemented in `src/database_read.cpp`. Navigation is predictable.
-- **Helper headers are private:** `database_impl.h` and `database_helpers.h` are never installed. They are implementation details.
+**What:** Current Julia/Dart hardcode `"date_time"` and `"value"` as column names.
 
-## Build Order for Refactoring
+**Why bad:** Fails for schemas with different dimension column names (e.g., `date_recorded`) or value column names (e.g., `temperature`, `humidity`). The dimension column is discovered from metadata (`dimension_column` field), not assumed.
 
-This decomposition should be done in a specific order to maintain a green test suite at every step.
+**Instead:** Query metadata to discover column names. The binding should work with any schema.
 
-### Phase 1: Extract `database_impl.h` (Foundation)
+### Anti-Pattern 2: Row-Oriented void* Arrays Through FFI
 
-Extract the `Database::Impl` struct and its inline method bodies into `src/database_impl.h`. Move the anonymous namespace helpers (logger creation, row extractors) there too since they are shared. Update `src/database.cpp` to `#include "database_impl.h"`. **Tests pass with zero behavior change.**
+**What:** Passing each cell as a `(type, void*)` pair -- `row_count * column_count` type+pointer pairs.
 
-This is the critical enabling step. Everything else depends on it.
+**Why bad:** FFI bindings (Julia, Dart) would need to construct per-cell `Ptr{Cvoid}` arrays. For 1000 rows x 5 columns, that is 5000 `void*` pointer allocations in the binding layer, each requiring boxing. Columnar approach: 5 typed arrays, each allocated once.
 
-### Phase 2: Extract C++ Read Operations
+**Instead:** Columnar typed arrays. Each column is one contiguous native array.
 
-Move all `read_scalar_*`, `read_vector_*`, `read_set_*`, and `read_element_ids` into `src/database_read.cpp`. Move the associated anonymous namespace template helpers (`read_grouped_values_all`, `read_grouped_values_by_id`, `get_row_value`) into the new file's anonymous namespace (they are only used by read methods).
+### Anti-Pattern 3: Changing the C++ Interface
 
-Update `src/CMakeLists.txt` to add the new source file. Tests pass.
+**What:** Modifying `Database::update_time_series_group` or `Database::read_time_series_group` to take/return columnar data.
 
-### Phase 3: Extract C++ Update Operations
+**Why bad:** The C++ interface (`vector<map<string, Value>>`) is already correct and general. Lua depends on it working row-oriented. Changing it creates unnecessary churn in the C++ layer and Lua bindings.
 
-Move all `update_scalar_*`, `update_vector_*`, `update_set_*` into `src/database_update.cpp`. Update CMakeLists. Tests pass.
+**Instead:** Only change the C API marshaling. The C API is the translation layer between the columnar FFI-friendly format and the row-oriented C++ format.
 
-### Phase 4: Extract C++ Create/Delete Operations
+### Anti-Pattern 4: Separate Functions Per Column Type Combination
 
-Move `create_element`, `update_element`, `delete_element_by_id` into `src/database_create.cpp`. These are the largest individual methods (~200 lines for create, ~150 for update). Update CMakeLists. Tests pass.
+**What:** Creating `quiver_database_update_time_series_group_floats`, `quiver_database_update_time_series_group_integers`, `quiver_database_update_time_series_group_mixed`, etc.
 
-### Phase 5: Extract C++ Metadata, Time Series, Relations, Query, CSV
+**Why bad:** The number of type combinations is combinatorial. A table with 3 columns could be (STRING, FLOAT, FLOAT), (STRING, INTEGER, FLOAT), (STRING, STRING, INTEGER), etc. The typed parallel array pattern handles all combinations uniformly.
 
-Move remaining functional groups into their respective files. This can be done in one batch or incrementally:
-- `database_metadata.cpp`: metadata + describe
-- `database_time_series.cpp`: time series + files
-- `database_relations.cpp`: relation operations
-- `database_query.cpp`: query methods
-- `database_csv.cpp`: CSV stubs
+**Instead:** One function with `column_types[]` that describes each column.
 
-After this phase, `src/database.cpp` contains only lifecycle, execute core, and factory methods (~300 lines).
+## Build Order
 
-### Phase 6: Extract C API Helpers
+The implementation should follow this dependency order to maintain a working test suite at each step.
 
-Create `src/c/database_helpers.h` with the template helpers and conversion functions. Update `src/c/database.cpp` to include it.
+### Step 1: New C API Signatures (Header)
 
-### Phase 7: Split C API Files
+Modify `include/quiver/c/database.h` to declare the new function signatures. Keep the old signatures temporarily (with a comment marking them for removal) so existing code compiles.
 
-Mirror the C++ split: create `src/c/database_read.cpp`, `src/c/database_update.cpp`, `src/c/database_metadata.cpp`, `src/c/database_time_series.cpp`, `src/c/database_query.cpp`. Update CMakeLists.
+**Files changed:** `include/quiver/c/database.h`
+**Tests:** All existing tests still compile and pass (old signatures still present).
 
-### Phase 8: Verify Full Stack
+### Step 2: New C API Implementation
 
-Run `scripts/build-all.bat` to confirm all C++ tests, C API tests, Julia tests, and Dart tests pass. The bindings are unaffected because the C header (`include/quiver/c/database.h`) does not change.
+Implement the new columnar marshaling in `src/c/database_time_series.cpp`. Add helper functions to `src/c/database_helpers.h` if needed (e.g., `convert_columnar_to_rows`, `convert_rows_to_columnar`). Update the free function.
 
-## Anti-Patterns
+**Files changed:** `src/c/database_time_series.cpp`, `src/c/database_helpers.h`
+**Tests:** Write new C API tests for multi-column schemas (`multi_time_series.sql`). Old single-column tests still pass via old signatures.
 
-### Anti-Pattern 1: Splitting the Public Header
+### Step 3: Migrate C API Tests to New Signatures
 
-**What people do:** Try to decompose `include/quiver/database.h` into multiple public headers (one per functional group).
+Update `tests/test_c_api_database_time_series.cpp` to use the new signatures. Remove old signatures from the header.
 
-**Why it is wrong:** The `Database` class is a single type. Splitting its declaration across headers breaks the type system and makes the API harder to consume. Bindings generators would need to discover and combine multiple headers. The header is 200 lines -- it is not the problem.
+**Files changed:** `tests/test_c_api_database_time_series.cpp`, `include/quiver/c/database.h`
+**Tests:** All C++ and C API tests pass. Bindings temporarily broken (expected).
 
-**Do this instead:** Keep the single public header. Split only the `.cpp` implementation files.
+### Step 4: Regenerate FFI Bindings
 
-### Anti-Pattern 2: Breaking the Pimpl by Exposing Impl Details
+Run `bindings/julia/generator/generator.bat` and `bindings/dart/generator/generator.bat` to pick up the new C API signatures.
 
-**What people do:** Make `database_impl.h` a public header, or give split files direct access to `sqlite3*` bypassing the Impl struct.
+**Files changed:** `bindings/julia/src/c_api.jl`, `bindings/dart/lib/src/ffi/bindings.dart`
+**Tests:** FFI layer updated, but binding logic still uses old calling convention (will fail).
 
-**Why it is wrong:** The entire point of Pimpl is that consumers of `database.h` never see sqlite3 or spdlog headers. If split implementation files access `sqlite3*` directly without going through `Impl`, the encapsulation boundary becomes inconsistent.
+### Step 5: Update Julia Bindings
 
-**Do this instead:** All split files include the private `database_impl.h` and access sqlite3 through `impl_->db`. The Impl struct is the single source of truth for the database connection state.
+Rewrite `update_time_series_group!` and `read_time_series_group` in Julia to use columnar marshaling via metadata.
 
-### Anti-Pattern 3: Creating Intermediate Classes
+**Files changed:** `bindings/julia/src/database_update.jl`, `bindings/julia/src/database_read.jl`
+**Tests:** Julia tests pass.
 
-**What people do:** Create `DatabaseReader`, `DatabaseWriter`, `DatabaseMetadata` classes to decompose the monolith, then compose them inside `Database`.
+### Step 6: Update Dart Bindings
 
-**Why it is wrong in this codebase:** All operations share the same `sqlite3*` connection, the same `Schema*`, the same `TransactionGuard`. Splitting into classes creates artificial ownership boundaries and makes transactions that span operations (like `create_element` which writes to scalar table + vector tables + set tables + time series tables) harder to implement. The API contract is that `Database` is the single entry point.
+Rewrite `updateTimeSeriesGroup` and `readTimeSeriesGroup` in Dart to use columnar marshaling via metadata.
 
-**Do this instead:** Split implementation files, not the class. One class, many source files, one Impl struct.
+**Files changed:** `bindings/dart/lib/src/database_update.dart`, `bindings/dart/lib/src/database_read.dart`
+**Tests:** Dart tests pass.
 
-### Anti-Pattern 4: Splitting C API Without Splitting C++ First
+### Step 7: Full Stack Verification
 
-**What people do:** Start by splitting `src/c/database.cpp` because it has "simpler" code (just wrappers).
-
-**Why it is wrong:** The C API file structure should mirror the C++ file structure. If you split the C API first, you create a file organization that has no correspondence to the C++ layer. Then when you split the C++ layer later, you have to re-reorganize the C API to match.
-
-**Do this instead:** C++ first, C API second. The C API mirrors the C++ structure.
+Run `scripts/build-all.bat` to confirm all layers pass.
 
 ## Integration Points
 
-### Internal Boundaries
+| Boundary | Before | After |
+|----------|--------|-------|
+| C API <-> C++ | C API marshals 2 fixed columns to `vector<map>` | C API marshals N typed columns to `vector<map>` |
+| Julia <-> C API | Julia passes `Ptr{Ptr{Cchar}}` + `Ptr{Cdouble}` | Julia passes `Ptr{Ptr{Cchar}}` (names) + `Ptr{Cint}` (types) + `Ptr{Ptr{Cvoid}}` (data) |
+| Dart <-> C API | Dart passes `Pointer<Pointer<Char>>` + `Pointer<Double>` | Dart passes names + types + `Pointer<Pointer<Void>>` (data) |
+| Lua <-> C++ | Direct sol2 binding (unchanged) | Direct sol2 binding (unchanged) |
+| Bindings <-> Metadata API | Bindings ignore metadata for writes | Bindings query metadata to determine column names/types before marshaling |
 
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| `database_*.cpp` <-> `database_impl.h` | Direct member access via `impl_->` | All files share the same Impl struct; no message passing |
-| `src/c/database_*.cpp` <-> `src/c/database_helpers.h` | Template function calls | Helpers are header-only templates, no link-time dependency |
-| `src/c/database_*.cpp` <-> `src/c/internal.h` | `quiver_database` struct, `QUIVER_REQUIRE` macro | Unchanged from current architecture |
-| C++ layer <-> C layer | `db->db.method_name(...)` pattern | C API holds `quiver::Database` by value inside opaque `quiver_database` struct |
+## Scalability Considerations
 
-### CMake Integration
-
-Adding new source files requires updating `src/CMakeLists.txt`:
-
-```cmake
-# Core library sources
-set(QUIVER_SOURCES
-    database.cpp
-    database_create.cpp      # NEW
-    database_read.cpp        # NEW
-    database_update.cpp      # NEW
-    database_metadata.cpp    # NEW
-    database_time_series.cpp # NEW
-    database_relations.cpp   # NEW
-    database_query.cpp       # NEW
-    database_csv.cpp         # NEW
-    element.cpp
-    lua_runner.cpp
-    migration.cpp
-    migrations.cpp
-    result.cpp
-    row.cpp
-    schema.cpp
-    schema_validator.cpp
-    type_validator.cpp
-)
-```
-
-And for the C API:
-
-```cmake
-if(QUIVER_BUILD_C_API)
-    add_library(quiver_c SHARED
-        c/common.cpp
-        c/database.cpp
-        c/database_read.cpp        # NEW
-        c/database_update.cpp      # NEW
-        c/database_metadata.cpp    # NEW
-        c/database_time_series.cpp # NEW
-        c/database_query.cpp       # NEW
-        c/element.cpp
-        c/lua_runner.cpp
-    )
-```
-
-### Binding Impact
-
-**None.** The bindings (Julia, Dart) depend only on the installed C headers (`include/quiver/c/*.h`). Since no headers change, no binding regeneration is needed. This is the primary reason to decompose at the `.cpp` level only.
-
-## Scaling Considerations
-
-| Concern | Current (1934 lines) | After Split (~300 per file) | Future Growth |
-|---------|---------------------|----------------------------|---------------|
-| Developer navigation | Requires search to find method in monolith | Open file matching test file name | Each new feature group gets its own file |
-| Compile time impact | Any change recompiles entire 1934-line TU | Only affected TU recompiles | Incremental build stays fast |
-| Merge conflicts | High probability on concurrent changes | Low -- changes to reads don't conflict with changes to writes | Feature branches touch different files |
-| Code review clarity | Reviewers see 1934 lines of context | PRs scoped to specific functional area | Self-documenting structure |
-
-### Scaling Priority
-
-1. **First bottleneck (current):** `src/database.cpp` at 1934 lines. Every change requires navigating the entire file. Concurrent work causes merge conflicts.
-2. **Second bottleneck (current):** `src/c/database.cpp` at 1612 lines. Same problem, compounded by the mechanical wrapper pattern making it hard to find the right function.
-3. **Non-bottleneck:** All other files are appropriately sized. `schema.cpp`, `schema_validator.cpp`, `type_validator.cpp`, `element.cpp`, `lua_runner.cpp` are each focused on a single responsibility and do not need splitting.
+| Concern | Current | After Redesign |
+|---------|---------|----------------|
+| Column count | Fixed 2 (dimension + 1 value) | Arbitrary N columns |
+| Column types | Float-only values | Integer, Float, String per column |
+| Schemas supported | Only `(date_time TEXT, value REAL)` pattern | Any `{Collection}_time_series_{name}` schema |
+| Row count | No limit (good) | No limit (unchanged) |
+| Memory overhead | Minimal (2 flat arrays) | Proportional to column count (N flat arrays) |
+| Binding complexity | Simple (hardcoded 2 arrays) | Moderate (metadata query + typed array construction) |
 
 ## Sources
 
-- Direct codebase analysis of Quiver repository (all confidence levels HIGH)
-- C++ Pimpl idiom: Standard practice documented in Herb Sutter's GotW #100, Scott Meyers' Effective Modern C++ Item 22
-- Split implementation pattern: Used by major C++ projects (LLVM splits `Sema` into `SemaDecl.cpp`, `SemaExpr.cpp`, `SemaType.cpp` etc. -- same class, multiple source files)
-- CMake multi-file builds: Standard CMake documentation for `add_library` with multiple sources
+- Direct codebase analysis: all source files listed in Component Boundaries table (HIGH confidence)
+- Existing C API patterns: `database_query.cpp` typed parallel arrays (`convert_params`) (HIGH confidence)
+- Existing metadata API: `GroupMetadata.dimension_column`, `GroupMetadata.value_columns` already provide all needed schema info (HIGH confidence)
+- `multi_time_series.sql` schema: proves multi-column time series tables are already supported at schema and C++ level (HIGH confidence)
 
 ---
-*Architecture research for: Quiver C++20 library refactoring*
-*Researched: 2026-02-09*
+*Architecture research for: Quiver multi-column time series update interface redesign*
+*Researched: 2026-02-12*

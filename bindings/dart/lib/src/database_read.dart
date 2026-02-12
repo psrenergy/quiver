@@ -915,11 +915,14 @@ extension DatabaseRead on Database {
         return [];
       }
 
+      final meta = getTimeSeriesMetadata(collection, group);
+      final valCol = meta.valueColumns.isEmpty ? 'value' : meta.valueColumns.first.name;
+
       final result = <Map<String, Object?>>[];
       for (var i = 0; i < rowCount; i++) {
         result.add({
           'date_time': outDateTimes.value[i].cast<Utf8>().toDartString(),
-          'value': outValues.value[i],
+          valCol: outValues.value[i],
         });
       }
 

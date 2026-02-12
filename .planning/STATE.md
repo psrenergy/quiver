@@ -5,43 +5,42 @@
 See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** Every public C++ method is reachable from every binding through uniform, predictable patterns
-**Current focus:** v1.0 milestone complete. Planning next milestone.
+**Current focus:** v1.1 Time Series Ergonomics -- Phase 11 (C API Multi-Column Time Series)
 
 ## Current Position
 
-Milestone: v1.0 Quiver Refactoring -- SHIPPED 2026-02-11
-Status: All 10 phases executed, verified, and archived.
-Last activity: 2026-02-11 -- Milestone v1.0 archived
+Phase: 11 of 14 (C API Multi-Column Time Series)
+Plan: 0 of 0 in current phase (plans TBD)
+Status: Ready to plan
+Last activity: 2026-02-12 -- Roadmap created for v1.1 milestone (4 phases, 13 requirements mapped)
 
-Progress: [##########] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
-- Average duration: 11.5min
-- Total execution time: ~3 hours
+- Total plans completed: 15 (v1.0)
+- Average duration: ~12 min (v1.0)
+- Total execution time: ~3 hours (v1.0)
 
-**By Phase:**
+**By Phase (v1.0):**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-cpp-impl-header-extraction | 1 | 6min | 6min |
-| 02-cpp-core-file-decomposition | 2 | 17min | 8.5min |
-| 03-cpp-naming-error-standardization | 2 | 32min | 16min |
-| 04-c-api-file-decomposition | 2 | 24min | 12min |
-| 05-c-api-naming-error-standardization | 2 | 21min | 10.5min |
-| 06-julia-bindings-standardization | 1 | 11min | 11min |
-| 07-dart-bindings-standardization | 1 | 14min | 14min |
-| 08-lua-bindings-standardization | 1 | 4min | 4min |
-| 09-code-hygiene | 2 | 43min | 21.5min |
-| 10-cross-layer-docs-final-verification | 1 | 13min | 13min |
+| 1-10 | 15 | ~3h | ~12m |
+
+*v1.1 metrics start fresh at Phase 11*
 
 ## Accumulated Context
 
 ### Decisions
 
 See PROJECT.md Key Decisions table for full log with outcomes.
+
+Recent decisions affecting current work:
+- v1.0: Alloc/free co-location in C API (read + free in same translation unit)
+- v1.0: 3 canonical error message patterns (Cannot/Not found/Failed to)
+- v1.1: Columnar typed-arrays pattern (reuse convert_params() approach from database_query.cpp)
 
 ### Pending Todos
 
@@ -53,6 +52,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-02-11
-Stopped at: v1.0 milestone archived
+Last session: 2026-02-12
+Stopped at: Roadmap created for v1.1 -- 4 phases (11-14), 13 requirements mapped
 Resume file: None

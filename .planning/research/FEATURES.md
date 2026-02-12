@@ -1,180 +1,282 @@
-# Feature Research
+# Feature Landscape: Time Series Update Interface Redesign
 
-**Domain:** C++20 library with C API and multi-language FFI bindings (Julia, Dart, Lua)
-**Researched:** 2026-02-09
-**Confidence:** HIGH (codebase analysis + established FFI design principles from Botan, CppCon hourglass pattern, multi-language binding practitioners)
+**Domain:** Multi-column time series update API across C++/C/Julia/Dart/Lua
+**Researched:** 2026-02-12
+**Confidence:** HIGH (direct codebase analysis, established FFI patterns, existing internal precedents)
 
-## Feature Landscape
+## Problem Statement
 
-### Table Stakes (Users Expect These)
+The current `update_time_series_group` C API is hardcoded to exactly 2 parallel arrays: one `const char* const*` for the dimension column (date_time strings) and one `const double*` for a single value column. The C++ layer already supports N columns via `vector<map<string, Value>>`, but the C API bottleneck prevents bindings from passing multi-column time series data.
 
-Features that any well-refactored C++ library with multi-language bindings must have. Missing these means the library feels broken or untrustworthy.
+**Current C API signature:**
+```c
+quiver_database_update_time_series_group(db, collection, group, id,
+    const char* const* date_times,  // hardcoded: 1 string dimension column
+    const double* values,            // hardcoded: 1 float value column
+    size_t row_count);
+```
+
+**Target:** Support schemas like `(id, date_time, temperature REAL, humidity REAL, status TEXT)` -- N value columns of mixed types, matching the C++ layer's existing capability.
+
+**Symmetry goal:** The read side (`read_time_series_group`) has the same limitation and must be redesigned in lockstep.
+
+## Table Stakes
+
+Features the redesigned API must have. Missing any of these means the redesign is incomplete.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| **Complete API parity across all layers** | If C++ can do it, C/Julia/Dart/Lua must too. Partial coverage forces users to drop to a lower layer, defeating the purpose of bindings. | MEDIUM | Current gap: `is_healthy`, `path` have C API but no Dart/Julia high-level method. Lua missing CSV operations. Several methods only partially bound. |
-| **Uniform naming convention per layer** | Each layer follows its language's idiom consistently. C++ uses `snake_case`, C uses `quiver_` prefix + `snake_case`, Dart uses `camelCase`, Julia uses `snake_case`. Inconsistencies signal amateur design. | LOW | Currently good within individual layers. Cross-layer mapping should be documented in one canonical table. |
-| **Uniform error handling per layer** | C++ throws exceptions, C returns `quiver_error_t` + `quiver_get_last_error()`, bindings translate to native exceptions. Every function in every layer must follow its layer's convention without exception. | LOW | Currently solid. Dart `check()` and Julia `check()` both correctly translate C error codes to native exceptions. Maintain this. |
-| **Explicit resource lifecycle (create/destroy pairs)** | Every allocated resource must have a matching free function. No ambiguity about ownership. | LOW | Already implemented: `quiver_database_close`, `quiver_free_*` functions. Ensure new features follow same pattern. |
-| **Source file decomposition by responsibility** | No single file should exceed ~500 lines. Monolithic files make review, testing, and navigation painful. | MEDIUM | `database.cpp` is 1934 lines, `src/c/database.cpp` is 1612 lines. These must be split by operation category (CRUD, metadata, time series, query, CSV). |
-| **Test coverage for every public API function** | Every C++ method, C API function, and binding method must have at least one test. Tests are the contract. | MEDIUM | Test structure exists and is well-organized by category. Must maintain this discipline as files are split. |
-| **Matching free functions for every allocation** | Every `quiver_read_*` that returns allocated memory must have a documented `quiver_free_*` counterpart. | LOW | Already implemented. Keep the pattern. |
-| **QUIVER_REQUIRE macro for null-pointer guards** | Every C API function taking a pointer param must validate it before dereferencing. | LOW | Pattern exists in codebase. Audit for completeness during refactor. |
-| **Thread-local error storage** | `quiver_get_last_error()` must be thread-local so concurrent callers do not clobber each other's error state. | LOW | Already implemented with thread-local storage. |
-| **Binary error codes (OK/ERROR)** | C API returns only 0 or 1. Detailed info via `quiver_get_last_error()`. Simple, universal, FFI-friendly. | LOW | Already implemented. Do not add richer error codes -- they leak C++ semantics into the C layer. |
-| **Opaque handle pattern for all C API types** | `quiver_database_t`, `quiver_element_t`, `quiver_lua_runner_t` are forward-declared opaque structs. Internal layout never exposed. | LOW | Already implemented correctly. |
-| **Shared test schemas** | All test layers (C++, C API, Julia, Dart, Lua) use the same SQL schema files from `tests/schemas/`. | LOW | Already implemented. Prevents schema drift between test suites. |
+| **N typed value columns through C API** | The C++ layer already handles N columns. The C API must not be the bottleneck. Without this, multi-column time series schemas are unusable from any binding. | HIGH | Core challenge of this milestone. Requires new C API signature or new opaque type. |
+| **Matching read-side redesign** | If update supports N columns, read must return N columns. Otherwise data written through the new API cannot be read back through the same API. | HIGH | Read and update must be redesigned together. Cannot ship one without the other. |
+| **Type safety for each column** | Each value column has a schema-defined type (INTEGER, REAL, TEXT). The C API must accept typed data per column, not cast everything to double. | MEDIUM | Current API loses INTEGER precision (casts to double). Current API cannot handle TEXT value columns at all. |
+| **Column name association** | Caller must specify which column each data array belongs to. Positional-only approaches break when schema column order changes. | MEDIUM | Names provide self-documenting calls and decouple from schema column ordering. |
+| **Dimension column flexibility** | The dimension column name comes from metadata (e.g., `date_time`). The API should not hardcode the name "date_time". | LOW | C++ already uses metadata to find the dimension column. C API must pass it through. |
+| **Empty row set (clear)** | Calling with 0 rows must delete all existing time series data for that element, matching current behavior. | LOW | Already works in C++ layer. New C API must preserve this. |
+| **Consistent binding ergonomics** | Julia kwargs, Dart Map, Lua table -- each binding should feel natural in its language while using the same C API underneath. | MEDIUM | Target: `update_time_series_group!(db, "Sensor", "temperature", id; date_time=[...], temperature=[...])` in Julia. |
+| **Backward-compatible C++ signature** | The C++ `update_time_series_group(collection, group, id, vector<map<string, Value>>)` already works for N columns. Do not change it. | LOW | Zero work needed at C++ layer. This is a C API + bindings change. |
+| **Free function for read results** | New read signature returns new data structures. Must provide matching free function(s). | MEDIUM | Follow alloc/free co-location pattern from `database_time_series.cpp`. |
+| **Test schema with multi-column time series** | Need a schema like `(id, date_time, temperature REAL, humidity REAL)` to actually test the multi-column path. | LOW | `multi_time_series.sql` exists but has single-column groups. Need a multi-value-column group schema. |
 
-### Differentiators (Competitive Advantage)
+## Differentiators
 
-Features that set a well-designed multi-language library apart. Not expected, but make the library feel polished and professional.
+Features that make the redesign feel polished rather than just functional.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| **Canonical API mapping table** | A single document (in CLAUDE.md or a dedicated file) mapping every C++ method to its C API, Julia, Dart, and Lua equivalents. Makes parity gaps instantly visible. Automated gap detection possible. | LOW | No competing library does this well. Most rely on ad-hoc documentation. This is Quiver's "intelligence over documentation" advantage. |
-| **Mechanical binding generation** | Julia and Dart bindings auto-generated from C header via `generator.bat`. Eliminates hand-written FFI boilerplate drift. | LOW | Already implemented. Most libraries require manual FFI. This is a significant advantage -- protect it. |
-| **Consistent file decomposition mirroring across layers** | C++ has `database_read.cpp`, C API has `c/database_read.cpp`, Julia has `database_read.jl`, Dart has `database_read.dart`. Same logical split at every layer. | MEDIUM | Partially there (bindings already split by operation). C++ and C API are monolithic. Aligning them to match bindings creates navigational symmetry. |
-| **Convenience methods in bindings only** | Bindings provide `readAllScalarsById`, `readAllVectorsById`, `readVectorGroupById` -- these are pure binding-layer conveniences that compose lower-level operations. Logic stays in C++, convenience in bindings. | LOW | Julia and Dart already do this. Good pattern. Document it as intentional policy. |
-| **Version query at C API level** | `quiver_version()` already exists. Bindings should expose it for runtime compatibility checks. | LOW | C API has it. Julia/Dart FFI wrappers have the binding. Verify high-level wrapper exposes it. |
-| **DateTime as a binding-layer concern** | C++ and C API handle dates as strings. Julia/Dart bindings convert to native DateTime types. Type enrichment happens at the binding layer, keeping C++ simple. | LOW | Already implemented in both Julia (`string_to_date_time`) and Dart (`stringToDateTime`). Document as explicit pattern. |
-| **Parameterized query support with typed params** | C API uses parallel arrays (`param_types[]`, `param_values[]`) for typed SQL parameters. Bindings marshal native types to these arrays. | LOW | Implemented in C API and all bindings. Complex FFI pattern done well. |
-| **Unified GroupMetadata across vector/set/time_series** | Single `GroupMetadata`/`quiver_group_metadata_t` type with `dimension_column` field distinguishing time series from vectors/sets. Reduces type proliferation. | LOW | Already implemented. Elegant design choice. |
-| **Schema validation at database creation** | `schema_validator.cpp` validates schema structure before database creation. Catches errors early with clear messages. | LOW | Already exists. Surface validation errors through all layers consistently. |
-| **RAII transaction guards** | `TransactionGuard` and `with_transaction()` lambda pattern for safe transaction management. | LOW | Already in C++ layer. Not exposed through C API/bindings (correct -- this is an implementation detail). |
-| **Blob module completion** | `blob.cpp` is currently a stub (empty function bodies). Completing this adds binary data support. | HIGH | Current stub has `Blob::Impl` with `std::iostream`, `file_path`, `BlobMetadata`. Needs full implementation + C API + bindings. |
-| **API surface documentation via `describe()`** | `describe()` prints schema info to stdout. Available at all layers. Useful for debugging and discovery. | LOW | Already bound to C API, Julia, Dart, Lua. |
+| **Columnar input (arrays of columns, not arrays of rows)** | Columnar layout matches how scientific/time-series data is typically stored in memory (separate arrays per measurement). Row-of-maps is the C++ internal representation; columnar is the natural FFI representation. | LOW | This is actually simpler for FFI than row-based. Each column is one contiguous array. Column names + types + arrays = complete. |
+| **Metadata-driven validation in C API** | The C API layer can call `get_time_series_metadata` to validate column names and types before passing to C++. Catches errors at the FFI boundary with clear messages. | LOW | Metadata system already exists. Just wire validation into the new update function. |
+| **Consistent pattern with `quiver_element_t` builder** | The Element builder (create/set/set/set/use/destroy) is an established pattern for multi-typed data through FFI. Could reuse or extend this for time series. | MEDIUM | Two viable approaches: (A) new opaque builder type, (B) parallel arrays with type descriptors. See Architecture Decisions below. |
+| **Integer value column support** | Current API casts all values to double. New API should natively support INTEGER columns, preserving int64_t precision. | LOW | `Value` variant already supports `int64_t`. Just need typed column arrays in C API. |
+| **String value column support** | Time series tables can have TEXT value columns (e.g., status codes, categories). Current API cannot represent these at all. | LOW | Same approach as string arrays elsewhere in C API. |
+| **Binding-level kwargs decomposition** | Julia/Dart bindings decompose kwargs/Map into the columnar C API calls. The binding does the type dispatch based on Julia/Dart native types. Caller never thinks about C types. | MEDIUM | Follows existing `create_element!` pattern where Julia kwargs -> Element builder -> C API. |
 
-### Anti-Features (Commonly Requested, Often Problematic)
+## Anti-Features
 
-Features that seem good but would harm the library during this refactoring phase.
+Features to explicitly NOT build during this redesign.
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| **Rich C API error codes** | "Give me QUIVER_ERROR_NOT_FOUND, QUIVER_ERROR_CONSTRAINT, etc." | Leaks C++ exception taxonomy into C ABI. Every new error type is an ABI break. Bindings must update switch statements. | Keep binary OK/ERROR + `quiver_get_last_error()` for details. Error messages are strings, not codes. |
-| **C++ templates in public API** | "Make `read_scalar<T>()` generic" | Cannot cross FFI boundary. C API must enumerate concrete types. Templates in the public header force template instantiation at the binding layer, violating "logic in C++" principle. | Keep type-specific methods: `read_scalar_integers`, `read_scalar_floats`, `read_scalar_strings`. |
-| **Async/callback-based C API** | "Add async operations for non-blocking I/O" | SQLite is inherently single-connection-single-thread. Adding async API adds complexity with no real concurrency gain. Binding-layer async (Dart futures, Julia tasks) should wrap synchronous C calls. | Bindings can wrap sync calls in async if their language needs it. C API stays synchronous. |
-| **SWIG-generated bindings** | "Auto-generate all bindings from C++ headers" | SWIG produces suboptimal FFI code, fights with custom memory management, and generates bindings that do not feel native. Current `ffigen`-based generators for Julia/Dart are better. | Keep current generator approach. Thin hand-written high-level wrappers over generated FFI layer. |
-| **Backwards compatibility constraints** | "Do not break existing API during refactor" | CLAUDE.md explicitly states: "WIP project - breaking changes acceptable, no backwards compatibility required." Backwards compat would prevent fixing naming inconsistencies and API gaps. | Break freely. Fix everything. Document changes. |
-| **Abstract base classes / interfaces in C++** | "Add Database interface for mocking" | Single concrete implementation. Interface adds vtable indirection, complicates Pimpl, serves no current purpose. | If testing needs mocking, test through the C API or use schema-based test databases (already the pattern). |
-| **Error message localization** | "Translate error messages to user's language" | Error messages are developer-facing diagnostic strings. Localization adds complexity and translation maintenance burden. | Keep English error messages. They are debugging output, not UI strings. |
-| **Exposing C++ implementation internals through C API** | "Let bindings access TransactionGuard, Impl, internal helpers" | Breaks encapsulation. C API is a public boundary. Internals should never leak. | If a binding needs transaction control, add explicit `quiver_database_begin_transaction()` / `commit()` / `rollback()` C API functions. |
-| **Adding new features during refactoring** | "While we're in there, let's add blob support and new query types" | Mixing refactoring with feature development makes regressions harder to detect and bisect. | Complete the refactoring first (file splits, naming, parity). Then add blob module as a separate phase. |
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| **Row-based C API (array of structs)** | Requires a new struct type with variant fields, complex memory management, and awkward FFI marshaling. Columnar is simpler for both C API and bindings. | Use columnar approach: parallel arrays per column with type tags. |
+| **Append semantics** | "Add rows to existing time series without replacing." Complicates the API (upsert? merge? conflict resolution?) and the SQL generation. | Keep replace-all semantics. Caller reads, modifies, writes back. Simple and predictable. If append is needed later, add `append_time_series_group` as a separate function. |
+| **Partial column update** | "Update only the temperature column, leave humidity unchanged." Requires per-column UPDATE instead of DELETE+INSERT, dramatically complicates SQL generation. | Keep full-group replacement. All columns must be provided for all rows. Partial update is a different operation. |
+| **Time range filtering on update** | "Replace only rows in date range X-Y." Makes the DELETE clause conditional, adds complexity. | Caller reads full data, modifies desired range, writes back full data. Or use raw `query_*` for surgical updates. |
+| **Automatic type coercion** | "Accept int array for REAL column and auto-convert." Type coercion hides bugs. If schema says REAL and caller passes INTEGER, that should either error or the binding should handle the conversion explicitly. | Bindings handle language-level coercion (Julia `Real` -> `Float64`). C API expects exact types. C++ layer already handles Value variant correctly. |
+| **Streaming/chunked update** | "Send rows in batches for large time series." Adds transaction management complexity across multiple C API calls. | Single-call replace with all rows. For truly large datasets, use `import_csv` or raw SQL through `query_*`. |
+| **Combined read+update (patch)** | "Read-modify-write in a single atomic operation." Requires exposing transactions through C API. | Keep read and update as separate operations. SQLite WAL mode provides isolation. |
+
+## Architecture Decisions
+
+### Critical Decision: C API Design for N Typed Columns
+
+Three approaches were analyzed. The recommended approach is **Option B: Columnar Parallel Arrays**.
+
+#### Option A: Opaque Builder Type (like `quiver_element_t`)
+
+```c
+// New opaque type
+quiver_time_series_data_t* data = nullptr;
+quiver_time_series_data_create(&data, row_count);
+quiver_time_series_data_set_string_column(data, "date_time", date_times, row_count);
+quiver_time_series_data_set_float_column(data, "temperature", temperatures, row_count);
+quiver_time_series_data_set_float_column(data, "humidity", humidities, row_count);
+quiver_database_update_time_series_group(db, collection, group, id, data);
+quiver_time_series_data_destroy(data);
+```
+
+**Pros:** Clean, type-safe, extensible. Follows existing Element pattern.
+**Cons:** New opaque type = new header, new internal struct, new create/destroy lifecycle, new generator output, new binding wrappers. Significant surface area increase. Every binding needs a builder wrapper class.
+
+#### Option B: Columnar Parallel Arrays (RECOMMENDED)
+
+```c
+// column_names[i], column_types[i], column_values[i] describe each column
+const char* column_names[] = {"date_time", "temperature", "humidity"};
+const int column_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT, QUIVER_DATA_TYPE_FLOAT};
+const void* const column_values[] = {date_times_array, temperatures_array, humidities_array};
+size_t column_count = 3;
+size_t row_count = 100;
+
+quiver_database_update_time_series_group(db, collection, group, id,
+    column_names, column_types, column_values, column_count, row_count);
+```
+
+**Pros:** Single function call. No new opaque types. Follows the exact pattern already used by `quiver_database_query_*_params` for typed parallel arrays. Bindings already know how to marshal `int* types` + `void** values`. Minimal new C API surface. Mechanically translatable in Julia/Dart/Lua.
+**Cons:** `void*` arrays require careful casting. Caller must ensure array lengths match `row_count`. Less type-safe than builder pattern.
+
+**Why recommended:** This project has an established precedent in `convert_params()` from `database_query.cpp` -- it already converts `int* param_types` + `void* const* param_values` into `vector<Value>`. The time series update is the same pattern applied to columnar data instead of row parameters. No new concepts, no new types, no new lifecycle management. The complexity is contained in one C API function and its binding-layer marshaling.
+
+#### Option C: JSON/String Serialization
+
+```c
+// Serialize to JSON string, parse in C API
+const char* json = "[{\"date_time\":\"2024-01-01\",\"temperature\":1.5}]";
+quiver_database_update_time_series_group_json(db, collection, group, id, json);
+```
+
+**Pros:** Trivial C API signature. Any language can produce JSON.
+**Cons:** Requires JSON parser dependency (or hand-rolled parsing). Serialization/deserialization overhead. Loses type safety entirely. Violates project principle of "no unnecessary dependencies."
+
+### Read Side Redesign
+
+The read side must return N typed columns. Two sub-options:
+
+**Option B-Read (matches Option B): Columnar parallel arrays as output**
+
+```c
+char** out_column_names = nullptr;
+int* out_column_types = nullptr;
+void** out_column_values = nullptr;  // Each void* points to typed array
+size_t out_column_count = 0;
+size_t out_row_count = 0;
+
+quiver_database_read_time_series_group(db, collection, group, id,
+    &out_column_names, &out_column_types, &out_column_values,
+    &out_column_count, &out_row_count);
+
+// Free
+quiver_database_free_time_series_data(
+    out_column_names, out_column_types, out_column_values,
+    out_column_count, out_row_count);
+```
+
+This is complex but follows naturally from Option B. The free function must know column types to free string arrays (delete[] each string) vs numeric arrays (delete[] the array).
+
+**Simplification: Metadata-aware free.** The free function receives `column_types` and `column_count`, so it knows which `void*` entries are `char**` (need per-string cleanup) vs `int64_t*`/`double*` (single delete[]).
 
 ## Feature Dependencies
 
 ```
-[Source file decomposition]
+[Multi-column test schema]
     |
-    +--requires--> [Consistent file naming across layers]
-    |                  |
-    |                  +--enables--> [Canonical API mapping table]
+    +--required by--> [C++ layer testing] (already works, just needs test)
     |
-    +--enables--> [Complete API parity]
-                      |
-                      +--requires--> [Every C++ method has C API function]
-                      |                  |
-                      |                  +--requires--> [Every C API function has binding methods]
-                      |                                    |
-                      |                                    +--requires--> [Generator re-run for FFI layer]
-                      |                                    |
-                      |                                    +--requires--> [High-level wrapper methods in Julia/Dart]
-                      |
-                      +--requires--> [Test for every public function]
+    +--required by--> [C API redesign testing]
 
-[Blob module completion]
+[C API update_time_series_group redesign]
     |
-    +--requires--> [Source file decomposition] (so blob fits cleanly into split structure)
-    +--requires--> [Complete API parity pattern] (C++ -> C -> Julia/Dart/Lua)
-    +--requires--> [Test coverage]
+    +--depends on--> [Existing metadata system] (get_time_series_metadata)
+    +--depends on--> [Existing quiver_data_type_t enum]
+    +--depends on--> [Existing convert_params pattern from database_query.cpp]
+    |
+    +--must ship with--> [C API read_time_series_group redesign]
+    +--must ship with--> [C API free_time_series_data redesign]
+    |
+    +--enables--> [Julia binding update]
+    +--enables--> [Dart binding update]
+    +--enables--> [Lua binding update] (Lua bypasses C API, but consistency matters)
+    +--enables--> [Generator re-run for new C API signature]
 
-[Canonical API mapping table]
+[Julia kwargs interface]
     |
-    +--enables--> [Automated parity gap detection]
-    +--enables--> [Generator validation]
+    +--depends on--> [C API redesign]
+    +--depends on--> [Julia c_api.jl regeneration]
+    +--uses--> [Existing create_element! kwargs pattern as template]
+
+[Dart Map interface]
+    |
+    +--depends on--> [C API redesign]
+    +--depends on--> [Dart bindings.dart regeneration]
+    +--uses--> [Existing createElement Map pattern as template]
+
+[Lua table interface]
+    |
+    +--depends on--> [C++ layer] (Lua calls C++ directly, not C API)
+    +--note--> Already works for N columns. Just needs kwargs-style sugar.
 ```
 
 ### Dependency Notes
 
-- **Source file decomposition must come first:** Splitting monolithic files is the foundation. Without it, adding API parity creates even larger monolithic files. Split first, then fill gaps.
-- **API parity requires generator re-runs:** After C API changes, `bindings/julia/generator/generator.bat` and `bindings/dart/generator/generator.bat` must run to regenerate FFI layers. High-level wrappers are then added manually.
-- **Blob module depends on everything else:** It is a new feature that should be added only after the refactoring establishes clean patterns. Adding it during refactoring mixes concerns.
-- **Canonical API mapping table has no hard dependencies:** Can be created at any time, but is most useful after source decomposition reveals the full picture.
-- **Test coverage is continuous:** Every file split, every new binding method, every parity gap filled must include tests. Not a separate phase -- it is part of every change.
+- **C++ layer needs zero changes.** `update_time_series_group(collection, group, id, vector<map<string, Value>>)` already accepts N columns of any type. The redesign is entirely C API + bindings.
+- **Read and update must ship together.** A multi-column update with a single-column read would leave data inaccessible through the API.
+- **Generators must re-run** after C API header changes. Julia `generator.bat` and Dart `generator.bat` produce the FFI layer. High-level wrappers are then updated manually.
+- **Lua is special:** `lua_runner.cpp` calls C++ directly, not the C API. The `update_time_series_group_from_lua` function already converts Lua tables to `vector<map<string, Value>>`. It already works for N columns. Only the ergonomic sugar (kwargs-style) needs adding.
+- **Multi-column test schema is the prerequisite.** Without a schema like `(id, date_time TEXT, temperature REAL, humidity REAL, status TEXT)`, there is nothing to test the multi-column path against.
 
-## MVP Definition
+## MVP Recommendation
 
-### Launch With (v1 -- Refactoring Complete)
+### Phase 1: Foundation (must complete first)
 
-Minimum viable refactoring -- what is needed to call this codebase "well-structured."
+1. **Multi-column test schema** -- Add `tests/schemas/valid/multi_column_time_series.sql` with `(id, date_time TEXT, temperature REAL, humidity REAL)`. Test C++ layer with it to confirm it already works.
+2. **C API `update_time_series_group` redesign** -- Replace 2-array signature with columnar parallel arrays (Option B). Implement conversion from columnar arrays to `vector<map<string, Value>>` in the C API layer.
+3. **C API `read_time_series_group` redesign** -- Replace 2-array output with columnar parallel array output. Implement conversion from `vector<map<string, Value>>` to columnar arrays.
+4. **C API `free_time_series_data` redesign** -- New free function that handles N typed columns.
+5. **C++ and C API tests** -- Test both single-column (backward compat behavior) and multi-column scenarios.
 
-- [x] **Source file decomposition** -- Split `database.cpp` and `src/c/database.cpp` into files mirroring the existing binding structure (create, read, update, delete, query, metadata, time_series, csv, relations)
-- [x] **Complete API parity audit** -- Document every C++ method and its C/Julia/Dart/Lua equivalents. Identify gaps.
-- [x] **Fill critical parity gaps** -- `is_healthy`, `path`, `current_version` exposed in all binding layers. CSV operations in Lua.
-- [x] **Tests for every split file** -- Existing tests reorganized to match new file structure. No test regressions.
+### Phase 2: Bindings (depends on Phase 1)
 
-### Add After Validation (v1.x)
+6. **Regenerate FFI layers** -- Run `generator.bat` for Julia and Dart.
+7. **Julia high-level wrapper** -- Add kwargs-style `update_time_series_group!(db, col, group, id; date_time=[...], temp=[...])` and update `read_time_series_group` to return multi-column Dicts.
+8. **Dart high-level wrapper** -- Add Map-based `updateTimeSeriesGroup(col, group, id, {'date_time': [...], 'temperature': [...]})` and update `readTimeSeriesGroup`.
+9. **Lua ergonomics** -- Already works for N columns. Add documentation/test coverage for multi-column usage.
+10. **Binding tests** -- Julia, Dart, Lua tests using multi-column schema.
 
-Features to add once core refactoring is verified working.
+### Defer
 
-- [ ] **Canonical API mapping table in CLAUDE.md** -- Add when parity audit is complete
-- [ ] **Automated parity gap detection** -- Script that parses C++ header and checks C API / binding coverage
-- [ ] **Blob module completion** -- Implement `Blob` class, C API, all bindings, tests
+- **Append semantics** -- Different operation, different milestone.
+- **Partial column update** -- Different operation, different milestone.
+- **Integer dimension columns** -- All current schemas use TEXT dimension columns (date_time). Integer dimensions (e.g., sequence numbers) could be added later but are not the motivating use case.
 
-### Future Consideration (v2+)
+## Complexity Assessment
 
-Features to defer until the refactored structure proves stable.
+| Component | Complexity | Rationale |
+|-----------|------------|-----------|
+| C++ layer changes | NONE | Already handles N typed columns via `vector<map<string, Value>>`. |
+| Multi-column test schema | LOW | One SQL file. |
+| C API update signature | MEDIUM | New parallel-array marshaling. Pattern exists in `database_query.cpp`. ~100 lines of new conversion code. |
+| C API read signature | HIGH | Must allocate N typed arrays, track types for freeing. More complex than update because of output allocation. ~150 lines. |
+| C API free function | MEDIUM | Must iterate columns, switch on type to free correctly. ~50 lines. |
+| Julia binding | MEDIUM | kwargs decomposition to parallel arrays. Follows `create_element!` pattern but with array values instead of scalars. ~80 lines. |
+| Dart binding | MEDIUM | Map decomposition to native memory. Follows `createElement` pattern. Arena-based allocation simplifies cleanup. ~100 lines. |
+| Lua binding | LOW | Already works. Just verify multi-column test passes. ~10 lines of test. |
+| Generator re-runs | LOW | Mechanical. Run bat files, verify output. |
 
-- [ ] **Transaction control through C API** -- `quiver_database_begin_transaction`, `commit`, `rollback` if scripting use cases need it
-- [ ] **Batch operations** -- Bulk create/update for performance-critical binding use cases
-- [ ] **Connection pooling** -- If multi-threaded usage patterns emerge
+**Total estimated effort:** Medium. The core challenge is the C API read-side output allocation (returning N typed arrays through out-parameters). Everything else follows established patterns.
+
+## Existing Internal Precedents
+
+These patterns within the Quiver codebase directly inform the redesign:
+
+| Precedent | Where | What It Teaches |
+|-----------|-------|-----------------|
+| `convert_params()` | `src/c/database_query.cpp` | Typed parallel arrays (`int* types`, `void** values`) through C API. Exact pattern for columnar input. |
+| `quiver_element_t` builder | `include/quiver/c/element.h` | Opaque type with typed setters. Alternative approach (not recommended for this use case due to surface area cost). |
+| `update_time_series_files` | `src/c/database_time_series.cpp` | Parallel string arrays (`const char** columns`, `const char** paths`) through C API. Column-name-associated data. |
+| `read_time_series_files` | `src/c/database_time_series.cpp` | Parallel string array output (`char*** out_columns`, `char*** out_paths`). Output allocation pattern. |
+| `copy_strings_to_c()` | `src/c/database_helpers.h` | Helper for allocating string arrays. Reusable for string column output. |
+| `read_scalars_impl<T>()` | `src/c/database_helpers.h` | Template for copying typed vectors to C arrays. Reusable per-column. |
+| `GroupMetadata.value_columns` | `include/quiver/attribute_metadata.h` | Already provides column names and types. Read-side can use this to allocate correctly typed output arrays. |
+| `quiver_data_type_t` enum | `include/quiver/c/database.h` | Already defines INTEGER=0, FLOAT=1, STRING=2, DATE_TIME=3, NULL=4. Reuse as column type tag. |
+| Julia `create_element!(db, col; kwargs...)` | `bindings/julia/src/database_create.jl` | kwargs -> Element builder pattern. Template for kwargs -> columnar arrays. |
+| Dart `createElement(col, Map)` | `bindings/dart/lib/src/database_create.dart` | Map -> Element builder pattern. Template for Map -> columnar arrays. |
 
 ## Feature Prioritization Matrix
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| Source file decomposition | HIGH | MEDIUM | P1 |
-| Complete API parity | HIGH | MEDIUM | P1 |
-| Fill parity gaps (is_healthy, path, etc.) | MEDIUM | LOW | P1 |
-| Tests for every split file | HIGH | LOW | P1 |
-| Canonical API mapping table | MEDIUM | LOW | P2 |
-| Consistent file naming across layers | MEDIUM | LOW | P2 |
-| Automated parity gap detection | LOW | MEDIUM | P3 |
-| Blob module completion | MEDIUM | HIGH | P3 |
-| Transaction control through C API | LOW | MEDIUM | P3 |
+| C API multi-column update | HIGH | MEDIUM | P0 |
+| C API multi-column read | HIGH | HIGH | P0 |
+| C API free function redesign | HIGH | MEDIUM | P0 |
+| Multi-column test schema | HIGH | LOW | P0 |
+| Julia kwargs interface | HIGH | MEDIUM | P1 |
+| Dart Map interface | HIGH | MEDIUM | P1 |
+| Lua multi-column tests | MEDIUM | LOW | P1 |
+| Metadata-driven validation | MEDIUM | LOW | P2 |
+| Integer value column support | MEDIUM | LOW | P0 (comes free with typed design) |
+| String value column support | MEDIUM | LOW | P0 (comes free with typed design) |
 
 **Priority key:**
-- P1: Must have for refactoring milestone
-- P2: Should have, add when structure is stable
-- P3: Nice to have, future milestone
-
-## Competitor Feature Analysis
-
-| Feature | SQLiteCpp | sqlite_modern_cpp | Quiver (Current) | Quiver (Target) |
-|---------|-----------|-------------------|-------------------|-----------------|
-| C++ API | Yes | Yes | Yes | Yes |
-| C API for FFI | No | No | Yes | Yes (complete) |
-| Multi-language bindings | No | No | Julia, Dart, Lua | Julia, Dart, Lua (parity) |
-| Schema validation | No | No | Yes | Yes |
-| Binding auto-generation | N/A | N/A | Partial (FFI layer) | Full (FFI + validation) |
-| File decomposition | Good (by class) | Single header | Monolithic | Split by operation |
-| Thread safety docs | Yes | Yes | Implicit | Should document |
-| Error messages | C++ exceptions | C++ exceptions | Exceptions + C error codes | Same (consistent) |
-| Migration support | No | No | Yes | Yes |
-| Lua scripting | No | No | Yes | Yes (complete parity) |
-
-Quiver's differentiator is the multi-language binding architecture. No comparable SQLite wrapper offers C++ + C API + Julia + Dart + Lua from a single codebase. The refactoring should strengthen this unique position by making the binding process more systematic and verifiable.
+- P0: Core C API redesign (must complete first, enables everything else)
+- P1: Binding updates (immediately follows C API)
+- P2: Polish (after bindings work)
 
 ## Sources
 
-- [Botan FFI C Binding Documentation](https://botan.randombit.net/handbook/api_ref/ffi.html) -- HIGH confidence, authoritative example of production FFI design
-- [CppCon 2014: Hourglass Interfaces for C++ APIs (Stefanus DuToit)](https://isocpp.org/blog/2015/07/cppcon-2014-hourglass-interfaces-for-cpp-apis-stefanus-dutoit) -- HIGH confidence, foundational pattern for C++ FFI
-- [Binding a C++ Library to 10 Programming Languages (Ash Vardanian)](https://ashvardanian.com/posts/porting-cpp-library-to-ten-languages/) -- MEDIUM confidence, practitioner experience report
-- [Hourglass Interfaces (Brent Huisman)](https://brent.huisman.pl/hourglass-interfaces/) -- MEDIUM confidence, practical summary of hourglass pattern
-- [C Wrappers for C++ Libraries and Interoperability](https://caiorss.github.io/C-Cpp-Notes/CwrapperToQtLibrary.html) -- MEDIUM confidence, tutorial with patterns
-- [Layered Library Design (Big Book of Rust Interop)](https://nrc.github.io/big-book-ffi/patterns/layered.html) -- MEDIUM confidence, Rust-focused but pattern applies universally
-- [Principles of FFI API Design (Edward Z. Yang)](http://blog.ezyang.com/2010/06/principles-of-ffi-api-design/) -- MEDIUM confidence, principled FFI design guidance
 - Quiver codebase analysis (direct inspection of all layers) -- HIGH confidence
+- Existing `convert_params()` pattern in `src/c/database_query.cpp` -- HIGH confidence (proven internal pattern)
+- Existing `quiver_element_t` builder pattern -- HIGH confidence (proven internal pattern)
+- Existing `update_time_series_files` parallel array pattern -- HIGH confidence (proven internal pattern)
+- Current `GroupMetadata` with `value_columns` and `dimension_column` -- HIGH confidence (metadata system already provides type info needed for validation)
 
 ---
-*Feature research for: C++ library with multi-language FFI bindings*
-*Researched: 2026-02-09*
+*Feature research for: Time Series Update Interface Redesign*
+*Researched: 2026-02-12*
