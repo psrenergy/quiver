@@ -10,7 +10,15 @@
       "Bash(./build/bin/quiver_c_tests.exe:*)",
       "Bash(node:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(bindings/julia/test/test.bat)",
+      "Bash(bindingsdarttesttest.bat)",
+      "Bash(cmd.exe /c \"cd /d C:\\\\Development\\\\DatabaseTmp\\\\quiver && bindings\\\\dart\\\\test\\\\test.bat\")",
+      "Bash(cmd.exe:*)",
+      "Bash(grep:*)",
+      "Bash(powershell.exe -Command \"Set-Location ''C:\\\\Development\\\\DatabaseTmp\\\\quiver\\\\bindings\\\\dart''; dart test --chain-stack-traces test\\\\database_time_series_test.dart 2>&1\")",
+      "Bash(powershell.exe -Command:*)",
+      "Bash(bindings/dart/test/test.bat)"
     ]
   }
 }

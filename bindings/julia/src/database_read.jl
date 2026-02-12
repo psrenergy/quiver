@@ -563,6 +563,9 @@ function read_time_series_group(db::Database, collection::String, group::String,
         return Vector{Dict{String, Any}}()
     end
 
+    metadata = get_time_series_metadata(db, collection, group)
+    val_col = isempty(metadata.value_columns) ? "value" : metadata.value_columns[1].name
+
     date_time_ptrs = unsafe_wrap(Array, out_date_times[], row_count)
     values = unsafe_wrap(Array, out_values[], row_count) |> copy
 
@@ -570,7 +573,7 @@ function read_time_series_group(db::Database, collection::String, group::String,
     for i in 1:row_count
         push!(rows, Dict{String, Any}(
             "date_time" => unsafe_string(date_time_ptrs[i]),
-            "value" => values[i],
+            val_col => values[i],
         ))
     end
 
