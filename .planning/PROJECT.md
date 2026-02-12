@@ -40,9 +40,21 @@ Every public C++ method is reachable from every binding (C, Julia, Dart, Lua) th
 
 ### Active
 
+- [ ] Kwargs-style columnar interface for `update_time_series_group` across all layers (C API, Julia, Dart, Lua)
+- [ ] Multi-column time series support through the C API (currently limited to single value column)
 - [ ] Complete API surface parity -- every C++ method exposed through C, Julia, Dart, and Lua
 - [ ] Automated parity detection script that verifies binding completeness
 - [ ] Clean up or remove non-functional blob module stubs
+
+## Current Milestone: v1.1 Time Series Ergonomics
+
+**Goal:** Make `update_time_series_group` match `create_element`'s kwargs/columnar interface pattern across all layers.
+
+**Target features:**
+- Redesign C API to support multi-column time series updates
+- Julia kwargs interface: `update_time_series_group!(db, col, group, id; date_time=[...], val=[...])`
+- Dart named-parameter interface matching Julia ergonomics
+- Lua alignment with the same columnar pattern
 
 ### Out of Scope
 
@@ -90,4 +102,4 @@ Tech stack: C++20, CMake, SQLite, spdlog, GoogleTest, sol2 (Lua), Julia FFI, Dar
 | Representative docs over exhaustive | CLAUDE.md shows transformation rules + examples, not all 60 methods | ✓ Good -- maintainable, drift-resistant documentation |
 
 ---
-*Last updated: 2026-02-11 after v1.0 milestone*
+*Last updated: 2026-02-11 after v1.1 milestone start*
