@@ -1,294 +1,364 @@
-# Pitfalls Research
+# Domain Pitfalls: Time Series Update Interface Redesign
 
-**Domain:** C++20 library refactoring with C FFI and multi-language bindings (Julia, Dart, Lua)
-**Researched:** 2026-02-09
-**Confidence:** HIGH (based on direct codebase analysis plus domain expertise)
+**Domain:** C FFI multi-column interface redesign with Julia/Dart/Lua binding migration
+**Researched:** 2026-02-12
+**Confidence:** HIGH (based on direct codebase analysis of all four layers)
+
+## Context
+
+The current `update_time_series_group` C API accepts 2 parallel arrays (`const char* const* date_times`, `const double* values`) for a single-column time series. The redesign adds support for N typed columns through the C boundary, changes Julia bindings from `Dict[]` to kwargs, and changes Dart bindings from `List<Map>` to named parameters. The C++ layer already supports multi-column via `std::vector<std::map<std::string, Value>>`, so the redesign primarily affects the C API and bindings.
+
+---
 
 ## Critical Pitfalls
 
-### Pitfall 1: SQL Injection via String Concatenation in Schema Queries
+Mistakes that cause memory corruption, data loss, or require rewrites.
 
-**What goes wrong:**
-Table and column names are interpolated directly into SQL strings throughout `database.cpp`. Lines like `"SELECT " + attribute + " FROM " + collection` (line 990), `"UPDATE " + collection + " SET " + attribute + " = ?"` (line 1182), and `"DELETE FROM " + table + " WHERE id = ?"` (line 809) construct SQL from user-supplied collection/attribute names. The same pattern exists in `schema.cpp` where `PRAGMA table_info(` + table + `)` (line 296) and `PRAGMA foreign_key_list(` + table + `)` (line 331) concatenate table names directly into PRAGMA calls.
+### Pitfall 1: Partial Allocation Leak on Exception in Multi-Column C API
 
-**Why it happens:**
-SQLite parameterized queries (`?` placeholders) only work for values, not for identifiers (table names, column names). Developers correctly parameterize values but forget that identifiers also need sanitization. The `Schema` class acts as a trusted intermediary since table names come from `sqlite_master`, but `collection` and `attribute` parameters in the `Database` public API come from callers.
+**What goes wrong:** The new C API `update_time_series_group` must marshal N columns of varying types from parallel arrays into `std::vector<std::map<std::string, Value>>`. If column 3 of 5 causes an exception (e.g., invalid type tag, null pointer dereference), columns 1 and 2 have already been converted and pushed into the vector. The existing pattern catches the exception and returns `QUIVER_ERROR`, but the caller's allocated arrays are never freed because the C API was not responsible for them on the input side. This is fine for input arrays (caller owns them). However, the real danger is on the **read** side: if the new `read_time_series_group` allocates output arrays for columns 1 and 2, then fails on column 3, the partially allocated arrays leak because the caller never receives pointers to free them.
 
-**How to avoid:**
-Validate all collection and attribute names against the loaded `Schema` before constructing SQL. The `require_collection` check already exists for some methods but only verifies existence, not that the string is safe. Add an identifier validation function (e.g., reject anything containing SQL metacharacters: `;`, `'`, `"`, `--`, spaces) or exclusively use allowlisted identifiers from the schema's `TableDefinition::columns` map. Since the Schema already has the full list of valid tables and columns, the fix is to always resolve user-supplied names against that allowlist before interpolation.
+**Why it happens:** The current `read_time_series_group` allocates exactly 2 arrays (`out_date_times` and `out_values`). The new multi-column version must allocate N arrays of varying types. If allocation or conversion of column K fails, columns 0..K-1 are leaked because: (1) the function returns `QUIVER_ERROR`, (2) the caller checks error and skips the free call, (3) the partially-filled output pointers may or may not have been written.
 
-**Warning signs:**
-- Any `"SELECT " + userInput` or `"UPDATE " + userInput` pattern where `userInput` is not validated against the schema
-- Methods that skip `require_schema` / `require_collection` checks (e.g., `read_scalar_relation` at line 951 does manual checks)
-- New CRUD methods added without identifier validation
+**Evidence from codebase:** Look at `database_time_series.cpp` lines 79-80 -- the current read allocates `new char*[rows.size()]` and `new double[rows.size()]` separately. If the second `new` throws `std::bad_alloc`, the first allocation leaks. This is tolerable for 2 allocations (very unlikely) but becomes a real risk with N allocations for N columns.
 
-**Phase to address:**
-Phase 1 (C++ core restructuring). Must be resolved before any API surface changes, as every read/update/delete method is affected. Add a centralized `validate_identifier()` helper that all SQL-building methods call.
+**Consequences:** Memory leaks in long-running processes. Under address sanitizer, intermittent test failures. In production bindings (Julia/Dart), leaked native memory not tracked by GC.
 
----
+**Prevention:**
+1. Allocate all output arrays in a single allocation block and write them to output parameters only after all succeed. Use a local cleanup guard:
+   ```cpp
+   // Allocate everything, only assign to out_* after all succeed
+   std::vector<void*> col_data;  // local, RAII-cleaned on exception
+   for (size_t c = 0; c < col_count; ++c) {
+       col_data.push_back(allocate_column(c, row_count));
+   }
+   // All allocations succeeded, now write to out params (no throw possible)
+   for (size_t c = 0; c < col_count; ++c) {
+       out_columns[c] = col_data[c];
+   }
+   ```
+2. Alternatively, use a struct-based return (a `quiver_time_series_result_t`) with a single free function, keeping alloc/free co-located and atomic.
+3. Never write to caller-visible output parameters until all allocations have succeeded.
 
-### Pitfall 2: C API Memory Ownership Ambiguity During Refactoring
+**Detection:** Run address sanitizer on read tests with schemas that have 3+ value columns. Test the error path where column N-1 has invalid data type.
 
-**What goes wrong:**
-The C API has complex memory ownership patterns with multiple allocation/free pairs: `quiver_free_integer_array`, `quiver_free_float_array`, `quiver_free_string_array`, `quiver_free_integer_vectors`, `quiver_free_float_vectors`, `quiver_free_string_vectors`, `quiver_free_time_series_data`, `quiver_free_time_series_files`, `quiver_free_scalar_metadata`, `quiver_free_group_metadata`, `quiver_free_scalar_metadata_array`, `quiver_free_group_metadata_array`, `quiver_string_free`. During refactoring, renaming or moving these functions, or changing the allocation strategy (e.g., switching from `new[]` to a different allocator), creates mismatched alloc/free pairs that produce silent memory corruption or leaks.
-
-**Why it happens:**
-C API memory management is inherently fragile. Each `read_*` function allocates via `new[]` in `src/c/database.cpp`, and the matching `free_*` deallocates via `delete[]`. If a refactoring changes one side without the other, or if a new C API function reuses an existing free function with a different allocation layout, the mismatch is invisible at compile time. The bindings (Julia finalizer, Dart Arena) each call specific free functions and will crash or leak if the contract changes.
-
-**How to avoid:**
-1. Document each alloc/free pair as a formal contract in the C header with comments.
-2. When splitting `src/c/database.cpp` (1612 lines), keep all free functions co-located with their corresponding alloc functions in the same translation unit.
-3. Add a test for each alloc/free pair that verifies allocation, usage, and deallocation in sequence.
-4. Never change an allocation strategy without auditing all four consumers (C tests, Julia, Dart, Lua).
-
-**Warning signs:**
-- A `quiver_free_*` function is moved to a different file than its corresponding `quiver_read_*` or `quiver_database_*` function
-- A new read function reuses an existing free function without verifying allocation compatibility
-- Binding tests pass but valgrind/AddressSanitizer shows leaks or use-after-free
-
-**Phase to address:**
-Phase 2 (C API restructuring). When splitting `src/c/database.cpp`, the alloc/free pairs must move together. Each new C API file should be self-contained for its memory lifecycle.
+**Phase to address:** C API redesign phase (the multi-column read/update implementation).
 
 ---
 
-### Pitfall 3: Binding Desynchronization After C API Signature Changes
+### Pitfall 2: Type Tag / Data Array Mismatch Across C Boundary
 
-**What goes wrong:**
-The Julia (`c_api.jl`, 491 lines), Dart (`bindings.dart`), and Lua (`lua_runner.cpp`) bindings each independently declare the C API function signatures. Julia uses `@ccall` with explicit type annotations. Dart uses `ffigen` to generate `bindings.dart`. Lua uses sol2 usertype bindings. When a C API function signature changes (e.g., parameter order, type change, new parameter), any binding not regenerated will silently call the C function with wrong types, causing stack corruption, segfaults, or data corruption.
+**What goes wrong:** The multi-column C API will use parallel arrays: `column_names[]`, `column_types[]`, and `column_data[]` (where `column_data[i]` is `void*` pointing to a typed array). If `column_types[i]` says `QUIVER_DATA_TYPE_INTEGER` but `column_data[i]` actually points to a `double[]`, the `static_cast` in the C API silently reinterprets the bytes, producing garbage values. There is no runtime check possible because `void*` erases all type information.
 
-**Why it happens:**
-There is no compile-time enforcement between the C header declarations and the binding declarations. Julia's `@ccall` and Dart's FFI bindings are text-based reproductions of C signatures. A parameter type change (e.g., `int32_t` to `size_t`, or adding an `out_count` parameter) is invisible to the binding code until runtime. The generators exist (`bindings/julia/generator/generator.bat`, `bindings/dart/generator/generator.bat`) but must be manually triggered.
+**Why it happens:** The project already has this pattern in `convert_params()` (database_query.cpp lines 10-36) for parameterized queries. That function handles single values per parameter (`*static_cast<const int64_t*>(param_values[i])`). The time series redesign extends this to arrays of values per column, amplifying the risk: a type mismatch corrupts not one value but `row_count` values. The bindings (Julia/Dart) construct these parallel arrays, and any bug in the marshaling code silently corrupts data.
 
-**How to avoid:**
-1. After every C API header change, immediately regenerate all bindings using the generator scripts before running any other tests.
-2. Add a CI step that regenerates bindings and diffs against checked-in files; fail if they differ.
-3. When changing function signatures, change all four layers atomically: C++ -> C API -> regenerate Julia -> regenerate Dart -> update Lua manually.
-4. Run `scripts/test-all.bat` after every C API change, not just `quiver_c_tests.exe`.
+**Evidence from codebase:** The `convert_params` function at `database_query.cpp:17` does `*static_cast<const int64_t*>(param_values[i])` -- if `param_types[i]` is wrong, this is undefined behavior. The same pattern scaled to arrays of `row_count` elements is catastrophic.
 
-**Warning signs:**
-- C API tests pass but Julia/Dart tests fail with segfaults or garbage data
-- A function was added to `include/quiver/c/database.h` but is not present in `c_api.jl`
-- `bindings.dart` file timestamp is older than the C API header it wraps
-- `quiver_element_set_array_integer` uses `int32_t count` in C but Julia declares `Int32` while the Dart binding might assume `int` (platform-dependent size)
+**Consequences:** Silent data corruption. Written time series values are wrong. Tests may pass if they only test the happy path with correct types. Production data is silently mangled.
 
-**Phase to address:**
-Every phase that touches C API signatures. Must be a gate criterion: no phase is complete until all bindings are regenerated and all binding tests pass.
+**Prevention:**
+1. In the C API, validate column types against the schema metadata *before* casting. The C API already calls `db->db.get_time_series_metadata()` (line 128 of `database_time_series.cpp`) -- use this to verify that the caller's type tags match the actual column types.
+2. Add explicit validation: if `column_types[i]` does not match `metadata.value_columns[i].data_type`, set error and return `QUIVER_ERROR` before any data is accessed.
+3. In bindings, derive column types from metadata automatically rather than requiring the caller to specify them. The metadata lookup already exists at the C API level.
+4. Consider eliminating the `void*` pattern entirely: instead of `column_types[] + column_data[]`, use separate typed parameters per column, similar to how update_vector_integers/floats/strings are separate functions. This trades API surface area for type safety.
+
+**Detection:** Write tests where column types are deliberately wrong. If the test produces garbage instead of an error, the validation is missing.
+
+**Phase to address:** C API design phase. This is a design decision, not an implementation detail. Choose the API shape before writing code.
 
 ---
 
-### Pitfall 4: Blob Type Stub Silently Corrupting Data
+### Pitfall 3: Julia GC Collecting Intermediate Arrays During ccall
 
-**What goes wrong:**
-The `execute()` method in `database.cpp` (line 359) throws `std::runtime_error("Blob not implemented")` when encountering `SQLITE_BLOB` column types. If any schema evolution introduces BLOB columns, or if a migration adds one, every read operation on tables containing that column will throw, but the column can be written via `execute_raw()` without error. This creates databases with unreadable data.
+**What goes wrong:** When Julia marshals kwargs to parallel C arrays, it creates intermediate Julia arrays (`Vector{Ptr{Cchar}}`, `Vector{Int64}`, `Vector{Float64}`) that hold pointers to native memory or converted values. If these intermediates are not rooted with `GC.@preserve`, the garbage collector can collect them during the `@ccall`, causing the C function to read freed memory.
 
-**Why it happens:**
-The blob stub was likely a placeholder that was never revisited. The `SQLITE_BLOB` case in the `execute()` switch statement (line 358-359) is the only type that throws rather than producing a `Value`. The `Value` type (`std::variant<std::nullptr_t, int64_t, double, std::string>`) has no blob variant. Since the schema validator does not reject schemas containing BLOB columns, nothing prevents them from being created.
+**Why it happens:** The current `update_time_series_group!` in `database_update.jl` (lines 138-167) already demonstrates the correct pattern: it uses `GC.@preserve date_time_cstrings` to keep the string buffer array alive during the ccall. But the redesign adds N columns of varying types, requiring N separate `GC.@preserve` blocks or a single block preserving all intermediates. The risk is that during the rewrite, some columns' intermediates are accidentally left unpreserved.
 
-**How to avoid:**
-1. Add BLOB to the `Value` variant (e.g., as `std::vector<uint8_t>`) or explicitly reject BLOB columns in the `SchemaValidator`.
-2. If deferring blob support, make the `SchemaValidator` reject schemas containing BLOB-typed columns with a clear error message during `apply_schema()` / `migrate_up()`, rather than failing at read time.
-3. Never leave stub `throw` statements in data paths without a corresponding validation gate that prevents reaching them.
+**Evidence from codebase:** The existing `update_vector_strings!` (line 81-87) uses `GC.@preserve cstrings` to protect the string-to-Cstring conversion results. The current pattern works for a single column. With N string columns, N separate conversion arrays must all be preserved simultaneously.
 
-**Warning signs:**
-- A `tests/schemas/valid/` schema file containing BLOB columns passes validation but fails at read time
-- User reports "Blob not implemented" error after migrating an existing database
-- The `export.h` / `data_type.h` files have no Blob enum value
+**Consequences:** Intermittent segfaults in Julia tests. The GC is nondeterministic, so the bug may only manifest under memory pressure, making it extremely difficult to reproduce. Tests pass 99% of the time but fail sporadically in CI.
 
-**Phase to address:**
-Phase 1 (C++ core restructuring). Either implement blob support or add the rejection gate to `SchemaValidator`. This must happen before any file decomposition since the fix touches `database.cpp`, `schema_validator.cpp`, and potentially `value.h`.
+**Prevention:**
+1. Wrap all intermediate arrays in a single `GC.@preserve` block:
+   ```julia
+   all_preserved = []
+   for (name, values) in kwargs
+       if values isa Vector{<:AbstractString}
+           cstrings = [Base.cconvert(Cstring, s) for s in values]
+           push!(all_preserved, cstrings)
+       end
+   end
+   GC.@preserve all_preserved begin
+       # build pointer arrays and call ccall here
+   end
+   ```
+2. Keep string conversion and ccall in the same `GC.@preserve` scope. Never separate them across function boundaries.
+3. For numeric arrays (`Vector{Int64}`, `Vector{Float64}`), Julia guarantees the array memory is stable during ccall (no GC relocation for primitive arrays), but only if the array is still referenced. Ensure a local variable holds it.
 
----
+**Detection:** Run Julia tests with `GC.gc()` calls inserted between array construction and ccall. If there is a preservation bug, forced GC will trigger it deterministically.
 
-### Pitfall 5: TransactionGuard Destructor Silently Swallowing Rollback Failures
-
-**What goes wrong:**
-The `TransactionGuard` destructor in `database.cpp` (lines 249-253) calls `rollback()` when `committed_` is false. The `rollback()` method (lines 224-235) catches its own errors and logs them but does not throw. If the SQLite connection is in a bad state (e.g., disk full, corrupted WAL), the rollback silently fails and the database is left in an inconsistent state with a half-applied transaction. The caller receives the original exception from the operation that failed, never learning that the rollback also failed.
-
-**Why it happens:**
-Destructors cannot throw in C++ (well, they should not), so the design is correct in principle. But the caller pattern assumes rollback always succeeds. If `begin_transaction()` succeeds and then an operation fails, the `TransactionGuard` destructor calls `rollback()`, which logs the failure and returns. The database connection may now be in an indeterminate transaction state.
-
-**How to avoid:**
-1. After a failed rollback, set a flag on the `Impl` that marks the connection as unhealthy (e.g., `impl_->db_healthy = false`).
-2. Make `is_healthy()` check this flag, so subsequent operations fail fast with "Database connection in unhealthy state after failed rollback" rather than producing further corruption.
-3. Alternatively, close and reopen the SQLite connection on rollback failure, since the connection state is unknown.
-
-**Warning signs:**
-- Log messages showing "Failed to rollback transaction" followed by subsequent successful operations
-- Data corruption that only appears after disk pressure or I/O errors
-- `is_healthy()` returns true even after a logged rollback failure
-
-**Phase to address:**
-Phase 1 (C++ core restructuring). Address alongside the TransactionGuard refactoring when splitting `database.cpp`.
+**Phase to address:** Julia binding redesign phase. Must be reviewed in code review with explicit checklist item: "All intermediate arrays preserved during ccall."
 
 ---
 
-### Pitfall 6: Naming Inconsistency Cascade Across Four Layers
+### Pitfall 4: Breaking the Existing Test Suite Incrementally
 
-**What goes wrong:**
-Renaming a function for consistency (e.g., `read_scalar_integers` -> `read_integers` or `delete_element_by_id` -> `delete_by_id`) requires coordinated changes across: (1) C++ header + implementation, (2) C API header + implementation, (3) Julia generator + generated code + wrapper code, (4) Dart generator + generated code + wrapper code, and (5) Lua sol2 bindings. Missing any one layer creates a silent link failure (Dart/Julia) or compile error (C++/C). Partial renames where some layers use old names and others use new names create confusion.
+**What goes wrong:** The redesign changes function signatures at the C API level (`quiver_database_update_time_series_group` gains new parameters). All 1,213 existing tests must continue passing throughout the migration. If the C API signature changes before all binding tests are updated, the entire CI pipeline breaks and stays broken for the duration of the migration, creating a "big bang" commit.
 
-**Why it happens:**
-The project has five separate layers that each independently declare the same logical API. There is no single source of truth that generates all layers. The Julia and Dart generators parse C headers but the Lua bindings in `lua_runner.cpp` are hand-written sol2 registrations. A rename in the C header propagates to Julia/Dart via generators but requires manual Lua updates. And the higher-level Julia/Dart wrapper files (e.g., `database_read.jl`, `database_read.dart`) have their own idiomatic names that are not auto-generated.
+**Why it happens:** The project has 4 test suites (C++, C API, Julia, Dart) plus Lua tests. The C API header is consumed by the Dart ffigen generator and the Julia `c_api.jl` declarations. A signature change in `include/quiver/c/database.h` immediately breaks:
+1. `tests/test_c_api_database_time_series.cpp` (all 15 time series C API tests)
+2. `bindings/julia/src/c_api.jl` line 316-318 (ccall declaration)
+3. `bindings/dart/lib/src/ffi/bindings.dart` (auto-generated)
+4. All Julia/Dart test files that call the function
 
-**How to avoid:**
-1. Create a naming convention document that maps each logical operation to its name in each layer: C++ method, C function, Julia function, Dart method, Lua method.
-2. Rename in atomic batches: all five layers in a single commit.
-3. Run `scripts/test-all.bat` after every rename.
-4. Consider making the Lua bindings table-driven (a registration list) rather than individually hand-written lambda registrations, so additions/renames are less error-prone.
+The C++ layer is unaffected (it already uses `std::vector<std::map<std::string, Value>>`).
 
-**Warning signs:**
-- C++ tests pass, C tests pass, but Julia or Dart tests fail on "symbol not found"
-- Two layers using different names for the same operation (e.g., Julia says `read_time_series_group` but Dart says `readTimeSeriesGroupById`)
-- Lua bindings expose fewer methods than the C API header declares
+**Consequences:** Multi-day period where CI is broken. Developers cannot verify other changes. Partial work must be merged, creating instability. Worse, if the migration is abandoned partway, rolling back is difficult.
 
-**Phase to address:**
-Phase 3 (naming standardization). This should be a dedicated phase with a checklist of every function across all five layers. Do not interleave naming changes with functional changes.
+**Prevention:**
+1. **Add new, don't modify.** Introduce `quiver_database_update_time_series_group_v2` (or `_multi` or `_columnar`) alongside the existing function. Old tests continue passing. New tests exercise the new API. Only remove the old function after all bindings have migrated.
+2. Alternatively, make the new C API signature backward-compatible: if `column_count == 0` and a single `date_times` + `values` pair is provided, use the old code path.
+3. Each layer migrates independently: C API first (with backward compat), then Julia, then Dart, then Lua, each with passing tests at every step.
+4. Use `scripts/test-all.bat` as the gate for every single commit during migration.
 
----
+**Detection:** If more than one test suite is failing simultaneously, the migration is being done wrong. Each commit should break zero or at most one test suite (the one being actively migrated).
 
-### Pitfall 7: File Decomposition Breaking Pimpl Encapsulation
-
-**What goes wrong:**
-The `Database::Impl` struct (defined at line 166 of `database.cpp`) contains the sqlite3 pointer, logger, schema, type_validator, and the `TransactionGuard` inner class. When splitting `database.cpp` (1934 lines) into multiple files (e.g., `database_read.cpp`, `database_create.cpp`, `database_update.cpp`), each new file needs access to the `Impl` struct. If `Impl` is moved to a shared internal header, the Pimpl encapsulation is violated -- sqlite3.h and spdlog headers become transitively included by all files that include the internal header, defeating the purpose of Pimpl.
-
-**Why it happens:**
-The entire `Database` class uses a single `Impl` that holds all state. Every method accesses `impl_->db`, `impl_->logger`, `impl_->schema`, or calls `impl_->require_collection()`. Splitting the implementation file without splitting the `Impl` struct forces the internal header to expose everything. But splitting `Impl` into sub-structs creates a different complexity: the transaction guard needs `db`, logging needs `logger`, validation needs `schema`, etc.
-
-**How to avoid:**
-1. Create a single `src/database_impl.h` (internal, not in `include/`) that defines `Database::Impl` and is only included by `src/database_*.cpp` files. This is the standard approach: Pimpl hides dependencies from public headers, not from the library's own translation units.
-2. Do NOT put `database_impl.h` in `include/quiver/`. It must stay in `src/`.
-3. Ensure CMakeLists.txt does not install `database_impl.h`.
-4. Each split file includes `database_impl.h` and implements a subset of `Database` methods.
-
-**Warning signs:**
-- New files in `include/quiver/` that include `<sqlite3.h>` or `<spdlog/spdlog.h>`
-- Build times increase because translation units now parse sqlite3/spdlog headers that were previously hidden
-- The public `database.h` header gains new includes
-
-**Phase to address:**
-Phase 1 (C++ core file decomposition). This is the first decision to make before any code is moved. Get the internal header structure right, then split.
+**Phase to address:** This is a *process* pitfall, not a code pitfall. It affects the phase ordering in the roadmap. The roadmap must enforce incremental migration with backward compatibility.
 
 ---
 
-### Pitfall 8: Schema Naming Convention Fragility (`get_parent_collection` Using First Underscore)
+### Pitfall 5: Free Function Mismatch for Variable-Column Read Results
 
-**What goes wrong:**
-`Schema::get_parent_collection()` in `schema.cpp` (line 112-118) extracts the parent collection by taking the substring before the first underscore: `table.substr(0, table.find('_'))`. If a collection name ever contains an underscore (even though the validator currently rejects them), or if a naming convention like `TimeSeries` is used for a collection that has child tables like `TimeSeries_vector_values`, the parsing breaks. The `is_collection()` method (line 80-85) uses `table.find('_') == std::string::npos` to identify collections, meaning `Configuration` is hardcoded as a special case.
+**What goes wrong:** The current `quiver_database_free_time_series_data(char** date_times, double* values, size_t row_count)` frees exactly 2 arrays: one `char**` (with per-element string deallocation) and one `double*`. The new multi-column read returns N arrays of varying types. Each array has different deallocation requirements: `int64_t*` uses `delete[]`, `double*` uses `delete[]`, `char**` requires iterating and freeing each string then freeing the array. A single generic free function must know the type of each column to free it correctly.
 
-**Why it happens:**
-The schema naming convention relies on string parsing rather than storing explicit parent-child relationships. The validator at `schema_validator.cpp` line 60-63 rejects collection names with underscores, but this is a validation rule, not a structural guarantee. If the validator rule is relaxed (e.g., to allow `My_Collection`), the entire table classification system breaks.
+**Why it happens:** The existing alloc/free pattern co-locates allocation and deallocation (per CLAUDE.md principle). The free function is hardcoded to the allocation shape. With variable columns, the free function must accept type information to know how to deallocate each column. Passing type info to a free function is unusual and error-prone.
 
-**How to avoid:**
-1. During schema loading (`Schema::load_from_database`), explicitly build a map of `table -> parent_collection` using foreign key analysis rather than string parsing.
-2. Classify tables during loading based on their foreign keys and column structure, not their names.
-3. If name-based classification must remain, document it as an invariant and add regression tests for edge cases.
-4. Never relax the "no underscores in collection names" rule without first replacing the string-based classification.
+**Evidence from codebase:** Compare `quiver_database_free_time_series_data` (line 152-163 of `database_time_series.cpp`) which knows the exact layout (char** + double*), vs `free_vectors_impl` template (database_helpers.h:50-61) which is generic for numeric types but not for mixed types. There is no existing pattern for freeing N columns of heterogeneous types.
 
-**Warning signs:**
-- A test schema with a collection name containing underscores passes validation but produces wrong parent collection mappings
-- `list_vector_groups()` returns empty for a collection whose vector tables exist
-- `find_table_for_column()` fails to find a table that clearly exists in the schema
+**Consequences:** Memory leaks (if string columns are freed as `delete[]` instead of per-element `delete[]` then `delete[]`), double-free (if numeric columns are freed with string deallocation logic), or heap corruption.
 
-**Phase to address:**
-Phase 1 (C++ core restructuring), specifically when refactoring `schema.cpp`. Consider switching to a structural classification approach.
+**Prevention:**
+1. **Return a struct, not raw arrays.** Define `quiver_time_series_data_t` that bundles all column data, types, and counts. Provide a single `quiver_database_free_time_series_data_v2(quiver_time_series_data_t*)` that knows how to free each column based on stored type information.
+   ```c
+   typedef struct {
+       char** dimension_values;   // date/time strings
+       size_t row_count;
+       quiver_data_type_t* column_types;
+       char** column_names;
+       void** column_data;  // each points to typed array
+       size_t column_count;
+   } quiver_time_series_data_t;
+   ```
+2. The free function iterates `column_count`, switches on `column_types[i]`, and frees appropriately. The type information travels with the data, eliminating caller error.
+3. Keep the struct opaque to the caller. Provide accessor functions if needed.
+
+**Detection:** Run address sanitizer on all read tests. Write a test that reads a multi-column time series with mixed types (integer + float + string columns) and verifies clean deallocation.
+
+**Phase to address:** C API design phase. This must be decided before implementation because it determines the entire API shape.
 
 ---
 
-## Technical Debt Patterns
+## Moderate Pitfalls
 
-Shortcuts that seem reasonable but create long-term problems.
+Mistakes that cause bugs, rework, or test failures but are recoverable.
 
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| String concatenation for SQL identifiers | Simpler code, no identifier quoting needed | SQL injection risk, fragile with special characters | Never -- always validate against schema |
-| Duplicated code across `read_vector_*`, `read_set_*`, `update_vector_*`, `update_set_*` | Each method is self-contained and readable | 18+ nearly-identical methods in `database.cpp` that drift apart during edits | Only in initial prototyping; template-refactor during file decomposition |
-| Hand-written Lua sol2 bindings | Direct control, no generator dependency | Lua bindings lag behind C API, miss new functions, naming drifts | Acceptable if Lua is low-priority; add tracking checklist |
-| `export_to_csv` / `import_from_csv` as empty stubs (lines 1818-1824) | Placeholder for future feature | Bound to C API and all bindings; callers get silent no-op | Only if callers are warned; currently returns `void` with no error |
-| `SQLITE_BLOB` throwing runtime_error | Defers blob implementation | Databases with blob columns crash at read time, not at schema load | Never without a validation gate |
+### Pitfall 6: Kwargs Column Name to Schema Column Name Mismatch
 
-## Integration Gotchas
+**What goes wrong:** Julia kwargs use Symbol keys (`:temperature`, `:humidity`). The user writes `update_time_series_group!(db, "Sensor", "temperature", id; date_time=dates, temperature=temps)`. The kwargs key `temperature` must exactly match the SQL column name in `Sensor_time_series_temperature`. If the column is named `temp_celsius` but the kwarg is `temperature`, the data silently goes to the wrong column or the C++ layer throws "column not found."
 
-Common mistakes when connecting the layers of this codebase.
+**Why it happens:** Julia kwargs are Symbols converted to Strings. There is no compile-time or IDE-assisted validation that the kwarg name matches a real column. The current `Dict{String, Any}` interface at least makes the column name visually explicit as a string key. Kwargs feel more natural but hide the mapping.
 
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| C++ -> C API | Returning `const char*` pointing to C++ internal `std::string` that gets destroyed (e.g., `quiver_database_path` returns `db->db.path().c_str()` which is valid only while `db` lives) | Document lifetime guarantees; for short-lived strings, use `strdup_safe()` and require caller to free |
-| C API -> Julia | Julia `@ccall` type mismatches (e.g., `Int32` vs `Cint` vs `Int64`) silently produce wrong values | Always use Julia's C-compatible types (`Cint`, `Csize_t`, `Cdouble`) and verify against C header |
-| C API -> Dart | Dart `Arena` allocation freed before native function reads the data | Ensure Arena is not released until after the C function returns; use `try/finally` blocks consistently |
-| C API -> Lua | sol2 lambda captures reference to `Database&` which must outlive `LuaRunner` | Enforce that `LuaRunner` destructor runs before `Database` destructor; document ownership requirement |
-| Schema -> PRAGMA | Table names from user input passed to `PRAGMA table_info()` without quoting | In `schema.cpp`, table names come from `sqlite_master` (trusted); in `database.cpp`, they come from callers (untrusted) -- validate before use |
+**Prevention:**
+1. Validate column names against metadata in the binding before calling the C API. The binding can call `get_time_series_metadata` to get the list of valid column names and reject unknown kwargs early with a clear error.
+2. Keep the error message specific: "Unknown column 'temperature' in time series group 'temp'. Valid columns: date_time, temp_celsius, humidity".
+3. In Dart, named parameters are defined at compile time in the function signature, so this validation happens naturally. But for dynamic schemas, Dart must use a Map parameter anyway (named parameters cannot be dynamically defined).
 
-## Performance Traps
+**Detection:** Write a test that passes an invalid column name via kwargs and verifies the error message names the invalid column and lists valid ones.
 
-Patterns that work at small scale but fail as usage grows.
+**Phase to address:** Julia and Dart binding redesign phases.
 
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| Per-row `INSERT` in loops (create_element, update_vector, update_set) | Slow writes for large vectors/sets/time_series | Use multi-row INSERT or prepared statement reuse within transaction | > 1000 elements per vector/set |
-| Full table scan in `read_scalar_*` (no WHERE clause) | Slow reads as table grows | This is by design (read all elements), but consider pagination API | > 100K rows per collection |
-| `Schema::from_database` runs N+1 PRAGMA queries (1 per table) | Slow database opening with many tables | Cache schema or batch introspection | > 50 tables in schema |
-| `find_table_for_column` iterates all tables sequentially | Slow column routing in create_element with many tables | Build a column-to-table index during schema loading | > 20 group tables per collection |
+---
 
-## Security Mistakes
+### Pitfall 7: Dart Named Parameters Cannot Be Dynamic
 
-Domain-specific security issues beyond general web security.
+**What goes wrong:** The project context says "Dart from List<Map> to named parameters." But Dart named parameters are compile-time constructs -- you cannot dynamically define named parameters based on schema metadata. A time series group with columns `[temperature, humidity]` would need `void updateTimeSeriesGroup({required List<double> temperature, required List<double> humidity})`, but the column names and types vary per schema. This is impossible with Dart named parameters.
 
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| Collection/attribute names interpolated into SQL without validation | SQL injection through malicious collection or attribute names passed by binding callers | Validate all identifiers against the Schema's known tables/columns before SQL construction |
-| `execute_raw()` exposed as private method but callable from `migrate_up()` with file contents | Malicious migration SQL could execute arbitrary commands (ATTACH, load_extension) | Disable SQLite extension loading; validate migration SQL if migrations come from untrusted sources |
-| `quiver_get_last_error()` returns thread-local string | Error messages from one thread could leak to another if thread-local storage is not correctly initialized | Verify `thread_local` storage works correctly on all target platforms (Windows TLS has nuances with DLLs) |
+**Why it happens:** Confusion between Dart named parameters (static, declared in function signature) and Python-style kwargs (dynamic, runtime-determined). Dart does not support the latter.
 
-## "Looks Done But Isn't" Checklist
+**Consequences:** If the Dart API is designed around named parameters, it only works for a fixed set of known column names, defeating the purpose of a schema-flexible library.
 
-Things that appear complete but are missing critical pieces.
+**Prevention:**
+1. **Accept that Dart must use a Map.** The Dart API should be `void updateTimeSeriesGroup(String collection, String group, int id, Map<String, List<Object>> columns)` where keys are column names and values are typed lists.
+2. Alternatively, use a builder pattern:
+   ```dart
+   db.updateTimeSeriesGroup('Sensor', 'temperature', id,
+     TimeSeriesData()
+       ..addStringColumn('date_time', dateTimes)
+       ..addDoubleColumn('temperature', temps));
+   ```
+3. Document why named parameters are not used: column names come from the schema, not the code.
 
-- [ ] **File decomposition:** Splitting `database.cpp` into `database_read.cpp`, `database_create.cpp`, etc. looks done, but verify that `Database::Impl` is in a private internal header (not public), and that build times actually improved
-- [ ] **C API function renaming:** Function renamed in C header, but check: (1) Julia generator re-run, (2) Dart generator re-run, (3) Lua sol2 binding updated, (4) all four test suites pass
-- [ ] **New CRUD method added:** C++ implementation exists and C++ tests pass, but check: (1) C API wrapper exists, (2) C API test exists, (3) Julia binding wrapper exists, (4) Dart binding wrapper exists, (5) Lua binding registered
-- [ ] **Memory free function added:** `quiver_free_*` function exists in header, but verify: (1) Implementation in `.cpp` matches allocation strategy, (2) Julia finalizer calls it, (3) Dart wrapper calls it, (4) no double-free or leak in any binding
-- [ ] **Schema validator updated:** New validation rule added, but verify: (1) invalid schema test in `tests/schemas/invalid/` exercises it, (2) error message is descriptive, (3) existing valid schemas still pass
+**Detection:** If the Dart API design review proposes named parameters, flag this immediately.
+
+**Phase to address:** API design phase (before implementation). This is a design decision.
+
+---
+
+### Pitfall 8: Read Side Returning Columnar Data but Caller Expecting Row-Oriented
+
+**What goes wrong:** If the new `read_time_series_group` C API returns columnar data (parallel arrays per column), but bindings transpose to row-oriented `Dict[]` / `List<Map>`, the transposition has O(rows * columns) cost and creates N*M Dict/Map objects. For large time series (100K rows, 5 columns), this creates 500K map entries, causing significant memory and CPU overhead.
+
+**Why it happens:** The C++ layer returns row-oriented data (`std::vector<std::map<std::string, Value>>`). The C API must flatten this to C-compatible arrays. The most natural C representation is columnar (parallel arrays). The bindings must reconstruct row-oriented structures for the user.
+
+**Evidence from codebase:** The current Dart `readVectorGroupById` and Julia `read_vector_group_by_id` both do column-to-row transposition (see Julia `database_read.jl` lines 536-547 and Dart `database_read.dart` lines 873-883).
+
+**Prevention:**
+1. Accept the transposition cost and optimize: allocate rows vector with capacity, pre-size dicts.
+2. Consider offering both columnar and row-oriented read APIs at the binding level. Power users who process large time series column-wise can skip transposition.
+3. For the C API, columnar is correct: it avoids per-row allocation overhead and is more cache-friendly for the C layer.
+
+**Detection:** Benchmark read operations with 10K and 100K row time series. If transposition takes more than 10% of total read time, consider offering columnar read in bindings.
+
+**Phase to address:** C API and binding implementation phases.
+
+---
+
+### Pitfall 9: Lua Table-Based Interface Inconsistency
+
+**What goes wrong:** Lua currently receives and returns time series as arrays of tables (Lua tables, i.e., `{ {date_time = "...", value = 1.0}, ... }`). If the C++ `update_time_series_group` changes its signature but the Lua sol2 binding is not updated, Lua scripts silently pass wrong data shapes. Unlike Julia/Dart which go through the C API, Lua binds directly to C++ via sol2 lambdas.
+
+**Why it happens:** Lua bindings are manually maintained in `lua_runner.cpp`. The `update_time_series_group_from_lua` function (line 1058-1069) manually iterates a sol::table and calls `lua_table_to_value_map()`. If the C++ interface changes to accept columnar data instead of row maps, the Lua binding must be completely rewritten, not just updated.
+
+**Evidence from codebase:** `lua_runner.cpp` line 1063-1068 shows the current pattern: iterate `rows` table by integer index, convert each row to a `std::map<std::string, Value>`.
+
+**Prevention:**
+1. Keep the C++ `update_time_series_group` accepting `std::vector<std::map<std::string, Value>>`. The C++ interface is already correct for multi-column. Only the C API needs redesign.
+2. The Lua binding should continue calling the C++ method directly with the same row-map interface. No change needed in Lua unless the C++ interface changes.
+3. If the C++ interface does change, update Lua in the same commit. The Lua sol2 bindings are only ~50 lines per function and can be updated quickly.
+
+**Detection:** Run Lua tests after every C++ interface change. Lua tests are fast and catch binding mismatches immediately.
+
+**Phase to address:** C++ core phase (if C++ interface changes) or Lua binding phase.
+
+---
+
+### Pitfall 10: Dimension Column Handling Inconsistency
+
+**What goes wrong:** The dimension column (`date_time`) has special semantics: it is the ordering/primary key column, not a "value" column. The current C API hardcodes this as `const char* const* date_times` (always string, always separate). The new multi-column API must decide: is the dimension column one of the N columns, or is it still a separate parameter? Inconsistency here causes confusion in every binding.
+
+**Why it happens:** The schema allows the dimension column to have any `date_`-prefixed name (`date_time`, `date_recorded`, etc.) and the C++ layer discovers it dynamically from metadata. The current C API hardcodes "date_times" as the parameter name. The new API must handle arbitrary dimension column names.
+
+**Evidence from codebase:** `database_time_series.cpp` lines 64-67 and 126-130 show the C API looking up the dimension column name from metadata. The multi_time_series.sql schema uses `date_time` for both groups, but there is no guarantee all schemas use the same name.
+
+**Prevention:**
+1. Keep the dimension column as a separate, explicitly-named parameter in the C API. It is always a string array. The value columns are the variable-count typed arrays.
+   ```c
+   quiver_database_update_time_series_group(
+       db, collection, group, id,
+       dimension_values,  // always const char* const*, always string
+       column_names, column_types, column_data, column_count,  // value columns
+       row_count);
+   ```
+2. In bindings, require the dimension column kwarg/key to match the schema's dimension column name. Validate early.
+3. Document clearly: the dimension column is always string, always separate, always required.
+
+**Detection:** Test with a schema where the dimension column is named something other than `date_time` (e.g., `date_recorded`). Verify that both read and update work correctly.
+
+**Phase to address:** C API design phase.
+
+---
+
+## Minor Pitfalls
+
+### Pitfall 11: FFI Generator Not Regenerated After C API Changes
+
+**What goes wrong:** After changing `quiver_database_update_time_series_group` signature in `include/quiver/c/database.h`, the developer forgets to run `bindings/julia/generator/generator.bat` and `bindings/dart/generator/generator.bat`. The old function signatures remain in `c_api.jl` and `bindings.dart`, causing link errors or silent data corruption.
+
+**Prevention:** Add generator re-run to the checklist for every C API change. Ideally, the build system detects header changes and triggers regeneration.
+
+---
+
+### Pitfall 12: Row Count Validation Across All Column Arrays
+
+**What goes wrong:** The new C API accepts N column arrays, each with `row_count` elements. If column A has 100 elements but column B has 99 (off-by-one), the C API reads past the end of column B's array. There is no way to detect this from the C API side because C arrays do not carry their length.
+
+**Prevention:**
+1. Trust the caller (consistent with project philosophy of "clean code over defensive code").
+2. But document the contract clearly: "All column data arrays must have exactly `row_count` elements."
+3. In bindings, validate array lengths before calling the C API:
+   ```julia
+   for (name, values) in kwargs
+       length(values) == row_count || throw(ArgumentError("Column '$name' has $(length(values)) elements, expected $row_count"))
+   end
+   ```
+
+---
+
+### Pitfall 13: Empty Time Series Edge Cases with Multi-Column
+
+**What goes wrong:** The current API handles empty time series by passing `nullptr` for both arrays and `0` for count. With N columns, the convention must be consistent: are all column arrays `nullptr`, or is the entire column descriptor `nullptr`?
+
+**Prevention:** Define and test the empty case explicitly. Convention: if `row_count == 0`, all column data pointers may be `nullptr`. The free function must handle this gracefully (check for nullptr before iterating).
+
+---
+
+## Phase-Specific Warnings
+
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| C++ core interface | Changing `update_time_series_group` signature breaks Lua sol2 bindings | Keep C++ accepting `vector<map<string, Value>>`, only change C API |
+| C API design | void* column data with type tags enables silent corruption | Validate types against schema metadata before casting |
+| C API design | No struct-based return leads to complex free functions | Use `quiver_time_series_data_t` result struct |
+| C API implementation | Partial allocation leak on exception path | Allocate all arrays before writing to out-params |
+| Julia bindings | GC collecting string intermediates during ccall | Single `GC.@preserve` block for all intermediate arrays |
+| Julia bindings | kwargs column names not validated against schema | Call `get_time_series_metadata` and validate before ccall |
+| Dart bindings | Assuming named parameters can be schema-dynamic | Use Map or builder pattern, not named parameters |
+| Dart bindings | Arena freed too early when constructing multi-column arrays | Keep single Arena for entire operation, release in finally |
+| Lua bindings | Lua table structure changes silently | Lua binds to C++, not C API; keep C++ interface stable |
+| All bindings | FFI generators not re-run after header change | Regenerate immediately, diff, test-all.bat |
+| Test migration | Changing C API signature breaks all 4 test suites at once | Add new function alongside old, migrate incrementally |
+
+## Decision Matrix: API Shape
+
+The single most consequential design decision is the C API shape. Every other pitfall cascades from this choice.
+
+| Approach | Type Safety | Memory Safety | Binding Complexity | Recommendation |
+|----------|-------------|---------------|-------------------|----------------|
+| **A: Separate typed functions** (`_integers`, `_floats`, `_strings` per column) | HIGH | HIGH | HIGH (N ccalls per update) | NO -- too many FFI crossings for multi-column |
+| **B: Parallel arrays with type tags** (`column_types[] + void* column_data[]`) | LOW | LOW | MEDIUM | NO -- void* is a footgun, project already has this with query params and it works but does not scale |
+| **C: Struct-based** (`quiver_time_series_columns_t` with typed column descriptors) | MEDIUM | HIGH | LOW (one ccall, one free) | YES -- type info travels with data, single alloc/free point |
+| **D: Per-column calls inside a transaction** (begin_update, add_column, commit_update) | HIGH | HIGH | MEDIUM | MAYBE -- more C API surface but each call is type-safe |
+
+**Recommendation:** Approach C (struct-based). It provides the best balance of safety and simplicity. The struct bundles column names, types, and data pointers together, and the free function can iterate the struct to deallocate correctly. This is consistent with the existing `quiver_group_metadata_t` pattern which already bundles variable-length typed metadata.
 
 ## Recovery Strategies
 
-When pitfalls occur despite prevention, how to recover.
-
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| SQL injection in identifier | MEDIUM | Add identifier validation function; audit all SQL-building code; no data loss since SQLite STRICT mode limits damage |
-| Memory ownership mismatch (C API) | HIGH | Run AddressSanitizer on all test suites; audit every alloc/free pair; fix mismatches; re-test all bindings |
-| Binding desynchronization | LOW | Re-run generators; diff output; fix any manual bindings; run test-all.bat |
-| Blob stub hit in production | LOW | Add SchemaValidator rejection for BLOB columns; or implement blob support; re-validate existing schemas |
-| TransactionGuard rollback failure | HIGH | Add connection health tracking; audit all code paths that use TransactionGuard; add integration tests for I/O failure scenarios |
-| Naming cascade incomplete | MEDIUM | Grep for old name across all files; fix remaining references; run test-all.bat; update naming map |
-| Pimpl broken by file split | MEDIUM | Move internal header from `include/` to `src/`; verify public header includes unchanged; rebuild and check compile times |
-| Schema naming fragility | HIGH | Redesign table classification to use structural analysis; extensive regression testing on all existing schemas |
-
-## Pitfall-to-Phase Mapping
-
-How roadmap phases should address these pitfalls.
-
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| SQL injection in identifiers | Phase 1: C++ core restructuring | All SQL-building methods validated by `validate_identifier()`; no raw string concatenation of user input into SQL |
-| C API memory ownership | Phase 2: C API restructuring | Each alloc/free pair co-located; AddressSanitizer clean on full test suite |
-| Binding desynchronization | Every phase touching C API | Generator re-run + diff check after every C API change; `test-all.bat` passes |
-| Blob type stub | Phase 1: C++ core restructuring | SchemaValidator rejects BLOB columns OR blob variant added to Value type |
-| TransactionGuard failures | Phase 1: C++ core restructuring | Connection health flag set on rollback failure; `is_healthy()` reflects it |
-| Naming inconsistency cascade | Phase 3: naming standardization | Naming map document with all five layers; test-all.bat passes |
-| Pimpl encapsulation break | Phase 1: C++ file decomposition | `database_impl.h` exists in `src/`, not `include/`; public header includes unchanged |
-| Schema naming fragility | Phase 1: C++ core restructuring | `get_parent_collection` tested with edge cases; consider structural classification |
+| Partial allocation leak | LOW | Add address sanitizer to CI; fix leak; re-test |
+| Type tag mismatch corruption | HIGH | Data must be re-written; add validation; re-test with bad types |
+| Julia GC segfault | MEDIUM | Add `GC.@preserve`; difficult to reproduce -- add forced GC in tests |
+| Broken test suite | LOW | Add backward-compat old function; migrate incrementally |
+| Free function mismatch | HIGH | Address sanitizer + valgrind; audit all alloc/free paths |
+| Kwargs column mismatch | LOW | Add metadata validation in binding; clear error message |
+| Dart named params impossible | LOW | Switch to Map; design review catches early |
+| Row-column transposition perf | LOW | Benchmark; add columnar API if needed |
+| Lua binding stale | LOW | Run Lua tests; update sol2 binding |
+| Dimension column inconsistency | MEDIUM | Standardize as separate param; test with non-standard dim names |
 
 ## Sources
 
-- Direct codebase analysis of `src/database.cpp` (1934 lines), `src/c/database.cpp` (1612 lines), `src/schema.cpp`, `src/schema_validator.cpp`, and all binding files
-- [C++ Stories - The Pimpl Pattern](https://www.cppstories.com/2018/01/pimpl/) - Pimpl decomposition pitfalls
-- [C Wrappers for C++ Libraries and Interoperability](https://caiorss.github.io/C-Cpp-Notes/CwrapperToQtLibrary.html) - C API wrapper patterns
-- [FFI Wikipedia](https://en.wikipedia.org/wiki/Foreign_function_interface) - Cross-language FFI type mapping challenges
-- [SQLite Injection Payloads](https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/SQL%20Injection/SQLite%20Injection.md) - SQLite-specific injection techniques
-- [Dart C interop](https://dart.dev/interop/c-interop) - Dart FFI binding patterns
-- [Real-World Cross-Language Bugs](https://chapering.github.io/pubs/fse25haoran.pdf) - Academic study on cross-language bug patterns
+- Direct analysis of `src/c/database_time_series.cpp` (279 lines) -- current alloc/free patterns
+- Direct analysis of `src/c/database_query.cpp` (197 lines) -- existing void*/type-tag pattern for parameterized queries
+- Direct analysis of `src/c/database_helpers.h` (145 lines) -- existing marshaling templates
+- Direct analysis of `bindings/julia/src/database_update.jl` (201 lines) -- current Julia time series update with `GC.@preserve`
+- Direct analysis of `bindings/dart/lib/src/database_update.dart` (374 lines) -- current Dart Arena-based FFI
+- Direct analysis of `src/lua_runner.cpp` lines 1058-1069 -- current Lua sol2 time series binding
+- Direct analysis of `tests/test_c_api_database_time_series.cpp` (548 lines) -- 15 existing C API time series tests
+- Direct analysis of `include/quiver/c/database.h` (462 lines) -- existing C API surface
+- Direct analysis of `tests/schemas/valid/multi_time_series.sql` -- multi-group schema (single value column per group)
+- Existing project PITFALLS.md (v1.0 milestone) -- Pitfall 2 (C API memory ownership) and Pitfall 3 (binding desynchronization) are directly relevant and amplified by this redesign
 
 ---
-*Pitfalls research for: C++20 library refactoring with C FFI and multi-language bindings*
-*Researched: 2026-02-09*
+*Pitfalls research for: Time series update interface redesign (multi-column C API + kwargs bindings)*
+*Researched: 2026-02-12*
