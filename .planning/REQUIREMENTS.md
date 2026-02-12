@@ -55,25 +55,25 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CAPI-01 | — | Pending |
-| CAPI-02 | — | Pending |
-| CAPI-03 | — | Pending |
-| CAPI-04 | — | Pending |
-| CAPI-05 | — | Pending |
-| BIND-01 | — | Pending |
-| BIND-02 | — | Pending |
-| BIND-03 | — | Pending |
-| BIND-04 | — | Pending |
-| BIND-05 | — | Pending |
-| MIGR-01 | — | Pending |
-| MIGR-02 | — | Pending |
-| MIGR-03 | — | Pending |
+| CAPI-01 | Phase 11 | Pending |
+| CAPI-02 | Phase 11 | Pending |
+| CAPI-03 | Phase 11 | Pending |
+| CAPI-04 | Phase 11 | Pending |
+| CAPI-05 | Phase 11 | Pending |
+| BIND-01 | Phase 12 | Pending |
+| BIND-02 | Phase 12 | Pending |
+| BIND-03 | Phase 13 | Pending |
+| BIND-04 | Phase 13 | Pending |
+| BIND-05 | Phase 14 | Pending |
+| MIGR-01 | Phase 11 | Pending |
+| MIGR-02 | Phase 14 | Pending |
+| MIGR-03 | Phase 14 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 13 total
-- Mapped to phases: 0
-- Unmapped: 13
+- Mapped to phases: 13
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-12*
-*Last updated: 2026-02-12 after initial definition*
+*Last updated: 2026-02-12 after roadmap creation*
