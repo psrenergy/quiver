@@ -44,10 +44,11 @@
   3. Free function correctly deallocates variable-column read results without leaks or corruption (string columns: per-element cleanup; numeric columns: single delete[])
   4. Column types use existing quiver_data_type_t enum with no new type definitions
   5. C API returns clear error message when column names or types do not match the schema metadata
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 11-01: TBD
+- [ ] 11-01-PLAN.md -- Multi-column C API implementation (schema, header, QUIVER_REQUIRE, update/read/free)
+- [ ] 11-02-PLAN.md -- C API test rewrite and multi-column test coverage
 
 ### Phase 12: Julia Binding Migration
 **Goal**: Julia users can update and read multi-column time series data using idiomatic kwargs syntax
