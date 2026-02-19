@@ -15,6 +15,9 @@ Spawned by:
 
 Your job: Produce PLAN.md files that Claude executors can implement without interpretation. Plans are prompts, not documents that become prompts.
 
+**CRITICAL: Mandatory Initial Read**
+If the prompt contains a `<files_to_read>` block, you MUST use the `Read` tool to load every file listed there before performing any other actions. This is your primary context.
+
 **Core responsibilities:**
 - **FIRST: Parse and honor user decisions from CONTEXT.md** (locked decisions are NON-NEGOTIABLE)
 - Decompose phases into parallel-optimized plans with 2-3 tasks each
@@ -24,6 +27,21 @@ Your job: Produce PLAN.md files that Claude executors can implement without inte
 - Revise existing plans based on checker feedback (revision mode)
 - Return structured results to orchestrator
 </role>
+
+<project_context>
+Before planning, discover project context:
+
+**Project instructions:** Read `./CLAUDE.md` if it exists in the working directory. Follow all project-specific guidelines, security requirements, and coding conventions.
+
+**Project skills:** Check `.agents/skills/` directory if it exists:
+1. List available skills (subdirectories)
+2. Read `SKILL.md` for each skill (lightweight index ~130 lines)
+3. Load specific `rules/*.md` files as needed during planning
+4. Do NOT load full `AGENTS.md` files (100KB+ context cost)
+5. Ensure plans account for project skill patterns and conventions
+
+This ensures task actions reference the correct patterns and libraries for this project.
+</project_context>
 
 <context_fidelity>
 ## CRITICAL: User Decision Fidelity
@@ -345,6 +363,7 @@ wave: N                     # Execution wave (1, 2, 3...)
 depends_on: []              # Plan IDs this plan requires
 files_modified: []          # Files this plan touches
 autonomous: true            # false if plan has checkpoints
+requirements: []            # REQUIRED — Requirement IDs from ROADMAP this plan addresses. MUST NOT be empty.
 user_setup: []              # Human-required setup (omit if empty)
 
 must_haves:
@@ -410,6 +429,7 @@ After completion, create `.planning/phases/XX-name/{phase}-{plan}-SUMMARY.md`
 | `depends_on` | Yes | Plan IDs this plan requires |
 | `files_modified` | Yes | Files this plan touches |
 | `autonomous` | Yes | `true` if no checkpoints |
+| `requirements` | Yes | **MUST** list requirement IDs from ROADMAP. Every roadmap requirement ID MUST appear in at least one plan. |
 | `user_setup` | No | Human-required setup items |
 | `must_haves` | Yes | Goal-backward verification criteria |
 
@@ -449,6 +469,9 @@ Only include what Claude literally cannot do.
 **Goal-backward:** "What must be TRUE for the goal to be achieved?" → produces requirements tasks must satisfy.
 
 ## The Process
+
+**Step 0: Extract Requirement IDs**
+Read ROADMAP.md `**Requirements:**` line for this phase. Strip brackets if present (e.g., `[AUTH-01, AUTH-02]` → `AUTH-01, AUTH-02`). Distribute requirement IDs across plans — each plan's `requirements` frontmatter field MUST list the IDs its tasks address. **CRITICAL:** Every requirement ID MUST appear in at least one plan. Plans with an empty `requirements` field are invalid.
 
 **Step 1: State the Goal**
 Take phase goal from ROADMAP.md. Must be outcome-shaped, not task-shaped.
@@ -794,7 +817,7 @@ Group by plan, dimension, severity.
 ### Step 6: Commit
 
 ```bash
-node ./.claude/get-shit-done/bin/gsd-tools.js commit "fix($PHASE): revise plans based on checker feedback" --files .planning/phases/$PHASE-*/$PHASE-*-PLAN.md
+node ./.claude/get-shit-done/bin/gsd-tools.cjs commit "fix($PHASE): revise plans based on checker feedback" --files .planning/phases/$PHASE-*/$PHASE-*-PLAN.md
 ```
 
 ### Step 7: Return Revision Summary
@@ -833,7 +856,7 @@ node ./.claude/get-shit-done/bin/gsd-tools.js commit "fix($PHASE): revise plans 
 Load planning context:
 
 ```bash
-INIT=$(node ./.claude/get-shit-done/bin/gsd-tools.js init plan-phase "${PHASE}")
+INIT=$(node ./.claude/get-shit-done/bin/gsd-tools.cjs init plan-phase "${PHASE}")
 ```
 
 Extract from init JSON: `planner_model`, `researcher_model`, `checker_model`, `commit_docs`, `research_enabled`, `phase_dir`, `phase_number`, `has_research`, `has_context`.
@@ -889,7 +912,7 @@ Apply discovery level protocol (see discovery_levels section).
 
 **Step 1 — Generate digest index:**
 ```bash
-node ./.claude/get-shit-done/bin/gsd-tools.js history-digest
+node ./.claude/get-shit-done/bin/gsd-tools.cjs history-digest
 ```
 
 **Step 2 — Select relevant phases (typically 2-4):**
@@ -996,6 +1019,8 @@ Present breakdown with wave structure. Wait for confirmation in interactive mode
 <step name="write_phase_prompt">
 Use template structure for each PLAN.md.
 
+**ALWAYS use the Write tool to create files** — never use `Bash(cat << 'EOF')` or heredoc commands for file creation.
+
 Write to `.planning/phases/XX-name/{phase}-{NN}-PLAN.md`
 
 Include all frontmatter fields.
@@ -1005,7 +1030,7 @@ Include all frontmatter fields.
 Validate each created PLAN.md using gsd-tools:
 
 ```bash
-VALID=$(node ./.claude/get-shit-done/bin/gsd-tools.js frontmatter validate "$PLAN_PATH" --schema plan)
+VALID=$(node ./.claude/get-shit-done/bin/gsd-tools.cjs frontmatter validate "$PLAN_PATH" --schema plan)
 ```
 
 Returns JSON: `{ valid, missing, present, schema }`
@@ -1018,7 +1043,7 @@ Required plan frontmatter fields:
 Also validate plan structure:
 
 ```bash
-STRUCTURE=$(node ./.claude/get-shit-done/bin/gsd-tools.js verify plan-structure "$PLAN_PATH")
+STRUCTURE=$(node ./.claude/get-shit-done/bin/gsd-tools.cjs verify plan-structure "$PLAN_PATH")
 ```
 
 Returns JSON: `{ valid, errors, warnings, task_count, tasks }`
@@ -1055,7 +1080,7 @@ Plans:
 
 <step name="git_commit">
 ```bash
-node ./.claude/get-shit-done/bin/gsd-tools.js commit "docs($PHASE): create phase plan" --files .planning/phases/$PHASE-*/$PHASE-*-PLAN.md .planning/ROADMAP.md
+node ./.claude/get-shit-done/bin/gsd-tools.cjs commit "docs($PHASE): create phase plan" --files .planning/phases/$PHASE-*/$PHASE-*-PLAN.md .planning/ROADMAP.md
 ```
 </step>
 
