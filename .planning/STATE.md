@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-11)
 
 ## Current Position
 
-Phase: 11 of 14 (C API Multi-Column Time Series)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-19 -- Completed 11-01 (multi-column C API signatures + implementation)
+Phase: 11 of 14 (C API Multi-Column Time Series) -- COMPLETE
+Plan: 2 of 2 in current phase
+Status: Phase Complete
+Last activity: 2026-02-19 -- Completed 11-02 (multi-column C API test coverage)
 
-Progress: [█░░░░░░░░░] 12%
+Progress: [██░░░░░░░░] 25%
 
 ## Performance Metrics
 
@@ -34,6 +34,7 @@ Progress: [█░░░░░░░░░] 12%
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 11 | 01 | 5min | 2 | 7 |
+| 11 | 02 | 5min | 2 | 1 |
 
 *v1.1 metrics start fresh at Phase 11*
 
@@ -50,6 +51,8 @@ Recent decisions affecting current work:
 - v1.1: Split QUIVER_REQUIRE into two calls for 9-arg functions (readability over single macro call)
 - v1.1: c_type_name() helper is file-local static in database_time_series.cpp (single use site)
 - v1.1: Dimension column stored as QUIVER_DATA_TYPE_STRING in schema lookup map
+- v1.1: Value columns returned in alphabetical order (std::map in TableDefinition), not CREATE TABLE definition order
+- v1.1: Partial column updates fail on NOT NULL schemas (SQLite constraint enforced at C++ layer)
 
 ### Pending Todos
 
@@ -62,5 +65,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-19
-Stopped at: Completed 11-01-PLAN.md
+Stopped at: Completed 11-02-PLAN.md (Phase 11 complete)
 Resume file: None
