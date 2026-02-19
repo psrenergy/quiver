@@ -58,10 +58,11 @@ Plans:
   1. Julia user can call `update_time_series_group!(db, col, group, id; date_time=[...], val=[...])` with kwargs matching schema column names
   2. Julia user receives multi-column read results with correct native types per column (Int64 for INTEGER, Float64 for REAL, String for TEXT)
   3. Julia tests pass for multi-column time series schema with mixed types (INTEGER + REAL + TEXT value columns)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 12-01: TBD
+- [ ] 12-01-PLAN.md -- Regenerate FFI bindings, rewrite update_time_series_group! (kwargs) and read_time_series_group (Dict)
+- [ ] 12-02-PLAN.md -- Rewrite existing tests for new interface + add multi-column mixed-type tests
 
 ### Phase 13: Dart Binding Migration
 **Goal**: Dart users can update and read multi-column time series data using idiomatic Map interface
