@@ -21,6 +21,8 @@ struct LuaRunner::Impl {
     }
 
     void bind_database() {
+        // NOLINTBEGIN(performance-unnecessary-value-param) sol2 lambda bindings require pass-by-value for type
+        // deduction
         lua.new_usertype<Database>(
             "Database",
             "create_element",
@@ -109,7 +111,7 @@ struct LuaRunner::Impl {
             [](Database& self, const std::string& collection, sol::this_state s) {
                 return read_element_ids_to_lua(self, collection, s);
             },
-            "delete_element_by_id",
+            "delete_element",
             [](Database& self, const std::string& collection, int64_t id) { self.delete_element(collection, id); },
             "update_element",
             [](Database& self, const std::string& collection, int64_t id, sol::table values) {
@@ -296,13 +298,14 @@ struct LuaRunner::Impl {
             [](Database& self, const std::string& collection, sol::table paths) {
                 update_time_series_files_from_lua(self, collection, paths);
             });
+        // NOLINTEND(performance-unnecessary-value-param)
     }
 
     // ========================================================================
     // Conversion helpers
     // ========================================================================
 
-    static std::vector<int64_t> lua_table_to_int64_vector(sol::table t) {
+    static std::vector<int64_t> lua_table_to_int64_vector(const sol::table& t) {
         std::vector<int64_t> result;
         for (size_t i = 1; i <= t.size(); ++i) {
             result.push_back(t.get<int64_t>(i));
@@ -310,7 +313,7 @@ struct LuaRunner::Impl {
         return result;
     }
 
-    static std::vector<double> lua_table_to_double_vector(sol::table t) {
+    static std::vector<double> lua_table_to_double_vector(const sol::table& t) {
         std::vector<double> result;
         for (size_t i = 1; i <= t.size(); ++i) {
             result.push_back(t.get<double>(i));
@@ -318,7 +321,7 @@ struct LuaRunner::Impl {
         return result;
     }
 
-    static std::vector<std::string> lua_table_to_string_vector(sol::table t) {
+    static std::vector<std::string> lua_table_to_string_vector(const sol::table& t) {
         std::vector<std::string> result;
         for (size_t i = 1; i <= t.size(); ++i) {
             result.push_back(t.get<std::string>(i));
@@ -339,7 +342,7 @@ struct LuaRunner::Impl {
             val);
     }
 
-    static std::map<std::string, Value> lua_table_to_value_map(sol::table t) {
+    static std::map<std::string, Value> lua_table_to_value_map(const sol::table& t) {
         std::map<std::string, Value> result;
         for (auto& pair : t) {
             auto key = pair.first.as<std::string>();
@@ -357,9 +360,9 @@ struct LuaRunner::Impl {
         return result;
     }
 
-    static Element table_to_element(sol::table values) {
+    static Element table_to_element(const sol::table& values) {
         Element element;
-        for (auto pair : values) {
+        for (const auto& pair : values) {
             auto key = pair.first;
             auto val = pair.second;
             auto k = key.as<std::string>();
@@ -400,12 +403,13 @@ struct LuaRunner::Impl {
     }
 
     static int64_t
-    create_element_from_lua(Database& db, const std::string& collection, sol::table values, sol::this_state) {
+    create_element_from_lua(Database& db, const std::string& collection, const sol::table& values, sol::this_state) {
         auto element = table_to_element(values);
         return db.create_element(collection, element);
     }
 
-    static void update_element_from_lua(Database& db, const std::string& collection, int64_t id, sol::table values) {
+    static void
+    update_element_from_lua(Database& db, const std::string& collection, int64_t id, const sol::table& values) {
         auto element = table_to_element(values);
         db.update_element(collection, id, element);
     }
@@ -763,18 +767,18 @@ struct LuaRunner::Impl {
         return t;
     }
 
-    static std::vector<Value> lua_table_to_values(sol::table params) {
+    static std::vector<Value> lua_table_to_values(const sol::table& params) {
         std::vector<Value> values;
         for (size_t i = 1; i <= params.size(); ++i) {
             sol::object val = params[i];
             if (val.is<sol::lua_nil_t>()) {
                 values.emplace_back(nullptr);
             } else if (val.is<int64_t>()) {
-                values.push_back(val.as<int64_t>());
+                values.emplace_back(val.as<int64_t>());
             } else if (val.is<double>()) {
-                values.push_back(val.as<double>());
+                values.emplace_back(val.as<double>());
             } else if (val.is<std::string>()) {
-                values.push_back(val.as<std::string>());
+                values.emplace_back(val.as<std::string>());
             }
         }
         return values;
@@ -1093,7 +1097,8 @@ struct LuaRunner::Impl {
         return t;
     }
 
-    static void update_time_series_files_from_lua(Database& db, const std::string& collection, sol::table paths) {
+    static void
+    update_time_series_files_from_lua(Database& db, const std::string& collection, const sol::table& paths) {
         std::map<std::string, std::optional<std::string>> cpp_paths;
         for (auto& pair : paths) {
             auto key = pair.first.as<std::string>();

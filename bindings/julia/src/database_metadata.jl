@@ -48,7 +48,7 @@ function get_scalar_metadata(db::Database, collection::AbstractString, attribute
 
     result = parse_scalar_metadata(metadata[])
 
-    C.quiver_free_scalar_metadata(metadata)
+    C.quiver_database_free_scalar_metadata(metadata)
     return result
 end
 
@@ -58,7 +58,7 @@ function get_vector_metadata(db::Database, collection::AbstractString, group_nam
 
     result = parse_group_metadata(metadata[])
 
-    C.quiver_free_group_metadata(metadata)
+    C.quiver_database_free_group_metadata(metadata)
     return result
 end
 
@@ -68,7 +68,7 @@ function get_set_metadata(db::Database, collection::AbstractString, group_name::
 
     result = parse_group_metadata(metadata[])
 
-    C.quiver_free_group_metadata(metadata)
+    C.quiver_database_free_group_metadata(metadata)
     return result
 end
 
@@ -88,7 +88,7 @@ function list_scalar_attributes(db::Database, collection::AbstractString)
         metadata = unsafe_load(Ptr{C.quiver_scalar_metadata_t}(meta_ptr))
         push!(result, parse_scalar_metadata(metadata))
     end
-    C.quiver_free_scalar_metadata_array(out_metadata[], count)
+    C.quiver_database_free_scalar_metadata_array(out_metadata[], count)
     return result
 end
 
@@ -108,7 +108,7 @@ function list_vector_groups(db::Database, collection::AbstractString)
         metadata = unsafe_load(Ptr{C.quiver_group_metadata_t}(meta_ptr))
         push!(result, parse_group_metadata(metadata))
     end
-    C.quiver_free_group_metadata_array(out_metadata[], count)
+    C.quiver_database_free_group_metadata_array(out_metadata[], count)
     return result
 end
 
@@ -128,7 +128,7 @@ function list_set_groups(db::Database, collection::AbstractString)
         metadata = unsafe_load(Ptr{C.quiver_group_metadata_t}(meta_ptr))
         push!(result, parse_group_metadata(metadata))
     end
-    C.quiver_free_group_metadata_array(out_metadata[], count)
+    C.quiver_database_free_group_metadata_array(out_metadata[], count)
     return result
 end
 
@@ -138,7 +138,7 @@ function get_time_series_metadata(db::Database, collection::AbstractString, grou
 
     result = parse_group_metadata(metadata[])
 
-    C.quiver_free_group_metadata(metadata)
+    C.quiver_database_free_group_metadata(metadata)
     return result
 end
 
@@ -158,7 +158,7 @@ function list_time_series_groups(db::Database, collection::AbstractString)
         metadata = unsafe_load(Ptr{C.quiver_group_metadata_t}(meta_ptr))
         push!(result, parse_group_metadata(metadata))
     end
-    C.quiver_free_group_metadata_array(out_metadata[], count)
+    C.quiver_database_free_group_metadata_array(out_metadata[], count)
     return result
 end
 
@@ -181,6 +181,6 @@ function list_time_series_files_columns(db::Database, collection::String)
 
     ptrs = unsafe_wrap(Array, out_columns[], count)
     result = [unsafe_string(ptr) for ptr in ptrs]
-    C.quiver_free_string_array(out_columns[], count)
+    C.quiver_database_free_string_array(out_columns[], count)
     return result
 end

@@ -263,6 +263,65 @@ TEST(Database, CreateElementWithTimeSeries) {
     EXPECT_DOUBLE_EQ(std::get<double>(rows[2].at("value")), 3.5);
 }
 
+TEST(Database, CreateElementWithMultiTimeSeries) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("multi_time_series.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    // Configuration required first
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    // Create element with shared date_time routed to both time series tables
+    quiver::Element element;
+    element.set("label", std::string("Sensor 1"))
+        .set("date_time", std::vector<std::string>{"2024-01-01T10:00:00", "2024-01-02T10:00:00", "2024-01-03T10:00:00"})
+        .set("temperature", std::vector<double>{20.0, 21.5, 22.0})
+        .set("humidity", std::vector<double>{45.0, 50.0, 55.0});
+
+    int64_t id = db.create_element("Sensor", element);
+    EXPECT_EQ(id, 1);
+
+    // Verify temperature group
+    auto temp_rows = db.read_time_series_group("Sensor", "temperature", id);
+    EXPECT_EQ(temp_rows.size(), 3);
+    EXPECT_EQ(std::get<std::string>(temp_rows[0].at("date_time")), "2024-01-01T10:00:00");
+    EXPECT_EQ(std::get<std::string>(temp_rows[1].at("date_time")), "2024-01-02T10:00:00");
+    EXPECT_EQ(std::get<std::string>(temp_rows[2].at("date_time")), "2024-01-03T10:00:00");
+    EXPECT_DOUBLE_EQ(std::get<double>(temp_rows[0].at("temperature")), 20.0);
+    EXPECT_DOUBLE_EQ(std::get<double>(temp_rows[1].at("temperature")), 21.5);
+    EXPECT_DOUBLE_EQ(std::get<double>(temp_rows[2].at("temperature")), 22.0);
+
+    // Verify humidity group
+    auto hum_rows = db.read_time_series_group("Sensor", "humidity", id);
+    EXPECT_EQ(hum_rows.size(), 3);
+    EXPECT_EQ(std::get<std::string>(hum_rows[0].at("date_time")), "2024-01-01T10:00:00");
+    EXPECT_EQ(std::get<std::string>(hum_rows[1].at("date_time")), "2024-01-02T10:00:00");
+    EXPECT_EQ(std::get<std::string>(hum_rows[2].at("date_time")), "2024-01-03T10:00:00");
+    EXPECT_DOUBLE_EQ(std::get<double>(hum_rows[0].at("humidity")), 45.0);
+    EXPECT_DOUBLE_EQ(std::get<double>(hum_rows[1].at("humidity")), 50.0);
+    EXPECT_DOUBLE_EQ(std::get<double>(hum_rows[2].at("humidity")), 55.0);
+}
+
+TEST(Database, CreateElementWithMultiTimeSeriesMismatchedLengths) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("multi_time_series.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    // Configuration required first
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    // date_time has 3 values, temperature has 3, humidity has 2 — mismatch in humidity table
+    quiver::Element element;
+    element.set("label", std::string("Sensor 1"))
+        .set("date_time", std::vector<std::string>{"2024-01-01T10:00:00", "2024-01-02T10:00:00", "2024-01-03T10:00:00"})
+        .set("temperature", std::vector<double>{20.0, 21.5, 22.0})
+        .set("humidity", std::vector<double>{45.0, 50.0});
+
+    EXPECT_THROW(db.create_element("Sensor", element), std::runtime_error);
+}
+
 TEST(Database, CreateElementWithDatetime) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});

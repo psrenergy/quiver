@@ -25,7 +25,7 @@ void main() {
         var ids = db.readElementIds('Configuration');
         expect(ids.length, equals(3));
 
-        db.deleteElementById('Configuration', 2);
+        db.deleteElement('Configuration', 2);
 
         ids = db.readElementIds('Configuration');
         expect(ids.length, equals(2));
@@ -61,7 +61,7 @@ void main() {
         var ids = db.readElementIds('Collection');
         expect(ids.length, equals(2));
 
-        db.deleteElementById('Collection', 1);
+        db.deleteElement('Collection', 1);
 
         ids = db.readElementIds('Collection');
         expect(ids.length, equals(1));
@@ -97,7 +97,7 @@ void main() {
         var ids = db.readElementIds('Collection');
         expect(ids.length, equals(2));
 
-        db.deleteElementById('Collection', 1);
+        db.deleteElement('Collection', 1);
 
         ids = db.readElementIds('Collection');
         expect(ids.length, equals(1));
@@ -121,7 +121,7 @@ void main() {
         db.createElement('Configuration', {'label': 'Config 1'});
 
         // Delete non-existent element should succeed
-        db.deleteElementById('Configuration', 999);
+        db.deleteElement('Configuration', 999);
 
         // Verify original element still exists
         final ids = db.readElementIds('Configuration');
@@ -151,7 +151,7 @@ void main() {
           'integer_attribute': 300,
         });
 
-        db.deleteElementById('Configuration', 2);
+        db.deleteElement('Configuration', 2);
 
         final labels = db.readScalarStrings('Configuration', 'label');
         expect(labels.length, equals(2));

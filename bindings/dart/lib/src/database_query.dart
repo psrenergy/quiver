@@ -26,7 +26,7 @@ extension DatabaseQuery on Database {
       }
 
       final result = outValue.value.cast<Utf8>().toDartString();
-      bindings.quiver_string_free(outValue.value);
+      bindings.quiver_element_free_string(outValue.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -128,7 +128,7 @@ extension DatabaseQuery on Database {
       }
 
       final result = outValue.value.cast<Utf8>().toDartString();
-      bindings.quiver_string_free(outValue.value);
+      bindings.quiver_element_free_string(outValue.value);
       return result;
     } finally {
       arena.releaseAll();

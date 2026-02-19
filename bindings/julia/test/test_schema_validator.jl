@@ -27,7 +27,12 @@ include("fixture.jl")
     end
 
     @testset "Duplicate Attribute" begin
-        path_schema = joinpath(tests_path(), "schemas", "invalid", "duplicate_attribute.sql")
+        path_schema = joinpath(tests_path(), "schemas", "invalid", "duplicate_attribute_vector.sql")
+        @test_throws Quiver.DatabaseException Quiver.from_schema(":memory:", path_schema)
+    end
+
+    @testset "Duplicate Attribute Time Series" begin
+        path_schema = joinpath(tests_path(), "schemas", "invalid", "duplicate_attribute_time_series.sql")
         @test_throws Quiver.DatabaseException Quiver.from_schema(":memory:", path_schema)
     end
 

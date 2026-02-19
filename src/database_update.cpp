@@ -38,7 +38,7 @@ void Database::update_element(const std::string& collection, int64_t id, const E
             first = false;
         }
         sql += " WHERE id = ?";
-        params.push_back(id);
+        params.emplace_back(id);
 
         execute(sql, params);
     }
@@ -49,23 +49,25 @@ void Database::update_element(const std::string& collection, int64_t id, const E
     std::map<std::string, std::map<std::string, const std::vector<Value>*>> time_series_table_columns;
 
     for (const auto& [attr_name, values] : arrays) {
-        auto match = impl_->schema->find_table_for_column(collection, attr_name);
-        if (!match) {
+        auto matches = impl_->schema->find_all_tables_for_column(collection, attr_name);
+        if (matches.empty()) {
             throw std::runtime_error("Cannot update_element: attribute '" + attr_name +
                                      "' is not a vector, set, or time series attribute in collection '" + collection +
                                      "'");
         }
 
-        switch (match->type) {
-        case GroupTableType::Vector:
-            vector_table_columns[match->table_name][attr_name] = &values;
-            break;
-        case GroupTableType::Set:
-            set_table_columns[match->table_name][attr_name] = &values;
-            break;
-        case GroupTableType::TimeSeries:
-            time_series_table_columns[match->table_name][attr_name] = &values;
-            break;
+        for (const auto& match : matches) {
+            switch (match.type) {
+            case GroupTableType::Vector:
+                vector_table_columns[match.table_name][attr_name] = &values;
+                break;
+            case GroupTableType::Set:
+                set_table_columns[match.table_name][attr_name] = &values;
+                break;
+            case GroupTableType::TimeSeries:
+                time_series_table_columns[match.table_name][attr_name] = &values;
+                break;
+            }
         }
     }
 
@@ -211,6 +213,7 @@ void Database::update_vector_integers(const std::string& collection,
     impl_->require_collection(collection, "update_vector_integers");
 
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
+    impl_->require_column(vector_table, attribute, "update_vector_integers");
 
     Impl::TransactionGuard txn(*impl_);
 
@@ -219,7 +222,7 @@ void Database::update_vector_integers(const std::string& collection,
 
     for (size_t i = 0; i < values.size(); ++i) {
         auto insert_sql = "INSERT INTO " + vector_table + " (id, vector_index, " + attribute + ") VALUES (?, ?, ?)";
-        int64_t vector_index = static_cast<int64_t>(i + 1);
+        auto vector_index = static_cast<int64_t>(i + 1);
         execute(insert_sql, {id, vector_index, values[i]});
     }
 
@@ -235,6 +238,7 @@ void Database::update_vector_floats(const std::string& collection,
     impl_->require_collection(collection, "update_vector_floats");
 
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
+    impl_->require_column(vector_table, attribute, "update_vector_floats");
 
     Impl::TransactionGuard txn(*impl_);
 
@@ -243,7 +247,7 @@ void Database::update_vector_floats(const std::string& collection,
 
     for (size_t i = 0; i < values.size(); ++i) {
         auto insert_sql = "INSERT INTO " + vector_table + " (id, vector_index, " + attribute + ") VALUES (?, ?, ?)";
-        int64_t vector_index = static_cast<int64_t>(i + 1);
+        auto vector_index = static_cast<int64_t>(i + 1);
         execute(insert_sql, {id, vector_index, values[i]});
     }
 
@@ -259,6 +263,7 @@ void Database::update_vector_strings(const std::string& collection,
     impl_->require_collection(collection, "update_vector_strings");
 
     auto vector_table = impl_->schema->find_vector_table(collection, attribute);
+    impl_->require_column(vector_table, attribute, "update_vector_strings");
 
     Impl::TransactionGuard txn(*impl_);
 
@@ -267,7 +272,7 @@ void Database::update_vector_strings(const std::string& collection,
 
     for (size_t i = 0; i < values.size(); ++i) {
         auto insert_sql = "INSERT INTO " + vector_table + " (id, vector_index, " + attribute + ") VALUES (?, ?, ?)";
-        int64_t vector_index = static_cast<int64_t>(i + 1);
+        auto vector_index = static_cast<int64_t>(i + 1);
         execute(insert_sql, {id, vector_index, values[i]});
     }
 
@@ -283,6 +288,7 @@ void Database::update_set_integers(const std::string& collection,
     impl_->require_collection(collection, "update_set_integers");
 
     auto set_table = impl_->schema->find_set_table(collection, attribute);
+    impl_->require_column(set_table, attribute, "update_set_integers");
 
     Impl::TransactionGuard txn(*impl_);
 
@@ -306,6 +312,7 @@ void Database::update_set_floats(const std::string& collection,
     impl_->require_collection(collection, "update_set_floats");
 
     auto set_table = impl_->schema->find_set_table(collection, attribute);
+    impl_->require_column(set_table, attribute, "update_set_floats");
 
     Impl::TransactionGuard txn(*impl_);
 
@@ -329,6 +336,7 @@ void Database::update_set_strings(const std::string& collection,
     impl_->require_collection(collection, "update_set_strings");
 
     auto set_table = impl_->schema->find_set_table(collection, attribute);
+    impl_->require_column(set_table, attribute, "update_set_strings");
 
     Impl::TransactionGuard txn(*impl_);
 

@@ -115,7 +115,7 @@ std::vector<GroupMetadata> Database::list_vector_groups(const std::string& colle
             continue;
 
         // Extract group name from table name
-        if (table_name.size() > prefix.size() && table_name.substr(0, prefix.size()) == prefix) {
+        if (table_name.starts_with(prefix)) {
             auto group_name = table_name.substr(prefix.size());
             result.push_back(get_vector_metadata(collection, group_name));
         }
@@ -136,7 +136,7 @@ std::vector<GroupMetadata> Database::list_set_groups(const std::string& collecti
             continue;
 
         // Extract group name from table name
-        if (table_name.size() > prefix.size() && table_name.substr(0, prefix.size()) == prefix) {
+        if (table_name.starts_with(prefix)) {
             auto group_name = table_name.substr(prefix.size());
             result.push_back(get_set_metadata(collection, group_name));
         }

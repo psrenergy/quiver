@@ -43,7 +43,12 @@ TEST_F(SchemaValidatorFixture, InvalidLabelWrongType) {
 }
 
 TEST_F(SchemaValidatorFixture, InvalidDuplicateAttribute) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("duplicate_attribute.sql"), opts),
+    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("duplicate_attribute_vector.sql"), opts),
+                 std::runtime_error);
+}
+
+TEST_F(SchemaValidatorFixture, InvalidDuplicateAttributeTimeSeries) {
+    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("duplicate_attribute_time_series.sql"), opts),
                  std::runtime_error);
 }
 

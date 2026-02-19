@@ -32,7 +32,8 @@ void Database::update_scalar_relation(const std::string& collection,
     if (lookup_result.empty() || !lookup_result[0].get_integer(0)) {
         throw std::runtime_error("Target element not found: '" + to_label + "' in collection '" + to_table + "'");
     }
-    auto to_id = lookup_result[0].get_integer(0).value();
+    auto to_id =
+        lookup_result[0].get_integer(0).value();  // NOLINT(bugprone-unchecked-optional-access) checked on line 32
 
     // Update the source element
     auto update_sql = "UPDATE " + collection + " SET " + attribute + " = ? WHERE label = ?";

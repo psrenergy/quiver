@@ -154,7 +154,7 @@ QUIVER_C_API quiver_error_t quiver_element_to_string(quiver_element_t* element, 
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_string_free(char* str) {
+QUIVER_C_API quiver_error_t quiver_element_free_string(char* str) {
     delete[] str;
     return QUIVER_OK;
 }

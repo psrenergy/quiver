@@ -8,7 +8,7 @@ namespace quiver {
 
 namespace fs = std::filesystem;
 
-Migration::Migration(int64_t version, const std::string& path) : version_(version), path_(path) {}
+Migration::Migration(int64_t version, std::string path) : version_(version), path_(std::move(path)) {}
 
 int64_t Migration::version() const {
     return version_;

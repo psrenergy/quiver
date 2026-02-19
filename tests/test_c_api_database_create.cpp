@@ -151,8 +151,77 @@ TEST(DatabaseCApi, CreateElementWithTimeSeries) {
     EXPECT_DOUBLE_EQ(out_values[1], 2.5);
     EXPECT_DOUBLE_EQ(out_values[2], 3.5);
 
-    quiver_free_string_array(out_date_times, out_count);
+    quiver_database_free_string_array(out_date_times, out_count);
     delete[] out_values;
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, CreateElementWithMultiTimeSeries) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("multi_time_series.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    // Create Configuration first
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t config_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Configuration", config, &config_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    // Create Sensor element with shared date_time routed to both time series tables
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
+    quiver_element_set_string(element, "label", "Sensor 1");
+
+    const char* date_times[] = {"2024-01-01T10:00:00", "2024-01-02T10:00:00", "2024-01-03T10:00:00"};
+    quiver_element_set_array_string(element, "date_time", date_times, 3);
+
+    double temps[] = {20.0, 21.5, 22.0};
+    quiver_element_set_array_float(element, "temperature", temps, 3);
+
+    double hums[] = {45.0, 50.0, 55.0};
+    quiver_element_set_array_float(element, "humidity", hums, 3);
+
+    int64_t id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Sensor", element, &id), QUIVER_OK);
+    EXPECT_EQ(id, 1);
+
+    // Verify temperature group
+    char** out_temp_dates = nullptr;
+    double* out_temp_values = nullptr;
+    size_t out_temp_count = 0;
+    ASSERT_EQ(quiver_database_read_time_series_group(
+                  db, "Sensor", "temperature", id, &out_temp_dates, &out_temp_values, &out_temp_count),
+              QUIVER_OK);
+    EXPECT_EQ(out_temp_count, 3);
+    EXPECT_STREQ(out_temp_dates[0], "2024-01-01T10:00:00");
+    EXPECT_STREQ(out_temp_dates[1], "2024-01-02T10:00:00");
+    EXPECT_STREQ(out_temp_dates[2], "2024-01-03T10:00:00");
+    EXPECT_DOUBLE_EQ(out_temp_values[0], 20.0);
+    EXPECT_DOUBLE_EQ(out_temp_values[1], 21.5);
+    EXPECT_DOUBLE_EQ(out_temp_values[2], 22.0);
+    quiver_database_free_time_series_data(out_temp_dates, out_temp_values, out_temp_count);
+
+    // Verify humidity group
+    char** out_hum_dates = nullptr;
+    double* out_hum_values = nullptr;
+    size_t out_hum_count = 0;
+    ASSERT_EQ(quiver_database_read_time_series_group(
+                  db, "Sensor", "humidity", id, &out_hum_dates, &out_hum_values, &out_hum_count),
+              QUIVER_OK);
+    EXPECT_EQ(out_hum_count, 3);
+    EXPECT_STREQ(out_hum_dates[0], "2024-01-01T10:00:00");
+    EXPECT_STREQ(out_hum_dates[1], "2024-01-02T10:00:00");
+    EXPECT_STREQ(out_hum_dates[2], "2024-01-03T10:00:00");
+    EXPECT_DOUBLE_EQ(out_hum_values[0], 45.0);
+    EXPECT_DOUBLE_EQ(out_hum_values[1], 50.0);
+    EXPECT_DOUBLE_EQ(out_hum_values[2], 55.0);
+    quiver_database_free_time_series_data(out_hum_dates, out_hum_values, out_hum_count);
+
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     quiver_database_close(db);
 }
@@ -180,7 +249,7 @@ TEST(DatabaseCApi, CreateElementWithDatetime) {
     EXPECT_EQ(out_count, 1);
     EXPECT_STREQ(out_values[0], "2024-03-15T14:30:45");
 
-    quiver_free_string_array(out_values, out_count);
+    quiver_database_free_string_array(out_values, out_count);
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     quiver_database_close(db);
 }

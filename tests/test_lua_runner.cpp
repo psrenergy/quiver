@@ -428,7 +428,7 @@ TEST_F(LuaRunnerTest, DeleteElementByIdFromLua) {
         local ids = db:read_element_ids("Collection")
         assert(#ids == 3, "Expected 3 elements before delete")
 
-        db:delete_element_by_id("Collection", 2)
+        db:delete_element("Collection", 2)
 
         ids = db:read_element_ids("Collection")
         assert(#ids == 2, "Expected 2 elements after delete")
@@ -453,7 +453,7 @@ TEST_F(LuaRunnerTest, DeleteElementByIdWithVectorDataFromLua) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:delete_element_by_id("Collection", 1)
+        db:delete_element("Collection", 1)
 
         local ids = db:read_element_ids("Collection")
         assert(#ids == 1, "Expected 1 element after delete")
@@ -476,7 +476,7 @@ TEST_F(LuaRunnerTest, DeleteElementByIdNonExistentFromLua) {
 
     // Deleting non-existent element should succeed silently (idempotent)
     lua.run(R"(
-        db:delete_element_by_id("Collection", 999)
+        db:delete_element("Collection", 999)
 
         local ids = db:read_element_ids("Collection")
         assert(#ids == 1, "Original element should still exist")
@@ -494,7 +494,7 @@ TEST_F(LuaRunnerTest, DeleteElementByIdOtherElementsUnchangedFromLua) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:delete_element_by_id("Collection", 2)
+        db:delete_element("Collection", 2)
 
         local labels = db:read_scalar_strings("Collection", "label")
         assert(#labels == 2, "Expected 2 labels after delete")
@@ -918,7 +918,7 @@ TEST_F(LuaRunnerTest, DeleteFromNonExistentCollection) {
 
     quiver::LuaRunner lua(db);
 
-    EXPECT_THROW({ lua.run(R"(db:delete_element_by_id("NonexistentCollection", 1))"); }, std::runtime_error);
+    EXPECT_THROW({ lua.run(R"(db:delete_element("NonexistentCollection", 1))"); }, std::runtime_error);
 }
 
 TEST_F(LuaRunnerTest, MultipleOperationsPartialFailure) {
@@ -1408,6 +1408,41 @@ TEST_F(LuaRunnerTest, ReadTimeSeriesGroupByIdFromLua) {
         assert(rows[2].value == 2.5, "Expected value 2.5")
     )";
     lua.run(script);
+}
+
+TEST_F(LuaRunnerTest, CreateElementWithMultiTimeSeriesFromLua) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("multi_time_series.sql"));
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:create_element("Configuration", { label = "Test Config" })
+        db:create_element("Sensor", {
+            label = "Sensor 1",
+            date_time = {"2024-01-01T10:00:00", "2024-01-02T10:00:00", "2024-01-03T10:00:00"},
+            temperature = {20.0, 21.5, 22.0},
+            humidity = {45.0, 50.0, 55.0}
+        })
+    )");
+
+    // Verify temperature group from C++ side
+    auto temp_rows = db.read_time_series_group("Sensor", "temperature", 1);
+    EXPECT_EQ(temp_rows.size(), 3);
+    EXPECT_EQ(std::get<std::string>(temp_rows[0].at("date_time")), "2024-01-01T10:00:00");
+    EXPECT_EQ(std::get<std::string>(temp_rows[1].at("date_time")), "2024-01-02T10:00:00");
+    EXPECT_EQ(std::get<std::string>(temp_rows[2].at("date_time")), "2024-01-03T10:00:00");
+    EXPECT_DOUBLE_EQ(std::get<double>(temp_rows[0].at("temperature")), 20.0);
+    EXPECT_DOUBLE_EQ(std::get<double>(temp_rows[1].at("temperature")), 21.5);
+    EXPECT_DOUBLE_EQ(std::get<double>(temp_rows[2].at("temperature")), 22.0);
+
+    // Verify humidity group from C++ side
+    auto hum_rows = db.read_time_series_group("Sensor", "humidity", 1);
+    EXPECT_EQ(hum_rows.size(), 3);
+    EXPECT_EQ(std::get<std::string>(hum_rows[0].at("date_time")), "2024-01-01T10:00:00");
+    EXPECT_EQ(std::get<std::string>(hum_rows[1].at("date_time")), "2024-01-02T10:00:00");
+    EXPECT_EQ(std::get<std::string>(hum_rows[2].at("date_time")), "2024-01-03T10:00:00");
+    EXPECT_DOUBLE_EQ(std::get<double>(hum_rows[0].at("humidity")), 45.0);
+    EXPECT_DOUBLE_EQ(std::get<double>(hum_rows[1].at("humidity")), 50.0);
+    EXPECT_DOUBLE_EQ(std::get<double>(hum_rows[2].at("humidity")), 55.0);
 }
 
 TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupFromLua) {

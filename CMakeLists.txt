@@ -65,23 +65,35 @@ install(FILES
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/quiver
 )
 
+# Source files for format and tidy targets
+file(GLOB_RECURSE ALL_SOURCE_FILES
+    ${CMAKE_SOURCE_DIR}/include/quiver/*.h
+    ${CMAKE_SOURCE_DIR}/include/quiver/c/*.h
+    ${CMAKE_SOURCE_DIR}/src/*.cpp
+    ${CMAKE_SOURCE_DIR}/src/*.h
+    ${CMAKE_SOURCE_DIR}/src/blob/*.cpp
+    ${CMAKE_SOURCE_DIR}/src/blob/*.h
+    ${CMAKE_SOURCE_DIR}/src/c/*.cpp
+    ${CMAKE_SOURCE_DIR}/src/c/*.h
+    ${CMAKE_SOURCE_DIR}/tests/*.cpp
+    ${CMAKE_SOURCE_DIR}/tests/*.h
+)
+
 # Format target
 find_program(CLANG_FORMAT clang-format)
 if(CLANG_FORMAT)
-    file(GLOB_RECURSE ALL_SOURCE_FILES
-        ${CMAKE_SOURCE_DIR}/include/quiver/*.h
-        ${CMAKE_SOURCE_DIR}/include/quiver/c/*.h
-        ${CMAKE_SOURCE_DIR}/src/*.cpp
-        ${CMAKE_SOURCE_DIR}/src/*.h
-        ${CMAKE_SOURCE_DIR}/src/blob/*.cpp
-        ${CMAKE_SOURCE_DIR}/src/blob/*.h
-        ${CMAKE_SOURCE_DIR}/src/c/*.c
-        ${CMAKE_SOURCE_DIR}/src/c/*.h
-        ${CMAKE_SOURCE_DIR}/tests/*.cpp
-        ${CMAKE_SOURCE_DIR}/tests/*.h
-    )
     add_custom_target(format
         COMMAND ${CLANG_FORMAT} -i ${ALL_SOURCE_FILES}
         COMMENT "Formatting code with clang-format"
+    )
+endif()
+
+# Tidy target — runs clang-tidy via script to avoid command-line length limits on Windows
+find_program(CLANG_TIDY clang-tidy)
+if(CLANG_TIDY)
+    add_custom_target(tidy
+        COMMAND ${CMAKE_SOURCE_DIR}/scripts/tidy.bat
+        COMMENT "Running clang-tidy"
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
 endif()

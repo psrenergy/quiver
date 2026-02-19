@@ -79,12 +79,10 @@ function Base.setindex!(el::Element, value::Vector{<:AbstractString}, name::Stri
     end
 end
 
-# Handle empty arrays (Vector{Any}) - throw a DatabaseException
 function Base.setindex!(el::Element, value::Vector{Any}, name::String)
     if isempty(value)
-        throw(DatabaseException("Empty array not allowed for '$name'"))
+        throw(ArgumentError("Cannot determine array element type for '$name': array is empty"))
     end
-    # For non-empty Vector{Any}, try to determine the element type
     first_val = first(value)
     if first_val isa Integer
         el[name] = Int64[Int64(v) for v in value]
@@ -93,7 +91,7 @@ function Base.setindex!(el::Element, value::Vector{Any}, name::String)
     elseif first_val isa AbstractString
         el[name] = String[String(v) for v in value]
     else
-        error("Unsupported array element type for '$name': $(typeof(first_val))")
+        throw(ArgumentError("Unsupported array element type for '$name': $(typeof(first_val))"))
     end
 end
 
@@ -105,7 +103,7 @@ function Base.show(io::IO, e::Element)
         return nothing
     end
     str = unsafe_string(out_string[])
-    C.quiver_string_free(out_string[])
+    C.quiver_element_free_string(out_string[])
     print(io, str)
     return nothing
 end

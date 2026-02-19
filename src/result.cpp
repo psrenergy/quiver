@@ -4,7 +4,7 @@
 
 namespace quiver {
 
-Result::Result() : columns_(), rows_() {}
+Result::Result() = default;
 
 Result::Result(std::vector<std::string> columns, std::vector<Row> rows)
     : columns_(std::move(columns)), rows_(std::move(rows)) {}

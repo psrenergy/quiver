@@ -31,7 +31,7 @@ extension DatabaseRead on Database {
       }
 
       final result = List<int>.generate(count, (i) => outValues.value[i]);
-      bindings.quiver_free_integer_array(outValues.value);
+      bindings.quiver_database_free_integer_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -63,7 +63,7 @@ extension DatabaseRead on Database {
       }
 
       final result = List<double>.generate(count, (i) => outValues.value[i]);
-      bindings.quiver_free_float_array(outValues.value);
+      bindings.quiver_database_free_float_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -95,7 +95,7 @@ extension DatabaseRead on Database {
       }
 
       final result = List<String>.generate(count, (i) => outValues.value[i].cast<Utf8>().toDartString());
-      bindings.quiver_free_string_array(outValues.value, count);
+      bindings.quiver_database_free_string_array(outValues.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -137,7 +137,7 @@ extension DatabaseRead on Database {
           result.add(List<int>.generate(size, (j) => outVectors.value[i][j]));
         }
       }
-      bindings.quiver_free_integer_vectors(outVectors.value, outSizes.value, count);
+      bindings.quiver_database_free_integer_vectors(outVectors.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -179,7 +179,7 @@ extension DatabaseRead on Database {
           result.add(List<double>.generate(size, (j) => outVectors.value[i][j]));
         }
       }
-      bindings.quiver_free_float_vectors(outVectors.value, outSizes.value, count);
+      bindings.quiver_database_free_float_vectors(outVectors.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -221,7 +221,7 @@ extension DatabaseRead on Database {
           result.add(List<String>.generate(size, (j) => outVectors.value[i][j].cast<Utf8>().toDartString()));
         }
       }
-      bindings.quiver_free_string_vectors(outVectors.value, outSizes.value, count);
+      bindings.quiver_database_free_string_vectors(outVectors.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -263,7 +263,7 @@ extension DatabaseRead on Database {
           result.add(List<int>.generate(size, (j) => outSets.value[i][j]));
         }
       }
-      bindings.quiver_free_integer_vectors(outSets.value, outSizes.value, count);
+      bindings.quiver_database_free_integer_vectors(outSets.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -305,7 +305,7 @@ extension DatabaseRead on Database {
           result.add(List<double>.generate(size, (j) => outSets.value[i][j]));
         }
       }
-      bindings.quiver_free_float_vectors(outSets.value, outSizes.value, count);
+      bindings.quiver_database_free_float_vectors(outSets.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -347,7 +347,7 @@ extension DatabaseRead on Database {
           result.add(List<String>.generate(size, (j) => outSets.value[i][j].cast<Utf8>().toDartString()));
         }
       }
-      bindings.quiver_free_string_vectors(outSets.value, outSizes.value, count);
+      bindings.quiver_database_free_string_vectors(outSets.value, outSizes.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -443,7 +443,7 @@ extension DatabaseRead on Database {
         return null;
       }
       final result = outValue.value.cast<Utf8>().toDartString();
-      bindings.quiver_string_free(outValue.value);
+      bindings.quiver_element_free_string(outValue.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -487,7 +487,7 @@ extension DatabaseRead on Database {
       }
 
       final result = List<int>.generate(count, (i) => outValues.value[i]);
-      bindings.quiver_free_integer_array(outValues.value);
+      bindings.quiver_database_free_integer_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -520,7 +520,7 @@ extension DatabaseRead on Database {
       }
 
       final result = List<double>.generate(count, (i) => outValues.value[i]);
-      bindings.quiver_free_float_array(outValues.value);
+      bindings.quiver_database_free_float_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -553,7 +553,7 @@ extension DatabaseRead on Database {
       }
 
       final result = List<String>.generate(count, (i) => outValues.value[i].cast<Utf8>().toDartString());
-      bindings.quiver_free_string_array(outValues.value, count);
+      bindings.quiver_database_free_string_array(outValues.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -595,7 +595,7 @@ extension DatabaseRead on Database {
       }
 
       final result = List<int>.generate(count, (i) => outValues.value[i]);
-      bindings.quiver_free_integer_array(outValues.value);
+      bindings.quiver_database_free_integer_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -628,7 +628,7 @@ extension DatabaseRead on Database {
       }
 
       final result = List<double>.generate(count, (i) => outValues.value[i]);
-      bindings.quiver_free_float_array(outValues.value);
+      bindings.quiver_database_free_float_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -661,7 +661,7 @@ extension DatabaseRead on Database {
       }
 
       final result = List<String>.generate(count, (i) => outValues.value[i].cast<Utf8>().toDartString());
-      bindings.quiver_free_string_array(outValues.value, count);
+      bindings.quiver_database_free_string_array(outValues.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -701,7 +701,7 @@ extension DatabaseRead on Database {
       }
 
       final result = List<int>.generate(count, (i) => outIds.value[i]);
-      bindings.quiver_free_integer_array(outIds.value);
+      bindings.quiver_database_free_integer_array(outIds.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -813,7 +813,7 @@ extension DatabaseRead on Database {
         case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
           values = readVectorDateTimesById(collection, name, id);
         default:
-          throw Exception('Unknown data type: ${col.dataType}');
+          throw ArgumentError('Unknown data type: ${col.dataType}');
       }
 
       columnData[name] = values;
@@ -863,7 +863,7 @@ extension DatabaseRead on Database {
         case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
           values = readSetDateTimesById(collection, name, id);
         default:
-          throw Exception('Unknown data type: ${col.dataType}');
+          throw ArgumentError('Unknown data type: ${col.dataType}');
       }
 
       columnData[name] = values;
@@ -915,15 +915,18 @@ extension DatabaseRead on Database {
         return [];
       }
 
+      final meta = getTimeSeriesMetadata(collection, group);
+      final valCol = meta.valueColumns.isEmpty ? 'value' : meta.valueColumns.first.name;
+
       final result = <Map<String, Object?>>[];
       for (var i = 0; i < rowCount; i++) {
         result.add({
           'date_time': outDateTimes.value[i].cast<Utf8>().toDartString(),
-          'value': outValues.value[i],
+          valCol: outValues.value[i],
         });
       }
 
-      bindings.quiver_free_time_series_data(outDateTimes.value, outValues.value, rowCount);
+      bindings.quiver_database_free_time_series_data(outDateTimes.value, outValues.value, rowCount);
       return result;
     } finally {
       arena.releaseAll();
@@ -967,7 +970,7 @@ extension DatabaseRead on Database {
         result[column] = path;
       }
 
-      bindings.quiver_free_time_series_files(outColumns.value, outPaths.value, count);
+      bindings.quiver_database_free_time_series_files(outColumns.value, outPaths.value, count);
       return result;
     } finally {
       arena.releaseAll();

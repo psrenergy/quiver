@@ -1,196 +1,111 @@
-# Roadmap: Quiver Refactoring
+# Roadmap: Quiver
 
-## Overview
+## Milestones
 
-This roadmap transforms Quiver from a working but inconsistently organized library into a uniformly structured, consistently named, and fully standardized codebase across all five layers (C++, C API, Julia, Dart, Lua). The approach is interleaved: fix one layer at a time starting from the C++ core outward, with each phase producing a verifiable, test-passing state. Every phase builds on the previous one's structural improvements.
+- ✅ **v1.0 Quiver Refactoring** -- Phases 1-10 (shipped 2026-02-11)
+- **v1.1 Time Series Ergonomics** -- Phases 11-14 (in progress)
 
 ## Phases
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+<details>
+<summary>v1.0 Quiver Refactoring (Phases 1-10) -- SHIPPED 2026-02-11</summary>
 
-Decimal phases appear between their surrounding integers in numeric order.
+- [x] Phase 1: C++ Impl Header Extraction (1/1 plans) -- 2026-02-09
+- [x] Phase 2: C++ Core File Decomposition (2/2 plans) -- 2026-02-09
+- [x] Phase 3: C++ Naming and Error Standardization (2/2 plans) -- 2026-02-10
+- [x] Phase 4: C API File Decomposition (2/2 plans) -- 2026-02-10
+- [x] Phase 5: C API Naming and Error Standardization (2/2 plans) -- 2026-02-10
+- [x] Phase 6: Julia Bindings Standardization (1/1 plans) -- 2026-02-10
+- [x] Phase 7: Dart Bindings Standardization (1/1 plans) -- 2026-02-10
+- [x] Phase 8: Lua Bindings Standardization (1/1 plans) -- 2026-02-10
+- [x] Phase 9: Code Hygiene (2/2 plans) -- 2026-02-10
+- [x] Phase 10: Cross-Layer Documentation and Final Verification (1/1 plans) -- 2026-02-10
 
-- [x] **Phase 1: C++ Impl Header Extraction** - Extract Database::Impl into private internal header to enable file decomposition ✓ (2026-02-09)
-- [x] **Phase 2: C++ Core File Decomposition** - Split monolithic database.cpp into focused modules by operation type ✓ (2026-02-09)
-- [x] **Phase 3: C++ Naming and Error Standardization** - Standardize C++ method names and exception patterns ✓ (2026-02-10)
-- [x] **Phase 4: C API File Decomposition** - Split monolithic C API database.cpp with shared helper extraction ✓ (2026-02-10)
-- [ ] **Phase 5: C API Naming and Error Standardization** - Standardize C API function names and error handling patterns
-- [ ] **Phase 6: Julia Bindings Standardization** - Standardize Julia binding names and error surfacing
-- [ ] **Phase 7: Dart Bindings Standardization** - Standardize Dart binding names and error surfacing
-- [ ] **Phase 8: Lua Bindings Standardization** - Standardize Lua binding names and error surfacing
-- [ ] **Phase 9: Code Hygiene** - SQL injection mitigation, clang-tidy integration, static analysis cleanup
-- [ ] **Phase 10: Cross-Layer Documentation and Final Verification** - Document naming conventions, validate full test suite across all layers
+</details>
+
+### v1.1 Time Series Ergonomics
+
+**Milestone Goal:** Make `update_time_series_group` and `read_time_series_group` support N typed value columns across all layers, matching `create_element`'s columnar interface pattern.
+
+- [ ] **Phase 11: C API Multi-Column Time Series** - Redesign C API to support N typed value columns for time series update, read, and free
+- [ ] **Phase 12: Julia Binding Migration** - Julia kwargs interface for multi-column time series update and typed multi-column read
+- [ ] **Phase 13: Dart Binding Migration** - Dart Map interface for multi-column time series update and typed multi-column read
+- [ ] **Phase 14: Verification and Cleanup** - Remove old API, verify Lua coverage, full-stack test gate
 
 ## Phase Details
 
-### Phase 1: C++ Impl Header Extraction
-**Goal**: The Database::Impl struct definition lives in a private internal header that multiple .cpp files can include without exposing sqlite3/spdlog in public headers
-**Depends on**: Nothing (first phase)
-**Requirements**: DECP-02
+### Phase 11: C API Multi-Column Time Series
+**Goal**: Developers can update and read multi-column time series data through the C API with correct types per column
+**Depends on**: Phase 10 (v1.0 complete)
+**Requirements**: CAPI-01, CAPI-02, CAPI-03, CAPI-04, CAPI-05, MIGR-01
 **Success Criteria** (what must be TRUE):
-  1. A file `src/database_impl.h` exists containing the `Database::Impl` struct definition, moved from `src/database.cpp`
-  2. `src/database.cpp` includes `src/database_impl.h` and compiles identically to before
-  3. No public header in `include/quiver/` has changed
-  4. All existing C++ tests pass (`quiver_tests.exe` green)
-  5. `src/database_impl.h` is not reachable from any public include path (verified by include structure)
-**Plans**: 1 plan
-
-Plans:
-- [x] 01-01-PLAN.md -- Extract Database::Impl struct to src/database_impl.h internal header ✓
-
-### Phase 2: C++ Core File Decomposition
-**Goal**: The monolithic database.cpp is split into focused modules where each file handles one category of operations, and developers can navigate directly to the file for any operation type
-**Depends on**: Phase 1
-**Requirements**: DECP-01, DECP-05
-**Success Criteria** (what must be TRUE):
-  1. `src/database.cpp` contains only lifecycle operations (constructor, destructor, move, factory methods) and is under 500 lines
-  2. Separate implementation files exist for create, read, update, delete, metadata, time series, query, and relations operations
-  3. Every split file includes `src/database_impl.h` and compiles as part of the library
-  4. All existing C++ tests pass with zero behavior changes (`quiver_tests.exe` green)
-  5. No public header in `include/quiver/` has changed
-**Plans**: 2 plans
-
-Plans:
-- [x] 02-01-PLAN.md -- Extract shared helpers and CRUD operations (create, read, update, delete) ✓
-- [x] 02-02-PLAN.md -- Extract remaining operations (metadata, time series, query, relations, describe) ✓
-
-### Phase 3: C++ Naming and Error Standardization
-**Goal**: All C++ public methods follow a single, documented naming convention and throw exceptions with consistent types and message formats
-**Depends on**: Phase 2
-**Requirements**: NAME-01, ERRH-01
-**Success Criteria** (what must be TRUE):
-  1. Every public method on the Database class follows the same naming pattern (verb_noun or verb_adjective_noun)
-  2. All exceptions thrown use `std::runtime_error` with a consistent message format that includes the operation name and the reason for failure
-  3. No two methods use different naming styles for the same kind of operation (e.g., all reads use `read_`, all updates use `update_`)
-  4. All existing C++ tests pass after renaming (updated to match new names)
-**Plans**: 2 plans
-
-Plans:
-- [x] 03-01-PLAN.md -- Rename 5 deviant C++ method names and update all call sites ✓
-- [x] 03-02-PLAN.md -- Standardize all error messages to 3 patterns and update CLAUDE.md ✓
-
-### Phase 4: C API File Decomposition
-**Goal**: The monolithic C API database.cpp is split into focused modules mirroring C++ structure, with shared helper templates extracted into a common internal header
-**Depends on**: Phase 3
-**Requirements**: DECP-03, DECP-04, DECP-06
-**Success Criteria** (what must be TRUE):
-  1. `src/c/database_helpers.h` exists containing marshaling templates, `strdup_safe`, metadata converters, and `QUIVER_REQUIRE` macro
-  2. `src/c/database.cpp` contains only lifecycle C API functions and is under 500 lines
-  3. Separate C API implementation files exist matching the C++ decomposition structure
-  4. Every alloc/free pair is co-located in the same translation unit
-  5. All existing C API tests pass with zero behavior changes (`quiver_c_tests.exe` green)
-**Plans**: 2 plans
-
-Plans:
-- [x] 04-01-PLAN.md -- Extract helpers into database_helpers.h, split CRUD/read/relations into separate files ✓
-- [x] 04-02-PLAN.md -- Extract update/metadata/query/time_series, finalize lifecycle-only database.cpp ✓
-
-### Phase 5: C API Naming and Error Standardization
-**Goal**: All C API function names follow a single `quiver_{entity}_{operation}` convention and every function uses the try-catch-set_last_error pattern consistently
-**Depends on**: Phase 4
-**Requirements**: NAME-02, ERRH-02
-**Success Criteria** (what must be TRUE):
-  1. Every C API function follows `quiver_{entity}_{operation}` naming (e.g., `quiver_database_read_scalar_integers`, not mixed patterns)
-  2. Every C API function that can fail uses the `QUIVER_REQUIRE` macro for precondition checks and returns `QUIVER_OK`/`QUIVER_ERROR`
-  3. C API header files updated with consistent naming; Julia/Dart generators re-run successfully
-  4. All existing C API tests pass after renaming (updated to match new names)
+  1. C API function accepts N typed value columns (column_names[], column_types[], column_data[], column_count, row_count) and writes multi-column time series data to the database
+  2. C API function reads multi-column time series data back with correct types per column (integers as int64_t, floats as double, strings as char*)
+  3. Free function correctly deallocates variable-column read results without leaks or corruption (string columns: per-element cleanup; numeric columns: single delete[])
+  4. Column types use existing quiver_data_type_t enum with no new type definitions
+  5. C API returns clear error message when column names or types do not match the schema metadata
 **Plans**: TBD
 
 Plans:
-- [ ] 05-01: Audit and standardize C API function names
-- [ ] 05-02: Standardize C API error handling patterns
+- [ ] 11-01: TBD
 
-### Phase 6: Julia Bindings Standardization
-**Goal**: Julia bindings use idiomatic Julia naming conventions while mapping predictably to C API, and surface all C API errors uniformly without crafting custom messages
-**Depends on**: Phase 5
-**Requirements**: NAME-03, ERRH-03
+### Phase 12: Julia Binding Migration
+**Goal**: Julia users can update and read multi-column time series data using idiomatic kwargs syntax
+**Depends on**: Phase 11
+**Requirements**: BIND-01, BIND-02
 **Success Criteria** (what must be TRUE):
-  1. Every Julia wrapper function uses `snake_case` naming following Julia conventions
-  2. Julia function names map predictably from C API names (e.g., `quiver_database_read_scalar_integers` -> `read_scalar_integers`)
-  3. All Julia error handling retrieves and surfaces C API error messages -- no custom error strings defined in Julia code
-  4. Julia test suite passes (`bindings/julia/test/test.bat` green)
+  1. Julia user can call `update_time_series_group!(db, col, group, id; date_time=[...], val=[...])` with kwargs matching schema column names
+  2. Julia user receives multi-column read results with correct native types per column (Int64 for INTEGER, Float64 for REAL, String for TEXT)
+  3. Julia tests pass for multi-column time series schema with mixed types (INTEGER + REAL + TEXT value columns)
 **Plans**: TBD
 
 Plans:
-- [ ] 06-01: Standardize Julia binding names and error handling
+- [ ] 12-01: TBD
 
-### Phase 7: Dart Bindings Standardization
-**Goal**: Dart bindings use idiomatic Dart naming conventions while mapping predictably to C API, and surface all C API errors uniformly without crafting custom messages
-**Depends on**: Phase 5
-**Requirements**: NAME-04, ERRH-04
+### Phase 13: Dart Binding Migration
+**Goal**: Dart users can update and read multi-column time series data using idiomatic Map interface
+**Depends on**: Phase 11
+**Requirements**: BIND-03, BIND-04
 **Success Criteria** (what must be TRUE):
-  1. Every Dart wrapper method uses `camelCase` naming following Dart conventions
-  2. Dart method names map predictably from C API names (e.g., `quiver_database_read_scalar_integers` -> `readScalarIntegers`)
-  3. All Dart error handling retrieves and surfaces C API error messages -- no custom error strings defined in Dart code
-  4. Dart test suite passes (`bindings/dart/test/test.bat` green)
+  1. Dart user can call `updateTimeSeriesGroup(col, grp, id, {'date_time': [...], 'temp': [...]})` with a Map of column names to typed arrays
+  2. Dart user receives multi-column read results with correct native types per column (int for INTEGER, double for REAL, String for TEXT)
+  3. Dart tests pass for multi-column time series schema with mixed types (INTEGER + REAL + TEXT value columns)
 **Plans**: TBD
 
 Plans:
-- [ ] 07-01: Standardize Dart binding names and error handling
+- [ ] 13-01: TBD
 
-### Phase 8: Lua Bindings Standardization
-**Goal**: Lua bindings use consistent naming matching C++ method names and surface errors uniformly through pcall/error patterns
-**Depends on**: Phase 3
-**Requirements**: NAME-05, ERRH-05
+### Phase 14: Verification and Cleanup
+**Goal**: Old single-column C API functions are removed, all bindings verified against multi-column schemas, full test suite green
+**Depends on**: Phase 12, Phase 13
+**Requirements**: BIND-05, MIGR-02, MIGR-03
 **Success Criteria** (what must be TRUE):
-  1. Every Lua binding method name matches the corresponding C++ method name
-  2. All Lua error handling uses pcall/error patterns that surface C++ exception messages
-  3. No custom error messages are crafted in Lua code -- all errors originate from C++
-  4. Lua scripting tests pass through LuaRunner
+  1. Lua multi-column time series operations have passing test coverage using mixed-type schema
+  2. Old single-column C API time series functions are removed from headers and implementation
+  3. All 1,213+ tests pass across all 4 suites (C++, C API, Julia, Dart) via `scripts/build-all.bat`
 **Plans**: TBD
 
 Plans:
-- [ ] 08-01: Standardize Lua binding names and error handling
-
-### Phase 9: Code Hygiene
-**Goal**: SQL string concatenation is eliminated from schema queries, clang-tidy is integrated, and the codebase passes static analysis checks
-**Depends on**: Phase 5
-**Requirements**: HYGN-01, HYGN-02, HYGN-03
-**Success Criteria** (what must be TRUE):
-  1. No SQL query in the codebase constructs table/column names via string concatenation without validation -- all identifiers are validated against the loaded schema or use parameterized equivalents
-  2. A `.clang-tidy` configuration file exists with `readability-identifier-naming`, `bugprone-*`, `modernize-*`, `performance-*` checks enabled
-  3. Running clang-tidy against the codebase produces zero errors (suppressions are documented for intentional exceptions)
-  4. All test suites continue to pass after hygiene changes
-**Plans**: TBD
-
-Plans:
-- [ ] 09-01: Replace SQL string concatenation with validated identifiers
-- [ ] 09-02: Add clang-tidy configuration and fix violations
-
-### Phase 10: Cross-Layer Documentation and Final Verification
-**Goal**: Naming conventions are documented with cross-layer mapping examples in CLAUDE.md, and the full test suite across all layers passes as a final gate
-**Depends on**: Phases 6, 7, 8, 9
-**Requirements**: NAME-06, TEST-01, TEST-02, TEST-03, TEST-04, TEST-05
-**Success Criteria** (what must be TRUE):
-  1. CLAUDE.md contains a naming convention section with cross-layer mapping examples (C++ method -> C API function -> Julia method -> Dart method -> Lua method)
-  2. `scripts/build-all.bat` succeeds end-to-end (builds all targets, runs all tests)
-  3. C++ test suite passes (`quiver_tests.exe` green)
-  4. C API test suite passes (`quiver_c_tests.exe` green)
-  5. Julia test suite passes (`bindings/julia/test/test.bat` green)
-  6. Dart test suite passes (`bindings/dart/test/test.bat` green)
-**Plans**: TBD
-
-Plans:
-- [ ] 10-01: Document cross-layer naming conventions in CLAUDE.md
-- [ ] 10-02: Final full-stack verification
+- [ ] 14-01: TBD
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
-Note: Phases 6, 7 both depend on Phase 5. Phase 8 depends on Phase 3. Phase 10 depends on 6, 7, 8, 9.
+Phases execute in numeric order: 11 -> 12 -> 13 -> 14
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. C++ Impl Header Extraction | 1/1 | Complete | 2026-02-09 |
-| 2. C++ Core File Decomposition | 2/2 | Complete | 2026-02-09 |
-| 3. C++ Naming and Error Standardization | 2/2 | Complete | 2026-02-10 |
-| 4. C API File Decomposition | 2/2 | Complete | 2026-02-10 |
-| 5. C API Naming and Error Standardization | 0/2 | Not started | - |
-| 6. Julia Bindings Standardization | 0/1 | Not started | - |
-| 7. Dart Bindings Standardization | 0/1 | Not started | - |
-| 8. Lua Bindings Standardization | 0/1 | Not started | - |
-| 9. Code Hygiene | 0/2 | Not started | - |
-| 10. Cross-Layer Documentation and Final Verification | 0/2 | Not started | - |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. C++ Impl Header Extraction | v1.0 | 1/1 | Complete | 2026-02-09 |
+| 2. C++ Core File Decomposition | v1.0 | 2/2 | Complete | 2026-02-09 |
+| 3. C++ Naming and Error Standardization | v1.0 | 2/2 | Complete | 2026-02-10 |
+| 4. C API File Decomposition | v1.0 | 2/2 | Complete | 2026-02-10 |
+| 5. C API Naming and Error Standardization | v1.0 | 2/2 | Complete | 2026-02-10 |
+| 6. Julia Bindings Standardization | v1.0 | 1/1 | Complete | 2026-02-10 |
+| 7. Dart Bindings Standardization | v1.0 | 1/1 | Complete | 2026-02-10 |
+| 8. Lua Bindings Standardization | v1.0 | 1/1 | Complete | 2026-02-10 |
+| 9. Code Hygiene | v1.0 | 2/2 | Complete | 2026-02-10 |
+| 10. Cross-Layer Docs & Final Verification | v1.0 | 1/1 | Complete | 2026-02-10 |
+| 11. C API Multi-Column Time Series | v1.1 | 0/0 | Not started | - |
+| 12. Julia Binding Migration | v1.1 | 0/0 | Not started | - |
+| 13. Dart Binding Migration | v1.1 | 0/0 | Not started | - |
+| 14. Verification and Cleanup | v1.1 | 0/0 | Not started | - |

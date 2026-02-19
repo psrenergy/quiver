@@ -59,7 +59,7 @@ function query_string(db::Database, sql::String)
         return nothing
     end
     result = unsafe_string(out_value[])
-    C.quiver_string_free(out_value[])
+    C.quiver_element_free_string(out_value[])
     return result
 end
 
@@ -126,7 +126,7 @@ function query_string(db::Database, sql::String, params::Vector)
         return nothing
     end
     result = unsafe_string(out_value[])
-    C.quiver_string_free(out_value[])
+    C.quiver_element_free_string(out_value[])
     return result
 end
 
