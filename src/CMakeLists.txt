@@ -1,6 +1,6 @@
 # Core library sources
 set(QUIVER_SOURCES
-    csv.cpp
+    database_csv.cpp
     database.cpp
     database_create.cpp
     database_read.cpp

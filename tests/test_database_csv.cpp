@@ -431,6 +431,72 @@ TEST(Database, ExportToCsvEnumMultiLocale) {
     EXPECT_EQ(lines[2].find("Ativo"), std::string::npos);
 }
 
+TEST(Database, ExportToCsvTrimsWhitespace) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
+
+    // Insert data with leading/trailing spaces directly via SQL
+    db.query_string("INSERT INTO Configuration (label, integer_attribute, float_attribute, date_attribute) "
+                    "VALUES ('  Config 1  ', 42, 3.14, '  2024-01-15T10:30:00  ')");
+
+    db.query_string("INSERT INTO Configuration (label, integer_attribute, float_attribute, date_attribute) "
+                    "VALUES ('Config 2   ', 100, 2.71, '   2024-06-01T00:00:00')");
+
+    auto csv_path = (fs::temp_directory_path() / "quiver_export_trim.csv").string();
+    db.export_csv("Configuration", csv_path);
+
+    std::ifstream file(csv_path);
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(file, line)) {
+        lines.push_back(line);
+    }
+    file.close();
+    fs::remove(csv_path);
+
+    ASSERT_EQ(lines.size(), 4);  // sep + header + 2 data rows
+
+    // Labels should be trimmed
+    EXPECT_NE(lines[2].find("Config 1"), std::string::npos);
+    EXPECT_EQ(lines[2].find("  Config 1"), std::string::npos);  // no leading spaces
+    EXPECT_EQ(lines[2].find("Config 1  "), std::string::npos);  // no trailing spaces
+
+    EXPECT_NE(lines[3].find("Config 2"), std::string::npos);
+    EXPECT_EQ(lines[3].find("Config 2   "), std::string::npos);  // no trailing spaces
+}
+
+TEST(Database, ExportToCsvTrimsWhitespaceForeignKeys) {
+    auto db =
+        quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), {.console_level = QUIVER_LOG_OFF});
+
+    // Insert parent with padded label
+    db.query_string("INSERT INTO Parent (label) VALUES ('  Parent 1  ')");
+
+    quiver::Element c1;
+    c1.set("label", std::string("Child 1"));
+    db.create_element("Child", c1);
+
+    db.update_scalar_relation("Child", "parent_id", "Child 1", "  Parent 1  ");
+
+    auto csv_path = (fs::temp_directory_path() / "quiver_export_trim_fk.csv").string();
+    db.export_csv("Child", csv_path);
+
+    std::ifstream file(csv_path);
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(file, line)) {
+        lines.push_back(line);
+    }
+    file.close();
+    fs::remove(csv_path);
+
+    ASSERT_EQ(lines.size(), 3);  // sep + header + 1 row
+
+    // FK resolved label should be trimmed
+    EXPECT_NE(lines[2].find("Parent 1"), std::string::npos);
+    EXPECT_EQ(lines[2].find("  Parent 1"), std::string::npos);  // no leading spaces
+    EXPECT_EQ(lines[2].find("Parent 1  "), std::string::npos);  // no trailing spaces
+}
+
 TEST(Database, ExportToCsvNonExistentCollectionThrows) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
 
