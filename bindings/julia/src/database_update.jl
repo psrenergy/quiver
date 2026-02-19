@@ -135,33 +135,102 @@ end
 
 # Update time series functions
 
-function update_time_series_group!(
-    db::Database,
-    collection::String,
-    group::String,
-    id::Int64,
-    rows::Vector{Dict{String, Any}},
-)
-    if isempty(rows)
+function update_time_series_group!(db::Database, collection::String, group::String, id::Int64; kwargs...)
+    # No kwargs = clear all rows for this element
+    if isempty(kwargs)
         check(C.quiver_database_update_time_series_group(
             db.ptr, collection, group, id,
-            C_NULL, C_NULL, Csize_t(0),
+            C_NULL, C_NULL, C_NULL, Csize_t(0), Csize_t(0),
         ))
         return nothing
     end
 
-    row_count = length(rows)
-    date_time_cstrings = [Base.cconvert(Cstring, String(row["date_time"])) for row in rows]
-    date_time_ptrs = [Base.unsafe_convert(Cstring, cs) for cs in date_time_cstrings]
-    values = Float64[Float64(row["value"]) for row in rows]
+    # Validate all vectors have the same length
+    row_count = length(first(values(kwargs)))
+    for (k, v) in kwargs
+        if length(v) != row_count
+            throw(ArgumentError(
+                "All column vectors must have the same length, got $(length(v)) for '$(k)' but expected $row_count"
+            ))
+        end
+    end
 
-    GC.@preserve date_time_cstrings begin
-        check(
-            C.quiver_database_update_time_series_group(
-                db.ptr, collection, group, id,
-                date_time_ptrs, values, Csize_t(row_count),
-            ),
-        )
+    # Fetch metadata for auto-coercion (Int -> Float when schema expects REAL)
+    metadata = get_time_series_metadata(db, collection, group)
+    schema_types = Dict{String, C.quiver_data_type_t}()
+    schema_types[metadata.dimension_column] = C.QUIVER_DATA_TYPE_STRING
+    for vc in metadata.value_columns
+        schema_types[vc.name] = vc.data_type
+    end
+
+    column_count = length(kwargs)
+    col_names_strs = String[]
+    col_types = Cint[]
+    col_data_ptrs = Ptr{Cvoid}[]
+    refs = Any[]  # Keep references alive for GC.@preserve
+
+    for (k, v) in kwargs
+        col_name = String(k)
+        push!(col_names_strs, col_name)
+        schema_type = get(schema_types, col_name, nothing)
+
+        if eltype(v) <: DateTime
+            # DateTime -> format to string
+            str_vals = [date_time_to_string(dt) for dt in v]
+            cstrs = [Base.cconvert(Cstring, s) for s in str_vals]
+            ptrs = Ptr{Cchar}[Base.unsafe_convert(Cstring, cs) for cs in cstrs]
+            push!(refs, cstrs)
+            push!(refs, ptrs)
+            push!(col_types, Cint(C.QUIVER_DATA_TYPE_STRING))
+            push!(col_data_ptrs, pointer(ptrs))
+        elseif eltype(v) <: AbstractString
+            cstrs = [Base.cconvert(Cstring, s) for s in v]
+            ptrs = Ptr{Cchar}[Base.unsafe_convert(Cstring, cs) for cs in cstrs]
+            push!(refs, cstrs)
+            push!(refs, ptrs)
+            push!(col_types, Cint(C.QUIVER_DATA_TYPE_STRING))
+            push!(col_data_ptrs, pointer(ptrs))
+        elseif eltype(v) <: Integer
+            # Check if schema expects FLOAT -> auto-coerce
+            if schema_type == C.QUIVER_DATA_TYPE_FLOAT
+                float_arr = Float64[Float64(x) for x in v]
+                push!(refs, float_arr)
+                push!(col_types, Cint(C.QUIVER_DATA_TYPE_FLOAT))
+                push!(col_data_ptrs, pointer(float_arr))
+            else
+                int_arr = Int64[Int64(x) for x in v]
+                push!(refs, int_arr)
+                push!(col_types, Cint(C.QUIVER_DATA_TYPE_INTEGER))
+                push!(col_data_ptrs, pointer(int_arr))
+            end
+        elseif eltype(v) <: Real
+            float_arr = Float64[Float64(x) for x in v]
+            push!(refs, float_arr)
+            push!(col_types, Cint(C.QUIVER_DATA_TYPE_FLOAT))
+            push!(col_data_ptrs, pointer(float_arr))
+        else
+            throw(ArgumentError("Unsupported column type: $(eltype(v)) for column '$col_name'"))
+        end
+    end
+
+    # Build column_names as Cstring array
+    name_cstrs = [Base.cconvert(Cstring, n) for n in col_names_strs]
+    name_ptrs = Ptr{Cchar}[Base.unsafe_convert(Cstring, cs) for cs in name_cstrs]
+    push!(refs, name_cstrs)
+    push!(refs, name_ptrs)
+
+    # Build column_types and column_data arrays
+    col_types_arr = Cint[t for t in col_types]
+    col_data_arr = Ptr{Cvoid}[p for p in col_data_ptrs]
+    push!(refs, col_types_arr)
+    push!(refs, col_data_arr)
+
+    GC.@preserve refs begin
+        check(C.quiver_database_update_time_series_group(
+            db.ptr, collection, group, id,
+            name_ptrs, col_types_arr, col_data_arr,
+            Csize_t(column_count), Csize_t(row_count),
+        ))
     end
     return nothing
 end
