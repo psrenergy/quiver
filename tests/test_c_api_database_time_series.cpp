@@ -100,29 +100,41 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupById) {
     quiver_database_create_element(db, "Collection", e1, &id);
     EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
-    // Insert time series data
+    // Insert time series data (multi-column: date_time + value)
+    const char* col_names[] = {"date_time", "value"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT};
     const char* date_times[] = {"2024-01-01T10:00:00", "2024-01-01T11:00:00", "2024-01-01T12:00:00"};
     double values[] = {1.5, 2.5, 3.5};
-    auto err = quiver_database_update_time_series_group(db, "Collection", "data", id, date_times, values, 3);
+    const void* col_data[] = {date_times, values};
+    auto err = quiver_database_update_time_series_group(db, "Collection", "data", id, col_names, col_types, col_data, 2, 3);
     EXPECT_EQ(err, QUIVER_OK);
 
     // Read back
-    char** out_date_times = nullptr;
-    double* out_values = nullptr;
+    char** out_col_names = nullptr;
+    int* out_col_types = nullptr;
+    void** out_col_data = nullptr;
+    size_t col_count = 0;
     size_t row_count = 0;
-    err =
-        quiver_database_read_time_series_group(db, "Collection", "data", id, &out_date_times, &out_values, &row_count);
+    err = quiver_database_read_time_series_group(db, "Collection", "data", id,
+                                                 &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count);
 
     EXPECT_EQ(err, QUIVER_OK);
     ASSERT_EQ(row_count, 3);
+    ASSERT_EQ(col_count, 2);  // date_time + value
+
+    // Column 0: date_time (STRING)
+    auto** out_date_times = static_cast<char**>(out_col_data[0]);
     EXPECT_STREQ(out_date_times[0], "2024-01-01T10:00:00");
-    EXPECT_DOUBLE_EQ(out_values[0], 1.5);
     EXPECT_STREQ(out_date_times[1], "2024-01-01T11:00:00");
-    EXPECT_DOUBLE_EQ(out_values[1], 2.5);
     EXPECT_STREQ(out_date_times[2], "2024-01-01T12:00:00");
+
+    // Column 1: value (FLOAT)
+    auto* out_values = static_cast<double*>(out_col_data[1]);
+    EXPECT_DOUBLE_EQ(out_values[0], 1.5);
+    EXPECT_DOUBLE_EQ(out_values[1], 2.5);
     EXPECT_DOUBLE_EQ(out_values[2], 3.5);
 
-    quiver_database_free_time_series_data(out_date_times, out_values, row_count);
+    quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, col_count, row_count);
     quiver_database_close(db);
 }
 
@@ -151,16 +163,20 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupByIdEmpty) {
     EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
     // Read without inserting data
-    char** out_date_times = nullptr;
-    double* out_values = nullptr;
+    char** out_col_names = nullptr;
+    int* out_col_types = nullptr;
+    void** out_col_data = nullptr;
+    size_t col_count = 0;
     size_t row_count = 0;
-    auto err =
-        quiver_database_read_time_series_group(db, "Collection", "data", id, &out_date_times, &out_values, &row_count);
+    auto err = quiver_database_read_time_series_group(db, "Collection", "data", id,
+                                                      &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count);
 
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(row_count, 0);
-    EXPECT_EQ(out_date_times, nullptr);
-    EXPECT_EQ(out_values, nullptr);
+    EXPECT_EQ(col_count, 0);
+    EXPECT_EQ(out_col_names, nullptr);
+    EXPECT_EQ(out_col_types, nullptr);
+    EXPECT_EQ(out_col_data, nullptr);
 
     quiver_database_close(db);
 }
@@ -193,31 +209,38 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroup) {
     quiver_database_create_element(db, "Collection", e1, &id);
     EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
-    // Insert initial data
+    // Insert initial data (multi-column)
+    const char* col_names1[] = {"date_time", "value"};
+    int col_types1[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT};
     const char* date_times1[] = {"2024-01-01T10:00:00"};
     double values1[] = {1.0};
-    auto err = quiver_database_update_time_series_group(db, "Collection", "data", id, date_times1, values1, 1);
+    const void* col_data1[] = {date_times1, values1};
+    auto err = quiver_database_update_time_series_group(db, "Collection", "data", id, col_names1, col_types1, col_data1, 2, 1);
     EXPECT_EQ(err, QUIVER_OK);
 
     // Replace with new data
     const char* date_times2[] = {"2024-02-01T10:00:00", "2024-02-01T11:00:00"};
     double values2[] = {10.0, 20.0};
-    err = quiver_database_update_time_series_group(db, "Collection", "data", id, date_times2, values2, 2);
+    const void* col_data2[] = {date_times2, values2};
+    err = quiver_database_update_time_series_group(db, "Collection", "data", id, col_names1, col_types1, col_data2, 2, 2);
     EXPECT_EQ(err, QUIVER_OK);
 
     // Read back
-    char** out_date_times = nullptr;
-    double* out_values = nullptr;
+    char** out_col_names = nullptr;
+    int* out_col_types = nullptr;
+    void** out_col_data = nullptr;
+    size_t col_count = 0;
     size_t row_count = 0;
-    err =
-        quiver_database_read_time_series_group(db, "Collection", "data", id, &out_date_times, &out_values, &row_count);
+    err = quiver_database_read_time_series_group(db, "Collection", "data", id,
+                                                 &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count);
 
     EXPECT_EQ(err, QUIVER_OK);
     ASSERT_EQ(row_count, 2);
-    EXPECT_STREQ(out_date_times[0], "2024-02-01T10:00:00");
-    EXPECT_DOUBLE_EQ(out_values[0], 10.0);
+    ASSERT_EQ(col_count, 2);
+    EXPECT_STREQ(static_cast<char**>(out_col_data[0])[0], "2024-02-01T10:00:00");
+    EXPECT_DOUBLE_EQ(static_cast<double*>(out_col_data[1])[0], 10.0);
 
-    quiver_database_free_time_series_data(out_date_times, out_values, row_count);
+    quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, col_count, row_count);
     quiver_database_close(db);
 }
 
@@ -245,25 +268,31 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupClear) {
     quiver_database_create_element(db, "Collection", e1, &id);
     EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
 
-    // Insert data
+    // Insert data (multi-column)
+    const char* col_names[] = {"date_time", "value"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT};
     const char* date_times[] = {"2024-01-01T10:00:00"};
     double values[] = {1.0};
-    auto err = quiver_database_update_time_series_group(db, "Collection", "data", id, date_times, values, 1);
+    const void* col_data[] = {date_times, values};
+    auto err = quiver_database_update_time_series_group(db, "Collection", "data", id, col_names, col_types, col_data, 2, 1);
     EXPECT_EQ(err, QUIVER_OK);
 
-    // Clear by updating with empty
-    err = quiver_database_update_time_series_group(db, "Collection", "data", id, nullptr, nullptr, 0);
+    // Clear by updating with empty (column_count == 0, row_count == 0)
+    err = quiver_database_update_time_series_group(db, "Collection", "data", id, nullptr, nullptr, nullptr, 0, 0);
     EXPECT_EQ(err, QUIVER_OK);
 
     // Verify empty
-    char** out_date_times = nullptr;
-    double* out_values = nullptr;
+    char** out_col_names = nullptr;
+    int* out_col_types = nullptr;
+    void** out_col_data = nullptr;
+    size_t col_count = 0;
     size_t row_count = 0;
-    err =
-        quiver_database_read_time_series_group(db, "Collection", "data", id, &out_date_times, &out_values, &row_count);
+    err = quiver_database_read_time_series_group(db, "Collection", "data", id,
+                                                 &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count);
 
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(row_count, 0);
+    EXPECT_EQ(col_count, 0);
 
     quiver_database_close(db);
 }
@@ -291,13 +320,16 @@ TEST(DatabaseCApi, TimeSeriesNullArguments) {
     EXPECT_EQ(quiver_database_list_time_series_groups(nullptr, "Collection", &groups, &count), QUIVER_ERROR);
     EXPECT_EQ(quiver_database_list_time_series_groups(db, nullptr, &groups, &count), QUIVER_ERROR);
 
-    char** out_date_times = nullptr;
-    double* out_values = nullptr;
+    char** out_col_names = nullptr;
+    int* out_col_types = nullptr;
+    void** out_col_data = nullptr;
+    size_t col_count = 0;
     size_t row_count = 0;
     EXPECT_EQ(quiver_database_read_time_series_group(
-                  nullptr, "Collection", "data", 1, &out_date_times, &out_values, &row_count),
+                  nullptr, "Collection", "data", 1, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count),
               QUIVER_ERROR);
-    EXPECT_EQ(quiver_database_read_time_series_group(db, nullptr, "data", 1, &out_date_times, &out_values, &row_count),
+    EXPECT_EQ(quiver_database_read_time_series_group(
+                  db, nullptr, "data", 1, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count),
               QUIVER_ERROR);
 
     quiver_database_close(db);

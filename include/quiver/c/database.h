@@ -342,28 +342,41 @@ QUIVER_C_API quiver_error_t quiver_database_update_set_strings(quiver_database_t
                                                                const char* const* values,
                                                                size_t count);
 
-// Read time series group by element ID - returns rows with date_time and value columns
-// out_rows: array of row structs, out_row_count: number of rows
-// Each row contains date_time string and value columns
+// Read time series group by element ID - returns multi-column typed data
+// Columns are returned in schema definition order (dimension first, then value columns)
+// Column data arrays are typed: INTEGER -> int64_t*, FLOAT -> double*, STRING/DATE_TIME -> char**
 QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_database_t* db,
                                                                    const char* collection,
                                                                    const char* group,
                                                                    int64_t id,
-                                                                   char*** out_date_times,
-                                                                   double** out_values,
+                                                                   char*** out_column_names,
+                                                                   int** out_column_types,
+                                                                   void*** out_column_data,
+                                                                   size_t* out_column_count,
                                                                    size_t* out_row_count);
 
-// Update time series group - replaces all rows for element
+// Update time series group - replaces all rows for element with multi-column typed data
+// column_names[]: column names (including dimension column, any order)
+// column_types[]: quiver_data_type_t per column
+// column_data[]: typed array per column (int64_t* for INTEGER, double* for FLOAT, const char** for STRING/DATE_TIME)
+// Pass column_count == 0 and row_count == 0 with NULL arrays to clear all rows
 QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_database_t* db,
                                                                      const char* collection,
                                                                      const char* group,
                                                                      int64_t id,
-                                                                     const char* const* date_times,
-                                                                     const double* values,
+                                                                     const char* const* column_names,
+                                                                     const int* column_types,
+                                                                     const void* const* column_data,
+                                                                     size_t column_count,
                                                                      size_t row_count);
 
-// Free time series read results
-QUIVER_C_API quiver_error_t quiver_database_free_time_series_data(char** date_times, double* values, size_t row_count);
+// Free multi-column time series read results
+// Uses column_types to determine deallocation strategy per column
+QUIVER_C_API quiver_error_t quiver_database_free_time_series_data(char** column_names,
+                                                                  int* column_types,
+                                                                  void** column_data,
+                                                                  size_t column_count,
+                                                                  size_t row_count);
 
 // Time series files - singleton table storing file paths for external time series data
 // Check if collection has a time_series_files table
