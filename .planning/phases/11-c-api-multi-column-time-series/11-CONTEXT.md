@@ -1,6 +1,6 @@
 # Phase 11: C API Multi-Column Time Series - Context
 
-**Gathered:** 2026-02-12
+**Gathered:** 2026-02-12 (updated 2026-02-19)
 **Status:** Ready for planning
 
 <domain>
@@ -60,11 +60,11 @@ Redesign the C API time series functions (`update_time_series_group`, `read_time
 <deferred>
 ## Deferred Ideas
 
-None -- discussion stayed within phase scope
+- Transaction batching / combined create+time-series API — the current two-step workflow (create_element then update_time_series_group) uses two separate SQLite transactions. A batch transaction API or combined operation could improve performance for bulk inserts. Defer to a future phase.
 
 </deferred>
 
 ---
 
 *Phase: 11-c-api-multi-column-time-series*
-*Context gathered: 2026-02-12*
+*Context gathered: 2026-02-12 (updated 2026-02-19)*
