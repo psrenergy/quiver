@@ -138,10 +138,12 @@ end
 function update_time_series_group!(db::Database, collection::String, group::String, id::Int64; kwargs...)
     # No kwargs = clear all rows for this element
     if isempty(kwargs)
-        check(C.quiver_database_update_time_series_group(
-            db.ptr, collection, group, id,
-            C_NULL, C_NULL, C_NULL, Csize_t(0), Csize_t(0),
-        ))
+        check(
+            C.quiver_database_update_time_series_group(
+                db.ptr, collection, group, id,
+                C_NULL, C_NULL, C_NULL, Csize_t(0), Csize_t(0),
+            ),
+        )
         return nothing
     end
 
@@ -149,9 +151,11 @@ function update_time_series_group!(db::Database, collection::String, group::Stri
     row_count = length(first(values(kwargs)))
     for (k, v) in kwargs
         if length(v) != row_count
-            throw(ArgumentError(
-                "All column vectors must have the same length, got $(length(v)) for '$(k)' but expected $row_count"
-            ))
+            throw(
+                ArgumentError(
+                    "All column vectors must have the same length, got $(length(v)) for '$(k)' but expected $row_count",
+                ),
+            )
         end
     end
 
@@ -226,11 +230,13 @@ function update_time_series_group!(db::Database, collection::String, group::Stri
     push!(refs, col_data_arr)
 
     GC.@preserve refs begin
-        check(C.quiver_database_update_time_series_group(
-            db.ptr, collection, group, id,
-            name_ptrs, col_types_arr, col_data_arr,
-            Csize_t(column_count), Csize_t(row_count),
-        ))
+        check(
+            C.quiver_database_update_time_series_group(
+                db.ptr, collection, group, id,
+                name_ptrs, col_types_arr, col_data_arr,
+                Csize_t(column_count), Csize_t(row_count),
+            ),
+        )
     end
     return nothing
 end

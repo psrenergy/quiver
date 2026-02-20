@@ -553,10 +553,12 @@ function read_time_series_group(db::Database, collection::String, group::String,
     out_col_count = Ref{Csize_t}(0)
     out_row_count = Ref{Csize_t}(0)
 
-    check(C.quiver_database_read_time_series_group(
-        db.ptr, collection, group, id,
-        out_col_names, out_col_types, out_col_data, out_col_count, out_row_count,
-    ))
+    check(
+        C.quiver_database_read_time_series_group(
+            db.ptr, collection, group, id,
+            out_col_names, out_col_types, out_col_data, out_col_count, out_row_count,
+        ),
+    )
 
     col_count = out_col_count[]
     row_count = out_row_count[]
