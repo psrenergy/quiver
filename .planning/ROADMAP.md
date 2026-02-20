@@ -86,10 +86,11 @@ Plans:
   1. Lua multi-column time series operations have passing test coverage using mixed-type schema
   2. Old single-column C API time series functions are removed from headers and implementation
   3. All 1,213+ tests pass across all 4 suites (C++, C API, Julia, Dart) via `scripts/build-all.bat`
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 14-01: TBD
+- [ ] 14-01-PLAN.md -- Lua multi-column time series tests and composite read helper tests
+- [ ] 14-02-PLAN.md -- CLAUDE.md updates, dead code sweep, and full test suite gate
 
 ## Progress
 
