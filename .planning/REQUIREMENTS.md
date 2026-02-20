@@ -21,7 +21,7 @@ Requirements for time series update interface redesign. Each maps to roadmap pha
 - [x] **BIND-02**: Julia read_time_series_group returns multi-column data with correct types per column
 - [x] **BIND-03**: Dart updateTimeSeriesGroup accepts Map: `updateTimeSeriesGroup(col, grp, id, {'date_time': [...], 'temp': [...]})`
 - [x] **BIND-04**: Dart readTimeSeriesGroup returns multi-column data with correct types per column
-- [ ] **BIND-05**: Lua multi-column time series operations have test coverage (implementation already works via sol2)
+- [x] **BIND-05**: Lua multi-column time series operations have test coverage (implementation already works via sol2)
 
 ### Migration Safety
 
@@ -64,7 +64,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BIND-02 | Phase 12 | Complete |
 | BIND-03 | Phase 13 | Complete |
 | BIND-04 | Phase 13 | Complete |
-| BIND-05 | Phase 14 | Pending |
+| BIND-05 | Phase 14 | Complete |
 | MIGR-01 | Phase 11 | Complete |
 | MIGR-02 | Phase 14 | Pending |
 | MIGR-03 | Phase 14 | Pending |
