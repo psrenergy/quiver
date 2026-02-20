@@ -2,26 +2,25 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-11)
+See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** Every public C++ method is reachable from every binding through uniform, predictable patterns
-**Current focus:** v1.1 Time Series Ergonomics -- Phase 14 Complete (Milestone Complete)
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 14 of 14 (Verification and Cleanup)
-Plan: 2 of 2 in current phase
-Status: Phase 14 Complete -- v1.1 Milestone Complete
-Last activity: 2026-02-20 -- Completed 14-02 (CLAUDE.md docs, dead code sweep, full test suite gate)
+Phase: 14 of 14 (all complete)
+Plan: N/A
+Status: v1.1 Milestone Complete -- ready for next milestone
+Last activity: 2026-02-20 -- v1.1 Time Series Ergonomics shipped
 
 Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15 (v1.0)
-- Average duration: ~12 min (v1.0)
-- Total execution time: ~3 hours (v1.0)
+- Total plans completed: 15 (v1.0) + 8 (v1.1) = 23 total
+- Average duration: ~12 min (v1.0), ~4 min (v1.1)
 
 **By Phase (v1.0):**
 
@@ -42,35 +41,11 @@ Progress: [██████████] 100%
 | 14 | 01 | 6min | 2 | 1 |
 | 14 | 02 | 3min | 2 | 1 |
 
-*v1.1 metrics start fresh at Phase 11*
-
 ## Accumulated Context
 
 ### Decisions
 
 See PROJECT.md Key Decisions table for full log with outcomes.
-
-Recent decisions affecting current work:
-- v1.0: Alloc/free co-location in C API (read + free in same translation unit)
-- v1.0: 3 canonical error message patterns (Cannot/Not found/Failed to)
-- v1.1: Columnar typed-arrays pattern (reuse convert_params() approach from database_query.cpp)
-- v1.1: Split QUIVER_REQUIRE into two calls for 9-arg functions (readability over single macro call)
-- v1.1: c_type_name() helper is file-local static in database_time_series.cpp (single use site)
-- v1.1: Dimension column stored as QUIVER_DATA_TYPE_STRING in schema lookup map
-- v1.1: Value columns returned in alphabetical order (std::map in TableDefinition), not CREATE TABLE definition order
-- v1.1: Partial column updates fail on NOT NULL schemas (SQLite constraint enforced at C++ layer)
-- v1.1: Dict{String, Vector} with abstract Vector value type for Julia read_time_series_group return
-- v1.1: Single refs::Vector{Any} collector for GC.@preserve in kwargs-to-columnar marshaling
-- v1.1: Metadata fetch per update call for auto-coercion (Int->Float when schema expects REAL)
-- v1.1: Fixed test_database_create.jl time series assertions as blocking deviation during test migration
-- v1.1: Map<String, List<Object>> for both Dart update parameter and read return type (API symmetry)
-- v1.1: Strict type enforcement in Dart (no auto-coercion, unlike Julia)
-- v1.1: DateTime constructor comparisons for dimension column in Dart tests
-- v1.1: Empty Map {} for clear semantics in Dart (matches API design decision)
-- v1.1: Lua composite read helpers (read_all_vectors/sets_by_id) require single-column groups where group_name == column_name
-- v1.1: Multi-Column Time Series C API section placed before Parameterized Queries (both document typed parallel-array FFI patterns)
-- v1.1: Cross-layer naming table split "Time series" into "Time series read" and "Time series update" rows
-- v1.1: No hardcoded test counts in CLAUDE.md (staleness avoidance)
 
 ### Pending Todos
 
@@ -83,5 +58,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 14-02-PLAN.md (Phase 14 complete, v1.1 milestone complete)
+Stopped at: v1.1 milestone completed and archived
 Resume file: None
