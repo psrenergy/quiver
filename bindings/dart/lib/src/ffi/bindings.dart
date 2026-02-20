@@ -1888,8 +1888,10 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> group,
     int id,
-    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>> out_date_times,
-    ffi.Pointer<ffi.Pointer<ffi.Double>> out_values,
+    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>> out_column_names,
+    ffi.Pointer<ffi.Pointer<ffi.Int>> out_column_types,
+    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Void>>> out_column_data,
+    ffi.Pointer<ffi.Size> out_column_count,
     ffi.Pointer<ffi.Size> out_row_count,
   ) {
     return _quiver_database_read_time_series_group(
@@ -1897,8 +1899,10 @@ class QuiverDatabaseBindings {
       collection,
       group,
       id,
-      out_date_times,
-      out_values,
+      out_column_names,
+      out_column_types,
+      out_column_data,
+      out_column_count,
       out_row_count,
     );
   }
@@ -1912,7 +1916,9 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Char>,
             ffi.Int64,
             ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
-            ffi.Pointer<ffi.Pointer<ffi.Double>>,
+            ffi.Pointer<ffi.Pointer<ffi.Int>>,
+            ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Void>>>,
+            ffi.Pointer<ffi.Size>,
             ffi.Pointer<ffi.Size>,
           )
         >
@@ -1925,7 +1931,9 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Char>,
           int,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
-          ffi.Pointer<ffi.Pointer<ffi.Double>>,
+          ffi.Pointer<ffi.Pointer<ffi.Int>>,
+          ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Void>>>,
+          ffi.Pointer<ffi.Size>,
           ffi.Pointer<ffi.Size>,
         )
       >();
@@ -1935,8 +1943,10 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> group,
     int id,
-    ffi.Pointer<ffi.Pointer<ffi.Char>> date_times,
-    ffi.Pointer<ffi.Double> values,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> column_names,
+    ffi.Pointer<ffi.Int> column_types,
+    ffi.Pointer<ffi.Pointer<ffi.Void>> column_data,
+    int column_count,
     int row_count,
   ) {
     return _quiver_database_update_time_series_group(
@@ -1944,8 +1954,10 @@ class QuiverDatabaseBindings {
       collection,
       group,
       id,
-      date_times,
-      values,
+      column_names,
+      column_types,
+      column_data,
+      column_count,
       row_count,
     );
   }
@@ -1959,7 +1971,9 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Char>,
             ffi.Int64,
             ffi.Pointer<ffi.Pointer<ffi.Char>>,
-            ffi.Pointer<ffi.Double>,
+            ffi.Pointer<ffi.Int>,
+            ffi.Pointer<ffi.Pointer<ffi.Void>>,
+            ffi.Size,
             ffi.Size,
           )
         >
@@ -1972,29 +1986,51 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Char>,
           int,
           ffi.Pointer<ffi.Pointer<ffi.Char>>,
-          ffi.Pointer<ffi.Double>,
+          ffi.Pointer<ffi.Int>,
+          ffi.Pointer<ffi.Pointer<ffi.Void>>,
+          int,
           int,
         )
       >();
 
   int quiver_database_free_time_series_data(
-    ffi.Pointer<ffi.Pointer<ffi.Char>> date_times,
-    ffi.Pointer<ffi.Double> values,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> column_names,
+    ffi.Pointer<ffi.Int> column_types,
+    ffi.Pointer<ffi.Pointer<ffi.Void>> column_data,
+    int column_count,
     int row_count,
   ) {
     return _quiver_database_free_time_series_data(
-      date_times,
-      values,
+      column_names,
+      column_types,
+      column_data,
+      column_count,
       row_count,
     );
   }
 
   late final _quiver_database_free_time_series_dataPtr =
       _lookup<
-        ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Pointer<ffi.Double>, ffi.Size)>
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Pointer<ffi.Int>,
+            ffi.Pointer<ffi.Pointer<ffi.Void>>,
+            ffi.Size,
+            ffi.Size,
+          )
+        >
       >('quiver_database_free_time_series_data');
   late final _quiver_database_free_time_series_data = _quiver_database_free_time_series_dataPtr
-      .asFunction<int Function(ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Pointer<ffi.Double>, int)>();
+      .asFunction<
+        int Function(
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          ffi.Pointer<ffi.Int>,
+          ffi.Pointer<ffi.Pointer<ffi.Void>>,
+          int,
+          int,
+        )
+      >();
 
   int quiver_database_has_time_series_files(
     ffi.Pointer<quiver_database_t> db,
@@ -2160,9 +2196,7 @@ class QuiverDatabaseBindings {
   }
 
   late final _quiver_database_free_integer_arrayPtr =
-      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Int64>)>>(
-        'quiver_database_free_integer_array',
-      );
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Int64>)>>('quiver_database_free_integer_array');
   late final _quiver_database_free_integer_array = _quiver_database_free_integer_arrayPtr
       .asFunction<int Function(ffi.Pointer<ffi.Int64>)>();
 
@@ -2175,9 +2209,7 @@ class QuiverDatabaseBindings {
   }
 
   late final _quiver_database_free_float_arrayPtr =
-      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Double>)>>(
-        'quiver_database_free_float_array',
-      );
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Double>)>>('quiver_database_free_float_array');
   late final _quiver_database_free_float_array = _quiver_database_free_float_arrayPtr
       .asFunction<int Function(ffi.Pointer<ffi.Double>)>();
 

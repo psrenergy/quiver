@@ -269,15 +269,15 @@ extension DatabaseUpdate on Database {
   // ==========================================================================
 
   /// Updates a time series group by element ID (replaces all rows).
-  /// Each row must contain 'date_time' (String) and 'value' (double) keys.
-  void updateTimeSeriesGroup(String collection, String group, int id, List<Map<String, Object?>> rows) {
+  /// Takes a Map of column names to typed Lists.
+  /// Supported value types: int, double, String, DateTime.
+  /// An empty Map clears all rows for that element.
+  void updateTimeSeriesGroup(String collection, String group, int id, Map<String, List<Object>> data) {
     _ensureNotClosed();
 
     final arena = Arena();
     try {
-      final rowCount = rows.length;
-
-      if (rowCount == 0) {
+      if (data.isEmpty) {
         check(
           bindings.quiver_database_update_time_series_group(
             _ptr,
@@ -286,29 +286,67 @@ extension DatabaseUpdate on Database {
             id,
             nullptr,
             nullptr,
+            nullptr,
+            0,
             0,
           ),
         );
         return;
       }
 
-      final dateTimes = arena<Pointer<Char>>(rowCount);
-      final values = arena<Double>(rowCount);
-
-      for (var i = 0; i < rowCount; i++) {
-        final row = rows[i];
-        final dateTime = row['date_time'];
-        final value = row['value'];
-
-        if (dateTime is! String) {
-          throw ArgumentError("Row $i missing or invalid 'date_time' (must be String)");
+      // Validate equal lengths
+      final rowCount = data.values.first.length;
+      for (final entry in data.entries) {
+        if (entry.value.length != rowCount) {
+          throw ArgumentError('All column lists must have the same length');
         }
-        if (value is! num) {
-          throw ArgumentError("Row $i missing or invalid 'value' (must be num)");
-        }
+      }
 
-        dateTimes[i] = dateTime.toNativeUtf8(allocator: arena).cast();
-        values[i] = value.toDouble();
+      final columnCount = data.length;
+      final columnNames = arena<Pointer<Char>>(columnCount);
+      final columnTypes = arena<Int>(columnCount);
+      final columnData = arena<Pointer<Void>>(columnCount);
+
+      var i = 0;
+      for (final entry in data.entries) {
+        columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
+        final values = entry.value;
+
+        if (values.isEmpty) {
+          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_STRING;
+          columnData[i] = nullptr;
+        } else if (values.first is int) {
+          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER;
+          final arr = arena<Int64>(rowCount);
+          for (var r = 0; r < rowCount; r++) {
+            arr[r] = values[r] as int;
+          }
+          columnData[i] = arr.cast();
+        } else if (values.first is double) {
+          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT;
+          final arr = arena<Double>(rowCount);
+          for (var r = 0; r < rowCount; r++) {
+            arr[r] = values[r] as double;
+          }
+          columnData[i] = arr.cast();
+        } else if (values.first is String) {
+          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_STRING;
+          final arr = arena<Pointer<Char>>(rowCount);
+          for (var r = 0; r < rowCount; r++) {
+            arr[r] = (values[r] as String).toNativeUtf8(allocator: arena).cast();
+          }
+          columnData[i] = arr.cast();
+        } else if (values.first is DateTime) {
+          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_STRING;
+          final arr = arena<Pointer<Char>>(rowCount);
+          for (var r = 0; r < rowCount; r++) {
+            arr[r] = dateTimeToString(values[r] as DateTime).toNativeUtf8(allocator: arena).cast();
+          }
+          columnData[i] = arr.cast();
+        } else {
+          throw ArgumentError('Unsupported value type: ${values.first.runtimeType}');
+        }
+        i++;
       }
 
       check(
@@ -317,8 +355,10 @@ extension DatabaseUpdate on Database {
           collection.toNativeUtf8(allocator: arena).cast(),
           group.toNativeUtf8(allocator: arena).cast(),
           id,
-          dateTimes,
-          values,
+          columnNames,
+          columnTypes,
+          columnData,
+          columnCount,
           rowCount,
         ),
       );
