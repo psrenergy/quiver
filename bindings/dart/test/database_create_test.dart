@@ -404,25 +404,25 @@ void main() {
         });
         expect(id, greaterThan(0));
 
-        // Verify temperature group
-        final tempRows = db.readTimeSeriesGroup('Sensor', 'temperature', id);
-        expect(tempRows.length, equals(3));
-        expect(tempRows[0]['date_time'], equals('2024-01-01T10:00:00'));
-        expect(tempRows[1]['date_time'], equals('2024-01-02T10:00:00'));
-        expect(tempRows[2]['date_time'], equals('2024-01-03T10:00:00'));
-        expect(tempRows[0]['temperature'], equals(20.0));
-        expect(tempRows[1]['temperature'], equals(21.5));
-        expect(tempRows[2]['temperature'], equals(22.0));
+        // Verify temperature group (Map-based columnar return)
+        final tempResult = db.readTimeSeriesGroup('Sensor', 'temperature', id);
+        expect(tempResult['date_time']!.length, equals(3));
+        expect(tempResult['date_time']![0], equals(DateTime(2024, 1, 1, 10, 0, 0)));
+        expect(tempResult['date_time']![1], equals(DateTime(2024, 1, 2, 10, 0, 0)));
+        expect(tempResult['date_time']![2], equals(DateTime(2024, 1, 3, 10, 0, 0)));
+        expect(tempResult['temperature']![0], equals(20.0));
+        expect(tempResult['temperature']![1], equals(21.5));
+        expect(tempResult['temperature']![2], equals(22.0));
 
-        // Verify humidity group
-        final humRows = db.readTimeSeriesGroup('Sensor', 'humidity', id);
-        expect(humRows.length, equals(3));
-        expect(humRows[0]['date_time'], equals('2024-01-01T10:00:00'));
-        expect(humRows[1]['date_time'], equals('2024-01-02T10:00:00'));
-        expect(humRows[2]['date_time'], equals('2024-01-03T10:00:00'));
-        expect(humRows[0]['humidity'], equals(45.0));
-        expect(humRows[1]['humidity'], equals(50.0));
-        expect(humRows[2]['humidity'], equals(55.0));
+        // Verify humidity group (Map-based columnar return)
+        final humResult = db.readTimeSeriesGroup('Sensor', 'humidity', id);
+        expect(humResult['date_time']!.length, equals(3));
+        expect(humResult['date_time']![0], equals(DateTime(2024, 1, 1, 10, 0, 0)));
+        expect(humResult['date_time']![1], equals(DateTime(2024, 1, 2, 10, 0, 0)));
+        expect(humResult['date_time']![2], equals(DateTime(2024, 1, 3, 10, 0, 0)));
+        expect(humResult['humidity']![0], equals(45.0));
+        expect(humResult['humidity']![1], equals(50.0));
+        expect(humResult['humidity']![2], equals(55.0));
       } finally {
         db.close();
       }

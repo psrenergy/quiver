@@ -888,14 +888,19 @@ extension DatabaseRead on Database {
   // ==========================================================================
 
   /// Reads a time series group for an element by ID.
-  /// Returns rows with date_time and value columns, ordered by date_time.
-  List<Map<String, Object?>> readTimeSeriesGroup(String collection, String group, int id) {
+  /// Returns a Map of column names to typed Lists.
+  /// The dimension column is parsed to List<DateTime>.
+  /// INTEGER columns return List<int>, FLOAT columns return List<double>,
+  /// other TEXT columns return List<String>.
+  Map<String, List<Object>> readTimeSeriesGroup(String collection, String group, int id) {
     _ensureNotClosed();
 
     final arena = Arena();
     try {
-      final outDateTimes = arena<Pointer<Pointer<Char>>>();
-      final outValues = arena<Pointer<Double>>();
+      final outColNames = arena<Pointer<Pointer<Char>>>();
+      final outColTypes = arena<Pointer<Int>>();
+      final outColData = arena<Pointer<Pointer<Void>>>();
+      final outColCount = arena<Size>();
       final outRowCount = arena<Size>();
 
       check(
@@ -904,29 +909,60 @@ extension DatabaseRead on Database {
           collection.toNativeUtf8(allocator: arena).cast(),
           group.toNativeUtf8(allocator: arena).cast(),
           id,
-          outDateTimes,
-          outValues,
+          outColNames,
+          outColTypes,
+          outColData,
+          outColCount,
           outRowCount,
         ),
       );
 
+      final colCount = outColCount.value;
       final rowCount = outRowCount.value;
-      if (rowCount == 0 || outDateTimes.value == nullptr) {
-        return [];
-      }
 
+      if (colCount == 0 || rowCount == 0) return {};
+
+      // Get dimension column for DateTime parsing
       final meta = getTimeSeriesMetadata(collection, group);
-      final valCol = meta.valueColumns.isEmpty ? 'value' : meta.valueColumns.first.name;
+      final dimCol = meta.dimensionColumn;
 
-      final result = <Map<String, Object?>>[];
-      for (var i = 0; i < rowCount; i++) {
-        result.add({
-          'date_time': outDateTimes.value[i].cast<Utf8>().toDartString(),
-          valCol: outValues.value[i],
-        });
+      final result = <String, List<Object>>{};
+      for (var c = 0; c < colCount; c++) {
+        final colName = outColNames.value[c].cast<Utf8>().toDartString();
+        final colType = outColTypes.value[c];
+
+        if (colType == quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER) {
+          final ptr = outColData.value[c].cast<Int64>();
+          result[colName] = List<int>.generate(rowCount, (r) => ptr[r]);
+        } else if (colType == quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT) {
+          final ptr = outColData.value[c].cast<Double>();
+          result[colName] = List<double>.generate(rowCount, (r) => ptr[r]);
+        } else {
+          // STRING or DATE_TIME
+          final ptr = outColData.value[c].cast<Pointer<Char>>();
+          if (colName == dimCol) {
+            result[colName] = List<DateTime>.generate(
+              rowCount,
+              (r) => stringToDateTime(ptr[r].cast<Utf8>().toDartString()),
+            );
+          } else {
+            result[colName] = List<String>.generate(
+              rowCount,
+              (r) => ptr[r].cast<Utf8>().toDartString(),
+            );
+          }
+        }
       }
 
-      bindings.quiver_database_free_time_series_data(outDateTimes.value, outValues.value, rowCount);
+      // Free C-allocated memory
+      bindings.quiver_database_free_time_series_data(
+        outColNames.value,
+        outColTypes.value,
+        outColData.value,
+        colCount,
+        rowCount,
+      );
+
       return result;
     } finally {
       arena.releaseAll();

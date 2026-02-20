@@ -547,38 +547,64 @@ function read_set_group_by_id(db::Database, collection::String, group::String, i
 end
 
 function read_time_series_group(db::Database, collection::String, group::String, id::Int64)
-    out_date_times = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
-    out_values = Ref{Ptr{Cdouble}}(C_NULL)
+    out_col_names = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
+    out_col_types = Ref{Ptr{Cint}}(C_NULL)
+    out_col_data = Ref{Ptr{Ptr{Cvoid}}}(C_NULL)
+    out_col_count = Ref{Csize_t}(0)
     out_row_count = Ref{Csize_t}(0)
 
     check(
         C.quiver_database_read_time_series_group(
             db.ptr, collection, group, id,
-            out_date_times, out_values, out_row_count,
+            out_col_names, out_col_types, out_col_data, out_col_count, out_row_count,
         ),
     )
 
+    col_count = out_col_count[]
     row_count = out_row_count[]
-    if row_count == 0 || out_date_times[] == C_NULL
-        return Vector{Dict{String, Any}}()
+
+    if col_count == 0 || row_count == 0
+        return Dict{String, Vector}()
     end
 
+    # Get dimension column name for DateTime parsing
     metadata = get_time_series_metadata(db, collection, group)
-    val_col = isempty(metadata.value_columns) ? "value" : metadata.value_columns[1].name
+    dim_col = metadata.dimension_column
 
-    date_time_ptrs = unsafe_wrap(Array, out_date_times[], row_count)
-    values = unsafe_wrap(Array, out_values[], row_count) |> copy
+    # Unmarshal column names, types, data
+    name_ptrs = unsafe_wrap(Array, out_col_names[], col_count)
+    type_vals = unsafe_wrap(Array, out_col_types[], col_count)
+    data_ptrs = unsafe_wrap(Array, out_col_data[], col_count)
 
-    rows = Vector{Dict{String, Any}}()
-    for i in 1:row_count
-        push!(rows, Dict{String, Any}(
-            "date_time" => unsafe_string(date_time_ptrs[i]),
-            val_col => values[i],
-        ))
+    result = Dict{String, Vector}()
+    for i in 1:col_count
+        col_name = unsafe_string(name_ptrs[i])
+        col_type = type_vals[i]
+
+        if col_type == Cint(C.QUIVER_DATA_TYPE_INTEGER)
+            int_ptr = reinterpret(Ptr{Int64}, data_ptrs[i])
+            result[col_name] = copy(unsafe_wrap(Array, int_ptr, row_count))
+        elseif col_type == Cint(C.QUIVER_DATA_TYPE_FLOAT)
+            float_ptr = reinterpret(Ptr{Float64}, data_ptrs[i])
+            result[col_name] = copy(unsafe_wrap(Array, float_ptr, row_count))
+        elseif col_type == Cint(C.QUIVER_DATA_TYPE_STRING) || col_type == Cint(C.QUIVER_DATA_TYPE_DATE_TIME)
+            str_ptr_ptr = reinterpret(Ptr{Ptr{Cchar}}, data_ptrs[i])
+            str_ptrs = unsafe_wrap(Array, str_ptr_ptr, row_count)
+            if col_name == dim_col
+                result[col_name] = DateTime[string_to_date_time(unsafe_string(p)) for p in str_ptrs]
+            else
+                result[col_name] = String[unsafe_string(p) for p in str_ptrs]
+            end
+        end
     end
 
-    C.quiver_database_free_time_series_data(out_date_times[], out_values[], row_count)
-    return rows
+    # Free C-allocated memory
+    C.quiver_database_free_time_series_data(
+        out_col_names[], out_col_types[], out_col_data[],
+        Csize_t(col_count), Csize_t(row_count),
+    )
+
+    return result
 end
 
 function read_time_series_files(db::Database, collection::String)

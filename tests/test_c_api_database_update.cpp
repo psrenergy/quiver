@@ -498,23 +498,35 @@ TEST(DatabaseCApi, UpdateElementWithTimeSeries) {
     EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
     EXPECT_EQ(err, QUIVER_OK);
 
-    // Verify via read_time_series_group
-    char** out_date_times = nullptr;
-    double* out_values = nullptr;
-    size_t out_count = 0;
-    ASSERT_EQ(
-        quiver_database_read_time_series_group(db, "Collection", "data", id, &out_date_times, &out_values, &out_count),
-        QUIVER_OK);
-    EXPECT_EQ(out_count, 3);
+    // Verify via read_time_series_group (multi-column)
+    char** out_col_names = nullptr;
+    int* out_col_types = nullptr;
+    void** out_col_data = nullptr;
+    size_t out_col_count = 0;
+    size_t out_row_count = 0;
+    ASSERT_EQ(quiver_database_read_time_series_group(db,
+                                                     "Collection",
+                                                     "data",
+                                                     id,
+                                                     &out_col_names,
+                                                     &out_col_types,
+                                                     &out_col_data,
+                                                     &out_col_count,
+                                                     &out_row_count),
+              QUIVER_OK);
+    EXPECT_EQ(out_row_count, 3);
+    ASSERT_EQ(out_col_count, 2);  // date_time + value
+
+    auto** out_date_times = static_cast<char**>(out_col_data[0]);
     EXPECT_STREQ(out_date_times[0], "2025-06-01T00:00:00");
     EXPECT_STREQ(out_date_times[1], "2025-06-02T00:00:00");
     EXPECT_STREQ(out_date_times[2], "2025-06-03T00:00:00");
+    auto* out_values = static_cast<double*>(out_col_data[1]);
     EXPECT_DOUBLE_EQ(out_values[0], 10.0);
     EXPECT_DOUBLE_EQ(out_values[1], 20.0);
     EXPECT_DOUBLE_EQ(out_values[2], 30.0);
 
-    quiver_database_free_string_array(out_date_times, out_count);
-    delete[] out_values;
+    quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, out_col_count, out_row_count);
     quiver_database_close(db);
 }
 

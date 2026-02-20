@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Quiver is a SQLite wrapper library with a C++ core, C API for FFI, and language bindings (Julia, Dart, Lua). It provides structured data access patterns (scalars, vectors, sets, time series) over SQLite databases with schema validation, element builders, and Lua scripting support. The target users are developers embedding structured SQLite access into Julia, Dart, or Lua applications.
+Quiver is a SQLite wrapper library with a C++ core, C API for FFI, and language bindings (Julia, Dart, Lua). It provides structured data access patterns (scalars, vectors, sets, time series) over SQLite databases with schema validation, element builders, multi-column time series support, and Lua scripting. The target users are developers embedding structured SQLite access into Julia, Dart, or Lua applications.
 
 ## Core Value
 
@@ -37,42 +37,37 @@ Every public C++ method is reachable from every binding (C, Julia, Dart, Lua) th
 - ✓ SQL identifier validation (defense-in-depth) -- v1.0
 - ✓ clang-tidy static analysis integration -- v1.0
 - ✓ Cross-layer naming documentation in CLAUDE.md -- v1.0
+- ✓ Multi-column time series support through the C API (columnar typed-array signatures) -- v1.1
+- ✓ Kwargs-style columnar interface for `update_time_series_group` across all layers (C API, Julia, Dart, Lua) -- v1.1
+- ✓ Multi-column time series read with typed column returns across all layers -- v1.1
+- ✓ Lua multi-column time series test coverage -- v1.1
 
 ### Active
 
-- [ ] Kwargs-style columnar interface for `update_time_series_group` across all layers (C API, Julia, Dart, Lua)
-- [ ] Multi-column time series support through the C API (currently limited to single value column)
 - [ ] Complete API surface parity -- every C++ method exposed through C, Julia, Dart, and Lua
 - [ ] Automated parity detection script that verifies binding completeness
 - [ ] Clean up or remove non-functional blob module stubs
 
-## Current Milestone: v1.1 Time Series Ergonomics
-
-**Goal:** Make `update_time_series_group` match `create_element`'s kwargs/columnar interface pattern across all layers.
-
-**Target features:**
-- Redesign C API to support multi-column time series updates
-- Julia kwargs interface: `update_time_series_group!(db, col, group, id; date_time=[...], val=[...])`
-- Dart named-parameter interface matching Julia ergonomics
-- Lua alignment with the same columnar pattern
-
 ### Out of Scope
 
-- New features beyond current API surface -- refactoring only, no new database operations
+- New features beyond current API surface -- stabilize existing bindings first
 - Performance optimization -- focus is consistency, not speed
 - New language bindings (Python, etc.) -- stabilize existing bindings first
 - Authentication or access control -- not in scope for a library
 - GUI or CLI tools -- library only
 - C++20 modules -- breaks FFI generator toolchain
 - Async/thread-safe API -- SQLite is single-connection
+- Time series append semantics, partial column updates, range filtering -- deferred to v2
 
 ## Context
 
-Shipped v1.0 refactoring milestone. Codebase is now uniformly structured across all 5 layers:
-- C++ core: 10 focused modules (lifecycle, create, read, update, delete, metadata, time series, query, relations, describe)
-- C API: 9 focused modules mirroring C++ structure with shared helper header
-- Julia, Dart, Lua bindings: idiomatic naming, uniform error surfacing
-- 1,213 tests passing across 4 suites (C++ 388, C API 247, Julia 351, Dart 227)
+Shipped v1.0 (refactoring) and v1.1 (time series ergonomics). Codebase state:
+- C++ core: 10 focused modules with multi-column time series via `vector<map<string, Value>>`
+- C API: 9 focused modules with columnar typed-array pattern for time series (parallel column_names[], column_types[], column_data[])
+- Julia: kwargs interface for time series update, Dict{String, Vector} for reads, auto-coercion (Int->Float)
+- Dart: Map<String, List<Object>> for both time series update and read, strict type enforcement
+- Lua: direct C++ binding via sol2, multi-column time series verified with mixed-type tests
+- 1,295+ tests passing across 4 suites (C++ 401, C API 257, Julia 399, Dart 238)
 - clang-tidy integrated with zero project-code warnings
 - SQL identifier validation at all concatenation sites
 
@@ -100,6 +95,10 @@ Tech stack: C++20, CMake, SQLite, spdlog, GoogleTest, sol2 (Lua), Julia FFI, Dar
 | 3 canonical error message patterns | Consistent format enables downstream parsing: Cannot/Not found/Failed to | ✓ Good -- C API, Julia, Dart, Lua all surface errors uniformly |
 | Alloc/free co-location in C API | Every allocation and its free function in same translation unit | ✓ Good -- clear ownership, no orphaned allocations |
 | Representative docs over exhaustive | CLAUDE.md shows transformation rules + examples, not all 60 methods | ✓ Good -- maintainable, drift-resistant documentation |
+| Columnar typed-arrays for C API time series | Reuse convert_params() pattern from database_query.cpp for multi-column FFI | ✓ Good -- consistent FFI marshaling across query and time series |
+| Dict/Map return types for binding reads | Julia Dict{String, Vector}, Dart Map<String, List<Object>> | ✓ Good -- symmetric with update interface, typed columns |
+| Layer-specific type behavior | Julia auto-coerces Int->Float; Dart enforces strict types | ✓ Good -- idiomatic per language while maintaining correctness |
+| Schema validation before time series ops | Metadata lookup validates column names and types before processing | ✓ Good -- clear error messages on mismatch, no silent corruption |
 
 ---
-*Last updated: 2026-02-11 after v1.1 milestone start*
+*Last updated: 2026-02-20 after v1.1 milestone*
