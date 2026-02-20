@@ -160,6 +160,203 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    # Multi-column mixed-type tests using mixed_time_series.sql schema
+    # Schema: Sensor_time_series_readings with date_time TEXT, temperature REAL, humidity INTEGER, status TEXT
+
+    @testset "Multi-Column Update and Read" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "mixed_time_series.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id = Quiver.create_element!(db, "Sensor"; label = "Sensor 1")
+
+        Quiver.update_time_series_group!(db, "Sensor", "readings", id;
+            date_time = [DateTime(2024, 1, 1, 10, 0, 0), DateTime(2024, 1, 1, 11, 0, 0)],
+            temperature = [20.5, 21.3],
+            humidity = [45, 50],
+            status = ["normal", "high"],
+        )
+
+        result = Quiver.read_time_series_group(db, "Sensor", "readings", id)
+        @test length(result) == 4  # 4 columns
+
+        # Dimension column: DateTime
+        @test result["date_time"] isa Vector{DateTime}
+        @test result["date_time"][1] == DateTime(2024, 1, 1, 10, 0, 0)
+        @test result["date_time"][2] == DateTime(2024, 1, 1, 11, 0, 0)
+
+        # REAL column: Float64
+        @test result["temperature"] isa Vector{Float64}
+        @test result["temperature"] == [20.5, 21.3]
+
+        # INTEGER column: Int64
+        @test result["humidity"] isa Vector{Int64}
+        @test result["humidity"] == [45, 50]
+
+        # TEXT column: String
+        @test result["status"] isa Vector{String}
+        @test result["status"] == ["normal", "high"]
+
+        Quiver.close!(db)
+    end
+
+    @testset "Multi-Column Auto-Coercion Int to Float" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "mixed_time_series.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id = Quiver.create_element!(db, "Sensor"; label = "Sensor 1")
+
+        # Pass Int for temperature (REAL column) -- should auto-coerce to Float64
+        Quiver.update_time_series_group!(db, "Sensor", "readings", id;
+            date_time = ["2024-01-01T10:00:00"],
+            temperature = [20],
+            humidity = [45],
+            status = ["normal"],
+        )
+
+        result = Quiver.read_time_series_group(db, "Sensor", "readings", id)
+        @test result["temperature"] == [20.0]
+        @test result["temperature"] isa Vector{Float64}
+
+        Quiver.close!(db)
+    end
+
+    @testset "Multi-Column DateTime on Dimension" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "mixed_time_series.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id = Quiver.create_element!(db, "Sensor"; label = "Sensor 1")
+
+        # Pass DateTime objects for dimension column
+        dt = DateTime(2024, 6, 15, 14, 30, 0)
+        Quiver.update_time_series_group!(db, "Sensor", "readings", id;
+            date_time = [dt],
+            temperature = [25.0],
+            humidity = [60],
+            status = ["ok"],
+        )
+
+        result = Quiver.read_time_series_group(db, "Sensor", "readings", id)
+        @test result["date_time"][1] == dt
+        @test result["date_time"] isa Vector{DateTime}
+
+        Quiver.close!(db)
+    end
+
+    @testset "Multi-Column String Dimension" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "mixed_time_series.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id = Quiver.create_element!(db, "Sensor"; label = "Sensor 1")
+
+        # Pass string values for dimension column (not DateTime)
+        Quiver.update_time_series_group!(db, "Sensor", "readings", id;
+            date_time = ["2024-03-20T08:15:00"],
+            temperature = [18.0],
+            humidity = [70],
+            status = ["damp"],
+        )
+
+        # Should come back parsed to DateTime on read
+        result = Quiver.read_time_series_group(db, "Sensor", "readings", id)
+        @test result["date_time"][1] == DateTime(2024, 3, 20, 8, 15, 0)
+        @test result["date_time"] isa Vector{DateTime}
+
+        Quiver.close!(db)
+    end
+
+    @testset "Multi-Column Clear" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "mixed_time_series.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id = Quiver.create_element!(db, "Sensor"; label = "Sensor 1")
+
+        # Insert data
+        Quiver.update_time_series_group!(db, "Sensor", "readings", id;
+            date_time = ["2024-01-01T10:00:00"],
+            temperature = [20.0],
+            humidity = [45],
+            status = ["normal"],
+        )
+
+        # Clear with no kwargs
+        Quiver.update_time_series_group!(db, "Sensor", "readings", id)
+
+        result = Quiver.read_time_series_group(db, "Sensor", "readings", id)
+        @test isempty(result)
+
+        Quiver.close!(db)
+    end
+
+    @testset "Multi-Column Replace" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "mixed_time_series.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id = Quiver.create_element!(db, "Sensor"; label = "Sensor 1")
+
+        # First update
+        Quiver.update_time_series_group!(db, "Sensor", "readings", id;
+            date_time = ["2024-01-01T10:00:00"],
+            temperature = [20.0],
+            humidity = [45],
+            status = ["normal"],
+        )
+
+        # Second update fully replaces first
+        Quiver.update_time_series_group!(db, "Sensor", "readings", id;
+            date_time = ["2024-06-01T12:00:00", "2024-06-01T13:00:00"],
+            temperature = [30.0, 31.5],
+            humidity = [35, 40],
+            status = ["hot", "very_hot"],
+        )
+
+        result = Quiver.read_time_series_group(db, "Sensor", "readings", id)
+        @test length(result["date_time"]) == 2
+        @test result["temperature"] == [30.0, 31.5]
+        @test result["humidity"] == [35, 40]
+        @test result["status"] == ["hot", "very_hot"]
+
+        Quiver.close!(db)
+    end
+
+    @testset "Multi-Column Read Empty" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "mixed_time_series.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id = Quiver.create_element!(db, "Sensor"; label = "Sensor 1")
+
+        # Read without any update
+        result = Quiver.read_time_series_group(db, "Sensor", "readings", id)
+        @test isempty(result)
+        @test result isa Dict{String, Vector}
+
+        Quiver.close!(db)
+    end
+
+    @testset "Multi-Column Row Count Mismatch" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "mixed_time_series.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id = Quiver.create_element!(db, "Sensor"; label = "Sensor 1")
+
+        # Vectors of different lengths should throw ArgumentError
+        @test_throws ArgumentError Quiver.update_time_series_group!(db, "Sensor", "readings", id;
+            date_time = ["2024-01-01T10:00:00", "2024-01-01T11:00:00"],
+            temperature = [20.5],  # length 1 vs length 2
+            humidity = [45, 50],
+            status = ["normal", "high"],
+        )
+
+        Quiver.close!(db)
+    end
+
     @testset "Time Series Files - has_time_series_files" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
