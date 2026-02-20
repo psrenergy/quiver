@@ -41,7 +41,8 @@ void write_csv(const std::string& path,
                const FkLabelMap& fk_labels,
                const DateFormatMap& date_format_map,
                const EnumMap& enum_map) {
-    rapidcsv::Document doc("", rapidcsv::LabelParams(0, -1), rapidcsv::SeparatorParams(',', false, false));
+    rapidcsv::Document doc(
+        "", rapidcsv::LabelParams(0, -1), rapidcsv::SeparatorParams(',', false, false, false, false));
 
     for (size_t i = 0; i < columns.size(); ++i) {
         doc.SetColumnName(i, columns[i]);
