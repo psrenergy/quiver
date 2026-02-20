@@ -9,9 +9,9 @@ Requirements for Explicit Transactions milestone. Each maps to roadmap phases.
 
 ### Transaction Control
 
-- [ ] **TXN-01**: Caller can wrap multiple write operations in a single transaction via `begin_transaction` / `commit` / `rollback` on the public C++ API
-- [ ] **TXN-02**: Existing write methods (create_element, update_*, delete_element) work correctly inside an explicit transaction without "cannot start a transaction within a transaction" errors
-- [ ] **TXN-03**: Misusing transaction API (double begin, commit/rollback without begin) throws Quiver-pattern error messages
+- [x] **TXN-01**: Caller can wrap multiple write operations in a single transaction via `begin_transaction` / `commit` / `rollback` on the public C++ API
+- [x] **TXN-02**: Existing write methods (create_element, update_*, delete_element) work correctly inside an explicit transaction without "cannot start a transaction within a transaction" errors
+- [x] **TXN-03**: Misusing transaction API (double begin, commit/rollback without begin) throws Quiver-pattern error messages
 
 ### C API
 
@@ -58,9 +58,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TXN-01 | Phase 1 | Pending |
-| TXN-02 | Phase 1 | Pending |
-| TXN-03 | Phase 1 | Pending |
+| TXN-01 | Phase 1 | Complete |
+| TXN-02 | Phase 1 | Complete |
+| TXN-03 | Phase 1 | Complete |
 | CAPI-01 | Phase 2 | Pending |
 | BIND-01 | Phase 3 | Pending |
 | BIND-02 | Phase 3 | Pending |
