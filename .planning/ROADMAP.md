@@ -29,10 +29,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Calling `commit()` or `rollback()` without an active transaction throws an error matching Quiver's "Cannot {operation}: {reason}" pattern
   4. Calling `begin_transaction()` when a transaction is already active throws an error matching Quiver's "Cannot {operation}: {reason}" pattern
   5. All existing C++ tests continue to pass unchanged (no regression)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 01-01: TBD
+- [ ] 01-01-PLAN.md -- Implement transaction API, nest-aware TransactionGuard, and test suite
 
 ### Phase 2: C API Transaction Surface
 **Goal**: C API consumers can control transactions through flat FFI-safe functions
@@ -82,7 +82,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. C++ Transaction Core | 0/0 | Not started | - |
+| 1. C++ Transaction Core | 0/1 | Planned | - |
 | 2. C API Transaction Surface | 0/0 | Not started | - |
 | 3. Language Bindings | 0/0 | Not started | - |
 | 4. Performance Benchmark | 0/0 | Not started | - |
