@@ -1,5 +1,7 @@
 #include "quiver/value.h"
 
+#include <type_traits>
+
 namespace quiver {
 
 std::ostream& operator<<(std::ostream& os, const Value& val) {

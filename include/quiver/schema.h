@@ -46,7 +46,7 @@ struct TableDefinition {
     std::optional<DataType> get_data_type(const std::string& column) const;
     bool has_column(const std::string& column) const;
     const ColumnDefinition* get_column(const std::string& column) const;
-    const std::vector<std::string> column_names() const {
+    std::vector<std::string> column_names() const {
         std::vector<std::string> names;
         for (const auto& [col_name, col_def] : columns) {
             names.push_back(col_name);
