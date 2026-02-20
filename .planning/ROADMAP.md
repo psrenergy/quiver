@@ -72,10 +72,11 @@ Plans:
   1. Dart user can call `updateTimeSeriesGroup(col, grp, id, {'date_time': [...], 'temp': [...]})` with a Map of column names to typed arrays
   2. Dart user receives multi-column read results with correct native types per column (int for INTEGER, double for REAL, String for TEXT)
   3. Dart tests pass for multi-column time series schema with mixed types (INTEGER + REAL + TEXT value columns)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 13-01: TBD
+- [ ] 13-01-PLAN.md -- Regenerate FFI bindings, rewrite updateTimeSeriesGroup (Map) and readTimeSeriesGroup (typed Map return)
+- [ ] 13-02-PLAN.md -- Rewrite existing tests for new interface + add multi-column mixed-type tests
 
 ### Phase 14: Verification and Cleanup
 **Goal**: Old single-column C API functions are removed, all bindings verified against multi-column schemas, full test suite green
