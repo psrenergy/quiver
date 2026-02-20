@@ -2,6 +2,7 @@ module TestDatabaseTimeSeries
 
 using Quiver
 using Test
+using Dates
 
 include("fixture.jl")
 
@@ -42,28 +43,29 @@ include("fixture.jl")
         Quiver.create_element!(db, "Configuration"; label = "Test Config")
         id = Quiver.create_element!(db, "Collection"; label = "Item 1")
 
-        # Insert time series data
-        Quiver.update_time_series_group!(
-            db,
-            "Collection",
-            "data",
-            id,
-            [
-                Dict{String, Any}("date_time" => "2024-01-01T10:00:00", "value" => 1.5),
-                Dict{String, Any}("date_time" => "2024-01-01T11:00:00", "value" => 2.5),
-                Dict{String, Any}("date_time" => "2024-01-01T12:00:00", "value" => 3.5),
-            ],
+        # Insert time series data using kwargs
+        Quiver.update_time_series_group!(db, "Collection", "data", id;
+            date_time = ["2024-01-01T10:00:00", "2024-01-01T11:00:00", "2024-01-01T12:00:00"],
+            value = [1.5, 2.5, 3.5],
         )
 
-        # Read back
-        rows = Quiver.read_time_series_group(db, "Collection", "data", id)
-        @test length(rows) == 3
-        @test rows[1]["date_time"] == "2024-01-01T10:00:00"
-        @test rows[1]["value"] == 1.5
-        @test rows[2]["date_time"] == "2024-01-01T11:00:00"
-        @test rows[2]["value"] == 2.5
-        @test rows[3]["date_time"] == "2024-01-01T12:00:00"
-        @test rows[3]["value"] == 3.5
+        # Read back as Dict{String, Vector}
+        result = Quiver.read_time_series_group(db, "Collection", "data", id)
+        @test length(result) == 2
+        @test length(result["date_time"]) == 3
+        @test length(result["value"]) == 3
+
+        # Dimension column values are parsed to DateTime
+        @test result["date_time"][1] == DateTime(2024, 1, 1, 10, 0, 0)
+        @test result["date_time"][2] == DateTime(2024, 1, 1, 11, 0, 0)
+        @test result["date_time"][3] == DateTime(2024, 1, 1, 12, 0, 0)
+        @test result["date_time"] isa Vector{DateTime}
+
+        # Value column values are Float64
+        @test result["value"][1] == 1.5
+        @test result["value"][2] == 2.5
+        @test result["value"][3] == 3.5
+        @test result["value"] isa Vector{Float64}
 
         Quiver.close!(db)
     end
@@ -76,8 +78,9 @@ include("fixture.jl")
         id = Quiver.create_element!(db, "Collection"; label = "Item 1")
 
         # No time series data inserted
-        rows = Quiver.read_time_series_group(db, "Collection", "data", id)
-        @test isempty(rows)
+        result = Quiver.read_time_series_group(db, "Collection", "data", id)
+        @test isempty(result)
+        @test result isa Dict{String, Vector}
 
         Quiver.close!(db)
     end
@@ -89,36 +92,25 @@ include("fixture.jl")
         Quiver.create_element!(db, "Configuration"; label = "Test Config")
         id = Quiver.create_element!(db, "Collection"; label = "Item 1")
 
-        # Insert initial data
-        Quiver.update_time_series_group!(
-            db,
-            "Collection",
-            "data",
-            id,
-            [
-                Dict{String, Any}("date_time" => "2024-01-01T10:00:00", "value" => 1.0),
-            ],
+        # Insert initial data using kwargs
+        Quiver.update_time_series_group!(db, "Collection", "data", id;
+            date_time = ["2024-01-01T10:00:00"],
+            value = [1.0],
         )
 
-        rows = Quiver.read_time_series_group(db, "Collection", "data", id)
-        @test length(rows) == 1
+        result = Quiver.read_time_series_group(db, "Collection", "data", id)
+        @test length(result["date_time"]) == 1
 
-        # Replace with new data
-        Quiver.update_time_series_group!(
-            db,
-            "Collection",
-            "data",
-            id,
-            [
-                Dict{String, Any}("date_time" => "2024-02-01T10:00:00", "value" => 10.0),
-                Dict{String, Any}("date_time" => "2024-02-01T11:00:00", "value" => 20.0),
-            ],
+        # Replace with new data using kwargs
+        Quiver.update_time_series_group!(db, "Collection", "data", id;
+            date_time = ["2024-02-01T10:00:00", "2024-02-01T11:00:00"],
+            value = [10.0, 20.0],
         )
 
-        rows = Quiver.read_time_series_group(db, "Collection", "data", id)
-        @test length(rows) == 2
-        @test rows[1]["date_time"] == "2024-02-01T10:00:00"
-        @test rows[1]["value"] == 10.0
+        result = Quiver.read_time_series_group(db, "Collection", "data", id)
+        @test length(result["date_time"]) == 2
+        @test result["date_time"][1] == DateTime(2024, 2, 1, 10, 0, 0)
+        @test result["value"][1] == 10.0
 
         Quiver.close!(db)
     end
@@ -130,22 +122,17 @@ include("fixture.jl")
         Quiver.create_element!(db, "Configuration"; label = "Test Config")
         id = Quiver.create_element!(db, "Collection"; label = "Item 1")
 
-        # Insert data
-        Quiver.update_time_series_group!(
-            db,
-            "Collection",
-            "data",
-            id,
-            [
-                Dict{String, Any}("date_time" => "2024-01-01T10:00:00", "value" => 1.0),
-            ],
+        # Insert data using kwargs
+        Quiver.update_time_series_group!(db, "Collection", "data", id;
+            date_time = ["2024-01-01T10:00:00"],
+            value = [1.0],
         )
 
-        # Clear by updating with empty
-        Quiver.update_time_series_group!(db, "Collection", "data", id, Dict{String, Any}[])
+        # Clear by calling with no kwargs
+        Quiver.update_time_series_group!(db, "Collection", "data", id)
 
-        rows = Quiver.read_time_series_group(db, "Collection", "data", id)
-        @test isempty(rows)
+        result = Quiver.read_time_series_group(db, "Collection", "data", id)
+        @test isempty(result)
 
         Quiver.close!(db)
     end
@@ -157,25 +144,18 @@ include("fixture.jl")
         Quiver.create_element!(db, "Configuration"; label = "Test Config")
         id = Quiver.create_element!(db, "Collection"; label = "Item 1")
 
-        # Insert out of order
-        Quiver.update_time_series_group!(
-            db,
-            "Collection",
-            "data",
-            id,
-            [
-                Dict{String, Any}("date_time" => "2024-01-03T10:00:00", "value" => 3.0),
-                Dict{String, Any}("date_time" => "2024-01-01T10:00:00", "value" => 1.0),
-                Dict{String, Any}("date_time" => "2024-01-02T10:00:00", "value" => 2.0),
-            ],
+        # Insert out of order using kwargs
+        Quiver.update_time_series_group!(db, "Collection", "data", id;
+            date_time = ["2024-01-03T10:00:00", "2024-01-01T10:00:00", "2024-01-02T10:00:00"],
+            value = [3.0, 1.0, 2.0],
         )
 
-        # Should be returned ordered by date_time
-        rows = Quiver.read_time_series_group(db, "Collection", "data", id)
-        @test length(rows) == 3
-        @test rows[1]["date_time"] == "2024-01-01T10:00:00"
-        @test rows[2]["date_time"] == "2024-01-02T10:00:00"
-        @test rows[3]["date_time"] == "2024-01-03T10:00:00"
+        # Should be returned ordered by date_time (dimension column)
+        result = Quiver.read_time_series_group(db, "Collection", "data", id)
+        @test length(result["date_time"]) == 3
+        @test result["date_time"][1] == DateTime(2024, 1, 1, 10, 0, 0)
+        @test result["date_time"][2] == DateTime(2024, 1, 2, 10, 0, 0)
+        @test result["date_time"][3] == DateTime(2024, 1, 3, 10, 0, 0)
 
         Quiver.close!(db)
     end
