@@ -1737,3 +1737,82 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesMultiRowFromLua) {
     )";
     lua.run(script);
 }
+
+// ============================================================================
+// Composite read helper tests
+// ============================================================================
+
+TEST_F(LuaRunnerTest, ReadAllScalarsByIdFromLua) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema,
+        {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection",
+        quiver::Element().set("label", "Item 1").set("some_integer", int64_t{42}).set("some_float", 3.14));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        local scalars = db:read_all_scalars_by_id("Collection", )" + std::to_string(id) + R"()
+
+        -- Verify label (TEXT)
+        assert(scalars.label == "Item 1", "Expected label 'Item 1', got " .. tostring(scalars.label))
+        assert(type(scalars.label) == "string", "label should be string type")
+
+        -- Verify some_integer (INTEGER)
+        assert(scalars.some_integer == 42, "Expected some_integer 42, got " .. tostring(scalars.some_integer))
+        assert(type(scalars.some_integer) == "number", "some_integer should be number type")
+
+        -- Verify some_float (REAL)
+        assert(scalars.some_float == 3.14, "Expected some_float 3.14, got " .. tostring(scalars.some_float))
+        assert(type(scalars.some_float) == "number", "some_float should be number type")
+    )";
+    lua.run(script);
+}
+
+TEST_F(LuaRunnerTest, ReadAllVectorsByIdFromLua) {
+    // Use basic.sql which has no vector groups -- verifies the binding is callable
+    // and returns an empty table. Note: collections.sql has multi-column vector groups
+    // where group_name != column_name, which is a known limitation of the composite helper.
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"),
+        {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+    int64_t id = db.create_element("Configuration", quiver::Element().set("label", "Config"));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        local vectors = db:read_all_vectors_by_id("Configuration", )" + std::to_string(id) + R"()
+
+        -- basic.sql has no vector groups, so result should be an empty table
+        assert(type(vectors) == "table", "Expected table type, got " .. type(vectors))
+
+        -- Verify no keys in the result
+        local count = 0
+        for _ in pairs(vectors) do count = count + 1 end
+        assert(count == 0, "Expected empty table for schema with no vector groups, got " .. count .. " entries")
+    )";
+    lua.run(script);
+}
+
+TEST_F(LuaRunnerTest, ReadAllSetsByIdFromLua) {
+    // Use basic.sql which has no set groups -- verifies the binding is callable
+    // and returns an empty table. Note: collections.sql has set groups where
+    // group_name != column_name, which is a known limitation of the composite helper.
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"),
+        {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+    int64_t id = db.create_element("Configuration", quiver::Element().set("label", "Config"));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        local sets = db:read_all_sets_by_id("Configuration", )" + std::to_string(id) + R"()
+
+        -- basic.sql has no set groups, so result should be an empty table
+        assert(type(sets) == "table", "Expected table type, got " .. type(sets))
+
+        -- Verify no keys in the result
+        local count = 0
+        for _ in pairs(sets) do count = count + 1 end
+        assert(count == 0, "Expected empty table for schema with no set groups, got " .. count .. " entries")
+    )";
+    lua.run(script);
+}
