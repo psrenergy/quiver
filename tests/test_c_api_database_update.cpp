@@ -504,8 +504,15 @@ TEST(DatabaseCApi, UpdateElementWithTimeSeries) {
     void** out_col_data = nullptr;
     size_t out_col_count = 0;
     size_t out_row_count = 0;
-    ASSERT_EQ(quiver_database_read_time_series_group(db, "Collection", "data", id,
-                                                     &out_col_names, &out_col_types, &out_col_data, &out_col_count, &out_row_count),
+    ASSERT_EQ(quiver_database_read_time_series_group(db,
+                                                     "Collection",
+                                                     "data",
+                                                     id,
+                                                     &out_col_names,
+                                                     &out_col_types,
+                                                     &out_col_data,
+                                                     &out_col_count,
+                                                     &out_row_count),
               QUIVER_OK);
     EXPECT_EQ(out_row_count, 3);
     ASSERT_EQ(out_col_count, 2);  // date_time + value

@@ -142,8 +142,15 @@ TEST(DatabaseCApi, CreateElementWithTimeSeries) {
     void** out_col_data = nullptr;
     size_t out_col_count = 0;
     size_t out_row_count = 0;
-    ASSERT_EQ(quiver_database_read_time_series_group(db, "Collection", "data", id,
-                                                     &out_col_names, &out_col_types, &out_col_data, &out_col_count, &out_row_count),
+    ASSERT_EQ(quiver_database_read_time_series_group(db,
+                                                     "Collection",
+                                                     "data",
+                                                     id,
+                                                     &out_col_names,
+                                                     &out_col_types,
+                                                     &out_col_data,
+                                                     &out_col_count,
+                                                     &out_row_count),
               QUIVER_OK);
     EXPECT_EQ(out_row_count, 3);
     ASSERT_EQ(out_col_count, 2);  // date_time + value
@@ -201,9 +208,15 @@ TEST(DatabaseCApi, CreateElementWithMultiTimeSeries) {
     void** out_temp_col_data = nullptr;
     size_t out_temp_col_count = 0;
     size_t out_temp_row_count = 0;
-    ASSERT_EQ(quiver_database_read_time_series_group(
-                  db, "Sensor", "temperature", id,
-                  &out_temp_col_names, &out_temp_col_types, &out_temp_col_data, &out_temp_col_count, &out_temp_row_count),
+    ASSERT_EQ(quiver_database_read_time_series_group(db,
+                                                     "Sensor",
+                                                     "temperature",
+                                                     id,
+                                                     &out_temp_col_names,
+                                                     &out_temp_col_types,
+                                                     &out_temp_col_data,
+                                                     &out_temp_col_count,
+                                                     &out_temp_row_count),
               QUIVER_OK);
     EXPECT_EQ(out_temp_row_count, 3);
     ASSERT_EQ(out_temp_col_count, 2);  // date_time + temperature
@@ -215,7 +228,8 @@ TEST(DatabaseCApi, CreateElementWithMultiTimeSeries) {
     EXPECT_DOUBLE_EQ(out_temp_values[0], 20.0);
     EXPECT_DOUBLE_EQ(out_temp_values[1], 21.5);
     EXPECT_DOUBLE_EQ(out_temp_values[2], 22.0);
-    quiver_database_free_time_series_data(out_temp_col_names, out_temp_col_types, out_temp_col_data, out_temp_col_count, out_temp_row_count);
+    quiver_database_free_time_series_data(
+        out_temp_col_names, out_temp_col_types, out_temp_col_data, out_temp_col_count, out_temp_row_count);
 
     // Verify humidity group (multi-column)
     char** out_hum_col_names = nullptr;
@@ -223,9 +237,15 @@ TEST(DatabaseCApi, CreateElementWithMultiTimeSeries) {
     void** out_hum_col_data = nullptr;
     size_t out_hum_col_count = 0;
     size_t out_hum_row_count = 0;
-    ASSERT_EQ(quiver_database_read_time_series_group(
-                  db, "Sensor", "humidity", id,
-                  &out_hum_col_names, &out_hum_col_types, &out_hum_col_data, &out_hum_col_count, &out_hum_row_count),
+    ASSERT_EQ(quiver_database_read_time_series_group(db,
+                                                     "Sensor",
+                                                     "humidity",
+                                                     id,
+                                                     &out_hum_col_names,
+                                                     &out_hum_col_types,
+                                                     &out_hum_col_data,
+                                                     &out_hum_col_count,
+                                                     &out_hum_row_count),
               QUIVER_OK);
     EXPECT_EQ(out_hum_row_count, 3);
     ASSERT_EQ(out_hum_col_count, 2);  // date_time + humidity
@@ -237,7 +257,8 @@ TEST(DatabaseCApi, CreateElementWithMultiTimeSeries) {
     EXPECT_DOUBLE_EQ(out_hum_values[0], 45.0);
     EXPECT_DOUBLE_EQ(out_hum_values[1], 50.0);
     EXPECT_DOUBLE_EQ(out_hum_values[2], 55.0);
-    quiver_database_free_time_series_data(out_hum_col_names, out_hum_col_types, out_hum_col_data, out_hum_col_count, out_hum_row_count);
+    quiver_database_free_time_series_data(
+        out_hum_col_names, out_hum_col_types, out_hum_col_data, out_hum_col_count, out_hum_row_count);
 
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     quiver_database_close(db);

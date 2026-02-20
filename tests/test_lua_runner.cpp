@@ -1548,20 +1548,22 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesFilesFromLua) {
 // ============================================================================
 
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesUpdateAndReadFromLua) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("mixed_time_series.sql"),
-        {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("mixed_time_series.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Sensor", quiver::Element().set("label", "Sensor 1"));
 
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        db:update_time_series_group("Sensor", "readings", )" + std::to_string(id) + R"(, {
+        db:update_time_series_group("Sensor", "readings", )" +
+                         std::to_string(id) + R"(, {
             { date_time = "2024-01-01T10:00:00", temperature = 20.5, humidity = 45, status = "normal" },
             { date_time = "2024-01-02T10:00:00", temperature = 22.3, humidity = 50, status = "warning" },
         })
 
-        local rows = db:read_time_series_group("Sensor", "readings", )" + std::to_string(id) + R"()
+        local rows = db:read_time_series_group("Sensor", "readings", )" +
+                         std::to_string(id) + R"()
         assert(#rows == 2, "Expected 2 rows, got " .. #rows)
 
         -- Verify first row
@@ -1586,23 +1588,24 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesUpdateAndReadFromLua) {
 }
 
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesReadEmptyFromLua) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("mixed_time_series.sql"),
-        {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("mixed_time_series.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Sensor", quiver::Element().set("label", "Sensor 1"));
 
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        local rows = db:read_time_series_group("Sensor", "readings", )" + std::to_string(id) + R"()
+        local rows = db:read_time_series_group("Sensor", "readings", )" +
+                         std::to_string(id) + R"()
         assert(#rows == 0, "Expected 0 rows for empty time series, got " .. #rows)
     )";
     lua.run(script);
 }
 
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesReplaceFromLua) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("mixed_time_series.sql"),
-        {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("mixed_time_series.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Sensor", quiver::Element().set("label", "Sensor 1"));
 
@@ -1610,22 +1613,26 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesReplaceFromLua) {
 
     std::string script = R"(
         -- First update: 2 rows
-        db:update_time_series_group("Sensor", "readings", )" + std::to_string(id) + R"(, {
+        db:update_time_series_group("Sensor", "readings", )" +
+                         std::to_string(id) + R"(, {
             { date_time = "2024-01-01", temperature = 10.0, humidity = 30, status = "low" },
             { date_time = "2024-01-02", temperature = 15.0, humidity = 40, status = "mid" },
         })
 
-        local rows = db:read_time_series_group("Sensor", "readings", )" + std::to_string(id) + R"()
+        local rows = db:read_time_series_group("Sensor", "readings", )" +
+                         std::to_string(id) + R"()
         assert(#rows == 2, "Expected 2 rows after first update, got " .. #rows)
 
         -- Second update: 3 different rows (replaces previous)
-        db:update_time_series_group("Sensor", "readings", )" + std::to_string(id) + R"(, {
+        db:update_time_series_group("Sensor", "readings", )" +
+                         std::to_string(id) + R"(, {
             { date_time = "2024-06-01", temperature = 25.0, humidity = 60, status = "high" },
             { date_time = "2024-06-02", temperature = 26.5, humidity = 65, status = "high" },
             { date_time = "2024-06-03", temperature = 28.0, humidity = 70, status = "critical" },
         })
 
-        rows = db:read_time_series_group("Sensor", "readings", )" + std::to_string(id) + R"()
+        rows = db:read_time_series_group("Sensor", "readings", )" +
+                         std::to_string(id) + R"()
         assert(#rows == 3, "Expected 3 rows after replace, got " .. #rows)
         assert(rows[1].date_time == "2024-06-01", "First row should be 2024-06-01")
         assert(rows[1].temperature == 25.0, "First row temperature should be 25.0")
@@ -1635,8 +1642,8 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesReplaceFromLua) {
 }
 
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesClearFromLua) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("mixed_time_series.sql"),
-        {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("mixed_time_series.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Sensor", quiver::Element().set("label", "Sensor 1"));
 
@@ -1644,26 +1651,30 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesClearFromLua) {
 
     std::string script = R"(
         -- Insert 2 rows
-        db:update_time_series_group("Sensor", "readings", )" + std::to_string(id) + R"(, {
+        db:update_time_series_group("Sensor", "readings", )" +
+                         std::to_string(id) + R"(, {
             { date_time = "2024-01-01", temperature = 10.0, humidity = 30, status = "ok" },
             { date_time = "2024-01-02", temperature = 15.0, humidity = 40, status = "ok" },
         })
 
-        local rows = db:read_time_series_group("Sensor", "readings", )" + std::to_string(id) + R"()
+        local rows = db:read_time_series_group("Sensor", "readings", )" +
+                         std::to_string(id) + R"()
         assert(#rows == 2, "Expected 2 rows before clear, got " .. #rows)
 
         -- Clear by updating with empty table
-        db:update_time_series_group("Sensor", "readings", )" + std::to_string(id) + R"(, {})
+        db:update_time_series_group("Sensor", "readings", )" +
+                         std::to_string(id) + R"(, {})
 
-        rows = db:read_time_series_group("Sensor", "readings", )" + std::to_string(id) + R"()
+        rows = db:read_time_series_group("Sensor", "readings", )" +
+                         std::to_string(id) + R"()
         assert(#rows == 0, "Expected 0 rows after clear, got " .. #rows)
     )";
     lua.run(script);
 }
 
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesOrderingFromLua) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("mixed_time_series.sql"),
-        {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("mixed_time_series.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Sensor", quiver::Element().set("label", "Sensor 1"));
 
@@ -1671,13 +1682,15 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesOrderingFromLua) {
 
     std::string script = R"(
         -- Insert rows out of order
-        db:update_time_series_group("Sensor", "readings", )" + std::to_string(id) + R"(, {
+        db:update_time_series_group("Sensor", "readings", )" +
+                         std::to_string(id) + R"(, {
             { date_time = "2024-01-03", temperature = 30.0, humidity = 70, status = "high" },
             { date_time = "2024-01-01", temperature = 10.0, humidity = 30, status = "low" },
             { date_time = "2024-01-02", temperature = 20.0, humidity = 50, status = "mid" },
         })
 
-        local rows = db:read_time_series_group("Sensor", "readings", )" + std::to_string(id) + R"()
+        local rows = db:read_time_series_group("Sensor", "readings", )" +
+                         std::to_string(id) + R"()
         assert(#rows == 3, "Expected 3 rows, got " .. #rows)
 
         -- Verify rows are returned sorted by date_time (dimension column)
@@ -1697,15 +1710,16 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesOrderingFromLua) {
 }
 
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesMultiRowFromLua) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("mixed_time_series.sql"),
-        {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("mixed_time_series.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Sensor", quiver::Element().set("label", "Sensor 1"));
 
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        db:update_time_series_group("Sensor", "readings", )" + std::to_string(id) + R"(, {
+        db:update_time_series_group("Sensor", "readings", )" +
+                         std::to_string(id) + R"(, {
             { date_time = "2024-01-01T00:00:00", temperature = 10.1, humidity = 30, status = "cold" },
             { date_time = "2024-01-02T00:00:00", temperature = 15.2, humidity = 40, status = "cool" },
             { date_time = "2024-01-03T00:00:00", temperature = 20.3, humidity = 50, status = "mild" },
@@ -1713,7 +1727,8 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesMultiRowFromLua) {
             { date_time = "2024-01-05T00:00:00", temperature = 30.5, humidity = 70, status = "hot" },
         })
 
-        local rows = db:read_time_series_group("Sensor", "readings", )" + std::to_string(id) + R"()
+        local rows = db:read_time_series_group("Sensor", "readings", )" +
+                         std::to_string(id) + R"()
         assert(#rows == 5, "Expected 5 rows, got " .. #rows)
 
         -- Verify all 5 rows with correct types and values
@@ -1743,16 +1758,18 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesMultiRowFromLua) {
 // ============================================================================
 
 TEST_F(LuaRunnerTest, ReadAllScalarsByIdFromLua) {
-    auto db = quiver::Database::from_schema(":memory:", collections_schema,
-        {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(
+        ":memory:", collections_schema, {.read_only = 0, .console_level = QUIVER_LOG_OFF});
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    int64_t id = db.create_element("Collection",
+    int64_t id = db.create_element(
+        "Collection",
         quiver::Element().set("label", "Item 1").set("some_integer", int64_t{42}).set("some_float", 3.14));
 
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        local scalars = db:read_all_scalars_by_id("Collection", )" + std::to_string(id) + R"()
+        local scalars = db:read_all_scalars_by_id("Collection", )" +
+                         std::to_string(id) + R"()
 
         -- Verify label (TEXT)
         assert(scalars.label == "Item 1", "Expected label 'Item 1', got " .. tostring(scalars.label))
@@ -1773,14 +1790,15 @@ TEST_F(LuaRunnerTest, ReadAllVectorsByIdFromLua) {
     // Use basic.sql which has no vector groups -- verifies the binding is callable
     // and returns an empty table. Note: collections.sql has multi-column vector groups
     // where group_name != column_name, which is a known limitation of the composite helper.
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"),
-        {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
     int64_t id = db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        local vectors = db:read_all_vectors_by_id("Configuration", )" + std::to_string(id) + R"()
+        local vectors = db:read_all_vectors_by_id("Configuration", )" +
+                         std::to_string(id) + R"()
 
         -- basic.sql has no vector groups, so result should be an empty table
         assert(type(vectors) == "table", "Expected table type, got " .. type(vectors))
@@ -1797,14 +1815,15 @@ TEST_F(LuaRunnerTest, ReadAllSetsByIdFromLua) {
     // Use basic.sql which has no set groups -- verifies the binding is callable
     // and returns an empty table. Note: collections.sql has set groups where
     // group_name != column_name, which is a known limitation of the composite helper.
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"),
-        {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
     int64_t id = db.create_element("Configuration", quiver::Element().set("label", "Config"));
 
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        local sets = db:read_all_sets_by_id("Configuration", )" + std::to_string(id) + R"()
+        local sets = db:read_all_sets_by_id("Configuration", )" +
+                         std::to_string(id) + R"()
 
         -- basic.sql has no set groups, so result should be an empty table
         assert(type(sets) == "table", "Expected table type, got " .. type(sets))

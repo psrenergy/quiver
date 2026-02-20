@@ -106,7 +106,8 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupById) {
     const char* date_times[] = {"2024-01-01T10:00:00", "2024-01-01T11:00:00", "2024-01-01T12:00:00"};
     double values[] = {1.5, 2.5, 3.5};
     const void* col_data[] = {date_times, values};
-    auto err = quiver_database_update_time_series_group(db, "Collection", "data", id, col_names, col_types, col_data, 2, 3);
+    auto err =
+        quiver_database_update_time_series_group(db, "Collection", "data", id, col_names, col_types, col_data, 2, 3);
     EXPECT_EQ(err, QUIVER_OK);
 
     // Read back
@@ -115,8 +116,8 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupById) {
     void** out_col_data = nullptr;
     size_t col_count = 0;
     size_t row_count = 0;
-    err = quiver_database_read_time_series_group(db, "Collection", "data", id,
-                                                 &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count);
+    err = quiver_database_read_time_series_group(
+        db, "Collection", "data", id, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count);
 
     EXPECT_EQ(err, QUIVER_OK);
     ASSERT_EQ(row_count, 3);
@@ -176,8 +177,8 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupByIdEmpty) {
     void** out_col_data = nullptr;
     size_t col_count = 0;
     size_t row_count = 0;
-    auto err = quiver_database_read_time_series_group(db, "Collection", "data", id,
-                                                      &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count);
+    auto err = quiver_database_read_time_series_group(
+        db, "Collection", "data", id, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count);
 
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(row_count, 0);
@@ -223,14 +224,16 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroup) {
     const char* date_times1[] = {"2024-01-01T10:00:00"};
     double values1[] = {1.0};
     const void* col_data1[] = {date_times1, values1};
-    auto err = quiver_database_update_time_series_group(db, "Collection", "data", id, col_names1, col_types1, col_data1, 2, 1);
+    auto err =
+        quiver_database_update_time_series_group(db, "Collection", "data", id, col_names1, col_types1, col_data1, 2, 1);
     EXPECT_EQ(err, QUIVER_OK);
 
     // Replace with new data
     const char* date_times2[] = {"2024-02-01T10:00:00", "2024-02-01T11:00:00"};
     double values2[] = {10.0, 20.0};
     const void* col_data2[] = {date_times2, values2};
-    err = quiver_database_update_time_series_group(db, "Collection", "data", id, col_names1, col_types1, col_data2, 2, 2);
+    err =
+        quiver_database_update_time_series_group(db, "Collection", "data", id, col_names1, col_types1, col_data2, 2, 2);
     EXPECT_EQ(err, QUIVER_OK);
 
     // Read back
@@ -239,8 +242,8 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroup) {
     void** out_col_data = nullptr;
     size_t col_count = 0;
     size_t row_count = 0;
-    err = quiver_database_read_time_series_group(db, "Collection", "data", id,
-                                                 &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count);
+    err = quiver_database_read_time_series_group(
+        db, "Collection", "data", id, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count);
 
     EXPECT_EQ(err, QUIVER_OK);
     ASSERT_EQ(row_count, 2);
@@ -294,7 +297,8 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupClear) {
     const char* date_times[] = {"2024-01-01T10:00:00"};
     double values[] = {1.0};
     const void* col_data[] = {date_times, values};
-    auto err = quiver_database_update_time_series_group(db, "Collection", "data", id, col_names, col_types, col_data, 2, 1);
+    auto err =
+        quiver_database_update_time_series_group(db, "Collection", "data", id, col_names, col_types, col_data, 2, 1);
     EXPECT_EQ(err, QUIVER_OK);
 
     // Clear by updating with empty (column_count == 0, row_count == 0)
@@ -307,8 +311,8 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupClear) {
     void** out_col_data = nullptr;
     size_t col_count = 0;
     size_t row_count = 0;
-    err = quiver_database_read_time_series_group(db, "Collection", "data", id,
-                                                 &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count);
+    err = quiver_database_read_time_series_group(
+        db, "Collection", "data", id, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count);
 
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(row_count, 0);
@@ -348,9 +352,10 @@ TEST(DatabaseCApi, TimeSeriesNullArguments) {
     void** out_col_data = nullptr;
     size_t col_count = 0;
     size_t row_count = 0;
-    EXPECT_EQ(quiver_database_read_time_series_group(
-                  nullptr, "Collection", "data", 1, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count),
-              QUIVER_ERROR);
+    EXPECT_EQ(
+        quiver_database_read_time_series_group(
+            nullptr, "Collection", "data", 1, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count),
+        QUIVER_ERROR);
     EXPECT_EQ(quiver_database_read_time_series_group(
                   db, nullptr, "data", 1, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count),
               QUIVER_ERROR);
@@ -381,12 +386,14 @@ TEST(DatabaseCApi, TimeSeriesNullArguments) {
     const char* dts[] = {"2024-01-01T10:00:00"};
     double vals[] = {1.0};
     const void* col_data[] = {dts, vals};
-    EXPECT_EQ(quiver_database_update_time_series_group(nullptr, "Collection", "data", 1, col_names, col_types, col_data, 2, 1),
+    EXPECT_EQ(quiver_database_update_time_series_group(
+                  nullptr, "Collection", "data", 1, col_names, col_types, col_data, 2, 1),
               QUIVER_ERROR);
     EXPECT_EQ(quiver_database_update_time_series_group(db, nullptr, "data", 1, col_names, col_types, col_data, 2, 1),
               QUIVER_ERROR);
-    EXPECT_EQ(quiver_database_update_time_series_group(db, "Collection", nullptr, 1, col_names, col_types, col_data, 2, 1),
-              QUIVER_ERROR);
+    EXPECT_EQ(
+        quiver_database_update_time_series_group(db, "Collection", nullptr, 1, col_names, col_types, col_data, 2, 1),
+        QUIVER_ERROR);
 
     quiver_database_close(db);
 }
@@ -421,13 +428,15 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupMultiColumn) {
 
     // Insert 4-column time series: date_time, temperature (REAL), humidity (INTEGER), status (TEXT)
     const char* col_names[] = {"date_time", "temperature", "humidity", "status"};
-    int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT, QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_STRING};
+    int col_types[] = {
+        QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT, QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_STRING};
     const char* dts[] = {"2024-01-01T10:00:00", "2024-01-01T11:00:00"};
     double temps[] = {20.5, 21.0};
     int64_t humids[] = {65, 70};
     const char* stats[] = {"ok", "warn"};
     const void* col_data[] = {dts, temps, humids, stats};
-    auto err = quiver_database_update_time_series_group(db, "Sensor", "readings", id, col_names, col_types, col_data, 4, 2);
+    auto err =
+        quiver_database_update_time_series_group(db, "Sensor", "readings", id, col_names, col_types, col_data, 4, 2);
     EXPECT_EQ(err, QUIVER_OK);
 
     // Read back
@@ -436,8 +445,8 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupMultiColumn) {
     void** out_col_data = nullptr;
     size_t col_count = 0;
     size_t row_count = 0;
-    err = quiver_database_read_time_series_group(db, "Sensor", "readings", id,
-                                                  &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count);
+    err = quiver_database_read_time_series_group(
+        db, "Sensor", "readings", id, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count);
 
     EXPECT_EQ(err, QUIVER_OK);
     ASSERT_EQ(col_count, 4);
@@ -450,10 +459,10 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupMultiColumn) {
     EXPECT_STREQ(out_col_names[3], "temperature");
 
     // Verify types match column order
-    EXPECT_EQ(out_col_types[0], QUIVER_DATA_TYPE_STRING);    // date_time
-    EXPECT_EQ(out_col_types[1], QUIVER_DATA_TYPE_INTEGER);   // humidity
-    EXPECT_EQ(out_col_types[2], QUIVER_DATA_TYPE_STRING);    // status
-    EXPECT_EQ(out_col_types[3], QUIVER_DATA_TYPE_FLOAT);     // temperature
+    EXPECT_EQ(out_col_types[0], QUIVER_DATA_TYPE_STRING);   // date_time
+    EXPECT_EQ(out_col_types[1], QUIVER_DATA_TYPE_INTEGER);  // humidity
+    EXPECT_EQ(out_col_types[2], QUIVER_DATA_TYPE_STRING);   // status
+    EXPECT_EQ(out_col_types[3], QUIVER_DATA_TYPE_FLOAT);    // temperature
 
     // Verify data: column 0 (date_time - STRING)
     auto** out_dts = static_cast<char**>(out_col_data[0]);
@@ -511,7 +520,8 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupPartialColumns) {
     const char* dts[] = {"2024-01-01T10:00:00"};
     double temps[] = {22.5};
     const void* col_data[] = {dts, temps};
-    auto err = quiver_database_update_time_series_group(db, "Sensor", "readings", id, col_names, col_types, col_data, 2, 1);
+    auto err =
+        quiver_database_update_time_series_group(db, "Sensor", "readings", id, col_names, col_types, col_data, 2, 1);
     // Fails due to NOT NULL constraint on omitted columns (humidity, status)
     EXPECT_EQ(err, QUIVER_ERROR);
 
@@ -543,13 +553,15 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupColumnOrderIndependent) {
 
     // Pass columns in reversed order: status, humidity, temperature, date_time
     const char* col_names[] = {"status", "humidity", "temperature", "date_time"};
-    int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_FLOAT, QUIVER_DATA_TYPE_STRING};
+    int col_types[] = {
+        QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_FLOAT, QUIVER_DATA_TYPE_STRING};
     const char* stats[] = {"ok", "warn"};
     int64_t humids[] = {65, 70};
     double temps[] = {20.5, 21.0};
     const char* dts[] = {"2024-01-01T10:00:00", "2024-01-01T11:00:00"};
     const void* col_data[] = {stats, humids, temps, dts};
-    auto err = quiver_database_update_time_series_group(db, "Sensor", "readings", id, col_names, col_types, col_data, 4, 2);
+    auto err =
+        quiver_database_update_time_series_group(db, "Sensor", "readings", id, col_names, col_types, col_data, 4, 2);
     EXPECT_EQ(err, QUIVER_OK);
 
     // Read back - should return columns in schema order regardless of update order
@@ -558,8 +570,8 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupColumnOrderIndependent) {
     void** out_col_data = nullptr;
     size_t col_count = 0;
     size_t row_count = 0;
-    err = quiver_database_read_time_series_group(db, "Sensor", "readings", id,
-                                                  &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count);
+    err = quiver_database_read_time_series_group(
+        db, "Sensor", "readings", id, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count);
 
     EXPECT_EQ(err, QUIVER_OK);
     ASSERT_EQ(col_count, 4);
@@ -625,12 +637,14 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupMissingDimension) {
     double temps[] = {20.5};
     int64_t humids[] = {65};
     const void* col_data[] = {temps, humids};
-    auto err = quiver_database_update_time_series_group(db, "Sensor", "readings", id, col_names, col_types, col_data, 2, 1);
+    auto err =
+        quiver_database_update_time_series_group(db, "Sensor", "readings", id, col_names, col_types, col_data, 2, 1);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     std::string error_msg = quiver_get_last_error();
     EXPECT_NE(error_msg.find("Cannot update_time_series_group: dimension column 'date_time' missing from column_names"),
-              std::string::npos) << "Error was: " << error_msg;
+              std::string::npos)
+        << "Error was: " << error_msg;
 
     quiver_database_close(db);
 }
@@ -664,12 +678,14 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupUnknownColumn) {
     const char* dts[] = {"2024-01-01T10:00:00"};
     double pressures[] = {1013.25};
     const void* col_data[] = {dts, pressures};
-    auto err = quiver_database_update_time_series_group(db, "Sensor", "readings", id, col_names, col_types, col_data, 2, 1);
+    auto err =
+        quiver_database_update_time_series_group(db, "Sensor", "readings", id, col_names, col_types, col_data, 2, 1);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     std::string error_msg = quiver_get_last_error();
     EXPECT_NE(error_msg.find("Cannot update_time_series_group: column 'pressure' not found in group"),
-              std::string::npos) << "Error was: " << error_msg;
+              std::string::npos)
+        << "Error was: " << error_msg;
 
     quiver_database_close(db);
 }
@@ -703,16 +719,15 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupTypeMismatch) {
     const char* dts[] = {"2024-01-01T10:00:00"};
     int64_t temps[] = {20};
     const void* col_data[] = {dts, temps};
-    auto err = quiver_database_update_time_series_group(db, "Sensor", "readings", id, col_names, col_types, col_data, 2, 1);
+    auto err =
+        quiver_database_update_time_series_group(db, "Sensor", "readings", id, col_names, col_types, col_data, 2, 1);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     std::string error_msg = quiver_get_last_error();
     EXPECT_NE(error_msg.find("Cannot update_time_series_group: column"), std::string::npos)
         << "Error was: " << error_msg;
-    EXPECT_NE(error_msg.find("has type"), std::string::npos)
-        << "Error was: " << error_msg;
-    EXPECT_NE(error_msg.find("but received"), std::string::npos)
-        << "Error was: " << error_msg;
+    EXPECT_NE(error_msg.find("has type"), std::string::npos) << "Error was: " << error_msg;
+    EXPECT_NE(error_msg.find("but received"), std::string::npos) << "Error was: " << error_msg;
 
     quiver_database_close(db);
 }
@@ -742,13 +757,15 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupDateTimeStringInterchangeable) {
 
     // Use DATE_TIME type for the dimension column (instead of STRING)
     const char* col_names[] = {"date_time", "temperature", "humidity", "status"};
-    int col_types[] = {QUIVER_DATA_TYPE_DATE_TIME, QUIVER_DATA_TYPE_FLOAT, QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_STRING};
+    int col_types[] = {
+        QUIVER_DATA_TYPE_DATE_TIME, QUIVER_DATA_TYPE_FLOAT, QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_STRING};
     const char* dts[] = {"2024-01-01T10:00:00"};
     double temps[] = {22.0};
     int64_t humids[] = {55};
     const char* stats[] = {"ok"};
     const void* col_data[] = {dts, temps, humids, stats};
-    auto err = quiver_database_update_time_series_group(db, "Sensor", "readings", id, col_names, col_types, col_data, 4, 1);
+    auto err =
+        quiver_database_update_time_series_group(db, "Sensor", "readings", id, col_names, col_types, col_data, 4, 1);
     EXPECT_EQ(err, QUIVER_OK) << "DATE_TIME and STRING should be interchangeable for dimension column";
 
     // Read back to confirm
@@ -757,8 +774,8 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupDateTimeStringInterchangeable) {
     void** out_col_data = nullptr;
     size_t col_count = 0;
     size_t row_count = 0;
-    err = quiver_database_read_time_series_group(db, "Sensor", "readings", id,
-                                                  &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count);
+    err = quiver_database_read_time_series_group(
+        db, "Sensor", "readings", id, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count);
     EXPECT_EQ(err, QUIVER_OK);
     ASSERT_EQ(row_count, 1);
     ASSERT_EQ(col_count, 4);
@@ -803,8 +820,8 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupMultiColumnEmpty) {
     void** out_col_data = nullptr;
     size_t col_count = 0;
     size_t row_count = 0;
-    auto err = quiver_database_read_time_series_group(db, "Sensor", "readings", id,
-                                                       &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count);
+    auto err = quiver_database_read_time_series_group(
+        db, "Sensor", "readings", id, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count);
 
     EXPECT_EQ(err, QUIVER_OK);
     EXPECT_EQ(row_count, 0);

@@ -162,8 +162,8 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_databa
             }
         } catch (...) {
             // Clean up partially allocated results
-            quiver_database_free_time_series_data(*out_column_names, *out_column_types, *out_column_data, col_count,
-                                                  row_count);
+            quiver_database_free_time_series_data(
+                *out_column_names, *out_column_types, *out_column_data, col_count, row_count);
             *out_column_names = nullptr;
             *out_column_types = nullptr;
             *out_column_data = nullptr;
@@ -236,8 +236,8 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
             }
         }
         if (!has_dimension) {
-            throw std::runtime_error("Cannot update_time_series_group: dimension column '" +
-                                     metadata.dimension_column + "' missing from column_names");
+            throw std::runtime_error("Cannot update_time_series_group: dimension column '" + metadata.dimension_column +
+                                     "' missing from column_names");
         }
 
         // Validate each column_name exists in schema and type matches
@@ -245,9 +245,8 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
             std::string name(column_names[i]);
             auto it = schema_columns.find(name);
             if (it == schema_columns.end()) {
-                throw std::runtime_error("Cannot update_time_series_group: column '" + name +
-                                         "' not found in group '" + std::string(group) + "' for collection '" +
-                                         std::string(collection) + "'");
+                throw std::runtime_error("Cannot update_time_series_group: column '" + name + "' not found in group '" +
+                                         std::string(group) + "' for collection '" + std::string(collection) + "'");
             }
             // Type check: DATE_TIME and STRING are interchangeable
             auto expected = it->second;
@@ -317,7 +316,8 @@ QUIVER_C_API quiver_error_t quiver_database_free_time_series_data(char** column_
     // Free column data based on column_types
     if (column_data && column_types) {
         for (size_t i = 0; i < column_count; ++i) {
-            if (!column_data[i]) continue;
+            if (!column_data[i])
+                continue;
             switch (column_types[i]) {
             case QUIVER_DATA_TYPE_INTEGER:
                 delete[] static_cast<int64_t*>(column_data[i]);
