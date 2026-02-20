@@ -29,7 +29,7 @@
 
 - [x] **Phase 11: C API Multi-Column Time Series** - Redesign C API to support N typed value columns for time series update, read, and free (completed 2026-02-19)
 - [x] **Phase 12: Julia Binding Migration** - Julia kwargs interface for multi-column time series update and typed multi-column read (completed 2026-02-20)
-- [ ] **Phase 13: Dart Binding Migration** - Dart Map interface for multi-column time series update and typed multi-column read
+- [x] **Phase 13: Dart Binding Migration** - Dart Map interface for multi-column time series update and typed multi-column read (completed 2026-02-20)
 - [ ] **Phase 14: Verification and Cleanup** - Remove old API, verify Lua coverage, full-stack test gate
 
 ## Phase Details
@@ -110,5 +110,5 @@ Phases execute in numeric order: 11 -> 12 -> 13 -> 14
 | 10. Cross-Layer Docs & Final Verification | v1.0 | 1/1 | Complete | 2026-02-10 |
 | 11. C API Multi-Column Time Series | 2/2 | Complete    | 2026-02-19 | - |
 | 12. Julia Binding Migration | 2/2 | Complete    | 2026-02-20 | - |
-| 13. Dart Binding Migration | 1/2 | In Progress|  | - |
+| 13. Dart Binding Migration | 2/2 | Complete   | 2026-02-20 | - |
 | 14. Verification and Cleanup | v1.1 | 0/0 | Not started | - |
