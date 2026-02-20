@@ -12,7 +12,7 @@ Expose explicit transaction control (`begin_transaction`, `commit`, `rollback`) 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: C++ Transaction Core** - Public begin/commit/rollback with nest-aware TransactionGuard
+- [x] **Phase 1: C++ Transaction Core** - Public begin/commit/rollback with nest-aware TransactionGuard (completed 2026-02-20)
 - [ ] **Phase 2: C API Transaction Surface** - Flat C functions wrapping the C++ transaction methods
 - [ ] **Phase 3: Language Bindings** - Julia, Dart, and Lua bindings with convenience wrappers
 - [ ] **Phase 4: Performance Benchmark** - Prove measurable speedup from batched transactions
@@ -82,7 +82,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. C++ Transaction Core | 0/1 | Planned | - |
+| 1. C++ Transaction Core | 0/1 | Complete    | 2026-02-20 |
 | 2. C API Transaction Surface | 0/0 | Not started | - |
 | 3. Language Bindings | 0/0 | Not started | - |
 | 4. Performance Benchmark | 0/0 | Not started | - |
