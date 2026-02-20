@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-11)
 
 **Core value:** Every public C++ method is reachable from every binding through uniform, predictable patterns
-**Current focus:** v1.1 Time Series Ergonomics -- Phase 14 In Progress
+**Current focus:** v1.1 Time Series Ergonomics -- Phase 14 Complete (Milestone Complete)
 
 ## Current Position
 
 Phase: 14 of 14 (Verification and Cleanup)
-Plan: 1 of 2 in current phase
-Status: Plan 14-01 Complete
-Last activity: 2026-02-20 -- Completed 14-01 (Lua multi-column time series + composite read helper tests)
+Plan: 2 of 2 in current phase
+Status: Phase 14 Complete -- v1.1 Milestone Complete
+Last activity: 2026-02-20 -- Completed 14-02 (CLAUDE.md docs, dead code sweep, full test suite gate)
 
 Progress: [██████████] 100%
 
@@ -40,6 +40,7 @@ Progress: [██████████] 100%
 | 13 | 01 | 3min | 2 | 3 |
 | 13 | 02 | 3min | 2 | 2 |
 | 14 | 01 | 6min | 2 | 1 |
+| 14 | 02 | 3min | 2 | 1 |
 
 *v1.1 metrics start fresh at Phase 11*
 
@@ -67,6 +68,9 @@ Recent decisions affecting current work:
 - v1.1: DateTime constructor comparisons for dimension column in Dart tests
 - v1.1: Empty Map {} for clear semantics in Dart (matches API design decision)
 - v1.1: Lua composite read helpers (read_all_vectors/sets_by_id) require single-column groups where group_name == column_name
+- v1.1: Multi-Column Time Series C API section placed before Parameterized Queries (both document typed parallel-array FFI patterns)
+- v1.1: Cross-layer naming table split "Time series" into "Time series read" and "Time series update" rows
+- v1.1: No hardcoded test counts in CLAUDE.md (staleness avoidance)
 
 ### Pending Todos
 
@@ -79,5 +83,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 14-01-PLAN.md
+Stopped at: Completed 14-02-PLAN.md (Phase 14 complete, v1.1 milestone complete)
 Resume file: None

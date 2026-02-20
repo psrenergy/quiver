@@ -26,8 +26,8 @@ Requirements for time series update interface redesign. Each maps to roadmap pha
 ### Migration Safety
 
 - [x] **MIGR-01**: Multi-column test schema with mixed types (INTEGER + REAL + TEXT value columns) in tests/schemas/valid/
-- [ ] **MIGR-02**: All existing 1,213+ tests continue passing throughout migration
-- [ ] **MIGR-03**: Old C API functions removed only after all bindings migrated to new interface
+- [x] **MIGR-02**: All existing 1,213+ tests continue passing throughout migration
+- [x] **MIGR-03**: Old C API functions removed only after all bindings migrated to new interface
 
 ## v2 Requirements
 
@@ -66,8 +66,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BIND-04 | Phase 13 | Complete |
 | BIND-05 | Phase 14 | Complete |
 | MIGR-01 | Phase 11 | Complete |
-| MIGR-02 | Phase 14 | Pending |
-| MIGR-03 | Phase 14 | Pending |
+| MIGR-02 | Phase 14 | Complete |
+| MIGR-03 | Phase 14 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 13 total
