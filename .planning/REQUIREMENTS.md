@@ -58,23 +58,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TXN-01 | — | Pending |
-| TXN-02 | — | Pending |
-| TXN-03 | — | Pending |
-| CAPI-01 | — | Pending |
-| BIND-01 | — | Pending |
-| BIND-02 | — | Pending |
-| BIND-03 | — | Pending |
-| BIND-04 | — | Pending |
-| BIND-05 | — | Pending |
-| BIND-06 | — | Pending |
-| PERF-01 | — | Pending |
+| TXN-01 | Phase 1 | Pending |
+| TXN-02 | Phase 1 | Pending |
+| TXN-03 | Phase 1 | Pending |
+| CAPI-01 | Phase 2 | Pending |
+| BIND-01 | Phase 3 | Pending |
+| BIND-02 | Phase 3 | Pending |
+| BIND-03 | Phase 3 | Pending |
+| BIND-04 | Phase 3 | Pending |
+| BIND-05 | Phase 3 | Pending |
+| BIND-06 | Phase 3 | Pending |
+| PERF-01 | Phase 4 | Pending |
 
 **Coverage:**
 - v0.3 requirements: 11 total
-- Mapped to phases: 0
-- Unmapped: 11
+- Mapped to phases: 11
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-20*
-*Last updated: 2026-02-20 after initial definition*
+*Last updated: 2026-02-20 after roadmap creation*

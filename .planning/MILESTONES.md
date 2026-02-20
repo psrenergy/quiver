@@ -15,4 +15,5 @@ Full CRUD, typed scalar/vector/set/time-series operations, parameterized queries
 **Started:** 2026-02-20
 **Goal:** Eliminate the two-transaction overhead when creating elements with time series data by exposing explicit transaction control across all layers.
 
-**Status:** Defining requirements
+**Status:** Roadmap created, ready to plan Phase 1
+**Phases:** 4 (Phase 1-4)
