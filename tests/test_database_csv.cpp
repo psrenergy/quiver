@@ -455,13 +455,9 @@ TEST(Database, ExportToCsvTrimsWhitespace) {
 
     ASSERT_EQ(lines.size(), 4);  // sep + header + 2 data rows
 
-    // Labels should be trimmed
-    EXPECT_NE(lines[2].find("Config 1"), std::string::npos);
-    EXPECT_EQ(lines[2].find("  Config 1"), std::string::npos);  // no leading spaces
-    EXPECT_EQ(lines[2].find("Config 1  "), std::string::npos);  // no trailing spaces
-
-    EXPECT_NE(lines[3].find("Config 2"), std::string::npos);
-    EXPECT_EQ(lines[3].find("Config 2   "), std::string::npos);  // no trailing spaces
+    // All string values should be exactly trimmed
+    EXPECT_EQ(lines[2], "\"Config 1\",,2024-01-15T10:30:00,3.14,42,");
+    EXPECT_EQ(lines[3], "\"Config 2\",,2024-06-01T00:00:00,2.71,100,");
 }
 
 TEST(Database, ExportToCsvTrimsWhitespaceForeignKeys) {
