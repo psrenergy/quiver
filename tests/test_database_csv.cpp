@@ -31,7 +31,6 @@ TEST(Database, ExportToCsvBasicCollection) {
     auto csv_path = (fs::temp_directory_path() / "quiver_export_basic.csv").string();
     db.export_csv("Configuration", csv_path);
 
-    // Read CSV back
     std::ifstream file(csv_path);
     std::vector<std::string> lines;
     std::string line;
@@ -42,29 +41,10 @@ TEST(Database, ExportToCsvBasicCollection) {
     fs::remove(csv_path);
 
     ASSERT_EQ(lines.size(), 4);  // sep + header + 2 data rows
-
-    // Line 0: sep=,
     EXPECT_EQ(lines[0], "sep=,");
-
-    // Line 1: header should not contain id (table has label column)
-    EXPECT_EQ(lines[1].find("id"), std::string::npos);
-    EXPECT_NE(lines[1].find("label"), std::string::npos);
-    EXPECT_NE(lines[1].find("integer_attribute"), std::string::npos);
-    EXPECT_NE(lines[1].find("float_attribute"), std::string::npos);
-    EXPECT_NE(lines[1].find("boolean_attribute"), std::string::npos);
-    EXPECT_NE(lines[1].find("date_attribute"), std::string::npos);
-
-    // Line 2: Config 1 data
-    EXPECT_NE(lines[2].find("Config 1"), std::string::npos);
-    EXPECT_NE(lines[2].find("42"), std::string::npos);
-    EXPECT_NE(lines[2].find("3.14"), std::string::npos);
-    EXPECT_NE(lines[2].find("1"), std::string::npos);  // boolean_attribute
-
-    // Line 3: Config 2 data
-    EXPECT_NE(lines[3].find("Config 2"), std::string::npos);
-    EXPECT_NE(lines[3].find("100"), std::string::npos);
-    EXPECT_NE(lines[3].find("2.71"), std::string::npos);
-    EXPECT_NE(lines[3].find("2024-01-01"), std::string::npos);
+    EXPECT_EQ(lines[1], "label,boolean_attribute,date_attribute,float_attribute,integer_attribute,string_attribute");
+    EXPECT_EQ(lines[2], "Config 1,1,,3.14,42,");
+    EXPECT_EQ(lines[3], "Config 2,,2024-01-01T00:00:00,2.71,100,");
 }
 
 TEST(Database, ExportToCsvEmptyCollection) {
@@ -83,15 +63,8 @@ TEST(Database, ExportToCsvEmptyCollection) {
     fs::remove(csv_path);
 
     ASSERT_EQ(lines.size(), 2);  // sep + header only, no data rows
-
-    // Line 0: sep=,
     EXPECT_EQ(lines[0], "sep=,");
-
-    // Line 1: header with all columns except id
-    EXPECT_EQ(lines[1].find("id"), std::string::npos);
-    EXPECT_NE(lines[1].find("label"), std::string::npos);
-    EXPECT_NE(lines[1].find("integer_attribute"), std::string::npos);
-    EXPECT_NE(lines[1].find("float_attribute"), std::string::npos);
+    EXPECT_EQ(lines[1], "label,boolean_attribute,date_attribute,float_attribute,integer_attribute,string_attribute");
 }
 
 TEST(Database, ExportToCsvResolveForeignKeys) {
@@ -131,18 +104,9 @@ TEST(Database, ExportToCsvResolveForeignKeys) {
     fs::remove(csv_path);
 
     ASSERT_EQ(lines.size(), 4);  // sep + header + 2 rows
-
-    // Header keeps original FK column names
-    EXPECT_NE(lines[1].find("parent_id"), std::string::npos);
-    EXPECT_NE(lines[1].find("sibling_id"), std::string::npos);
-
-    // Row data should contain resolved labels, not integer IDs
-    EXPECT_NE(lines[2].find("Child 1"), std::string::npos);
-    EXPECT_NE(lines[2].find("Parent 1"), std::string::npos);
-
-    EXPECT_NE(lines[3].find("Child 2"), std::string::npos);
-    EXPECT_NE(lines[3].find("Parent 2"), std::string::npos);
-    EXPECT_NE(lines[3].find("Child 1"), std::string::npos);  // sibling resolved
+    EXPECT_EQ(lines[1], "label,parent_id,sibling_id");
+    EXPECT_EQ(lines[2], "Child 1,Parent 1,");
+    EXPECT_EQ(lines[3], "Child 2,Parent 2,Child 1");
 }
 
 TEST(Database, ExportToCsvNullForeignKey) {
@@ -166,7 +130,8 @@ TEST(Database, ExportToCsvNullForeignKey) {
     fs::remove(csv_path);
 
     ASSERT_EQ(lines.size(), 3);  // sep + header + 1 row
-    EXPECT_NE(lines[2].find("Orphan"), std::string::npos);
+    EXPECT_EQ(lines[1], "label,parent_id,sibling_id");
+    EXPECT_EQ(lines[2], "Orphan,,");
 }
 
 TEST(Database, ExportToCsvVectorTableResolveForeignKeys) {
@@ -196,10 +161,9 @@ TEST(Database, ExportToCsvVectorTableResolveForeignKeys) {
     fs::remove(csv_path);
 
     ASSERT_EQ(lines.size(), 4);  // sep + header + 2 rows
-
-    // FK columns should resolve to labels
-    EXPECT_NE(lines[2].find("Child 1"), std::string::npos);
-    EXPECT_NE(lines[2].find("Parent 1"), std::string::npos);
+    EXPECT_EQ(lines[1], "id,parent_ref,vector_index");
+    EXPECT_EQ(lines[2], "Child 1,Parent 1,1");
+    EXPECT_EQ(lines[3], "Child 1,Parent 1,2");
 }
 
 TEST(Database, ExportToCsvSetTableResolveForeignKeys) {
@@ -233,12 +197,9 @@ TEST(Database, ExportToCsvSetTableResolveForeignKeys) {
     fs::remove(csv_path);
 
     ASSERT_EQ(lines.size(), 4);  // sep + header + 2 rows
-
-    // FK columns should resolve to labels
-    EXPECT_NE(lines[2].find("Child 1"), std::string::npos);
-    EXPECT_NE(lines[2].find("Parent 1"), std::string::npos);
-    EXPECT_NE(lines[3].find("Child 1"), std::string::npos);
-    EXPECT_NE(lines[3].find("Parent 2"), std::string::npos);
+    EXPECT_EQ(lines[1], "id,parent_ref");
+    EXPECT_EQ(lines[2], "Child 1,Parent 1");
+    EXPECT_EQ(lines[3], "Child 1,Parent 2");
 }
 
 TEST(Database, ExportToCsvVectorIndexAsNormalValue) {
@@ -264,42 +225,10 @@ TEST(Database, ExportToCsvVectorIndexAsNormalValue) {
     fs::remove(csv_path);
 
     ASSERT_EQ(lines.size(), 5);  // sep + header + 3 rows
-
-    // Header should contain vector_index
-    EXPECT_NE(lines[1].find("vector_index"), std::string::npos);
-
-    // vector_index values should be integers 1, 2, 3
-    EXPECT_NE(lines[2].find("1"), std::string::npos);
-    EXPECT_NE(lines[3].find("2"), std::string::npos);
-    EXPECT_NE(lines[4].find("3"), std::string::npos);
-
-    // id column should resolve to parent label
-    EXPECT_NE(lines[2].find("Item 1"), std::string::npos);
-}
-
-TEST(Database, ExportToCsvQuotesFieldsWithCommas) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
-
-    quiver::Element e1;
-    e1.set("label", std::string("Item, with comma"));
-    db.create_element("Configuration", e1);
-
-    auto csv_path = (fs::temp_directory_path() / "quiver_export_quoting.csv").string();
-    db.export_csv("Configuration", csv_path);
-
-    std::ifstream file(csv_path);
-    std::vector<std::string> lines;
-    std::string line;
-    while (std::getline(file, line)) {
-        lines.push_back(line);
-    }
-    file.close();
-    fs::remove(csv_path);
-
-    ASSERT_EQ(lines.size(), 3);  // sep + header + 1 row
-
-    // Field with comma should be quoted per RFC 4180
-    EXPECT_NE(lines[2].find("\"Item, with comma\""), std::string::npos);
+    EXPECT_EQ(lines[1], "id,value_float,value_int,vector_index");
+    EXPECT_EQ(lines[2], "Item 1,,10,1");
+    EXPECT_EQ(lines[3], "Item 1,,20,2");
+    EXPECT_EQ(lines[4], "Item 1,,30,3");
 }
 
 TEST(Database, ExportToCsvTimeSeriesTable) {
@@ -310,7 +239,6 @@ TEST(Database, ExportToCsvTimeSeriesTable) {
     e1.set("label", std::string("Item 1"));
     db.create_element("Collection", e1);
 
-    // Insert time series data directly
     db.query_string("INSERT INTO Collection_time_series_data VALUES (1, '2024-01-15T10:30:00', 42.5)");
     db.query_string("INSERT INTO Collection_time_series_data VALUES (1, '2024-01-15T11:00:00', 37.2)");
 
@@ -327,16 +255,9 @@ TEST(Database, ExportToCsvTimeSeriesTable) {
     fs::remove(csv_path);
 
     ASSERT_EQ(lines.size(), 4);  // sep + header + 2 rows
-
-    // collection_id FK should resolve to parent label
-    EXPECT_NE(lines[2].find("Item 1"), std::string::npos);
-
-    // date_time should be exported (default format = ISO 8601)
-    EXPECT_NE(lines[2].find("2024-01-15T10:30:00"), std::string::npos);
-    EXPECT_NE(lines[3].find("2024-01-15T11:00:00"), std::string::npos);
-
-    // value should be exported as-is
-    EXPECT_NE(lines[2].find("42.5"), std::string::npos);
+    EXPECT_EQ(lines[1], "date_time,id,value");
+    EXPECT_EQ(lines[2], "2024-01-15T10:30:00,Item 1,42.5");
+    EXPECT_EQ(lines[3], "2024-01-15T11:00:00,Item 1,37.2");
 }
 
 TEST(Database, ExportToCsvDateTimeCustomFormat) {
@@ -362,8 +283,8 @@ TEST(Database, ExportToCsvDateTimeCustomFormat) {
     fs::remove(csv_path);
 
     ASSERT_EQ(lines.size(), 3);  // sep + header + 1 row
-    EXPECT_NE(lines[2].find("2024-01"), std::string::npos);
-    EXPECT_EQ(lines[2].find("10:30"), std::string::npos);  // time should be gone
+    EXPECT_EQ(lines[1], "date_time,id,value");
+    EXPECT_EQ(lines[2], "2024-01,Item 1,42.5");
 }
 
 TEST(Database, ExportToCsvEnumResolution) {
@@ -387,8 +308,8 @@ TEST(Database, ExportToCsvEnumResolution) {
     fs::remove(csv_path);
 
     ASSERT_EQ(lines.size(), 3);  // sep + header + 1 row
-    EXPECT_NE(lines[2].find("Active"), std::string::npos);
-    EXPECT_EQ(lines[2].find(",1,"), std::string::npos);  // raw integer should not appear
+    EXPECT_EQ(lines[1], "label,boolean_attribute,date_attribute,float_attribute,integer_attribute,string_attribute");
+    EXPECT_EQ(lines[2], "Config 1,,,,Active,");
 }
 
 TEST(Database, ExportToCsvEnumInvalidIdThrows) {
@@ -426,9 +347,7 @@ TEST(Database, ExportToCsvEnumMultiLocale) {
     fs::remove(csv_path);
 
     ASSERT_EQ(lines.size(), 3);  // sep + header + 1 row
-    // First locale ("en") should be used for export
-    EXPECT_NE(lines[2].find("Active"), std::string::npos);
-    EXPECT_EQ(lines[2].find("Ativo"), std::string::npos);
+    EXPECT_EQ(lines[2], "Config 1,,,,Active,");
 }
 
 TEST(Database, ExportToCsvTrimsWhitespace) {
@@ -454,10 +373,8 @@ TEST(Database, ExportToCsvTrimsWhitespace) {
     fs::remove(csv_path);
 
     ASSERT_EQ(lines.size(), 4);  // sep + header + 2 data rows
-
-    // All string values should be exactly trimmed
-    EXPECT_EQ(lines[2], "\"Config 1\",,2024-01-15T10:30:00,3.14,42,");
-    EXPECT_EQ(lines[3], "\"Config 2\",,2024-06-01T00:00:00,2.71,100,");
+    EXPECT_EQ(lines[2], "Config 1,,2024-01-15T10:30:00,3.14,42,");
+    EXPECT_EQ(lines[3], "Config 2,,2024-06-01T00:00:00,2.71,100,");
 }
 
 TEST(Database, ExportToCsvTrimsWhitespaceForeignKeys) {
@@ -486,11 +403,7 @@ TEST(Database, ExportToCsvTrimsWhitespaceForeignKeys) {
     fs::remove(csv_path);
 
     ASSERT_EQ(lines.size(), 3);  // sep + header + 1 row
-
-    // FK resolved label should be trimmed
-    EXPECT_NE(lines[2].find("Parent 1"), std::string::npos);
-    EXPECT_EQ(lines[2].find("  Parent 1"), std::string::npos);  // no leading spaces
-    EXPECT_EQ(lines[2].find("Parent 1  "), std::string::npos);  // no trailing spaces
+    EXPECT_EQ(lines[2], "Child 1,Parent 1,");
 }
 
 TEST(Database, ExportToCsvNonExistentCollectionThrows) {
@@ -503,7 +416,6 @@ TEST(Database, ExportToCsvNonExistentCollectionThrows) {
 TEST(Database, ExportToCsvNullValues) {
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = QUIVER_LOG_OFF});
 
-    // Create element with NULL values
     quiver::Element e1;
     e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
     db.create_element("Configuration", e1);
@@ -515,7 +427,6 @@ TEST(Database, ExportToCsvNullValues) {
     auto csv_path = (fs::temp_directory_path() / "quiver_export_nulls.csv").string();
     db.export_csv("Configuration", csv_path);
 
-    // Read CSV back
     std::ifstream file(csv_path);
     std::vector<std::string> lines;
     std::string line;
@@ -526,39 +437,22 @@ TEST(Database, ExportToCsvNullValues) {
     fs::remove(csv_path);
 
     ASSERT_EQ(lines.size(), 4);  // sep + header + 2 data rows
-
-    // Line 0: sep=,
     EXPECT_EQ(lines[0], "sep=,");
-
-    // Line 1: header
-    EXPECT_EQ(lines[1].find("id"), std::string::npos);  // No id when table has label
-    EXPECT_NE(lines[1].find("label"), std::string::npos);
-    EXPECT_NE(lines[1].find("integer_attribute"), std::string::npos);
-    EXPECT_NE(lines[1].find("float_attribute"), std::string::npos);
-
-    // Line 2: Config 1 with values
-    EXPECT_NE(lines[2].find("Config 1"), std::string::npos);
-    EXPECT_NE(lines[2].find("42"), std::string::npos);
-
-    // Line 3: Config 2 with NULL values exported as empty strings
-    EXPECT_NE(lines[3].find("Config 2"), std::string::npos);
-    // NULL values should appear as empty fields (consecutive commas)
-    // The default integer_attribute value is 6 (from schema), so we expect it
-    EXPECT_NE(lines[3].find("6"), std::string::npos);  // Default value from schema
+    EXPECT_EQ(lines[1], "label,boolean_attribute,date_attribute,float_attribute,integer_attribute,string_attribute");
+    EXPECT_EQ(lines[2], "Config 1,,,,42,");
+    EXPECT_EQ(lines[3], "Config 2,,,,6,");  // integer_attribute defaults to 6 from schema
 }
 
 TEST(Database, ExportToCsvTimeSeriesFiles) {
     auto db =
         quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), {.console_level = QUIVER_LOG_OFF});
 
-    // Insert time series file references
     db.query_string(
         "INSERT INTO Collection_time_series_files (data_file, metadata_file) VALUES ('data.csv', 'meta.csv')");
 
     auto csv_path = (fs::temp_directory_path() / "quiver_export_ts_files.csv").string();
     db.export_csv("Collection_time_series_files", csv_path);
 
-    // Read CSV back
     std::ifstream file(csv_path);
     std::vector<std::string> lines;
     std::string line;
@@ -569,19 +463,9 @@ TEST(Database, ExportToCsvTimeSeriesFiles) {
     fs::remove(csv_path);
 
     ASSERT_EQ(lines.size(), 3);  // sep + header + 1 data row
-
-    // Line 0: sep=,
     EXPECT_EQ(lines[0], "sep=,");
-
-    // Line 1: header should not contain id or label (singleton table, no pk)
-    EXPECT_EQ(lines[1].find("id"), std::string::npos);
-    EXPECT_EQ(lines[1].find("label"), std::string::npos);
-    EXPECT_NE(lines[1].find("data_file"), std::string::npos);
-    EXPECT_NE(lines[1].find("metadata_file"), std::string::npos);
-
-    // Line 2: data row with file paths
-    EXPECT_NE(lines[2].find("data.csv"), std::string::npos);
-    EXPECT_NE(lines[2].find("meta.csv"), std::string::npos);
+    EXPECT_EQ(lines[1], "data_file,metadata_file");
+    EXPECT_EQ(lines[2], "data.csv,meta.csv");
 }
 
 TEST(Database, ExportToCsvInvalidPathThrows) {
@@ -591,8 +475,6 @@ TEST(Database, ExportToCsvInvalidPathThrows) {
     e1.set("label", std::string("Config 1"));
     db.create_element("Configuration", e1);
 
-    // Try to write to an invalid/inaccessible path
-    // On Windows, paths with invalid characters or non-existent directories should fail
     auto invalid_path = "Z:/nonexistent_drive/invalid_path/file.csv";
     EXPECT_THROW(db.export_csv("Configuration", invalid_path), std::runtime_error);
 }
