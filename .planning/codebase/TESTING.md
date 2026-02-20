@@ -1,87 +1,95 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-02-09
+**Analysis Date:** 2026-02-20
 
 ## Test Framework
 
-**Runner:**
-- Google Test (gtest) v1.x
-- Config: `tests/CMakeLists.txt` with `gtest_discover_tests()`
+**C++ / C API Runner:**
+- GoogleTest (GTest) with GMock
+- Version: fetched via CMake FetchContent (see `cmake/Dependencies.cmake`)
+- Config: `tests/CMakeLists.txt`
+- Test discovery: `gtest_discover_tests()` per executable
 
-**Assertion Library:**
-- Google Test built-in assertions: `EXPECT_*`, `ASSERT_*`
-- Mock library: Google Mock (gmock)
+**Julia Runner:**
+- Built-in `Test` stdlib with `@testset`
+- Entry point: `bindings/julia/test/runtests.jl`
+- Recursive auto-discovery of `test_*.jl` files
+
+**Dart Runner:**
+- `package:test` framework
+- Entry point: `bindings/dart/test/`
+- Files named `*_test.dart`
 
 **Run Commands:**
 ```bash
-cmake --build build --config Debug                # Build everything
-./build/bin/quiver_tests.exe                      # Run C++ core tests
-./build/bin/quiver_c_tests.exe                    # Run C API tests (if QUIVER_BUILD_C_API enabled)
-scripts/build-all.bat                             # Build all + run all tests
-scripts/test-all.bat                              # Run all tests (assumes built)
+# C++ core tests
+./build/bin/quiver_tests.exe
+
+# C API tests
+./build/bin/quiver_c_tests.exe
+
+# Julia tests
+bindings/julia/test/test.bat
+
+# Dart tests
+bindings/dart/test/test.bat
+
+# All tests + build
+scripts/test-all.bat
+
+# Build then test
+scripts/build-all.bat
 ```
 
 ## Test File Organization
 
-**Location:**
-- C++ tests: `tests/test_*.cpp` - same directory, co-located with test utilities
-- C API tests: `tests/test_c_api_*.cpp` - same directory
-- Test schemas: `tests/schemas/valid/*.sql` and `tests/schemas/invalid/*.sql`
-- Test utilities: `tests/test_utils.h` - shared header with helper macros
+**C++ tests** — in `tests/`, separate from source:
+- `test_{domain}.cpp` — C++ API tests (e.g., `test_database_create.cpp`)
+- `test_c_api_{domain}.cpp` — C API tests (e.g., `test_c_api_database_create.cpp`)
+- `test_utils.h` — shared utilities (path helpers, quiet options)
 
-**Naming:**
-- Functional tests: `test_<feature>.cpp` (e.g., `test_database_read.cpp`, `test_database_create.cpp`)
-- Error tests: `test_<component>_errors.cpp` (e.g., `test_database_errors.cpp`)
-- C API equivalents: `test_c_api_<same>.cpp` (e.g., `test_c_api_database_read.cpp`)
-- Integration/issue tests: `test_issues.cpp`, `test_migrations.cpp`, `test_lua_runner.cpp`, `test_row_result.cpp`, `test_schema_validator.cpp`
+**Compiled into two separate executables:**
+- `quiver_tests` — links against `quiver` (C++ library)
+- `quiver_c_tests` — links against `quiver_c` and `quiver`
 
-**Structure:**
-```
-tests/
-├── test_database_lifecycle.cpp        # Open, close, move semantics
-├── test_database_create.cpp           # Create element operations
-├── test_database_read.cpp             # Read scalar/vector/set operations
-├── test_database_update.cpp           # Update operations
-├── test_database_delete.cpp           # Delete operations
-├── test_database_query.cpp            # SQL query operations
-├── test_database_relations.cpp        # Relation operations
-├── test_database_time_series.cpp      # Time series operations
-├── test_database_errors.cpp           # Error handling for all operations
-├── test_element.cpp                   # Element builder tests
-├── test_lua_runner.cpp                # Lua scripting tests
-├── test_migrations.cpp                # Migration lifecycle tests
-├── test_row_result.cpp                # Row/Result container tests
-├── test_schema_validator.cpp          # Schema validation tests
-├── test_c_api_database_*.cpp          # C API equivalents
-├── test_c_api_element.cpp
-├── test_c_api_lua_runner.cpp
-├── test_issues.cpp                    # Issue-specific regression tests
-├── test_utils.h                       # Shared test utilities
-└── schemas/
-    ├── valid/*.sql                    # Valid test schemas (referenced via VALID_SCHEMA macro)
-    ├── invalid/*.sql                  # Invalid schemas for error testing
-    ├── migrations/                    # Migration test directories
-    └── issues/                        # Issue-specific test data
-```
+**Julia tests** — in `bindings/julia/test/`:
+- `test_{domain}.jl` files auto-discovered by `runtests.jl`
+- `fixture.jl` — shared helper functions
+
+**Dart tests** — in `bindings/dart/test/`:
+- `{domain}_test.dart` naming convention
+
+**Test schemas** (shared across all test layers):
+- Located in `tests/schemas/valid/` and `tests/schemas/invalid/`
+- Referenced from all C++, Julia, and Dart tests via relative paths
+- Valid: `basic.sql`, `collections.sql`, `relations.sql`, `multi_time_series.sql`, `mixed_time_series.sql`
+- Invalid: one file per validation rule (e.g., `no_configuration.sql`, `label_not_null.sql`)
+- Issues: regression schemas in `tests/schemas/issues/issue{N}/`
 
 ## Test Structure
 
-**Test Suite Organization:**
-
-C++ tests use Google Test fixtures to manage setup/teardown:
-
+**C++ flat tests (no fixture):** Used when each test sets up its own in-memory database.
 ```cpp
-#include <gtest/gtest.h>
-#include <quiver/database.h>
-#include "test_utils.h"
+TEST(Database, CreateElementWithScalars) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
-namespace fs = std::filesystem;
+    quiver::Element element;
+    element.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
 
+    int64_t id = db.create_element("Configuration", element);
+    EXPECT_EQ(id, 1);
+
+    auto labels = db.read_scalar_strings("Configuration", "label");
+    EXPECT_EQ(labels[0], "Config 1");
+}
+```
+
+**C++ fixture-based tests:** Used when setup/teardown is shared (file-based DBs, migration paths).
+```cpp
 class TempFileFixture : public ::testing::Test {
 protected:
-    void SetUp() override {
-        path = (fs::temp_directory_path() / "quiver_test.db").string();
-    }
+    void SetUp() override { path = (fs::temp_directory_path() / "quiver_test.db").string(); }
     void TearDown() override {
         if (fs::exists(path))
             fs::remove(path);
@@ -92,302 +100,256 @@ protected:
 TEST_F(TempFileFixture, OpenFileOnDisk) {
     quiver::Database db(path);
     EXPECT_TRUE(db.is_healthy());
-    EXPECT_EQ(db.path(), path);
-}
-
-TEST(Database, ReadScalarIntegers) {  // Ungrouped test - no fixture
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
-
-    quiver::Element e1;
-    e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
-    db.create_element("Configuration", e1);
-
-    auto values = db.read_scalar_integers("Configuration", "integer_attribute");
-    EXPECT_EQ(values.size(), 2);
-    EXPECT_EQ(values[0], 42);
 }
 ```
 
-**Patterns:**
-- `SetUp()`: Create temporary files, initialize resources
-- `TearDown()`: Clean up files with `fs::remove()`
-- Test initialization: Database created fresh per test
-- Logging: Always disable with `{.read_only = 0, .console_level = QUIVER_LOG_OFF}` to reduce noise
-- Inline element construction with fluent API: `Element().set("name", value).set("other", value2)`
-
-## Assertion Patterns
-
-**Expectation vs Assertion:**
-- `EXPECT_*`: Test continues on failure, collects all failures
-- `ASSERT_*`: Test stops on failure, exits early
-
-**Common patterns:**
-
+**Section markers** divide logical groups within a test file:
 ```cpp
-// Equality checks
-EXPECT_EQ(actual, expected);          // For values, vectors
-EXPECT_NE(a, b);                      // Not equal
-EXPECT_STREQ(actual, expected);       // C strings
-
-// Boolean checks
-EXPECT_TRUE(condition);
-EXPECT_FALSE(condition);
-
-// Exception checks
-EXPECT_THROW(expression, exception_type);    // Expect exception thrown
-EXPECT_NO_THROW(expression);                 // Expect no exception
-
-// Floating point comparisons
-EXPECT_DOUBLE_EQ(actual, expected);   // Fuzzy equality for doubles
-EXPECT_FLOAT_EQ(actual, expected);    // For floats
-
-// Container checks
-EXPECT_EQ(vector.size(), count);
-EXPECT_TRUE(vector.empty());
-EXPECT_EQ(vector[0], value);
-EXPECT_EQ(vector, expected_vector);   // Full vector equality
-
-// Null pointer checks
-EXPECT_NE(ptr, nullptr);
-EXPECT_EQ(ptr, nullptr);
+// ============================================================================
+// Read scalar tests
+// ============================================================================
 ```
 
-## Mocking
+**Julia testset pattern:**
+```julia
+module TestDatabaseCreate
+using Test
+using Quiver
+include("fixture.jl")
 
-**Framework:** Google Mock (gmock)
-
-**Usage:** Not heavily used in current tests; tests favor real database instances
-
-**Pattern (if needed):**
-```cpp
-#include <gmock/gmock.h>
-
-class MockElement {
-public:
-    MOCK_METHOD(Element&, set, (const std::string&, int64_t));
-};
+@testset "Create" begin
+    @testset "Scalar Attributes" begin
+        db = Quiver.from_schema(":memory:", path_to_schema)
+        Quiver.create_element!(db, "Configuration"; label = "Test", integer_attribute = 42)
+        Quiver.close!(db)
+    end
+end
+end  # module
 ```
 
-**What to Mock:**
-- External dependencies (file system, network) - currently no mocking used, real temp files created
-- Heavy computation that would slow tests
-
-**What NOT to Mock:**
-- Core Database operations - use real in-memory SQLite instances
-- Element builder - lightweight, no side effects
-- Query results - real database results needed to verify correctness
-
-## Test Fixtures and Factories
-
-**Test Data:**
-- Fixtures define schema paths: `VALID_SCHEMA("basic.sql")`, `VALID_SCHEMA("collections.sql")`
-- Elements built inline per test with fluent API
-- Collection setup: `db.create_element("Configuration", config)` followed by domain elements
-- Configuration element required for all schemas (singleton pattern)
-
-**Factories:**
-- Element builder: `Element().set("label", "Item 1").set("value", 42)`
-- Database factory: `Database::from_schema()`, `Database::from_migrations()`
-- Test utilities: `test_utils.h` provides `VALID_SCHEMA()`, `INVALID_SCHEMA()` macros
-
-**Location:**
-- Schemas in `tests/schemas/valid/` and `tests/schemas/invalid/`
-- Schema paths computed at runtime: `VALID_SCHEMA("basic.sql")` expands to `tests/schemas/valid/basic.sql`
-- Macro implementation: `SCHEMA_PATH(relative) quiver::test::path_from(__FILE__, relative)`
-
-## Coverage
-
-**Requirements:** None enforced; coverage measured informally
-
-**Test Counts by Category (as of analysis date):**
-- Lifecycle (open, close, move): 35 tests
-- Create operations: 12 tests
-- Read operations (scalar/vector/set): 39 tests
-- Update operations: 28 tests
-- Delete operations: 5 tests
-- Query operations: 17 tests
-- Relations: 7 tests
-- Time series: 19 tests
-- Error handling: 42 tests
-- Element/builder: 22 tests
-- Migrations: 21 tests
-- Lua runner: 83 tests
-- Row/Result: 23 tests
-- Schema validation: 31 tests
-- Issues/regression: 1 test
-- **Total: ~400+ tests across C++ and C API suites**
-
-**View Coverage:**
-No automated coverage tool configured; tests are designed for behavioral verification.
-
-## Test Types
-
-**Unit Tests:**
-- Scope: Individual methods (e.g., `Element::set()`, `Row::get_integer()`)
-- Approach: Direct instantiation, method calls, assertion on return values
-- Example: `test_element.cpp` - 22 tests on Element builder fluent API
-
-**Integration Tests:**
-- Scope: Database + schema + operations end-to-end
-- Approach: Load schema with `from_schema()`, create elements, read back, verify
-- Example: `test_database_read.cpp` - read operations with real schema validation
-
-**Query/SQL Tests:**
-- Scope: Parameterized and non-parameterized SQL execution
-- Approach: Execute raw SQL with parameters, verify results via `Result` container
-- Location: `test_database_query.cpp` - 17 tests
-
-**Error Tests:**
-- Scope: Exception conditions and error paths
-- Approach: `EXPECT_THROW()` for invalid operations
-- Location: `test_database_errors.cpp` - 42 tests covering schema errors, validation, etc.
-
-**E2E Tests:**
-- Not a separate category; integration tests serve as E2E
-- Lua scripting tests in `test_lua_runner.cpp` test full scenario execution
-
-## Common Patterns
-
-**Async Testing:**
-Not applicable; SQLite operations are synchronous.
-
-**Error Testing:**
-```cpp
-TEST(DatabaseErrors, CreateElementNoSchema) {
-    quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
-    quiver::Element element;
-    element.set("label", std::string("Test"));
-    EXPECT_THROW(db.create_element("Configuration", element), std::runtime_error);
-}
-
-TEST_F(TempFileFixture, FromSchemaFileNotFound) {
-    EXPECT_THROW(
-        quiver::Database::from_schema(
-            ":memory:", "nonexistent/path/schema.sql", {.read_only = 0, .console_level = QUIVER_LOG_OFF}),
-        std::runtime_error);
-}
+**Dart test pattern:**
+```dart
+group('Create Scalar Attributes', () {
+  test('creates Configuration with all scalar types', () {
+    final db = Database.fromSchema(':memory:', schemaPath);
+    try {
+      final id = db.createElement('Configuration', {'label': 'Test Config'});
+      expect(id, greaterThan(0));
+    } finally {
+      db.close();
+    }
+  });
+});
 ```
 
-**Boundary Value Tests:**
-- Empty results: vectors/sets with 0 elements
-- Null values: `set_null()` for scalar attributes
-- Large values: tested via in-memory databases with multiple elements
-- Example from `test_database_read.cpp`:
-```cpp
-TEST(Database, ReadScalarEmpty) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+## Database Setup in Tests
 
-    quiver::Element config;
-    config.set("label", std::string("Test Config"));
-    db.create_element("Configuration", config);
-
-    auto integers = db.read_scalar_integers("Collection", "some_integer");
-    auto floats = db.read_scalar_floats("Collection", "some_float");
-    auto strings = db.read_scalar_strings("Collection", "label");
-
-    EXPECT_TRUE(integers.empty());
-    EXPECT_TRUE(floats.empty());
-    EXPECT_TRUE(strings.empty());
-}
-```
-
-**Parameterized Query Tests:**
-- SQL with parameter placeholders: `?` for positional parameters
-- Type arrays and value arrays passed in parallel
-- Example from `test_database_query.cpp`:
-```cpp
-auto result = db.query_integer(
-    "SELECT value FROM MyCollection WHERE id = ?",
-    {QUIVER_DATA_TYPE_INTEGER},
-    {&element_id});
-```
-
-**C API Testing Pattern:**
-```cpp
-auto options = quiver_database_options_default();
-options.console_level = QUIVER_LOG_OFF;
-quiver_database_t* db = nullptr;
-ASSERT_EQ(quiver_database_open(path.c_str(), &options, &db), QUIVER_OK);
-
-int healthy = 0;
-EXPECT_EQ(quiver_database_is_healthy(db, &healthy), QUIVER_OK);
-EXPECT_EQ(healthy, 1);
-
-quiver_database_close(db);
-```
-
-**Time Series Tests:**
-- Dimension column handling: `date_time`, `date_value`, etc.
-- Metadata retrieval: `get_time_series_metadata()` includes `dimension_column`
-- Files table tests: `has_time_series_files()`, `read_time_series_files()`
-- Location: `test_database_time_series.cpp` - 19 tests
-
-## Test Utilities and Helpers
-
-**`test_utils.h` Macros:**
-```cpp
-// Convenience macros for schema paths
-#define SCHEMA_PATH(relative) quiver::test::path_from(__FILE__, relative)
-#define VALID_SCHEMA(name) SCHEMA_PATH("schemas/valid/" name)
-#define INVALID_SCHEMA(name) SCHEMA_PATH("schemas/invalid/" name)
-
-// Helper functions
-inline std::string path_from(const char* test_file, const std::string& relative);
-inline quiver_database_options_t quiet_options();
-```
-
-**Usage:**
+**In-memory databases** are the default — fast, no cleanup:
 ```cpp
 auto db = quiver::Database::from_schema(
     ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 ```
 
-**Test Data Schemas:**
-- `basic.sql`: Minimal Configuration table with scalar attributes (integer, float, string)
-- `collections.sql`: Configuration + Collection with vectors and sets
-- `migrations/1/up.sql`, `migrations/1/down.sql`: Test migrations
-- `issues/issue52/`: Issue-specific regression test data
+**Logging always suppressed in tests:**
+- C++: `{.read_only = 0, .console_level = QUIVER_LOG_OFF}`
+- Via helper: `quiver::test::quiet_options()` defined in `tests/test_utils.h`
+- Julia/Dart: logging off by default when no options specified
 
-## Test Execution Details
+**Schema path macros** (defined in `tests/test_utils.h`):
+```cpp
+#define VALID_SCHEMA(name) SCHEMA_PATH("schemas/valid/" name)
+#define INVALID_SCHEMA(name) SCHEMA_PATH("schemas/invalid/" name)
+// Usage:
+VALID_SCHEMA("basic.sql")       // → absolute path to tests/schemas/valid/basic.sql
+INVALID_SCHEMA("no_configuration.sql")
+```
 
-**Test Discovery:**
-- Google Test auto-discovers tests via `gtest_discover_tests(quiver_tests)`
-- Tests run in arbitrary order (no ordering guarantees)
-- Each test runs independently with fresh setup/teardown
+All schema paths are computed at runtime relative to `__FILE__`, so tests work regardless of working directory.
 
-**Isolation:**
-- Temporary file cleanup: `TearDown()` removes database files
-- In-memory databases: `:memory:` used for most tests, no cross-test pollution
-- Fresh Database instances per test: no shared state
+## Assertion Patterns
 
-**Test Output:**
-- CMake integration with `CTest`
-- Verbose output shows test name, PASSED/FAILED, assertions
-- Failed assertions include actual vs. expected values
+**C++ value checks:**
+```cpp
+EXPECT_EQ(values[0], 42);              // integer equality
+EXPECT_DOUBLE_EQ(values[0], 3.14);    // float equality (ULP tolerance)
+EXPECT_EQ(labels[0], "Config 1");     // string equality
+EXPECT_EQ(count, 2u);                 // size_t comparison (note 'u' suffix)
+EXPECT_TRUE(result.has_value());      // optional has value
+EXPECT_FALSE(result.has_value());     // optional is empty
+EXPECT_TRUE(vec.empty());             // container is empty
+EXPECT_STREQ(c_str, "expected");      // C string equality (C API tests)
+```
 
-## Special Test Cases
+**C++ throw checks:**
+```cpp
+EXPECT_THROW(db.create_element("Nonexistent", element), std::runtime_error);
+EXPECT_THROW(bad_operation(), std::exception);  // broader catch when type uncertain
+EXPECT_NO_THROW(db.from_schema(":memory:", VALID_SCHEMA("basic.sql"), opts));
+```
 
-**Migration Tests (`test_migrations.cpp`):**
-- Verify migration file reading (up.sql, down.sql)
-- Test version comparison and ordering
-- Location: `tests/schemas/migrations/` with numbered directories (1/, 2/, 3/)
+**ASSERT vs EXPECT:**
+- `ASSERT_*` used to guard preconditions (stops test if fails): `ASSERT_EQ(err, QUIVER_OK)`, `ASSERT_NE(db, nullptr)`
+- `EXPECT_*` used for actual behavioral assertions (continues on failure)
 
-**Lua Runner Tests (`test_lua_runner.cpp`):**
-- Execute Lua scripts with database access
-- 83 tests covering script execution, variable binding, error handling
-- Lua integration tested via database operations within scripts
+**C API result check pattern:**
+```cpp
+quiver_database_t* db = nullptr;
+ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
+ASSERT_NE(db, nullptr);
+// ... use db ...
+quiver_database_close(db);
+```
 
-**Schema Validator Tests (`test_schema_validator.cpp`):**
-- 31 tests validating Configuration table requirements
-- Test foreign key constraints, composite keys, NULL/NOT NULL
-- Invalid schemas in `tests/schemas/invalid/` used for negative tests
+**Time series multi-column check pattern (C API):**
+```cpp
+char** out_col_names = nullptr;
+int* out_col_types = nullptr;
+void** out_col_data = nullptr;
+size_t out_col_count = 0, out_row_count = 0;
+ASSERT_EQ(quiver_database_read_time_series_group(db, "Collection", "data", id,
+    &out_col_names, &out_col_types, &out_col_data, &out_col_count, &out_row_count), QUIVER_OK);
+EXPECT_EQ(out_row_count, 3);
+auto** dates = static_cast<char**>(out_col_data[0]);
+EXPECT_STREQ(dates[0], "2024-01-01T10:00:00");
+quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, out_col_count, out_row_count);
+```
 
-**Issue Regression Tests (`test_issues.cpp`):**
-- 1 test for issue #52 (migration validation)
-- Schemas stored in `tests/schemas/issues/<issue_number>/`
+## Mocking
+
+**Framework:** GMock (included in C++ tests via `<gmock/gmock.h>`)
+
+**Actual usage:** GMock is linked but not actively used for mocks — all tests use real database instances. The matcher library is used for collection assertions:
+```cpp
+#include <gmock/gmock.h>
+// Used implicitly for EXPECT_THAT matchers in read tests
+```
+
+No mock objects are defined. The architecture makes mocking unnecessary: tests use in-memory SQLite databases (`:memory:`) which are fast and isolated.
+
+## Fixtures and Factories
+
+**Test data approach:** Created inline per test via `Element` builder or C API element calls. No shared fixture data files.
+
+**C++ element setup pattern:**
+```cpp
+quiver::Element element;
+element.set("label", std::string("Config 1"))
+       .set("integer_attribute", int64_t{42})
+       .set("float_attribute", 3.14);
+int64_t id = db.create_element("Configuration", element);
+```
+
+**Prerequisite data pattern:** Many tests require a `Configuration` row first (schema constraint). Always created explicitly:
+```cpp
+quiver::Element config;
+config.set("label", std::string("Test Config"));
+db.create_element("Configuration", config);
+// Now create the actual test data in another collection
+```
+
+**Julia element setup:**
+```julia
+Quiver.create_element!(db, "Configuration"; label = "Test Config")
+Quiver.create_element!(db, "Collection"; label = "Item 1", value_int = [1, 2, 3])
+```
+
+**Dart element setup:**
+```dart
+db.createElement('Configuration', {'label': 'Test Config'});
+db.createElement('Collection', {'label': 'Item 1', 'value_int': [1, 2, 3]});
+```
+
+## Coverage
+
+**Requirements:** No enforced coverage threshold in CI config.
+
+**Dart coverage script exists:**
+```bash
+bindings/dart/test/coverage.bat
+bindings/dart/test/coverage.sh
+```
+
+**C++ coverage:** Not configured in CMake.
+
+## Test Types
+
+**Unit Tests:**
+- `test_element.cpp` — tests `Element` class in isolation (no database)
+- `test_row_result.cpp` — tests `Row` and `Result` types in isolation
+- `tests/test_migrations.cpp` — tests `Migration`/`Migrations` classes in isolation
+
+**Integration Tests (majority):**
+- All `test_database_*.cpp` and `test_c_api_database_*.cpp` files
+- Each test creates a real in-memory database and exercises the full stack
+
+**Regression Tests:**
+- `test_issues.cpp` — exercises specific bug-fix scenarios
+- Schema files in `tests/schemas/issues/issue{N}/` document the regression
+
+**Schema Validation Tests:**
+- `test_schema_validator.cpp` — verifies that invalid schemas are rejected
+- Each invalid schema file in `tests/schemas/invalid/` corresponds to a test case
+
+**Binding Tests:**
+- Julia: `bindings/julia/test/test_*.jl` — mirror C++ test coverage for Julia API
+- Dart: `bindings/dart/test/*_test.dart` — mirror C++ test coverage for Dart API
+- Bindings share `tests/schemas/` via relative paths
+
+**E2E Tests:**
+- `test_lua_runner.cpp` and `test_c_api_lua_runner.cpp` — Lua scripting integration
+- Exercises Lua scripts that invoke database operations and verify results via C++ API
+
+## Common Patterns
+
+**Testing error conditions:**
+```cpp
+// Collection does not exist
+EXPECT_THROW(db.create_element("NonexistentCollection", element), std::runtime_error);
+
+// Null pointer (C API)
+EXPECT_EQ(quiver_database_create_element(nullptr, "Plant", element, &id), QUIVER_ERROR);
+EXPECT_EQ(quiver_database_create_element(db, nullptr, element, &id), QUIVER_ERROR);
+```
+
+**Testing optional results:**
+```cpp
+auto val = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id);
+EXPECT_TRUE(val.has_value());
+EXPECT_EQ(*val, 100);
+
+auto missing = db.query_string("SELECT x FROM T WHERE 1=0");
+EXPECT_FALSE(missing.has_value());
+```
+
+**Testing time series data (C++ API):**
+```cpp
+std::vector<std::map<std::string, quiver::Value>> rows = {
+    {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.5}},
+    {{"date_time", std::string("2024-01-01T11:00:00")}, {"value", 2.5}}};
+db.update_time_series_group("Collection", "data", id, rows);
+auto result = db.read_time_series_group("Collection", "data", id);
+EXPECT_EQ(std::get<std::string>(result[0]["date_time"]), "2024-01-01T10:00:00");
+EXPECT_DOUBLE_EQ(std::get<double>(result[0]["value"]), 1.5);
+```
+
+**Memory cleanup in C API tests:**
+```cpp
+// Every allocated output must be freed after use
+quiver_database_free_integer_array(values);
+quiver_database_free_string_array(out_values, out_count);
+quiver_database_free_time_series_data(col_names, col_types, col_data, col_count, row_count);
+quiver_database_close(db);
+quiver_element_destroy(element);
+```
+
+**Testing set ordering (sorted before comparison):**
+```cpp
+auto sets = db.read_set_strings("Collection", "tag");
+auto tags = sets[0];
+std::sort(tags.begin(), tags.end());  // sets have no guaranteed order
+EXPECT_EQ(tags, (std::vector<std::string>{"important", "review", "urgent"}));
+```
 
 ---
 
-*Testing analysis: 2026-02-09*
+*Testing analysis: 2026-02-20*

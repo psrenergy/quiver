@@ -1,274 +1,328 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-02-09
+**Analysis Date:** 2026-02-20
 
 ## Directory Layout
 
 ```
 quiver/
-├── include/quiver/              # C++ public headers
-│   ├── c/                       # C API headers (for FFI)
-│   ├── blob/                    # Blob/binary file support
-│   ├── *.h                      # Core C++ API headers
-│   └── export.h                 # Visibility macros
-├── src/                         # C++ implementation
-│   ├── c/                       # C API implementation
-│   ├── blob/                    # Blob implementation
-│   ├── *.cpp                    # Core implementation
+├── include/
+│   └── quiver/                    # C++ public headers
+│       ├── database.h             # Database class — primary C++ API
+│       ├── element.h              # Element builder
+│       ├── attribute_metadata.h   # ScalarMetadata, GroupMetadata types
+│       ├── schema.h               # Schema, TableDefinition, ColumnDefinition
+│       ├── schema_validator.h     # SchemaValidator (validates on open)
+│       ├── type_validator.h       # TypeValidator (validates on write)
+│       ├── lua_runner.h           # LuaRunner (Lua scripting)
+│       ├── migration.h            # Single migration file abstraction
+│       ├── migrations.h           # Migration collection + pending logic
+│       ├── result.h               # SQL result set
+│       ├── row.h                  # Single result row
+│       ├── value.h                # Value variant (nullptr/int64/double/string)
+│       ├── data_type.h            # DataType enum + helpers
+│       ├── export.h               # QUIVER_API DLL export macro
+│       ├── quiver.h               # Convenience umbrella include
+│       ├── c/                     # C API public headers (for FFI consumers)
+│       │   ├── common.h           # quiver_error_t, quiver_get_last_error, quiver_version
+│       │   ├── options.h          # quiver_database_options_t, quiver_log_level_t (shared C/C++)
+│       │   ├── database.h         # All database C API declarations
+│       │   ├── element.h          # quiver_element_t C API
+│       │   └── lua_runner.h       # quiver_lua_runner C API
+│       └── blob/                  # Blob/external binary file headers
+│           ├── blob.h             # Blob class
+│           ├── blob_csv.h         # CSV blob operations
+│           ├── blob_metadata.h    # BlobMetadata type
+│           ├── dimension.h        # Dimension type
+│           ├── time_constants.h   # Time-related constants
+│           └── time_properties.h  # Time property helpers
+├── src/                           # C++ implementation
+│   ├── database.cpp               # Lifecycle: open, close, factory methods, CSV
+│   ├── database_create.cpp        # create_element, update_element (routing arrays)
+│   ├── database_delete.cpp        # delete_element
+│   ├── database_describe.cpp      # describe() — schema inspection to stdout
+│   ├── database_impl.h            # Database::Impl definition + TransactionGuard
+│   ├── database_internal.h        # Shared templates (read_grouped_values_all/by_id, etc.)
+│   ├── database_metadata.cpp      # get/list scalar_metadata, vector/set/time series groups
+│   ├── database_query.cpp         # query_string/integer/float with optional params
+│   ├── database_read.cpp          # All scalar/vector/set/element ID read operations
+│   ├── database_relations.cpp     # update/read scalar_relation
+│   ├── database_time_series.cpp   # read/update_time_series_group + files operations
+│   ├── database_update.cpp        # update_scalar/vector/set_*
+│   ├── element.cpp                # Element builder implementation
+│   ├── lua_runner.cpp             # LuaRunner Impl + all sol2 bindings (large: ~1700 lines)
+│   ├── migration.cpp              # Migration implementation
+│   ├── migrations.cpp             # Migrations directory discovery
+│   ├── result.cpp                 # Result implementation
+│   ├── row.cpp                    # Row implementation
+│   ├── schema.cpp                 # Schema::from_database, table classification, naming
+│   ├── schema_validator.cpp       # SchemaValidator validation rules
+│   ├── type_validator.cpp         # TypeValidator scalar/array checks
+│   ├── CMakeLists.txt             # Build targets for core + C API
+│   ├── c/                         # C API implementation
+│   │   ├── internal.h             # quiver_database/quiver_element structs + QUIVER_REQUIRE macro
+│   │   ├── database_helpers.h     # Marshaling templates (read_scalars_impl, copy_strings_to_c, convert_*_to_c)
+│   │   ├── common.cpp             # quiver_version, quiver_get_last_error (thread-local)
+│   │   ├── database.cpp           # Lifecycle, describe, CSV C API functions
+│   │   ├── database_create.cpp    # create/update/delete element C API
+│   │   ├── database_metadata.cpp  # get/list metadata C API + free functions
+│   │   ├── database_query.cpp     # query_string/integer/float C API (plain + _params)
+│   │   ├── database_read.cpp      # All read C API + matching free functions
+│   │   ├── database_relations.cpp # Relation C API
+│   │   ├── database_time_series.cpp # Time series C API + free functions
+│   │   ├── database_update.cpp    # All update C API
+│   │   element.cpp                # Element C API
+│   │   └── lua_runner.cpp         # LuaRunner C API
+│   └── blob/                      # Blob implementation files
+│       ├── blob.cpp
+│       ├── blob_csv.cpp
+│       ├── blob_metadata.cpp
+│       ├── dimension.cpp
+│       └── time_properties.cpp
+├── bindings/
+│   ├── julia/                     # Julia bindings (Quiver.jl package)
+│   │   ├── src/
+│   │   │   ├── Quiver.jl          # Module entry point — includes/exports all submodules
+│   │   │   ├── c_api.jl           # Auto-generated C declarations (do not edit manually)
+│   │   │   ├── database.jl        # Database struct, lifecycle (from_schema, close!, describe)
+│   │   │   ├── database_create.jl # create_element!, update_element!
+│   │   │   ├── database_csv.jl    # export_csv, import_csv
+│   │   │   ├── database_delete.jl # delete_element!
+│   │   │   ├── database_metadata.jl # get_*/list_* metadata
+│   │   │   ├── database_query.jl  # query_string, query_integer, query_float, query_date_time
+│   │   │   ├── database_read.jl   # All read operations + read_all_* helpers
+│   │   │   ├── database_update.jl # All update operations
+│   │   │   ├── date_time.jl       # DateTime parsing helpers
+│   │   │   ├── element.jl         # Element struct + set methods
+│   │   │   ├── exceptions.jl      # DatabaseException type + check() helper
+│   │   │   └── lua_runner.jl      # LuaRunner struct + run()
+│   │   ├── test/                  # Julia test files (mirror C++ test organization)
+│   │   ├── generator/             # FFI binding generator scripts
+│   │   └── binary_builder/        # BinaryBuilder.jl cross-compilation scripts
+│   ├── dart/                      # Dart bindings (quiver package)
+│   │   ├── lib/src/
+│   │   │   ├── database.dart      # Database class — lifecycle + part includes
+│   │   │   ├── database_create.dart
+│   │   │   ├── database_csv.dart
+│   │   │   ├── database_delete.dart
+│   │   │   ├── database_metadata.dart
+│   │   │   ├── database_query.dart
+│   │   │   ├── database_read.dart # All read operations including read_all_* helpers
+│   │   │   ├── database_relations.dart
+│   │   │   ├── database_update.dart
+│   │   │   ├── date_time.dart     # DateTime parsing helpers
+│   │   │   ├── element.dart       # Element class + set methods
+│   │   │   ├── exceptions.dart    # QuiverException + check() helper
+│   │   │   ├── lua_runner.dart    # LuaRunner class
+│   │   │   └── ffi/
+│   │   │       ├── bindings.dart  # Auto-generated Dart FFI declarations (do not edit)
+│   │   │       └── library_loader.dart # DLL/SO loading logic
+│   │   ├── test/                  # Dart test files
+│   │   ├── generator/             # FFI binding generator scripts
+│   │   └── hook/                  # Dart native hook for DLL build
+│   └── python/                    # Python bindings — stub only, not implemented
+│       ├── src/__init__.py
+│       └── tests/unit/test_database.py
+├── tests/                         # C++ test suite (doctest)
+│   ├── test_database_lifecycle.cpp
+│   ├── test_database_create.cpp
+│   ├── test_database_read.cpp
+│   ├── test_database_update.cpp
+│   ├── test_database_delete.cpp
+│   ├── test_database_query.cpp
+│   ├── test_database_relations.cpp
+│   ├── test_database_time_series.cpp
+│   ├── test_database_errors.cpp
+│   ├── test_c_api_database_*.cpp  # C API tests (same categories)
+│   ├── test_lua_runner.cpp
+│   ├── test_c_api_lua_runner.cpp
+│   ├── test_schema_validator.cpp
+│   ├── test_migrations.cpp
+│   ├── test_element.cpp
+│   ├── test_row_result.cpp
+│   ├── test_issues.cpp            # Regression tests for filed issues
+│   ├── test_utils.h               # Shared test helpers
+│   ├── schemas/
+│   │   ├── valid/                 # Valid SQL schemas used across all tests
+│   │   │   ├── basic.sql
+│   │   │   ├── collections.sql
+│   │   │   ├── relations.sql
+│   │   │   ├── mixed_time_series.sql
+│   │   │   └── multi_time_series.sql
+│   │   ├── invalid/               # Schemas that must fail SchemaValidator
+│   │   ├── migrations/            # Versioned migration directories (1/, 2/, 3/)
+│   │   └── issues/                # Schemas reproducing specific issue regressions
 │   └── CMakeLists.txt
-├── tests/                       # Test suite
-│   ├── schemas/                 # Shared SQL schemas for tests
-│   │   ├── valid/               # Valid test schemas
-│   │   └── invalid/             # Invalid schemas for validation testing
-│   ├── test_*.cpp               # C++ tests (Google Test)
-│   └── test_c_api_*.cpp         # C API tests
-├── bindings/                    # Language bindings
-│   ├── julia/                   # Julia binding (Quiver.jl)
-│   ├── dart/                    # Dart binding
-│   └── python/                  # Python binding
-├── cmake/                       # CMake utilities
-├── .clang-format                # Code formatting config
-├── CMakeLists.txt               # Root build config
-└── CLAUDE.md                    # Project instructions
+├── cmake/                         # CMake modules
+│   ├── CompilerOptions.cmake      # Compiler flags and warnings
+│   ├── Dependencies.cmake         # Find/fetch SQLite3, spdlog, sol2, doctest
+│   └── Platform.cmake             # Windows/Linux platform detection
+├── scripts/                       # Build and utility scripts
+│   ├── build-all.bat              # Build everything + run all tests
+│   ├── test-all.bat               # Run all tests (assumes already built)
+│   ├── format.bat                 # Run clang-format
+│   ├── tidy.bat                   # Run clang-tidy
+│   └── generator.bat              # Run both FFI generators
+├── docs/                          # Human documentation
+│   ├── introduction.md
+│   ├── attributes.md
+│   ├── migrations.md
+│   ├── rules.md
+│   └── time_series.md
+├── .planning/codebase/            # GSD codebase analysis documents
+├── CMakeLists.txt                 # Root CMake — sets C++20, configures subdirs
+├── CMakePresets.json              # CMake preset configurations
+├── .clang-format                  # Clang-format style rules
+├── .clang-tidy                    # Clang-tidy check configuration
+└── CLAUDE.md                      # Project instructions for AI agents
 ```
 
 ## Directory Purposes
 
 **`include/quiver/`:**
-- Purpose: Public C++ API headers
-- Contains: Class/struct definitions, type aliases, method signatures
-- Key files:
-  - `database.h`: Main Database class (lines 23-200)
-  - `element.h`: Element builder with fluent API (lines 13-43)
-  - `attribute_metadata.h`: ScalarMetadata, GroupMetadata structs
-  - `schema.h`: Schema introspection API
-  - `row.h`, `result.h`: Query result parsing
-  - `value.h`: Variant-like value type
-  - `export.h`: Visibility macros (QUIVER_API)
+- Purpose: Public C++ API headers. Everything a C++ consumer needs.
+- Key files: `database.h` (full API surface), `element.h` (builder), `schema.h` (introspection), `value.h` (variant type).
 
 **`include/quiver/c/`:**
-- Purpose: C API headers for FFI binding generators
-- Contains: Opaque handle types, C function declarations, error codes
-- Key files:
-  - `database.h`: ~250+ C API functions (factory, CRUD, metadata, query)
-  - `element.h`: C-style element construction
-  - `options.h`: DatabaseOptions struct shared with C++
-  - `common.h`: Error codes (QUIVER_OK=0, QUIVER_ERROR=1)
-  - `lua_runner.h`: Lua script execution
-
-**`include/quiver/blob/`:**
-- Purpose: Binary file support for external time-series data
-- Contains: Blob metadata, time constants, dimension handling
-- Key files:
-  - `blob.h`: File reading/writing with dimensional indexing
-  - `blob_metadata.h`: Blob structure metadata
-  - `dimension.h`, `time_properties.h`: Dimension/time utilities
+- Purpose: C API headers for FFI consumption. `options.h` is shared between C++ and C layers.
+- Key files: `common.h` (error codes, utility functions), `database.h` (all database C API), `element.h`, `lua_runner.h`.
 
 **`src/`:**
-- Purpose: C++ implementation
-- Contains: Database lifecycle, CRUD implementation, query execution
-- Key files:
-  - `database.cpp`: Main implementation (2100+ lines)
-    - Database::Impl struct with sqlite3 pointer, logger, schema cache
-    - TransactionGuard RAII (lines 237-257)
-    - Template helpers for reading grouped values (lines 40-77)
-  - `schema.cpp`: Schema introspection from database metadata
-  - `schema_validator.cpp`: Configuration table, FK constraint checks
-  - `type_validator.cpp`: Runtime type validation
-  - `migrations.cpp`: Migration tracking and application
-  - `element.cpp`: Element builder implementation
-  - `result.cpp`, `row.cpp`: Query result types
-  - `lua_runner.cpp`: Lua script integration
+- Purpose: C++ implementation. One `.cpp` per concern area; no monolithic file.
+- Key files: `database_impl.h` (Impl struct, TransactionGuard), `database_internal.h` (shared templates for grouped reads), `lua_runner.cpp` (all sol2 Lua bindings).
 
 **`src/c/`:**
-- Purpose: C API implementation (FFI glue)
-- Contains: Wrappers around C++ classes, error handling, memory management
-- Key files:
-  - `database.cpp`: All C API function implementations (1600+ lines)
-    - Wraps Database class methods in try-catch blocks
-    - Allocates/frees C arrays for output parameters
-    - Helper templates for numeric/string vectors (lines 11-76)
-  - `element.cpp`: C element construction
-  - `internal.h`: Opaque struct definitions, QUIVER_REQUIRE macros (lines 28-80)
-  - `common.cpp`: Error message storage and retrieval
+- Purpose: C API implementation. Mirrors the C++ source split exactly.
+- Key files: `internal.h` (opaque struct definitions + QUIVER_REQUIRE macro), `database_helpers.h` (marshaling templates, `strdup_safe`, metadata converters).
 
-**`src/blob/`:**
-- Purpose: Binary file I/O for time series
-- Contains: File handle management, dimensional array indexing
+**`bindings/julia/src/`:**
+- Purpose: Julia module. `c_api.jl` is auto-generated — do not edit. All other files are hand-written wrappers.
+- Key files: `Quiver.jl` (module root), `exceptions.jl` (check() helper), `database.jl` (Database struct + lifecycle).
 
-**`tests/`:**
-- Purpose: Comprehensive test coverage
-- Contains: GTest-based unit tests for C++ and C APIs
-- Organization by functionality:
-  - `test_database_lifecycle.cpp`: Open, close, move semantics, options
-  - `test_database_create.cpp`: Element creation with scalars/vectors/sets
-  - `test_database_read.cpp`: Scalar/vector/set read operations
-  - `test_database_update.cpp`: Scalar/vector/set updates
-  - `test_database_delete.cpp`: Element deletion
-  - `test_database_query.cpp`: Raw SQL queries with parameters
-  - `test_database_relations.cpp`: Foreign key relations
-  - `test_database_time_series.cpp`: Time series group operations
-  - `test_lua_runner.cpp`: Lua script execution with database access
-  - `test_element.cpp`: Element builder API
-  - `test_migrations.cpp`: Migration application
-  - `test_schema_validator.cpp`: Schema validation errors
-  - C API tests mirror above with `test_c_api_database_*.cpp` prefix
+**`bindings/dart/lib/src/`:**
+- Purpose: Dart package. `ffi/bindings.dart` is auto-generated — do not edit. `database.dart` uses `part` directives to include the other database files.
+- Key files: `ffi/bindings.dart` (auto-generated), `ffi/library_loader.dart` (DLL loading), `database.dart` (Database class + part includes), `exceptions.dart` (check() helper).
 
 **`tests/schemas/`:**
-- Purpose: Shared SQL schema files for all tests
-- Contains: Valid and invalid schemas
-- Location: `tests/schemas/valid/`, `tests/schemas/invalid/`
-- Examples: `basic.sql`, `collections.sql`, `time_series.sql`
-- Macro usage: `VALID_SCHEMA("basic.sql")` expands to full schema file path
-
-**`bindings/julia/`:**
-- Purpose: Julia language binding
-- Structure:
-  - `src/*.jl`: Julia source files
-  - `test/test.bat`: Julia test runner
-  - `generator/generator.bat`: FFI binding code generator
-- Key modules: `database.jl`, `element.jl`, `exceptions.jl`, split read/write modules
-
-**`bindings/dart/`:**
-- Purpose: Dart language binding
-- Structure:
-  - `lib/src/*.dart`: Dart implementation
-  - `lib/src/ffi/`: Generated FFI bindings from C API
-  - `test/test.bat`: Dart test runner
-  - `generator/generator.bat`: FFI binding generator
-- Pattern: Splits functionality into `database_create.dart`, `database_read.dart`, etc.
-
-**`bindings/python/`:**
-- Purpose: Python language binding
-- Status: Minimal or placeholder
-
-**`cmake/`:**
-- Purpose: CMake utilities and helpers
-- Contains: CompilerOptions.cmake, Dependencies.cmake, Platform.cmake
+- Purpose: Shared SQL schema files used by C++, C API, Julia, and Dart tests. All bindings reference schemas from this directory.
+- Key files: `valid/basic.sql` (most common test schema), `valid/collections.sql`, `valid/relations.sql`, `valid/mixed_time_series.sql`.
 
 ## Key File Locations
 
 **Entry Points:**
-
-- `include/quiver/quiver.h`: Convenience header including database.h and element.h (lines 1-8)
-- `include/quiver/database.h`: Public API entry (Database class, all CRUD methods)
-- `include/quiver/c/database.h`: C API entry (all ~250+ functions)
-- `src/database.cpp`: Implementation of Database class and most operations
+- `include/quiver/database.h`: C++ API — all method signatures.
+- `include/quiver/c/database.h`: C API — all FFI function declarations.
+- `bindings/julia/src/Quiver.jl`: Julia module root.
+- `bindings/dart/lib/src/database.dart`: Dart Database class.
 
 **Configuration:**
+- `CMakeLists.txt`: Root build configuration (C++20, output dirs, subdirs).
+- `CMakePresets.json`: Debug/Release CMake presets.
+- `.clang-format`: Code formatting rules.
+- `.clang-tidy`: Static analysis configuration.
+- `include/quiver/c/options.h`: `quiver_database_options_t` — shared by C++ and C API.
 
-- `CMakeLists.txt`: Root build config (C++20, shared/static options, test targets)
-- `CMakePresets.json`: Build presets for Debug/Release
-- `.clang-format`: Code style rules
-- `CLAUDE.md`: Project principles and patterns (required reading)
+**Core Logic (C++):**
+- `src/database_impl.h`: `Database::Impl` definition — sqlite3 handle, logger, Schema, TypeValidator, TransactionGuard.
+- `src/database_internal.h`: Shared templates for grouped value reads.
+- `src/schema.cpp`: Table classification, naming conventions, column introspection.
+- `src/schema_validator.cpp`: Quiver schema convention enforcement.
+- `src/lua_runner.cpp`: All sol2 Lua bindings (~1700 lines).
 
-**Core Logic:**
-
-- `src/database.cpp`: Database operations, transaction handling, query execution (lines 150-2100)
-- `src/schema.cpp`: Schema introspection from SQLite metadata
-- `src/c/database.cpp`: C API wrappers for all operations (lines 80-1600+)
-- `src/lua_runner.cpp`: Lua integration with database binding
+**C API Internal Utilities:**
+- `src/c/internal.h`: Opaque struct definitions and QUIVER_REQUIRE macro.
+- `src/c/database_helpers.h`: `strdup_safe()`, marshaling templates, `convert_scalar_to_c()`, `convert_group_to_c()`.
 
 **Testing:**
-
-- `tests/test_utils.h`: Utility macros like VALID_SCHEMA("name.sql")
-- `tests/test_database_create.cpp`: Template for CRUD test patterns
-- `tests/test_c_api_database_create.cpp`: Mirror C API test examples
+- `tests/test_utils.h`: Shared C++ test helpers.
+- `tests/schemas/valid/`: SQL schemas used by all test suites.
+- `bindings/julia/test/fixture.jl`: Julia test fixture helper.
 
 ## Naming Conventions
 
-**Files:**
+**Files (C++):**
+- Headers: `lowercase_underscore.h`
+- Implementations: `lowercase_underscore.cpp`
+- Per-concern split: `database_{concern}.cpp` (e.g., `database_read.cpp`, `database_time_series.cpp`)
+- Private implementation headers: suffix `_impl.h` (e.g., `database_impl.h`) or `_internal.h` (e.g., `database_internal.h`)
 
-- C++ implementation: `snake_case.cpp` (e.g., `database.cpp`, `schema_validator.cpp`)
-- C++ headers: `snake_case.h` (e.g., `database.h`, `attribute_metadata.h`)
-- C API headers: `snake_case.h` (e.g., `database.h`, but under `include/quiver/c/`)
-- Test files: `test_component.cpp` or `test_c_api_component.cpp`
-- Test schemas: `lowercase.sql` (e.g., `basic.sql`, `collections.sql`)
+**Files (C API):**
+- Same pattern as C++: `database_{concern}.cpp` under `src/c/`
+- Shared helpers: `database_helpers.h`, `internal.h` (no `database_` prefix as they span concerns)
 
-**Classes:**
+**Files (Julia):**
+- Module: `Quiver.jl`
+- Feature files: `database_{concern}.jl`, matching the C++ split
+- Auto-generated: `c_api.jl` (do not edit)
 
-- PascalCase: Database, Element, Result, Row, Schema, LuaRunner, TypeValidator
-- Structs: PascalCase: ScalarMetadata, GroupMetadata, TableDefinition, ColumnDefinition
+**Files (Dart):**
+- Feature files: `database_{concern}.dart`
+- Auto-generated: `ffi/bindings.dart` (do not edit)
+- Test files: `database_{concern}_test.dart`
 
-**Functions:**
+**Test files (C++):**
+- C++ core tests: `test_{subject}.cpp` (e.g., `test_database_read.cpp`)
+- C API tests: `test_c_api_{subject}.cpp` (e.g., `test_c_api_database_read.cpp`)
 
-- C++: snake_case: `create_element()`, `read_scalar_integers()`, `from_schema()`
-- C: snake_case with `quiver_` prefix: `quiver_database_create_element()`, `quiver_database_close()`
-- Helper functions: snake_case, often in anonymous namespaces
-
-**Variables:**
-
-- Local/member: snake_case: `impl_`, `logger`, `db_path`
-- Constants: UPPER_CASE: `QUIVER_OK`, `QUIVER_LOG_INFO`
-- Macros: UPPER_CASE: `QUIVER_REQUIRE`, `QUIVER_API`
-
-**Types:**
-
-- C++ types: PascalCase: `Database`, `DataType`, `DatabaseOptions`
-- C opaque types: snake_case_t: `quiver_database_t`, `quiver_element_t`
-- C enums: UPPER_CASE: `QUIVER_LOG_DEBUG`, `QUIVER_DATA_TYPE_INTEGER`
+**Directories:**
+- Collection tables by convention: `{Collection}` (PascalCase, matches SQL table name)
+- Vector tables: `{Collection}_vector_{name}`
+- Set tables: `{Collection}_set_{name}`
+- Time series tables: `{Collection}_time_series_{name}`
 
 ## Where to Add New Code
 
-**New Feature (e.g., new CRUD operation):**
-- Primary code: `include/quiver/database.h` (method declaration)
-- Implementation: `src/database.cpp` (operation logic in Impl or public method)
-- C API wrapper: `include/quiver/c/database.h` (function declaration) + `src/c/database.cpp` (implementation)
-- Tests: `tests/test_database_*.cpp` for C++ + `tests/test_c_api_database_*.cpp` for C API
-- Bindings: Auto-generated via `bindings/{julia,dart}/generator/generator.bat` from C API
+**New C++ Database Method:**
+1. Add declaration to `include/quiver/database.h`.
+2. Implement in the appropriate `src/database_{concern}.cpp` (or create a new file if the concern is genuinely new).
+3. Add C API declaration to `include/quiver/c/database.h`.
+4. Implement in `src/c/database_{concern}.cpp`.
+5. Regenerate FFI bindings: `scripts/generator.bat` (runs both Julia and Dart generators).
+6. Add Julia wrapper in `bindings/julia/src/database_{concern}.jl`.
+7. Add Dart wrapper in `bindings/dart/lib/src/database_{concern}.dart`.
+8. Add Lua binding in `src/lua_runner.cpp` (inside `bind_database()`).
+9. Add C++ tests in `tests/test_database_{concern}.cpp`.
+10. Add C API tests in `tests/test_c_api_database_{concern}.cpp`.
 
-**New Component/Module:**
-- If hiding private dependencies (e.g., SQLite, sol2): Use Pimpl pattern
-  - Public header: `include/quiver/component_name.h` (Pimpl class with move semantics)
-  - Implementation: `src/component_name.cpp` (Impl struct with private members)
-  - Example: `include/quiver/database.h` + `src/database.cpp`
-- If no private dependencies: Use value type (Rule of Zero)
-  - Public header: `include/quiver/component_name.h` (struct/class with default copy/move)
-  - Implementation: Inline or `src/component_name.cpp` if complex
-  - Example: `include/quiver/element.h`, `include/quiver/attribute_metadata.h`
+**New Collection Schema:**
+- Add to an existing `.sql` file in `tests/schemas/valid/`, or create a new file there if the test domain warrants it.
+- All test suites (C++, C API, Julia, Dart) reference schemas from `tests/schemas/`.
 
-**Utilities:**
-- Shared helpers for C++ library: `src/*.cpp` (in anonymous namespace or static)
-- Shared helpers for C API: `src/c/*.cpp` (in anonymous namespace)
-- Example: Template helpers in `src/database.cpp` lines 40-77, `src/c/database.cpp` lines 12-76
+**New Binding-Only Convenience Method:**
+- Julia: Add to the appropriate `bindings/julia/src/database_{concern}.jl`.
+- Dart: Add as a method in the matching `part` file (`bindings/dart/lib/src/database_{concern}.dart`).
+- These do NOT require C API changes or regeneration.
 
-**Schema/Migration:**
-- SQL files: `tests/schemas/valid/` (for test usage)
-- No production schema files (database created from provided SQL or migrations)
-- Migration tracking: Configuration table with version field
+**New Error Type:**
+- Do NOT add new error message formats. Use one of the three existing patterns defined in `CLAUDE.md`. Error text is defined in `src/*.cpp` (C++ layer) only; bindings never craft messages.
 
-**Tests:**
-- C++ tests: `tests/test_[feature].cpp` using GTest framework
-- C API mirror tests: `tests/test_c_api_[feature].cpp` with identical scenarios
-- Test schemas: `tests/schemas/valid/[name].sql` referenced via VALID_SCHEMA macro
-- Invalid schemas: `tests/schemas/invalid/[name].sql` for validator testing
+**New Utility/Helper (C++ layer):**
+- Shared read utilities: `src/database_internal.h`
+- C API marshaling helpers: `src/c/database_helpers.h`
+- Do not introduce new headers unless the scope is genuinely cross-cutting.
 
 ## Special Directories
 
 **`build/`:**
-- Purpose: Build artifacts (generated during cmake build)
-- Generated: Yes, created by CMake
-- Committed: No (in .gitignore)
-- Contains: bin/, lib/, CMakeFiles/
+- Purpose: CMake build output. Contains compiled binaries in `build/bin/` and libraries in `build/lib/`.
+- Generated: Yes.
+- Committed: No.
 
-**`bindings/{language}/.dart_tool/`, `bindings/julia/.artifacts/`:**
-- Purpose: Language-specific build caches
-- Generated: Yes, by language build systems
-- Committed: No
-- Should be cleared if binding build fails
-
-**`cmake/`:**
-- Purpose: CMake helper modules
-- Contains: CompilerOptions.cmake, Dependencies.cmake, Platform.cmake
-- Examples: Sets C++ standard, adds spdlog/sqlite3 dependencies
+**`bindings/julia/generator/` and `bindings/dart/generator/`:**
+- Purpose: FFI binding generators — run after C API changes to regenerate `c_api.jl` and `ffi/bindings.dart`.
+- Generated output: `bindings/julia/src/c_api.jl`, `bindings/dart/lib/src/ffi/bindings.dart`.
+- Committed: Yes (both the generator and the generated output).
 
 **`.planning/codebase/`:**
-- Purpose: Generated codebase analysis documents (this directory)
-- Generated: Yes, by GSD orchestrator
-- Committed: Yes, for reference by other GSD commands
-- Contains: ARCHITECTURE.md, STRUCTURE.md, CONVENTIONS.md, TESTING.md, CONCERNS.md
+- Purpose: GSD codebase analysis documents consumed by plan/execute commands.
+- Generated: Yes (by GSD map-codebase).
+- Committed: Yes.
 
-**`docs/`:**
-- Purpose: Project documentation (if any)
-- Status: Minimal, project-level instructions in CLAUDE.md
+**`tests/schemas/`:**
+- Purpose: Canonical SQL schema fixtures shared across all language test suites.
+- Generated: No — hand-authored.
+- Committed: Yes.
 
+---
+
+*Structure analysis: 2026-02-20*

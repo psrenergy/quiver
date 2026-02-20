@@ -1,195 +1,168 @@
 # Codebase Concerns
 
-**Analysis Date:** 2026-02-09
+**Analysis Date:** 2026-02-20
 
 ## Tech Debt
 
-**Blob Module Incomplete Implementation:**
-- Issue: The blob module contains stubbed/empty function bodies that serve as placeholders
-- Files: `src/blob/blob.cpp` (lines 7-9)
-- Impact: Functions `open_reader()` and `open_writer()` are declared but have no implementation, making blob file I/O non-functional. This blocks time series file operations that may depend on blob reading/writing
-- Fix approach: Implement the blob I/O functions properly or remove them if they're not being used. The deprecation comment indicates these were previously removed and should be inlined elsewhere - verify if they're actually needed
+**Blob subsystem is entirely unimplemented:**
+- Issue: All blob-related classes (`Blob`, `BlobCSV`, `BlobMetadata`, `Dimension`, `TimeProperties`) have empty `.cpp` implementations - no methods are implemented at all.
+- Files: `src/blob/blob.cpp`, `src/blob/blob_csv.cpp`, `src/blob/blob_metadata.cpp`, `src/blob/dimension.cpp`, `src/blob/time_properties.cpp`
+- Impact: Headers are compiled and shipped but calling any blob method results in undefined behavior. No tests exist for blob at all.
+- Fix approach: Either implement the blob subsystem fully (with tests) or delete all blob headers and sources until the feature is needed.
 
-**Deprecated Functions Still Referenced:**
-- Issue: `blob.cpp` contains a comment noting that deprecated functions should be "used inline when needed" but no clear guidance on where they were moved or if they're callable
-- Files: `src/blob/blob.cpp` (lines 11-12), `src/blob/blob_csv.cpp` (contains only a stub Impl struct)
-- Impact: Maintenance burden and potential confusion about what's supported in blob operations
-- Fix approach: Either complete the blob implementation or remove it entirely if not used. Update CLAUDE.md with actual blob support status
+**`export_csv` and `import_csv` are empty stubs:**
+- Issue: Both methods are declared in the public C++ API, C API, and bound in the Dart binding, but the implementations are empty function bodies that do nothing and return no error.
+- Files: `src/database_describe.cpp` lines 91-93, `src/c/database.cpp` lines 133-153, `include/quiver/database.h` lines 175-176, `include/quiver/c/database.h` lines 421-422
+- Impact: Callers of `export_csv` / `import_csv` will receive `QUIVER_OK` but no file will be written and no data imported. Silent data loss for callers who depend on this.
+- Fix approach: Implement using SQLite's `.csv` output mode or a manual query-and-write approach, or throw `std::runtime_error("Not implemented")` until ready.
 
-**BlobCSV Stub Implementation:**
-- Issue: `BlobCSV::Impl` struct exists only as a placeholder with no implementation
-- Files: `src/blob/blob_csv.cpp` (entire file)
-- Impact: CSV blob serialization is non-functional
-- Fix approach: Complete implementation or remove if this feature is not yet required
+**Migration rollback (`migrate_down`) is not exposed:**
+- Issue: `Migration::down_sql()` exists and `down.sql` files are present in test schemas, but there is no `migrate_down()` method on `Database`, no C API function, and no binding support for rolling back migrations.
+- Files: `src/migration.cpp` line 37, `src/migrations.cpp`, `include/quiver/migration.h`
+- Impact: Schema rollbacks are impossible through the library API. Callers who need to downgrade must manipulate the SQLite database directly.
+- Fix approach: Add `Database::migrate_down(target_version)`, C API `quiver_database_migrate_down()`, and binding wrappers.
 
-## Known Issues & Regressions
+**`describe()` writes to `std::cout` directly:**
+- Issue: `Database::describe()` uses raw `std::cout` for output instead of returning a string or using the instance logger.
+- Files: `src/database_describe.cpp`
+- Impact: Output cannot be captured in tests, redirected to a file, or exposed through the C API / bindings in a useful way. The Lua binding also just calls it and discards the output.
+- Fix approach: Change signature to `std::string describe() const` and return the formatted string, or accept an `std::ostream&` parameter.
 
-**Issue #52 - Label Validation in Collections:**
-- Symptoms: Schema validation fails when creating collections without proper label column handling
-- Files: `tests/schemas/issues/issue52/1/up.sql`, `tests/test_issues.cpp`
-- Trigger: Creating a collection from the issue52 migration schema should throw an error
-- Status: Test exists to verify the error is raised, but the underlying cause hasn't been documented. Label column validation in `src/schema_validator.cpp` may need review
+**`std::map` row representation has implicit column ordering dependency:**
+- Issue: `read_time_series_group` returns `std::vector<std::map<std::string, Value>>` and `update_time_series_group` accepts the same type. `std::map` iterates in alphabetical key order, so when `update_time_series_group` extracts `value_columns` from `rows[0]`, the column order is alphabetical — not schema order. The generated INSERT SQL column list matches this alphabetical order, which happens to work because VALUES placeholders match the same iteration, but this is fragile coupling.
+- Files: `src/database_time_series.cpp` lines 140-145
+- Impact: If column extraction ever uses a different ordering from INSERT placeholder binding, data will be written to wrong columns silently. Currently safe but non-obvious.
+- Fix approach: Build the column list from schema metadata (already available as `table_def->columns`) rather than from `rows[0]` keys.
 
-**Issue #70 - Time Series Creation:**
-- Symptoms: Time series element creation may have issues with mixed column types or naming
-- Files: `bindings/dart/test/issues_test.dart` (lines 26-43)
-- Trigger: Creating elements with nested time series data involving date_time arrays and multiple value columns
-- Status: Test exists and passes, but the issue remains relevant for edge cases
+**Schema classification uses fragile naming heuristics:**
+- Issue: `Schema::is_collection()` treats any table name without an underscore as a collection. `Schema::get_parent_collection()` extracts the parent name by splitting at the first underscore. This works only because the naming convention forbids underscores in collection names (enforced by schema validator), but any third-party SQLite table with an underscore would be misclassified.
+- Files: `src/schema.cpp` lines 89-123
+- Impact: If a user attaches a database or applies additional SQL with underscores in table names, the schema introspection will silently misclassify tables and potentially expose them as collections or group tables.
+- Fix approach: Consider storing collection names explicitly during `load_schema_metadata()` rather than re-detecting from name patterns at every call.
+
+## Known Bugs
+
+**`read_vector_*` / `read_set_*` / `update_vector_*` / `update_set_*` dereference null schema pointer when called without a loaded schema:**
+- Symptoms: These methods call `require_collection()` which calls `require_schema()`, but `require_collection()` calls `schema->has_table()` after checking `schema` for null. However, the test comments in `test_database_errors.cpp` lines 135-137 and 165-167 and 269-271 explicitly state these methods "cause segfault (null pointer dereference) because `impl_->schema->find_vector_table()` is called without null check" — but looking at the code, `require_collection` does have the null check. The test comments appear to document a formerly present bug that may have been partially addressed. The comments themselves are stale and misleading.
+- Files: `tests/test_database_errors.cpp` lines 135-137, 165-167, 269-271, 298-300
+- Trigger: The comment says "without schema", but the tests themselves do use a loaded schema.
+- Fix approach: Remove or update the stale misleading comments in the test file.
+
+**`create_element` with time series data does not validate that the dimension column is provided:**
+- Symptoms: When inserting time series rows via `create_element` / `update_element`, the code iterates over user-provided column arrays and inserts them. It does not check whether the dimension column (e.g., `date_time`) was included in the arrays. If missing, SQLite will receive a NOT NULL violation or a primary key constraint violation at runtime.
+- Files: `src/database_create.cpp` lines 197-212, `src/database_update.cpp` lines 147-160
+- Trigger: Pass a time series attribute array via `Element::set()` without including the dimension column data — the check only exists in `update_time_series_group`, not in the `create_element`/`update_element` path.
+- Fix approach: Add a pre-insert check that the dimension column is present among the provided column names when inserting time series rows.
 
 ## Security Considerations
 
-**SQL Injection Risk in Schema Queries:**
-- Risk: Several functions build SQL strings using string concatenation instead of parameterized queries when querying PRAGMA statements
-- Files: `src/schema.cpp` (lines 296, 331, 360, 374), `src/database.cpp` (line 427)
-- Current mitigation: Table names and pragmas come from internal schema discovery, not user input. However, `set_version()` uses string concatenation with user-supplied integer
-- Recommendations:
-  - Replace `PRAGMA table_info()`, `PRAGMA foreign_key_list()`, `PRAGMA index_list()`, `PRAGMA index_info()` with parameterized equivalents or use SQLite's meta-query tables
-  - For `set_version()`, use parameterized query: `PRAGMA user_version = ?` instead of concatenating the version number
+**SQL injection via collection name, attribute name, and table name interpolation:**
+- Risk: All SQL strings in the C++ layer are built by concatenating `collection`, `attribute`, `table`, and `dim_col` strings directly into SQL without quoting or escaping. Examples: `"SELECT " + attribute + " FROM " + collection`, `"UPDATE " + collection + " SET " + attribute + " = ?"`. While collection and attribute names are validated to exist in the schema (via `require_collection` and `require_column`), they are not validated to be safe SQL identifiers before interpolation. A collection name containing SQL metacharacters (`;`, `--`, spaces, quotes) could alter the query structure.
+- Files: `src/database_read.cpp` (all read methods), `src/database_update.cpp` (all update methods), `src/database_create.cpp`, `src/database_relations.cpp`, `src/database_time_series.cpp`
+- Current mitigation: `require_collection` confirms the name exists in the schema, which was loaded from the actual SQLite `sqlite_master`. Since schema names originate from the database file itself (not user input at query time), the risk is lower — an attacker would need to control the schema file contents. However, collection names received from callers that bypass this check (e.g., through the Lua runner) have no additional sanitization.
+- Recommendations: Apply `is_safe_identifier()` (already defined in `src/schema.cpp` line 11) to collection and attribute names before SQL construction, or use SQLite identifier quoting (`"[" + name + "]"` or `'"' + name + '"'`).
 
-**execute_raw() Public API:**
-- Risk: Public method `Database::execute_raw()` at `src/database.cpp:448` accepts arbitrary SQL without parameterization
-- Files: `src/database.cpp` (lines 448-456)
-- Current mitigation: Documented as accepting raw SQL - caller responsibility
-- Recommendations: Document this as a low-level API and strongly recommend using `execute()` with parameterized queries for production code. Add warnings in CLAUDE.md about SQL injection
-
-**Lua Scripting Sandbox:**
-- Risk: `LuaRunner` allows Lua scripts to call database methods directly without validation
-- Files: `src/lua_runner.cpp` (lines 23-xxx), C++ bindings for all Database methods
-- Current mitigation: Scripts run in the same process context as the calling code
-- Recommendations: Document security implications in CLAUDE.md. Consider adding a scripting policy for production use
+**Lua runner opens `base`, `string`, and `table` libraries — no I/O sandbox:**
+- Risk: `sol::lib::base` includes `load`, `loadstring`, `dofile`, and `require`. A script passed to `LuaRunner::run()` can potentially load arbitrary Lua code from the filesystem using `require` or `dofile` if those remain accessible. `sol::lib::io` and `sol::lib::os` are excluded, limiting direct file access, but `require` can load `.so`/`.dll` native extensions.
+- Files: `src/lua_runner.cpp` line 18
+- Current mitigation: `sol::lib::io` and `sol::lib::os` are not loaded, reducing the attack surface.
+- Recommendations: Consider also excluding `sol::lib::package` to prevent `require` from loading native extensions. If Lua scripts are always trusted (internal use only), document this assumption.
 
 ## Performance Bottlenecks
 
-**Large database.cpp File:**
-- Problem: Main database implementation is 1934 lines, making it difficult to navigate and modify
-- Files: `src/database.cpp`
-- Cause: Contains all Database methods, Impl struct, transaction handling, and numerous read/write operations in a single file
-- Improvement path: Consider splitting into logical modules (e.g., database_lifecycle.cpp, database_crud.cpp, database_queries.cpp) while maintaining Pimpl pattern
+**Per-row INSERT in vectors/sets/time series (N+1 write pattern):**
+- Problem: All bulk data operations (`create_element`, `update_element`, `update_vector_*`, `update_set_*`, `update_time_series_group`) issue one `execute()` call per row. A vector of 10,000 points causes 10,000 individual `sqlite3_prepare_v2` + `sqlite3_step` calls inside a single transaction.
+- Files: `src/database_create.cpp` lines 101-117, `src/database_update.cpp` lines 88-100, `src/database_time_series.cpp` lines 159-181
+- Cause: Each `execute()` call prepares the statement from scratch (no statement caching or reuse).
+- Improvement path: Cache the prepared statement outside the row loop and rebind parameters per row, or use multi-row `INSERT INTO ... VALUES (?,?),(?,?),(?,?)` syntax for batches.
 
-**Large C API Wrapper:**
-- Problem: C API database wrapper is 1612 lines with heavy use of helper templates
-- Files: `src/c/database.cpp`
-- Cause: FFI bridge between C++ and C APIs requires extensive boilerplate for type conversion
-- Improvement path: Template metaprogramming could reduce code duplication in read/free operations
+**Schema re-loaded on every `from_schema` / `from_migrations` open:**
+- Problem: `load_schema_metadata()` runs a full `PRAGMA table_info` + `PRAGMA foreign_key_list` + `PRAGMA index_list` + `PRAGMA index_info` query for every table every time a database is opened. For schemas with many tables this adds measurable startup latency.
+- Files: `src/database_impl.h` lines 48-53, `src/schema.cpp` lines 293-326
+- Cause: No schema caching between open/close cycles of the same database file.
+- Improvement path: This is acceptable for a WIP project. Consider caching schema to a sidecar file or using a hash of `sqlite_master` as a cache key if startup time becomes a concern.
 
-**Memory Allocation in Read Operations:**
-- Problem: Read operations for scalar/vector/string data allocate separate arrays that must be freed by caller
-- Files: `src/c/database.cpp` (helper templates lines 12-76)
-- Cause: C API design requires out-parameters for variable-length results
-- Improvement path: Document memory management clearly. Consider providing utility functions to simplify common patterns like reading and immediately converting to Dart/Julia native types
-
-**Lua Binding Overhead:**
-- Problem: All Database methods are bound individually to Lua with lambdas
-- Files: `src/lua_runner.cpp` (lines 23-100+)
-- Cause: Sol2 requires explicit method binding for each public method
-- Improvement path: This is acceptable but document that Lua is slower than C/C++ for performance-critical operations
+**`list_scalar_attributes` / `list_vector_groups` / `list_set_groups` / `list_time_series_groups` return full metadata for every group, including foreign key scan per attribute:**
+- Problem: `list_scalar_attributes` scans all foreign keys for each column in a nested loop (O(columns × foreign_keys)). `list_vector_groups`, `list_set_groups`, and `list_time_series_groups` call `get_*_metadata()` individually for each group, each of which iterates all columns again.
+- Files: `src/database_metadata.cpp` lines 82-103, 105-124, 126-145
+- Cause: No caching of metadata results; full schema iteration per call.
+- Improvement path: Acceptable for current scale. Pre-build metadata index at `load_schema_metadata()` time if this becomes a bottleneck.
 
 ## Fragile Areas
 
-**Schema Validation and Discovery:**
-- Files: `src/schema_validator.cpp`, `src/schema.cpp`
-- Why fragile: Complex interdependencies between table naming conventions (Collection, Collection_vector_*, Collection_set_*, Collection_time_series_*) and schema detection logic. Any change to naming conventions requires updates in multiple places
-- Safe modification:
-  1. Add comprehensive tests for each naming pattern in `tests/test_schema_validator.cpp`
-  2. Use consistent helper functions like `is_vector_table()`, `is_set_table()`, `is_time_series_table()` everywhere
-  3. Document the naming rules clearly in CLAUDE.md (already done)
-- Test coverage: Good - dedicated test file exists
+**`update_time_series_files` column name interpolation into SQL:**
+- Files: `src/database_time_series.cpp` lines 287-308
+- Why fragile: Column names from the `paths` map are interpolated directly into the INSERT SQL string (`insert_sql += col_name`). They are validated to exist in the table definition (line 273), but not sanitized as SQL identifiers. A column name with special characters in the schema would produce broken SQL.
+- Safe modification: After adding identifier validation (see Security section), this is safe. Currently safe in practice since column names come from SQLite's `PRAGMA table_info` output.
+- Test coverage: Covered in `tests/test_database_time_series.cpp` for the happy path; no tests for unusual column names.
 
-**Time Series Dimension Column Detection:**
-- Files: `src/database.cpp` (line 147-156), `src/schema.cpp` (DateTime type detection)
-- Why fragile: Dimension column detection relies on:
-  1. Column name starting with `date_` (case-sensitive)
-  2. Or column type being DateTime
-  3. Special datetime column detection in `is_date_time_column()`
-- Safe modification: Add explicit schema validation that time series tables have exactly one dimension column, and document this requirement
-- Test coverage: `test_database_time_series.cpp` covers basic operations but not all edge cases
+**`is_date_time_column` convention is the sole mechanism for detecting the time series dimension column:**
+- Files: `src/database_internal.h` lines 68-76, `include/quiver/data_type.h` lines 39-41
+- Why fragile: If a time series table has no column starting with `date_`, `find_dimension_column()` throws at runtime. Schema validation does not enforce the `date_` prefix requirement for time series tables (the `validate_time_series_files_table` exists but there is no `validate_time_series_table`).
+- Safe modification: The schema validator in `src/schema_validator.cpp` line 38 skips time series table validation entirely. Adding a time series validation step (checking for `date_` column) would catch schema authoring errors at open time instead of at first read.
+- Test coverage: Time series tests all use schemas with `date_time` columns; no tests exist for a malformed time series schema.
 
-**Transaction Guard and Error Recovery:**
-- Files: `src/database.cpp` (lines 237-257, 202-235)
-- Why fragile: TransactionGuard::rollback() is called in destructor and swallows errors (line 230-231). If rollback fails, the database may be in an inconsistent state but the error is logged but not propagated
-- Safe modification:
-  1. Document that rollback failures are non-recoverable errors
-  2. Consider adding a flag to force close database if rollback fails
-  3. Add test cases for transaction failure scenarios
-- Test coverage: Need more comprehensive transaction failure tests
-
-**Type Validator and Type Coercion:**
-- Files: `src/type_validator.cpp` (lines 36-48)
-- Why fragile: Allows double values in INTEGER columns and strings in TEXT/INTEGER/DateTime columns. This flexibility can mask type errors
-- Safe modification: Document the type coercion rules clearly. Consider stricter validation mode for production
-- Test coverage: `test_database_create.cpp` and `test_c_api_database_create.cpp` should include type coercion tests
+**`read_time_series_group` falls back to null value for unrecognized column types:**
+- Files: `src/database_time_series.cpp` lines 92-108
+- Why fragile: The column value extraction uses three sequential `get_integer` / `get_float` / `get_string` checks. If all three return nullopt (e.g., BLOB column), the row silently stores `nullptr` for that column. This is consistent with how `Database::execute()` handles unexpected types, but BLOB is explicitly unsupported and throws in `execute()` (line 196). The time series path would not see that throw since it goes through the `Result` abstraction.
+- Safe modification: This is safe for correctly-formed STRICT schemas (BLOB is not a STRICT type). The concern only applies to non-STRICT schemas.
 
 ## Scaling Limits
 
-**In-Memory Database Logging:**
-- Current capacity: No practical limit - spdlog handles it
-- Limit: In-memory databases use console-only logging (no file sink)
-- Scaling path: For very large in-memory databases, consider option to log to file despite being :memory: database
+**All-element read operations load entire column into memory:**
+- Current capacity: Unbounded — all rows returned from `read_scalar_integers` / `read_vector_floats` / etc. are materialized into `std::vector` in memory before returning.
+- Limit: For collections with millions of rows or large vector tables, this will exhaust available memory.
+- Scaling path: Add cursor/iterator read variants, or pagination parameters (`LIMIT` / `OFFSET`), to support streaming access.
 
-**Migration Version Numbers:**
-- Current capacity: Limited to positive int64_t (up to 9,223,372,036,854,775,807)
-- Limit: Practical limit is filesystem namespace - directory names for migration folders
-- Scaling path: No action needed - int64_t provides sufficient capacity
-
-**Foreign Key Cascade Operations:**
-- Current capacity: Depends on SQLite query depth and recursion limits
-- Limit: Very large delete operations could hit SQLite's internal limits
-- Scaling path: Monitor delete operations on collections with many foreign key references
+**Single-writer SQLite with no WAL mode configured:**
+- Current capacity: One write at a time; readers block on writes in default journal mode.
+- Limit: Not suitable for concurrent multi-process access patterns without WAL mode.
+- Scaling path: Add `PRAGMA journal_mode = WAL;` to the `Database` constructor after `PRAGMA foreign_keys = ON;` to improve read concurrency.
 
 ## Missing Critical Features
 
-**Blob Module Non-Functional:**
-- Problem: Time series files feature relies on blob reading/writing which is stubbed
-- Blocks: `read_time_series_files()`, `update_time_series_files()` operations may not fully work with actual file data
-- Impact: Cannot use time series file operations in production
-- Severity: High if blob support is planned; Low if feature is being deferred
+**No time series table validation in SchemaValidator:**
+- Problem: `SchemaValidator::validate()` explicitly skips time series table validation (comment at line 38: "Time series tables have minimal validation (just file paths)"). No check verifies the `date_` dimension column is present, that the foreign key to the parent collection exists, or that cascade rules are correct.
+- Files: `src/schema_validator.cpp` line 38
+- Blocks: Invalid time series schemas silently open and only fail at first data operation.
 
-**Query Result Bounds Checking:**
-- Problem: `Result::operator[]` (line 33 in `src/result.cpp`) performs bounds checking but `Result::at()` may throw on out-of-bounds access
-- Impact: Inconsistent behavior between operator[] and at()
-- Recommendation: Document the API contract clearly - which method to use for safe vs unsafe access
+**No `migrate_down` API:**
+- Problem: Schema rollback is unavailable through the public API despite `down.sql` files existing in migrations.
+- Files: `src/migration.cpp`, `src/migrations.cpp`, `include/quiver/database.h`
+- Blocks: Any workflow requiring schema rollback must manipulate the database file directly.
 
 ## Test Coverage Gaps
 
-**SQL Injection Prevention:**
-- What's not tested: Parameterized query handling with special characters, quotes, and SQL keywords in string values
-- Files: `tests/test_database_query.cpp`
-- Risk: Without explicit injection tests, regressions could be introduced
-- Priority: Medium
+**Blob subsystem has zero tests:**
+- What's not tested: All of `Blob`, `BlobCSV`, `BlobMetadata`, `Dimension`, `TimeProperties`
+- Files: `include/quiver/blob/`, `src/blob/`
+- Risk: Implementations are empty; any future implementation would have no test baseline.
+- Priority: Low (depends on whether blob subsystem will be implemented or deleted).
 
-**Transaction Failure Scenarios:**
-- What's not tested: Rollback failures, database corruption recovery, partial commit failures
-- Files: `tests/test_database_lifecycle.cpp`
-- Risk: Unknown behavior when transactions fail
-- Priority: High (impacts data integrity)
+**`export_csv` / `import_csv` are not tested in C++, C API, or binding tests:**
+- What's not tested: CSV round-trip correctness, file creation, error handling for bad paths.
+- Files: `src/database_describe.cpp`, `src/c/database.cpp`, `bindings/dart/lib/src/database_csv.dart`, `bindings/julia/src/database_csv.jl`
+- Risk: Silent no-ops currently succeed; when implemented, regressions in CSV format or path handling would go undetected.
+- Priority: Medium — dependent on implementation landing.
 
-**Memory Management in C API:**
-- What's not tested: Memory leak detection, double-free prevention, proper cleanup of string arrays
-- Files: `tests/test_c_api_*.cpp`
-- Risk: Memory leaks in C API bindings, particularly for scalar/vector result sets
-- Priority: High (impacts binding stability)
+**No tests for `read_vector_*` / `read_set_*` / `update_vector_*` / `update_set_*` with no schema loaded:**
+- What's not tested: Behavior when `impl_->schema` is null and these methods are called (test comments in `test_database_errors.cpp` mark these as skipped).
+- Files: `tests/test_database_errors.cpp` lines 135-168, 269-312
+- Risk: A crash (segfault) rather than a `std::runtime_error` would be surfaced to callers.
+- Priority: Medium — these are public API entry points.
 
-**Blob Operations:**
-- What's not tested: No functional tests exist for blob reading/writing
-- Files: No test_blob.cpp exists
-- Risk: Entire blob subsystem may be broken without detection
-- Priority: High (feature is non-functional)
+**No tests for `describe()` output correctness:**
+- What's not tested: The string output of `describe()` is never asserted against expected content — it is only called to verify it does not crash.
+- Files: `src/database_describe.cpp`, `tests/test_database_lifecycle.cpp`
+- Risk: Output format regressions go undetected.
+- Priority: Low.
 
-**Schema Edge Cases:**
-- What's not tested:
-  - Collections with underscores in names (explicitly forbidden, but no test verifies this)
-  - Multiple time series groups in single collection
-  - Foreign key chains beyond immediate parent
-- Files: `tests/test_schema_validator.cpp`
-- Risk: Unexpected behavior with complex schemas
-- Priority: Medium
-
-**Error Message Quality:**
-- What's not tested: Specific error message content (only that errors are thrown)
-- Files: All test_database_* files
-- Risk: User-facing error messages may be unhelpful
-- Priority: Low (but improves user experience)
+**No tests for time series schema validation (missing dimension column):**
+- What's not tested: Opening a time series schema that lacks the `date_` column.
+- Files: `src/schema_validator.cpp`, `tests/test_schema_validator.cpp`
+- Risk: Invalid schemas fail only at first read/write, not at open time.
+- Priority: Medium.
 
 ---
 
-*Concerns audit: 2026-02-09*
+*Concerns audit: 2026-02-20*
