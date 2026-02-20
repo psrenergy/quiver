@@ -273,13 +273,31 @@ void Database::set_version(int64_t version) {
 }
 
 void Database::begin_transaction() {
+    if (!sqlite3_get_autocommit(impl_->db)) {
+        throw std::runtime_error("Cannot begin_transaction: transaction already active");
+    }
     impl_->begin_transaction();
+    impl_->logger->debug("User transaction started");
 }
+
+bool Database::in_transaction() const {
+    return !sqlite3_get_autocommit(impl_->db);
+}
+
 void Database::commit() {
+    if (sqlite3_get_autocommit(impl_->db)) {
+        throw std::runtime_error("Cannot commit: no active transaction");
+    }
     impl_->commit();
+    impl_->logger->debug("User transaction committed");
 }
+
 void Database::rollback() {
+    if (sqlite3_get_autocommit(impl_->db)) {
+        throw std::runtime_error("Cannot rollback: no active transaction");
+    }
     impl_->rollback();
+    impl_->logger->debug("User transaction rolled back");
 }
 
 void Database::execute_raw(const std::string& sql) {
@@ -322,14 +340,14 @@ void Database::migrate_up(const std::string& migrations_path) {
                                      " has no up.sql file");
         }
 
-        begin_transaction();
+        impl_->begin_transaction();
         try {
             execute_raw(up_sql);
             set_version(migration.version());
-            commit();
+            impl_->commit();
             impl_->logger->info("Migration {} applied successfully", migration.version());
         } catch (const std::exception& e) {
-            rollback();
+            impl_->rollback();
             impl_->logger->error("Migration {} failed: {}", migration.version(), e.what());
             throw std::runtime_error("Failed to migrate_up: migration " + std::to_string(migration.version()) + ": " +
                                      e.what());
@@ -356,13 +374,13 @@ void Database::apply_schema(const std::string& schema_path) {
 
     impl_->logger->info("Applying schema from: {}", schema_path);
 
-    begin_transaction();
+    impl_->begin_transaction();
     try {
         execute_raw(schema_sql);
         impl_->load_schema_metadata();
-        commit();
+        impl_->commit();
     } catch (const std::exception& e) {
-        rollback();
+        impl_->rollback();
         impl_->logger->error("Failed to apply schema: {}", e.what());
         throw;
     }
