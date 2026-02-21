@@ -432,6 +432,12 @@ Julia, Dart, and Lua provide additional convenience methods that compose core op
 | `read_all_vectors_by_id` | `readAllVectorsById` | `read_all_vectors_by_id` | `list_vector_groups` + typed reads |
 | `read_all_sets_by_id` | `readAllSetsById` | `read_all_sets_by_id` | `list_set_groups` + typed reads |
 
+**Transaction block wrappers (Julia, Dart, and Lua):**
+
+| Julia | Dart | Lua | Wraps |
+|-------|------|-----|-------|
+| `transaction(db) do db...end` | `db.transaction((db) {...})` | `db:transaction(function(db)...end)` | begin + fn + commit/rollback |
+
 **Multi-column group readers (Julia and Dart only):**
 
 | Julia | Dart | Wraps |

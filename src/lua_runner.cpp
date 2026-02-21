@@ -297,6 +297,33 @@ struct LuaRunner::Impl {
             "update_time_series_files",
             [](Database& self, const std::string& collection, sol::table paths) {
                 update_time_series_files_from_lua(self, collection, paths);
+            },
+            // Group 10: Transactions
+            "begin_transaction",
+            [](Database& self) { self.begin_transaction(); },
+            "commit",
+            [](Database& self) { self.commit(); },
+            "rollback",
+            [](Database& self) { self.rollback(); },
+            "in_transaction",
+            [](Database& self) { return self.in_transaction(); },
+            "transaction",
+            [](Database& self, sol::protected_function fn) -> sol::object {
+                self.begin_transaction();
+                auto result = fn(std::ref(self));
+                if (!result.valid()) {
+                    sol::error err = result;
+                    try {
+                        self.rollback();
+                    } catch (...) {
+                    }
+                    throw std::runtime_error(err.what());
+                }
+                self.commit();
+                if (result.return_count() > 0) {
+                    return result.get<sol::object>(0);
+                }
+                return sol::make_object(result.lua_state(), sol::lua_nil);
             });
         // NOLINTEND(performance-unnecessary-value-param)
     }
