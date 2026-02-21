@@ -72,6 +72,12 @@ bindings/julia/test/test.bat      # Julia tests
 bindings/dart/test/test.bat       # Dart tests
 ```
 
+### Benchmark
+```bash
+./build/bin/quiver_benchmark.exe  # Transaction performance benchmark (run manually)
+```
+Standalone executable comparing individual vs batched transaction performance. Not part of test suite. Built by `build-all.bat` but never executed automatically.
+
 ### Test Organization
 Test files organized by functionality:
 - `test_database_lifecycle.cpp` - open, close, move semantics, options

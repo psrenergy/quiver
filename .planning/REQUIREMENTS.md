@@ -29,7 +29,7 @@ Requirements for Explicit Transactions milestone. Each maps to roadmap phases.
 
 ### Performance
 
-- [ ] **PERF-01**: C++ benchmark demonstrates measurable speedup from batching `create_element` + `update_time_series_group` in a single transaction vs separate transactions
+- [x] **PERF-01**: C++ benchmark demonstrates measurable speedup from batching `create_element` + `update_time_series_group` in a single transaction vs separate transactions
 
 ## Future Requirements
 
@@ -68,7 +68,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BIND-04 | Phase 3 | Complete |
 | BIND-05 | Phase 3 | Complete |
 | BIND-06 | Phase 3 | Complete |
-| PERF-01 | Phase 4 | Pending |
+| PERF-01 | Phase 4 | Complete |
 
 **Coverage:**
 - v0.3 requirements: 12 total (11 original + TQRY-01 moved from Future)

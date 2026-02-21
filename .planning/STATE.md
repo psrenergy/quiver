@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-20)
 
 **Core value:** Reliable, schema-validated SQLite access through a single C++ core with mechanically-derived bindings that feel native in every target language.
-**Current focus:** Phase 3 -- Language Bindings
+**Current focus:** Phase 4 -- Performance Benchmark
 
 ## Current Position
 
-Phase: 3 of 4 (Language Bindings)
+Phase: 4 of 4 (Performance Benchmark)
 Plan: 1 of 1 in current phase
-Status: Phase 3 complete
-Last activity: 2026-02-21 -- Completed 03-01-PLAN.md (Language Bindings Transaction)
+Status: Phase 4 complete
+Last activity: 2026-02-21 -- Completed 04-01-PLAN.md (Transaction Benchmark)
 
-Progress: [████████░░] 75%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 7min
-- Total execution time: 0.33 hours
+- Total plans completed: 4
+- Average duration: 10min
+- Total execution time: 0.67 hours
 
 **By Phase:**
 
@@ -30,10 +30,11 @@ Progress: [████████░░] 75%
 | 01-c-transaction-core | 1 | 5min | 5min |
 | 02-c-api-transaction-surface | 1 | 3min | 3min |
 | 03-language-bindings | 1 | 12min | 12min |
+| 04-performance-benchmark | 1 | 20min | 20min |
 
 **Recent Trend:**
-- Last 5 plans: 5min, 3min, 12min
-- Trend: increasing (binding tasks touch more files across languages)
+- Last 5 plans: 5min, 3min, 12min, 20min
+- Trend: increasing (benchmark required debugging Windows-specific runtime issues)
 
 *Updated after each plan completion*
 
@@ -54,6 +55,9 @@ Recent decisions affecting current work:
 - [Phase 3]: Added #include <stdbool.h> to C API database.h for FFI generator compatibility
 - [Phase 3]: Transaction block wrappers use best-effort rollback (swallow rollback error, rethrow original)
 - [Phase 3]: Julia transaction(fn, db) takes fn first for do-block syntax desugaring
+- [Phase 4]: Benchmark uses file-based DB (not :memory:) to reflect real-world I/O cost
+- [Phase 4]: Database scoped in block for RAII close before temp file removal on Windows
+- [Phase 4]: Pre-removal of temp files guards against leftover files from prior crashed runs
 
 ### Key Technical Context
 
@@ -67,6 +71,9 @@ Recent decisions affecting current work:
 - Dart extension in bindings/dart/lib/src/database_transaction.dart: beginTransaction, commit, rollback, inTransaction, transaction<T>
 - Lua bindings in src/lua_runner.cpp Group 10: begin_transaction, commit, rollback, in_transaction, transaction
 - include/quiver/c/database.h now includes <stdbool.h> for bool* parameter compatibility
+- Benchmark executable at build/bin/quiver_benchmark.exe: 5000 elements, 5 iterations, median/mean stats
+- CMake target quiver_benchmark in tests/CMakeLists.txt, linked to quiver only (no gtest)
+- Benchmark proves ~20x+ speedup from explicit transactions on file-based SQLite
 
 ### Pending Todos
 
@@ -79,5 +86,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-21
-Stopped at: Completed 03-01-PLAN.md
+Stopped at: Completed 04-01-PLAN.md
 Resume file: None
