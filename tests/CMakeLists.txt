@@ -78,3 +78,23 @@ if(QUIVER_BUILD_C_API)
         WORKING_DIRECTORY $<TARGET_FILE_DIR:quiver_c_tests>
     )
 endif()
+
+# Benchmark executable (not part of test suite)
+add_executable(quiver_benchmark
+    benchmark/benchmark.cpp
+)
+
+target_link_libraries(quiver_benchmark
+    PRIVATE
+        quiver
+        quiver_compiler_options
+)
+
+# Copy DLLs for benchmark
+if(WIN32 AND BUILD_SHARED_LIBS)
+    add_custom_command(TARGET quiver_benchmark POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:quiver>
+            $<TARGET_FILE_DIR:quiver_benchmark>
+    )
+endif()
