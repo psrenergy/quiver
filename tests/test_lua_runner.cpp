@@ -1984,8 +1984,10 @@ TEST_F(LuaRunnerTest, TransactionBlockMultiOps) {
     // After update, one should be 100 and the other 20
     bool found100 = false, found20 = false;
     for (auto v : integers) {
-        if (v == 100) found100 = true;
-        if (v == 20) found20 = true;
+        if (v == 100)
+            found100 = true;
+        if (v == 20)
+            found20 = true;
     }
     EXPECT_TRUE(found100);
     EXPECT_TRUE(found20);

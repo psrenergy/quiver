@@ -93,7 +93,7 @@ include("fixture.jl")
 
         result = Quiver.transaction(db) do db
             Quiver.create_element!(db, "Collection"; label = "Item 1", some_integer = 42)
-            42
+            return 42
         end
 
         @test result == 42
@@ -113,7 +113,7 @@ include("fixture.jl")
         @test_throws ErrorException begin
             Quiver.transaction(db) do db
                 Quiver.create_element!(db, "Collection"; label = "Item 1", some_integer = 10)
-                error("intentional error")
+                return error("intentional error")
             end
         end
 
@@ -132,7 +132,7 @@ include("fixture.jl")
         Quiver.transaction(db) do db
             Quiver.create_element!(db, "Collection"; label = "Item 1", some_integer = 10)
             Quiver.create_element!(db, "Collection"; label = "Item 2", some_integer = 20)
-            Quiver.update_scalar_integer!(db, "Collection", "some_integer", Int64(1), Int64(100))
+            return Quiver.update_scalar_integer!(db, "Collection", "some_integer", Int64(1), Int64(100))
         end
 
         labels = Quiver.read_scalar_strings(db, "Collection", "label")
