@@ -100,6 +100,7 @@ if(QUIVER_BUILD_C_API)
         c/database_query.cpp
         c/database_time_series.cpp
         c/database_relations.cpp
+        c/database_transaction.cpp
         c/element.cpp
         c/lua_runner.cpp
     )
