@@ -1,407 +1,219 @@
-# Architecture Patterns
+# Architecture Research
 
-**Domain:** Multi-column time series update interface redesign across C++/C API/FFI bindings
-**Researched:** 2026-02-12
-**Confidence:** HIGH (based on direct codebase analysis of all layers)
+**Domain:** Explicit transaction control for SQLite wrapper library
+**Researched:** 2026-02-20
+**Confidence:** HIGH
 
-## Problem Statement
+## System Overview
 
-The C++ layer already supports multi-column time series via `vector<map<string, Value>>`, but the C API hardcodes a single-value-column assumption: `const char** date_times, const double* values, size_t row_count`. This means:
-
-1. Time series tables with multiple value columns (e.g., `temperature REAL, humidity REAL`) cannot be written through the C API.
-2. Time series tables with non-float value columns (e.g., `INTEGER`, `TEXT`) cannot be written through the C API.
-3. Both Julia and Dart bindings inherit this limitation because they call the C API.
-4. Lua bypasses the C API (calls C++ directly via sol2) and already supports multi-column writes.
-
-The read side has the same limitation: `quiver_database_read_time_series_group` returns `char** date_times, double* values` -- single column, float-only. Both read and update need redesign.
-
-## Current Architecture (What Exists)
-
-### Layer-by-Layer Data Flow for Time Series Update
+Current architecture with transaction integration points marked:
 
 ```
-Julia/Dart binding
+Bindings Layer (Julia, Dart, Lua)
+  |  Thin wrappers calling C API
   |
-  |  Binding takes List<Map<String, Object?>> (Dart) or Vector{Dict} (Julia)
-  |  but extracts only "date_time" and "value" keys, discards everything else
+C API Layer (src/c/)
+  |  Flat functions, quiver_error_t returns, thread-local errors
+  |  NEW: quiver_database_begin_transaction / commit / rollback
   |
-  v
-C API: quiver_database_update_time_series_group(
-    db, collection, group, id,
-    const char** date_times,   // dimension column values
-    const double* values,      // single value column (float only)
-    size_t row_count
-)
+C++ Public API (include/quiver/database.h)
+  |  Database class with Pimpl
+  |  CHANGE: begin_transaction / commit / rollback become public
+  |  NEW: in_transaction() query method
   |
-  |  C API reconstructs vector<map<string, Value>> with exactly 2 columns
-  |  by looking up metadata for dimension_column and first value_column
+C++ Implementation (src/database_impl.h)
+  |  Database::Impl owns sqlite3*, Schema, TypeValidator
+  |  CHANGE: TransactionGuard checks user transaction state
+  |  NEW: bool user_transaction_active_ flag on Impl
   |
-  v
-C++ Database::update_time_series_group(
-    collection, group, id,
-    const vector<map<string, Value>>& rows   // fully flexible, multi-column
-)
-  |
-  |  Builds parameterized INSERT with all columns from first row
-  |
-  v
-SQLite (supports any schema the user defined)
+SQLite (sqlite3*)
+  |  sqlite3_get_autocommit() for state detection
 ```
 
-### Layer-by-Layer Data Flow for Time Series Read
+## Integration Design
 
-```
-C++ Database::read_time_series_group(collection, group, id)
-  -> Returns vector<map<string, Value>>  (all columns, all types)
-  |
-  v
-C API: quiver_database_read_time_series_group(...)
-  -> Extracts dimension_column as char**, first value_column as double*
-  -> Drops all other columns, coerces integers to double
-  |
-  v
-Julia/Dart binding
-  -> Reconstructs List<Map<String, Object?>> with only "date_time" and "value"
-```
+### Core Mechanism: User Transaction Flag on Impl
 
-### Bottleneck
+Add a `bool user_transaction_active_` member to `Database::Impl`. This flag distinguishes user-initiated transactions from internal ones. The flag is set by the public `begin_transaction()`, cleared by `commit()`/`rollback()`, and checked by `TransactionGuard`.
 
-The C API is the bottleneck. It flattens a rich multi-column multi-type structure into a rigid 2-column float-only interface. The C++ layer above and SQLite below both support the full schema.
+This is preferred over relying solely on `sqlite3_get_autocommit()` because:
+1. `sqlite3_get_autocommit()` cannot distinguish between user transactions and internal TransactionGuard transactions
+2. A flag gives explicit control and clear semantics
+3. It avoids edge cases with `BEGIN DEFERRED` where autocommit may not flip immediately
 
-### Existing Precedent: Parameterized Query Pattern
-
-The parameterized query C API already solves a similar problem -- passing heterogeneously-typed data through a C FFI boundary:
-
-```c
-// param_types[i]: QUIVER_DATA_TYPE_INTEGER(0), FLOAT(1), STRING(2), NULL(4)
-// param_values[i]: pointer to int64_t, double, const char*, or NULL
-quiver_database_query_string_params(db, sql,
-    param_types, param_values, param_count,
-    &out_value, &out_has_value);
-```
-
-This uses typed parallel arrays: `const int* param_types` + `const void* const* param_values` + `size_t param_count`. The C API implementation (`convert_params` in `database_query.cpp`) switches on type to reconstruct `vector<Value>`.
-
-## Recommended Architecture
-
-### Design Decision: Columnar Typed Arrays (Not Row-Oriented)
-
-The parameterized query pattern passes one value per parameter. Time series passes N rows x M columns of data. Two approaches are possible:
-
-**Option A: Row-oriented (follow query param pattern exactly)**
-Pass `column_count * row_count` typed values in a flat array. Each "cell" is a (type, value) pair. The C API reconstructs the 2D structure.
-
-**Option B: Columnar typed arrays**
-Pass each column as a separate typed array. Column names + types describe the schema; column data arrays contain the values. Each column is homogeneous (all ints, all floats, or all strings), which matches SQLite's per-column type affinity and avoids `void*` pointer indirection for every cell.
-
-**Recommendation: Option B (columnar).** Reasons:
-
-1. **Type safety per column.** A column is either all `int64_t*`, all `double*`, or all `const char**`. No `void*` casting per cell. The type array has `column_count` entries (not `row_count * column_count`).
-2. **FFI friendliness.** Julia and Dart FFI can pass native arrays directly (`Ptr{Cdouble}`, `Pointer<Double>`). Row-oriented `void*` arrays require per-cell pointer boxing in bindings, which is awkward and error-prone.
-3. **Matches the read direction.** Reads naturally produce columnar data (a SQL column maps to one C array). Symmetry between read and write simplifies the mental model.
-4. **SQLite affinity.** SQLite columns have a single declared type. Columnar layout matches this -- one type per column, not one type per cell.
-5. **Performance.** Columnar arrays are cache-friendly for the common case of iterating all values in a column. Row-oriented `void*` indirection is a pointer chase per cell.
-
-### New C API Signatures
-
-#### Update
-
-```c
-// Replaces: quiver_database_update_time_series_group
-quiver_error_t quiver_database_update_time_series_group(
-    quiver_database_t* db,
-    const char* collection,
-    const char* group,
-    int64_t id,
-    const char* const* column_names,     // [column_count] column names
-    const int* column_types,             // [column_count] QUIVER_DATA_TYPE_* enum
-    const void* const* column_data,      // [column_count] typed array pointers
-    size_t column_count,
-    size_t row_count
-);
-```
-
-Where `column_data[i]` points to:
-- `const int64_t*` array of `row_count` elements if `column_types[i] == QUIVER_DATA_TYPE_INTEGER`
-- `const double*` array of `row_count` elements if `column_types[i] == QUIVER_DATA_TYPE_FLOAT`
-- `const char* const*` array of `row_count` elements if `column_types[i] == QUIVER_DATA_TYPE_STRING`
-
-The dimension column (e.g., `date_time`) is included as one of the named columns. The C API no longer needs to know which column is the dimension -- it passes all columns uniformly and the C++ layer handles ordering.
-
-#### Read
-
-```c
-// Replaces: quiver_database_read_time_series_group
-quiver_error_t quiver_database_read_time_series_group(
-    quiver_database_t* db,
-    const char* collection,
-    const char* group,
-    int64_t id,
-    char*** out_column_names,            // [*out_column_count] allocated column names
-    int** out_column_types,              // [*out_column_count] QUIVER_DATA_TYPE_* values
-    void*** out_column_data,             // [*out_column_count] typed array pointers
-    size_t* out_column_count,
-    size_t* out_row_count
-);
-```
-
-Where `out_column_data[i]` is:
-- `int64_t*` array of `*out_row_count` elements if `out_column_types[i] == QUIVER_DATA_TYPE_INTEGER`
-- `double*` array of `*out_row_count` elements if `out_column_types[i] == QUIVER_DATA_TYPE_FLOAT`
-- `char**` array of `*out_row_count` elements if `out_column_types[i] == QUIVER_DATA_TYPE_STRING`
-
-#### Free
-
-```c
-// Replaces: quiver_database_free_time_series_data
-quiver_error_t quiver_database_free_time_series_data(
-    char** column_names,
-    int* column_types,
-    void** column_data,
-    size_t column_count,
-    size_t row_count
-);
-```
-
-The free function uses `column_types` to determine how to free each `column_data[i]`: `delete[] (int64_t*)`, `delete[] (double*)`, or `delete[] each string then delete[] the char** array`.
-
-### C API Implementation (database_time_series.cpp)
-
-The C API marshaling layer converts between columnar C arrays and the C++ row-oriented `vector<map<string, Value>>`:
-
-**Update direction (columnar -> row-oriented):**
-```
-For each row r in 0..row_count:
-    map<string, Value> row;
-    For each column c in 0..column_count:
-        row[column_names[c]] = extract_typed_value(column_types[c], column_data[c], r);
-    rows.push_back(row);
-Call db->db.update_time_series_group(collection, group, id, rows);
-```
-
-**Read direction (row-oriented -> columnar):**
-```
-auto rows = db->db.read_time_series_group(collection, group, id);
-auto metadata = db->db.get_time_series_metadata(collection, group);
-// Use metadata to determine column names and types (not row content)
-Allocate column arrays based on metadata types and row count.
-For each row r:
-    For each column c:
-        Store rows[r][column_names[c]] into typed column_data[c][r];
-```
-
-### C++ Layer
-
-**No changes needed.** `Database::update_time_series_group` already takes `vector<map<string, Value>>` and `Database::read_time_series_group` already returns `vector<map<string, Value>>`. The C++ interface is already fully general.
-
-### Lua Layer
-
-**No changes needed.** `update_time_series_group_from_lua` calls C++ directly via sol2, converting Lua tables to `vector<map<string, Value>>`. `read_time_series_group_to_lua` returns the full multi-column data as Lua tables. Lua already supports the full interface.
-
-### Julia Binding Changes
-
-**Current (hardcoded two columns):**
-```julia
-function update_time_series_group!(db, collection, group, id, rows::Vector{Dict{String, Any}})
-    date_time_ptrs = [String(row["date_time"]) for row in rows]
-    values = Float64[Float64(row["value"]) for row in rows]
-    C.quiver_database_update_time_series_group(db.ptr, collection, group, id,
-        date_time_ptrs, values, row_count)
-end
-```
-
-**New (columnar, schema-driven):**
-```julia
-function update_time_series_group!(db, collection, group, id, rows::Vector{Dict{String, Any}})
-    if isempty(rows)
-        # Call C API with column_count=0, row_count=0
-        return nothing
-    end
-
-    metadata = get_time_series_metadata(db, collection, group)
-    # Build column lists from metadata (dimension_column + value_columns)
-    column_names = [metadata.dimension_column; [vc.name for vc in metadata.value_columns]]
-    column_types = [metadata_type_to_quiver_type(dim_type); [vc.data_type for vc ...]]
-
-    # For each column, extract typed array from rows
-    column_data = [extract_column(rows, name, type) for (name, type) in zip(column_names, column_types)]
-
-    # Call new C API
-    C.quiver_database_update_time_series_group(db.ptr, collection, group, id,
-        column_names_ptrs, column_types_arr, column_data_ptrs,
-        length(column_names), length(rows))
-end
-```
-
-The key change: instead of hardcoding `"date_time"` and `"value"`, the binding queries metadata to discover column names and types, then marshals each column as a typed array.
-
-**Alternative (simpler, kwargs-style):**
-```julia
-function update_time_series_group!(db, collection, group, id; kwargs...)
-    # kwargs like: date_time=["2024-01-01", "2024-01-02"], temperature=[20.5, 21.0]
-    # Each kwarg is a column name -> array of values
-end
-```
-
-This kwargs convenience method can wrap the Dict-based method.
-
-### Dart Binding Changes
-
-**Current (hardcoded two columns):**
-```dart
-void updateTimeSeriesGroup(String collection, String group, int id,
-    List<Map<String, Object?>> rows) {
-    // Extracts 'date_time' and 'value' only
-    dateTimes[i] = dateTime.toNativeUtf8();
-    values[i] = value.toDouble();
-    bindings.quiver_database_update_time_series_group(...);
-}
-```
-
-**New (columnar, schema-driven):**
-```dart
-void updateTimeSeriesGroup(String collection, String group, int id,
-    List<Map<String, Object?>> rows) {
-    // Query metadata for column names and types
-    final metadata = getTimeSeriesMetadata(collection, group);
-    // Marshal each column as typed native array
-    // Call new C API with column_names, column_types, column_data arrays
-}
-```
-
-Same pattern as Julia: metadata-driven column discovery, typed marshaling per column.
-
-## Component Boundaries
-
-### Components Changed
-
-| Component | File(s) | Change Type | Description |
-|-----------|---------|-------------|-------------|
-| C API time series header | `include/quiver/c/database.h` | **MODIFIED** | New signatures for read/update/free |
-| C API time series impl | `src/c/database_time_series.cpp` | **MODIFIED** | New columnar marshaling logic |
-| C API helpers | `src/c/database_helpers.h` | **MODIFIED** | Add columnar marshaling helper functions |
-| Julia FFI declarations | `bindings/julia/src/c_api.jl` | **REGENERATED** | New ccall signatures |
-| Julia update | `bindings/julia/src/database_update.jl` | **MODIFIED** | Columnar marshaling, metadata-driven |
-| Julia read | `bindings/julia/src/database_read.jl` | **MODIFIED** | Columnar unmarshaling |
-| Dart FFI bindings | `bindings/dart/lib/src/ffi/bindings.dart` | **REGENERATED** | New FFI signatures |
-| Dart update | `bindings/dart/lib/src/database_update.dart` | **MODIFIED** | Columnar marshaling, metadata-driven |
-| Dart read | `bindings/dart/lib/src/database_read.dart` | **MODIFIED** | Columnar unmarshaling |
-
-### Components Unchanged
-
-| Component | Reason |
-|-----------|--------|
-| C++ Database class (`include/quiver/database.h`) | Already supports multi-column via `vector<map<string, Value>>` |
-| C++ time series impl (`src/database_time_series.cpp`) | Already handles arbitrary columns |
-| Lua bindings (`src/lua_runner.cpp`) | Calls C++ directly, already multi-column |
-| C++ tests (`test_database_time_series.cpp`) | Test C++ layer which is unchanged |
-| All schema files | Schema definitions are not affected |
-| All non-time-series C API functions | Unrelated |
-
-## Data Flow (New Design)
-
-### Update Path
-
-```
-Julia: update_time_series_group!(db, "Sensor", "readings", 1,
-    [Dict("date_time" => "2024-01-01", "temperature" => 20.5, "humidity" => 65.0), ...])
-
-Dart: updateTimeSeriesGroup(db, "Sensor", "readings", 1,
-    [{"date_time": "2024-01-01", "temperature": 20.5, "humidity": 65.0}, ...])
-
-  |  Binding queries metadata to discover columns:
-  |    dimension_column = "date_time" (TEXT)
-  |    value_columns = [{name: "temperature", type: REAL}, {name: "humidity", type: REAL}]
-  |
-  |  Marshals to columnar arrays:
-  |    column_names  = ["date_time", "temperature", "humidity"]
-  |    column_types  = [STRING, FLOAT, FLOAT]
-  |    column_data   = [char**{"2024-01-01",...}, double*{20.5,...}, double*{65.0,...}]
-  |    column_count  = 3
-  |    row_count     = N
-  |
-  v
-C API: quiver_database_update_time_series_group(
-    db, "Sensor", "readings", 1,
-    column_names, column_types, column_data,
-    column_count=3, row_count=N)
-
-  |  Converts columnar -> row-oriented:
-  |    for each row: map<string, Value> with all columns
-  |
-  v
-C++ Database::update_time_series_group(
-    "Sensor", "readings", 1,
-    [{date_time: "2024-01-01", temperature: 20.5, humidity: 65.0}, ...])
-
-  |
-  v
-SQLite: INSERT INTO Sensor_time_series_readings (id, date_time, temperature, humidity)
-        VALUES (1, ?, ?, ?)
-```
-
-### Read Path
-
-```
-C++ Database::read_time_series_group("Sensor", "readings", 1)
-  -> Returns [{date_time: "2024-01-01", temperature: 20.5, humidity: 65.0}, ...]
-  |
-  v
-C API: Uses metadata to build typed columnar output:
-  out_column_names  = ["date_time", "temperature", "humidity"]
-  out_column_types  = [STRING, FLOAT, FLOAT]
-  out_column_data   = [char**{...}, double*{...}, double*{...}]
-  out_column_count  = 3
-  out_row_count     = N
-  |
-  v
-Julia/Dart: Unmarshal columnar arrays back to List<Map<String, Object?>>
-  -> [{date_time: "2024-01-01", temperature: 20.5, humidity: 65.0}, ...]
-```
-
-## Patterns to Follow
-
-### Pattern 1: Metadata-Driven Marshaling
-
-**What:** Use `get_time_series_metadata` to discover column names and types at runtime, then marshal/unmarshal accordingly. Never hardcode column names in bindings.
-
-**When:** Any time data crosses the C API boundary for variable-schema tables.
-
-**Why:** The schema is defined by the user's SQL file, not by the library code. Column names and types are only known at runtime. Metadata provides the contract.
-
-**Example (C API update implementation):**
 ```cpp
-quiver_error_t quiver_database_update_time_series_group(
-    quiver_database_t* db, const char* collection, const char* group, int64_t id,
-    const char* const* column_names, const int* column_types,
-    const void* const* column_data, size_t column_count, size_t row_count) {
-    QUIVER_REQUIRE(db, collection, group);
-    if (row_count > 0 && (!column_names || !column_types || !column_data)) {
-        quiver_set_last_error("Null column arrays with non-zero row_count");
+// database_impl.h -- modified Impl struct
+struct Database::Impl {
+    sqlite3* db = nullptr;
+    std::string path;
+    std::shared_ptr<spdlog::logger> logger;
+    std::unique_ptr<Schema> schema;
+    std::unique_ptr<TypeValidator> type_validator;
+    bool user_transaction_active_ = false;  // NEW
+
+    // ... existing helpers unchanged ...
+
+    // Existing begin_transaction/commit/rollback unchanged
+    // They still execute raw SQL against sqlite3*
+};
+```
+
+### TransactionGuard Becomes Nest-Aware
+
+The only modification to `TransactionGuard`: check `user_transaction_active_` on construction. If a user transaction is already active, the guard becomes a no-op (does not BEGIN, does not COMMIT/ROLLBACK on destruction).
+
+```cpp
+class TransactionGuard {
+    Impl& impl_;
+    bool committed_ = false;
+    bool is_noop_ = false;  // NEW
+
+public:
+    explicit TransactionGuard(Impl& impl) : impl_(impl) {
+        if (impl_.user_transaction_active_) {
+            is_noop_ = true;  // User transaction covers us
+        } else {
+            impl_.begin_transaction();
+        }
+    }
+
+    void commit() {
+        if (!is_noop_) {
+            impl_.commit();
+        }
+        committed_ = true;
+    }
+
+    ~TransactionGuard() {
+        if (!committed_ && !is_noop_) {
+            impl_.rollback();
+        }
+    }
+
+    TransactionGuard(const TransactionGuard&) = delete;
+    TransactionGuard& operator=(const TransactionGuard&) = delete;
+};
+```
+
+**Key property:** When `user_transaction_active_` is false, behavior is identical to today. No existing code paths change.
+
+### Public API on Database Class
+
+Move `begin_transaction()`, `commit()`, `rollback()` from private to public in `database.h`. Add `in_transaction()` query. The existing private implementations delegate to `Impl`; the only new logic is the flag management.
+
+```cpp
+// database.h -- new public methods
+class Database {
+public:
+    // ... existing public methods ...
+
+    // Transaction control
+    void begin_transaction();
+    bool in_transaction() const;
+    void commit();
+    void rollback();
+
+    // ... rest unchanged, remove these from private section ...
+};
+```
+
+```cpp
+// database.cpp -- modified implementations
+void Database::begin_transaction() {
+    if (impl_->user_transaction_active_) {
+        throw std::runtime_error(
+            "Cannot begin_transaction: a transaction is already active");
+    }
+    impl_->begin_transaction();
+    impl_->user_transaction_active_ = true;
+}
+
+bool Database::in_transaction() const {
+    return impl_->user_transaction_active_;
+}
+
+void Database::commit() {
+    if (!impl_->user_transaction_active_) {
+        throw std::runtime_error(
+            "Cannot commit: no active transaction");
+    }
+    impl_->commit();
+    impl_->user_transaction_active_ = false;
+}
+
+void Database::rollback() {
+    if (!impl_->user_transaction_active_) {
+        throw std::runtime_error(
+            "Cannot rollback: no active transaction");
+    }
+    impl_->rollback();
+    impl_->user_transaction_active_ = false;
+}
+```
+
+**Error messages follow established patterns:** "Cannot {operation}: {reason}"
+
+**Note:** The internal callers in `database.cpp` (`migrate_up`, `apply_schema`) use `impl_->begin_transaction()` / `impl_->commit()` / `impl_->rollback()` directly on the Impl, bypassing the flag. This is correct -- those are internal operations that should not interact with user transaction state.
+
+### Component Responsibilities
+
+| Component | Responsibility | What Changes |
+|-----------|---------------|--------------|
+| `Database::Impl` (database_impl.h) | Owns sqlite3*, executes raw transaction SQL | Add `user_transaction_active_` flag |
+| `TransactionGuard` (database_impl.h) | RAII for internal method transactions | Check flag, become no-op when set |
+| `Database` (database.h) | Public API surface | Move txn methods from private to public, add `in_transaction()` |
+| `Database` (database.cpp) | Public method implementations | Add flag management and precondition checks |
+| C API (src/c/database.h, database.cpp) | FFI surface | Add 4 new functions |
+| Julia binding (database.jl) | Julia wrapper | Add 4 new functions |
+| Dart binding (database.dart) | Dart wrapper | Add 4 new methods |
+| Lua binding (lua_runner.cpp) | Lua userdata methods | Add 4 new bindings |
+
+## C API Integration
+
+Three new functions plus one query, all in `src/c/database.cpp` (lifecycle file). They follow the exact same pattern as `quiver_database_describe` -- simple delegation, no output parameters beyond error code.
+
+```c
+// include/quiver/c/database.h -- new declarations
+QUIVER_C_API quiver_error_t quiver_database_begin_transaction(quiver_database_t* db);
+QUIVER_C_API quiver_error_t quiver_database_in_transaction(quiver_database_t* db, int* out_active);
+QUIVER_C_API quiver_error_t quiver_database_commit(quiver_database_t* db);
+QUIVER_C_API quiver_error_t quiver_database_rollback(quiver_database_t* db);
+```
+
+```cpp
+// src/c/database.cpp -- implementations
+QUIVER_C_API quiver_error_t quiver_database_begin_transaction(quiver_database_t* db) {
+    QUIVER_REQUIRE(db);
+    try {
+        db->db.begin_transaction();
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
         return QUIVER_ERROR;
     }
+}
+
+QUIVER_C_API quiver_error_t quiver_database_in_transaction(quiver_database_t* db, int* out_active) {
+    QUIVER_REQUIRE(db, out_active);
+    *out_active = db->db.in_transaction() ? 1 : 0;
+    return QUIVER_OK;
+}
+
+QUIVER_C_API quiver_error_t quiver_database_commit(quiver_database_t* db) {
+    QUIVER_REQUIRE(db);
     try {
-        std::vector<std::map<std::string, quiver::Value>> rows;
-        rows.reserve(row_count);
-        for (size_t r = 0; r < row_count; ++r) {
-            std::map<std::string, quiver::Value> row;
-            for (size_t c = 0; c < column_count; ++c) {
-                switch (column_types[c]) {
-                case QUIVER_DATA_TYPE_INTEGER:
-                    row[column_names[c]] = static_cast<const int64_t*>(column_data[c])[r];
-                    break;
-                case QUIVER_DATA_TYPE_FLOAT:
-                    row[column_names[c]] = static_cast<const double*>(column_data[c])[r];
-                    break;
-                case QUIVER_DATA_TYPE_STRING:
-                    row[column_names[c]] = std::string(
-                        static_cast<const char* const*>(column_data[c])[r]);
-                    break;
-                }
-            }
-            rows.push_back(std::move(row));
-        }
-        db->db.update_time_series_group(collection, group, id, rows);
+        db->db.commit();
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_database_rollback(quiver_database_t* db) {
+    QUIVER_REQUIRE(db);
+    try {
+        db->db.rollback();
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
@@ -410,134 +222,349 @@ quiver_error_t quiver_database_update_time_series_group(
 }
 ```
 
-### Pattern 2: Co-located Alloc/Free for Columnar Data
+These belong in `src/c/database.cpp` alongside other lifecycle functions (open, close, describe) because transactions are database-level lifecycle operations, not CRUD.
 
-**What:** The read function allocates columnar arrays; the free function deallocates them. Both live in `src/c/database_time_series.cpp`, following the existing alloc/free co-location principle.
+## Binding Integration Patterns
 
-**When:** Always for C API functions that return allocated memory.
+### Julia Binding
 
-**Why:** The free function needs to know the column types to correctly deallocate each column's data array (string columns need per-element deletion; numeric columns are a single `delete[]`).
+New functions in `bindings/julia/src/database.jl` (lifecycle file, consistent with `close!`, `describe`).
 
-### Pattern 3: Reuse Existing Type Enum
+```julia
+# bindings/julia/src/database.jl -- new functions
+function begin_transaction!(db::Database)
+    check(C.quiver_database_begin_transaction(db.ptr))
+    return nothing
+end
 
-**What:** Use the existing `quiver_data_type_t` enum (`QUIVER_DATA_TYPE_INTEGER=0, FLOAT=1, STRING=2`) for column types. Do not introduce a new enum.
+function in_transaction(db::Database)
+    out_active = Ref{Cint}(0)
+    check(C.quiver_database_in_transaction(db.ptr, out_active))
+    return out_active[] != 0
+end
 
-**When:** Any new C API function that needs to express data types.
+function commit!(db::Database)
+    check(C.quiver_database_commit(db.ptr))
+    return nothing
+end
 
-**Why:** Consistency with the parameterized query API. The enum is already defined in `include/quiver/c/database.h` and understood by all bindings.
+function rollback!(db::Database)
+    check(C.quiver_database_rollback(db.ptr))
+    return nothing
+end
+```
 
-## Anti-Patterns to Avoid
+FFI declarations in `bindings/julia/src/c_api.jl` (auto-generated by running `bindings/julia/generator/generator.bat`).
 
-### Anti-Pattern 1: Hardcoding Column Names in Bindings
+**Naming convention:** `begin_transaction!`, `commit!`, `rollback!` use `!` suffix because they mutate database state. `in_transaction` is a query, no `!`.
 
-**What:** Current Julia/Dart hardcode `"date_time"` and `"value"` as column names.
+### Dart Binding
 
-**Why bad:** Fails for schemas with different dimension column names (e.g., `date_recorded`) or value column names (e.g., `temperature`, `humidity`). The dimension column is discovered from metadata (`dimension_column` field), not assumed.
+New methods on the `Database` class. These could go in `database.dart` directly (lifecycle) or in a new `database_transaction.dart` part file for organizational clarity. Given existing convention (create/read/update/delete each have their own part file), a dedicated `database_transaction.dart` is consistent.
 
-**Instead:** Query metadata to discover column names. The binding should work with any schema.
+```dart
+// bindings/dart/lib/src/database_transaction.dart
+part of 'database.dart';
 
-### Anti-Pattern 2: Row-Oriented void* Arrays Through FFI
+extension DatabaseTransaction on Database {
+  void beginTransaction() {
+    _ensureNotClosed();
+    check(bindings.quiver_database_begin_transaction(_ptr));
+  }
 
-**What:** Passing each cell as a `(type, void*)` pair -- `row_count * column_count` type+pointer pairs.
+  bool get isInTransaction {
+    _ensureNotClosed();
+    final arena = Arena();
+    try {
+      final outActive = arena<Int>();
+      check(bindings.quiver_database_in_transaction(_ptr, outActive));
+      return outActive.value != 0;
+    } finally {
+      arena.releaseAll();
+    }
+  }
 
-**Why bad:** FFI bindings (Julia, Dart) would need to construct per-cell `Ptr{Cvoid}` arrays. For 1000 rows x 5 columns, that is 5000 `void*` pointer allocations in the binding layer, each requiring boxing. Columnar approach: 5 typed arrays, each allocated once.
+  void commit() {
+    _ensureNotClosed();
+    check(bindings.quiver_database_commit(_ptr));
+  }
 
-**Instead:** Columnar typed arrays. Each column is one contiguous native array.
+  void rollback() {
+    _ensureNotClosed();
+    check(bindings.quiver_database_rollback(_ptr));
+  }
+}
+```
 
-### Anti-Pattern 3: Changing the C++ Interface
+Add `part 'database_transaction.dart';` to `database.dart`.
 
-**What:** Modifying `Database::update_time_series_group` or `Database::read_time_series_group` to take/return columnar data.
+FFI declarations in `bindings/dart/lib/src/ffi/bindings.dart` (auto-generated by running `bindings/dart/generator/generator.bat`).
 
-**Why bad:** The C++ interface (`vector<map<string, Value>>`) is already correct and general. Lua depends on it working row-oriented. Changing it creates unnecessary churn in the C++ layer and Lua bindings.
+**Naming convention:** `beginTransaction`, `commit`, `rollback` (camelCase). `isInTransaction` as a getter is idiomatic Dart.
 
-**Instead:** Only change the C API marshaling. The C API is the translation layer between the columnar FFI-friendly format and the row-oriented C++ format.
+### Lua Binding
 
-### Anti-Pattern 4: Separate Functions Per Column Type Combination
+New methods on the Database userdata in `src/lua_runner.cpp`, added to the `bind_database()` call.
 
-**What:** Creating `quiver_database_update_time_series_group_floats`, `quiver_database_update_time_series_group_integers`, `quiver_database_update_time_series_group_mixed`, etc.
+```cpp
+// In bind_database(), add to the new_usertype call:
+"begin_transaction",
+[](Database& self) { self.begin_transaction(); },
+"in_transaction",
+[](Database& self) { return self.in_transaction(); },
+"commit",
+[](Database& self) { self.commit(); },
+"rollback",
+[](Database& self) { self.rollback(); },
+```
 
-**Why bad:** The number of type combinations is combinatorial. A table with 3 columns could be (STRING, FLOAT, FLOAT), (STRING, INTEGER, FLOAT), (STRING, STRING, INTEGER), etc. The typed parallel array pattern handles all combinations uniformly.
+**Naming convention:** `begin_transaction`, `in_transaction`, `commit`, `rollback` -- 1:1 match with C++ names, consistent with all other Lua bindings.
 
-**Instead:** One function with `column_types[]` that describes each column.
+## Cross-Layer Naming Summary
+
+| C++ | C API | Julia | Dart | Lua |
+|-----|-------|-------|------|-----|
+| `begin_transaction()` | `quiver_database_begin_transaction()` | `begin_transaction!()` | `beginTransaction()` | `begin_transaction()` |
+| `in_transaction()` | `quiver_database_in_transaction()` | `in_transaction()` | `isInTransaction` (getter) | `in_transaction()` |
+| `commit()` | `quiver_database_commit()` | `commit!()` | `commit()` | `commit()` |
+| `rollback()` | `quiver_database_rollback()` | `rollback!()` | `rollback()` | `rollback()` |
+
+## Data Flow
+
+### Without User Transaction (Unchanged)
+
+```
+caller: db.create_element("Items", elem)
+    |
+    v
+Database::create_element()
+    |
+    v
+TransactionGuard(*impl_)
+    |-- impl_->user_transaction_active_ == false
+    |-- Executes BEGIN TRANSACTION
+    |
+    v
+... SQL operations ...
+    |
+    v
+txn.commit()  -->  COMMIT
+    |
+    v
+return element_id
+```
+
+### With User Transaction (New)
+
+```
+caller: db.begin_transaction()
+    |-- impl_->begin_transaction()  -->  BEGIN TRANSACTION
+    |-- impl_->user_transaction_active_ = true
+    |
+    v
+caller: db.create_element("Items", elem1)
+    |
+    v
+Database::create_element()
+    |
+    v
+TransactionGuard(*impl_)
+    |-- impl_->user_transaction_active_ == true
+    |-- is_noop_ = true  -->  NO BEGIN
+    |
+    v
+... SQL operations ...
+    |
+    v
+txn.commit()  -->  NO-OP (is_noop_)
+    |
+    v
+return element_id
+
+caller: db.update_time_series_group(...)
+    |-- Same pattern: TransactionGuard is no-op
+    |
+    v
+caller: db.commit()
+    |-- impl_->commit()  -->  COMMIT (single fsync)
+    |-- impl_->user_transaction_active_ = false
+```
+
+### Error During User Transaction
+
+```
+caller: db.begin_transaction()
+    |
+    v
+caller: db.create_element(...)  -->  throws!
+    |
+    |-- TransactionGuard destructor fires
+    |-- is_noop_ == true  -->  NO ROLLBACK (user controls this)
+    |
+    v
+caller catches exception
+    |
+    v
+caller: db.rollback()
+    |-- impl_->rollback()  -->  ROLLBACK
+    |-- impl_->user_transaction_active_ = false
+```
+
+**Critical design point:** When TransactionGuard is a no-op, it does NOT rollback on exception. The user who opened the transaction is responsible for calling `rollback()`. This is the correct behavior -- the user may want to handle the error and continue the transaction with different operations.
+
+## Files Modified vs New
+
+### Modified Files (8)
+
+| File | Change |
+|------|--------|
+| `src/database_impl.h` | Add `user_transaction_active_` to Impl, modify TransactionGuard |
+| `include/quiver/database.h` | Move txn methods from private to public, add `in_transaction()` |
+| `src/database.cpp` | Add flag management in begin/commit/rollback |
+| `include/quiver/c/database.h` | Add 4 C API function declarations |
+| `src/c/database.cpp` | Add 4 C API function implementations |
+| `bindings/julia/src/database.jl` | Add 4 Julia wrapper functions |
+| `bindings/julia/src/c_api.jl` | Add FFI declarations (via generator) |
+| `src/lua_runner.cpp` | Add 4 Lua bindings to bind_database() |
+
+### New Files (1)
+
+| File | Purpose |
+|------|---------|
+| `bindings/dart/lib/src/database_transaction.dart` | Dart transaction extension methods |
+
+### Auto-Generated Files (1)
+
+| File | How |
+|------|-----|
+| `bindings/dart/lib/src/ffi/bindings.dart` | `bindings/dart/generator/generator.bat` |
+
+### Test Files (4 new)
+
+| File | Purpose |
+|------|---------|
+| `tests/test_database_transaction.cpp` | C++ core transaction tests |
+| `tests/test_c_api_database_transaction.cpp` | C API transaction tests |
+| Julia test additions | Transaction tests in existing test suite |
+| Dart test additions | Transaction tests in existing test suite |
+
+## Anti-Patterns
+
+### Anti-Pattern 1: SAVEPOINT for Nesting
+
+**What people do:** Use SQLite SAVEPOINTs for nested transaction support
+**Why it's wrong for this project:** Adds complexity for no benefit. The user transaction already provides atomicity. Internal operations do not need their own rollback points within a user transaction -- if any step fails, the entire user transaction should fail.
+**Do this instead:** No-op TransactionGuard when user transaction is active.
+
+### Anti-Pattern 2: Checking sqlite3_get_autocommit() Instead of a Flag
+
+**What people do:** Query SQLite autocommit state to detect nesting
+**Why it's wrong:** Cannot distinguish between a user-initiated transaction and an internal TransactionGuard transaction. Also, `BEGIN DEFERRED` does not immediately flip autocommit.
+**Do this instead:** Explicit `user_transaction_active_` flag on Impl.
+
+### Anti-Pattern 3: TransactionGuard Rolling Back in No-Op Mode
+
+**What people do:** Have the guard rollback on destruction even in no-op mode "for safety"
+**Why it's wrong:** The user explicitly started the transaction and must explicitly control its outcome. An internal operation failing should propagate the exception to the user, who then decides to rollback or handle it.
+**Do this instead:** No-op guard does nothing on destruction. Exception propagates to caller.
+
+### Anti-Pattern 4: Making rollback() Silently Succeed When No Transaction
+
+**What people do:** Make `rollback()` a no-op when no transaction is active
+**Why it's wrong:** Masks caller logic errors. If a caller calls rollback without a transaction, that is a bug.
+**Do this instead:** Throw with "Cannot rollback: no active transaction"
 
 ## Build Order
 
-The implementation should follow this dependency order to maintain a working test suite at each step.
+The implementation has strict dependencies that dictate build order:
 
-### Step 1: New C API Signatures (Header)
+### Phase 1: Core C++ (no downstream dependencies)
 
-Modify `include/quiver/c/database.h` to declare the new function signatures. Keep the old signatures temporarily (with a comment marking them for removal) so existing code compiles.
+**Step 1.1:** Modify `src/database_impl.h`
+- Add `bool user_transaction_active_ = false` to `Impl`
+- Modify `TransactionGuard` to check the flag
 
-**Files changed:** `include/quiver/c/database.h`
-**Tests:** All existing tests still compile and pass (old signatures still present).
+**Step 1.2:** Modify `include/quiver/database.h`
+- Move `begin_transaction()`, `commit()`, `rollback()` from private to public
+- Add `in_transaction() const`
 
-### Step 2: New C API Implementation
+**Step 1.3:** Modify `src/database.cpp`
+- Add flag management logic to the 3 existing method implementations
+- Add `in_transaction()` implementation
 
-Implement the new columnar marshaling in `src/c/database_time_series.cpp`. Add helper functions to `src/c/database_helpers.h` if needed (e.g., `convert_columnar_to_rows`, `convert_rows_to_columnar`). Update the free function.
+**Step 1.4:** Add `tests/test_database_transaction.cpp`
+- Test begin/commit, begin/rollback
+- Test double-begin error
+- Test commit-without-begin error
+- Test rollback-without-begin error
+- Test TransactionGuard no-op within user transaction
+- Test that create_element + update_time_series_group in one user transaction produces one commit
+- Test error propagation: exception in second operation, then rollback
 
-**Files changed:** `src/c/database_time_series.cpp`, `src/c/database_helpers.h`
-**Tests:** Write new C API tests for multi-column schemas (`multi_time_series.sql`). Old single-column tests still pass via old signatures.
+**Rationale:** Core must be correct before any downstream layer. Tests verify the nesting behavior that all other layers depend on.
 
-### Step 3: Migrate C API Tests to New Signatures
+### Phase 2: C API (depends on Phase 1)
 
-Update `tests/test_c_api_database_time_series.cpp` to use the new signatures. Remove old signatures from the header.
+**Step 2.1:** Add declarations to `include/quiver/c/database.h`
 
-**Files changed:** `tests/test_c_api_database_time_series.cpp`, `include/quiver/c/database.h`
-**Tests:** All C++ and C API tests pass. Bindings temporarily broken (expected).
+**Step 2.2:** Add implementations to `src/c/database.cpp`
 
-### Step 4: Regenerate FFI Bindings
+**Step 2.3:** Add `tests/test_c_api_database_transaction.cpp`
+- Same test scenarios as C++ but through C API
+- Verify error codes and error messages
 
-Run `bindings/julia/generator/generator.bat` and `bindings/dart/generator/generator.bat` to pick up the new C API signatures.
+**Rationale:** C API must exist before bindings. Bindings are generated from C API headers.
 
-**Files changed:** `bindings/julia/src/c_api.jl`, `bindings/dart/lib/src/ffi/bindings.dart`
-**Tests:** FFI layer updated, but binding logic still uses old calling convention (will fail).
+### Phase 3: Bindings (depends on Phase 2, can be parallelized)
 
-### Step 5: Update Julia Bindings
+**Step 3.1 (Julia):**
+- Regenerate `bindings/julia/src/c_api.jl` via generator
+- Add wrapper functions to `bindings/julia/src/database.jl`
+- Add tests to Julia test suite
 
-Rewrite `update_time_series_group!` and `read_time_series_group` in Julia to use columnar marshaling via metadata.
+**Step 3.2 (Dart):**
+- Regenerate `bindings/dart/lib/src/ffi/bindings.dart` via generator
+- Create `bindings/dart/lib/src/database_transaction.dart`
+- Add `part 'database_transaction.dart';` to `database.dart`
+- Add tests to Dart test suite
 
-**Files changed:** `bindings/julia/src/database_update.jl`, `bindings/julia/src/database_read.jl`
-**Tests:** Julia tests pass.
+**Step 3.3 (Lua):**
+- Add 4 bindings to `bind_database()` in `src/lua_runner.cpp`
+- Add tests via LuaRunner in C++ test suite
 
-### Step 6: Update Dart Bindings
+**Rationale:** All three bindings depend only on the C API (Phase 2). They have no dependencies on each other. Julia and Dart require FFI regeneration. Lua binds directly to the C++ API through sol2.
 
-Rewrite `updateTimeSeriesGroup` and `readTimeSeriesGroup` in Dart to use columnar marshaling via metadata.
+### Phase 4: Benchmark (depends on Phase 1)
 
-**Files changed:** `bindings/dart/lib/src/database_update.dart`, `bindings/dart/lib/src/database_read.dart`
-**Tests:** Dart tests pass.
+**Step 4.1:** Write C++ benchmark comparing:
+- N iterations of `create_element` + `update_time_series_group` without user transaction (2N fsyncs)
+- Same operations wrapped in single user transaction (1 fsync)
 
-### Step 7: Full Stack Verification
+**Rationale:** Benchmark validates the performance motivation for the feature. Only depends on C++ core.
 
-Run `scripts/build-all.bat` to confirm all layers pass.
+### Dependency Graph
 
-## Integration Points
-
-| Boundary | Before | After |
-|----------|--------|-------|
-| C API <-> C++ | C API marshals 2 fixed columns to `vector<map>` | C API marshals N typed columns to `vector<map>` |
-| Julia <-> C API | Julia passes `Ptr{Ptr{Cchar}}` + `Ptr{Cdouble}` | Julia passes `Ptr{Ptr{Cchar}}` (names) + `Ptr{Cint}` (types) + `Ptr{Ptr{Cvoid}}` (data) |
-| Dart <-> C API | Dart passes `Pointer<Pointer<Char>>` + `Pointer<Double>` | Dart passes names + types + `Pointer<Pointer<Void>>` (data) |
-| Lua <-> C++ | Direct sol2 binding (unchanged) | Direct sol2 binding (unchanged) |
-| Bindings <-> Metadata API | Bindings ignore metadata for writes | Bindings query metadata to determine column names/types before marshaling |
-
-## Scalability Considerations
-
-| Concern | Current | After Redesign |
-|---------|---------|----------------|
-| Column count | Fixed 2 (dimension + 1 value) | Arbitrary N columns |
-| Column types | Float-only values | Integer, Float, String per column |
-| Schemas supported | Only `(date_time TEXT, value REAL)` pattern | Any `{Collection}_time_series_{name}` schema |
-| Row count | No limit (good) | No limit (unchanged) |
-| Memory overhead | Minimal (2 flat arrays) | Proportional to column count (N flat arrays) |
-| Binding complexity | Simple (hardcoded 2 arrays) | Moderate (metadata query + typed array construction) |
+```
+Phase 1: C++ Core + Tests
+    |
+    v
+Phase 2: C API + Tests
+    |
+    +---> Phase 3.1: Julia Binding + Tests
+    |
+    +---> Phase 3.2: Dart Binding + Tests
+    |
+    +---> Phase 3.3: Lua Binding + Tests
+    |
+    +---> Phase 4: Benchmark
+```
 
 ## Sources
 
-- Direct codebase analysis: all source files listed in Component Boundaries table (HIGH confidence)
-- Existing C API patterns: `database_query.cpp` typed parallel arrays (`convert_params`) (HIGH confidence)
-- Existing metadata API: `GroupMetadata.dimension_column`, `GroupMetadata.value_columns` already provide all needed schema info (HIGH confidence)
-- `multi_time_series.sql` schema: proves multi-column time series tables are already supported at schema and C++ level (HIGH confidence)
+- [SQLite Test For Auto-Commit Mode](https://sqlite.org/c3ref/get_autocommit.html) -- Official documentation for `sqlite3_get_autocommit()`
+- [SQLite Transaction Documentation](https://www.sqlite.org/lang_transaction.html) -- Transaction semantics, DEFERRED behavior
+- Existing codebase: `src/database_impl.h`, `include/quiver/database.h`, `src/database.cpp`, `src/c/database.cpp`, `bindings/julia/src/database.jl`, `bindings/dart/lib/src/database.dart`, `src/lua_runner.cpp`
 
 ---
-*Architecture research for: Quiver multi-column time series update interface redesign*
-*Researched: 2026-02-12*
+*Architecture research for: Explicit transaction control in Quiver SQLite wrapper*
+*Researched: 2026-02-20*

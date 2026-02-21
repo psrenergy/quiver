@@ -2,103 +2,73 @@
 
 ## What This Is
 
-Quiver is a SQLite wrapper library with a C++ core, C API for FFI, and language bindings (Julia, Dart, Lua). It provides structured data access patterns (scalars, vectors, sets, time series) over SQLite databases with schema validation, element builders, multi-column time series support, and Lua scripting. The target users are developers embedding structured SQLite access into Julia, Dart, or Lua applications.
+SQLite wrapper library with a C++ core, flat C API for FFI, and idiomatic language bindings (Julia, Dart, Lua). Provides schema-driven CRUD, typed reads, time series, relations, parameterized queries, CSV, and Lua scripting over a validated SQLite schema.
 
 ## Core Value
 
-Every public C++ method is reachable from every binding (C, Julia, Dart, Lua) through uniform, predictable patterns -- the library feels like one product, not four wrappers.
+Reliable, schema-validated SQLite access through a single C++ core with mechanically-derived bindings that feel native in every target language.
 
 ## Requirements
 
 ### Validated
 
-- ✓ Database lifecycle management (open, close, move semantics, factory methods) -- existing
-- ✓ Element creation with fluent builder API -- existing
-- ✓ Scalar read/write for integers, floats, strings -- existing
-- ✓ Vector read/write for integers, floats, strings -- existing
-- ✓ Set read/write for integers, floats, strings -- existing
-- ✓ Time series read/update/metadata -- existing
-- ✓ Time series files support -- existing
-- ✓ Schema validation (Configuration table, naming conventions, foreign keys) -- existing
-- ✓ Parameterized SQL queries (string, integer, float results) -- existing
-- ✓ Relation support (set/read scalar relations) -- existing
-- ✓ Metadata inspection (scalar, vector, set, time series group metadata) -- existing
-- ✓ C API with binary error codes and thread-local error messages -- existing
-- ✓ Julia bindings via FFI -- existing
-- ✓ Dart bindings via FFI -- existing
-- ✓ Lua scripting via LuaRunner -- existing
-- ✓ Migration-based schema evolution -- existing
-- ✓ RAII transaction management -- existing
-- ✓ Logging via spdlog -- existing
-- ✓ GoogleTest-based C++ and C API test suites -- existing
-- ✓ Uniform naming conventions across all layers -- v1.0
-- ✓ Consistent error handling patterns across all layers -- v1.0
-- ✓ Modular file decomposition (C++ and C API) -- v1.0
-- ✓ SQL identifier validation (defense-in-depth) -- v1.0
-- ✓ clang-tidy static analysis integration -- v1.0
-- ✓ Cross-layer naming documentation in CLAUDE.md -- v1.0
-- ✓ Multi-column time series support through the C API (columnar typed-array signatures) -- v1.1
-- ✓ Kwargs-style columnar interface for `update_time_series_group` across all layers (C API, Julia, Dart, Lua) -- v1.1
-- ✓ Multi-column time series read with typed column returns across all layers -- v1.1
-- ✓ Lua multi-column time series test coverage -- v1.1
+<!-- Shipped and confirmed valuable. Pre-GSD milestones (v0.1-v0.2). -->
+
+- CRUD operations (create, read, update, delete elements)
+- Typed scalar/vector/set read and write operations (integer, float, string)
+- Multi-column time series (read/update with typed columnar data)
+- Time series files (singleton file path references)
+- Schema validation on open (structural + runtime type checking)
+- Metadata introspection (scalar, vector, set, time-series groups)
+- Parameterized SQL queries (positional ? placeholders, typed parameters)
+- Relations (foreign key update/read via scalar_relation)
+- CSV export/import
+- Schema migrations (versioned directory discovery)
+- Lua scripting (full DB API exposed as `db` userdata)
+- C API with binary error codes and thread-local error messages
+- Julia bindings with auto-generated FFI declarations
+- Dart bindings with auto-generated FFI declarations
+- Element builder with fluent API
 
 ### Active
 
-- [ ] Complete API surface parity -- every C++ method exposed through C, Julia, Dart, and Lua
-- [ ] Automated parity detection script that verifies binding completeness
-- [ ] Clean up or remove non-functional blob module stubs
+<!-- Current scope: v0.3 — Explicit Transactions -->
+
+- [ ] Explicit transaction control (begin/commit/rollback) in C++ public API
+- [ ] Nest-aware internal TransactionGuard (no-op when user transaction active)
+- [ ] Explicit transactions exposed through C API
+- [ ] Explicit transactions exposed through Julia binding
+- [ ] Explicit transactions exposed through Dart binding
+- [ ] Explicit transactions exposed through Lua binding
+- [ ] C++ benchmark measuring create_element + update_time_series performance improvement
 
 ### Out of Scope
 
-- New features beyond current API surface -- stabilize existing bindings first
-- Performance optimization -- focus is consistency, not speed
-- New language bindings (Python, etc.) -- stabilize existing bindings first
-- Authentication or access control -- not in scope for a library
-- GUI or CLI tools -- library only
-- C++20 modules -- breaks FFI generator toolchain
-- Async/thread-safe API -- SQLite is single-connection
-- Time series append semantics, partial column updates, range filtering -- deferred to v2
+- Python bindings (stub exists, not implementing this milestone)
+- New database operations beyond transaction control
+- Schema migration tooling changes
 
 ## Context
 
-Shipped v1.0 (refactoring) and v1.1 (time series ergonomics). Codebase state:
-- C++ core: 10 focused modules with multi-column time series via `vector<map<string, Value>>`
-- C API: 9 focused modules with columnar typed-array pattern for time series (parallel column_names[], column_types[], column_data[])
-- Julia: kwargs interface for time series update, Dict{String, Vector} for reads, auto-coercion (Int->Float)
-- Dart: Map<String, List<Object>> for both time series update and read, strict type enforcement
-- Lua: direct C++ binding via sol2, multi-column time series verified with mixed-type tests
-- 1,295+ tests passing across 4 suites (C++ 401, C API 257, Julia 399, Dart 238)
-- clang-tidy integrated with zero project-code warnings
-- SQL identifier validation at all concatenation sites
-
-Tech stack: C++20, CMake, SQLite, spdlog, GoogleTest, sol2 (Lua), Julia FFI, Dart FFI.
+- SQLite is the single storage engine; `Database::Impl` owns the `sqlite3*` handle
+- `TransactionGuard` (RAII, in `database_impl.h`) manages internal transactions for all write methods
+- `create_element` and `update_time_series_group` each open their own `TransactionGuard` — calling both for one element means two commits = two fsyncs
+- `sqlite3_get_autocommit()` can detect whether a transaction is already active
+- All public C++ methods must propagate through C API, then to all bindings
 
 ## Constraints
 
-- **Tech stack**: C++20, CMake, SQLite -- no changes to foundational stack
-- **Architecture**: Layered (C++ -> C API -> Bindings) must be preserved
-- **Pimpl pattern**: Only for classes hiding private dependencies (Database, LuaRunner)
-- **Intelligence in C++**: Logic stays in C++ core; bindings remain thin wrappers
-- **Error messages**: Defined in C++/C API layer only; bindings surface them, never craft their own
-- **Test schemas**: All in `tests/schemas/`, shared across test suites
+- **ABI**: C API remains flat functions with `quiver_error_t` returns
+- **Nesting**: Must not break existing code — when no user transaction is active, behavior is identical to today
+- **Standard**: C++20
+- **Bindings**: All new C++ methods must be bound to C API, Julia, Dart, and Lua
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Interleaved refactoring (layer by layer) | Fix one layer at a time (C++ -> C -> Julia -> Dart), making it consistent AND complete per layer | ✓ Good -- each phase built on previous, kept all tests passing |
-| Breaking changes acceptable | WIP project, no external consumers depending on current API | ✓ Good -- enabled clean renames without deprecation overhead |
-| Tests with every change | Every refactored API must have passing tests | ✓ Good -- 1,213 tests green at final gate |
-| Full stack scope | All layers (C++, C API, Julia, Dart, Lua) in scope for refactoring | ✓ Good -- uniform naming is now mechanical across all layers |
-| Extract Impl header before decomposition | Research recommendation: separate phase enables clean split | ✓ Good -- Phase 1 was 6min, unblocked all subsequent decomposition |
-| quiver::internal namespace for shared helpers | ODR safety for inline non-template functions across translation units | ✓ Good -- clean compilation with no duplicate symbol issues |
-| 3 canonical error message patterns | Consistent format enables downstream parsing: Cannot/Not found/Failed to | ✓ Good -- C API, Julia, Dart, Lua all surface errors uniformly |
-| Alloc/free co-location in C API | Every allocation and its free function in same translation unit | ✓ Good -- clear ownership, no orphaned allocations |
-| Representative docs over exhaustive | CLAUDE.md shows transformation rules + examples, not all 60 methods | ✓ Good -- maintainable, drift-resistant documentation |
-| Columnar typed-arrays for C API time series | Reuse convert_params() pattern from database_query.cpp for multi-column FFI | ✓ Good -- consistent FFI marshaling across query and time series |
-| Dict/Map return types for binding reads | Julia Dict{String, Vector}, Dart Map<String, List<Object>> | ✓ Good -- symmetric with update interface, typed columns |
-| Layer-specific type behavior | Julia auto-coerces Int->Float; Dart enforces strict types | ✓ Good -- idiomatic per language while maintaining correctness |
-| Schema validation before time series ops | Metadata lookup validates column names and types before processing | ✓ Good -- clear error messages on mismatch, no silent corruption |
+| Explicit begin/commit/rollback over RAII wrapper | Simplest FFI surface; bindings can wrap in their own RAII if desired | -- Pending |
+| TransactionGuard becomes no-op when nested | Avoids SAVEPOINT complexity; user transaction covers atomicity | -- Pending |
 
 ---
-*Last updated: 2026-02-20 after v1.1 milestone*
+*Last updated: 2026-02-20 after milestone v0.3 initialization*

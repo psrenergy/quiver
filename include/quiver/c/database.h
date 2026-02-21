@@ -4,6 +4,8 @@
 #include "common.h"
 #include "options.h"
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -45,6 +47,12 @@ QUIVER_C_API quiver_error_t quiver_database_from_schema(const char* db_path,
 QUIVER_C_API quiver_error_t quiver_database_close(quiver_database_t* db);
 QUIVER_C_API quiver_error_t quiver_database_is_healthy(quiver_database_t* db, int* out_healthy);
 QUIVER_C_API quiver_error_t quiver_database_path(quiver_database_t* db, const char** out_path);
+
+// Transaction control
+QUIVER_C_API quiver_error_t quiver_database_begin_transaction(quiver_database_t* db);
+QUIVER_C_API quiver_error_t quiver_database_commit(quiver_database_t* db);
+QUIVER_C_API quiver_error_t quiver_database_rollback(quiver_database_t* db);
+QUIVER_C_API quiver_error_t quiver_database_in_transaction(quiver_database_t* db, bool* out_active);
 
 // Version
 QUIVER_C_API quiver_error_t quiver_database_current_version(quiver_database_t* db, int64_t* out_version);

@@ -1,364 +1,433 @@
-# Domain Pitfalls: Time Series Update Interface Redesign
+# Pitfalls Research
 
-**Domain:** C FFI multi-column interface redesign with Julia/Dart/Lua binding migration
-**Researched:** 2026-02-12
-**Confidence:** HIGH (based on direct codebase analysis of all four layers)
-
-## Context
-
-The current `update_time_series_group` C API accepts 2 parallel arrays (`const char* const* date_times`, `const double* values`) for a single-column time series. The redesign adds support for N typed columns through the C boundary, changes Julia bindings from `Dict[]` to kwargs, and changes Dart bindings from `List<Map>` to named parameters. The C++ layer already supports multi-column via `std::vector<std::map<std::string, Value>>`, so the redesign primarily affects the C API and bindings.
-
----
+**Domain:** Adding explicit transaction control to an SQLite wrapper library with existing internal RAII transactions
+**Researched:** 2026-02-20
+**Confidence:** HIGH
 
 ## Critical Pitfalls
 
-Mistakes that cause memory corruption, data loss, or require rewrites.
+### Pitfall 1: Double BEGIN -- SQLite Does Not Support Nested Transactions
 
-### Pitfall 1: Partial Allocation Leak on Exception in Multi-Column C API
+**What goes wrong:**
+The existing `TransactionGuard` constructor calls `sqlite3_exec(db, "BEGIN TRANSACTION;")`. If a user calls `db.begin_transaction()` (starting a user transaction), and then calls `create_element()` (which internally constructs a `TransactionGuard`), SQLite returns error code 1: "cannot start a transaction within a transaction". The operation fails and the user's outer transaction is left in an indeterminate state.
 
-**What goes wrong:** The new C API `update_time_series_group` must marshal N columns of varying types from parallel arrays into `std::vector<std::map<std::string, Value>>`. If column 3 of 5 causes an exception (e.g., invalid type tag, null pointer dereference), columns 1 and 2 have already been converted and pushed into the vector. The existing pattern catches the exception and returns `QUIVER_ERROR`, but the caller's allocated arrays are never freed because the C API was not responsible for them on the input side. This is fine for input arrays (caller owns them). However, the real danger is on the **read** side: if the new `read_time_series_group` allocates output arrays for columns 1 and 2, then fails on column 3, the partially allocated arrays leak because the caller never receives pointers to free them.
+This is the single most likely bug when adding user-facing transactions to this codebase, because every write method (`create_element`, `update_element`, `update_vector_*`, `update_set_*`, `update_time_series_group`, `update_time_series_files`) constructs its own `TransactionGuard`. There are 12+ call sites that will all fail inside a user transaction.
 
-**Why it happens:** The current `read_time_series_group` allocates exactly 2 arrays (`out_date_times` and `out_values`). The new multi-column version must allocate N arrays of varying types. If allocation or conversion of column K fails, columns 0..K-1 are leaked because: (1) the function returns `QUIVER_ERROR`, (2) the caller checks error and skips the free call, (3) the partially-filled output pointers may or may not have been written.
+**Why it happens:**
+SQLite flatly rejects `BEGIN` inside an active transaction. This is not a configurable nesting limitation -- it is a fundamental constraint of SQLite's transaction model. The only mechanism for nested transaction-like behavior is `SAVEPOINT`, which has its own complexity (see Pitfall 4).
 
-**Evidence from codebase:** Look at `database_time_series.cpp` lines 79-80 -- the current read allocates `new char*[rows.size()]` and `new double[rows.size()]` separately. If the second `new` throws `std::bad_alloc`, the first allocation leaks. This is tolerable for 2 allocations (very unlikely) but becomes a real risk with N allocations for N columns.
+**How to avoid:**
+Make `TransactionGuard` nest-aware. In the constructor, check `sqlite3_get_autocommit(db)` -- if it returns 0 (already in a transaction), the guard becomes a no-op (does not issue BEGIN, does not issue COMMIT/ROLLBACK in destructor). If it returns non-zero (autocommit mode, no active transaction), proceed as today.
 
-**Consequences:** Memory leaks in long-running processes. Under address sanitizer, intermittent test failures. In production bindings (Julia/Dart), leaked native memory not tracked by GC.
+```cpp
+explicit TransactionGuard(Impl& impl) : impl_(impl) {
+    if (sqlite3_get_autocommit(impl_.db)) {
+        impl_.begin_transaction();
+        owns_transaction_ = true;
+    }
+    // else: already in a transaction, become a no-op
+}
+```
 
-**Prevention:**
-1. Allocate all output arrays in a single allocation block and write them to output parameters only after all succeed. Use a local cleanup guard:
-   ```cpp
-   // Allocate everything, only assign to out_* after all succeed
-   std::vector<void*> col_data;  // local, RAII-cleaned on exception
-   for (size_t c = 0; c < col_count; ++c) {
-       col_data.push_back(allocate_column(c, row_count));
-   }
-   // All allocations succeeded, now write to out params (no throw possible)
-   for (size_t c = 0; c < col_count; ++c) {
-       out_columns[c] = col_data[c];
-   }
-   ```
-2. Alternatively, use a struct-based return (a `quiver_time_series_result_t`) with a single free function, keeping alloc/free co-located and atomic.
-3. Never write to caller-visible output parameters until all allocations have succeeded.
+Add a `bool owns_transaction_ = false;` member. Only call `commit()` / `rollback()` in destructor/commit when `owns_transaction_` is true.
 
-**Detection:** Run address sanitizer on read tests with schemas that have 3+ value columns. Test the error path where column N-1 has invalid data type.
+**Warning signs:**
+- Any test that calls `begin_transaction()` then any write method will crash immediately
+- Error message: "Failed to begin transaction: cannot start a transaction within a transaction"
 
-**Phase to address:** C API redesign phase (the multi-column read/update implementation).
-
----
-
-### Pitfall 2: Type Tag / Data Array Mismatch Across C Boundary
-
-**What goes wrong:** The multi-column C API will use parallel arrays: `column_names[]`, `column_types[]`, and `column_data[]` (where `column_data[i]` is `void*` pointing to a typed array). If `column_types[i]` says `QUIVER_DATA_TYPE_INTEGER` but `column_data[i]` actually points to a `double[]`, the `static_cast` in the C API silently reinterprets the bytes, producing garbage values. There is no runtime check possible because `void*` erases all type information.
-
-**Why it happens:** The project already has this pattern in `convert_params()` (database_query.cpp lines 10-36) for parameterized queries. That function handles single values per parameter (`*static_cast<const int64_t*>(param_values[i])`). The time series redesign extends this to arrays of values per column, amplifying the risk: a type mismatch corrupts not one value but `row_count` values. The bindings (Julia/Dart) construct these parallel arrays, and any bug in the marshaling code silently corrupts data.
-
-**Evidence from codebase:** The `convert_params` function at `database_query.cpp:17` does `*static_cast<const int64_t*>(param_values[i])` -- if `param_types[i]` is wrong, this is undefined behavior. The same pattern scaled to arrays of `row_count` elements is catastrophic.
-
-**Consequences:** Silent data corruption. Written time series values are wrong. Tests may pass if they only test the happy path with correct types. Production data is silently mangled.
-
-**Prevention:**
-1. In the C API, validate column types against the schema metadata *before* casting. The C API already calls `db->db.get_time_series_metadata()` (line 128 of `database_time_series.cpp`) -- use this to verify that the caller's type tags match the actual column types.
-2. Add explicit validation: if `column_types[i]` does not match `metadata.value_columns[i].data_type`, set error and return `QUIVER_ERROR` before any data is accessed.
-3. In bindings, derive column types from metadata automatically rather than requiring the caller to specify them. The metadata lookup already exists at the C API level.
-4. Consider eliminating the `void*` pattern entirely: instead of `column_types[] + column_data[]`, use separate typed parameters per column, similar to how update_vector_integers/floats/strings are separate functions. This trades API surface area for type safety.
-
-**Detection:** Write tests where column types are deliberately wrong. If the test produces garbage instead of an error, the validation is missing.
-
-**Phase to address:** C API design phase. This is a design decision, not an implementation detail. Choose the API shape before writing code.
+**Phase to address:**
+Phase 1 (C++ core) -- this must be the very first change, before any public API is exposed. All existing tests must continue passing with the modified `TransactionGuard`.
 
 ---
 
-### Pitfall 3: Julia GC Collecting Intermediate Arrays During ccall
+### Pitfall 2: TransactionGuard Rollback Inside User Transaction Destroys User's Work
 
-**What goes wrong:** When Julia marshals kwargs to parallel C arrays, it creates intermediate Julia arrays (`Vector{Ptr{Cchar}}`, `Vector{Int64}`, `Vector{Float64}`) that hold pointers to native memory or converted values. If these intermediates are not rooted with `GC.@preserve`, the garbage collector can collect them during the `@ccall`, causing the C function to read freed memory.
+**What goes wrong:**
+An internal operation fails (e.g., type validation error in `create_element`), and the `TransactionGuard` destructor issues `ROLLBACK`, destroying the user's entire transaction including all prior successful operations.
 
-**Why it happens:** The current `update_time_series_group!` in `database_update.jl` (lines 138-167) already demonstrates the correct pattern: it uses `GC.@preserve date_time_cstrings` to keep the string buffer array alive during the ccall. But the redesign adds N columns of varying types, requiring N separate `GC.@preserve` blocks or a single block preserving all intermediates. The risk is that during the rewrite, some columns' intermediates are accidentally left unpreserved.
+**Why it happens:**
+The `TransactionGuard` destructor pattern (rollback on non-committed destruction) is correct for standalone internal transactions. But when nested inside a user transaction, `ROLLBACK` terminates the outer transaction too -- SQLite does not scope ROLLBACK to any inner context. There is only one transaction, and ROLLBACK ends it entirely.
 
-**Evidence from codebase:** The existing `update_vector_strings!` (line 81-87) uses `GC.@preserve cstrings` to protect the string-to-Cstring conversion results. The current pattern works for a single column. With N string columns, N separate conversion arrays must all be preserved simultaneously.
+**How to avoid:**
+When `TransactionGuard` detects an active user transaction (via `sqlite3_get_autocommit()` returning 0), it MUST become a complete no-op: no `BEGIN`, no `COMMIT`, no `ROLLBACK`. Exception propagation handles error communication -- the user catches the exception and decides whether to `rollback()` or `commit()`.
 
-**Consequences:** Intermittent segfaults in Julia tests. The GC is nondeterministic, so the bug may only manifest under memory pressure, making it extremely difficult to reproduce. Tests pass 99% of the time but fail sporadically in CI.
+This is the direct consequence of Pitfall 1's fix: if the guard does not own the transaction, it must not touch it at all.
 
-**Prevention:**
-1. Wrap all intermediate arrays in a single `GC.@preserve` block:
-   ```julia
-   all_preserved = []
-   for (name, values) in kwargs
-       if values isa Vector{<:AbstractString}
-           cstrings = [Base.cconvert(Cstring, s) for s in values]
-           push!(all_preserved, cstrings)
-       end
-   end
-   GC.@preserve all_preserved begin
-       # build pointer arrays and call ccall here
-   end
-   ```
-2. Keep string conversion and ccall in the same `GC.@preserve` scope. Never separate them across function boundaries.
-3. For numeric arrays (`Vector{Int64}`, `Vector{Float64}`), Julia guarantees the array memory is stable during ccall (no GC relocation for primitive arrays), but only if the array is still referenced. Ensure a local variable holds it.
+**Warning signs:**
+- User calls `begin_transaction()`, does 10 successful creates, the 11th fails, and all 10 are silently rolled back
+- Test: `begin` -> `create A` (success) -> `create B` (fail with type error) -> verify A is still readable -> works only if guard is a true no-op
 
-**Detection:** Run Julia tests with `GC.gc()` calls inserted between array construction and ccall. If there is a preservation bug, forced GC will trigger it deterministically.
-
-**Phase to address:** Julia binding redesign phase. Must be reviewed in code review with explicit checklist item: "All intermediate arrays preserved during ccall."
+**Phase to address:**
+Phase 1 (C++ core) -- tested together with Pitfall 1 fix.
 
 ---
 
-### Pitfall 4: Breaking the Existing Test Suite Incrementally
+### Pitfall 3: Abandoned User Transactions Lock the Database
 
-**What goes wrong:** The redesign changes function signatures at the C API level (`quiver_database_update_time_series_group` gains new parameters). All 1,213 existing tests must continue passing throughout the migration. If the C API signature changes before all binding tests are updated, the entire CI pipeline breaks and stays broken for the duration of the migration, creating a "big bang" commit.
+**What goes wrong:**
+A user calls `begin_transaction()` but never calls `commit()` or `rollback()` -- due to an exception, early return, or simply forgetting. The transaction remains open. In SQLite, an open write transaction holds a RESERVED lock (or EXCLUSIVE during writes), blocking all other writers. If the `Database` object goes out of scope with an open transaction, `sqlite3_close_v2()` will eventually roll back, but the lock was held for the entire object lifetime.
 
-**Why it happens:** The project has 4 test suites (C++, C API, Julia, Dart) plus Lua tests. The C API header is consumed by the Dart ffigen generator and the Julia `c_api.jl` declarations. A signature change in `include/quiver/c/database.h` immediately breaks:
-1. `tests/test_c_api_database_time_series.cpp` (all 15 time series C API tests)
-2. `bindings/julia/src/c_api.jl` line 316-318 (ccall declaration)
-3. `bindings/dart/lib/src/ffi/bindings.dart` (auto-generated)
-4. All Julia/Dart test files that call the function
+In FFI scenarios (Julia, Dart, Lua), this is especially dangerous: if the binding user forgets to finalize the transaction, the database remains locked until garbage collection destroys the wrapper object -- which may never happen promptly in GC-based languages.
 
-The C++ layer is unaffected (it already uses `std::vector<std::map<std::string, Value>>`).
+**Why it happens:**
+Explicit `begin`/`commit`/`rollback` without RAII puts the burden of cleanup entirely on the user. C does not have exceptions, Julia/Dart use GC not RAII, and Lua has no destructors. Unlike the internal `TransactionGuard` which guarantees rollback in its destructor, user-facing transactions have no automatic safety net.
 
-**Consequences:** Multi-day period where CI is broken. Developers cannot verify other changes. Partial work must be merged, creating instability. Worse, if the migration is abandoned partway, rolling back is difficult.
+**How to avoid:**
+1. In `Impl::~Impl()`, check `sqlite3_get_autocommit(db)` before closing. If a transaction is active (returns 0), log a warning and issue `ROLLBACK` before `sqlite3_close_v2()`.
+2. In bindings, provide lambda/closure-based transaction wrappers that guarantee cleanup:
 
-**Prevention:**
-1. **Add new, don't modify.** Introduce `quiver_database_update_time_series_group_v2` (or `_multi` or `_columnar`) alongside the existing function. Old tests continue passing. New tests exercise the new API. Only remove the old function after all bindings have migrated.
-2. Alternatively, make the new C API signature backward-compatible: if `column_count == 0` and a single `date_times` + `values` pair is provided, use the old code path.
-3. Each layer migrates independently: C API first (with backward compat), then Julia, then Dart, then Lua, each with passing tests at every step.
-4. Use `scripts/test-all.bat` as the gate for every single commit during migration.
+Julia:
+```julia
+function transaction(f, db::Database)
+    begin_transaction!(db)
+    try
+        result = f()
+        commit!(db)
+        return result
+    catch
+        rollback!(db)
+        rethrow()
+    end
+end
+```
 
-**Detection:** If more than one test suite is failing simultaneously, the migration is being done wrong. Each commit should break zero or at most one test suite (the one being actively migrated).
+Dart:
+```dart
+T transaction<T>(T Function() action) {
+    beginTransaction();
+    try {
+        final result = action();
+        commit();
+        return result;
+    } catch (e) {
+        rollback();
+        rethrow();
+    }
+}
+```
 
-**Phase to address:** This is a *process* pitfall, not a code pitfall. It affects the phase ordering in the roadmap. The roadmap must enforce incremental migration with backward compatibility.
+3. Document that calling `begin_transaction()` without a corresponding `commit()`/`rollback()` is a programming error.
 
----
+**Warning signs:**
+- "database is locked" errors in multi-connection scenarios
+- Application hangs waiting for locks
+- Test suite hangs or times out
 
-### Pitfall 5: Free Function Mismatch for Variable-Column Read Results
-
-**What goes wrong:** The current `quiver_database_free_time_series_data(char** date_times, double* values, size_t row_count)` frees exactly 2 arrays: one `char**` (with per-element string deallocation) and one `double*`. The new multi-column read returns N arrays of varying types. Each array has different deallocation requirements: `int64_t*` uses `delete[]`, `double*` uses `delete[]`, `char**` requires iterating and freeing each string then freeing the array. A single generic free function must know the type of each column to free it correctly.
-
-**Why it happens:** The existing alloc/free pattern co-locates allocation and deallocation (per CLAUDE.md principle). The free function is hardcoded to the allocation shape. With variable columns, the free function must accept type information to know how to deallocate each column. Passing type info to a free function is unusual and error-prone.
-
-**Evidence from codebase:** Compare `quiver_database_free_time_series_data` (line 152-163 of `database_time_series.cpp`) which knows the exact layout (char** + double*), vs `free_vectors_impl` template (database_helpers.h:50-61) which is generic for numeric types but not for mixed types. There is no existing pattern for freeing N columns of heterogeneous types.
-
-**Consequences:** Memory leaks (if string columns are freed as `delete[]` instead of per-element `delete[]` then `delete[]`), double-free (if numeric columns are freed with string deallocation logic), or heap corruption.
-
-**Prevention:**
-1. **Return a struct, not raw arrays.** Define `quiver_time_series_data_t` that bundles all column data, types, and counts. Provide a single `quiver_database_free_time_series_data_v2(quiver_time_series_data_t*)` that knows how to free each column based on stored type information.
-   ```c
-   typedef struct {
-       char** dimension_values;   // date/time strings
-       size_t row_count;
-       quiver_data_type_t* column_types;
-       char** column_names;
-       void** column_data;  // each points to typed array
-       size_t column_count;
-   } quiver_time_series_data_t;
-   ```
-2. The free function iterates `column_count`, switches on `column_types[i]`, and frees appropriately. The type information travels with the data, eliminating caller error.
-3. Keep the struct opaque to the caller. Provide accessor functions if needed.
-
-**Detection:** Run address sanitizer on all read tests. Write a test that reads a multi-column time series with mixed types (integer + float + string columns) and verifies clean deallocation.
-
-**Phase to address:** C API design phase. This must be decided before implementation because it determines the entire API shape.
-
----
-
-## Moderate Pitfalls
-
-Mistakes that cause bugs, rework, or test failures but are recoverable.
-
-### Pitfall 6: Kwargs Column Name to Schema Column Name Mismatch
-
-**What goes wrong:** Julia kwargs use Symbol keys (`:temperature`, `:humidity`). The user writes `update_time_series_group!(db, "Sensor", "temperature", id; date_time=dates, temperature=temps)`. The kwargs key `temperature` must exactly match the SQL column name in `Sensor_time_series_temperature`. If the column is named `temp_celsius` but the kwarg is `temperature`, the data silently goes to the wrong column or the C++ layer throws "column not found."
-
-**Why it happens:** Julia kwargs are Symbols converted to Strings. There is no compile-time or IDE-assisted validation that the kwarg name matches a real column. The current `Dict{String, Any}` interface at least makes the column name visually explicit as a string key. Kwargs feel more natural but hide the mapping.
-
-**Prevention:**
-1. Validate column names against metadata in the binding before calling the C API. The binding can call `get_time_series_metadata` to get the list of valid column names and reject unknown kwargs early with a clear error.
-2. Keep the error message specific: "Unknown column 'temperature' in time series group 'temp'. Valid columns: date_time, temp_celsius, humidity".
-3. In Dart, named parameters are defined at compile time in the function signature, so this validation happens naturally. But for dynamic schemas, Dart must use a Map parameter anyway (named parameters cannot be dynamically defined).
-
-**Detection:** Write a test that passes an invalid column name via kwargs and verifies the error message names the invalid column and lists valid ones.
-
-**Phase to address:** Julia and Dart binding redesign phases.
+**Phase to address:**
+Phase 1 (C++ core) -- add destructor safety. Phase 3+ (bindings) -- provide idiomatic transaction wrappers.
 
 ---
 
-### Pitfall 7: Dart Named Parameters Cannot Be Dynamic
+### Pitfall 4: SAVEPOINT Complexity Leaking Into the Design
 
-**What goes wrong:** The project context says "Dart from List<Map> to named parameters." But Dart named parameters are compile-time constructs -- you cannot dynamically define named parameters based on schema metadata. A time series group with columns `[temperature, humidity]` would need `void updateTimeSeriesGroup({required List<double> temperature, required List<double> humidity})`, but the column names and types vary per schema. This is impossible with Dart named parameters.
+**What goes wrong:**
+Instead of making `TransactionGuard` a no-op inside user transactions, the implementation uses `SAVEPOINT` for nested transaction support. This introduces significant complexity:
 
-**Why it happens:** Confusion between Dart named parameters (static, declared in function signature) and Python-style kwargs (dynamic, runtime-determined). Dart does not support the latter.
+- `ROLLBACK TO savepoint` does not end the savepoint -- the transaction remains active, the savepoint stays on the stack
+- `RELEASE savepoint` is not a durable commit -- an outer rollback undoes it
+- Savepoint names must be tracked (depth counter or unique names)
+- `COMMIT` releases ALL savepoints, breaking outer savepoint isolation
+- Each savepoint opens a sub-journal (not free, though cheaper than full journals)
+- Savepoint leaks: forgetting `RELEASE` after `ROLLBACK TO` leaves orphaned entries on the transaction stack
+- Reusing savepoint names merely shadows the old one, potentially causing logic bugs
 
-**Consequences:** If the Dart API is designed around named parameters, it only works for a fixed set of known column names, defeating the purpose of a schema-flexible library.
+**Why it happens:**
+Developers from PostgreSQL/SQL Server backgrounds expect nested transactions. They reach for SAVEPOINT as the SQLite equivalent. But SAVEPOINT semantics are subtly different and introduce edge cases that are hard to test across FFI boundaries.
 
-**Prevention:**
-1. **Accept that Dart must use a Map.** The Dart API should be `void updateTimeSeriesGroup(String collection, String group, int id, Map<String, List<Object>> columns)` where keys are column names and values are typed lists.
-2. Alternatively, use a builder pattern:
-   ```dart
-   db.updateTimeSeriesGroup('Sensor', 'temperature', id,
-     TimeSeriesData()
-       ..addStringColumn('date_time', dateTimes)
-       ..addDoubleColumn('temperature', temps));
-   ```
-3. Document why named parameters are not used: column names come from the schema, not the code.
+**How to avoid:**
+Do not use SAVEPOINT. The project's pending design decision ("TransactionGuard becomes no-op when nested") is correct. When a user transaction is active, internal `TransactionGuard` instances detect this and become no-ops. The user's transaction provides atomicity for all operations within it.
 
-**Detection:** If the Dart API design review proposes named parameters, flag this immediately.
+The no-op approach matches Quiver's philosophy: "Simple solutions over complex abstractions." The user transaction already provides the ACID guarantees. Internal guards adding SAVEPOINT nesting would be defensive code that violates "clean code over defensive code."
 
-**Phase to address:** API design phase (before implementation). This is a design decision.
+**Warning signs:**
+- PR introducing `SAVEPOINT` names, depth counters, or savepoint stacks
+- Edge case tests for "ROLLBACK TO then RELEASE" sequences
+- Cross-binding differences in savepoint behavior
 
----
-
-### Pitfall 8: Read Side Returning Columnar Data but Caller Expecting Row-Oriented
-
-**What goes wrong:** If the new `read_time_series_group` C API returns columnar data (parallel arrays per column), but bindings transpose to row-oriented `Dict[]` / `List<Map>`, the transposition has O(rows * columns) cost and creates N*M Dict/Map objects. For large time series (100K rows, 5 columns), this creates 500K map entries, causing significant memory and CPU overhead.
-
-**Why it happens:** The C++ layer returns row-oriented data (`std::vector<std::map<std::string, Value>>`). The C API must flatten this to C-compatible arrays. The most natural C representation is columnar (parallel arrays). The bindings must reconstruct row-oriented structures for the user.
-
-**Evidence from codebase:** The current Dart `readVectorGroupById` and Julia `read_vector_group_by_id` both do column-to-row transposition (see Julia `database_read.jl` lines 536-547 and Dart `database_read.dart` lines 873-883).
-
-**Prevention:**
-1. Accept the transposition cost and optimize: allocate rows vector with capacity, pre-size dicts.
-2. Consider offering both columnar and row-oriented read APIs at the binding level. Power users who process large time series column-wise can skip transposition.
-3. For the C API, columnar is correct: it avoids per-row allocation overhead and is more cache-friendly for the C layer.
-
-**Detection:** Benchmark read operations with 10K and 100K row time series. If transposition takes more than 10% of total read time, consider offering columnar read in bindings.
-
-**Phase to address:** C API and binding implementation phases.
+**Phase to address:**
+Phase 1 (C++ core) -- validate the no-op design decision. Document the rationale in code comments so future maintainers do not "improve" it by adding SAVEPOINT support.
 
 ---
 
-### Pitfall 9: Lua Table-Based Interface Inconsistency
+### Pitfall 5: Manual `is_in_transaction_` Flag Getting Out of Sync with SQLite State
 
-**What goes wrong:** Lua currently receives and returns time series as arrays of tables (Lua tables, i.e., `{ {date_time = "...", value = 1.0}, ... }`). If the C++ `update_time_series_group` changes its signature but the Lua sol2 binding is not updated, Lua scripts silently pass wrong data shapes. Unlike Julia/Dart which go through the C API, Lua binds directly to C++ via sol2 lambdas.
+**What goes wrong:**
+A boolean flag says "in transaction" but SQLite has auto-rolled-back the transaction due to `SQLITE_FULL`, `SQLITE_IOERR`, `SQLITE_NOMEM`, `SQLITE_BUSY`, or `SQLITE_INTERRUPT`. Subsequent operations silently run in autocommit mode, each committing individually. The user believes they are in a transaction when they are not.
 
-**Why it happens:** Lua bindings are manually maintained in `lua_runner.cpp`. The `update_time_series_group_from_lua` function (line 1058-1069) manually iterates a sol::table and calls `lua_table_to_value_map()`. If the C++ interface changes to accept columnar data instead of row maps, the Lua binding must be completely rewritten, not just updated.
+**Why it happens:**
+SQLite can automatically rollback a transaction on certain catastrophic errors without any C API notification or callback. The official documentation explicitly states that `sqlite3_get_autocommit()` is "the only way to find out whether SQLite automatically rolled back the transaction after an error." A boolean flag cannot capture this.
 
-**Evidence from codebase:** `lua_runner.cpp` line 1063-1068 shows the current pattern: iterate `rows` table by integer index, convert each row to a `std::map<std::string, Value>`.
+**How to avoid:**
+Use `sqlite3_get_autocommit()` directly instead of a boolean flag. Always call it to query transaction state. Never cache the result in a variable that can become stale.
 
-**Prevention:**
-1. Keep the C++ `update_time_series_group` accepting `std::vector<std::map<std::string, Value>>`. The C++ interface is already correct for multi-column. Only the C API needs redesign.
-2. The Lua binding should continue calling the C++ method directly with the same row-map interface. No change needed in Lua unless the C++ interface changes.
-3. If the C++ interface does change, update Lua in the same commit. The Lua sol2 bindings are only ~50 lines per function and can be updated quickly.
+Alternatively, use `sqlite3_txn_state()` (available since SQLite 3.34.0; Quiver uses 3.50.2) for richer state information: `SQLITE_TXN_NONE`, `SQLITE_TXN_READ`, `SQLITE_TXN_WRITE`.
 
-**Detection:** Run Lua tests after every C++ interface change. Lua tests are fast and catch binding mismatches immediately.
+For the public `in_transaction()` API method, `!sqlite3_get_autocommit(db)` is the correct implementation.
 
-**Phase to address:** C++ core phase (if C++ interface changes) or Lua binding phase.
+**Warning signs:**
+- Silent data integrity violations -- operations that should be atomic committed individually
+- `commit()` throws "cannot commit - no transaction is active" unexpectedly
+- Hard to reproduce because auto-rollback requires disk-level conditions
 
----
-
-### Pitfall 10: Dimension Column Handling Inconsistency
-
-**What goes wrong:** The dimension column (`date_time`) has special semantics: it is the ordering/primary key column, not a "value" column. The current C API hardcodes this as `const char* const* date_times` (always string, always separate). The new multi-column API must decide: is the dimension column one of the N columns, or is it still a separate parameter? Inconsistency here causes confusion in every binding.
-
-**Why it happens:** The schema allows the dimension column to have any `date_`-prefixed name (`date_time`, `date_recorded`, etc.) and the C++ layer discovers it dynamically from metadata. The current C API hardcodes "date_times" as the parameter name. The new API must handle arbitrary dimension column names.
-
-**Evidence from codebase:** `database_time_series.cpp` lines 64-67 and 126-130 show the C API looking up the dimension column name from metadata. The multi_time_series.sql schema uses `date_time` for both groups, but there is no guarantee all schemas use the same name.
-
-**Prevention:**
-1. Keep the dimension column as a separate, explicitly-named parameter in the C API. It is always a string array. The value columns are the variable-count typed arrays.
-   ```c
-   quiver_database_update_time_series_group(
-       db, collection, group, id,
-       dimension_values,  // always const char* const*, always string
-       column_names, column_types, column_data, column_count,  // value columns
-       row_count);
-   ```
-2. In bindings, require the dimension column kwarg/key to match the schema's dimension column name. Validate early.
-3. Document clearly: the dimension column is always string, always separate, always required.
-
-**Detection:** Test with a schema where the dimension column is named something other than `date_time` (e.g., `date_recorded`). Verify that both read and update work correctly.
-
-**Phase to address:** C API design phase.
+**Phase to address:**
+Phase 1 (C++ core) -- use `sqlite3_get_autocommit()` exclusively, never a flag.
 
 ---
 
-## Minor Pitfalls
+### Pitfall 6: Rollback in Cleanup Path Masking the Original Exception
 
-### Pitfall 11: FFI Generator Not Regenerated After C API Changes
+**What goes wrong:**
+A user's operation fails inside a transaction. The cleanup path (destructor, catch block, binding finally-equivalent) calls `rollback()`. But SQLite has already auto-rolled-back the transaction due to the error. The `ROLLBACK` SQL statement fails with "cannot rollback - no transaction is active", and this secondary error masks the original error.
 
-**What goes wrong:** After changing `quiver_database_update_time_series_group` signature in `include/quiver/c/database.h`, the developer forgets to run `bindings/julia/generator/generator.bat` and `bindings/dart/generator/generator.bat`. The old function signatures remain in `c_api.jl` and `bindings.dart`, causing link errors or silent data corruption.
+This exact bug hit Microsoft.Data.Sqlite (dotnet/efcore #36561): `Commit()` throws `SQLITE_FULL`, SQLite auto-rolls-back, then `Dispose()` tries to rollback and throws a different error, masking the original "disk full" message.
 
-**Prevention:** Add generator re-run to the checklist for every C API change. Ideally, the build system detects header changes and triggers regeneration.
+**Why it happens:**
+Certain SQLite errors (`SQLITE_FULL`, `SQLITE_IOERR`, `SQLITE_NOMEM`, `SQLITE_BUSY`, `SQLITE_INTERRUPT`) cause SQLite to automatically rollback the transaction. After auto-rollback, `sqlite3_get_autocommit()` returns non-zero (back in autocommit mode). If cleanup code blindly issues `ROLLBACK`, SQLite returns an error.
+
+**How to avoid:**
+1. Before calling `ROLLBACK` in any cleanup path, check `sqlite3_get_autocommit(db)`. If it returns non-zero, the transaction is already gone -- skip the rollback.
+2. The existing `Impl::rollback()` already does not throw on failure (it logs and swallows). Keep this behavior for internal paths.
+3. In the public `rollback()` method, throw if called without an active transaction -- helps users detect logic errors. But the internal cleanup must remain no-throw.
+
+```cpp
+// Public method -- throws on misuse
+void Database::rollback() {
+    if (sqlite3_get_autocommit(impl_->db)) {
+        throw std::runtime_error("Cannot rollback: no transaction is active");
+    }
+    impl_->rollback();
+}
+
+// Destructor path -- never throws
+Impl::~Impl() {
+    if (db && !sqlite3_get_autocommit(db)) {
+        logger->warn("Destroying database with open transaction -- rolling back");
+        rollback();  // internal, swallows errors
+    }
+    if (db) sqlite3_close_v2(db);
+}
+```
+
+**Warning signs:**
+- Error messages about "no transaction is active" when there clearly should be one
+- Original errors swallowed, only secondary errors visible
+- Confusing error messages from bindings
+
+**Phase to address:**
+Phase 1 (C++ core) -- check autocommit state before rollback in all cleanup paths.
 
 ---
 
-### Pitfall 12: Row Count Validation Across All Column Arrays
+### Pitfall 7: Benchmark Measuring Wrong Configuration (Journal Mode / Synchronous)
 
-**What goes wrong:** The new C API accepts N column arrays, each with `row_count` elements. If column A has 100 elements but column B has 99 (off-by-one), the C API reads past the end of column B's array. There is no way to detect this from the C API side because C arrays do not carry their length.
+**What goes wrong:**
+The project motivation for explicit transactions is performance: `create_element` + `update_time_series_group` currently run two separate transactions (two fsyncs). The benchmark should show improvement from wrapping them in one transaction. But benchmark results are meaningless if SQLite configuration is not controlled:
 
-**Prevention:**
-1. Trust the caller (consistent with project philosophy of "clean code over defensive code").
-2. But document the contract clearly: "All column data arrays must have exactly `row_count` elements."
-3. In bindings, validate array lengths before calling the C API:
-   ```julia
-   for (name, values) in kwargs
-       length(values) == row_count || throw(ArgumentError("Column '$name' has $(length(values)) elements, expected $row_count"))
-   end
-   ```
+1. **WAL mode vs. DELETE journal**: WAL is much faster for writes. If the benchmark DB is in WAL mode, the single-transaction improvement appears smaller (WAL already reduces fsync cost).
+2. **synchronous=FULL vs. NORMAL**: `FULL` (the default) fsyncs every commit -- the exact cost batching eliminates. `NORMAL` in WAL mode only fsyncs on checkpoint, making the improvement appear minimal.
+3. **synchronous=OFF**: Eliminates fsyncs entirely. Two transactions vs. one shows near-zero difference.
+4. **In-memory database (`:memory:`)**: No fsync at all. Benchmark is meaningless.
+
+**Why it happens:**
+Developers run benchmarks on default settings without realizing SQLite's default is conservative (`DELETE` journal, `synchronous=FULL`). Or they copy "recommended pragmas" from blog posts (`WAL`, `synchronous=NORMAL`) which minimize the exact cost being measured.
+
+**How to avoid:**
+1. Benchmark with explicit, documented SQLite configuration. Pin `journal_mode=DELETE` and `synchronous=FULL` for the "maximum improvement" benchmark. Also benchmark with `journal_mode=WAL` and `synchronous=NORMAL` for "production" comparison.
+2. Always use file-based databases, never `:memory:`.
+3. Report both configurations and actual speedup ratios.
+4. Keep assertions loose: `EXPECT_LT(batched_ms, unbatched_ms)`. Print ratios for human inspection but do not gate CI on specific speedup numbers -- they depend on hardware (SSD vs HDD), OS, and system load.
+
+**Warning signs:**
+- Benchmark shows "only 10% improvement" -- likely running WAL+NORMAL
+- Benchmark shows "50x improvement" on local machine but fails CI assertion -- hardware-dependent
+- No PRAGMA configuration documented in benchmark code
+
+**Phase to address:**
+Benchmark phase -- must be designed before the feature is considered "complete".
 
 ---
 
-### Pitfall 13: Empty Time Series Edge Cases with Multi-Column
+### Pitfall 8: BEGIN DEFERRED vs. BEGIN IMMEDIATE -- Wrong Lock Type
 
-**What goes wrong:** The current API handles empty time series by passing `nullptr` for both arrays and `0` for count. With N columns, the convention must be consistent: are all column arrays `nullptr`, or is the entire column descriptor `nullptr`?
+**What goes wrong:**
+SQLite's `BEGIN` starts a DEFERRED transaction -- no locks are acquired until the first read or write. If a user calls `begin_transaction()` intending to batch writes, but first does a read, they acquire a SHARED lock. When the first write executes, SQLite tries to promote to RESERVED, which can fail with `SQLITE_BUSY` if another connection holds a SHARED lock. This is the classic "reader starves writer" problem.
 
-**Prevention:** Define and test the empty case explicitly. Convention: if `row_count == 0`, all column data pointers may be `nullptr`. The free function must handle this gracefully (check for nullptr before iterating).
+**Why it happens:**
+Most wrapper libraries use plain `BEGIN` (DEFERRED) by default because it is the simplest. But for Quiver's transaction batching use case, `BEGIN IMMEDIATE` is almost always correct: the user intends to write, so acquiring the write lock upfront avoids lock-promotion failures.
+
+**How to avoid:**
+Use `BEGIN IMMEDIATE` for user-facing `begin_transaction()`:
+- Quiver's primary use case is batching writes (create + update in one transaction)
+- Single-connection usage means no contention from within the same process
+- `BEGIN IMMEDIATE` is strictly safer than `BEGIN DEFERRED` for write transactions
+- Performance cost of acquiring RESERVED lock upfront is negligible
+
+**Warning signs:**
+- `SQLITE_BUSY` errors when the first write executes inside a user transaction
+- Intermittent failures in multi-connection setups
+
+**Phase to address:**
+Phase 1 (C++ core) -- use `BEGIN IMMEDIATE` in the implementation.
 
 ---
 
-## Phase-Specific Warnings
+### Pitfall 9: commit() and rollback() Called Without Active Transaction
 
-| Phase Topic | Likely Pitfall | Mitigation |
-|-------------|---------------|------------|
-| C++ core interface | Changing `update_time_series_group` signature breaks Lua sol2 bindings | Keep C++ accepting `vector<map<string, Value>>`, only change C API |
-| C API design | void* column data with type tags enables silent corruption | Validate types against schema metadata before casting |
-| C API design | No struct-based return leads to complex free functions | Use `quiver_time_series_data_t` result struct |
-| C API implementation | Partial allocation leak on exception path | Allocate all arrays before writing to out-params |
-| Julia bindings | GC collecting string intermediates during ccall | Single `GC.@preserve` block for all intermediate arrays |
-| Julia bindings | kwargs column names not validated against schema | Call `get_time_series_metadata` and validate before ccall |
-| Dart bindings | Assuming named parameters can be schema-dynamic | Use Map or builder pattern, not named parameters |
-| Dart bindings | Arena freed too early when constructing multi-column arrays | Keep single Arena for entire operation, release in finally |
-| Lua bindings | Lua table structure changes silently | Lua binds to C++, not C API; keep C++ interface stable |
-| All bindings | FFI generators not re-run after header change | Regenerate immediately, diff, test-all.bat |
-| Test migration | Changing C API signature breaks all 4 test suites at once | Add new function alongside old, migrate incrementally |
+**What goes wrong:**
+A user calls `commit()` or `rollback()` without a preceding `begin_transaction()`. Or calls `commit()` twice. In SQLite:
+- `COMMIT` without an active transaction returns an error
+- `ROLLBACK` without an active transaction returns an error
+- `COMMIT` after a prior `COMMIT` returns an error
 
-## Decision Matrix: API Shape
+If not handled, the raw SQLite error message leaks through the C API to binding users.
 
-The single most consequential design decision is the C API shape. Every other pitfall cascades from this choice.
+**Why it happens:**
+With explicit begin/commit/rollback (not RAII), tracking transaction state is error-prone. Conditional logic, early returns, and exception handling create opportunities for mismatched calls.
 
-| Approach | Type Safety | Memory Safety | Binding Complexity | Recommendation |
-|----------|-------------|---------------|-------------------|----------------|
-| **A: Separate typed functions** (`_integers`, `_floats`, `_strings` per column) | HIGH | HIGH | HIGH (N ccalls per update) | NO -- too many FFI crossings for multi-column |
-| **B: Parallel arrays with type tags** (`column_types[] + void* column_data[]`) | LOW | LOW | MEDIUM | NO -- void* is a footgun, project already has this with query params and it works but does not scale |
-| **C: Struct-based** (`quiver_time_series_columns_t` with typed column descriptors) | MEDIUM | HIGH | LOW (one ccall, one free) | YES -- type info travels with data, single alloc/free point |
-| **D: Per-column calls inside a transaction** (begin_update, add_column, commit_update) | HIGH | HIGH | MEDIUM | MAYBE -- more C API surface but each call is type-safe |
+**How to avoid:**
+In the public C++ methods, check `sqlite3_get_autocommit(db)` before executing:
+- `begin_transaction()`: if autocommit is OFF, throw `"Cannot begin_transaction: transaction already active"`
+- `commit()`: if autocommit is ON, throw `"Cannot commit: no transaction is active"`
+- `rollback()`: if autocommit is ON, throw `"Cannot rollback: no transaction is active"`
 
-**Recommendation:** Approach C (struct-based). It provides the best balance of safety and simplicity. The struct bundles column names, types, and data pointers together, and the free function can iterate the struct to deallocate correctly. This is consistent with the existing `quiver_group_metadata_t` pattern which already bundles variable-length typed metadata.
+These follow the existing error message pattern: `"Cannot {operation}: {reason}"`.
+
+**Warning signs:**
+- Raw SQLite error messages appearing in `quiver_get_last_error()`
+- Double-commit bugs in binding code
+- Confusing state after error recovery
+
+**Phase to address:**
+Phase 1 (C++ core) -- validate preconditions in all three public methods.
+
+---
+
+## Technical Debt Patterns
+
+Shortcuts that seem reasonable but create long-term problems.
+
+| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
+|----------|-------------------|----------------|-----------------|
+| `bool in_transaction_` flag instead of `sqlite3_get_autocommit()` | Avoids C API call | Flag becomes stale after auto-rollback; silent data integrity violations | Never -- SQLite is the source of truth |
+| Skipping precondition checks on `commit()`/`rollback()` | Less code | Silent corruption when called without active transaction; confusing errors propagate to bindings | Never |
+| Adding SAVEPOINT for nesting | Handles hypothetical edge cases | Massive complexity for zero practical benefit; different semantics than real nested transactions | Never for this project |
+| Exposing only raw `begin`/`commit`/`rollback` in bindings, no wrappers | Ships faster | Binding users forget cleanup, file bug reports about locked databases | Only temporarily; wrappers must ship with the binding phase |
+| Using plain `BEGIN` instead of `BEGIN IMMEDIATE` | Matches most examples online | Lock-promotion failures under concurrent access | Never for Quiver's write-batching use case |
+
+## Integration Gotchas
+
+Common mistakes when connecting transaction control across the C++/C/binding stack.
+
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| C++ to C API | Forgetting to catch exceptions from `begin_transaction()` / `commit()` / `rollback()` | Wrap in standard try-catch with `quiver_set_last_error()`, return `QUIVER_ERROR` |
+| C API to Julia | Calling `ccall` for `begin_transaction` but not checking return code | Julia wrapper must check error code and throw Julia exception |
+| C API to Dart | Not handling the case where `commit()` returns `QUIVER_ERROR` | Dart wrapper must throw `QuiverException` on error |
+| C API to Lua | Exposing `begin_transaction`/`commit`/`rollback` as separate methods without `db:transaction(fn)` convenience | Provide `db:transaction(function() ... end)` that guarantees rollback on Lua error |
+| Lua scripting | Script calls `db:begin_transaction()` and errors before committing | `LuaRunner::run()` must check `sqlite3_get_autocommit()` after script execution; if transaction is open, auto-rollback and log warning |
+| Internal private vs. public methods | `database.h` already has private `begin_transaction()`, `commit()`, `rollback()` (lines 197-199) | Make these public. Do not create separate public/private versions. The same methods serve both roles. |
+| Benchmark | Measuring through C API or bindings instead of C++ directly | Binding overhead can obscure fsync improvement; benchmark C++ core first |
+
+## Performance Traps
+
+Patterns that work at small scale but fail as usage grows.
+
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|----------------|
+| User wraps every single operation in `begin`/`commit` | Extra overhead, no benefit (operations already have implicit transactions) | Document that single operations do not need explicit transactions | Immediately -- adds overhead |
+| Very large transaction (100K+ operations) | WAL file grows unboundedly, checkpoint cannot run, memory pressure | Document recommended batch sizes; suggest chunked transactions | 10K+ operations in DELETE journal; 100K+ in WAL |
+| Benchmark without warmup | First iteration includes initialization, page cache warmup | Discard first N iterations or run setup outside measured block | First benchmark run |
+| Holding transaction open during computation | Database locked for duration of unrelated work | Keep transactions short: prepare data, then begin-write-commit | As soon as multiple connections exist |
+| Benchmark on in-memory database | Shows zero improvement because no fsync | Always use file-based database for transaction benchmarks | Immediately |
+| Flaky benchmark assertions | `EXPECT_GT(ratio, 10.0)` fails on different hardware | Use loose assertions (`batched < unbatched`); print ratios for human review | Different CI hardware |
+
+## Security Mistakes
+
+Domain-specific security issues relevant to transaction control.
+
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| Exposing `begin_transaction` in Lua without cleanup | Lua script opens transaction, errors out, transaction stays open, locking DB | `LuaRunner::run()` auto-rollbacks open transactions after script execution |
+| `query_*()` methods inside explicit transaction | User can execute DDL (`DROP TABLE`, `ALTER TABLE`) atomically inside transaction | Already a risk with `query_*()` methods; transactions do not change this. Document that `query_*()` participates in user transactions. |
+
+## UX Pitfalls
+
+Common user experience mistakes in this domain.
+
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|-----------------|
+| No way to query transaction state | User cannot conditionally begin a transaction in reusable code | Provide `bool in_transaction() const` wrapping `!sqlite3_get_autocommit(db)` |
+| Raw SQLite error leaking: "cannot start a transaction within a transaction" | User sees internal SQLite message instead of Quiver-style | Intercept in `begin_transaction()`: `"Cannot begin_transaction: transaction already active"` |
+| Rollback does not re-throw original error | User calls rollback in catch block but loses what originally failed | Document: rollback is cleanup; re-throw original exception from the catch block |
+| No feedback about auto-rollback | User commits after auto-rollback, gets confusing error | `commit()` should throw `"Cannot commit: no transaction is active"` with clear messaging |
+| Logging noise from no-op TransactionGuard | 1000-operation batch produces 1000 "skipping BEGIN" debug lines | Use `trace` level for no-op message, or omit entirely |
+
+## "Looks Done But Isn't" Checklist
+
+Things that appear complete but are missing critical pieces.
+
+- [ ] **TransactionGuard nest-awareness:** Tested with ALL write methods, not just `create_element`. Verify: `update_element`, `update_vector_*` (3 types), `update_set_*` (3 types), `update_time_series_group`, `update_time_series_files`, `update_scalar_relation`, `import_csv`
+- [ ] **Error inside user transaction:** Test that a failed operation does NOT rollback prior successful operations within the same user transaction
+- [ ] **commit() after auto-rollback:** Test what happens when `commit()` is called after SQLite has auto-rolled-back (should throw clear error, not raw SQLite message)
+- [ ] **Destructor cleanup:** `Database` destructor rolls back open transaction without crash or leak
+- [ ] **C API error propagation:** `quiver_database_begin_transaction` returns `QUIVER_ERROR` with proper message when transaction already active
+- [ ] **Binding convenience wrappers:** Julia `transaction()`, Dart `transaction()`, Lua `db:transaction()` all (a) rollback on exception, (b) re-throw original error, (c) do not mask errors
+- [ ] **LuaRunner safety:** `LuaRunner::run()` auto-rollbacks any open transaction when script ends or errors
+- [ ] **Benchmark configuration:** Documents PRAGMA settings, runs with at least two configs (DELETE+FULL, WAL+NORMAL), uses file-based DB
+- [ ] **Read operations inside transaction:** `read_scalar_*`, `read_vector_*`, `query_*` work correctly inside explicit transaction (they do not use TransactionGuard, so should work, but verify)
+- [ ] **Double-call guards:** `begin` then `begin` throws. `commit` then `commit` throws. `rollback` without `begin` throws.
+- [ ] **FFI generators re-run:** Julia and Dart FFI generators executed after C API header changes
 
 ## Recovery Strategies
 
+When pitfalls occur despite prevention, how to recover.
+
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Partial allocation leak | LOW | Add address sanitizer to CI; fix leak; re-test |
-| Type tag mismatch corruption | HIGH | Data must be re-written; add validation; re-test with bad types |
-| Julia GC segfault | MEDIUM | Add `GC.@preserve`; difficult to reproduce -- add forced GC in tests |
-| Broken test suite | LOW | Add backward-compat old function; migrate incrementally |
-| Free function mismatch | HIGH | Address sanitizer + valgrind; audit all alloc/free paths |
-| Kwargs column mismatch | LOW | Add metadata validation in binding; clear error message |
-| Dart named params impossible | LOW | Switch to Map; design review catches early |
-| Row-column transposition perf | LOW | Benchmark; add columnar API if needed |
-| Lua binding stale | LOW | Run Lua tests; update sol2 binding |
-| Dimension column inconsistency | MEDIUM | Standardize as separate param; test with non-standard dim names |
+| Double BEGIN crash (P1) | LOW | Fix TransactionGuard to check autocommit; all existing tests verify the fix |
+| Guard rollback destroys user work (P2) | LOW | Make guard full no-op; add test for partial-failure-within-transaction |
+| Abandoned transaction / locked DB (P3) | LOW | Close and reopen Database; SQLite auto-rolls-back on close. Add destructor safety. |
+| SAVEPOINT complexity (P4) | HIGH | Remove SAVEPOINT, revert to no-op. Significant rewrite if deeply integrated. Prevention is critical. |
+| Stale flag (P5) | MEDIUM | Replace flag with `sqlite3_get_autocommit()` calls. Audit all usage sites. |
+| Masked error from rollback (P6) | MEDIUM | Add autocommit check before rollback in all cleanup paths; audit C API catch blocks |
+| Wrong benchmark config (P7) | LOW | Re-run with correct PRAGMAs; add PRAGMA setup to benchmark code |
+| Wrong lock type (P8) | LOW | Change `BEGIN` to `BEGIN IMMEDIATE`; single line change |
+| Mismatched commit/rollback (P9) | LOW | Add precondition checks; straightforward |
+
+## Pitfall-to-Phase Mapping
+
+How roadmap phases should address these pitfalls.
+
+| Pitfall | Prevention Phase | Verification |
+|---------|------------------|--------------|
+| P1: Double BEGIN | Phase 1: C++ core | Existing tests pass + new test: `begin_transaction()` then `create_element()` succeeds |
+| P2: Guard rollback in user txn | Phase 1: C++ core | Test: begin, create A, create B (fails), verify A still readable, commit |
+| P3: Abandoned transaction | Phase 1 + Phase 3 bindings | Destructor test: destroy with open txn, no crash. Binding wrapper tests. |
+| P4: SAVEPOINT complexity | Phase 1: C++ core | Code review: no SAVEPOINT in codebase. Design doc rejects it. |
+| P5: Stale flag | Phase 1: C++ core | No flag in implementation; `sqlite3_get_autocommit()` used directly |
+| P6: Masked errors | Phase 1: C++ core | Test: force error inside transaction, verify original error propagates through bindings |
+| P7: Wrong benchmark config | Benchmark phase | Benchmark code has explicit PRAGMA setup and documents settings |
+| P8: DEFERRED vs IMMEDIATE | Phase 1: C++ core | Implementation uses `BEGIN IMMEDIATE`. Grep for plain `BEGIN TRANSACTION` confirms no stragglers. |
+| P9: Mismatched calls | Phase 1: C++ core | Tests: commit without begin throws, rollback without begin throws, double begin throws, double commit throws |
 
 ## Sources
 
-- Direct analysis of `src/c/database_time_series.cpp` (279 lines) -- current alloc/free patterns
-- Direct analysis of `src/c/database_query.cpp` (197 lines) -- existing void*/type-tag pattern for parameterized queries
-- Direct analysis of `src/c/database_helpers.h` (145 lines) -- existing marshaling templates
-- Direct analysis of `bindings/julia/src/database_update.jl` (201 lines) -- current Julia time series update with `GC.@preserve`
-- Direct analysis of `bindings/dart/lib/src/database_update.dart` (374 lines) -- current Dart Arena-based FFI
-- Direct analysis of `src/lua_runner.cpp` lines 1058-1069 -- current Lua sol2 time series binding
-- Direct analysis of `tests/test_c_api_database_time_series.cpp` (548 lines) -- 15 existing C API time series tests
-- Direct analysis of `include/quiver/c/database.h` (462 lines) -- existing C API surface
-- Direct analysis of `tests/schemas/valid/multi_time_series.sql` -- multi-group schema (single value column per group)
-- Existing project PITFALLS.md (v1.0 milestone) -- Pitfall 2 (C API memory ownership) and Pitfall 3 (binding desynchronization) are directly relevant and amplified by this redesign
+- [SQLite Transaction Documentation](https://www.sqlite.org/lang_transaction.html) -- HIGH confidence: official docs on BEGIN/COMMIT/ROLLBACK semantics, nesting constraints
+- [SQLite SAVEPOINT Documentation](https://sqlite.org/lang_savepoint.html) -- HIGH confidence: official docs on SAVEPOINT/RELEASE/ROLLBACK TO semantics
+- [sqlite3_get_autocommit() Documentation](https://sqlite.org/c3ref/get_autocommit.html) -- HIGH confidence: thread safety warning, auto-rollback detection, the "only way to find out" quote
+- [sqlite3_txn_state() Documentation](https://sqlite.org/c3ref/txn_state.html) -- HIGH confidence: introduced SQLite 3.34.0, finer-grained than get_autocommit
+- [SQLite Threading Modes](https://sqlite.org/threadsafe.html) -- HIGH confidence: official threading model
+- [SQLite File Locking and Concurrency](https://sqlite.org/lockingv3.html) -- HIGH confidence: SHARED/RESERVED/EXCLUSIVE lock semantics
+- [sqlite3_close() Documentation](https://www.sqlite.org/c3ref/close.html) -- HIGH confidence: behavior on close with open transaction
+- [dotnet/efcore Issue #36561](https://github.com/dotnet/efcore/issues/36561) -- HIGH confidence: real-world bug demonstrating rollback masking original error
+- [sqlx Issue #3634](https://github.com/launchbadge/sqlx/issues/3634) -- MEDIUM confidence: demonstrates SAVEPOINT leak after ROLLBACK TO
+- [SQLiteCpp (SRombauts)](https://github.com/SRombauts/SQLiteCpp) -- MEDIUM confidence: reference C++ wrapper with RAII transaction pattern
+- [trailofbits/sqlite_wrapper](https://github.com/trailofbits/sqlite_wrapper) -- MEDIUM confidence: reference wrapper with both RAII guard and manual methods
+- [SQLite Performance Tuning (phiresky)](https://phiresky.github.io/blog/2020/sqlite-performance-tuning/) -- MEDIUM confidence: WAL vs journal, synchronous settings
+- [PowerSync SQLite Optimizations](https://www.powersync.com/blog/sqlite-optimizations-for-ultra-high-performance) -- MEDIUM confidence: production PRAGMA recommendations
+- [SQLite Performance Testing (Draken)](https://ericdraken.com/sqlite-performance-testing/) -- MEDIUM confidence: comprehensive PRAGMA benchmarking
+- Existing codebase: `src/database_impl.h` (TransactionGuard), `src/database_create.cpp` (12+ usage sites), `include/quiver/database.h` (private begin/commit/rollback on lines 197-199)
 
 ---
-*Pitfalls research for: Time series update interface redesign (multi-column C API + kwargs bindings)*
-*Researched: 2026-02-12*
+*Pitfalls research for: Quiver v0.3 -- Explicit Transaction Control*
+*Researched: 2026-02-20*

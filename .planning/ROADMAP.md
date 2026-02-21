@@ -1,53 +1,90 @@
-# Roadmap: Quiver
+# Roadmap: Quiver v0.3 -- Explicit Transactions
 
-## Milestones
+## Overview
 
-- ✅ **v1.0 Quiver Refactoring** -- Phases 1-10 (shipped 2026-02-11)
-- ✅ **v1.1 Time Series Ergonomics** -- Phases 11-14 (shipped 2026-02-20)
+Expose explicit transaction control (`begin_transaction`, `commit`, `rollback`) starting from the C++ core, wrapping through the C API, and propagating to all three language bindings (Julia, Dart, Lua). Each phase delivers a complete, testable layer. A benchmark phase proves the performance motivation is real.
 
 ## Phases
 
-<details>
-<summary>✅ v1.0 Quiver Refactoring (Phases 1-10) -- SHIPPED 2026-02-11</summary>
+**Phase Numbering:**
+- Integer phases (1, 2, 3): Planned milestone work
+- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [x] Phase 1: C++ Impl Header Extraction (1/1 plans) -- 2026-02-09
-- [x] Phase 2: C++ Core File Decomposition (2/2 plans) -- 2026-02-09
-- [x] Phase 3: C++ Naming and Error Standardization (2/2 plans) -- 2026-02-10
-- [x] Phase 4: C API File Decomposition (2/2 plans) -- 2026-02-10
-- [x] Phase 5: C API Naming and Error Standardization (2/2 plans) -- 2026-02-10
-- [x] Phase 6: Julia Bindings Standardization (1/1 plans) -- 2026-02-10
-- [x] Phase 7: Dart Bindings Standardization (1/1 plans) -- 2026-02-10
-- [x] Phase 8: Lua Bindings Standardization (1/1 plans) -- 2026-02-10
-- [x] Phase 9: Code Hygiene (2/2 plans) -- 2026-02-10
-- [x] Phase 10: Cross-Layer Documentation and Final Verification (1/1 plans) -- 2026-02-10
+Decimal phases appear between their surrounding integers in numeric order.
 
-</details>
+- [x] **Phase 1: C++ Transaction Core** - Public begin/commit/rollback with nest-aware TransactionGuard (completed 2026-02-20)
+- [x] **Phase 2: C API Transaction Surface** - Flat C functions wrapping the C++ transaction methods
+- [x] **Phase 3: Language Bindings** - Julia, Dart, and Lua bindings with convenience wrappers
+- [ ] **Phase 4: Performance Benchmark** - Prove measurable speedup from batched transactions
 
-<details>
-<summary>✅ v1.1 Time Series Ergonomics (Phases 11-14) -- SHIPPED 2026-02-20</summary>
+## Phase Details
 
-- [x] Phase 11: C API Multi-Column Time Series (2/2 plans) -- 2026-02-19
-- [x] Phase 12: Julia Binding Migration (2/2 plans) -- 2026-02-20
-- [x] Phase 13: Dart Binding Migration (2/2 plans) -- 2026-02-20
-- [x] Phase 14: Verification and Cleanup (2/2 plans) -- 2026-02-20
+### Phase 1: C++ Transaction Core
+**Goal**: Users of the C++ API can wrap multiple write operations in a single explicit transaction
+**Depends on**: Nothing (first phase)
+**Requirements**: TXN-01, TXN-02, TXN-03
+**Success Criteria** (what must be TRUE):
+  1. Caller can call `begin_transaction()`, perform multiple writes, then `commit()` or `rollback()` on a Database instance
+  2. Existing write methods (`create_element`, `update_*`, `delete_element`) execute without error inside an explicit transaction -- no "cannot start a transaction within a transaction" failures
+  3. Calling `commit()` or `rollback()` without an active transaction throws an error matching Quiver's "Cannot {operation}: {reason}" pattern
+  4. Calling `begin_transaction()` when a transaction is already active throws an error matching Quiver's "Cannot {operation}: {reason}" pattern
+  5. All existing C++ tests continue to pass unchanged (no regression)
+**Plans**: 1 plan
 
-</details>
+Plans:
+- [ ] 01-01-PLAN.md -- Implement transaction API, nest-aware TransactionGuard, and test suite
+
+### Phase 2: C API Transaction Surface
+**Goal**: C API consumers can control transactions through flat FFI-safe functions
+**Depends on**: Phase 1
+**Requirements**: CAPI-01
+**Success Criteria** (what must be TRUE):
+  1. `quiver_database_begin_transaction`, `quiver_database_commit`, and `quiver_database_rollback` exist as C functions returning `quiver_error_t`
+  2. A C API caller can batch multiple `quiver_database_create_element` calls inside a single transaction with one commit
+  3. Error cases (double begin, commit without begin) return `QUIVER_ERROR` with descriptive messages from `quiver_get_last_error()`
+  4. `quiver_database_in_transaction` returns transaction state via `bool* out_active` out-param
+**Plans**: 1 plan
+
+Plans:
+- [ ] 02-01-PLAN.md -- Implement C API transaction functions and tests
+
+### Phase 3: Language Bindings
+**Goal**: Julia, Dart, and Lua users can control transactions idiomatically in their language
+**Depends on**: Phase 2
+**Requirements**: BIND-01, BIND-02, BIND-03, BIND-04, BIND-05, BIND-06
+**Success Criteria** (what must be TRUE):
+  1. Julia users can call `begin_transaction!(db)`, `commit!(db)`, `rollback!(db)` and use `transaction(db) do ... end` with auto commit on success and rollback on exception
+  2. Dart users can call `db.beginTransaction()`, `db.commit()`, `db.rollback()` and use `db.transaction(() { ... })` with auto commit on success and rollback on exception
+  3. Lua users can call `db:begin_transaction()`, `db:commit()`, `db:rollback()` and use `db:transaction(fn)` with pcall-based auto commit on success and rollback on error
+  4. Error messages from misuse (double begin, commit without begin) propagate correctly from C++ through each binding without bindings crafting their own messages
+  5. All existing binding tests continue to pass unchanged (no regression)
+  6. `in_transaction` is also bound in each language (Julia: `in_transaction(db)`, Dart: `db.inTransaction()`, Lua: `db:in_transaction()`)
+**Plans**: 1 plan
+
+Plans:
+- [ ] 03-01-PLAN.md -- Julia, Dart, and Lua transaction bindings with convenience wrappers and test suites
+
+### Phase 4: Performance Benchmark
+**Goal**: Measurable proof that explicit transactions improve write throughput
+**Depends on**: Phase 1
+**Requirements**: PERF-01
+**Success Criteria** (what must be TRUE):
+  1. A C++ benchmark test creates multiple elements with time series data both with and without an explicit wrapping transaction
+  2. The batched-transaction variant completes measurably faster than the individual-transaction variant on a file-based database
+  3. Benchmark results are printed to stdout so a human can observe the speedup ratio
+**Plans**: TBD
+
+Plans:
+- [ ] 04-01: TBD
 
 ## Progress
 
-| Phase | Milestone | Plans Complete | Status | Completed |
-|-------|-----------|----------------|--------|-----------|
-| 1. C++ Impl Header Extraction | v1.0 | 1/1 | Complete | 2026-02-09 |
-| 2. C++ Core File Decomposition | v1.0 | 2/2 | Complete | 2026-02-09 |
-| 3. C++ Naming and Error Standardization | v1.0 | 2/2 | Complete | 2026-02-10 |
-| 4. C API File Decomposition | v1.0 | 2/2 | Complete | 2026-02-10 |
-| 5. C API Naming and Error Standardization | v1.0 | 2/2 | Complete | 2026-02-10 |
-| 6. Julia Bindings Standardization | v1.0 | 1/1 | Complete | 2026-02-10 |
-| 7. Dart Bindings Standardization | v1.0 | 1/1 | Complete | 2026-02-10 |
-| 8. Lua Bindings Standardization | v1.0 | 1/1 | Complete | 2026-02-10 |
-| 9. Code Hygiene | v1.0 | 2/2 | Complete | 2026-02-10 |
-| 10. Cross-Layer Docs & Final Verification | v1.0 | 1/1 | Complete | 2026-02-10 |
-| 11. C API Multi-Column Time Series | v1.1 | 2/2 | Complete | 2026-02-19 |
-| 12. Julia Binding Migration | v1.1 | 2/2 | Complete | 2026-02-20 |
-| 13. Dart Binding Migration | v1.1 | 2/2 | Complete | 2026-02-20 |
-| 14. Verification and Cleanup | v1.1 | 2/2 | Complete | 2026-02-20 |
+**Execution Order:**
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 1. C++ Transaction Core | 1/1 | Complete | 2026-02-20 |
+| 2. C API Transaction Surface | 1/1 | Complete | 2026-02-21 |
+| 3. Language Bindings | 1/1 | Complete    | 2026-02-21 |
+| 4. Performance Benchmark | 0/0 | Not started | - |

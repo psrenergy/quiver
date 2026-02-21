@@ -27,6 +27,7 @@ src/c/                    # C API implementation
   database_query.cpp      # Query operations (plain and parameterized)
   database_time_series.cpp # Time series operations + co-located free functions
   database_relations.cpp  # Relation operations
+  database_transaction.cpp # Transaction control (begin, commit, rollback, in_transaction)
 bindings/julia/           # Julia bindings (Quiver.jl)
 bindings/dart/            # Dart bindings (quiver)
 tests/                    # C++ tests
@@ -81,6 +82,7 @@ Test files organized by functionality:
 - `test_database_query.cpp` - parameterized and non-parameterized query operations
 - `test_database_relations.cpp` - relation operations
 - `test_database_time_series.cpp` - time series read/update/metadata operations
+- `test_database_transaction.cpp` - explicit transaction control (begin/commit/rollback)
 
 C API tests follow same pattern with `test_c_api_database_*.cpp` prefix.
 
@@ -107,19 +109,23 @@ struct Database::Impl {
 Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`, `GroupMetadata`, `ScalarMetadata`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor).
 
 ### Transactions
-Use `Impl::TransactionGuard` RAII or `impl_->with_transaction(lambda)`:
+Public API exposes explicit transaction control:
 ```cpp
-// RAII guard
+db.begin_transaction();
+// multiple write operations...
+db.commit();   // or db.rollback();
+bool active = db.in_transaction();
+```
+
+Internally, `Impl::TransactionGuard` is nest-aware RAII: if an explicit transaction is already active (checked via `sqlite3_get_autocommit()`), the guard becomes a no-op. This allows write methods (`create_element`, `update_vector_*`, etc.) to work both standalone and inside explicit transactions without double-beginning.
+
+```cpp
+// Internal RAII guard (nest-aware)
 {
-    TransactionGuard guard(db);
+    TransactionGuard guard(impl);
     // operations...
     guard.commit();
 }
-
-// Lambda wrapper
-impl_->with_transaction([&]() {
-    // operations...
-});
 ```
 
 ### Naming Convention
@@ -336,6 +342,7 @@ Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references.
 
 ### Database Class
 - Factory methods: `from_schema()`, `from_migrations()`
+- Transaction control: `begin_transaction()`, `commit()`, `rollback()`, `in_transaction()`
 - CRUD: `create_element(collection, element)`
 - Scalar readers: `read_scalar_integers/floats/strings(collection, attribute)`
 - Vector readers: `read_vector_integers/floats/strings(collection, attribute)`
@@ -383,6 +390,10 @@ lua.run(R"(
 | Category | C++ | C API | Julia | Dart | Lua |
 |----------|-----|-------|-------|------|-----|
 | Factory | `Database::from_schema()` | `quiver_database_from_schema()` | `from_schema()` | `Database.fromSchema()` | N/A |
+| Transaction | `begin_transaction()` | `quiver_database_begin_transaction()` | `begin_transaction!()` | `beginTransaction()` | `begin_transaction()` |
+| Transaction | `commit()` | `quiver_database_commit()` | `commit!()` | `commit()` | `commit()` |
+| Transaction | `rollback()` | `quiver_database_rollback()` | `rollback!()` | `rollback()` | `rollback()` |
+| Transaction | `in_transaction()` | `quiver_database_in_transaction()` | `in_transaction()` | `inTransaction()` | `in_transaction()` |
 | Create | `create_element()` | `quiver_database_create_element()` | `create_element!()` | `createElement()` | `create_element()` |
 | Read scalar | `read_scalar_integers()` | `quiver_database_read_scalar_integers()` | `read_scalar_integers()` | `readScalarIntegers()` | `read_scalar_integers()` |
 | Read by ID | `read_scalar_integer_by_id()` | `quiver_database_read_scalar_integer_by_id()` | `read_scalar_integer_by_id()` | `readScalarIntegerById()` | `read_scalar_integer_by_id()` |
@@ -420,6 +431,12 @@ Julia, Dart, and Lua provide additional convenience methods that compose core op
 | `read_all_scalars_by_id` | `readAllScalarsById` | `read_all_scalars_by_id` | `list_scalar_attributes` + typed reads |
 | `read_all_vectors_by_id` | `readAllVectorsById` | `read_all_vectors_by_id` | `list_vector_groups` + typed reads |
 | `read_all_sets_by_id` | `readAllSetsById` | `read_all_sets_by_id` | `list_set_groups` + typed reads |
+
+**Transaction block wrappers (Julia, Dart, and Lua):**
+
+| Julia | Dart | Lua | Wraps |
+|-------|------|-----|-------|
+| `transaction(db) do db...end` | `db.transaction((db) {...})` | `db:transaction(function(db)...end)` | begin + fn + commit/rollback |
 
 **Multi-column group readers (Julia and Dart only):**
 

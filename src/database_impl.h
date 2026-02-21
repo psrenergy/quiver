@@ -99,17 +99,25 @@ struct Database::Impl {
     class TransactionGuard {
         Impl& impl_;
         bool committed_ = false;
+        bool owns_transaction_ = false;
 
     public:
-        explicit TransactionGuard(Impl& impl) : impl_(impl) { impl_.begin_transaction(); }
+        explicit TransactionGuard(Impl& impl) : impl_(impl) {
+            if (sqlite3_get_autocommit(impl_.db)) {
+                impl_.begin_transaction();
+                owns_transaction_ = true;
+            }
+        }
 
         void commit() {
-            impl_.commit();
+            if (owns_transaction_) {
+                impl_.commit();
+            }
             committed_ = true;
         }
 
         ~TransactionGuard() {
-            if (!committed_) {
+            if (!committed_ && owns_transaction_) {
                 impl_.rollback();
             }
         }

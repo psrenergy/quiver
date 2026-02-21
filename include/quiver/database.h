@@ -180,6 +180,12 @@ public:
     std::optional<int64_t> query_integer(const std::string& sql, const std::vector<Value>& params = {});
     std::optional<double> query_float(const std::string& sql, const std::vector<Value>& params = {});
 
+    // Transaction control
+    void begin_transaction();
+    void commit();
+    void rollback();
+    bool in_transaction() const;
+
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
@@ -194,9 +200,6 @@ private:
     void set_version(int64_t version);
     void migrate_up(const std::string& migration_path);
     void apply_schema(const std::string& schema_path);
-    void begin_transaction();
-    void commit();
-    void rollback();
 };
 
 }  // namespace quiver
