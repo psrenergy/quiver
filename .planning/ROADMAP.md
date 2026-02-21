@@ -59,10 +59,10 @@ Plans:
   4. Error messages from misuse (double begin, commit without begin) propagate correctly from C++ through each binding without bindings crafting their own messages
   5. All existing binding tests continue to pass unchanged (no regression)
   6. `in_transaction` is also bound in each language (Julia: `in_transaction(db)`, Dart: `db.inTransaction()`, Lua: `db:in_transaction()`)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 03-01: TBD
+- [ ] 03-01-PLAN.md -- Julia, Dart, and Lua transaction bindings with convenience wrappers and test suites
 
 ### Phase 4: Performance Benchmark
 **Goal**: Measurable proof that explicit transactions improve write throughput
