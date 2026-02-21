@@ -86,5 +86,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 |-------|----------------|--------|-----------|
 | 1. C++ Transaction Core | 1/1 | Complete | 2026-02-20 |
 | 2. C API Transaction Surface | 1/1 | Complete | 2026-02-21 |
-| 3. Language Bindings | 1/1 | Complete | 2026-02-21 |
+| 3. Language Bindings | 1/1 | Complete    | 2026-02-21 |
 | 4. Performance Benchmark | 0/0 | Not started | - |
