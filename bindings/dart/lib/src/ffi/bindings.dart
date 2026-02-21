@@ -200,6 +200,64 @@ class QuiverDatabaseBindings {
   late final _quiver_database_path = _quiver_database_pathPtr
       .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Pointer<ffi.Char>>)>();
 
+  int quiver_database_begin_transaction(
+    ffi.Pointer<quiver_database_t> db,
+  ) {
+    return _quiver_database_begin_transaction(
+      db,
+    );
+  }
+
+  late final _quiver_database_begin_transactionPtr =
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_database_t>)>>(
+        'quiver_database_begin_transaction',
+      );
+  late final _quiver_database_begin_transaction = _quiver_database_begin_transactionPtr
+      .asFunction<int Function(ffi.Pointer<quiver_database_t>)>();
+
+  int quiver_database_commit(
+    ffi.Pointer<quiver_database_t> db,
+  ) {
+    return _quiver_database_commit(
+      db,
+    );
+  }
+
+  late final _quiver_database_commitPtr =
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_database_t>)>>('quiver_database_commit');
+  late final _quiver_database_commit = _quiver_database_commitPtr
+      .asFunction<int Function(ffi.Pointer<quiver_database_t>)>();
+
+  int quiver_database_rollback(
+    ffi.Pointer<quiver_database_t> db,
+  ) {
+    return _quiver_database_rollback(
+      db,
+    );
+  }
+
+  late final _quiver_database_rollbackPtr =
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_database_t>)>>('quiver_database_rollback');
+  late final _quiver_database_rollback = _quiver_database_rollbackPtr
+      .asFunction<int Function(ffi.Pointer<quiver_database_t>)>();
+
+  int quiver_database_in_transaction(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Bool> out_active,
+  ) {
+    return _quiver_database_in_transaction(
+      db,
+      out_active,
+    );
+  }
+
+  late final _quiver_database_in_transactionPtr =
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Bool>)>>(
+        'quiver_database_in_transaction',
+      );
+  late final _quiver_database_in_transaction = _quiver_database_in_transactionPtr
+      .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Bool>)>();
+
   int quiver_database_current_version(
     ffi.Pointer<quiver_database_t> db,
     ffi.Pointer<ffi.Int64> out_version,

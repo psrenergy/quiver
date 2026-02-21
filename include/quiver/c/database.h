@@ -4,6 +4,8 @@
 #include "common.h"
 #include "options.h"
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
