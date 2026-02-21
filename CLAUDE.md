@@ -27,6 +27,7 @@ src/c/                    # C API implementation
   database_query.cpp      # Query operations (plain and parameterized)
   database_time_series.cpp # Time series operations + co-located free functions
   database_relations.cpp  # Relation operations
+  database_transaction.cpp # Transaction control (begin, commit, rollback, in_transaction)
 bindings/julia/           # Julia bindings (Quiver.jl)
 bindings/dart/            # Dart bindings (quiver)
 tests/                    # C++ tests

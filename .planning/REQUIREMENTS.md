@@ -15,7 +15,7 @@ Requirements for Explicit Transactions milestone. Each maps to roadmap phases.
 
 ### C API
 
-- [ ] **CAPI-01**: C API exposes `quiver_database_begin_transaction` / `quiver_database_commit` / `quiver_database_rollback` / `quiver_database_in_transaction` as flat functions returning `quiver_error_t`
+- [x] **CAPI-01**: C API exposes `quiver_database_begin_transaction` / `quiver_database_commit` / `quiver_database_rollback` / `quiver_database_in_transaction` as flat functions returning `quiver_error_t`
   - Includes TQRY-01 scope: `in_transaction()` exposed as `quiver_database_in_transaction(db, bool* out_active)`
 
 ### Bindings
@@ -60,8 +60,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TXN-01 | Phase 1 | Complete |
 | TXN-02 | Phase 1 | Complete |
 | TXN-03 | Phase 1 | Complete |
-| CAPI-01 | Phase 2 | Pending |
-| TQRY-01 | Phase 2 | Pending |
+| CAPI-01 | Phase 2 | Complete |
+| TQRY-01 | Phase 2 | Complete |
 | BIND-01 | Phase 3 | Pending |
 | BIND-02 | Phase 3 | Pending |
 | BIND-03 | Phase 3 | Pending |
