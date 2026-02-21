@@ -20,12 +20,12 @@ Requirements for Explicit Transactions milestone. Each maps to roadmap phases.
 
 ### Bindings
 
-- [ ] **BIND-01**: Julia binding exposes `begin_transaction!` / `commit!` / `rollback!`
-- [ ] **BIND-02**: Dart binding exposes `beginTransaction` / `commit` / `rollback`
-- [ ] **BIND-03**: Lua binding exposes `begin_transaction` / `commit` / `rollback`
-- [ ] **BIND-04**: Julia provides `transaction(db) do...end` with auto commit on success / rollback on exception
-- [ ] **BIND-05**: Dart provides `db.transaction(() {...})` with auto commit/rollback
-- [ ] **BIND-06**: Lua provides `db:transaction(fn)` with pcall-based auto commit/rollback
+- [x] **BIND-01**: Julia binding exposes `begin_transaction!` / `commit!` / `rollback!`
+- [x] **BIND-02**: Dart binding exposes `beginTransaction` / `commit` / `rollback`
+- [x] **BIND-03**: Lua binding exposes `begin_transaction` / `commit` / `rollback`
+- [x] **BIND-04**: Julia provides `transaction(db) do...end` with auto commit on success / rollback on exception
+- [x] **BIND-05**: Dart provides `db.transaction(() {...})` with auto commit/rollback
+- [x] **BIND-06**: Lua provides `db:transaction(fn)` with pcall-based auto commit/rollback
 
 ### Performance
 
@@ -62,12 +62,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TXN-03 | Phase 1 | Complete |
 | CAPI-01 | Phase 2 | Complete |
 | TQRY-01 | Phase 2 | Complete |
-| BIND-01 | Phase 3 | Pending |
-| BIND-02 | Phase 3 | Pending |
-| BIND-03 | Phase 3 | Pending |
-| BIND-04 | Phase 3 | Pending |
-| BIND-05 | Phase 3 | Pending |
-| BIND-06 | Phase 3 | Pending |
+| BIND-01 | Phase 3 | Complete |
+| BIND-02 | Phase 3 | Complete |
+| BIND-03 | Phase 3 | Complete |
+| BIND-04 | Phase 3 | Complete |
+| BIND-05 | Phase 3 | Complete |
+| BIND-06 | Phase 3 | Complete |
 | PERF-01 | Phase 4 | Pending |
 
 **Coverage:**
