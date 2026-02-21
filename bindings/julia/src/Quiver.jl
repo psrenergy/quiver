@@ -16,6 +16,7 @@ include("database_query.jl")
 include("database_read.jl")
 include("database_update.jl")
 include("database_delete.jl")
+include("database_transaction.jl")
 include("lua_runner.jl")
 
 export Element, Database, LuaRunner, DatabaseException

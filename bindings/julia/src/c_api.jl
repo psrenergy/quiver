@@ -103,6 +103,22 @@ function quiver_database_path(db, out_path)
     @ccall libquiver_c.quiver_database_path(db::Ptr{quiver_database_t}, out_path::Ptr{Ptr{Cchar}})::quiver_error_t
 end
 
+function quiver_database_begin_transaction(db)
+    @ccall libquiver_c.quiver_database_begin_transaction(db::Ptr{quiver_database_t})::quiver_error_t
+end
+
+function quiver_database_commit(db)
+    @ccall libquiver_c.quiver_database_commit(db::Ptr{quiver_database_t})::quiver_error_t
+end
+
+function quiver_database_rollback(db)
+    @ccall libquiver_c.quiver_database_rollback(db::Ptr{quiver_database_t})::quiver_error_t
+end
+
+function quiver_database_in_transaction(db, out_active)
+    @ccall libquiver_c.quiver_database_in_transaction(db::Ptr{quiver_database_t}, out_active::Ptr{Bool})::quiver_error_t
+end
+
 function quiver_database_current_version(db, out_version)
     @ccall libquiver_c.quiver_database_current_version(db::Ptr{quiver_database_t}, out_version::Ptr{Int64})::quiver_error_t
 end
