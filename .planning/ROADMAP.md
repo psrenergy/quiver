@@ -42,10 +42,11 @@ Plans:
   1. `quiver_database_begin_transaction`, `quiver_database_commit`, and `quiver_database_rollback` exist as C functions returning `quiver_error_t`
   2. A C API caller can batch multiple `quiver_database_create_element` calls inside a single transaction with one commit
   3. Error cases (double begin, commit without begin) return `QUIVER_ERROR` with descriptive messages from `quiver_get_last_error()`
-**Plans**: TBD
+  4. `quiver_database_in_transaction` returns transaction state via `bool* out_active` out-param
+**Plans**: 1 plan
 
 Plans:
-- [ ] 02-01: TBD
+- [ ] 02-01-PLAN.md -- Implement C API transaction functions and tests
 
 ### Phase 3: Language Bindings
 **Goal**: Julia, Dart, and Lua users can control transactions idiomatically in their language
@@ -83,6 +84,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. C++ Transaction Core | 0/1 | Complete    | 2026-02-20 |
-| 2. C API Transaction Surface | 0/0 | Not started | - |
+| 2. C API Transaction Surface | 0/1 | Not started | - |
 | 3. Language Bindings | 0/0 | Not started | - |
 | 4. Performance Benchmark | 0/0 | Not started | - |
