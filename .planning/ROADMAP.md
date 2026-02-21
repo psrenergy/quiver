@@ -72,10 +72,10 @@ Plans:
   1. A C++ benchmark test creates multiple elements with time series data both with and without an explicit wrapping transaction
   2. The batched-transaction variant completes measurably faster than the individual-transaction variant on a file-based database
   3. Benchmark results are printed to stdout so a human can observe the speedup ratio
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 04-01: TBD
+- [ ] 04-01-PLAN.md -- Standalone benchmark comparing individual vs batched transaction write throughput
 
 ## Progress
 
