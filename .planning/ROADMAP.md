@@ -58,6 +58,7 @@ Plans:
   3. Lua users can call `db:begin_transaction()`, `db:commit()`, `db:rollback()` and use `db:transaction(fn)` with pcall-based auto commit on success and rollback on error
   4. Error messages from misuse (double begin, commit without begin) propagate correctly from C++ through each binding without bindings crafting their own messages
   5. All existing binding tests continue to pass unchanged (no regression)
+  6. `in_transaction` is also bound in each language (Julia: `in_transaction(db)`, Dart: `db.inTransaction()`, Lua: `db:in_transaction()`)
 **Plans**: TBD
 
 Plans:

@@ -15,7 +15,8 @@ Requirements for Explicit Transactions milestone. Each maps to roadmap phases.
 
 ### C API
 
-- [ ] **CAPI-01**: C API exposes `quiver_database_begin_transaction` / `quiver_database_commit` / `quiver_database_rollback` as flat functions returning `quiver_error_t`
+- [ ] **CAPI-01**: C API exposes `quiver_database_begin_transaction` / `quiver_database_commit` / `quiver_database_rollback` / `quiver_database_in_transaction` as flat functions returning `quiver_error_t`
+  - Includes TQRY-01 scope: `in_transaction()` exposed as `quiver_database_in_transaction(db, bool* out_active)`
 
 ### Bindings
 
@@ -34,9 +35,7 @@ Requirements for Explicit Transactions milestone. Each maps to roadmap phases.
 
 Deferred to future release. Tracked but not in current roadmap.
 
-### Transaction Queries
-
-- **TQRY-01**: Public `in_transaction()` const query method on Database (wraps `sqlite3_get_autocommit()`)
+None currently.
 
 ## Out of Scope
 
@@ -62,6 +61,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TXN-02 | Phase 1 | Complete |
 | TXN-03 | Phase 1 | Complete |
 | CAPI-01 | Phase 2 | Pending |
+| TQRY-01 | Phase 2 | Pending |
 | BIND-01 | Phase 3 | Pending |
 | BIND-02 | Phase 3 | Pending |
 | BIND-03 | Phase 3 | Pending |
@@ -71,8 +71,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PERF-01 | Phase 4 | Pending |
 
 **Coverage:**
-- v0.3 requirements: 11 total
-- Mapped to phases: 11
+- v0.3 requirements: 12 total (11 original + TQRY-01 moved from Future)
+- Mapped to phases: 12
 - Unmapped: 0
 
 ---
