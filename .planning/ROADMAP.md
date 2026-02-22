@@ -38,11 +38,11 @@ See: milestones/v0.3-ROADMAP.md for full details.
   3. Passing an `enum_labels` map in options replaces integer values with human-readable labels in the output; unmapped integer values appear as raw integers (no crash, no empty field)
   4. Passing a `date_time_format` string in options reformats DateTime columns (identified by metadata, not value inspection) using strftime; non-DateTime columns are unaffected
   5. Exporting an empty collection writes a header-only CSV file (not an error); NULL values appear as empty fields; all fields with commas, quotes, or newlines are correctly escaped per RFC 4180
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 05-01-PLAN.md -- CSVExportOptions struct, export_csv implementation, C API stub update
+- [ ] 05-02-PLAN.md -- Comprehensive test suite and CLAUDE.md documentation update
 
 ### Phase 6: C API
 **Goal**: C API consumers can export CSV through flat FFI-safe functions with the same capabilities as the C++ API
@@ -82,7 +82,7 @@ Phases execute in numeric order: 5 -> 6 -> 7
 | 2. C API Transaction Surface | v0.3 | 1/1 | Complete | 2026-02-21 |
 | 3. Language Bindings | v0.3 | 1/1 | Complete | 2026-02-21 |
 | 4. Performance Benchmark | v0.3 | 1/1 | Complete | 2026-02-21 |
-| 5. C++ Core | v0.4 | 0/0 | Not started | - |
+| 5. C++ Core | v0.4 | 0/2 | Planned | - |
 | 6. C API | v0.4 | 0/0 | Not started | - |
 | 7. Bindings | v0.4 | 0/0 | Not started | - |
 
