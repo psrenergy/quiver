@@ -4,7 +4,7 @@
 
 - v0.2 (Pre-GSD) -- Full CRUD, typed operations, bindings
 - v0.3 Explicit Transactions -- Phases 1-4 (shipped 2026-02-22)
-- v0.4 CSV Export -- Phases 5-7 (in progress)
+- v0.4 CSV Export -- Phases 5-7 (Phase 7 plan 02 complete)
 
 ## Phases
 
@@ -71,7 +71,7 @@ Plans:
 
 Plans:
 - [ ] 07-01-PLAN.md -- Julia and Dart export_csv/exportCSV wrappers with options marshaling and tests
-- [ ] 07-02-PLAN.md -- Lua export_csv binding via sol2 and C++ tests
+- [x] 07-02-PLAN.md -- Lua export_csv binding via sol2 and C++ tests (completed 2026-02-22)
 
 ## Progress
 
@@ -86,7 +86,7 @@ Phases execute in numeric order: 5 -> 6 -> 7
 | 4. Performance Benchmark | v0.3 | 1/1 | Complete | 2026-02-21 |
 | 5. C++ Core | v0.4 | Complete    | 2026-02-22 | - |
 | 6. C API | v0.4 | 0/2 | Planning complete | - |
-| 7. Bindings | v0.4 | 0/2 | Planning complete | - |
+| 7. Bindings | v0.4 | 1/2 | In Progress | - |
 
 ---
 *Roadmap created: 2026-02-22*

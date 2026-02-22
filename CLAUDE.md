@@ -419,7 +419,7 @@ lua.run(R"(
 | Time series update | `update_time_series_group()` | `quiver_database_update_time_series_group()` | `update_time_series_group!()` | `updateTimeSeriesGroup()` | `update_time_series_group()` |
 | Query | `query_string()` | `quiver_database_query_string()` | `query_string()` | `queryString()` | `query_string()` |
 | Relations | `update_scalar_relation()` | `quiver_database_update_scalar_relation()` | `update_scalar_relation!()` | `updateScalarRelation()` | `update_scalar_relation()` |
-| CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | N/A |
+| CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | `export_csv()` |
 | Describe | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |
 
 The transformation rules are mechanical. Given any C++ method name, you can derive the equivalent in any layer without consulting a lookup table.

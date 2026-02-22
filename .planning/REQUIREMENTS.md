@@ -30,7 +30,7 @@ Requirements for CSV Export milestone. Each maps to roadmap phases.
 
 - [ ] **BIND-01**: Julia `export_csv(db, collection, group, path, options)` with default options
 - [ ] **BIND-02**: Dart `exportCSV(collection, group, path, options)` with default options
-- [ ] **BIND-03**: Lua `export_csv(collection, group, path, options)` with default options
+- [x] **BIND-03**: Lua `export_csv(collection, group, path, options)` with default options
 
 ## Future Requirements
 
@@ -71,7 +71,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CAPI-02 | Phase 6 | Complete |
 | BIND-01 | Phase 7 | Pending |
 | BIND-02 | Phase 7 | Pending |
-| BIND-03 | Phase 7 | Pending |
+| BIND-03 | Phase 7 | Complete |
 
 **Coverage:**
 - v0.4 requirements: 13 total
