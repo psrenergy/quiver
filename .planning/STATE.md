@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 5 of 7 (C++ Core)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-22 -- Completed 05-01-PLAN.md (C++ CSV Export)
+Plan: 2 of 2 in current phase
+Status: Phase Complete
+Last activity: 2026-02-22 -- Completed 05-02-PLAN.md (CSV Export Tests & Documentation)
 
-Progress: [::::::::::::::::::::] v0.3 complete | [#####.....] v0.4 50%
+Progress: [::::::::::::::::::::] v0.3 complete | [##########] v0.4 Phase 5 complete (2/2 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5 (4 v0.3 + 1 v0.4)
-- Average duration: ~10 min
-- Total execution time: ~50 min
+- Total plans completed: 6 (4 v0.3 + 2 v0.4)
+- Average duration: ~9 min
+- Total execution time: ~54 min
 
 **By Phase (v0.3):**
 
@@ -36,10 +36,11 @@ Progress: [::::::::::::::::::::] v0.3 complete | [#####.....] v0.4 50%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 5. C++ Core | 1 | ~10 min | ~10 min |
+| 5. C++ Core | 2 | ~14 min | ~7 min |
 
 *Updated after each plan completion*
 | Phase 05 P01 | 10min | 2 tasks | 7 files |
+| Phase 05 P02 | 4min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -58,6 +59,7 @@ v0.4 design decisions (from research):
 - [Phase 05]: Hand-rolled RFC 4180 CSV writer instead of third-party library
 - [Phase 05]: std::get_time for cross-platform ISO 8601 parsing (no strptime on MSVC)
 - [Phase 05]: snprintf %g for float formatting (no trailing zeros)
+- [Phase 05]: Unique attribute names across group tables to avoid schema validator collision
 
 ### Key Technical Context
 
@@ -66,6 +68,8 @@ v0.4 design decisions (from research):
 - C API stub updated to 4-param signature (collection, group, path); full options struct deferred to Phase 6
 - Julia/Dart bindings still reference old 2-param signature (will need updates in Phase 7)
 - import_csv remains an empty stub in src/database_describe.cpp
+- 19 CSV export tests in test_database_csv.cpp covering all 8 requirements (CSV-01 through OPT-04)
+- csv_export.sql test schema uses 'measurement' (vector) and 'tag' (set) to avoid duplicate attribute validation
 
 ### Pending Todos
 
@@ -78,5 +82,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 05-01-PLAN.md
-Resume file: .planning/phases/05-c-core/05-01-SUMMARY.md
+Stopped at: Completed 05-02-PLAN.md (Phase 5 complete)
+Resume file: .planning/phases/05-c-core/05-02-SUMMARY.md
