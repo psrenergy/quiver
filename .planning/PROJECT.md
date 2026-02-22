@@ -20,7 +20,7 @@ Reliable, schema-validated SQLite access through a single C++ core with mechanic
 - Metadata introspection (scalar, vector, set, time-series groups) -- v0.2
 - Parameterized SQL queries (positional ? placeholders, typed parameters) -- v0.2
 - Relations (foreign key update/read via scalar_relation) -- v0.2
-- CSV export/import -- v0.2
+- CSV export/import (API stubs only, non-functional) -- v0.2
 - Schema migrations (versioned directory discovery) -- v0.2
 - Lua scripting (full DB API exposed as `db` userdata) -- v0.2
 - C API with binary error codes and thread-local error messages -- v0.2
@@ -38,11 +38,23 @@ Reliable, schema-validated SQLite access through a single C++ core with mechanic
 
 ### Active
 
-(None -- next milestone not yet defined)
+<!-- Current scope: v0.4 — CSV Export -->
+
+- [ ] Export scalars CSV for a collection (label + all scalar attributes, no id column)
+- [ ] Export group CSV for vector/set/time series (label replaces id, actual column names from schema)
+- [ ] Enum map support: caller passes attribute -> {value -> label} mapping, integer values replaced with labels
+- [ ] Date/time format support: caller specifies format string for date_time columns
+- [ ] CSV export options struct in C++ (enum_labels, date_time_format)
+- [ ] CSV export exposed through C API with flat options struct
+- [ ] CSV export exposed through Julia binding
+- [ ] CSV export exposed through Dart binding
+- [ ] CSV export exposed through Lua binding
 
 ### Out of Scope
 
 - Python bindings (stub exists, not implementing)
+- CSV import (defer to future milestone; export-only for v0.4)
+- Multi-language columns in CSV (caller picks one language per call)
 - SAVEPOINT-based nested transactions (no-op TransactionGuard is simpler)
 - Transaction behavior modes (DEFERRED/IMMEDIATE/EXCLUSIVE) -- single-connection, DEFERRED is correct
 - C++ RAII Transaction wrapper in public API -- flat begin/commit/rollback simplest for FFI
@@ -50,12 +62,22 @@ Reliable, schema-validated SQLite access through a single C++ core with mechanic
 - Automatic retry on SQLITE_BUSY -- single-connection, cannot occur
 - Async transaction support -- synchronous by design
 
+## Current Milestone: v0.4 CSV Export
+
+**Goal:** Replace empty CSV export stubs with real implementation — export collection scalars or any group (vector/set/time series) to CSV with enum label resolution and date/time formatting.
+
+**Target features:**
+- Export scalars CSV (label + attributes, enum values resolved to labels)
+- Export group CSV (id replaced with label, schema column names, enum + date formatting)
+- Options struct: enum_labels map + date_time_format string
+- Full propagation: C++ -> C API -> Julia, Dart, Lua
+
 ## Context
 
 Shipped v0.3 with explicit transaction control across all layers. Codebase: ~7300 lines C++, C API, Julia, Dart, Lua.
 Tech stack: C++20, SQLite, spdlog, sol2, CMake.
 Test suites: C++ 418, C API 263, Julia 418, Dart 247 tests.
-Benchmark shows 20x+ speedup from batching writes in a single transaction on file-based SQLite.
+Existing export_csv/import_csv stubs in API surface are non-functional (empty bodies).
 
 ## Constraints
 
@@ -78,4 +100,4 @@ Benchmark shows 20x+ speedup from batching writes in a single transaction on fil
 | Benchmark uses file-based DB (not :memory:) | Reflects real-world I/O cost; the point of benchmarking transactions | Good |
 
 ---
-*Last updated: 2026-02-22 after v0.3 milestone*
+*Last updated: 2026-02-22 after v0.4 milestone initialization*

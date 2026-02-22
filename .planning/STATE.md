@@ -5,13 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** Reliable, schema-validated SQLite access through a single C++ core with mechanically-derived bindings that feel native in every target language.
-**Current focus:** Planning next milestone
+**Current focus:** v0.4 CSV Export -- Defining requirements
 
 ## Current Position
 
-Phase: N/A (between milestones)
-Status: v0.3 shipped, next milestone not started
-Last activity: 2026-02-22 -- Completed v0.3 Explicit Transactions milestone
+Phase: Not started (defining requirements)
+Plan: --
+Status: Defining requirements
+Last activity: 2026-02-22 -- Milestone v0.4 started
 
 ## Accumulated Context
 
@@ -22,12 +23,11 @@ All v0.3 decisions archived -- see milestones/v0.3-ROADMAP.md for details.
 
 ### Key Technical Context
 
-- TransactionGuard in database_impl.h is nest-aware: checks sqlite3_get_autocommit() in constructor
-- Public transaction API: begin_transaction(), commit(), rollback(), in_transaction() on Database
-- All write methods (create, update, delete) use TransactionGuard internally (no-op when nested)
-- C API transaction functions in src/c/database_transaction.cpp
-- Julia, Dart, Lua all have transaction block convenience wrappers
-- Benchmark executable at build/bin/quiver_benchmark.exe
+- Existing export_csv/import_csv are empty stubs in src/database_describe.cpp
+- C API wrappers exist in src/c/database.cpp but call empty C++ functions
+- Julia/Dart bindings already wrap the stubs (will need signature changes)
+- Lua binds export_csv/import_csv in lua_runner.cpp (also wraps empty stubs)
+- TransactionGuard nest-aware pattern available for write operations
 
 ### Pending Todos
 
@@ -40,5 +40,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed v0.3 milestone
+Stopped at: Defining v0.4 requirements
 Resume file: None
