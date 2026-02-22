@@ -52,10 +52,11 @@ Plans:
   1. `quiver_csv_export_options_default()` returns a valid default options struct and `quiver_database_export_csv()` accepts it to produce identical output as the C++ API
   2. The `quiver_csv_export_options_t` flat struct can represent any enum_labels mapping (multiple attributes, multiple values per attribute) through FFI-safe parallel arrays with no nested pointers beyond one level
   3. FFI generators (Julia Clang.jl and Dart ffigen) successfully parse the new C API headers and produce correct binding declarations
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 06-01: TBD
+- [ ] 06-01-PLAN.md -- C API csv.h header, flat options struct, database_csv.cpp implementation, build registration
+- [ ] 06-02-PLAN.md -- C API CSV test suite (19 tests), FFI generator validation, CLAUDE.md update
 
 ### Phase 7: Bindings
 **Goal**: Julia, Dart, and Lua users can export CSV using idiomatic APIs with native map types for options
@@ -83,7 +84,7 @@ Phases execute in numeric order: 5 -> 6 -> 7
 | 3. Language Bindings | v0.3 | 1/1 | Complete | 2026-02-21 |
 | 4. Performance Benchmark | v0.3 | 1/1 | Complete | 2026-02-21 |
 | 5. C++ Core | v0.4 | Complete    | 2026-02-22 | - |
-| 6. C API | v0.4 | 0/0 | Not started | - |
+| 6. C API | v0.4 | 0/2 | Planning complete | - |
 | 7. Bindings | v0.4 | 0/0 | Not started | - |
 
 ---
