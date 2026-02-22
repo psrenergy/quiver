@@ -22,7 +22,7 @@ See: milestones/v0.3-ROADMAP.md for full details.
 
 ### v0.4 CSV Export
 
-- [ ] **Phase 5: C++ Core** - Options struct, export logic, RFC 4180 writer, enum resolution, date formatting, tests
+- [x] **Phase 5: C++ Core** - Options struct, export logic, RFC 4180 writer, enum resolution, date formatting, tests (completed 2026-02-22)
 - [ ] **Phase 6: C API** - Flat options struct, export function, FFI generation, C API tests
 - [ ] **Phase 7: Bindings** - Julia, Dart, and Lua wrappers with idiomatic option conversion and binding tests
 
@@ -82,7 +82,7 @@ Phases execute in numeric order: 5 -> 6 -> 7
 | 2. C API Transaction Surface | v0.3 | 1/1 | Complete | 2026-02-21 |
 | 3. Language Bindings | v0.3 | 1/1 | Complete | 2026-02-21 |
 | 4. Performance Benchmark | v0.3 | 1/1 | Complete | 2026-02-21 |
-| 5. C++ Core | v0.4 | 0/2 | Planned | - |
+| 5. C++ Core | v0.4 | Complete    | 2026-02-22 | - |
 | 6. C API | v0.4 | 0/0 | Not started | - |
 | 7. Bindings | v0.4 | 0/0 | Not started | - |
 
