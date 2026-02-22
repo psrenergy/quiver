@@ -67,5 +67,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Roadmap created for v0.4 -- ready to plan Phase 5
-Resume file: None
+Stopped at: Phase 5 context gathered
+Resume file: .planning/phases/05-c-core/05-CONTEXT.md
