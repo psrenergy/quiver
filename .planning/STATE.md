@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** Reliable, schema-validated SQLite access through a single C++ core with mechanically-derived bindings that feel native in every target language.
-**Current focus:** v0.4 CSV Export -- Phase 5 (C++ Core)
+**Current focus:** v0.4 CSV Export -- Phase 6 (C API)
 
 ## Current Position
 
-Phase: 5 of 7 (C++ Core)
-Plan: 2 of 2 in current phase
-Status: Phase Complete
-Last activity: 2026-02-22 -- Completed 05-02-PLAN.md (CSV Export Tests & Documentation)
+Phase: 6 of 7 (C API)
+Plan: 0 of 0 in current phase
+Status: Context Gathered
+Last activity: 2026-02-22 -- Phase 6 context gathered
 
 Progress: [::::::::::::::::::::] v0.3 complete | [##########] v0.4 Phase 5 complete (2/2 plans)
 
@@ -82,5 +82,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 05-02-PLAN.md (Phase 5 complete)
-Resume file: .planning/phases/05-c-core/05-02-SUMMARY.md
+Stopped at: Phase 6 context gathered
+Resume file: .planning/phases/06-c-api/06-CONTEXT.md
