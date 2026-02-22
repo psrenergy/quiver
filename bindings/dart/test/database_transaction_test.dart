@@ -201,8 +201,7 @@ void main() {
         expect(labels.contains('Item 1'), isTrue);
         expect(labels.contains('Item 2'), isTrue);
 
-        final integers =
-            db.readScalarIntegers('Collection', 'some_integer');
+        final integers = db.readScalarIntegers('Collection', 'some_integer');
         expect(integers.contains(100), isTrue);
         expect(integers.contains(20), isTrue);
       } finally {
