@@ -9,17 +9,17 @@ Requirements for CSV Export milestone. Each maps to roadmap phases.
 
 ### CSV Export
 
-- [ ] **CSV-01**: `export_csv(collection, group, path, options)` -- group="" exports scalars (label + all scalar attributes, no id), group="name" exports that vector/set/time series group (label replaces id, schema column names)
-- [ ] **CSV-02**: CSV output is RFC 4180 compliant (header row, comma delimiter, double-quote escaping for commas/quotes/newlines)
-- [ ] **CSV-03**: Empty collection writes header-only CSV (not an error)
-- [ ] **CSV-04**: NULL values written as empty fields
+- [x] **CSV-01**: `export_csv(collection, group, path, options)` -- group="" exports scalars (label + all scalar attributes, no id), group="name" exports that vector/set/time series group (label replaces id, schema column names)
+- [x] **CSV-02**: CSV output is RFC 4180 compliant (header row, comma delimiter, double-quote escaping for commas/quotes/newlines)
+- [x] **CSV-03**: Empty collection writes header-only CSV (not an error)
+- [x] **CSV-04**: NULL values written as empty fields
 
 ### Options
 
-- [ ] **OPT-01**: `CSVExportOptions` struct with `enum_labels` map (`attribute -> {value -> label}`) and `date_time_format` string
-- [ ] **OPT-02**: Enum resolution replaces integer values with labels from caller-provided map; unmapped values fall back to raw integer
-- [ ] **OPT-03**: Date/time formatting via `strftime` format string applied only to DateTime columns (identified by metadata, not value inspection)
-- [ ] **OPT-04**: `default_csv_export_options()` / `quiver_csv_export_options_default()` following DatabaseOptions pattern
+- [x] **OPT-01**: `CSVExportOptions` struct with `enum_labels` map (`attribute -> {value -> label}`) and `date_time_format` string
+- [x] **OPT-02**: Enum resolution replaces integer values with labels from caller-provided map; unmapped values fall back to raw integer
+- [x] **OPT-03**: Date/time formatting via `strftime` format string applied only to DateTime columns (identified by metadata, not value inspection)
+- [x] **OPT-04**: `default_csv_export_options()` / `quiver_csv_export_options_default()` following DatabaseOptions pattern
 
 ### C API
 
@@ -59,14 +59,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CSV-01 | Phase 5 | Pending |
-| CSV-02 | Phase 5 | Pending |
-| CSV-03 | Phase 5 | Pending |
-| CSV-04 | Phase 5 | Pending |
-| OPT-01 | Phase 5 | Pending |
-| OPT-02 | Phase 5 | Pending |
-| OPT-03 | Phase 5 | Pending |
-| OPT-04 | Phase 5 | Pending |
+| CSV-01 | Phase 5 | Complete |
+| CSV-02 | Phase 5 | Complete |
+| CSV-03 | Phase 5 | Complete |
+| CSV-04 | Phase 5 | Complete |
+| OPT-01 | Phase 5 | Complete |
+| OPT-02 | Phase 5 | Complete |
+| OPT-03 | Phase 5 | Complete |
+| OPT-04 | Phase 5 | Complete |
 | CAPI-01 | Phase 6 | Pending |
 | CAPI-02 | Phase 6 | Pending |
 | BIND-01 | Phase 7 | Pending |
