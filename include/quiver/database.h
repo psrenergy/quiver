@@ -4,6 +4,7 @@
 #include "export.h"
 #include "quiver/attribute_metadata.h"
 #include "quiver/c/options.h"
+#include "quiver/csv.h"
 #include "quiver/element.h"
 #include "quiver/result.h"
 
@@ -172,7 +173,10 @@ public:
     void describe() const;
 
     // CSV operations
-    void export_csv(const std::string& table, const std::string& path);
+    void export_csv(const std::string& collection,
+                    const std::string& group,
+                    const std::string& path,
+                    const CSVExportOptions& options = default_csv_export_options());
     void import_csv(const std::string& table, const std::string& path);
 
     // Query methods - execute SQL and return first row's first column

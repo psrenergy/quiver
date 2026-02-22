@@ -9,6 +9,7 @@ set(QUIVER_SOURCES
     database_time_series.cpp
     database_query.cpp
     database_relations.cpp
+    database_csv.cpp
     database_describe.cpp
     element.cpp
     lua_runner.cpp
