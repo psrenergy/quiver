@@ -150,6 +150,7 @@ echo   C++ tests:    OK
 echo   C API tests:  OK
 echo   Julia tests:  OK
 echo   Dart tests:   OK
+echo   Benchmark:    Built (run manually: build\bin\quiver_benchmark.exe)
 echo.
 
 exit /b 0

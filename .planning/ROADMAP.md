@@ -1,90 +1,29 @@
-# Roadmap: Quiver v0.3 -- Explicit Transactions
+# Roadmap: Quiver
 
-## Overview
+## Milestones
 
-Expose explicit transaction control (`begin_transaction`, `commit`, `rollback`) starting from the C++ core, wrapping through the C API, and propagating to all three language bindings (Julia, Dart, Lua). Each phase delivers a complete, testable layer. A benchmark phase proves the performance motivation is real.
+- v0.2 (Pre-GSD) -- Full CRUD, typed operations, bindings
+- v0.3 Explicit Transactions -- Phases 1-4 (shipped 2026-02-22)
 
 ## Phases
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+<details>
+<summary>v0.3 Explicit Transactions (Phases 1-4) -- SHIPPED 2026-02-22</summary>
 
-Decimal phases appear between their surrounding integers in numeric order.
+- [x] Phase 1: C++ Transaction Core (1/1 plans) -- completed 2026-02-20
+- [x] Phase 2: C API Transaction Surface (1/1 plans) -- completed 2026-02-21
+- [x] Phase 3: Language Bindings (1/1 plans) -- completed 2026-02-21
+- [x] Phase 4: Performance Benchmark (1/1 plans) -- completed 2026-02-21
 
-- [x] **Phase 1: C++ Transaction Core** - Public begin/commit/rollback with nest-aware TransactionGuard (completed 2026-02-20)
-- [x] **Phase 2: C API Transaction Surface** - Flat C functions wrapping the C++ transaction methods
-- [x] **Phase 3: Language Bindings** - Julia, Dart, and Lua bindings with convenience wrappers
-- [ ] **Phase 4: Performance Benchmark** - Prove measurable speedup from batched transactions
+See: milestones/v0.3-ROADMAP.md for full details.
 
-## Phase Details
-
-### Phase 1: C++ Transaction Core
-**Goal**: Users of the C++ API can wrap multiple write operations in a single explicit transaction
-**Depends on**: Nothing (first phase)
-**Requirements**: TXN-01, TXN-02, TXN-03
-**Success Criteria** (what must be TRUE):
-  1. Caller can call `begin_transaction()`, perform multiple writes, then `commit()` or `rollback()` on a Database instance
-  2. Existing write methods (`create_element`, `update_*`, `delete_element`) execute without error inside an explicit transaction -- no "cannot start a transaction within a transaction" failures
-  3. Calling `commit()` or `rollback()` without an active transaction throws an error matching Quiver's "Cannot {operation}: {reason}" pattern
-  4. Calling `begin_transaction()` when a transaction is already active throws an error matching Quiver's "Cannot {operation}: {reason}" pattern
-  5. All existing C++ tests continue to pass unchanged (no regression)
-**Plans**: 1 plan
-
-Plans:
-- [ ] 01-01-PLAN.md -- Implement transaction API, nest-aware TransactionGuard, and test suite
-
-### Phase 2: C API Transaction Surface
-**Goal**: C API consumers can control transactions through flat FFI-safe functions
-**Depends on**: Phase 1
-**Requirements**: CAPI-01
-**Success Criteria** (what must be TRUE):
-  1. `quiver_database_begin_transaction`, `quiver_database_commit`, and `quiver_database_rollback` exist as C functions returning `quiver_error_t`
-  2. A C API caller can batch multiple `quiver_database_create_element` calls inside a single transaction with one commit
-  3. Error cases (double begin, commit without begin) return `QUIVER_ERROR` with descriptive messages from `quiver_get_last_error()`
-  4. `quiver_database_in_transaction` returns transaction state via `bool* out_active` out-param
-**Plans**: 1 plan
-
-Plans:
-- [ ] 02-01-PLAN.md -- Implement C API transaction functions and tests
-
-### Phase 3: Language Bindings
-**Goal**: Julia, Dart, and Lua users can control transactions idiomatically in their language
-**Depends on**: Phase 2
-**Requirements**: BIND-01, BIND-02, BIND-03, BIND-04, BIND-05, BIND-06
-**Success Criteria** (what must be TRUE):
-  1. Julia users can call `begin_transaction!(db)`, `commit!(db)`, `rollback!(db)` and use `transaction(db) do ... end` with auto commit on success and rollback on exception
-  2. Dart users can call `db.beginTransaction()`, `db.commit()`, `db.rollback()` and use `db.transaction(() { ... })` with auto commit on success and rollback on exception
-  3. Lua users can call `db:begin_transaction()`, `db:commit()`, `db:rollback()` and use `db:transaction(fn)` with pcall-based auto commit on success and rollback on error
-  4. Error messages from misuse (double begin, commit without begin) propagate correctly from C++ through each binding without bindings crafting their own messages
-  5. All existing binding tests continue to pass unchanged (no regression)
-  6. `in_transaction` is also bound in each language (Julia: `in_transaction(db)`, Dart: `db.inTransaction()`, Lua: `db:in_transaction()`)
-**Plans**: 1 plan
-
-Plans:
-- [ ] 03-01-PLAN.md -- Julia, Dart, and Lua transaction bindings with convenience wrappers and test suites
-
-### Phase 4: Performance Benchmark
-**Goal**: Measurable proof that explicit transactions improve write throughput
-**Depends on**: Phase 1
-**Requirements**: PERF-01
-**Success Criteria** (what must be TRUE):
-  1. A C++ benchmark test creates multiple elements with time series data both with and without an explicit wrapping transaction
-  2. The batched-transaction variant completes measurably faster than the individual-transaction variant on a file-based database
-  3. Benchmark results are printed to stdout so a human can observe the speedup ratio
-**Plans**: TBD
-
-Plans:
-- [ ] 04-01: TBD
+</details>
 
 ## Progress
 
-**Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. C++ Transaction Core | 1/1 | Complete | 2026-02-20 |
-| 2. C API Transaction Surface | 1/1 | Complete | 2026-02-21 |
-| 3. Language Bindings | 1/1 | Complete    | 2026-02-21 |
-| 4. Performance Benchmark | 0/0 | Not started | - |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. C++ Transaction Core | v0.3 | 1/1 | Complete | 2026-02-20 |
+| 2. C API Transaction Surface | v0.3 | 1/1 | Complete | 2026-02-21 |
+| 3. Language Bindings | v0.3 | 1/1 | Complete | 2026-02-21 |
+| 4. Performance Benchmark | v0.3 | 1/1 | Complete | 2026-02-21 |
