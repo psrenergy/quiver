@@ -13,6 +13,7 @@ include/quiver/           # C++ public headers
   lua_runner.h            # Lua scripting support
 include/quiver/c/         # C API headers (for FFI)
   options.h               # Canonical DatabaseOptions/LogLevel types (shared by C++ and C)
+  csv.h                   # quiver_csv_export_options_t struct and default factory
   database.h
   element.h
   lua_runner.h
@@ -21,7 +22,8 @@ src/                      # C++ implementation
 src/c/                    # C API implementation
   internal.h              # Shared structs (quiver_database, quiver_element), QUIVER_REQUIRE macro
   database_helpers.h      # Marshaling templates, strdup_safe, metadata converters
-  database.cpp            # Lifecycle: open, close, factory methods, describe, CSV
+  database.cpp            # Lifecycle: open, close, factory methods, describe
+  database_csv.cpp        # CSV export: options conversion, export function
   database_create.cpp     # Element CRUD: create, update, delete
   database_read.cpp       # All read operations + co-located free functions
   database_update.cpp     # All scalar/vector/set update operations
@@ -93,7 +95,8 @@ Test files organized by functionality:
 - `test_database_time_series.cpp` - time series read/update/metadata operations
 - `test_database_transaction.cpp` - explicit transaction control (begin/commit/rollback)
 
-C API tests follow same pattern with `test_c_api_database_*.cpp` prefix.
+C API tests follow same pattern with `test_c_api_database_*.cpp` prefix:
+- `test_c_api_database_csv.cpp` - CSV export options struct, enum labels, date formatting, scalar/group export
 
 All test schemas located in `tests/schemas/valid/` and `tests/schemas/invalid/`.
 
