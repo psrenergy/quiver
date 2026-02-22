@@ -59,25 +59,25 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CSV-01 | - | Pending |
-| CSV-02 | - | Pending |
-| CSV-03 | - | Pending |
-| CSV-04 | - | Pending |
-| OPT-01 | - | Pending |
-| OPT-02 | - | Pending |
-| OPT-03 | - | Pending |
-| OPT-04 | - | Pending |
-| CAPI-01 | - | Pending |
-| CAPI-02 | - | Pending |
-| BIND-01 | - | Pending |
-| BIND-02 | - | Pending |
-| BIND-03 | - | Pending |
+| CSV-01 | Phase 5 | Pending |
+| CSV-02 | Phase 5 | Pending |
+| CSV-03 | Phase 5 | Pending |
+| CSV-04 | Phase 5 | Pending |
+| OPT-01 | Phase 5 | Pending |
+| OPT-02 | Phase 5 | Pending |
+| OPT-03 | Phase 5 | Pending |
+| OPT-04 | Phase 5 | Pending |
+| CAPI-01 | Phase 6 | Pending |
+| CAPI-02 | Phase 6 | Pending |
+| BIND-01 | Phase 7 | Pending |
+| BIND-02 | Phase 7 | Pending |
+| BIND-03 | Phase 7 | Pending |
 
 **Coverage:**
 - v0.4 requirements: 13 total
-- Mapped to phases: 0
-- Unmapped: 13
+- Mapped to phases: 13
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-22*
-*Last updated: 2026-02-22 after initial definition*
+*Last updated: 2026-02-22 after roadmap creation*
