@@ -8,6 +8,7 @@ SQLite wrapper library with C++ core, C API for FFI, and language bindings (Juli
 include/quiver/           # C++ public headers
   database.h              # Database class - main API
   attribute_metadata.h    # ScalarMetadata, GroupMetadata types
+  csv.h                   # CSVExportOptions struct and default factory
   element.h               # Element builder for create operations
   lua_runner.h            # Lua scripting support
 include/quiver/c/         # C API headers (for FFI)
@@ -16,6 +17,7 @@ include/quiver/c/         # C API headers (for FFI)
   element.h
   lua_runner.h
 src/                      # C++ implementation
+  database_csv.cpp        # CSV export implementation
 src/c/                    # C API implementation
   internal.h              # Shared structs (quiver_database, quiver_element), QUIVER_REQUIRE macro
   database_helpers.h      # Marshaling templates, strdup_safe, metadata converters
@@ -82,6 +84,7 @@ Standalone executable comparing individual vs batched transaction performance. N
 Test files organized by functionality:
 - `test_database_lifecycle.cpp` - open, close, move semantics, options
 - `test_database_create.cpp` - create element operations
+- `test_database_csv.cpp` - CSV export operations (scalar, group, options, formatting)
 - `test_database_read.cpp` - read scalar/vector/set operations
 - `test_database_update.cpp` - update scalar/vector/set operations
 - `test_database_delete.cpp` - delete element operations
@@ -112,7 +115,7 @@ struct Database::Impl {
 };
 ```
 
-Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`, `GroupMetadata`, `ScalarMetadata`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor).
+Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`, `GroupMetadata`, `ScalarMetadata`, `CSVExportOptions`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor).
 
 ### Transactions
 Public API exposes explicit transaction control:
@@ -360,6 +363,7 @@ Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references.
 - Relations: `update_scalar_relation()`, `read_scalar_relation()`
 - Query: `query_string/integer/float(sql, params = {})` - parameterized SQL with positional `?` placeholders
 - Schema inspection: `describe()` - prints schema info to stdout
+- CSV: `export_csv()` -- exports collection scalars or groups to CSV file with optional enum/date formatting via `CSVExportOptions`
 
 ### Element Class
 Builder for element creation with fluent API:
