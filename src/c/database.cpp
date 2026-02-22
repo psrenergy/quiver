@@ -130,11 +130,11 @@ QUIVER_C_API quiver_error_t quiver_database_describe(quiver_database_t* db) {
 
 // CSV operations
 
-QUIVER_C_API quiver_error_t quiver_database_export_csv(quiver_database_t* db, const char* table, const char* path) {
-    QUIVER_REQUIRE(db, table, path);
+QUIVER_C_API quiver_error_t quiver_database_export_csv(quiver_database_t* db, const char* collection, const char* group, const char* path) {
+    QUIVER_REQUIRE(db, collection, group, path);
 
     try {
-        db->db.export_csv(table, path);
+        db->db.export_csv(collection, group, path);
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
