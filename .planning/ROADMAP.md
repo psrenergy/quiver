@@ -67,10 +67,11 @@ Plans:
   2. Dart `exportCSV(collection, group, path, {options})` accepts a Dart Map for enum_labels and produces correct CSV output; default options work without named parameters
   3. Lua `db:export_csv(collection, group, path, options)` accepts a Lua table for enum_labels and produces correct CSV output; omitting the options table uses defaults
   4. All three bindings produce byte-identical CSV output to each other and to the C++ API for the same input data and options
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 07-01: TBD
+- [ ] 07-01-PLAN.md -- Julia and Dart export_csv/exportCSV wrappers with options marshaling and tests
+- [ ] 07-02-PLAN.md -- Lua export_csv binding via sol2 and C++ tests
 
 ## Progress
 
@@ -85,7 +86,7 @@ Phases execute in numeric order: 5 -> 6 -> 7
 | 4. Performance Benchmark | v0.3 | 1/1 | Complete | 2026-02-21 |
 | 5. C++ Core | v0.4 | Complete    | 2026-02-22 | - |
 | 6. C API | v0.4 | 0/2 | Planning complete | - |
-| 7. Bindings | v0.4 | 0/0 | Not started | - |
+| 7. Bindings | v0.4 | 0/2 | Planning complete | - |
 
 ---
 *Roadmap created: 2026-02-22*
