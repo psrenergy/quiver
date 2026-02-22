@@ -23,8 +23,8 @@ Requirements for CSV Export milestone. Each maps to roadmap phases.
 
 ### C API
 
-- [ ] **CAPI-01**: `quiver_csv_export_options_t` flat struct with parallel arrays for enum_labels, passable through FFI
-- [ ] **CAPI-02**: `quiver_database_export_csv(db, collection, group, path, opts)` returning `quiver_error_t`; group="" or NULL for scalars
+- [x] **CAPI-01**: `quiver_csv_export_options_t` flat struct with parallel arrays for enum_labels, passable through FFI
+- [x] **CAPI-02**: `quiver_database_export_csv(db, collection, group, path, opts)` returning `quiver_error_t`; group="" or NULL for scalars
 
 ### Bindings
 
@@ -67,8 +67,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OPT-02 | Phase 5 | Complete |
 | OPT-03 | Phase 5 | Complete |
 | OPT-04 | Phase 5 | Complete |
-| CAPI-01 | Phase 6 | Pending |
-| CAPI-02 | Phase 6 | Pending |
+| CAPI-01 | Phase 6 | Complete |
+| CAPI-02 | Phase 6 | Complete |
 | BIND-01 | Phase 7 | Pending |
 | BIND-02 | Phase 7 | Pending |
 | BIND-03 | Phase 7 | Pending |

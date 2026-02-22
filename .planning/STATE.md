@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 6 of 7 (C API)
-Plan: 0 of 0 in current phase
-Status: Context Gathered
-Last activity: 2026-02-22 -- Phase 6 context gathered
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-22 -- Completed 06-01-PLAN.md (C API CSV header + implementation)
 
-Progress: [::::::::::::::::::::] v0.3 complete | [##########] v0.4 Phase 5 complete (2/2 plans)
+Progress: [::::::::::::::::::::] v0.3 complete | [############] v0.4 Phase 6 in progress (1/2 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6 (4 v0.3 + 2 v0.4)
-- Average duration: ~9 min
-- Total execution time: ~54 min
+- Total plans completed: 7 (4 v0.3 + 3 v0.4)
+- Average duration: ~8 min
+- Total execution time: ~57 min
 
 **By Phase (v0.3):**
 
@@ -37,10 +37,12 @@ Progress: [::::::::::::::::::::] v0.3 complete | [##########] v0.4 Phase 5 compl
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 5. C++ Core | 2 | ~14 min | ~7 min |
+| 6. C API | 1 | ~3 min | ~3 min |
 
 *Updated after each plan completion*
 | Phase 05 P01 | 10min | 2 tasks | 7 files |
 | Phase 05 P02 | 4min | 2 tasks | 4 files |
+| Phase 06 P01 | 3min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -60,13 +62,18 @@ v0.4 design decisions (from research):
 - [Phase 05]: std::get_time for cross-platform ISO 8601 parsing (no strptime on MSVC)
 - [Phase 05]: snprintf %g for float formatting (no trailing zeros)
 - [Phase 05]: Unique attribute names across group tables to avoid schema validator collision
+- [Phase 06]: Grouped-by-attribute parallel arrays layout for enum_labels flat struct
+- [Phase 06]: No free function for options struct -- caller-owned, borrowing semantics
+- [Phase 06]: NULL date_time_format treated as empty string in convert_options
 
 ### Key Technical Context
 
 - export_csv implemented in src/database_csv.cpp with full scalar/group export logic
 - CSVExportOptions struct in include/quiver/csv.h (plain value type, Rule of Zero)
-- C API stub updated to 4-param signature (collection, group, path); full options struct deferred to Phase 6
-- Julia/Dart bindings still reference old 2-param signature (will need updates in Phase 7)
+- C API export_csv now 5-param with quiver_csv_export_options_t* opts (replaces old 4-param stub)
+- quiver_csv_export_options_t flat struct in include/quiver/c/csv.h with grouped-by-attribute parallel arrays
+- convert_options helper in src/c/database_csv.cpp reconstructs C++ CSVExportOptions from flat struct
+- Julia/Dart bindings still reference old signature (will need regeneration + updates in Phase 7)
 - import_csv remains an empty stub in src/database_describe.cpp
 - 19 CSV export tests in test_database_csv.cpp covering all 8 requirements (CSV-01 through OPT-04)
 - csv_export.sql test schema uses 'measurement' (vector) and 'tag' (set) to avoid duplicate attribute validation
@@ -82,5 +89,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-c-api/06-CONTEXT.md
+Stopped at: Completed 06-01-PLAN.md
+Resume file: .planning/phases/06-c-api/06-01-SUMMARY.md
