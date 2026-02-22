@@ -1,5 +1,6 @@
 # Core library sources
 set(QUIVER_SOURCES
+    database_csv.cpp
     database.cpp
     database_create.cpp
     database_read.cpp
@@ -11,6 +12,7 @@ set(QUIVER_SOURCES
     database_relations.cpp
     database_describe.cpp
     element.cpp
+    enum_map.cpp
     lua_runner.cpp
     migration.cpp
     migrations.cpp
@@ -19,6 +21,7 @@ set(QUIVER_SOURCES
     schema.cpp
     schema_validator.cpp
     type_validator.cpp
+    value.cpp
 )
 
 # Build type
@@ -63,6 +66,7 @@ target_link_libraries(quiver
         spdlog::spdlog
         lua_library
         sol2
+        rapidcsv
         ${CMAKE_DL_LIBS}
 )
 

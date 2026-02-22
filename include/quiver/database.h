@@ -5,8 +5,10 @@
 #include "quiver/attribute_metadata.h"
 #include "quiver/c/options.h"
 #include "quiver/element.h"
+#include "quiver/enum_map.h"
 #include "quiver/result.h"
 
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -15,6 +17,7 @@
 namespace quiver {
 
 using DatabaseOptions = quiver_database_options_t;
+using DateFormatMap = std::map<std::string, std::string>;
 
 inline DatabaseOptions default_database_options() {
     return {0, QUIVER_LOG_INFO};
@@ -172,7 +175,10 @@ public:
     void describe() const;
 
     // CSV operations
-    void export_csv(const std::string& table, const std::string& path);
+    void export_csv(const std::string& table,
+                    const std::string& path,
+                    const DateFormatMap& date_format_map = {},
+                    const EnumMap& enum_map = {});
     void import_csv(const std::string& table, const std::string& path);
 
     // Query methods - execute SQL and return first row's first column
@@ -201,6 +207,16 @@ private:
     void migrate_up(const std::string& migration_path);
     void apply_schema(const std::string& schema_path);
 };
+
+// CSV helper types and functions
+using FkLabelMap = std::map<std::string, std::map<int64_t, std::string>>;
+
+void write_csv(const std::string& path,
+               const std::vector<std::string>& columns,
+               const Result& data,
+               const FkLabelMap& fk_labels = {},
+               const DateFormatMap& date_format_map = {},
+               const EnumMap& enum_map = {});
 
 }  // namespace quiver
 
