@@ -2,6 +2,7 @@ include(GoogleTest)
 
 add_executable(quiver_tests
     test_database_create.cpp
+    test_database_csv.cpp
     test_database_delete.cpp
     test_database_errors.cpp
     test_database_lifecycle.cpp
