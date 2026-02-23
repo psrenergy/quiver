@@ -6,12 +6,19 @@
 #include "quiver/schema_validator.h"
 #include "quiver/type_validator.h"
 
+#include <map>
 #include <memory>
 #include <spdlog/spdlog.h>
 #include <sqlite3.h>
 #include <string>
+#include <vector>
 
 namespace quiver {
+
+struct ResolvedElement {
+    std::map<std::string, Value> scalars;
+    std::map<std::string, std::vector<Value>> arrays;
+};
 
 struct Database::Impl {
     sqlite3* db = nullptr;
@@ -78,6 +85,50 @@ struct Database::Impl {
 
         // String value for TEXT/DATETIME column: pass through
         return value;
+    }
+
+    ResolvedElement resolve_element_fk_labels(
+        const std::string& collection,
+        const Element& element,
+        Database& db)
+    {
+        ResolvedElement resolved;
+
+        // Resolve scalars against collection table FK metadata
+        const auto* collection_def = schema->get_table(collection);
+        for (const auto& [name, value] : element.scalars()) {
+            resolved.scalars[name] = resolve_fk_label(*collection_def, name, value, db);
+        }
+
+        // Resolve arrays against their respective group table FK metadata
+        for (const auto& [array_name, values] : element.arrays()) {
+            auto matches = schema->find_all_tables_for_column(collection, array_name);
+
+            // Find the first table match for FK resolution
+            // (FK columns have unique names per schema design, so first match is correct;
+            //  non-FK columns pass through resolve_fk_label unchanged regardless of table)
+            const TableDefinition* resolve_table = nullptr;
+            for (const auto& match : matches) {
+                const auto* td = schema->get_table(match.table_name);
+                if (td) {
+                    resolve_table = td;
+                    break;
+                }
+            }
+
+            std::vector<Value> resolved_values;
+            resolved_values.reserve(values.size());
+            for (const auto& val : values) {
+                if (resolve_table) {
+                    resolved_values.push_back(resolve_fk_label(*resolve_table, array_name, val, db));
+                } else {
+                    resolved_values.push_back(val);
+                }
+            }
+            resolved.arrays[array_name] = std::move(resolved_values);
+        }
+
+        return resolved;
     }
 
     void load_schema_metadata() {

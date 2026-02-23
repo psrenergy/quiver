@@ -52,3 +52,11 @@ CREATE TABLE Child_set_scores (
     FOREIGN KEY(id) REFERENCES Child(id) ON DELETE CASCADE ON UPDATE CASCADE,
     UNIQUE(id, score)
 ) STRICT;
+
+CREATE TABLE Child_time_series_events (
+    id INTEGER NOT NULL REFERENCES Child(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    date_time TEXT NOT NULL,
+    sponsor_id INTEGER,
+    FOREIGN KEY (sponsor_id) REFERENCES Parent(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    PRIMARY KEY (id, date_time)
+) STRICT;

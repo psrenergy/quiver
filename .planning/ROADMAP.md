@@ -42,10 +42,11 @@ Plans:
   2. User can pass string labels in a vector FK column and create_element resolves each label to its target ID
   3. User can pass string labels in a time series FK column and create_element resolves each label to its target ID
   4. All FK label resolution happens before any SQL writes (pre-resolve pass), so a resolution failure causes zero partial writes
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: TBD
+- [ ] 02-01-PLAN.md -- Pre-resolve pass implementation (schema extension, ResolvedElement, create_element refactor)
+- [ ] 02-02-PLAN.md -- Comprehensive FK resolution tests (per-type, combined, regression, error)
 
 ### Phase 3: Update Element FK Resolution
 **Goal**: Users can pass target labels for scalar, vector, set, and time series FK columns in update_element and they resolve to target IDs automatically
@@ -83,6 +84,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 0/1 | Planned | - |
-| 2. Create Element FK Resolution | 0/0 | Not started | - |
+| 2. Create Element FK Resolution | 0/2 | Planned | - |
 | 3. Update Element FK Resolution | 0/0 | Not started | - |
 | 4. Cleanup | 0/0 | Not started | - |
