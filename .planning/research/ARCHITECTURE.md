@@ -1,660 +1,507 @@
-# Architecture Research: CSV Export with Enum Resolution and Date Formatting
+# Architecture Research: CSV Library Integration and Header Consolidation
 
-**Domain:** CSV export for SQLite wrapper library with cross-layer propagation
+**Domain:** CSV library integration into existing SQLite wrapper + C API header reorganization
 **Researched:** 2026-02-22
 **Confidence:** HIGH
 
 ## System Overview
 
-Current architecture with CSV export integration points:
+The v0.5 milestone has two independent changes: replace the hand-rolled CSV writer in the C++ layer, and merge two C API headers. Each change has a distinct integration surface with different ripple effects.
 
 ```
-Bindings Layer (Julia, Dart, Lua)
-  |  Construct native map/dict -> flatten to parallel arrays
-  |  Call C API with flat options struct
-  |
-C API Layer (src/c/)
-  |  Flat functions, quiver_error_t returns
-  |  NEW: quiver_csv_export_options_t struct (flat parallel arrays for enum map)
-  |  NEW: quiver_database_export_scalars_csv / quiver_database_export_group_csv
-  |  NEW: quiver_csv_export_options_free for cleanup
-  |
-C++ Public API (include/quiver/database.h)
-  |  Database class with Pimpl
-  |  NEW: CsvExportOptions struct (nested map + format string)
-  |  CHANGE: export_csv signature replaced with export_scalars_csv / export_group_csv
-  |
-C++ Implementation (src/database_csv.cpp)
-  |  NEW file: Direct sqlite3 queries, CSV formatting, enum resolution, date formatting
-  |  Uses: Schema for column discovery, impl_->db for queries
-  |
-SQLite (sqlite3*)
-  |  Direct SELECT queries for CSV data extraction
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          Language Bindings                                   │
+│  Julia (c_api.jl + database_csv.jl)                                         │
+│  Dart  (bindings.dart + database_csv.dart)                                  │
+│  Lua   (lua_runner.cpp via sol2)                                             │
+└───────────────────────────────┬────────────────────────────────────────────┘
+                                │ C API (FFI boundary)
+┌───────────────────────────────▼────────────────────────────────────────────┐
+│                          C API Layer                                         │
+│  include/quiver/c/database.h         -- includes csv.h + options.h           │
+│  include/quiver/c/options.h          -- DatabaseOptions + LogLevel           │
+│  include/quiver/c/csv.h              -- CSVExportOptions (MERGE TARGET)      │
+│  src/c/database_csv.cpp              -- convert_options(), C API wrappers    │
+└───────────────────────────────┬────────────────────────────────────────────┘
+                                │ C++ library boundary
+┌───────────────────────────────▼────────────────────────────────────────────┐
+│                          C++ Core                                            │
+│  include/quiver/csv.h                -- C++ CSVExportOptions struct          │
+│  include/quiver/database.h           -- Database class, export_csv()         │
+│  src/database_csv.cpp                -- LIBRARY INTEGRATION POINT            │
+│    csv_escape()    <-- REPLACE with csv-parser CSVWriter                    │
+│    write_csv_row() <-- REPLACE with csv-parser CSVWriter                    │
+│    parse_iso8601() <-- KEEP (date formatting, no library equivalent needed) │
+│    format_datetime() <-- KEEP                                               │
+│    value_to_csv_string() <-- KEEP                                           │
+└───────────────────────────────┬────────────────────────────────────────────┘
+                                │
+┌───────────────────────────────▼────────────────────────────────────────────┐
+│  External Dependencies                                                       │
+│  SQLite3, spdlog, sol2, csv-parser (NEW via FetchContent)                   │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## New API Methods
+## Change 1: CSV Library Integration
 
-### C++ Public API
+### Integration Point
 
-Two distinct export operations replace the current stub:
+The hand-rolled writer lives entirely in `src/database_csv.cpp`. Two static functions are the targets:
 
 ```cpp
-// include/quiver/csv_export_options.h -- new header
-struct CsvExportOptions {
-    // attribute_name -> { integer_value -> label_string }
-    std::map<std::string, std::map<int64_t, std::string>> enum_labels;
+// CURRENT -- remove both functions:
+static std::string csv_escape(const std::string& field) { ... }  // ~20 lines
+static void write_csv_row(std::ofstream& file, const std::vector<std::string>& fields) { ... }  // ~8 lines
 
-    // strftime-compatible format string for date_time columns (empty = no formatting)
-    std::string date_time_format;
-};
-
-// include/quiver/database.h -- modified signatures
-void export_scalars_csv(const std::string& collection,
-                        const std::string& path,
-                        const CsvExportOptions& options = {});
-
-void export_group_csv(const std::string& collection,
-                      const std::string& group,
-                      const std::string& path,
-                      const CsvExportOptions& options = {});
+// REPLACEMENT -- use csv-parser CSVWriter:
+// csv::make_csv_writer(file) << fields_vector;
 ```
 
-**Rationale for two methods instead of one:**
+The library replaces these two helpers only. Everything else in `src/database_csv.cpp` stays: `parse_iso8601()`, `format_datetime()`, `value_to_csv_string()`, `Database::export_csv()` logic.
 
-The current stub `export_csv(table, path)` takes a raw table name, which is wrong for two reasons: (1) callers should not need to know internal table naming conventions (`Collection_vector_values`), and (2) scalar export requires joining id->label while group export has different column semantics (id column replaced with label, structural columns like `vector_index` omitted from output). Two methods with distinct parameters are clearer than a polymorphic single method.
+### Recommended Library: vincentlaucsb/csv-parser
 
-**CsvExportOptions as a separate header** because it is a plain value type (no private dependencies, Rule of Zero) and will be included by both `database.h` and the C API headers. This follows the pattern of `attribute_metadata.h` and `data_type.h`.
+**Rationale:** Read+write capable (enabling future import), RFC 4180 compliant writer via `csv::make_csv_writer()`, FetchContent compatible, C++11 minimum (project uses C++20), single-header variant available, active maintenance.
 
-### C API Structs
-
-The core challenge: representing `map<string, map<int64_t, string>>` (enum_labels) through a flat C API.
-
-**Design: Flattened parallel arrays with entry counts per attribute.**
-
-```c
-// include/quiver/c/csv_export_options.h -- new header
-
-typedef struct {
-    // Enum labels: flattened representation of attribute -> {value -> label}
-    //
-    // attribute_names[i] identifies which attribute the entries belong to.
-    // attribute_entry_counts[i] says how many (value, label) pairs this attribute has.
-    // enum_values[] and enum_label_strings[] are the flattened pairs, contiguous.
-    //
-    // Example: attribute "status" with {0->"Active", 1->"Inactive"}, "priority" with {0->"Low"}
-    //   attribute_names = ["status", "priority"]
-    //   attribute_entry_counts = [2, 1]
-    //   attribute_count = 2
-    //   enum_values = [0, 1, 0]          -- status entries, then priority entries
-    //   enum_label_strings = ["Active", "Inactive", "Low"]
-    //   total_enum_entries = 3
-    //
-    const char* const* attribute_names;
-    const size_t* attribute_entry_counts;
-    size_t attribute_count;
-
-    const int64_t* enum_values;
-    const char* const* enum_label_strings;
-    size_t total_enum_entries;
-
-    // Date/time format (NULL = no formatting, pass through raw string)
-    const char* date_time_format;
-} quiver_csv_export_options_t;
-```
-
-**Why this design over alternatives:**
-
-| Alternative | Problem |
-|-------------|---------|
-| JSON string | Requires JSON parser in C++ core; violates "no external deps for options" |
-| Opaque builder handle | Adds lifecycle complexity (create/add_entry/free); more C API surface |
-| Array of per-attribute structs with inner arrays | Nested heap allocation, complex ownership |
-| **Flattened parallel arrays (chosen)** | Caller builds contiguous arrays; no allocation in C layer; matches existing parallel-array patterns (parameterized queries, time series update) |
-
-The parallel-array pattern is already established in the codebase. `quiver_database_update_time_series_group` uses `column_names[]`, `column_types[]`, `column_data[]`, `column_count`, `row_count`. The enum map flattening follows the same principle: parallel arrays plus counts.
-
-**Key invariant:** `sum(attribute_entry_counts[0..attribute_count-1]) == total_enum_entries`. The C++ conversion function validates this.
-
-### C API Functions
-
-```c
-// include/quiver/c/database.h -- new/modified declarations
-
-// Replace existing export_csv stub
-QUIVER_C_API quiver_error_t quiver_database_export_scalars_csv(
-    quiver_database_t* db,
-    const char* collection,
-    const char* path,
-    const quiver_csv_export_options_t* options);  // NULL = default options
-
-QUIVER_C_API quiver_error_t quiver_database_export_group_csv(
-    quiver_database_t* db,
-    const char* collection,
-    const char* group,
-    const char* path,
-    const quiver_csv_export_options_t* options);  // NULL = default options
-```
-
-**No free function needed** for `quiver_csv_export_options_t` because the caller owns all the data. The struct contains only `const` pointers into caller-owned memory. The C API reads the data during the export call and does not retain any references. This matches `quiver_database_options_t` which also has no free function.
-
-### C API to C++ Conversion
-
-A helper in `src/c/database_csv.cpp` converts the flat struct to the nested C++ map:
+**Writing API (verified from test suite):**
 
 ```cpp
-static CsvExportOptions convert_csv_options(const quiver_csv_export_options_t* opts) {
-    CsvExportOptions result;
-    if (!opts) return result;
+#include "csv.hpp"
 
-    if (opts->date_time_format) {
-        result.date_time_format = opts->date_time_format;
-    }
+// Create writer bound to an ofstream
+auto writer = csv::make_csv_writer(file);
 
-    // Rebuild nested map from flattened arrays
-    size_t offset = 0;
-    for (size_t i = 0; i < opts->attribute_count; ++i) {
-        std::string attr_name(opts->attribute_names[i]);
-        std::map<int64_t, std::string> entries;
-        for (size_t j = 0; j < opts->attribute_entry_counts[i]; ++j) {
-            entries[opts->enum_values[offset + j]] =
-                std::string(opts->enum_label_strings[offset + j]);
-        }
-        result.enum_labels[attr_name] = std::move(entries);
-        offset += opts->attribute_entry_counts[i];
-    }
-
-    // Validate invariant
-    if (offset != opts->total_enum_entries) {
-        throw std::runtime_error(
-            "Cannot export_csv: enum entry count mismatch "
-            "(sum of attribute_entry_counts != total_enum_entries)");
-    }
-
-    return result;
-}
+// Write a row -- operator<< accepts vector, array, or tuple of stringifiable values
+writer << std::vector<std::string>{"label", "value", "date_created"};
+writer << std::vector<std::string>{"Item1", "42", "2024-01-15"};
 ```
 
-## Data Flow
+The library handles RFC 4180 quoting (comma, double-quote, newline in field) automatically. `csv_escape()` and `write_csv_row()` become one line each.
 
-### Export Scalars CSV
+**FetchContent integration:**
 
-```
-caller: db.export_scalars_csv("Items", "output.csv", options)
-    |
-    v
-Database::export_scalars_csv()
-    |-- impl_->require_collection("Items", "export_scalars_csv")
-    |-- Retrieve scalar metadata: list_scalar_attributes("Items")
-    |-- Build column list: [label, attr1, attr2, ...] (skip "id")
-    |-- Execute: SELECT label, attr1, attr2, ... FROM Items
-    |
-    v
-For each row:
-    |-- For each column value:
-    |   |-- Is this column in enum_labels map?
-    |   |   YES: lookup value -> label, write label
-    |   |   NO: Is this a date_time column with format string?
-    |   |       YES: format date string
-    |   |       NO: write raw value
-    |
-    v
-Write CSV rows to file (std::ofstream)
-```
-
-### Export Group CSV
-
-```
-caller: db.export_group_csv("Items", "values", "output.csv", options)
-    |
-    v
-Database::export_group_csv()
-    |-- impl_->require_collection("Items", "export_group_csv")
-    |-- Determine group type (vector/set/time_series) via Schema
-    |-- Get group table name: Items_vector_values / Items_set_tags / Items_time_series_data
-    |-- Get group metadata for column info
-    |-- Build SELECT with JOIN to parent for label:
-    |   SELECT Items.label, col1, col2, ...
-    |   FROM Items_vector_values
-    |   JOIN Items ON Items_vector_values.id = Items.id
-    |   ORDER BY Items.label, vector_index  (or date_time for time series)
-    |-- Skip structural columns in output: id, vector_index (for vectors)
-    |
-    v
-For each row:
-    |-- Same enum resolution and date formatting as scalars
-    |
-    v
-Write CSV rows to file (std::ofstream)
-```
-
-### SQL Query Strategy: Direct sqlite3
-
-The export uses direct SQL via the existing `Database::execute()` internal method, NOT the typed read methods (`read_scalar_integers`, etc.). Reasons:
-
-1. **Performance:** One query fetches all columns at once. Using typed read methods would require N queries (one per attribute) plus manual row alignment.
-2. **Column order:** A single SELECT preserves column ordering naturally. Composing from individual reads requires reconstructing row order from parallel vectors.
-3. **Consistency:** `describe()` in the same file (`database_describe.cpp`) already uses `impl_->schema` directly. Export follows the same pattern.
-4. **Simplicity:** One query, iterate rows, format output. No intermediate data structures.
-
-The query returns a `Result` with `Row` objects. Each `Row` value is accessed positionally via `get_integer/get_float/get_string`, then formatted.
-
-## Component Boundaries
-
-### New Components
-
-| Component | File | Responsibility |
-|-----------|------|---------------|
-| `CsvExportOptions` | `include/quiver/csv_export_options.h` | C++ options struct (plain value type, Rule of Zero) |
-| `quiver_csv_export_options_t` | `include/quiver/c/csv_export_options.h` | C API flat struct for FFI |
-| CSV export implementation | `src/database_csv.cpp` | SQL queries, CSV writing, enum resolution, date formatting |
-| C API CSV functions | `src/c/database_csv.cpp` | C API wrappers, flat-to-nested conversion |
-
-### Modified Components
-
-| Component | File | Change |
-|-----------|------|--------|
-| Database class | `include/quiver/database.h` | Replace `export_csv` stub with `export_scalars_csv` + `export_group_csv` |
-| Database describe | `src/database_describe.cpp` | Remove `export_csv` and `import_csv` stubs |
-| C API database header | `include/quiver/c/database.h` | Replace `quiver_database_export_csv` with two new functions |
-| C API database impl | `src/c/database.cpp` | Remove `quiver_database_export_csv` and `quiver_database_import_csv` stubs |
-| CMakeLists.txt | `src/CMakeLists.txt` | Add `database_csv.cpp` |
-| C API CMakeLists.txt | `src/c/CMakeLists.txt` | Add `database_csv.cpp` |
-| Julia CSV binding | `bindings/julia/src/database_csv.jl` | Replace stub with real implementation |
-| Julia C API | `bindings/julia/src/c_api.jl` | Regenerate FFI declarations |
-| Dart CSV binding | `bindings/dart/lib/src/database_csv.dart` | Replace stub with real implementation |
-| Dart FFI bindings | `bindings/dart/lib/src/ffi/bindings.dart` | Regenerate FFI declarations |
-| Lua runner | `src/lua_runner.cpp` | Add `export_scalars_csv` and `export_group_csv` bindings |
-
-### Unchanged Components
-
-Schema, metadata, TypeValidator, TransactionGuard, Element, existing read/write methods, existing query methods -- none of these change.
-
-## CSV Writing Implementation
-
-### No External CSV Library
-
-Use `std::ofstream` with manual CSV escaping. The output is simple tabular data. A CSV library adds a dependency for what amounts to:
-
-```cpp
-static void write_csv_field(std::ofstream& out, const std::string& value, bool first) {
-    if (!first) out << ',';
-    // Quote if contains comma, quote, or newline
-    if (value.find_first_of(",\"\n") != std::string::npos) {
-        out << '"';
-        for (char c : value) {
-            if (c == '"') out << '"';
-            out << c;
-        }
-        out << '"';
-    } else {
-        out << value;
-    }
-}
-```
-
-This is ~15 lines. A library dependency is not justified.
-
-### Date/Time Formatting
-
-The `date_time_format` string in `CsvExportOptions` is a C++ `std::chrono`-style format or a simple custom format. However, since SQLite stores date/time as TEXT strings (ISO 8601 format like "2024-01-15T10:30:00"), and the caller wants output formatting, the simplest approach is:
-
-1. Parse the stored ISO string to `std::tm` via `strptime` (POSIX) or manual parsing
-2. Format via `strftime` with the caller's format string
-3. Write the formatted string to CSV
-
-Since the project targets C++20 on Windows (MSVC), `strptime` is not available. Use manual ISO 8601 parsing (the format is fixed and known) and `std::put_time` / `strftime` for output. This avoids platform-specific dependencies.
-
-If `date_time_format` is empty, date/time columns are written as-is (raw SQLite TEXT value). This is the default behavior.
-
-### Enum Resolution
-
-For each row, for each column that appears in `enum_labels`:
-
-1. Read the integer value from the `Row`
-2. Look up in the attribute's `map<int64_t, string>`
-3. If found, write the label string
-4. If not found, write the raw integer (graceful degradation, log a warning)
-
-This happens at the C++ layer. Bindings pass the map through; they do not perform resolution themselves. This follows the project principle: "Logic resides in C++ layer. Bindings remain thin."
-
-## Binding Integration
-
-### Julia
-
-Julia builds the options struct most naturally using a Dict:
-
-```julia
-# Caller API:
-export_scalars_csv!(db, "Items", "output.csv";
-    enum_labels = Dict(
-        "status" => Dict(0 => "Active", 1 => "Inactive"),
-        "priority" => Dict(0 => "Low", 1 => "Medium", 2 => "High")
-    ),
-    date_time_format = "%Y-%m-%d"
+```cmake
+FetchContent_Declare(csv
+    GIT_REPOSITORY https://github.com/vincentlaucsb/csv-parser.git
+    GIT_TAG 2.3.0
+    GIT_SHALLOW TRUE
 )
+FetchContent_MakeAvailable(csv)
+
+# Link against the core quiver library:
+target_link_libraries(quiver PRIVATE csv)
 ```
 
-The Julia binding flattens the `Dict{String, Dict{Int64, String}}` into parallel arrays and fills a `quiver_csv_export_options_t` struct via `ccall`. The flattening logic lives in Julia (binding-side convenience):
-
-```julia
-function export_scalars_csv!(db::Database, collection::String, path::String;
-                             enum_labels::Dict{String,Dict{Int64,String}} = Dict{String,Dict{Int64,String}}(),
-                             date_time_format::String = "")
-    # Flatten enum_labels to parallel arrays
-    attr_names = collect(keys(enum_labels))
-    attr_entry_counts = [length(enum_labels[a]) for a in attr_names]
-    all_values = Int64[]
-    all_labels = String[]
-    for attr in attr_names
-        for (v, l) in enum_labels[attr]
-            push!(all_values, v)
-            push!(all_labels, l)
-        end
-    end
-    # Build C struct and call
-    ...
-end
-```
-
-### Dart
-
-Dart uses a `Map<String, Map<int, String>>` and a helper class:
-
-```dart
-class CsvExportOptions {
-  final Map<String, Map<int, String>> enumLabels;
-  final String dateTimeFormat;
-
-  const CsvExportOptions({
-    this.enumLabels = const {},
-    this.dateTimeFormat = '',
-  });
-}
-
-// Caller API:
-db.exportScalarsCSV('Items', 'output.csv',
-  options: CsvExportOptions(
-    enumLabels: {
-      'status': {0: 'Active', 1: 'Inactive'},
-    },
-    dateTimeFormat: '%Y-%m-%d',
-  ),
-);
-```
-
-The Dart binding allocates native memory in an `Arena`, flattens the map, fills the C struct, calls the C API, and releases the arena. This follows the existing pattern in `database_csv.dart`.
-
-### Lua
-
-Lua receives native tables. The C++ sol2 binding extracts the nested table structure:
-
-```lua
--- Caller API:
-db:export_scalars_csv("Items", "output.csv", {
-    enum_labels = {
-        status = { [0] = "Active", [1] = "Inactive" },
-        priority = { [0] = "Low" }
-    },
-    date_time_format = "%Y-%m-%d"
-})
-```
-
-The sol2 binding converts the Lua table directly to `CsvExportOptions` in C++:
-
-```cpp
-"export_scalars_csv",
-[](Database& self, const std::string& collection, const std::string& path,
-   sol::optional<sol::table> opts_table) {
-    CsvExportOptions options;
-    if (opts_table) {
-        options = lua_table_to_csv_options(*opts_table);
-    }
-    self.export_scalars_csv(collection, path, options);
-},
-```
-
-Lua skips the C API entirely (sol2 binds to C++ directly), so no flattening needed. The nested Lua table maps directly to the nested C++ map. This is consistent with how time series and query parameters work in Lua.
-
-## Patterns to Follow
-
-### Pattern 1: Options Struct with Defaults
-
-Follow the `DatabaseOptions` pattern: a simple struct with a default constructor / initializer.
-
-```cpp
-struct CsvExportOptions {
-    std::map<std::string, std::map<int64_t, std::string>> enum_labels;
-    std::string date_time_format;
-};
-// Default construction gives empty map and empty format string = no transformation
-```
-
-C++ callers can use `{}` for defaults. C API callers pass `NULL` for the options pointer. This mirrors `quiver_database_options_t` being optional in factory functions.
-
-### Pattern 2: Separate Implementation File
-
-Create `src/database_csv.cpp` (new file) rather than extending `database_describe.cpp`. Rationale:
-
-- `describe()` prints to stdout (diagnostic). CSV export writes to files (data operation). Different concerns.
-- The existing file organization (`database_read.cpp`, `database_create.cpp`, etc.) separates by operation type.
-- CSV export will have meaningful implementation (~200-300 lines). It deserves its own translation unit.
-
-The stub `export_csv` and `import_csv` move out of `database_describe.cpp`. The `import_csv` stub can remain as-is (empty body) or be removed entirely since it is out of scope for v0.4.
-
-### Pattern 3: Schema-Driven Column Discovery
-
-Use `list_scalar_attributes()` and group metadata to discover columns dynamically, not hardcoded SQL. This ensures export works with any schema.
-
-```cpp
-void Database::export_scalars_csv(const std::string& collection,
-                                  const std::string& path,
-                                  const CsvExportOptions& options) {
-    impl_->require_collection(collection, "export_scalars_csv");
-    auto attributes = list_scalar_attributes(collection);
-
-    // Build SELECT from discovered attributes (skip id, include label)
-    std::string sql = "SELECT label";
-    std::vector<std::string> column_names = {"label"};
-    for (const auto& attr : attributes) {
-        if (attr.name == "id" || attr.name == "label") continue;
-        sql += ", " + attr.name;
-        column_names.push_back(attr.name);
-    }
-    sql += " FROM " + collection;
-
-    auto result = execute(sql);
-    // ... write CSV ...
-}
-```
-
-### Pattern 4: C API Co-location
-
-Following the alloc/free co-location rule: `quiver_database_export_scalars_csv` and `quiver_database_export_group_csv` plus the `convert_csv_options` helper all live in `src/c/database_csv.cpp`. No free function is needed (caller-owned data), but if one were needed later, it would go in the same file.
-
-## Anti-Patterns to Avoid
-
-### Anti-Pattern 1: Passing the Enum Map as JSON
-
-**What:** Serialize the map to a JSON string, pass as `const char*`, parse in C++.
-**Why bad:** Introduces a JSON parsing dependency. The C API should handle structured data natively, not through serialization formats. The existing codebase has zero JSON usage.
-**Instead:** Flattened parallel arrays as described above.
-
-### Anti-Pattern 2: Using Existing Read Methods for Export
-
-**What:** Call `read_scalar_integers()`, `read_scalar_strings()`, etc. individually, then align the parallel vectors into rows.
-**Why bad:** N+1 queries instead of one. Row alignment is error-prone (what if some attributes have NULL gaps?). Significantly slower for large collections.
-**Instead:** Single `SELECT` query via `execute()`, iterate rows.
-
-### Anti-Pattern 3: Enum Resolution in Bindings
-
-**What:** Have Julia/Dart/Lua do the value->label replacement after reading raw data.
-**Why bad:** Violates "Logic resides in C++ layer." Duplicates logic in 3+ places. The C++ layer has all the information needed.
-**Instead:** Pass the map to C++, resolve there, write resolved values to CSV.
-
-### Anti-Pattern 4: Re-using the DatabaseOptions Struct
-
-**What:** Add CSV fields to `quiver_database_options_t`.
-**Why bad:** `DatabaseOptions` is a database-wide configuration (log level, read-only). CSV export options are per-call parameters. Mixing them conflates lifecycle configuration with operation parameters.
-**Instead:** Separate `CsvExportOptions` / `quiver_csv_export_options_t`.
-
-### Anti-Pattern 5: One Generic Export Function
-
-**What:** `export_csv(collection, group_or_empty, path, options)` where empty group means scalars.
-**Why bad:** Overloaded semantics through empty string detection. The two operations have different SQL, different column handling, and different skip-lists. Separate functions are clearer.
-**Instead:** `export_scalars_csv` and `export_group_csv`.
-
-## Files New vs Modified
-
-### New Files
-
-| File | Purpose |
-|------|---------|
-| `include/quiver/csv_export_options.h` | CsvExportOptions C++ struct |
-| `include/quiver/c/csv_export_options.h` | quiver_csv_export_options_t C struct |
-| `src/database_csv.cpp` | C++ export implementation |
-| `src/c/database_csv.cpp` | C API export wrappers + option conversion |
-| `tests/test_database_csv.cpp` | C++ CSV export tests |
-| `tests/test_c_api_database_csv.cpp` | C API CSV export tests |
-| `tests/schemas/valid/csv_export.sql` | Test schema with enum-like integer attributes |
-
-### Modified Files
+### Files Changed by Library Integration
 
 | File | Change |
 |------|--------|
-| `include/quiver/database.h` | Replace `export_csv`/`import_csv` with new signatures, add `#include "csv_export_options.h"` |
-| `include/quiver/c/database.h` | Replace `quiver_database_export_csv`/`import_csv` with new function declarations |
-| `src/database_describe.cpp` | Remove `export_csv`/`import_csv` stubs |
-| `src/c/database.cpp` | Remove `quiver_database_export_csv`/`import_csv` stubs |
-| `src/CMakeLists.txt` | Add `database_csv.cpp` |
-| `src/c/CMakeLists.txt` | Add `database_csv.cpp` |
-| `bindings/julia/src/database_csv.jl` | Replace stubs with real export functions |
-| `bindings/julia/src/c_api.jl` | Regenerate (via generator) |
-| `bindings/dart/lib/src/database_csv.dart` | Replace stubs with real export methods |
-| `bindings/dart/lib/src/ffi/bindings.dart` | Regenerate (via generator) |
-| `src/lua_runner.cpp` | Add `export_scalars_csv` and `export_group_csv` bindings |
+| `cmake/Dependencies.cmake` | Add FetchContent_Declare + FetchContent_MakeAvailable for csv-parser |
+| `src/CMakeLists.txt` | Add `csv` to `target_link_libraries(quiver PRIVATE ...)` |
+| `src/database_csv.cpp` | Remove `csv_escape()` + `write_csv_row()`; add `#include "csv.hpp"`; replace call sites with `make_csv_writer(file) << fields` |
 
-### Removed Stubs
+No other files change. The C API, bindings, headers, and tests are entirely unaffected by the library swap.
 
-| Current Stub | Replacement |
-|-------------|-------------|
-| `Database::export_csv(table, path)` | `Database::export_scalars_csv(collection, path, options)` + `Database::export_group_csv(collection, group, path, options)` |
-| `Database::import_csv(table, path)` | Keep empty stub (out of scope for v0.4) or remove declaration |
-| `quiver_database_export_csv(db, table, path)` | `quiver_database_export_scalars_csv(db, collection, path, options)` + `quiver_database_export_group_csv(db, collection, group, path, options)` |
-| `quiver_database_import_csv(db, table, path)` | Keep empty stub or remove |
+### Binary Mode Constraint
+
+Current code opens the file in binary mode to prevent Windows CRLF injection:
+
+```cpp
+std::ofstream file(path, std::ios::binary);
+```
+
+The csv-parser `make_csv_writer(file)` accepts the stream as-is; it does not reopen the file. Binary mode must be retained on the `std::ofstream` before passing it to `make_csv_writer`. This is not an issue -- the library wraps the stream, not the file path.
+
+### What Does NOT Change
+
+- `parse_iso8601()` and `format_datetime()` -- date formatting has no library equivalent in csv-parser; these stay unchanged.
+- `value_to_csv_string()` -- converts `Value` variant to string; still needed to prepare the string values before passing to the writer.
+- The `std::ofstream` lifecycle management, parent directory creation.
+- `src/c/database_csv.cpp` -- C API wrapper is unaffected.
+- All test files -- behavior is identical, output is identical (both produce RFC 4180).
+- All bindings -- the library boundary is `Database::export_csv()` which is unchanged in signature.
+
+---
+
+## Change 2: Merge csv.h into options.h
+
+### Current State
+
+Two separate files in `include/quiver/c/`:
+
+```
+include/quiver/c/options.h
+  - quiver_log_level_t enum
+  - quiver_database_options_t struct
+  - quiver_database_options_default() declaration (implemented in src/c/database.cpp)
+
+include/quiver/c/csv.h
+  - quiver_csv_export_options_t struct (includes "common.h")
+  - quiver_csv_export_options_default() declaration
+```
+
+### Merge Target
+
+`include/quiver/c/csv.h` is deleted. Its content moves into `include/quiver/c/options.h`.
+
+**Resulting `options.h` structure:**
+
+```c
+#ifndef QUIVER_C_OPTIONS_H
+#define QUIVER_C_OPTIONS_H
+
+#include "common.h"   // ADD: needed for QUIVER_C_API, stddef.h, stdint.h
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// Log level enum (unchanged)
+typedef enum {
+    QUIVER_LOG_DEBUG = 0,
+    ...
+} quiver_log_level_t;
+
+// Database options (unchanged)
+typedef struct {
+    int read_only;
+    quiver_log_level_t console_level;
+} quiver_database_options_t;
+
+// CSV export options (MOVED from csv.h)
+typedef struct {
+    const char* date_time_format;
+    const char* const* enum_attribute_names;
+    const size_t* enum_entry_counts;
+    const int64_t* enum_values;
+    const char* const* enum_labels;
+    size_t enum_attribute_count;
+} quiver_csv_export_options_t;
+
+// CSV factory (MOVED from csv.h)
+QUIVER_C_API quiver_csv_export_options_t quiver_csv_export_options_default(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif  // QUIVER_C_OPTIONS_H
+```
+
+Note: current `options.h` does not include `common.h`. The merged file needs it for `QUIVER_C_API`, `size_t`, and `int64_t`. Current `csv.h` already includes `common.h`. Adding `#include "common.h"` to `options.h` is the correct fix.
+
+### Downstream Consumer Impact
+
+Every file that currently includes `quiver/c/csv.h` must be updated.
+
+**Direct includes of `quiver/c/csv.h` (verified by grep):**
+
+| File | Required Change |
+|------|-----------------|
+| `src/c/database_csv.cpp` | Change `#include "quiver/c/csv.h"` to `#include "quiver/c/options.h"` |
+| `tests/test_c_api_database_csv.cpp` | Change `#include <quiver/c/csv.h>` to `#include <quiver/c/options.h>` |
+
+**`include/quiver/c/database.h` currently includes both:**
+
+```c
+#include "csv.h"       // line 5 -- DELETE this include
+#include "options.h"   // line 6 -- KEEP (already there)
+```
+
+After the merge, `database.h` only needs `options.h`. The `csv.h` include line is removed.
+
+**`include/quiver/c/csv.h`:** The file is deleted.
+
+### FFI Generator Impact
+
+#### Julia Generator
+
+The Julia generator (`bindings/julia/generator/generator.jl`) reads ALL `.h` files in `include/quiver/c/` automatically:
+
+```julia
+headers = [
+    joinpath(include_dir, header) for
+    header in readdir(include_dir) if endswith(header, ".h") && header != "platform.h"
+]
+```
+
+When `csv.h` is deleted, it disappears from the list automatically. When `options.h` gains the CSV struct and factory function, the generator picks them up from `options.h`. The generated `c_api.jl` content is identical -- `quiver_csv_export_options_t` and `quiver_csv_export_options_default` appear in the output regardless of which header defines them.
+
+**Julia generator: no configuration change required.** The regenerated `c_api.jl` will be identical in content. Regeneration is still required to pick up the new header order, but no `.toml` changes are needed.
+
+#### Dart ffigen
+
+The Dart ffigen configuration in `pubspec.yaml` uses an explicit entry-points list:
+
+```yaml
+ffigen:
+  headers:
+    entry-points:
+      - '../../include/quiver/c/common.h'
+      - '../../include/quiver/c/database.h'
+      - '../../include/quiver/c/element.h'
+      - '../../include/quiver/c/lua_runner.h'
+    include-directives:
+      - '../../include/quiver/c/common.h'
+      - '../../include/quiver/c/database.h'
+      - '../../include/quiver/c/element.h'
+      - '../../include/quiver/c/lua_runner.h'
+```
+
+`csv.h` is NOT listed as an entry-point or include-directive. It was picked up transitively through `database.h` which included `csv.h`. After the merge, `database.h` includes `options.h` instead, and `options.h` now contains the CSV types. The ffigen tool still sees `quiver_csv_export_options_t` transitively through `database.h -> options.h`.
+
+**Dart ffigen: no pubspec.yaml changes required.** Regeneration required (same as Julia). Generated `bindings.dart` content will be functionally identical.
+
+### Julia Binding Code
+
+`bindings/julia/src/database_csv.jl` references `C.quiver_csv_export_options_t` and `C.quiver_csv_export_options_default()` -- both defined in the `C` module from `c_api.jl`. Since the generated `c_api.jl` content does not change (same type, same function, just sourced from `options.h` instead of `csv.h`), the Julia binding file does not change.
+
+### Dart Binding Code
+
+`bindings/dart/lib/src/database_csv.dart` uses `quiver_csv_export_options_t` from the generated `bindings.dart`. Same situation as Julia -- the generated type definition is identical regardless of which header it came from.
+
+### C++ Side (include/quiver/csv.h)
+
+The C++ public header `include/quiver/csv.h` (containing `CSVExportOptions` struct) is **not involved** in the consolidation. The merge is C API (`include/quiver/c/`) only. The C++ header is separate and stays as-is.
+
+### Files Changed by Header Consolidation
+
+| File | Change |
+|------|--------|
+| `include/quiver/c/options.h` | Add `#include "common.h"`; append `quiver_csv_export_options_t` struct + `quiver_csv_export_options_default()` declaration |
+| `include/quiver/c/csv.h` | **DELETE** |
+| `include/quiver/c/database.h` | Remove `#include "csv.h"` line (already includes `options.h`) |
+| `src/c/database_csv.cpp` | `#include "quiver/c/csv.h"` -> `#include "quiver/c/options.h"` |
+| `tests/test_c_api_database_csv.cpp` | `#include <quiver/c/csv.h>` -> `#include <quiver/c/options.h>` |
+| `bindings/julia/src/c_api.jl` | Regenerate (content identical, source header changes) |
+| `bindings/dart/lib/src/ffi/bindings.dart` | Regenerate (content identical, source header changes) |
+
+---
+
+## Component Boundaries: New vs Modified vs Deleted
+
+### New Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| csv-parser dependency | `cmake/Dependencies.cmake` | FetchContent declaration for vincentlaucsb/csv-parser |
+
+### Modified Components
+
+| Component | File | Change Type |
+|-----------|------|-------------|
+| C++ CSV writer | `src/database_csv.cpp` | Replace 2 functions with library calls; add `#include "csv.hpp"` |
+| C API options header | `include/quiver/c/options.h` | Absorb CSV struct + factory from csv.h; add common.h include |
+| C API database header | `include/quiver/c/database.h` | Remove `#include "csv.h"` |
+| C API CSV impl | `src/c/database_csv.cpp` | Update include path |
+| C API CSV test | `tests/test_c_api_database_csv.cpp` | Update include path |
+| Core library build | `src/CMakeLists.txt` | Add csv to PRIVATE link libraries |
+| Julia generated bindings | `bindings/julia/src/c_api.jl` | Regenerate (no logic change) |
+| Dart generated bindings | `bindings/dart/lib/src/ffi/bindings.dart` | Regenerate (no logic change) |
+
+### Deleted Components
+
+| Component | File | Reason |
+|-----------|------|--------|
+| C API CSV header | `include/quiver/c/csv.h` | Content merged into options.h |
+
+### Unchanged Components
+
+Everything else is unaffected:
+
+- `include/quiver/csv.h` (C++ CSVExportOptions)
+- `include/quiver/database.h` (Database class declaration)
+- `include/quiver/c/common.h`, `element.h`, `lua_runner.h`
+- `src/c/database_csv.cpp` logic (only include path changes)
+- `src/database_csv.cpp` non-writer logic
+- `src/lua_runner.cpp` (Lua binds to C++ directly, no C API headers)
+- `bindings/julia/src/database_csv.jl` (no logic change)
+- `bindings/dart/lib/src/database_csv.dart` (no logic change)
+- All C++ core tests (`test_database_csv.cpp` and others)
+- All Julia and Dart binding test files
+- All Lua tests in `test_lua_runner.cpp`
+- `tests/schemas/` -- no schema changes
+
+---
+
+## Data Flow
+
+### CSV Export Path (After Both Changes)
+
+```
+caller -> Database::export_csv(collection, group, path, options)
+    |
+    v
+src/database_csv.cpp:
+    value_to_csv_string() -- unchanged, converts Value variant to string
+    std::ofstream file(path, std::ios::binary)  -- unchanged
+    auto writer = csv::make_csv_writer(file)    -- NEW (was: manual write_csv_row)
+    writer << header_vector                      -- NEW (was: write_csv_row + csv_escape)
+    writer << row_vector                         -- NEW (was: write_csv_row + csv_escape)
+    |
+    v
+csv-parser library handles RFC 4180 escaping internally
+```
+
+### Header Include Chain (After Consolidation)
+
+```
+tests/test_c_api_database_csv.cpp
+    #include <quiver/c/options.h>      (was: csv.h)
+        #include "common.h"
+    #include <quiver/c/database.h>
+        #include "common.h"
+        #include "options.h"           (csv.h include removed; options.h was already there)
+
+src/c/database_csv.cpp
+    #include "quiver/c/options.h"      (was: quiver/c/csv.h)
+    -- quiver_csv_export_options_t found in options.h
+
+Julia FFI generator:
+    reads all *.h in include/quiver/c/ except platform.h
+    csv.h gone -> not in list
+    options.h now has csv struct -> picked up automatically
+
+Dart ffigen:
+    entry-points: database.h, element.h, lua_runner.h, common.h
+    database.h includes options.h (not csv.h anymore)
+    options.h has csv struct -> picked up transitively
+```
+
+---
 
 ## Build Order
 
-### Phase 1: C++ Core (no downstream dependencies)
+The two changes are fully independent. Either order works. However, since library integration touches `src/CMakeLists.txt` and header consolidation does not, the cleaner sequence is:
 
-**Step 1.1:** Create `include/quiver/csv_export_options.h`
-- Define `CsvExportOptions` struct
+**Step 1 -- Library integration (self-contained, no header changes):**
+1. Add csv-parser to `cmake/Dependencies.cmake`
+2. Link `csv` in `src/CMakeLists.txt`
+3. Replace `csv_escape()` + `write_csv_row()` in `src/database_csv.cpp` with `make_csv_writer()`
+4. Build and verify all tests pass (C++ core tests, especially `test_database_csv.cpp`)
 
-**Step 1.2:** Modify `include/quiver/database.h`
-- Add `#include "csv_export_options.h"`
-- Replace `export_csv` with `export_scalars_csv` and `export_group_csv`
-- Decision: keep `import_csv` stub or remove declaration
+**Step 2 -- Header consolidation (self-contained, no build system changes):**
+1. Merge CSV content into `include/quiver/c/options.h` (add `#include "common.h"`, append struct + declaration)
+2. Delete `include/quiver/c/csv.h`
+3. Remove `#include "csv.h"` from `include/quiver/c/database.h`
+4. Update `src/c/database_csv.cpp` include
+5. Update `tests/test_c_api_database_csv.cpp` include
+6. Build and verify all tests pass (especially C API tests)
 
-**Step 1.3:** Create `src/database_csv.cpp`
-- Implement `export_scalars_csv`: schema discovery, SQL query, CSV writing, enum resolution, date formatting
-- Implement `export_group_csv`: group type detection, JOIN query, column filtering, CSV writing
-- Implement CSV escaping helper, date parsing/formatting helper
+**Step 3 -- FFI regeneration (required after header consolidation):**
+1. Run `bindings/julia/generator/generator.bat` -> regenerates `c_api.jl`
+2. Run `bindings/dart/generator/generator.bat` -> regenerates `bindings.dart`
+3. Run Julia and Dart tests to confirm generated bindings are identical in behavior
 
-**Step 1.4:** Remove stubs from `src/database_describe.cpp`
-
-**Step 1.5:** Update `src/CMakeLists.txt`
-
-**Step 1.6:** Create test schema `tests/schemas/valid/csv_export.sql`
-- Include integer attributes that simulate enums
-- Include date_time columns
-- Include vector, set, and time series groups
-
-**Step 1.7:** Create `tests/test_database_csv.cpp`
-- Test scalars export (basic, with enum labels, with date formatting)
-- Test group export (vector, set, time series)
-- Test empty collection export
-- Test enum value not in map (graceful fallback)
-- Test file creation and CSV format correctness
-
-### Phase 2: C API (depends on Phase 1)
-
-**Step 2.1:** Create `include/quiver/c/csv_export_options.h`
-- Define `quiver_csv_export_options_t` flat struct
-
-**Step 2.2:** Modify `include/quiver/c/database.h`
-- Add `#include "csv_export_options.h"`
-- Replace `quiver_database_export_csv` with two new function declarations
-
-**Step 2.3:** Create `src/c/database_csv.cpp`
-- Implement `convert_csv_options` helper (flat -> nested)
-- Implement `quiver_database_export_scalars_csv`
-- Implement `quiver_database_export_group_csv`
-
-**Step 2.4:** Remove stubs from `src/c/database.cpp`
-
-**Step 2.5:** Update `src/c/CMakeLists.txt`
-
-**Step 2.6:** Create `tests/test_c_api_database_csv.cpp`
-- Same scenarios as C++ tests but via C API
-- Test NULL options (defaults)
-- Test enum flattening correctness
-
-### Phase 3: Bindings (depends on Phase 2, parallelizable)
-
-**Step 3.1 (Julia):**
-- Regenerate `c_api.jl` via generator
-- Rewrite `database_csv.jl` with Dict flattening and real ccall
-- Add Julia CSV export tests
-
-**Step 3.2 (Dart):**
-- Regenerate FFI bindings via generator
-- Rewrite `database_csv.dart` with Map flattening and Arena allocation
-- Add Dart CSV export tests
-
-**Step 3.3 (Lua):**
-- Add `export_scalars_csv` and `export_group_csv` to `bind_database()` in `lua_runner.cpp`
-- Add `lua_table_to_csv_options` helper
-- Add Lua CSV export tests (via LuaRunner in C++ test suite)
-
-### Dependency Graph
+**Dependency graph:**
 
 ```
-Phase 1: C++ Core + Options Struct + Tests
-    |
-    v
-Phase 2: C API + Flat Options Struct + Tests
-    |
-    +---> Phase 3.1: Julia Binding + Tests
-    |
-    +---> Phase 3.2: Dart Binding + Tests
-    |
-    +---> Phase 3.3: Lua Binding + Tests
+Step 1 (library)  ---independent of--->  Step 2 (headers)
+                                              |
+                                              v
+                                         Step 3 (FFI regen)
 ```
 
-## Cross-Layer Naming Summary
+Steps 1 and 2 can be done in either order or in the same commit. Step 3 must come after Step 2.
 
-| C++ | C API | Julia | Dart | Lua |
-|-----|-------|-------|------|-----|
-| `export_scalars_csv()` | `quiver_database_export_scalars_csv()` | `export_scalars_csv!()` | `exportScalarsCSV()` | `export_scalars_csv()` |
-| `export_group_csv()` | `quiver_database_export_group_csv()` | `export_group_csv!()` | `exportGroupCSV()` | `export_group_csv()` |
-| `CsvExportOptions` | `quiver_csv_export_options_t` | keyword args on export functions | `CsvExportOptions` class | Lua table argument |
+---
+
+## Architectural Patterns
+
+### Pattern 1: Library Wraps the Stream, Not the File
+
+**What:** Pass the already-opened `std::ofstream` to `csv::make_csv_writer()`, not a file path.
+**When to use:** Always -- binary mode must be set on the stream before wrapping.
+**Trade-off:** One extra line (open stream, then wrap). But binary mode is required for correct cross-platform LF output, and the library cannot be told to open in binary mode itself.
+
+```cpp
+std::ofstream file(path, std::ios::binary);  // open with binary mode
+if (!file.is_open()) { throw ...; }
+auto writer = csv::make_csv_writer(file);    // wrap the open stream
+writer << header_fields;
+for (const auto& row : data_result) {
+    // ... build row fields ...
+    writer << row_fields;
+}
+```
+
+### Pattern 2: Single-Header Content Consolidation
+
+**What:** When merging `csv.h` into `options.h`, keep the content in the same section order: enums, then structs, then function declarations.
+**When to use:** Any time a small standalone header is merged into a companion header.
+**Trade-off:** The merged header is longer but has fewer files to manage. The key invariant: `options.h` becomes the canonical location for all C API option types.
+
+### Pattern 3: Include Guard Update on Merge
+
+**What:** The merged `options.h` keeps its own `#ifndef QUIVER_C_OPTIONS_H` guard. No new guard needed.
+**When to use:** When absorbing content from another file -- do not replicate the source file's guard.
+**Consequence:** Anyone who had `#include <quiver/c/csv.h>` and `#include <quiver/c/options.h>` in the same TU now just needs `#include <quiver/c/options.h>`. No double-inclusion risk.
+
+---
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Creating a Compatibility Shim for csv.h
+
+**What people do:** Keep `csv.h` as a thin header that includes `options.h` with a deprecation comment.
+**Why it's wrong:** The project philosophy is "Delete unused code, do not deprecate." There are exactly two direct includes to update (`src/c/database_csv.cpp` and `tests/test_c_api_database_csv.cpp`). A shim adds permanent technical debt for two trivial find-and-replace edits.
+**Do this instead:** Delete `csv.h`, update the two files, regenerate FFI bindings.
+
+### Anti-Pattern 2: Replacing the ofstream with a Library-Managed File
+
+**What people do:** Use the library's file-path-based API (if it exists) to let the library open the file.
+**Why it's wrong:** The existing code opens in binary mode (`std::ios::binary`) to prevent CRLF conversion on Windows. If the library opens the file internally, binary mode cannot be guaranteed. The current approach (open stream, pass to writer) is correct and must be preserved.
+**Do this instead:** Keep `std::ofstream file(path, std::ios::binary)`, then `auto writer = csv::make_csv_writer(file)`.
+
+### Anti-Pattern 3: Merging csv.h into database.h Instead of options.h
+
+**What people do:** Put CSV options in the main database header since that's where the function is declared.
+**Why it's wrong:** `database.h` is already large (~490 lines). More importantly, `quiver_database_options_t` lives in `options.h` as a structural peer. CSV export options are per-call options of the same conceptual kind. `options.h` is the correct home.
+**Do this instead:** Merge into `options.h`, keep `database.h` focused on function signatures.
+
+### Anti-Pattern 4: Linking csv-parser as PUBLIC
+
+**What people do:** Add `csv` to `target_link_libraries(quiver PUBLIC ...)`.
+**Why it's wrong:** csv-parser is an implementation detail of `src/database_csv.cpp`. No public header includes `csv.hpp`. Marking it PUBLIC would propagate the dependency to all consumers of `libquiver`.
+**Do this instead:** `target_link_libraries(quiver PRIVATE ... csv)`.
+
+---
+
+## Integration Points Summary
+
+| Integration Point | Change 1 (Library) | Change 2 (Header Merge) |
+|------------------|-------------------|------------------------|
+| `src/database_csv.cpp` | Replace 2 functions, add #include | No change |
+| `cmake/Dependencies.cmake` | Add FetchContent | No change |
+| `src/CMakeLists.txt` | Add csv to PRIVATE links | No change |
+| `include/quiver/c/options.h` | No change | Add common.h include + CSV content |
+| `include/quiver/c/csv.h` | No change | Delete file |
+| `include/quiver/c/database.h` | No change | Remove csv.h include |
+| `src/c/database_csv.cpp` | No change | Update include path |
+| `tests/test_c_api_database_csv.cpp` | No change | Update include path |
+| `bindings/julia/src/c_api.jl` | No change | Regenerate (same content) |
+| `bindings/dart/lib/src/ffi/bindings.dart` | No change | Regenerate (same content) |
+| All other files | No change | No change |
+
+**Total files touched:** 10 (across both changes combined)
+
+---
 
 ## Scalability Considerations
 
-| Concern | Small (100 rows) | Medium (10K rows) | Large (1M rows) |
-|---------|-------------------|--------------------|--------------------|
-| Memory | Single Result in memory, write as you go | Same; Result holds all rows | Consider streaming: execute query, iterate sqlite3_step, write per-row without buffering all in Result |
-| File I/O | Negligible | Negligible | Buffered ofstream handles this well |
-| Enum lookup | Map lookup per cell, negligible | Same | Same; map is small (enums have few values) |
+Not applicable to this milestone -- v0.5 is a refactor with no behavior change. Library selection (csv-parser) is appropriate for any scale; writing is stream-based and does not buffer entire file in memory.
 
-For v0.4, loading the full `Result` into memory is acceptable. If million-row collections become common, a future optimization can iterate `sqlite3_step` directly without materializing the full `Result`. This is an optimization, not an architectural change.
+---
 
 ## Sources
 
-- Existing codebase analysis: `include/quiver/database.h`, `include/quiver/c/database.h`, `include/quiver/c/options.h`, `src/database_describe.cpp`, `src/c/database.cpp`, `src/c/database_query.cpp`, `src/c/database_time_series.cpp`, `src/c/database_helpers.h`, `src/database_impl.h`, `src/database_read.cpp`, `src/lua_runner.cpp`
-- Existing binding stubs: `bindings/julia/src/database_csv.jl`, `bindings/dart/lib/src/database_csv.dart`
-- Schema patterns: `tests/schemas/valid/collections.sql`, `tests/schemas/valid/relations.sql`
-- Project requirements: `.planning/PROJECT.md` (v0.4 requirements)
+- Codebase analysis: `src/database_csv.cpp`, `src/c/database_csv.cpp`, `include/quiver/c/csv.h`, `include/quiver/c/options.h`, `include/quiver/c/database.h`, `src/CMakeLists.txt`, `cmake/Dependencies.cmake`
+- FFI generator configs: `bindings/julia/generator/generator.jl`, `bindings/julia/generator/generator.toml`, `bindings/dart/pubspec.yaml`
+- Binding implementations: `bindings/julia/src/database_csv.jl`, `bindings/dart/lib/src/database_csv.dart`
+- Test files: `tests/test_c_api_database_csv.cpp`
+- csv-parser library: [vincentlaucsb/csv-parser](https://github.com/vincentlaucsb/csv-parser) -- write API verified from [test_write_csv.cpp](https://github.com/vincentlaucsb/csv-parser/blob/master/tests/test_write_csv.cpp) and [CMake FetchContent wiki](https://github.com/vincentlaucsb/csv-parser/wiki/Example:-Using-csv%E2%80%90parser-with-CMake-and-FetchContent)
 
 ---
-*Architecture research for: CSV Export with Enum Resolution and Date Formatting in Quiver SQLite wrapper*
+
+*Architecture research for: v0.5 CSV Refactor (library integration + header consolidation)*
 *Researched: 2026-02-22*
