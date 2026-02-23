@@ -331,8 +331,8 @@ static rapidcsv::Document read_csv_file(const std::string& path) {
     }
 
     std::istringstream ss(content);
-    auto doc = rapidcsv::Document(ss, rapidcsv::LabelParams(0, -1),
-                                  rapidcsv::SeparatorParams(',', false, false, true, true, '"'));
+    auto doc = rapidcsv::Document(
+        ss, rapidcsv::LabelParams(0, -1), rapidcsv::SeparatorParams(',', false, false, true, true, '"'));
 
     if (doc.GetColumnCount() == 0) {
         throw std::runtime_error("Cannot import_csv: CSV file is empty.");
@@ -344,16 +344,13 @@ static rapidcsv::Document read_csv_file(const std::string& path) {
 // Parse a datetime string from CSV back to ISO 8601 storage format.
 // If format is empty, validates the input is already ISO 8601.
 // If format is non-empty, parses with that format and reformats to ISO 8601.
-static std::string parse_datetime_import(const std::string& raw_value, const std::string& format,
-                                         const std::string& column_name) {
+static std::string parse_datetime_import(const std::string& raw_value, const std::string& format) {
     if (format.empty()) {
         // Assume input is already ISO 8601; validate
         std::tm tm{};
         if (!parse_iso8601(raw_value, tm)) {
-            throw std::runtime_error("Cannot import_csv: Timestamp '" + raw_value +
-                                     "' is not valid. Please provide a valid timestamp with format "
-                                     "%Y-%m-%dT%H:%M:%S for column '" +
-                                     column_name + "'.");
+            throw std::runtime_error("Cannot import_csv: Timestamp " + raw_value +
+                                     " is not valid. Please provide a valid timestamp with format %Y-%m-%dT%H:%M:%S.");
         }
         // Reformat to canonical form
         char buffer[64];
@@ -367,9 +364,8 @@ static std::string parse_datetime_import(const std::string& raw_value, const std
     std::istringstream ss(raw_value);
     ss >> std::get_time(&tm, format.c_str());
     if (ss.fail()) {
-        throw std::runtime_error("Cannot import_csv: Timestamp '" + raw_value +
-                                 "' is not valid. Please provide a valid timestamp with format " + format +
-                                 " for column '" + column_name + "'.");
+        throw std::runtime_error("Cannot import_csv: Timestamp " + raw_value +
+                                 " is not valid. Please provide a valid timestamp with format " + format + ".");
     }
 
     char buffer[64];
@@ -379,8 +375,7 @@ static std::string parse_datetime_import(const std::string& raw_value, const std
 
 // Resolve an enum text label back to its integer value.
 // Searches all locales in the enum_labels map with case-insensitive matching.
-static int64_t resolve_enum_value(const std::string& cell, const std::string& column,
-                                  const CSVImportOptions& options) {
+static int64_t resolve_enum_value(const std::string& cell, const std::string& column, const CSVImportOptions& options) {
     auto attr_it = options.enum_labels.find(column);
     if (attr_it == options.enum_labels.end()) {
         throw std::runtime_error("Cannot import_csv: Invalid enum value '" + cell + "' for column '" + column + "'.");
@@ -399,8 +394,7 @@ static int64_t resolve_enum_value(const std::string& cell, const std::string& co
 }
 
 // Validate that CSV columns match expected database columns (count and names).
-static void validate_columns_match(const std::vector<std::string>& csv_cols,
-                                   const std::vector<std::string>& db_cols) {
+static void validate_columns_match(const std::vector<std::string>& csv_cols, const std::vector<std::string>& db_cols) {
     if (csv_cols.size() != db_cols.size()) {
         throw std::runtime_error(
             "Cannot import_csv: The number of columns in the CSV file does not match the number of columns in the "
@@ -446,7 +440,9 @@ static std::unordered_map<std::string, int64_t> build_label_to_id_map(Database& 
     return label_to_id;
 }
 
-void Database::import_csv(const std::string& collection, const std::string& group, const std::string& path,
+void Database::import_csv(const std::string& collection,
+                          const std::string& group,
+                          const std::string& path,
                           const CSVImportOptions& options) {
     impl_->require_collection(collection, "import_csv");
 
@@ -478,9 +474,25 @@ void Database::import_csv(const std::string& collection, const std::string& grou
     // Read CSV, validate columns against DB schema, handle empty CSV
     auto doc = read_csv_file(path);
     auto csv_cols = get_csv_columns(doc);
-    auto db_cols = get_db_columns(execute("SELECT * FROM " + table_name + " LIMIT 0"),
-                                  group.empty() ? "id" : "");
+    auto db_cols = get_db_columns(execute("SELECT * FROM " + table_name + " LIMIT 0"), group.empty() ? "id" : "");
+
+    // Scalar path: require label column before general column validation
+    if (group.empty()) {
+        if (std::find(csv_cols.begin(), csv_cols.end(), "label") == csv_cols.end()) {
+            throw std::runtime_error("Cannot import_csv: CSV file does not contain a 'label' column.");
+        }
+    }
+
     validate_columns_match(csv_cols, db_cols);
+
+    // Validate per-row column count
+    for (size_t row = 0; row < doc.GetRowCount(); ++row) {
+        auto row_data = doc.GetRow<std::string>(row);
+        if (row_data.size() != csv_cols.size()) {
+            throw std::runtime_error("Cannot import_csv: The number of columns of row " + std::to_string(row + 1) +
+                                     " in the CSV file does not match the number of columns in the database.");
+        }
+    }
 
     size_t row_count = doc.GetRowCount();
     if (row_count == 0) {
@@ -525,7 +537,7 @@ void Database::import_csv(const std::string& collection, const std::string& grou
         // Validation pass: check all cells before mutating
         for (size_t row = 0; row < row_count; ++row) {
             for (const auto& col_name : db_cols) {
-                std::string cell = read_cell(doc,csv_col_index[col_name], row);
+                std::string cell = read_cell(doc, csv_col_index[col_name], row);
                 const auto* col_def = table_def->get_column(col_name);
                 auto fk_it = fk_map.find(col_name);
                 bool is_fk = fk_it != fk_map.end();
@@ -533,23 +545,24 @@ void Database::import_csv(const std::string& collection, const std::string& grou
 
                 if (cell.empty()) {
                     if (col_def && col_def->not_null) {
-                        throw std::runtime_error("Cannot import_csv: Column '" + col_name +
-                                                 "' cannot be NULL (row " + std::to_string(row + 1) + ").");
+                        throw std::runtime_error("Cannot import_csv: Column " + col_name + " cannot be NULL.");
                     }
                     continue;
                 }
 
                 if (is_fk && !is_self_fk) {
                     if (fk_label_maps[col_name].find(cell) == fk_label_maps[col_name].end()) {
-                        throw std::runtime_error("Cannot import_csv: Element with label '" + cell +
-                                                 "' does not exist in collection '" + fk_it->second.to_table + "'.");
+                        throw std::runtime_error(
+                            "Cannot import_csv: Could not find an existing element from collection " +
+                            fk_it->second.to_table + " with label " + cell +
+                            ".\nCreate the element before referencing it.");
                     }
                 }
 
                 DataType type = col_def ? col_def->type : DataType::Text;
 
                 if (type == DataType::DateTime || is_date_time_column(col_name)) {
-                    parse_datetime_import(cell, options.date_time_format, col_name);
+                    parse_datetime_import(cell, options.date_time_format);
                 }
 
                 if (type == DataType::Integer && !is_fk) {
@@ -569,8 +582,8 @@ void Database::import_csv(const std::string& collection, const std::string& grou
                     try {
                         (void)std::stod(cell);
                     } catch (...) {
-                        throw std::runtime_error("Cannot import_csv: Invalid float value '" + cell +
-                                                 "' for column '" + col_name + "'.");
+                        throw std::runtime_error("Cannot import_csv: Invalid float value '" + cell + "' for column '" +
+                                                 col_name + "'.");
                     }
                 }
             }
@@ -600,7 +613,7 @@ void Database::import_csv(const std::string& collection, const std::string& grou
             for (size_t row = 0; row < row_count; ++row) {
                 std::vector<Value> params;
                 for (const auto& col_name : db_cols) {
-                    std::string cell = read_cell(doc,csv_col_index[col_name], row);
+                    std::string cell = read_cell(doc, csv_col_index[col_name], row);
                     const auto* col_def = table_def->get_column(col_name);
                     auto fk_it = fk_map.find(col_name);
                     bool is_fk = fk_it != fk_map.end();
@@ -624,7 +637,7 @@ void Database::import_csv(const std::string& collection, const std::string& grou
                     DataType type = col_def ? col_def->type : DataType::Text;
 
                     if (type == DataType::DateTime || is_date_time_column(col_name)) {
-                        params.push_back(parse_datetime_import(cell, options.date_time_format, col_name));
+                        params.push_back(parse_datetime_import(cell, options.date_time_format));
                         continue;
                     }
 
@@ -661,15 +674,16 @@ void Database::import_csv(const std::string& collection, const std::string& grou
 
                 for (const auto& col_name : self_fk_cols) {
                     for (size_t row = 0; row < row_count; ++row) {
-                        std::string cell = read_cell(doc,csv_col_index[col_name], row);
+                        std::string cell = read_cell(doc, csv_col_index[col_name], row);
                         if (cell.empty())
                             continue;
 
-                        std::string label = read_cell(doc,csv_col_index["label"], row);
+                        std::string label = read_cell(doc, csv_col_index["label"], row);
 
                         if (self_label_to_id.find(cell) == self_label_to_id.end()) {
-                            throw std::runtime_error("Cannot import_csv: Element with label '" + cell +
-                                                     "' does not exist in collection '" + collection + "'.");
+                            throw std::runtime_error(
+                                "Cannot import_csv: Could not find an existing element from collection " + collection +
+                                " with label " + cell + ".\nCreate the element before referencing it.");
                         }
 
                         execute("UPDATE " + collection + " SET " + col_name + " = ? WHERE id = ?",
@@ -748,8 +762,8 @@ void Database::import_csv(const std::string& collection, const std::string& grou
             size_t vi_csv_idx = csv_col_index["vector_index"];
 
             for (size_t row = 0; row < row_count; ++row) {
-                std::string id_label = read_cell(doc,id_csv_idx, row);
-                std::string vi_str = read_cell(doc,vi_csv_idx, row);
+                std::string id_label = read_cell(doc, id_csv_idx, row);
+                std::string vi_str = read_cell(doc, vi_csv_idx, row);
                 try {
                     element_vector_indices[id_label].push_back(std::stoll(vi_str));
                 } catch (...) {
@@ -771,12 +785,12 @@ void Database::import_csv(const std::string& collection, const std::string& grou
         // Validation pass: per-cell checks
         for (size_t row = 0; row < row_count; ++row) {
             for (const auto& col_name : db_cols) {
-                std::string cell = read_cell(doc,csv_col_index[col_name], row);
+                std::string cell = read_cell(doc, csv_col_index[col_name], row);
 
                 if (col_name == "id") {
                     if (label_to_id.find(cell) == label_to_id.end()) {
-                        throw std::runtime_error("Cannot import_csv: Element with label '" + cell +
-                                                 "' does not exist in collection '" + collection + "'.");
+                        throw std::runtime_error("Cannot import_csv: Element with id " + cell +
+                                                 " does not exist in collection " + collection + ".");
                     }
                     continue;
                 }
@@ -785,16 +799,16 @@ void Database::import_csv(const std::string& collection, const std::string& grou
 
                 if (cell.empty()) {
                     if (col_def && col_def->not_null) {
-                        throw std::runtime_error("Cannot import_csv: Column '" + col_name +
-                                                 "' cannot be NULL (row " + std::to_string(row + 1) + ").");
+                        throw std::runtime_error("Cannot import_csv: Column " + col_name + " cannot be NULL.");
                     }
                     continue;
                 }
 
                 if (auto fk_it = fk_map.find(col_name); fk_it != fk_map.end()) {
                     if (fk_label_maps[col_name].find(cell) == fk_label_maps[col_name].end()) {
-                        throw std::runtime_error("Cannot import_csv: Element with label '" + cell +
-                                                 "' does not exist in collection '" + fk_it->second.to_table + "'.");
+                        throw std::runtime_error(
+                            "Cannot import_csv: Could not find an existing element from collection " +
+                            fk_it->second.to_table + " with label " + cell + ".");
                     }
                 }
 
@@ -802,7 +816,7 @@ void Database::import_csv(const std::string& collection, const std::string& grou
                 bool is_datetime = (type == DataType::DateTime || is_date_time_column(col_name));
 
                 if (is_datetime && col_name != "id" && col_name != "vector_index") {
-                    parse_datetime_import(cell, options.date_time_format, col_name);
+                    parse_datetime_import(cell, options.date_time_format);
                 }
             }
         }
@@ -831,7 +845,7 @@ void Database::import_csv(const std::string& collection, const std::string& grou
             for (size_t row = 0; row < row_count; ++row) {
                 std::vector<Value> params;
                 for (const auto& col_name : db_cols) {
-                    std::string cell = read_cell(doc,csv_col_index[col_name], row);
+                    std::string cell = read_cell(doc, csv_col_index[col_name], row);
 
                     if (col_name == "id") {
                         params.push_back(label_to_id.at(cell));
@@ -857,7 +871,7 @@ void Database::import_csv(const std::string& collection, const std::string& grou
                     bool is_datetime = (type == DataType::DateTime || is_date_time_column(col_name));
 
                     if (is_datetime) {
-                        params.push_back(parse_datetime_import(cell, options.date_time_format, col_name));
+                        params.push_back(parse_datetime_import(cell, options.date_time_format));
                         continue;
                     }
 
