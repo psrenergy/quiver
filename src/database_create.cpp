@@ -13,8 +13,11 @@ int64_t Database::create_element(const std::string& collection, const Element& e
         throw std::runtime_error("Cannot create_element: element must have at least one scalar attribute");
     }
 
-    // Validate scalar types
-    for (const auto& [name, value] : scalars) {
+    // Pre-resolve pass: resolve all FK labels before any writes
+    auto resolved = impl_->resolve_element_fk_labels(collection, element, *this);
+
+    // Validate resolved scalar types
+    for (const auto& [name, value] : resolved.scalars) {
         impl_->type_validator->validate_scalar(collection, name, value);
     }
 
@@ -26,7 +29,7 @@ int64_t Database::create_element(const std::string& collection, const Element& e
     std::vector<Value> params;
 
     auto first = true;
-    for (const auto& [name, value] : scalars) {
+    for (const auto& [name, value] : resolved.scalars) {
         if (!first) {
             sql += ", ";
             placeholders += ", ";
@@ -43,7 +46,7 @@ int64_t Database::create_element(const std::string& collection, const Element& e
     impl_->logger->debug("Inserted element with id: {}", element_id);
 
     // Process arrays - route to vector or set tables based on schema
-    const auto& arrays = element.arrays();
+    const auto& arrays = resolved.arrays;
 
     // Build a map of set table -> (column_name -> array values)
     std::map<std::string, std::map<std::string, const std::vector<Value>*>> set_table_columns;
@@ -145,9 +148,7 @@ int64_t Database::create_element(const std::string& collection, const Element& e
             for (const auto& [col_name, values_ptr] : columns) {
                 set_sql += ", " + col_name;
                 set_placeholders += ", ?";
-
-                auto val = impl_->resolve_fk_label(*table_def, col_name, (*values_ptr)[row_idx], *this);
-                set_params.push_back(val);
+                set_params.push_back((*values_ptr)[row_idx]);
             }
             set_sql += ") VALUES (" + set_placeholders + ")";
             execute(set_sql, set_params);
