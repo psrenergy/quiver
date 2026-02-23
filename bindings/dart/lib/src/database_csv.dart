@@ -88,7 +88,7 @@ extension DatabaseCSV on Database {
     final arena = Arena();
     try {
       final optsPtr = arena<quiver_csv_options_t>();
-      _fillCsvOptions(optsPtr, arena, enumLabels: enumLabels, dateTimeFormat: dateTimeFormat);
+      _fillCSVOptions(optsPtr, arena, enumLabels: enumLabels, dateTimeFormat: dateTimeFormat);
 
       check(
         bindings.quiver_database_export_csv(
@@ -125,7 +125,7 @@ extension DatabaseCSV on Database {
     final arena = Arena();
     try {
       final optsPtr = arena<quiver_csv_options_t>();
-      _fillCsvOptions(optsPtr, arena, enumLabels: enumLabels, dateTimeFormat: dateTimeFormat);
+      _fillCSVOptions(optsPtr, arena, enumLabels: enumLabels, dateTimeFormat: dateTimeFormat);
 
       check(
         bindings.quiver_database_import_csv(
