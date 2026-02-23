@@ -1,7 +1,7 @@
 #include "internal.h"
-#include "quiver/c/csv.h"
+#include "quiver/c/options.h"
 #include "quiver/c/database.h"
-#include "quiver/csv.h"
+#include "quiver/options.h"
 
 #include <string>
 

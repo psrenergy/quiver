@@ -1,5 +1,5 @@
 #include "database_impl.h"
-#include "quiver/csv.h"
+#include "quiver/options.h"
 
 #include <cstdio>
 #include <cstring>

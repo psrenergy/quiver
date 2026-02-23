@@ -3,8 +3,7 @@
 
 #include "export.h"
 #include "quiver/attribute_metadata.h"
-#include "quiver/c/options.h"
-#include "quiver/csv.h"
+#include "quiver/options.h"
 #include "quiver/element.h"
 #include "quiver/result.h"
 
@@ -14,12 +13,6 @@
 #include <vector>
 
 namespace quiver {
-
-using DatabaseOptions = quiver_database_options_t;
-
-inline DatabaseOptions default_database_options() {
-    return {0, QUIVER_LOG_INFO};
-}
 
 class QUIVER_API Database {
 public:

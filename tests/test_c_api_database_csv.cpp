@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
-#include <quiver/c/csv.h>
+#include <quiver/c/options.h>
 #include <quiver/c/database.h>
 #include <quiver/c/element.h>
 #include <sstream>

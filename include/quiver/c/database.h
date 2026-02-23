@@ -2,7 +2,6 @@
 #define QUIVER_C_DATABASE_H
 
 #include "common.h"
-#include "csv.h"
 #include "options.h"
 
 #include <stdbool.h>
