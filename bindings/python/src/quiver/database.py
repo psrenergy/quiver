@@ -3,8 +3,9 @@ from __future__ import annotations
 import warnings
 
 from quiver._c_api import ffi, get_lib
-from quiver._helpers import check, decode_string
+from quiver._helpers import check, decode_string, decode_string_or_none
 from quiver.exceptions import QuiverError
+from quiver.metadata import GroupMetadata, ScalarMetadata
 
 
 class Database:
@@ -593,7 +594,168 @@ class Database:
         finally:
             lib.quiver_database_free_string_array(out_values[0], count)
 
+    # -- Metadata get ------------------------------------------------------------
+
+    def get_scalar_metadata(
+        self, collection: str, attribute: str,
+    ) -> ScalarMetadata:
+        """Get metadata for a scalar attribute."""
+        self._ensure_open()
+        lib = get_lib()
+        out = ffi.new("quiver_scalar_metadata_t*")
+        check(lib.quiver_database_get_scalar_metadata(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), out,
+        ))
+        try:
+            return _parse_scalar_metadata(out)
+        finally:
+            lib.quiver_database_free_scalar_metadata(out)
+
+    def get_vector_metadata(
+        self, collection: str, group_name: str,
+    ) -> GroupMetadata:
+        """Get metadata for a vector group."""
+        self._ensure_open()
+        lib = get_lib()
+        out = ffi.new("quiver_group_metadata_t*")
+        check(lib.quiver_database_get_vector_metadata(
+            self._ptr, collection.encode("utf-8"), group_name.encode("utf-8"), out,
+        ))
+        try:
+            return _parse_group_metadata(out)
+        finally:
+            lib.quiver_database_free_group_metadata(out)
+
+    def get_set_metadata(
+        self, collection: str, group_name: str,
+    ) -> GroupMetadata:
+        """Get metadata for a set group."""
+        self._ensure_open()
+        lib = get_lib()
+        out = ffi.new("quiver_group_metadata_t*")
+        check(lib.quiver_database_get_set_metadata(
+            self._ptr, collection.encode("utf-8"), group_name.encode("utf-8"), out,
+        ))
+        try:
+            return _parse_group_metadata(out)
+        finally:
+            lib.quiver_database_free_group_metadata(out)
+
+    def get_time_series_metadata(
+        self, collection: str, group_name: str,
+    ) -> GroupMetadata:
+        """Get metadata for a time series group."""
+        self._ensure_open()
+        lib = get_lib()
+        out = ffi.new("quiver_group_metadata_t*")
+        check(lib.quiver_database_get_time_series_metadata(
+            self._ptr, collection.encode("utf-8"), group_name.encode("utf-8"), out,
+        ))
+        try:
+            return _parse_group_metadata(out)
+        finally:
+            lib.quiver_database_free_group_metadata(out)
+
+    # -- Metadata list -----------------------------------------------------------
+
+    def list_scalar_attributes(self, collection: str) -> list[ScalarMetadata]:
+        """List all scalar attributes for a collection. Returns full metadata objects."""
+        self._ensure_open()
+        lib = get_lib()
+        out_metadata = ffi.new("quiver_scalar_metadata_t**")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_list_scalar_attributes(
+            self._ptr, collection.encode("utf-8"), out_metadata, out_count,
+        ))
+        count = out_count[0]
+        if count == 0 or out_metadata[0] == ffi.NULL:
+            return []
+        try:
+            return [_parse_scalar_metadata(out_metadata[0] + i) for i in range(count)]
+        finally:
+            lib.quiver_database_free_scalar_metadata_array(out_metadata[0], count)
+
+    def list_vector_groups(self, collection: str) -> list[GroupMetadata]:
+        """List all vector groups for a collection. Returns full metadata objects."""
+        self._ensure_open()
+        lib = get_lib()
+        out_metadata = ffi.new("quiver_group_metadata_t**")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_list_vector_groups(
+            self._ptr, collection.encode("utf-8"), out_metadata, out_count,
+        ))
+        count = out_count[0]
+        if count == 0 or out_metadata[0] == ffi.NULL:
+            return []
+        try:
+            return [_parse_group_metadata(out_metadata[0] + i) for i in range(count)]
+        finally:
+            lib.quiver_database_free_group_metadata_array(out_metadata[0], count)
+
+    def list_set_groups(self, collection: str) -> list[GroupMetadata]:
+        """List all set groups for a collection. Returns full metadata objects."""
+        self._ensure_open()
+        lib = get_lib()
+        out_metadata = ffi.new("quiver_group_metadata_t**")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_list_set_groups(
+            self._ptr, collection.encode("utf-8"), out_metadata, out_count,
+        ))
+        count = out_count[0]
+        if count == 0 or out_metadata[0] == ffi.NULL:
+            return []
+        try:
+            return [_parse_group_metadata(out_metadata[0] + i) for i in range(count)]
+        finally:
+            lib.quiver_database_free_group_metadata_array(out_metadata[0], count)
+
+    def list_time_series_groups(self, collection: str) -> list[GroupMetadata]:
+        """List all time series groups for a collection. Returns full metadata objects."""
+        self._ensure_open()
+        lib = get_lib()
+        out_metadata = ffi.new("quiver_group_metadata_t**")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_list_time_series_groups(
+            self._ptr, collection.encode("utf-8"), out_metadata, out_count,
+        ))
+        count = out_count[0]
+        if count == 0 or out_metadata[0] == ffi.NULL:
+            return []
+        try:
+            return [_parse_group_metadata(out_metadata[0] + i) for i in range(count)]
+        finally:
+            lib.quiver_database_free_group_metadata_array(out_metadata[0], count)
+
     def __repr__(self) -> str:
         if self._closed:
             return "Database(closed)"
         return f"Database(path={self.path()!r})"
+
+
+# -- Metadata parsing helpers (module-level) ---------------------------------
+
+
+def _parse_scalar_metadata(meta) -> ScalarMetadata:
+    """Parse a quiver_scalar_metadata_t struct into a ScalarMetadata dataclass."""
+    return ScalarMetadata(
+        name=decode_string(meta.name),
+        data_type=int(meta.data_type),
+        not_null=bool(meta.not_null),
+        primary_key=bool(meta.primary_key),
+        default_value=decode_string_or_none(meta.default_value),
+        is_foreign_key=bool(meta.is_foreign_key),
+        references_collection=decode_string_or_none(meta.references_collection),
+        references_column=decode_string_or_none(meta.references_column),
+    )
+
+
+def _parse_group_metadata(meta) -> GroupMetadata:
+    """Parse a quiver_group_metadata_t struct into a GroupMetadata dataclass."""
+    value_columns: list[ScalarMetadata] = []
+    for i in range(meta.value_column_count):
+        value_columns.append(_parse_scalar_metadata(meta.value_columns[i]))
+    return GroupMetadata(
+        group_name=decode_string(meta.group_name),
+        dimension_column="" if meta.dimension_column == ffi.NULL else decode_string(meta.dimension_column),
+        value_columns=value_columns,
+    )
