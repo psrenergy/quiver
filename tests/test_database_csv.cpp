@@ -1182,3 +1182,33 @@ TEST(DatabaseCSV, ImportCSV_Scalar_CrossCollectionFK_RoundTrip) {
 
     fs::remove(csv_path);
 }
+
+TEST(DatabaseCSV, ImportCSV_Scalar_20000Rows) {
+    auto db = make_db();
+    auto csv_path = temp_csv("Import20000Rows");
+
+    // Generate a 20000-row CSV file
+    std::ofstream out(csv_path, std::ios::binary);
+    out << "sep=,\nlabel,name,status,price,date_created,notes\n";
+    for (int i = 1; i <= 20000; ++i) {
+        out << "Item" << i << ","
+            << "Name" << i << "," << (i % 3) << "," << (i * 0.5) << ","
+            << "2024-01-15T10:30:00,"
+            << "note" << i << "\n";
+    }
+    out.close();
+
+    db.import_csv("Items", "", csv_path.string());
+
+    auto names = db.read_scalar_strings("Items", "name");
+    ASSERT_EQ(names.size(), 20000);
+    EXPECT_EQ(names[0], "Name1");
+    EXPECT_EQ(names[19999], "Name20000");
+
+    auto prices = db.read_scalar_floats("Items", "price");
+    ASSERT_EQ(prices.size(), 20000);
+    EXPECT_NEAR(prices[0], 0.5, 0.001);
+    EXPECT_NEAR(prices[19999], 10000.0, 0.001);
+
+    fs::remove(csv_path);
+}
