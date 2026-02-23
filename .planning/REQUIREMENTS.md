@@ -9,13 +9,13 @@ Requirements for milestone v1.0 Relations. Each maps to roadmap phases.
 
 ### Foundation
 
-- [ ] **FOUND-01**: Shared `resolve_fk_label` helper extracts the proven set FK pattern into a reusable method on `Database::Impl`
+- [x] **FOUND-01**: Shared `resolve_fk_label` helper extracts the proven set FK pattern into a reusable method on `Database::Impl`
 
 ### Create Element
 
 - [ ] **CRE-01**: User can pass a target label (string) for a scalar FK column in `create_element` and it resolves to the target's ID
 - [ ] **CRE-02**: User can pass target labels for vector FK columns in `create_element` and they resolve to target IDs
-- [ ] **CRE-03**: Existing set FK resolution in `create_element` uses the shared helper (refactor, no behavior change)
+- [x] **CRE-03**: Existing set FK resolution in `create_element` uses the shared helper (refactor, no behavior change)
 - [ ] **CRE-04**: User can pass target labels for time series FK columns in `create_element` and they resolve to target IDs
 
 ### Update Element
@@ -27,7 +27,7 @@ Requirements for milestone v1.0 Relations. Each maps to roadmap phases.
 
 ### Error Handling
 
-- [ ] **ERR-01**: Passing a label that doesn't exist in the target table throws a clear error: `"Failed to resolve label 'X' to ID in table 'Y'"`
+- [x] **ERR-01**: Passing a label that doesn't exist in the target table throws a clear error: `"Failed to resolve label 'X' to ID in table 'Y'"`
 
 ### Cleanup
 
@@ -53,16 +53,16 @@ None currently deferred.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | Phase 1 | Pending |
+| FOUND-01 | Phase 1 | Complete |
 | CRE-01 | Phase 2 | Pending |
 | CRE-02 | Phase 2 | Pending |
-| CRE-03 | Phase 1 | Pending |
+| CRE-03 | Phase 1 | Complete |
 | CRE-04 | Phase 2 | Pending |
 | UPD-01 | Phase 3 | Pending |
 | UPD-02 | Phase 3 | Pending |
 | UPD-03 | Phase 3 | Pending |
 | UPD-04 | Phase 3 | Pending |
-| ERR-01 | Phase 1 | Pending |
+| ERR-01 | Phase 1 | Complete |
 | CLN-01 | Phase 4 | Pending |
 
 **Coverage:**
