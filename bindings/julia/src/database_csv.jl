@@ -1,5 +1,5 @@
 """
-    build_csv_options(kwargs...) -> (Ref{quiver_csv_export_options_t}, Vector{Any})
+    build_quiver_csv_export_options(kwargs...) -> (Ref{quiver_csv_export_options_t}, Vector{Any})
 
 Build a C API `quiver_csv_export_options_t` from keyword arguments.
 Returns `(opts_ref, temps)` where `temps` holds all temporary objects that must
@@ -10,7 +10,7 @@ Supported kwargs:
   - `date_time_format::String` — strftime format for DateTime columns
   - `enum_labels::Dict{String, Dict{Int, String}}` — attribute → (value → label) mapping
 """
-function build_csv_options(; kwargs...)
+function build_quiver_csv_export_options(; kwargs...)
     opts = C.quiver_csv_export_options_default()
     temps = Any[]
 
@@ -82,7 +82,7 @@ function build_csv_options(; kwargs...)
 end
 
 function export_csv(db::Database, collection::String, group::String, path::String; kwargs...)
-    opts_ref, temps = build_csv_options(; kwargs...)
+    opts_ref, temps = build_quiver_csv_export_options(; kwargs...)
     GC.@preserve temps begin
         check(C.quiver_database_export_csv(db.ptr, collection, group, path, opts_ref))
     end
