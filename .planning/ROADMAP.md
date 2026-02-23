@@ -24,7 +24,7 @@ See: milestones/v0.3-ROADMAP.md for full details.
 
 - [x] **Phase 5: C++ Core** - Options struct, export logic, RFC 4180 writer, enum resolution, date formatting, tests (completed 2026-02-22)
 - [ ] **Phase 6: C API** - Flat options struct, export function, FFI generation, C API tests
-- [ ] **Phase 7: Bindings** - Julia, Dart, and Lua wrappers with idiomatic option conversion and binding tests
+- [x] **Phase 7: Bindings** - Julia, Dart, and Lua wrappers with idiomatic option conversion and binding tests (completed 2026-02-23)
 
 ## Phase Details
 
@@ -86,7 +86,7 @@ Phases execute in numeric order: 5 -> 6 -> 7
 | 4. Performance Benchmark | v0.3 | 1/1 | Complete | 2026-02-21 |
 | 5. C++ Core | v0.4 | Complete    | 2026-02-22 | - |
 | 6. C API | v0.4 | 0/2 | Planning complete | - |
-| 7. Bindings | v0.4 | 1/2 | In Progress | - |
+| 7. Bindings | v0.4 | Complete    | 2026-02-23 | - |
 
 ---
 *Roadmap created: 2026-02-22*
