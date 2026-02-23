@@ -45,6 +45,41 @@ struct Database::Impl {
         }
     }
 
+    Value resolve_fk_label(const TableDefinition& table_def,
+                           const std::string& column,
+                           const Value& value,
+                           Database& db) {
+        if (!std::holds_alternative<std::string>(value)) {
+            return value;
+        }
+
+        const auto& str_val = std::get<std::string>(value);
+
+        // Check if column is a foreign key
+        for (const auto& fk : table_def.foreign_keys) {
+            if (fk.from_column == column) {
+                auto lookup_sql = "SELECT id FROM " + fk.to_table + " WHERE label = ?";
+                auto lookup_result = db.execute(lookup_sql, {str_val});
+                if (lookup_result.empty() || !lookup_result[0].get_integer(0)) {
+                    throw std::runtime_error("Failed to resolve label '" + str_val +
+                                             "' to ID in table '" + fk.to_table + "'");
+                }
+                return lookup_result[0].get_integer(0).value();
+            }
+        }
+
+        // String value on a non-FK INTEGER column is an error
+        auto col_type = table_def.get_data_type(column);
+        if (col_type && *col_type == DataType::Integer) {
+            throw std::runtime_error("Cannot resolve attribute: '" + column +
+                                     "' is INTEGER but received string '" + str_val +
+                                     "' (not a foreign key)");
+        }
+
+        // String value for TEXT/DATETIME column: pass through
+        return value;
+    }
+
     void load_schema_metadata() {
         schema = std::make_unique<Schema>(Schema::from_database(db));
         SchemaValidator validator(*schema);
