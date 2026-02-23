@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 8 of 9 (Library Integration)
-Plan: 0 of ? in current phase
-Status: Ready to plan
-Last activity: 2026-02-22 -- Roadmap created for v0.5
+Plan: 1 of 1 in current phase
+Status: Phase 8 complete
+Last activity: 2026-02-22 -- Completed 08-01-PLAN.md (rapidcsv integration)
 
-Progress: [##########..] 78% (10/~12 plans across all milestones)
+Progress: [###########.] 85% (11/~13 plans across all milestones)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10 (4 v0.3 + 6 v0.4)
+- Total plans completed: 11 (4 v0.3 + 6 v0.4 + 1 v0.5)
 - Average duration: ~7 min
-- Total execution time: ~70 min
+- Total execution time: ~78 min
 
 **By Phase (v0.3):**
 
@@ -40,6 +40,12 @@ Progress: [##########..] 78% (10/~12 plans across all milestones)
 | 6. C API | 2 | ~8 min | ~4 min |
 | 7. Bindings | 2 | ~8 min | ~4 min |
 
+**By Phase (v0.5):**
+
+| Phase | Plans | Total | Avg/Plan |
+|-------|-------|-------|----------|
+| 8. Library Integration | 1 | ~8 min | ~8 min |
+
 *Updated after each plan completion*
 
 ## Accumulated Context
@@ -51,10 +57,13 @@ Recent decisions affecting current work:
 
 - [v0.5]: rapidcsv (d99kris, v8.92) chosen over vincentlaucsb/csv-parser -- header-only, simpler FetchContent integration, sufficient for write-centric v0.5 scope
 - [v0.5]: csv.h deleted outright (no compatibility stub) -- project philosophy prohibits deprecation
+- [v0.5]: SeparatorParams with mHasCR=false forces LF-only line endings on Windows (matching existing test behavior)
+- [v0.5]: make_csv_document() and save_csv_document() extracted as shared helpers for scalar/group export paths
+- [v0.5]: Always SetCell<std::string> to prevent rapidcsv type conversion from altering float formatting
 
 ### Key Technical Context
 
-- Hand-rolled CSV writer: `csv_escape()` and `write_csv_row()` in src/database_csv.cpp (~15 lines)
+- CSV export now uses rapidcsv Document/Save API (csv_escape and write_csv_row deleted)
 - C API CSV options: `quiver_csv_export_options_t` in include/quiver/c/csv.h
 - C API database options: `quiver_database_options_t` in include/quiver/c/options.h
 - Two include sites for csv.h: src/c/database_csv.cpp, tests/test_c_api_database_csv.cpp
@@ -72,5 +81,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Roadmap created for v0.5 milestone
+Stopped at: Completed 08-01-PLAN.md (rapidcsv integration)
 Resume file: None

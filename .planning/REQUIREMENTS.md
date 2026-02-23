@@ -9,9 +9,9 @@ Requirements for CSV Refactor milestone. Each maps to roadmap phases.
 
 ### CSV Library
 
-- [ ] **LIB-01**: Replace `csv_escape()` and `write_csv_row()` in `src/database_csv.cpp` with rapidcsv Document/Save API
-- [ ] **LIB-02**: Integrate rapidcsv via CMake FetchContent as PRIVATE dependency (no new DLLs on Windows)
-- [ ] **LIB-03**: All existing CSV export tests pass without modification (22 C++ + 19 C API)
+- [x] **LIB-01**: Replace `csv_escape()` and `write_csv_row()` in `src/database_csv.cpp` with rapidcsv Document/Save API
+- [x] **LIB-02**: Integrate rapidcsv via CMake FetchContent as PRIVATE dependency (no new DLLs on Windows)
+- [x] **LIB-03**: All existing CSV export tests pass without modification (22 C++ + 19 C API)
 
 ### Header Consolidation
 
@@ -73,9 +73,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LIB-01 | Phase 8 | Pending |
-| LIB-02 | Phase 8 | Pending |
-| LIB-03 | Phase 8 | Pending |
+| LIB-01 | Phase 8 | Complete |
+| LIB-02 | Phase 8 | Complete |
+| LIB-03 | Phase 8 | Complete |
 | HDR-01 | Phase 9 | Pending |
 | HDR-02 | Phase 9 | Pending |
 | HDR-03 | Phase 9 | Pending |
