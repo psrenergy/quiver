@@ -172,9 +172,7 @@ TEST(DatabaseCSV, ExportCSV_RFC4180_CommaEscaping) {
     auto db = make_db();
 
     quiver::Element e1;
-    e1.set("label", std::string("Item1"))
-        .set("name", std::string("Alpha, Beta"))
-        .set("status", int64_t{1});
+    e1.set("label", std::string("Item1")).set("name", std::string("Alpha, Beta")).set("status", int64_t{1});
     db.create_element("Items", e1);
 
     auto csv_path = temp_csv("CommaEscaping");
@@ -192,9 +190,7 @@ TEST(DatabaseCSV, ExportCSV_RFC4180_QuoteEscaping) {
     auto db = make_db();
 
     quiver::Element e1;
-    e1.set("label", std::string("Item1"))
-        .set("name", std::string("He said \"hello\""))
-        .set("status", int64_t{1});
+    e1.set("label", std::string("Item1")).set("name", std::string("He said \"hello\"")).set("status", int64_t{1});
     db.create_element("Items", e1);
 
     auto csv_path = temp_csv("QuoteEscaping");
@@ -212,9 +208,7 @@ TEST(DatabaseCSV, ExportCSV_RFC4180_NewlineEscaping) {
     auto db = make_db();
 
     quiver::Element e1;
-    e1.set("label", std::string("Item1"))
-        .set("name", std::string("line1\nline2"))
-        .set("status", int64_t{1});
+    e1.set("label", std::string("Item1")).set("name", std::string("line1\nline2")).set("status", int64_t{1});
     db.create_element("Items", e1);
 
     auto csv_path = temp_csv("NewlineEscaping");
@@ -232,9 +226,7 @@ TEST(DatabaseCSV, ExportCSV_LFLineEndings) {
     auto db = make_db();
 
     quiver::Element e1;
-    e1.set("label", std::string("Item1"))
-        .set("name", std::string("Alpha"))
-        .set("status", int64_t{1});
+    e1.set("label", std::string("Item1")).set("name", std::string("Alpha")).set("status", int64_t{1});
     db.create_element("Items", e1);
 
     auto csv_path = temp_csv("LFLineEndings");
@@ -276,8 +268,7 @@ TEST(DatabaseCSV, ExportCSV_NullValues_EmptyFields) {
     auto db = make_db();
 
     quiver::Element e1;
-    e1.set("label", std::string("Item1"))
-        .set("name", std::string("Alpha"));
+    e1.set("label", std::string("Item1")).set("name", std::string("Alpha"));
     // status, price, date_created, notes all left NULL
     db.create_element("Items", e1);
 
@@ -330,15 +321,11 @@ TEST(DatabaseCSV, ExportCSV_EnumLabels_ReplacesIntegers) {
     auto db = make_db();
 
     quiver::Element e1;
-    e1.set("label", std::string("Item1"))
-        .set("name", std::string("Alpha"))
-        .set("status", int64_t{1});
+    e1.set("label", std::string("Item1")).set("name", std::string("Alpha")).set("status", int64_t{1});
     db.create_element("Items", e1);
 
     quiver::Element e2;
-    e2.set("label", std::string("Item2"))
-        .set("name", std::string("Beta"))
-        .set("status", int64_t{2});
+    e2.set("label", std::string("Item2")).set("name", std::string("Beta")).set("status", int64_t{2});
     db.create_element("Items", e2);
 
     quiver::CSVExportOptions opts;
@@ -364,15 +351,11 @@ TEST(DatabaseCSV, ExportCSV_EnumLabels_UnmappedFallback) {
     auto db = make_db();
 
     quiver::Element e1;
-    e1.set("label", std::string("Item1"))
-        .set("name", std::string("Alpha"))
-        .set("status", int64_t{1});
+    e1.set("label", std::string("Item1")).set("name", std::string("Alpha")).set("status", int64_t{1});
     db.create_element("Items", e1);
 
     quiver::Element e2;
-    e2.set("label", std::string("Item2"))
-        .set("name", std::string("Beta"))
-        .set("status", int64_t{3});
+    e2.set("label", std::string("Item2")).set("name", std::string("Beta")).set("status", int64_t{3});
     db.create_element("Items", e2);
 
     quiver::CSVExportOptions opts;

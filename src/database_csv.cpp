@@ -79,10 +79,8 @@ static std::string value_to_csv_string(const Value& value,
     // Integer with possible enum resolution
     if (std::holds_alternative<int64_t>(value)) {
         auto int_val = std::get<int64_t>(value);
-        if (auto attr_it = options.enum_labels.find(column_name);
-            attr_it != options.enum_labels.end()) {
-            if (auto val_it = attr_it->second.find(int_val);
-                val_it != attr_it->second.end()) {
+        if (auto attr_it = options.enum_labels.find(column_name); attr_it != options.enum_labels.end()) {
+            if (auto val_it = attr_it->second.find(int_val); val_it != attr_it->second.end()) {
                 return csv_escape(val_it->second);
             }
         }
@@ -171,7 +169,8 @@ void Database::export_csv(const std::string& collection,
         // Build SELECT query with columns in schema order
         std::string select_cols;
         for (size_t i = 0; i < csv_columns.size(); ++i) {
-            if (i > 0) select_cols += ", ";
+            if (i > 0)
+                select_cols += ", ";
             select_cols += csv_columns[i];
         }
 
@@ -213,8 +212,8 @@ void Database::export_csv(const std::string& collection,
             table_name = ts_table;
             group_type = GroupType::TimeSeries;
         } else {
-            throw std::runtime_error("Cannot export_csv: group not found: '" + group +
-                                     "' in collection '" + collection + "'");
+            throw std::runtime_error("Cannot export_csv: group not found: '" + group + "' in collection '" +
+                                     collection + "'");
         }
 
         // Get group table columns in schema definition order
@@ -224,8 +223,10 @@ void Database::export_csv(const std::string& collection,
         // Determine which columns to include (skip id, skip vector_index for vectors)
         std::vector<std::string> group_data_columns;
         for (const auto& col : all_group_columns) {
-            if (col == "id") continue;
-            if (group_type == GroupType::Vector && col == "vector_index") continue;
+            if (col == "id")
+                continue;
+            if (group_type == GroupType::Vector && col == "vector_index")
+                continue;
             group_data_columns.push_back(col);
         }
 
@@ -282,8 +283,8 @@ void Database::export_csv(const std::string& collection,
             order_clause = "ORDER BY G.id, G." + group_meta.dimension_column;
         }
 
-        std::string query = "SELECT " + select_cols + " FROM " + table_name + " G JOIN " +
-                            collection + " C ON C.id = G.id " + order_clause;
+        std::string query = "SELECT " + select_cols + " FROM " + table_name + " G JOIN " + collection +
+                            " C ON C.id = G.id " + order_clause;
 
         auto data_result = execute(query);
 

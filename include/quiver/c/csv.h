@@ -25,12 +25,12 @@ extern "C" {
 //   enum_labels          = ["Active", "Inactive", "Low"]
 //   enum_attribute_count = 2
 typedef struct {
-    const char*        date_time_format;       // strftime format; "" = no formatting
-    const char* const* enum_attribute_names;   // [enum_attribute_count]
-    const size_t*      enum_entry_counts;      // [enum_attribute_count]
-    const int64_t*     enum_values;            // [sum of enum_entry_counts]
-    const char* const* enum_labels;            // [sum of enum_entry_counts]
-    size_t             enum_attribute_count;    // number of attributes with enum mappings
+    const char* date_time_format;             // strftime format; "" = no formatting
+    const char* const* enum_attribute_names;  // [enum_attribute_count]
+    const size_t* enum_entry_counts;          // [enum_attribute_count]
+    const int64_t* enum_values;               // [sum of enum_entry_counts]
+    const char* const* enum_labels;           // [sum of enum_entry_counts]
+    size_t enum_attribute_count;              // number of attributes with enum mappings
 } quiver_csv_export_options_t;
 
 // Returns default options (no enum mapping, no date formatting).

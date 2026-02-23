@@ -2088,13 +2088,12 @@ TEST(LuaRunner_ExportCSV, EnumLabels) {
         })
     )");
 
-    lua.run(
-        "db:export_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) + "\", {\n"
-        "    enum_labels = {\n"
-        "        status = {[1] = \"Active\", [2] = \"Inactive\"}\n"
-        "    }\n"
-        "})"
-    );
+    lua.run("db:export_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) +
+            "\", {\n"
+            "    enum_labels = {\n"
+            "        status = {[1] = \"Active\", [2] = \"Inactive\"}\n"
+            "    }\n"
+            "})");
 
     auto content = read_csv_file(csv_path.string());
     EXPECT_NE(content.find("Item1,Alpha,Active,9.99,2024-01-15T10:30:00,first\n"), std::string::npos);
@@ -2117,11 +2116,10 @@ TEST(LuaRunner_ExportCSV, DateTimeFormat) {
         })
     )");
 
-    lua.run(
-        "db:export_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) + "\", {\n"
-        "    date_time_format = \"%Y/%m/%d\"\n"
-        "})"
-    );
+    lua.run("db:export_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) +
+            "\", {\n"
+            "    date_time_format = \"%Y/%m/%d\"\n"
+            "})");
 
     auto content = read_csv_file(csv_path.string());
     EXPECT_NE(content.find("Item1,Alpha,1,9.99,2024/01/15,first\n"), std::string::npos);
@@ -2147,20 +2145,19 @@ TEST(LuaRunner_ExportCSV, CombinedOptions) {
         })
     )");
 
-    lua.run(
-        "db:export_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) + "\", {\n"
-        "    enum_labels = {\n"
-        "        status = {[1] = \"Active\", [2] = \"Inactive\"}\n"
-        "    },\n"
-        "    date_time_format = \"%Y/%m/%d\"\n"
-        "})"
-    );
+    lua.run("db:export_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) +
+            "\", {\n"
+            "    enum_labels = {\n"
+            "        status = {[1] = \"Active\", [2] = \"Inactive\"}\n"
+            "    },\n"
+            "    date_time_format = \"%Y/%m/%d\"\n"
+            "})");
 
     auto content = read_csv_file(csv_path.string());
     EXPECT_NE(content.find("label,name,status,price,date_created,notes\n"), std::string::npos);
     EXPECT_NE(content.find("Item1,Alpha,Active,9.99,2024/01/15,first\n"), std::string::npos);
-    EXPECT_NE(content.find("Item2,Beta,Inactive,19.5,2024/02/20,second\n"), std::string::npos)
-        << "Actual content:\n" << content;
+    EXPECT_NE(content.find("Item2,Beta,Inactive,19.5,2024/02/20,second\n"), std::string::npos) << "Actual content:\n"
+                                                                                               << content;
 
     std::filesystem::remove(csv_path);
 }

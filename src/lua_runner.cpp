@@ -343,9 +343,8 @@ struct LuaRunner::Impl {
                         enums->for_each([&](sol::object attr_key, sol::object attr_value) {
                             auto attr_name = attr_key.as<std::string>();
                             auto& attr_map = opts.enum_labels[attr_name];
-                            attr_value.as<sol::table>().for_each([&](sol::object k, sol::object v) {
-                                attr_map[k.as<int64_t>()] = v.as<std::string>();
-                            });
+                            attr_value.as<sol::table>().for_each(
+                                [&](sol::object k, sol::object v) { attr_map[k.as<int64_t>()] = v.as<std::string>(); });
                         });
                     }
                 }

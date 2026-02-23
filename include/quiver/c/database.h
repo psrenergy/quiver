@@ -427,7 +427,11 @@ QUIVER_C_API quiver_error_t quiver_database_free_float_vectors(double** vectors,
 QUIVER_C_API quiver_error_t quiver_database_free_string_vectors(char*** vectors, size_t* sizes, size_t count);
 
 // CSV operations
-QUIVER_C_API quiver_error_t quiver_database_export_csv(quiver_database_t* db, const char* collection, const char* group, const char* path, const quiver_csv_export_options_t* opts);
+QUIVER_C_API quiver_error_t quiver_database_export_csv(quiver_database_t* db,
+                                                       const char* collection,
+                                                       const char* group,
+                                                       const char* path,
+                                                       const quiver_csv_export_options_t* opts);
 QUIVER_C_API quiver_error_t quiver_database_import_csv(quiver_database_t* db, const char* table, const char* path);
 
 // Query methods - execute SQL and return first row's first column

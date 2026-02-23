@@ -6,8 +6,9 @@ Returns `(opts_ref, temps)` where `temps` holds all temporary objects that must
 stay alive during the C call (use inside `GC.@preserve`).
 
 Supported kwargs:
-- `date_time_format::String` — strftime format for DateTime columns
-- `enum_labels::Dict{String, Dict{Int, String}}` — attribute → (value → label) mapping
+
+  - `date_time_format::String` — strftime format for DateTime columns
+  - `enum_labels::Dict{String, Dict{Int, String}}` — attribute → (value → label) mapping
 """
 function build_csv_options(; kwargs...)
     opts = C.quiver_csv_export_options_default()
