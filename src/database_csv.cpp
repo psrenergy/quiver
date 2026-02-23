@@ -94,6 +94,7 @@ static rapidcsv::Document make_csv_document() {
 // Uses binary mode to prevent Windows CRLF conversion.
 static void save_csv_document(rapidcsv::Document& doc, const std::string& path) {
     std::ostringstream oss;
+    oss << "sep=,\n";
     doc.Save(oss);
 
     std::ofstream file(path, std::ios::binary);

@@ -255,7 +255,7 @@ TEST(DatabaseCSV, ExportCSV_EmptyCollection_HeaderOnly) {
     auto content = read_file(csv_path.string());
 
     // Header row only, followed by LF
-    EXPECT_EQ(content, "label,name,status,price,date_created,notes\n");
+    EXPECT_EQ(content, "sep=,\nlabel,name,status,price,date_created,notes\n");
 
     fs::remove(csv_path);
 }
