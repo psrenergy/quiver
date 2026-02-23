@@ -60,7 +60,10 @@ Plans:
   3. Regenerated Julia `c_api.jl` and Dart `bindings.dart` contain exactly one definition of `quiver_csv_export_options_t` with all 6 fields intact
   4. All Julia CSV tests (19) and Dart CSV tests (5) pass after FFI regeneration
   5. All C API tests (282) pass with the updated include paths
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 09-01-PLAN.md -- Merge CSV types into consolidated options headers, update include paths, delete csv.h files
+- [ ] 09-02-PLAN.md -- Regenerate FFI bindings and verify all test suites pass
 
 ## Progress
 
@@ -77,7 +80,7 @@ Phases execute in numeric order: 8 -> 9
 | 6. C API | v0.4 | 2/2 | Complete | 2026-02-22 |
 | 7. Bindings | v0.4 | 2/2 | Complete | 2026-02-23 |
 | 8. Library Integration | v0.5 | 0/1 | Not started | - |
-| 9. Header Consolidation | v0.5 | 0/? | Not started | - |
+| 9. Header Consolidation | v0.5 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-22*
