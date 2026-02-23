@@ -21,13 +21,14 @@ static bool parse_iso8601(const std::string& datetime_str, std::tm& tm) {
     std::memset(&tm, 0, sizeof(tm));
     std::istringstream ss(datetime_str);
     ss >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%S");
-    if (!ss.fail()) {
+    if (!ss.fail() && tm.tm_mday >= 1) {
         return true;
     }
+    std::memset(&tm, 0, sizeof(tm));
     ss.clear();
     ss.str(datetime_str);
     ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
-    return !ss.fail();
+    return !ss.fail() && tm.tm_mday >= 1;
 }
 
 // Format a datetime value using strftime. Returns raw_value if parsing fails.
@@ -363,7 +364,7 @@ static std::string parse_datetime_import(const std::string& raw_value, const std
     std::memset(&tm, 0, sizeof(tm));
     std::istringstream ss(raw_value);
     ss >> std::get_time(&tm, format.c_str());
-    if (ss.fail()) {
+    if (ss.fail() || tm.tm_mday < 1) {
         throw std::runtime_error("Cannot import_csv: Timestamp " + raw_value +
                                  " is not valid. Please provide a valid timestamp with format " + format + ".");
     }

@@ -6,6 +6,7 @@
 #include <quiver/c/database.h>
 #include <quiver/c/element.h>
 #include <quiver/c/options.h>
+#include <set>
 #include <sstream>
 
 namespace fs = std::filesystem;
@@ -713,6 +714,261 @@ TEST(DatabaseCApiCSV, ExportCSV_CreatesParentDirectories) {
 
     // Cleanup
     fs::remove_all(fs::temp_directory_path() / "quiver_c_test_nested");
+    quiver_database_close(db);
+}
+
+// ============================================================================
+// CSV Import tests
+// ============================================================================
+
+// Helper: write a CSV file from string
+static void write_csv_file(const std::string& path, const std::string& content) {
+    std::ofstream f(path, std::ios::binary);
+    f << content;
+}
+
+TEST(DatabaseCApiCSV, ImportCSV_Scalar_RoundTrip) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+              QUIVER_OK);
+
+    // Create elements
+    quiver_element_t* e1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
+    quiver_element_set_string(e1, "label", "Item1");
+    quiver_element_set_string(e1, "name", "Alpha");
+    quiver_element_set_integer(e1, "status", 1);
+    quiver_element_set_float(e1, "price", 9.99);
+    quiver_element_set_string(e1, "date_created", "2024-01-15T10:30:00");
+    quiver_element_set_string(e1, "notes", "first");
+    int64_t id1 = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Items", e1, &id1), QUIVER_OK);
+    quiver_element_destroy(e1);
+
+    quiver_element_t* e2 = nullptr;
+    ASSERT_EQ(quiver_element_create(&e2), QUIVER_OK);
+    quiver_element_set_string(e2, "label", "Item2");
+    quiver_element_set_string(e2, "name", "Beta");
+    quiver_element_set_integer(e2, "status", 2);
+    quiver_element_set_float(e2, "price", 19.5);
+    quiver_element_set_string(e2, "date_created", "2024-02-20T08:00:00");
+    quiver_element_set_string(e2, "notes", "second");
+    int64_t id2 = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Items", e2, &id2), QUIVER_OK);
+    quiver_element_destroy(e2);
+
+    // Export
+    auto csv_path = temp_csv("ImportScalarRT");
+    auto csv_opts = quiver_csv_export_options_default();
+    ASSERT_EQ(quiver_database_export_csv(db, "Items", "", csv_path.string().c_str(), &csv_opts), QUIVER_OK);
+
+    // Import into fresh DB
+    quiver_database_t* db2 = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db2),
+              QUIVER_OK);
+
+    auto import_opts = quiver_csv_import_options_default();
+    ASSERT_EQ(quiver_database_import_csv(db2, "Items", "", csv_path.string().c_str(), &import_opts), QUIVER_OK);
+
+    // Verify
+    char** names = nullptr;
+    size_t name_count = 0;
+    ASSERT_EQ(quiver_database_read_scalar_strings(db2, "Items", "name", &names, &name_count), QUIVER_OK);
+    ASSERT_EQ(name_count, 2u);
+    EXPECT_STREQ(names[0], "Alpha");
+    EXPECT_STREQ(names[1], "Beta");
+    quiver_database_free_string_array(names, name_count);
+
+    fs::remove(csv_path);
+    quiver_database_close(db);
+    quiver_database_close(db2);
+}
+
+TEST(DatabaseCApiCSV, ImportCSV_Vector_RoundTrip) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+              QUIVER_OK);
+
+    quiver_element_t* e1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
+    quiver_element_set_string(e1, "label", "Item1");
+    quiver_element_set_string(e1, "name", "Alpha");
+    int64_t id1 = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Items", e1, &id1), QUIVER_OK);
+    quiver_element_destroy(e1);
+
+    double vec_values[] = {1.1, 2.2, 3.3};
+    ASSERT_EQ(quiver_database_update_vector_floats(db, "Items", "measurement", id1, vec_values, 3), QUIVER_OK);
+
+    // Export
+    auto csv_path = temp_csv("ImportVectorRT");
+    auto csv_opts = quiver_csv_export_options_default();
+    ASSERT_EQ(quiver_database_export_csv(db, "Items", "measurements", csv_path.string().c_str(), &csv_opts), QUIVER_OK);
+
+    // Clear and re-import
+    ASSERT_EQ(quiver_database_update_vector_floats(db, "Items", "measurement", id1, nullptr, 0), QUIVER_OK);
+
+    auto import_opts = quiver_csv_import_options_default();
+    ASSERT_EQ(quiver_database_import_csv(db, "Items", "measurements", csv_path.string().c_str(), &import_opts),
+              QUIVER_OK);
+
+    // Verify
+    double* vals = nullptr;
+    size_t val_count = 0;
+    ASSERT_EQ(quiver_database_read_vector_floats_by_id(db, "Items", "measurement", id1, &vals, &val_count), QUIVER_OK);
+    ASSERT_EQ(val_count, 3u);
+    EXPECT_NEAR(vals[0], 1.1, 0.001);
+    EXPECT_NEAR(vals[1], 2.2, 0.001);
+    EXPECT_NEAR(vals[2], 3.3, 0.001);
+    quiver_database_free_float_array(vals);
+
+    fs::remove(csv_path);
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApiCSV, ImportCSV_Set_RoundTrip) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+              QUIVER_OK);
+
+    quiver_element_t* e1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
+    quiver_element_set_string(e1, "label", "Item1");
+    quiver_element_set_string(e1, "name", "Alpha");
+    int64_t id1 = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Items", e1, &id1), QUIVER_OK);
+    quiver_element_destroy(e1);
+
+    const char* set_values[] = {"red", "green", "blue"};
+    ASSERT_EQ(quiver_database_update_set_strings(db, "Items", "tag", id1, set_values, 3), QUIVER_OK);
+
+    // Export
+    auto csv_path = temp_csv("ImportSetRT");
+    auto csv_opts = quiver_csv_export_options_default();
+    ASSERT_EQ(quiver_database_export_csv(db, "Items", "tags", csv_path.string().c_str(), &csv_opts), QUIVER_OK);
+
+    // Clear and re-import
+    ASSERT_EQ(quiver_database_update_set_strings(db, "Items", "tag", id1, nullptr, 0), QUIVER_OK);
+
+    auto import_opts = quiver_csv_import_options_default();
+    ASSERT_EQ(quiver_database_import_csv(db, "Items", "tags", csv_path.string().c_str(), &import_opts), QUIVER_OK);
+
+    // Verify
+    char** tags = nullptr;
+    size_t tag_count = 0;
+    ASSERT_EQ(quiver_database_read_set_strings_by_id(db, "Items", "tag", id1, &tags, &tag_count), QUIVER_OK);
+    ASSERT_EQ(tag_count, 3u);
+
+    std::set<std::string> tag_set;
+    for (size_t i = 0; i < tag_count; ++i) {
+        tag_set.insert(tags[i]);
+    }
+    EXPECT_TRUE(tag_set.count("red"));
+    EXPECT_TRUE(tag_set.count("green"));
+    EXPECT_TRUE(tag_set.count("blue"));
+    quiver_database_free_string_array(tags, tag_count);
+
+    fs::remove(csv_path);
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApiCSV, ImportCSV_TimeSeries_RoundTrip) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+              QUIVER_OK);
+
+    quiver_element_t* e1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
+    quiver_element_set_string(e1, "label", "Item1");
+    quiver_element_set_string(e1, "name", "Alpha");
+    int64_t id1 = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Items", e1, &id1), QUIVER_OK);
+    quiver_element_destroy(e1);
+
+    const char* col_names[] = {"date_time", "temperature", "humidity"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT, QUIVER_DATA_TYPE_INTEGER};
+    const char* date_times[] = {"2024-01-01T10:00:00", "2024-01-01T11:00:00"};
+    double temperatures[] = {22.5, 23.0};
+    int64_t humidities[] = {60, 55};
+    const void* col_data[] = {date_times, temperatures, humidities};
+    ASSERT_EQ(
+        quiver_database_update_time_series_group(db, "Items", "readings", id1, col_names, col_types, col_data, 3, 2),
+        QUIVER_OK);
+
+    // Export
+    auto csv_path = temp_csv("ImportTSRT");
+    auto csv_opts = quiver_csv_export_options_default();
+    ASSERT_EQ(quiver_database_export_csv(db, "Items", "readings", csv_path.string().c_str(), &csv_opts), QUIVER_OK);
+
+    // Clear and re-import
+    ASSERT_EQ(quiver_database_update_time_series_group(db, "Items", "readings", id1, nullptr, nullptr, nullptr, 0, 0),
+              QUIVER_OK);
+
+    auto import_opts = quiver_csv_import_options_default();
+    ASSERT_EQ(quiver_database_import_csv(db, "Items", "readings", csv_path.string().c_str(), &import_opts), QUIVER_OK);
+
+    // Verify via read
+    char** out_col_names = nullptr;
+    int* out_col_types = nullptr;
+    void** out_col_data = nullptr;
+    size_t out_col_count = 0;
+    size_t out_row_count = 0;
+    ASSERT_EQ(quiver_database_read_time_series_group(db,
+                                                     "Items",
+                                                     "readings",
+                                                     id1,
+                                                     &out_col_names,
+                                                     &out_col_types,
+                                                     &out_col_data,
+                                                     &out_col_count,
+                                                     &out_row_count),
+              QUIVER_OK);
+    EXPECT_EQ(out_row_count, 2u);
+    quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, out_col_count, out_row_count);
+
+    fs::remove(csv_path);
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApiCSV, ImportCSV_Scalar_HeaderOnly_ClearsTable) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+              QUIVER_OK);
+
+    // Populate
+    quiver_element_t* e1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
+    quiver_element_set_string(e1, "label", "Item1");
+    quiver_element_set_string(e1, "name", "Alpha");
+    int64_t id1 = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Items", e1, &id1), QUIVER_OK);
+    quiver_element_destroy(e1);
+
+    // Import header-only CSV
+    auto csv_path = temp_csv("ImportHeaderOnly");
+    write_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\n");
+
+    auto import_opts = quiver_csv_import_options_default();
+    ASSERT_EQ(quiver_database_import_csv(db, "Items", "", csv_path.string().c_str(), &import_opts), QUIVER_OK);
+
+    // Verify table is empty
+    char** names = nullptr;
+    size_t name_count = 0;
+    ASSERT_EQ(quiver_database_read_scalar_strings(db, "Items", "name", &names, &name_count), QUIVER_OK);
+    EXPECT_EQ(name_count, 0u);
+    quiver_database_free_string_array(names, name_count);
+
+    fs::remove(csv_path);
     quiver_database_close(db);
 }
 

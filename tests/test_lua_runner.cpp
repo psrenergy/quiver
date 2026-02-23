@@ -2165,3 +2165,150 @@ TEST(LuaRunner_ExportCSV, CombinedOptions) {
 
     std::filesystem::remove(csv_path);
 }
+
+// ============================================================================
+// CSV import tests
+// ============================================================================
+
+static void write_lua_csv_file(const std::string& path, const std::string& content) {
+    std::ofstream f(path, std::ios::binary);
+    f << content;
+}
+
+TEST(LuaRunner_ImportCSV, ScalarRoundTrip) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(":memory:", csv_schema);
+    quiver::LuaRunner lua(db);
+
+    auto csv_path = lua_csv_temp("ImportScalarRT");
+
+    lua.run(R"(
+        db:create_element("Items", {
+            label = "Item1", name = "Alpha", status = 1,
+            price = 9.99, date_created = "2024-01-15T10:30:00", notes = "first"
+        })
+        db:create_element("Items", {
+            label = "Item2", name = "Beta", status = 2,
+            price = 19.5, date_created = "2024-02-20T08:00:00", notes = "second"
+        })
+    )");
+
+    // Export
+    lua.run("db:export_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) + "\")");
+
+    // Delete all elements and re-import
+    lua.run(R"(
+        db:delete_element("Items", 1)
+        db:delete_element("Items", 2)
+    )");
+
+    lua.run("db:import_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) + "\")");
+
+    lua.run(R"(
+        local names = db:read_scalar_strings("Items", "name")
+        assert(#names == 2, "Expected 2 names, got " .. #names)
+        assert(names[1] == "Alpha", "Expected Alpha, got " .. names[1])
+        assert(names[2] == "Beta", "Expected Beta, got " .. names[2])
+    )");
+
+    std::filesystem::remove(csv_path);
+}
+
+TEST(LuaRunner_ImportCSV, VectorGroupRoundTrip) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(":memory:", csv_schema);
+    quiver::LuaRunner lua(db);
+
+    auto csv_path = lua_csv_temp("ImportVectorRT");
+
+    lua.run(R"(
+        local id1 = db:create_element("Items", { label = "Item1", name = "Alpha" })
+        db:update_vector_floats("Items", "measurement", id1, {1.1, 2.2, 3.3})
+    )");
+
+    // Export
+    lua.run("db:export_csv(\"Items\", \"measurements\", \"" + lua_safe_path(csv_path) + "\")");
+
+    // Clear vector and re-import
+    lua.run(R"(
+        db:update_vector_floats("Items", "measurement", 1, {})
+    )");
+
+    lua.run("db:import_csv(\"Items\", \"measurements\", \"" + lua_safe_path(csv_path) + "\")");
+
+    lua.run(R"(
+        local vals = db:read_vector_floats_by_id("Items", "measurement", 1)
+        assert(#vals == 3, "Expected 3 values, got " .. #vals)
+    )");
+
+    std::filesystem::remove(csv_path);
+}
+
+TEST(LuaRunner_ImportCSV, ScalarHeaderOnlyClearsTable) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(":memory:", csv_schema);
+    quiver::LuaRunner lua(db);
+
+    auto csv_path = lua_csv_temp("ImportHeaderOnly");
+
+    lua.run(R"(
+        db:create_element("Items", { label = "Item1", name = "Alpha" })
+    )");
+
+    // Write header-only CSV
+    write_lua_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\n");
+
+    lua.run("db:import_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) + "\")");
+
+    lua.run(R"(
+        local names = db:read_scalar_strings("Items", "name")
+        assert(#names == 0, "Expected 0 names, got " .. #names)
+    )");
+
+    std::filesystem::remove(csv_path);
+}
+
+TEST(LuaRunner_ImportCSV, EnumResolution) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(":memory:", csv_schema);
+    quiver::LuaRunner lua(db);
+
+    auto csv_path = lua_csv_temp("ImportEnum");
+    write_lua_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,Active,,,\n");
+
+    lua.run("db:import_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) +
+            "\", {\n"
+            "    enum_labels = {\n"
+            "        status = { en = { Active = 1, Inactive = 2 } }\n"
+            "    }\n"
+            "})");
+
+    lua.run(R"(
+        local status = db:read_scalar_integer_by_id("Items", "status", 1)
+        assert(status == 1, "Expected status 1, got " .. tostring(status))
+    )");
+
+    std::filesystem::remove(csv_path);
+}
+
+TEST(LuaRunner_ImportCSV, DateTimeFormat) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(":memory:", csv_schema);
+    quiver::LuaRunner lua(db);
+
+    auto csv_path = lua_csv_temp("ImportDateTime");
+    write_lua_csv_file(csv_path.string(),
+                       "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,2024/01/15,\n");
+
+    lua.run("db:import_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) +
+            "\", {\n"
+            "    date_time_format = \"%Y/%m/%d\"\n"
+            "})");
+
+    lua.run(R"(
+        local date = db:read_scalar_string_by_id("Items", "date_created", 1)
+        assert(date == "2024-01-15T00:00:00", "Expected 2024-01-15T00:00:00, got " .. tostring(date))
+    )");
+
+    std::filesystem::remove(csv_path);
+}
