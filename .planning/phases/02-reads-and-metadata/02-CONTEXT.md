@@ -18,11 +18,11 @@ Python bindings for all scalar/vector/set read operations (bulk and by-id), elem
 - Bulk scalar reads return flat `list[int]`, `list[float]`, `list[str | None]` — no ID keying
 - Bulk vector/set reads return `list[list[int]]` etc. — list of lists, matching Julia/Dart pattern
 - `read_element_ids()` returns `list[int]`
-- `read_scalar_relation()` returns `int | None` — nullable foreign keys handled with None
+- `read_scalar_relation()` returns `list[str | None]` — related element labels (not IDs), nullable foreign keys handled with None
 - Bulk string reads with NULLs: `None` in list preserving positional alignment (`list[str | None]`)
 
 ### Metadata dataclass design
-- Field names match C struct exactly: `attribute_name`, `data_type`, `is_nullable`, `is_foreign_key`, `references_collection`, `references_column`
+- Field names match C struct exactly: `name`, `data_type`, `not_null`, `primary_key`, `default_value`, `is_foreign_key`, `references_collection`, `references_column`
 - GroupMetadata.value_columns is `list[ScalarMetadata]` — nested composition, not flat dicts
 - Frozen/mutable and package-level export decisions: Claude's discretion
 
