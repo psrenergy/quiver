@@ -47,7 +47,10 @@ Plans:
   3. `read_vector_integers_by_id(collection, id, attribute)` and `read_set_strings_by_id(collection, id, attribute)` return correctly typed Python lists
   4. `get_scalar_metadata(collection, attribute)` returns a `ScalarMetadata` dataclass with correct field values; `get_vector_metadata` returns a `GroupMetadata` dataclass
   5. `list_scalar_attributes(collection)` and `list_vector_groups(collection)` return Python lists of strings; `read_scalar_relation(collection, id, attribute)` returns the related element ID
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 02-01-PLAN.md -- CFFI declarations, metadata dataclasses, scalar/by-id reads, element IDs, relation reads
+- [ ] 02-02-PLAN.md -- Vector/set bulk and by-id reads, metadata get/list operations
 
 ### Phase 3: Writes and Transactions
 **Goal**: Elements can be created, updated, and deleted; scalar/vector/set attributes and relations can be updated; and explicit transactions and the transaction context manager work correctly
