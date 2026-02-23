@@ -71,7 +71,7 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 ### CSV
 
 - [ ] **CSV-01**: export_csv with CSVExportOptions struct (date format, enum labels)
-- [ ] **CSV-02**: import_csv for table data import
+- [ ] **CSV-02**: import_csv for table data import *(Note: verify C++ implementation exists before binding — may be dropped)*
 
 ### Convenience
 
@@ -115,13 +115,61 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (Populated during roadmap creation) | | |
+| INFRA-01 | Phase 1 | Pending |
+| INFRA-02 | Phase 1 | Pending |
+| INFRA-03 | Phase 1 | Pending |
+| INFRA-04 | Phase 1 | Pending |
+| INFRA-05 | Phase 1 | Pending |
+| INFRA-06 | Phase 1 | Pending |
+| LIFE-01 | Phase 1 | Pending |
+| LIFE-02 | Phase 1 | Pending |
+| LIFE-03 | Phase 1 | Pending |
+| LIFE-04 | Phase 1 | Pending |
+| LIFE-05 | Phase 1 | Pending |
+| LIFE-06 | Phase 1 | Pending |
+| READ-01 | Phase 2 | Pending |
+| READ-02 | Phase 2 | Pending |
+| READ-03 | Phase 2 | Pending |
+| READ-04 | Phase 2 | Pending |
+| READ-05 | Phase 2 | Pending |
+| READ-06 | Phase 2 | Pending |
+| READ-07 | Phase 2 | Pending |
+| READ-08 | Phase 2 | Pending |
+| META-01 | Phase 2 | Pending |
+| META-02 | Phase 2 | Pending |
+| META-03 | Phase 2 | Pending |
+| WRITE-01 | Phase 3 | Pending |
+| WRITE-02 | Phase 3 | Pending |
+| WRITE-03 | Phase 3 | Pending |
+| WRITE-04 | Phase 3 | Pending |
+| WRITE-05 | Phase 3 | Pending |
+| WRITE-06 | Phase 3 | Pending |
+| WRITE-07 | Phase 3 | Pending |
+| TXN-01 | Phase 3 | Pending |
+| TXN-02 | Phase 3 | Pending |
+| QUERY-01 | Phase 4 | Pending |
+| QUERY-02 | Phase 4 | Pending |
+| TS-01 | Phase 5 | Pending |
+| TS-02 | Phase 5 | Pending |
+| TS-03 | Phase 5 | Pending |
+| CSV-01 | Phase 6 | Pending |
+| CSV-02 | Phase 6 | Pending |
+| CONV-01 | Phase 6 | Pending |
+| CONV-02 | Phase 6 | Pending |
+| CONV-03 | Phase 6 | Pending |
+| CONV-04 | Phase 6 | Pending |
+| CONV-05 | Phase 6 | Pending |
+| TEST-01 | Phase 7 | Pending |
+| TEST-02 | Phase 7 | Pending |
+| TEST-03 | Phase 7 | Pending |
+| TEST-04 | Phase 7 | Pending |
+| TEST-05 | Phase 7 | Pending |
 
 **Coverage:**
-- v0.4 requirements: 37 total
-- Mapped to phases: 0
-- Unmapped: 37
+- v0.4 requirements: 49 total
+- Mapped to phases: 49
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-23*
-*Last updated: 2026-02-23 after initial definition*
+*Last updated: 2026-02-23 after roadmap creation — traceability populated*
