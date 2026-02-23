@@ -1,9 +1,9 @@
 [project]
-name = "margaux"
+name = "quiver"
 version = "0.1.0"
-readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "cffi>=2.0.0",
 ]
 
 [build-system]
@@ -18,7 +18,6 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src"]
+packages = ["src/quiver"]
 
 [project.scripts]
-
