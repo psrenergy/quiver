@@ -46,7 +46,9 @@ See: milestones/v0.3-ROADMAP.md for full details.
   2. rapidcsv is fetched via CMake FetchContent and linked as a PRIVATE dependency -- no new DLLs appear in the build output on Windows
   3. All 22 C++ CSV export tests pass without any test modifications (same assertions, same expected output)
   4. All 19 C API CSV export tests pass without any test modifications
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 08-01-PLAN.md -- Replace csv_escape/write_csv_row with rapidcsv Document/Save via FetchContent
 
 ### Phase 9: Header Consolidation
 **Goal**: All C API option types live in a single header, and FFI-generated bindings reflect the consolidated layout
@@ -74,7 +76,7 @@ Phases execute in numeric order: 8 -> 9
 | 5. C++ Core | v0.4 | 2/2 | Complete | 2026-02-22 |
 | 6. C API | v0.4 | 2/2 | Complete | 2026-02-22 |
 | 7. Bindings | v0.4 | 2/2 | Complete | 2026-02-23 |
-| 8. Library Integration | v0.5 | 0/? | Not started | - |
+| 8. Library Integration | v0.5 | 0/1 | Not started | - |
 | 9. Header Consolidation | v0.5 | 0/? | Not started | - |
 
 ---
