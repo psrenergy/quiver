@@ -9,6 +9,7 @@ set(QUIVER_SOURCES
     database_time_series.cpp
     database_query.cpp
     database_relations.cpp
+    database_csv.cpp
     database_describe.cpp
     element.cpp
     lua_runner.cpp
@@ -63,6 +64,7 @@ target_link_libraries(quiver
         spdlog::spdlog
         lua_library
         sol2
+        rapidcsv
         ${CMAKE_DL_LIBS}
 )
 
@@ -93,6 +95,7 @@ if(QUIVER_BUILD_C_API)
     add_library(quiver_c SHARED
         c/common.cpp
         c/database.cpp
+        c/database_csv.cpp
         c/database_create.cpp
         c/database_read.cpp
         c/database_update.cpp

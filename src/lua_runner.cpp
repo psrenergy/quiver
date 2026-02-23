@@ -2,6 +2,7 @@
 
 #include "quiver/database.h"
 #include "quiver/element.h"
+#include "quiver/options.h"
 #include "quiver/value.h"
 
 #include <map>
@@ -324,6 +325,30 @@ struct LuaRunner::Impl {
                     return result.get<sol::object>(0);
                 }
                 return sol::make_object(result.lua_state(), sol::lua_nil);
+            },
+            // Group 11: CSV export
+            "export_csv",
+            [](Database& self,
+               const std::string& collection,
+               const std::string& group,
+               const std::string& path,
+               sol::optional<sol::table> opts_table) {
+                CSVExportOptions opts;
+                if (opts_table) {
+                    auto& t = *opts_table;
+                    if (auto fmt = t.get<sol::optional<std::string>>("date_time_format")) {
+                        opts.date_time_format = *fmt;
+                    }
+                    if (auto enums = t.get<sol::optional<sol::table>>("enum_labels")) {
+                        enums->for_each([&](sol::object attr_key, sol::object attr_value) {
+                            auto attr_name = attr_key.as<std::string>();
+                            auto& attr_map = opts.enum_labels[attr_name];
+                            attr_value.as<sol::table>().for_each(
+                                [&](sol::object k, sol::object v) { attr_map[k.as<int64_t>()] = v.as<std::string>(); });
+                        });
+                    }
+                }
+                self.export_csv(collection, group, path, opts);
             });
         // NOLINTEND(performance-unnecessary-value-param)
     }

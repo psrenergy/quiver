@@ -2,6 +2,7 @@ include(GoogleTest)
 
 add_executable(quiver_tests
     test_database_create.cpp
+    test_database_csv.cpp
     test_database_delete.cpp
     test_database_errors.cpp
     test_database_lifecycle.cpp
@@ -44,6 +45,7 @@ gtest_discover_tests(quiver_tests
 if(QUIVER_BUILD_C_API)
     add_executable(quiver_c_tests
         test_c_api_database_create.cpp
+        test_c_api_database_csv.cpp
         test_c_api_database_delete.cpp
         test_c_api_database_lifecycle.cpp
         test_c_api_database_query.cpp

@@ -8,18 +8,21 @@ SQLite wrapper library with C++ core, C API for FFI, and language bindings (Juli
 include/quiver/           # C++ public headers
   database.h              # Database class - main API
   attribute_metadata.h    # ScalarMetadata, GroupMetadata types
+  options.h               # DatabaseOptions, CSVExportOptions types and factories
   element.h               # Element builder for create operations
   lua_runner.h            # Lua scripting support
 include/quiver/c/         # C API headers (for FFI)
-  options.h               # Canonical DatabaseOptions/LogLevel types (shared by C++ and C)
+  options.h               # All option types: LogLevel, DatabaseOptions, CSVExportOptions
   database.h
   element.h
   lua_runner.h
 src/                      # C++ implementation
+  database_csv.cpp        # CSV export implementation
 src/c/                    # C API implementation
   internal.h              # Shared structs (quiver_database, quiver_element), QUIVER_REQUIRE macro
   database_helpers.h      # Marshaling templates, strdup_safe, metadata converters
-  database.cpp            # Lifecycle: open, close, factory methods, describe, CSV
+  database.cpp            # Lifecycle: open, close, factory methods, describe
+  database_csv.cpp        # CSV export: options conversion, export function
   database_create.cpp     # Element CRUD: create, update, delete
   database_read.cpp       # All read operations + co-located free functions
   database_update.cpp     # All scalar/vector/set update operations
@@ -82,6 +85,7 @@ Standalone executable comparing individual vs batched transaction performance. N
 Test files organized by functionality:
 - `test_database_lifecycle.cpp` - open, close, move semantics, options
 - `test_database_create.cpp` - create element operations
+- `test_database_csv.cpp` - CSV export operations (scalar, group, options, formatting)
 - `test_database_read.cpp` - read scalar/vector/set operations
 - `test_database_update.cpp` - update scalar/vector/set operations
 - `test_database_delete.cpp` - delete element operations
@@ -90,7 +94,8 @@ Test files organized by functionality:
 - `test_database_time_series.cpp` - time series read/update/metadata operations
 - `test_database_transaction.cpp` - explicit transaction control (begin/commit/rollback)
 
-C API tests follow same pattern with `test_c_api_database_*.cpp` prefix.
+C API tests follow same pattern with `test_c_api_database_*.cpp` prefix:
+- `test_c_api_database_csv.cpp` - CSV export options struct, enum labels, date formatting, scalar/group export
 
 All test schemas located in `tests/schemas/valid/` and `tests/schemas/invalid/`.
 
@@ -112,7 +117,7 @@ struct Database::Impl {
 };
 ```
 
-Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`, `GroupMetadata`, `ScalarMetadata`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor).
+Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`, `GroupMetadata`, `ScalarMetadata`, `CSVExportOptions`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor).
 
 ### Transactions
 Public API exposes explicit transaction control:
@@ -360,6 +365,7 @@ Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references.
 - Relations: `update_scalar_relation()`, `read_scalar_relation()`
 - Query: `query_string/integer/float(sql, params = {})` - parameterized SQL with positional `?` placeholders
 - Schema inspection: `describe()` - prints schema info to stdout
+- CSV: `export_csv()` -- exports collection scalars or groups to CSV file with optional enum/date formatting via `CSVExportOptions`
 
 ### Element Class
 Builder for element creation with fluent API:
@@ -412,7 +418,7 @@ lua.run(R"(
 | Time series update | `update_time_series_group()` | `quiver_database_update_time_series_group()` | `update_time_series_group!()` | `updateTimeSeriesGroup()` | `update_time_series_group()` |
 | Query | `query_string()` | `quiver_database_query_string()` | `query_string()` | `queryString()` | `query_string()` |
 | Relations | `update_scalar_relation()` | `quiver_database_update_scalar_relation()` | `update_scalar_relation!()` | `updateScalarRelation()` | `update_scalar_relation()` |
-| CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | N/A |
+| CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | `export_csv()` |
 | Describe | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |
 
 The transformation rules are mechanical. Given any C++ method name, you can derive the equivalent in any layer without consulting a lookup table.
