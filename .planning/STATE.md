@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 Phase: 7 of 7 (Bindings) -- COMPLETE
 Plan: 2 of 2 in current phase (all plans done)
 Status: Phase complete
-Last activity: 2026-02-22 -- Completed 07-02-PLAN.md (Lua CSV export binding + tests)
+Last activity: 2026-02-22 -- Completed 07-01-PLAN.md and 07-02-PLAN.md (Julia/Dart/Lua CSV export bindings)
 
 Progress: [::::::::::::::::::::] v0.3 complete | [####################] v0.4 complete (all 7 phases done)
 
@@ -45,6 +45,7 @@ Progress: [::::::::::::::::::::] v0.3 complete | [####################] v0.4 com
 | Phase 05 P02 | 4min | 2 tasks | 4 files |
 | Phase 06 P01 | 3min | 2 tasks | 5 files |
 | Phase 06 P02 | 5min | 2 tasks | 5 files |
+| Phase 07 P01 | 13min | 2 tasks | 5 files |
 | Phase 07 P02 | 8min | 2 tasks | 3 files |
 
 ## Accumulated Context
@@ -72,6 +73,9 @@ v0.4 design decisions (from research):
 - [Phase 07]: Lua bypasses C API, calls Database::export_csv() directly via sol2 lambda
 - [Phase 07]: sol::optional<sol::table> for truly optional Lua options table argument
 - [Phase 07]: Nested for_each traversal for enum_labels Lua table to C++ unordered_map
+- [Phase 07]: Julia build_csv_options constructs new immutable struct with all 6 positional fields
+- [Phase 07]: Dart allocates quiver_csv_export_options_t via Arena, sets fields directly (no default factory)
+- [Phase 07]: Fixed Julia build_options to use keyword splatting (;kwargs...) for Julia 1.12 compatibility
 
 ### Key Technical Context
 
@@ -80,7 +84,8 @@ v0.4 design decisions (from research):
 - C API export_csv now 5-param with quiver_csv_export_options_t* opts (replaces old 4-param stub)
 - quiver_csv_export_options_t flat struct in include/quiver/c/csv.h with grouped-by-attribute parallel arrays
 - convert_options helper in src/c/database_csv.cpp reconstructs C++ CSVExportOptions from flat struct
-- Julia/Dart FFI bindings regenerated with quiver_csv_export_options_t (Phase 7 wrapper code still needed)
+- Julia export_csv with build_csv_options marshaling Dict kwargs to C API flat struct (19 tests)
+- Dart exportCSV with Arena-based options marshaling Map to C API struct (5 tests)
 - import_csv remains an empty stub in src/database_describe.cpp
 - 19 C++ CSV export tests in test_database_csv.cpp covering all 8 requirements (CSV-01 through OPT-04)
 - 19 C API CSV export tests in test_c_api_database_csv.cpp mirroring C++ tests
@@ -88,6 +93,7 @@ v0.4 design decisions (from research):
 - Lua export_csv binding in src/lua_runner.cpp via sol2 lambda with optional table argument
 - 5 Lua CSV export tests in test_lua_runner.cpp (ScalarDefaults, GroupExport, EnumLabels, DateTimeFormat, CombinedOptions)
 - 282 C API tests pass (263 + 19 CSV), 442 C++ tests pass (437 + 5 Lua CSV)
+- 437 Julia tests pass (418 + 19 CSV), 252 Dart tests pass (247 + 5 CSV)
 
 ### Pending Todos
 
@@ -100,5 +106,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 07-02-PLAN.md (Phase 7 complete, v0.4 milestone done)
-Resume file: .planning/phases/07-bindings/07-02-SUMMARY.md
+Stopped at: Completed 07-01-PLAN.md (Julia/Dart CSV bindings complete)
+Resume file: .planning/phases/07-bindings/07-01-SUMMARY.md
