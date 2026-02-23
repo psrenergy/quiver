@@ -5,16 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** Reliable, schema-validated SQLite access through a single C++ core with mechanically-derived bindings that feel native in every target language.
-**Current focus:** v0.4 CSV Export -- Phase 7 complete, all phases done
+**Current focus:** v0.5 CSV Refactor -- Defining requirements
 
 ## Current Position
 
-Phase: 7 of 7 (Bindings) -- COMPLETE
-Plan: 2 of 2 in current phase (all plans done)
-Status: Phase complete
-Last activity: 2026-02-22 -- Completed 07-01-PLAN.md and 07-02-PLAN.md (Julia/Dart/Lua CSV export bindings)
-
-Progress: [::::::::::::::::::::] v0.3 complete | [####################] v0.4 complete (all 7 phases done)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-22 — Milestone v0.5 started
 
 ## Performance Metrics
 
