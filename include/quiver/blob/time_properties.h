@@ -10,6 +10,8 @@
 
 namespace quiver {
 
+struct Dimension;
+
 enum class TimeFrequency { Yearly, Monthly, Weekly, Daily, Hourly };
 
 QUIVER_API std::string frequency_to_string(TimeFrequency frequency);

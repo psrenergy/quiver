@@ -11,6 +11,8 @@
 
 namespace quiver {
 
+struct Dimension;
+
 struct QUIVER_API BlobMetadata {
     std::vector<Dimension> dimensions;
     std::time_t initial_datetime;
