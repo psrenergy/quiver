@@ -5,33 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** Consistent, type-safe database operations across multiple languages through a single C++ implementation
-**Current focus:** Phase 1 - Foundation
+**Current focus:** Phase 2 - Reads and Metadata
 
 ## Current Position
 
-Phase: 1 of 7 (Foundation) -- COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase Complete
-Last activity: 2026-02-23 — Completed 01-02-PLAN.md (Database/Element classes, lifecycle tests)
+Phase: 2 of 7 (Reads and Metadata)
+Plan: 1 of 2 in current phase
+Status: In Progress
+Last activity: 2026-02-23 — Completed 02-01-PLAN.md (Scalar reads, metadata dataclasses, CFFI declarations)
 
-Progress: [██░░░░░░░░] 14%
+Progress: [███░░░░░░░] 21%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 3min
-- Total execution time: 6min
+- Total plans completed: 3
+- Average duration: 4min
+- Total execution time: 12min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 2 | 6min | 3min |
+| 02-reads-and-metadata | 1 | 6min | 6min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (4min), 01-02 (2min)
-- Trend: Accelerating
+- Last 5 plans: 01-01 (4min), 01-02 (2min), 02-01 (6min)
+- Trend: Stable
 
 *Updated after each plan completion*
 
@@ -51,6 +52,9 @@ Recent decisions affecting current work:
 - [01-02]: Database properties as methods (not @property) per user decision
 - [01-02]: Element __del__ destroys silently (no warning); Database __del__ emits ResourceWarning
 - [01-02]: Removed old tests/unit/ directory in favor of flat tests/ layout
+- [02-01]: Bulk scalar reads skip NULL values (matches C++ behavior); by-id reads return None for NULLs
+- [02-01]: read_scalar_relation maps both NULL and empty strings to None (matches Julia)
+- [02-01]: Added update_scalar_relation early (Rule 3) to support relation test setup
 
 ### Pending Todos
 
@@ -64,5 +68,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 01-02-PLAN.md (Phase 1 complete)
-Resume file: .planning/phases/02-*/02-01-PLAN.md
+Stopped at: Completed 02-01-PLAN.md
+Resume file: .planning/phases/02-reads-and-metadata/02-02-PLAN.md

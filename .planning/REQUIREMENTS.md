@@ -27,14 +27,14 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 
 ### Read Operations
 
-- [ ] **READ-01**: read_scalar_integers/floats/strings for bulk reads with proper try/finally free
-- [ ] **READ-02**: read_scalar_integer/float/string_by_id for single-element reads
+- [x] **READ-01**: read_scalar_integers/floats/strings for bulk reads with proper try/finally free
+- [x] **READ-02**: read_scalar_integer/float/string_by_id for single-element reads
 - [ ] **READ-03**: read_vector_integers/floats/strings for bulk vector reads with nested array marshaling
 - [ ] **READ-04**: read_vector_integers/floats/strings_by_id for single-element vector reads
 - [ ] **READ-05**: read_set_integers/floats/strings for bulk set reads
 - [ ] **READ-06**: read_set_integers/floats/strings_by_id for single-element set reads
-- [ ] **READ-07**: read_element_ids for collection element ID listing
-- [ ] **READ-08**: read_scalar_relation for relation reads
+- [x] **READ-07**: read_element_ids for collection element ID listing
+- [x] **READ-08**: read_scalar_relation for relation reads
 
 ### Write Operations
 
@@ -127,14 +127,14 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 | LIFE-04 | Phase 1 | Complete |
 | LIFE-05 | Phase 1 | Complete |
 | LIFE-06 | Phase 1 | Complete |
-| READ-01 | Phase 2 | Pending |
-| READ-02 | Phase 2 | Pending |
+| READ-01 | Phase 2 | Complete |
+| READ-02 | Phase 2 | Complete |
 | READ-03 | Phase 2 | Pending |
 | READ-04 | Phase 2 | Pending |
 | READ-05 | Phase 2 | Pending |
 | READ-06 | Phase 2 | Pending |
-| READ-07 | Phase 2 | Pending |
-| READ-08 | Phase 2 | Pending |
+| READ-07 | Phase 2 | Complete |
+| READ-08 | Phase 2 | Complete |
 | META-01 | Phase 2 | Pending |
 | META-02 | Phase 2 | Pending |
 | META-03 | Phase 2 | Pending |
