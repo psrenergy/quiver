@@ -53,23 +53,23 @@ None currently deferred.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | — | Pending |
-| CRE-01 | — | Pending |
-| CRE-02 | — | Pending |
-| CRE-03 | — | Pending |
-| CRE-04 | — | Pending |
-| UPD-01 | — | Pending |
-| UPD-02 | — | Pending |
-| UPD-03 | — | Pending |
-| UPD-04 | — | Pending |
-| ERR-01 | — | Pending |
-| CLN-01 | — | Pending |
+| FOUND-01 | Phase 1 | Pending |
+| CRE-01 | Phase 2 | Pending |
+| CRE-02 | Phase 2 | Pending |
+| CRE-03 | Phase 1 | Pending |
+| CRE-04 | Phase 2 | Pending |
+| UPD-01 | Phase 3 | Pending |
+| UPD-02 | Phase 3 | Pending |
+| UPD-03 | Phase 3 | Pending |
+| UPD-04 | Phase 3 | Pending |
+| ERR-01 | Phase 1 | Pending |
+| CLN-01 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 11 total
-- Mapped to phases: 0
-- Unmapped: 11
+- Mapped to phases: 11
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-23*
-*Last updated: 2026-02-23 after initial definition*
+*Last updated: 2026-02-23 after roadmap creation*
