@@ -9,29 +9,29 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 
 ## Current Position
 
-Phase: 2 of 7 (Reads and Metadata)
-Plan: 1 of 2 in current phase
-Status: In Progress
-Last activity: 2026-02-23 — Completed 02-01-PLAN.md (Scalar reads, metadata dataclasses, CFFI declarations)
+Phase: 2 of 7 (Reads and Metadata) -- COMPLETE
+Plan: 2 of 2 in current phase
+Status: Phase Complete
+Last activity: 2026-02-23 — Completed 02-02-PLAN.md (Vector/set reads, metadata get/list)
 
-Progress: [███░░░░░░░] 21%
+Progress: [███░░░░░░░] 28%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
+- Total plans completed: 4
 - Average duration: 4min
-- Total execution time: 12min
+- Total execution time: 16min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 2 | 6min | 3min |
-| 02-reads-and-metadata | 1 | 6min | 6min |
+| 02-reads-and-metadata | 2 | 10min | 5min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (4min), 01-02 (2min), 02-01 (6min)
+- Last 5 plans: 01-01 (4min), 01-02 (2min), 02-01 (6min), 02-02 (4min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -55,6 +55,9 @@ Recent decisions affecting current work:
 - [02-01]: Bulk scalar reads skip NULL values (matches C++ behavior); by-id reads return None for NULLs
 - [02-01]: read_scalar_relation maps both NULL and empty strings to None (matches Julia)
 - [02-01]: Added update_scalar_relation early (Rule 3) to support relation test setup
+- [02-02]: Bulk vector/set reads skip elements with no data (matches C++ NULL skipping behavior)
+- [02-02]: list_* methods return full metadata objects (not just names) -- enables Phase 6 convenience methods
+- [02-02]: _parse_scalar_metadata/_parse_group_metadata are module-level helpers
 
 ### Pending Todos
 
@@ -68,5 +71,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 02-01-PLAN.md
-Resume file: .planning/phases/02-reads-and-metadata/02-02-PLAN.md
+Stopped at: Completed 02-02-PLAN.md (Phase 2 complete)
+Resume file: .planning/phases/03-writes-and-transactions/03-01-PLAN.md

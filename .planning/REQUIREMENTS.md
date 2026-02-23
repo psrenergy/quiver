@@ -29,10 +29,10 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 
 - [x] **READ-01**: read_scalar_integers/floats/strings for bulk reads with proper try/finally free
 - [x] **READ-02**: read_scalar_integer/float/string_by_id for single-element reads
-- [ ] **READ-03**: read_vector_integers/floats/strings for bulk vector reads with nested array marshaling
-- [ ] **READ-04**: read_vector_integers/floats/strings_by_id for single-element vector reads
-- [ ] **READ-05**: read_set_integers/floats/strings for bulk set reads
-- [ ] **READ-06**: read_set_integers/floats/strings_by_id for single-element set reads
+- [x] **READ-03**: read_vector_integers/floats/strings for bulk vector reads with nested array marshaling
+- [x] **READ-04**: read_vector_integers/floats/strings_by_id for single-element vector reads
+- [x] **READ-05**: read_set_integers/floats/strings for bulk set reads
+- [x] **READ-06**: read_set_integers/floats/strings_by_id for single-element set reads
 - [x] **READ-07**: read_element_ids for collection element ID listing
 - [x] **READ-08**: read_scalar_relation for relation reads
 
@@ -53,9 +53,9 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 
 ### Metadata
 
-- [ ] **META-01**: get_scalar_metadata returning ScalarMetadata dataclass
-- [ ] **META-02**: get_vector_metadata, get_set_metadata, get_time_series_metadata returning GroupMetadata dataclass
-- [ ] **META-03**: list_scalar_attributes, list_vector_groups, list_set_groups, list_time_series_groups
+- [x] **META-01**: get_scalar_metadata returning ScalarMetadata dataclass
+- [x] **META-02**: get_vector_metadata, get_set_metadata, get_time_series_metadata returning GroupMetadata dataclass
+- [x] **META-03**: list_scalar_attributes, list_vector_groups, list_set_groups, list_time_series_groups
 
 ### Queries
 
@@ -129,15 +129,15 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 | LIFE-06 | Phase 1 | Complete |
 | READ-01 | Phase 2 | Complete |
 | READ-02 | Phase 2 | Complete |
-| READ-03 | Phase 2 | Pending |
-| READ-04 | Phase 2 | Pending |
-| READ-05 | Phase 2 | Pending |
-| READ-06 | Phase 2 | Pending |
+| READ-03 | Phase 2 | Complete |
+| READ-04 | Phase 2 | Complete |
+| READ-05 | Phase 2 | Complete |
+| READ-06 | Phase 2 | Complete |
 | READ-07 | Phase 2 | Complete |
 | READ-08 | Phase 2 | Complete |
-| META-01 | Phase 2 | Pending |
-| META-02 | Phase 2 | Pending |
-| META-03 | Phase 2 | Pending |
+| META-01 | Phase 2 | Complete |
+| META-02 | Phase 2 | Complete |
+| META-03 | Phase 2 | Complete |
 | WRITE-01 | Phase 3 | Pending |
 | WRITE-02 | Phase 3 | Pending |
 | WRITE-03 | Phase 3 | Pending |
