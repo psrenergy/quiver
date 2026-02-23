@@ -183,3 +183,67 @@ TEST(Database, SetScalarRelationOverwrite) {
     relations = db.read_scalar_relation("Child", "parent_id");
     EXPECT_EQ(relations[0], "Parent 2");
 }
+
+// ============================================================================
+// FK label resolution (resolve_fk_label helper)
+// ============================================================================
+
+TEST(Database, ResolveFkLabelInSetCreate) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    // Create 2 parents
+    quiver::Element parent1;
+    parent1.set("label", std::string("Parent 1"));
+    db.create_element("Parent", parent1);
+
+    quiver::Element parent2;
+    parent2.set("label", std::string("Parent 2"));
+    db.create_element("Parent", parent2);
+
+    // Create child with set FK using string labels (mentor_id is unique to set table)
+    quiver::Element child;
+    child.set("label", std::string("Child 1"));
+    child.set("mentor_id", std::vector<std::string>{"Parent 1", "Parent 2"});
+    db.create_element("Child", child);
+
+    // Read back resolved integer IDs
+    auto sets = db.read_set_integers("Child", "mentor_id");
+    ASSERT_EQ(sets.size(), 1);
+    ASSERT_EQ(sets[0].size(), 2);
+
+    // Resolved parent IDs should be 1 and 2
+    std::vector<int64_t> sorted_ids(sets[0].begin(), sets[0].end());
+    std::sort(sorted_ids.begin(), sorted_ids.end());
+    EXPECT_EQ(sorted_ids[0], 1);
+    EXPECT_EQ(sorted_ids[1], 2);
+}
+
+TEST(Database, ResolveFkLabelMissingTarget) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    // Create child with set FK referencing nonexistent parent (mentor_id is unique to set table)
+    quiver::Element child;
+    child.set("label", std::string("Child 1"));
+    child.set("mentor_id", std::vector<std::string>{"Nonexistent Parent"});
+
+    try {
+        db.create_element("Child", child);
+        FAIL() << "Expected std::runtime_error";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Failed to resolve label 'Nonexistent Parent' to ID in table 'Parent'");
+    }
+}
+
+TEST(Database, RejectStringForNonFkIntegerColumn) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    // Create child, then try to create with string in non-FK INTEGER set column
+    quiver::Element child;
+    child.set("label", std::string("Child 1"));
+    child.set("score", std::vector<std::string>{"not_a_label"});
+
+    EXPECT_THROW(db.create_element("Child", child), std::runtime_error);
+}

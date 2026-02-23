@@ -37,3 +37,18 @@ CREATE TABLE Child_set_parents (
     FOREIGN KEY(parent_ref) REFERENCES Parent(id) ON DELETE CASCADE ON UPDATE CASCADE,
     UNIQUE(id, parent_ref)
 ) STRICT;
+
+CREATE TABLE Child_set_mentors (
+    id INTEGER,
+    mentor_id INTEGER,
+    FOREIGN KEY(id) REFERENCES Child(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY(mentor_id) REFERENCES Parent(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE(id, mentor_id)
+) STRICT;
+
+CREATE TABLE Child_set_scores (
+    id INTEGER,
+    score INTEGER,
+    FOREIGN KEY(id) REFERENCES Child(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE(id, score)
+) STRICT;
