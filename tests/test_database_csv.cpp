@@ -76,20 +76,27 @@ TEST(DatabaseCSV, ExportCSV_VectorGroupExport) {
     e1.set("label", std::string("Item1")).set("name", std::string("Alpha"));
     auto id1 = db.create_element("Items", e1);
 
+    quiver::Element e2;
+    e2.set("label", std::string("Item2")).set("name", std::string("Beta"));
+    auto id2 = db.create_element("Items", e2);
+
     db.update_vector_floats("Items", "measurement", id1, {1.1, 2.2, 3.3});
+    db.update_vector_floats("Items", "measurement", id2, {4.4, 5.5});
 
     auto csv_path = temp_csv("VectorExport");
     db.export_csv("Items", "measurements", csv_path.string());
 
     auto content = read_file(csv_path.string());
 
-    // Header: label + value columns (no id, no vector_index)
-    EXPECT_NE(content.find("label,measurement\n"), std::string::npos);
+    // Header: id + vector_index + value columns
+    EXPECT_NE(content.find("sep=,\nid,vector_index,measurement\n"), std::string::npos);
 
-    // Data rows: one row per vector element
-    EXPECT_NE(content.find("Item1,1.1\n"), std::string::npos);
-    EXPECT_NE(content.find("Item1,2.2\n"), std::string::npos);
-    EXPECT_NE(content.find("Item1,3.3\n"), std::string::npos);
+    // Data rows: one row per vector element with vector_index
+    EXPECT_NE(content.find("Item1,1,1.1\n"), std::string::npos);
+    EXPECT_NE(content.find("Item1,2,2.2\n"), std::string::npos);
+    EXPECT_NE(content.find("Item1,3,3.3\n"), std::string::npos);
+    EXPECT_NE(content.find("Item2,1,4.4\n"), std::string::npos);
+    EXPECT_NE(content.find("Item2,2,5.5\n"), std::string::npos);
 
     fs::remove(csv_path);
 }
@@ -108,8 +115,8 @@ TEST(DatabaseCSV, ExportCSV_SetGroupExport) {
 
     auto content = read_file(csv_path.string());
 
-    // Header: label + tag
-    EXPECT_NE(content.find("label,tag\n"), std::string::npos);
+    // Header: id + tag
+    EXPECT_NE(content.find("sep=,\nid,tag\n"), std::string::npos);
 
     // Data rows
     EXPECT_NE(content.find("Item1,red\n"), std::string::npos);
@@ -136,8 +143,8 @@ TEST(DatabaseCSV, ExportCSV_TimeSeriesGroupExport) {
 
     auto content = read_file(csv_path.string());
 
-    // Header: label + dimension + value columns
-    EXPECT_NE(content.find("label,date_time,temperature,humidity\n"), std::string::npos);
+    // Header: id + dimension + value columns
+    EXPECT_NE(content.find("sep=,\nid,date_time,temperature,humidity\n"), std::string::npos);
 
     // Data rows ordered by date_time
     EXPECT_NE(content.find("Item1,2024-01-01T10:00:00,22.5,60\n"), std::string::npos);

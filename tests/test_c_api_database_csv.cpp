@@ -94,8 +94,18 @@ TEST(DatabaseCApiCSV, ExportCSV_VectorGroupExport) {
     ASSERT_EQ(quiver_database_create_element(db, "Items", e1, &id1), QUIVER_OK);
     quiver_element_destroy(e1);
 
-    double vec_values[] = {1.1, 2.2, 3.3};
-    ASSERT_EQ(quiver_database_update_vector_floats(db, "Items", "measurement", id1, vec_values, 3), QUIVER_OK);
+    quiver_element_t* e2 = nullptr;
+    ASSERT_EQ(quiver_element_create(&e2), QUIVER_OK);
+    quiver_element_set_string(e2, "label", "Item2");
+    quiver_element_set_string(e2, "name", "Beta");
+    int64_t id2 = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Items", e2, &id2), QUIVER_OK);
+    quiver_element_destroy(e2);
+
+    double vec_values1[] = {1.1, 2.2, 3.3};
+    ASSERT_EQ(quiver_database_update_vector_floats(db, "Items", "measurement", id1, vec_values1, 3), QUIVER_OK);
+    double vec_values2[] = {4.4, 5.5};
+    ASSERT_EQ(quiver_database_update_vector_floats(db, "Items", "measurement", id2, vec_values2, 2), QUIVER_OK);
 
     auto csv_path = temp_csv("VectorExport");
     auto csv_opts = quiver_csv_export_options_default();
@@ -103,13 +113,15 @@ TEST(DatabaseCApiCSV, ExportCSV_VectorGroupExport) {
 
     auto content = read_file(csv_path.string());
 
-    // Header: label + value columns (no id, no vector_index)
-    EXPECT_NE(content.find("label,measurement\n"), std::string::npos);
+    // Header: id + vector_index + value columns
+    EXPECT_NE(content.find("sep=,\nid,vector_index,measurement\n"), std::string::npos);
 
-    // Data rows: one row per vector element
-    EXPECT_NE(content.find("Item1,1.1\n"), std::string::npos);
-    EXPECT_NE(content.find("Item1,2.2\n"), std::string::npos);
-    EXPECT_NE(content.find("Item1,3.3\n"), std::string::npos);
+    // Data rows: one row per vector element with vector_index
+    EXPECT_NE(content.find("Item1,1,1.1\n"), std::string::npos);
+    EXPECT_NE(content.find("Item1,2,2.2\n"), std::string::npos);
+    EXPECT_NE(content.find("Item1,3,3.3\n"), std::string::npos);
+    EXPECT_NE(content.find("Item2,1,4.4\n"), std::string::npos);
+    EXPECT_NE(content.find("Item2,2,5.5\n"), std::string::npos);
 
     fs::remove(csv_path);
     quiver_database_close(db);
@@ -140,8 +152,8 @@ TEST(DatabaseCApiCSV, ExportCSV_SetGroupExport) {
 
     auto content = read_file(csv_path.string());
 
-    // Header: label + tag
-    EXPECT_NE(content.find("label,tag\n"), std::string::npos);
+    // Header: id + tag
+    EXPECT_NE(content.find("sep=,\nid,tag\n"), std::string::npos);
 
     // Data rows
     EXPECT_NE(content.find("Item1,red\n"), std::string::npos);
@@ -185,8 +197,8 @@ TEST(DatabaseCApiCSV, ExportCSV_TimeSeriesGroupExport) {
 
     auto content = read_file(csv_path.string());
 
-    // Header: label + dimension + value columns
-    EXPECT_NE(content.find("label,date_time,temperature,humidity\n"), std::string::npos);
+    // Header: id + dimension + value columns
+    EXPECT_NE(content.find("sep=,\nid,date_time,temperature,humidity\n"), std::string::npos);
 
     // Data rows ordered by date_time
     EXPECT_NE(content.find("Item1,2024-01-01T10:00:00,22.5,60\n"), std::string::npos);
@@ -361,7 +373,7 @@ TEST(DatabaseCApiCSV, ExportCSV_EmptyCollection_HeaderOnly) {
     auto content = read_file(csv_path.string());
 
     // Header row only, followed by LF
-    EXPECT_EQ(content, "label,name,status,price,date_created,notes\n");
+    EXPECT_EQ(content, "sep=,\nlabel,name,status,price,date_created,notes\n");
 
     fs::remove(csv_path);
     quiver_database_close(db);

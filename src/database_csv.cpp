@@ -212,19 +212,14 @@ void Database::export_csv(const std::string& collection,
         auto schema_result = execute("SELECT * FROM " + table_name + " LIMIT 0");
         const auto& all_group_columns = schema_result.columns();
 
-        // Determine which columns to include (skip id, skip vector_index for vectors)
+        // All group table columns become CSV columns
         std::vector<std::string> group_data_columns;
         for (const auto& col : all_group_columns) {
-            if (col == "id")
-                continue;
-            if (group_type == GroupType::Vector && col == "vector_index")
-                continue;
             group_data_columns.push_back(col);
         }
 
         // CSV headers: label first, then group data columns
         std::vector<std::string> csv_columns;
-        csv_columns.emplace_back("label");
         csv_columns.insert(csv_columns.end(), group_data_columns.begin(), group_data_columns.end());
 
         // Build DataType map from group metadata
@@ -240,8 +235,8 @@ void Database::export_csv(const std::string& collection,
         for (const auto& vc : group_meta.value_columns) {
             type_map[vc.name] = vc.data_type;
         }
-        // label is always Text
-        type_map["label"] = DataType::Text;
+        // id is always Text as it takes the label value from the parent collection
+        type_map["id"] = DataType::Text;
         // Dimension column (if time series) is DateTime if its name starts with "date_"
         if (!group_meta.dimension_column.empty()) {
             if (is_date_time_column(group_meta.dimension_column)) {
@@ -254,6 +249,8 @@ void Database::export_csv(const std::string& collection,
         // Build SELECT query: C.label + group data columns with JOIN
         std::string select_cols = "C.label";
         for (const auto& col : group_data_columns) {
+            if (col == "id")
+                continue;
             select_cols += ", G." + col;
         }
 
