@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from contextlib import contextmanager
 
 from quiver._c_api import ffi, get_lib
 from quiver._helpers import check, decode_string, decode_string_or_none
@@ -253,6 +254,49 @@ class Database:
             check(lib.quiver_database_update_set_strings(
                 self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
                 id, c_arr, len(values)))
+
+    # -- Transaction control ----------------------------------------------------
+
+    def begin_transaction(self) -> None:
+        """Begin an explicit transaction."""
+        self._ensure_open()
+        lib = get_lib()
+        check(lib.quiver_database_begin_transaction(self._ptr))
+
+    def commit(self) -> None:
+        """Commit the current transaction."""
+        self._ensure_open()
+        lib = get_lib()
+        check(lib.quiver_database_commit(self._ptr))
+
+    def rollback(self) -> None:
+        """Roll back the current transaction."""
+        self._ensure_open()
+        lib = get_lib()
+        check(lib.quiver_database_rollback(self._ptr))
+
+    def in_transaction(self) -> bool:
+        """Return True if a transaction is currently active."""
+        self._ensure_open()
+        lib = get_lib()
+        out = ffi.new("_Bool*")
+        check(lib.quiver_database_in_transaction(self._ptr, out))
+        return bool(out[0])
+
+    @contextmanager
+    def transaction(self):
+        """Execute operations within a transaction. Auto-commits on success, rolls back on exception."""
+        self._ensure_open()
+        self.begin_transaction()
+        try:
+            yield self
+            self.commit()
+        except BaseException:
+            try:
+                self.rollback()
+            except Exception:
+                pass  # Best-effort rollback; swallow rollback errors
+            raise
 
     # -- Scalar reads (bulk) --------------------------------------------------
 

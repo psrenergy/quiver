@@ -278,6 +278,12 @@ ffi.cdef("""
     quiver_error_t quiver_database_update_set_strings(quiver_database_t* db,
         const char* collection, const char* attribute, int64_t id,
         const char* const* values, size_t count);
+
+    // Transaction control
+    quiver_error_t quiver_database_begin_transaction(quiver_database_t* db);
+    quiver_error_t quiver_database_commit(quiver_database_t* db);
+    quiver_error_t quiver_database_rollback(quiver_database_t* db);
+    quiver_error_t quiver_database_in_transaction(quiver_database_t* db, _Bool* out_active);
 """)
 
 _lib = None
