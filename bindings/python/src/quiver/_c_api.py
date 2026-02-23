@@ -173,6 +173,11 @@ ffi.cdef("""
         const char* collection, const char* attribute,
         char*** out_values, size_t* out_count);
 
+    // Update scalar relation (by label)
+    quiver_error_t quiver_database_update_scalar_relation(quiver_database_t* db,
+        const char* collection, const char* attribute,
+        const char* from_label, const char* to_label);
+
     // Free functions for read results
     quiver_error_t quiver_database_free_integer_array(int64_t* values);
     quiver_error_t quiver_database_free_float_array(double* values);

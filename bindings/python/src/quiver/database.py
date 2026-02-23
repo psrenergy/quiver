@@ -118,6 +118,185 @@ class Database:
         )
         return out_id[0]
 
+    # -- Scalar reads (bulk) --------------------------------------------------
+
+    def read_scalar_integers(self, collection: str, attribute: str) -> list[int]:
+        """Read all integer values for a scalar attribute across all elements."""
+        self._ensure_open()
+        lib = get_lib()
+        out_values = ffi.new("int64_t**")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_read_scalar_integers(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+            out_values, out_count,
+        ))
+        count = out_count[0]
+        if count == 0 or out_values[0] == ffi.NULL:
+            return []
+        try:
+            return [out_values[0][i] for i in range(count)]
+        finally:
+            lib.quiver_database_free_integer_array(out_values[0])
+
+    def read_scalar_floats(self, collection: str, attribute: str) -> list[float]:
+        """Read all float values for a scalar attribute across all elements."""
+        self._ensure_open()
+        lib = get_lib()
+        out_values = ffi.new("double**")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_read_scalar_floats(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+            out_values, out_count,
+        ))
+        count = out_count[0]
+        if count == 0 or out_values[0] == ffi.NULL:
+            return []
+        try:
+            return [out_values[0][i] for i in range(count)]
+        finally:
+            lib.quiver_database_free_float_array(out_values[0])
+
+    def read_scalar_strings(self, collection: str, attribute: str) -> list[str | None]:
+        """Read all string values for a scalar attribute. NULL values become None."""
+        self._ensure_open()
+        lib = get_lib()
+        out_values = ffi.new("char***")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_read_scalar_strings(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+            out_values, out_count,
+        ))
+        count = out_count[0]
+        if count == 0 or out_values[0] == ffi.NULL:
+            return []
+        try:
+            result: list[str | None] = []
+            for i in range(count):
+                ptr = out_values[0][i]
+                if ptr == ffi.NULL:
+                    result.append(None)
+                else:
+                    result.append(ffi.string(ptr).decode("utf-8"))
+            return result
+        finally:
+            lib.quiver_database_free_string_array(out_values[0], count)
+
+    # -- Scalar reads (by ID) -------------------------------------------------
+
+    def read_scalar_integer_by_id(
+        self, collection: str, attribute: str, id: int,
+    ) -> int | None:
+        """Read an integer scalar attribute for a single element. Returns None if NULL."""
+        self._ensure_open()
+        lib = get_lib()
+        out_value = ffi.new("int64_t*")
+        out_has = ffi.new("int*")
+        check(lib.quiver_database_read_scalar_integer_by_id(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+            id, out_value, out_has,
+        ))
+        if out_has[0] == 0:
+            return None
+        return out_value[0]
+
+    def read_scalar_float_by_id(
+        self, collection: str, attribute: str, id: int,
+    ) -> float | None:
+        """Read a float scalar attribute for a single element. Returns None if NULL."""
+        self._ensure_open()
+        lib = get_lib()
+        out_value = ffi.new("double*")
+        out_has = ffi.new("int*")
+        check(lib.quiver_database_read_scalar_float_by_id(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+            id, out_value, out_has,
+        ))
+        if out_has[0] == 0:
+            return None
+        return out_value[0]
+
+    def read_scalar_string_by_id(
+        self, collection: str, attribute: str, id: int,
+    ) -> str | None:
+        """Read a string scalar attribute for a single element. Returns None if NULL."""
+        self._ensure_open()
+        lib = get_lib()
+        out_value = ffi.new("char**")
+        out_has = ffi.new("int*")
+        check(lib.quiver_database_read_scalar_string_by_id(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+            id, out_value, out_has,
+        ))
+        if out_has[0] == 0 or out_value[0] == ffi.NULL:
+            return None
+        try:
+            return ffi.string(out_value[0]).decode("utf-8")
+        finally:
+            lib.quiver_element_free_string(out_value[0])
+
+    # -- Element IDs -----------------------------------------------------------
+
+    def read_element_ids(self, collection: str) -> list[int]:
+        """Read all element IDs in a collection."""
+        self._ensure_open()
+        lib = get_lib()
+        out_ids = ffi.new("int64_t**")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_read_element_ids(
+            self._ptr, collection.encode("utf-8"), out_ids, out_count,
+        ))
+        count = out_count[0]
+        if count == 0 or out_ids[0] == ffi.NULL:
+            return []
+        try:
+            return [out_ids[0][i] for i in range(count)]
+        finally:
+            lib.quiver_database_free_integer_array(out_ids[0])
+
+    # -- Relation operations ----------------------------------------------------
+
+    def update_scalar_relation(
+        self, collection: str, attribute: str, from_label: str, to_label: str,
+    ) -> None:
+        """Set a scalar relation by element labels."""
+        self._ensure_open()
+        lib = get_lib()
+        check(lib.quiver_database_update_scalar_relation(
+            self._ptr,
+            collection.encode("utf-8"),
+            attribute.encode("utf-8"),
+            from_label.encode("utf-8"),
+            to_label.encode("utf-8"),
+        ))
+
+    def read_scalar_relation(
+        self, collection: str, attribute: str,
+    ) -> list[str | None]:
+        """Read scalar relation labels. Returns labels of related elements, None for unset."""
+        self._ensure_open()
+        lib = get_lib()
+        out_values = ffi.new("char***")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_read_scalar_relation(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+            out_values, out_count,
+        ))
+        count = out_count[0]
+        if count == 0 or out_values[0] == ffi.NULL:
+            return []
+        try:
+            result: list[str | None] = []
+            for i in range(count):
+                ptr = out_values[0][i]
+                if ptr == ffi.NULL:
+                    result.append(None)
+                else:
+                    s = ffi.string(ptr).decode("utf-8")
+                    result.append(None if s == "" else s)
+            return result
+        finally:
+            lib.quiver_database_free_string_array(out_values[0], count)
+
     def __repr__(self) -> str:
         if self._closed:
             return "Database(closed)"
