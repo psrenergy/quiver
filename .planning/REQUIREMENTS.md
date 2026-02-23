@@ -9,11 +9,11 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 
 ### Infrastructure
 
-- [ ] **INFRA-01**: Python package renamed from "margaux" to "quiver" with CFFI dependency, uv as package manager, and correct project metadata
-- [ ] **INFRA-02**: CFFI ABI-mode declarations covering the full C API surface (hand-written from Julia c_api.jl reference)
-- [ ] **INFRA-03**: DLL/SO loader that resolves libquiver and libquiver_c at runtime with Windows pre-load for dependency chain
-- [ ] **INFRA-04**: Error handling via check() function that reads thread-local C API errors and raises Python exceptions
-- [ ] **INFRA-05**: String encoding helpers for UTF-8 conversion at the FFI boundary (including nullable strings)
+- [x] **INFRA-01**: Python package renamed from "margaux" to "quiver" with CFFI dependency, uv as package manager, and correct project metadata
+- [x] **INFRA-02**: CFFI ABI-mode declarations covering the full C API surface (hand-written from Julia c_api.jl reference)
+- [x] **INFRA-03**: DLL/SO loader that resolves libquiver and libquiver_c at runtime with Windows pre-load for dependency chain
+- [x] **INFRA-04**: Error handling via check() function that reads thread-local C API errors and raises Python exceptions
+- [x] **INFRA-05**: String encoding helpers for UTF-8 conversion at the FFI boundary (including nullable strings)
 - [ ] **INFRA-06**: Test runner script (test.bat) matching Julia/Dart pattern with PATH setup
 
 ### Lifecycle
@@ -23,7 +23,7 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 - [ ] **LIFE-03**: Database.path, Database.current_version, Database.is_healthy properties
 - [ ] **LIFE-04**: Database.describe() for schema inspection
 - [ ] **LIFE-05**: Element builder with set() fluent API for integer, float, string, null, and array types
-- [ ] **LIFE-06**: quiver.version() returning library version string
+- [x] **LIFE-06**: quiver.version() returning library version string
 
 ### Read Operations
 
@@ -115,18 +115,18 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | Phase 1 | Pending |
-| INFRA-02 | Phase 1 | Pending |
-| INFRA-03 | Phase 1 | Pending |
-| INFRA-04 | Phase 1 | Pending |
-| INFRA-05 | Phase 1 | Pending |
+| INFRA-01 | Phase 1 | Complete |
+| INFRA-02 | Phase 1 | Complete |
+| INFRA-03 | Phase 1 | Complete |
+| INFRA-04 | Phase 1 | Complete |
+| INFRA-05 | Phase 1 | Complete |
 | INFRA-06 | Phase 1 | Pending |
 | LIFE-01 | Phase 1 | Pending |
 | LIFE-02 | Phase 1 | Pending |
 | LIFE-03 | Phase 1 | Pending |
 | LIFE-04 | Phase 1 | Pending |
 | LIFE-05 | Phase 1 | Pending |
-| LIFE-06 | Phase 1 | Pending |
+| LIFE-06 | Phase 1 | Complete |
 | READ-01 | Phase 2 | Pending |
 | READ-02 | Phase 2 | Pending |
 | READ-03 | Phase 2 | Pending |
