@@ -50,6 +50,7 @@ Consistent, type-safe database operations across multiple languages through a si
 - **Binding philosophy**: Thin wrappers only. No logic in Python layer. Error messages come from C++/C API.
 - **Naming**: Python uses `snake_case` matching C++ method names exactly (same as Julia/Lua pattern).
 - **Code quality**: Human-readable, clean code. Simple solutions over complex abstractions.
+- **Package manager**: uv for Python dependency management and virtual environments.
 - **Test schemas**: All bindings reference shared schemas from `tests/schemas/`.
 
 ## Key Decisions
