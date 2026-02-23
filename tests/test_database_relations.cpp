@@ -330,3 +330,91 @@ TEST(Database, CreateElementTimeSeriesFkLabels) {
     EXPECT_EQ(std::get<int64_t>(ts_data[0].at("sponsor_id")), 1);
     EXPECT_EQ(std::get<int64_t>(ts_data[1].at("sponsor_id")), 2);
 }
+
+TEST(Database, CreateElementAllFkTypesInOneCall) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("relations.sql"),
+        {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    // Create parents
+    quiver::Element p1, p2;
+    p1.set("label", std::string("Parent 1"));
+    p2.set("label", std::string("Parent 2"));
+    db.create_element("Parent", p1);
+    db.create_element("Parent", p2);
+
+    // Create child with ALL FK types in one call:
+    // - scalar FK: parent_id -> Parent 1
+    // - set FK: mentor_id -> Parent 2 (unique to Child_set_mentors)
+    // - vector+set FK: parent_ref -> Parent 1 (routes to vector AND set tables)
+    // - time series FK: sponsor_id -> Parent 2 (unique to Child_time_series_events)
+    quiver::Element child;
+    child.set("label", std::string("Child 1"));
+    child.set("parent_id", std::string("Parent 1"));                      // scalar FK
+    child.set("mentor_id", std::vector<std::string>{"Parent 2"});         // set FK
+    child.set("parent_ref", std::vector<std::string>{"Parent 1"});        // vector+set FK
+    child.set("date_time", std::vector<std::string>{"2024-01-01"});       // time series dimension
+    child.set("sponsor_id", std::vector<std::string>{"Parent 2"});        // time series FK
+    db.create_element("Child", child);
+
+    // Verify scalar FK
+    auto parent_ids = db.read_scalar_integers("Child", "parent_id");
+    ASSERT_EQ(parent_ids.size(), 1);
+    EXPECT_EQ(parent_ids[0], 1);
+
+    // Verify set FK (mentor_id)
+    auto mentors = db.read_set_integers("Child", "mentor_id");
+    ASSERT_EQ(mentors.size(), 1);
+    ASSERT_EQ(mentors[0].size(), 1);
+    EXPECT_EQ(mentors[0][0], 2);
+
+    // Verify vector FK (parent_ref in Child_vector_refs)
+    auto vrefs = db.read_vector_integers_by_id("Child", "parent_ref", 1);
+    ASSERT_EQ(vrefs.size(), 1);
+    EXPECT_EQ(vrefs[0], 1);
+
+    // Verify time series FK (sponsor_id in Child_time_series_events)
+    auto ts_data = db.read_time_series_group("Child", "events", 1);
+    ASSERT_EQ(ts_data.size(), 1);
+    EXPECT_EQ(std::get<int64_t>(ts_data[0].at("sponsor_id")), 2);
+}
+
+TEST(Database, CreateElementNoFkColumnsUnchanged) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"),
+        {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    // basic.sql has no FK columns -- this tests that the pre-resolve pass
+    // passes all values through unchanged for schemas with no FKs
+    quiver::Element element;
+    element.set("label", std::string("Config 1"));
+    element.set("integer_attribute", int64_t{42});
+    element.set("float_attribute", 3.14);
+
+    int64_t id = db.create_element("Configuration", element);
+    EXPECT_EQ(id, 1);
+
+    auto labels = db.read_scalar_strings("Configuration", "label");
+    EXPECT_EQ(labels[0], "Config 1");
+    auto integers = db.read_scalar_integers("Configuration", "integer_attribute");
+    EXPECT_EQ(integers[0], 42);
+    auto floats = db.read_scalar_floats("Configuration", "float_attribute");
+    EXPECT_DOUBLE_EQ(floats[0], 3.14);
+}
+
+TEST(Database, ScalarFkResolutionFailureCausesNoPartialWrites) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("relations.sql"),
+        {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    // Create child with scalar FK referencing nonexistent parent
+    quiver::Element child;
+    child.set("label", std::string("Orphan Child"));
+    child.set("parent_id", std::string("Nonexistent Parent"));
+
+    EXPECT_THROW(db.create_element("Child", child), std::runtime_error);
+
+    // Verify: no child was created (zero partial writes)
+    auto labels = db.read_scalar_strings("Child", "label");
+    EXPECT_EQ(labels.size(), 0);
+}
