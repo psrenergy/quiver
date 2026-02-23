@@ -28,10 +28,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Passing a label that does not exist in the target table throws `"Failed to resolve label 'X' to ID in table 'Y'"`
   3. Existing set FK resolution in `create_element` uses the shared helper and all existing relation tests pass unchanged
   4. Passing a string for a non-FK INTEGER column produces a clear Quiver error (not a raw SQLite STRICT mode error)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 01-01: TBD
+- [ ] 01-01-PLAN.md -- Extract resolve_fk_label helper, refactor set FK path, add dedicated tests
 
 ### Phase 2: Create Element FK Resolution
 **Goal**: Users can pass target labels (strings) for scalar, vector, and time series FK columns in create_element and they resolve to target IDs automatically
@@ -82,7 +82,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/0 | Not started | - |
+| 1. Foundation | 0/1 | Planned | - |
 | 2. Create Element FK Resolution | 0/0 | Not started | - |
 | 3. Update Element FK Resolution | 0/0 | Not started | - |
 | 4. Cleanup | 0/0 | Not started | - |
