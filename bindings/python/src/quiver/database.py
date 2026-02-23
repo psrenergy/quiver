@@ -297,6 +297,302 @@ class Database:
         finally:
             lib.quiver_database_free_string_array(out_values[0], count)
 
+    # -- Vector reads (bulk) -----------------------------------------------------
+
+    def read_vector_integers(self, collection: str, attribute: str) -> list[list[int]]:
+        """Read integer vectors for all elements in a collection."""
+        self._ensure_open()
+        lib = get_lib()
+        out_vectors = ffi.new("int64_t***")
+        out_sizes = ffi.new("size_t**")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_read_vector_integers(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+            out_vectors, out_sizes, out_count,
+        ))
+        count = out_count[0]
+        if count == 0 or out_vectors[0] == ffi.NULL:
+            return []
+        try:
+            result: list[list[int]] = []
+            for i in range(count):
+                size = out_sizes[0][i]
+                if out_vectors[0][i] == ffi.NULL or size == 0:
+                    result.append([])
+                else:
+                    result.append([out_vectors[0][i][j] for j in range(size)])
+            return result
+        finally:
+            lib.quiver_database_free_integer_vectors(out_vectors[0], out_sizes[0], count)
+
+    def read_vector_floats(self, collection: str, attribute: str) -> list[list[float]]:
+        """Read float vectors for all elements in a collection."""
+        self._ensure_open()
+        lib = get_lib()
+        out_vectors = ffi.new("double***")
+        out_sizes = ffi.new("size_t**")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_read_vector_floats(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+            out_vectors, out_sizes, out_count,
+        ))
+        count = out_count[0]
+        if count == 0 or out_vectors[0] == ffi.NULL:
+            return []
+        try:
+            result: list[list[float]] = []
+            for i in range(count):
+                size = out_sizes[0][i]
+                if out_vectors[0][i] == ffi.NULL or size == 0:
+                    result.append([])
+                else:
+                    result.append([out_vectors[0][i][j] for j in range(size)])
+            return result
+        finally:
+            lib.quiver_database_free_float_vectors(out_vectors[0], out_sizes[0], count)
+
+    def read_vector_strings(self, collection: str, attribute: str) -> list[list[str]]:
+        """Read string vectors for all elements in a collection."""
+        self._ensure_open()
+        lib = get_lib()
+        out_vectors = ffi.new("char****")
+        out_sizes = ffi.new("size_t**")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_read_vector_strings(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+            out_vectors, out_sizes, out_count,
+        ))
+        count = out_count[0]
+        if count == 0 or out_vectors[0] == ffi.NULL:
+            return []
+        try:
+            result: list[list[str]] = []
+            for i in range(count):
+                size = out_sizes[0][i]
+                if out_vectors[0][i] == ffi.NULL or size == 0:
+                    result.append([])
+                else:
+                    result.append([
+                        ffi.string(out_vectors[0][i][j]).decode("utf-8")
+                        for j in range(size)
+                    ])
+            return result
+        finally:
+            lib.quiver_database_free_string_vectors(out_vectors[0], out_sizes[0], count)
+
+    # -- Vector reads (by ID) ----------------------------------------------------
+
+    def read_vector_integers_by_id(
+        self, collection: str, attribute: str, id: int,
+    ) -> list[int]:
+        """Read an integer vector for a single element."""
+        self._ensure_open()
+        lib = get_lib()
+        out_values = ffi.new("int64_t**")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_read_vector_integers_by_id(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+            id, out_values, out_count,
+        ))
+        count = out_count[0]
+        if count == 0 or out_values[0] == ffi.NULL:
+            return []
+        try:
+            return [out_values[0][i] for i in range(count)]
+        finally:
+            lib.quiver_database_free_integer_array(out_values[0])
+
+    def read_vector_floats_by_id(
+        self, collection: str, attribute: str, id: int,
+    ) -> list[float]:
+        """Read a float vector for a single element."""
+        self._ensure_open()
+        lib = get_lib()
+        out_values = ffi.new("double**")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_read_vector_floats_by_id(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+            id, out_values, out_count,
+        ))
+        count = out_count[0]
+        if count == 0 or out_values[0] == ffi.NULL:
+            return []
+        try:
+            return [out_values[0][i] for i in range(count)]
+        finally:
+            lib.quiver_database_free_float_array(out_values[0])
+
+    def read_vector_strings_by_id(
+        self, collection: str, attribute: str, id: int,
+    ) -> list[str]:
+        """Read a string vector for a single element."""
+        self._ensure_open()
+        lib = get_lib()
+        out_values = ffi.new("char***")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_read_vector_strings_by_id(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+            id, out_values, out_count,
+        ))
+        count = out_count[0]
+        if count == 0 or out_values[0] == ffi.NULL:
+            return []
+        try:
+            return [
+                ffi.string(out_values[0][i]).decode("utf-8")
+                for i in range(count)
+            ]
+        finally:
+            lib.quiver_database_free_string_array(out_values[0], count)
+
+    # -- Set reads (bulk) --------------------------------------------------------
+
+    def read_set_integers(self, collection: str, attribute: str) -> list[list[int]]:
+        """Read integer sets for all elements in a collection."""
+        self._ensure_open()
+        lib = get_lib()
+        out_sets = ffi.new("int64_t***")
+        out_sizes = ffi.new("size_t**")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_read_set_integers(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+            out_sets, out_sizes, out_count,
+        ))
+        count = out_count[0]
+        if count == 0 or out_sets[0] == ffi.NULL:
+            return []
+        try:
+            result: list[list[int]] = []
+            for i in range(count):
+                size = out_sizes[0][i]
+                if out_sets[0][i] == ffi.NULL or size == 0:
+                    result.append([])
+                else:
+                    result.append([out_sets[0][i][j] for j in range(size)])
+            return result
+        finally:
+            lib.quiver_database_free_integer_vectors(out_sets[0], out_sizes[0], count)
+
+    def read_set_floats(self, collection: str, attribute: str) -> list[list[float]]:
+        """Read float sets for all elements in a collection."""
+        self._ensure_open()
+        lib = get_lib()
+        out_sets = ffi.new("double***")
+        out_sizes = ffi.new("size_t**")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_read_set_floats(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+            out_sets, out_sizes, out_count,
+        ))
+        count = out_count[0]
+        if count == 0 or out_sets[0] == ffi.NULL:
+            return []
+        try:
+            result: list[list[float]] = []
+            for i in range(count):
+                size = out_sizes[0][i]
+                if out_sets[0][i] == ffi.NULL or size == 0:
+                    result.append([])
+                else:
+                    result.append([out_sets[0][i][j] for j in range(size)])
+            return result
+        finally:
+            lib.quiver_database_free_float_vectors(out_sets[0], out_sizes[0], count)
+
+    def read_set_strings(self, collection: str, attribute: str) -> list[list[str]]:
+        """Read string sets for all elements in a collection."""
+        self._ensure_open()
+        lib = get_lib()
+        out_sets = ffi.new("char****")
+        out_sizes = ffi.new("size_t**")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_read_set_strings(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+            out_sets, out_sizes, out_count,
+        ))
+        count = out_count[0]
+        if count == 0 or out_sets[0] == ffi.NULL:
+            return []
+        try:
+            result: list[list[str]] = []
+            for i in range(count):
+                size = out_sizes[0][i]
+                if out_sets[0][i] == ffi.NULL or size == 0:
+                    result.append([])
+                else:
+                    result.append([
+                        ffi.string(out_sets[0][i][j]).decode("utf-8")
+                        for j in range(size)
+                    ])
+            return result
+        finally:
+            lib.quiver_database_free_string_vectors(out_sets[0], out_sizes[0], count)
+
+    # -- Set reads (by ID) -------------------------------------------------------
+
+    def read_set_integers_by_id(
+        self, collection: str, attribute: str, id: int,
+    ) -> list[int]:
+        """Read an integer set for a single element."""
+        self._ensure_open()
+        lib = get_lib()
+        out_values = ffi.new("int64_t**")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_read_set_integers_by_id(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+            id, out_values, out_count,
+        ))
+        count = out_count[0]
+        if count == 0 or out_values[0] == ffi.NULL:
+            return []
+        try:
+            return [out_values[0][i] for i in range(count)]
+        finally:
+            lib.quiver_database_free_integer_array(out_values[0])
+
+    def read_set_floats_by_id(
+        self, collection: str, attribute: str, id: int,
+    ) -> list[float]:
+        """Read a float set for a single element."""
+        self._ensure_open()
+        lib = get_lib()
+        out_values = ffi.new("double**")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_read_set_floats_by_id(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+            id, out_values, out_count,
+        ))
+        count = out_count[0]
+        if count == 0 or out_values[0] == ffi.NULL:
+            return []
+        try:
+            return [out_values[0][i] for i in range(count)]
+        finally:
+            lib.quiver_database_free_float_array(out_values[0])
+
+    def read_set_strings_by_id(
+        self, collection: str, attribute: str, id: int,
+    ) -> list[str]:
+        """Read a string set for a single element."""
+        self._ensure_open()
+        lib = get_lib()
+        out_values = ffi.new("char***")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_read_set_strings_by_id(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+            id, out_values, out_count,
+        ))
+        count = out_count[0]
+        if count == 0 or out_values[0] == ffi.NULL:
+            return []
+        try:
+            return [
+                ffi.string(out_values[0][i]).decode("utf-8")
+                for i in range(count)
+            ]
+        finally:
+            lib.quiver_database_free_string_array(out_values[0], count)
+
     def __repr__(self) -> str:
         if self._closed:
             return "Database(closed)"
