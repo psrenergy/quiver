@@ -214,7 +214,7 @@ void Database::export_csv(const std::string& collection,
 
         // CSV headers: label first, then group data columns
         std::vector<std::string> csv_columns;
-        csv_columns.push_back("label");
+        csv_columns.emplace_back("label");
         csv_columns.insert(csv_columns.end(), group_data_columns.begin(), group_data_columns.end());
 
         // Build DataType map from group metadata
