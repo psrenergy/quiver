@@ -2055,17 +2055,21 @@ TEST(LuaRunner_ExportCSV, GroupExport) {
     auto csv_path = lua_csv_temp("GroupExport");
 
     lua.run(R"(
-        local id = db:create_element("Items", { label = "Item1", name = "Alpha" })
-        db:update_vector_floats("Items", "measurement", id, {1.1, 2.2, 3.3})
+        local id1 = db:create_element("Items", { label = "Item1", name = "Alpha" })
+        local id2 = db:create_element("Items", { label = "Item2", name = "Beta" })
+        db:update_vector_floats("Items", "measurement", id1, {1.1, 2.2, 3.3})
+        db:update_vector_floats("Items", "measurement", id2, {4.4, 5.5})
     )");
 
     lua.run("db:export_csv(\"Items\", \"measurements\", \"" + lua_safe_path(csv_path) + "\")");
 
     auto content = read_csv_file(csv_path.string());
-    EXPECT_NE(content.find("label,measurement\n"), std::string::npos);
-    EXPECT_NE(content.find("Item1,1.1\n"), std::string::npos);
-    EXPECT_NE(content.find("Item1,2.2\n"), std::string::npos);
-    EXPECT_NE(content.find("Item1,3.3\n"), std::string::npos);
+    EXPECT_NE(content.find("sep=,\nid,vector_index,measurement\n"), std::string::npos);
+    EXPECT_NE(content.find("Item1,1,1.1\n"), std::string::npos);
+    EXPECT_NE(content.find("Item1,2,2.2\n"), std::string::npos);
+    EXPECT_NE(content.find("Item1,3,3.3\n"), std::string::npos);
+    EXPECT_NE(content.find("Item2,1,4.4\n"), std::string::npos);
+    EXPECT_NE(content.find("Item2,2,5.5\n"), std::string::npos);
 
     std::filesystem::remove(csv_path);
 }

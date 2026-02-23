@@ -58,15 +58,22 @@ void main() {
           'label': 'Item1',
           'name': 'Alpha',
         });
+        final id2 = db.createElement('Items', {
+          'label': 'Item2',
+          'name': 'Beta',
+        });
         db.updateVectorFloats('Items', 'measurement', id1, [1.1, 2.2, 3.3]);
+        db.updateVectorFloats('Items', 'measurement', id2, [4.4, 5.5]);
 
         db.exportCSV('Items', 'measurements', csvPath);
         final content = File(csvPath).readAsStringSync();
 
-        expect(content, contains('label,measurement\n'));
-        expect(content, contains('Item1,1.1\n'));
-        expect(content, contains('Item1,2.2\n'));
-        expect(content, contains('Item1,3.3\n'));
+        expect(content, contains('sep=,\nid,vector_index,measurement\n'));
+        expect(content, contains('Item1,1,1.1\n'));
+        expect(content, contains('Item1,2,2.2\n'));
+        expect(content, contains('Item1,3,3.3\n'));
+        expect(content, contains('Item2,1,4.4\n'));
+        expect(content, contains('Item2,2,5.5\n'));
       } finally {
         final f = File(csvPath);
         if (f.existsSync()) f.deleteSync();

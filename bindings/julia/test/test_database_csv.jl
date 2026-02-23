@@ -49,15 +49,22 @@ include("fixture.jl")
                 label = "Item1",
                 name = "Alpha",
             )
+            id2 = Quiver.create_element!(db, "Items";
+                label = "Item2",
+                name = "Beta",
+            )
             Quiver.update_vector_floats!(db, "Items", "measurement", id1, [1.1, 2.2, 3.3])
+            Quiver.update_vector_floats!(db, "Items", "measurement", id2, [4.4, 5.5])
 
             Quiver.export_csv(db, "Items", "measurements", csv_path)
             content = read(csv_path, String)
 
-            @test occursin("label,measurement\n", content)
-            @test occursin("Item1,1.1\n", content)
-            @test occursin("Item1,2.2\n", content)
-            @test occursin("Item1,3.3\n", content)
+            @test occursin("sep=,\nid,vector_index,measurement\n", content)
+            @test occursin("Item1,1,1.1\n", content)
+            @test occursin("Item1,2,2.2\n", content)
+            @test occursin("Item1,3,3.3\n", content)
+            @test occursin("Item2,1,4.4\n", content)
+            @test occursin("Item2,2,5.5\n", content)
         finally
             isfile(csv_path) && rm(csv_path)
             Quiver.close!(db)
