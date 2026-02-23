@@ -13,10 +13,10 @@ Requirements for milestone v1.0 Relations. Each maps to roadmap phases.
 
 ### Create Element
 
-- [ ] **CRE-01**: User can pass a target label (string) for a scalar FK column in `create_element` and it resolves to the target's ID
-- [ ] **CRE-02**: User can pass target labels for vector FK columns in `create_element` and they resolve to target IDs
+- [x] **CRE-01**: User can pass a target label (string) for a scalar FK column in `create_element` and it resolves to the target's ID
+- [x] **CRE-02**: User can pass target labels for vector FK columns in `create_element` and they resolve to target IDs
 - [x] **CRE-03**: Existing set FK resolution in `create_element` uses the shared helper (refactor, no behavior change)
-- [ ] **CRE-04**: User can pass target labels for time series FK columns in `create_element` and they resolve to target IDs
+- [x] **CRE-04**: User can pass target labels for time series FK columns in `create_element` and they resolve to target IDs
 
 ### Update Element
 
@@ -54,10 +54,10 @@ None currently deferred.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | FOUND-01 | Phase 1 | Complete |
-| CRE-01 | Phase 2 | Pending |
-| CRE-02 | Phase 2 | Pending |
+| CRE-01 | Phase 2 | Complete |
+| CRE-02 | Phase 2 | Complete |
 | CRE-03 | Phase 1 | Complete |
-| CRE-04 | Phase 2 | Pending |
+| CRE-04 | Phase 2 | Complete |
 | UPD-01 | Phase 3 | Pending |
 | UPD-02 | Phase 3 | Pending |
 | UPD-03 | Phase 3 | Pending |
