@@ -73,18 +73,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LIB-01 | — | Pending |
-| LIB-02 | — | Pending |
-| LIB-03 | — | Pending |
-| HDR-01 | — | Pending |
-| HDR-02 | — | Pending |
-| HDR-03 | — | Pending |
+| LIB-01 | Phase 8 | Pending |
+| LIB-02 | Phase 8 | Pending |
+| LIB-03 | Phase 8 | Pending |
+| HDR-01 | Phase 9 | Pending |
+| HDR-02 | Phase 9 | Pending |
+| HDR-03 | Phase 9 | Pending |
 
 **Coverage:**
 - v0.5 requirements: 6 total
-- Mapped to phases: 0
-- Unmapped: 6
+- Mapped to phases: 6
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-22*
-*Last updated: 2026-02-22 after v0.5 milestone definition*
+*Last updated: 2026-02-22 after roadmap creation*
