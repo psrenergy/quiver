@@ -32,7 +32,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A C API error (e.g., opening a nonexistent schema) raises `QuiverError` with the exact C++ error message
   4. `Element().set("label", "x").set("value", 42)` constructs an element usable in C API calls without memory errors
   5. `test.bat` runs the Python test suite with correct PATH setup and all lifecycle tests pass
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 01-01-PLAN.md -- Package scaffolding, CFFI declarations, DLL loader, error handling, string helpers, version()
+- [ ] 01-02-PLAN.md -- Database class, Element class, test runner, lifecycle tests
 
 ### Phase 2: Reads and Metadata
 **Goal**: Every read operation over scalars, vectors, sets, and element IDs works correctly with no memory leaks, and metadata queries return typed Python dataclasses
@@ -109,7 +112,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/? | Not started | - |
+| 1. Foundation | 0/2 | Planned | - |
 | 2. Reads and Metadata | 0/? | Not started | - |
 | 3. Writes and Transactions | 0/? | Not started | - |
 | 4. Queries and Relations | 0/? | Not started | - |
