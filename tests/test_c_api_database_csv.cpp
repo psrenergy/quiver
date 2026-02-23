@@ -3,9 +3,9 @@
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
-#include <quiver/c/options.h>
 #include <quiver/c/database.h>
 #include <quiver/c/element.h>
+#include <quiver/c/options.h>
 #include <sstream>
 
 namespace fs = std::filesystem;

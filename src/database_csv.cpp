@@ -87,8 +87,7 @@ static std::string value_to_csv_string(const Value& value,
 // SeparatorParams: comma separator, no trim, no CR (LF only), quoted linebreaks, auto-quote, double-quote char.
 static rapidcsv::Document make_csv_document() {
     return rapidcsv::Document(
-        "", rapidcsv::LabelParams(0, -1),
-        rapidcsv::SeparatorParams(',', false, false, true, true, '"'));
+        "", rapidcsv::LabelParams(0, -1), rapidcsv::SeparatorParams(',', false, false, true, true, '"'));
 }
 
 // Save a rapidcsv Document to a file path via stringstream intermediary.
@@ -165,8 +164,7 @@ void Database::export_csv(const std::string& collection,
                 if (auto it = type_map.find(csv_columns[i]); it != type_map.end()) {
                     dt = it->second;
                 }
-                doc.SetCell<std::string>(i, row_idx,
-                    value_to_csv_string(row[i], csv_columns[i], dt, options));
+                doc.SetCell<std::string>(i, row_idx, value_to_csv_string(row[i], csv_columns[i], dt, options));
             }
             ++row_idx;
         }
@@ -280,8 +278,7 @@ void Database::export_csv(const std::string& collection,
                 if (auto it = type_map.find(csv_columns[i]); it != type_map.end()) {
                     dt = it->second;
                 }
-                doc.SetCell<std::string>(i, row_idx,
-                    value_to_csv_string(row[i], csv_columns[i], dt, options));
+                doc.SetCell<std::string>(i, row_idx, value_to_csv_string(row[i], csv_columns[i], dt, options));
             }
             ++row_idx;
         }
