@@ -635,8 +635,24 @@ TEST(DatabaseCApi, UpdateScalarStringNullValue) {
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto err = quiver_database_update_scalar_string(db, "Configuration", "string_attribute", 1, nullptr);
-    EXPECT_EQ(err, QUIVER_ERROR);
+    // Create element with a string value
+    quiver_element_t* elem = nullptr;
+    ASSERT_EQ(quiver_element_create(&elem), QUIVER_OK);
+    quiver_element_set_string(elem, "label", "test");
+    quiver_element_set_string(elem, "string_attribute", "hello");
+    int64_t id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Configuration", elem, &id), QUIVER_OK);
+    quiver_element_destroy(elem);
+
+    // Update to NULL -- should succeed
+    auto err = quiver_database_update_scalar_string(db, "Configuration", "string_attribute", id, nullptr);
+    EXPECT_EQ(err, QUIVER_OK);
+
+    // Verify it was set to NULL
+    char* read_val = nullptr;
+    int has_val = 0;
+    ASSERT_EQ(quiver_database_read_scalar_string_by_id(db, "Configuration", "string_attribute", id, &read_val, &has_val), QUIVER_OK);
+    EXPECT_EQ(has_val, 0);
 
     quiver_database_close(db);
 }

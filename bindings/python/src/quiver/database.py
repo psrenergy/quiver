@@ -119,6 +119,141 @@ class Database:
         )
         return out_id[0]
 
+    # -- Write operations -------------------------------------------------------
+
+    def update_element(self, collection: str, id: int, element) -> None:
+        """Update an existing element's scalar attributes."""
+        self._ensure_open()
+        lib = get_lib()
+        check(lib.quiver_database_update_element(
+            self._ptr, collection.encode("utf-8"), id, element._ptr))
+
+    def delete_element(self, collection: str, id: int) -> None:
+        """Delete an element by ID."""
+        self._ensure_open()
+        lib = get_lib()
+        check(lib.quiver_database_delete_element(
+            self._ptr, collection.encode("utf-8"), id))
+
+    # -- Scalar updates ---------------------------------------------------------
+
+    def update_scalar_integer(self, collection, attribute, id, value):
+        """Update an integer scalar attribute for a single element."""
+        self._ensure_open()
+        lib = get_lib()
+        check(lib.quiver_database_update_scalar_integer(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+            id, value))
+
+    def update_scalar_float(self, collection, attribute, id, value):
+        """Update a float scalar attribute for a single element."""
+        self._ensure_open()
+        lib = get_lib()
+        check(lib.quiver_database_update_scalar_float(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+            id, value))
+
+    def update_scalar_string(self, collection, attribute, id, value):
+        """Update a string scalar attribute. Pass None to set NULL."""
+        self._ensure_open()
+        lib = get_lib()
+        c_value = value.encode("utf-8") if value is not None else ffi.NULL
+        check(lib.quiver_database_update_scalar_string(
+            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+            id, c_value))
+
+    # -- Vector updates ---------------------------------------------------------
+
+    def update_vector_integers(self, collection, attribute, id, values):
+        """Replace an integer vector for a single element. Empty list clears."""
+        self._ensure_open()
+        lib = get_lib()
+        if not values:
+            check(lib.quiver_database_update_vector_integers(
+                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+                id, ffi.NULL, 0))
+        else:
+            c_arr = ffi.new("int64_t[]", values)
+            check(lib.quiver_database_update_vector_integers(
+                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+                id, c_arr, len(values)))
+
+    def update_vector_floats(self, collection, attribute, id, values):
+        """Replace a float vector for a single element. Empty list clears."""
+        self._ensure_open()
+        lib = get_lib()
+        if not values:
+            check(lib.quiver_database_update_vector_floats(
+                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+                id, ffi.NULL, 0))
+        else:
+            c_arr = ffi.new("double[]", values)
+            check(lib.quiver_database_update_vector_floats(
+                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+                id, c_arr, len(values)))
+
+    def update_vector_strings(self, collection, attribute, id, values):
+        """Replace a string vector for a single element. Empty list clears."""
+        self._ensure_open()
+        lib = get_lib()
+        if not values:
+            check(lib.quiver_database_update_vector_strings(
+                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+                id, ffi.NULL, 0))
+        else:
+            encoded = [v.encode("utf-8") for v in values]
+            c_strings = [ffi.new("char[]", e) for e in encoded]
+            c_arr = ffi.new("const char*[]", c_strings)
+            check(lib.quiver_database_update_vector_strings(
+                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+                id, c_arr, len(values)))
+
+    # -- Set updates ------------------------------------------------------------
+
+    def update_set_integers(self, collection, attribute, id, values):
+        """Replace an integer set for a single element. Empty list clears."""
+        self._ensure_open()
+        lib = get_lib()
+        if not values:
+            check(lib.quiver_database_update_set_integers(
+                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+                id, ffi.NULL, 0))
+        else:
+            c_arr = ffi.new("int64_t[]", values)
+            check(lib.quiver_database_update_set_integers(
+                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+                id, c_arr, len(values)))
+
+    def update_set_floats(self, collection, attribute, id, values):
+        """Replace a float set for a single element. Empty list clears."""
+        self._ensure_open()
+        lib = get_lib()
+        if not values:
+            check(lib.quiver_database_update_set_floats(
+                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+                id, ffi.NULL, 0))
+        else:
+            c_arr = ffi.new("double[]", values)
+            check(lib.quiver_database_update_set_floats(
+                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+                id, c_arr, len(values)))
+
+    def update_set_strings(self, collection, attribute, id, values):
+        """Replace a string set for a single element. Empty list clears."""
+        self._ensure_open()
+        lib = get_lib()
+        if not values:
+            check(lib.quiver_database_update_set_strings(
+                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+                id, ffi.NULL, 0))
+        else:
+            encoded = [v.encode("utf-8") for v in values]
+            c_strings = [ffi.new("char[]", e) for e in encoded]
+            c_arr = ffi.new("const char*[]", c_strings)
+            check(lib.quiver_database_update_set_strings(
+                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
+                id, c_arr, len(values)))
+
     # -- Scalar reads (bulk) --------------------------------------------------
 
     def read_scalar_integers(self, collection: str, attribute: str) -> list[int]:

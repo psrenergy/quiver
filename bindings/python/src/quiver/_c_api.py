@@ -242,6 +242,42 @@ ffi.cdef("""
         quiver_scalar_metadata_t* metadata, size_t count);
     quiver_error_t quiver_database_free_group_metadata_array(
         quiver_group_metadata_t* metadata, size_t count);
+
+    // Update element
+    quiver_error_t quiver_database_update_element(quiver_database_t* db,
+        const char* collection, int64_t id, const quiver_element_t* element);
+    quiver_error_t quiver_database_delete_element(quiver_database_t* db,
+        const char* collection, int64_t id);
+
+    // Update scalar attributes
+    quiver_error_t quiver_database_update_scalar_integer(quiver_database_t* db,
+        const char* collection, const char* attribute, int64_t id, int64_t value);
+    quiver_error_t quiver_database_update_scalar_float(quiver_database_t* db,
+        const char* collection, const char* attribute, int64_t id, double value);
+    quiver_error_t quiver_database_update_scalar_string(quiver_database_t* db,
+        const char* collection, const char* attribute, int64_t id, const char* value);
+
+    // Update vector attributes
+    quiver_error_t quiver_database_update_vector_integers(quiver_database_t* db,
+        const char* collection, const char* attribute, int64_t id,
+        const int64_t* values, size_t count);
+    quiver_error_t quiver_database_update_vector_floats(quiver_database_t* db,
+        const char* collection, const char* attribute, int64_t id,
+        const double* values, size_t count);
+    quiver_error_t quiver_database_update_vector_strings(quiver_database_t* db,
+        const char* collection, const char* attribute, int64_t id,
+        const char* const* values, size_t count);
+
+    // Update set attributes
+    quiver_error_t quiver_database_update_set_integers(quiver_database_t* db,
+        const char* collection, const char* attribute, int64_t id,
+        const int64_t* values, size_t count);
+    quiver_error_t quiver_database_update_set_floats(quiver_database_t* db,
+        const char* collection, const char* attribute, int64_t id,
+        const double* values, size_t count);
+    quiver_error_t quiver_database_update_set_strings(quiver_database_t* db,
+        const char* collection, const char* attribute, int64_t id,
+        const char* const* values, size_t count);
 """)
 
 _lib = None
