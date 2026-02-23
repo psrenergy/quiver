@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** Reliable, schema-validated SQLite access through a single C++ core with mechanically-derived bindings that feel native in every target language.
-**Current focus:** v0.5 CSV Refactor -- Phase 8 (Library Integration)
+**Current focus:** v0.5 CSV Refactor -- Phase 9 (Header Consolidation)
 
 ## Current Position
 
-Phase: 8 of 9 (Library Integration)
-Plan: 1 of 1 in current phase
-Status: Phase 8 complete
-Last activity: 2026-02-22 -- Completed 08-01-PLAN.md (rapidcsv integration)
+Phase: 9 of 9 (Header Consolidation)
+Plan: 1 of 2 in current phase
+Status: Plan 09-01 complete
+Last activity: 2026-02-22 -- Completed 09-01-PLAN.md (header consolidation)
 
-Progress: [###########.] 85% (11/~13 plans across all milestones)
+Progress: [###########.] 92% (12/~13 plans across all milestones)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11 (4 v0.3 + 6 v0.4 + 1 v0.5)
+- Total plans completed: 12 (4 v0.3 + 6 v0.4 + 2 v0.5)
 - Average duration: ~7 min
-- Total execution time: ~78 min
+- Total execution time: ~85 min
 
 **By Phase (v0.3):**
 
@@ -45,6 +45,7 @@ Progress: [###########.] 85% (11/~13 plans across all milestones)
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 8. Library Integration | 1 | ~8 min | ~8 min |
+| 9. Header Consolidation | 1 | ~7 min | ~7 min |
 
 *Updated after each plan completion*
 
@@ -60,14 +61,15 @@ Recent decisions affecting current work:
 - [v0.5]: SeparatorParams with mHasCR=false forces LF-only line endings on Windows (matching existing test behavior)
 - [v0.5]: make_csv_document() and save_csv_document() extracted as shared helpers for scalar/group export paths
 - [v0.5]: Always SetCell<std::string> to prevent rapidcsv type conversion from altering float formatting
+- [v0.5]: csv.h deleted and types consolidated into options.h at both C and C++ layers
+- [v0.5]: Each .cpp file includes options.h directly (no transitive reliance through database.h)
 
 ### Key Technical Context
 
 - CSV export now uses rapidcsv Document/Save API (csv_escape and write_csv_row deleted)
-- C API CSV options: `quiver_csv_export_options_t` in include/quiver/c/csv.h
-- C API database options: `quiver_database_options_t` in include/quiver/c/options.h
-- Two include sites for csv.h: src/c/database_csv.cpp, tests/test_c_api_database_csv.cpp
-- database.h includes csv.h transitively (needed for Dart ffigen)
+- All option types consolidated: quiver_csv_export_options_t + quiver_database_options_t in include/quiver/c/options.h
+- C++ options: DatabaseOptions alias + CSVExportOptions struct in include/quiver/options.h
+- csv.h files deleted at both layers; all source files updated to include options.h
 - Test counts: 442 C++, 282 C API, 437 Julia, 252 Dart
 
 ### Pending Todos
@@ -81,5 +83,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 08-01-PLAN.md (rapidcsv integration)
+Stopped at: Completed 09-01-PLAN.md (header consolidation)
 Resume file: None

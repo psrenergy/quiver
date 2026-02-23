@@ -79,8 +79,8 @@ Phases execute in numeric order: 8 -> 9
 | 5. C++ Core | v0.4 | 2/2 | Complete | 2026-02-22 |
 | 6. C API | v0.4 | 2/2 | Complete | 2026-02-22 |
 | 7. Bindings | v0.4 | 2/2 | Complete | 2026-02-23 |
-| 8. Library Integration | v0.5 | 0/1 | Not started | - |
-| 9. Header Consolidation | v0.5 | 0/2 | Not started | - |
+| 8. Library Integration | v0.5 | 1/1 | Complete | 2026-02-22 |
+| 9. Header Consolidation | v0.5 | 1/2 | In Progress | - |
 
 ---
 *Roadmap created: 2026-02-22*
