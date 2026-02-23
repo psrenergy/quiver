@@ -638,6 +638,32 @@ TEST(DatabaseCSV, ImportCSV_Scalar_EnumCaseInsensitive) {
     fs::remove(csv_path);
 }
 
+TEST(DatabaseCSV, ImportCSV_Scalar_EnumMultiLanguage) {
+    auto db = make_db();
+
+    // CSV uses Portuguese labels for status
+    auto csv_path = temp_csv("ImportScalarEnumMultiLang");
+    write_csv_file(csv_path.string(),
+                   "sep=,\nlabel,name,status,price,date_created,notes\n"
+                   "Item1,Alpha,Ativo,,,\n"
+                   "Item2,Beta,Inactive,,,\n"
+                   "Item3,Gamma,Inativo,,,\n");
+
+    quiver::CSVImportOptions opts;
+    opts.enum_labels["status"]["en"] = {{"Active", 1}, {"Inactive", 2}};
+    opts.enum_labels["status"]["pt"] = {{"Ativo", 1}, {"Inativo", 2}};
+
+    db.import_csv("Items", "", csv_path.string(), opts);
+
+    auto statuses = db.read_scalar_integers("Items", "status");
+    ASSERT_EQ(statuses.size(), 3u);
+    EXPECT_EQ(statuses[0], 1);  // Ativo -> 1 (pt)
+    EXPECT_EQ(statuses[1], 2);  // Inactive -> 2 (en)
+    EXPECT_EQ(statuses[2], 2);  // Inativo -> 2 (pt)
+
+    fs::remove(csv_path);
+}
+
 TEST(DatabaseCSV, ImportCSV_Scalar_DateTimeFormat) {
     auto db = make_db();
 
