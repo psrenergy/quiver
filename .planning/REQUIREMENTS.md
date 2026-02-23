@@ -14,15 +14,15 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 - [x] **INFRA-03**: DLL/SO loader that resolves libquiver and libquiver_c at runtime with Windows pre-load for dependency chain
 - [x] **INFRA-04**: Error handling via check() function that reads thread-local C API errors and raises Python exceptions
 - [x] **INFRA-05**: String encoding helpers for UTF-8 conversion at the FFI boundary (including nullable strings)
-- [ ] **INFRA-06**: Test runner script (test.bat) matching Julia/Dart pattern with PATH setup
+- [x] **INFRA-06**: Test runner script (test.bat) matching Julia/Dart pattern with PATH setup
 
 ### Lifecycle
 
-- [ ] **LIFE-01**: Database.from_schema() and Database.from_migrations() factory methods wrapping C API
-- [ ] **LIFE-02**: Database.close() with pointer nullification and context manager support (with statement)
-- [ ] **LIFE-03**: Database.path, Database.current_version, Database.is_healthy properties
-- [ ] **LIFE-04**: Database.describe() for schema inspection
-- [ ] **LIFE-05**: Element builder with set() fluent API for integer, float, string, null, and array types
+- [x] **LIFE-01**: Database.from_schema() and Database.from_migrations() factory methods wrapping C API
+- [x] **LIFE-02**: Database.close() with pointer nullification and context manager support (with statement)
+- [x] **LIFE-03**: Database.path, Database.current_version, Database.is_healthy properties
+- [x] **LIFE-04**: Database.describe() for schema inspection
+- [x] **LIFE-05**: Element builder with set() fluent API for integer, float, string, null, and array types
 - [x] **LIFE-06**: quiver.version() returning library version string
 
 ### Read Operations
@@ -120,12 +120,12 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 | INFRA-03 | Phase 1 | Complete |
 | INFRA-04 | Phase 1 | Complete |
 | INFRA-05 | Phase 1 | Complete |
-| INFRA-06 | Phase 1 | Pending |
-| LIFE-01 | Phase 1 | Pending |
-| LIFE-02 | Phase 1 | Pending |
-| LIFE-03 | Phase 1 | Pending |
-| LIFE-04 | Phase 1 | Pending |
-| LIFE-05 | Phase 1 | Pending |
+| INFRA-06 | Phase 1 | Complete |
+| LIFE-01 | Phase 1 | Complete |
+| LIFE-02 | Phase 1 | Complete |
+| LIFE-03 | Phase 1 | Complete |
+| LIFE-04 | Phase 1 | Complete |
+| LIFE-05 | Phase 1 | Complete |
 | LIFE-06 | Phase 1 | Complete |
 | READ-01 | Phase 2 | Pending |
 | READ-02 | Phase 2 | Pending |
