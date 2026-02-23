@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from quiver import Database
+from quiver import Database, Element
 
 
 @pytest.fixture
@@ -33,8 +33,36 @@ def migrations_path(schemas_path: Path) -> Path:
 
 
 @pytest.fixture
+def collections_schema_path(schemas_path: Path) -> Path:
+    """Return the path to the collections test schema."""
+    return schemas_path / "valid" / "collections.sql"
+
+
+@pytest.fixture
+def relations_schema_path(schemas_path: Path) -> Path:
+    """Return the path to the relations test schema."""
+    return schemas_path / "valid" / "relations.sql"
+
+
+@pytest.fixture
 def db(valid_schema_path: Path, tmp_path: Path) -> Generator[Database, None, None]:
     """Create a test database and close it after the test."""
     database = Database.from_schema(str(tmp_path / "test.db"), str(valid_schema_path))
+    yield database
+    database.close()
+
+
+@pytest.fixture
+def collections_db(collections_schema_path: Path, tmp_path: Path) -> Generator[Database, None, None]:
+    """Create a test database with the collections schema."""
+    database = Database.from_schema(str(tmp_path / "collections.db"), str(collections_schema_path))
+    yield database
+    database.close()
+
+
+@pytest.fixture
+def relations_db(relations_schema_path: Path, tmp_path: Path) -> Generator[Database, None, None]:
+    """Create a test database with the relations schema."""
+    database = Database.from_schema(str(tmp_path / "relations.db"), str(relations_schema_path))
     yield database
     database.close()

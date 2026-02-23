@@ -1,8 +1,16 @@
 from quiver.database import Database
 from quiver.element import Element
 from quiver.exceptions import QuiverError
+from quiver.metadata import GroupMetadata, ScalarMetadata
 
-__all__ = ["Database", "Element", "QuiverError", "version"]
+__all__ = [
+    "Database",
+    "Element",
+    "GroupMetadata",
+    "QuiverError",
+    "ScalarMetadata",
+    "version",
+]
 
 
 def version() -> str:

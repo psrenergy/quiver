@@ -88,6 +88,155 @@ ffi.cdef("""
 
     quiver_error_t quiver_element_to_string(quiver_element_t* element, char** out_string);
     quiver_error_t quiver_element_free_string(char* str);
+
+    // Data type enum
+    typedef enum {
+        QUIVER_DATA_TYPE_INTEGER = 0,
+        QUIVER_DATA_TYPE_FLOAT = 1,
+        QUIVER_DATA_TYPE_STRING = 2,
+        QUIVER_DATA_TYPE_DATE_TIME = 3,
+        QUIVER_DATA_TYPE_NULL = 4,
+    } quiver_data_type_t;
+
+    // Read scalar attributes
+    quiver_error_t quiver_database_read_scalar_integers(quiver_database_t* db,
+        const char* collection, const char* attribute,
+        int64_t** out_values, size_t* out_count);
+    quiver_error_t quiver_database_read_scalar_floats(quiver_database_t* db,
+        const char* collection, const char* attribute,
+        double** out_values, size_t* out_count);
+    quiver_error_t quiver_database_read_scalar_strings(quiver_database_t* db,
+        const char* collection, const char* attribute,
+        char*** out_values, size_t* out_count);
+
+    // Read scalar by ID
+    quiver_error_t quiver_database_read_scalar_integer_by_id(quiver_database_t* db,
+        const char* collection, const char* attribute, int64_t id,
+        int64_t* out_value, int* out_has_value);
+    quiver_error_t quiver_database_read_scalar_float_by_id(quiver_database_t* db,
+        const char* collection, const char* attribute, int64_t id,
+        double* out_value, int* out_has_value);
+    quiver_error_t quiver_database_read_scalar_string_by_id(quiver_database_t* db,
+        const char* collection, const char* attribute, int64_t id,
+        char** out_value, int* out_has_value);
+
+    // Read vector attributes (bulk)
+    quiver_error_t quiver_database_read_vector_integers(quiver_database_t* db,
+        const char* collection, const char* attribute,
+        int64_t*** out_vectors, size_t** out_sizes, size_t* out_count);
+    quiver_error_t quiver_database_read_vector_floats(quiver_database_t* db,
+        const char* collection, const char* attribute,
+        double*** out_vectors, size_t** out_sizes, size_t* out_count);
+    quiver_error_t quiver_database_read_vector_strings(quiver_database_t* db,
+        const char* collection, const char* attribute,
+        char**** out_vectors, size_t** out_sizes, size_t* out_count);
+
+    // Read vector by ID
+    quiver_error_t quiver_database_read_vector_integers_by_id(quiver_database_t* db,
+        const char* collection, const char* attribute, int64_t id,
+        int64_t** out_values, size_t* out_count);
+    quiver_error_t quiver_database_read_vector_floats_by_id(quiver_database_t* db,
+        const char* collection, const char* attribute, int64_t id,
+        double** out_values, size_t* out_count);
+    quiver_error_t quiver_database_read_vector_strings_by_id(quiver_database_t* db,
+        const char* collection, const char* attribute, int64_t id,
+        char*** out_values, size_t* out_count);
+
+    // Read set attributes (bulk)
+    quiver_error_t quiver_database_read_set_integers(quiver_database_t* db,
+        const char* collection, const char* attribute,
+        int64_t*** out_sets, size_t** out_sizes, size_t* out_count);
+    quiver_error_t quiver_database_read_set_floats(quiver_database_t* db,
+        const char* collection, const char* attribute,
+        double*** out_sets, size_t** out_sizes, size_t* out_count);
+    quiver_error_t quiver_database_read_set_strings(quiver_database_t* db,
+        const char* collection, const char* attribute,
+        char**** out_sets, size_t** out_sizes, size_t* out_count);
+
+    // Read set by ID
+    quiver_error_t quiver_database_read_set_integers_by_id(quiver_database_t* db,
+        const char* collection, const char* attribute, int64_t id,
+        int64_t** out_values, size_t* out_count);
+    quiver_error_t quiver_database_read_set_floats_by_id(quiver_database_t* db,
+        const char* collection, const char* attribute, int64_t id,
+        double** out_values, size_t* out_count);
+    quiver_error_t quiver_database_read_set_strings_by_id(quiver_database_t* db,
+        const char* collection, const char* attribute, int64_t id,
+        char*** out_values, size_t* out_count);
+
+    // Read element IDs
+    quiver_error_t quiver_database_read_element_ids(quiver_database_t* db,
+        const char* collection, int64_t** out_ids, size_t* out_count);
+
+    // Read scalar relation
+    quiver_error_t quiver_database_read_scalar_relation(quiver_database_t* db,
+        const char* collection, const char* attribute,
+        char*** out_values, size_t* out_count);
+
+    // Free functions for read results
+    quiver_error_t quiver_database_free_integer_array(int64_t* values);
+    quiver_error_t quiver_database_free_float_array(double* values);
+    quiver_error_t quiver_database_free_string_array(char** values, size_t count);
+    quiver_error_t quiver_database_free_integer_vectors(int64_t** vectors, size_t* sizes, size_t count);
+    quiver_error_t quiver_database_free_float_vectors(double** vectors, size_t* sizes, size_t count);
+    quiver_error_t quiver_database_free_string_vectors(char*** vectors, size_t* sizes, size_t count);
+
+    // Metadata struct types
+    typedef struct {
+        const char* name;
+        quiver_data_type_t data_type;
+        int not_null;
+        int primary_key;
+        const char* default_value;
+        int is_foreign_key;
+        const char* references_collection;
+        const char* references_column;
+    } quiver_scalar_metadata_t;
+
+    typedef struct {
+        const char* group_name;
+        const char* dimension_column;
+        quiver_scalar_metadata_t* value_columns;
+        size_t value_column_count;
+    } quiver_group_metadata_t;
+
+    // Metadata queries
+    quiver_error_t quiver_database_get_scalar_metadata(quiver_database_t* db,
+        const char* collection, const char* attribute,
+        quiver_scalar_metadata_t* out_metadata);
+    quiver_error_t quiver_database_get_vector_metadata(quiver_database_t* db,
+        const char* collection, const char* group_name,
+        quiver_group_metadata_t* out_metadata);
+    quiver_error_t quiver_database_get_set_metadata(quiver_database_t* db,
+        const char* collection, const char* group_name,
+        quiver_group_metadata_t* out_metadata);
+    quiver_error_t quiver_database_get_time_series_metadata(quiver_database_t* db,
+        const char* collection, const char* group_name,
+        quiver_group_metadata_t* out_metadata);
+
+    // Metadata free
+    quiver_error_t quiver_database_free_scalar_metadata(quiver_scalar_metadata_t* metadata);
+    quiver_error_t quiver_database_free_group_metadata(quiver_group_metadata_t* metadata);
+
+    // Metadata list
+    quiver_error_t quiver_database_list_scalar_attributes(quiver_database_t* db,
+        const char* collection,
+        quiver_scalar_metadata_t** out_metadata, size_t* out_count);
+    quiver_error_t quiver_database_list_vector_groups(quiver_database_t* db,
+        const char* collection,
+        quiver_group_metadata_t** out_metadata, size_t* out_count);
+    quiver_error_t quiver_database_list_set_groups(quiver_database_t* db,
+        const char* collection,
+        quiver_group_metadata_t** out_metadata, size_t* out_count);
+    quiver_error_t quiver_database_list_time_series_groups(quiver_database_t* db,
+        const char* collection,
+        quiver_group_metadata_t** out_metadata, size_t* out_count);
+
+    // Metadata array free
+    quiver_error_t quiver_database_free_scalar_metadata_array(
+        quiver_scalar_metadata_t* metadata, size_t count);
+    quiver_error_t quiver_database_free_group_metadata_array(
+        quiver_group_metadata_t* metadata, size_t count);
 """)
 
 _lib = None

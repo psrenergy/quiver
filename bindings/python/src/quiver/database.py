@@ -106,6 +106,18 @@ class Database:
         lib = get_lib()
         check(lib.quiver_database_describe(self._ptr))
 
+    def create_element(self, collection: str, element) -> int:
+        """Create a new element. Returns the new element ID."""
+        self._ensure_open()
+        lib = get_lib()
+        out_id = ffi.new("int64_t*")
+        check(
+            lib.quiver_database_create_element(
+                self._ptr, collection.encode("utf-8"), element._ptr, out_id,
+            )
+        )
+        return out_id[0]
+
     def __repr__(self) -> str:
         if self._closed:
             return "Database(closed)"
