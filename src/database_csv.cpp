@@ -7,34 +7,10 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <rapidcsv.h>
 #include <sstream>
 
 namespace quiver {
-
-// RFC 4180 field escaping: if field contains comma, double-quote, newline,
-// or carriage return, wrap in double quotes and double any internal quotes.
-static std::string csv_escape(const std::string& field) {
-    bool needs_quoting = false;
-    for (char c : field) {
-        if (c == ',' || c == '"' || c == '\n' || c == '\r') {
-            needs_quoting = true;
-            break;
-        }
-    }
-    if (!needs_quoting) {
-        return field;
-    }
-    std::string escaped = "\"";
-    for (char c : field) {
-        if (c == '"') {
-            escaped += "\"\"";
-        } else {
-            escaped += c;
-        }
-    }
-    escaped += "\"";
-    return escaped;
-}
 
 // Cross-platform ISO 8601 parser using std::get_time (not strptime).
 // Tries "YYYY-MM-DDTHH:MM:SS" first, then "YYYY-MM-DD HH:MM:SS".
@@ -65,8 +41,9 @@ static std::string format_datetime(const std::string& raw_value, const std::stri
 }
 
 // Convert a Value to its CSV string representation.
-// NULL -> empty string (unquoted), integers check enum_labels,
+// NULL -> empty string, integers check enum_labels,
 // floats use %g for clean output, strings apply DateTime formatting.
+// rapidcsv handles CSV escaping/quoting via auto-quote.
 static std::string value_to_csv_string(const Value& value,
                                        const std::string& column_name,
                                        DataType data_type,
@@ -81,7 +58,7 @@ static std::string value_to_csv_string(const Value& value,
         auto int_val = std::get<int64_t>(value);
         if (auto attr_it = options.enum_labels.find(column_name); attr_it != options.enum_labels.end()) {
             if (auto val_it = attr_it->second.find(int_val); val_it != attr_it->second.end()) {
-                return csv_escape(val_it->second);
+                return val_it->second;
             }
         }
         return std::to_string(int_val);
@@ -98,23 +75,33 @@ static std::string value_to_csv_string(const Value& value,
     if (std::holds_alternative<std::string>(value)) {
         const auto& str_val = std::get<std::string>(value);
         if (data_type == DataType::DateTime && !options.date_time_format.empty()) {
-            return csv_escape(format_datetime(str_val, options.date_time_format));
+            return format_datetime(str_val, options.date_time_format);
         }
-        return csv_escape(str_val);
+        return str_val;
     }
 
     return "";
 }
 
-// Join fields with commas and append LF.
-static void write_csv_row(std::ofstream& file, const std::vector<std::string>& fields) {
-    for (size_t i = 0; i < fields.size(); ++i) {
-        if (i > 0) {
-            file << ',';
-        }
-        file << fields[i];
+// Build a rapidcsv Document with column headers enabled and LF-only line endings.
+// SeparatorParams: comma separator, no trim, no CR (LF only), quoted linebreaks, auto-quote, double-quote char.
+static rapidcsv::Document make_csv_document() {
+    return rapidcsv::Document(
+        "", rapidcsv::LabelParams(0, -1),
+        rapidcsv::SeparatorParams(',', false, false, true, true, '"'));
+}
+
+// Save a rapidcsv Document to a file path via stringstream intermediary.
+// Uses binary mode to prevent Windows CRLF conversion.
+static void save_csv_document(rapidcsv::Document& doc, const std::string& path) {
+    std::ostringstream oss;
+    doc.Save(oss);
+
+    std::ofstream file(path, std::ios::binary);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to export_csv: could not open file: " + path);
     }
-    file << '\n';
+    file << oss.str();
 }
 
 void Database::export_csv(const std::string& collection,
@@ -127,12 +114,6 @@ void Database::export_csv(const std::string& collection,
     auto parent = fs::path(path).parent_path();
     if (!parent.empty()) {
         fs::create_directories(parent);
-    }
-
-    // Open in binary mode to prevent Windows text-mode CRLF conversion
-    std::ofstream file(path, std::ios::binary);
-    if (!file.is_open()) {
-        throw std::runtime_error("Failed to export_csv: could not open file: " + path);
     }
 
     if (group.empty()) {
@@ -158,13 +139,13 @@ void Database::export_csv(const std::string& collection,
             type_map[attr.name] = attr.data_type;
         }
 
-        // Write header row
-        std::vector<std::string> header_fields;
-        header_fields.reserve(csv_columns.size());
-        for (const auto& col : csv_columns) {
-            header_fields.push_back(csv_escape(col));
+        // Build rapidcsv Document
+        auto doc = make_csv_document();
+
+        // Set column names
+        for (size_t i = 0; i < csv_columns.size(); ++i) {
+            doc.SetColumnName(i, csv_columns[i]);
         }
-        write_csv_row(file, header_fields);
 
         // Build SELECT query with columns in schema order
         std::string select_cols;
@@ -176,19 +157,22 @@ void Database::export_csv(const std::string& collection,
 
         auto data_result = execute("SELECT " + select_cols + " FROM " + collection + " ORDER BY rowid");
 
-        // Write data rows
+        // Populate document cells
+        size_t row_idx = 0;
         for (const auto& row : data_result) {
-            std::vector<std::string> fields;
-            fields.reserve(csv_columns.size());
             for (size_t i = 0; i < csv_columns.size(); ++i) {
                 DataType dt = DataType::Text;
                 if (auto it = type_map.find(csv_columns[i]); it != type_map.end()) {
                     dt = it->second;
                 }
-                fields.push_back(value_to_csv_string(row[i], csv_columns[i], dt, options));
+                doc.SetCell<std::string>(i, row_idx,
+                    value_to_csv_string(row[i], csv_columns[i], dt, options));
             }
-            write_csv_row(file, fields);
+            ++row_idx;
         }
+
+        // Save to file via stringstream
+        save_csv_document(doc, path);
     } else {
         // Group export
         impl_->require_collection(collection, "export_csv");
@@ -259,13 +243,13 @@ void Database::export_csv(const std::string& collection,
             }
         }
 
-        // Write header row
-        std::vector<std::string> header_fields;
-        header_fields.reserve(csv_columns.size());
-        for (const auto& col : csv_columns) {
-            header_fields.push_back(csv_escape(col));
+        // Build rapidcsv Document
+        auto doc = make_csv_document();
+
+        // Set column names
+        for (size_t i = 0; i < csv_columns.size(); ++i) {
+            doc.SetColumnName(i, csv_columns[i]);
         }
-        write_csv_row(file, header_fields);
 
         // Build SELECT query: C.label + group data columns with JOIN
         std::string select_cols = "C.label";
@@ -288,19 +272,22 @@ void Database::export_csv(const std::string& collection,
 
         auto data_result = execute(query);
 
-        // Write data rows
+        // Populate document cells
+        size_t row_idx = 0;
         for (const auto& row : data_result) {
-            std::vector<std::string> fields;
-            fields.reserve(csv_columns.size());
             for (size_t i = 0; i < csv_columns.size(); ++i) {
                 DataType dt = DataType::Text;
                 if (auto it = type_map.find(csv_columns[i]); it != type_map.end()) {
                     dt = it->second;
                 }
-                fields.push_back(value_to_csv_string(row[i], csv_columns[i], dt, options));
+                doc.SetCell<std::string>(i, row_idx,
+                    value_to_csv_string(row[i], csv_columns[i], dt, options));
             }
-            write_csv_row(file, fields);
+            ++row_idx;
         }
+
+        // Save to file via stringstream
+        save_csv_document(doc, path);
     }
 }
 
