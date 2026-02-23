@@ -33,6 +33,7 @@ src/c/                    # C API implementation
   database_transaction.cpp # Transaction control (begin, commit, rollback, in_transaction)
 bindings/julia/           # Julia bindings (Quiver.jl)
 bindings/dart/            # Dart bindings (quiver)
+bindings/python/          # Python bindings (quiver) - CFFI ABI-mode
 tests/                    # C++ tests
 tests/schemas/            # Shared SQL schemas for all tests
 ```
@@ -73,6 +74,7 @@ scripts/test-all.bat             # Run all tests (assumes already built)
 ./build/bin/quiver_c_tests.exe    # C API tests
 bindings/julia/test/test.bat      # Julia tests
 bindings/dart/test/test.bat       # Dart tests
+bindings/python/test/test.bat     # Python tests
 ```
 
 ### Benchmark
@@ -387,39 +389,40 @@ lua.run(R"(
 
 ### Transformation Rules
 
-| From C++ | To C API | To Julia | To Dart | To Lua |
-|----------|----------|----------|---------|--------|
-| `method_name` | `quiver_database_method_name` | `method_name` (+ `!` if mutating) | `methodName` | `method_name` |
-| `Database::from_schema()` | `quiver_database_from_schema()` | `from_schema()` | `Database.fromSchema()` | N/A |
+| From C++ | To C API | To Julia | To Dart | To Python | To Lua |
+|----------|----------|----------|---------|-----------|--------|
+| `method_name` | `quiver_database_method_name` | `method_name` (+ `!` if mutating) | `methodName` | `method_name` | `method_name` |
+| `Database::from_schema()` | `quiver_database_from_schema()` | `from_schema()` | `Database.fromSchema()` | `Database.from_schema()` | N/A |
 
 - **C++ to C API:** Prefix `quiver_database_` to the C++ method name. Example: `create_element` -> `quiver_database_create_element`
 - **C++ to Julia:** Same name. Add `!` suffix for mutating operations (create, update, delete). Example: `create_element` -> `create_element!`, `read_scalar_integers` -> `read_scalar_integers`
 - **C++ to Dart:** Convert `snake_case` to `camelCase`. Example: `read_scalar_integers` -> `readScalarIntegers`. Factory methods use Dart named constructors: `from_schema` -> `Database.fromSchema()`
+- **C++ to Python:** Same `snake_case` name. Factory methods are `@staticmethod`: `from_schema` -> `Database.from_schema()`. Properties are regular methods (not `@property`).
 - **C++ to Lua:** Same name exactly (1:1 match). Example: `read_scalar_integers` -> `read_scalar_integers`. Lua has no lifecycle methods (open/close) -- database is provided as `db` userdata by LuaRunner.
 
 ### Representative Cross-Layer Examples
 
-| Category | C++ | C API | Julia | Dart | Lua |
-|----------|-----|-------|-------|------|-----|
-| Factory | `Database::from_schema()` | `quiver_database_from_schema()` | `from_schema()` | `Database.fromSchema()` | N/A |
-| Transaction | `begin_transaction()` | `quiver_database_begin_transaction()` | `begin_transaction!()` | `beginTransaction()` | `begin_transaction()` |
-| Transaction | `commit()` | `quiver_database_commit()` | `commit!()` | `commit()` | `commit()` |
-| Transaction | `rollback()` | `quiver_database_rollback()` | `rollback!()` | `rollback()` | `rollback()` |
-| Transaction | `in_transaction()` | `quiver_database_in_transaction()` | `in_transaction()` | `inTransaction()` | `in_transaction()` |
-| Create | `create_element()` | `quiver_database_create_element()` | `create_element!()` | `createElement()` | `create_element()` |
-| Read scalar | `read_scalar_integers()` | `quiver_database_read_scalar_integers()` | `read_scalar_integers()` | `readScalarIntegers()` | `read_scalar_integers()` |
-| Read by ID | `read_scalar_integer_by_id()` | `quiver_database_read_scalar_integer_by_id()` | `read_scalar_integer_by_id()` | `readScalarIntegerById()` | `read_scalar_integer_by_id()` |
-| Update scalar | `update_scalar_integer()` | `quiver_database_update_scalar_integer()` | `update_scalar_integer!()` | `updateScalarInteger()` | `update_scalar_integer()` |
-| Update vector | `update_vector_strings()` | `quiver_database_update_vector_strings()` | `update_vector_strings!()` | `updateVectorStrings()` | `update_vector_strings()` |
-| Delete | `delete_element()` | `quiver_database_delete_element()` | `delete_element!()` | `deleteElement()` | `delete_element()` |
-| Metadata | `get_scalar_metadata()` | `quiver_database_get_scalar_metadata()` | `get_scalar_metadata()` | `getScalarMetadata()` | `get_scalar_metadata()` |
-| List groups | `list_vector_groups()` | `quiver_database_list_vector_groups()` | `list_vector_groups()` | `listVectorGroups()` | `list_vector_groups()` |
-| Time series read | `read_time_series_group()` | `quiver_database_read_time_series_group()` | `read_time_series_group()` | `readTimeSeriesGroup()` | `read_time_series_group()` |
-| Time series update | `update_time_series_group()` | `quiver_database_update_time_series_group()` | `update_time_series_group!()` | `updateTimeSeriesGroup()` | `update_time_series_group()` |
-| Query | `query_string()` | `quiver_database_query_string()` | `query_string()` | `queryString()` | `query_string()` |
-| Relations | `update_scalar_relation()` | `quiver_database_update_scalar_relation()` | `update_scalar_relation!()` | `updateScalarRelation()` | `update_scalar_relation()` |
-| CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | `export_csv()` |
-| Describe | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |
+| Category | C++ | C API | Julia | Dart | Python | Lua |
+|----------|-----|-------|-------|------|--------|-----|
+| Factory | `Database::from_schema()` | `quiver_database_from_schema()` | `from_schema()` | `Database.fromSchema()` | `Database.from_schema()` | N/A |
+| Transaction | `begin_transaction()` | `quiver_database_begin_transaction()` | `begin_transaction!()` | `beginTransaction()` | `begin_transaction()` | `begin_transaction()` |
+| Transaction | `commit()` | `quiver_database_commit()` | `commit!()` | `commit()` | `commit()` | `commit()` |
+| Transaction | `rollback()` | `quiver_database_rollback()` | `rollback!()` | `rollback()` | `rollback()` | `rollback()` |
+| Transaction | `in_transaction()` | `quiver_database_in_transaction()` | `in_transaction()` | `inTransaction()` | `in_transaction()` | `in_transaction()` |
+| Create | `create_element()` | `quiver_database_create_element()` | `create_element!()` | `createElement()` | `create_element()` | `create_element()` |
+| Read scalar | `read_scalar_integers()` | `quiver_database_read_scalar_integers()` | `read_scalar_integers()` | `readScalarIntegers()` | `read_scalar_integers()` | `read_scalar_integers()` |
+| Read by ID | `read_scalar_integer_by_id()` | `quiver_database_read_scalar_integer_by_id()` | `read_scalar_integer_by_id()` | `readScalarIntegerById()` | `read_scalar_integer_by_id()` | `read_scalar_integer_by_id()` |
+| Update scalar | `update_scalar_integer()` | `quiver_database_update_scalar_integer()` | `update_scalar_integer!()` | `updateScalarInteger()` | `update_scalar_integer()` | `update_scalar_integer()` |
+| Update vector | `update_vector_strings()` | `quiver_database_update_vector_strings()` | `update_vector_strings!()` | `updateVectorStrings()` | `update_vector_strings()` | `update_vector_strings()` |
+| Delete | `delete_element()` | `quiver_database_delete_element()` | `delete_element!()` | `deleteElement()` | `delete_element()` | `delete_element()` |
+| Metadata | `get_scalar_metadata()` | `quiver_database_get_scalar_metadata()` | `get_scalar_metadata()` | `getScalarMetadata()` | `get_scalar_metadata()` | `get_scalar_metadata()` |
+| List groups | `list_vector_groups()` | `quiver_database_list_vector_groups()` | `list_vector_groups()` | `listVectorGroups()` | `list_vector_groups()` | `list_vector_groups()` |
+| Time series read | `read_time_series_group()` | `quiver_database_read_time_series_group()` | `read_time_series_group()` | `readTimeSeriesGroup()` | `read_time_series_group()` | `read_time_series_group()` |
+| Time series update | `update_time_series_group()` | `quiver_database_update_time_series_group()` | `update_time_series_group!()` | `updateTimeSeriesGroup()` | `update_time_series_group()` | `update_time_series_group()` |
+| Query | `query_string()` | `quiver_database_query_string()` | `query_string()` | `queryString()` | `query_string()` | `query_string()` |
+| Relations | `update_scalar_relation()` | `quiver_database_update_scalar_relation()` | `update_scalar_relation!()` | `updateScalarRelation()` | `update_scalar_relation()` | `update_scalar_relation()` |
+| CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | `export_csv()` | `export_csv()` |
+| Describe | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` | `describe()` |
 
 The transformation rules are mechanical. Given any C++ method name, you can derive the equivalent in any layer without consulting a lookup table.
 
@@ -464,6 +467,7 @@ When C API changes, regenerate:
 ```bash
 bindings/julia/generator/generator.bat   # Julia
 bindings/dart/generator/generator.bat    # Dart
+bindings/python/generator/generator.bat  # Python
 ```
 
 ### Julia Notes
@@ -476,3 +480,10 @@ bindings/dart/generator/generator.bat    # Dart
 - `libquiver_c.dll` depends on `libquiver.dll` - both must be in PATH
 - test.bat handles PATH setup automatically
 - When C API struct layouts change, clear `.dart_tool/hooks_runner/` and `.dart_tool/lib/` to force a fresh DLL rebuild
+
+### Python Notes
+- Uses CFFI ABI-mode (no compiler required at install time)
+- `_loader.py` pre-loads `libquiver.dll` on Windows for dependency chain resolution
+- `_c_api.py` contains hand-written CFFI cdef declarations (generator output in `_declarations.py` for reference)
+- Properties are regular methods, not `@property` (per design decision)
+- test.bat prepends `build/bin/` to PATH for DLL discovery
