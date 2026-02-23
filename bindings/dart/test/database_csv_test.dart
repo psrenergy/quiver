@@ -89,7 +89,10 @@ void main() {
           'status': 2,
         });
 
-        db.exportCSV('Items', '', csvPath,
+        db.exportCSV(
+          'Items',
+          '',
+          csvPath,
           enumLabels: {
             'status': {1: 'Active', 2: 'Inactive'},
           },
@@ -119,7 +122,10 @@ void main() {
           'date_created': '2024-01-15T10:30:00',
         });
 
-        db.exportCSV('Items', '', csvPath,
+        db.exportCSV(
+          'Items',
+          '',
+          csvPath,
           dateTimeFormat: '%Y/%m/%d',
         );
         final content = File(csvPath).readAsStringSync();
@@ -151,7 +157,10 @@ void main() {
           'date_created': '2024-02-20T08:00:00',
         });
 
-        db.exportCSV('Items', '', csvPath,
+        db.exportCSV(
+          'Items',
+          '',
+          csvPath,
           enumLabels: {
             'status': {1: 'Active', 2: 'Inactive'},
           },

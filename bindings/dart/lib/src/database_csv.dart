@@ -25,8 +25,7 @@ extension DatabaseCSV on Database {
       final optsPtr = arena<quiver_csv_export_options_t>();
 
       // date_time_format: empty string means no formatting
-      optsPtr.ref.date_time_format =
-          (dateTimeFormat ?? '').toNativeUtf8(allocator: arena).cast();
+      optsPtr.ref.date_time_format = (dateTimeFormat ?? '').toNativeUtf8(allocator: arena).cast();
 
       if (enumLabels != null && enumLabels.isNotEmpty) {
         final attrCount = enumLabels.length;
@@ -45,14 +44,12 @@ extension DatabaseCSV on Database {
         var attrIdx = 0;
         var entryIdx = 0;
         for (final attr in enumLabels.entries) {
-          attrNames[attrIdx] =
-              attr.key.toNativeUtf8(allocator: arena).cast();
+          attrNames[attrIdx] = attr.key.toNativeUtf8(allocator: arena).cast();
           entryCounts[attrIdx] = attr.value.length;
 
           for (final entry in attr.value.entries) {
             allValues[entryIdx] = entry.key;
-            allLabels[entryIdx] =
-                entry.value.toNativeUtf8(allocator: arena).cast();
+            allLabels[entryIdx] = entry.value.toNativeUtf8(allocator: arena).cast();
             entryIdx++;
           }
           attrIdx++;
