@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** Consistent, type-safe database operations across multiple languages through a single C++ implementation
-**Current focus:** Phase 2 - Reads and Metadata
+**Current focus:** Phase 3 - Writes and Transactions
 
 ## Current Position
 
-Phase: 2 of 7 (Reads and Metadata) -- COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase Complete
-Last activity: 2026-02-23 — Completed 02-02-PLAN.md (Vector/set reads, metadata get/list)
+Phase: 3 of 7 (Writes and Transactions)
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-23 — Completed 03-01-PLAN.md (Python write operations)
 
-Progress: [███░░░░░░░] 28%
+Progress: [████░░░░░░] 35%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 4min
-- Total execution time: 16min
+- Total plans completed: 5
+- Average duration: 5min
+- Total execution time: 25min
 
 **By Phase:**
 
@@ -29,9 +29,10 @@ Progress: [███░░░░░░░] 28%
 |-------|-------|-------|----------|
 | 01-foundation | 2 | 6min | 3min |
 | 02-reads-and-metadata | 2 | 10min | 5min |
+| 03-writes-and-transactions | 1 | 9min | 9min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (4min), 01-02 (2min), 02-01 (6min), 02-02 (4min)
+- Last 5 plans: 01-02 (2min), 02-01 (6min), 02-02 (4min), 03-01 (9min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -58,6 +59,7 @@ Recent decisions affecting current work:
 - [02-02]: Bulk vector/set reads skip elements with no data (matches C++ NULL skipping behavior)
 - [02-02]: list_* methods return full metadata objects (not just names) -- enables Phase 6 convenience methods
 - [02-02]: _parse_scalar_metadata/_parse_group_metadata are module-level helpers
+- [03-01]: C API update_scalar_string now accepts NULL to set column to NULL (behavioral change, test updated)
 
 ### Pending Todos
 
@@ -71,5 +73,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 02-02-PLAN.md (Phase 2 complete)
-Resume file: .planning/phases/03-writes-and-transactions/03-01-PLAN.md
+Stopped at: Completed 03-01-PLAN.md
+Resume file: .planning/phases/03-writes-and-transactions/03-02-PLAN.md

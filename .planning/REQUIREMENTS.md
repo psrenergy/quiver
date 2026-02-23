@@ -38,13 +38,13 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 
 ### Write Operations
 
-- [ ] **WRITE-01**: create_element wrapping C API with Element parameter and returned ID
-- [ ] **WRITE-02**: update_element wrapping C API with Element parameter
-- [ ] **WRITE-03**: delete_element wrapping C API
-- [ ] **WRITE-04**: update_scalar_integer/float/string for individual scalar updates
-- [ ] **WRITE-05**: update_vector_integers/floats/strings for vector replacement
-- [ ] **WRITE-06**: update_set_integers/floats/strings for set replacement
-- [ ] **WRITE-07**: update_scalar_relation for relation updates
+- [x] **WRITE-01**: create_element wrapping C API with Element parameter and returned ID
+- [x] **WRITE-02**: update_element wrapping C API with Element parameter
+- [x] **WRITE-03**: delete_element wrapping C API
+- [x] **WRITE-04**: update_scalar_integer/float/string for individual scalar updates
+- [x] **WRITE-05**: update_vector_integers/floats/strings for vector replacement
+- [x] **WRITE-06**: update_set_integers/floats/strings for set replacement
+- [x] **WRITE-07**: update_scalar_relation for relation updates
 
 ### Transactions
 
@@ -138,13 +138,13 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 | META-01 | Phase 2 | Complete |
 | META-02 | Phase 2 | Complete |
 | META-03 | Phase 2 | Complete |
-| WRITE-01 | Phase 3 | Pending |
-| WRITE-02 | Phase 3 | Pending |
-| WRITE-03 | Phase 3 | Pending |
-| WRITE-04 | Phase 3 | Pending |
-| WRITE-05 | Phase 3 | Pending |
-| WRITE-06 | Phase 3 | Pending |
-| WRITE-07 | Phase 3 | Pending |
+| WRITE-01 | Phase 3 | Complete |
+| WRITE-02 | Phase 3 | Complete |
+| WRITE-03 | Phase 3 | Complete |
+| WRITE-04 | Phase 3 | Complete |
+| WRITE-05 | Phase 3 | Complete |
+| WRITE-06 | Phase 3 | Complete |
+| WRITE-07 | Phase 3 | Complete |
 | TXN-01 | Phase 3 | Pending |
 | TXN-02 | Phase 3 | Pending |
 | QUERY-01 | Phase 4 | Pending |
