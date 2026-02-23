@@ -8,12 +8,11 @@ SQLite wrapper library with C++ core, C API for FFI, and language bindings (Juli
 include/quiver/           # C++ public headers
   database.h              # Database class - main API
   attribute_metadata.h    # ScalarMetadata, GroupMetadata types
-  csv.h                   # CSVExportOptions struct and default factory
+  options.h               # DatabaseOptions, CSVExportOptions types and factories
   element.h               # Element builder for create operations
   lua_runner.h            # Lua scripting support
 include/quiver/c/         # C API headers (for FFI)
-  options.h               # Canonical DatabaseOptions/LogLevel types (shared by C++ and C)
-  csv.h                   # quiver_csv_export_options_t struct and default factory
+  options.h               # All option types: LogLevel, DatabaseOptions, CSVExportOptions
   database.h
   element.h
   lua_runner.h
