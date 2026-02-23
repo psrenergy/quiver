@@ -1,7 +1,7 @@
 part of 'database.dart';
 
 /// Helper to populate a [quiver_csv_options_t] from Dart maps.
-void _fillCsvOptions(
+void _fillCSVOptions(
   Pointer<quiver_csv_options_t> optsPtr,
   Arena arena, {
   Map<String, Map<String, Map<String, int>>>? enumLabels,
