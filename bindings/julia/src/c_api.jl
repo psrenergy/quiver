@@ -44,19 +44,6 @@ function quiver_clear_last_error()
     @ccall libquiver_c.quiver_clear_last_error()::Cvoid
 end
 
-struct quiver_csv_export_options_t
-    date_time_format::Ptr{Cchar}
-    enum_attribute_names::Ptr{Ptr{Cchar}}
-    enum_entry_counts::Ptr{Csize_t}
-    enum_values::Ptr{Int64}
-    enum_labels::Ptr{Ptr{Cchar}}
-    enum_attribute_count::Csize_t
-end
-
-function quiver_csv_export_options_default()
-    @ccall libquiver_c.quiver_csv_export_options_default()::quiver_csv_export_options_t
-end
-
 @cenum quiver_log_level_t::UInt32 begin
     QUIVER_LOG_DEBUG = 0
     QUIVER_LOG_INFO = 1
@@ -68,6 +55,19 @@ end
 struct quiver_database_options_t
     read_only::Cint
     console_level::quiver_log_level_t
+end
+
+struct quiver_csv_export_options_t
+    date_time_format::Ptr{Cchar}
+    enum_attribute_names::Ptr{Ptr{Cchar}}
+    enum_entry_counts::Ptr{Csize_t}
+    enum_values::Ptr{Int64}
+    enum_labels::Ptr{Ptr{Cchar}}
+    enum_attribute_count::Csize_t
+end
+
+function quiver_csv_export_options_default()
+    @ccall libquiver_c.quiver_csv_export_options_default()::quiver_csv_export_options_t
 end
 
 function quiver_database_options_default()
