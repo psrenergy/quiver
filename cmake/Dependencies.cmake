@@ -38,6 +38,13 @@ FetchContent_Declare(sol2
 )
 FetchContent_MakeAvailable(sol2)
 
+# rapidcsv for CSV reading/writing (header-only)
+FetchContent_Declare(rapidcsv
+    GIT_REPOSITORY https://github.com/d99kris/rapidcsv.git
+    GIT_TAG v8.92
+)
+FetchContent_MakeAvailable(rapidcsv)
+
 # GoogleTest for testing
 if(QUIVER_BUILD_TESTS)
     FetchContent_Declare(googletest

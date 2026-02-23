@@ -64,6 +64,7 @@ target_link_libraries(quiver
         spdlog::spdlog
         lua_library
         sol2
+        rapidcsv
         ${CMAKE_DL_LIBS}
 )
 
