@@ -1191,9 +1191,7 @@ TEST(DatabaseCSV, ImportCSV_Scalar_20000Rows) {
     std::ofstream out(csv_path, std::ios::binary);
     out << "sep=,\nlabel,name,status,price,date_created,notes\n";
     for (int i = 1; i <= 20000; ++i) {
-        out << "Item" << i << ","
-            << "Name" << i << "," << (i % 3) << "," << (i * 0.5) << ","
-            << "2024-01-15T10:30:00,"
+        out << "Item" << i << "," << "Name" << i << "," << (i % 3) << "," << (i * 0.5) << "," << "2024-01-15T10:30:00,"
             << "note" << i << "\n";
     }
     out.close();
