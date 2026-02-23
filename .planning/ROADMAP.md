@@ -12,7 +12,7 @@ v0.4 delivers Python bindings via CFFI and cross-layer test parity. The work bui
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [x] **Phase 1: Foundation** - Package setup, DLL loading, error handling, lifecycle, and test scaffolding (completed 2026-02-23)
+- [x] **Phase 1: Foundation** - Package setup, DLL loading, error handling, lifecycle, and test scaffolding (completed 2026-02-23)
 - [ ] **Phase 2: Reads and Metadata** - All scalar/vector/set read operations plus metadata queries with correct memory management
 - [ ] **Phase 3: Writes and Transactions** - All CRUD write operations, scalar/vector/set updates, relation writes, and transaction control
 - [ ] **Phase 4: Queries and Relations** - Parameterized SQL queries with keepalive marshaling and relation read operations
@@ -62,7 +62,10 @@ Plans:
   3. `update_scalar_integer(collection, id, attribute, value)` persists the updated value; `update_vector_strings(collection, id, attribute, values)` replaces the vector; `update_set_integers(collection, id, attribute, values)` replaces the set
   4. `update_scalar_relation(collection, id, attribute, related_id)` links two elements
   5. `begin_transaction()` / `commit()` / `rollback()` control transaction state; `with db.transaction():` commits on success and rolls back on exception
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 03-01-PLAN.md -- CFFI write declarations, update/delete element, scalar/vector/set update methods, create/update/delete tests
+- [ ] 03-02-PLAN.md -- Transaction CFFI declarations, begin/commit/rollback/in_transaction, context manager, transaction tests
 
 ### Phase 4: Queries and Relations
 **Goal**: Parameterized SQL queries return correctly typed Python results with no GC-premature-free bugs, completing the query surface
@@ -116,8 +119,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 0/2 | Complete    | 2026-02-23 |
-| 2. Reads and Metadata | 0/? | Not started | - |
-| 3. Writes and Transactions | 0/? | Not started | - |
+| 2. Reads and Metadata | 0/2 | Complete | 2026-02-23 |
+| 3. Writes and Transactions | 0/2 | Not started | - |
 | 4. Queries and Relations | 0/? | Not started | - |
 | 5. Time Series | 0/? | Not started | - |
 | 6. CSV and Convenience Helpers | 0/? | Not started | - |
