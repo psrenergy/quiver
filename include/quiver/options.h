@@ -25,6 +25,16 @@ inline CSVExportOptions default_csv_export_options() {
     return {};
 }
 
+struct QUIVER_API CSVImportOptions {
+    std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, int64_t>>>
+        enum_labels;
+    std::string date_time_format;  // strftime format string; empty = no formatting
+};
+
+inline CSVImportOptions default_csv_import_options() {
+    return {};
+}
+
 }  // namespace quiver
 
 #endif  // QUIVER_OPTIONS_H
