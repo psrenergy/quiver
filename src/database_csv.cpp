@@ -103,6 +103,38 @@ static void save_csv_document(rapidcsv::Document& doc, const std::string& path) 
     file << oss.str();
 }
 
+// Render query results to a CSV file: create document, set headers, populate cells, save.
+// Column types are resolved once from type_map (invariant across rows).
+static void write_csv(const Result& data_result,
+                      const std::vector<std::string>& csv_columns,
+                      const std::unordered_map<std::string, DataType>& type_map,
+                      const CSVExportOptions& options,
+                      const std::string& path) {
+    auto doc = make_csv_document();
+
+    for (size_t i = 0; i < csv_columns.size(); ++i) {
+        doc.SetColumnName(i, csv_columns[i]);
+    }
+
+    // Resolve column types once (invariant across rows)
+    std::vector<DataType> col_types(csv_columns.size(), DataType::Text);
+    for (size_t i = 0; i < csv_columns.size(); ++i) {
+        if (auto it = type_map.find(csv_columns[i]); it != type_map.end()) {
+            col_types[i] = it->second;
+        }
+    }
+
+    size_t row_idx = 0;
+    for (const auto& row : data_result) {
+        for (size_t i = 0; i < csv_columns.size(); ++i) {
+            doc.SetCell<std::string>(i, row_idx, value_to_csv_string(row[i], csv_columns[i], col_types[i], options));
+        }
+        ++row_idx;
+    }
+
+    save_csv_document(doc, path);
+}
+
 void Database::export_csv(const std::string& collection,
                           const std::string& group,
                           const std::string& path,
@@ -138,14 +170,6 @@ void Database::export_csv(const std::string& collection,
             type_map[attr.name] = attr.data_type;
         }
 
-        // Build rapidcsv Document
-        auto doc = make_csv_document();
-
-        // Set column names
-        for (size_t i = 0; i < csv_columns.size(); ++i) {
-            doc.SetColumnName(i, csv_columns[i]);
-        }
-
         // Build SELECT query with columns in schema order
         std::string select_cols;
         for (size_t i = 0; i < csv_columns.size(); ++i) {
@@ -155,22 +179,7 @@ void Database::export_csv(const std::string& collection,
         }
 
         auto data_result = execute("SELECT " + select_cols + " FROM " + collection + " ORDER BY rowid");
-
-        // Populate document cells
-        size_t row_idx = 0;
-        for (const auto& row : data_result) {
-            for (size_t i = 0; i < csv_columns.size(); ++i) {
-                DataType dt = DataType::Text;
-                if (auto it = type_map.find(csv_columns[i]); it != type_map.end()) {
-                    dt = it->second;
-                }
-                doc.SetCell<std::string>(i, row_idx, value_to_csv_string(row[i], csv_columns[i], dt, options));
-            }
-            ++row_idx;
-        }
-
-        // Save to file via stringstream
-        save_csv_document(doc, path);
+        write_csv(data_result, csv_columns, type_map, options, path);
     } else {
         // Group export
         impl_->require_collection(collection, "export_csv");
@@ -241,14 +250,6 @@ void Database::export_csv(const std::string& collection,
             }
         }
 
-        // Build rapidcsv Document
-        auto doc = make_csv_document();
-
-        // Set column names
-        for (size_t i = 0; i < csv_columns.size(); ++i) {
-            doc.SetColumnName(i, csv_columns[i]);
-        }
-
         // Build SELECT query: C.label + group data columns with JOIN
         std::string select_cols = "C.label";
         for (const auto& col : group_data_columns) {
@@ -269,22 +270,7 @@ void Database::export_csv(const std::string& collection,
                             " C ON C.id = G.id " + order_clause;
 
         auto data_result = execute(query);
-
-        // Populate document cells
-        size_t row_idx = 0;
-        for (const auto& row : data_result) {
-            for (size_t i = 0; i < csv_columns.size(); ++i) {
-                DataType dt = DataType::Text;
-                if (auto it = type_map.find(csv_columns[i]); it != type_map.end()) {
-                    dt = it->second;
-                }
-                doc.SetCell<std::string>(i, row_idx, value_to_csv_string(row[i], csv_columns[i], dt, options));
-            }
-            ++row_idx;
-        }
-
-        // Save to file via stringstream
-        save_csv_document(doc, path);
+        write_csv(data_result, csv_columns, type_map, options, path);
     }
 }
 
