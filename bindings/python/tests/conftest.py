@@ -1,0 +1,40 @@
+from __future__ import annotations
+
+from collections.abc import Generator
+from pathlib import Path
+
+import pytest
+
+from quiver import Database
+
+
+@pytest.fixture
+def tests_path() -> Path:
+    """Return the tests/ directory path."""
+    return Path(__file__).resolve().parent
+
+
+@pytest.fixture
+def schemas_path() -> Path:
+    """Return the shared test schemas directory."""
+    return Path(__file__).resolve().parent.parent.parent.parent / "tests" / "schemas"
+
+
+@pytest.fixture
+def valid_schema_path(schemas_path: Path) -> Path:
+    """Return the path to the basic test schema."""
+    return schemas_path / "valid" / "basic.sql"
+
+
+@pytest.fixture
+def migrations_path(schemas_path: Path) -> Path:
+    """Return the path to the test migrations directory."""
+    return schemas_path / "migrations"
+
+
+@pytest.fixture
+def db(valid_schema_path: Path, tmp_path: Path) -> Generator[Database, None, None]:
+    """Create a test database and close it after the test."""
+    database = Database.from_schema(str(tmp_path / "test.db"), str(valid_schema_path))
+    yield database
+    database.close()
