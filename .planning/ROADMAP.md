@@ -12,7 +12,7 @@ v0.4 delivers Python bindings via CFFI and cross-layer test parity. The work bui
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - Package setup, DLL loading, error handling, lifecycle, and test scaffolding
+- [x] **Phase 1: Foundation** - Package setup, DLL loading, error handling, lifecycle, and test scaffolding (completed 2026-02-23)
 - [ ] **Phase 2: Reads and Metadata** - All scalar/vector/set read operations plus metadata queries with correct memory management
 - [ ] **Phase 3: Writes and Transactions** - All CRUD write operations, scalar/vector/set updates, relation writes, and transaction control
 - [ ] **Phase 4: Queries and Relations** - Parameterized SQL queries with keepalive marshaling and relation read operations
@@ -112,7 +112,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/2 | Planned | - |
+| 1. Foundation | 0/2 | Complete    | 2026-02-23 |
 | 2. Reads and Metadata | 0/? | Not started | - |
 | 3. Writes and Transactions | 0/? | Not started | - |
 | 4. Queries and Relations | 0/? | Not started | - |
