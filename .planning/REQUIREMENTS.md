@@ -48,8 +48,8 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 
 ### Transactions
 
-- [ ] **TXN-01**: begin_transaction, commit, rollback, in_transaction methods
-- [ ] **TXN-02**: transaction() context manager wrapping begin/commit/rollback
+- [x] **TXN-01**: begin_transaction, commit, rollback, in_transaction methods
+- [x] **TXN-02**: transaction() context manager wrapping begin/commit/rollback
 
 ### Metadata
 
@@ -145,8 +145,8 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 | WRITE-05 | Phase 3 | Complete |
 | WRITE-06 | Phase 3 | Complete |
 | WRITE-07 | Phase 3 | Complete |
-| TXN-01 | Phase 3 | Pending |
-| TXN-02 | Phase 3 | Pending |
+| TXN-01 | Phase 3 | Complete |
+| TXN-02 | Phase 3 | Complete |
 | QUERY-01 | Phase 4 | Pending |
 | QUERY-02 | Phase 4 | Pending |
 | TS-01 | Phase 5 | Pending |
