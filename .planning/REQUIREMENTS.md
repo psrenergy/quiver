@@ -3,28 +3,42 @@
 **Defined:** 2026-02-22
 **Core Value:** Reliable, schema-validated SQLite access through a single C++ core with mechanically-derived bindings that feel native in every target language.
 
-## v0.4 Requirements
+## v0.5 Requirements
 
-Requirements for CSV Export milestone. Each maps to roadmap phases.
+Requirements for CSV Refactor milestone. Each maps to roadmap phases.
+
+### CSV Library
+
+- [ ] **LIB-01**: Replace `csv_escape()` and `write_csv_row()` in `src/database_csv.cpp` with rapidcsv Document/Save API
+- [ ] **LIB-02**: Integrate rapidcsv via CMake FetchContent as PRIVATE dependency (no new DLLs on Windows)
+- [ ] **LIB-03**: All existing CSV export tests pass without modification (22 C++ + 19 C API)
+
+### Header Consolidation
+
+- [ ] **HDR-01**: Merge `quiver_csv_export_options_t` struct and `quiver_csv_export_options_default()` declaration from `csv.h` into `options.h`
+- [ ] **HDR-02**: Delete `include/quiver/c/csv.h` with no compatibility stub
+- [ ] **HDR-03**: Regenerate Julia and Dart FFI bindings; generated struct must be identical
+
+## v0.4 Requirements (Complete)
 
 ### CSV Export
 
-- [x] **CSV-01**: `export_csv(collection, group, path, options)` -- group="" exports scalars (label + all scalar attributes, no id), group="name" exports that vector/set/time series group (label replaces id, schema column names)
-- [x] **CSV-02**: CSV output is RFC 4180 compliant (header row, comma delimiter, double-quote escaping for commas/quotes/newlines)
-- [x] **CSV-03**: Empty collection writes header-only CSV (not an error)
+- [x] **CSV-01**: `export_csv(collection, group, path, options)` -- group="" exports scalars, group="name" exports groups
+- [x] **CSV-02**: CSV output is RFC 4180 compliant
+- [x] **CSV-03**: Empty collection writes header-only CSV
 - [x] **CSV-04**: NULL values written as empty fields
 
 ### Options
 
-- [x] **OPT-01**: `CSVExportOptions` struct with `enum_labels` map (`attribute -> {value -> label}`) and `date_time_format` string
-- [x] **OPT-02**: Enum resolution replaces integer values with labels from caller-provided map; unmapped values fall back to raw integer
-- [x] **OPT-03**: Date/time formatting via `strftime` format string applied only to DateTime columns (identified by metadata, not value inspection)
-- [x] **OPT-04**: `default_csv_export_options()` / `quiver_csv_export_options_default()` following DatabaseOptions pattern
+- [x] **OPT-01**: `CSVExportOptions` struct with `enum_labels` map and `date_time_format` string
+- [x] **OPT-02**: Enum resolution with unmapped fallback to raw integer
+- [x] **OPT-03**: DateTime formatting via strftime on metadata-identified columns
+- [x] **OPT-04**: `default_csv_export_options()` / `quiver_csv_export_options_default()` factory
 
 ### C API
 
-- [x] **CAPI-01**: `quiver_csv_export_options_t` flat struct with parallel arrays for enum_labels, passable through FFI
-- [x] **CAPI-02**: `quiver_database_export_csv(db, collection, group, path, opts)` returning `quiver_error_t`; group="" or NULL for scalars
+- [x] **CAPI-01**: `quiver_csv_export_options_t` flat struct with parallel arrays for enum_labels
+- [x] **CAPI-02**: `quiver_database_export_csv(db, collection, group, path, opts)` returning `quiver_error_t`
 
 ### Bindings
 
@@ -47,11 +61,11 @@ Explicitly excluded. Documented to prevent scope creep.
 
 | Feature | Reason |
 |---------|--------|
-| CSV import | Significantly harder (type inference, validation); defer to future milestone |
-| Multi-language columns in CSV | Caller picks one language per call; multi-column adds complexity with little benefit |
+| CSV import | Defer to future milestone; v0.5 is refactor only |
+| Multi-language columns in CSV | Caller picks one language per call |
 | Custom delimiters | RFC 4180 comma-only is correct for this use case |
 | Streaming export | Not needed at Quiver's target data sizes |
-| Auto-resolving enum values from FK relationships | Fragile; caller-provided map is explicit and safe |
+| vincentlaucsb/csv-parser | rapidcsv chosen for v0.5 (header-only, simpler integration); revisit for import milestone |
 
 ## Traceability
 
@@ -59,25 +73,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CSV-01 | Phase 5 | Complete |
-| CSV-02 | Phase 5 | Complete |
-| CSV-03 | Phase 5 | Complete |
-| CSV-04 | Phase 5 | Complete |
-| OPT-01 | Phase 5 | Complete |
-| OPT-02 | Phase 5 | Complete |
-| OPT-03 | Phase 5 | Complete |
-| OPT-04 | Phase 5 | Complete |
-| CAPI-01 | Phase 6 | Complete |
-| CAPI-02 | Phase 6 | Complete |
-| BIND-01 | Phase 7 | Complete |
-| BIND-02 | Phase 7 | Complete |
-| BIND-03 | Phase 7 | Complete |
+| LIB-01 | — | Pending |
+| LIB-02 | — | Pending |
+| LIB-03 | — | Pending |
+| HDR-01 | — | Pending |
+| HDR-02 | — | Pending |
+| HDR-03 | — | Pending |
 
 **Coverage:**
-- v0.4 requirements: 13 total
-- Mapped to phases: 13
-- Unmapped: 0
+- v0.5 requirements: 6 total
+- Mapped to phases: 0
+- Unmapped: 6
 
 ---
 *Requirements defined: 2026-02-22*
-*Last updated: 2026-02-22 after roadmap creation*
+*Last updated: 2026-02-22 after v0.5 milestone definition*
