@@ -17,7 +17,7 @@ Requirements for CSV Refactor milestone. Each maps to roadmap phases.
 
 - [x] **HDR-01**: Merge `quiver_csv_export_options_t` struct and `quiver_csv_export_options_default()` declaration from `csv.h` into `options.h`
 - [x] **HDR-02**: Delete `include/quiver/c/csv.h` with no compatibility stub
-- [ ] **HDR-03**: Regenerate Julia and Dart FFI bindings; generated struct must be identical
+- [x] **HDR-03**: Regenerate Julia and Dart FFI bindings; generated struct must be identical
 
 ## v0.4 Requirements (Complete)
 
@@ -78,7 +78,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LIB-03 | Phase 8 | Complete |
 | HDR-01 | Phase 9 | Complete |
 | HDR-02 | Phase 9 | Complete |
-| HDR-03 | Phase 9 | Pending |
+| HDR-03 | Phase 9 | Complete |
 
 **Coverage:**
 - v0.5 requirements: 6 total
