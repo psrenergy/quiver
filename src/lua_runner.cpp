@@ -333,7 +333,7 @@ struct LuaRunner::Impl {
                const std::string& group,
                const std::string& path,
                sol::optional<sol::table> opts_table) {
-                CSVExportOptions opts;
+                CSVOptions opts;
                 if (opts_table) {
                     auto& t = *opts_table;
                     if (auto fmt = t.get<sol::optional<std::string>>("date_time_format")) {
@@ -342,9 +342,14 @@ struct LuaRunner::Impl {
                     if (auto enums = t.get<sol::optional<sol::table>>("enum_labels")) {
                         enums->for_each([&](sol::object attr_key, sol::object attr_value) {
                             auto attr_name = attr_key.as<std::string>();
-                            auto& attr_map = opts.enum_labels[attr_name];
-                            attr_value.as<sol::table>().for_each(
-                                [&](sol::object k, sol::object v) { attr_map[k.as<int64_t>()] = v.as<std::string>(); });
+                            auto& attr_locale_map = opts.enum_labels[attr_name];
+                            attr_value.as<sol::table>().for_each([&](sol::object locale_key, sol::object locale_value) {
+                                auto locale_name = locale_key.as<std::string>();
+                                auto& label_map = attr_locale_map[locale_name];
+                                locale_value.as<sol::table>().for_each([&](sol::object k, sol::object v) {
+                                    label_map[k.as<std::string>()] = v.as<int64_t>();
+                                });
+                            });
                         });
                     }
                 }
@@ -357,7 +362,7 @@ struct LuaRunner::Impl {
                const std::string& group,
                const std::string& path,
                sol::optional<sol::table> opts_table) {
-                CSVImportOptions opts;
+                CSVOptions opts;
                 if (opts_table) {
                     auto& t = *opts_table;
                     if (auto fmt = t.get<sol::optional<std::string>>("date_time_format")) {

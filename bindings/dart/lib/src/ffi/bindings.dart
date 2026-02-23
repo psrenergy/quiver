@@ -2352,7 +2352,7 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> group,
     ffi.Pointer<ffi.Char> path,
-    ffi.Pointer<quiver_csv_export_options_t> opts,
+    ffi.Pointer<quiver_csv_options_t> opts,
   ) {
     return _quiver_database_export_csv(
       db,
@@ -2371,7 +2371,7 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Char>,
-            ffi.Pointer<quiver_csv_export_options_t>,
+            ffi.Pointer<quiver_csv_options_t>,
           )
         >
       >('quiver_database_export_csv');
@@ -2382,7 +2382,7 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
-          ffi.Pointer<quiver_csv_export_options_t>,
+          ffi.Pointer<quiver_csv_options_t>,
         )
       >();
 
@@ -2391,7 +2391,7 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> group,
     ffi.Pointer<ffi.Char> path,
-    ffi.Pointer<quiver_csv_import_options_t> opts,
+    ffi.Pointer<quiver_csv_options_t> opts,
   ) {
     return _quiver_database_import_csv(
       db,
@@ -2410,7 +2410,7 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Char>,
-            ffi.Pointer<quiver_csv_import_options_t>,
+            ffi.Pointer<quiver_csv_options_t>,
           )
         >
       >('quiver_database_import_csv');
@@ -2421,7 +2421,7 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
-          ffi.Pointer<quiver_csv_import_options_t>,
+          ffi.Pointer<quiver_csv_options_t>,
         )
       >();
 
@@ -3120,22 +3120,7 @@ final class quiver_group_metadata_t extends ffi.Struct {
   external int value_column_count;
 }
 
-final class quiver_csv_export_options_t extends ffi.Struct {
-  external ffi.Pointer<ffi.Char> date_time_format;
-
-  external ffi.Pointer<ffi.Pointer<ffi.Char>> enum_attribute_names;
-
-  external ffi.Pointer<ffi.Size> enum_entry_counts;
-
-  external ffi.Pointer<ffi.Int64> enum_values;
-
-  external ffi.Pointer<ffi.Pointer<ffi.Char>> enum_labels;
-
-  @ffi.Size()
-  external int enum_attribute_count;
-}
-
-final class quiver_csv_import_options_t extends ffi.Struct {
+final class quiver_csv_options_t extends ffi.Struct {
   external ffi.Pointer<ffi.Char> date_time_format;
 
   external ffi.Pointer<ffi.Pointer<ffi.Char>> enum_attribute_names;

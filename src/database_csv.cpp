@@ -48,21 +48,22 @@ static std::string format_datetime(const std::string& raw_value, const std::stri
 // NULL -> empty string, integers check enum_labels,
 // floats use %g for clean output, strings apply DateTime formatting.
 // rapidcsv handles CSV escaping/quoting via auto-quote.
-static std::string value_to_csv_string(const Value& value,
-                                       const std::string& column_name,
-                                       DataType data_type,
-                                       const CSVExportOptions& options) {
+static std::string
+value_to_csv_string(const Value& value, const std::string& column_name, DataType data_type, const CSVOptions& options) {
     // NULL -> empty field
     if (std::holds_alternative<std::nullptr_t>(value)) {
         return "";
     }
 
-    // Integer with possible enum resolution
+    // Integer with possible enum resolution (reverse search: find label whose value matches)
     if (std::holds_alternative<int64_t>(value)) {
         auto int_val = std::get<int64_t>(value);
         if (auto attr_it = options.enum_labels.find(column_name); attr_it != options.enum_labels.end()) {
-            if (auto val_it = attr_it->second.find(int_val); val_it != attr_it->second.end()) {
-                return val_it->second;
+            for (const auto& [locale, labels] : attr_it->second) {
+                for (const auto& [label, val] : labels) {
+                    if (val == int_val)
+                        return label;
+                }
             }
         }
         return std::to_string(int_val);
@@ -113,7 +114,7 @@ static void save_csv_document(rapidcsv::Document& doc, const std::string& path) 
 static void write_csv(const Result& data_result,
                       const std::vector<std::string>& csv_columns,
                       const std::unordered_map<std::string, DataType>& type_map,
-                      const CSVExportOptions& options,
+                      const CSVOptions& options,
                       const std::string& path) {
     auto doc = make_csv_document();
 
@@ -143,7 +144,7 @@ static void write_csv(const Result& data_result,
 void Database::export_csv(const std::string& collection,
                           const std::string& group,
                           const std::string& path,
-                          const CSVExportOptions& options) {
+                          const CSVOptions& options) {
     namespace fs = std::filesystem;
 
     // Create parent directories (mkdir -p)
@@ -376,7 +377,7 @@ static std::string parse_datetime_import(const std::string& raw_value, const std
 
 // Resolve an enum text label back to its integer value.
 // Searches all locales in the enum_labels map with case-insensitive matching.
-static int64_t resolve_enum_value(const std::string& cell, const std::string& column, const CSVImportOptions& options) {
+static int64_t resolve_enum_value(const std::string& cell, const std::string& column, const CSVOptions& options) {
     auto attr_it = options.enum_labels.find(column);
     if (attr_it == options.enum_labels.end()) {
         throw std::runtime_error("Cannot import_csv: Invalid enum value '" + cell + "' for column '" + column + "'.");
@@ -444,7 +445,7 @@ static std::unordered_map<std::string, int64_t> build_label_to_id_map(Database& 
 void Database::import_csv(const std::string& collection,
                           const std::string& group,
                           const std::string& path,
-                          const CSVImportOptions& options) {
+                          const CSVOptions& options) {
     impl_->require_collection(collection, "import_csv");
 
     // Resolve target table name

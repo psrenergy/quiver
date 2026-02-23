@@ -430,12 +430,12 @@ QUIVER_C_API quiver_error_t quiver_database_export_csv(quiver_database_t* db,
                                                        const char* collection,
                                                        const char* group,
                                                        const char* path,
-                                                       const quiver_csv_export_options_t* opts);
+                                                       const quiver_csv_options_t* opts);
 QUIVER_C_API quiver_error_t quiver_database_import_csv(quiver_database_t* db,
                                                        const char* collection,
                                                        const char* group,
                                                        const char* path,
-                                                       const quiver_csv_import_options_t* opts);
+                                                       const quiver_csv_options_t* opts);
 
 // Query methods - execute SQL and return first row's first column
 QUIVER_C_API quiver_error_t quiver_database_query_string(quiver_database_t* db,

@@ -335,8 +335,8 @@ TEST(DatabaseCSV, ExportCSV_EnumLabels_ReplacesIntegers) {
     e2.set("label", std::string("Item2")).set("name", std::string("Beta")).set("status", int64_t{2});
     db.create_element("Items", e2);
 
-    quiver::CSVExportOptions opts;
-    opts.enum_labels["status"] = {{1, "Active"}, {2, "Inactive"}};
+    quiver::CSVOptions opts;
+    opts.enum_labels["status"]["en"] = {{"Active", 1}, {"Inactive", 2}};
 
     auto csv_path = temp_csv("EnumReplace");
     db.export_csv("Items", "", csv_path.string(), opts);
@@ -365,8 +365,8 @@ TEST(DatabaseCSV, ExportCSV_EnumLabels_UnmappedFallback) {
     e2.set("label", std::string("Item2")).set("name", std::string("Beta")).set("status", int64_t{3});
     db.create_element("Items", e2);
 
-    quiver::CSVExportOptions opts;
-    opts.enum_labels["status"] = {{1, "Active"}};  // only map value 1
+    quiver::CSVOptions opts;
+    opts.enum_labels["status"]["en"] = {{"Active", 1}};  // only map value 1
 
     auto csv_path = temp_csv("EnumFallback");
     db.export_csv("Items", "", csv_path.string(), opts);
@@ -395,7 +395,7 @@ TEST(DatabaseCSV, ExportCSV_DateTimeFormat_FormatsDateColumns) {
         .set("date_created", std::string("2024-01-15T10:30:00"));
     db.create_element("Items", e1);
 
-    quiver::CSVExportOptions opts;
+    quiver::CSVOptions opts;
     opts.date_time_format = "%Y/%m/%d";
 
     auto csv_path = temp_csv("DateFormat");
@@ -422,7 +422,7 @@ TEST(DatabaseCSV, ExportCSV_DateTimeFormat_NonDateColumnsUnaffected) {
         .set("notes", std::string("2024-01-15T10:30:00"));  // also not a date column
     db.create_element("Items", e1);
 
-    quiver::CSVExportOptions opts;
+    quiver::CSVOptions opts;
     opts.date_time_format = "%Y/%m/%d";
 
     auto csv_path = temp_csv("NonDateUnaffected");
@@ -452,7 +452,7 @@ TEST(DatabaseCSV, ExportCSV_DateTimeFormat_NonDateColumnsUnaffected) {
 // ============================================================================
 
 TEST(DatabaseCSV, ExportCSV_DefaultOptionsFactory) {
-    auto opts = quiver::default_csv_export_options();
+    auto opts = quiver::default_csv_options();
     EXPECT_TRUE(opts.enum_labels.empty());
     EXPECT_TRUE(opts.date_time_format.empty());
 }
@@ -602,7 +602,7 @@ TEST(DatabaseCSV, ImportCSV_Scalar_EnumResolution) {
     auto csv_path = temp_csv("ImportScalarEnum");
     write_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,Active,,,\n");
 
-    quiver::CSVImportOptions opts;
+    quiver::CSVOptions opts;
     opts.enum_labels["status"]["en"] = {{"Active", 1}, {"Inactive", 2}};
 
     db.import_csv("Items", "", csv_path.string(), opts);
@@ -624,7 +624,7 @@ TEST(DatabaseCSV, ImportCSV_Scalar_EnumCaseInsensitive) {
                    "Item2,Beta,active,,,\n"
                    "Item3,Gamma,Active,,,\n");
 
-    quiver::CSVImportOptions opts;
+    quiver::CSVOptions opts;
     opts.enum_labels["status"]["en"] = {{"Active", 1}};
 
     db.import_csv("Items", "", csv_path.string(), opts);
@@ -649,7 +649,7 @@ TEST(DatabaseCSV, ImportCSV_Scalar_EnumMultiLanguage) {
                    "Item2,Beta,Inactive,,,\n"
                    "Item3,Gamma,Inativo,,,\n");
 
-    quiver::CSVImportOptions opts;
+    quiver::CSVOptions opts;
     opts.enum_labels["status"]["en"] = {{"Active", 1}, {"Inactive", 2}};
     opts.enum_labels["status"]["pt"] = {{"Ativo", 1}, {"Inativo", 2}};
 
@@ -670,7 +670,7 @@ TEST(DatabaseCSV, ImportCSV_Scalar_DateTimeFormat) {
     auto csv_path = temp_csv("ImportScalarDateTime");
     write_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,2024/01/15,\n");
 
-    quiver::CSVImportOptions opts;
+    quiver::CSVOptions opts;
     opts.date_time_format = "%Y/%m/%d";
 
     db.import_csv("Items", "", csv_path.string(), opts);
@@ -952,7 +952,7 @@ TEST(DatabaseCSV, ImportCSV_Scalar_InvalidEnumWithMapping_Throws) {
     auto csv_path = temp_csv("ImportBadEnumMap");
     write_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,Unknown,,,\n");
 
-    quiver::CSVImportOptions opts;
+    quiver::CSVOptions opts;
     opts.enum_labels["status"]["en"] = {{"Active", 1}, {"Inactive", 2}};
 
     EXPECT_THROW(
@@ -1120,7 +1120,7 @@ TEST(DatabaseCSV, ImportCSV_TimeSeries_DateTimeParsing) {
     auto csv_path = temp_csv("ImportTSDateTime");
     write_csv_file(csv_path.string(), "sep=,\nid,date_time,temperature,humidity\nItem1,2024/01/15,22.5,60\n");
 
-    quiver::CSVImportOptions opts;
+    quiver::CSVOptions opts;
     opts.date_time_format = "%Y/%m/%d";
 
     db.import_csv("Items", "readings", csv_path.string(), opts);

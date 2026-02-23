@@ -2095,7 +2095,7 @@ TEST(LuaRunner_ExportCSV, EnumLabels) {
     lua.run("db:export_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) +
             "\", {\n"
             "    enum_labels = {\n"
-            "        status = {[1] = \"Active\", [2] = \"Inactive\"}\n"
+            "        status = { en = { Active = 1, Inactive = 2 } }\n"
             "    }\n"
             "})");
 
@@ -2152,7 +2152,7 @@ TEST(LuaRunner_ExportCSV, CombinedOptions) {
     lua.run("db:export_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) +
             "\", {\n"
             "    enum_labels = {\n"
-            "        status = {[1] = \"Active\", [2] = \"Inactive\"}\n"
+            "        status = { en = { Active = 1, Inactive = 2 } }\n"
             "    },\n"
             "    date_time_format = \"%Y/%m/%d\"\n"
             "})");

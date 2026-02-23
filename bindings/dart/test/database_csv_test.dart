@@ -101,7 +101,9 @@ void main() {
           '',
           csvPath,
           enumLabels: {
-            'status': {1: 'Active', 2: 'Inactive'},
+            'status': {
+              'en': {'Active': 1, 'Inactive': 2},
+            },
           },
         );
         final content = File(csvPath).readAsStringSync();
@@ -169,7 +171,9 @@ void main() {
           '',
           csvPath,
           enumLabels: {
-            'status': {1: 'Active', 2: 'Inactive'},
+            'status': {
+              'en': {'Active': 1, 'Inactive': 2},
+            },
           },
           dateTimeFormat: '%Y/%m/%d',
         );

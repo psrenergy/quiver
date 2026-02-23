@@ -87,7 +87,7 @@ include("fixture.jl")
             )
 
             Quiver.export_csv(db, "Items", "", csv_path;
-                enum_labels = Dict("status" => Dict(1 => "Active", 2 => "Inactive")),
+                enum_labels = Dict("status" => Dict("en" => Dict("Active" => 1, "Inactive" => 2))),
             )
             content = read(csv_path, String)
 
@@ -145,7 +145,7 @@ include("fixture.jl")
             )
 
             Quiver.export_csv(db, "Items", "", csv_path;
-                enum_labels = Dict("status" => Dict(1 => "Active", 2 => "Inactive")),
+                enum_labels = Dict("status" => Dict("en" => Dict("Active" => 1, "Inactive" => 2))),
                 date_time_format = "%Y/%m/%d",
             )
             content = read(csv_path, String)
