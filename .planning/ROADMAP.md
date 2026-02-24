@@ -87,7 +87,10 @@ Plans:
   1. `read_time_series_group(collection, id, group)` returns a list of row dicts with correct Python types per column (int for INTEGER, float for FLOAT, str for STRING/DATE_TIME)
   2. `update_time_series_group(collection, id, group, rows)` persists rows correctly; calling with empty rows clears all rows for that group
   3. `has_time_series_files(collection)` returns a bool; `read_time_series_files(collection)` returns a dict of file paths; `update_time_series_files(collection, data)` persists changes
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 05-01-PLAN.md -- CFFI declarations, read/update time series group with void** dispatch, group tests
+- [ ] 05-02-PLAN.md -- Time series files methods (has/list/read/update), files tests
 
 ### Phase 6: CSV and Convenience Helpers
 **Goal**: CSV export works with all CSVExportOptions fields correctly marshaled, and composite read helpers compose existing operations into single-call results
