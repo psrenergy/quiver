@@ -41,7 +41,7 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — 9 FK resolution create tests (set, scalar, vector, time series, combined, no-FK, errors, partial writes)
+- [x] 05-01-PLAN.md — 9 FK resolution create tests (set, scalar, vector, time series, combined, no-FK, errors, partial writes)
 - [ ] 05-02-PLAN.md — 7 FK resolution update tests (scalar, vector, set, time series, combined, no-FK, failure preserves existing)
 
 ### Phase 6: Julia FK Tests
@@ -103,7 +103,7 @@ Phases execute in numeric order: 5 -> 6 -> 7 -> 8
 | 2. Create Element FK Resolution | v1.0 | 2/2 | Complete | 2026-02-23 |
 | 3. Update Element FK Resolution | v1.0 | 1/1 | Complete | 2026-02-24 |
 | 4. Cleanup | v1.0 | 2/2 | Complete | 2026-02-24 |
-| 5. C API FK Tests | v1.1 | 0/2 | Not started | - |
+| 5. C API FK Tests | v1.1 | 1/2 | In Progress | - |
 | 6. Julia FK Tests | v1.1 | 0/? | Not started | - |
 | 7. Dart FK Tests | v1.1 | 0/? | Not started | - |
 | 8. Lua FK Tests | v1.1 | 0/? | Not started | - |

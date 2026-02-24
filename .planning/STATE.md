@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 5 of 8 (C API FK Tests)
-Plan: 0 of ? in current phase
-Status: Ready to plan
-Last activity: 2026-02-24 -- Roadmap created for v1.1 FK Test Coverage
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-24 -- Completed 05-01-PLAN.md (C API FK create tests)
 
-Progress: [####------] 40% (4/8 phases, v1.0 complete)
+Progress: [####------] 40% (4/8 phases, v1.0 complete; phase 5: 1/2 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6 (v1.0)
+- Total plans completed: 7 (6 v1.0 + 1 v1.1)
 - Average duration: --
 - Total execution time: --
 
@@ -31,6 +31,7 @@ Progress: [####------] 40% (4/8 phases, v1.0 complete)
 | 2. Create FK | 2 | -- | -- |
 | 3. Update FK | 1 | -- | -- |
 | 4. Cleanup | 2 | -- | -- |
+| 5. C API FK Tests | 1/2 | 2min | 2min |
 
 *Updated after each plan completion*
 
@@ -43,6 +44,8 @@ All v1.0 decisions resolved -- see .planning/milestones/v1.0-ROADMAP.md for full
 
 v1.1 context: Each binding layer mirrors the same 16 C++ FK tests (9 create + 7 update). C++ tests are the reference; bindings adapt to their API conventions.
 
+- Phase 5 Plan 1: Verify FK resolution via typed C API read functions, error-path tests check return code only (not message substrings)
+
 ### Pending Todos
 
 None.
@@ -54,5 +57,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Roadmap created for v1.1 FK Test Coverage
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None
