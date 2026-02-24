@@ -646,6 +646,40 @@ TEST(Database, UpdateVectorIntegersInvalidColumnThrows) {
         std::runtime_error);
 }
 
+TEST(Database, UpdateScalarStringTrimsWhitespace) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    quiver::Element e;
+    e.set("label", std::string("Config 1")).set("string_attribute", std::string("hello"));
+    int64_t id = db.create_element("Configuration", e);
+
+    db.update_scalar_string("Configuration", "string_attribute", id, "  world  ");
+
+    auto val = db.read_scalar_string_by_id("Configuration", "string_attribute", id);
+    EXPECT_TRUE(val.has_value());
+    EXPECT_EQ(*val, "world");
+}
+
+TEST(Database, UpdateSetStringsTrimsWhitespace) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1"));
+    int64_t id = db.create_element("Collection", e);
+
+    db.update_set_strings("Collection", "tag", id, {"  alpha  ", "\tbeta\n", " gamma "});
+
+    auto set_vals = db.read_set_strings_by_id("Collection", "tag", id);
+    std::sort(set_vals.begin(), set_vals.end());
+    EXPECT_EQ(set_vals, (std::vector<std::string>{"alpha", "beta", "gamma"}));
+}
+
 // ============================================================================
 // Update element FK label resolution tests
 // ============================================================================
