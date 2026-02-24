@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** A single, clean C++ API that exposes full SQLite schema capabilities through uniform, mechanically-derived bindings.
-**Current focus:** Phase 3: Update Element FK Resolution
+**Current focus:** Phase 4: Cleanup
 
 ## Current Position
 
-Phase: 3 of 4 (Update Element FK Resolution) -- COMPLETE
-Plan: 1 of 1 in current phase
-Status: Phase 03 complete
-Last activity: 2026-02-24 -- Completed 03-01-PLAN.md (update_element FK resolution)
+Phase: 4 of 4 (Cleanup)
+Plan: 1 of 2 in current phase -- COMPLETE
+Status: Executing phase 04
+Last activity: 2026-02-24 -- Completed 04-01-PLAN.md (remove relation methods from core)
 
-Progress: [#######...] 75%
+Progress: [########..] 83%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 5min
-- Total execution time: 0.35 hours
+- Total plans completed: 5
+- Average duration: 7min
+- Total execution time: 0.55 hours
 
 **By Phase:**
 
@@ -31,10 +31,11 @@ Progress: [#######...] 75%
 | Phase 02 P01 | 4min | 2 tasks | 3 files |
 | Phase 02 P02 | 3min | 2 tasks | 1 files |
 | Phase 03 P01 | 3min | 2 tasks | 2 files |
+| Phase 04 P01 | 12min | 2 tasks | 10 files |
 
 **Recent Trend:**
-- Last 5 plans: 11min, 4min, 3min, 3min
-- Trend: stable-fast
+- Last 5 plans: 11min, 4min, 3min, 3min, 12min
+- Trend: stable
 
 *Updated after each plan completion*
 
@@ -54,6 +55,7 @@ Recent decisions affecting current work:
 - [Phase 03]: Pre-resolve call placed after emptiness check, before TransactionGuard (mirrors create_element)
 - [Phase 03]: Emptiness check uses raw element.scalars()/arrays(), not resolved values
 - [Phase 03]: No new functions created -- resolve call added inline per locked decision
+- [Phase 04]: FK resolution tests relocated to test_database_create.cpp (exercises create_element FK behavior)
 
 ### Pending Todos
 
@@ -66,5 +68,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 03-01-PLAN.md
+Stopped at: Completed 04-01-PLAN.md
 Resume file: None

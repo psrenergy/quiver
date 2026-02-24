@@ -31,7 +31,7 @@ Requirements for milestone v1.0 Relations. Each maps to roadmap phases.
 
 ### Cleanup
 
-- [ ] **CLN-01**: Evaluate whether `update_scalar_relation` is redundant and decide keep/remove
+- [x] **CLN-01**: Evaluate whether `update_scalar_relation` is redundant and decide keep/remove
 
 ## Future Requirements
 
@@ -63,7 +63,7 @@ None currently deferred.
 | UPD-03 | Phase 3 | Complete |
 | UPD-04 | Phase 3 | Complete |
 | ERR-01 | Phase 1 | Complete |
-| CLN-01 | Phase 4 | Pending |
+| CLN-01 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 11 total
