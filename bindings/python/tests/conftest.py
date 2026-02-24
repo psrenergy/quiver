@@ -66,3 +66,17 @@ def relations_db(relations_schema_path: Path, tmp_path: Path) -> Generator[Datab
     database = Database.from_schema(str(tmp_path / "relations.db"), str(relations_schema_path))
     yield database
     database.close()
+
+
+@pytest.fixture
+def mixed_time_series_schema_path(schemas_path: Path) -> Path:
+    """Return the path to the mixed time series test schema."""
+    return schemas_path / "valid" / "mixed_time_series.sql"
+
+
+@pytest.fixture
+def mixed_time_series_db(mixed_time_series_schema_path: Path, tmp_path: Path) -> Generator[Database, None, None]:
+    """Create a test database with the mixed time series schema (multi-type columns)."""
+    database = Database.from_schema(str(tmp_path / "mixed_ts.db"), str(mixed_time_series_schema_path))
+    yield database
+    database.close()
