@@ -10,7 +10,6 @@ export 'src/database.dart'
         DatabaseMetadata,
         DatabaseQuery,
         DatabaseRead,
-        DatabaseRelations,
         DatabaseUpdate;
 export 'src/date_time.dart' show dateTimeToString, stringToDateTime;
 export 'src/element.dart' show Element;

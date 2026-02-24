@@ -15,12 +15,15 @@ void Database::update_element(const std::string& collection, int64_t id, const E
         throw std::runtime_error("Cannot update_element: element must have at least one attribute to update");
     }
 
+    // Pre-resolve pass: resolve all FK labels before any writes
+    auto resolved = impl_->resolve_element_fk_labels(collection, element, *this);
+
     Impl::TransactionGuard txn(*impl_);
 
     // Update scalars if present
-    if (!scalars.empty()) {
+    if (!resolved.scalars.empty()) {
         // Validate scalar types
-        for (const auto& [name, value] : scalars) {
+        for (const auto& [name, value] : resolved.scalars) {
             impl_->type_validator->validate_scalar(collection, name, value);
         }
 
@@ -29,7 +32,7 @@ void Database::update_element(const std::string& collection, int64_t id, const E
         std::vector<Value> params;
 
         auto first = true;
-        for (const auto& [name, value] : scalars) {
+        for (const auto& [name, value] : resolved.scalars) {
             if (!first) {
                 sql += ", ";
             }
@@ -48,7 +51,7 @@ void Database::update_element(const std::string& collection, int64_t id, const E
     std::map<std::string, std::map<std::string, const std::vector<Value>*>> set_table_columns;
     std::map<std::string, std::map<std::string, const std::vector<Value>*>> time_series_table_columns;
 
-    for (const auto& [attr_name, values] : arrays) {
+    for (const auto& [attr_name, values] : resolved.arrays) {
         auto matches = impl_->schema->find_all_tables_for_column(collection, attr_name);
         if (matches.empty()) {
             throw std::runtime_error("Cannot update_element: attribute '" + attr_name +
