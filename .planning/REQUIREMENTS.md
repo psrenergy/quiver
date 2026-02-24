@@ -59,8 +59,8 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 
 ### Queries
 
-- [ ] **QUERY-01**: query_string, query_integer, query_float for simple SQL queries
-- [ ] **QUERY-02**: query_string_params, query_integer_params, query_float_params with typed parameter marshaling and keepalive
+- [x] **QUERY-01**: query_string, query_integer, query_float for simple SQL queries
+- [x] **QUERY-02**: query_string_params, query_integer_params, query_float_params with typed parameter marshaling and keepalive
 
 ### Time Series
 
@@ -147,8 +147,8 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 | WRITE-07 | Phase 3 | Complete |
 | TXN-01 | Phase 3 | Complete |
 | TXN-02 | Phase 3 | Complete |
-| QUERY-01 | Phase 4 | Pending |
-| QUERY-02 | Phase 4 | Pending |
+| QUERY-01 | Phase 4 | Complete |
+| QUERY-02 | Phase 4 | Complete |
 | TS-01 | Phase 5 | Pending |
 | TS-02 | Phase 5 | Pending |
 | TS-03 | Phase 5 | Pending |

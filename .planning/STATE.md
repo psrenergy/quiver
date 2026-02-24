@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** Consistent, type-safe database operations across multiple languages through a single C++ implementation
-**Current focus:** Phase 3 - Writes and Transactions
+**Current focus:** Phase 4 - Queries and Relations -- COMPLETE
 
 ## Current Position
 
-Phase: 3 of 7 (Writes and Transactions) -- COMPLETE
-Plan: 2 of 2 in current phase
+Phase: 4 of 7 (Queries and Relations) -- COMPLETE
+Plan: 1 of 1 in current phase
 Status: Phase Complete
-Last activity: 2026-02-23 — Completed 03-02-PLAN.md (Python transaction bindings)
+Last activity: 2026-02-23 — Completed 04-01-PLAN.md (Python query bindings)
 
-Progress: [█████░░░░░] 43%
+Progress: [██████░░░░] 57%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 5min
-- Total execution time: 27min
+- Total plans completed: 7
+- Average duration: 4min
+- Total execution time: 29min
 
 **By Phase:**
 
@@ -30,9 +30,10 @@ Progress: [█████░░░░░] 43%
 | 01-foundation | 2 | 6min | 3min |
 | 02-reads-and-metadata | 2 | 10min | 5min |
 | 03-writes-and-transactions | 2 | 11min | 6min |
+| 04-queries-and-relations | 1 | 2min | 2min |
 
 **Recent Trend:**
-- Last 5 plans: 01-02 (2min), 02-01 (6min), 02-02 (4min), 03-01 (9min), 03-02 (2min)
+- Last 5 plans: 02-01 (6min), 02-02 (4min), 03-01 (9min), 03-02 (2min), 04-01 (2min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -62,6 +63,8 @@ Recent decisions affecting current work:
 - [03-01]: C API update_scalar_string now accepts NULL to set column to NULL (behavioral change, test updated)
 - [03-02]: Transaction context manager uses except BaseException for rollback (catches KeyboardInterrupt/SystemExit)
 - [03-02]: _Bool* CFFI type for in_transaction output parameter (matches C API bool* exactly)
+- [04-01]: Used void** instead of const void* const* in CFFI cdef (ABI-compatible; CFFI ignores const qualifiers)
+- [04-01]: _marshal_params is module-level function consistent with _parse_scalar_metadata pattern
 
 ### Pending Todos
 
@@ -75,5 +78,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 03-02-PLAN.md (Phase 03 complete)
-Resume file: Next phase (04-query-operations)
+Stopped at: Completed 04-01-PLAN.md (Phase 04 complete)
+Resume file: Next phase (05-time-series)
