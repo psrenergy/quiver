@@ -1573,3 +1573,74 @@ TEST(DatabaseCApiCSV, ImportCSV_Vector_NonNumericIndex_ReturnsError) {
     fs::remove(csv_path);
     quiver_database_close(db);
 }
+
+// ============================================================================
+// import_csv: Trailing empty columns (Excel artifact)
+// ============================================================================
+
+TEST(DatabaseCApiCSV, ImportCSV_Scalar_TrailingEmptyColumns) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+              QUIVER_OK);
+
+    auto csv_path = temp_csv("ImportScalarTrailing");
+    write_csv_file(csv_path.string(),
+                   "sep=,\n"
+                   "label,name,status,price,date_created,notes,,,,\n"
+                   "Item1,Alpha,1,9.99,2024-01-15T10:30:00,first,,,,\n"
+                   "Item2,Beta,2,19.5,2024-02-20T08:00:00,second,,,,\n");
+
+    auto import_opts = quiver_csv_options_default();
+    ASSERT_EQ(quiver_database_import_csv(db, "Items", "", csv_path.string().c_str(), &import_opts), QUIVER_OK);
+
+    char** names = nullptr;
+    size_t name_count = 0;
+    ASSERT_EQ(quiver_database_read_scalar_strings(db, "Items", "name", &names, &name_count), QUIVER_OK);
+    ASSERT_EQ(name_count, 2u);
+    EXPECT_STREQ(names[0], "Alpha");
+    EXPECT_STREQ(names[1], "Beta");
+    quiver_database_free_string_array(names, name_count);
+
+    fs::remove(csv_path);
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApiCSV, ImportCSV_Vector_TrailingEmptyColumns) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+              QUIVER_OK);
+
+    quiver_element_t* e1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
+    quiver_element_set_string(e1, "label", "Item1");
+    quiver_element_set_string(e1, "name", "Alpha");
+    int64_t id1 = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Items", e1, &id1), QUIVER_OK);
+    quiver_element_destroy(e1);
+
+    auto csv_path = temp_csv("ImportVectorTrailing");
+    write_csv_file(csv_path.string(),
+                   "sep=,\n"
+                   "id,vector_index,measurement,,,\n"
+                   "Item1,1,1.1,,,\n"
+                   "Item1,2,2.2,,,\n");
+
+    auto import_opts = quiver_csv_options_default();
+    ASSERT_EQ(quiver_database_import_csv(db, "Items", "measurements", csv_path.string().c_str(), &import_opts),
+              QUIVER_OK);
+
+    double* vals = nullptr;
+    size_t val_count = 0;
+    ASSERT_EQ(quiver_database_read_vector_floats_by_id(db, "Items", "measurement", id1, &vals, &val_count), QUIVER_OK);
+    ASSERT_EQ(val_count, 2u);
+    EXPECT_NEAR(vals[0], 1.1, 0.001);
+    EXPECT_NEAR(vals[1], 2.2, 0.001);
+    quiver_database_free_float_array(vals);
+
+    fs::remove(csv_path);
+    quiver_database_close(db);
+}

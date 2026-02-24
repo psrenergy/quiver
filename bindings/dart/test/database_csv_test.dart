@@ -475,5 +475,58 @@ void main() {
         db.close();
       }
     });
+
+    test('scalar trailing empty columns', () {
+      final db = Database.fromSchema(':memory:', schemaPath);
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_trailing_scalar.csv';
+      try {
+        File(csvPath).writeAsStringSync(
+          'sep=,\n'
+          'label,name,status,price,date_created,notes,,,,\n'
+          'Item1,Alpha,1,9.99,2024-01-15T10:30:00,first,,,,\n'
+          'Item2,Beta,2,19.5,2024-02-20T08:00:00,second,,,,\n',
+        );
+
+        db.importCSV('Items', '', csvPath);
+
+        final names = db.readScalarStrings('Items', 'name');
+        expect(names.length, 2);
+        expect(names[0], 'Alpha');
+        expect(names[1], 'Beta');
+      } finally {
+        final f = File(csvPath);
+        if (f.existsSync()) f.deleteSync();
+        db.close();
+      }
+    });
+
+    test('vector trailing empty columns', () {
+      final db = Database.fromSchema(':memory:', schemaPath);
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_trailing_vector.csv';
+      try {
+        db.createElement('Items', {
+          'label': 'Item1',
+          'name': 'Alpha',
+        });
+
+        File(csvPath).writeAsStringSync(
+          'sep=,\n'
+          'id,vector_index,measurement,,,\n'
+          'Item1,1,1.1,,,\n'
+          'Item1,2,2.2,,,\n',
+        );
+
+        db.importCSV('Items', 'measurements', csvPath);
+
+        final vals = db.readVectorFloatsById('Items', 'measurement', 1);
+        expect(vals.length, 2);
+        expect(vals[0], closeTo(1.1, 0.001));
+        expect(vals[1], closeTo(2.2, 0.001));
+      } finally {
+        final f = File(csvPath);
+        if (f.existsSync()) f.deleteSync();
+        db.close();
+      }
+    });
   });
 }

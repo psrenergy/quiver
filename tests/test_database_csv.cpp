@@ -1645,3 +1645,56 @@ TEST(DatabaseCSV, ImportCSV_Vector_NonNumericIndex_Throws) {
 
     fs::remove(csv_path);
 }
+
+// ============================================================================
+// import_csv: Trailing empty columns (Excel artifact)
+// ============================================================================
+
+TEST(DatabaseCSV, ImportCSV_Scalar_TrailingEmptyColumns) {
+    auto db = make_db();
+
+    auto csv_path = temp_csv("ImportTrailingEmpty");
+    write_csv_file(csv_path.string(),
+                   "sep=,\n"
+                   "label,name,status,price,date_created,notes,,,,\n"
+                   "Item1,Alpha,1,9.99,2024-01-15T10:30:00,first,,,,\n"
+                   "Item2,Beta,2,19.5,2024-02-20T08:00:00,second,,,,\n");
+
+    db.import_csv("Items", "", csv_path.string());
+
+    auto names = db.read_scalar_strings("Items", "name");
+    ASSERT_EQ(names.size(), 2);
+    EXPECT_EQ(names[0], "Alpha");
+    EXPECT_EQ(names[1], "Beta");
+
+    auto prices = db.read_scalar_floats("Items", "price");
+    ASSERT_EQ(prices.size(), 2);
+    EXPECT_NEAR(prices[0], 9.99, 0.001);
+    EXPECT_NEAR(prices[1], 19.5, 0.001);
+
+    fs::remove(csv_path);
+}
+
+TEST(DatabaseCSV, ImportCSV_Vector_TrailingEmptyColumns) {
+    auto db = make_db();
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item1")).set("name", std::string("A")).set("status", int64_t{1}).set("price", 1.0);
+    db.create_element("Items", e1);
+
+    auto csv_path = temp_csv("ImportVectorTrailingEmpty");
+    write_csv_file(csv_path.string(),
+                   "sep=,\n"
+                   "id,vector_index,measurement,,,\n"
+                   "Item1,1,1.1,,,\n"
+                   "Item1,2,2.2,,,\n");
+
+    db.import_csv("Items", "measurements", csv_path.string());
+
+    auto vals = db.read_vector_floats_by_id("Items", "measurement", 1);
+    ASSERT_EQ(vals.size(), 2);
+    EXPECT_NEAR(vals[0], 1.1, 0.001);
+    EXPECT_NEAR(vals[1], 2.2, 0.001);
+
+    fs::remove(csv_path);
+}

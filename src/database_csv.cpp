@@ -332,6 +332,49 @@ static rapidcsv::Document read_csv_file(const std::string& path) {
         std::replace(content.begin(), content.end(), ';', ',');
     }
 
+    // Strip trailing empty columns — common Excel artifact when editing CSVs with sep=,
+    // Count trailing commas on the header line, then strip that many from every line.
+    {
+        auto first_nl = content.find('\n');
+        std::string_view header(content.data(), first_nl != std::string::npos ? first_nl : content.size());
+        size_t trailing = 0;
+        for (auto it = header.rbegin(); it != header.rend() && (*it == ',' || *it == ' ' || *it == '\t' || *it == '\r');
+             ++it) {
+            if (*it == ',')
+                ++trailing;
+        }
+        if (trailing > 0) {
+            std::string stripped;
+            stripped.reserve(content.size());
+            std::istringstream lines(content);
+            std::string line;
+            bool first = true;
+            while (std::getline(lines, line)) {
+                if (!first)
+                    stripped += '\n';
+                first = false;
+                // Remove exactly `trailing` trailing commas (and surrounding whitespace)
+                size_t to_remove = trailing;
+                auto end = line.size();
+                while (to_remove > 0 && end > 0) {
+                    auto ch = line[end - 1];
+                    if (ch == ' ' || ch == '\t' || ch == '\r') {
+                        --end;
+                        continue;
+                    }
+                    if (ch == ',') {
+                        --end;
+                        --to_remove;
+                        continue;
+                    }
+                    break;
+                }
+                stripped += line.substr(0, end);
+            }
+            content = std::move(stripped);
+        }
+    }
+
     std::istringstream ss(content);
     auto doc = rapidcsv::Document(
         ss, rapidcsv::LabelParams(0, -1), rapidcsv::SeparatorParams(',', false, false, true, true, '"'));

@@ -393,6 +393,59 @@ end
         end
     end
 
+    @testset "Scalar trailing empty columns" begin
+        db = Quiver.from_schema(":memory:", path_schema)
+        csv_path = tempname() * ".csv"
+        try
+            open(csv_path, "w") do f
+                return write(f,
+                    "sep=,\n" *
+                    "label,name,status,price,date_created,notes,,,,\n" *
+                    "Item1,Alpha,1,9.99,2024-01-15T10:30:00,first,,,,\n" *
+                    "Item2,Beta,2,19.5,2024-02-20T08:00:00,second,,,,\n")
+            end
+
+            Quiver.import_csv(db, "Items", "", csv_path)
+
+            names = Quiver.read_scalar_strings(db, "Items", "name")
+            @test length(names) == 2
+            @test names[1] == "Alpha"
+            @test names[2] == "Beta"
+        finally
+            isfile(csv_path) && rm(csv_path)
+            Quiver.close!(db)
+        end
+    end
+
+    @testset "Vector trailing empty columns" begin
+        db = Quiver.from_schema(":memory:", path_schema)
+        csv_path = tempname() * ".csv"
+        try
+            Quiver.create_element!(db, "Items";
+                label = "Item1",
+                name = "Alpha",
+            )
+
+            open(csv_path, "w") do f
+                return write(f,
+                    "sep=,\n" *
+                    "id,vector_index,measurement,,,\n" *
+                    "Item1,1,1.1,,,\n" *
+                    "Item1,2,2.2,,,\n")
+            end
+
+            Quiver.import_csv(db, "Items", "measurements", csv_path)
+
+            vals = Quiver.read_vector_floats_by_id(db, "Items", "measurement", 1)
+            @test length(vals) == 2
+            @test vals[1] ≈ 1.1 atol = 0.001
+            @test vals[2] ≈ 2.2 atol = 0.001
+        finally
+            isfile(csv_path) && rm(csv_path)
+            Quiver.close!(db)
+        end
+    end
+
     @testset "Group invalid enum throws" begin
         db = Quiver.from_schema(":memory:", path_schema)
         csv_path = tempname() * ".csv"
