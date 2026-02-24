@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import warnings
 from contextlib import contextmanager
+from datetime import datetime
 
 from quiver._c_api import ffi, get_lib
 from quiver._helpers import check, decode_string, decode_string_or_none
@@ -297,6 +298,90 @@ class Database:
             except Exception:
                 pass  # Best-effort rollback; swallow rollback errors
             raise
+
+    # -- Query operations -------------------------------------------------------
+
+    def query_string(self, sql: str, *, params: list | None = None) -> str | None:
+        """Execute SQL and return the first column of the first row as str, or None."""
+        self._ensure_open()
+        lib = get_lib()
+        out_value = ffi.new("char**")
+        out_has = ffi.new("int*")
+
+        if params is not None and len(params) > 0:
+            keepalive, c_types, c_values = _marshal_params(params)
+            check(lib.quiver_database_query_string_params(
+                self._ptr, sql.encode("utf-8"),
+                c_types, c_values, len(params),
+                out_value, out_has,
+            ))
+        else:
+            check(lib.quiver_database_query_string(
+                self._ptr, sql.encode("utf-8"),
+                out_value, out_has,
+            ))
+
+        if out_has[0] == 0 or out_value[0] == ffi.NULL:
+            return None
+        try:
+            return ffi.string(out_value[0]).decode("utf-8")
+        finally:
+            lib.quiver_element_free_string(out_value[0])
+
+    def query_integer(self, sql: str, *, params: list | None = None) -> int | None:
+        """Execute SQL and return the first column of the first row as int, or None."""
+        self._ensure_open()
+        lib = get_lib()
+        out_value = ffi.new("int64_t*")
+        out_has = ffi.new("int*")
+
+        if params is not None and len(params) > 0:
+            keepalive, c_types, c_values = _marshal_params(params)
+            check(lib.quiver_database_query_integer_params(
+                self._ptr, sql.encode("utf-8"),
+                c_types, c_values, len(params),
+                out_value, out_has,
+            ))
+        else:
+            check(lib.quiver_database_query_integer(
+                self._ptr, sql.encode("utf-8"),
+                out_value, out_has,
+            ))
+
+        if out_has[0] == 0:
+            return None
+        return out_value[0]
+
+    def query_float(self, sql: str, *, params: list | None = None) -> float | None:
+        """Execute SQL and return the first column of the first row as float, or None."""
+        self._ensure_open()
+        lib = get_lib()
+        out_value = ffi.new("double*")
+        out_has = ffi.new("int*")
+
+        if params is not None and len(params) > 0:
+            keepalive, c_types, c_values = _marshal_params(params)
+            check(lib.quiver_database_query_float_params(
+                self._ptr, sql.encode("utf-8"),
+                c_types, c_values, len(params),
+                out_value, out_has,
+            ))
+        else:
+            check(lib.quiver_database_query_float(
+                self._ptr, sql.encode("utf-8"),
+                out_value, out_has,
+            ))
+
+        if out_has[0] == 0:
+            return None
+        return out_value[0]
+
+    def query_date_time(self, sql: str, *, params: list | None = None) -> datetime | None:
+        """Execute SQL and return the first column of the first row as datetime, or None."""
+        result = self.query_string(sql, params=params)
+        if result is None:
+            return None
+        return datetime.fromisoformat(result)
 
     # -- Scalar reads (bulk) --------------------------------------------------
 
@@ -909,6 +994,48 @@ class Database:
         if self._closed:
             return "Database(closed)"
         return f"Database(path={self.path()!r})"
+
+
+# -- Parameter marshaling helpers (module-level) -----------------------------
+
+
+def _marshal_params(params: list) -> tuple:
+    """Marshal Python params into C API parallel arrays.
+
+    Returns (keepalive, c_types, c_values) where keepalive must remain
+    referenced until the C API call completes.
+    """
+    n = len(params)
+    c_types = ffi.new("int[]", n)
+    c_values = ffi.new("void*[]", n)
+    keepalive = []  # prevent GC of typed buffers
+
+    for i, p in enumerate(params):
+        if p is None:
+            c_types[i] = 4  # QUIVER_DATA_TYPE_NULL
+            c_values[i] = ffi.NULL
+        elif isinstance(p, int):  # bool is subclass of int, handled here
+            c_types[i] = 0  # QUIVER_DATA_TYPE_INTEGER
+            buf = ffi.new("int64_t*", p)
+            keepalive.append(buf)
+            c_values[i] = ffi.cast("void*", buf)
+        elif isinstance(p, float):
+            c_types[i] = 1  # QUIVER_DATA_TYPE_FLOAT
+            buf = ffi.new("double*", p)
+            keepalive.append(buf)
+            c_values[i] = ffi.cast("void*", buf)
+        elif isinstance(p, str):
+            c_types[i] = 2  # QUIVER_DATA_TYPE_STRING
+            c_buf = ffi.new("char[]", p.encode("utf-8"))
+            keepalive.append(c_buf)
+            c_values[i] = ffi.cast("void*", c_buf)
+        else:
+            raise TypeError(
+                f"Unsupported parameter type: {type(p).__name__}. "
+                "Expected int, float, str, or None."
+            )
+
+    return keepalive, c_types, c_values
 
 
 # -- Metadata parsing helpers (module-level) ---------------------------------

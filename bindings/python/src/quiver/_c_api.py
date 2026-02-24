@@ -284,6 +284,25 @@ ffi.cdef("""
     quiver_error_t quiver_database_commit(quiver_database_t* db);
     quiver_error_t quiver_database_rollback(quiver_database_t* db);
     quiver_error_t quiver_database_in_transaction(quiver_database_t* db, _Bool* out_active);
+
+    // Query methods - simple
+    quiver_error_t quiver_database_query_string(quiver_database_t* db,
+        const char* sql, char** out_value, int* out_has_value);
+    quiver_error_t quiver_database_query_integer(quiver_database_t* db,
+        const char* sql, int64_t* out_value, int* out_has_value);
+    quiver_error_t quiver_database_query_float(quiver_database_t* db,
+        const char* sql, double* out_value, int* out_has_value);
+
+    // Query methods - parameterized
+    quiver_error_t quiver_database_query_string_params(quiver_database_t* db,
+        const char* sql, const int* param_types, void**  param_values,
+        size_t param_count, char** out_value, int* out_has_value);
+    quiver_error_t quiver_database_query_integer_params(quiver_database_t* db,
+        const char* sql, const int* param_types, void** param_values,
+        size_t param_count, int64_t* out_value, int* out_has_value);
+    quiver_error_t quiver_database_query_float_params(quiver_database_t* db,
+        const char* sql, const int* param_types, void** param_values,
+        size_t param_count, double* out_value, int* out_has_value);
 """)
 
 _lib = None
