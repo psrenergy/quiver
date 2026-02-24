@@ -35,7 +35,7 @@ None currently deferred.
 
 | Feature | Reason |
 |---------|--------|
-| New C++ FK tests | Already complete — 16 tests in v1.0 |
+| New C++ FK tests | Already complete -- 16 tests in v1.0 |
 | FK resolution code changes | v1.0 shipped the implementation; this is test-only |
 | Binding convenience methods for FK | Bindings pass through to C API; no new methods needed |
 
@@ -59,4 +59,4 @@ None currently deferred.
 
 ---
 *Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 after initial definition*
+*Last updated: 2026-02-24 after roadmap creation*
