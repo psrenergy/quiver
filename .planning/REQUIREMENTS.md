@@ -19,8 +19,8 @@ Requirements for milestone v1.1 FK Test Coverage. Each maps to roadmap phases.
 
 ### Dart
 
-- [ ] **DART-01**: Dart FK resolution tests for createElement cover all 9 test cases mirroring C++ create path
-- [ ] **DART-02**: Dart FK resolution tests for updateElement cover all 7 test cases mirroring C++ update path
+- [x] **DART-01**: Dart FK resolution tests for createElement cover all 9 test cases mirroring C++ create path
+- [x] **DART-02**: Dart FK resolution tests for updateElement cover all 7 test cases mirroring C++ update path
 
 ### Lua
 
@@ -47,8 +47,8 @@ None currently deferred.
 | CAPI-02 | Phase 5 | Complete |
 | JUL-01 | Phase 6 | Complete |
 | JUL-02 | Phase 6 | Complete |
-| DART-01 | Phase 7 | Pending |
-| DART-02 | Phase 7 | Pending |
+| DART-01 | Phase 7 | Complete |
+| DART-02 | Phase 7 | Complete |
 | LUA-01 | Phase 8 | Pending |
 | LUA-02 | Phase 8 | Pending |
 

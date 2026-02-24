@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** A single, clean C++ API that exposes full SQLite schema capabilities through uniform, mechanically-derived bindings.
-**Current focus:** Phase 6 - Julia FK Tests
+**Current focus:** Phase 7 - Dart FK Tests
 
 ## Current Position
 
-Phase: 6 of 8 (Julia FK Tests)
+Phase: 7 of 8 (Dart FK Tests)
 Plan: 2 of 2 in current phase
 Status: Phase complete
-Last activity: 2026-02-24 -- Completed 06-02-PLAN.md (Julia FK update tests)
+Last activity: 2026-02-24 -- Completed 07-02-PLAN.md (Dart FK update tests)
 
-Progress: [######----] 75% (6/8 phases complete)
+Progress: [########--] 87% (7/8 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10 (6 v1.0 + 4 v1.1)
+- Total plans completed: 12 (6 v1.0 + 6 v1.1)
 - Average duration: --
 - Total execution time: --
 
@@ -33,6 +33,7 @@ Progress: [######----] 75% (6/8 phases complete)
 | 4. Cleanup | 2 | -- | -- |
 | 5. C API FK Tests | 2/2 | 5min | 2.5min |
 | 6. Julia FK Tests | 2/2 | 4min | 2min |
+| 7. Dart FK Tests | 2/2 | 4min | 2min |
 
 *Updated after each plan completion*
 
@@ -49,6 +50,8 @@ v1.1 context: Each binding layer mirrors the same 16 C++ FK tests (9 create + 7 
 - Phase 5 Plan 2: C API FK update tests mirror C++ counterparts exactly (7 tests: scalar, vector, set, time series, combined, no-FK, failure-preserves)
 - Phase 6 Plan 1: Julia FK create tests mirror C++ counterparts (9 tests), use @test_throws without message inspection
 - Phase 6 Plan 2: Julia FK update tests mirror C++ counterparts (7 tests: scalar, vector, set, time series, combined, no-FK, failure-preserves)
+- Phase 7 Plan 1: Dart FK create tests mirror C++ counterparts (9 tests), use throwsA(isA<DatabaseException>()) without message inspection
+- Phase 7 Plan 2: Dart FK update tests mirror C++ counterparts (7 tests: scalar, vector, set, time series, combined, no-FK, failure-preserves)
 
 ### Pending Todos
 
@@ -61,5 +64,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 06-02-PLAN.md (phase 6 complete)
+Stopped at: Completed 07-02-PLAN.md (phase 7 complete)
 Resume file: None
