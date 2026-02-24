@@ -708,6 +708,25 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    @testset "Update Element Scalar FK Integer" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        Quiver.create_element!(db, "Parent"; label = "Parent 1")
+        Quiver.create_element!(db, "Parent"; label = "Parent 2")
+        Quiver.create_element!(db, "Child"; label = "Child 1", parent_id = 1)
+
+        # Update child: change parent_id to 2 using integer ID directly
+        Quiver.update_element!(db, "Child", Int64(1); parent_id = 2)
+
+        # Verify: parent_id updated to 2
+        parent_ids = Quiver.read_scalar_integers(db, "Child", "parent_id")
+        @test parent_ids == [2]
+
+        Quiver.close!(db)
+    end
+
     @testset "Update Element Vector FK Labels" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
         db = Quiver.from_schema(":memory:", path_schema)

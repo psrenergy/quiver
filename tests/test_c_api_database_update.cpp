@@ -928,6 +928,55 @@ TEST(DatabaseCApi, UpdateElementScalarFkLabel) {
     quiver_database_close(db);
 }
 
+TEST(DatabaseCApi, UpdateElementScalarFkInteger) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    // Create two parents
+    quiver_element_t* p1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&p1), QUIVER_OK);
+    quiver_element_set_string(p1, "label", "Parent 1");
+    int64_t p1_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Parent", p1, &p1_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(p1), QUIVER_OK);
+
+    quiver_element_t* p2 = nullptr;
+    ASSERT_EQ(quiver_element_create(&p2), QUIVER_OK);
+    quiver_element_set_string(p2, "label", "Parent 2");
+    int64_t p2_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Parent", p2, &p2_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(p2), QUIVER_OK);
+
+    // Create child with parent_id = 1 (integer)
+    quiver_element_t* child = nullptr;
+    ASSERT_EQ(quiver_element_create(&child), QUIVER_OK);
+    quiver_element_set_string(child, "label", "Child 1");
+    quiver_element_set_integer(child, "parent_id", 1);
+    int64_t child_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Child", child, &child_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(child), QUIVER_OK);
+
+    // Update child: change parent_id to 2 using integer ID directly
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
+    quiver_element_set_integer(update, "parent_id", 2);
+    auto err = quiver_database_update_element(db, "Child", child_id, update);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
+    EXPECT_EQ(err, QUIVER_OK);
+
+    // Verify: parent_id updated to 2
+    int64_t* parent_ids = nullptr;
+    size_t count = 0;
+    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &parent_ids, &count), QUIVER_OK);
+    ASSERT_EQ(count, 1);
+    EXPECT_EQ(parent_ids[0], 2);
+
+    quiver_database_free_integer_array(parent_ids);
+    quiver_database_close(db);
+}
+
 TEST(DatabaseCApi, UpdateElementVectorFkLabels) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;

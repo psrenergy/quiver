@@ -560,6 +560,26 @@ void main() {
       }
     });
 
+    test('stores scalar FK integer ID directly', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Parent', {'label': 'Parent 1'});
+        db.createElement('Child', {
+          'label': 'Child 1',
+          'parent_id': 1,
+        });
+
+        final result = db.readScalarIntegers('Child', 'parent_id');
+        expect(result, equals([1]));
+      } finally {
+        db.close();
+      }
+    });
+
     test('resolves vector FK labels to IDs', () {
       final db = Database.fromSchema(
         ':memory:',

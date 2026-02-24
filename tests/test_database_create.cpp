@@ -426,6 +426,27 @@ TEST(Database, CreateElementScalarFkLabel) {
     EXPECT_EQ(parent_ids[0], 1);  // Parent 1's auto-increment ID
 }
 
+TEST(Database, CreateElementScalarFkInteger) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    // Create parent
+    quiver::Element parent;
+    parent.set("label", std::string("Parent 1"));
+    db.create_element("Parent", parent);
+
+    // Create child with scalar FK using integer ID directly (bypasses label resolution)
+    quiver::Element child;
+    child.set("label", std::string("Child 1"));
+    child.set("parent_id", int64_t{1});
+    db.create_element("Child", child);
+
+    // Verify: read back integer, should be stored as-is
+    auto parent_ids = db.read_scalar_integers("Child", "parent_id");
+    ASSERT_EQ(parent_ids.size(), 1);
+    EXPECT_EQ(parent_ids[0], 1);
+}
+
 TEST(Database, CreateElementVectorFkLabels) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});

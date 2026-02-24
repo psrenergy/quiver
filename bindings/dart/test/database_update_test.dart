@@ -997,6 +997,28 @@ void main() {
       }
     });
 
+    test('updates scalar FK with integer ID directly', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Parent', {'label': 'Parent 1'});
+        db.createElement('Parent', {'label': 'Parent 2'});
+        db.createElement('Child', {'label': 'Child 1', 'parent_id': 1});
+
+        // Update child: change parent_id to 2 using integer ID directly
+        db.updateElement('Child', 1, {'parent_id': 2});
+
+        // Verify: parent_id updated to 2
+        final parentIds = db.readScalarIntegers('Child', 'parent_id');
+        expect(parentIds, equals([2]));
+      } finally {
+        db.close();
+      }
+    });
+
     test('resolves vector FK labels to IDs', () {
       final db = Database.fromSchema(
         ':memory:',

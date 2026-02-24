@@ -678,6 +678,34 @@ TEST(Database, UpdateElementScalarFkLabel) {
     EXPECT_EQ(parent_ids[0], 2);
 }
 
+TEST(Database, UpdateElementScalarFkInteger) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    // Create two parents
+    quiver::Element p1, p2;
+    p1.set("label", std::string("Parent 1"));
+    p2.set("label", std::string("Parent 2"));
+    db.create_element("Parent", p1);
+    db.create_element("Parent", p2);
+
+    // Create child with parent_id = 1 (integer)
+    quiver::Element child;
+    child.set("label", std::string("Child 1"));
+    child.set("parent_id", int64_t{1});
+    db.create_element("Child", child);
+
+    // Update child: change parent_id to 2 using integer ID directly
+    quiver::Element update;
+    update.set("parent_id", int64_t{2});
+    db.update_element("Child", 1, update);
+
+    // Verify: parent_id updated to 2
+    auto parent_ids = db.read_scalar_integers("Child", "parent_id");
+    ASSERT_EQ(parent_ids.size(), 1);
+    EXPECT_EQ(parent_ids[0], 2);
+}
+
 TEST(Database, UpdateElementVectorFkLabels) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});

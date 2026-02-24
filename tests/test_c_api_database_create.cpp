@@ -415,6 +415,40 @@ TEST(DatabaseCApi, CreateElementScalarFkLabel) {
     quiver_database_close(db);
 }
 
+TEST(DatabaseCApi, CreateElementScalarFkInteger) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+
+    // Create parent
+    quiver_element_t* parent = nullptr;
+    ASSERT_EQ(quiver_element_create(&parent), QUIVER_OK);
+    quiver_element_set_string(parent, "label", "Parent 1");
+    int64_t pid = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Parent", parent, &pid), QUIVER_OK);
+    quiver_element_destroy(parent);
+
+    // Create child with scalar FK using integer ID directly
+    quiver_element_t* child = nullptr;
+    ASSERT_EQ(quiver_element_create(&child), QUIVER_OK);
+    quiver_element_set_string(child, "label", "Child 1");
+    quiver_element_set_integer(child, "parent_id", 1);
+
+    int64_t child_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Child", child, &child_id), QUIVER_OK);
+    quiver_element_destroy(child);
+
+    // Verify via read_scalar_integers
+    int64_t* values = nullptr;
+    size_t count = 0;
+    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &values, &count), QUIVER_OK);
+    ASSERT_EQ(count, 1);
+    EXPECT_EQ(values[0], 1);
+
+    quiver_database_free_integer_array(values);
+    quiver_database_close(db);
+}
+
 TEST(DatabaseCApi, CreateElementVectorFkLabels) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;

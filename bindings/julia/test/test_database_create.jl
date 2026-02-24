@@ -413,6 +413,23 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    @testset "Create Element Scalar FK Integer" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        Quiver.create_element!(db, "Parent"; label = "Parent 1")
+
+        # Create child with scalar FK using integer ID directly
+        Quiver.create_element!(db, "Child"; label = "Child 1", parent_id = 1)
+
+        # Verify: read back integer, should be stored as-is
+        result = Quiver.read_scalar_integers(db, "Child", "parent_id")
+        @test result == [1]
+
+        Quiver.close!(db)
+    end
+
     @testset "Create Element Vector FK Labels" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
         db = Quiver.from_schema(":memory:", path_schema)

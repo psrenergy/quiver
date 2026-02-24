@@ -2209,6 +2209,23 @@ TEST_F(LuaRunnerFkTest, CreateElementScalarFkLabel) {
     EXPECT_EQ(parent_ids[0], 1);
 }
 
+TEST_F(LuaRunnerFkTest, CreateElementScalarFkInteger) {
+    auto db = quiver::Database::from_schema(":memory:", relations_schema);
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:create_element("Parent", { label = "Parent 1" })
+        db:create_element("Child", {
+            label = "Child 1",
+            parent_id = 1
+        })
+    )");
+
+    auto parent_ids = db.read_scalar_integers("Child", "parent_id");
+    ASSERT_EQ(parent_ids.size(), 1);
+    EXPECT_EQ(parent_ids[0], 1);
+}
+
 TEST_F(LuaRunnerFkTest, CreateElementVectorFkLabels) {
     auto db = quiver::Database::from_schema(":memory:", relations_schema);
     quiver::LuaRunner lua(db);
@@ -2348,6 +2365,25 @@ TEST_F(LuaRunnerFkTest, UpdateElementScalarFkLabel) {
             parent_id = "Parent 1"
         })
         db:update_element("Child", 1, { parent_id = "Parent 2" })
+    )");
+
+    auto parent_ids = db.read_scalar_integers("Child", "parent_id");
+    ASSERT_EQ(parent_ids.size(), 1);
+    EXPECT_EQ(parent_ids[0], 2);
+}
+
+TEST_F(LuaRunnerFkTest, UpdateElementScalarFkInteger) {
+    auto db = quiver::Database::from_schema(":memory:", relations_schema);
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:create_element("Parent", { label = "Parent 1" })
+        db:create_element("Parent", { label = "Parent 2" })
+        db:create_element("Child", {
+            label = "Child 1",
+            parent_id = 1
+        })
+        db:update_element("Child", 1, { parent_id = 2 })
     )");
 
     auto parent_ids = db.read_scalar_integers("Child", "parent_id");
