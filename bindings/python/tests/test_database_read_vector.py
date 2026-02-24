@@ -99,3 +99,50 @@ class TestReadVectorFloatsBulk:
         assert abs(result[0][1] - 2.2) < 1e-9
         assert len(result[1]) == 1
         assert abs(result[1][0] - 3.3) < 1e-9
+
+
+# -- Convenience vector reads ------------------------------------------------
+
+
+class TestReadAllVectorsByID:
+    def test_read_all_vectors_by_id_no_groups(self, db: Database) -> None:
+        """read_all_vectors_by_id returns empty dict for collections with no vector groups."""
+        id1 = db.create_element("Configuration", Element().set("label", "item1"))
+        result = db.read_all_vectors_by_id("Configuration", id1)
+        assert result == {}
+
+
+class TestReadVectorGroupByID:
+    def test_read_vector_group_by_id(self, collections_db: Database) -> None:
+        elem = (
+            Element()
+            .set("label", "item1")
+            .set("some_integer", 10)
+            .set("value_int", [1, 2, 3])
+            .set("value_float", [1.1, 2.2, 3.3])
+        )
+        id1 = collections_db.create_element("Collection", elem)
+
+        result = collections_db.read_vector_group_by_id("Collection", "values", id1)
+        assert len(result) == 3
+
+        # Check first row
+        assert result[0]["vector_index"] == 0
+        assert result[0]["value_int"] == 1
+        assert abs(result[0]["value_float"] - 1.1) < 1e-9
+
+        # Check last row
+        assert result[2]["vector_index"] == 2
+        assert result[2]["value_int"] == 3
+        assert abs(result[2]["value_float"] - 3.3) < 1e-9
+
+        # Every row has vector_index as int
+        for row in result:
+            assert "vector_index" in row
+            assert isinstance(row["vector_index"], int)
+
+    def test_read_vector_group_by_id_empty(self, collections_db: Database) -> None:
+        elem = Element().set("label", "item1").set("some_integer", 10)
+        id1 = collections_db.create_element("Collection", elem)
+        result = collections_db.read_vector_group_by_id("Collection", "values", id1)
+        assert result == []

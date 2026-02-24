@@ -70,3 +70,31 @@ class TestReadSetStringsBulk:
         result = collections_db.read_set_strings("Collection", "tag")
         assert len(result) == 1
         assert result[0] == ["alpha"]
+
+
+# -- Convenience set reads ---------------------------------------------------
+
+
+class TestReadAllSetsByID:
+    def test_read_all_sets_by_id_no_groups(self, db: Database) -> None:
+        """read_all_sets_by_id returns empty dict for collections with no set groups."""
+        id1 = db.create_element("Configuration", Element().set("label", "item1"))
+        result = db.read_all_sets_by_id("Configuration", id1)
+        assert result == {}
+
+
+class TestReadSetGroupByID:
+    def test_read_set_group_by_id(self, collections_db: Database) -> None:
+        elem = Element().set("label", "item1").set("some_integer", 10).set("tag", ["alpha", "beta"])
+        id1 = collections_db.create_element("Collection", elem)
+        result = collections_db.read_set_group_by_id("Collection", "tags", id1)
+        assert isinstance(result, list)
+        # Each row is a dict with column name "tag"
+        tags = [row["tag"] for row in result]
+        assert sorted(tags) == ["alpha", "beta"]
+
+    def test_read_set_group_by_id_empty(self, collections_db: Database) -> None:
+        elem = Element().set("label", "item1").set("some_integer", 10)
+        id1 = collections_db.create_element("Collection", elem)
+        result = collections_db.read_set_group_by_id("Collection", "tags", id1)
+        assert result == []

@@ -1,6 +1,8 @@
-"""Tests for scalar read operations, element IDs, and relation reads."""
+"""Tests for scalar read operations, element IDs, relation reads, and convenience helpers."""
 
 from __future__ import annotations
+
+from datetime import datetime, timezone
 
 import pytest
 
@@ -170,3 +172,71 @@ class TestReadScalarRelation:
         assert len(labels) == 2
         assert labels[0] == "Child 2"
         assert labels[1] is None
+
+
+# -- DateTime scalar reads ---------------------------------------------------
+
+
+class TestReadScalarDateTimeByID:
+    def test_read_scalar_date_time_by_id(self, db: Database) -> None:
+        id1 = db.create_element(
+            "Configuration",
+            Element().set("label", "item1").set("date_attribute", "2024-01-15T10:30:00"),
+        )
+        result = db.read_scalar_date_time_by_id("Configuration", "date_attribute", id1)
+        assert result == datetime(2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc)
+        assert result.tzinfo is not None
+
+    def test_read_scalar_date_time_by_id_space_format(self, db: Database) -> None:
+        id1 = db.create_element(
+            "Configuration",
+            Element().set("label", "item1").set("date_attribute", "2024-01-15 10:30:00"),
+        )
+        result = db.read_scalar_date_time_by_id("Configuration", "date_attribute", id1)
+        assert result == datetime(2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc)
+
+    def test_read_scalar_date_time_by_id_none(self, db: Database) -> None:
+        id1 = db.create_element("Configuration", Element().set("label", "item1"))
+        result = db.read_scalar_date_time_by_id("Configuration", "date_attribute", id1)
+        assert result is None
+
+
+# -- Composite scalar reads --------------------------------------------------
+
+
+class TestReadAllScalarsByID:
+    def test_read_all_scalars_by_id(self, db: Database) -> None:
+        id1 = db.create_element(
+            "Configuration",
+            Element()
+            .set("label", "item1")
+            .set("integer_attribute", 42)
+            .set("float_attribute", 3.14)
+            .set("string_attribute", "hello")
+            .set("date_attribute", "2024-01-15T10:30:00"),
+        )
+        result = db.read_all_scalars_by_id("Configuration", id1)
+
+        # Check all expected keys present
+        assert "id" in result
+        assert "label" in result
+        assert "integer_attribute" in result
+        assert "float_attribute" in result
+        assert "string_attribute" in result
+        assert "date_attribute" in result
+
+        # Check types
+        assert isinstance(result["id"], int)
+        assert isinstance(result["label"], str)
+        assert isinstance(result["integer_attribute"], int)
+        assert isinstance(result["float_attribute"], float)
+        assert isinstance(result["string_attribute"], str)
+        assert isinstance(result["date_attribute"], datetime)
+
+        # Check values
+        assert result["label"] == "item1"
+        assert result["integer_attribute"] == 42
+        assert abs(result["float_attribute"] - 3.14) < 1e-9
+        assert result["string_attribute"] == "hello"
+        assert result["date_attribute"] == datetime(2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc)
+        assert result["date_attribute"].tzinfo is not None
