@@ -1683,3 +1683,252 @@ TEST(DatabaseCApi, DateTimeReadScalarString) {
     delete[] value;
     quiver_database_close(db);
 }
+
+// ============================================================================
+// Gap-fill: Read vector strings (using all_types.sql)
+// ============================================================================
+
+TEST(DatabaseCApi, ReadVectorStringsHappyPath) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("all_types.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+    quiver_element_set_string(e, "label", "Item 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "AllTypes", e, &id);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+
+    const char* str_values[] = {"alpha", "beta", "gamma"};
+    ASSERT_EQ(quiver_database_update_vector_strings(db, "AllTypes", "label_value", id, str_values, 3), QUIVER_OK);
+
+    char*** vectors = nullptr;
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    auto err = quiver_database_read_vector_strings(db, "AllTypes", "label_value", &vectors, &sizes, &count);
+    EXPECT_EQ(err, QUIVER_OK);
+    EXPECT_EQ(count, 1);
+    EXPECT_EQ(sizes[0], 3);
+    EXPECT_STREQ(vectors[0][0], "alpha");
+    EXPECT_STREQ(vectors[0][1], "beta");
+    EXPECT_STREQ(vectors[0][2], "gamma");
+
+    quiver_database_free_string_vectors(vectors, sizes, count);
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadVectorStringsByIdHappyPath) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("all_types.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+    quiver_element_set_string(e, "label", "Item 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "AllTypes", e, &id);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+
+    const char* str_values[] = {"hello", "world"};
+    ASSERT_EQ(quiver_database_update_vector_strings(db, "AllTypes", "label_value", id, str_values, 2), QUIVER_OK);
+
+    char** read_values = nullptr;
+    size_t count = 0;
+    auto err = quiver_database_read_vector_strings_by_id(db, "AllTypes", "label_value", id, &read_values, &count);
+    EXPECT_EQ(err, QUIVER_OK);
+    EXPECT_EQ(count, 2);
+    EXPECT_STREQ(read_values[0], "hello");
+    EXPECT_STREQ(read_values[1], "world");
+
+    quiver_database_free_string_array(read_values, count);
+    quiver_database_close(db);
+}
+
+// ============================================================================
+// Gap-fill: Read set integers (using all_types.sql)
+// ============================================================================
+
+TEST(DatabaseCApi, ReadSetIntegersHappyPath) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("all_types.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+    quiver_element_set_string(e, "label", "Item 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "AllTypes", e, &id);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+
+    int64_t int_values[] = {10, 20, 30};
+    ASSERT_EQ(quiver_database_update_set_integers(db, "AllTypes", "code", id, int_values, 3), QUIVER_OK);
+
+    int64_t** sets = nullptr;
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    auto err = quiver_database_read_set_integers(db, "AllTypes", "code", &sets, &sizes, &count);
+    EXPECT_EQ(err, QUIVER_OK);
+    EXPECT_EQ(count, 1);
+    EXPECT_EQ(sizes[0], 3);
+
+    std::vector<int64_t> set_vals(sets[0], sets[0] + sizes[0]);
+    std::sort(set_vals.begin(), set_vals.end());
+    EXPECT_EQ(set_vals[0], 10);
+    EXPECT_EQ(set_vals[1], 20);
+    EXPECT_EQ(set_vals[2], 30);
+
+    quiver_database_free_integer_vectors(sets, sizes, count);
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadSetIntegersByIdHappyPath) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("all_types.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+    quiver_element_set_string(e, "label", "Item 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "AllTypes", e, &id);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+
+    int64_t int_values[] = {100, 200};
+    ASSERT_EQ(quiver_database_update_set_integers(db, "AllTypes", "code", id, int_values, 2), QUIVER_OK);
+
+    int64_t* read_values = nullptr;
+    size_t count = 0;
+    auto err = quiver_database_read_set_integers_by_id(db, "AllTypes", "code", id, &read_values, &count);
+    EXPECT_EQ(err, QUIVER_OK);
+    EXPECT_EQ(count, 2);
+
+    std::vector<int64_t> sorted(read_values, read_values + count);
+    std::sort(sorted.begin(), sorted.end());
+    EXPECT_EQ(sorted[0], 100);
+    EXPECT_EQ(sorted[1], 200);
+
+    quiver_database_free_integer_array(read_values);
+    quiver_database_close(db);
+}
+
+// ============================================================================
+// Gap-fill: Read set floats (using all_types.sql)
+// ============================================================================
+
+TEST(DatabaseCApi, ReadSetFloatsHappyPath) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("all_types.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+    quiver_element_set_string(e, "label", "Item 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "AllTypes", e, &id);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+
+    double float_values[] = {1.1, 2.2, 3.3};
+    ASSERT_EQ(quiver_database_update_set_floats(db, "AllTypes", "weight", id, float_values, 3), QUIVER_OK);
+
+    double** sets = nullptr;
+    size_t* sizes = nullptr;
+    size_t count = 0;
+    auto err = quiver_database_read_set_floats(db, "AllTypes", "weight", &sets, &sizes, &count);
+    EXPECT_EQ(err, QUIVER_OK);
+    EXPECT_EQ(count, 1);
+    EXPECT_EQ(sizes[0], 3);
+
+    std::vector<double> set_vals(sets[0], sets[0] + sizes[0]);
+    std::sort(set_vals.begin(), set_vals.end());
+    EXPECT_DOUBLE_EQ(set_vals[0], 1.1);
+    EXPECT_DOUBLE_EQ(set_vals[1], 2.2);
+    EXPECT_DOUBLE_EQ(set_vals[2], 3.3);
+
+    quiver_database_free_float_vectors(sets, sizes, count);
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, ReadSetFloatsByIdHappyPath) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("all_types.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+    quiver_element_set_string(e, "label", "Item 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "AllTypes", e, &id);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+
+    double float_values[] = {9.9, 8.8};
+    ASSERT_EQ(quiver_database_update_set_floats(db, "AllTypes", "weight", id, float_values, 2), QUIVER_OK);
+
+    double* read_values = nullptr;
+    size_t count = 0;
+    auto err = quiver_database_read_set_floats_by_id(db, "AllTypes", "weight", id, &read_values, &count);
+    EXPECT_EQ(err, QUIVER_OK);
+    EXPECT_EQ(count, 2);
+
+    std::vector<double> sorted(read_values, read_values + count);
+    std::sort(sorted.begin(), sorted.end());
+    EXPECT_DOUBLE_EQ(sorted[0], 8.8);
+    EXPECT_DOUBLE_EQ(sorted[1], 9.9);
+
+    quiver_database_free_float_array(read_values);
+    quiver_database_close(db);
+}
