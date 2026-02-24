@@ -5,7 +5,7 @@ preprocessor directives and QUIVER_C_API macros.
 
 Usage:
     python generator/generator.py                              # Print to stdout
-    python generator/generator.py --output src/quiver_db/_declarations.py  # Write file
+    python generator/generator.py --output src/quiverdb/_declarations.py  # Write file
 """
 
 from __future__ import annotations
@@ -17,10 +17,10 @@ from pathlib import Path
 
 # Headers to process, in dependency order
 HEADERS = [
-    "include/quiver_db/c/common.h",
-    "include/quiver_db/c/options.h",
-    "include/quiver_db/c/database.h",
-    "include/quiver_db/c/element.h",
+    "include/quiverdb/c/common.h",
+    "include/quiverdb/c/options.h",
+    "include/quiverdb/c/database.h",
+    "include/quiverdb/c/element.h",
 ]
 
 

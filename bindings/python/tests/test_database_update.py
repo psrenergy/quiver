@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from quiver_db import Database, Element
+from quiverdb import Database, Element
 
 
 class TestUpdateElement:

@@ -362,7 +362,7 @@ def get_lib():
     """Lazily load and return the C API library handle."""
     global _lib
     if _lib is None:
-        from quiver_db._loader import load_library
+        from quiverdb._loader import load_library
 
         _lib = load_library(ffi)
     return _lib

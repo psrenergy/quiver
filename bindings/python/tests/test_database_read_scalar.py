@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from quiver_db import Database, Element
+from quiverdb import Database, Element
 
 
 # -- Bulk scalar reads ---------------------------------------------------------

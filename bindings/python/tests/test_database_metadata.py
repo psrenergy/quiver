@@ -6,7 +6,7 @@ import dataclasses
 
 import pytest
 
-from quiver_db import Database, Element, GroupMetadata, ScalarMetadata
+from quiverdb import Database, Element, GroupMetadata, ScalarMetadata
 
 
 # -- get_scalar_metadata -------------------------------------------------------

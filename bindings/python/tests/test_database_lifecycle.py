@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-import quiver_db
-from quiver_db import Database, QuiverError
+import quiverdb
+from quiverdb import Database, QuiverError
 
 
 def test_from_schema_creates_database(valid_schema_path: Path, tmp_path: Path) -> None:
@@ -65,7 +65,7 @@ def test_describe_runs_without_error(db: Database) -> None:
 
 
 def test_version_returns_string() -> None:
-    result = quiver_db.version()
+    result = quiverdb.version()
     assert isinstance(result, str)
     assert len(result) > 0
 

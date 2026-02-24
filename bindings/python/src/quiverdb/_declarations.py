@@ -1,6 +1,6 @@
 """Auto-generated CFFI declarations. Do not edit manually.
 
-Regenerate with: python generator/generator.py --output src/quiver_db/_declarations.py
+Regenerate with: python generator/generator.py --output src/quiverdb/_declarations.py
 """
 
 DECLARATIONS = """

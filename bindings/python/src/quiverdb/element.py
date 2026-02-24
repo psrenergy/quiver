@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from quiver_db._c_api import ffi, get_lib
-from quiver_db._helpers import check, decode_string
-from quiver_db.exceptions import QuiverError
+from quiverdb._c_api import ffi, get_lib
+from quiverdb._helpers import check, decode_string
+from quiverdb.exceptions import QuiverError
 
 
 class Element:

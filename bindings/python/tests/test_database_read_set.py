@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from quiver_db import Database, Element
+from quiverdb import Database, Element
 
 
 # -- Set reads by ID ----------------------------------------------------------

@@ -1,5 +1,5 @@
 [project]
-name = "quiver_db"
+name = "quiverdb"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
@@ -18,6 +18,6 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/quiver_db"]
+packages = ["src/quiverdb"]
 
 [project.scripts]

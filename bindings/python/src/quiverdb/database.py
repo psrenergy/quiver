@@ -4,10 +4,10 @@ import warnings
 from contextlib import contextmanager
 from datetime import datetime, timezone
 
-from quiver_db._c_api import ffi, get_lib
-from quiver_db._helpers import check, decode_string, decode_string_or_none
-from quiver_db.exceptions import QuiverError
-from quiver_db.metadata import CSVExportOptions, GroupMetadata, ScalarMetadata
+from quiverdb._c_api import ffi, get_lib
+from quiverdb._helpers import check, decode_string, decode_string_or_none
+from quiverdb.exceptions import QuiverError
+from quiverdb.metadata import CSVExportOptions, GroupMetadata, ScalarMetadata
 
 
 class Database:
