@@ -127,6 +127,29 @@ include("fixture.jl")
         end
     end
 
+    @testset "Invalid datetime returns raw value" begin
+        db = Quiver.from_schema(":memory:", path_schema)
+        csv_path = tempname() * ".csv"
+        try
+            Quiver.create_element!(db, "Items";
+                label = "Item1",
+                name = "Alpha",
+                date_created = "not-a-date",
+            )
+
+            Quiver.export_csv(db, "Items", "", csv_path;
+                date_time_format = "%Y/%m/%d",
+            )
+            content = read(csv_path, String)
+
+            # Invalid datetime should be returned as-is
+            @test occursin("not-a-date", content)
+        finally
+            isfile(csv_path) && rm(csv_path)
+            Quiver.close!(db)
+        end
+    end
+
     @testset "Combined options (enum_labels + date_time_format)" begin
         db = Quiver.from_schema(":memory:", path_schema)
         csv_path = tempname() * ".csv"
@@ -297,6 +320,73 @@ end
             date = Quiver.read_scalar_string_by_id(db, "Items", "date_created", 1)
             @test !isnothing(date)
             @test date == "2024-01-15T00:00:00"
+        finally
+            isfile(csv_path) && rm(csv_path)
+            Quiver.close!(db)
+        end
+    end
+
+    @testset "Semicolon sep= header round-trip" begin
+        db = Quiver.from_schema(":memory:", path_schema)
+        csv_path = tempname() * ".csv"
+        try
+            open(csv_path, "w") do f
+                return write(f, "sep=;\nlabel;name;status;price;date_created;notes\nItem1;Alpha;1;9.99;;\n")
+            end
+
+            Quiver.import_csv(db, "Items", "", csv_path)
+
+            names = Quiver.read_scalar_strings(db, "Items", "name")
+            @test length(names) == 1
+            @test names[1] == "Alpha"
+        finally
+            isfile(csv_path) && rm(csv_path)
+            Quiver.close!(db)
+        end
+    end
+
+    @testset "Semicolon auto-detect round-trip" begin
+        db = Quiver.from_schema(":memory:", path_schema)
+        csv_path = tempname() * ".csv"
+        try
+            open(csv_path, "w") do f
+                return write(f, "label;name;status;price;date_created;notes\nItem1;Alpha;1;9.99;;\n")
+            end
+
+            Quiver.import_csv(db, "Items", "", csv_path)
+
+            names = Quiver.read_scalar_strings(db, "Items", "name")
+            @test length(names) == 1
+            @test names[1] == "Alpha"
+        finally
+            isfile(csv_path) && rm(csv_path)
+            Quiver.close!(db)
+        end
+    end
+
+    @testset "Cannot open file throws" begin
+        db = Quiver.from_schema(":memory:", path_schema)
+        try
+            @test_throws Exception Quiver.import_csv(db, "Items", "", "/nonexistent/path/file.csv")
+        finally
+            Quiver.close!(db)
+        end
+    end
+
+    @testset "Group duplicate entries throws" begin
+        db = Quiver.from_schema(":memory:", path_schema)
+        csv_path = tempname() * ".csv"
+        try
+            Quiver.create_element!(db, "Items";
+                label = "Item1",
+                name = "Alpha",
+            )
+
+            open(csv_path, "w") do f
+                return write(f, "sep=,\nid,tag\nItem1,red\nItem1,red\n")
+            end
+
+            @test_throws Exception Quiver.import_csv(db, "Items", "tags", csv_path)
         finally
             isfile(csv_path) && rm(csv_path)
             Quiver.close!(db)

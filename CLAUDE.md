@@ -8,11 +8,11 @@ SQLite wrapper library with C++ core, C API for FFI, and language bindings (Juli
 include/quiver/           # C++ public headers
   database.h              # Database class - main API
   attribute_metadata.h    # ScalarMetadata, GroupMetadata types
-  options.h               # DatabaseOptions, CSVExportOptions types and factories
+  options.h               # DatabaseOptions, CSVOptions types and factories
   element.h               # Element builder for create operations
   lua_runner.h            # Lua scripting support
 include/quiver/c/         # C API headers (for FFI)
-  options.h               # All option types: LogLevel, DatabaseOptions, CSVExportOptions
+  options.h               # All option types: LogLevel, DatabaseOptions, CSVOptions
   database.h
   element.h
   lua_runner.h
@@ -117,7 +117,7 @@ struct Database::Impl {
 };
 ```
 
-Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`, `GroupMetadata`, `ScalarMetadata`, `CSVExportOptions`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor).
+Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`, `GroupMetadata`, `ScalarMetadata`, `CSVOptions`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor).
 
 ### Transactions
 Public API exposes explicit transaction control:
@@ -365,7 +365,7 @@ Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references.
 - Relations: `update_scalar_relation()`, `read_scalar_relation()`
 - Query: `query_string/integer/float(sql, params = {})` - parameterized SQL with positional `?` placeholders
 - Schema inspection: `describe()` - prints schema info to stdout
-- CSV: `export_csv()` -- exports collection scalars or groups to CSV file with optional enum/date formatting via `CSVExportOptions`
+- CSV: `export_csv()`, `import_csv()` -- CSV export/import with optional enum/date formatting via `CSVOptions`
 
 ### Element Class
 Builder for element creation with fluent API:

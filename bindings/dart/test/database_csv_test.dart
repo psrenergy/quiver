@@ -149,6 +149,33 @@ void main() {
       }
     });
 
+    test('invalid datetime returns raw value', () {
+      final db = Database.fromSchema(':memory:', schemaPath);
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_invalid_date.csv';
+      try {
+        db.createElement('Items', {
+          'label': 'Item1',
+          'name': 'Alpha',
+          'date_created': 'not-a-date',
+        });
+
+        db.exportCSV(
+          'Items',
+          '',
+          csvPath,
+          dateTimeFormat: '%Y/%m/%d',
+        );
+        final content = File(csvPath).readAsStringSync();
+
+        // Invalid datetime should be returned as-is
+        expect(content, contains('not-a-date'));
+      } finally {
+        final f = File(csvPath);
+        if (f.existsSync()) f.deleteSync();
+        db.close();
+      }
+    });
+
     test('combined options (enum_labels + date_time_format)', () {
       final db = Database.fromSchema(':memory:', schemaPath);
       final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_combined.csv';
@@ -335,6 +362,80 @@ void main() {
         final date = db.readScalarStringById('Items', 'date_created', 1);
         expect(date, isNotNull);
         expect(date, '2024-01-15T00:00:00');
+      } finally {
+        final f = File(csvPath);
+        if (f.existsSync()) f.deleteSync();
+        db.close();
+      }
+    });
+
+    test('semicolon sep= header round-trip', () {
+      final db = Database.fromSchema(':memory:', schemaPath);
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_semicolon.csv';
+      try {
+        File(csvPath).writeAsStringSync(
+          'sep=;\nlabel;name;status;price;date_created;notes\nItem1;Alpha;1;9.99;;\n',
+        );
+
+        db.importCSV('Items', '', csvPath);
+
+        final names = db.readScalarStrings('Items', 'name');
+        expect(names.length, 1);
+        expect(names[0], 'Alpha');
+      } finally {
+        final f = File(csvPath);
+        if (f.existsSync()) f.deleteSync();
+        db.close();
+      }
+    });
+
+    test('semicolon auto-detect round-trip', () {
+      final db = Database.fromSchema(':memory:', schemaPath);
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_semicolon_auto.csv';
+      try {
+        File(csvPath).writeAsStringSync(
+          'label;name;status;price;date_created;notes\nItem1;Alpha;1;9.99;;\n',
+        );
+
+        db.importCSV('Items', '', csvPath);
+
+        final names = db.readScalarStrings('Items', 'name');
+        expect(names.length, 1);
+        expect(names[0], 'Alpha');
+      } finally {
+        final f = File(csvPath);
+        if (f.existsSync()) f.deleteSync();
+        db.close();
+      }
+    });
+
+    test('cannot open file throws', () {
+      final db = Database.fromSchema(':memory:', schemaPath);
+      try {
+        expect(
+          () => db.importCSV('Items', '', '/nonexistent/path/file.csv'),
+          throwsException,
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('group duplicate entries throws', () {
+      final db = Database.fromSchema(':memory:', schemaPath);
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_dup_group.csv';
+      try {
+        db.createElement('Items', {
+          'label': 'Item1',
+          'name': 'Alpha',
+        });
+
+        File(csvPath).writeAsStringSync('sep=,\nid,tag\nItem1,red\nItem1,red\n');
+
+        expect(
+          () => db.importCSV('Items', 'tags', csvPath),
+          throwsException,
+        );
       } finally {
         final f = File(csvPath);
         if (f.existsSync()) f.deleteSync();

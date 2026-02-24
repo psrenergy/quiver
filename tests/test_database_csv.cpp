@@ -411,6 +411,29 @@ TEST(DatabaseCSV, ExportCSV_DateTimeFormat_FormatsDateColumns) {
     fs::remove(csv_path);
 }
 
+TEST(DatabaseCSV, ExportCSV_DateTimeFormat_InvalidDateReturnsRaw) {
+    auto db = make_db();
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item1"))
+        .set("name", std::string("Alpha"))
+        .set("date_created", std::string("not-a-date"));  // invalid ISO 8601
+    db.create_element("Items", e1);
+
+    quiver::CSVOptions opts;
+    opts.date_time_format = "%Y/%m/%d";
+
+    auto csv_path = temp_csv("InvalidDateRaw");
+    db.export_csv("Items", "", csv_path.string(), opts);
+
+    auto content = read_file(csv_path.string());
+
+    // Invalid datetime should be returned as-is (raw value)
+    EXPECT_NE(content.find("not-a-date"), std::string::npos);
+
+    fs::remove(csv_path);
+}
+
 TEST(DatabaseCSV, ExportCSV_DateTimeFormat_NonDateColumnsUnaffected) {
     auto db = make_db();
 
@@ -507,6 +530,31 @@ TEST(DatabaseCSV, ExportCSV_OverwritesExistingFile) {
     EXPECT_NE(content.find("Item1,Alpha"), std::string::npos);
 
     fs::remove(csv_path);
+}
+
+TEST(DatabaseCSV, ExportCSV_CannotOpenFile_Throws) {
+    auto db = make_db();
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item1")).set("name", std::string("Alpha"));
+    db.create_element("Items", e1);
+
+    // Use a path that exists as a directory, so opening it as a file fails
+    auto dir_path = fs::temp_directory_path() / "quiver_test_dir_not_file";
+    fs::create_directories(dir_path);
+
+    EXPECT_THROW(
+        {
+            try {
+                db.export_csv("Items", "", dir_path.string());
+            } catch (const std::runtime_error& e) {
+                EXPECT_NE(std::string(e.what()).find("Failed to export_csv: could not open file"), std::string::npos);
+                throw;
+            }
+        },
+        std::runtime_error);
+
+    fs::remove_all(dir_path);
 }
 
 // ============================================================================
@@ -1233,6 +1281,333 @@ TEST(DatabaseCSV, ImportCSV_Scalar_20000Rows) {
     ASSERT_EQ(prices.size(), 20000);
     EXPECT_NEAR(prices[0], 0.5, 0.001);
     EXPECT_NEAR(prices[19999], 10000.0, 0.001);
+
+    fs::remove(csv_path);
+}
+
+// ============================================================================
+// import_csv: Semicolon delimiter handling
+// ============================================================================
+
+TEST(DatabaseCSV, ImportCSV_SemicolonSepHeader_RoundTrip) {
+    auto db = make_db();
+    auto csv_path = temp_csv("ImportSemicolonSep");
+    write_csv_file(csv_path.string(), "sep=;\nlabel;name;status;price;date_created;notes\nItem1;Alpha;1;9.99;;\n");
+
+    db.import_csv("Items", "", csv_path.string());
+
+    auto names = db.read_scalar_strings("Items", "name");
+    ASSERT_EQ(names.size(), 1);
+    EXPECT_EQ(names[0], "Alpha");
+
+    auto price = db.read_scalar_float_by_id("Items", "price", 1);
+    ASSERT_TRUE(price.has_value());
+    EXPECT_NEAR(price.value(), 9.99, 0.001);
+
+    fs::remove(csv_path);
+}
+
+TEST(DatabaseCSV, ImportCSV_SemicolonAutoDetect_RoundTrip) {
+    auto db = make_db();
+    auto csv_path = temp_csv("ImportSemicolonAuto");
+    // No sep= header, semicolons present, no commas -> auto-detected as semicolon-delimited
+    write_csv_file(csv_path.string(), "label;name;status;price;date_created;notes\nItem1;Alpha;1;9.99;;\n");
+
+    db.import_csv("Items", "", csv_path.string());
+
+    auto names = db.read_scalar_strings("Items", "name");
+    ASSERT_EQ(names.size(), 1);
+    EXPECT_EQ(names[0], "Alpha");
+
+    fs::remove(csv_path);
+}
+
+// ============================================================================
+// import_csv: Cannot open file
+// ============================================================================
+
+TEST(DatabaseCSV, ImportCSV_CannotOpenFile_Throws) {
+    auto db = make_db();
+
+    EXPECT_THROW(
+        {
+            try {
+                db.import_csv("Items", "", "/nonexistent/path/file.csv");
+            } catch (const std::runtime_error& e) {
+                EXPECT_NE(std::string(e.what()).find("Cannot import_csv: could not open file"), std::string::npos);
+                throw;
+            }
+        },
+        std::runtime_error);
+}
+
+// ============================================================================
+// import_csv: Custom datetime format parse failure
+// ============================================================================
+
+TEST(DatabaseCSV, ImportCSV_Scalar_BadCustomDateTimeFormat_Throws) {
+    auto db = make_db();
+    auto csv_path = temp_csv("ImportBadCustomDateTime");
+    write_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,not-a-date,\n");
+
+    quiver::CSVOptions opts;
+    opts.date_time_format = "%Y/%m/%d";
+
+    EXPECT_THROW(
+        {
+            try {
+                db.import_csv("Items", "", csv_path.string(), opts);
+            } catch (const std::runtime_error& e) {
+                std::string msg = e.what();
+                EXPECT_NE(msg.find("Timestamp not-a-date is not valid"), std::string::npos);
+                EXPECT_NE(msg.find("format %Y/%m/%d"), std::string::npos);
+                throw;
+            }
+        },
+        std::runtime_error);
+
+    fs::remove(csv_path);
+}
+
+// ============================================================================
+// import_csv: Per-row column count mismatch
+// ============================================================================
+
+TEST(DatabaseCSV, ImportCSV_RowColumnCountMismatch_Throws) {
+    auto db = make_db();
+    auto csv_path = temp_csv("ImportRowColMismatch");
+    // Header has 6 columns, data row has 7 (extra column)
+    write_csv_file(csv_path.string(),
+                   "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,1,9.99,,note,EXTRA\n");
+
+    EXPECT_THROW(
+        {
+            try {
+                db.import_csv("Items", "", csv_path.string());
+            } catch (const std::runtime_error& e) {
+                EXPECT_NE(std::string(e.what()).find("number of columns of row"), std::string::npos);
+                throw;
+            }
+        },
+        std::runtime_error);
+
+    fs::remove(csv_path);
+}
+
+// ============================================================================
+// import_csv: Self-FK label not found
+// ============================================================================
+
+TEST(DatabaseCSV, ImportCSV_Scalar_SelfFK_InvalidLabel_Throws) {
+    auto db = make_relations_db();
+
+    quiver::Element p1;
+    p1.set("label", std::string("Parent1"));
+    db.create_element("Parent", p1);
+
+    auto csv_path = temp_csv("ImportSelfFKBad");
+    // Child2 references NonExistent via self-FK sibling_id
+    write_csv_file(csv_path.string(),
+                   "sep=,\nlabel,parent_id,sibling_id\n"
+                   "Child1,Parent1,\n"
+                   "Child2,Parent1,NonExistent\n");
+
+    EXPECT_THROW(
+        {
+            try {
+                db.import_csv("Child", "", csv_path.string());
+            } catch (const std::runtime_error& e) {
+                std::string msg = e.what();
+                EXPECT_NE(msg.find("Could not find an existing element from collection Child with label NonExistent"),
+                          std::string::npos);
+                throw;
+            }
+        },
+        std::runtime_error);
+
+    fs::remove(csv_path);
+}
+
+// ============================================================================
+// import_csv: Group FK tests (vector with FK)
+// ============================================================================
+
+TEST(DatabaseCSV, ImportCSV_Vector_WithFK_RoundTrip) {
+    auto db = make_relations_db();
+
+    // Create parent elements
+    quiver::Element p1;
+    p1.set("label", std::string("Parent1"));
+    db.create_element("Parent", p1);
+
+    quiver::Element p2;
+    p2.set("label", std::string("Parent2"));
+    db.create_element("Parent", p2);
+
+    // Create child element
+    quiver::Element c1;
+    c1.set("label", std::string("Child1")).set("parent_id", int64_t{1});
+    db.create_element("Child", c1);
+
+    // Import vector group with FK column (parent_ref -> Parent)
+    auto csv_path = temp_csv("ImportVectorFK");
+    write_csv_file(csv_path.string(),
+                   "sep=,\nid,vector_index,parent_ref\n"
+                   "Child1,1,Parent1\n"
+                   "Child1,2,Parent2\n");
+
+    db.import_csv("Child", "refs", csv_path.string());
+
+    auto vals = db.read_vector_integers_by_id("Child", "parent_ref", 1);
+    ASSERT_EQ(vals.size(), 2);
+    EXPECT_EQ(vals[0], 1);  // Parent1 -> id 1
+    EXPECT_EQ(vals[1], 2);  // Parent2 -> id 2
+
+    fs::remove(csv_path);
+}
+
+TEST(DatabaseCSV, ImportCSV_Vector_FK_InvalidLabel_Throws) {
+    auto db = make_relations_db();
+
+    quiver::Element p1;
+    p1.set("label", std::string("Parent1"));
+    db.create_element("Parent", p1);
+
+    quiver::Element c1;
+    c1.set("label", std::string("Child1")).set("parent_id", int64_t{1});
+    db.create_element("Child", c1);
+
+    auto csv_path = temp_csv("ImportVectorFKBad");
+    write_csv_file(csv_path.string(), "sep=,\nid,vector_index,parent_ref\nChild1,1,NonExistent\n");
+
+    EXPECT_THROW(
+        {
+            try {
+                db.import_csv("Child", "refs", csv_path.string());
+            } catch (const std::runtime_error& e) {
+                std::string msg = e.what();
+                EXPECT_NE(msg.find("Could not find an existing element from collection Parent with label NonExistent"),
+                          std::string::npos);
+                throw;
+            }
+        },
+        std::runtime_error);
+
+    fs::remove(csv_path);
+}
+
+// ============================================================================
+// import_csv: Group NOT NULL validation
+// ============================================================================
+
+TEST(DatabaseCSV, ImportCSV_Group_NotNull_Throws) {
+    auto db = make_db();
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item1")).set("name", std::string("Alpha"));
+    db.create_element("Items", e1);
+
+    auto csv_path = temp_csv("ImportGroupNotNull");
+    // tag is NOT NULL in Items_set_tags — empty cell should fail
+    write_csv_file(csv_path.string(), "sep=,\nid,tag\nItem1,\n");
+
+    EXPECT_THROW(
+        {
+            try {
+                db.import_csv("Items", "tags", csv_path.string());
+            } catch (const std::runtime_error& e) {
+                EXPECT_NE(std::string(e.what()).find("Column tag cannot be NULL"), std::string::npos);
+                throw;
+            }
+        },
+        std::runtime_error);
+
+    fs::remove(csv_path);
+}
+
+// ============================================================================
+// import_csv: Group enum resolution (integer column with enum labels)
+// ============================================================================
+
+TEST(DatabaseCSV, ImportCSV_TimeSeries_EnumInGroup_RoundTrip) {
+    auto db = make_db();
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item1")).set("name", std::string("Alpha"));
+    auto id1 = db.create_element("Items", e1);
+
+    auto csv_path = temp_csv("ImportTSEnum");
+    write_csv_file(csv_path.string(),
+                   "sep=,\nid,date_time,temperature,humidity\n"
+                   "Item1,2024-01-01T10:00:00,22.5,Low\n"
+                   "Item1,2024-01-01T11:00:00,23.0,High\n");
+
+    quiver::CSVOptions opts;
+    opts.enum_labels["humidity"]["en"] = {{"Low", 60}, {"High", 90}};
+
+    db.import_csv("Items", "readings", csv_path.string(), opts);
+
+    auto ts_rows = db.read_time_series_group("Items", "readings", id1);
+    ASSERT_EQ(ts_rows.size(), 2);
+    EXPECT_EQ(std::get<int64_t>(ts_rows[0].at("humidity")), 60);
+    EXPECT_EQ(std::get<int64_t>(ts_rows[1].at("humidity")), 90);
+
+    fs::remove(csv_path);
+}
+
+// ============================================================================
+// import_csv: Group duplicate entries (UNIQUE constraint violation)
+// ============================================================================
+
+TEST(DatabaseCSV, ImportCSV_Group_DuplicateEntries_Throws) {
+    auto db = make_db();
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item1")).set("name", std::string("Alpha"));
+    db.create_element("Items", e1);
+
+    auto csv_path = temp_csv("ImportGroupDuplicates");
+    // Duplicate (id, tag) pair — violates UNIQUE constraint
+    write_csv_file(csv_path.string(), "sep=,\nid,tag\nItem1,red\nItem1,red\n");
+
+    EXPECT_THROW(
+        {
+            try {
+                db.import_csv("Items", "tags", csv_path.string());
+            } catch (const std::runtime_error& e) {
+                EXPECT_NE(std::string(e.what()).find("duplicate entries"), std::string::npos);
+                throw;
+            }
+        },
+        std::runtime_error);
+
+    fs::remove(csv_path);
+}
+
+// ============================================================================
+// import_csv: Vector non-numeric index
+// ============================================================================
+
+TEST(DatabaseCSV, ImportCSV_Vector_NonNumericIndex_Throws) {
+    auto db = make_db();
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item1")).set("name", std::string("Alpha"));
+    db.create_element("Items", e1);
+
+    auto csv_path = temp_csv("ImportVectorNonNumericIdx");
+    write_csv_file(csv_path.string(), "sep=,\nid,vector_index,measurement\nItem1,abc,1.1\n");
+
+    EXPECT_THROW(
+        {
+            try {
+                db.import_csv("Items", "measurements", csv_path.string());
+            } catch (const std::runtime_error& e) {
+                EXPECT_NE(std::string(e.what()).find("vector_index must be consecutive"), std::string::npos);
+                throw;
+            }
+        },
+        std::runtime_error);
 
     fs::remove(csv_path);
 }
