@@ -117,11 +117,12 @@ Plans:
   2. C++ and C API coverage audits are complete; any functional areas covered by binding tests but absent from C++ or C API tests have new test files added
   3. Julia and Dart audits are complete; any coverage gaps relative to the Python or C++ layer have new tests added
   4. Running all five test suites (C++, C API, Julia, Dart, Python) produces zero failures
-**Plans**: 3 plans
+**Plans**: 4 plans
 Plans:
 - [x] 07-01-PLAN.md -- New all_types.sql schema, C++ gap-fill tests, C API gap-fill tests + new metadata test file
 - [x] 07-02-PLAN.md -- Julia and Dart gap-fill tests (string vectors, integer/float sets, describe, convenience methods)
 - [x] 07-03-PLAN.md -- Python and Lua gap-fill tests, full 6-layer parity validation
+- [ ] 07-04-PLAN.md -- Gap closure: fix Python CSV export crash and phantom scalar_relation symbol
 
 ## Progress
 
@@ -136,4 +137,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Queries and Relations | 0/1 | Not started | - |
 | 5. Time Series | 0/? | Not started | - |
 | 6. CSV and Convenience Helpers | 2/2 | Complete | 2026-02-24 |
-| 7. Test Parity | 3/3 | In Progress | - |
+| 7. Test Parity | 3/4 | In Progress | - |
