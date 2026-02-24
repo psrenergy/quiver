@@ -70,11 +70,11 @@ Plans:
   3. Dart update paths (scalar, vector, set, time series) resolve FK labels to IDs -- verified by updating an existing element and reading back the resolved values
   4. Dart update failure preserves the element's existing data -- verified by attempting an update with a bad FK label and confirming original values remain
   5. Non-FK integer columns pass through unchanged in both create and update paths -- verified by a no-FK regression test
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 07-01: TBD
-- [ ] 07-02: TBD
+- [ ] 07-01-PLAN.md — 9 FK resolution create tests (set, scalar, vector, time series, combined, no-FK, errors, partial writes)
+- [ ] 07-02-PLAN.md — 7 FK resolution update tests (scalar, vector, set, time series, combined, no-FK, failure preserves existing)
 
 ### Phase 8: Lua FK Tests
 **Goal**: Lua callers can verify that FK label resolution works correctly for all column types through create_element and update_element
