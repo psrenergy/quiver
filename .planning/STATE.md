@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 6 of 7 (CSV and Convenience Helpers)
-Plan: 1 of 2 in current phase (06-01 complete)
-Status: In Progress
-Last activity: 2026-02-24 — Completed 06-01-PLAN.md (CSV export Python binding)
+Plan: 2 of 2 in current phase (06-02 complete, phase complete)
+Status: Phase 6 Complete
+Last activity: 2026-02-24 — Completed 06-02-PLAN.md (Python convenience helpers)
 
-Progress: [████████░░] 80%
+Progress: [█████████░] 86%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
+- Total plans completed: 11
 - Average duration: 4min
-- Total execution time: 40min
+- Total execution time: 49min
 
 **By Phase:**
 
@@ -32,10 +32,10 @@ Progress: [████████░░] 80%
 | 03-writes-and-transactions | 2 | 11min | 6min |
 | 04-queries-and-relations | 1 | 2min | 2min |
 | 05-time-series | 2 | 5min | 3min |
-| 06-csv-and-convenience-helpers | 1 | 6min | 6min |
+| 06-csv-and-convenience-helpers | 2 | 15min | 8min |
 
 **Recent Trend:**
-- Last 5 plans: 03-02 (2min), 04-01 (2min), 05-01 (3min), 05-02 (2min), 06-01 (6min)
+- Last 5 plans: 04-01 (2min), 05-01 (3min), 05-02 (2min), 06-01 (6min), 06-02 (9min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -74,6 +74,10 @@ Recent decisions affecting current work:
 - [05-02]: Symmetric dict API for read/update files -- same {column: path_or_None} shape in both directions
 - [06-01]: import_csv raises NotImplementedError in Python (C++ implementation is no-op stub)
 - [06-01]: Group CSV export format uses label + value columns (no id/vector_index, no sep prefix) per actual DLL behavior
+- [06-02]: _parse_datetime replaces inline fromisoformat with UTC-aware datetime.replace(tzinfo=timezone.utc)
+- [06-02]: query_date_time updated to use _parse_datetime for consistent UTC timezone behavior
+- [06-02]: read_all_vectors/sets_by_id use group name as column attribute (works for single-column groups with matching names)
+- [06-02]: read_vector_group_by_id includes vector_index as integer key in row dicts per user decision
 
 ### Pending Todos
 
@@ -87,5 +91,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 06-01-PLAN.md (CSV export Python binding)
-Resume file: Phase 6, Plan 2 next (convenience helpers)
+Stopped at: Completed 06-02-PLAN.md (Python convenience helpers) — Phase 6 complete
+Resume file: Phase 7 next (test parity)

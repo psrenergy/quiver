@@ -75,11 +75,11 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 
 ### Convenience
 
-- [ ] **CONV-01**: read_all_scalars_by_id composing list_scalar_attributes + typed reads
-- [ ] **CONV-02**: read_all_vectors_by_id composing list_vector_groups + typed reads
-- [ ] **CONV-03**: read_all_sets_by_id composing list_set_groups + typed reads
-- [ ] **CONV-04**: DateTime helpers (read_scalar_date_time_by_id, read_vector_date_time_by_id, read_set_date_time_by_id, query_date_time)
-- [ ] **CONV-05**: read_vector_group_by_id and read_set_group_by_id multi-column group readers
+- [x] **CONV-01**: read_all_scalars_by_id composing list_scalar_attributes + typed reads
+- [x] **CONV-02**: read_all_vectors_by_id composing list_vector_groups + typed reads
+- [x] **CONV-03**: read_all_sets_by_id composing list_set_groups + typed reads
+- [x] **CONV-04**: DateTime helpers (read_scalar_date_time_by_id, read_vector_date_time_by_id, read_set_date_time_by_id, query_date_time)
+- [x] **CONV-05**: read_vector_group_by_id and read_set_group_by_id multi-column group readers
 
 ### Test Parity
 
@@ -154,11 +154,11 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 | TS-03 | Phase 5 | Complete |
 | CSV-01 | Phase 6 | Complete |
 | CSV-02 | Phase 6 | Stub |
-| CONV-01 | Phase 6 | Pending |
-| CONV-02 | Phase 6 | Pending |
-| CONV-03 | Phase 6 | Pending |
-| CONV-04 | Phase 6 | Pending |
-| CONV-05 | Phase 6 | Pending |
+| CONV-01 | Phase 6 | Complete |
+| CONV-02 | Phase 6 | Complete |
+| CONV-03 | Phase 6 | Complete |
+| CONV-04 | Phase 6 | Complete |
+| CONV-05 | Phase 6 | Complete |
 | TEST-01 | Phase 7 | Pending |
 | TEST-02 | Phase 7 | Pending |
 | TEST-03 | Phase 7 | Pending |

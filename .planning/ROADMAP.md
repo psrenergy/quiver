@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Writes and Transactions** - All CRUD write operations, scalar/vector/set updates, relation writes, and transaction control (completed 2026-02-23)
 - [ ] **Phase 4: Queries and Relations** - Parameterized SQL queries with keepalive marshaling and relation read operations
 - [ ] **Phase 5: Time Series** - Multi-column void** read/write dispatch and time series files operations
-- [ ] **Phase 6: CSV and Convenience Helpers** - CSV export with struct marshaling and pure-Python composite read helpers
+- [x] **Phase 6: CSV and Convenience Helpers** - CSV export with struct marshaling and pure-Python composite read helpers (completed 2026-02-24)
 - [ ] **Phase 7: Test Parity** - Comprehensive test coverage audit and gap-fill across C++, C API, Julia, Dart, and Python
 
 ## Phase Details
@@ -105,8 +105,8 @@ Plans:
 **Coverage Note**: CSV-02 (`import_csv`) — C++ implementation is a no-op stub. Python binding exists as `import_csv(table, path)` raising `NotImplementedError` per user decision; will become functional when C++ implements it.
 **Plans**: 2 plans
 Plans:
-- [ ] 06-01-PLAN.md -- CSV export with CSVExportOptions struct marshaling, import_csv stub, CFFI declarations, and tests
-- [ ] 06-02-PLAN.md -- DateTime helpers, composite read-all helpers, multi-column group readers, and tests
+- [x] 06-01-PLAN.md -- CSV export with CSVExportOptions struct marshaling, import_csv stub, CFFI declarations, and tests
+- [x] 06-02-PLAN.md -- DateTime helpers, composite read-all helpers, multi-column group readers, and tests
 
 ### Phase 7: Test Parity
 **Goal**: Every language layer has test coverage for each functional area, with all gaps identified and filled, and the Python test suite matches Julia/Dart in structure and depth
@@ -131,5 +131,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Writes and Transactions | 0/2 | Not started | - |
 | 4. Queries and Relations | 0/1 | Not started | - |
 | 5. Time Series | 0/? | Not started | - |
-| 6. CSV and Convenience Helpers | 0/? | Not started | - |
+| 6. CSV and Convenience Helpers | 2/2 | Complete | 2026-02-24 |
 | 7. Test Parity | 0/? | Not started | - |
