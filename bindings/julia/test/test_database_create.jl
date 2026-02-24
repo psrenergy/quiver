@@ -343,6 +343,203 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    # ============================================================================
+    # FK label resolution in create_element!
+    # ============================================================================
+
+    @testset "Resolve FK Label In Set Create" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        Quiver.create_element!(db, "Parent"; label = "Parent 1")
+        Quiver.create_element!(db, "Parent"; label = "Parent 2")
+
+        # Create child with set FK using string labels (mentor_id is unique to set table)
+        Quiver.create_element!(db, "Child"; label = "Child 1", mentor_id = ["Parent 1", "Parent 2"])
+
+        # Read back resolved integer IDs
+        result = Quiver.read_set_integers_by_id(db, "Child", "mentor_id", Int64(1))
+        @test sort(result) == [1, 2]
+
+        Quiver.close!(db)
+    end
+
+    @testset "Resolve FK Label Missing Target" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+
+        @test_throws Quiver.DatabaseException Quiver.create_element!(db, "Child";
+            label = "Child 1",
+            mentor_id = ["Nonexistent Parent"],
+        )
+
+        Quiver.close!(db)
+    end
+
+    @testset "Reject String For Non-FK Integer Column" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        Quiver.create_element!(db, "Parent"; label = "Parent 1")
+
+        @test_throws Quiver.DatabaseException Quiver.create_element!(db, "Child";
+            label = "Child 1",
+            parent_id = 1,
+            score = ["not_a_label"],
+        )
+
+        Quiver.close!(db)
+    end
+
+    @testset "Create Element Scalar FK Label" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        Quiver.create_element!(db, "Parent"; label = "Parent 1")
+
+        # Create child with scalar FK using string label (not integer)
+        Quiver.create_element!(db, "Child"; label = "Child 1", parent_id = "Parent 1")
+
+        # Verify: read back as integer, should be resolved ID
+        result = Quiver.read_scalar_integers(db, "Child", "parent_id")
+        @test result == [1]
+
+        Quiver.close!(db)
+    end
+
+    @testset "Create Element Scalar FK Integer" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        Quiver.create_element!(db, "Parent"; label = "Parent 1")
+
+        # Create child with scalar FK using integer ID directly
+        Quiver.create_element!(db, "Child"; label = "Child 1", parent_id = 1)
+
+        # Verify: read back integer, should be stored as-is
+        result = Quiver.read_scalar_integers(db, "Child", "parent_id")
+        @test result == [1]
+
+        Quiver.close!(db)
+    end
+
+    @testset "Create Element Vector FK Labels" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        Quiver.create_element!(db, "Parent"; label = "Parent 1")
+        Quiver.create_element!(db, "Parent"; label = "Parent 2")
+
+        # Create child with vector FK using string labels
+        Quiver.create_element!(db, "Child"; label = "Child 1", parent_ref = ["Parent 1", "Parent 2"])
+
+        # Verify: read back vector integers
+        result = Quiver.read_vector_integers_by_id(db, "Child", "parent_ref", Int64(1))
+        @test result == [1, 2]
+
+        Quiver.close!(db)
+    end
+
+    @testset "Create Element Time Series FK Labels" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        Quiver.create_element!(db, "Parent"; label = "Parent 1")
+        Quiver.create_element!(db, "Parent"; label = "Parent 2")
+
+        # Create child with time series FK using string labels
+        Quiver.create_element!(db, "Child";
+            label = "Child 1",
+            date_time = ["2024-01-01", "2024-01-02"],
+            sponsor_id = ["Parent 1", "Parent 2"],
+        )
+
+        # Verify: read time series group and check sponsor_id values
+        result = Quiver.read_time_series_group(db, "Child", "events", Int64(1))
+        @test result["sponsor_id"] == [1, 2]
+
+        Quiver.close!(db)
+    end
+
+    @testset "Create Element All FK Types In One Call" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        Quiver.create_element!(db, "Parent"; label = "Parent 1")
+        Quiver.create_element!(db, "Parent"; label = "Parent 2")
+
+        # Create child with ALL FK types in one call
+        Quiver.create_element!(db, "Child";
+            label = "Child 1",
+            parent_id = "Parent 1",
+            mentor_id = ["Parent 2"],
+            parent_ref = ["Parent 1"],
+            date_time = ["2024-01-01"],
+            sponsor_id = ["Parent 2"],
+        )
+
+        # Verify scalar FK
+        @test Quiver.read_scalar_integers(db, "Child", "parent_id") == [1]
+
+        # Verify set FK (mentor_id)
+        @test sort(Quiver.read_set_integers_by_id(db, "Child", "mentor_id", Int64(1))) == [2]
+
+        # Verify vector FK (parent_ref)
+        @test Quiver.read_vector_integers_by_id(db, "Child", "parent_ref", Int64(1)) == [1]
+
+        # Verify time series FK (sponsor_id)
+        ts = Quiver.read_time_series_group(db, "Child", "events", Int64(1))
+        @test ts["sponsor_id"] == [2]
+
+        Quiver.close!(db)
+    end
+
+    @testset "Create Element No FK Columns Unchanged" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        # basic.sql has no FK columns -- pre-resolve pass is a no-op
+        Quiver.create_element!(db, "Configuration";
+            label = "Config 1",
+            integer_attribute = 42,
+            float_attribute = 3.14,
+        )
+
+        @test Quiver.read_scalar_strings(db, "Configuration", "label") == ["Config 1"]
+        @test Quiver.read_scalar_integers(db, "Configuration", "integer_attribute") == [42]
+        @test Quiver.read_scalar_floats(db, "Configuration", "float_attribute") == [3.14]
+
+        Quiver.close!(db)
+    end
+
+    @testset "Scalar FK Resolution Failure Causes No Partial Writes" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+
+        # Attempt to create child with scalar FK referencing nonexistent parent
+        @test_throws Quiver.DatabaseException Quiver.create_element!(db, "Child";
+            label = "Orphan Child",
+            parent_id = "Nonexistent Parent",
+        )
+
+        # Verify: no child was created (zero partial writes)
+        labels = Quiver.read_scalar_strings(db, "Child", "label")
+        @test length(labels) == 0
+
+        Quiver.close!(db)
+    end
 end
 
 end

@@ -1,28 +1,3 @@
-function read_scalar_relation(db::Database, collection::String, attribute::String)
-    out_values = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
-    out_count = Ref{Csize_t}(0)
-
-    check(C.quiver_database_read_scalar_relation(db.ptr, collection, attribute, out_values, out_count))
-
-    count = out_count[]
-    if count == 0 || out_values[] == C_NULL
-        return Union{String, Nothing}[]
-    end
-
-    ptrs = unsafe_wrap(Array, out_values[], count)
-    result = Union{String, Nothing}[]
-    for ptr in ptrs
-        if ptr == C_NULL
-            push!(result, nothing)
-        else
-            s = unsafe_string(ptr)
-            push!(result, isempty(s) ? nothing : s)
-        end
-    end
-    C.quiver_database_free_string_array(out_values[], count)
-    return result
-end
-
 function read_scalar_integers(db::Database, collection::String, attribute::String)
     out_values = Ref{Ptr{Int64}}(C_NULL)
     out_count = Ref{Csize_t}(0)

@@ -15,7 +15,6 @@ part 'database_transaction.dart';
 part 'database_metadata.dart';
 part 'database_query.dart';
 part 'database_read.dart';
-part 'database_relations.dart';
 part 'database_update.dart';
 
 /// A wrapper for the Quiver database.

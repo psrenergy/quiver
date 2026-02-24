@@ -253,19 +253,6 @@ struct LuaRunner::Impl {
             [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
                 return read_set_strings_to_lua(self, collection, attribute, s);
             },
-            // Group 6: Relations
-            "update_scalar_relation",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               const std::string& from_label,
-               const std::string& to_label) {
-                self.update_scalar_relation(collection, attribute, from_label, to_label);
-            },
-            "read_scalar_relation",
-            [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
-                return read_scalar_relation_to_lua(self, collection, attribute, s);
-            },
             // Group 7: Time series metadata
             "get_time_series_metadata",
             [](Database& self, const std::string& collection, const std::string& group_name, sol::this_state s) {
@@ -1065,23 +1052,6 @@ struct LuaRunner::Impl {
             outer[i + 1] = inner;
         }
         return outer;
-    }
-
-    // ========================================================================
-    // Relations
-    // ========================================================================
-
-    static sol::table read_scalar_relation_to_lua(Database& db,
-                                                  const std::string& collection,
-                                                  const std::string& attribute,
-                                                  sol::this_state s) {
-        sol::state_view lua(s);
-        auto result = db.read_scalar_relation(collection, attribute);
-        auto t = lua.create_table();
-        for (size_t i = 0; i < result.size(); ++i) {
-            t[i + 1] = result[i];
-        }
-        return t;
     }
 
     // ========================================================================
