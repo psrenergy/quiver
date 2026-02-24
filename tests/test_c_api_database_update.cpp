@@ -874,3 +874,432 @@ TEST(DatabaseCApi, UpdateSetStringsNullElement) {
 
     quiver_database_close(db);
 }
+
+// ============================================================================
+// Update element FK label resolution tests
+// ============================================================================
+
+TEST(DatabaseCApi, UpdateElementScalarFkLabel) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    // Create two parents
+    quiver_element_t* p1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&p1), QUIVER_OK);
+    quiver_element_set_string(p1, "label", "Parent 1");
+    int64_t p1_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Parent", p1, &p1_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(p1), QUIVER_OK);
+
+    quiver_element_t* p2 = nullptr;
+    ASSERT_EQ(quiver_element_create(&p2), QUIVER_OK);
+    quiver_element_set_string(p2, "label", "Parent 2");
+    int64_t p2_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Parent", p2, &p2_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(p2), QUIVER_OK);
+
+    // Create child with parent_id pointing to Parent 1 via string label
+    quiver_element_t* child = nullptr;
+    ASSERT_EQ(quiver_element_create(&child), QUIVER_OK);
+    quiver_element_set_string(child, "label", "Child 1");
+    quiver_element_set_string(child, "parent_id", "Parent 1");
+    int64_t child_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Child", child, &child_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(child), QUIVER_OK);
+
+    // Update child: change parent_id to Parent 2 via string label
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
+    quiver_element_set_string(update, "parent_id", "Parent 2");
+    auto err = quiver_database_update_element(db, "Child", child_id, update);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
+    EXPECT_EQ(err, QUIVER_OK);
+
+    // Verify: parent_id resolved to Parent 2's ID (2)
+    int64_t* parent_ids = nullptr;
+    size_t count = 0;
+    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &parent_ids, &count), QUIVER_OK);
+    ASSERT_EQ(count, 1);
+    EXPECT_EQ(parent_ids[0], 2);
+
+    quiver_database_free_integer_array(parent_ids);
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateElementVectorFkLabels) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    // Create two parents
+    quiver_element_t* p1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&p1), QUIVER_OK);
+    quiver_element_set_string(p1, "label", "Parent 1");
+    int64_t p1_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Parent", p1, &p1_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(p1), QUIVER_OK);
+
+    quiver_element_t* p2 = nullptr;
+    ASSERT_EQ(quiver_element_create(&p2), QUIVER_OK);
+    quiver_element_set_string(p2, "label", "Parent 2");
+    int64_t p2_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Parent", p2, &p2_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(p2), QUIVER_OK);
+
+    // Create child with vector FK pointing to Parent 1
+    quiver_element_t* child = nullptr;
+    ASSERT_EQ(quiver_element_create(&child), QUIVER_OK);
+    quiver_element_set_string(child, "label", "Child 1");
+    const char* init_refs[] = {"Parent 1"};
+    quiver_element_set_array_string(child, "parent_ref", init_refs, 1);
+    int64_t child_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Child", child, &child_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(child), QUIVER_OK);
+
+    // Update child: change vector FK to {Parent 2, Parent 1}
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
+    const char* new_refs[] = {"Parent 2", "Parent 1"};
+    quiver_element_set_array_string(update, "parent_ref", new_refs, 2);
+    auto err = quiver_database_update_element(db, "Child", child_id, update);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
+    EXPECT_EQ(err, QUIVER_OK);
+
+    // Verify: vector resolved to {2, 1} (order preserved)
+    int64_t* refs = nullptr;
+    size_t count = 0;
+    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child_id, &refs, &count),
+              QUIVER_OK);
+    ASSERT_EQ(count, 2);
+    EXPECT_EQ(refs[0], 2);
+    EXPECT_EQ(refs[1], 1);
+
+    quiver_database_free_integer_array(refs);
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateElementSetFkLabels) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    // Create two parents
+    quiver_element_t* p1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&p1), QUIVER_OK);
+    quiver_element_set_string(p1, "label", "Parent 1");
+    int64_t p1_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Parent", p1, &p1_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(p1), QUIVER_OK);
+
+    quiver_element_t* p2 = nullptr;
+    ASSERT_EQ(quiver_element_create(&p2), QUIVER_OK);
+    quiver_element_set_string(p2, "label", "Parent 2");
+    int64_t p2_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Parent", p2, &p2_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(p2), QUIVER_OK);
+
+    // Create child with set FK pointing to Parent 1
+    quiver_element_t* child = nullptr;
+    ASSERT_EQ(quiver_element_create(&child), QUIVER_OK);
+    quiver_element_set_string(child, "label", "Child 1");
+    const char* init_mentors[] = {"Parent 1"};
+    quiver_element_set_array_string(child, "mentor_id", init_mentors, 1);
+    int64_t child_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Child", child, &child_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(child), QUIVER_OK);
+
+    // Update child: change set FK to {Parent 2}
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
+    const char* new_mentors[] = {"Parent 2"};
+    quiver_element_set_array_string(update, "mentor_id", new_mentors, 1);
+    auto err = quiver_database_update_element(db, "Child", child_id, update);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
+    EXPECT_EQ(err, QUIVER_OK);
+
+    // Verify: set resolved to {2}
+    int64_t* mentors = nullptr;
+    size_t count = 0;
+    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "mentor_id", child_id, &mentors, &count),
+              QUIVER_OK);
+    ASSERT_EQ(count, 1);
+    EXPECT_EQ(mentors[0], 2);
+
+    quiver_database_free_integer_array(mentors);
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateElementTimeSeriesFkLabels) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    // Create two parents
+    quiver_element_t* p1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&p1), QUIVER_OK);
+    quiver_element_set_string(p1, "label", "Parent 1");
+    int64_t p1_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Parent", p1, &p1_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(p1), QUIVER_OK);
+
+    quiver_element_t* p2 = nullptr;
+    ASSERT_EQ(quiver_element_create(&p2), QUIVER_OK);
+    quiver_element_set_string(p2, "label", "Parent 2");
+    int64_t p2_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Parent", p2, &p2_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(p2), QUIVER_OK);
+
+    // Create child with time series FK pointing to Parent 1
+    quiver_element_t* child = nullptr;
+    ASSERT_EQ(quiver_element_create(&child), QUIVER_OK);
+    quiver_element_set_string(child, "label", "Child 1");
+    const char* init_dates[] = {"2024-01-01"};
+    quiver_element_set_array_string(child, "date_time", init_dates, 1);
+    const char* init_sponsors[] = {"Parent 1"};
+    quiver_element_set_array_string(child, "sponsor_id", init_sponsors, 1);
+    int64_t child_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Child", child, &child_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(child), QUIVER_OK);
+
+    // Update child: change time series FK to {Parent 2, Parent 1}
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
+    const char* new_dates[] = {"2024-06-01", "2024-06-02"};
+    quiver_element_set_array_string(update, "date_time", new_dates, 2);
+    const char* new_sponsors[] = {"Parent 2", "Parent 1"};
+    quiver_element_set_array_string(update, "sponsor_id", new_sponsors, 2);
+    auto err = quiver_database_update_element(db, "Child", child_id, update);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
+    EXPECT_EQ(err, QUIVER_OK);
+
+    // Verify via read_time_series_group
+    char** out_col_names = nullptr;
+    int* out_col_types = nullptr;
+    void** out_col_data = nullptr;
+    size_t out_col_count = 0;
+    size_t out_row_count = 0;
+    ASSERT_EQ(quiver_database_read_time_series_group(db,
+                                                     "Child",
+                                                     "events",
+                                                     child_id,
+                                                     &out_col_names,
+                                                     &out_col_types,
+                                                     &out_col_data,
+                                                     &out_col_count,
+                                                     &out_row_count),
+              QUIVER_OK);
+    EXPECT_EQ(out_row_count, 2);
+    ASSERT_EQ(out_col_count, 2);  // date_time + sponsor_id
+
+    // sponsor_id is col 1 (INTEGER type)
+    auto* sponsor_ids = static_cast<int64_t*>(out_col_data[1]);
+    EXPECT_EQ(sponsor_ids[0], 2);
+    EXPECT_EQ(sponsor_ids[1], 1);
+
+    quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, out_col_count, out_row_count);
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateElementAllFkTypesInOneCall) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    // Create two parents
+    quiver_element_t* p1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&p1), QUIVER_OK);
+    quiver_element_set_string(p1, "label", "Parent 1");
+    int64_t p1_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Parent", p1, &p1_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(p1), QUIVER_OK);
+
+    quiver_element_t* p2 = nullptr;
+    ASSERT_EQ(quiver_element_create(&p2), QUIVER_OK);
+    quiver_element_set_string(p2, "label", "Parent 2");
+    int64_t p2_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Parent", p2, &p2_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(p2), QUIVER_OK);
+
+    // Create child with ALL FK types pointing to Parent 1
+    quiver_element_t* child = nullptr;
+    ASSERT_EQ(quiver_element_create(&child), QUIVER_OK);
+    quiver_element_set_string(child, "label", "Child 1");
+    quiver_element_set_string(child, "parent_id", "Parent 1");
+    const char* init_mentors[] = {"Parent 1"};
+    quiver_element_set_array_string(child, "mentor_id", init_mentors, 1);
+    const char* init_refs[] = {"Parent 1"};
+    quiver_element_set_array_string(child, "parent_ref", init_refs, 1);
+    const char* init_dates[] = {"2024-01-01"};
+    quiver_element_set_array_string(child, "date_time", init_dates, 1);
+    const char* init_sponsors[] = {"Parent 1"};
+    quiver_element_set_array_string(child, "sponsor_id", init_sponsors, 1);
+    int64_t child_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Child", child, &child_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(child), QUIVER_OK);
+
+    // Update child: change ALL FK types to Parent 2
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
+    quiver_element_set_string(update, "parent_id", "Parent 2");
+    const char* new_mentors[] = {"Parent 2"};
+    quiver_element_set_array_string(update, "mentor_id", new_mentors, 1);
+    const char* new_refs[] = {"Parent 2"};
+    quiver_element_set_array_string(update, "parent_ref", new_refs, 1);
+    const char* new_dates[] = {"2025-01-01"};
+    quiver_element_set_array_string(update, "date_time", new_dates, 1);
+    const char* new_sponsors[] = {"Parent 2"};
+    quiver_element_set_array_string(update, "sponsor_id", new_sponsors, 1);
+    auto err = quiver_database_update_element(db, "Child", child_id, update);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
+    EXPECT_EQ(err, QUIVER_OK);
+
+    // Verify scalar FK: parent_id == 2
+    int64_t* parent_ids = nullptr;
+    size_t count = 0;
+    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &parent_ids, &count), QUIVER_OK);
+    ASSERT_EQ(count, 1);
+    EXPECT_EQ(parent_ids[0], 2);
+    quiver_database_free_integer_array(parent_ids);
+
+    // Verify set FK: mentor_id == {2}
+    int64_t* mentors = nullptr;
+    size_t mentor_count = 0;
+    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "mentor_id", child_id, &mentors, &mentor_count),
+              QUIVER_OK);
+    ASSERT_EQ(mentor_count, 1);
+    EXPECT_EQ(mentors[0], 2);
+    quiver_database_free_integer_array(mentors);
+
+    // Verify vector FK: parent_ref == {2}
+    int64_t* refs = nullptr;
+    size_t ref_count = 0;
+    ASSERT_EQ(quiver_database_read_vector_integers_by_id(db, "Child", "parent_ref", child_id, &refs, &ref_count),
+              QUIVER_OK);
+    ASSERT_EQ(ref_count, 1);
+    EXPECT_EQ(refs[0], 2);
+    quiver_database_free_integer_array(refs);
+
+    // Verify time series FK: sponsor_id == {2}
+    char** out_col_names = nullptr;
+    int* out_col_types = nullptr;
+    void** out_col_data = nullptr;
+    size_t out_col_count = 0;
+    size_t out_row_count = 0;
+    ASSERT_EQ(quiver_database_read_time_series_group(db,
+                                                     "Child",
+                                                     "events",
+                                                     child_id,
+                                                     &out_col_names,
+                                                     &out_col_types,
+                                                     &out_col_data,
+                                                     &out_col_count,
+                                                     &out_row_count),
+              QUIVER_OK);
+    ASSERT_EQ(out_row_count, 1);
+    ASSERT_EQ(out_col_count, 2);
+    auto* sponsor_ids = static_cast<int64_t*>(out_col_data[1]);
+    EXPECT_EQ(sponsor_ids[0], 2);
+    quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, out_col_count, out_row_count);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateElementNoFkColumnsUnchanged) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    // Create element with all scalar types
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+    quiver_element_set_string(e, "label", "Config 1");
+    quiver_element_set_integer(e, "integer_attribute", 42);
+    quiver_element_set_float(e, "float_attribute", 3.14);
+    quiver_element_set_string(e, "string_attribute", "hello");
+    int64_t id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Configuration", e, &id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+
+    // Update via update_element (FK pre-resolve pass should be a no-op for non-FK schemas)
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
+    quiver_element_set_integer(update, "integer_attribute", 100);
+    quiver_element_set_float(update, "float_attribute", 2.71);
+    quiver_element_set_string(update, "string_attribute", "world");
+    auto err = quiver_database_update_element(db, "Configuration", id, update);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
+    EXPECT_EQ(err, QUIVER_OK);
+
+    // Verify integer updated
+    int64_t int_val;
+    int has_value;
+    ASSERT_EQ(quiver_database_read_scalar_integer_by_id(db, "Configuration", "integer_attribute", id, &int_val, &has_value),
+              QUIVER_OK);
+    EXPECT_EQ(has_value, 1);
+    EXPECT_EQ(int_val, 100);
+
+    // Verify float updated
+    double float_val;
+    ASSERT_EQ(quiver_database_read_scalar_float_by_id(db, "Configuration", "float_attribute", id, &float_val, &has_value),
+              QUIVER_OK);
+    EXPECT_EQ(has_value, 1);
+    EXPECT_DOUBLE_EQ(float_val, 2.71);
+
+    // Verify string updated
+    char* str_val = nullptr;
+    ASSERT_EQ(quiver_database_read_scalar_string_by_id(db, "Configuration", "string_attribute", id, &str_val, &has_value),
+              QUIVER_OK);
+    EXPECT_EQ(has_value, 1);
+    EXPECT_STREQ(str_val, "world");
+    delete[] str_val;
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateElementFkResolutionFailurePreservesExisting) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    // Create parent and child with parent_id pointing to Parent 1
+    quiver_element_t* parent = nullptr;
+    ASSERT_EQ(quiver_element_create(&parent), QUIVER_OK);
+    quiver_element_set_string(parent, "label", "Parent 1");
+    int64_t parent_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Parent", parent, &parent_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(parent), QUIVER_OK);
+
+    quiver_element_t* child = nullptr;
+    ASSERT_EQ(quiver_element_create(&child), QUIVER_OK);
+    quiver_element_set_string(child, "label", "Child 1");
+    quiver_element_set_string(child, "parent_id", "Parent 1");
+    int64_t child_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Child", child, &child_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(child), QUIVER_OK);
+
+    // Attempt update with nonexistent parent label
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
+    quiver_element_set_string(update, "parent_id", "Nonexistent Parent");
+    auto err = quiver_database_update_element(db, "Child", child_id, update);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
+    EXPECT_EQ(err, QUIVER_ERROR);
+
+    // Verify: original value preserved (parent_id still points to Parent 1's ID)
+    int64_t* parent_ids = nullptr;
+    size_t count = 0;
+    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Child", "parent_id", &parent_ids, &count), QUIVER_OK);
+    ASSERT_EQ(count, 1);
+    EXPECT_EQ(parent_ids[0], 1);
+
+    quiver_database_free_integer_array(parent_ids);
+    quiver_database_close(db);
+}
