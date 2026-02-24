@@ -2,21 +2,11 @@
 
 ## What This Is
 
-SQLite wrapper library with a C++ core, flat C API for FFI, and language bindings (Julia, Dart, Lua). Schema-driven: databases self-describe via SQLite introspection, supporting collections with scalar, vector, set, and time series attributes.
+SQLite wrapper library with a C++ core, flat C API for FFI, and language bindings (Julia, Dart, Lua). Schema-driven: databases self-describe via SQLite introspection, supporting collections with scalar, vector, set, and time series attributes. Foreign key columns resolve labels to IDs automatically in create and update paths.
 
 ## Core Value
 
 A single, clean C++ API that exposes full SQLite schema capabilities through uniform, mechanically-derived bindings — write logic once, use from any language.
-
-## Current Milestone: v1.0 Relations
-
-**Goal:** Make foreign key relations work naturally through `create_element` and `update_element` by resolving labels to IDs, eliminating the need for a separate relation API.
-
-**Target features:**
-- FK label resolution in `create_element` for scalar and vector FK columns
-- FK label resolution in `update_element` for scalar, vector, and set FK columns
-- Uniform error behavior: throw on missing target label
-- Full binding stack: C++ → C API → Julia → Dart → Lua
 
 ## Requirements
 
@@ -28,44 +18,65 @@ A single, clean C++ API that exposes full SQLite schema capabilities through uni
 - Parameterized queries
 - CSV export
 - Transaction control (begin/commit/rollback)
-- Relation read (`read_scalar_relation`) and write (`update_scalar_relation`)
 - FK label resolution in `create_element` for set FK columns
 - Full binding stack for all above (Julia, Dart, Lua)
+- ✓ FK label resolution in `create_element` for scalar FK columns — v1.0
+- ✓ FK label resolution in `create_element` for vector FK columns — v1.0
+- ✓ FK label resolution in `create_element` for time series FK columns — v1.0
+- ✓ FK label resolution in `update_element` for scalar FK columns — v1.0
+- ✓ FK label resolution in `update_element` for vector FK columns — v1.0
+- ✓ FK label resolution in `update_element` for set FK columns — v1.0
+- ✓ FK label resolution in `update_element` for time series FK columns — v1.0
+- ✓ Shared `resolve_fk_label` helper for all FK resolution — v1.0
+- ✓ Clear error on missing FK target label — v1.0
+- ✓ Removed redundant `update_scalar_relation` and `read_scalar_relation` — v1.0
+
+## Current Milestone: v1.1 FK Test Coverage
+
+**Goal:** Mirror all 16 C++ FK resolution tests across C API, Julia, Dart, and Lua to ensure FK label resolution is tested end-to-end through every binding layer.
+
+**Target:**
+- C API: 16 FK resolution tests (create + update paths)
+- Julia: 16 FK resolution tests (create + update paths)
+- Dart: 16 FK resolution tests (create + update paths)
+- Lua: 16 FK resolution tests (create + update paths)
 
 ### Active
 
-- [ ] FK label resolution in `create_element` for scalar FK columns
-- [ ] FK label resolution in `create_element` for vector FK columns
-- [ ] FK label resolution in `update_element` for scalar FK columns
-- [ ] FK label resolution in `update_element` for vector FK columns
-- [ ] FK label resolution in `update_element` for set FK columns
-- [ ] Remove `update_scalar_relation` if redundant after above changes
+- [ ] FK resolution test coverage in C API (create + update + error cases)
+- [ ] FK resolution test coverage in Julia (create + update + error cases)
+- [ ] FK resolution test coverage in Dart (create + update + error cases)
+- [ ] FK resolution test coverage in Lua (create + update + error cases)
 
 ### Out of Scope
 
-- Changes to `read_scalar_relation` — stays as-is
-- New relation read methods (e.g., reverse lookups, by_id reads) — future milestone
-- Relation support in time series FK columns — no current schema uses this pattern
+- FK resolution cache — premature optimization; SQLite page cache handles repeated lookups
+- Batch label resolution — marginal perf gain, harder per-label error messages
+- FK resolution in typed update methods (`update_scalar_integer`, etc.) — these accept typed values; callers already have IDs
+- "Find or create" semantics for FK targets — silent data creation is dangerous for a low-level wrapper
 
 ## Context
 
-- FK label resolution already works for set FK columns in `create_element` (src/database_create.cpp:151-167). The pattern is proven — it needs to be applied uniformly to scalar and vector paths in both create and update.
-- `TypeValidator` currently rejects strings for INTEGER FK columns. The resolution must happen before or bypass type validation for FK columns.
-- `update_scalar_relation` uses label-to-label lookup (from_label → to_label). `update_element` uses ID-to-label. They serve different access patterns.
+Shipped v1.0 Relations with 23,493 LOC C++.
+Tech stack: C++20, SQLite, spdlog, Lua, Julia FFI, Dart FFI.
+Test suite: 1,391 tests across 4 layers (C++ 442, C API 271, Julia 430, Dart 248).
+Relation methods (`update_scalar_relation`, `read_scalar_relation`) removed — FK resolution now happens uniformly through `create_element` and `update_element` pre-resolve pass.
 
 ## Constraints
 
 - **Binding parity**: All C++ changes must propagate through C API → Julia → Dart → Lua
-- **Error consistency**: FK resolution errors use existing pattern: `"Failed to resolve label 'X' to ID in table 'Y'"`
+- **Error consistency**: FK resolution errors use pattern: `"Failed to resolve label 'X' to ID in table 'Y'"`
 - **Schema convention**: FK columns are INTEGER type referencing `id` column of target table
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Labels resolve to IDs at create/update time | Natural API — callers think in labels, storage thinks in IDs | — Pending |
-| Throw on missing target label | Consistent with existing set FK behavior, fail-fast prevents silent data corruption | — Pending |
-| Keep `read_scalar_relation` unchanged | Still useful for reading resolved labels; no alternative exists | — Pending |
+| Labels resolve to IDs at create/update time | Natural API — callers think in labels, storage thinks in IDs | ✓ Good — unified pre-resolve pass works for all column types |
+| Throw on missing target label | Consistent with existing set FK behavior, fail-fast prevents silent data corruption | ✓ Good — zero partial writes on resolution failure |
+| Remove `read_scalar_relation` and `update_scalar_relation` | Redundant after FK resolution in create/update; simpler API surface | ✓ Good — 5 layers cleaned, no functionality lost |
+| Pre-resolve pass via `ResolvedElement` struct | Immutable input pattern; resolve all FK labels into separate struct before SQL writes | ✓ Good — same method reused by both create and update |
+| `resolve_fk_label` on `Database::Impl` | Internal helper needs schema access and `execute()`; nested class access to private members | ✓ Good — clean separation, no public API leak |
 
 ---
-*Last updated: 2026-02-23 after milestone v1.0 initialization*
+*Last updated: 2026-02-24 after v1.1 milestone initialization*
