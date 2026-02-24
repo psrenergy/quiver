@@ -30,23 +30,14 @@ A single, clean C++ API that exposes full SQLite schema capabilities through uni
 - ✓ Shared `resolve_fk_label` helper for all FK resolution — v1.0
 - ✓ Clear error on missing FK target label — v1.0
 - ✓ Removed redundant `update_scalar_relation` and `read_scalar_relation` — v1.0
-
-## Current Milestone: v1.1 FK Test Coverage
-
-**Goal:** Mirror all 16 C++ FK resolution tests across C API, Julia, Dart, and Lua to ensure FK label resolution is tested end-to-end through every binding layer.
-
-**Target:**
-- C API: 16 FK resolution tests (create + update paths)
-- Julia: 16 FK resolution tests (create + update paths)
-- Dart: 16 FK resolution tests (create + update paths)
-- Lua: 16 FK resolution tests (create + update paths)
+- ✓ FK resolution test coverage in C API (9 create + 7 update tests) — v1.1
+- ✓ FK resolution test coverage in Julia (9 create + 7 update tests) — v1.1
+- ✓ FK resolution test coverage in Dart (9 create + 7 update tests) — v1.1
+- ✓ FK resolution test coverage in Lua (9 create + 7 update tests) — v1.1
 
 ### Active
 
-- [ ] FK resolution test coverage in C API (create + update + error cases)
-- [ ] FK resolution test coverage in Julia (create + update + error cases)
-- [ ] FK resolution test coverage in Dart (create + update + error cases)
-- [ ] FK resolution test coverage in Lua (create + update + error cases)
+(None — planning next milestone)
 
 ### Out of Scope
 
@@ -57,10 +48,10 @@ A single, clean C++ API that exposes full SQLite schema capabilities through uni
 
 ## Context
 
-Shipped v1.0 Relations with 23,493 LOC C++.
+Shipped v1.1 FK Test Coverage with 23,493+ LOC C++.
 Tech stack: C++20, SQLite, spdlog, Lua, Julia FFI, Dart FFI.
-Test suite: 1,391 tests across 4 layers (C++ 442, C API 271, Julia 430, Dart 248).
-Relation methods (`update_scalar_relation`, `read_scalar_relation`) removed — FK resolution now happens uniformly through `create_element` and `update_element` pre-resolve pass.
+Test suite: 1,452+ tests across 4 layers (C++ 458, C API 287, Julia 459, Dart 248+).
+FK resolution fully tested end-to-end through all 4 binding layers with 64 dedicated FK tests (16 per layer).
 
 ## Constraints
 
@@ -77,6 +68,8 @@ Relation methods (`update_scalar_relation`, `read_scalar_relation`) removed — 
 | Remove `read_scalar_relation` and `update_scalar_relation` | Redundant after FK resolution in create/update; simpler API surface | ✓ Good — 5 layers cleaned, no functionality lost |
 | Pre-resolve pass via `ResolvedElement` struct | Immutable input pattern; resolve all FK labels into separate struct before SQL writes | ✓ Good — same method reused by both create and update |
 | `resolve_fk_label` on `Database::Impl` | Internal helper needs schema access and `execute()`; nested class access to private members | ✓ Good — clean separation, no public API leak |
+| Error-type-only checks in binding tests | Error messages owned by C++ layer; bindings check exception type, not message content | ✓ Good — decouples test stability from message wording |
+| Lua uses typed update methods for vector/time series FK | Lua's `update_element` doesn't accept vector/time series columns directly; typed methods (`update_vector_integers`, `update_time_series_group`) used instead | ✓ Good — matches Lua binding design, same FK resolution path |
 
 ---
-*Last updated: 2026-02-24 after v1.1 milestone initialization*
+*Last updated: 2026-02-24 after v1.1 milestone*

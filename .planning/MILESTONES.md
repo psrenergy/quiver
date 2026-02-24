@@ -20,3 +20,25 @@
 
 ---
 
+
+## v1.1 FK Test Coverage (Shipped: 2026-02-24)
+
+**Phases completed:** 4 phases (5-8), 8 plans, 64 tests
+**Timeline:** 1 day (2026-02-24)
+**Git range:** `test(05-01)` -> `test(08-02)`
+**Source changes:** 7 files, +1,980 lines (test code only)
+
+**Delivered:** FK label resolution test coverage across all 4 binding layers (C API, Julia, Dart, Lua), mirroring the 16 C++ FK resolution tests (9 create + 7 update) in each layer.
+
+**Key accomplishments:**
+- 16 C API FK resolution tests (9 create + 7 update) verifying FK label-to-ID resolution through C API layer
+- 16 Julia FK resolution tests mirroring C++ FK resolution through Julia FFI bindings
+- 16 Dart FK resolution tests verifying FK resolution through Dart FFI bindings
+- 16 Lua FK resolution tests verifying FK resolution through Lua scripting layer (with typed method variants for vector/time series update)
+- Full binding parity: all 4 layers test identical FK scenarios with consistent error handling (type-only checks, no message inspection)
+- Shared `relations.sql` schema used by all layers for FK test infrastructure
+
+**Test counts at ship:** C++ 458, C API 287, Julia 459, Dart 248+
+
+---
+

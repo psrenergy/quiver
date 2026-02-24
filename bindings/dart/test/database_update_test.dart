@@ -1006,10 +1006,15 @@ void main() {
         db.createElement('Configuration', {'label': 'Test Config'});
         db.createElement('Parent', {'label': 'Parent 1'});
         db.createElement('Parent', {'label': 'Parent 2'});
-        db.createElement('Child', {'label': 'Child 1', 'parent_ref': ['Parent 1']});
+        db.createElement('Child', {
+          'label': 'Child 1',
+          'parent_ref': ['Parent 1'],
+        });
 
         // Update child: change vector FK to [Parent 2, Parent 1]
-        db.updateElement('Child', 1, {'parent_ref': ['Parent 2', 'Parent 1']});
+        db.updateElement('Child', 1, {
+          'parent_ref': ['Parent 2', 'Parent 1'],
+        });
 
         // Verify: vector resolved to [2, 1] (order preserved)
         final refs = db.readVectorIntegersById('Child', 'parent_ref', 1);
@@ -1028,10 +1033,15 @@ void main() {
         db.createElement('Configuration', {'label': 'Test Config'});
         db.createElement('Parent', {'label': 'Parent 1'});
         db.createElement('Parent', {'label': 'Parent 2'});
-        db.createElement('Child', {'label': 'Child 1', 'mentor_id': ['Parent 1']});
+        db.createElement('Child', {
+          'label': 'Child 1',
+          'mentor_id': ['Parent 1'],
+        });
 
         // Update child: change set FK to [Parent 2]
-        db.updateElement('Child', 1, {'mentor_id': ['Parent 2']});
+        db.updateElement('Child', 1, {
+          'mentor_id': ['Parent 2'],
+        });
 
         // Verify: set resolved to [2]
         final mentors = db.readSetIntegersById('Child', 'mentor_id', 1);
