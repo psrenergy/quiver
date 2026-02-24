@@ -1205,4 +1205,48 @@ void main() {
       }
     });
   });
+
+  group('Update Trims Whitespace', () {
+    test('trims scalar string on update', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'string_attribute': 'hello',
+        });
+
+        db.updateScalarString('Configuration', 'string_attribute', 1, '  world  ');
+
+        final value = db.readScalarStringById('Configuration', 'string_attribute', 1);
+        expect(value, equals('world'));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('trims set strings on update', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'tag': ['old'],
+        });
+
+        db.updateSetStrings('Collection', 'tag', 1, ['  alpha  ', '\tbeta\n', ' gamma ']);
+
+        final values = db.readSetStringsById('Collection', 'tag', 1);
+        final sorted = List<String>.from(values)..sort();
+        expect(sorted, equals(['alpha', 'beta', 'gamma']));
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

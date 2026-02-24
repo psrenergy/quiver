@@ -344,6 +344,39 @@ include("fixture.jl")
     end
 
     # ============================================================================
+    # Whitespace trimming tests
+    # ============================================================================
+
+    @testset "Scalar String Trims Whitespace" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Config 1", string_attribute = "hello")
+
+        Quiver.update_scalar_string!(db, "Configuration", "string_attribute", Int64(1), "  world  ")
+
+        value = Quiver.read_scalar_string_by_id(db, "Configuration", "string_attribute", Int64(1))
+        @test value == "world"
+
+        Quiver.close!(db)
+    end
+
+    @testset "Set Strings Trims Whitespace" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        Quiver.create_element!(db, "Collection"; label = "Item 1", tag = ["old"])
+
+        Quiver.update_set_strings!(db, "Collection", "tag", Int64(1), ["  alpha  ", "\turgent\n", " gamma "])
+
+        values = Quiver.read_set_strings_by_id(db, "Collection", "tag", Int64(1))
+        @test sort(values) == ["alpha", "gamma", "urgent"]
+
+        Quiver.close!(db)
+    end
+
+    # ============================================================================
     # Scalar update functions tests
     # ============================================================================
 
