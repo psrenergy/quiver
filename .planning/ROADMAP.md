@@ -21,8 +21,8 @@
 
 **Milestone Goal:** Mirror all 16 C++ FK resolution tests across C API, Julia, Dart, and Lua to ensure FK label resolution is tested end-to-end through every binding layer.
 
-- [ ] **Phase 5: C API FK Tests** - 16 FK resolution tests covering create and update paths through the C API
-- [ ] **Phase 6: Julia FK Tests** - 16 FK resolution tests covering create! and update paths through Julia bindings
+- [x] **Phase 5: C API FK Tests** - 16 FK resolution tests covering create and update paths through the C API
+- [x] **Phase 6: Julia FK Tests** - 16 FK resolution tests covering create! and update paths through Julia bindings
 - [ ] **Phase 7: Dart FK Tests** - 16 FK resolution tests covering createElement and updateElement through Dart bindings
 - [ ] **Phase 8: Lua FK Tests** - 16 FK resolution tests covering create_element and update_element through Lua scripting
 
@@ -42,7 +42,7 @@
 
 Plans:
 - [x] 05-01-PLAN.md — 9 FK resolution create tests (set, scalar, vector, time series, combined, no-FK, errors, partial writes)
-- [ ] 05-02-PLAN.md — 7 FK resolution update tests (scalar, vector, set, time series, combined, no-FK, failure preserves existing)
+- [x] 05-02-PLAN.md — 7 FK resolution update tests (scalar, vector, set, time series, combined, no-FK, failure preserves existing)
 
 ### Phase 6: Julia FK Tests
 **Goal**: Julia callers can verify that FK label resolution works correctly for all column types through create_element! and update paths
@@ -57,8 +57,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — 9 FK resolution create tests (set, scalar, vector, time series, combined, no-FK, errors, partial writes)
-- [ ] 06-02-PLAN.md — 7 FK resolution update tests (scalar, vector, set, time series, combined, no-FK, failure preserves existing)
+- [x] 06-01-PLAN.md — 9 FK resolution create tests (set, scalar, vector, time series, combined, no-FK, errors, partial writes)
+- [x] 06-02-PLAN.md — 7 FK resolution update tests (scalar, vector, set, time series, combined, no-FK, failure preserves existing)
 
 ### Phase 7: Dart FK Tests
 **Goal**: Dart callers can verify that FK label resolution works correctly for all column types through createElement and updateElement
