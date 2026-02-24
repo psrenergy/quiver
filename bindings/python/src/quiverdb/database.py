@@ -541,44 +541,58 @@ class Database:
     def update_scalar_relation(
         self, collection: str, attribute: str, from_label: str, to_label: str,
     ) -> None:
-        """Set a scalar relation by element labels."""
+        """Set a scalar FK relation by resolving element labels to IDs.
+
+        Looks up the target element's ID via label query, then the source
+        element's ID, and calls update_scalar_integer to set the FK column.
+        """
         self._ensure_open()
-        lib = get_lib()
-        check(lib.quiver_database_update_scalar_relation(
-            self._ptr,
-            collection.encode("utf-8"),
-            attribute.encode("utf-8"),
-            from_label.encode("utf-8"),
-            to_label.encode("utf-8"),
-        ))
+        meta = self.get_scalar_metadata(collection, attribute)
+        ref_collection = meta.references_collection
+        if ref_collection is None:
+            raise ValueError(
+                f"Attribute '{attribute}' in collection '{collection}' is not a foreign key"
+            )
+        source_id = self.query_integer(
+            f"SELECT id FROM {collection} WHERE label = ?", params=[from_label])
+        if source_id is None:
+            raise ValueError(
+                f"Element not found: '{from_label}' in collection '{collection}'"
+            )
+        target_id = self.query_integer(
+            f"SELECT id FROM {ref_collection} WHERE label = ?", params=[to_label])
+        if target_id is None:
+            raise ValueError(
+                f"Element not found: '{to_label}' in collection '{ref_collection}'"
+            )
+        self.update_scalar_integer(collection, attribute, source_id, target_id)
 
     def read_scalar_relation(
         self, collection: str, attribute: str,
     ) -> list[str | None]:
-        """Read scalar relation labels. Returns labels of related elements, None for unset."""
+        """Read scalar FK relation labels.
+
+        Returns label of the related element for each row, None for unset FKs.
+        """
         self._ensure_open()
-        lib = get_lib()
-        out_values = ffi.new("char***")
-        out_count = ffi.new("size_t*")
-        check(lib.quiver_database_read_scalar_relation(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-            out_values, out_count,
-        ))
-        count = out_count[0]
-        if count == 0 or out_values[0] == ffi.NULL:
-            return []
-        try:
-            result: list[str | None] = []
-            for i in range(count):
-                ptr = out_values[0][i]
-                if ptr == ffi.NULL:
-                    result.append(None)
-                else:
-                    s = ffi.string(ptr).decode("utf-8")
-                    result.append(None if s == "" else s)
-            return result
-        finally:
-            lib.quiver_database_free_string_array(out_values[0], count)
+        meta = self.get_scalar_metadata(collection, attribute)
+        ref_collection = meta.references_collection
+        if ref_collection is None:
+            raise ValueError(
+                f"Attribute '{attribute}' in collection '{collection}' is not a foreign key"
+            )
+        ids = self.read_element_ids(collection)
+        result: list[str | None] = []
+        for eid in ids:
+            fk_val = self.read_scalar_integer_by_id(collection, attribute, eid)
+            if fk_val is None:
+                result.append(None)
+            else:
+                label = self.query_string(
+                    f"SELECT label FROM {ref_collection} WHERE id = ?",
+                    params=[fk_val])
+                result.append(label)
+        return result
 
     # -- Vector reads (bulk) -----------------------------------------------------
 
