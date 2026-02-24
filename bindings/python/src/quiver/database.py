@@ -990,6 +990,79 @@ class Database:
         finally:
             lib.quiver_database_free_group_metadata_array(out_metadata[0], count)
 
+    # -- Time series group operations -------------------------------------------
+
+    def read_time_series_group(
+        self, collection: str, group: str, id: int,
+    ) -> list[dict]:
+        """Read time series data for an element. Returns list of row dicts with typed values."""
+        self._ensure_open()
+        lib = get_lib()
+        out_names = ffi.new("char***")
+        out_types = ffi.new("int**")
+        out_data = ffi.new("void***")
+        out_col_count = ffi.new("size_t*")
+        out_row_count = ffi.new("size_t*")
+        check(lib.quiver_database_read_time_series_group(
+            self._ptr, collection.encode("utf-8"), group.encode("utf-8"), id,
+            out_names, out_types, out_data, out_col_count, out_row_count,
+        ))
+        col_count = out_col_count[0]
+        row_count = out_row_count[0]
+        if col_count == 0 or row_count == 0:
+            return []
+        try:
+            # Build column info
+            columns = []
+            for c in range(col_count):
+                name = ffi.string(out_names[0][c]).decode("utf-8")
+                ctype = out_types[0][c]
+                columns.append((name, ctype))
+
+            # Transpose columnar to row dicts
+            rows: list[dict] = []
+            for r in range(row_count):
+                row: dict = {}
+                for c, (name, ctype) in enumerate(columns):
+                    if ctype == 0:  # INTEGER
+                        row[name] = ffi.cast("int64_t*", out_data[0][c])[r]
+                    elif ctype == 1:  # FLOAT
+                        row[name] = ffi.cast("double*", out_data[0][c])[r]
+                    else:  # STRING or DATE_TIME
+                        row[name] = ffi.string(
+                            ffi.cast("char**", out_data[0][c])[r]
+                        ).decode("utf-8")
+                rows.append(row)
+            return rows
+        finally:
+            lib.quiver_database_free_time_series_data(
+                out_names[0], out_types[0], out_data[0], col_count, row_count)
+
+    def update_time_series_group(
+        self, collection: str, group: str, id: int, rows: list[dict],
+    ) -> None:
+        """Update time series data for an element. Pass empty list to clear all rows."""
+        self._ensure_open()
+        lib = get_lib()
+        c_collection = collection.encode("utf-8")
+        c_group = group.encode("utf-8")
+
+        if not rows:
+            # Clear operation
+            check(lib.quiver_database_update_time_series_group(
+                self._ptr, c_collection, c_group, id,
+                ffi.NULL, ffi.NULL, ffi.NULL, 0, 0))
+            return
+
+        # Get metadata for column schema
+        metadata = self.get_time_series_metadata(collection, group)
+        keepalive, c_col_names, c_col_types, c_col_data, col_count, row_count = (
+            _marshal_time_series_columns(rows, metadata)
+        )
+        check(lib.quiver_database_update_time_series_group(
+            self._ptr, c_collection, c_group, id,
+            c_col_names, c_col_types, c_col_data, col_count, row_count))
+
     def __repr__(self) -> str:
         if self._closed:
             return "Database(closed)"
@@ -1036,6 +1109,76 @@ def _marshal_params(params: list) -> tuple:
             )
 
     return keepalive, c_types, c_values
+
+
+def _marshal_time_series_columns(
+    rows: list[dict], metadata: GroupMetadata,
+) -> tuple:
+    """Marshal Python row dicts into columnar C API arrays for time series update.
+
+    Returns (keepalive, c_col_names, c_col_types, c_col_data, col_count, row_count)
+    where keepalive must remain referenced until the C API call completes.
+    """
+    # Build column schema from metadata: dimension column first, then value columns
+    # Dimension column type is always STRING (2) since it's TEXT in SQL
+    columns: list[tuple[str, int]] = []
+    columns.append((metadata.dimension_column, 2))  # STRING for dimension
+    for vc in metadata.value_columns:
+        columns.append((vc.name, vc.data_type))
+
+    col_count = len(columns)
+    row_count = len(rows)
+    keepalive: list = []
+
+    # Validate rows
+    for r, row in enumerate(rows):
+        for name, col_type in columns:
+            if name not in row:
+                raise ValueError(f"Row {r} is missing column '{name}'")
+            v = row[name]
+            if col_type == 0:  # INTEGER
+                if type(v) is not int:
+                    raise TypeError(
+                        f"Column '{name}' expects int, got {type(v).__name__}")
+            elif col_type == 1:  # FLOAT
+                if type(v) is not float:
+                    raise TypeError(
+                        f"Column '{name}' expects float, got {type(v).__name__}")
+            else:  # STRING or DATE_TIME
+                if type(v) is not str:
+                    raise TypeError(
+                        f"Column '{name}' expects str, got {type(v).__name__}")
+
+    # Build column name array
+    c_col_names = ffi.new("const char*[]", col_count)
+    for c, (name, _) in enumerate(columns):
+        buf = ffi.new("char[]", name.encode("utf-8"))
+        keepalive.append(buf)
+        c_col_names[c] = buf
+
+    # Build column type array
+    c_col_types = ffi.new("int[]", [ct for _, ct in columns])
+
+    # Build column data arrays (transpose rows to columnar)
+    c_col_data = ffi.new("void*[]", col_count)
+    for c, (name, col_type) in enumerate(columns):
+        if col_type == 0:  # INTEGER
+            arr = ffi.new("int64_t[]", [row[name] for row in rows])
+            keepalive.append(arr)
+            c_col_data[c] = ffi.cast("void*", arr)
+        elif col_type == 1:  # FLOAT
+            arr = ffi.new("double[]", [row[name] for row in rows])
+            keepalive.append(arr)
+            c_col_data[c] = ffi.cast("void*", arr)
+        else:  # STRING or DATE_TIME
+            encoded = [row[name].encode("utf-8") for row in rows]
+            c_strs = [ffi.new("char[]", e) for e in encoded]
+            keepalive.extend(c_strs)
+            c_arr = ffi.new("char*[]", c_strs)
+            keepalive.append(c_arr)
+            c_col_data[c] = ffi.cast("void*", c_arr)
+
+    return keepalive, c_col_names, c_col_types, c_col_data, col_count, row_count
 
 
 # -- Metadata parsing helpers (module-level) ---------------------------------

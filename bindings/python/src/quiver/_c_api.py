@@ -303,6 +303,37 @@ ffi.cdef("""
     quiver_error_t quiver_database_query_float_params(quiver_database_t* db,
         const char* sql, const int* param_types, void** param_values,
         size_t param_count, double* out_value, int* out_has_value);
+
+    // Time series group read/update/free
+    quiver_error_t quiver_database_read_time_series_group(quiver_database_t* db,
+        const char* collection, const char* group, int64_t id,
+        char*** out_column_names, int** out_column_types,
+        void*** out_column_data, size_t* out_column_count, size_t* out_row_count);
+
+    quiver_error_t quiver_database_update_time_series_group(quiver_database_t* db,
+        const char* collection, const char* group, int64_t id,
+        const char* const* column_names, const int* column_types,
+        void** column_data, size_t column_count, size_t row_count);
+
+    quiver_error_t quiver_database_free_time_series_data(char** column_names,
+        int* column_types, void** column_data,
+        size_t column_count, size_t row_count);
+
+    // Time series files
+    quiver_error_t quiver_database_has_time_series_files(quiver_database_t* db,
+        const char* collection, int* out_result);
+
+    quiver_error_t quiver_database_list_time_series_files_columns(quiver_database_t* db,
+        const char* collection, char*** out_columns, size_t* out_count);
+
+    quiver_error_t quiver_database_read_time_series_files(quiver_database_t* db,
+        const char* collection, char*** out_columns, char*** out_paths, size_t* out_count);
+
+    quiver_error_t quiver_database_update_time_series_files(quiver_database_t* db,
+        const char* collection, const char* const* columns, const char* const* paths,
+        size_t count);
+
+    quiver_error_t quiver_database_free_time_series_files(char** columns, char** paths, size_t count);
 """)
 
 _lib = None
