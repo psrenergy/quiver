@@ -10,7 +10,7 @@ Requirements for milestone v1.1 FK Test Coverage. Each maps to roadmap phases.
 ### C API
 
 - [x] **CAPI-01**: C API FK resolution tests for create_element cover all 9 test cases (set FK, scalar FK, vector FK, time series FK, all types combined, no-FK regression, missing target error, non-FK integer error, zero partial writes)
-- [ ] **CAPI-02**: C API FK resolution tests for update_element cover all 7 test cases (scalar FK, vector FK, set FK, time series FK, all types combined, no-FK regression, failure preserves existing)
+- [x] **CAPI-02**: C API FK resolution tests for update_element cover all 7 test cases (scalar FK, vector FK, set FK, time series FK, all types combined, no-FK regression, failure preserves existing)
 
 ### Julia
 
@@ -44,7 +44,7 @@ None currently deferred.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | CAPI-01 | Phase 5 | Complete |
-| CAPI-02 | Phase 5 | Pending |
+| CAPI-02 | Phase 5 | Complete |
 | JUL-01 | Phase 6 | Pending |
 | JUL-02 | Phase 6 | Pending |
 | DART-01 | Phase 7 | Pending |
