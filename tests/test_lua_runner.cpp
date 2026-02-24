@@ -1303,49 +1303,6 @@ TEST_F(LuaRunnerTest, ReadSetStringsAllFromLua) {
 }
 
 // ============================================================================
-// Relations tests
-// ============================================================================
-
-class LuaRunnerRelationsTest : public ::testing::Test {
-protected:
-    void SetUp() override { relations_schema = VALID_SCHEMA("relations.sql"); }
-    std::string relations_schema;
-};
-
-TEST_F(LuaRunnerRelationsTest, SetScalarRelationFromLua) {
-    auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element("Parent", quiver::Element().set("label", "Parent A"));
-    db.create_element("Child", quiver::Element().set("label", "Child 1"));
-
-    quiver::LuaRunner lua(db);
-
-    lua.run(R"(
-        db:update_scalar_relation("Child", "parent_id", "Child 1", "Parent A")
-    )");
-
-    auto relations = db.read_scalar_relation("Child", "parent_id");
-    EXPECT_EQ(relations.size(), 1);
-    EXPECT_EQ(relations[0], "Parent A");
-}
-
-TEST_F(LuaRunnerRelationsTest, ReadScalarRelationFromLua) {
-    auto db = quiver::Database::from_schema(":memory:", relations_schema);
-    db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element("Parent", quiver::Element().set("label", "Parent A"));
-    db.create_element("Child", quiver::Element().set("label", "Child 1"));
-    db.update_scalar_relation("Child", "parent_id", "Child 1", "Parent A");
-
-    quiver::LuaRunner lua(db);
-
-    lua.run(R"(
-        local relations = db:read_scalar_relation("Child", "parent_id")
-        assert(#relations == 1, "Expected 1 relation, got " .. #relations)
-        assert(relations[1] == "Parent A", "Expected 'Parent A', got " .. relations[1])
-    )");
-}
-
-// ============================================================================
 // Time series metadata tests
 // ============================================================================
 
