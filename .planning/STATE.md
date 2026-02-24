@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Consistent, type-safe database operations across multiple languages through a single C++ implementation
-**Current focus:** Planning next milestone
+**Current focus:** v0.4.1 — Python binding catch-up with upstream C++ changes
 
 ## Current Position
 
-Phase: — (between milestones)
+Phase: Not started (defining requirements)
 Plan: —
-Status: v0.4 shipped
-Last activity: 2026-02-24 — Completed v0.4 milestone (Python Bindings & Test Parity)
+Status: Defining requirements
+Last activity: 2026-02-24 — Milestone v0.4.1 started
 
-Progress: Milestone complete
+Progress: Initializing
 
 ## Performance Metrics
 
@@ -35,10 +35,11 @@ None.
 
 ### Blockers/Concerns
 
-None (milestone shipped).
+- C++ upstream changed: relations removed (integrated into CRUD), import_csv implemented, CSVExportOptions → CSVOptions
+- Python bindings need catch-up with these 3 changes
 
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: v0.4 milestone completion
-Resume: `/gsd:new-milestone` to start next milestone
+Stopped at: v0.4.1 milestone initialization
+Resume: Define requirements, then create roadmap

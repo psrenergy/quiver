@@ -28,7 +28,7 @@ Consistent, type-safe database operations across multiple languages through a si
 
 <!-- Current scope. Building toward these. -->
 
-(None — planning next milestone)
+- [ ] Python bindings catch-up with upstream C++ changes (relation removal, import_csv, CSVOptions rename)
 
 ### Out of Scope
 
@@ -68,9 +68,9 @@ Consistent, type-safe database operations across multiple languages through a si
 | No LuaRunner in Python | Niche use case, not core to Python binding value | ✓ Good — kept scope focused |
 | Properties as methods | Consistency with C++ naming, simpler implementation | ✓ Good — avoids @property magic |
 | Database __del__ warns | ResourceWarning for unclosed databases (not silent) | ✓ Good — catches leaks in dev |
-| Scalar relations as pure-Python | Avoids phantom C symbol; composes metadata+query+update | ✓ Good — fixed crash, clean architecture |
+| Scalar relations as pure-Python | Avoids phantom C symbol; composes metadata+query+update | ⚠️ Revisit — C++ integrated relations into create/update/read; remove convenience methods |
 | void** for time series marshaling | Type-safe columnar dispatch matching C API pattern | ✓ Good — handles N typed columns |
-| import_csv as NotImplementedError | C++ stub exists but no-op; Python surfaces this clearly | ⚠️ Revisit when C++ implements |
+| import_csv as NotImplementedError | C++ stub exists but no-op; Python surfaces this clearly | ⚠️ Revisit — C++ now implements import_csv |
 
 ---
-*Last updated: 2026-02-24 after v0.4 milestone*
+*Last updated: 2026-02-24 after v0.4.1 milestone initialization*
