@@ -498,8 +498,15 @@ TEST(DatabaseCApi, CreateElementTimeSeriesFkLabels) {
     void** out_col_data = nullptr;
     size_t out_col_count = 0;
     size_t out_row_count = 0;
-    ASSERT_EQ(quiver_database_read_time_series_group(db, "Child", "events", child_id, &out_col_names, &out_col_types,
-                                                     &out_col_data, &out_col_count, &out_row_count),
+    ASSERT_EQ(quiver_database_read_time_series_group(db,
+                                                     "Child",
+                                                     "events",
+                                                     child_id,
+                                                     &out_col_names,
+                                                     &out_col_types,
+                                                     &out_col_data,
+                                                     &out_col_count,
+                                                     &out_row_count),
               QUIVER_OK);
     ASSERT_EQ(out_col_count, 2);  // date_time + sponsor_id
     ASSERT_EQ(out_row_count, 2);
@@ -589,8 +596,15 @@ TEST(DatabaseCApi, CreateElementAllFkTypesInOneCall) {
     void** out_col_data = nullptr;
     size_t out_col_count = 0;
     size_t out_row_count = 0;
-    ASSERT_EQ(quiver_database_read_time_series_group(db, "Child", "events", child_id, &out_col_names, &out_col_types,
-                                                     &out_col_data, &out_col_count, &out_row_count),
+    ASSERT_EQ(quiver_database_read_time_series_group(db,
+                                                     "Child",
+                                                     "events",
+                                                     child_id,
+                                                     &out_col_names,
+                                                     &out_col_types,
+                                                     &out_col_data,
+                                                     &out_col_count,
+                                                     &out_row_count),
               QUIVER_OK);
     ASSERT_EQ(out_col_count, 2);
     ASSERT_EQ(out_row_count, 1);
@@ -628,18 +642,16 @@ TEST(DatabaseCApi, CreateElementNoFkColumnsUnchanged) {
 
     int64_t* int_values = nullptr;
     size_t int_count = 0;
-    ASSERT_EQ(
-        quiver_database_read_scalar_integers(db, "Configuration", "integer_attribute", &int_values, &int_count),
-        QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Configuration", "integer_attribute", &int_values, &int_count),
+              QUIVER_OK);
     ASSERT_EQ(int_count, 1);
     EXPECT_EQ(int_values[0], 42);
     quiver_database_free_integer_array(int_values);
 
     double* float_values = nullptr;
     size_t float_count = 0;
-    ASSERT_EQ(
-        quiver_database_read_scalar_floats(db, "Configuration", "float_attribute", &float_values, &float_count),
-        QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_scalar_floats(db, "Configuration", "float_attribute", &float_values, &float_count),
+              QUIVER_OK);
     ASSERT_EQ(float_count, 1);
     EXPECT_DOUBLE_EQ(float_values[0], 3.14);
     quiver_database_free_float_array(float_values);

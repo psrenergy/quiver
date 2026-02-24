@@ -1024,8 +1024,7 @@ TEST(DatabaseCApi, UpdateElementSetFkLabels) {
     // Verify: set resolved to {2}
     int64_t* mentors = nullptr;
     size_t count = 0;
-    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "mentor_id", child_id, &mentors, &count),
-              QUIVER_OK);
+    ASSERT_EQ(quiver_database_read_set_integers_by_id(db, "Child", "mentor_id", child_id, &mentors, &count), QUIVER_OK);
     ASSERT_EQ(count, 1);
     EXPECT_EQ(mentors[0], 2);
 
@@ -1240,22 +1239,25 @@ TEST(DatabaseCApi, UpdateElementNoFkColumnsUnchanged) {
     // Verify integer updated
     int64_t int_val;
     int has_value;
-    ASSERT_EQ(quiver_database_read_scalar_integer_by_id(db, "Configuration", "integer_attribute", id, &int_val, &has_value),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_read_scalar_integer_by_id(db, "Configuration", "integer_attribute", id, &int_val, &has_value),
+        QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_EQ(int_val, 100);
 
     // Verify float updated
     double float_val;
-    ASSERT_EQ(quiver_database_read_scalar_float_by_id(db, "Configuration", "float_attribute", id, &float_val, &has_value),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_read_scalar_float_by_id(db, "Configuration", "float_attribute", id, &float_val, &has_value),
+        QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_DOUBLE_EQ(float_val, 2.71);
 
     // Verify string updated
     char* str_val = nullptr;
-    ASSERT_EQ(quiver_database_read_scalar_string_by_id(db, "Configuration", "string_attribute", id, &str_val, &has_value),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_read_scalar_string_by_id(db, "Configuration", "string_attribute", id, &str_val, &has_value),
+        QUIVER_OK);
     EXPECT_EQ(has_value, 1);
     EXPECT_STREQ(str_val, "world");
     delete[] str_val;
