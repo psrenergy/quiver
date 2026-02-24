@@ -24,7 +24,7 @@ Requirements for milestone v1.1 FK Test Coverage. Each maps to roadmap phases.
 
 ### Lua
 
-- [ ] **LUA-01**: Lua FK resolution tests for create_element cover all 9 test cases mirroring C++ create path
+- [x] **LUA-01**: Lua FK resolution tests for create_element cover all 9 test cases mirroring C++ create path
 - [ ] **LUA-02**: Lua FK resolution tests for update_element cover all 7 test cases mirroring C++ update path
 
 ## Future Requirements
@@ -49,7 +49,7 @@ None currently deferred.
 | JUL-02 | Phase 6 | Complete |
 | DART-01 | Phase 7 | Complete |
 | DART-02 | Phase 7 | Complete |
-| LUA-01 | Phase 8 | Pending |
+| LUA-01 | Phase 8 | Complete |
 | LUA-02 | Phase 8 | Pending |
 
 **Coverage:**

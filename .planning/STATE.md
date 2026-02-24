@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** A single, clean C++ API that exposes full SQLite schema capabilities through uniform, mechanically-derived bindings.
-**Current focus:** Phase 7 - Dart FK Tests
+**Current focus:** Phase 8 - Lua FK Tests
 
 ## Current Position
 
-Phase: 7 of 8 (Dart FK Tests)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-24 -- Completed 07-02-PLAN.md (Dart FK update tests)
+Phase: 8 of 8 (Lua FK Tests)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-02-24 -- Completed 08-01-PLAN.md (Lua FK create tests)
 
-Progress: [########--] 87% (7/8 phases complete)
+Progress: [########--] 87% (7/8 phases complete, 1/2 plans in phase 8)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12 (6 v1.0 + 6 v1.1)
+- Total plans completed: 13 (6 v1.0 + 7 v1.1)
 - Average duration: --
 - Total execution time: --
 
@@ -34,6 +34,7 @@ Progress: [########--] 87% (7/8 phases complete)
 | 5. C API FK Tests | 2/2 | 5min | 2.5min |
 | 6. Julia FK Tests | 2/2 | 4min | 2min |
 | 7. Dart FK Tests | 2/2 | 4min | 2min |
+| 8. Lua FK Tests | 1/2 | 2min | 2min |
 
 *Updated after each plan completion*
 
@@ -52,6 +53,7 @@ v1.1 context: Each binding layer mirrors the same 16 C++ FK tests (9 create + 7 
 - Phase 6 Plan 2: Julia FK update tests mirror C++ counterparts (7 tests: scalar, vector, set, time series, combined, no-FK, failure-preserves)
 - Phase 7 Plan 1: Dart FK create tests mirror C++ counterparts (9 tests), use throwsA(isA<DatabaseException>()) without message inspection
 - Phase 7 Plan 2: Dart FK update tests mirror C++ counterparts (7 tests: scalar, vector, set, time series, combined, no-FK, failure-preserves)
+- Phase 8 Plan 1: Lua FK create tests mirror C++ counterparts (9 tests), use EXPECT_THROW without message inspection
 
 ### Pending Todos
 
@@ -64,5 +66,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 07-02-PLAN.md (phase 7 complete)
+Stopped at: Completed 08-01-PLAN.md
 Resume file: None
