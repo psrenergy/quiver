@@ -161,8 +161,11 @@ public:
     void export_csv(const std::string& collection,
                     const std::string& group,
                     const std::string& path,
-                    const CSVExportOptions& options = default_csv_export_options());
-    void import_csv(const std::string& table, const std::string& path);
+                    const CSVOptions& options = default_csv_options());
+    void import_csv(const std::string& table,
+                    const std::string& group,
+                    const std::string& path,
+                    const CSVOptions& options = default_csv_options());
 
     // Query methods - execute SQL and return first row's first column
     std::optional<std::string> query_string(const std::string& sql, const std::vector<Value>& params = {});

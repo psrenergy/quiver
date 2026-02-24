@@ -2052,7 +2052,7 @@ TEST(LuaRunner_ExportCSV, EnumLabels) {
     lua.run("db:export_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) +
             "\", {\n"
             "    enum_labels = {\n"
-            "        status = {[1] = \"Active\", [2] = \"Inactive\"}\n"
+            "        status = { en = { Active = 1, Inactive = 2 } }\n"
             "    }\n"
             "})");
 
@@ -2109,7 +2109,7 @@ TEST(LuaRunner_ExportCSV, CombinedOptions) {
     lua.run("db:export_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) +
             "\", {\n"
             "    enum_labels = {\n"
-            "        status = {[1] = \"Active\", [2] = \"Inactive\"}\n"
+            "        status = { en = { Active = 1, Inactive = 2 } }\n"
             "    },\n"
             "    date_time_format = \"%Y/%m/%d\"\n"
             "})");
@@ -2119,6 +2119,153 @@ TEST(LuaRunner_ExportCSV, CombinedOptions) {
     EXPECT_NE(content.find("Item1,Alpha,Active,9.99,2024/01/15,first\n"), std::string::npos);
     EXPECT_NE(content.find("Item2,Beta,Inactive,19.5,2024/02/20,second\n"), std::string::npos) << "Actual content:\n"
                                                                                                << content;
+
+    std::filesystem::remove(csv_path);
+}
+
+// ============================================================================
+// CSV import tests
+// ============================================================================
+
+static void write_lua_csv_file(const std::string& path, const std::string& content) {
+    std::ofstream f(path, std::ios::binary);
+    f << content;
+}
+
+TEST(LuaRunner_ImportCSV, ScalarRoundTrip) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(":memory:", csv_schema);
+    quiver::LuaRunner lua(db);
+
+    auto csv_path = lua_csv_temp("ImportScalarRT");
+
+    lua.run(R"(
+        db:create_element("Items", {
+            label = "Item1", name = "Alpha", status = 1,
+            price = 9.99, date_created = "2024-01-15T10:30:00", notes = "first"
+        })
+        db:create_element("Items", {
+            label = "Item2", name = "Beta", status = 2,
+            price = 19.5, date_created = "2024-02-20T08:00:00", notes = "second"
+        })
+    )");
+
+    // Export
+    lua.run("db:export_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) + "\")");
+
+    // Delete all elements and re-import
+    lua.run(R"(
+        db:delete_element("Items", 1)
+        db:delete_element("Items", 2)
+    )");
+
+    lua.run("db:import_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) + "\")");
+
+    lua.run(R"(
+        local names = db:read_scalar_strings("Items", "name")
+        assert(#names == 2, "Expected 2 names, got " .. #names)
+        assert(names[1] == "Alpha", "Expected Alpha, got " .. names[1])
+        assert(names[2] == "Beta", "Expected Beta, got " .. names[2])
+    )");
+
+    std::filesystem::remove(csv_path);
+}
+
+TEST(LuaRunner_ImportCSV, VectorGroupRoundTrip) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(":memory:", csv_schema);
+    quiver::LuaRunner lua(db);
+
+    auto csv_path = lua_csv_temp("ImportVectorRT");
+
+    lua.run(R"(
+        local id1 = db:create_element("Items", { label = "Item1", name = "Alpha" })
+        db:update_vector_floats("Items", "measurement", id1, {1.1, 2.2, 3.3})
+    )");
+
+    // Export
+    lua.run("db:export_csv(\"Items\", \"measurements\", \"" + lua_safe_path(csv_path) + "\")");
+
+    // Clear vector and re-import
+    lua.run(R"(
+        db:update_vector_floats("Items", "measurement", 1, {})
+    )");
+
+    lua.run("db:import_csv(\"Items\", \"measurements\", \"" + lua_safe_path(csv_path) + "\")");
+
+    lua.run(R"(
+        local vals = db:read_vector_floats_by_id("Items", "measurement", 1)
+        assert(#vals == 3, "Expected 3 values, got " .. #vals)
+    )");
+
+    std::filesystem::remove(csv_path);
+}
+
+TEST(LuaRunner_ImportCSV, ScalarHeaderOnlyClearsTable) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(":memory:", csv_schema);
+    quiver::LuaRunner lua(db);
+
+    auto csv_path = lua_csv_temp("ImportHeaderOnly");
+
+    lua.run(R"(
+        db:create_element("Items", { label = "Item1", name = "Alpha" })
+    )");
+
+    // Write header-only CSV
+    write_lua_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\n");
+
+    lua.run("db:import_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) + "\")");
+
+    lua.run(R"(
+        local names = db:read_scalar_strings("Items", "name")
+        assert(#names == 0, "Expected 0 names, got " .. #names)
+    )");
+
+    std::filesystem::remove(csv_path);
+}
+
+TEST(LuaRunner_ImportCSV, EnumResolution) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(":memory:", csv_schema);
+    quiver::LuaRunner lua(db);
+
+    auto csv_path = lua_csv_temp("ImportEnum");
+    write_lua_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,Active,,,\n");
+
+    lua.run("db:import_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) +
+            "\", {\n"
+            "    enum_labels = {\n"
+            "        status = { en = { Active = 1, Inactive = 2 } }\n"
+            "    }\n"
+            "})");
+
+    lua.run(R"(
+        local status = db:read_scalar_integer_by_id("Items", "status", 1)
+        assert(status == 1, "Expected status 1, got " .. tostring(status))
+    )");
+
+    std::filesystem::remove(csv_path);
+}
+
+TEST(LuaRunner_ImportCSV, DateTimeFormat) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(":memory:", csv_schema);
+    quiver::LuaRunner lua(db);
+
+    auto csv_path = lua_csv_temp("ImportDateTime");
+    write_lua_csv_file(csv_path.string(),
+                       "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,2024/01/15,\n");
+
+    lua.run("db:import_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) +
+            "\", {\n"
+            "    date_time_format = \"%Y/%m/%d\"\n"
+            "})");
+
+    lua.run(R"(
+        local date = db:read_scalar_string_by_id("Items", "date_created", 1)
+        assert(date == "2024-01-15T00:00:00", "Expected 2024-01-15T00:00:00, got " .. tostring(date))
+    )");
 
     std::filesystem::remove(csv_path);
 }
@@ -2142,13 +2289,13 @@ TEST_F(LuaRunnerFkTest, CreateElementSetFkLabels) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:create_element("Parent", { label = "Parent 1" })
-        db:create_element("Parent", { label = "Parent 2" })
-        db:create_element("Child", {
-            label = "Child 1",
-            mentor_id = {"Parent 1", "Parent 2"}
-        })
-    )");
+    db:create_element("Parent", { label = "Parent 1" })
+    db:create_element("Parent", { label = "Parent 2" })
+    db:create_element("Child", {
+        label = "Child 1",
+        mentor_id = {"Parent 1", "Parent 2"}
+    })
+)");
 
     auto sets = db.read_set_integers("Child", "mentor_id");
     ASSERT_EQ(sets.size(), 1);
@@ -2167,11 +2314,11 @@ TEST_F(LuaRunnerFkTest, CreateElementMissingFkTarget) {
     EXPECT_THROW(
         {
             lua.run(R"(
-            db:create_element("Child", {
-                label = "Child 1",
-                mentor_id = {"Nonexistent Parent"}
-            })
-        )");
+        db:create_element("Child", {
+            label = "Child 1",
+            mentor_id = {"Nonexistent Parent"}
+        })
+    )");
         },
         std::runtime_error);
 }
@@ -2183,11 +2330,11 @@ TEST_F(LuaRunnerFkTest, CreateElementStringForNonFkInteger) {
     EXPECT_THROW(
         {
             lua.run(R"(
-            db:create_element("Child", {
-                label = "Child 1",
-                score = {"not_a_label"}
-            })
-        )");
+        db:create_element("Child", {
+            label = "Child 1",
+            score = {"not_a_label"}
+        })
+    )");
         },
         std::runtime_error);
 }
@@ -2197,12 +2344,12 @@ TEST_F(LuaRunnerFkTest, CreateElementScalarFkLabel) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:create_element("Parent", { label = "Parent 1" })
-        db:create_element("Child", {
-            label = "Child 1",
-            parent_id = "Parent 1"
-        })
-    )");
+    db:create_element("Parent", { label = "Parent 1" })
+    db:create_element("Child", {
+        label = "Child 1",
+        parent_id = "Parent 1"
+    })
+)");
 
     auto parent_ids = db.read_scalar_integers("Child", "parent_id");
     ASSERT_EQ(parent_ids.size(), 1);
@@ -2214,12 +2361,12 @@ TEST_F(LuaRunnerFkTest, CreateElementScalarFkInteger) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:create_element("Parent", { label = "Parent 1" })
-        db:create_element("Child", {
-            label = "Child 1",
-            parent_id = 1
-        })
-    )");
+    db:create_element("Parent", { label = "Parent 1" })
+    db:create_element("Child", {
+        label = "Child 1",
+        parent_id = 1
+    })
+)");
 
     auto parent_ids = db.read_scalar_integers("Child", "parent_id");
     ASSERT_EQ(parent_ids.size(), 1);
@@ -2231,13 +2378,13 @@ TEST_F(LuaRunnerFkTest, CreateElementVectorFkLabels) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:create_element("Parent", { label = "Parent 1" })
-        db:create_element("Parent", { label = "Parent 2" })
-        db:create_element("Child", {
-            label = "Child 1",
-            parent_ref = {"Parent 1", "Parent 2"}
-        })
-    )");
+    db:create_element("Parent", { label = "Parent 1" })
+    db:create_element("Parent", { label = "Parent 2" })
+    db:create_element("Child", {
+        label = "Child 1",
+        parent_ref = {"Parent 1", "Parent 2"}
+    })
+)");
 
     auto refs = db.read_vector_integers_by_id("Child", "parent_ref", 1);
     ASSERT_EQ(refs.size(), 2);
@@ -2250,14 +2397,14 @@ TEST_F(LuaRunnerFkTest, CreateElementTimeSeriesFkLabels) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:create_element("Parent", { label = "Parent 1" })
-        db:create_element("Parent", { label = "Parent 2" })
-        db:create_element("Child", {
-            label = "Child 1",
-            date_time = {"2024-01-01", "2024-01-02"},
-            sponsor_id = {"Parent 1", "Parent 2"}
-        })
-    )");
+    db:create_element("Parent", { label = "Parent 1" })
+    db:create_element("Parent", { label = "Parent 2" })
+    db:create_element("Child", {
+        label = "Child 1",
+        date_time = {"2024-01-01", "2024-01-02"},
+        sponsor_id = {"Parent 1", "Parent 2"}
+    })
+)");
 
     auto ts_data = db.read_time_series_group("Child", "events", 1);
     ASSERT_EQ(ts_data.size(), 2);
@@ -2270,17 +2417,17 @@ TEST_F(LuaRunnerFkTest, CreateElementAllFkTypes) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:create_element("Parent", { label = "Parent 1" })
-        db:create_element("Parent", { label = "Parent 2" })
-        db:create_element("Child", {
-            label = "Child 1",
-            parent_id = "Parent 1",
-            mentor_id = {"Parent 2"},
-            parent_ref = {"Parent 1"},
-            date_time = {"2024-01-01"},
-            sponsor_id = {"Parent 2"}
-        })
-    )");
+    db:create_element("Parent", { label = "Parent 1" })
+    db:create_element("Parent", { label = "Parent 2" })
+    db:create_element("Child", {
+        label = "Child 1",
+        parent_id = "Parent 1",
+        mentor_id = {"Parent 2"},
+        parent_ref = {"Parent 1"},
+        date_time = {"2024-01-01"},
+        sponsor_id = {"Parent 2"}
+    })
+)");
 
     // Verify scalar FK
     auto parent_ids = db.read_scalar_integers("Child", "parent_id");
@@ -2309,12 +2456,12 @@ TEST_F(LuaRunnerFkTest, CreateElementNoFkUnchanged) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:create_element("Configuration", {
-            label = "Config 1",
-            integer_attribute = 42,
-            float_attribute = 3.14
-        })
-    )");
+    db:create_element("Configuration", {
+        label = "Config 1",
+        integer_attribute = 42,
+        float_attribute = 3.14
+    })
+)");
 
     auto labels = db.read_scalar_strings("Configuration", "label");
     ASSERT_EQ(labels.size(), 1);
@@ -2336,11 +2483,11 @@ TEST_F(LuaRunnerFkTest, CreateElementFkResolutionNoPartialWrites) {
     EXPECT_THROW(
         {
             lua.run(R"(
-            db:create_element("Child", {
-                label = "Orphan Child",
-                parent_id = "Nonexistent"
-            })
-        )");
+        db:create_element("Child", {
+            label = "Orphan Child",
+            parent_id = "Nonexistent"
+        })
+    )");
         },
         std::runtime_error);
 
@@ -2358,14 +2505,14 @@ TEST_F(LuaRunnerFkTest, UpdateElementScalarFkLabel) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:create_element("Parent", { label = "Parent 1" })
-        db:create_element("Parent", { label = "Parent 2" })
-        db:create_element("Child", {
-            label = "Child 1",
-            parent_id = "Parent 1"
-        })
-        db:update_element("Child", 1, { parent_id = "Parent 2" })
-    )");
+    db:create_element("Parent", { label = "Parent 1" })
+    db:create_element("Parent", { label = "Parent 2" })
+    db:create_element("Child", {
+        label = "Child 1",
+        parent_id = "Parent 1"
+    })
+    db:update_element("Child", 1, { parent_id = "Parent 2" })
+)");
 
     auto parent_ids = db.read_scalar_integers("Child", "parent_id");
     ASSERT_EQ(parent_ids.size(), 1);
@@ -2377,14 +2524,14 @@ TEST_F(LuaRunnerFkTest, UpdateElementScalarFkInteger) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:create_element("Parent", { label = "Parent 1" })
-        db:create_element("Parent", { label = "Parent 2" })
-        db:create_element("Child", {
-            label = "Child 1",
-            parent_id = 1
-        })
-        db:update_element("Child", 1, { parent_id = 2 })
-    )");
+    db:create_element("Parent", { label = "Parent 1" })
+    db:create_element("Parent", { label = "Parent 2" })
+    db:create_element("Child", {
+        label = "Child 1",
+        parent_id = 1
+    })
+    db:update_element("Child", 1, { parent_id = 2 })
+)");
 
     auto parent_ids = db.read_scalar_integers("Child", "parent_id");
     ASSERT_EQ(parent_ids.size(), 1);
@@ -2396,14 +2543,14 @@ TEST_F(LuaRunnerFkTest, UpdateElementSetFkLabels) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:create_element("Parent", { label = "Parent 1" })
-        db:create_element("Parent", { label = "Parent 2" })
-        db:create_element("Child", {
-            label = "Child 1",
-            mentor_id = {"Parent 1"}
-        })
-        db:update_element("Child", 1, { mentor_id = {"Parent 2"} })
-    )");
+    db:create_element("Parent", { label = "Parent 1" })
+    db:create_element("Parent", { label = "Parent 2" })
+    db:create_element("Child", {
+        label = "Child 1",
+        mentor_id = {"Parent 1"}
+    })
+    db:update_element("Child", 1, { mentor_id = {"Parent 2"} })
+)");
 
     auto mentors = db.read_set_integers("Child", "mentor_id");
     ASSERT_EQ(mentors.size(), 1);
@@ -2416,24 +2563,24 @@ TEST_F(LuaRunnerFkTest, UpdateElementAllFkTypes) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:create_element("Parent", { label = "Parent 1" })
-        db:create_element("Parent", { label = "Parent 2" })
-        db:create_element("Child", {
-            label = "Child 1",
-            parent_id = "Parent 1",
-            mentor_id = {"Parent 1"},
-            parent_ref = {"Parent 1"},
-            date_time = {"2024-01-01"},
-            sponsor_id = {"Parent 1"}
-        })
-        db:update_element("Child", 1, {
-            parent_id = "Parent 2",
-            mentor_id = {"Parent 2"},
-            parent_ref = {"Parent 2"},
-            date_time = {"2025-01-01"},
-            sponsor_id = {"Parent 2"}
-        })
-    )");
+    db:create_element("Parent", { label = "Parent 1" })
+    db:create_element("Parent", { label = "Parent 2" })
+    db:create_element("Child", {
+        label = "Child 1",
+        parent_id = "Parent 1",
+        mentor_id = {"Parent 1"},
+        parent_ref = {"Parent 1"},
+        date_time = {"2024-01-01"},
+        sponsor_id = {"Parent 1"}
+    })
+    db:update_element("Child", 1, {
+        parent_id = "Parent 2",
+        mentor_id = {"Parent 2"},
+        parent_ref = {"Parent 2"},
+        date_time = {"2025-01-01"},
+        sponsor_id = {"Parent 2"}
+    })
+)");
 
     // Verify scalar FK
     auto parent_ids = db.read_scalar_integers("Child", "parent_id");
@@ -2462,18 +2609,18 @@ TEST_F(LuaRunnerFkTest, UpdateElementFkFailurePreservesExisting) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:create_element("Parent", { label = "Parent 1" })
-        db:create_element("Child", {
-            label = "Child 1",
-            parent_id = "Parent 1"
-        })
-    )");
+    db:create_element("Parent", { label = "Parent 1" })
+    db:create_element("Child", {
+        label = "Child 1",
+        parent_id = "Parent 1"
+    })
+)");
 
     EXPECT_THROW(
         {
             lua.run(R"(
-            db:update_element("Child", 1, { parent_id = "Nonexistent" })
-        )");
+        db:update_element("Child", 1, { parent_id = "Nonexistent" })
+    )");
         },
         std::runtime_error);
 
@@ -2488,18 +2635,18 @@ TEST_F(LuaRunnerFkTest, UpdateElementNoFkUnchanged) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:create_element("Configuration", {
-            label = "Config 1",
-            integer_attribute = 42,
-            float_attribute = 3.14,
-            string_attribute = "hello"
-        })
-        db:update_element("Configuration", 1, {
-            integer_attribute = 100,
-            float_attribute = 2.71,
-            string_attribute = "world"
-        })
-    )");
+    db:create_element("Configuration", {
+        label = "Config 1",
+        integer_attribute = 42,
+        float_attribute = 3.14,
+        string_attribute = "hello"
+    })
+    db:update_element("Configuration", 1, {
+        integer_attribute = 100,
+        float_attribute = 2.71,
+        string_attribute = "world"
+    })
+)");
 
     auto integer_val = db.read_scalar_integer_by_id("Configuration", "integer_attribute", 1);
     EXPECT_TRUE(integer_val.has_value());
@@ -2519,14 +2666,14 @@ TEST_F(LuaRunnerFkTest, UpdateVectorFkViaTypedMethod) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:create_element("Parent", { label = "Parent 1" })
-        db:create_element("Parent", { label = "Parent 2" })
-        db:create_element("Child", {
-            label = "Child 1",
-            parent_ref = {"Parent 1"}
-        })
-        db:update_vector_integers("Child", "parent_ref", 1, {2, 1})
-    )");
+    db:create_element("Parent", { label = "Parent 1" })
+    db:create_element("Parent", { label = "Parent 2" })
+    db:create_element("Child", {
+        label = "Child 1",
+        parent_ref = {"Parent 1"}
+    })
+    db:update_vector_integers("Child", "parent_ref", 1, {2, 1})
+)");
 
     auto refs = db.read_vector_integers_by_id("Child", "parent_ref", 1);
     ASSERT_EQ(refs.size(), 2);
@@ -2539,18 +2686,18 @@ TEST_F(LuaRunnerFkTest, UpdateTimeSeriesFkViaTypedMethod) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:create_element("Parent", { label = "Parent 1" })
-        db:create_element("Parent", { label = "Parent 2" })
-        db:create_element("Child", {
-            label = "Child 1",
-            date_time = {"2024-01-01"},
-            sponsor_id = {"Parent 1"}
-        })
-        db:update_time_series_group("Child", "events", 1, {
-            {date_time = "2025-01-01", sponsor_id = 2},
-            {date_time = "2025-01-02", sponsor_id = 1}
-        })
-    )");
+    db:create_element("Parent", { label = "Parent 1" })
+    db:create_element("Parent", { label = "Parent 2" })
+    db:create_element("Child", {
+        label = "Child 1",
+        date_time = {"2024-01-01"},
+        sponsor_id = {"Parent 1"}
+    })
+    db:update_time_series_group("Child", "events", 1, {
+        {date_time = "2025-01-01", sponsor_id = 2},
+        {date_time = "2025-01-02", sponsor_id = 1}
+    })
+)");
 
     auto ts_data = db.read_time_series_group("Child", "events", 1);
     ASSERT_EQ(ts_data.size(), 2);

@@ -2274,7 +2274,7 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> group,
     ffi.Pointer<ffi.Char> path,
-    ffi.Pointer<quiver_csv_export_options_t> opts,
+    ffi.Pointer<quiver_csv_options_t> opts,
   ) {
     return _quiver_database_export_csv(
       db,
@@ -2293,7 +2293,7 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Char>,
             ffi.Pointer<ffi.Char>,
-            ffi.Pointer<quiver_csv_export_options_t>,
+            ffi.Pointer<quiver_csv_options_t>,
           )
         >
       >('quiver_database_export_csv');
@@ -2304,30 +2304,48 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
           ffi.Pointer<ffi.Char>,
-          ffi.Pointer<quiver_csv_export_options_t>,
+          ffi.Pointer<quiver_csv_options_t>,
         )
       >();
 
   int quiver_database_import_csv(
     ffi.Pointer<quiver_database_t> db,
-    ffi.Pointer<ffi.Char> table,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> group,
     ffi.Pointer<ffi.Char> path,
+    ffi.Pointer<quiver_csv_options_t> opts,
   ) {
     return _quiver_database_import_csv(
       db,
-      table,
+      collection,
+      group,
       path,
+      opts,
     );
   }
 
   late final _quiver_database_import_csvPtr =
       _lookup<
         ffi.NativeFunction<
-          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<quiver_csv_options_t>,
+          )
         >
       >('quiver_database_import_csv');
   late final _quiver_database_import_csv = _quiver_database_import_csvPtr
-      .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)>();
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<quiver_csv_options_t>,
+        )
+      >();
 
   int quiver_database_query_string(
     ffi.Pointer<quiver_database_t> db,
@@ -3024,19 +3042,21 @@ final class quiver_group_metadata_t extends ffi.Struct {
   external int value_column_count;
 }
 
-final class quiver_csv_export_options_t extends ffi.Struct {
+final class quiver_csv_options_t extends ffi.Struct {
   external ffi.Pointer<ffi.Char> date_time_format;
 
   external ffi.Pointer<ffi.Pointer<ffi.Char>> enum_attribute_names;
 
-  external ffi.Pointer<ffi.Size> enum_entry_counts;
+  external ffi.Pointer<ffi.Pointer<ffi.Char>> enum_locale_names;
 
-  external ffi.Pointer<ffi.Int64> enum_values;
+  external ffi.Pointer<ffi.Size> enum_entry_counts;
 
   external ffi.Pointer<ffi.Pointer<ffi.Char>> enum_labels;
 
+  external ffi.Pointer<ffi.Int64> enum_values;
+
   @ffi.Size()
-  external int enum_attribute_count;
+  external int enum_group_count;
 }
 
 typedef quiver_element_t1 = quiver_element;

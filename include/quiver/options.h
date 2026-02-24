@@ -16,12 +16,13 @@ inline DatabaseOptions default_database_options() {
     return {0, QUIVER_LOG_INFO};
 }
 
-struct QUIVER_API CSVExportOptions {
-    std::unordered_map<std::string, std::unordered_map<int64_t, std::string>> enum_labels;
+struct QUIVER_API CSVOptions {
+    std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, int64_t>>>
+        enum_labels;               // attribute -> locale -> label -> value
     std::string date_time_format;  // strftime format string; empty = no formatting
 };
 
-inline CSVExportOptions default_csv_export_options() {
+inline CSVOptions default_csv_options() {
     return {};
 }
 
