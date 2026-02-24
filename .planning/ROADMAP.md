@@ -71,10 +71,11 @@ Plans:
   1. A clear decision is documented on whether `update_scalar_relation` is kept, removed, or kept with guidance noting the preferred alternative
   2. If kept: error messages in `update_scalar_relation` are consistent with the new FK resolution error format
   3. If removed: all call sites in tests and bindings are updated and no compilation errors exist
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: TBD
+- [ ] 04-01-PLAN.md -- Remove relation methods from C++ core, C API, Lua, CMakeLists, and all C++/C API tests; relocate FK resolution tests
+- [ ] 04-02-PLAN.md -- Remove relation methods from Julia/Dart bindings, regenerate FFI, clean CLAUDE.md, validate with build-all
 
 ## Progress
 
