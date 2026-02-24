@@ -507,4 +507,224 @@ void main() {
       }
     });
   });
+
+  group('FK Resolution - Create', () {
+    test('resolves set FK labels to IDs', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Parent', {'label': 'Parent 1'});
+        db.createElement('Parent', {'label': 'Parent 2'});
+        db.createElement('Child', {
+          'label': 'Child 1',
+          'mentor_id': ['Parent 1', 'Parent 2'],
+        });
+
+        final result = db.readSetIntegersById('Child', 'mentor_id', 1)..sort();
+        expect(result, equals([1, 2]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws on missing FK target label', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        expect(
+          () => db.createElement('Child', {
+            'label': 'Child 1',
+            'mentor_id': ['Nonexistent Parent'],
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('throws on string for non-FK integer column', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Parent', {'label': 'Parent 1'});
+        expect(
+          () => db.createElement('Child', {
+            'label': 'Child 1',
+            'parent_id': 1,
+            'score': ['not_a_label'],
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
+      } finally {
+        db.close();
+      }
+    });
+
+    test('resolves scalar FK labels to IDs', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Parent', {'label': 'Parent 1'});
+        db.createElement('Child', {
+          'label': 'Child 1',
+          'parent_id': 'Parent 1',
+        });
+
+        final result = db.readScalarIntegers('Child', 'parent_id');
+        expect(result, equals([1]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('stores scalar FK integer ID directly', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Parent', {'label': 'Parent 1'});
+        db.createElement('Child', {
+          'label': 'Child 1',
+          'parent_id': 1,
+        });
+
+        final result = db.readScalarIntegers('Child', 'parent_id');
+        expect(result, equals([1]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('resolves vector FK labels to IDs', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Parent', {'label': 'Parent 1'});
+        db.createElement('Parent', {'label': 'Parent 2'});
+        db.createElement('Child', {
+          'label': 'Child 1',
+          'parent_ref': ['Parent 1', 'Parent 2'],
+        });
+
+        final result = db.readVectorIntegersById('Child', 'parent_ref', 1);
+        expect(result, equals([1, 2]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('resolves time series FK labels to IDs', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Parent', {'label': 'Parent 1'});
+        db.createElement('Parent', {'label': 'Parent 2'});
+        db.createElement('Child', {
+          'label': 'Child 1',
+          'date_time': ['2024-01-01', '2024-01-02'],
+          'sponsor_id': ['Parent 1', 'Parent 2'],
+        });
+
+        final result = db.readTimeSeriesGroup('Child', 'events', 1);
+        expect(result['sponsor_id'], equals([1, 2]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('resolves all FK types in one call', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        db.createElement('Parent', {'label': 'Parent 1'});
+        db.createElement('Parent', {'label': 'Parent 2'});
+        db.createElement('Child', {
+          'label': 'Child 1',
+          'parent_id': 'Parent 1',
+          'mentor_id': ['Parent 2'],
+          'parent_ref': ['Parent 1'],
+          'date_time': ['2024-01-01'],
+          'sponsor_id': ['Parent 2'],
+        });
+
+        // Verify scalar FK
+        expect(db.readScalarIntegers('Child', 'parent_id'), equals([1]));
+        // Verify set FK
+        expect(db.readSetIntegersById('Child', 'mentor_id', 1)..sort(), equals([2]));
+        // Verify vector FK
+        expect(db.readVectorIntegersById('Child', 'parent_ref', 1), equals([1]));
+        // Verify time series FK
+        expect(db.readTimeSeriesGroup('Child', 'events', 1)['sponsor_id'], equals([2]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('non-FK integer columns pass through unchanged', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 42,
+          'float_attribute': 3.14,
+        });
+
+        expect(db.readScalarStrings('Configuration', 'label'), equals(['Config 1']));
+        expect(db.readScalarIntegers('Configuration', 'integer_attribute'), equals([42]));
+        expect(db.readScalarFloats('Configuration', 'float_attribute'), equals([3.14]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('zero partial writes on resolution failure', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        expect(
+          () => db.createElement('Child', {
+            'label': 'Child 1',
+            'parent_id': 'Nonexistent Parent',
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
+
+        // Verify no child was created
+        final labels = db.readScalarStrings('Child', 'label');
+        expect(labels, isEmpty);
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

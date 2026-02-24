@@ -717,6 +717,208 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    # ============================================================================
+    # Update element FK label resolution tests
+    # ============================================================================
+
+    @testset "Update Element Scalar FK Label" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        Quiver.create_element!(db, "Parent"; label = "Parent 1")
+        Quiver.create_element!(db, "Parent"; label = "Parent 2")
+        Quiver.create_element!(db, "Child"; label = "Child 1", parent_id = "Parent 1")
+
+        # Update child: change parent_id to Parent 2 using string label
+        Quiver.update_element!(db, "Child", Int64(1); parent_id = "Parent 2")
+
+        # Verify: parent_id resolved to Parent 2's ID (2)
+        parent_ids = Quiver.read_scalar_integers(db, "Child", "parent_id")
+        @test parent_ids == [2]
+
+        Quiver.close!(db)
+    end
+
+    @testset "Update Element Scalar FK Integer" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        Quiver.create_element!(db, "Parent"; label = "Parent 1")
+        Quiver.create_element!(db, "Parent"; label = "Parent 2")
+        Quiver.create_element!(db, "Child"; label = "Child 1", parent_id = 1)
+
+        # Update child: change parent_id to 2 using integer ID directly
+        Quiver.update_element!(db, "Child", Int64(1); parent_id = 2)
+
+        # Verify: parent_id updated to 2
+        parent_ids = Quiver.read_scalar_integers(db, "Child", "parent_id")
+        @test parent_ids == [2]
+
+        Quiver.close!(db)
+    end
+
+    @testset "Update Element Vector FK Labels" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        Quiver.create_element!(db, "Parent"; label = "Parent 1")
+        Quiver.create_element!(db, "Parent"; label = "Parent 2")
+        Quiver.create_element!(db, "Child"; label = "Child 1", parent_ref = ["Parent 1"])
+
+        # Update child: change vector FK to [Parent 2, Parent 1]
+        Quiver.update_element!(db, "Child", Int64(1); parent_ref = ["Parent 2", "Parent 1"])
+
+        # Verify: vector resolved to [2, 1] (order preserved)
+        refs = Quiver.read_vector_integers_by_id(db, "Child", "parent_ref", Int64(1))
+        @test refs == [2, 1]
+
+        Quiver.close!(db)
+    end
+
+    @testset "Update Element Set FK Labels" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        Quiver.create_element!(db, "Parent"; label = "Parent 1")
+        Quiver.create_element!(db, "Parent"; label = "Parent 2")
+        Quiver.create_element!(db, "Child"; label = "Child 1", mentor_id = ["Parent 1"])
+
+        # Update child: change set FK to [Parent 2]
+        Quiver.update_element!(db, "Child", Int64(1); mentor_id = ["Parent 2"])
+
+        # Verify: set resolved to [2]
+        mentors = Quiver.read_set_integers_by_id(db, "Child", "mentor_id", Int64(1))
+        @test mentors == [2]
+
+        Quiver.close!(db)
+    end
+
+    @testset "Update Element Time Series FK Labels" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        Quiver.create_element!(db, "Parent"; label = "Parent 1")
+        Quiver.create_element!(db, "Parent"; label = "Parent 2")
+        Quiver.create_element!(db, "Child";
+            label = "Child 1",
+            date_time = ["2024-01-01"],
+            sponsor_id = ["Parent 1"],
+        )
+
+        # Update child: change time series FK to [Parent 2, Parent 1]
+        Quiver.update_element!(db, "Child", Int64(1);
+            date_time = ["2024-06-01", "2024-06-02"],
+            sponsor_id = ["Parent 2", "Parent 1"],
+        )
+
+        # Verify: time series resolved to [2, 1]
+        result = Quiver.read_time_series_group(db, "Child", "events", Int64(1))
+        @test result["sponsor_id"] == [2, 1]
+        @test length(result["date_time"]) == 2
+
+        Quiver.close!(db)
+    end
+
+    @testset "Update Element All FK Types In One Call" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        Quiver.create_element!(db, "Parent"; label = "Parent 1")
+        Quiver.create_element!(db, "Parent"; label = "Parent 2")
+
+        # Create child with all FK types pointing to Parent 1
+        Quiver.create_element!(db, "Child";
+            label = "Child 1",
+            parent_id = "Parent 1",
+            mentor_id = ["Parent 1"],
+            parent_ref = ["Parent 1"],
+            date_time = ["2024-01-01"],
+            sponsor_id = ["Parent 1"],
+        )
+
+        # Update child: change all FK types to Parent 2
+        Quiver.update_element!(db, "Child", Int64(1);
+            parent_id = "Parent 2",
+            mentor_id = ["Parent 2"],
+            parent_ref = ["Parent 2"],
+            date_time = ["2025-01-01"],
+            sponsor_id = ["Parent 2"],
+        )
+
+        # Verify scalar FK
+        parent_ids = Quiver.read_scalar_integers(db, "Child", "parent_id")
+        @test parent_ids == [2]
+
+        # Verify set FK
+        mentors = Quiver.read_set_integers_by_id(db, "Child", "mentor_id", Int64(1))
+        @test mentors == [2]
+
+        # Verify vector FK
+        refs = Quiver.read_vector_integers_by_id(db, "Child", "parent_ref", Int64(1))
+        @test refs == [2]
+
+        # Verify time series FK
+        ts = Quiver.read_time_series_group(db, "Child", "events", Int64(1))
+        @test ts["sponsor_id"] == [2]
+
+        Quiver.close!(db)
+    end
+
+    @testset "Update Element No FK Columns Unchanged" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration";
+            label = "Config 1",
+            integer_attribute = 42,
+            float_attribute = 3.14,
+            string_attribute = "hello",
+        )
+
+        # Update scalar attributes in a non-FK schema
+        Quiver.update_element!(db, "Configuration", Int64(1);
+            integer_attribute = 100,
+            float_attribute = 2.71,
+            string_attribute = "world",
+        )
+
+        # Verify values updated correctly (pre-resolve passthrough safe for non-FK schemas)
+        @test Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", Int64(1)) == 100
+        @test Quiver.read_scalar_float_by_id(db, "Configuration", "float_attribute", Int64(1)) == 2.71
+        @test Quiver.read_scalar_string_by_id(db, "Configuration", "string_attribute", Int64(1)) == "world"
+
+        Quiver.close!(db)
+    end
+
+    @testset "Update Element FK Resolution Failure Preserves Existing" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        Quiver.create_element!(db, "Parent"; label = "Parent 1")
+        Quiver.create_element!(db, "Child"; label = "Child 1", parent_id = "Parent 1")
+
+        # Attempt update with nonexistent FK label
+        @test_throws Quiver.DatabaseException Quiver.update_element!(
+            db,
+            "Child",
+            Int64(1);
+            parent_id = "Nonexistent Parent",
+        )
+
+        # Verify original value preserved
+        parent_ids = Quiver.read_scalar_integers(db, "Child", "parent_id")
+        @test parent_ids == [1]
+
+        Quiver.close!(db)
+    end
 end
 
 end

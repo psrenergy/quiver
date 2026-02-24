@@ -679,3 +679,262 @@ TEST(Database, UpdateSetStringsTrimsWhitespace) {
     std::sort(set_vals.begin(), set_vals.end());
     EXPECT_EQ(set_vals, (std::vector<std::string>{"alpha", "beta", "gamma"}));
 }
+
+// ============================================================================
+// Update element FK label resolution tests
+// ============================================================================
+
+TEST(Database, UpdateElementScalarFkLabel) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    // Create two parents
+    quiver::Element p1, p2;
+    p1.set("label", std::string("Parent 1"));
+    p2.set("label", std::string("Parent 2"));
+    db.create_element("Parent", p1);
+    db.create_element("Parent", p2);
+
+    // Create child with parent_id pointing to Parent 1
+    quiver::Element child;
+    child.set("label", std::string("Child 1"));
+    child.set("parent_id", std::string("Parent 1"));
+    db.create_element("Child", child);
+
+    // Update child: change parent_id to Parent 2 using string label
+    quiver::Element update;
+    update.set("parent_id", std::string("Parent 2"));
+    db.update_element("Child", 1, update);
+
+    // Verify: parent_id resolved to Parent 2's ID (2)
+    auto parent_ids = db.read_scalar_integers("Child", "parent_id");
+    ASSERT_EQ(parent_ids.size(), 1);
+    EXPECT_EQ(parent_ids[0], 2);
+}
+
+TEST(Database, UpdateElementScalarFkInteger) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    // Create two parents
+    quiver::Element p1, p2;
+    p1.set("label", std::string("Parent 1"));
+    p2.set("label", std::string("Parent 2"));
+    db.create_element("Parent", p1);
+    db.create_element("Parent", p2);
+
+    // Create child with parent_id = 1 (integer)
+    quiver::Element child;
+    child.set("label", std::string("Child 1"));
+    child.set("parent_id", int64_t{1});
+    db.create_element("Child", child);
+
+    // Update child: change parent_id to 2 using integer ID directly
+    quiver::Element update;
+    update.set("parent_id", int64_t{2});
+    db.update_element("Child", 1, update);
+
+    // Verify: parent_id updated to 2
+    auto parent_ids = db.read_scalar_integers("Child", "parent_id");
+    ASSERT_EQ(parent_ids.size(), 1);
+    EXPECT_EQ(parent_ids[0], 2);
+}
+
+TEST(Database, UpdateElementVectorFkLabels) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    // Create two parents
+    quiver::Element p1, p2;
+    p1.set("label", std::string("Parent 1"));
+    p2.set("label", std::string("Parent 2"));
+    db.create_element("Parent", p1);
+    db.create_element("Parent", p2);
+
+    // Create child with vector FK pointing to Parent 1
+    quiver::Element child;
+    child.set("label", std::string("Child 1"));
+    child.set("parent_ref", std::vector<std::string>{"Parent 1"});
+    db.create_element("Child", child);
+
+    // Update child: change vector FK to {Parent 2, Parent 1}
+    quiver::Element update;
+    update.set("parent_ref", std::vector<std::string>{"Parent 2", "Parent 1"});
+    db.update_element("Child", 1, update);
+
+    // Verify: vector resolved to {2, 1}
+    auto refs = db.read_vector_integers_by_id("Child", "parent_ref", 1);
+    ASSERT_EQ(refs.size(), 2);
+    EXPECT_EQ(refs[0], 2);
+    EXPECT_EQ(refs[1], 1);
+}
+
+TEST(Database, UpdateElementSetFkLabels) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    // Create two parents
+    quiver::Element p1, p2;
+    p1.set("label", std::string("Parent 1"));
+    p2.set("label", std::string("Parent 2"));
+    db.create_element("Parent", p1);
+    db.create_element("Parent", p2);
+
+    // Create child with set FK pointing to Parent 1
+    quiver::Element child;
+    child.set("label", std::string("Child 1"));
+    child.set("mentor_id", std::vector<std::string>{"Parent 1"});
+    db.create_element("Child", child);
+
+    // Update child: change set FK to {Parent 2}
+    quiver::Element update;
+    update.set("mentor_id", std::vector<std::string>{"Parent 2"});
+    db.update_element("Child", 1, update);
+
+    // Verify: set resolved to {2}
+    auto mentors = db.read_set_integers("Child", "mentor_id");
+    ASSERT_EQ(mentors.size(), 1);
+    ASSERT_EQ(mentors[0].size(), 1);
+    EXPECT_EQ(mentors[0][0], 2);
+}
+
+TEST(Database, UpdateElementTimeSeriesFkLabels) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    // Create two parents
+    quiver::Element p1, p2;
+    p1.set("label", std::string("Parent 1"));
+    p2.set("label", std::string("Parent 2"));
+    db.create_element("Parent", p1);
+    db.create_element("Parent", p2);
+
+    // Create child with time series FK pointing to Parent 1
+    quiver::Element child;
+    child.set("label", std::string("Child 1"));
+    child.set("date_time", std::vector<std::string>{"2024-01-01"});
+    child.set("sponsor_id", std::vector<std::string>{"Parent 1"});
+    db.create_element("Child", child);
+
+    // Update child: change time series FK to {Parent 2, Parent 1}
+    quiver::Element update;
+    update.set("date_time", std::vector<std::string>{"2024-06-01", "2024-06-02"});
+    update.set("sponsor_id", std::vector<std::string>{"Parent 2", "Parent 1"});
+    db.update_element("Child", 1, update);
+
+    // Verify: time series resolved to {2, 1}
+    auto ts_data = db.read_time_series_group("Child", "events", 1);
+    ASSERT_EQ(ts_data.size(), 2);
+    EXPECT_EQ(std::get<int64_t>(ts_data[0].at("sponsor_id")), 2);
+    EXPECT_EQ(std::get<int64_t>(ts_data[1].at("sponsor_id")), 1);
+}
+
+TEST(Database, UpdateElementAllFkTypesInOneCall) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    // Create two parents
+    quiver::Element p1, p2;
+    p1.set("label", std::string("Parent 1"));
+    p2.set("label", std::string("Parent 2"));
+    db.create_element("Parent", p1);
+    db.create_element("Parent", p2);
+
+    // Create child with all FK types pointing to Parent 1
+    quiver::Element child;
+    child.set("label", std::string("Child 1"));
+    child.set("parent_id", std::string("Parent 1"));
+    child.set("mentor_id", std::vector<std::string>{"Parent 1"});
+    child.set("parent_ref", std::vector<std::string>{"Parent 1"});
+    child.set("date_time", std::vector<std::string>{"2024-01-01"});
+    child.set("sponsor_id", std::vector<std::string>{"Parent 1"});
+    db.create_element("Child", child);
+
+    // Update child: change all FK types to point to Parent 2
+    quiver::Element update;
+    update.set("parent_id", std::string("Parent 2"));
+    update.set("mentor_id", std::vector<std::string>{"Parent 2"});
+    update.set("parent_ref", std::vector<std::string>{"Parent 2"});
+    update.set("date_time", std::vector<std::string>{"2025-01-01"});
+    update.set("sponsor_id", std::vector<std::string>{"Parent 2"});
+    db.update_element("Child", 1, update);
+
+    // Verify scalar FK
+    auto parent_ids = db.read_scalar_integers("Child", "parent_id");
+    ASSERT_EQ(parent_ids.size(), 1);
+    EXPECT_EQ(parent_ids[0], 2);
+
+    // Verify set FK (mentor_id)
+    auto mentors = db.read_set_integers("Child", "mentor_id");
+    ASSERT_EQ(mentors.size(), 1);
+    ASSERT_EQ(mentors[0].size(), 1);
+    EXPECT_EQ(mentors[0][0], 2);
+
+    // Verify vector FK (parent_ref)
+    auto vrefs = db.read_vector_integers_by_id("Child", "parent_ref", 1);
+    ASSERT_EQ(vrefs.size(), 1);
+    EXPECT_EQ(vrefs[0], 2);
+
+    // Verify time series FK (sponsor_id)
+    auto ts_data = db.read_time_series_group("Child", "events", 1);
+    ASSERT_EQ(ts_data.size(), 1);
+    EXPECT_EQ(std::get<int64_t>(ts_data[0].at("sponsor_id")), 2);
+}
+
+TEST(Database, UpdateElementNoFkColumnsUnchanged) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    // Create element in non-FK schema
+    quiver::Element e;
+    e.set("label", std::string("Config 1"))
+        .set("integer_attribute", int64_t{42})
+        .set("float_attribute", 3.14)
+        .set("string_attribute", std::string("hello"));
+    int64_t id = db.create_element("Configuration", e);
+
+    // Update scalar attributes via update_element
+    quiver::Element update;
+    update.set("integer_attribute", int64_t{100})
+        .set("float_attribute", 2.71)
+        .set("string_attribute", std::string("world"));
+    db.update_element("Configuration", id, update);
+
+    // Verify values updated correctly (pre-resolve passthrough safe for non-FK schemas)
+    auto integer_val = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id);
+    EXPECT_TRUE(integer_val.has_value());
+    EXPECT_EQ(*integer_val, 100);
+
+    auto float_val = db.read_scalar_float_by_id("Configuration", "float_attribute", id);
+    EXPECT_TRUE(float_val.has_value());
+    EXPECT_DOUBLE_EQ(*float_val, 2.71);
+
+    auto str_val = db.read_scalar_string_by_id("Configuration", "string_attribute", id);
+    EXPECT_TRUE(str_val.has_value());
+    EXPECT_EQ(*str_val, "world");
+}
+
+TEST(Database, UpdateElementFkResolutionFailurePreservesExisting) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    // Create parent and child with parent_id pointing to Parent 1
+    quiver::Element parent;
+    parent.set("label", std::string("Parent 1"));
+    db.create_element("Parent", parent);
+
+    quiver::Element child;
+    child.set("label", std::string("Child 1"));
+    child.set("parent_id", std::string("Parent 1"));
+    db.create_element("Child", child);
+
+    // Attempt update with nonexistent parent label
+    quiver::Element update;
+    update.set("parent_id", std::string("Nonexistent Parent"));
+    EXPECT_THROW(db.update_element("Child", 1, update), std::runtime_error);
+
+    // Verify: original value preserved (parent_id still points to Parent 1's ID)
+    auto parent_ids = db.read_scalar_integers("Child", "parent_id");
+    ASSERT_EQ(parent_ids.size(), 1);
+    EXPECT_EQ(parent_ids[0], 1);
+}

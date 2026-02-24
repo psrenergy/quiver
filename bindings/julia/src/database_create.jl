@@ -15,14 +15,3 @@ function create_element!(db::Database, collection::String; kwargs...)
         destroy!(e)
     end
 end
-
-function update_scalar_relation!(
-    db::Database,
-    collection::String,
-    attribute::String,
-    from_label::String,
-    to_label::String,
-)
-    check(C.quiver_database_update_scalar_relation(db.ptr, collection, attribute, from_label, to_label))
-    return nothing
-end

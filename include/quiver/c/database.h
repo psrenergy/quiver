@@ -69,19 +69,6 @@ QUIVER_C_API quiver_error_t quiver_database_update_element(quiver_database_t* db
                                                            const quiver_element_t* element);
 QUIVER_C_API quiver_error_t quiver_database_delete_element(quiver_database_t* db, const char* collection, int64_t id);
 
-// Relation operations
-QUIVER_C_API quiver_error_t quiver_database_update_scalar_relation(quiver_database_t* db,
-                                                                   const char* collection,
-                                                                   const char* attribute,
-                                                                   const char* from_label,
-                                                                   const char* to_label);
-
-QUIVER_C_API quiver_error_t quiver_database_read_scalar_relation(quiver_database_t* db,
-                                                                 const char* collection,
-                                                                 const char* attribute,
-                                                                 char*** out_values,
-                                                                 size_t* out_count);
-
 // Read scalar attributes
 QUIVER_C_API quiver_error_t quiver_database_read_scalar_integers(quiver_database_t* db,
                                                                  const char* collection,
