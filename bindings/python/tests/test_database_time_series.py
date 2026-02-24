@@ -167,3 +167,66 @@ class TestTimeSeriesSingleColumn:
         result = collections_db.read_time_series_group("Collection", "data", eid)
         assert len(result) == 2
         assert result == rows
+
+
+# -- Time series files tests ---------------------------------------------------
+
+class TestHasTimeSeriesFiles:
+
+    def test_has_time_series_files_true(self, collections_db: Database) -> None:
+        """Collection with a files table returns True."""
+        assert collections_db.has_time_series_files("Collection") is True
+
+    def test_has_time_series_files_false(self, mixed_time_series_db: Database) -> None:
+        """Sensor schema has no files table, returns False."""
+        assert mixed_time_series_db.has_time_series_files("Sensor") is False
+
+
+class TestListTimeSeriesFilesColumns:
+
+    def test_list_time_series_files_columns(self, collections_db: Database) -> None:
+        """Returns column names from the files table."""
+        columns = collections_db.list_time_series_files_columns("Collection")
+        assert sorted(columns) == ["data_file", "metadata_file"]
+
+
+class TestReadTimeSeriesFiles:
+
+    def test_read_time_series_files_initial(self, collections_db: Database) -> None:
+        """Before any update, all columns map to None."""
+        result = collections_db.read_time_series_files("Collection")
+        assert isinstance(result, dict)
+        for col in ["data_file", "metadata_file"]:
+            assert col in result
+            assert result[col] is None
+
+
+class TestUpdateTimeSeriesFiles:
+
+    def test_update_and_read_time_series_files(self, collections_db: Database) -> None:
+        """Update with paths, read back, verify exact match."""
+        data = {"data_file": "/path/to/data.csv", "metadata_file": "/path/to/meta.json"}
+        collections_db.update_time_series_files("Collection", data)
+
+        result = collections_db.read_time_series_files("Collection")
+        assert result == data
+
+    def test_update_time_series_files_partial_none(self, collections_db: Database) -> None:
+        """Update with one path set and one None, verify None preserved."""
+        data = {"data_file": "/path/to/data.csv", "metadata_file": None}
+        collections_db.update_time_series_files("Collection", data)
+
+        result = collections_db.read_time_series_files("Collection")
+        assert result["data_file"] == "/path/to/data.csv"
+        assert result["metadata_file"] is None
+
+    def test_update_time_series_files_overwrite(self, collections_db: Database) -> None:
+        """Update with values, then update again, verify second values persisted."""
+        data1 = {"data_file": "/first/data.csv", "metadata_file": "/first/meta.json"}
+        collections_db.update_time_series_files("Collection", data1)
+
+        data2 = {"data_file": "/second/data.csv", "metadata_file": "/second/meta.json"}
+        collections_db.update_time_series_files("Collection", data2)
+
+        result = collections_db.read_time_series_files("Collection")
+        assert result == data2
