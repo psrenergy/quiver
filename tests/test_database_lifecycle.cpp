@@ -1,3 +1,5 @@
+#include "test_utils.h"
+
 #include <filesystem>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
@@ -368,4 +370,15 @@ TEST_F(MigrationFixture, FromMigrationsLoadsSchemaWhenAlreadyUpToDate) {
     // Verify we can create elements
     auto id = db.create_element("Test3", quiver::Element().set("label", "item1").set("capacity", int64_t{42}));
     EXPECT_GT(id, 0);
+}
+
+// ============================================================================
+// Describe tests
+// ============================================================================
+
+TEST_F(TempFileFixture, DescribeDoesNotThrow) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    EXPECT_NO_THROW(db.describe());
 }

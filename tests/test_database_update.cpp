@@ -237,6 +237,68 @@ TEST(Database, UpdateSetMultipleElements) {
 }
 
 // ============================================================================
+// Update vector strings / set integers / set floats (gap-fill using all_types.sql)
+// ============================================================================
+
+TEST(Database, UpdateVectorStringsBasic) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1"));
+    int64_t id = db.create_element("AllTypes", e);
+
+    db.update_vector_strings("AllTypes", "label_value", id, {"alpha", "beta"});
+
+    auto vec = db.read_vector_strings_by_id("AllTypes", "label_value", id);
+    EXPECT_EQ(vec, (std::vector<std::string>{"alpha", "beta"}));
+}
+
+TEST(Database, UpdateSetIntegersBasic) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1"));
+    int64_t id = db.create_element("AllTypes", e);
+
+    db.update_set_integers("AllTypes", "code", id, {10, 20, 30});
+
+    auto set = db.read_set_integers_by_id("AllTypes", "code", id);
+    std::sort(set.begin(), set.end());
+    EXPECT_EQ(set, (std::vector<int64_t>{10, 20, 30}));
+}
+
+TEST(Database, UpdateSetFloatsBasic) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1"));
+    int64_t id = db.create_element("AllTypes", e);
+
+    db.update_set_floats("AllTypes", "weight", id, {1.1, 2.2});
+
+    auto set = db.read_set_floats_by_id("AllTypes", "weight", id);
+    std::sort(set.begin(), set.end());
+    EXPECT_EQ(set.size(), 2);
+    EXPECT_DOUBLE_EQ(set[0], 1.1);
+    EXPECT_DOUBLE_EQ(set[1], 2.2);
+}
+
+// ============================================================================
 // update_element tests
 // ============================================================================
 

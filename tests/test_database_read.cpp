@@ -591,6 +591,154 @@ TEST(Database, ReadSetStringsByIdInvalidCollection) {
 }
 
 // ============================================================================
+// Read vector strings tests (gap-fill using all_types.sql)
+// ============================================================================
+
+TEST(Database, ReadVectorStringsBulk) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item 1"));
+    int64_t id1 = db.create_element("AllTypes", e1);
+    db.update_vector_strings("AllTypes", "label_value", id1, {"alpha", "beta", "gamma"});
+
+    quiver::Element e2;
+    e2.set("label", std::string("Item 2"));
+    int64_t id2 = db.create_element("AllTypes", e2);
+    db.update_vector_strings("AllTypes", "label_value", id2, {"delta", "epsilon"});
+
+    auto vectors = db.read_vector_strings("AllTypes", "label_value");
+    EXPECT_EQ(vectors.size(), 2);
+    EXPECT_EQ(vectors[0], (std::vector<std::string>{"alpha", "beta", "gamma"}));
+    EXPECT_EQ(vectors[1], (std::vector<std::string>{"delta", "epsilon"}));
+}
+
+TEST(Database, ReadVectorStringsByIdBasic) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1"));
+    int64_t id = db.create_element("AllTypes", e);
+    db.update_vector_strings("AllTypes", "label_value", id, {"hello", "world"});
+
+    auto vec = db.read_vector_strings_by_id("AllTypes", "label_value", id);
+    EXPECT_EQ(vec, (std::vector<std::string>{"hello", "world"}));
+}
+
+// ============================================================================
+// Read set integers/floats tests (gap-fill using all_types.sql)
+// ============================================================================
+
+TEST(Database, ReadSetIntegersBulk) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item 1"));
+    int64_t id1 = db.create_element("AllTypes", e1);
+    db.update_set_integers("AllTypes", "code", id1, {10, 20, 30});
+
+    quiver::Element e2;
+    e2.set("label", std::string("Item 2"));
+    int64_t id2 = db.create_element("AllTypes", e2);
+    db.update_set_integers("AllTypes", "code", id2, {40, 50});
+
+    auto sets = db.read_set_integers("AllTypes", "code");
+    EXPECT_EQ(sets.size(), 2);
+    auto set1 = sets[0];
+    auto set2 = sets[1];
+    std::sort(set1.begin(), set1.end());
+    std::sort(set2.begin(), set2.end());
+    EXPECT_EQ(set1, (std::vector<int64_t>{10, 20, 30}));
+    EXPECT_EQ(set2, (std::vector<int64_t>{40, 50}));
+}
+
+TEST(Database, ReadSetIntegersByIdBasic) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1"));
+    int64_t id = db.create_element("AllTypes", e);
+    db.update_set_integers("AllTypes", "code", id, {100, 200, 300});
+
+    auto set = db.read_set_integers_by_id("AllTypes", "code", id);
+    std::sort(set.begin(), set.end());
+    EXPECT_EQ(set, (std::vector<int64_t>{100, 200, 300}));
+}
+
+TEST(Database, ReadSetFloatsBulk) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item 1"));
+    int64_t id1 = db.create_element("AllTypes", e1);
+    db.update_set_floats("AllTypes", "weight", id1, {1.1, 2.2, 3.3});
+
+    quiver::Element e2;
+    e2.set("label", std::string("Item 2"));
+    int64_t id2 = db.create_element("AllTypes", e2);
+    db.update_set_floats("AllTypes", "weight", id2, {4.4, 5.5});
+
+    auto sets = db.read_set_floats("AllTypes", "weight");
+    EXPECT_EQ(sets.size(), 2);
+    auto set1 = sets[0];
+    auto set2 = sets[1];
+    std::sort(set1.begin(), set1.end());
+    std::sort(set2.begin(), set2.end());
+    EXPECT_EQ(set1.size(), 3);
+    EXPECT_DOUBLE_EQ(set1[0], 1.1);
+    EXPECT_DOUBLE_EQ(set1[1], 2.2);
+    EXPECT_DOUBLE_EQ(set1[2], 3.3);
+    EXPECT_EQ(set2.size(), 2);
+    EXPECT_DOUBLE_EQ(set2[0], 4.4);
+    EXPECT_DOUBLE_EQ(set2[1], 5.5);
+}
+
+TEST(Database, ReadSetFloatsByIdBasic) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("all_types.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e;
+    e.set("label", std::string("Item 1"));
+    int64_t id = db.create_element("AllTypes", e);
+    db.update_set_floats("AllTypes", "weight", id, {9.9, 8.8});
+
+    auto set = db.read_set_floats_by_id("AllTypes", "weight", id);
+    std::sort(set.begin(), set.end());
+    EXPECT_EQ(set.size(), 2);
+    EXPECT_DOUBLE_EQ(set[0], 8.8);
+    EXPECT_DOUBLE_EQ(set[1], 9.9);
+}
+
+// ============================================================================
 // DateTime metadata tests
 // ============================================================================
 
