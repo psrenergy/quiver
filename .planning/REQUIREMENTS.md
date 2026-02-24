@@ -70,8 +70,8 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 
 ### CSV
 
-- [ ] **CSV-01**: export_csv with CSVExportOptions struct (date format, enum labels)
-- [ ] **CSV-02**: import_csv stub bound (raises NotImplementedError -- C++ implementation is a no-op stub)
+- [x] **CSV-01**: export_csv with CSVExportOptions struct (date format, enum labels)
+- [x] **CSV-02**: import_csv stub bound (raises NotImplementedError -- C++ implementation is a no-op stub)
 
 ### Convenience
 
@@ -152,7 +152,7 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 | TS-01 | Phase 5 | Complete |
 | TS-02 | Phase 5 | Complete |
 | TS-03 | Phase 5 | Complete |
-| CSV-01 | Phase 6 | Pending |
+| CSV-01 | Phase 6 | Complete |
 | CSV-02 | Phase 6 | Stub |
 | CONV-01 | Phase 6 | Pending |
 | CONV-02 | Phase 6 | Pending |
