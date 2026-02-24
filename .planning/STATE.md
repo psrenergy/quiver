@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** Consistent, type-safe database operations across multiple languages through a single C++ implementation
-**Current focus:** Phase 4 - Queries and Relations -- COMPLETE
+**Current focus:** Phase 5 - Time Series
 
 ## Current Position
 
-Phase: 4 of 7 (Queries and Relations) -- COMPLETE
-Plan: 1 of 1 in current phase
-Status: Phase Complete
-Last activity: 2026-02-23 — Completed 04-01-PLAN.md (Python query bindings)
+Phase: 5 of 7 (Time Series)
+Plan: 1 of 2 in current phase (05-01 complete)
+Status: In Progress
+Last activity: 2026-02-23 — Completed 05-01-PLAN.md (Time series group read/write)
 
-Progress: [██████░░░░] 57%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
+- Total plans completed: 8
 - Average duration: 4min
-- Total execution time: 29min
+- Total execution time: 32min
 
 **By Phase:**
 
@@ -31,9 +31,10 @@ Progress: [██████░░░░] 57%
 | 02-reads-and-metadata | 2 | 10min | 5min |
 | 03-writes-and-transactions | 2 | 11min | 6min |
 | 04-queries-and-relations | 1 | 2min | 2min |
+| 05-time-series | 1 | 3min | 3min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (6min), 02-02 (4min), 03-01 (9min), 03-02 (2min), 04-01 (2min)
+- Last 5 plans: 02-02 (4min), 03-01 (9min), 03-02 (2min), 04-01 (2min), 05-01 (3min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -65,6 +66,10 @@ Recent decisions affecting current work:
 - [03-02]: _Bool* CFFI type for in_transaction output parameter (matches C API bool* exactly)
 - [04-01]: Used void** instead of const void* const* in CFFI cdef (ABI-compatible; CFFI ignores const qualifiers)
 - [04-01]: _marshal_params is module-level function consistent with _parse_scalar_metadata pattern
+- [05-01]: DATE_TIME columns return plain str (no auto-parsing) -- consistent with Phase 4 query_string pattern
+- [05-01]: Parameter order (collection, group, id) follows C++/C API order, matching Julia/Dart
+- [05-01]: type(v) is int used for strict INTEGER validation (rejects bool subclass)
+- [05-01]: Dimension column type hardcoded to STRING (2) in _marshal_time_series_columns
 
 ### Pending Todos
 
@@ -78,5 +83,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 04-01-PLAN.md (Phase 04 complete)
-Resume file: Next phase (05-time-series)
+Stopped at: Completed 05-01-PLAN.md (Time series group read/write)
+Resume file: .planning/phases/05-time-series/05-02-PLAN.md

@@ -64,8 +64,8 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 
 ### Time Series
 
-- [ ] **TS-01**: read_time_series_group with void** column dispatch by type
-- [ ] **TS-02**: update_time_series_group with columnar typed-array marshaling (including clear via empty arrays)
+- [x] **TS-01**: read_time_series_group with void** column dispatch by type
+- [x] **TS-02**: update_time_series_group with columnar typed-array marshaling (including clear via empty arrays)
 - [ ] **TS-03**: has_time_series_files, list_time_series_files_columns, read_time_series_files, update_time_series_files
 
 ### CSV
@@ -149,8 +149,8 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 | TXN-02 | Phase 3 | Complete |
 | QUERY-01 | Phase 4 | Complete |
 | QUERY-02 | Phase 4 | Complete |
-| TS-01 | Phase 5 | Pending |
-| TS-02 | Phase 5 | Pending |
+| TS-01 | Phase 5 | Complete |
+| TS-02 | Phase 5 | Complete |
 | TS-03 | Phase 5 | Pending |
 | CSV-01 | Phase 6 | Pending |
 | CSV-02 | Phase 6 | Pending |
