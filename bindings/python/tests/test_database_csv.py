@@ -146,14 +146,14 @@ class TestExportCSVGroup:
         csv_db.export_csv("Items", "measurements", out)
 
         content = _read_file(out)
-        # Header: label + value column(s)
-        assert "label,measurement\n" in content
-        # Data rows: one per vector element
-        assert "Item1,1.1\n" in content
-        assert "Item1,2.2\n" in content
-        assert "Item1,3.3\n" in content
-        assert "Item2,4.4\n" in content
-        assert "Item2,5.5\n" in content
+        # Header: sep line + id,vector_index,value column(s)
+        assert "sep=,\nid,vector_index,measurement\n" in content
+        # Data rows: label, vector_index, value per vector element
+        assert "Item1,1,1.1\n" in content
+        assert "Item1,2,2.2\n" in content
+        assert "Item1,3,3.3\n" in content
+        assert "Item2,1,4.4\n" in content
+        assert "Item2,2,5.5\n" in content
 
 
 class TestExportCSVNullValues:

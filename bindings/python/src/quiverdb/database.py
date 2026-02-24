@@ -1464,7 +1464,7 @@ def _marshal_csv_export_options(options: CSVExportOptions) -> tuple:
     during the C API call.
     """
     keepalive: list = []
-    c_opts = ffi.new("quiver_csv_export_options_t*")
+    c_opts = ffi.new("quiver_csv_options_t*")
 
     # date_time_format
     dtf_buf = ffi.new("char[]", options.date_time_format.encode("utf-8"))
@@ -1473,42 +1473,50 @@ def _marshal_csv_export_options(options: CSVExportOptions) -> tuple:
 
     if not options.enum_labels:
         c_opts.enum_attribute_names = ffi.NULL
+        c_opts.enum_locale_names = ffi.NULL
         c_opts.enum_entry_counts = ffi.NULL
-        c_opts.enum_values = ffi.NULL
         c_opts.enum_labels = ffi.NULL
-        c_opts.enum_attribute_count = 0
+        c_opts.enum_values = ffi.NULL
+        c_opts.enum_group_count = 0
         return keepalive, c_opts
 
     attr_count = len(options.enum_labels)
     c_attr_names = ffi.new("const char*[]", attr_count)
     keepalive.append(c_attr_names)
+    c_locale_names = ffi.new("const char*[]", attr_count)
+    keepalive.append(c_locale_names)
     c_entry_counts = ffi.new("size_t[]", attr_count)
     keepalive.append(c_entry_counts)
 
     total_entries = sum(len(entries) for entries in options.enum_labels.values())
-    c_values = ffi.new("int64_t[]", total_entries)
-    keepalive.append(c_values)
     c_labels = ffi.new("const char*[]", total_entries)
     keepalive.append(c_labels)
+    c_values = ffi.new("int64_t[]", total_entries)
+    keepalive.append(c_values)
 
     entry_idx = 0
     for attr_idx, (attr_name, entries) in enumerate(options.enum_labels.items()):
         name_buf = ffi.new("char[]", attr_name.encode("utf-8"))
         keepalive.append(name_buf)
         c_attr_names[attr_idx] = name_buf
+        # No locale support in Python CSVExportOptions; pass empty string locale
+        locale_buf = ffi.new("char[]", b"")
+        keepalive.append(locale_buf)
+        c_locale_names[attr_idx] = locale_buf
         c_entry_counts[attr_idx] = len(entries)
         for val, label in entries.items():
-            c_values[entry_idx] = val
             label_buf = ffi.new("char[]", label.encode("utf-8"))
             keepalive.append(label_buf)
             c_labels[entry_idx] = label_buf
+            c_values[entry_idx] = val
             entry_idx += 1
 
     c_opts.enum_attribute_names = c_attr_names
+    c_opts.enum_locale_names = c_locale_names
     c_opts.enum_entry_counts = c_entry_counts
-    c_opts.enum_values = c_values
     c_opts.enum_labels = c_labels
-    c_opts.enum_attribute_count = attr_count
+    c_opts.enum_values = c_values
+    c_opts.enum_group_count = attr_count
 
     return keepalive, c_opts
 
