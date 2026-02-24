@@ -43,14 +43,6 @@ public:
     void update_element(const std::string& collection, int64_t id, const Element& element);
     void delete_element(const std::string& collection, int64_t id);
 
-    // Relation operations
-    void update_scalar_relation(const std::string& collection,
-                                const std::string& attribute,
-                                const std::string& from_label,
-                                const std::string& to_label);
-
-    std::vector<std::string> read_scalar_relation(const std::string& collection, const std::string& attribute);
-
     // Read scalar attributes (all elements)
     std::vector<int64_t> read_scalar_integers(const std::string& collection, const std::string& attribute);
     std::vector<double> read_scalar_floats(const std::string& collection, const std::string& attribute);
