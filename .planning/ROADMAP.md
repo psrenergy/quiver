@@ -58,10 +58,10 @@ Plans:
   3. User can update set FK columns by passing target label strings and update_element resolves each to its target ID
   4. User can update time series FK columns by passing target label strings and update_element resolves each to its target ID
   5. All FK label resolution in update_element happens before any SQL writes (pre-resolve pass)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 03-01: TBD
+- [ ] 03-01-PLAN.md -- Wire pre-resolve pass into update_element, add FK resolution tests for all column types
 
 ### Phase 4: Cleanup
 **Goal**: The FK resolution feature is complete and the public API surface is evaluated for redundancy
@@ -85,5 +85,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 |-------|----------------|--------|-----------|
 | 1. Foundation | 0/1 | Planned | - |
 | 2. Create Element FK Resolution | 0/2 | Planned | - |
-| 3. Update Element FK Resolution | 0/0 | Not started | - |
+| 3. Update Element FK Resolution | 0/1 | Planned | - |
 | 4. Cleanup | 0/0 | Not started | - |
