@@ -1063,6 +1063,88 @@ class Database:
             self._ptr, c_collection, c_group, id,
             c_col_names, c_col_types, c_col_data, col_count, row_count))
 
+    # -- Time series files ------------------------------------------------------
+
+    def has_time_series_files(self, collection: str) -> bool:
+        """Return True if the collection has a time series files table."""
+        self._ensure_open()
+        lib = get_lib()
+        out = ffi.new("int*")
+        check(lib.quiver_database_has_time_series_files(
+            self._ptr, collection.encode("utf-8"), out))
+        return bool(out[0])
+
+    def list_time_series_files_columns(self, collection: str) -> list[str]:
+        """List column names in the time series files table."""
+        self._ensure_open()
+        lib = get_lib()
+        out_columns = ffi.new("char***")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_list_time_series_files_columns(
+            self._ptr, collection.encode("utf-8"), out_columns, out_count))
+        count = out_count[0]
+        if count == 0:
+            return []
+        try:
+            return [
+                ffi.string(out_columns[0][i]).decode("utf-8")
+                for i in range(count)
+            ]
+        finally:
+            lib.quiver_database_free_string_array(out_columns[0], count)
+
+    def read_time_series_files(self, collection: str) -> dict[str, str | None]:
+        """Read time series file paths. Returns dict mapping column names to paths (or None)."""
+        self._ensure_open()
+        lib = get_lib()
+        out_columns = ffi.new("char***")
+        out_paths = ffi.new("char***")
+        out_count = ffi.new("size_t*")
+        check(lib.quiver_database_read_time_series_files(
+            self._ptr, collection.encode("utf-8"), out_columns, out_paths, out_count))
+        count = out_count[0]
+        if count == 0:
+            return {}
+        try:
+            result: dict[str, str | None] = {}
+            for i in range(count):
+                col_name = ffi.string(out_columns[0][i]).decode("utf-8")
+                if out_paths[0][i] == ffi.NULL:
+                    result[col_name] = None
+                else:
+                    result[col_name] = ffi.string(out_paths[0][i]).decode("utf-8")
+            return result
+        finally:
+            lib.quiver_database_free_time_series_files(
+                out_columns[0], out_paths[0], count)
+
+    def update_time_series_files(
+        self, collection: str, data: dict[str, str | None],
+    ) -> None:
+        """Update time series file paths. Pass None for a path to clear it."""
+        self._ensure_open()
+        lib = get_lib()
+        count = len(data)
+        if count == 0:
+            return
+
+        keepalive: list = []
+        c_columns = ffi.new("const char*[]", count)
+        c_paths = ffi.new("const char*[]", count)
+        for i, (col, path) in enumerate(data.items()):
+            c_col = ffi.new("char[]", col.encode("utf-8"))
+            keepalive.append(c_col)
+            c_columns[i] = c_col
+            if path is None:
+                c_paths[i] = ffi.NULL
+            else:
+                c_path = ffi.new("char[]", path.encode("utf-8"))
+                keepalive.append(c_path)
+                c_paths[i] = c_path
+
+        check(lib.quiver_database_update_time_series_files(
+            self._ptr, collection.encode("utf-8"), c_columns, c_paths, count))
+
     def __repr__(self) -> str:
         if self._closed:
             return "Database(closed)"
