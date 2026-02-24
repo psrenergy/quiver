@@ -651,7 +651,9 @@ TEST(DatabaseCApi, UpdateScalarStringNullValue) {
     // Verify it was set to NULL
     char* read_val = nullptr;
     int has_val = 0;
-    ASSERT_EQ(quiver_database_read_scalar_string_by_id(db, "Configuration", "string_attribute", id, &read_val, &has_val), QUIVER_OK);
+    ASSERT_EQ(
+        quiver_database_read_scalar_string_by_id(db, "Configuration", "string_attribute", id, &read_val, &has_val),
+        QUIVER_OK);
     EXPECT_EQ(has_val, 0);
 
     quiver_database_close(db);
