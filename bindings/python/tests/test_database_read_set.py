@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from quiverdb import Database, Element
 
 
@@ -98,3 +100,81 @@ class TestReadSetGroupByID:
         id1 = collections_db.create_element("Collection", elem)
         result = collections_db.read_set_group_by_id("Collection", "tags", id1)
         assert result == []
+
+
+# -- Integer set reads (gap-fill) --------------------------------------------
+
+
+class TestReadSetIntegersBulk:
+    def test_read_set_integers(self, all_types_db: Database) -> None:
+        id1 = all_types_db.create_element("AllTypes", Element().set("label", "item1"))
+        id2 = all_types_db.create_element("AllTypes", Element().set("label", "item2"))
+        all_types_db.update_set_integers("AllTypes", "code", id1, [10, 20, 30])
+        all_types_db.update_set_integers("AllTypes", "code", id2, [40, 50])
+        result = all_types_db.read_set_integers("AllTypes", "code")
+        assert len(result) == 2
+        assert sorted(result[0]) == [10, 20, 30]
+        assert sorted(result[1]) == [40, 50]
+
+
+class TestReadSetIntegersByID:
+    def test_read_set_integers_by_id(self, all_types_db: Database) -> None:
+        id1 = all_types_db.create_element("AllTypes", Element().set("label", "item1"))
+        all_types_db.update_set_integers("AllTypes", "code", id1, [100, 200, 300])
+        result = all_types_db.read_set_integers_by_id("AllTypes", "code", id1)
+        assert sorted(result) == [100, 200, 300]
+
+
+# -- Float set reads (gap-fill) ---------------------------------------------
+
+
+class TestReadSetFloatsBulk:
+    def test_read_set_floats(self, all_types_db: Database) -> None:
+        id1 = all_types_db.create_element("AllTypes", Element().set("label", "item1"))
+        id2 = all_types_db.create_element("AllTypes", Element().set("label", "item2"))
+        all_types_db.update_set_floats("AllTypes", "weight", id1, [1.1, 2.2])
+        all_types_db.update_set_floats("AllTypes", "weight", id2, [3.3, 4.4, 5.5])
+        result = all_types_db.read_set_floats("AllTypes", "weight")
+        assert len(result) == 2
+        assert len(result[0]) == 2
+        assert len(result[1]) == 3
+
+
+class TestReadSetFloatsByID:
+    def test_read_set_floats_by_id(self, all_types_db: Database) -> None:
+        id1 = all_types_db.create_element("AllTypes", Element().set("label", "item1"))
+        all_types_db.update_set_floats("AllTypes", "weight", id1, [9.9, 8.8])
+        result = all_types_db.read_set_floats_by_id("AllTypes", "weight", id1)
+        assert len(result) == 2
+        assert any(abs(v - 9.9) < 1e-9 for v in result)
+        assert any(abs(v - 8.8) < 1e-9 for v in result)
+
+
+# -- DateTime set convenience (gap-fill) ------------------------------------
+
+
+class TestReadSetDateTimeByID:
+    def test_read_set_date_time_by_id(self, all_types_db: Database) -> None:
+        """read_set_date_time_by_id wraps read_set_strings_by_id + datetime parsing."""
+        id1 = all_types_db.create_element("AllTypes", Element().set("label", "item1"))
+        all_types_db.update_set_strings(
+            "AllTypes", "tag", id1,
+            ["2024-01-15T10:30:00", "2024-06-20T08:00:00"],
+        )
+        result = all_types_db.read_set_date_time_by_id("AllTypes", "tag", id1)
+        assert len(result) == 2
+        assert all(isinstance(dt, datetime) for dt in result)
+        years = sorted(dt.month for dt in result)
+        assert years == [1, 6]
+
+
+# -- Convenience set reads with data (gap-fill) ------------------------------
+
+
+class TestReadAllSetsByIDWithData:
+    """Skipped: read_all_sets_by_id uses group name as attribute, but no existing
+    schema has single-column set groups where group name == column name.
+    The convenience method has a known limitation (decision 06-02). The empty-case
+    test above covers the method plumbing."""
+
+    pass

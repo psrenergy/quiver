@@ -44,3 +44,14 @@ class TestCreateElement:
         collections_db.update_set_strings("Collection", "tag", elem_id, ["a", "b"])
         result = collections_db.read_set_strings_by_id("Collection", "tag", elem_id)
         assert sorted(result) == ["a", "b"]
+
+    def test_create_with_fk_label(self, relations_db: Database) -> None:
+        """FK label resolution: string value for FK column resolves to parent ID."""
+        relations_db.create_element("Configuration", Element().set("label", "cfg"))
+        relations_db.create_element("Parent", Element().set("label", "Parent 1"))
+        child_id = relations_db.create_element(
+            "Child",
+            Element().set("label", "Child 1").set("parent_id", "Parent 1"),
+        )
+        result = relations_db.read_scalar_integer_by_id("Child", "parent_id", child_id)
+        assert result == 1
