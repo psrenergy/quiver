@@ -2000,6 +2000,167 @@ TEST_F(LuaRunnerTest, TransactionBlockMultiOps) {
 }
 
 // ============================================================================
+// Gap-fill tests: typed operations using all_types.sql (Phase 07-03)
+// ============================================================================
+
+class LuaRunnerAllTypesTest : public ::testing::Test {
+protected:
+    void SetUp() override { all_types_schema = VALID_SCHEMA("all_types.sql"); }
+    std::string all_types_schema;
+};
+
+TEST_F(LuaRunnerAllTypesTest, ReadVectorStringsBulkFromLua) {
+    auto db = quiver::Database::from_schema(":memory:", all_types_schema);
+    db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
+    db.create_element("AllTypes", quiver::Element().set("label", "Item 2"));
+    db.update_vector_strings("AllTypes", "label_value", 1, {"alpha", "beta"});
+    db.update_vector_strings("AllTypes", "label_value", 2, {"gamma", "delta", "epsilon"});
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        local vectors = db:read_vector_strings("AllTypes", "label_value")
+        assert(#vectors == 2, "Expected 2 vectors, got " .. #vectors)
+        assert(#vectors[1] == 2, "First vector should have 2 elements")
+        assert(vectors[1][1] == "alpha", "First element should be 'alpha'")
+        assert(vectors[1][2] == "beta", "Second element should be 'beta'")
+        assert(#vectors[2] == 3, "Second vector should have 3 elements")
+        assert(vectors[2][1] == "gamma", "Third vector first element should be 'gamma'")
+    )");
+}
+
+TEST_F(LuaRunnerAllTypesTest, ReadVectorStringsByIdFromLua) {
+    auto db = quiver::Database::from_schema(":memory:", all_types_schema);
+    int64_t id1 = db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
+    db.update_vector_strings("AllTypes", "label_value", id1, {"hello", "world"});
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        local vec = db:read_vector_strings_by_id("AllTypes", "label_value", )" +
+                         std::to_string(id1) + R"()
+        assert(#vec == 2, "Expected 2 elements, got " .. #vec)
+        assert(vec[1] == "hello", "First element should be 'hello'")
+        assert(vec[2] == "world", "Second element should be 'world'")
+    )";
+    lua.run(script);
+}
+
+TEST_F(LuaRunnerAllTypesTest, ReadSetIntegersByIdFromLua) {
+    auto db = quiver::Database::from_schema(":memory:", all_types_schema);
+    int64_t id1 = db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
+    db.update_set_integers("AllTypes", "code", id1, {100, 200, 300});
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        local vals = db:read_set_integers_by_id("AllTypes", "code", )" +
+                         std::to_string(id1) + R"()
+        assert(#vals == 3, "Expected 3 values, got " .. #vals)
+    )";
+    lua.run(script);
+}
+
+TEST_F(LuaRunnerAllTypesTest, ReadSetFloatsByIdFromLua) {
+    auto db = quiver::Database::from_schema(":memory:", all_types_schema);
+    int64_t id1 = db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
+    db.update_set_floats("AllTypes", "weight", id1, {1.1, 2.2, 3.3});
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        local vals = db:read_set_floats_by_id("AllTypes", "weight", )" +
+                         std::to_string(id1) + R"()
+        assert(#vals == 3, "Expected 3 values, got " .. #vals)
+    )";
+    lua.run(script);
+}
+
+TEST_F(LuaRunnerAllTypesTest, ReadSetIntegersBulkFromLua) {
+    auto db = quiver::Database::from_schema(":memory:", all_types_schema);
+    db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
+    db.create_element("AllTypes", quiver::Element().set("label", "Item 2"));
+    db.update_set_integers("AllTypes", "code", 1, {10, 20});
+    db.update_set_integers("AllTypes", "code", 2, {30, 40, 50});
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        local sets = db:read_set_integers("AllTypes", "code")
+        assert(#sets == 2, "Expected 2 sets, got " .. #sets)
+        assert(#sets[1] == 2, "First set should have 2 values")
+        assert(#sets[2] == 3, "Second set should have 3 values")
+    )");
+}
+
+TEST_F(LuaRunnerAllTypesTest, ReadSetFloatsBulkFromLua) {
+    auto db = quiver::Database::from_schema(":memory:", all_types_schema);
+    db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
+    db.create_element("AllTypes", quiver::Element().set("label", "Item 2"));
+    db.update_set_floats("AllTypes", "weight", 1, {1.1, 2.2});
+    db.update_set_floats("AllTypes", "weight", 2, {3.3});
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        local sets = db:read_set_floats("AllTypes", "weight")
+        assert(#sets == 2, "Expected 2 sets, got " .. #sets)
+        assert(#sets[1] == 2, "First set should have 2 values")
+        assert(#sets[2] == 1, "Second set should have 1 value")
+    )");
+}
+
+TEST_F(LuaRunnerAllTypesTest, UpdateSetIntegersFromLua) {
+    auto db = quiver::Database::from_schema(":memory:", all_types_schema);
+    int64_t id1 = db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        db:update_set_integers("AllTypes", "code", )" +
+                         std::to_string(id1) + R"(, {10, 20, 30})
+        local vals = db:read_set_integers_by_id("AllTypes", "code", )" +
+                         std::to_string(id1) + R"()
+        assert(#vals == 3, "Expected 3 values after update, got " .. #vals)
+    )";
+    lua.run(script);
+
+    auto result = db.read_set_integers_by_id("AllTypes", "code", id1);
+    EXPECT_EQ(result.size(), 3);
+}
+
+TEST_F(LuaRunnerAllTypesTest, UpdateSetFloatsFromLua) {
+    auto db = quiver::Database::from_schema(":memory:", all_types_schema);
+    int64_t id1 = db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        db:update_set_floats("AllTypes", "weight", )" +
+                         std::to_string(id1) + R"(, {1.1, 2.2})
+        local vals = db:read_set_floats_by_id("AllTypes", "weight", )" +
+                         std::to_string(id1) + R"()
+        assert(#vals == 2, "Expected 2 values after update, got " .. #vals)
+    )";
+    lua.run(script);
+
+    auto result = db.read_set_floats_by_id("AllTypes", "weight", id1);
+    EXPECT_EQ(result.size(), 2);
+}
+
+TEST_F(LuaRunnerTest, DescribeFromLua) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"));
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+
+    quiver::LuaRunner lua(db);
+
+    // describe() prints to stdout and should not throw
+    lua.run(R"(
+        db:describe()
+    )");
+}
+
+// ============================================================================
 // CSV export tests
 // ============================================================================
 
