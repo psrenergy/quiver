@@ -102,10 +102,10 @@ Plans:
   3. `read_all_vectors_by_id(collection, id)` and `read_all_sets_by_id(collection, id)` return dicts of all group values for a given element
   4. `read_vector_group_by_id(collection, id, group)` and `read_set_group_by_id(collection, id, group)` return lists of row dicts from multi-column group reads
 
-**Coverage Note**: CSV-02 (`import_csv`) — confirmed not implemented in C++ (empty stub). Deferred from scope; REQUIREMENTS.md updated.
+**Coverage Note**: CSV-02 (`import_csv`) — C++ implementation is a no-op stub. Python binding exists as `import_csv(table, path)` raising `NotImplementedError` per user decision; will become functional when C++ implements it.
 **Plans**: 2 plans
 Plans:
-- [ ] 06-01-PLAN.md -- CSV export with CSVExportOptions struct marshaling, CFFI declarations, and tests; defer CSV-02
+- [ ] 06-01-PLAN.md -- CSV export with CSVExportOptions struct marshaling, import_csv stub, CFFI declarations, and tests
 - [ ] 06-02-PLAN.md -- DateTime helpers, composite read-all helpers, multi-column group readers, and tests
 
 ### Phase 7: Test Parity
