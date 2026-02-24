@@ -96,6 +96,7 @@ Test files organized by functionality:
 
 C API tests follow same pattern with `test_c_api_database_*.cpp` prefix:
 - `test_c_api_database_csv.cpp` - CSV export options struct, enum labels, date formatting, scalar/group export
+- `test_c_api_database_metadata.cpp` - Metadata get/list operations (vector, set, time series, scalar)
 
 All test schemas located in `tests/schemas/valid/` and `tests/schemas/invalid/`.
 

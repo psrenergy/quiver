@@ -119,7 +119,7 @@ Plans:
   4. Running all five test suites (C++, C API, Julia, Dart, Python) produces zero failures
 **Plans**: 3 plans
 Plans:
-- [ ] 07-01-PLAN.md -- New all_types.sql schema, C++ gap-fill tests, C API gap-fill tests + new metadata test file
+- [x] 07-01-PLAN.md -- New all_types.sql schema, C++ gap-fill tests, C API gap-fill tests + new metadata test file
 - [ ] 07-02-PLAN.md -- Julia and Dart gap-fill tests (string vectors, integer/float sets, describe, convenience methods)
 - [ ] 07-03-PLAN.md -- Python and Lua gap-fill tests, full 6-layer parity validation
 
@@ -136,4 +136,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Queries and Relations | 0/1 | Not started | - |
 | 5. Time Series | 0/? | Not started | - |
 | 6. CSV and Convenience Helpers | 2/2 | Complete | 2026-02-24 |
-| 7. Test Parity | 0/3 | Not started | - |
+| 7. Test Parity | 1/3 | In Progress | - |

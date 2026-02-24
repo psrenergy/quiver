@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** Consistent, type-safe database operations across multiple languages through a single C++ implementation
-**Current focus:** Phase 6 - CSV and Convenience Helpers
+**Current focus:** Phase 7 - Test Parity
 
 ## Current Position
 
-Phase: 6 of 7 (CSV and Convenience Helpers)
-Plan: 2 of 2 in current phase (06-02 complete, phase complete)
-Status: Phase 6 Complete
-Last activity: 2026-02-24 — Completed 06-02-PLAN.md (Python convenience helpers)
+Phase: 7 of 7 (Test Parity)
+Plan: 1 of 3 in current phase (07-01 complete)
+Status: In Progress
+Last activity: 2026-02-24 — Completed 07-01-PLAN.md (C++ and C API test gap-fill)
 
-Progress: [█████████░] 86%
+Progress: [██████████] 88%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
-- Average duration: 4min
-- Total execution time: 49min
+- Total plans completed: 12
+- Average duration: 5min
+- Total execution time: 59min
 
 **By Phase:**
 
@@ -33,9 +33,10 @@ Progress: [█████████░] 86%
 | 04-queries-and-relations | 1 | 2min | 2min |
 | 05-time-series | 2 | 5min | 3min |
 | 06-csv-and-convenience-helpers | 2 | 15min | 8min |
+| 07-test-parity | 1 | 10min | 10min |
 
 **Recent Trend:**
-- Last 5 plans: 04-01 (2min), 05-01 (3min), 05-02 (2min), 06-01 (6min), 06-02 (9min)
+- Last 5 plans: 05-01 (3min), 05-02 (2min), 06-01 (6min), 06-02 (9min), 07-01 (10min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -78,6 +79,8 @@ Recent decisions affecting current work:
 - [06-02]: query_date_time updated to use _parse_datetime for consistent UTC timezone behavior
 - [06-02]: read_all_vectors/sets_by_id use group name as column attribute (works for single-column groups with matching names)
 - [06-02]: read_vector_group_by_id includes vector_index as integer key in row dicts per user decision
+- [07-01]: Schema column names must be unique across all sub-tables of a collection (schema validator enforces this)
+- [07-01]: all_types.sql uses descriptive column names (label_value, count_value, code, weight, tag) instead of generic 'value'
 
 ### Pending Todos
 
@@ -91,5 +94,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 06-02-PLAN.md (Python convenience helpers) — Phase 6 complete
-Resume file: Phase 7 next (test parity)
+Stopped at: Completed 07-01-PLAN.md (C++ and C API test gap-fill)
+Resume file: 07-02-PLAN.md next (Julia/Dart binding test parity)

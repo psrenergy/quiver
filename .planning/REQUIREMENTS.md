@@ -84,8 +84,8 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 ### Test Parity
 
 - [ ] **TEST-01**: Python test suite matching Julia/Dart test file structure (one file per functional area)
-- [ ] **TEST-02**: Audit C++ test coverage and fill gaps where other layers have tests C++ lacks
-- [ ] **TEST-03**: Audit C API test coverage and fill gaps (currently only CSV tests exist as dedicated C API tests)
+- [x] **TEST-02**: Audit C++ test coverage and fill gaps where other layers have tests C++ lacks
+- [x] **TEST-03**: Audit C API test coverage and fill gaps (currently only CSV tests exist as dedicated C API tests)
 - [ ] **TEST-04**: Audit Julia test coverage and fill gaps where other layers have tests Julia lacks
 - [ ] **TEST-05**: Audit Dart test coverage and fill gaps where other layers have tests Dart lacks
 
@@ -160,8 +160,8 @@ Requirements for Python bindings and test parity. Each maps to roadmap phases.
 | CONV-04 | Phase 6 | Complete |
 | CONV-05 | Phase 6 | Complete |
 | TEST-01 | Phase 7 | Pending |
-| TEST-02 | Phase 7 | Pending |
-| TEST-03 | Phase 7 | Pending |
+| TEST-02 | Phase 7 | Complete |
+| TEST-03 | Phase 7 | Complete |
 | TEST-04 | Phase 7 | Pending |
 | TEST-05 | Phase 7 | Pending |
 
