@@ -13,8 +13,8 @@ v0.4 delivers Python bindings via CFFI and cross-layer test parity. The work bui
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Package setup, DLL loading, error handling, lifecycle, and test scaffolding (completed 2026-02-23)
-- [ ] **Phase 2: Reads and Metadata** - All scalar/vector/set read operations plus metadata queries with correct memory management
-- [ ] **Phase 3: Writes and Transactions** - All CRUD write operations, scalar/vector/set updates, relation writes, and transaction control
+- [x] **Phase 2: Reads and Metadata** - All scalar/vector/set read operations plus metadata queries with correct memory management (completed 2026-02-23)
+- [x] **Phase 3: Writes and Transactions** - All CRUD write operations, scalar/vector/set updates, relation writes, and transaction control (completed 2026-02-23)
 - [ ] **Phase 4: Queries and Relations** - Parameterized SQL queries with keepalive marshaling and relation read operations
 - [ ] **Phase 5: Time Series** - Multi-column void** read/write dispatch and time series files operations
 - [ ] **Phase 6: CSV and Convenience Helpers** - CSV export with struct marshaling and pure-Python composite read helpers
@@ -64,8 +64,8 @@ Plans:
   5. `begin_transaction()` / `commit()` / `rollback()` control transaction state; `with db.transaction():` commits on success and rolls back on exception
 **Plans**: 2 plans
 Plans:
-- [ ] 03-01-PLAN.md -- CFFI write declarations, update/delete element, scalar/vector/set update methods, create/update/delete tests
-- [ ] 03-02-PLAN.md -- Transaction CFFI declarations, begin/commit/rollback/in_transaction, context manager, transaction tests
+- [x] 03-01-PLAN.md -- CFFI write declarations, update/delete element, scalar/vector/set update methods, create/update/delete tests
+- [x] 03-02-PLAN.md -- Transaction CFFI declarations, begin/commit/rollback/in_transaction, context manager, transaction tests
 
 ### Phase 4: Queries and Relations
 **Goal**: Parameterized SQL queries return correctly typed Python results with no GC-premature-free bugs, completing the query surface
@@ -75,7 +75,9 @@ Plans:
   1. `query_string(sql)` executes a SQL SELECT and returns a list of strings
   2. `query_integer_params(sql, params)` with mixed int/float/str/None parameters returns correct integer results without segfault or premature GC of param buffers
   3. `query_string_params(sql, params)` with a `None` parameter correctly marshals NULL to the C API and returns expected results
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 04-01-PLAN.md -- CFFI query declarations, _marshal_params helper, 4 unified query methods, query tests
 
 ### Phase 5: Time Series
 **Goal**: Multi-column time series groups can be read and written using void** column dispatch by type, and time series file references can be read and updated
@@ -121,7 +123,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Foundation | 0/2 | Complete    | 2026-02-23 |
 | 2. Reads and Metadata | 0/2 | Complete | 2026-02-23 |
 | 3. Writes and Transactions | 0/2 | Not started | - |
-| 4. Queries and Relations | 0/? | Not started | - |
+| 4. Queries and Relations | 0/1 | Not started | - |
 | 5. Time Series | 0/? | Not started | - |
 | 6. CSV and Convenience Helpers | 0/? | Not started | - |
 | 7. Test Parity | 0/? | Not started | - |
