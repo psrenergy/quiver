@@ -69,6 +69,20 @@ def relations_db(relations_schema_path: Path, tmp_path: Path) -> Generator[Datab
 
 
 @pytest.fixture
+def csv_export_schema_path(schemas_path: Path) -> Path:
+    """Return the path to the CSV export test schema."""
+    return schemas_path / "valid" / "csv_export.sql"
+
+
+@pytest.fixture
+def csv_db(csv_export_schema_path: Path, tmp_path: Path) -> Generator[Database, None, None]:
+    """Create a test database with the CSV export schema."""
+    database = Database.from_schema(str(tmp_path / "csv.db"), str(csv_export_schema_path))
+    yield database
+    database.close()
+
+
+@pytest.fixture
 def mixed_time_series_schema_path(schemas_path: Path) -> Path:
     """Return the path to the mixed time series test schema."""
     return schemas_path / "valid" / "mixed_time_series.sql"
