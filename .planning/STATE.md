@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** A single, clean C++ API that exposes full SQLite schema capabilities through uniform, mechanically-derived bindings.
-**Current focus:** Phase 2: Create Element FK Resolution
+**Current focus:** Phase 3: Update Element FK Resolution
 
 ## Current Position
 
-Phase: 2 of 4 (Create Element FK Resolution) -- COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase 02 complete
-Last activity: 2026-02-23 -- Completed 02-02-PLAN.md (FK resolution tests)
+Phase: 3 of 4 (Update Element FK Resolution) -- COMPLETE
+Plan: 1 of 1 in current phase
+Status: Phase 03 complete
+Last activity: 2026-02-24 -- Completed 03-01-PLAN.md (update_element FK resolution)
 
-Progress: [#####.....] 50%
+Progress: [#######...] 75%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 6min
-- Total execution time: 0.3 hours
+- Total plans completed: 4
+- Average duration: 5min
+- Total execution time: 0.35 hours
 
 **By Phase:**
 
@@ -30,10 +30,11 @@ Progress: [#####.....] 50%
 | Phase 01 P01 | 11min | 2 tasks | 4 files |
 | Phase 02 P01 | 4min | 2 tasks | 3 files |
 | Phase 02 P02 | 3min | 2 tasks | 1 files |
+| Phase 03 P01 | 3min | 2 tasks | 2 files |
 
 **Recent Trend:**
-- Last 5 plans: 11min, 4min, 3min
-- Trend: improving
+- Last 5 plans: 11min, 4min, 3min, 3min
+- Trend: stable-fast
 
 *Updated after each plan completion*
 
@@ -50,6 +51,9 @@ Recent decisions affecting current work:
 - [Phase 02]: Pre-resolve pass resolves ALL values (FK and non-FK) via resolve_fk_label passthrough
 - [Phase 02]: Array FK resolution uses first table match from find_all_tables_for_column (unique FK column names by design)
 - [Phase 02]: Adjusted read_vector_integers_by_id assertions to match actual API (returns vector, not optional)
+- [Phase 03]: Pre-resolve call placed after emptiness check, before TransactionGuard (mirrors create_element)
+- [Phase 03]: Emptiness check uses raw element.scalars()/arrays(), not resolved values
+- [Phase 03]: No new functions created -- resolve call added inline per locked decision
 
 ### Pending Todos
 
@@ -61,6 +65,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-23
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-02-24
+Stopped at: Completed 03-01-PLAN.md
 Resume file: None

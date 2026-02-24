@@ -12,9 +12,9 @@ This milestone makes foreign key relations work naturally through `create_elemen
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - Extract shared FK resolution helper and prove it with the existing set FK refactor
-- [ ] **Phase 2: Create Element FK Resolution** - Resolve FK labels for scalar, vector, and time series columns in create_element
-- [ ] **Phase 3: Update Element FK Resolution** - Resolve FK labels for all column types in update_element
+- [x] **Phase 1: Foundation** - Extract shared FK resolution helper and prove it with the existing set FK refactor
+- [x] **Phase 2: Create Element FK Resolution** - Resolve FK labels for scalar, vector, and time series columns in create_element
+- [x] **Phase 3: Update Element FK Resolution** - Resolve FK labels for all column types in update_element
 - [ ] **Phase 4: Cleanup** - Evaluate update_scalar_relation redundancy and finalize
 
 ## Phase Details
@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 1 plan
 
 Plans:
-- [ ] 01-01-PLAN.md -- Extract resolve_fk_label helper, refactor set FK path, add dedicated tests
+- [x] 01-01-PLAN.md -- Extract resolve_fk_label helper, refactor set FK path, add dedicated tests
 
 ### Phase 2: Create Element FK Resolution
 **Goal**: Users can pass target labels (strings) for scalar, vector, and time series FK columns in create_element and they resolve to target IDs automatically
@@ -45,8 +45,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md -- Pre-resolve pass implementation (schema extension, ResolvedElement, create_element refactor)
-- [ ] 02-02-PLAN.md -- Comprehensive FK resolution tests (per-type, combined, regression, error)
+- [x] 02-01-PLAN.md -- Pre-resolve pass implementation (schema extension, ResolvedElement, create_element refactor)
+- [x] 02-02-PLAN.md -- Comprehensive FK resolution tests (per-type, combined, regression, error)
 
 ### Phase 3: Update Element FK Resolution
 **Goal**: Users can pass target labels for scalar, vector, set, and time series FK columns in update_element and they resolve to target IDs automatically
@@ -61,7 +61,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 03-01-PLAN.md -- Wire pre-resolve pass into update_element, add FK resolution tests for all column types
+- [x] 03-01-PLAN.md -- Wire pre-resolve pass into update_element, add FK resolution tests for all column types
 
 ### Phase 4: Cleanup
 **Goal**: The FK resolution feature is complete and the public API surface is evaluated for redundancy
@@ -83,7 +83,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/1 | Planned | - |
-| 2. Create Element FK Resolution | 0/2 | Planned | - |
-| 3. Update Element FK Resolution | 0/1 | Planned | - |
+| 1. Foundation | 1/1 | Complete | 2026-02-23 |
+| 2. Create Element FK Resolution | 2/2 | Complete | 2026-02-23 |
+| 3. Update Element FK Resolution | 1/1 | Complete | 2026-02-24 |
 | 4. Cleanup | 0/0 | Not started | - |

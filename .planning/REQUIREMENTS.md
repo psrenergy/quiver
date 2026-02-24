@@ -20,10 +20,10 @@ Requirements for milestone v1.0 Relations. Each maps to roadmap phases.
 
 ### Update Element
 
-- [ ] **UPD-01**: User can pass a target label for a scalar FK column in `update_element` and it resolves to the target's ID
-- [ ] **UPD-02**: User can pass target labels for vector FK columns in `update_element` and they resolve to target IDs
-- [ ] **UPD-03**: User can pass target labels for set FK columns in `update_element` and they resolve to target IDs
-- [ ] **UPD-04**: User can pass target labels for time series FK columns in `update_element` and they resolve to target IDs
+- [x] **UPD-01**: User can pass a target label for a scalar FK column in `update_element` and it resolves to the target's ID
+- [x] **UPD-02**: User can pass target labels for vector FK columns in `update_element` and they resolve to target IDs
+- [x] **UPD-03**: User can pass target labels for set FK columns in `update_element` and they resolve to target IDs
+- [x] **UPD-04**: User can pass target labels for time series FK columns in `update_element` and they resolve to target IDs
 
 ### Error Handling
 
@@ -58,10 +58,10 @@ None currently deferred.
 | CRE-02 | Phase 2 | Complete |
 | CRE-03 | Phase 1 | Complete |
 | CRE-04 | Phase 2 | Complete |
-| UPD-01 | Phase 3 | Pending |
-| UPD-02 | Phase 3 | Pending |
-| UPD-03 | Phase 3 | Pending |
-| UPD-04 | Phase 3 | Pending |
+| UPD-01 | Phase 3 | Complete |
+| UPD-02 | Phase 3 | Complete |
+| UPD-03 | Phase 3 | Complete |
+| UPD-04 | Phase 3 | Complete |
 | ERR-01 | Phase 1 | Complete |
 | CLN-01 | Phase 4 | Pending |
 
