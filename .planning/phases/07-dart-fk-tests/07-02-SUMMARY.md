@@ -59,7 +59,7 @@ Each task was committed atomically:
 
 1. **Task 1: Add 7 FK resolution update tests to Dart test file** - `7e71f49` (test)
 
-**Plan metadata:** pending (docs: complete plan)
+**Plan metadata:** `c9919d1` (docs: complete plan)
 
 ## Files Created/Modified
 - `bindings/dart/test/database_update_test.dart` - Added 7 FK update tests in `group('FK Resolution - Update', ...)` block

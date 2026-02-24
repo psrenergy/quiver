@@ -23,7 +23,7 @@
 
 - [x] **Phase 5: C API FK Tests** - 16 FK resolution tests covering create and update paths through the C API
 - [x] **Phase 6: Julia FK Tests** - 16 FK resolution tests covering create! and update paths through Julia bindings
-- [ ] **Phase 7: Dart FK Tests** - 16 FK resolution tests covering createElement and updateElement through Dart bindings
+- [x] **Phase 7: Dart FK Tests** - 16 FK resolution tests covering createElement and updateElement through Dart bindings
 - [ ] **Phase 8: Lua FK Tests** - 16 FK resolution tests covering create_element and update_element through Lua scripting
 
 ## Phase Details
@@ -103,7 +103,7 @@ Phases execute in numeric order: 5 -> 6 -> 7 -> 8
 | 2. Create Element FK Resolution | v1.0 | 2/2 | Complete | 2026-02-23 |
 | 3. Update Element FK Resolution | v1.0 | 1/1 | Complete | 2026-02-24 |
 | 4. Cleanup | v1.0 | 2/2 | Complete | 2026-02-24 |
-| 5. C API FK Tests | v1.1 | 1/2 | In Progress | - |
-| 6. Julia FK Tests | v1.1 | 0/2 | Not started | - |
-| 7. Dart FK Tests | v1.1 | 0/? | Not started | - |
+| 5. C API FK Tests | v1.1 | 2/2 | Complete | 2026-02-24 |
+| 6. Julia FK Tests | v1.1 | 2/2 | Complete | 2026-02-24 |
+| 7. Dart FK Tests | v1.1 | 2/2 | Complete | 2026-02-24 |
 | 8. Lua FK Tests | v1.1 | 0/? | Not started | - |
