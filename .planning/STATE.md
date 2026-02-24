@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 7 of 7 (Test Parity)
-Plan: 1 of 3 in current phase (07-01 complete)
+Plan: 2 of 3 in current phase (07-02 complete)
 Status: In Progress
-Last activity: 2026-02-24 — Completed 07-01-PLAN.md (C++ and C API test gap-fill)
+Last activity: 2026-02-24 — Completed 07-02-PLAN.md (Julia/Dart binding test parity)
 
-Progress: [██████████] 88%
+Progress: [███████████] 93%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
+- Total plans completed: 13
 - Average duration: 5min
-- Total execution time: 59min
+- Total execution time: 66min
 
 **By Phase:**
 
@@ -33,10 +33,10 @@ Progress: [██████████] 88%
 | 04-queries-and-relations | 1 | 2min | 2min |
 | 05-time-series | 2 | 5min | 3min |
 | 06-csv-and-convenience-helpers | 2 | 15min | 8min |
-| 07-test-parity | 1 | 10min | 10min |
+| 07-test-parity | 2 | 17min | 9min |
 
 **Recent Trend:**
-- Last 5 plans: 05-01 (3min), 05-02 (2min), 06-01 (6min), 06-02 (9min), 07-01 (10min)
+- Last 5 plans: 05-02 (2min), 06-01 (6min), 06-02 (9min), 07-01 (10min), 07-02 (7min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -81,6 +81,8 @@ Recent decisions affecting current work:
 - [06-02]: read_vector_group_by_id includes vector_index as integer key in row dicts per user decision
 - [07-01]: Schema column names must be unique across all sub-tables of a collection (schema validator enforces this)
 - [07-01]: all_types.sql uses descriptive column names (label_value, count_value, code, weight, tag) instead of generic 'value'
+- [07-02]: Used update_* functions to populate vector/set data before read tests (create_element does not populate sub-table columns)
+- [07-02]: Set group name for read_set_group_by_id is 'codes' (table AllTypes_set_codes -> group 'codes')
 
 ### Pending Todos
 
@@ -94,5 +96,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 07-01-PLAN.md (C++ and C API test gap-fill)
-Resume file: 07-02-PLAN.md next (Julia/Dart binding test parity)
+Stopped at: Completed 07-02-PLAN.md (Julia/Dart binding test parity)
+Resume file: 07-03-PLAN.md next (Python binding test parity)
