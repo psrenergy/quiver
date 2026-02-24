@@ -74,8 +74,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md -- Remove relation methods from C++ core, C API, Lua, CMakeLists, and all C++/C API tests; relocate FK resolution tests
-- [ ] 04-02-PLAN.md -- Remove relation methods from Julia/Dart bindings, regenerate FFI, clean CLAUDE.md, validate with build-all
+- [x] 04-01-PLAN.md -- Remove relation methods from C++ core, C API, Lua, CMakeLists, and all C++/C API tests; relocate FK resolution tests
+- [x] 04-02-PLAN.md -- Remove relation methods from Julia/Dart bindings, regenerate FFI, clean CLAUDE.md, validate with build-all
 
 ## Progress
 
@@ -87,4 +87,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 1. Foundation | 1/1 | Complete | 2026-02-23 |
 | 2. Create Element FK Resolution | 2/2 | Complete | 2026-02-23 |
 | 3. Update Element FK Resolution | 1/1 | Complete | 2026-02-24 |
-| 4. Cleanup | 0/0 | Not started | - |
+| 4. Cleanup | 2/2 | Complete | 2026-02-24 |
