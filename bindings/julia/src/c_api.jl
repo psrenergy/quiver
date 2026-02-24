@@ -153,14 +153,6 @@ function quiver_database_delete_element(db, collection, id)
     @ccall libquiver_c.quiver_database_delete_element(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, id::Int64)::quiver_error_t
 end
 
-function quiver_database_update_scalar_relation(db, collection, attribute, from_label, to_label)
-    @ccall libquiver_c.quiver_database_update_scalar_relation(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, from_label::Ptr{Cchar}, to_label::Ptr{Cchar})::quiver_error_t
-end
-
-function quiver_database_read_scalar_relation(db, collection, attribute, out_values, out_count)
-    @ccall libquiver_c.quiver_database_read_scalar_relation(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Ptr{Cchar}}}, out_count::Ptr{Csize_t})::quiver_error_t
-end
-
 function quiver_database_read_scalar_integers(db, collection, attribute, out_values, out_count)
     @ccall libquiver_c.quiver_database_read_scalar_integers(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::quiver_error_t
 end

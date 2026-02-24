@@ -17,7 +17,11 @@
       "Bash(git status:*)",
       "Bash(git log:*)",
       "Bash(git diff:*)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "Bash(node:*)",
+      "WebSearch",
+      "Bash(cmd:*)",
+      "Bash(powershell:*)"
     ]
   }
 }
