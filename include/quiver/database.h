@@ -43,14 +43,6 @@ public:
     void update_element(const std::string& collection, int64_t id, const Element& element);
     void delete_element(const std::string& collection, int64_t id);
 
-    // Relation operations
-    void update_scalar_relation(const std::string& collection,
-                                const std::string& attribute,
-                                const std::string& from_label,
-                                const std::string& to_label);
-
-    std::vector<std::string> read_scalar_relation(const std::string& collection, const std::string& attribute);
-
     // Read scalar attributes (all elements)
     std::vector<int64_t> read_scalar_integers(const std::string& collection, const std::string& attribute);
     std::vector<double> read_scalar_floats(const std::string& collection, const std::string& attribute);
@@ -169,8 +161,11 @@ public:
     void export_csv(const std::string& collection,
                     const std::string& group,
                     const std::string& path,
-                    const CSVExportOptions& options = default_csv_export_options());
-    void import_csv(const std::string& table, const std::string& path);
+                    const CSVOptions& options = default_csv_options());
+    void import_csv(const std::string& table,
+                    const std::string& group,
+                    const std::string& path,
+                    const CSVOptions& options = default_csv_options());
 
     // Query methods - execute SQL and return first row's first column
     std::optional<std::string> query_string(const std::string& sql, const std::vector<Value>& params = {});

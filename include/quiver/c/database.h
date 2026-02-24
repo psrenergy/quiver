@@ -69,19 +69,6 @@ QUIVER_C_API quiver_error_t quiver_database_update_element(quiver_database_t* db
                                                            const quiver_element_t* element);
 QUIVER_C_API quiver_error_t quiver_database_delete_element(quiver_database_t* db, const char* collection, int64_t id);
 
-// Relation operations
-QUIVER_C_API quiver_error_t quiver_database_update_scalar_relation(quiver_database_t* db,
-                                                                   const char* collection,
-                                                                   const char* attribute,
-                                                                   const char* from_label,
-                                                                   const char* to_label);
-
-QUIVER_C_API quiver_error_t quiver_database_read_scalar_relation(quiver_database_t* db,
-                                                                 const char* collection,
-                                                                 const char* attribute,
-                                                                 char*** out_values,
-                                                                 size_t* out_count);
-
 // Read scalar attributes
 QUIVER_C_API quiver_error_t quiver_database_read_scalar_integers(quiver_database_t* db,
                                                                  const char* collection,
@@ -430,8 +417,12 @@ QUIVER_C_API quiver_error_t quiver_database_export_csv(quiver_database_t* db,
                                                        const char* collection,
                                                        const char* group,
                                                        const char* path,
-                                                       const quiver_csv_export_options_t* opts);
-QUIVER_C_API quiver_error_t quiver_database_import_csv(quiver_database_t* db, const char* table, const char* path);
+                                                       const quiver_csv_options_t* opts);
+QUIVER_C_API quiver_error_t quiver_database_import_csv(quiver_database_t* db,
+                                                       const char* collection,
+                                                       const char* group,
+                                                       const char* path,
+                                                       const quiver_csv_options_t* opts);
 
 // Query methods - execute SQL and return first row's first column
 QUIVER_C_API quiver_error_t quiver_database_query_string(quiver_database_t* db,

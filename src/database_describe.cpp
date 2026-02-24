@@ -88,6 +88,4 @@ void Database::describe() const {
     }
 }
 
-void Database::import_csv(const std::string& table, const std::string& path) {}
-
 }  // namespace quiver

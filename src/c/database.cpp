@@ -128,18 +128,4 @@ QUIVER_C_API quiver_error_t quiver_database_describe(quiver_database_t* db) {
     }
 }
 
-// CSV operations
-
-QUIVER_C_API quiver_error_t quiver_database_import_csv(quiver_database_t* db, const char* table, const char* path) {
-    QUIVER_REQUIRE(db, table, path);
-
-    try {
-        db->db.import_csv(table, path);
-        return QUIVER_OK;
-    } catch (const std::exception& e) {
-        quiver_set_last_error(e.what());
-        return QUIVER_ERROR;
-    }
-}
-
 }  // extern "C"

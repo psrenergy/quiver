@@ -253,19 +253,6 @@ struct LuaRunner::Impl {
             [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
                 return read_set_strings_to_lua(self, collection, attribute, s);
             },
-            // Group 6: Relations
-            "update_scalar_relation",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               const std::string& from_label,
-               const std::string& to_label) {
-                self.update_scalar_relation(collection, attribute, from_label, to_label);
-            },
-            "read_scalar_relation",
-            [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
-                return read_scalar_relation_to_lua(self, collection, attribute, s);
-            },
             // Group 7: Time series metadata
             "get_time_series_metadata",
             [](Database& self, const std::string& collection, const std::string& group_name, sol::this_state s) {
@@ -333,7 +320,7 @@ struct LuaRunner::Impl {
                const std::string& group,
                const std::string& path,
                sol::optional<sol::table> opts_table) {
-                CSVExportOptions opts;
+                CSVOptions opts;
                 if (opts_table) {
                     auto& t = *opts_table;
                     if (auto fmt = t.get<sol::optional<std::string>>("date_time_format")) {
@@ -342,13 +329,47 @@ struct LuaRunner::Impl {
                     if (auto enums = t.get<sol::optional<sol::table>>("enum_labels")) {
                         enums->for_each([&](sol::object attr_key, sol::object attr_value) {
                             auto attr_name = attr_key.as<std::string>();
-                            auto& attr_map = opts.enum_labels[attr_name];
-                            attr_value.as<sol::table>().for_each(
-                                [&](sol::object k, sol::object v) { attr_map[k.as<int64_t>()] = v.as<std::string>(); });
+                            auto& attr_locale_map = opts.enum_labels[attr_name];
+                            attr_value.as<sol::table>().for_each([&](sol::object locale_key, sol::object locale_value) {
+                                auto locale_name = locale_key.as<std::string>();
+                                auto& label_map = attr_locale_map[locale_name];
+                                locale_value.as<sol::table>().for_each([&](sol::object k, sol::object v) {
+                                    label_map[k.as<std::string>()] = v.as<int64_t>();
+                                });
+                            });
                         });
                     }
                 }
                 self.export_csv(collection, group, path, opts);
+            },
+            // Group 12: CSV import
+            "import_csv",
+            [](Database& self,
+               const std::string& collection,
+               const std::string& group,
+               const std::string& path,
+               sol::optional<sol::table> opts_table) {
+                CSVOptions opts;
+                if (opts_table) {
+                    auto& t = *opts_table;
+                    if (auto fmt = t.get<sol::optional<std::string>>("date_time_format")) {
+                        opts.date_time_format = *fmt;
+                    }
+                    if (auto enums = t.get<sol::optional<sol::table>>("enum_labels")) {
+                        enums->for_each([&](sol::object attr_key, sol::object attr_value) {
+                            auto attr_name = attr_key.as<std::string>();
+                            auto& attr_locale_map = opts.enum_labels[attr_name];
+                            attr_value.as<sol::table>().for_each([&](sol::object locale_key, sol::object locale_value) {
+                                auto locale_name = locale_key.as<std::string>();
+                                auto& label_map = attr_locale_map[locale_name];
+                                locale_value.as<sol::table>().for_each([&](sol::object k, sol::object v) {
+                                    label_map[k.as<std::string>()] = v.as<int64_t>();
+                                });
+                            });
+                        });
+                    }
+                }
+                self.import_csv(collection, group, path, opts);
             });
         // NOLINTEND(performance-unnecessary-value-param)
     }
@@ -1031,23 +1052,6 @@ struct LuaRunner::Impl {
             outer[i + 1] = inner;
         }
         return outer;
-    }
-
-    // ========================================================================
-    // Relations
-    // ========================================================================
-
-    static sol::table read_scalar_relation_to_lua(Database& db,
-                                                  const std::string& collection,
-                                                  const std::string& attribute,
-                                                  sol::this_state s) {
-        sol::state_view lua(s);
-        auto result = db.read_scalar_relation(collection, attribute);
-        auto t = lua.create_table();
-        for (size_t i = 0; i < result.size(); ++i) {
-            t[i + 1] = result[i];
-        }
-        return t;
     }
 
     // ========================================================================

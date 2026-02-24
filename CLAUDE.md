@@ -8,11 +8,11 @@ SQLite wrapper library with C++ core, C API for FFI, and language bindings (Juli
 include/quiver/           # C++ public headers
   database.h              # Database class - main API
   attribute_metadata.h    # ScalarMetadata, GroupMetadata types
-  options.h               # DatabaseOptions, CSVExportOptions types and factories
+  options.h               # DatabaseOptions, CSVOptions types and factories
   element.h               # Element builder for create operations
   lua_runner.h            # Lua scripting support
 include/quiver/c/         # C API headers (for FFI)
-  options.h               # All option types: LogLevel, DatabaseOptions, CSVExportOptions
+  options.h               # All option types: LogLevel, DatabaseOptions, CSVOptions
   database.h
   element.h
   lua_runner.h
@@ -29,7 +29,6 @@ src/c/                    # C API implementation
   database_metadata.cpp   # Metadata get/list + co-located free functions
   database_query.cpp      # Query operations (plain and parameterized)
   database_time_series.cpp # Time series operations + co-located free functions
-  database_relations.cpp  # Relation operations
   database_transaction.cpp # Transaction control (begin, commit, rollback, in_transaction)
 bindings/julia/           # Julia bindings (Quiver.jl)
 bindings/dart/            # Dart bindings (quiver)
@@ -92,7 +91,6 @@ Test files organized by functionality:
 - `test_database_update.cpp` - update scalar/vector/set operations
 - `test_database_delete.cpp` - delete element operations
 - `test_database_query.cpp` - parameterized and non-parameterized query operations
-- `test_database_relations.cpp` - relation operations
 - `test_database_time_series.cpp` - time series read/update/metadata operations
 - `test_database_transaction.cpp` - explicit transaction control (begin/commit/rollback)
 
@@ -119,7 +117,7 @@ struct Database::Impl {
 };
 ```
 
-Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`, `GroupMetadata`, `ScalarMetadata`, `CSVExportOptions`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor).
+Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`, `GroupMetadata`, `ScalarMetadata`, `CSVOptions`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor).
 
 ### Transactions
 Public API exposes explicit transaction control:
@@ -146,7 +144,7 @@ Public Database methods follow `verb_[category_]type[_by_id]` pattern:
 - **Verbs:** create, read, update, delete, get, list, has, query, describe, export, import
 - **`_by_id` suffix:** Only for reads where both "all elements" and "single element" variants exist (e.g., `read_scalar_integers` vs `read_scalar_integer_by_id`)
 - **Singular vs plural:** Type name matches return cardinality (`read_scalar_integers` returns vector, `read_scalar_integer_by_id` returns optional)
-- **Examples:** `create_element`, `read_vector_floats_by_id`, `get_scalar_metadata`, `list_time_series_groups`, `update_scalar_relation`
+- **Examples:** `create_element`, `read_vector_floats_by_id`, `get_scalar_metadata`, `list_time_series_groups`
 
 ### Error Handling
 All `throw std::runtime_error(...)` in the C++ layer use exactly 3 message patterns:
@@ -154,7 +152,7 @@ All `throw std::runtime_error(...)` in the C++ layer use exactly 3 message patte
 **Pattern 1 -- Precondition failure:** `"Cannot {operation}: {reason}"`
 ```cpp
 throw std::runtime_error("Cannot create_element: element must have at least one scalar attribute");
-throw std::runtime_error("Cannot update_scalar_relation: attribute 'x' is not a foreign key in collection 'Y'");
+throw std::runtime_error("Cannot update_element: element must have at least one scalar or array attribute");
 ```
 
 **Pattern 2 -- Not found:** `"{Entity} not found: {identifier}"`
@@ -364,10 +362,9 @@ Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references.
 - Time series files: `has_time_series_files()`, `list_time_series_files_columns()`, `read_time_series_files()`, `update_time_series_files()`
 - Metadata: `get_scalar_metadata()`, `get_vector_metadata()`, `get_set_metadata()`, `get_time_series_metadata()` — all group metadata returns unified `GroupMetadata` with `dimension_column` (populated for time series, empty for vectors/sets)
 - List groups: `list_scalar_attributes()`, `list_vector_groups()`, `list_set_groups()`, `list_time_series_groups()`
-- Relations: `update_scalar_relation()`, `read_scalar_relation()`
 - Query: `query_string/integer/float(sql, params = {})` - parameterized SQL with positional `?` placeholders
 - Schema inspection: `describe()` - prints schema info to stdout
-- CSV: `export_csv()` -- exports collection scalars or groups to CSV file with optional enum/date formatting via `CSVExportOptions`
+- CSV: `export_csv()`, `import_csv()` -- CSV export/import with optional enum/date formatting via `CSVOptions`
 
 ### Element Class
 Builder for element creation with fluent API:
@@ -402,27 +399,26 @@ lua.run(R"(
 
 ### Representative Cross-Layer Examples
 
-| Category | C++ | C API | Julia | Dart | Python | Lua |
-|----------|-----|-------|-------|------|--------|-----|
-| Factory | `Database::from_schema()` | `quiver_database_from_schema()` | `from_schema()` | `Database.fromSchema()` | `Database.from_schema()` | N/A |
-| Transaction | `begin_transaction()` | `quiver_database_begin_transaction()` | `begin_transaction!()` | `beginTransaction()` | `begin_transaction()` | `begin_transaction()` |
-| Transaction | `commit()` | `quiver_database_commit()` | `commit!()` | `commit()` | `commit()` | `commit()` |
-| Transaction | `rollback()` | `quiver_database_rollback()` | `rollback!()` | `rollback()` | `rollback()` | `rollback()` |
-| Transaction | `in_transaction()` | `quiver_database_in_transaction()` | `in_transaction()` | `inTransaction()` | `in_transaction()` | `in_transaction()` |
-| Create | `create_element()` | `quiver_database_create_element()` | `create_element!()` | `createElement()` | `create_element()` | `create_element()` |
-| Read scalar | `read_scalar_integers()` | `quiver_database_read_scalar_integers()` | `read_scalar_integers()` | `readScalarIntegers()` | `read_scalar_integers()` | `read_scalar_integers()` |
-| Read by ID | `read_scalar_integer_by_id()` | `quiver_database_read_scalar_integer_by_id()` | `read_scalar_integer_by_id()` | `readScalarIntegerById()` | `read_scalar_integer_by_id()` | `read_scalar_integer_by_id()` |
-| Update scalar | `update_scalar_integer()` | `quiver_database_update_scalar_integer()` | `update_scalar_integer!()` | `updateScalarInteger()` | `update_scalar_integer()` | `update_scalar_integer()` |
-| Update vector | `update_vector_strings()` | `quiver_database_update_vector_strings()` | `update_vector_strings!()` | `updateVectorStrings()` | `update_vector_strings()` | `update_vector_strings()` |
-| Delete | `delete_element()` | `quiver_database_delete_element()` | `delete_element!()` | `deleteElement()` | `delete_element()` | `delete_element()` |
-| Metadata | `get_scalar_metadata()` | `quiver_database_get_scalar_metadata()` | `get_scalar_metadata()` | `getScalarMetadata()` | `get_scalar_metadata()` | `get_scalar_metadata()` |
-| List groups | `list_vector_groups()` | `quiver_database_list_vector_groups()` | `list_vector_groups()` | `listVectorGroups()` | `list_vector_groups()` | `list_vector_groups()` |
-| Time series read | `read_time_series_group()` | `quiver_database_read_time_series_group()` | `read_time_series_group()` | `readTimeSeriesGroup()` | `read_time_series_group()` | `read_time_series_group()` |
-| Time series update | `update_time_series_group()` | `quiver_database_update_time_series_group()` | `update_time_series_group!()` | `updateTimeSeriesGroup()` | `update_time_series_group()` | `update_time_series_group()` |
-| Query | `query_string()` | `quiver_database_query_string()` | `query_string()` | `queryString()` | `query_string()` | `query_string()` |
-| Relations | `update_scalar_relation()` | `quiver_database_update_scalar_relation()` | `update_scalar_relation!()` | `updateScalarRelation()` | `update_scalar_relation()` | `update_scalar_relation()` |
-| CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | `export_csv()` | `export_csv()` |
-| Describe | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` | `describe()` |
+| Category | C++ | C API | Julia | Dart | Lua |
+|----------|-----|-------|-------|------|-----|
+| Factory | `Database::from_schema()` | `quiver_database_from_schema()` | `from_schema()` | `Database.fromSchema()` | N/A |
+| Transaction | `begin_transaction()` | `quiver_database_begin_transaction()` | `begin_transaction!()` | `beginTransaction()` | `begin_transaction()` |
+| Transaction | `commit()` | `quiver_database_commit()` | `commit!()` | `commit()` | `commit()` |
+| Transaction | `rollback()` | `quiver_database_rollback()` | `rollback!()` | `rollback()` | `rollback()` |
+| Transaction | `in_transaction()` | `quiver_database_in_transaction()` | `in_transaction()` | `inTransaction()` | `in_transaction()` |
+| Create | `create_element()` | `quiver_database_create_element()` | `create_element!()` | `createElement()` | `create_element()` |
+| Read scalar | `read_scalar_integers()` | `quiver_database_read_scalar_integers()` | `read_scalar_integers()` | `readScalarIntegers()` | `read_scalar_integers()` |
+| Read by ID | `read_scalar_integer_by_id()` | `quiver_database_read_scalar_integer_by_id()` | `read_scalar_integer_by_id()` | `readScalarIntegerById()` | `read_scalar_integer_by_id()` |
+| Update scalar | `update_scalar_integer()` | `quiver_database_update_scalar_integer()` | `update_scalar_integer!()` | `updateScalarInteger()` | `update_scalar_integer()` |
+| Update vector | `update_vector_strings()` | `quiver_database_update_vector_strings()` | `update_vector_strings!()` | `updateVectorStrings()` | `update_vector_strings()` |
+| Delete | `delete_element()` | `quiver_database_delete_element()` | `delete_element!()` | `deleteElement()` | `delete_element()` |
+| Metadata | `get_scalar_metadata()` | `quiver_database_get_scalar_metadata()` | `get_scalar_metadata()` | `getScalarMetadata()` | `get_scalar_metadata()` |
+| List groups | `list_vector_groups()` | `quiver_database_list_vector_groups()` | `list_vector_groups()` | `listVectorGroups()` | `list_vector_groups()` |
+| Time series read | `read_time_series_group()` | `quiver_database_read_time_series_group()` | `read_time_series_group()` | `readTimeSeriesGroup()` | `read_time_series_group()` |
+| Time series update | `update_time_series_group()` | `quiver_database_update_time_series_group()` | `update_time_series_group!()` | `updateTimeSeriesGroup()` | `update_time_series_group()` |
+| Query | `query_string()` | `quiver_database_query_string()` | `query_string()` | `queryString()` | `query_string()` |
+| CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | `export_csv()` |
+| Describe | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |
 
 The transformation rules are mechanical. Given any C++ method name, you can derive the equivalent in any layer without consulting a lookup table.
 

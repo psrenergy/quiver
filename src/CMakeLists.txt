@@ -8,7 +8,6 @@ set(QUIVER_SOURCES
     database_metadata.cpp
     database_time_series.cpp
     database_query.cpp
-    database_relations.cpp
     database_csv.cpp
     database_describe.cpp
     element.cpp
@@ -102,7 +101,6 @@ if(QUIVER_BUILD_C_API)
         c/database_metadata.cpp
         c/database_query.cpp
         c/database_time_series.cpp
-        c/database_relations.cpp
         c/database_transaction.cpp
         c/element.cpp
         c/lua_runner.cpp

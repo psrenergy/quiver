@@ -20,7 +20,9 @@
       "Bash(git tag:*)",
       "Bash(node:*)",
       "WebSearch",
-      "Skill(gsd:execute-phase)"
+      "Bash(cmd:*)",
+      "Bash(powershell:*)",
+      "Bash(julia:*)"
     ]
   }
 }
