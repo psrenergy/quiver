@@ -407,8 +407,7 @@ TEST(Database, RejectStringForNonFkIntegerColumn) {
 
 TEST(Database, CreateElementScalarFkLabel) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"),
-        {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     // Create parent
     quiver::Element parent;
@@ -429,8 +428,7 @@ TEST(Database, CreateElementScalarFkLabel) {
 
 TEST(Database, CreateElementVectorFkLabels) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"),
-        {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     // Create parents
     quiver::Element p1, p2;
@@ -456,8 +454,7 @@ TEST(Database, CreateElementVectorFkLabels) {
 
 TEST(Database, CreateElementTimeSeriesFkLabels) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"),
-        {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     // Create parents
     quiver::Element p1, p2;
@@ -486,8 +483,7 @@ TEST(Database, CreateElementTimeSeriesFkLabels) {
 
 TEST(Database, CreateElementAllFkTypesInOneCall) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"),
-        {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     // Create parents
     quiver::Element p1, p2;
@@ -503,11 +499,11 @@ TEST(Database, CreateElementAllFkTypesInOneCall) {
     // - time series FK: sponsor_id -> Parent 2 (unique to Child_time_series_events)
     quiver::Element child;
     child.set("label", std::string("Child 1"));
-    child.set("parent_id", std::string("Parent 1"));                      // scalar FK
-    child.set("mentor_id", std::vector<std::string>{"Parent 2"});         // set FK
-    child.set("parent_ref", std::vector<std::string>{"Parent 1"});        // vector+set FK
-    child.set("date_time", std::vector<std::string>{"2024-01-01"});       // time series dimension
-    child.set("sponsor_id", std::vector<std::string>{"Parent 2"});        // time series FK
+    child.set("parent_id", std::string("Parent 1"));                 // scalar FK
+    child.set("mentor_id", std::vector<std::string>{"Parent 2"});    // set FK
+    child.set("parent_ref", std::vector<std::string>{"Parent 1"});   // vector+set FK
+    child.set("date_time", std::vector<std::string>{"2024-01-01"});  // time series dimension
+    child.set("sponsor_id", std::vector<std::string>{"Parent 2"});   // time series FK
     db.create_element("Child", child);
 
     // Verify scalar FK
@@ -534,8 +530,7 @@ TEST(Database, CreateElementAllFkTypesInOneCall) {
 
 TEST(Database, CreateElementNoFkColumnsUnchanged) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"),
-        {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     // basic.sql has no FK columns -- this tests that the pre-resolve pass
     // passes all values through unchanged for schemas with no FKs
@@ -557,8 +552,7 @@ TEST(Database, CreateElementNoFkColumnsUnchanged) {
 
 TEST(Database, ScalarFkResolutionFailureCausesNoPartialWrites) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"),
-        {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     // Create child with scalar FK referencing nonexistent parent
     quiver::Element child;
