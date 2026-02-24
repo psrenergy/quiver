@@ -1,6 +1,7 @@
 #include "database_impl.h"
 #include "quiver/migrations.h"
 #include "quiver/result.h"
+#include "utils/string.h"
 
 #include <atomic>
 #include <filesystem>
@@ -150,10 +151,11 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
                 } else if constexpr (std::is_same_v<T, double>) {
                     sqlite3_bind_double(stmt.get(), idx, arg);
                 } else if constexpr (std::is_same_v<T, std::string>) {
+                    auto trimmed = string::trim(arg);
                     sqlite3_bind_text(stmt.get(),
                                       idx,
-                                      arg.c_str(),
-                                      static_cast<int>(arg.size()),
+                                      trimmed.c_str(),
+                                      static_cast<int>(trimmed.size()),
                                       SQLITE_TRANSIENT);  // NOLINT(performance-no-int-to-ptr) SQLite macro
                 }
             },

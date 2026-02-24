@@ -806,6 +806,86 @@ TEST(DatabaseCApi, UpdateSetStringsNullAttribute) {
 }
 
 // ============================================================================
+// Whitespace trimming tests
+// ============================================================================
+
+TEST(DatabaseCApi, UpdateScalarStringTrimsWhitespace) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+    quiver_element_set_string(e, "label", "Config 1");
+    quiver_element_set_string(e, "string_attribute", "hello");
+    int64_t id = 0;
+    quiver_database_create_element(db, "Configuration", e, &id);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+
+    auto err = quiver_database_update_scalar_string(db, "Configuration", "string_attribute", id, "  world  ");
+    EXPECT_EQ(err, QUIVER_OK);
+
+    char* value = nullptr;
+    int has_value;
+    err = quiver_database_read_scalar_string_by_id(db, "Configuration", "string_attribute", id, &value, &has_value);
+    EXPECT_EQ(err, QUIVER_OK);
+    EXPECT_EQ(has_value, 1);
+    EXPECT_STREQ(value, "world");
+
+    delete[] value;
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateSetStringsTrimsWhitespace) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+    quiver_element_set_string(e, "label", "Item 1");
+    const char* tags[] = {"important", "urgent"};
+    quiver_element_set_array_string(e, "tag", tags, 2);
+    int64_t id = 0;
+    quiver_database_create_element(db, "Collection", e, &id);
+    EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
+
+    const char* new_tags[] = {"  alpha  ", "\tbeta\n", " gamma "};
+    auto err = quiver_database_update_set_strings(db, "Collection", "tag", id, new_tags, 3);
+    EXPECT_EQ(err, QUIVER_OK);
+
+    char** read_values = nullptr;
+    size_t count = 0;
+    err = quiver_database_read_set_strings_by_id(db, "Collection", "tag", id, &read_values, &count);
+    EXPECT_EQ(err, QUIVER_OK);
+    EXPECT_EQ(count, 3);
+
+    std::vector<std::string> set_values;
+    for (size_t i = 0; i < count; i++) {
+        set_values.push_back(read_values[i]);
+    }
+    std::sort(set_values.begin(), set_values.end());
+    EXPECT_EQ(set_values[0], "alpha");
+    EXPECT_EQ(set_values[1], "beta");
+    EXPECT_EQ(set_values[2], "gamma");
+
+    quiver_database_free_string_array(read_values, count);
+    quiver_database_close(db);
+}
+
+// ============================================================================
 // DateTime update tests
 // ============================================================================
 

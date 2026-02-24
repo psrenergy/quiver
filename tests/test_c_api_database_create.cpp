@@ -265,6 +265,59 @@ TEST(DatabaseCApi, CreateElementWithMultiTimeSeries) {
     quiver_database_close(db);
 }
 
+TEST(DatabaseCApi, CreateElementTrimsWhitespaceFromStrings) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    // Create Configuration first
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t config_id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Configuration", config, &config_id), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    // Create element with whitespace-padded strings
+    quiver_element_t* element = nullptr;
+    ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
+    quiver_element_set_string(element, "label", "  Item 1  ");
+    const char* tags[] = {"  important  ", "\turgent\n", " review "};
+    quiver_element_set_array_string(element, "tag", tags, 3);
+
+    int64_t id = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Collection", element, &id), QUIVER_OK);
+    EXPECT_EQ(id, 1);
+    EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
+
+    // Verify scalar string was trimmed
+    char* label = nullptr;
+    int has_label = 0;
+    ASSERT_EQ(quiver_database_read_scalar_string_by_id(db, "Collection", "label", id, &label, &has_label), QUIVER_OK);
+    EXPECT_EQ(has_label, 1);
+    EXPECT_STREQ(label, "Item 1");
+    delete[] label;
+
+    // Verify set strings were trimmed
+    char** read_tags = nullptr;
+    size_t tag_count = 0;
+    ASSERT_EQ(quiver_database_read_set_strings_by_id(db, "Collection", "tag", id, &read_tags, &tag_count), QUIVER_OK);
+    EXPECT_EQ(tag_count, 3);
+    std::vector<std::string> tag_values;
+    for (size_t i = 0; i < tag_count; i++) {
+        tag_values.push_back(read_tags[i]);
+    }
+    std::sort(tag_values.begin(), tag_values.end());
+    EXPECT_EQ(tag_values[0], "important");
+    EXPECT_EQ(tag_values[1], "review");
+    EXPECT_EQ(tag_values[2], "urgent");
+
+    quiver_database_free_string_array(read_tags, tag_count);
+    quiver_database_close(db);
+}
+
 TEST(DatabaseCApi, CreateElementWithDatetime) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
