@@ -102,8 +102,11 @@ Plans:
   3. `read_all_vectors_by_id(collection, id)` and `read_all_sets_by_id(collection, id)` return dicts of all group values for a given element
   4. `read_vector_group_by_id(collection, id, group)` and `read_set_group_by_id(collection, id, group)` return lists of row dicts from multi-column group reads
 
-**Coverage Note**: CSV-02 (`import_csv`) — research indicates this is not implemented in the C++ layer. Verify the C API before writing the binding. If unimplemented in C++, drop CSV-02 from scope and update REQUIREMENTS.md to defer it.
-**Plans**: TBD
+**Coverage Note**: CSV-02 (`import_csv`) — confirmed not implemented in C++ (empty stub). Deferred from scope; REQUIREMENTS.md updated.
+**Plans**: 2 plans
+Plans:
+- [ ] 06-01-PLAN.md -- CSV export with CSVExportOptions struct marshaling, CFFI declarations, and tests; defer CSV-02
+- [ ] 06-02-PLAN.md -- DateTime helpers, composite read-all helpers, multi-column group readers, and tests
 
 ### Phase 7: Test Parity
 **Goal**: Every language layer has test coverage for each functional area, with all gaps identified and filled, and the Python test suite matches Julia/Dart in structure and depth
