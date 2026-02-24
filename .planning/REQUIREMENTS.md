@@ -14,8 +14,8 @@ Requirements for milestone v1.1 FK Test Coverage. Each maps to roadmap phases.
 
 ### Julia
 
-- [ ] **JUL-01**: Julia FK resolution tests for create_element! cover all 9 test cases mirroring C++ create path
-- [ ] **JUL-02**: Julia FK resolution tests for update_element! cover all 7 test cases mirroring C++ update path
+- [x] **JUL-01**: Julia FK resolution tests for create_element! cover all 9 test cases mirroring C++ create path
+- [x] **JUL-02**: Julia FK resolution tests for update_element! cover all 7 test cases mirroring C++ update path
 
 ### Dart
 
@@ -45,8 +45,8 @@ None currently deferred.
 |-------------|-------|--------|
 | CAPI-01 | Phase 5 | Complete |
 | CAPI-02 | Phase 5 | Complete |
-| JUL-01 | Phase 6 | Pending |
-| JUL-02 | Phase 6 | Pending |
+| JUL-01 | Phase 6 | Complete |
+| JUL-02 | Phase 6 | Complete |
 | DART-01 | Phase 7 | Pending |
 | DART-02 | Phase 7 | Pending |
 | LUA-01 | Phase 8 | Pending |
