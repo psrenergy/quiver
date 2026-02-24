@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 4: Queries and Relations** - Parameterized SQL queries with keepalive marshaling and relation read operations
 - [ ] **Phase 5: Time Series** - Multi-column void** read/write dispatch and time series files operations
 - [x] **Phase 6: CSV and Convenience Helpers** - CSV export with struct marshaling and pure-Python composite read helpers (completed 2026-02-24)
-- [ ] **Phase 7: Test Parity** - Comprehensive test coverage audit and gap-fill across C++, C API, Julia, Dart, and Python
+- [x] **Phase 7: Test Parity** - Comprehensive test coverage audit and gap-fill across C++, C API, Julia, Dart, and Python (completed 2026-02-24)
 
 ## Phase Details
 
@@ -122,7 +122,7 @@ Plans:
 - [x] 07-01-PLAN.md -- New all_types.sql schema, C++ gap-fill tests, C API gap-fill tests + new metadata test file
 - [x] 07-02-PLAN.md -- Julia and Dart gap-fill tests (string vectors, integer/float sets, describe, convenience methods)
 - [x] 07-03-PLAN.md -- Python and Lua gap-fill tests, full 6-layer parity validation
-- [ ] 07-04-PLAN.md -- Gap closure: fix Python CSV export crash and phantom scalar_relation symbol
+- [x] 07-04-PLAN.md -- Gap closure: fix Python CSV export crash and phantom scalar_relation symbol
 
 ## Progress
 
@@ -137,4 +137,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Queries and Relations | 0/1 | Not started | - |
 | 5. Time Series | 0/? | Not started | - |
 | 6. CSV and Convenience Helpers | 2/2 | Complete | 2026-02-24 |
-| 7. Test Parity | 3/4 | In Progress | - |
+| 7. Test Parity | 4/4 | Complete | 2026-02-24 |
