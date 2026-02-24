@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 7 of 7 (Test Parity)
-Plan: 3 of 3 in current phase (07-03 complete)
+Plan: 4 of 4 in current phase (07-04 complete)
 Status: Complete
-Last activity: 2026-02-24 — Completed 07-03-PLAN.md (Python/Lua test parity)
+Last activity: 2026-02-24 — Completed 07-04-PLAN.md (Python CSV and relation gap closure)
 
 Progress: [████████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
+- Total plans completed: 15
 - Average duration: 5min
-- Total execution time: 75min
+- Total execution time: 79min
 
 **By Phase:**
 
@@ -33,14 +33,14 @@ Progress: [████████████] 100%
 | 04-queries-and-relations | 1 | 2min | 2min |
 | 05-time-series | 2 | 5min | 3min |
 | 06-csv-and-convenience-helpers | 2 | 15min | 8min |
-| 07-test-parity | 3 | 26min | 9min |
+| 07-test-parity | 4 | 30min | 8min |
 
 **Recent Trend:**
-- Last 5 plans: 06-01 (6min), 06-02 (9min), 07-01 (10min), 07-02 (7min), 07-03 (9min)
+- Last 5 plans: 06-02 (9min), 07-01 (10min), 07-02 (7min), 07-03 (9min), 07-04 (4min)
 - Trend: Stable
 
 *Updated after each plan completion*
-| Phase 07 P03 | 9min | 2 tasks | 6 files |
+| Phase 07 P04 | 4min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -75,7 +75,7 @@ Recent decisions affecting current work:
 - [05-01]: Dimension column type hardcoded to STRING (2) in _marshal_time_series_columns
 - [05-02]: Symmetric dict API for read/update files -- same {column: path_or_None} shape in both directions
 - [06-01]: import_csv raises NotImplementedError in Python (C++ implementation is no-op stub)
-- [06-01]: Group CSV export format uses label + value columns (no id/vector_index, no sep prefix) per actual DLL behavior
+- [06-01]: Group CSV export format uses id,vector_index,value columns with sep=, prefix per actual DLL behavior (corrected in 07-04)
 - [06-02]: _parse_datetime replaces inline fromisoformat with UTC-aware datetime.replace(tzinfo=timezone.utc)
 - [06-02]: query_date_time updated to use _parse_datetime for consistent UTC timezone behavior
 - [06-02]: read_all_vectors/sets_by_id use group name as column attribute (works for single-column groups with matching names)
@@ -87,6 +87,9 @@ Recent decisions affecting current work:
 - [07-03]: Skipped read_all_vectors/sets_by_id data tests -- convenience methods use group name as attribute, no schema has matching names (known limitation)
 - [07-03]: Python CSV crash and scalar_relation phantom symbol are pre-existing issues, not fixed in test parity phase
 - [Phase 07]: Skipped read_all_vectors/sets_by_id data tests -- convenience methods use group name as attribute, no schema has matching names
+- [07-04]: Scalar relation methods rewritten as pure-Python composing get_scalar_metadata + query_integer + update_scalar_integer
+- [07-04]: Group CSV test expectations updated to match actual DLL output (id,vector_index,value columns)
+- [07-04]: Empty-string locale name passed for each enum group (Python has no locale support in CSVExportOptions)
 
 ### Pending Todos
 
@@ -100,5 +103,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 07-03-PLAN.md (Python/Lua test parity -- all phases complete)
+Stopped at: Completed 07-04-PLAN.md (Python CSV and relation gap closure -- all phases complete)
 Resume file: All plans complete
