@@ -6,7 +6,7 @@ from datetime import datetime
 
 import pytest
 
-from quiver import Database, Element
+from quiver_db import Database, Element
 
 
 # -- Simple queries (QUERY-01) ------------------------------------------------

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from quiver._c_api import ffi, get_lib
-from quiver.exceptions import QuiverError
+from quiver_db._c_api import ffi, get_lib
+from quiver_db.exceptions import QuiverError
 
 
 def check(err: int) -> None:

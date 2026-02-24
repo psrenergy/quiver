@@ -1,7 +1,7 @@
-from quiver.database import Database
-from quiver.element import Element
-from quiver.exceptions import QuiverError
-from quiver.metadata import CSVExportOptions, GroupMetadata, ScalarMetadata
+from quiver_db.database import Database
+from quiver_db.element import Element
+from quiver_db.exceptions import QuiverError
+from quiver_db.metadata import CSVExportOptions, GroupMetadata, ScalarMetadata
 
 __all__ = [
     "CSVExportOptions",
@@ -16,7 +16,7 @@ __all__ = [
 
 def version() -> str:
     """Return the Quiver C library version string."""
-    from quiver._c_api import ffi, get_lib
+    from quiver_db._c_api import ffi, get_lib
 
     lib = get_lib()
     return ffi.string(lib.quiver_version()).decode("utf-8")

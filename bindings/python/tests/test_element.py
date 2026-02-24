@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from quiver import Element
+from quiver_db import Element
 
 
 def test_element_set_integer() -> None:

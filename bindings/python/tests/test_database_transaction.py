@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from quiver import Database, Element
+from quiver_db import Database, Element
 
 
 class TestExplicitTransaction:

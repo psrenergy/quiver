@@ -7,7 +7,7 @@ from io import StringIO
 
 import pytest
 
-from quiver import CSVExportOptions, Database, Element
+from quiver_db import CSVExportOptions, Database, Element
 
 
 class TestExportCSVScalarsDefault:
