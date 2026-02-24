@@ -1242,6 +1242,51 @@ TEST_F(LuaRunnerTest, UpdateVectorFloatsFromLua) {
     EXPECT_EQ(vec, (std::vector<double>{5.5, 6.6, 7.7}));
 }
 
+TEST_F(LuaRunnerTest, CreateElementTrimsWhitespaceFromLua) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:create_element("Configuration", { label = "Test Config" })
+        db:create_element("Collection", {
+            label = "  Item 1  ",
+            tag = {"  important  ", "	urgent\n", " review "}
+        })
+    )");
+
+    auto labels = db.read_scalar_strings("Collection", "label");
+    EXPECT_EQ(labels.size(), 1);
+    EXPECT_EQ(labels[0], "Item 1");
+
+    auto sets = db.read_set_strings("Collection", "tag");
+    EXPECT_EQ(sets.size(), 1);
+    auto tags = sets[0];
+    std::sort(tags.begin(), tags.end());
+    EXPECT_EQ(tags, (std::vector<std::string>{"important", "review", "urgent"}));
+}
+
+TEST_F(LuaRunnerTest, UpdateScalarStringTrimsWhitespaceFromLua) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    db.create_element("Configuration", quiver::Element().set("label", "Test Config"));
+    db.create_element("Collection",
+                      quiver::Element().set("label", "Item 1").set("tag", std::vector<std::string>{"old"}));
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:update_scalar_string("Collection", "label", 1, "  Updated  ")
+        local label = db:read_scalar_string_by_id("Collection", "label", 1)
+        assert(label == "Updated", "Expected 'Updated' but got '" .. label .. "'")
+
+        db:update_set_strings("Collection", "tag", 1, {"  alpha  ", "	beta\n", " gamma "})
+    )");
+
+    auto set_vals = db.read_set_strings_by_id("Collection", "tag", 1);
+    std::sort(set_vals.begin(), set_vals.end());
+    EXPECT_EQ(set_vals, (std::vector<std::string>{"alpha", "beta", "gamma"}));
+}
+
 TEST_F(LuaRunnerTest, UpdateVectorStringsFromLua) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));

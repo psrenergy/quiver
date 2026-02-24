@@ -321,6 +321,29 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    @testset "Trims Whitespace From Strings" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+
+        # Create element with whitespace-padded strings
+        Quiver.create_element!(db, "Collection";
+            label = "  Item 1  ",
+            tag = ["  important  ", "\turgent\n", " review "],
+        )
+
+        # Scalar string should be trimmed
+        label = Quiver.read_scalar_string_by_id(db, "Collection", "label", Int64(1))
+        @test label == "Item 1"
+
+        # Set strings should be trimmed
+        tags = Quiver.read_set_strings_by_id(db, "Collection", "tag", Int64(1))
+        @test sort(tags) == ["important", "review", "urgent"]
+
+        Quiver.close!(db)
+    end
+
     @testset "Native DateTime Object" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
         db = Quiver.from_schema(":memory:", path_schema)

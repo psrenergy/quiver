@@ -450,6 +450,36 @@ void main() {
     });
   });
 
+  group('Create Trims Whitespace From Strings', () {
+    test('trims scalar and set strings on create', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+
+        // Create element with whitespace-padded strings
+        final id = db.createElement('Collection', {
+          'label': '  Item 1  ',
+          'tag': ['  important  ', '\turgent\n', ' review '],
+        });
+        expect(id, equals(1));
+
+        // Scalar string should be trimmed
+        final label = db.readScalarStringById('Collection', 'label', 1);
+        expect(label, equals('Item 1'));
+
+        // Set strings should be trimmed
+        final tags = db.readSetStringsById('Collection', 'tag', 1);
+        final sortedTags = List<String>.from(tags)..sort();
+        expect(sortedTags, equals(['important', 'review', 'urgent']));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
   group('Create With Native DateTime', () {
     test('creates element with native DateTime object', () {
       final db = Database.fromSchema(

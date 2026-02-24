@@ -322,6 +322,35 @@ TEST(Database, CreateElementWithMultiTimeSeriesMismatchedLengths) {
     EXPECT_THROW(db.create_element("Sensor", element), std::runtime_error);
 }
 
+TEST(Database, CreateElementTrimsWhitespaceFromStrings) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    // Create element with whitespace-padded scalar, vector strings, and set strings
+    quiver::Element element;
+    element.set("label", std::string("  Item 1  "))
+        .set("tag", std::vector<std::string>{"  important  ", "\turgent\n", " review "});
+
+    int64_t id = db.create_element("Collection", element);
+    EXPECT_EQ(id, 1);
+
+    // Scalar string should be trimmed
+    auto labels = db.read_scalar_strings("Collection", "label");
+    EXPECT_EQ(labels.size(), 1);
+    EXPECT_EQ(labels[0], "Item 1");
+
+    // Set strings should be trimmed
+    auto sets = db.read_set_strings("Collection", "tag");
+    EXPECT_EQ(sets.size(), 1);
+    auto tags = sets[0];
+    std::sort(tags.begin(), tags.end());
+    EXPECT_EQ(tags, (std::vector<std::string>{"important", "review", "urgent"}));
+}
+
 TEST(Database, CreateElementWithDatetime) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
