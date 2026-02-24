@@ -86,11 +86,11 @@ Plans:
   3. Lua update paths (scalar, vector, set, time series) resolve FK labels to IDs -- verified by updating an existing element and reading back the resolved values
   4. Lua update failure preserves the element's existing data -- verified by attempting an update with a bad FK label and confirming original values remain
   5. Non-FK integer columns pass through unchanged in both create and update paths -- verified by a no-FK regression test
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 08-01: TBD
-- [ ] 08-02: TBD
+- [ ] 08-01-PLAN.md — 9 FK resolution create tests (set, scalar, vector, time series, combined, no-FK, errors, partial writes)
+- [ ] 08-02-PLAN.md — 7 FK resolution update tests (scalar, vector, set, time series, combined, no-FK, failure preserves existing)
 
 ## Progress
 
@@ -106,4 +106,4 @@ Phases execute in numeric order: 5 -> 6 -> 7 -> 8
 | 5. C API FK Tests | v1.1 | 2/2 | Complete | 2026-02-24 |
 | 6. Julia FK Tests | v1.1 | 2/2 | Complete | 2026-02-24 |
 | 7. Dart FK Tests | v1.1 | 2/2 | Complete | 2026-02-24 |
-| 8. Lua FK Tests | v1.1 | 0/? | Not started | - |
+| 8. Lua FK Tests | v1.1 | 0/2 | Not started | - |
