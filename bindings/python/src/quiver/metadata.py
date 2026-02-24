@@ -1,6 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+
+@dataclass(frozen=True)
+class CSVExportOptions:
+    """Options for CSV export operations."""
+
+    date_time_format: str = ""
+    enum_labels: dict[str, dict[int, str]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

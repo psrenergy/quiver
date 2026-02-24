@@ -1,9 +1,10 @@
 from quiver.database import Database
 from quiver.element import Element
 from quiver.exceptions import QuiverError
-from quiver.metadata import GroupMetadata, ScalarMetadata
+from quiver.metadata import CSVExportOptions, GroupMetadata, ScalarMetadata
 
 __all__ = [
+    "CSVExportOptions",
     "Database",
     "Element",
     "GroupMetadata",

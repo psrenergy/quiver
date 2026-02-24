@@ -334,6 +334,25 @@ ffi.cdef("""
         size_t count);
 
     quiver_error_t quiver_database_free_time_series_files(char** columns, char** paths, size_t count);
+
+    // CSV export options
+    typedef struct {
+        const char* date_time_format;
+        const char** enum_attribute_names;
+        const size_t* enum_entry_counts;
+        const int64_t* enum_values;
+        const char** enum_labels;
+        size_t enum_attribute_count;
+    } quiver_csv_export_options_t;
+
+    quiver_csv_export_options_t quiver_csv_export_options_default(void);
+
+    quiver_error_t quiver_database_export_csv(quiver_database_t* db,
+        const char* collection, const char* group, const char* path,
+        const quiver_csv_export_options_t* opts);
+
+    quiver_error_t quiver_database_import_csv(quiver_database_t* db,
+        const char* table, const char* path);
 """)
 
 _lib = None

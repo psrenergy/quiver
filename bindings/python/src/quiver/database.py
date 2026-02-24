@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import warnings
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 
 from quiver._c_api import ffi, get_lib
 from quiver._helpers import check, decode_string, decode_string_or_none
 from quiver.exceptions import QuiverError
-from quiver.metadata import GroupMetadata, ScalarMetadata
+from quiver.metadata import CSVExportOptions, GroupMetadata, ScalarMetadata
 
 
 class Database:
@@ -381,7 +381,25 @@ class Database:
         result = self.query_string(sql, params=params)
         if result is None:
             return None
-        return datetime.fromisoformat(result)
+        return _parse_datetime(result)
+
+    def read_scalar_date_time_by_id(
+        self, collection: str, attribute: str, id: int,
+    ) -> datetime | None:
+        """Read a datetime scalar attribute. Returns timezone-aware UTC datetime or None."""
+        return _parse_datetime(self.read_scalar_string_by_id(collection, attribute, id))
+
+    def read_vector_date_time_by_id(
+        self, collection: str, attribute: str, id: int,
+    ) -> list[datetime]:
+        """Read datetime values from a vector. Returns list of timezone-aware UTC datetimes."""
+        return [_parse_datetime(s) for s in self.read_vector_strings_by_id(collection, attribute, id)]
+
+    def read_set_date_time_by_id(
+        self, collection: str, attribute: str, id: int,
+    ) -> list[datetime]:
+        """Read datetime values from a set. Returns list of timezone-aware UTC datetimes."""
+        return [_parse_datetime(s) for s in self.read_set_strings_by_id(collection, attribute, id)]
 
     # -- Scalar reads (bulk) --------------------------------------------------
 
@@ -1145,10 +1163,186 @@ class Database:
         check(lib.quiver_database_update_time_series_files(
             self._ptr, collection.encode("utf-8"), c_columns, c_paths, count))
 
+    # -- CSV operations ---------------------------------------------------------
+
+    def export_csv(
+        self, collection: str, group: str, path: str,
+        options: CSVExportOptions | None = None,
+    ) -> None:
+        """Export a collection or group to CSV file."""
+        self._ensure_open()
+        lib = get_lib()
+        if options is None:
+            options = CSVExportOptions()
+        keepalive, c_opts = _marshal_csv_export_options(options)
+        check(lib.quiver_database_export_csv(
+            self._ptr, collection.encode("utf-8"), group.encode("utf-8"),
+            path.encode("utf-8"), c_opts))
+
+    def import_csv(self, table: str, path: str) -> None:
+        """Import CSV data into a table.
+
+        Not yet implemented -- the C++ implementation is a no-op stub.
+        Will be functional when the C++ layer implements import_csv.
+        """
+        raise NotImplementedError(
+            "import_csv is not yet implemented: the C++ implementation is a no-op stub"
+        )
+
+    # -- Convenience helpers ---------------------------------------------------
+
+    def read_all_scalars_by_id(self, collection: str, id: int) -> dict:
+        """Read all scalar attribute values for an element.
+
+        Returns dict mapping attribute names to typed values.
+        Includes id and label. DATE_TIME attributes are parsed to datetime objects.
+        """
+        self._ensure_open()
+        result = {}
+        for attr in self.list_scalar_attributes(collection):
+            name = attr.name
+            if attr.data_type == 0:    # INTEGER
+                result[name] = self.read_scalar_integer_by_id(collection, name, id)
+            elif attr.data_type == 1:  # FLOAT
+                result[name] = self.read_scalar_float_by_id(collection, name, id)
+            elif attr.data_type == 3:  # DATE_TIME
+                result[name] = self.read_scalar_date_time_by_id(collection, name, id)
+            else:                      # STRING (2)
+                result[name] = self.read_scalar_string_by_id(collection, name, id)
+        return result
+
+    def read_all_vectors_by_id(self, collection: str, id: int) -> dict:
+        """Read all vector group values for an element (single-column groups).
+
+        Returns dict mapping group names to typed lists.
+        DATE_TIME groups are parsed to datetime objects.
+        For multi-column groups, use read_vector_group_by_id.
+        """
+        self._ensure_open()
+        result = {}
+        for group in self.list_vector_groups(collection):
+            name = group.group_name
+            dt = group.value_columns[0].data_type if group.value_columns else 2
+            if dt == 0:    # INTEGER
+                result[name] = self.read_vector_integers_by_id(collection, name, id)
+            elif dt == 1:  # FLOAT
+                result[name] = self.read_vector_floats_by_id(collection, name, id)
+            elif dt == 3:  # DATE_TIME
+                result[name] = self.read_vector_date_time_by_id(collection, name, id)
+            else:          # STRING (2)
+                result[name] = self.read_vector_strings_by_id(collection, name, id)
+        return result
+
+    def read_all_sets_by_id(self, collection: str, id: int) -> dict:
+        """Read all set group values for an element (single-column groups).
+
+        Returns dict mapping group names to typed lists.
+        DATE_TIME groups are parsed to datetime objects.
+        For multi-column groups, use read_set_group_by_id.
+        """
+        self._ensure_open()
+        result = {}
+        for group in self.list_set_groups(collection):
+            name = group.group_name
+            dt = group.value_columns[0].data_type if group.value_columns else 2
+            if dt == 0:    # INTEGER
+                result[name] = self.read_set_integers_by_id(collection, name, id)
+            elif dt == 1:  # FLOAT
+                result[name] = self.read_set_floats_by_id(collection, name, id)
+            elif dt == 3:  # DATE_TIME
+                result[name] = self.read_set_date_time_by_id(collection, name, id)
+            else:          # STRING (2)
+                result[name] = self.read_set_strings_by_id(collection, name, id)
+        return result
+
+    def read_vector_group_by_id(
+        self, collection: str, group: str, id: int,
+    ) -> list[dict]:
+        """Read a multi-column vector group as row dicts.
+
+        Each row is a dict mapping column names to typed values.
+        Includes 'vector_index' (0-based) for ordering info.
+        Rows are returned in vector_index order.
+        DATE_TIME columns are parsed to datetime objects.
+        """
+        self._ensure_open()
+        metadata = self.get_vector_metadata(collection, group)
+        columns = metadata.value_columns
+        if not columns:
+            return []
+
+        column_data = {}
+        row_count = 0
+        for col in columns:
+            name = col.name
+            if col.data_type == 0:      # INTEGER
+                values = self.read_vector_integers_by_id(collection, name, id)
+            elif col.data_type == 1:    # FLOAT
+                values = self.read_vector_floats_by_id(collection, name, id)
+            elif col.data_type == 3:    # DATE_TIME
+                values = self.read_vector_date_time_by_id(collection, name, id)
+            else:                       # STRING (2)
+                values = self.read_vector_strings_by_id(collection, name, id)
+            column_data[name] = values
+            row_count = len(values)
+
+        return [
+            {"vector_index": i, **{name: vals[i] for name, vals in column_data.items()}}
+            for i in range(row_count)
+        ]
+
+    def read_set_group_by_id(
+        self, collection: str, group: str, id: int,
+    ) -> list[dict]:
+        """Read a multi-column set group as row dicts.
+
+        Each row is a dict mapping column names to typed values.
+        DATE_TIME columns are parsed to datetime objects.
+        """
+        self._ensure_open()
+        metadata = self.get_set_metadata(collection, group)
+        columns = metadata.value_columns
+        if not columns:
+            return []
+
+        column_data = {}
+        row_count = 0
+        for col in columns:
+            name = col.name
+            if col.data_type == 0:      # INTEGER
+                values = self.read_set_integers_by_id(collection, name, id)
+            elif col.data_type == 1:    # FLOAT
+                values = self.read_set_floats_by_id(collection, name, id)
+            elif col.data_type == 3:    # DATE_TIME
+                values = self.read_set_date_time_by_id(collection, name, id)
+            else:                       # STRING (2)
+                values = self.read_set_strings_by_id(collection, name, id)
+            column_data[name] = values
+            row_count = len(values)
+
+        return [
+            {name: vals[i] for name, vals in column_data.items()}
+            for i in range(row_count)
+        ]
+
     def __repr__(self) -> str:
         if self._closed:
             return "Database(closed)"
         return f"Database(path={self.path()!r})"
+
+
+# -- DateTime parsing helper (module-level) ----------------------------------
+
+
+def _parse_datetime(s: str | None) -> datetime | None:
+    """Parse an ISO 8601 datetime string to timezone-aware UTC datetime.
+
+    Returns None if input is None. Raises ValueError on malformed input.
+    Both 'YYYY-MM-DDTHH:MM:SS' and 'YYYY-MM-DD HH:MM:SS' formats are supported.
+    """
+    if s is None:
+        return None
+    return datetime.fromisoformat(s).replace(tzinfo=timezone.utc)
 
 
 # -- Parameter marshaling helpers (module-level) -----------------------------
@@ -1261,6 +1455,62 @@ def _marshal_time_series_columns(
             c_col_data[c] = ffi.cast("void*", c_arr)
 
     return keepalive, c_col_names, c_col_types, c_col_data, col_count, row_count
+
+
+def _marshal_csv_export_options(options: CSVExportOptions) -> tuple:
+    """Marshal CSVExportOptions into C API struct pointer.
+
+    Returns (keepalive, c_opts) where keepalive must stay referenced
+    during the C API call.
+    """
+    keepalive: list = []
+    c_opts = ffi.new("quiver_csv_export_options_t*")
+
+    # date_time_format
+    dtf_buf = ffi.new("char[]", options.date_time_format.encode("utf-8"))
+    keepalive.append(dtf_buf)
+    c_opts.date_time_format = dtf_buf
+
+    if not options.enum_labels:
+        c_opts.enum_attribute_names = ffi.NULL
+        c_opts.enum_entry_counts = ffi.NULL
+        c_opts.enum_values = ffi.NULL
+        c_opts.enum_labels = ffi.NULL
+        c_opts.enum_attribute_count = 0
+        return keepalive, c_opts
+
+    attr_count = len(options.enum_labels)
+    c_attr_names = ffi.new("const char*[]", attr_count)
+    keepalive.append(c_attr_names)
+    c_entry_counts = ffi.new("size_t[]", attr_count)
+    keepalive.append(c_entry_counts)
+
+    total_entries = sum(len(entries) for entries in options.enum_labels.values())
+    c_values = ffi.new("int64_t[]", total_entries)
+    keepalive.append(c_values)
+    c_labels = ffi.new("const char*[]", total_entries)
+    keepalive.append(c_labels)
+
+    entry_idx = 0
+    for attr_idx, (attr_name, entries) in enumerate(options.enum_labels.items()):
+        name_buf = ffi.new("char[]", attr_name.encode("utf-8"))
+        keepalive.append(name_buf)
+        c_attr_names[attr_idx] = name_buf
+        c_entry_counts[attr_idx] = len(entries)
+        for val, label in entries.items():
+            c_values[entry_idx] = val
+            label_buf = ffi.new("char[]", label.encode("utf-8"))
+            keepalive.append(label_buf)
+            c_labels[entry_idx] = label_buf
+            entry_idx += 1
+
+    c_opts.enum_attribute_names = c_attr_names
+    c_opts.enum_entry_counts = c_entry_counts
+    c_opts.enum_values = c_values
+    c_opts.enum_labels = c_labels
+    c_opts.enum_attribute_count = attr_count
+
+    return keepalive, c_opts
 
 
 # -- Metadata parsing helpers (module-level) ---------------------------------
