@@ -1,10 +1,22 @@
 #include "quiver/element.h"
 
+#include <algorithm>
 #include <sstream>
 
 namespace quiver {
 
 namespace {
+
+// Trim leading and trailing whitespaces
+std::string trim(const std::string& s) {
+    const char* whitespace = " \t\n\r\f\v";
+    size_t start = s.find_first_not_of(whitespace);
+    if (start == std::string::npos) {
+        return "";
+    }
+    size_t end = s.find_last_not_of(whitespace);
+    return s.substr(start, end - start + 1);
+}
 
 std::string value_to_string(const Value& value) {
     return std::visit(
@@ -39,7 +51,7 @@ Element& Element::set(const std::string& name, double value) {
 }
 
 Element& Element::set(const std::string& name, const std::string& value) {
-    scalars_[name] = value;
+    scalars_[name] = trim(value);
     return *this;
 }
 
@@ -59,7 +71,12 @@ Element& Element::set(const std::string& name, const std::vector<double>& values
 }
 
 Element& Element::set(const std::string& name, const std::vector<std::string>& values) {
-    arrays_[name] = std::vector<Value>(values.begin(), values.end());
+    std::vector<Value> trimmed;
+    trimmed.reserve(values.size());
+    for (const auto& v : values) {
+        trimmed.push_back(trim(v));
+    }
+    arrays_[name] = std::move(trimmed);
     return *this;
 }
 

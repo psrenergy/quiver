@@ -79,6 +79,44 @@ TEST(Element, SetArrayString) {
     EXPECT_EQ(std::get<std::string>(arrays.at("tags")[1]), "urgent");
 }
 
+TEST(Element, SetStringTrimsWhitespace) {
+    quiver::Element element;
+    element.set("label", std::string{"  Plant 1  "});
+
+    EXPECT_EQ(std::get<std::string>(element.scalars().at("label")), "Plant 1");
+}
+
+TEST(Element, SetStringTrimsLeadingWhitespace) {
+    quiver::Element element;
+    element.set("label", std::string{"\t\n  Test"});
+
+    EXPECT_EQ(std::get<std::string>(element.scalars().at("label")), "Test");
+}
+
+TEST(Element, SetStringTrimsTrailingWhitespace) {
+    quiver::Element element;
+    element.set("label", std::string{"Test  \r\n"});
+
+    EXPECT_EQ(std::get<std::string>(element.scalars().at("label")), "Test");
+}
+
+TEST(Element, SetStringAllWhitespaceBecomesEmpty) {
+    quiver::Element element;
+    element.set("label", std::string{"   \t\n  "});
+
+    EXPECT_EQ(std::get<std::string>(element.scalars().at("label")), "");
+}
+
+TEST(Element, SetArrayStringTrimsWhitespace) {
+    quiver::Element element;
+    element.set("tags", std::vector<std::string>{"  tag1  ", "\ttag2\n", "  tag3"});
+
+    const auto& arrays = element.arrays();
+    EXPECT_EQ(std::get<std::string>(arrays.at("tags")[0]), "tag1");
+    EXPECT_EQ(std::get<std::string>(arrays.at("tags")[1]), "tag2");
+    EXPECT_EQ(std::get<std::string>(arrays.at("tags")[2]), "tag3");
+}
+
 TEST(Element, FluentChaining) {
     quiver::Element element;
 
