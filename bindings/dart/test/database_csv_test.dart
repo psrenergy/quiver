@@ -442,5 +442,38 @@ void main() {
         db.close();
       }
     });
+
+    test('group invalid enum throws', () {
+      final db = Database.fromSchema(':memory:', schemaPath);
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_bad_group_enum.csv';
+      try {
+        db.createElement('Items', {
+          'label': 'Item1',
+          'name': 'Alpha',
+        });
+
+        File(csvPath).writeAsStringSync(
+          'sep=,\nid,date_time,temperature,humidity\nItem1,2024-01-01T10:00:00,22.5,Unknown\n',
+        );
+
+        expect(
+          () => db.importCSV(
+            'Items',
+            'readings',
+            csvPath,
+            enumLabels: {
+              'humidity': {
+                'en': {'Low': 60, 'High': 90},
+              },
+            },
+          ),
+          throwsException,
+        );
+      } finally {
+        final f = File(csvPath);
+        if (f.existsSync()) f.deleteSync();
+        db.close();
+      }
+    });
   });
 }

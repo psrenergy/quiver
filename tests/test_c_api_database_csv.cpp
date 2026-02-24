@@ -1462,6 +1462,54 @@ TEST(DatabaseCApiCSV, ImportCSV_TimeSeries_EnumInGroup_RoundTrip) {
 }
 
 // ============================================================================
+// CSV Import: Group invalid enum (no mapping provided for INTEGER column)
+// ============================================================================
+
+TEST(DatabaseCApiCSV, ImportCSV_Group_InvalidEnum_ReturnsError) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+              QUIVER_OK);
+
+    quiver_element_t* e1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
+    quiver_element_set_string(e1, "label", "Item1");
+    quiver_element_set_string(e1, "name", "Alpha");
+    int64_t id1 = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Items", e1, &id1), QUIVER_OK);
+    quiver_element_destroy(e1);
+
+    auto csv_path = temp_csv("ImportGroupBadEnum");
+    write_csv_file(csv_path.string(),
+                   "sep=,\nid,date_time,temperature,humidity\n"
+                   "Item1,2024-01-01T10:00:00,22.5,Unknown\n");
+
+    const char* attr_names[] = {"humidity"};
+    const char* locale_names[] = {"en"};
+    size_t entry_counts[] = {2};
+    const char* labels[] = {"Low", "High"};
+    int64_t values[] = {60, 90};
+
+    quiver_csv_options_t csv_opts = {};
+    csv_opts.date_time_format = "";
+    csv_opts.enum_attribute_names = attr_names;
+    csv_opts.enum_locale_names = locale_names;
+    csv_opts.enum_entry_counts = entry_counts;
+    csv_opts.enum_labels = labels;
+    csv_opts.enum_values = values;
+    csv_opts.enum_group_count = 1;
+
+    EXPECT_EQ(quiver_database_import_csv(db, "Items", "readings", csv_path.string().c_str(), &csv_opts), QUIVER_ERROR);
+
+    std::string err = quiver_get_last_error();
+    EXPECT_NE(err.find("Invalid enum value"), std::string::npos);
+
+    fs::remove(csv_path);
+    quiver_database_close(db);
+}
+
+// ============================================================================
 // CSV Import: Group duplicate entries (UNIQUE constraint violation)
 // ============================================================================
 

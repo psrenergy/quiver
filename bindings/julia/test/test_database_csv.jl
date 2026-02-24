@@ -392,6 +392,28 @@ end
             Quiver.close!(db)
         end
     end
+
+    @testset "Group invalid enum throws" begin
+        db = Quiver.from_schema(":memory:", path_schema)
+        csv_path = tempname() * ".csv"
+        try
+            Quiver.create_element!(db, "Items";
+                label = "Item1",
+                name = "Alpha",
+            )
+
+            open(csv_path, "w") do f
+                return write(f, "sep=,\nid,date_time,temperature,humidity\nItem1,2024-01-01T10:00:00,22.5,Unknown\n")
+            end
+
+            @test_throws Exception Quiver.import_csv(db, "Items", "readings", csv_path;
+                enum_labels = Dict("humidity" => Dict("en" => Dict("Low" => 60, "High" => 90))),
+            )
+        finally
+            isfile(csv_path) && rm(csv_path)
+            Quiver.close!(db)
+        end
+    end
 end
 
 end # module TestDatabaseCSV

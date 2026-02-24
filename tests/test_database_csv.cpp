@@ -1556,6 +1556,40 @@ TEST(DatabaseCSV, ImportCSV_TimeSeries_EnumInGroup_RoundTrip) {
 }
 
 // ============================================================================
+// import_csv: Group invalid enum (no mapping provided for INTEGER column)
+// ============================================================================
+
+TEST(DatabaseCSV, ImportCSV_Group_InvalidEnum_Throws) {
+    auto db = make_db();
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item1")).set("name", std::string("Alpha"));
+    db.create_element("Items", e1);
+
+    auto csv_path = temp_csv("ImportGroupBadEnum");
+    // humidity is INTEGER NOT NULL — "Unknown" is not in the enum mapping
+    write_csv_file(csv_path.string(),
+                   "sep=,\nid,date_time,temperature,humidity\n"
+                   "Item1,2024-01-01T10:00:00,22.5,Unknown\n");
+
+    quiver::CSVOptions opts;
+    opts.enum_labels["humidity"]["en"] = {{"Low", 60}, {"High", 90}};
+
+    EXPECT_THROW(
+        {
+            try {
+                db.import_csv("Items", "readings", csv_path.string(), opts);
+            } catch (const std::runtime_error& e) {
+                EXPECT_NE(std::string(e.what()).find("Invalid enum value"), std::string::npos);
+                throw;
+            }
+        },
+        std::runtime_error);
+
+    fs::remove(csv_path);
+}
+
+// ============================================================================
 // import_csv: Group duplicate entries (UNIQUE constraint violation)
 // ============================================================================
 
