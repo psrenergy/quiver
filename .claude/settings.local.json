@@ -21,7 +21,8 @@
       "Bash(node:*)",
       "WebSearch",
       "Bash(cmd:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(julia:*)"
     ]
   }
 }
