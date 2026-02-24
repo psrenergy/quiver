@@ -971,6 +971,67 @@ void main() {
   });
 
   // ==========================================================================
+  // Gap-fill: String vector, integer set, float set updates (using all_types.sql)
+  // ==========================================================================
+
+  group('Update Vector Strings', () {
+    test('updates vector strings', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        db.createElement('AllTypes', {'label': 'Item 1'});
+
+        db.updateVectorStrings('AllTypes', 'label_value', 1, ['alpha', 'beta']);
+
+        final result = db.readVectorStringsById('AllTypes', 'label_value', 1);
+        expect(result, equals(['alpha', 'beta']));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Update Set Integers', () {
+    test('updates set integers', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        db.createElement('AllTypes', {'label': 'Item 1'});
+
+        db.updateSetIntegers('AllTypes', 'code', 1, [10, 20, 30]);
+
+        final result = db.readSetIntegersById('AllTypes', 'code', 1);
+        expect(result..sort(), equals([10, 20, 30]));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Update Set Floats', () {
+    test('updates set floats', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        db.createElement('AllTypes', {'label': 'Item 1'});
+
+        db.updateSetFloats('AllTypes', 'weight', 1, [1.1, 2.2]);
+
+        final result = db.readSetFloatsById('AllTypes', 'weight', 1);
+        expect(result..sort(), equals([1.1, 2.2]));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  // ==========================================================================
   // FK Resolution - Update tests
   // ==========================================================================
 
