@@ -57,7 +57,7 @@ include("fixture.jl")
         @test length(ids) == 2
 
         # Delete element with id 1 (CASCADE should delete vector data)
-        Quiver.delete_element!(db, "Collection", Int64(1))
+        Quiver.delete_element!(db, "Collection", 1)
 
         # Verify element is deleted
         ids = Quiver.read_element_ids(db, "Collection")
@@ -87,7 +87,7 @@ include("fixture.jl")
         @test length(ids) == 2
 
         # Delete element with id 1 (CASCADE should delete set data)
-        Quiver.delete_element!(db, "Collection", Int64(1))
+        Quiver.delete_element!(db, "Collection", 1)
 
         # Verify element is deleted
         ids = Quiver.read_element_ids(db, "Collection")
