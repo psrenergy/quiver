@@ -195,9 +195,9 @@ void Database::export_csv(const std::string& collection,
         std::string table_name;
         GroupTableType group_type{};
 
-        std::string vec_table = Schema::vector_table_name(collection, group);
-        std::string set_table = Schema::set_table_name(collection, group);
-        std::string ts_table = Schema::time_series_table_name(collection, group);
+        auto vec_table = Schema::vector_table_name(collection, group);
+        auto set_table = Schema::set_table_name(collection, group);
+        auto ts_table = Schema::time_series_table_name(collection, group);
 
         if (impl_->schema->has_table(vec_table)) {
             table_name = vec_table;
@@ -453,13 +453,13 @@ void Database::import_csv(const std::string& collection,
     impl_->require_collection(collection, "import_csv");
 
     // Resolve target table name
-    std::string table_name = collection;
+    auto table_name = collection;
     GroupTableType group_type;
 
     if (!group.empty()) {
-        std::string vec_table = Schema::vector_table_name(collection, group);
-        std::string set_table = Schema::set_table_name(collection, group);
-        std::string ts_table = Schema::time_series_table_name(collection, group);
+        auto vec_table = Schema::vector_table_name(collection, group);
+        auto set_table = Schema::set_table_name(collection, group);
+        auto ts_table = Schema::time_series_table_name(collection, group);
 
         if (impl_->schema->has_table(vec_table)) {
             table_name = vec_table;
@@ -542,11 +542,11 @@ void Database::import_csv(const std::string& collection,
         // Validation pass: check all cells before mutating
         for (size_t row = 0; row < row_count; ++row) {
             for (const auto& col_name : db_cols) {
-                std::string cell = read_cell(doc, csv_col_index[col_name], row);
+                auto cell = read_cell(doc, csv_col_index[col_name], row);
                 const auto* col_def = table_def->get_column(col_name);
                 auto fk_it = fk_map.find(col_name);
-                bool is_fk = fk_it != fk_map.end();
-                bool is_self_fk = is_fk && fk_it->second.to_table == collection;
+                auto is_fk = fk_it != fk_map.end();
+                auto is_self_fk = is_fk && fk_it->second.to_table == collection;
 
                 if (cell.empty()) {
                     if (col_def && col_def->not_null) {
@@ -621,8 +621,8 @@ void Database::import_csv(const std::string& collection,
                     std::string cell = read_cell(doc, csv_col_index[col_name], row);
                     const auto* col_def = table_def->get_column(col_name);
                     auto fk_it = fk_map.find(col_name);
-                    bool is_fk = fk_it != fk_map.end();
-                    bool is_self_fk = is_fk && fk_it->second.to_table == collection;
+                    auto is_fk = fk_it != fk_map.end();
+                    auto is_self_fk = is_fk && fk_it->second.to_table == collection;
 
                     if (cell.empty()) {
                         params.emplace_back(nullptr);
@@ -679,7 +679,7 @@ void Database::import_csv(const std::string& collection,
 
                 for (const auto& col_name : self_fk_cols) {
                     for (size_t row = 0; row < row_count; ++row) {
-                        std::string cell = read_cell(doc, csv_col_index[col_name], row);
+                        auto cell = read_cell(doc, csv_col_index[col_name], row);
                         if (cell.empty())
                             continue;
 
