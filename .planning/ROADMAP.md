@@ -43,10 +43,11 @@ Plans:
   2. When running in development mode (no bundled libs), `_loader.py` falls back to finding libraries via PATH (existing behavior preserved)
   3. On Windows, `os.add_dll_directory()` is called for the bundled lib directory so `libquiver_c.dll` resolves its `libquiver.dll` dependency
   4. Installing the wheel in a clean virtual environment and running the full test suite passes (end-to-end local validation)
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 02-01: TBD
+- [ ] 02-01-PLAN.md -- Rewrite _loader.py with bundled-first discovery and add Linux RPATH
+- [ ] 02-02-PLAN.md -- End-to-end wheel install validation in clean venv
 
 ### Phase 3: CI Wheel Building
 **Goal**: GitHub Actions automatically builds and tests correct wheels for both target platforms on every push
@@ -83,6 +84,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Build System Migration | 2/2 | Complete | 2026-02-25 |
-| 2. Loader Rewrite | 0/0 | Not started | - |
+| 2. Loader Rewrite | 0/2 | In progress | - |
 | 3. CI Wheel Building | 0/0 | Not started | - |
 | 4. PyPI Publishing | 0/0 | Not started | - |
