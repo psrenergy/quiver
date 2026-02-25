@@ -46,7 +46,11 @@ class TestUpdateVector:
             "Collection",
             Element().set("label", "Item1"),
         )
-        collections_db.update_vector_integers("Collection", "value_int", elem_id, [10, 20, 30])
+        collections_db.update_element(
+            "Collection",
+            elem_id,
+            Element().set("value_int", [10, 20, 30]),
+        )
         result = collections_db.read_vector_integers_by_id("Collection", "value_int", elem_id)
         assert result == [10, 20, 30]
 
@@ -56,7 +60,11 @@ class TestUpdateVector:
             "Collection",
             Element().set("label", "Item1"),
         )
-        collections_db.update_vector_floats("Collection", "value_float", elem_id, [1.1, 2.2, 3.3])
+        collections_db.update_element(
+            "Collection",
+            elem_id,
+            Element().set("value_float", [1.1, 2.2, 3.3]),
+        )
         result = collections_db.read_vector_floats_by_id("Collection", "value_float", elem_id)
         assert len(result) == 3
         assert abs(result[0] - 1.1) < 1e-9
@@ -69,11 +77,19 @@ class TestUpdateVector:
             "Collection",
             Element().set("label", "Item1"),
         )
-        collections_db.update_vector_integers("Collection", "value_int", elem_id, [10, 20])
+        collections_db.update_element(
+            "Collection",
+            elem_id,
+            Element().set("value_int", [10, 20]),
+        )
         # Verify data exists
         assert collections_db.read_vector_integers_by_id("Collection", "value_int", elem_id) == [10, 20]
         # Clear with empty list
-        collections_db.update_vector_integers("Collection", "value_int", elem_id, [])
+        collections_db.update_element(
+            "Collection",
+            elem_id,
+            Element().set("value_int", []),
+        )
         result = collections_db.read_vector_integers_by_id("Collection", "value_int", elem_id)
         assert result == []
 
@@ -85,7 +101,11 @@ class TestUpdateSet:
             "Collection",
             Element().set("label", "Item1"),
         )
-        collections_db.update_set_strings("Collection", "tag", elem_id, ["tag1", "tag2"])
+        collections_db.update_element(
+            "Collection",
+            elem_id,
+            Element().set("tag", ["tag1", "tag2"]),
+        )
         result = collections_db.read_set_strings_by_id("Collection", "tag", elem_id)
         assert sorted(result) == ["tag1", "tag2"]
 
@@ -95,11 +115,19 @@ class TestUpdateSet:
             "Collection",
             Element().set("label", "Item1"),
         )
-        collections_db.update_set_strings("Collection", "tag", elem_id, ["tag1", "tag2"])
+        collections_db.update_element(
+            "Collection",
+            elem_id,
+            Element().set("tag", ["tag1", "tag2"]),
+        )
         # Verify data exists
         assert sorted(collections_db.read_set_strings_by_id("Collection", "tag", elem_id)) == ["tag1", "tag2"]
         # Clear with empty list
-        collections_db.update_set_strings("Collection", "tag", elem_id, [])
+        collections_db.update_element(
+            "Collection",
+            elem_id,
+            Element().set("tag", []),
+        )
         result = collections_db.read_set_strings_by_id("Collection", "tag", elem_id)
         assert result == []
 
