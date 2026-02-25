@@ -24,7 +24,7 @@ inline quiver::CSVOptions convert_options(const quiver_csv_options_t* opts) {
     return cpp_opts;
 }
 
-inline quiver_csv_options_t quiver_csv_options_default(void) {
+inline quiver_csv_options_t csv_options_default() {
     quiver_csv_options_t opts = {};
     opts.date_time_format = "";
     return opts;
