@@ -27,7 +27,7 @@ Full details: [milestones/v0.4-ROADMAP.md](milestones/v0.4-ROADMAP.md)
 
 **Milestone Goal:** Align Python bindings with upstream C++ changes -- remove deprecated relation convenience methods, implement import_csv, and restructure CSVOptions to match C++ layout.
 
-- [x] **Phase 8: Relations Cleanup** - Remove pure-Python relation convenience methods and rewrite tests to use integrated CRUD pattern (completed 2026-02-25)
+- [x] **Phase 8: Relations Cleanup** - Remove pure-Python relation convenience methods and rewrite tests to use integrated CRUD pattern (completed 2026-02-25)
 - [ ] **Phase 9: CSV Import and Options** - Implement import_csv, restructure CSVOptions with locale support, add import tests, update documentation
 
 ## Phase Details
@@ -55,10 +55,11 @@ Plans:
   2. CSVOptions class (not CSVExportOptions) exists with enum_labels structured as attribute-locale-label-value matching C++ and Julia/Dart
   3. Import and export round-trip tests pass -- data exported to CSV can be imported back and read correctly
   4. CLAUDE.md references CSVOptions (not CSVExportOptions) throughout
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 09-01: TBD
+- [ ] 09-01-PLAN.md -- Rename CSVExportOptions to CSVOptions, restructure enum_labels, rewrite marshaler, update export tests
+- [ ] 09-02-PLAN.md -- Implement import_csv, add scalar/group/enum round-trip tests
 
 ## Progress
 
@@ -74,5 +75,5 @@ Phases execute in numeric order: 8 -> 9
 | 5. Time Series | v0.4 | 2/2 | Complete | 2026-02-23 |
 | 6. CSV and Convenience Helpers | v0.4 | 2/2 | Complete | 2026-02-24 |
 | 7. Test Parity | v0.4 | 4/4 | Complete | 2026-02-24 |
-| 8. Relations Cleanup | 2/2 | Complete    | 2026-02-25 | - |
-| 9. CSV Import and Options | v0.4.1 | 0/? | Not started | - |
+| 8. Relations Cleanup | v0.4.1 | 2/2 | Complete | 2026-02-25 |
+| 9. CSV Import and Options | v0.4.1 | 0/2 | Not started | - |
