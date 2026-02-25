@@ -2167,7 +2167,7 @@ TEST(LuaRunner_ExportCSV, GroupExport) {
         db:update_element("Items", id2, { measurement = {4.4, 5.5} })
     )");
 
-    lua.run("db:export_csv(\"Items\", \"measurements\", \"" + lua_safe_path(csv_path) + "\")");
+    lua.run(R"(db:export_csv("Items", "measurements", ")" + lua_safe_path(csv_path) + "\")");
 
     auto content = read_csv_file(csv_path.string());
     EXPECT_NE(content.find("sep=,\nid,vector_index,measurement\n"), std::string::npos);
