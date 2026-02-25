@@ -14,9 +14,9 @@ Requirements for PyPI distribution milestone. Each maps to roadmap phases.
 
 ### Loader
 
-- [ ] **LOAD-01**: `_loader.py` discovers bundled native libs from `_libs/` subdirectory relative to package
-- [ ] **LOAD-02**: `_loader.py` falls back to development PATH discovery when bundled libs not found
-- [ ] **LOAD-03**: Windows `os.add_dll_directory()` registers bundled lib directory for transitive DLL resolution
+- [x] **LOAD-01**: `_loader.py` discovers bundled native libs from `_libs/` subdirectory relative to package
+- [x] **LOAD-02**: `_loader.py` falls back to development PATH discovery when bundled libs not found
+- [x] **LOAD-03**: Windows `os.add_dll_directory()` registers bundled lib directory for transitive DLL resolution
 
 ### CI/CD
 
@@ -52,9 +52,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | BUILD-01 | Phase 1 | Complete |
 | BUILD-02 | Phase 1 | Complete |
-| LOAD-01 | Phase 2 | Pending |
-| LOAD-02 | Phase 2 | Pending |
-| LOAD-03 | Phase 2 | Pending |
+| LOAD-01 | Phase 2 | Complete |
+| LOAD-02 | Phase 2 | Complete |
+| LOAD-03 | Phase 2 | Complete |
 | CI-01 | Phase 3 | Pending |
 | CI-02 | Phase 3 | Pending |
 | CI-03 | Phase 3 | Pending |
