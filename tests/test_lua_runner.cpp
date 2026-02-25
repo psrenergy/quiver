@@ -2159,8 +2159,8 @@ TEST(LuaRunner_ExportCSV, GroupExport) {
     lua.run(R"(
         local id1 = db:create_element("Items", { label = "Item1", name = "Alpha" })
         local id2 = db:create_element("Items", { label = "Item2", name = "Beta" })
-        db:update_vector_floats("Items", "measurement", id1, {1.1, 2.2, 3.3})
-        db:update_vector_floats("Items", "measurement", id2, {4.4, 5.5})
+        db:update_element("Items", id1, { measurement = {1.1, 2.2, 3.3} })
+        db:update_element("Items", id2, { measurement = {4.4, 5.5} })
     )");
 
     lua.run("db:export_csv(\"Items\", \"measurements\", \"" + lua_safe_path(csv_path) + "\")");
@@ -2325,7 +2325,7 @@ TEST(LuaRunner_ImportCSV, VectorGroupRoundTrip) {
 
     lua.run(R"(
         local id1 = db:create_element("Items", { label = "Item1", name = "Alpha" })
-        db:update_vector_floats("Items", "measurement", id1, {1.1, 2.2, 3.3})
+        db:update_element("Items", id1, { measurement = {1.1, 2.2, 3.3} })
     )");
 
     // Export
@@ -2333,7 +2333,7 @@ TEST(LuaRunner_ImportCSV, VectorGroupRoundTrip) {
 
     // Clear vector and re-import
     lua.run(R"(
-        db:update_vector_floats("Items", "measurement", 1, {})
+        db:update_element("Items", 1, { measurement = {} })
     )");
 
     lua.run("db:import_csv(\"Items\", \"measurements\", \"" + lua_safe_path(csv_path) + "\")");
@@ -2869,7 +2869,7 @@ TEST_F(LuaRunnerFkTest, UpdateVectorFkViaTypedMethod) {
         label = "Child 1",
         parent_ref = {"Parent 1"}
     })
-    db:update_vector_integers("Child", "parent_ref", 1, {2, 1})
+    db:update_element("Child", 1, { parent_ref = {2, 1} })
 )");
 
     auto refs = db.read_vector_integers_by_id("Child", "parent_ref", 1);
