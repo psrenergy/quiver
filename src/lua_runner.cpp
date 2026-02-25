@@ -175,56 +175,6 @@ struct LuaRunner::Impl {
             [](Database& self) { return self.current_version(); },
             "path",
             [](Database& self) -> const std::string& { return self.path(); },
-            // Group 3: Vector updates
-            "update_vector_integers",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               sol::table values) {
-                self.update_vector_integers(collection, attribute, id, lua_table_to_int64_vector(values));
-            },
-            "update_vector_floats",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               sol::table values) {
-                self.update_vector_floats(collection, attribute, id, lua_table_to_double_vector(values));
-            },
-            "update_vector_strings",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               sol::table values) {
-                self.update_vector_strings(collection, attribute, id, lua_table_to_string_vector(values));
-            },
-            // Group 4: Set updates
-            "update_set_integers",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               sol::table values) {
-                self.update_set_integers(collection, attribute, id, lua_table_to_int64_vector(values));
-            },
-            "update_set_floats",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               sol::table values) {
-                self.update_set_floats(collection, attribute, id, lua_table_to_double_vector(values));
-            },
-            "update_set_strings",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               sol::table values) {
-                self.update_set_strings(collection, attribute, id, lua_table_to_string_vector(values));
-            },
             // Group 5: Bulk set reads
             "read_set_integers",
             [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {

@@ -103,10 +103,19 @@ TEST(DatabaseCApiCSV, ExportCSV_VectorGroupExport) {
     ASSERT_EQ(quiver_database_create_element(db, "Items", e2, &id2), QUIVER_OK);
     quiver_element_destroy(e2);
 
+    quiver_element_t* update1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&update1), QUIVER_OK);
     double vec_values1[] = {1.1, 2.2, 3.3};
-    ASSERT_EQ(quiver_database_update_vector_floats(db, "Items", "measurement", id1, vec_values1, 3), QUIVER_OK);
+    quiver_element_set_array_float(update1, "measurement", vec_values1, 3);
+    ASSERT_EQ(quiver_database_update_element(db, "Items", id1, update1), QUIVER_OK);
+    quiver_element_destroy(update1);
+
+    quiver_element_t* update2 = nullptr;
+    ASSERT_EQ(quiver_element_create(&update2), QUIVER_OK);
     double vec_values2[] = {4.4, 5.5};
-    ASSERT_EQ(quiver_database_update_vector_floats(db, "Items", "measurement", id2, vec_values2, 2), QUIVER_OK);
+    quiver_element_set_array_float(update2, "measurement", vec_values2, 2);
+    ASSERT_EQ(quiver_database_update_element(db, "Items", id2, update2), QUIVER_OK);
+    quiver_element_destroy(update2);
 
     auto csv_path = temp_csv("VectorExport");
     auto csv_opts = quiver_csv_options_default();
@@ -145,7 +154,11 @@ TEST(DatabaseCApiCSV, ExportCSV_SetGroupExport) {
     quiver_element_destroy(e1);
 
     const char* set_values[] = {"red", "green", "blue"};
-    ASSERT_EQ(quiver_database_update_set_strings(db, "Items", "tag", id1, set_values, 3), QUIVER_OK);
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
+    quiver_element_set_array_string(update, "tag", set_values, 3);
+    ASSERT_EQ(quiver_database_update_element(db, "Items", id1, update), QUIVER_OK);
+    quiver_element_destroy(update);
 
     auto csv_path = temp_csv("SetExport");
     auto csv_opts = quiver_csv_options_default();
