@@ -2,7 +2,7 @@
     build_quiver_csv_options(kwargs...) -> (Ref{quiver_csv_options_t}, Vector{Any})
 
 Build a C API `quiver_csv_options_t` from keyword arguments.
-Returns `(opts_ref, temps)` where `temps` holds all temporary objects that must
+Returns `(options_ref, temps)` where `temps` holds all temporary objects that must
 stay alive during the C call (use inside `GC.@preserve`).
 
 Supported kwargs:
@@ -78,7 +78,7 @@ function build_quiver_csv_options(; kwargs...)
         end
     end
 
-    opts_new = C.quiver_csv_options_t(
+    options_new = C.quiver_csv_options_t(
         dtf_ptr,
         attr_names_ptr,
         locale_names_ptr,
@@ -87,8 +87,8 @@ function build_quiver_csv_options(; kwargs...)
         values_ptr,
         group_count,
     )
-    opts_ref = Ref(opts_new)
-    push!(temps, opts_ref)
+    options_ref = Ref(options_new)
+    push!(temps, options_ref)
 
-    return (opts_ref, temps)
+    return (options_ref, temps)
 end

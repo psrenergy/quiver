@@ -254,10 +254,10 @@ struct LuaRunner::Impl {
                const std::string& collection,
                const std::string& group,
                const std::string& path,
-               sol::optional<sol::table> opts_table) {
+               sol::optional<sol::table> options_table) {
                 CSVOptions options;
-                if (opts_table) {
-                    auto& t = *opts_table;
+                if (options_table) {
+                    auto& t = *options_table;
                     if (auto fmt = t.get<sol::optional<std::string>>("date_time_format")) {
                         options.date_time_format = *fmt;
                     }
@@ -283,10 +283,10 @@ struct LuaRunner::Impl {
                const std::string& collection,
                const std::string& group,
                const std::string& path,
-               sol::optional<sol::table> opts_table) {
+               sol::optional<sol::table> options_table) {
                 CSVOptions options;
-                if (opts_table) {
-                    auto& t = *opts_table;
+                if (options_table) {
+                    auto& t = *options_table;
                     if (auto fmt = t.get<sol::optional<std::string>>("date_time_format")) {
                         options.date_time_format = *fmt;
                     }

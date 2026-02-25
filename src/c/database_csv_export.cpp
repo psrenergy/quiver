@@ -20,8 +20,8 @@ QUIVER_C_API quiver_error_t quiver_database_export_csv(quiver_database_t* db,
     QUIVER_REQUIRE(db, collection, group, path, options);
 
     try {
-        auto cpp_opts = convert_options(options);
-        db->db.export_csv(collection, group, path, cpp_opts);
+        auto cpp_options = convert_options(options);
+        db->db.export_csv(collection, group, path, cpp_options);
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());

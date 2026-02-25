@@ -22,8 +22,8 @@ extension DatabaseCSVImport on Database {
     _ensureNotClosed();
     final arena = Arena();
     try {
-      final optsPtr = arena<quiver_csv_options_t>();
-      _fillCSVOptions(optsPtr, arena, enumLabels: enumLabels, dateTimeFormat: dateTimeFormat);
+      final optionsPtr = arena<quiver_csv_options_t>();
+      _fillCSVOptions(optionsPtr, arena, enumLabels: enumLabels, dateTimeFormat: dateTimeFormat);
 
       check(
         bindings.quiver_database_import_csv(
@@ -31,7 +31,7 @@ extension DatabaseCSVImport on Database {
           collection.toNativeUtf8(allocator: arena).cast(),
           group.toNativeUtf8(allocator: arena).cast(),
           path.toNativeUtf8(allocator: arena).cast(),
-          optsPtr,
+          optionsPtr,
         ),
       );
     } finally {
