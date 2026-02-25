@@ -5,63 +5,75 @@ from pathlib import Path
 
 from cffi import FFI
 
+_PACKAGE_DIR = Path(__file__).resolve().parent
+_LIBS_DIR = _PACKAGE_DIR / "_libs"
+_EXT = ".dll" if sys.platform == "win32" else ".so"
+_LIB_CORE = f"libquiver{_EXT}"
+_LIB_C_API = f"libquiver_c{_EXT}"
 
-def _find_library_dir() -> Path | None:
-    """Walk up from this file to find a build directory containing the shared libraries."""
-    current = Path(__file__).resolve().parent
+# Set after successful load
+_load_source: str = ""
 
-    # Platform-specific library name to look for
-    if sys.platform == "win32":
-        lib_name = "libquiver_c.dll"
-        subdirs = ["bin", "lib"]
-    elif sys.platform == "darwin":
-        lib_name = "libquiver_c.dylib"
-        subdirs = ["lib", "bin"]
-    else:
-        lib_name = "libquiver_c.so"
-        subdirs = ["lib", "bin"]
-
-    while current != current.parent:
-        build_dir = current / "build"
-        if build_dir.is_dir():
-            for subdir in subdirs:
-                candidate = build_dir / subdir
-                if candidate.is_dir() and (candidate / lib_name).exists():
-                    return candidate
-        current = current.parent
-    return None
+# Windows DLL directory handle (kept alive for process lifetime)
+_dll_dir_handle = None
 
 
 def load_library(ffi: FFI):
-    """Load the Quiver C API shared library via CFFI ABI mode.
+    """Load the Quiver C API shared library.
 
-    Pre-loads the core library first so that the C API library can resolve
-    its dependency chain. Returns the CFFI library handle for libquiver_c.
+    Strategy:
+    1. Bundled: Look for _libs/ subdirectory (wheel install)
+    2. Development: Fall back to system PATH (dev mode)
     """
-    lib_dir = _find_library_dir()
+    global _load_source, _dll_dir_handle
 
-    if lib_dir is not None:
-        if sys.platform == "win32":
-            # Pre-load core library first (dependency of libquiver_c.dll).
-            # The handle is not used further -- CFFI keeps it loaded in-process.
-            ffi.dlopen(str(lib_dir / "libquiver.dll"))
-            return ffi.dlopen(str(lib_dir / "libquiver_c.dll"))
-        elif sys.platform == "darwin":
-            ffi.dlopen(str(lib_dir / "libquiver.dylib"))
-            return ffi.dlopen(str(lib_dir / "libquiver_c.dylib"))
-        else:
-            ffi.dlopen(str(lib_dir / "libquiver.so"))
-            return ffi.dlopen(str(lib_dir / "libquiver_c.so"))
+    # --- Bundled mode ---
+    c_api_path = _LIBS_DIR / _LIB_C_API
+    if c_api_path.exists():
+        core_path = _LIBS_DIR / _LIB_CORE
+        try:
+            if sys.platform == "win32":
+                import os
 
-    # Fallback: load by name from system PATH.
-    # We try to pre-load the core library here too, but ignore errors if not found
-    # as it might be statically linked or already in the search path.
+                _dll_dir_handle = os.add_dll_directory(str(_LIBS_DIR))
+            ffi.dlopen(str(core_path))
+            lib = ffi.dlopen(str(c_api_path))
+            _load_source = "bundled"
+            return lib
+        except OSError as e:
+            raise RuntimeError(
+                f"Cannot load bundled native libraries: {e}. "
+                f"Searched: {_LIBS_DIR}"
+            ) from None
+
+    # --- Dev mode ---
+    dev_core = "libquiver" if sys.platform == "win32" else f"libquiver{_EXT}"
+    dev_c_api = "libquiver_c" if sys.platform == "win32" else f"libquiver_c{_EXT}"
     try:
-        if sys.platform == "win32":
-            ffi.dlopen("libquiver")
-        else:
-            ffi.dlopen("libquiver.so" if sys.platform != "darwin" else "libquiver.dylib")
+        ffi.dlopen(dev_core)
     except Exception:
         pass
 
-    return ffi.dlopen("libquiver_c" if sys.platform == "win32" else "libquiver_c.so" if sys.platform != "darwin" else "libquiver_c.dylib")
+    try:
+        lib = ffi.dlopen(dev_c_api)
+        _load_source = "development"
+        return lib
+    except OSError:
+        raise RuntimeError(
+            f"Cannot load native libraries. "
+            f"Searched: {_LIBS_DIR} (not found), system PATH. "
+            f"Missing: {_LIB_C_API}"
+        ) from None
+
+
+if __name__ == "__main__":
+    from quiverdb._c_api import ffi
+
+    try:
+        load_library(ffi)
+        print(f"OK: loaded via '{_load_source}'")
+        print(f"  _libs dir: {_LIBS_DIR}")
+        print(f"  _libs exists: {_LIBS_DIR.is_dir()}")
+    except RuntimeError as e:
+        print(f"FAIL: {e}")
+        raise SystemExit(1)
