@@ -239,14 +239,6 @@ ffi.cdef("""
     quiver_error_t quiver_database_delete_element(quiver_database_t* db,
         const char* collection, int64_t id);
 
-    // Update scalar attributes
-    quiver_error_t quiver_database_update_scalar_integer(quiver_database_t* db,
-        const char* collection, const char* attribute, int64_t id, int64_t value);
-    quiver_error_t quiver_database_update_scalar_float(quiver_database_t* db,
-        const char* collection, const char* attribute, int64_t id, double value);
-    quiver_error_t quiver_database_update_scalar_string(quiver_database_t* db,
-        const char* collection, const char* attribute, int64_t id, const char* value);
-
     // Update vector attributes
     quiver_error_t quiver_database_update_vector_integers(quiver_database_t* db,
         const char* collection, const char* attribute, int64_t id,

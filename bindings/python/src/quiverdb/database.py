@@ -138,39 +138,6 @@ class Database:
         lib = get_lib()
         check(lib.quiver_database_delete_element(self._ptr, collection.encode("utf-8"), id))
 
-    # -- Scalar updates ---------------------------------------------------------
-
-    def update_scalar_integer(self, collection, attribute, id, value):
-        """Update an integer scalar attribute for a single element."""
-        self._ensure_open()
-        lib = get_lib()
-        check(
-            lib.quiver_database_update_scalar_integer(
-                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, value
-            )
-        )
-
-    def update_scalar_float(self, collection, attribute, id, value):
-        """Update a float scalar attribute for a single element."""
-        self._ensure_open()
-        lib = get_lib()
-        check(
-            lib.quiver_database_update_scalar_float(
-                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, value
-            )
-        )
-
-    def update_scalar_string(self, collection, attribute, id, value):
-        """Update a string scalar attribute. Pass None to set NULL."""
-        self._ensure_open()
-        lib = get_lib()
-        c_value = value.encode("utf-8") if value is not None else ffi.NULL
-        check(
-            lib.quiver_database_update_scalar_string(
-                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, c_value
-            )
-        )
-
     # -- Vector updates ---------------------------------------------------------
 
     def update_vector_integers(self, collection, attribute, id, values):

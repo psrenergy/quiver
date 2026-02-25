@@ -6,81 +6,6 @@
 #include <quiver/element.h>
 
 // ============================================================================
-// Update scalar tests
-// ============================================================================
-
-TEST(Database, UpdateScalarInteger) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
-
-    quiver::Element e;
-    e.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
-    int64_t id = db.create_element("Configuration", e);
-
-    db.update_scalar_integer("Configuration", "integer_attribute", id, 100);
-
-    auto val = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id);
-    EXPECT_TRUE(val.has_value());
-    EXPECT_EQ(*val, 100);
-}
-
-TEST(Database, UpdateScalarFloat) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
-
-    quiver::Element e;
-    e.set("label", std::string("Config 1")).set("float_attribute", 3.14);
-    int64_t id = db.create_element("Configuration", e);
-
-    db.update_scalar_float("Configuration", "float_attribute", id, 2.71);
-
-    auto val = db.read_scalar_float_by_id("Configuration", "float_attribute", id);
-    EXPECT_TRUE(val.has_value());
-    EXPECT_DOUBLE_EQ(*val, 2.71);
-}
-
-TEST(Database, UpdateScalarString) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
-
-    quiver::Element e;
-    e.set("label", std::string("Config 1")).set("string_attribute", std::string("hello"));
-    int64_t id = db.create_element("Configuration", e);
-
-    db.update_scalar_string("Configuration", "string_attribute", id, "world");
-
-    auto val = db.read_scalar_string_by_id("Configuration", "string_attribute", id);
-    EXPECT_TRUE(val.has_value());
-    EXPECT_EQ(*val, "world");
-}
-
-TEST(Database, UpdateScalarMultipleElements) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
-
-    quiver::Element e1;
-    e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
-    int64_t id1 = db.create_element("Configuration", e1);
-
-    quiver::Element e2;
-    e2.set("label", std::string("Config 2")).set("integer_attribute", int64_t{100});
-    int64_t id2 = db.create_element("Configuration", e2);
-
-    // Update only first element
-    db.update_scalar_integer("Configuration", "integer_attribute", id1, 999);
-
-    // Verify first element changed
-    auto val1 = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id1);
-    EXPECT_TRUE(val1.has_value());
-    EXPECT_EQ(*val1, 999);
-
-    // Verify second element unchanged
-    auto val2 = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id2);
-    EXPECT_TRUE(val2.has_value());
-    EXPECT_EQ(*val2, 100);
-}
-
-// ============================================================================
 // Update vector tests
 // ============================================================================
 
@@ -572,24 +497,6 @@ TEST(Database, UpdateSetSingleElement) {
     EXPECT_EQ(set, (std::vector<std::string>{"single_tag"}));
 }
 
-TEST(Database, UpdateScalarInvalidCollection) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
-
-    EXPECT_THROW(db.update_scalar_integer("NonexistentCollection", "integer_attribute", 1, 42), std::runtime_error);
-}
-
-TEST(Database, UpdateScalarInvalidAttribute) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
-
-    quiver::Element e;
-    e.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
-    int64_t id = db.create_element("Configuration", e);
-
-    EXPECT_THROW(db.update_scalar_integer("Configuration", "nonexistent_attribute", id, 100), std::runtime_error);
-}
-
 TEST(Database, UpdateVectorInvalidCollection) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
@@ -673,7 +580,9 @@ TEST(Database, UpdateDateTimeScalar) {
     e.set("label", std::string("Config 1"));
     int64_t id = db.create_element("Configuration", e);
 
-    db.update_scalar_string("Configuration", "date_attribute", id, "2024-03-17T09:00:00");
+    quiver::Element update;
+    update.set("date_attribute", std::string("2024-03-17T09:00:00"));
+    db.update_element("Configuration", id, update);
 
     auto date = db.read_scalar_string_by_id("Configuration", "date_attribute", id);
     EXPECT_TRUE(date.has_value());
@@ -716,7 +625,9 @@ TEST(Database, UpdateScalarStringTrimsWhitespace) {
     e.set("label", std::string("Config 1")).set("string_attribute", std::string("hello"));
     int64_t id = db.create_element("Configuration", e);
 
-    db.update_scalar_string("Configuration", "string_attribute", id, "  world  ");
+    quiver::Element update;
+    update.set("string_attribute", std::string("  world  "));
+    db.update_element("Configuration", id, update);
 
     auto val = db.read_scalar_string_by_id("Configuration", "string_attribute", id);
     EXPECT_TRUE(val.has_value());

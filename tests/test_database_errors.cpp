@@ -179,28 +179,6 @@ TEST(DatabaseErrors, ReadSetStringsCollectionNotFound) {
 }
 
 // ============================================================================
-// Update scalar error tests
-// ============================================================================
-
-TEST(DatabaseErrors, UpdateScalarIntegerNoSchema) {
-    quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
-
-    EXPECT_THROW(db.update_scalar_integer("Configuration", "integer_attribute", 1, 42), std::exception);
-}
-
-TEST(DatabaseErrors, UpdateScalarFloatNoSchema) {
-    quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
-
-    EXPECT_THROW(db.update_scalar_float("Configuration", "float_attribute", 1, 3.14), std::exception);
-}
-
-TEST(DatabaseErrors, UpdateScalarStringNoSchema) {
-    quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
-
-    EXPECT_THROW(db.update_scalar_string("Configuration", "label", 1, "new value"), std::exception);
-}
-
-// ============================================================================
 // Update vector error tests
 // Note: update_vector_* methods without schema cause segfault (null pointer dereference)
 // because impl_->schema->find_vector_table() is called without null check.
@@ -361,31 +339,6 @@ TEST(DatabaseErrors, ApplySchemaFileNotFound) {
     EXPECT_THROW(quiver::Database::from_schema(
                      ":memory:", "nonexistent/path/schema.sql", {.read_only = 0, .console_level = QUIVER_LOG_OFF}),
                  std::runtime_error);
-}
-
-// ============================================================================
-// Update scalar with collection not found
-// ============================================================================
-
-TEST(DatabaseErrors, UpdateScalarIntegerCollectionNotFound) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
-
-    EXPECT_THROW(db.update_scalar_integer("NonexistentCollection", "value", 1, 42), std::runtime_error);
-}
-
-TEST(DatabaseErrors, UpdateScalarFloatCollectionNotFound) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
-
-    EXPECT_THROW(db.update_scalar_float("NonexistentCollection", "value", 1, 3.14), std::runtime_error);
-}
-
-TEST(DatabaseErrors, UpdateScalarStringCollectionNotFound) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
-
-    EXPECT_THROW(db.update_scalar_string("NonexistentCollection", "value", 1, "test"), std::runtime_error);
 }
 
 // ============================================================================

@@ -368,7 +368,9 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 42});
 
-        db.updateScalarInteger('Configuration', 'integer_attribute', 1, 100);
+        db.updateElement('Configuration', 1, {
+          'integer_attribute': 100,
+        });
 
         final value = db.readScalarIntegerById('Configuration', 'integer_attribute', 1);
         expect(value, equals(100));
@@ -385,7 +387,9 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 42});
 
-        db.updateScalarInteger('Configuration', 'integer_attribute', 1, 0);
+        db.updateElement('Configuration', 1, {
+          'integer_attribute': 0,
+        });
 
         final value = db.readScalarIntegerById('Configuration', 'integer_attribute', 1);
         expect(value, equals(0));
@@ -402,7 +406,7 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 42});
 
-        db.updateScalarInteger('Configuration', 'integer_attribute', 1, -999);
+        db.updateElement('Configuration', 1, {'integer_attribute': -999});
 
         final value = db.readScalarIntegerById('Configuration', 'integer_attribute', 1);
         expect(value, equals(-999));
@@ -420,7 +424,7 @@ void main() {
         db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 42});
         db.createElement('Configuration', {'label': 'Config 2', 'integer_attribute': 100});
 
-        db.updateScalarInteger('Configuration', 'integer_attribute', 1, 999);
+        db.updateElement('Configuration', 1, {'integer_attribute': 999});
 
         expect(db.readScalarIntegerById('Configuration', 'integer_attribute', 1), equals(999));
         expect(db.readScalarIntegerById('Configuration', 'integer_attribute', 2), equals(100));
@@ -436,7 +440,7 @@ void main() {
       );
       try {
         expect(
-          () => db.updateScalarInteger('NonexistentCollection', 'integer_attribute', 1, 42),
+          () => db.updateElement('NonexistentCollection', 1, {'integer_attribute': 42}),
           throwsA(isA<DatabaseException>()),
         );
       } finally {
@@ -452,7 +456,7 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 42});
         expect(
-          () => db.updateScalarInteger('Configuration', 'nonexistent_attribute', 1, 100),
+          () => db.updateElement('Configuration', 1, {'nonexistent_attribute': 100}),
           throwsA(isA<DatabaseException>()),
         );
       } finally {
@@ -470,7 +474,7 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Config 1', 'float_attribute': 3.14});
 
-        db.updateScalarFloat('Configuration', 'float_attribute', 1, 2.71);
+        db.updateElement('Configuration', 1, {'float_attribute': 2.71});
 
         final value = db.readScalarFloatById('Configuration', 'float_attribute', 1);
         expect(value, equals(2.71));
@@ -487,7 +491,7 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Config 1', 'float_attribute': 3.14});
 
-        db.updateScalarFloat('Configuration', 'float_attribute', 1, 0.0);
+        db.updateElement('Configuration', 1, {'float_attribute': 0.0});
 
         final value = db.readScalarFloatById('Configuration', 'float_attribute', 1);
         expect(value, equals(0.0));
@@ -504,7 +508,7 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Config 1', 'float_attribute': 1.0});
 
-        db.updateScalarFloat('Configuration', 'float_attribute', 1, 1.23456789012345);
+        db.updateElement('Configuration', 1, {'float_attribute': 1.23456789012345});
 
         final value = db.readScalarFloatById('Configuration', 'float_attribute', 1);
         expect(value, closeTo(1.23456789012345, 1e-10));
@@ -523,7 +527,7 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Config 1', 'string_attribute': 'hello'});
 
-        db.updateScalarString('Configuration', 'string_attribute', 1, 'world');
+        db.updateElement('Configuration', 1, {'string_attribute': 'world'});
 
         final value = db.readScalarStringById('Configuration', 'string_attribute', 1);
         expect(value, equals('world'));
@@ -540,7 +544,7 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Config 1', 'string_attribute': 'hello'});
 
-        db.updateScalarString('Configuration', 'string_attribute', 1, '');
+        db.updateElement('Configuration', 1, {'string_attribute': ''});
 
         final value = db.readScalarStringById('Configuration', 'string_attribute', 1);
         expect(value, equals(''));
@@ -557,7 +561,7 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Config 1', 'string_attribute': 'hello'});
 
-        db.updateScalarString('Configuration', 'string_attribute', 1, '日本語テスト');
+        db.updateElement('Configuration', 1, {'string_attribute': '日本語テスト'});
 
         final value = db.readScalarStringById('Configuration', 'string_attribute', 1);
         expect(value, equals('日本語テスト'));
@@ -579,7 +583,7 @@ void main() {
           'date_attribute': '2024-01-01T00:00:00',
         });
 
-        db.updateScalarString('Configuration', 'date_attribute', 1, '2025-12-31T23:59:59');
+        db.updateElement('Configuration', 1, {'date_attribute': '2025-12-31T23:59:59'});
 
         final date = db.readScalarStringById('Configuration', 'date_attribute', 1);
         expect(date, equals('2025-12-31T23:59:59'));
@@ -1279,7 +1283,7 @@ void main() {
           'string_attribute': 'hello',
         });
 
-        db.updateScalarString('Configuration', 'string_attribute', 1, '  world  ');
+        db.updateElement('Configuration', 1, {'string_attribute': '  world  '});
 
         final value = db.readScalarStringById('Configuration', 'string_attribute', 1);
         expect(value, equals('world'));
@@ -1300,7 +1304,9 @@ void main() {
           'tag': ['old'],
         });
 
-        db.updateSetStrings('Collection', 'tag', 1, ['  alpha  ', '\tbeta\n', ' gamma ']);
+        db.updateElement('Collection', 1, {
+          'tag': ['  alpha  ', '\tbeta\n', ' gamma '],
+        });
 
         final values = db.readSetStringsById('Collection', 'tag', 1);
         final sorted = List<String>.from(values)..sort();

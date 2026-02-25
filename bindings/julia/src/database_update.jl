@@ -16,23 +16,6 @@ function update_element!(db::Database, collection::String, id::Int64; kwargs...)
     return nothing
 end
 
-# Update scalar attribute functions
-
-function update_scalar_integer!(db::Database, collection::String, attribute::String, id::Int64, value::Integer)
-    check(C.quiver_database_update_scalar_integer(db.ptr, collection, attribute, id, Int64(value)))
-    return nothing
-end
-
-function update_scalar_float!(db::Database, collection::String, attribute::String, id::Int64, value::Real)
-    check(C.quiver_database_update_scalar_float(db.ptr, collection, attribute, id, Float64(value)))
-    return nothing
-end
-
-function update_scalar_string!(db::Database, collection::String, attribute::String, id::Int64, value::String)
-    check(C.quiver_database_update_scalar_string(db.ptr, collection, attribute, id, value))
-    return nothing
-end
-
 # Update vector attribute functions
 
 function update_vector_integers!(

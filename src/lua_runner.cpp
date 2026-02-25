@@ -175,21 +175,6 @@ struct LuaRunner::Impl {
             [](Database& self) { return self.current_version(); },
             "path",
             [](Database& self) -> const std::string& { return self.path(); },
-            // Group 2: Scalar updates
-            "update_scalar_integer",
-            [](Database& self, const std::string& collection, const std::string& attribute, int64_t id, int64_t value) {
-                self.update_scalar_integer(collection, attribute, id, value);
-            },
-            "update_scalar_float",
-            [](Database& self, const std::string& collection, const std::string& attribute, int64_t id, double value) {
-                self.update_scalar_float(collection, attribute, id, value);
-            },
-            "update_scalar_string",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               const std::string& value) { self.update_scalar_string(collection, attribute, id, value); },
             // Group 3: Vector updates
             "update_vector_integers",
             [](Database& self,
