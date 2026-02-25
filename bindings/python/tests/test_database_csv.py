@@ -1,4 +1,4 @@
-"""Tests for CSV export operations (export_csv, import_csv stub)."""
+"""Tests for CSV export and import operations."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from io import StringIO
 
 import pytest
 
-from quiverdb import CSVExportOptions, Database, Element
+from quiverdb import CSVOptions, Database, Element
 
 
 class TestExportCSVScalarsDefault:
@@ -62,10 +62,10 @@ class TestExportCSVWithEnumLabels:
         csv_db.create_element("Items", e2)
 
         out = str(tmp_path / "enums.csv")
-        opts = CSVExportOptions(
-            enum_labels={"status": {1: "Active", 2: "Inactive"}},
+        opts = CSVOptions(
+            enum_labels={"status": {"en": {"Active": 1, "Inactive": 2}}},
         )
-        csv_db.export_csv("Items", "", out, opts)
+        csv_db.export_csv("Items", "", out, options=opts)
 
         content = _read_file(out)
         assert "Item1,Alpha,Active," in content
@@ -88,8 +88,8 @@ class TestExportCSVWithDateFormat:
         csv_db.create_element("Items", e1)
 
         out = str(tmp_path / "dates.csv")
-        opts = CSVExportOptions(date_time_format="%Y/%m/%d")
-        csv_db.export_csv("Items", "", out, opts)
+        opts = CSVOptions(date_time_format="%Y/%m/%d")
+        csv_db.export_csv("Items", "", out, options=opts)
 
         content = _read_file(out)
         # date_created formatted
@@ -111,11 +111,11 @@ class TestExportCSVWithEnumAndDate:
         csv_db.create_element("Items", e1)
 
         out = str(tmp_path / "combined.csv")
-        opts = CSVExportOptions(
+        opts = CSVOptions(
             date_time_format="%Y-%m-%d",
-            enum_labels={"status": {1: "Active"}},
+            enum_labels={"status": {"en": {"Active": 1}}},
         )
-        csv_db.export_csv("Items", "", out, opts)
+        csv_db.export_csv("Items", "", out, options=opts)
 
         content = _read_file(out)
         assert "Active" in content
@@ -184,23 +184,23 @@ class TestImportCSVStub:
             csv_db.import_csv("Items", "any.csv")
 
 
-class TestCSVExportOptionsDefaults:
-    """Test CSVExportOptions dataclass defaults."""
+class TestCSVOptionsDefaults:
+    """Test CSVOptions dataclass defaults."""
 
     def test_default_options(self):
         """Default options have empty date_time_format and no enum labels."""
-        opts = CSVExportOptions()
+        opts = CSVOptions()
         assert opts.date_time_format == ""
         assert opts.enum_labels == {}
 
     def test_custom_options(self):
         """Options can be constructed with custom values."""
-        opts = CSVExportOptions(
+        opts = CSVOptions(
             date_time_format="%Y",
-            enum_labels={"status": {1: "Active"}},
+            enum_labels={"status": {"en": {"Active": 1}}},
         )
         assert opts.date_time_format == "%Y"
-        assert opts.enum_labels == {"status": {1: "Active"}}
+        assert opts.enum_labels == {"status": {"en": {"Active": 1}}}
 
 
 # -- Helper -------------------------------------------------------------------
