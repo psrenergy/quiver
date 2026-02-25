@@ -120,12 +120,7 @@ TEST(DatabaseCApiCSV, ImportCSV_Vector_RoundTrip) {
     auto csv_opts = quiver_csv_options_default();
     ASSERT_EQ(quiver_database_export_csv(db, "Items", "measurements", csv_path.string().c_str(), &csv_opts), QUIVER_OK);
 
-    // Clear and re-import
-    quiver_element_t* update_clear = nullptr;
-    ASSERT_EQ(quiver_element_create(&update_clear), QUIVER_OK);
-    quiver_element_set_array_float(update_clear, "measurement", nullptr, 0);
-    ASSERT_EQ(quiver_database_update_element(db, "Items", id1, update_clear), QUIVER_OK);
-    quiver_element_destroy(update_clear);
+    ASSERT_EQ(quiver_database_delete_element(db, "Items", id1), QUIVER_OK);
 
     auto import_opts = quiver_csv_options_default();
     ASSERT_EQ(quiver_database_import_csv(db, "Items", "measurements", csv_path.string().c_str(), &import_opts),
@@ -172,12 +167,7 @@ TEST(DatabaseCApiCSV, ImportCSV_Set_RoundTrip) {
     auto csv_opts = quiver_csv_options_default();
     ASSERT_EQ(quiver_database_export_csv(db, "Items", "tags", csv_path.string().c_str(), &csv_opts), QUIVER_OK);
 
-    // Clear and re-import
-    quiver_element_t* update_clear = nullptr;
-    ASSERT_EQ(quiver_element_create(&update_clear), QUIVER_OK);
-    quiver_element_set_array_string(update_clear, "tag", nullptr, 0);
-    ASSERT_EQ(quiver_database_update_element(db, "Items", id1, update_clear), QUIVER_OK);
-    quiver_element_destroy(update_clear);
+    ASSERT_EQ(quiver_database_delete_element(db, "Items", id1), QUIVER_OK);
 
     auto import_opts = quiver_csv_options_default();
     ASSERT_EQ(quiver_database_import_csv(db, "Items", "tags", csv_path.string().c_str(), &import_opts), QUIVER_OK);

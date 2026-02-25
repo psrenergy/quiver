@@ -84,8 +84,13 @@ TEST(DatabaseCSV, ExportCSV_VectorGroupExport) {
     e2.set("label", std::string("Item2")).set("name", std::string("Beta"));
     auto id2 = db.create_element("Items", e2);
 
-    db.update_vector_floats("Items", "measurement", id1, {1.1, 2.2, 3.3});
-    db.update_vector_floats("Items", "measurement", id2, {4.4, 5.5});
+    quiver::Element update1;
+    update1.set("measurement", std::vector<double>{1.1, 2.2, 3.3});
+    db.update_element("Items", id1, update1);
+
+    quiver::Element update2;
+    update2.set("measurement", std::vector<double>{4.4, 5.5});
+    db.update_element("Items", id2, update2);
 
     auto csv_path = temp_csv("VectorExport");
     db.export_csv("Items", "measurements", csv_path.string());
@@ -112,7 +117,9 @@ TEST(DatabaseCSV, ExportCSV_SetGroupExport) {
     e1.set("label", std::string("Item1")).set("name", std::string("Alpha"));
     auto id1 = db.create_element("Items", e1);
 
-    db.update_set_strings("Items", "tag", id1, {"red", "green", "blue"});
+    quiver::Element update;
+    update.set("tag", std::vector<std::string>{"red", "green", "blue"});
+    db.update_element("Items", id1, update);
 
     auto csv_path = temp_csv("SetExport");
     db.export_csv("Items", "tags", csv_path.string());
