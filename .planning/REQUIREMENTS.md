@@ -9,7 +9,7 @@ Catch-up milestone: align Python bindings with upstream C++ changes (relation re
 
 ### Relations
 
-- [ ] **REL-01**: Remove read_scalar_relation and update_scalar_relation methods from Python Database class
+- [x] **REL-01**: Remove read_scalar_relation and update_scalar_relation methods from Python Database class
 - [ ] **REL-02**: Update relation tests to use the new create/update/read pattern (relations via Element.set + read_scalar_integer_by_id)
 
 ### CSV
@@ -35,7 +35,7 @@ None -- this is a catch-up milestone.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REL-01 | Phase 8 | Pending |
+| REL-01 | Phase 8 | Complete |
 | REL-02 | Phase 8 | Pending |
 | CSV-01 | Phase 9 | Pending |
 | CSV-02 | Phase 9 | Pending |

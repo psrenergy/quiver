@@ -43,7 +43,7 @@ Full details: [milestones/v0.4-ROADMAP.md](milestones/v0.4-ROADMAP.md)
 **Plans:** 2 plans
 
 Plans:
-- [ ] 08-01-PLAN.md -- Remove deprecated relation methods, fix generator, regenerate declarations
+- [x] 08-01-PLAN.md -- Remove deprecated relation methods, fix generator, regenerate declarations
 - [ ] 08-02-PLAN.md -- Port FK resolution test suite from Julia/Dart (create + update + metadata)
 
 ### Phase 9: CSV Import and Options
@@ -74,5 +74,5 @@ Phases execute in numeric order: 8 -> 9
 | 5. Time Series | v0.4 | 2/2 | Complete | 2026-02-23 |
 | 6. CSV and Convenience Helpers | v0.4 | 2/2 | Complete | 2026-02-24 |
 | 7. Test Parity | v0.4 | 4/4 | Complete | 2026-02-24 |
-| 8. Relations Cleanup | v0.4.1 | 0/2 | In progress | - |
+| 8. Relations Cleanup | v0.4.1 | 1/2 | In Progress | - |
 | 9. CSV Import and Options | v0.4.1 | 0/? | Not started | - |
