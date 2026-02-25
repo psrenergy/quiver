@@ -1216,7 +1216,7 @@ TEST(DatabaseCApiCSV, ImportCSV_RowColumnCountMismatch_ReturnsError) {
     EXPECT_EQ(quiver_database_import_csv(db, "Items", "", csv_path.string().c_str(), &import_opts), QUIVER_ERROR);
 
     std::string err = quiver_get_last_error();
-    EXPECT_NE(err.find("number of columns of row"), std::string::npos);
+    EXPECT_NE(err.find("but the header has"), std::string::npos);
 
     fs::remove(csv_path);
     quiver_database_close(db);

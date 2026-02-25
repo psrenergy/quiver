@@ -1385,7 +1385,7 @@ TEST(DatabaseCSV, ImportCSV_RowColumnCountMismatch_Throws) {
             try {
                 db.import_csv("Items", "", csv_path.string());
             } catch (const std::runtime_error& e) {
-                EXPECT_NE(std::string(e.what()).find("number of columns of row"), std::string::npos);
+                EXPECT_NE(std::string(e.what()).find("but the header has"), std::string::npos);
                 throw;
             }
         },
@@ -1671,6 +1671,77 @@ TEST(DatabaseCSV, ImportCSV_Scalar_TrailingEmptyColumns) {
     ASSERT_EQ(prices.size(), 2);
     EXPECT_NEAR(prices[0], 9.99, 0.001);
     EXPECT_NEAR(prices[1], 19.5, 0.001);
+
+    fs::remove(csv_path);
+}
+
+TEST(DatabaseCSV, ImportCSV_Scalar_TrailingEmptyColumnsWithWhitespace) {
+    auto db = make_db();
+
+    auto csv_path = temp_csv("ImportTrailingWhitespace");
+    write_csv_file(csv_path.string(),
+                   "sep=,\n"
+                   "label,name,status,price,date_created,notes, ,\t, \t\n"
+                   "Item1,Alpha,1,9.99,2024-01-15T10:30:00,first, ,\t, \t\n"
+                   "Item2,Beta,2,19.5,2024-02-20T08:00:00,second, ,\t, \t\n");
+
+    db.import_csv("Items", "", csv_path.string());
+
+    auto names = db.read_scalar_strings("Items", "name");
+    ASSERT_EQ(names.size(), 2);
+    EXPECT_EQ(names[0], "Alpha");
+    EXPECT_EQ(names[1], "Beta");
+
+    fs::remove(csv_path);
+}
+
+TEST(DatabaseCSV, ImportCSV_Scalar_TrailingEmptyColumnsFewerOnDataRows) {
+    auto db = make_db();
+
+    auto csv_path = temp_csv("ImportTrailingFewer");
+    // Header has 4 trailing commas, data rows have only 2
+    write_csv_file(csv_path.string(),
+                   "sep=,\n"
+                   "label,name,status,price,date_created,notes,,,,\n"
+                   "Item1,Alpha,1,9.99,2024-01-15T10:30:00,first,,\n"
+                   "Item2,Beta,2,19.5,2024-02-20T08:00:00,second,,\n");
+
+    db.import_csv("Items", "", csv_path.string());
+
+    auto names = db.read_scalar_strings("Items", "name");
+    ASSERT_EQ(names.size(), 2);
+    EXPECT_EQ(names[0], "Alpha");
+    EXPECT_EQ(names[1], "Beta");
+
+    auto notes = db.read_scalar_strings("Items", "notes");
+    ASSERT_EQ(notes.size(), 2);
+    EXPECT_EQ(notes[0], "first");
+    EXPECT_EQ(notes[1], "second");
+
+    fs::remove(csv_path);
+}
+
+TEST(DatabaseCSV, ImportCSV_Scalar_TrailingEmptyColumnsMoreOnDataRows) {
+    auto db = make_db();
+
+    auto csv_path = temp_csv("ImportTrailingMore");
+    // Header has 2 trailing commas, data rows have 4 — should error
+    write_csv_file(csv_path.string(),
+                   "sep=,\n"
+                   "label,name,status,price,date_created,notes,,\n"
+                   "Item1,Alpha,1,9.99,2024-01-15T10:30:00,first,,,,\n"
+                   "Item2,Beta,2,19.5,2024-02-20T08:00:00,second,,,,\n");
+
+    EXPECT_THROW(
+        {
+            try {
+                db.import_csv("Items", "", csv_path.string());
+            } catch (const std::runtime_error& e) {
+                EXPECT_NE(std::string(e.what()).find("but the header has"), std::string::npos);
+                throw;
+            }
+        },
+        std::runtime_error);
 
     fs::remove(csv_path);
 }

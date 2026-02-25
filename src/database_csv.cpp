@@ -534,8 +534,9 @@ void Database::import_csv(const std::string& collection,
     for (size_t row = 0; row < doc.GetRowCount(); ++row) {
         auto row_data = doc.GetRow<std::string>(row);
         if (row_data.size() != csv_cols.size()) {
-            throw std::runtime_error("Cannot import_csv: The number of columns of row " + std::to_string(row + 1) +
-                                     " in the CSV file does not match the number of columns in the database.");
+            throw std::runtime_error("Cannot import_csv: Row " + std::to_string(row + 1) + " has " +
+                                     std::to_string(row_data.size()) + " columns, but the header has " +
+                                     std::to_string(csv_cols.size()) + ".");
         }
     }
 
