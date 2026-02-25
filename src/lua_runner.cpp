@@ -24,94 +24,9 @@ struct LuaRunner::Impl {
     void bind_database() {
         // NOLINTBEGIN(performance-unnecessary-value-param) sol2 lambda bindings require pass-by-value for type
         // deduction
-        lua.new_usertype<Database>(
+
+        auto type = lua.new_usertype<Database>(
             "Database",
-            "create_element",
-            [](Database& self, const std::string& collection, sol::table values, sol::this_state s) {
-                return create_element_from_lua(self, collection, values, s);
-            },
-            "read_scalar_strings",
-            [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
-                return read_scalar_strings_to_lua(self, collection, attribute, s);
-            },
-            "read_scalar_integers",
-            [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
-                return read_scalar_integers_to_lua(self, collection, attribute, s);
-            },
-            "read_scalar_floats",
-            [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
-                return read_scalar_floats_to_lua(self, collection, attribute, s);
-            },
-            "read_vector_integers",
-            [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
-                return read_vector_integers_to_lua(self, collection, attribute, s);
-            },
-            "read_vector_floats",
-            [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
-                return read_vector_floats_to_lua(self, collection, attribute, s);
-            },
-            "read_vector_strings",
-            [](Database& self, const std::string& collection, const std::string& attribute, sol::this_state s) {
-                return read_vector_strings_to_lua(self, collection, attribute, s);
-            },
-            "read_scalar_string_by_id",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               sol::this_state s) { return read_scalar_string_by_id_to_lua(self, collection, attribute, id, s); },
-            "read_scalar_integer_by_id",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               sol::this_state s) { return read_scalar_integer_by_id_to_lua(self, collection, attribute, id, s); },
-            "read_scalar_float_by_id",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               sol::this_state s) { return read_scalar_float_by_id_to_lua(self, collection, attribute, id, s); },
-            "read_vector_integers_by_id",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               sol::this_state s) { return read_vector_integers_by_id_to_lua(self, collection, attribute, id, s); },
-            "read_vector_floats_by_id",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               sol::this_state s) { return read_vector_floats_by_id_to_lua(self, collection, attribute, id, s); },
-            "read_vector_strings_by_id",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               sol::this_state s) { return read_vector_strings_by_id_to_lua(self, collection, attribute, id, s); },
-            "read_set_integers_by_id",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               sol::this_state s) { return read_set_integers_by_id_to_lua(self, collection, attribute, id, s); },
-            "read_set_floats_by_id",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               sol::this_state s) { return read_set_floats_by_id_to_lua(self, collection, attribute, id, s); },
-            "read_set_strings_by_id",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               sol::this_state s) { return read_set_strings_by_id_to_lua(self, collection, attribute, id, s); },
-            "read_element_ids",
-            [](Database& self, const std::string& collection, sol::this_state s) {
-                return read_element_ids_to_lua(self, collection, s);
-            },
             "delete_element",
             [](Database& self, const std::string& collection, int64_t id) { self.delete_element(collection, id); },
             "update_element",
@@ -372,6 +287,30 @@ struct LuaRunner::Impl {
                 self.import_csv(collection, group, path, opts);
             });
         // NOLINTEND(performance-unnecessary-value-param)
+
+        type.set_function("create_element", &create_element_from_lua);
+        
+        type.set_function("read_scalar_strings", &read_scalar_strings_to_lua);
+        type.set_function("read_scalar_integers", &read_scalar_integers_to_lua);
+        type.set_function("read_scalar_floats", &read_scalar_floats_to_lua);
+
+        type.set_function("read_scalar_string_by_id", &read_scalar_string_by_id_to_lua);
+        type.set_function("read_scalar_integer_by_id", &read_scalar_integer_by_id_to_lua);
+        type.set_function("read_scalar_float_by_id", &read_scalar_float_by_id_to_lua);
+
+        type.set_function("read_vector_integers", &read_vector_integers_to_lua);
+        type.set_function("read_vector_floats", &read_vector_floats_to_lua);
+        type.set_function("read_vector_strings", &read_vector_strings_to_lua);
+        
+        type.set_function("read_vector_integers_by_id", &read_vector_integers_by_id_to_lua);
+        type.set_function("read_vector_floats_by_id", &read_vector_floats_by_id_to_lua);
+        type.set_function("read_vector_strings_by_id", &read_vector_strings_by_id_to_lua);
+
+        type.set_function("read_set_integers_by_id", &read_set_integers_by_id_to_lua);
+        type.set_function("read_set_floats_by_id", &read_set_floats_by_id_to_lua);
+        type.set_function("read_set_strings_by_id", &read_set_strings_by_id_to_lua);
+
+        type.set_function("read_element_ids", &read_element_ids_to_lua);
     }
 
     // ========================================================================
