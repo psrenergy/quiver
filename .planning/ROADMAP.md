@@ -27,7 +27,7 @@ Full details: [milestones/v0.4-ROADMAP.md](milestones/v0.4-ROADMAP.md)
 
 **Milestone Goal:** Align Python bindings with upstream C++ changes -- remove deprecated relation convenience methods, implement import_csv, and restructure CSVOptions to match C++ layout.
 
-- [ ] **Phase 8: Relations Cleanup** - Remove pure-Python relation convenience methods and rewrite tests to use integrated CRUD pattern
+- [x] **Phase 8: Relations Cleanup** - Remove pure-Python relation convenience methods and rewrite tests to use integrated CRUD pattern (completed 2026-02-25)
 - [ ] **Phase 9: CSV Import and Options** - Implement import_csv, restructure CSVOptions with locale support, add import tests, update documentation
 
 ## Phase Details
@@ -40,7 +40,7 @@ Full details: [milestones/v0.4-ROADMAP.md](milestones/v0.4-ROADMAP.md)
   1. Database class has no read_scalar_relation or update_scalar_relation methods
   2. Relation tests create elements with relation attributes via Element.set and read them back via read_scalar_integer_by_id
   3. All existing Python tests pass after the removal (no regressions)
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 08-01-PLAN.md -- Remove deprecated relation methods, fix generator, regenerate declarations
@@ -74,5 +74,5 @@ Phases execute in numeric order: 8 -> 9
 | 5. Time Series | v0.4 | 2/2 | Complete | 2026-02-23 |
 | 6. CSV and Convenience Helpers | v0.4 | 2/2 | Complete | 2026-02-24 |
 | 7. Test Parity | v0.4 | 4/4 | Complete | 2026-02-24 |
-| 8. Relations Cleanup | v0.4.1 | 1/2 | In Progress | - |
+| 8. Relations Cleanup | 2/2 | Complete   | 2026-02-25 | - |
 | 9. CSV Import and Options | v0.4.1 | 0/? | Not started | - |
