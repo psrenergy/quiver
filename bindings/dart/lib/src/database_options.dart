@@ -2,13 +2,13 @@ part of 'database.dart';
 
 /// Helper to populate a [quiver_csv_options_t] from Dart maps.
 void _fillCSVOptions(
-  Pointer<quiver_csv_options_t> optsPtr,
+  Pointer<quiver_csv_options_t> optionsPtr,
   Arena arena, {
   Map<String, Map<String, Map<String, int>>>? enumLabels,
   String? dateTimeFormat,
 }) {
   // date_time_format: empty string means no formatting
-  optsPtr.ref.date_time_format = (dateTimeFormat ?? '').toNativeUtf8(allocator: arena).cast();
+  optionsPtr.ref.date_time_format = (dateTimeFormat ?? '').toNativeUtf8(allocator: arena).cast();
 
   if (enumLabels != null && enumLabels.isNotEmpty) {
     // Flatten attribute -> locale -> entries into grouped parallel arrays
@@ -49,18 +49,18 @@ void _fillCSVOptions(
       cValues[i] = allValues[i];
     }
 
-    optsPtr.ref.enum_attribute_names = cAttrNames;
-    optsPtr.ref.enum_locale_names = cLocaleNames;
-    optsPtr.ref.enum_entry_counts = cEntryCounts;
-    optsPtr.ref.enum_labels = cLabels;
-    optsPtr.ref.enum_values = cValues;
-    optsPtr.ref.enum_group_count = groupCount;
+    optionsPtr.ref.enum_attribute_names = cAttrNames;
+    optionsPtr.ref.enum_locale_names = cLocaleNames;
+    optionsPtr.ref.enum_entry_counts = cEntryCounts;
+    optionsPtr.ref.enum_labels = cLabels;
+    optionsPtr.ref.enum_values = cValues;
+    optionsPtr.ref.enum_group_count = groupCount;
   } else {
-    optsPtr.ref.enum_attribute_names = nullptr;
-    optsPtr.ref.enum_locale_names = nullptr;
-    optsPtr.ref.enum_entry_counts = nullptr;
-    optsPtr.ref.enum_labels = nullptr;
-    optsPtr.ref.enum_values = nullptr;
-    optsPtr.ref.enum_group_count = 0;
+    optionsPtr.ref.enum_attribute_names = nullptr;
+    optionsPtr.ref.enum_locale_names = nullptr;
+    optionsPtr.ref.enum_entry_counts = nullptr;
+    optionsPtr.ref.enum_labels = nullptr;
+    optionsPtr.ref.enum_values = nullptr;
+    optionsPtr.ref.enum_group_count = 0;
   }
 }

@@ -52,12 +52,12 @@ end
     QUIVER_LOG_OFF = 4
 end
 
-struct quiver_database_options_t
+mutable struct quiver_database_options_t
     read_only::Cint
     console_level::quiver_log_level_t
 end
 
-struct quiver_csv_options_t
+mutable struct quiver_csv_options_t
     date_time_format::Ptr{Cchar}
     enum_attribute_names::Ptr{Ptr{Cchar}}
     enum_locale_names::Ptr{Ptr{Cchar}}
@@ -351,12 +351,12 @@ function quiver_database_free_string_vectors(vectors, sizes, count)
     @ccall libquiver_c.quiver_database_free_string_vectors(vectors::Ptr{Ptr{Ptr{Cchar}}}, sizes::Ptr{Csize_t}, count::Csize_t)::quiver_error_t
 end
 
-function quiver_database_export_csv(db, collection, group, path, opts)
-    @ccall libquiver_c.quiver_database_export_csv(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, path::Ptr{Cchar}, opts::Ptr{quiver_csv_options_t})::quiver_error_t
+function quiver_database_export_csv(db, collection, group, path, options)
+    @ccall libquiver_c.quiver_database_export_csv(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, path::Ptr{Cchar}, options::Ptr{quiver_csv_options_t})::quiver_error_t
 end
 
-function quiver_database_import_csv(db, collection, group, path, opts)
-    @ccall libquiver_c.quiver_database_import_csv(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, path::Ptr{Cchar}, opts::Ptr{quiver_csv_options_t})::quiver_error_t
+function quiver_database_import_csv(db, collection, group, path, options)
+    @ccall libquiver_c.quiver_database_import_csv(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, path::Ptr{Cchar}, options::Ptr{quiver_csv_options_t})::quiver_error_t
 end
 
 function quiver_database_query_string(db, sql, out_value, out_has_value)

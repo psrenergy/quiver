@@ -108,10 +108,10 @@ class TestImportCSVEnumResolution:
             f.write("label,name,status,price,date_created,notes\n")
             f.write("EnumItem,Alpha,Active,,,\n")
 
-        opts = CSVOptions(
+        options = CSVOptions(
             enum_labels={"status": {"en": {"Active": 1, "Inactive": 2}}},
         )
-        csv_db.import_csv("Items", "", csv_path, options=opts)
+        csv_db.import_csv("Items", "", csv_path, options=options)
 
         status = csv_db.read_scalar_integer_by_id("Items", "status", 1)
         assert status == 1

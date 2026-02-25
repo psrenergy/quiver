@@ -346,11 +346,11 @@ TEST(DatabaseCSV, ExportCSV_EnumLabels_ReplacesIntegers) {
     e2.set("label", std::string("Item2")).set("name", std::string("Beta")).set("status", int64_t{2});
     db.create_element("Items", e2);
 
-    quiver::CSVOptions opts;
-    opts.enum_labels["status"]["en"] = {{"Active", 1}, {"Inactive", 2}};
+    quiver::CSVOptions options;
+    options.enum_labels["status"]["en"] = {{"Active", 1}, {"Inactive", 2}};
 
     auto csv_path = temp_csv("EnumReplace");
-    db.export_csv("Items", "", csv_path.string(), opts);
+    db.export_csv("Items", "", csv_path.string(), options);
 
     auto content = read_file(csv_path.string());
 
@@ -376,11 +376,11 @@ TEST(DatabaseCSV, ExportCSV_EnumLabels_UnmappedFallback) {
     e2.set("label", std::string("Item2")).set("name", std::string("Beta")).set("status", int64_t{3});
     db.create_element("Items", e2);
 
-    quiver::CSVOptions opts;
-    opts.enum_labels["status"]["en"] = {{"Active", 1}};  // only map value 1
+    quiver::CSVOptions options;
+    options.enum_labels["status"]["en"] = {{"Active", 1}};  // only map value 1
 
     auto csv_path = temp_csv("EnumFallback");
-    db.export_csv("Items", "", csv_path.string(), opts);
+    db.export_csv("Items", "", csv_path.string(), options);
 
     auto content = read_file(csv_path.string());
 
@@ -406,11 +406,11 @@ TEST(DatabaseCSV, ExportCSV_DateTimeFormat_FormatsDateColumns) {
         .set("date_created", std::string("2024-01-15T10:30:00"));
     db.create_element("Items", e1);
 
-    quiver::CSVOptions opts;
-    opts.date_time_format = "%Y/%m/%d";
+    quiver::CSVOptions options;
+    options.date_time_format = "%Y/%m/%d";
 
     auto csv_path = temp_csv("DateFormat");
-    db.export_csv("Items", "", csv_path.string(), opts);
+    db.export_csv("Items", "", csv_path.string(), options);
 
     auto content = read_file(csv_path.string());
 
@@ -431,11 +431,11 @@ TEST(DatabaseCSV, ExportCSV_DateTimeFormat_InvalidDateReturnsRaw) {
         .set("date_created", std::string("not-a-date"));  // invalid ISO 8601
     db.create_element("Items", e1);
 
-    quiver::CSVOptions opts;
-    opts.date_time_format = "%Y/%m/%d";
+    quiver::CSVOptions options;
+    options.date_time_format = "%Y/%m/%d";
 
     auto csv_path = temp_csv("InvalidDateRaw");
-    db.export_csv("Items", "", csv_path.string(), opts);
+    db.export_csv("Items", "", csv_path.string(), options);
 
     auto content = read_file(csv_path.string());
 
@@ -456,11 +456,11 @@ TEST(DatabaseCSV, ExportCSV_DateTimeFormat_NonDateColumnsUnaffected) {
         .set("notes", std::string("2024-01-15T10:30:00"));  // also not a date column
     db.create_element("Items", e1);
 
-    quiver::CSVOptions opts;
-    opts.date_time_format = "%Y/%m/%d";
+    quiver::CSVOptions options;
+    options.date_time_format = "%Y/%m/%d";
 
     auto csv_path = temp_csv("NonDateUnaffected");
-    db.export_csv("Items", "", csv_path.string(), opts);
+    db.export_csv("Items", "", csv_path.string(), options);
 
     auto content = read_file(csv_path.string());
 
@@ -486,9 +486,9 @@ TEST(DatabaseCSV, ExportCSV_DateTimeFormat_NonDateColumnsUnaffected) {
 // ============================================================================
 
 TEST(DatabaseCSV, ExportCSV_DefaultOptionsFactory) {
-    auto opts = quiver::default_csv_options();
-    EXPECT_TRUE(opts.enum_labels.empty());
-    EXPECT_TRUE(opts.date_time_format.empty());
+    auto options = quiver::default_csv_options();
+    EXPECT_TRUE(options.enum_labels.empty());
+    EXPECT_TRUE(options.date_time_format.empty());
 }
 
 // ============================================================================

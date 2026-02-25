@@ -1911,14 +1911,14 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> group,
     ffi.Pointer<ffi.Char> path,
-    ffi.Pointer<quiver_csv_options_t> opts,
+    ffi.Pointer<quiver_csv_options_t> options,
   ) {
     return _quiver_database_export_csv(
       db,
       collection,
       group,
       path,
-      opts,
+      options,
     );
   }
 
@@ -1950,14 +1950,14 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Char> collection,
     ffi.Pointer<ffi.Char> group,
     ffi.Pointer<ffi.Char> path,
-    ffi.Pointer<quiver_csv_options_t> opts,
+    ffi.Pointer<quiver_csv_options_t> options,
   ) {
     return _quiver_database_import_csv(
       db,
       collection,
       group,
       path,
-      opts,
+      options,
     );
   }
 

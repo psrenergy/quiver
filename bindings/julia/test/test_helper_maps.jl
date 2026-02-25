@@ -153,7 +153,7 @@ include("fixture.jl")
             Quiver.create_element!(db, "Child"; label = "Child 1", parent_ref = [1, 2])    # mentored by Parent 1, 2
             Quiver.create_element!(db, "Child"; label = "Child 2", parent_ref = [2, 3])    # mentored by Parent 2, 3
             Quiver.create_element!(db, "Child"; label = "Child 3")                         # no mentors
-            
+
             result = Quiver.set_relation_map(db, "Child", "Parent", "ref")
             @test result == [Int64[1, 2], Int64[2, 3], Int64[]]
 
