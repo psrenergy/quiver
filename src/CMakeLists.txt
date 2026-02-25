@@ -79,15 +79,17 @@ add_library(quiver::database ALIAS quiver)
 
 # Installation rules
 include(GNUInstallDirs)
-install(TARGETS quiver
-    EXPORT quiverTargets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/quiver
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
+if(NOT DEFINED SKBUILD)
+    install(TARGETS quiver
+        EXPORT quiverTargets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/quiver
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+endif()
 
 # C API wrapper (optional)
 if(QUIVER_BUILD_C_API)
@@ -128,10 +130,12 @@ if(QUIVER_BUILD_C_API)
 
     add_library(quiver::database_c ALIAS quiver_c)
 
-    install(TARGETS quiver_c
-        EXPORT quiverTargets
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    )
+    if(NOT DEFINED SKBUILD)
+        install(TARGETS quiver_c
+            EXPORT quiverTargets
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        )
+    endif()
 endif()

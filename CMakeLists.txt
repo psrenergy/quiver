@@ -16,6 +16,14 @@ option(QUIVER_BUILD_SHARED "Build shared library" ON)
 option(QUIVER_BUILD_TESTS "Build test suite" ON)
 option(QUIVER_BUILD_C_API "Build C API wrapper" OFF)
 
+# --- Python wheel packaging (scikit-build-core) ---
+# When building via scikit-build-core (pip wheel / python -m build),
+# SKBUILD is defined. Force C API on and disable tests for wheel builds.
+if(DEFINED SKBUILD)
+    set(QUIVER_BUILD_C_API ON CACHE BOOL "Build C API wrapper" FORCE)
+    set(QUIVER_BUILD_TESTS OFF CACHE BOOL "Build test suite" FORCE)
+endif()
+
 # Include CMake modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(CompilerOptions)
@@ -38,32 +46,34 @@ if(QUIVER_BUILD_TESTS)
 endif()
 
 # Package config for find_package() support
-include(GNUInstallDirs)
-include(CMakePackageConfigHelpers)
+if(NOT DEFINED SKBUILD)
+    include(GNUInstallDirs)
+    include(CMakePackageConfigHelpers)
 
-write_basic_package_version_file(
-    "${CMAKE_CURRENT_BINARY_DIR}/quiverConfigVersion.cmake"
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMajorVersion
-)
+    write_basic_package_version_file(
+        "${CMAKE_CURRENT_BINARY_DIR}/quiverConfigVersion.cmake"
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion
+    )
 
-configure_package_config_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/quiverConfig.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/quiverConfig.cmake"
-    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/quiver
-)
+    configure_package_config_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/quiverConfig.cmake.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/quiverConfig.cmake"
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/quiver
+    )
 
-install(EXPORT quiverTargets
-    FILE quiverTargets.cmake
-    NAMESPACE quiver::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/quiver
-)
+    install(EXPORT quiverTargets
+        FILE quiverTargets.cmake
+        NAMESPACE quiver::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/quiver
+    )
 
-install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/quiverConfig.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/quiverConfigVersion.cmake"
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/quiver
-)
+    install(FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/quiverConfig.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/quiverConfigVersion.cmake"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/quiver
+    )
+endif()
 
 # Source files for format and tidy targets
 file(GLOB_RECURSE ALL_SOURCE_FILES
@@ -96,5 +106,13 @@ if(CLANG_TIDY)
         COMMAND ${CMAKE_SOURCE_DIR}/scripts/tidy.bat
         COMMENT "Running clang-tidy"
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+endif()
+
+# Install native libraries into the Python wheel package directory
+if(DEFINED SKBUILD)
+    install(TARGETS quiver quiver_c
+        LIBRARY DESTINATION quiverdb/_libs
+        RUNTIME DESTINATION quiverdb/_libs
     )
 endif()
