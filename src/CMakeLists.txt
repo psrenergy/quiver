@@ -95,7 +95,8 @@ if(QUIVER_BUILD_C_API)
     add_library(quiver_c SHARED
         c/common.cpp
         c/database.cpp
-        c/database_csv.cpp
+        c/database_csv_export.cpp
+        c/database_csv_import.cpp
         c/database_create.cpp
         c/database_read.cpp
         c/database_update.cpp
