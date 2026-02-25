@@ -4,7 +4,7 @@
 #include "export.h"
 
 #include <cstdint>
-#include <ctime>
+#include <chrono>
 #include <memory>
 #include <string>
 
@@ -26,8 +26,8 @@ struct QUIVER_API TimeProperties {
     void set_initial_value(int64_t initial_value);
     void set_parent_dimension(std::unique_ptr<Dimension> parent);
 
-    int64_t datetime_to_int(std::time_t datetime) const;
-    std::time_t int_to_datetime(int64_t value) const;
+    int64_t datetime_to_int(std::chrono::system_clock::time_point datetime) const;
+    std::chrono::system_clock::time_point add_offset_from_int(std::chrono::system_clock::time_point base_datetime, int64_t value) const;
 };
 
 }  // namespace quiver
