@@ -59,9 +59,9 @@ String? _findNativeAssetsLibrary() {
   Directory? packageRoot = _findPackageRoot();
   if (packageRoot == null) return null;
 
-  // Search in .dart_tool/hooks_runner/shared/quiver_db/build/
+  // Search in .dart_tool/hooks_runner/shared/quiverdb/build/
   final hooksDir = Directory(
-    '${packageRoot.path}/.dart_tool/hooks_runner/shared/quiver_db/build',
+    '${packageRoot.path}/.dart_tool/hooks_runner/shared/quiverdb/build',
   );
 
   if (!hooksDir.existsSync()) return null;
