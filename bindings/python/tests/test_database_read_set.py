@@ -132,8 +132,8 @@ class TestReadSetFloatsBulk:
     def test_read_set_floats(self, all_types_db: Database) -> None:
         id1 = all_types_db.create_element("AllTypes", Element().set("label", "item1"))
         id2 = all_types_db.create_element("AllTypes", Element().set("label", "item2"))
-        all_types_db.update_set_floats("AllTypes", "weight", id1, [1.1, 2.2])
-        all_types_db.update_set_floats("AllTypes", "weight", id2, [3.3, 4.4, 5.5])
+        all_types_db.update_element("AllTypes", id1, Element().set("weight", [1.1, 2.2]))
+        all_types_db.update_element("AllTypes", id2, Element().set("weight", [3.3, 4.4, 5.5]))
         result = all_types_db.read_set_floats("AllTypes", "weight")
         assert len(result) == 2
         assert len(result[0]) == 2
@@ -143,7 +143,7 @@ class TestReadSetFloatsBulk:
 class TestReadSetFloatsByID:
     def test_read_set_floats_by_id(self, all_types_db: Database) -> None:
         id1 = all_types_db.create_element("AllTypes", Element().set("label", "item1"))
-        all_types_db.update_set_floats("AllTypes", "weight", id1, [9.9, 8.8])
+        all_types_db.update_element("AllTypes", id1, Element().set("weight", [9.9, 8.8]))
         result = all_types_db.read_set_floats_by_id("AllTypes", "weight", id1)
         assert len(result) == 2
         assert any(abs(v - 9.9) < 1e-9 for v in result)

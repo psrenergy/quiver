@@ -674,8 +674,12 @@ TEST(DatabaseCApi, UpdateVectorStringsNullCollection) {
 // ============================================================================
 
 TEST(DatabaseCApi, UpdateSetIntegersNullDb) {
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     int64_t values[] = {1, 2, 3};
-    auto err = quiver_database_update_set_integers(nullptr, "Collection", "tag", 1, values, 3);
+    quiver_element_set_array_integer(update, "tag", values, 3);
+    auto err = quiver_database_update_element(nullptr, "Collection", 1, update);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
     EXPECT_EQ(err, QUIVER_ERROR);
 }
 
@@ -687,16 +691,24 @@ TEST(DatabaseCApi, UpdateSetIntegersNullCollection) {
               QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     int64_t values[] = {1, 2, 3};
-    auto err = quiver_database_update_set_integers(db, nullptr, "tag", 1, values, 3);
+    quiver_element_set_array_integer(update, "tag", values, 3);
+    auto err = quiver_database_update_element(db, nullptr, 1, update);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
 
 TEST(DatabaseCApi, UpdateSetFloatsNullDb) {
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     double values[] = {1.0, 2.0, 3.0};
-    auto err = quiver_database_update_set_floats(nullptr, "Collection", "tag", 1, values, 3);
+    quiver_element_set_array_float(update, "tag", values, 3);
+    auto err = quiver_database_update_element(nullptr, "Collection", 1, update);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
     EXPECT_EQ(err, QUIVER_ERROR);
 }
 
@@ -708,16 +720,24 @@ TEST(DatabaseCApi, UpdateSetFloatsNullCollection) {
               QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     double values[] = {1.0, 2.0, 3.0};
-    auto err = quiver_database_update_set_floats(db, nullptr, "tag", 1, values, 3);
+    quiver_element_set_array_float(update, "tag", values, 3);
+    auto err = quiver_database_update_element(db, nullptr, 1, update);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
 }
 
 TEST(DatabaseCApi, UpdateSetStringsNullDb) {
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     const char* values[] = {"a", "b", "c"};
-    auto err = quiver_database_update_set_strings(nullptr, "Collection", "tag", 1, values, 3);
+    quiver_element_set_array_string(update, "tag", values, 3);
+    auto err = quiver_database_update_element(nullptr, "Collection", 1, update);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
     EXPECT_EQ(err, QUIVER_ERROR);
 }
 
@@ -729,8 +749,12 @@ TEST(DatabaseCApi, UpdateSetStringsNullCollection) {
               QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     const char* values[] = {"a", "b", "c"};
-    auto err = quiver_database_update_set_strings(db, nullptr, "tag", 1, values, 3);
+    quiver_element_set_array_string(update, "tag", values, 3);
+    auto err = quiver_database_update_element(db, nullptr, 1, update);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
@@ -744,8 +768,12 @@ TEST(DatabaseCApi, UpdateSetStringsNullAttribute) {
               QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     const char* values[] = {"a", "b", "c"};
-    auto err = quiver_database_update_set_strings(db, "Collection", nullptr, 1, values, 3);
+    quiver_element_set_array_string(update, nullptr, values, 3);
+    auto err = quiver_database_update_element(db, "Collection", 1, update);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     quiver_database_close(db);
