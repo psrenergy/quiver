@@ -4,11 +4,11 @@ from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
-class CSVExportOptions:
-    """Options for CSV export operations."""
+class CSVOptions:
+    """Options for CSV import and export operations."""
 
     date_time_format: str = ""
-    enum_labels: dict[str, dict[int, str]] = field(default_factory=dict)
+    enum_labels: dict[str, dict[str, dict[str, int]]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
