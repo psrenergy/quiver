@@ -2143,7 +2143,7 @@ TEST(LuaRunner_ExportCSV, ScalarDefaults) {
         })
     )");
 
-    lua.run("db:export_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) + "\")");
+    lua.run(R"(db:export_csv("Items", "", ")" + lua_safe_path(csv_path) + "\")");
 
     auto content = read_csv_file(csv_path.string());
     EXPECT_NE(content.find("label,name,status,price,date_created,notes\n"), std::string::npos);
@@ -2198,7 +2198,7 @@ TEST(LuaRunner_ExportCSV, EnumLabels) {
         })
     )");
 
-    lua.run("db:export_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) +
+    lua.run(R"(db:export_csv("Items", "", ")" + lua_safe_path(csv_path) +
             "\", {\n"
             "    enum_labels = {\n"
             "        status = { en = { Active = 1, Inactive = 2 } }\n"
@@ -2226,7 +2226,7 @@ TEST(LuaRunner_ExportCSV, DateTimeFormat) {
         })
     )");
 
-    lua.run("db:export_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) +
+    lua.run(R"(db:export_csv("Items", "", ")" + lua_safe_path(csv_path) +
             "\", {\n"
             "    date_time_format = \"%Y/%m/%d\"\n"
             "})");
@@ -2255,7 +2255,7 @@ TEST(LuaRunner_ExportCSV, CombinedOptions) {
         })
     )");
 
-    lua.run("db:export_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) +
+    lua.run(R"(db:export_csv("Items", "", ")" + lua_safe_path(csv_path) +
             "\", {\n"
             "    enum_labels = {\n"
             "        status = { en = { Active = 1, Inactive = 2 } }\n"
@@ -2300,7 +2300,7 @@ TEST(LuaRunner_ImportCSV, ScalarRoundTrip) {
     )");
 
     // Export
-    lua.run("db:export_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) + "\")");
+    lua.run(R"(db:export_csv("Items", "", ")" + lua_safe_path(csv_path) + "\")");
 
     // Delete all elements and re-import
     lua.run(R"(
@@ -2308,7 +2308,7 @@ TEST(LuaRunner_ImportCSV, ScalarRoundTrip) {
         db:delete_element("Items", 2)
     )");
 
-    lua.run("db:import_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) + "\")");
+    lua.run(R"(db:import_csv("Items", "", ")" + lua_safe_path(csv_path) + "\")");
 
     lua.run(R"(
         local names = db:read_scalar_strings("Items", "name")
@@ -2360,7 +2360,7 @@ TEST(LuaRunner_ImportCSV, ScalarHeaderOnlyClearsTable) {
     // Write header-only CSV
     write_lua_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\n");
 
-    lua.run("db:import_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) + "\")");
+    lua.run(R"(db:import_csv("Items", "", ")" + lua_safe_path(csv_path) + "\")");
 
     lua.run(R"(
         local names = db:read_scalar_strings("Items", "name")
@@ -2378,7 +2378,7 @@ TEST(LuaRunner_ImportCSV, EnumResolution) {
     auto csv_path = lua_csv_temp("ImportEnum");
     write_lua_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,Active,,,\n");
 
-    lua.run("db:import_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) +
+    lua.run(R"(db:import_csv("Items", "", ")" + lua_safe_path(csv_path) +
             "\", {\n"
             "    enum_labels = {\n"
             "        status = { en = { Active = 1, Inactive = 2 } }\n"
@@ -2402,7 +2402,7 @@ TEST(LuaRunner_ImportCSV, DateTimeFormat) {
     write_lua_csv_file(csv_path.string(),
                        "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,2024/01/15,\n");
 
-    lua.run("db:import_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) +
+    lua.run(R"(db:import_csv("Items", "", ")" + lua_safe_path(csv_path) +
             "\", {\n"
             "    date_time_format = \"%Y/%m/%d\"\n"
             "})");
@@ -2430,7 +2430,7 @@ TEST(LuaRunner_ImportCSV, ScalarTrailingEmptyColumns) {
                        "label,name,status,price,date_created,notes,,,,\n"
                        "Item1,Alpha,1,9.99,2024-01-15T10:30:00,first,,,,\n");
 
-    lua.run("db:import_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) + "\")");
+    lua.run(R"(db:import_csv("Items", "", ")" + lua_safe_path(csv_path) + "\")");
 
     lua.run(R"(
         local names = db:read_scalar_strings("Items", "name")
@@ -2457,7 +2457,7 @@ TEST(LuaRunner_ImportCSV, VectorTrailingEmptyColumns) {
                        "Item1,1,1.1,,,\n"
                        "Item1,2,2.2,,,\n");
 
-    lua.run("db:import_csv(\"Items\", \"measurements\", \"" + lua_safe_path(csv_path) + "\")");
+    lua.run(R"(db:import_csv("Items", "measurements", ")" + lua_safe_path(csv_path) + "\")");
 
     lua.run(R"(
         local vals = db:read_vector_floats_by_id("Items", "measurement", 1)
