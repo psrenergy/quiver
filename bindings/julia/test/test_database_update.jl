@@ -291,7 +291,7 @@ include("fixture.jl")
         )
 
         # Update DateTime value
-        Quiver.update_scalar_string!(db, "Configuration", "date_attribute", Int64(1), "2025-12-31T23:59:59")
+        Quiver.update_element!(db, "Configuration", Int64(1); date_attribute = "2025-12-31T23:59:59")
 
         # Verify update
         date = Quiver.read_scalar_string_by_id(db, "Configuration", "date_attribute", Int64(1))
@@ -353,7 +353,7 @@ include("fixture.jl")
 
         Quiver.create_element!(db, "Configuration"; label = "Config 1", string_attribute = "hello")
 
-        Quiver.update_scalar_string!(db, "Configuration", "string_attribute", Int64(1), "  world  ")
+        Quiver.update_element!(db, "Configuration", Int64(1); string_attribute = "  world  ")
 
         value = Quiver.read_scalar_string_by_id(db, "Configuration", "string_attribute", Int64(1))
         @test value == "world"

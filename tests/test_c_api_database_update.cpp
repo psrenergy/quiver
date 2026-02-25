@@ -267,8 +267,9 @@ TEST(DatabaseCApi, UpdateSetStrings) {
     EXPECT_EQ(count, 3);
 
     std::vector<std::string> set_values;
+    set_values.reserve(count);
     for (size_t i = 0; i < count; i++) {
-        set_values.push_back(read_values[i]);
+        set_values.emplace_back(read_values[i]);
     }
     std::sort(set_values.begin(), set_values.end());
     EXPECT_EQ(set_values[0], "new_tag1");

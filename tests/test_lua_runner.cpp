@@ -1220,7 +1220,7 @@ TEST_F(LuaRunnerTest, UpdateScalarStringTrimsWhitespaceFromLua) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:update_scalar_string("Collection", "label", 1, "  Updated  ")
+        db:update_element("Collection", 1, { label = "  Updated  " })
         local label = db:read_scalar_string_by_id("Collection", "label", 1)
         assert(label == "Updated", "Expected 'Updated' but got '" .. label .. "'")
 
