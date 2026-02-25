@@ -74,5 +74,5 @@ Phases execute in numeric order: 8 -> 9
 | 5. Time Series | v0.4 | 2/2 | Complete | 2026-02-23 |
 | 6. CSV and Convenience Helpers | v0.4 | 2/2 | Complete | 2026-02-24 |
 | 7. Test Parity | v0.4 | 4/4 | Complete | 2026-02-24 |
-| 8. Relations Cleanup | 2/2 | Complete   | 2026-02-25 | - |
+| 8. Relations Cleanup | 2/2 | Complete    | 2026-02-25 | - |
 | 9. CSV Import and Options | v0.4.1 | 0/? | Not started | - |
