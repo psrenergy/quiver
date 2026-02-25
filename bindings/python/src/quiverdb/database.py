@@ -1135,15 +1135,19 @@ class Database:
             self._ptr, collection.encode("utf-8"), group.encode("utf-8"),
             path.encode("utf-8"), c_opts))
 
-    def import_csv(self, table: str, path: str) -> None:
-        """Import CSV data into a table.
-
-        Not yet implemented -- the C++ implementation is a no-op stub.
-        Will be functional when the C++ layer implements import_csv.
-        """
-        raise NotImplementedError(
-            "import_csv is not yet implemented: the C++ implementation is a no-op stub"
-        )
+    def import_csv(
+        self, collection: str, group: str, path: str, *,
+        options: CSVOptions | None = None,
+    ) -> None:
+        """Import CSV data into a collection."""
+        self._ensure_open()
+        lib = get_lib()
+        if options is None:
+            options = CSVOptions()
+        keepalive, c_opts = _marshal_csv_options(options)
+        check(lib.quiver_database_import_csv(
+            self._ptr, collection.encode("utf-8"), group.encode("utf-8"),
+            path.encode("utf-8"), c_opts))
 
     # -- Convenience helpers ---------------------------------------------------
 
