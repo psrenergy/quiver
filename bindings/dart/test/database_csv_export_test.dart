@@ -62,10 +62,10 @@ void main() {
           'label': 'Item2',
           'name': 'Beta',
         });
-                db.updateElement('Items', id1, {
+        db.updateElement('Items', id1, {
           'measurement': [1.1, 2.2, 3.3],
         });
-                db.updateElement('Items', id2, {
+        db.updateElement('Items', id2, {
           'measurement': [4.4, 5.5],
         });
 
