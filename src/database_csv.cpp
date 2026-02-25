@@ -1,5 +1,6 @@
 #include "database_impl.h"
 #include "quiver/options.h"
+#include "quiver/schema.h"
 
 #include <algorithm>
 #include <cctype>
@@ -192,8 +193,7 @@ void Database::export_csv(const std::string& collection,
 
         // Determine group type by checking schema for matching table names
         std::string table_name;
-        enum class GroupType { Vector, Set, TimeSeries };
-        GroupType group_type{};
+        GroupTableType group_type{};
 
         std::string vec_table = Schema::vector_table_name(collection, group);
         std::string set_table = Schema::set_table_name(collection, group);
@@ -201,13 +201,13 @@ void Database::export_csv(const std::string& collection,
 
         if (impl_->schema->has_table(vec_table)) {
             table_name = vec_table;
-            group_type = GroupType::Vector;
+            group_type = GroupTableType::Vector;
         } else if (impl_->schema->has_table(set_table)) {
             table_name = set_table;
-            group_type = GroupType::Set;
+            group_type = GroupTableType::Set;
         } else if (impl_->schema->has_table(ts_table)) {
             table_name = ts_table;
-            group_type = GroupType::TimeSeries;
+            group_type = GroupTableType::TimeSeries;
         } else {
             throw std::runtime_error("Cannot export_csv: group not found: '" + group + "' in collection '" +
                                      collection + "'");
@@ -219,6 +219,7 @@ void Database::export_csv(const std::string& collection,
 
         // All group table columns become CSV columns
         std::vector<std::string> group_data_columns;
+        group_data_columns.reserve(all_group_columns.size());
         for (const auto& col : all_group_columns) {
             group_data_columns.push_back(col);
         }
@@ -230,9 +231,9 @@ void Database::export_csv(const std::string& collection,
         // Build DataType map from group metadata
         std::unordered_map<std::string, DataType> type_map;
         GroupMetadata group_meta{};
-        if (group_type == GroupType::Vector) {
+        if (group_type == GroupTableType::Vector) {
             group_meta = get_vector_metadata(collection, group);
-        } else if (group_type == GroupType::Set) {
+        } else if (group_type == GroupTableType::Set) {
             group_meta = get_set_metadata(collection, group);
         } else {
             group_meta = get_time_series_metadata(collection, group);
@@ -261,9 +262,9 @@ void Database::export_csv(const std::string& collection,
 
         // Determine ordering
         std::string order_clause;
-        if (group_type == GroupType::Vector) {
+        if (group_type == GroupTableType::Vector) {
             order_clause = "ORDER BY G.id, G.vector_index";
-        } else if (group_type == GroupType::Set) {
+        } else if (group_type == GroupTableType::Set) {
             order_clause = "ORDER BY G.id";
         } else {
             order_clause = "ORDER BY G.id, G." + group_meta.dimension_column;
@@ -413,8 +414,11 @@ static void validate_columns_match(const std::vector<std::string>& csv_cols, con
 
 // Get CSV column names from a rapidcsv Document.
 static std::vector<std::string> get_csv_columns(const rapidcsv::Document& doc) {
+    const auto size = doc.GetColumnCount();
+
     std::vector<std::string> cols;
-    for (size_t i = 0; i < doc.GetColumnCount(); ++i) {
+    cols.reserve(size);
+    for (size_t i = 0; i < size; ++i) {
         cols.push_back(doc.GetColumnName(i));
     }
     return cols;
@@ -450,8 +454,7 @@ void Database::import_csv(const std::string& collection,
 
     // Resolve target table name
     std::string table_name = collection;
-    enum class GroupType { None, Vector, Set, TimeSeries };
-    GroupType group_type = GroupType::None;
+    GroupTableType group_type;
 
     if (!group.empty()) {
         std::string vec_table = Schema::vector_table_name(collection, group);
@@ -460,13 +463,13 @@ void Database::import_csv(const std::string& collection,
 
         if (impl_->schema->has_table(vec_table)) {
             table_name = vec_table;
-            group_type = GroupType::Vector;
+            group_type = GroupTableType::Vector;
         } else if (impl_->schema->has_table(set_table)) {
             table_name = set_table;
-            group_type = GroupType::Set;
+            group_type = GroupTableType::Set;
         } else if (impl_->schema->has_table(ts_table)) {
             table_name = ts_table;
-            group_type = GroupType::TimeSeries;
+            group_type = GroupTableType::TimeSeries;
         } else {
             throw std::runtime_error("Cannot import_csv: group not found: '" + group + "' in collection '" +
                                      collection + "'");
@@ -496,7 +499,7 @@ void Database::import_csv(const std::string& collection,
         }
     }
 
-    size_t row_count = doc.GetRowCount();
+    auto row_count = doc.GetRowCount();
     if (row_count == 0) {
         execute_raw("PRAGMA foreign_keys = OFF");
         try {
@@ -561,7 +564,7 @@ void Database::import_csv(const std::string& collection,
                     }
                 }
 
-                DataType type = col_def ? col_def->type : DataType::Text;
+                auto type = col_def ? col_def->type : DataType::Text;
 
                 if (type == DataType::DateTime || is_date_time_column(col_name)) {
                     parse_datetime_import(cell, options.date_time_format);
@@ -609,7 +612,7 @@ void Database::import_csv(const std::string& collection,
                 insert_cols += db_cols[i];
                 insert_placeholders += "?";
             }
-            std::string insert_sql =
+            auto insert_sql =
                 "INSERT INTO " + collection + " (" + insert_cols + ") VALUES (" + insert_placeholders + ")";
 
             for (size_t row = 0; row < row_count; ++row) {
@@ -622,42 +625,42 @@ void Database::import_csv(const std::string& collection,
                     bool is_self_fk = is_fk && fk_it->second.to_table == collection;
 
                     if (cell.empty()) {
-                        params.push_back(nullptr);
+                        params.emplace_back(nullptr);
                         continue;
                     }
 
                     if (is_self_fk) {
-                        params.push_back(nullptr);
+                        params.emplace_back(nullptr);
                         continue;
                     }
 
                     if (is_fk) {
-                        params.push_back(fk_label_maps[col_name].at(cell));
+                        params.emplace_back(fk_label_maps[col_name].at(cell));
                         continue;
                     }
 
-                    DataType type = col_def ? col_def->type : DataType::Text;
+                    auto type = col_def ? col_def->type : DataType::Text;
 
                     if (type == DataType::DateTime || is_date_time_column(col_name)) {
-                        params.push_back(parse_datetime_import(cell, options.date_time_format));
+                        params.emplace_back(parse_datetime_import(cell, options.date_time_format));
                         continue;
                     }
 
                     if (type == DataType::Integer) {
                         try {
-                            params.push_back(std::stoll(cell));
+                            params.emplace_back(std::stoll(cell));
                         } catch (...) {
-                            params.push_back(resolve_enum_value(cell, col_name, options));
+                            params.emplace_back(resolve_enum_value(cell, col_name, options));
                         }
                         continue;
                     }
 
                     if (type == DataType::Real) {
-                        params.push_back(std::stod(cell));
+                        params.emplace_back(std::stod(cell));
                         continue;
                     }
 
-                    params.push_back(cell);
+                    params.emplace_back(cell);
                 }
 
                 execute(insert_sql, params);
@@ -680,7 +683,7 @@ void Database::import_csv(const std::string& collection,
                         if (cell.empty())
                             continue;
 
-                        std::string label = read_cell(doc, csv_col_index["label"], row);
+                        auto label = read_cell(doc, csv_col_index["label"], row);
 
                         if (self_label_to_id.find(cell) == self_label_to_id.end()) {
                             throw std::runtime_error(
@@ -725,9 +728,9 @@ void Database::import_csv(const std::string& collection,
 
         // Build type map from group metadata for DateTime detection
         GroupMetadata group_meta{};
-        if (group_type == GroupType::Vector) {
+        if (group_type == GroupTableType::Vector) {
             group_meta = get_vector_metadata(collection, group);
-        } else if (group_type == GroupType::Set) {
+        } else if (group_type == GroupTableType::Set) {
             group_meta = get_set_metadata(collection, group);
         } else {
             group_meta = get_time_series_metadata(collection, group);
@@ -758,14 +761,14 @@ void Database::import_csv(const std::string& collection,
         };
 
         // Validation pass: vector_index consecutive check
-        if (group_type == GroupType::Vector) {
+        if (group_type == GroupTableType::Vector) {
             std::unordered_map<std::string, std::vector<int64_t>> element_vector_indices;
-            size_t id_csv_idx = csv_col_index["id"];
-            size_t vi_csv_idx = csv_col_index["vector_index"];
+            auto id_csv_idx = csv_col_index["id"];
+            auto vi_csv_idx = csv_col_index["vector_index"];
 
             for (size_t row = 0; row < row_count; ++row) {
-                std::string id_label = read_cell(doc, id_csv_idx, row);
-                std::string vi_str = read_cell(doc, vi_csv_idx, row);
+                auto id_label = read_cell(doc, id_csv_idx, row);
+                auto vi_str = read_cell(doc, vi_csv_idx, row);
                 try {
                     element_vector_indices[id_label].push_back(std::stoll(vi_str));
                 } catch (...) {
@@ -787,7 +790,7 @@ void Database::import_csv(const std::string& collection,
         // Validation pass: per-cell checks
         for (size_t row = 0; row < row_count; ++row) {
             for (const auto& col_name : db_cols) {
-                std::string cell = read_cell(doc, csv_col_index[col_name], row);
+                auto cell = read_cell(doc, csv_col_index[col_name], row);
 
                 if (col_name == "id") {
                     if (label_to_id.find(cell) == label_to_id.end()) {
@@ -814,8 +817,8 @@ void Database::import_csv(const std::string& collection,
                     }
                 }
 
-                DataType type = get_type(col_name);
-                bool is_datetime = (type == DataType::DateTime || is_date_time_column(col_name));
+                auto type = get_type(col_name);
+                auto is_datetime = (type == DataType::DateTime || is_date_time_column(col_name));
 
                 if (is_datetime && col_name != "id" && col_name != "vector_index") {
                     parse_datetime_import(cell, options.date_time_format);
@@ -841,57 +844,57 @@ void Database::import_csv(const std::string& collection,
                 insert_cols += db_cols[i];
                 insert_placeholders += "?";
             }
-            std::string insert_sql =
+            auto insert_sql =
                 "INSERT INTO " + table_name + " (" + insert_cols + ") VALUES (" + insert_placeholders + ")";
 
             for (size_t row = 0; row < row_count; ++row) {
                 std::vector<Value> params;
                 for (const auto& col_name : db_cols) {
-                    std::string cell = read_cell(doc, csv_col_index[col_name], row);
+                    auto cell = read_cell(doc, csv_col_index[col_name], row);
 
                     if (col_name == "id") {
-                        params.push_back(label_to_id.at(cell));
+                        params.emplace_back(label_to_id.at(cell));
                         continue;
                     }
 
                     if (cell.empty()) {
-                        params.push_back(nullptr);
+                        params.emplace_back(nullptr);
                         continue;
                     }
 
                     if (col_name == "vector_index") {
-                        params.push_back(std::stoll(cell));
+                        params.emplace_back(std::stoll(cell));
                         continue;
                     }
 
                     if (fk_map.count(col_name) > 0) {
-                        params.push_back(fk_label_maps[col_name].at(cell));
+                        params.emplace_back(fk_label_maps[col_name].at(cell));
                         continue;
                     }
 
-                    DataType type = get_type(col_name);
-                    bool is_datetime = (type == DataType::DateTime || is_date_time_column(col_name));
+                    auto type = get_type(col_name);
+                    auto is_datetime = (type == DataType::DateTime || is_date_time_column(col_name));
 
                     if (is_datetime) {
-                        params.push_back(parse_datetime_import(cell, options.date_time_format));
+                        params.emplace_back(parse_datetime_import(cell, options.date_time_format));
                         continue;
                     }
 
                     if (type == DataType::Integer) {
                         try {
-                            params.push_back(std::stoll(cell));
+                            params.emplace_back(std::stoll(cell));
                         } catch (...) {
-                            params.push_back(resolve_enum_value(cell, col_name, options));
+                            params.emplace_back(resolve_enum_value(cell, col_name, options));
                         }
                         continue;
                     }
 
                     if (type == DataType::Real) {
-                        params.push_back(std::stod(cell));
+                        params.emplace_back(std::stod(cell));
                         continue;
                     }
 
-                    params.push_back(cell);
+                    params.emplace_back(cell);
                 }
 
                 execute(insert_sql, params);

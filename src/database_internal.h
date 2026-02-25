@@ -78,7 +78,13 @@ inline std::string find_dimension_column(const TableDefinition& table_def) {
 
 // Convert a ColumnDefinition to ScalarMetadata
 inline ScalarMetadata scalar_metadata_from_column(const ColumnDefinition& col) {
-    return {col.name, col.type, col.not_null, col.primary_key, col.default_value};
+    ScalarMetadata meta;
+    meta.name = col.name;
+    meta.data_type = col.type;
+    meta.not_null = col.not_null;
+    meta.primary_key = col.primary_key;
+    meta.default_value = col.default_value;
+    return meta;
 }
 
 }  // namespace quiver::internal
