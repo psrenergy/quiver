@@ -331,25 +331,6 @@ quiver_error_t quiver_database_free_scalar_metadata_array(quiver_scalar_metadata
                                                                        size_t count);
 quiver_error_t quiver_database_free_group_metadata_array(quiver_group_metadata_t* metadata, size_t count);
 
-// Update scalar attributes (by element ID)
-quiver_error_t quiver_database_update_scalar_integer(quiver_database_t* db,
-                                                                  const char* collection,
-                                                                  const char* attribute,
-                                                                  int64_t id,
-                                                                  int64_t value);
-
-quiver_error_t quiver_database_update_scalar_float(quiver_database_t* db,
-                                                                const char* collection,
-                                                                const char* attribute,
-                                                                int64_t id,
-                                                                double value);
-
-quiver_error_t quiver_database_update_scalar_string(quiver_database_t* db,
-                                                                 const char* collection,
-                                                                 const char* attribute,
-                                                                 int64_t id,
-                                                                 const char* value);
-
 // Update vector attributes (by element ID) - replaces entire vector
 quiver_error_t quiver_database_update_vector_integers(quiver_database_t* db,
                                                                    const char* collection,

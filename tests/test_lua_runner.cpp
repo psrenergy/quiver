@@ -1144,61 +1144,6 @@ TEST_F(LuaRunnerTest, PathFromLua) {
 }
 
 // ============================================================================
-// Scalar update tests
-// ============================================================================
-
-TEST_F(LuaRunnerTest, UpdateScalarIntegerFromLua) {
-    auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{10}));
-
-    quiver::LuaRunner lua(db);
-
-    lua.run(R"(
-        db:update_scalar_integer("Collection", "some_integer", 1, 999)
-        local val = db:read_scalar_integer_by_id("Collection", "some_integer", 1)
-        assert(val == 999, "Expected 999, got " .. tostring(val))
-    )");
-
-    auto val = db.read_scalar_integer_by_id("Collection", "some_integer", 1);
-    EXPECT_EQ(*val, 999);
-}
-
-TEST_F(LuaRunnerTest, UpdateScalarFloatFromLua) {
-    auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_float", 1.0));
-
-    quiver::LuaRunner lua(db);
-
-    lua.run(R"(
-        db:update_scalar_float("Collection", "some_float", 1, 9.99)
-        local val = db:read_scalar_float_by_id("Collection", "some_float", 1)
-        assert(val == 9.99, "Expected 9.99, got " .. tostring(val))
-    )");
-
-    auto val = db.read_scalar_float_by_id("Collection", "some_float", 1);
-    EXPECT_DOUBLE_EQ(*val, 9.99);
-}
-
-TEST_F(LuaRunnerTest, UpdateScalarStringFromLua) {
-    auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element("Collection", quiver::Element().set("label", "Item 1"));
-
-    quiver::LuaRunner lua(db);
-
-    lua.run(R"(
-        db:update_scalar_string("Collection", "label", 1, "Updated Item")
-        local val = db:read_scalar_string_by_id("Collection", "label", 1)
-        assert(val == "Updated Item", "Expected 'Updated Item', got " .. tostring(val))
-    )");
-
-    auto val = db.read_scalar_string_by_id("Collection", "label", 1);
-    EXPECT_EQ(*val, "Updated Item");
-}
-
-// ============================================================================
 // Vector update tests
 // ============================================================================
 
@@ -1978,7 +1923,7 @@ TEST_F(LuaRunnerTest, TransactionBlockMultiOps) {
         db:transaction(function(db)
             db:create_element("Collection", { label = "Item 1", some_integer = 10 })
             db:create_element("Collection", { label = "Item 2", some_integer = 20 })
-            db:update_scalar_integer("Collection", "some_integer", 1, 100)
+            db:update_element("Collection", 1, { some_integer = 100 })
         end)
     )");
 

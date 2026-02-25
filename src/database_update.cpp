@@ -166,48 +166,6 @@ void Database::update_element(const std::string& collection, int64_t id, const E
     impl_->logger->info("Updated element {} in {}", id, collection);
 }
 
-void Database::update_scalar_integer(const std::string& collection,
-                                     const std::string& attribute,
-                                     int64_t id,
-                                     int64_t value) {
-    impl_->logger->debug("Updating {}.{} for id {} to {}", collection, attribute, id, value);
-    impl_->require_collection(collection, "update_scalar");
-    impl_->type_validator->validate_scalar(collection, attribute, value);
-
-    auto sql = "UPDATE " + collection + " SET " + attribute + " = ? WHERE id = ?";
-    execute(sql, {value, id});
-
-    impl_->logger->info("Updated {}.{} for id {} to {}", collection, attribute, id, value);
-}
-
-void Database::update_scalar_float(const std::string& collection,
-                                   const std::string& attribute,
-                                   int64_t id,
-                                   double value) {
-    impl_->logger->debug("Updating {}.{} for id {} to {}", collection, attribute, id, value);
-    impl_->require_collection(collection, "update_scalar");
-    impl_->type_validator->validate_scalar(collection, attribute, value);
-
-    auto sql = "UPDATE " + collection + " SET " + attribute + " = ? WHERE id = ?";
-    execute(sql, {value, id});
-
-    impl_->logger->info("Updated {}.{} for id {} to {}", collection, attribute, id, value);
-}
-
-void Database::update_scalar_string(const std::string& collection,
-                                    const std::string& attribute,
-                                    int64_t id,
-                                    const std::string& value) {
-    impl_->logger->debug("Updating {}.{} for id {} to '{}'", collection, attribute, id, value);
-    impl_->require_collection(collection, "update_scalar");
-    impl_->type_validator->validate_scalar(collection, attribute, value);
-
-    auto sql = "UPDATE " + collection + " SET " + attribute + " = ? WHERE id = ?";
-    execute(sql, {value, id});
-
-    impl_->logger->info("Updated {}.{} for id {} to '{}'", collection, attribute, id, value);
-}
-
 void Database::update_vector_integers(const std::string& collection,
                                       const std::string& attribute,
                                       int64_t id,

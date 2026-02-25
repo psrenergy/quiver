@@ -295,18 +295,6 @@ function quiver_database_free_group_metadata_array(metadata, count)
     @ccall libquiver_c.quiver_database_free_group_metadata_array(metadata::Ptr{quiver_group_metadata_t}, count::Csize_t)::quiver_error_t
 end
 
-function quiver_database_update_scalar_integer(db, collection, attribute, id, value)
-    @ccall libquiver_c.quiver_database_update_scalar_integer(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, value::Int64)::quiver_error_t
-end
-
-function quiver_database_update_scalar_float(db, collection, attribute, id, value)
-    @ccall libquiver_c.quiver_database_update_scalar_float(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, value::Cdouble)::quiver_error_t
-end
-
-function quiver_database_update_scalar_string(db, collection, attribute, id, value)
-    @ccall libquiver_c.quiver_database_update_scalar_string(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, value::Ptr{Cchar})::quiver_error_t
-end
-
 function quiver_database_update_vector_integers(db, collection, attribute, id, values, count)
     @ccall libquiver_c.quiver_database_update_vector_integers(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Int64}, count::Csize_t)::quiver_error_t
 end

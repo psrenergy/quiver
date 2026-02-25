@@ -39,47 +39,6 @@ class TestUpdateElement:
         assert abs(float_val - 2.5) < 1e-9
 
 
-class TestUpdateScalar:
-    def test_update_scalar_integer(self, collections_db: Database) -> None:
-        collections_db.create_element("Configuration", Element().set("label", "cfg"))
-        elem_id = collections_db.create_element(
-            "Collection",
-            Element().set("label", "Item1").set("some_integer", 10),
-        )
-        collections_db.update_scalar_integer("Collection", "some_integer", elem_id, 100)
-        value = collections_db.read_scalar_integer_by_id("Collection", "some_integer", elem_id)
-        assert value == 100
-
-    def test_update_scalar_float(self, collections_db: Database) -> None:
-        collections_db.create_element("Configuration", Element().set("label", "cfg"))
-        elem_id = collections_db.create_element(
-            "Collection",
-            Element().set("label", "Item1").set("some_float", 1.0),
-        )
-        collections_db.update_scalar_float("Collection", "some_float", elem_id, 9.99)
-        value = collections_db.read_scalar_float_by_id("Collection", "some_float", elem_id)
-        assert value is not None
-        assert abs(value - 9.99) < 1e-9
-
-    def test_update_scalar_string(self, db: Database) -> None:
-        elem_id = db.create_element(
-            "Configuration",
-            Element().set("label", "item1").set("string_attribute", "hello"),
-        )
-        db.update_scalar_string("Configuration", "string_attribute", elem_id, "world")
-        value = db.read_scalar_string_by_id("Configuration", "string_attribute", elem_id)
-        assert value == "world"
-
-    def test_update_scalar_string_to_none(self, db: Database) -> None:
-        elem_id = db.create_element(
-            "Configuration",
-            Element().set("label", "item1").set("string_attribute", "hello"),
-        )
-        db.update_scalar_string("Configuration", "string_attribute", elem_id, None)
-        value = db.read_scalar_string_by_id("Configuration", "string_attribute", elem_id)
-        assert value is None
-
-
 class TestUpdateVector:
     def test_update_vector_integers(self, collections_db: Database) -> None:
         collections_db.create_element("Configuration", Element().set("label", "cfg"))

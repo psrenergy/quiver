@@ -6,62 +6,6 @@
 
 extern "C" {
 
-// Update scalar functions
-
-QUIVER_C_API quiver_error_t quiver_database_update_scalar_integer(quiver_database_t* db,
-                                                                  const char* collection,
-                                                                  const char* attribute,
-                                                                  int64_t id,
-                                                                  int64_t value) {
-    QUIVER_REQUIRE(db, collection, attribute);
-
-    try {
-        db->db.update_scalar_integer(collection, attribute, id, value);
-        return QUIVER_OK;
-    } catch (const std::exception& e) {
-        quiver_set_last_error(e.what());
-        return QUIVER_ERROR;
-    }
-}
-
-QUIVER_C_API quiver_error_t quiver_database_update_scalar_float(quiver_database_t* db,
-                                                                const char* collection,
-                                                                const char* attribute,
-                                                                int64_t id,
-                                                                double value) {
-    QUIVER_REQUIRE(db, collection, attribute);
-
-    try {
-        db->db.update_scalar_float(collection, attribute, id, value);
-        return QUIVER_OK;
-    } catch (const std::exception& e) {
-        quiver_set_last_error(e.what());
-        return QUIVER_ERROR;
-    }
-}
-
-QUIVER_C_API quiver_error_t quiver_database_update_scalar_string(quiver_database_t* db,
-                                                                 const char* collection,
-                                                                 const char* attribute,
-                                                                 int64_t id,
-                                                                 const char* value) {
-    QUIVER_REQUIRE(db, collection, attribute);
-
-    try {
-        if (value) {
-            db->db.update_scalar_string(collection, attribute, id, value);
-        } else {
-            // NULL value -- execute raw UPDATE SET attr = NULL
-            auto sql = std::string("UPDATE ") + collection + " SET " + attribute + " = NULL WHERE id = ?";
-            db->db.query_string(sql, {id});
-        }
-        return QUIVER_OK;
-    } catch (const std::exception& e) {
-        quiver_set_last_error(e.what());
-        return QUIVER_ERROR;
-    }
-}
-
 // Update vector functions
 
 QUIVER_C_API quiver_error_t quiver_database_update_vector_integers(quiver_database_t* db,

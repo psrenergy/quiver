@@ -93,7 +93,7 @@ class TestTransactionContextManager:
                 "Collection",
                 Element().set("label", "Item 1").set("some_integer", 10),
             )
-            db.update_scalar_integer("Collection", "some_integer", 1, 100)
+            db.update_element("Collection", 1, Element().set("Collection", 100))
 
         labels = collections_db.read_scalar_strings("Collection", "label")
         assert len(labels) == 1

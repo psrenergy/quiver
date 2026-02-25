@@ -192,7 +192,10 @@ void main() {
             'label': 'Item 2',
             'some_integer': 20,
           });
-          db.updateScalarInteger('Collection', 'some_integer', 1, 100);
+
+          db.updateElement('Collection', 1, {
+          'some_integer': 100,
+        });
           return null;
         });
 
