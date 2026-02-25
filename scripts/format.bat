@@ -31,4 +31,14 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo.
+echo Formatting Python bindings...
+pushd "%ROOT%\bindings\python"
+call format.bat
+popd
+if %ERRORLEVEL% neq 0 (
+    echo Failed to format Python bindings
+    exit /b 1
+)
+
+echo.
 echo All formatting complete.
