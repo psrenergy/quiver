@@ -37,68 +37,6 @@ struct LuaRunner::Impl {
             [](Database& self) { return self.current_version(); },
             "path",
             [](Database& self) -> const std::string& { return self.path(); },
-            "update_scalar_integer",
-            [](Database& self, const std::string& collection, const std::string& attribute, int64_t id, int64_t value) {
-                self.update_scalar_integer(collection, attribute, id, value);
-            },
-            "update_scalar_float",
-            [](Database& self, const std::string& collection, const std::string& attribute, int64_t id, double value) {
-                self.update_scalar_float(collection, attribute, id, value);
-            },
-            "update_scalar_string",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               const std::string& value) { self.update_scalar_string(collection, attribute, id, value); },
-            "update_vector_integers",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               sol::table values) {
-                self.update_vector_integers(collection, attribute, id, lua_table_to_int64_vector(values));
-            },
-            "update_vector_floats",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               sol::table values) {
-                self.update_vector_floats(collection, attribute, id, lua_table_to_double_vector(values));
-            },
-            "update_vector_strings",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               sol::table values) {
-                self.update_vector_strings(collection, attribute, id, lua_table_to_string_vector(values));
-            },
-            "update_set_integers",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               sol::table values) {
-                self.update_set_integers(collection, attribute, id, lua_table_to_int64_vector(values));
-            },
-            "update_set_floats",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               sol::table values) {
-                self.update_set_floats(collection, attribute, id, lua_table_to_double_vector(values));
-            },
-            "update_set_strings",
-            [](Database& self,
-               const std::string& collection,
-               const std::string& attribute,
-               int64_t id,
-               sol::table values) {
-                self.update_set_strings(collection, attribute, id, lua_table_to_string_vector(values));
-            },
             "has_time_series_files",
             [](Database& self, const std::string& collection) { return self.has_time_series_files(collection); },
             "begin_transaction",
@@ -220,9 +158,23 @@ struct LuaRunner::Impl {
 
         type.set_function("read_element_ids", &read_element_ids_to_lua);
 
+        type.set_function("update_scalar_integer", &update_scalar_integer_from_lua);
+        type.set_function("update_scalar_float", &update_scalar_float_from_lua);
+        type.set_function("update_scalar_string", &update_scalar_string_from_lua);
+
+        type.set_function("update_vector_integers", &update_vector_integers_from_lua);
+        type.set_function("update_vector_floats", &update_vector_floats_from_lua);
+        type.set_function("update_vector_strings", &update_vector_strings_from_lua);
+
+        type.set_function("update_set_integers", &update_set_integers_from_lua);
+        type.set_function("update_set_floats", &update_set_floats_from_lua);
+        type.set_function("update_set_strings", &update_set_strings_from_lua);
+
         type.set_function("update_element", &update_element_from_lua);
         type.set_function("update_time_series_group", &update_time_series_group_from_lua);
         type.set_function("update_time_series_files", &update_time_series_files_from_lua);
+
+        type.set_function("delete_element", &delete_element_from_lua);
 
         type.set_function("get_scalar_metadata", &get_scalar_metadata_to_lua);
         type.set_function("get_vector_metadata", &get_vector_metadata_to_lua);
@@ -920,10 +872,6 @@ struct LuaRunner::Impl {
         return outer;
     }
 
-    // ========================================================================
-    // Time series metadata
-    // ========================================================================
-
     static sol::table time_series_metadata_to_lua(sol::state_view& lua, const GroupMetadata& metadata) {
         auto t = lua.create_table();
         t["group_name"] = metadata.group_name;
@@ -955,10 +903,6 @@ struct LuaRunner::Impl {
         return t;
     }
 
-    // ========================================================================
-    // Time series data
-    // ========================================================================
-
     static sol::table read_time_series_group_to_lua(Database& db,
                                                     const std::string& collection,
                                                     const std::string& group,
@@ -989,10 +933,6 @@ struct LuaRunner::Impl {
         }
         db.update_time_series_group(collection, group, id, cpp_rows);
     }
-
-    // ========================================================================
-    // Time series files
-    // ========================================================================
 
     static sol::table
     list_time_series_files_columns_to_lua(Database& db, const std::string& collection, sol::this_state s) {
@@ -1032,6 +972,82 @@ struct LuaRunner::Impl {
             }
         }
         db.update_time_series_files(collection, cpp_paths);
+    }
+
+    static void update_scalar_integer_from_lua(Database& self,
+                                               const std::string& collection,
+                                               const std::string& attribute,
+                                               int64_t id,
+                                               int64_t value) {
+        self.update_scalar_integer(collection, attribute, id, value);
+    }
+
+    static void update_scalar_float_from_lua(Database& self,
+                                             const std::string& collection,
+                                             const std::string& attribute,
+                                             int64_t id,
+                                             double value) {
+        self.update_scalar_float(collection, attribute, id, value);
+    }
+
+    static void update_scalar_string_from_lua(Database& self,
+                                              const std::string& collection,
+                                              const std::string& attribute,
+                                              int64_t id,
+                                              const std::string& value) {
+        self.update_scalar_string(collection, attribute, id, value);
+    }
+
+    static void update_vector_integers_from_lua(Database& self,
+                                                const std::string& collection,
+                                                const std::string& attribute,
+                                                int64_t id,
+                                                sol::table values) {
+        self.update_vector_integers(collection, attribute, id, lua_table_to_int64_vector(values));
+    }
+
+    static void update_vector_floats_from_lua(Database& self,
+                                              const std::string& collection,
+                                              const std::string& attribute,
+                                              int64_t id,
+                                              sol::table values) {
+        self.update_vector_floats(collection, attribute, id, lua_table_to_double_vector(values));
+    }
+
+    static void update_vector_strings_from_lua(Database& self,
+                                               const std::string& collection,
+                                               const std::string& attribute,
+                                               int64_t id,
+                                               sol::table values) {
+        self.update_vector_strings(collection, attribute, id, lua_table_to_string_vector(values));
+    }
+
+    static void update_set_integers_from_lua(Database& self,
+                                             const std::string& collection,
+                                             const std::string& attribute,
+                                             int64_t id,
+                                             sol::table values) {
+        self.update_set_integers(collection, attribute, id, lua_table_to_int64_vector(values));
+    }
+
+    static void update_set_floats_from_lua(Database& self,
+                                           const std::string& collection,
+                                           const std::string& attribute,
+                                           int64_t id,
+                                           sol::table values) {
+        self.update_set_floats(collection, attribute, id, lua_table_to_double_vector(values));
+    }
+
+    static void update_set_strings_from_lua(Database& self,
+                                            const std::string& collection,
+                                            const std::string& attribute,
+                                            int64_t id,
+                                            sol::table values) {
+        self.update_set_strings(collection, attribute, id, lua_table_to_string_vector(values));
+    }
+
+    static void delete_element_from_lua(Database& self, const std::string& collection, int64_t id) {
+        self.delete_element(collection, id);
     }
 };
 
