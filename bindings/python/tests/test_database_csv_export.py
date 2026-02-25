@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from quiverdb import CSVOptions, Database, Element
+from quiverdb import CSVOptions, Database, Element, DatabaseCSVExport
 
 
 class TestExportCSVScalarsDefault:

@@ -23,8 +23,9 @@ src/c/                    # C API implementation
   internal.h              # Shared structs (quiver_database, quiver_element), QUIVER_REQUIRE macro
   database_helpers.h      # Marshaling templates, strdup_safe, metadata converters
   database.cpp            # Lifecycle: open, close, factory methods, describe
-  database_csv_export.cpp # CSV export: options conversion, export function
-  database_csv_import.cpp # CSV import: options conversion, import function
+  database_csv_options.h  # Shared CSV options: convert_options inline, quiver_csv_options_default
+  database_csv_export.cpp # CSV export function
+  database_csv_import.cpp # CSV import function
   database_create.cpp     # Element CRUD: create, update, delete
   database_read.cpp       # All read operations + co-located free functions
   database_update.cpp     # All scalar/vector/set update operations
