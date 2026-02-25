@@ -285,7 +285,7 @@ void main() {
         db.exportCSV('Items', 'measurements', csvPath);
 
         // Clear and re-import
-        db.updateElement('Items', id1, {'measurement': []});
+        db.deleteElement('Items', id1);
         db.importCSV('Items', 'measurements', csvPath);
 
         final vals = db.readVectorFloatsById('Items', 'measurement', id1);
