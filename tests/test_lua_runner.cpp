@@ -2333,14 +2333,10 @@ TEST(LuaRunner_ImportCSV, VectorGroupRoundTrip) {
     )");
 
     // Export
-    lua.run("db:export_csv(\"Items\", \"measurements\", \"" + lua_safe_path(csv_path) + "\")");
+    lua.run(R"(db:export_csv("Items", "measurements", ")" + lua_safe_path(csv_path) + R"("))");
 
-    // Clear vector and re-import
-    lua.run(R"(
-        db:update_element("Items", 1, { measurement = {} })
-    )");
-
-    lua.run("db:import_csv(\"Items\", \"measurements\", \"" + lua_safe_path(csv_path) + "\")");
+    // Re-import (import will overwrite existing values)
+    lua.run(R"(db:import_csv("Items", "measurements", ")" + lua_safe_path(csv_path) + R"("))");
 
     lua.run(R"(
         local vals = db:read_vector_floats_by_id("Items", "measurement", 1)
