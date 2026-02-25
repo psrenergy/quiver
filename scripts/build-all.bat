@@ -44,7 +44,7 @@ echo.
 REM ============================================================
 REM Step 1: Build C++ Library and C API
 REM ============================================================
-echo [1/5] Building C++ library and C API...
+echo [1/6] Building C++ library and C API...
 echo.
 
 cmake -B build -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DQUIVER_BUILD_TESTS=ON -DQUIVER_BUILD_C_API=ON
@@ -62,13 +62,13 @@ if errorlevel 1 (
 )
 
 echo.
-echo [1/5] Build completed successfully
+echo [1/6] Build completed successfully
 echo.
 
 REM ============================================================
 REM Step 2: Run C++ Tests
 REM ============================================================
-echo [2/5] Running C++ tests...
+echo [2/6] Running C++ tests...
 echo.
 
 "%ROOT_DIR%\build\bin\quiver_tests.exe"
@@ -79,13 +79,13 @@ if errorlevel 1 (
 )
 
 echo.
-echo [2/5] C++ tests passed
+echo [2/6] C++ tests passed
 echo.
 
 REM ============================================================
 REM Step 3: Run C API Tests
 REM ============================================================
-echo [3/5] Running C API tests...
+echo [3/6] Running C API tests...
 echo.
 
 "%ROOT_DIR%\build\bin\quiver_c_tests.exe"
@@ -96,13 +96,13 @@ if errorlevel 1 (
 )
 
 echo.
-echo [3/5] C API tests passed
+echo [3/6] C API tests passed
 echo.
 
 REM ============================================================
 REM Step 4: Run Julia Tests
 REM ============================================================
-echo [4/5] Running Julia tests...
+echo [4/6] Running Julia tests...
 echo.
 
 call "%ROOT_DIR%\bindings\julia\test\test.bat"
@@ -115,13 +115,13 @@ if %JULIA_EXIT% neq 0 (
 )
 
 echo.
-echo [4/5] Julia tests passed
+echo [4/6] Julia tests passed
 echo.
 
 REM ============================================================
 REM Step 5: Run Dart Tests
 REM ============================================================
-echo [5/5] Running Dart tests...
+echo [5/6] Running Dart tests...
 echo.
 
 call "%ROOT_DIR%\bindings\dart\test\test.bat"
@@ -134,7 +134,27 @@ if %DART_EXIT% neq 0 (
 )
 
 echo.
-echo [5/5] Dart tests passed
+echo [5/6] Dart tests passed
+echo.
+
+
+REM ============================================================
+REM Step 6: Run Python Tests
+REM ============================================================
+echo [6/6] Running Python tests...
+echo.
+
+call "%ROOT_DIR%\bindings\python\tests\test.bat"
+set PYTHON_EXIT=%errorlevel%
+
+if %PYTHON_EXIT% neq 0 (
+    echo.
+    echo ERROR: Python tests failed
+    exit /b 1
+)
+
+echo.
+echo [6/6] Python tests passed
 echo.
 
 REM ============================================================
@@ -150,7 +170,7 @@ echo   C++ tests:    OK
 echo   C API tests:  OK
 echo   Julia tests:  OK
 echo   Dart tests:   OK
-echo   Benchmark:    Built (run manually: build\bin\quiver_benchmark.exe)
+echo   Python tests: OK
 echo.
 
 exit /b 0
