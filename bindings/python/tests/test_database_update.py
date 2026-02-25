@@ -127,7 +127,7 @@ class TestUpdateSetIntegers:
             "AllTypes",
             Element().set("label", "Item1"),
         )
-        all_types_db.update_set_integers("AllTypes", "code", elem_id, [10, 20, 30])
+        all_types_db.update_element("AllTypes", elem_id, Element().set("code", [10, 20, 30]))
         result = all_types_db.read_set_integers_by_id("AllTypes", "code", elem_id)
         assert sorted(result) == [10, 20, 30]
 

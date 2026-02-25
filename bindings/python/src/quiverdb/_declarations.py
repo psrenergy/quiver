@@ -331,50 +331,6 @@ quiver_error_t quiver_database_free_scalar_metadata_array(quiver_scalar_metadata
                                                                        size_t count);
 quiver_error_t quiver_database_free_group_metadata_array(quiver_group_metadata_t* metadata, size_t count);
 
-// Update vector attributes (by element ID) - replaces entire vector
-quiver_error_t quiver_database_update_vector_integers(quiver_database_t* db,
-                                                                   const char* collection,
-                                                                   const char* attribute,
-                                                                   int64_t id,
-                                                                   const int64_t* values,
-                                                                   size_t count);
-
-quiver_error_t quiver_database_update_vector_floats(quiver_database_t* db,
-                                                                 const char* collection,
-                                                                 const char* attribute,
-                                                                 int64_t id,
-                                                                 const double* values,
-                                                                 size_t count);
-
-quiver_error_t quiver_database_update_vector_strings(quiver_database_t* db,
-                                                                  const char* collection,
-                                                                  const char* attribute,
-                                                                  int64_t id,
-                                                                  const char* const* values,
-                                                                  size_t count);
-
-// Update set attributes (by element ID) - replaces entire set
-quiver_error_t quiver_database_update_set_integers(quiver_database_t* db,
-                                                                const char* collection,
-                                                                const char* attribute,
-                                                                int64_t id,
-                                                                const int64_t* values,
-                                                                size_t count);
-
-quiver_error_t quiver_database_update_set_floats(quiver_database_t* db,
-                                                              const char* collection,
-                                                              const char* attribute,
-                                                              int64_t id,
-                                                              const double* values,
-                                                              size_t count);
-
-quiver_error_t quiver_database_update_set_strings(quiver_database_t* db,
-                                                               const char* collection,
-                                                               const char* attribute,
-                                                               int64_t id,
-                                                               const char* const* values,
-                                                               size_t count);
-
 // Read time series group by element ID - returns multi-column typed data
 // Columns are returned in schema definition order (dimension first, then value columns)
 // Column data arrays are typed: INTEGER -> int64_t*, FLOAT -> double*, STRING/DATE_TIME -> char**
