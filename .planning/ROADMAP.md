@@ -40,10 +40,11 @@ Full details: [milestones/v0.4-ROADMAP.md](milestones/v0.4-ROADMAP.md)
   1. Database class has no read_scalar_relation or update_scalar_relation methods
   2. Relation tests create elements with relation attributes via Element.set and read them back via read_scalar_integer_by_id
   3. All existing Python tests pass after the removal (no regressions)
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 08-01: TBD
+- [ ] 08-01-PLAN.md -- Remove deprecated relation methods, fix generator, regenerate declarations
+- [ ] 08-02-PLAN.md -- Port FK resolution test suite from Julia/Dart (create + update + metadata)
 
 ### Phase 9: CSV Import and Options
 **Goal**: Python binding supports full CSV round-trip (export and import) with correctly structured options matching the C++ CSVOptions layout
@@ -73,5 +74,5 @@ Phases execute in numeric order: 8 -> 9
 | 5. Time Series | v0.4 | 2/2 | Complete | 2026-02-23 |
 | 6. CSV and Convenience Helpers | v0.4 | 2/2 | Complete | 2026-02-24 |
 | 7. Test Parity | v0.4 | 4/4 | Complete | 2026-02-24 |
-| 8. Relations Cleanup | v0.4.1 | 0/? | Not started | - |
+| 8. Relations Cleanup | v0.4.1 | 0/2 | In progress | - |
 | 9. CSV Import and Options | v0.4.1 | 0/? | Not started | - |
