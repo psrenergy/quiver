@@ -4,8 +4,7 @@
 #include "export.h"
 
 #include <cstdint>
-#include <ctime>
-#include <memory>
+#include <chrono>
 #include <string>
 #include <vector>
 
@@ -15,7 +14,7 @@ struct Dimension;
 
 struct QUIVER_API BlobMetadata {
     std::vector<Dimension> dimensions;
-    std::time_t initial_datetime;
+    std::chrono::system_clock::time_point initial_datetime;
     std::string unit;
     std::vector<std::string> labels;
     std::string version;
@@ -23,7 +22,7 @@ struct QUIVER_API BlobMetadata {
     int64_t number_of_time_dimensions;
 
     // TOML Serialization
-    static BlobMetadata& from_toml(const std::string& toml_content);
+    static BlobMetadata from_toml(const std::string& toml_content);
     std::string to_toml() const;
 
     // Validation

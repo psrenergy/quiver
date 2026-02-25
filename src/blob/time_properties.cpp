@@ -5,10 +5,6 @@
 #include <stdexcept>
 
 namespace {
-int64_t day_of_week_from_datetime(std::chrono::system_clock::time_point datetime) {
-    int day_of_year = quiver::day_of_year(datetime);
-    return day_of_year % quiver::time::MAX_DAYS_IN_WEEK;
-}
 }  // anonymous namespace
 
 namespace quiver {
@@ -41,8 +37,8 @@ void TimeProperties::set_initial_value(int64_t initial_value) {
     this->initial_value = initial_value;
 }
 
-void TimeProperties::set_parent_dimension(std::unique_ptr<Dimension> parent) {
-    this->parent_dimension = std::move(parent);
+void TimeProperties::set_parent_dimension_index(int64_t parent_dimension_index) {
+    this->parent_dimension_index = parent_dimension_index;
 }
 
 int64_t TimeProperties::datetime_to_int(std::chrono::system_clock::time_point datetime) const {
