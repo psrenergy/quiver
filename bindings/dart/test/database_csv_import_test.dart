@@ -72,8 +72,8 @@ void main() {
 
         db.exportCSV('Items', 'measurements', csvPath);
 
-        // Clear and re-import
-        db.deleteElement('Items', id1);
+        // Clear vector data and re-import (parent element must exist for group import)
+        db.updateElement('Items', id1, {'measurement': <double>[]});
         db.importCSV('Items', 'measurements', csvPath);
 
         final vals = db.readVectorFloatsById('Items', 'measurement', id1);
