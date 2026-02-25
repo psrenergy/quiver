@@ -26,7 +26,10 @@ TEST(DatabaseCApi, UpdateScalarInteger) {
     quiver_database_create_element(db, "Configuration", e, &id);
     EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
-    auto err = quiver_database_update_scalar_integer(db, "Configuration", "integer_attribute", id, 100);
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
+    quiver_element_set_integer(update, "integer_attribute", 100);
+    auto err = quiver_database_update_element(db, "Configuration", id, update);
     EXPECT_EQ(err, QUIVER_OK);
 
     int64_t value;
@@ -554,108 +557,6 @@ TEST(DatabaseCApi, UpdateElementNullArguments) {
     EXPECT_EQ(err, QUIVER_ERROR);
 
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
-    quiver_database_close(db);
-}
-
-// ============================================================================
-// Update scalar null pointer tests
-// ============================================================================
-
-TEST(DatabaseCApi, UpdateScalarIntegerNullDb) {
-    auto err = quiver_database_update_scalar_integer(nullptr, "Configuration", "integer_attribute", 1, 42);
-    EXPECT_EQ(err, QUIVER_ERROR);
-}
-
-TEST(DatabaseCApi, UpdateScalarIntegerNullCollection) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
-    quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
-    ASSERT_NE(db, nullptr);
-
-    auto err = quiver_database_update_scalar_integer(db, nullptr, "integer_attribute", 1, 42);
-    EXPECT_EQ(err, QUIVER_ERROR);
-
-    quiver_database_close(db);
-}
-
-TEST(DatabaseCApi, UpdateScalarIntegerNullAttribute) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
-    quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
-    ASSERT_NE(db, nullptr);
-
-    auto err = quiver_database_update_scalar_integer(db, "Configuration", nullptr, 1, 42);
-    EXPECT_EQ(err, QUIVER_ERROR);
-
-    quiver_database_close(db);
-}
-
-TEST(DatabaseCApi, UpdateScalarFloatNullDb) {
-    auto err = quiver_database_update_scalar_float(nullptr, "Configuration", "float_attribute", 1, 3.14);
-    EXPECT_EQ(err, QUIVER_ERROR);
-}
-
-TEST(DatabaseCApi, UpdateScalarFloatNullCollection) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
-    quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
-    ASSERT_NE(db, nullptr);
-
-    auto err = quiver_database_update_scalar_float(db, nullptr, "float_attribute", 1, 3.14);
-    EXPECT_EQ(err, QUIVER_ERROR);
-
-    quiver_database_close(db);
-}
-
-TEST(DatabaseCApi, UpdateScalarStringNullDb) {
-    auto err = quiver_database_update_scalar_string(nullptr, "Configuration", "string_attribute", 1, "test");
-    EXPECT_EQ(err, QUIVER_ERROR);
-}
-
-TEST(DatabaseCApi, UpdateScalarStringNullCollection) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
-    quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
-    ASSERT_NE(db, nullptr);
-
-    auto err = quiver_database_update_scalar_string(db, nullptr, "string_attribute", 1, "test");
-    EXPECT_EQ(err, QUIVER_ERROR);
-
-    quiver_database_close(db);
-}
-
-TEST(DatabaseCApi, UpdateScalarStringNullValue) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
-    quiver_database_t* db = nullptr;
-    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
-    ASSERT_NE(db, nullptr);
-
-    // Create element with a string value
-    quiver_element_t* elem = nullptr;
-    ASSERT_EQ(quiver_element_create(&elem), QUIVER_OK);
-    quiver_element_set_string(elem, "label", "test");
-    quiver_element_set_string(elem, "string_attribute", "hello");
-    int64_t id = 0;
-    ASSERT_EQ(quiver_database_create_element(db, "Configuration", elem, &id), QUIVER_OK);
-    quiver_element_destroy(elem);
-
-    // Update to NULL -- should succeed
-    auto err = quiver_database_update_scalar_string(db, "Configuration", "string_attribute", id, nullptr);
-    EXPECT_EQ(err, QUIVER_OK);
-
-    // Verify it was set to NULL
-    char* read_val = nullptr;
-    int has_val = 0;
-    ASSERT_EQ(
-        quiver_database_read_scalar_string_by_id(db, "Configuration", "string_attribute", id, &read_val, &has_val),
-        QUIVER_OK);
-    EXPECT_EQ(has_val, 0);
-
     quiver_database_close(db);
 }
 
