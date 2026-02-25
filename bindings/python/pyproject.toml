@@ -15,6 +15,7 @@ cmake.source-dir = "../.."
 cmake.build-type = "Release"
 cmake.args = ["-DQUIVER_BUILD_TESTS=OFF"]
 wheel.packages = ["src/quiverdb"]
+wheel.exclude = ["bin", "lib", "include", "share"]
 
 [dependency-groups]
 dev = [
