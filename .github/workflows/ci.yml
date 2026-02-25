@@ -198,6 +198,45 @@ jobs:
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
+  python-coverage:
+      name: Python Coverage
+      runs-on: ubuntu-latest
+
+      steps:
+        - uses: actions/checkout@v6
+
+        - uses: astral-sh/setup-uv@v7
+
+        - name: Build C++ (for shared library)
+          run: |
+            cmake -B build \
+              -DCMAKE_BUILD_TYPE=Debug \
+              -DQUIVER_BUILD_TESTS=ON \
+              -DQUIVER_BUILD_C_API=ON
+            cmake --build build
+
+        - name: Install dependencies
+          working-directory: bindings/python
+          run: |
+            uv venv
+            uv pip install pytest pytest-cov
+            uv pip install -e .
+
+        - name: Run tests with coverage
+          working-directory: bindings/python
+          env:
+            LD_LIBRARY_PATH: ${{ github.workspace }}/build/lib
+          run: |
+            uv run pytest --cov=quiver --cov-report=xml
+
+        - name: Upload to Codecov
+          uses: codecov/codecov-action@v5
+          with:
+            files: bindings/python/coverage.xml
+            flags: python
+            fail_ci_if_error: false
+            token: ${{ secrets.CODECOV_TOKEN }}
+
   clang-format:
     name: Code Formatting
     runs-on: ubuntu-latest
