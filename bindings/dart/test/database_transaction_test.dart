@@ -194,8 +194,8 @@ void main() {
           });
 
           db.updateElement('Collection', 1, {
-          'some_integer': 100,
-        });
+            'some_integer': 100,
+          });
           return null;
         });
 

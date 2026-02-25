@@ -60,7 +60,7 @@ TEST(DatabaseCApi, UpdateScalarFloat) {
     quiver_element_t* update = nullptr;
     ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     quiver_element_set_float(update, "float_attribute", 2.71);
-    auto err = quiver_database_update_element(db, "Configuration", id, update);    
+    auto err = quiver_database_update_element(db, "Configuration", id, update);
     EXPECT_EQ(err, QUIVER_OK);
 
     double value;
@@ -91,8 +91,8 @@ TEST(DatabaseCApi, UpdateScalarString) {
     quiver_element_t* update = nullptr;
     ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     quiver_element_set_string(update, "string_attribute", "world");
-    auto err = quiver_database_update_element(db, "Configuration", id, update);    
-    EXPECT_EQ(err, QUIVER_OK);    
+    auto err = quiver_database_update_element(db, "Configuration", id, update);
+    EXPECT_EQ(err, QUIVER_OK);
 
     char* value = nullptr;
     int has_value;
@@ -752,8 +752,8 @@ TEST(DatabaseCApi, UpdateScalarStringTrimsWhitespace) {
     quiver_element_t* update = nullptr;
     ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     quiver_element_set_string(update, "string_attribute", "  world  ");
-    auto err = quiver_database_update_element(db, "Configuration", id, update);    
-    EXPECT_EQ(err, QUIVER_OK);    
+    auto err = quiver_database_update_element(db, "Configuration", id, update);
+    EXPECT_EQ(err, QUIVER_OK);
 
     char* value = nullptr;
     int has_value;
@@ -837,8 +837,8 @@ TEST(DatabaseCApi, UpdateDateTimeScalar) {
     quiver_element_t* update = nullptr;
     ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     quiver_element_set_string(update, "date_attribute", "2025-12-31T23:59:59");
-    auto err = quiver_database_update_element(db, "Configuration", id, update);    
-    EXPECT_EQ(err, QUIVER_OK);        
+    auto err = quiver_database_update_element(db, "Configuration", id, update);
+    EXPECT_EQ(err, QUIVER_OK);
 
     // Verify the update
     char* value = nullptr;

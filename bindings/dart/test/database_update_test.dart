@@ -368,7 +368,7 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 42});
 
-          db.updateElement('Configuration', 1, {
+        db.updateElement('Configuration', 1, {
           'integer_attribute': 100,
         });
 
@@ -387,7 +387,7 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 42});
 
-                  db.updateElement('Configuration', 1, {
+        db.updateElement('Configuration', 1, {
           'integer_attribute': 0,
         });
 
@@ -1304,7 +1304,9 @@ void main() {
           'tag': ['old'],
         });
 
-        db.updateElement('Collection', 1, {'tag': ['  alpha  ', '\tbeta\n', ' gamma ']});
+        db.updateElement('Collection', 1, {
+          'tag': ['  alpha  ', '\tbeta\n', ' gamma '],
+        });
 
         final values = db.readSetStringsById('Collection', 'tag', 1);
         final sorted = List<String>.from(values)..sort();

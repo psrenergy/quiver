@@ -133,12 +133,14 @@ include("fixture.jl")
             Quiver.create_element!(db, "Collection"; label = "Item 1", some_integer = 10)
             Quiver.create_element!(db, "Collection"; label = "Item 2", some_integer = 20)
 
-        Quiver.update_element!(
-            db,
-            "Collection",
-            Int64(1);
-            some_integer = Int64(100),
-        )            
+            Quiver.update_element!(
+                db,
+                "Collection",
+                Int64(1);
+                some_integer = Int64(100),
+            )
+
+            return nothing
         end
 
         labels = Quiver.read_scalar_strings(db, "Collection", "label")
