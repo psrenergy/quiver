@@ -28,10 +28,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Running `pip wheel .` in the bindings/python directory produces a `.whl` file containing `quiverdb/_libs/libquiver` and `quiverdb/_libs/libquiver_c` (platform-appropriate extensions)
   3. The CMake install targets only activate when the `SKBUILD` variable is set (normal CMake builds are unaffected)
   4. Existing Python tests still pass after the build backend switch (no functional regression)
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 01-01: TBD
+- [ ] 01-01-PLAN.md -- Replace hatchling with scikit-build-core and add SKBUILD CMake guard
+- [ ] 01-02-PLAN.md -- Create wheel validation script and verify end-to-end build
 
 ### Phase 2: Loader Rewrite
 **Goal**: Python code discovers and loads bundled native libraries from an installed wheel, with fallback for development
@@ -81,7 +82,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Build System Migration | 0/0 | Not started | - |
+| 1. Build System Migration | 0/2 | Planning complete | - |
 | 2. Loader Rewrite | 0/0 | Not started | - |
 | 3. CI Wheel Building | 0/0 | Not started | - |
 | 4. PyPI Publishing | 0/0 | Not started | - |
