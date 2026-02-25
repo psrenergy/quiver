@@ -1,6 +1,11 @@
 #ifndef QUIVER_C_DATABASE_CSV_OPTIONS_H
 #define QUIVER_C_DATABASE_CSV_OPTIONS_H
 
+#include "quiver/c/options.h"
+#include "quiver/options.h"
+
+#include <string>
+
 inline quiver::CSVOptions convert_options(const quiver_csv_options_t* opts) {
     quiver::CSVOptions cpp_opts;
     cpp_opts.date_time_format = opts->date_time_format ? opts->date_time_format : "";
@@ -19,8 +24,10 @@ inline quiver::CSVOptions convert_options(const quiver_csv_options_t* opts) {
     return cpp_opts;
 }
 
-QUIVER_C_API quiver_csv_options_t quiver_csv_options_default(void) {
+inline quiver_csv_options_t quiver_csv_options_default(void) {
     quiver_csv_options_t opts = {};
     opts.date_time_format = "";
     return opts;
 }
+
+#endif
