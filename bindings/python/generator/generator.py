@@ -17,10 +17,10 @@ from pathlib import Path
 
 # Headers to process, in dependency order
 HEADERS = [
-    "include/quiverdb/c/common.h",
-    "include/quiverdb/c/options.h",
-    "include/quiverdb/c/database.h",
-    "include/quiverdb/c/element.h",
+    "include/quiver/c/common.h",
+    "include/quiver/c/options.h",
+    "include/quiver/c/database.h",
+    "include/quiver/c/element.h",
 ]
 
 

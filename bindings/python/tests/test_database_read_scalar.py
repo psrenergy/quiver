@@ -1,4 +1,4 @@
-"""Tests for scalar read operations, element IDs, relation reads, and convenience helpers."""
+"""Tests for scalar read operations, element IDs, and convenience helpers."""
 
 from __future__ import annotations
 
@@ -132,46 +132,6 @@ class TestReadElementIDs:
     def test_read_element_ids_empty(self, db: Database) -> None:
         ids = db.read_element_ids("Configuration")
         assert ids == []
-
-
-# -- Scalar relation reads -----------------------------------------------------
-
-
-class TestReadScalarRelation:
-    def test_read_scalar_relation(self, relations_db: Database) -> None:
-        relations_db.create_element("Configuration", Element().set("label", "Test Config"))
-        relations_db.create_element("Parent", Element().set("label", "Parent 1"))
-        relations_db.create_element("Parent", Element().set("label", "Parent 2"))
-        relations_db.create_element("Child", Element().set("label", "Child 1"))
-        relations_db.create_element("Child", Element().set("label", "Child 2"))
-        relations_db.create_element("Child", Element().set("label", "Child 3"))
-
-        # Set relations using label-to-label
-        relations_db.update_scalar_relation("Child", "parent_id", "Child 1", "Parent 1")
-        relations_db.update_scalar_relation("Child", "parent_id", "Child 3", "Parent 2")
-
-        labels = relations_db.read_scalar_relation("Child", "parent_id")
-        assert len(labels) == 3
-        assert labels[0] == "Parent 1"
-        assert labels[1] is None  # Child 2 has no parent
-        assert labels[2] == "Parent 2"
-
-    def test_read_scalar_relation_empty(self, relations_db: Database) -> None:
-        relations_db.create_element("Configuration", Element().set("label", "Test Config"))
-        labels = relations_db.read_scalar_relation("Child", "parent_id")
-        assert labels == []
-
-    def test_read_scalar_relation_self_reference(self, relations_db: Database) -> None:
-        relations_db.create_element("Configuration", Element().set("label", "Test Config"))
-        relations_db.create_element("Child", Element().set("label", "Child 1"))
-        relations_db.create_element("Child", Element().set("label", "Child 2"))
-
-        relations_db.update_scalar_relation("Child", "sibling_id", "Child 1", "Child 2")
-
-        labels = relations_db.read_scalar_relation("Child", "sibling_id")
-        assert len(labels) == 2
-        assert labels[0] == "Child 2"
-        assert labels[1] is None
 
 
 # -- DateTime scalar reads ---------------------------------------------------

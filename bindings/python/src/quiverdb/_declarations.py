@@ -35,34 +35,36 @@ typedef struct {
     quiver_log_level_t console_level;
 } quiver_database_options_t;
 
-// CSV export options for controlling enum resolution and date formatting.
+// CSV options for controlling enum resolution and date formatting.
 // All pointers are borrowed -- caller owns the memory, function reads during call only.
 //
-// Enum labels map attribute names to (integer_value -> string_label) pairs.
-// Represented as grouped-by-attribute parallel arrays:
-//   enum_attribute_names[i]  = attribute name for group i
-//   enum_entry_counts[i]     = number of entries in group i
-//   enum_values[]            = all integer values, concatenated across groups
-//   enum_labels[]            = all string labels, concatenated across groups
-//   enum_attribute_count     = number of attribute groups (0 = no enum mapping)
+// Enum labels map attribute names to locale-keyed (string_label -> integer_value) pairs.
+// Represented as grouped-by-attribute-and-locale parallel arrays:
+//   enum_attribute_names[i]   = attribute name for group i
+//   enum_locale_names[i]      = locale name for group i (e.g. "en", "pt")
+//   enum_entry_counts[i]      = number of entries in group i
+//   enum_labels[]             = all string labels, concatenated across groups
+//   enum_values[]             = all integer values, concatenated across groups
+//   enum_group_count          = total number of (attribute, locale) groups
 //
-// Example: {"status": {1: "Active", 2: "Inactive"}, "priority": {0: "Low"}}
-//   enum_attribute_names = ["status", "priority"]
+// Example: {"status": {"en": {"Active": 1, "Inactive": 2}, "pt": {"Ativo": 1}}}
+//   enum_attribute_names = ["status", "status"]
+//   enum_locale_names    = ["en", "pt"]
 //   enum_entry_counts    = [2, 1]
-//   enum_values          = [1, 2, 0]
-//   enum_labels          = ["Active", "Inactive", "Low"]
-//   enum_attribute_count = 2
+//   enum_labels          = ["Active", "Inactive", "Ativo"]
+//   enum_values          = [1, 2, 1]
+//   enum_group_count     = 2
 typedef struct {
     const char* date_time_format;             // strftime format; "" = no formatting
-    const char* const* enum_attribute_names;  // [enum_attribute_count]
-    const size_t* enum_entry_counts;          // [enum_attribute_count]
-    const int64_t* enum_values;               // [sum of enum_entry_counts]
+    const char* const* enum_attribute_names;  // [enum_group_count]
+    const char* const* enum_locale_names;     // [enum_group_count]
+    const size_t* enum_entry_counts;          // [enum_group_count]
     const char* const* enum_labels;           // [sum of enum_entry_counts]
-    size_t enum_attribute_count;              // number of attributes with enum mappings
-} quiver_csv_export_options_t;
+    const int64_t* enum_values;               // [sum of enum_entry_counts]
+    size_t enum_group_count;                  // number of (attribute, locale) groups
+} quiver_csv_options_t;
 
-// Returns default options (no enum mapping, no date formatting).
-quiver_csv_export_options_t quiver_csv_export_options_default(void);
+quiver_csv_options_t quiver_csv_options_default(void);
 
 // database.h
 // Default options
@@ -123,19 +125,6 @@ quiver_error_t quiver_database_update_element(quiver_database_t* db,
                                                            int64_t id,
                                                            const quiver_element_t* element);
 quiver_error_t quiver_database_delete_element(quiver_database_t* db, const char* collection, int64_t id);
-
-// Relation operations
-quiver_error_t quiver_database_update_scalar_relation(quiver_database_t* db,
-                                                                   const char* collection,
-                                                                   const char* attribute,
-                                                                   const char* from_label,
-                                                                   const char* to_label);
-
-quiver_error_t quiver_database_read_scalar_relation(quiver_database_t* db,
-                                                                 const char* collection,
-                                                                 const char* attribute,
-                                                                 char*** out_values,
-                                                                 size_t* out_count);
 
 // Read scalar attributes
 quiver_error_t quiver_database_read_scalar_integers(quiver_database_t* db,
@@ -485,8 +474,12 @@ quiver_error_t quiver_database_export_csv(quiver_database_t* db,
                                                        const char* collection,
                                                        const char* group,
                                                        const char* path,
-                                                       const quiver_csv_export_options_t* opts);
-quiver_error_t quiver_database_import_csv(quiver_database_t* db, const char* table, const char* path);
+                                                       const quiver_csv_options_t* opts);
+quiver_error_t quiver_database_import_csv(quiver_database_t* db,
+                                                       const char* collection,
+                                                       const char* group,
+                                                       const char* path,
+                                                       const quiver_csv_options_t* opts);
 
 // Query methods - execute SQL and return first row's first column
 quiver_error_t quiver_database_query_string(quiver_database_t* db,
