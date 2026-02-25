@@ -61,7 +61,7 @@ include("fixture.jl")
 
             Quiver.export_csv(db, "Items", "measurements", csv_path)
 
-            Quiver.delete_element!(db, "Items", id1)
+            Quiver.update_element!(db, "Items", id1; measurement = Float64[])
             Quiver.import_csv(db, "Items", "measurements", csv_path)
 
             vals = Quiver.read_vector_floats_by_id(db, "Items", "measurement", id1)
