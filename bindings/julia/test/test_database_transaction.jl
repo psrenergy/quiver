@@ -136,7 +136,7 @@ include("fixture.jl")
             Quiver.update_element!(
                 db,
                 "Collection",
-                Int64(1);
+                1;
                 some_integer = Int64(100),
             )
 
