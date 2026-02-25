@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from quiverdb import Database, Element
+from quiverdb import Database, Element, QuiverError
 
 
 class TestUpdateElement:
@@ -172,3 +172,164 @@ class TestUpdateSetFloats:
         assert len(result) == 2
         assert any(abs(v - 1.1) < 1e-9 for v in result)
         assert any(abs(v - 2.2) < 1e-9 for v in result)
+
+
+class TestFKResolutionUpdate:
+    """FK label resolution tests for update_element -- ported from Julia/Dart."""
+
+    def test_scalar_fk_label(self, relations_db: Database) -> None:
+        """Update scalar FK with string label resolves to new parent ID."""
+        relations_db.create_element("Configuration", Element().set("label", "cfg"))
+        relations_db.create_element("Parent", Element().set("label", "Parent 1"))
+        relations_db.create_element("Parent", Element().set("label", "Parent 2"))
+        relations_db.create_element(
+            "Child",
+            Element().set("label", "Child 1").set("parent_id", "Parent 1"),
+        )
+        relations_db.update_element("Child", 1, Element().set("parent_id", "Parent 2"))
+        result = relations_db.read_scalar_integer_by_id("Child", "parent_id", 1)
+        assert result == 2
+
+    def test_scalar_fk_integer(self, relations_db: Database) -> None:
+        """Update scalar FK with integer value passed through as-is."""
+        relations_db.create_element("Configuration", Element().set("label", "cfg"))
+        relations_db.create_element("Parent", Element().set("label", "Parent 1"))
+        relations_db.create_element("Parent", Element().set("label", "Parent 2"))
+        relations_db.create_element(
+            "Child",
+            Element().set("label", "Child 1").set("parent_id", 1),
+        )
+        relations_db.update_element("Child", 1, Element().set("parent_id", 2))
+        result = relations_db.read_scalar_integer_by_id("Child", "parent_id", 1)
+        assert result == 2
+
+    def test_vector_fk_labels(self, relations_db: Database) -> None:
+        """Update vector FK with string labels resolves to parent IDs."""
+        relations_db.create_element("Configuration", Element().set("label", "cfg"))
+        relations_db.create_element("Parent", Element().set("label", "Parent 1"))
+        relations_db.create_element("Parent", Element().set("label", "Parent 2"))
+        relations_db.create_element(
+            "Child",
+            Element().set("label", "Child 1").set("parent_ref", ["Parent 1"]),
+        )
+        relations_db.update_element(
+            "Child", 1, Element().set("parent_ref", ["Parent 2", "Parent 1"]),
+        )
+        result = relations_db.read_vector_integers_by_id("Child", "parent_ref", 1)
+        assert result == [2, 1]
+
+    def test_set_fk_labels(self, relations_db: Database) -> None:
+        """Update set FK with string labels resolves to parent IDs."""
+        relations_db.create_element("Configuration", Element().set("label", "cfg"))
+        relations_db.create_element("Parent", Element().set("label", "Parent 1"))
+        relations_db.create_element("Parent", Element().set("label", "Parent 2"))
+        relations_db.create_element(
+            "Child",
+            Element().set("label", "Child 1").set("mentor_id", ["Parent 1"]),
+        )
+        relations_db.update_element(
+            "Child", 1, Element().set("mentor_id", ["Parent 2"]),
+        )
+        result = relations_db.read_set_integers_by_id("Child", "mentor_id", 1)
+        assert result == [2]
+
+    def test_time_series_fk_labels(self, relations_db: Database) -> None:
+        """Update time series FK with string labels resolves to parent IDs."""
+        relations_db.create_element("Configuration", Element().set("label", "cfg"))
+        relations_db.create_element("Parent", Element().set("label", "Parent 1"))
+        relations_db.create_element("Parent", Element().set("label", "Parent 2"))
+        relations_db.create_element(
+            "Child",
+            Element()
+            .set("label", "Child 1")
+            .set("date_time", ["2024-01-01"])
+            .set("sponsor_id", ["Parent 1"]),
+        )
+        relations_db.update_element(
+            "Child",
+            1,
+            Element()
+            .set("date_time", ["2024-06-01", "2024-06-02"])
+            .set("sponsor_id", ["Parent 2", "Parent 1"]),
+        )
+        rows = relations_db.read_time_series_group("Child", "events", 1)
+        sponsor_ids = [row["sponsor_id"] for row in rows]
+        assert sponsor_ids == [2, 1]
+        assert len(rows) == 2
+
+    def test_all_fk_types_in_one_call(self, relations_db: Database) -> None:
+        """Update all FK types in a single update_element call."""
+        relations_db.create_element("Configuration", Element().set("label", "cfg"))
+        relations_db.create_element("Parent", Element().set("label", "Parent 1"))
+        relations_db.create_element("Parent", Element().set("label", "Parent 2"))
+        # Create with all FK types pointing to Parent 1
+        relations_db.create_element(
+            "Child",
+            Element()
+            .set("label", "Child 1")
+            .set("parent_id", "Parent 1")
+            .set("mentor_id", ["Parent 1"])
+            .set("parent_ref", ["Parent 1"])
+            .set("date_time", ["2024-01-01"])
+            .set("sponsor_id", ["Parent 1"]),
+        )
+        # Update all FK types to Parent 2
+        relations_db.update_element(
+            "Child",
+            1,
+            Element()
+            .set("parent_id", "Parent 2")
+            .set("mentor_id", ["Parent 2"])
+            .set("parent_ref", ["Parent 2"])
+            .set("date_time", ["2025-01-01"])
+            .set("sponsor_id", ["Parent 2"]),
+        )
+        # Verify scalar FK
+        assert relations_db.read_scalar_integer_by_id("Child", "parent_id", 1) == 2
+        # Verify set FK
+        assert relations_db.read_set_integers_by_id("Child", "mentor_id", 1) == [2]
+        # Verify vector FK
+        assert relations_db.read_vector_integers_by_id("Child", "parent_ref", 1) == [2]
+        # Verify time series FK
+        rows = relations_db.read_time_series_group("Child", "events", 1)
+        assert [row["sponsor_id"] for row in rows] == [2]
+
+    def test_no_fk_columns_unchanged(self, db: Database) -> None:
+        """No FK columns: update_element works normally for non-FK schemas."""
+        db.create_element(
+            "Configuration",
+            Element()
+            .set("label", "Config 1")
+            .set("integer_attribute", 42)
+            .set("float_attribute", 3.14)
+            .set("string_attribute", "hello"),
+        )
+        db.update_element(
+            "Configuration",
+            1,
+            Element()
+            .set("integer_attribute", 100)
+            .set("float_attribute", 2.71)
+            .set("string_attribute", "world"),
+        )
+        assert db.read_scalar_integer_by_id("Configuration", "integer_attribute", 1) == 100
+        float_val = db.read_scalar_float_by_id("Configuration", "float_attribute", 1)
+        assert float_val is not None
+        assert abs(float_val - 2.71) < 1e-9
+        assert db.read_scalar_string_by_id("Configuration", "string_attribute", 1) == "world"
+
+    def test_resolution_failure_preserves_existing(self, relations_db: Database) -> None:
+        """Failed FK resolution preserves existing values."""
+        relations_db.create_element("Configuration", Element().set("label", "cfg"))
+        relations_db.create_element("Parent", Element().set("label", "Parent 1"))
+        relations_db.create_element(
+            "Child",
+            Element().set("label", "Child 1").set("parent_id", "Parent 1"),
+        )
+        with pytest.raises(QuiverError):
+            relations_db.update_element(
+                "Child", 1, Element().set("parent_id", "Nonexistent Parent"),
+            )
+        # Verify original value preserved
+        result = relations_db.read_scalar_integer_by_id("Child", "parent_id", 1)
+        assert result == 1
