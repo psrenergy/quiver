@@ -249,5 +249,4 @@ jobs:
 
       - name: Check formatting
         run: |
-          find include src tests -name '*.cpp' -o -name '*.h' | \
-            xargs clang-format --dry-run --Werror
+          find include src tests -name '*.cpp' -o -name '*.h' | xargs clang-format --dry-run --Werror
