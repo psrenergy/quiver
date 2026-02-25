@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:quiverdb/quiverdb.dart';
+import 'package:quiverdb/src/database.dart';
 import 'package:test/test.dart';
 import 'package:path/path.dart' as path;
 
