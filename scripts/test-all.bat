@@ -28,7 +28,7 @@ SET DART_RESULT=SKIP
 REM ============================================================
 REM Step 1: Run C++ Tests
 REM ============================================================
-echo [1/4] Running C++ tests...
+echo [1/5] Running C++ tests...
 
 if exist "%ROOT_DIR%\build\bin\quiver_tests.exe" (
     "%ROOT_DIR%\build\bin\quiver_tests.exe"
@@ -47,7 +47,7 @@ echo.
 REM ============================================================
 REM Step 2: Run C API Tests
 REM ============================================================
-echo [2/4] Running C API tests...
+echo [2/5] Running C API tests...
 
 if exist "%ROOT_DIR%\build\bin\quiver_c_tests.exe" (
     "%ROOT_DIR%\build\bin\quiver_c_tests.exe"
@@ -66,7 +66,7 @@ echo.
 REM ============================================================
 REM Step 3: Run Julia Tests
 REM ============================================================
-echo [3/4] Running Julia tests...
+echo [3/5] Running Julia tests...
 
 call "%ROOT_DIR%\bindings\julia\test\test.bat"
 if errorlevel 1 (
@@ -80,7 +80,7 @@ echo.
 REM ============================================================
 REM Step 4: Run Dart Tests
 REM ============================================================
-echo [4/4] Running Dart tests...
+echo [4/5] Running Dart tests...
 
 call "%ROOT_DIR%\bindings\dart\test\test.bat"
 if errorlevel 1 (
@@ -88,6 +88,20 @@ if errorlevel 1 (
     SET FAILED=1
 ) else (
     SET DART_RESULT=PASS
+)
+echo.
+
+REM ============================================================
+REM Step 5: Run Python Tests
+REM ============================================================
+echo [5/5] Running Python tests...
+
+call "%ROOT_DIR%\bindings\python\tests\test.bat"
+if errorlevel 1 (
+    SET PYTHON_RESULT=FAIL
+    SET FAILED=1
+) else (
+    SET PYTHON_RESULT=PASS
 )
 echo.
 

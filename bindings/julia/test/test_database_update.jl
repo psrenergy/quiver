@@ -649,6 +649,49 @@ include("fixture.jl")
     end
 
     # ============================================================================
+    # Gap-fill: String vector, integer set, float set updates (using all_types.sql)
+    # ============================================================================
+
+    @testset "Update Vector Strings" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "all_types.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "AllTypes"; label = "Item 1")
+
+        Quiver.update_vector_strings!(db, "AllTypes", "label_value", Int64(1), ["alpha", "beta"])
+        result = Quiver.read_vector_strings_by_id(db, "AllTypes", "label_value", Int64(1))
+        @test result == ["alpha", "beta"]
+
+        Quiver.close!(db)
+    end
+
+    @testset "Update Set Integers" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "all_types.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "AllTypes"; label = "Item 1")
+
+        Quiver.update_set_integers!(db, "AllTypes", "code", Int64(1), [10, 20, 30])
+        result = Quiver.read_set_integers_by_id(db, "AllTypes", "code", Int64(1))
+        @test sort(result) == [10, 20, 30]
+
+        Quiver.close!(db)
+    end
+
+    @testset "Update Set Floats" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "all_types.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "AllTypes"; label = "Item 1")
+
+        Quiver.update_set_floats!(db, "AllTypes", "weight", Int64(1), [1.1, 2.2])
+        result = Quiver.read_set_floats_by_id(db, "AllTypes", "weight", Int64(1))
+        @test sort(result) == [1.1, 2.2]
+
+        Quiver.close!(db)
+    end
+
+    # ============================================================================
     # Error handling tests for new update functions
     # ============================================================================
 

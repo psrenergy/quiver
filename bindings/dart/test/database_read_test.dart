@@ -554,6 +554,172 @@ void main() {
     });
   });
 
+  // ===========================================================================
+  // Gap-fill: String vector, integer set, float set reads (using all_types.sql)
+  // ===========================================================================
+
+  group('Read Vector Strings', () {
+    test('reads vector strings bulk', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        db.createElement('AllTypes', {'label': 'Item 1'});
+        db.createElement('AllTypes', {'label': 'Item 2'});
+
+        db.updateVectorStrings('AllTypes', 'label_value', 1, ['alpha', 'beta']);
+        db.updateVectorStrings('AllTypes', 'label_value', 2, ['gamma']);
+
+        final result = db.readVectorStrings('AllTypes', 'label_value');
+        expect(result.length, equals(2));
+        expect(result[0], equals(['alpha', 'beta']));
+        expect(result[1], equals(['gamma']));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('reads vector strings by id', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        db.createElement('AllTypes', {'label': 'Item 1'});
+        db.updateVectorStrings('AllTypes', 'label_value', 1, ['alpha', 'beta', 'gamma']);
+
+        final result = db.readVectorStringsById('AllTypes', 'label_value', 1);
+        expect(result, equals(['alpha', 'beta', 'gamma']));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('reads vector strings by id empty', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        db.createElement('AllTypes', {'label': 'Item 1'});
+
+        final result = db.readVectorStringsById('AllTypes', 'label_value', 1);
+        expect(result, isEmpty);
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Read Set Integers', () {
+    test('reads set integers bulk', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        db.createElement('AllTypes', {'label': 'Item 1'});
+        db.createElement('AllTypes', {'label': 'Item 2'});
+
+        db.updateSetIntegers('AllTypes', 'code', 1, [10, 20, 30]);
+        db.updateSetIntegers('AllTypes', 'code', 2, [40, 50]);
+
+        final result = db.readSetIntegers('AllTypes', 'code');
+        expect(result.length, equals(2));
+        expect(result[0]..sort(), equals([10, 20, 30]));
+        expect(result[1]..sort(), equals([40, 50]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('reads set integers by id', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        db.createElement('AllTypes', {'label': 'Item 1'});
+        db.updateSetIntegers('AllTypes', 'code', 1, [10, 20, 30]);
+
+        final result = db.readSetIntegersById('AllTypes', 'code', 1);
+        expect(result..sort(), equals([10, 20, 30]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('reads set integers by id empty', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        db.createElement('AllTypes', {'label': 'Item 1'});
+
+        final result = db.readSetIntegersById('AllTypes', 'code', 1);
+        expect(result, isEmpty);
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Read Set Floats', () {
+    test('reads set floats bulk', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        db.createElement('AllTypes', {'label': 'Item 1'});
+        db.createElement('AllTypes', {'label': 'Item 2'});
+
+        db.updateSetFloats('AllTypes', 'weight', 1, [1.1, 2.2]);
+        db.updateSetFloats('AllTypes', 'weight', 2, [3.3, 4.4, 5.5]);
+
+        final result = db.readSetFloats('AllTypes', 'weight');
+        expect(result.length, equals(2));
+        expect(result[0]..sort(), equals([1.1, 2.2]));
+        expect(result[1]..sort(), equals([3.3, 4.4, 5.5]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('reads set floats by id', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        db.createElement('AllTypes', {'label': 'Item 1'});
+        db.updateSetFloats('AllTypes', 'weight', 1, [1.1, 2.2]);
+
+        final result = db.readSetFloatsById('AllTypes', 'weight', 1);
+        expect(result..sort(), equals([1.1, 2.2]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('reads set floats by id empty', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        db.createElement('AllTypes', {'label': 'Item 1'});
+
+        final result = db.readSetFloatsById('AllTypes', 'weight', 1);
+        expect(result, isEmpty);
+      } finally {
+        db.close();
+      }
+    });
+  });
+
   // Read element IDs tests
 
   group('Read Element IDs', () {

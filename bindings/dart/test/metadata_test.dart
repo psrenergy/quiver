@@ -300,6 +300,26 @@ void main() {
     });
   });
 
+  group('Read Set Group By ID', () {
+    test('reads set group by id', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        db.createElement('AllTypes', {'label': 'Item 1'});
+        db.updateSetIntegers('AllTypes', 'code', 1, [10, 20, 30]);
+
+        final rows = db.readSetGroupById('AllTypes', 'codes', 1);
+        expect(rows, isNotEmpty);
+        final codes = rows.map((row) => row['code']).toList()..sort();
+        expect(codes, equals([10, 20, 30]));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
   group('List Set Groups', () {
     test('returns all set groups with metadata', () {
       final db = Database.fromSchema(

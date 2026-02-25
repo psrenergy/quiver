@@ -32,6 +32,7 @@ src/c/                    # C API implementation
   database_transaction.cpp # Transaction control (begin, commit, rollback, in_transaction)
 bindings/julia/           # Julia bindings (Quiver.jl)
 bindings/dart/            # Dart bindings (quiver)
+bindings/python/          # Python bindings (quiver) - CFFI ABI-mode
 tests/                    # C++ tests
 tests/schemas/            # Shared SQL schemas for all tests
 ```
@@ -72,6 +73,7 @@ scripts/test-all.bat             # Run all tests (assumes already built)
 ./build/bin/quiver_c_tests.exe    # C API tests
 bindings/julia/test/test.bat      # Julia tests
 bindings/dart/test/test.bat       # Dart tests
+bindings/python/test/test.bat     # Python tests
 ```
 
 ### Benchmark
@@ -94,6 +96,7 @@ Test files organized by functionality:
 
 C API tests follow same pattern with `test_c_api_database_*.cpp` prefix:
 - `test_c_api_database_csv.cpp` - CSV export options struct, enum labels, date formatting, scalar/group export
+- `test_c_api_database_metadata.cpp` - Metadata get/list operations (vector, set, time series, scalar)
 
 All test schemas located in `tests/schemas/valid/` and `tests/schemas/invalid/`.
 
@@ -384,14 +387,15 @@ lua.run(R"(
 
 ### Transformation Rules
 
-| From C++ | To C API | To Julia | To Dart | To Lua |
-|----------|----------|----------|---------|--------|
-| `method_name` | `quiver_database_method_name` | `method_name` (+ `!` if mutating) | `methodName` | `method_name` |
-| `Database::from_schema()` | `quiver_database_from_schema()` | `from_schema()` | `Database.fromSchema()` | N/A |
+| From C++ | To C API | To Julia | To Dart | To Python | To Lua |
+|----------|----------|----------|---------|-----------|--------|
+| `method_name` | `quiver_database_method_name` | `method_name` (+ `!` if mutating) | `methodName` | `method_name` | `method_name` |
+| `Database::from_schema()` | `quiver_database_from_schema()` | `from_schema()` | `Database.fromSchema()` | `Database.from_schema()` | N/A |
 
 - **C++ to C API:** Prefix `quiver_database_` to the C++ method name. Example: `create_element` -> `quiver_database_create_element`
 - **C++ to Julia:** Same name. Add `!` suffix for mutating operations (create, update, delete). Example: `create_element` -> `create_element!`, `read_scalar_integers` -> `read_scalar_integers`
 - **C++ to Dart:** Convert `snake_case` to `camelCase`. Example: `read_scalar_integers` -> `readScalarIntegers`. Factory methods use Dart named constructors: `from_schema` -> `Database.fromSchema()`
+- **C++ to Python:** Same `snake_case` name. Factory methods are `@staticmethod`: `from_schema` -> `Database.from_schema()`. Properties are regular methods (not `@property`).
 - **C++ to Lua:** Same name exactly (1:1 match). Example: `read_scalar_integers` -> `read_scalar_integers`. Lua has no lifecycle methods (open/close) -- database is provided as `db` userdata by LuaRunner.
 
 ### Representative Cross-Layer Examples
@@ -460,6 +464,7 @@ When C API changes, regenerate:
 ```bash
 bindings/julia/generator/generator.bat   # Julia
 bindings/dart/generator/generator.bat    # Dart
+bindings/python/generator/generator.bat  # Python
 ```
 
 ### Julia Notes
@@ -472,3 +477,10 @@ bindings/dart/generator/generator.bat    # Dart
 - `libquiver_c.dll` depends on `libquiver.dll` - both must be in PATH
 - test.bat handles PATH setup automatically
 - When C API struct layouts change, clear `.dart_tool/hooks_runner/` and `.dart_tool/lib/` to force a fresh DLL rebuild
+
+### Python Notes
+- Uses CFFI ABI-mode (no compiler required at install time)
+- `_loader.py` pre-loads `libquiver.dll` on Windows for dependency chain resolution
+- `_c_api.py` contains hand-written CFFI cdef declarations (generator output in `_declarations.py` for reference)
+- Properties are regular methods, not `@property` (per design decision)
+- test.bat prepends `build/bin/` to PATH for DLL discovery

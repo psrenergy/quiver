@@ -130,6 +130,17 @@ void main() {
     });
   });
 
+  group('Database describe', () {
+    test('describe does not throw', () {
+      final db = Database.fromSchema(':memory:', schemaPath);
+      try {
+        db.describe();
+      } finally {
+        db.close();
+      }
+    });
+  });
+
   group('Database close', () {
     test('close is idempotent', () {
       final db = Database.fromSchema(':memory:', schemaPath);
