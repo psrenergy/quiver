@@ -1,4 +1,4 @@
-name: quiver_db
+name: quiverdb
 description: Dart bindings for Quiver
 version: 0.3.0
 
