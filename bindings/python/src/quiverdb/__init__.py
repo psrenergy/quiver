@@ -6,6 +6,8 @@ from quiverdb.metadata import CSVOptions, GroupMetadata, ScalarMetadata
 __all__ = [
     "CSVOptions",
     "Database",
+    "DatabaseCSVExport",
+    "DatabaseCSVImport",
     "Element",
     "GroupMetadata",
     "QuiverError",
