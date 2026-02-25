@@ -289,7 +289,7 @@ struct LuaRunner::Impl {
         // NOLINTEND(performance-unnecessary-value-param)
 
         type.set_function("create_element", &create_element_from_lua);
-        
+
         type.set_function("read_scalar_strings", &read_scalar_strings_to_lua);
         type.set_function("read_scalar_integers", &read_scalar_integers_to_lua);
         type.set_function("read_scalar_floats", &read_scalar_floats_to_lua);
@@ -301,7 +301,7 @@ struct LuaRunner::Impl {
         type.set_function("read_vector_integers", &read_vector_integers_to_lua);
         type.set_function("read_vector_floats", &read_vector_floats_to_lua);
         type.set_function("read_vector_strings", &read_vector_strings_to_lua);
-        
+
         type.set_function("read_vector_integers_by_id", &read_vector_integers_by_id_to_lua);
         type.set_function("read_vector_floats_by_id", &read_vector_floats_by_id_to_lua);
         type.set_function("read_vector_strings_by_id", &read_vector_strings_by_id_to_lua);
