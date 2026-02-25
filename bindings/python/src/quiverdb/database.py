@@ -116,7 +116,10 @@ class Database:
         out_id = ffi.new("int64_t*")
         check(
             lib.quiver_database_create_element(
-                self._ptr, collection.encode("utf-8"), element._ptr, out_id,
+                self._ptr,
+                collection.encode("utf-8"),
+                element._ptr,
+                out_id,
             )
         )
         return out_id[0]
@@ -127,15 +130,13 @@ class Database:
         """Update an existing element's scalar attributes."""
         self._ensure_open()
         lib = get_lib()
-        check(lib.quiver_database_update_element(
-            self._ptr, collection.encode("utf-8"), id, element._ptr))
+        check(lib.quiver_database_update_element(self._ptr, collection.encode("utf-8"), id, element._ptr))
 
     def delete_element(self, collection: str, id: int) -> None:
         """Delete an element by ID."""
         self._ensure_open()
         lib = get_lib()
-        check(lib.quiver_database_delete_element(
-            self._ptr, collection.encode("utf-8"), id))
+        check(lib.quiver_database_delete_element(self._ptr, collection.encode("utf-8"), id))
 
     # -- Scalar updates ---------------------------------------------------------
 
@@ -143,26 +144,32 @@ class Database:
         """Update an integer scalar attribute for a single element."""
         self._ensure_open()
         lib = get_lib()
-        check(lib.quiver_database_update_scalar_integer(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-            id, value))
+        check(
+            lib.quiver_database_update_scalar_integer(
+                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, value
+            )
+        )
 
     def update_scalar_float(self, collection, attribute, id, value):
         """Update a float scalar attribute for a single element."""
         self._ensure_open()
         lib = get_lib()
-        check(lib.quiver_database_update_scalar_float(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-            id, value))
+        check(
+            lib.quiver_database_update_scalar_float(
+                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, value
+            )
+        )
 
     def update_scalar_string(self, collection, attribute, id, value):
         """Update a string scalar attribute. Pass None to set NULL."""
         self._ensure_open()
         lib = get_lib()
         c_value = value.encode("utf-8") if value is not None else ffi.NULL
-        check(lib.quiver_database_update_scalar_string(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-            id, c_value))
+        check(
+            lib.quiver_database_update_scalar_string(
+                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, c_value
+            )
+        )
 
     # -- Vector updates ---------------------------------------------------------
 
@@ -171,44 +178,56 @@ class Database:
         self._ensure_open()
         lib = get_lib()
         if not values:
-            check(lib.quiver_database_update_vector_integers(
-                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-                id, ffi.NULL, 0))
+            check(
+                lib.quiver_database_update_vector_integers(
+                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, ffi.NULL, 0
+                )
+            )
         else:
             c_arr = ffi.new("int64_t[]", values)
-            check(lib.quiver_database_update_vector_integers(
-                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-                id, c_arr, len(values)))
+            check(
+                lib.quiver_database_update_vector_integers(
+                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, c_arr, len(values)
+                )
+            )
 
     def update_vector_floats(self, collection, attribute, id, values):
         """Replace a float vector for a single element. Empty list clears."""
         self._ensure_open()
         lib = get_lib()
         if not values:
-            check(lib.quiver_database_update_vector_floats(
-                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-                id, ffi.NULL, 0))
+            check(
+                lib.quiver_database_update_vector_floats(
+                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, ffi.NULL, 0
+                )
+            )
         else:
             c_arr = ffi.new("double[]", values)
-            check(lib.quiver_database_update_vector_floats(
-                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-                id, c_arr, len(values)))
+            check(
+                lib.quiver_database_update_vector_floats(
+                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, c_arr, len(values)
+                )
+            )
 
     def update_vector_strings(self, collection, attribute, id, values):
         """Replace a string vector for a single element. Empty list clears."""
         self._ensure_open()
         lib = get_lib()
         if not values:
-            check(lib.quiver_database_update_vector_strings(
-                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-                id, ffi.NULL, 0))
+            check(
+                lib.quiver_database_update_vector_strings(
+                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, ffi.NULL, 0
+                )
+            )
         else:
             encoded = [v.encode("utf-8") for v in values]
             c_strings = [ffi.new("char[]", e) for e in encoded]
             c_arr = ffi.new("const char*[]", c_strings)
-            check(lib.quiver_database_update_vector_strings(
-                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-                id, c_arr, len(values)))
+            check(
+                lib.quiver_database_update_vector_strings(
+                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, c_arr, len(values)
+                )
+            )
 
     # -- Set updates ------------------------------------------------------------
 
@@ -217,44 +236,56 @@ class Database:
         self._ensure_open()
         lib = get_lib()
         if not values:
-            check(lib.quiver_database_update_set_integers(
-                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-                id, ffi.NULL, 0))
+            check(
+                lib.quiver_database_update_set_integers(
+                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, ffi.NULL, 0
+                )
+            )
         else:
             c_arr = ffi.new("int64_t[]", values)
-            check(lib.quiver_database_update_set_integers(
-                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-                id, c_arr, len(values)))
+            check(
+                lib.quiver_database_update_set_integers(
+                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, c_arr, len(values)
+                )
+            )
 
     def update_set_floats(self, collection, attribute, id, values):
         """Replace a float set for a single element. Empty list clears."""
         self._ensure_open()
         lib = get_lib()
         if not values:
-            check(lib.quiver_database_update_set_floats(
-                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-                id, ffi.NULL, 0))
+            check(
+                lib.quiver_database_update_set_floats(
+                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, ffi.NULL, 0
+                )
+            )
         else:
             c_arr = ffi.new("double[]", values)
-            check(lib.quiver_database_update_set_floats(
-                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-                id, c_arr, len(values)))
+            check(
+                lib.quiver_database_update_set_floats(
+                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, c_arr, len(values)
+                )
+            )
 
     def update_set_strings(self, collection, attribute, id, values):
         """Replace a string set for a single element. Empty list clears."""
         self._ensure_open()
         lib = get_lib()
         if not values:
-            check(lib.quiver_database_update_set_strings(
-                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-                id, ffi.NULL, 0))
+            check(
+                lib.quiver_database_update_set_strings(
+                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, ffi.NULL, 0
+                )
+            )
         else:
             encoded = [v.encode("utf-8") for v in values]
             c_strings = [ffi.new("char[]", e) for e in encoded]
             c_arr = ffi.new("const char*[]", c_strings)
-            check(lib.quiver_database_update_set_strings(
-                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-                id, c_arr, len(values)))
+            check(
+                lib.quiver_database_update_set_strings(
+                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, c_arr, len(values)
+                )
+            )
 
     # -- Transaction control ----------------------------------------------------
 
@@ -310,16 +341,26 @@ class Database:
 
         if params is not None and len(params) > 0:
             keepalive, c_types, c_values = _marshal_params(params)
-            check(lib.quiver_database_query_string_params(
-                self._ptr, sql.encode("utf-8"),
-                c_types, c_values, len(params),
-                out_value, out_has,
-            ))
+            check(
+                lib.quiver_database_query_string_params(
+                    self._ptr,
+                    sql.encode("utf-8"),
+                    c_types,
+                    c_values,
+                    len(params),
+                    out_value,
+                    out_has,
+                )
+            )
         else:
-            check(lib.quiver_database_query_string(
-                self._ptr, sql.encode("utf-8"),
-                out_value, out_has,
-            ))
+            check(
+                lib.quiver_database_query_string(
+                    self._ptr,
+                    sql.encode("utf-8"),
+                    out_value,
+                    out_has,
+                )
+            )
 
         if out_has[0] == 0 or out_value[0] == ffi.NULL:
             return None
@@ -337,16 +378,26 @@ class Database:
 
         if params is not None and len(params) > 0:
             keepalive, c_types, c_values = _marshal_params(params)
-            check(lib.quiver_database_query_integer_params(
-                self._ptr, sql.encode("utf-8"),
-                c_types, c_values, len(params),
-                out_value, out_has,
-            ))
+            check(
+                lib.quiver_database_query_integer_params(
+                    self._ptr,
+                    sql.encode("utf-8"),
+                    c_types,
+                    c_values,
+                    len(params),
+                    out_value,
+                    out_has,
+                )
+            )
         else:
-            check(lib.quiver_database_query_integer(
-                self._ptr, sql.encode("utf-8"),
-                out_value, out_has,
-            ))
+            check(
+                lib.quiver_database_query_integer(
+                    self._ptr,
+                    sql.encode("utf-8"),
+                    out_value,
+                    out_has,
+                )
+            )
 
         if out_has[0] == 0:
             return None
@@ -361,16 +412,26 @@ class Database:
 
         if params is not None and len(params) > 0:
             keepalive, c_types, c_values = _marshal_params(params)
-            check(lib.quiver_database_query_float_params(
-                self._ptr, sql.encode("utf-8"),
-                c_types, c_values, len(params),
-                out_value, out_has,
-            ))
+            check(
+                lib.quiver_database_query_float_params(
+                    self._ptr,
+                    sql.encode("utf-8"),
+                    c_types,
+                    c_values,
+                    len(params),
+                    out_value,
+                    out_has,
+                )
+            )
         else:
-            check(lib.quiver_database_query_float(
-                self._ptr, sql.encode("utf-8"),
-                out_value, out_has,
-            ))
+            check(
+                lib.quiver_database_query_float(
+                    self._ptr,
+                    sql.encode("utf-8"),
+                    out_value,
+                    out_has,
+                )
+            )
 
         if out_has[0] == 0:
             return None
@@ -384,19 +445,28 @@ class Database:
         return _parse_datetime(result)
 
     def read_scalar_date_time_by_id(
-        self, collection: str, attribute: str, id: int,
+        self,
+        collection: str,
+        attribute: str,
+        id: int,
     ) -> datetime | None:
         """Read a datetime scalar attribute. Returns timezone-aware UTC datetime or None."""
         return _parse_datetime(self.read_scalar_string_by_id(collection, attribute, id))
 
     def read_vector_date_time_by_id(
-        self, collection: str, attribute: str, id: int,
+        self,
+        collection: str,
+        attribute: str,
+        id: int,
     ) -> list[datetime]:
         """Read datetime values from a vector. Returns list of timezone-aware UTC datetimes."""
         return [_parse_datetime(s) for s in self.read_vector_strings_by_id(collection, attribute, id)]
 
     def read_set_date_time_by_id(
-        self, collection: str, attribute: str, id: int,
+        self,
+        collection: str,
+        attribute: str,
+        id: int,
     ) -> list[datetime]:
         """Read datetime values from a set. Returns list of timezone-aware UTC datetimes."""
         return [_parse_datetime(s) for s in self.read_set_strings_by_id(collection, attribute, id)]
@@ -409,10 +479,15 @@ class Database:
         lib = get_lib()
         out_values = ffi.new("int64_t**")
         out_count = ffi.new("size_t*")
-        check(lib.quiver_database_read_scalar_integers(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-            out_values, out_count,
-        ))
+        check(
+            lib.quiver_database_read_scalar_integers(
+                self._ptr,
+                collection.encode("utf-8"),
+                attribute.encode("utf-8"),
+                out_values,
+                out_count,
+            )
+        )
         count = out_count[0]
         if count == 0 or out_values[0] == ffi.NULL:
             return []
@@ -427,10 +502,15 @@ class Database:
         lib = get_lib()
         out_values = ffi.new("double**")
         out_count = ffi.new("size_t*")
-        check(lib.quiver_database_read_scalar_floats(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-            out_values, out_count,
-        ))
+        check(
+            lib.quiver_database_read_scalar_floats(
+                self._ptr,
+                collection.encode("utf-8"),
+                attribute.encode("utf-8"),
+                out_values,
+                out_count,
+            )
+        )
         count = out_count[0]
         if count == 0 or out_values[0] == ffi.NULL:
             return []
@@ -445,10 +525,15 @@ class Database:
         lib = get_lib()
         out_values = ffi.new("char***")
         out_count = ffi.new("size_t*")
-        check(lib.quiver_database_read_scalar_strings(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-            out_values, out_count,
-        ))
+        check(
+            lib.quiver_database_read_scalar_strings(
+                self._ptr,
+                collection.encode("utf-8"),
+                attribute.encode("utf-8"),
+                out_values,
+                out_count,
+            )
+        )
         count = out_count[0]
         if count == 0 or out_values[0] == ffi.NULL:
             return []
@@ -467,49 +552,76 @@ class Database:
     # -- Scalar reads (by ID) -------------------------------------------------
 
     def read_scalar_integer_by_id(
-        self, collection: str, attribute: str, id: int,
+        self,
+        collection: str,
+        attribute: str,
+        id: int,
     ) -> int | None:
         """Read an integer scalar attribute for a single element. Returns None if NULL."""
         self._ensure_open()
         lib = get_lib()
         out_value = ffi.new("int64_t*")
         out_has = ffi.new("int*")
-        check(lib.quiver_database_read_scalar_integer_by_id(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-            id, out_value, out_has,
-        ))
+        check(
+            lib.quiver_database_read_scalar_integer_by_id(
+                self._ptr,
+                collection.encode("utf-8"),
+                attribute.encode("utf-8"),
+                id,
+                out_value,
+                out_has,
+            )
+        )
         if out_has[0] == 0:
             return None
         return out_value[0]
 
     def read_scalar_float_by_id(
-        self, collection: str, attribute: str, id: int,
+        self,
+        collection: str,
+        attribute: str,
+        id: int,
     ) -> float | None:
         """Read a float scalar attribute for a single element. Returns None if NULL."""
         self._ensure_open()
         lib = get_lib()
         out_value = ffi.new("double*")
         out_has = ffi.new("int*")
-        check(lib.quiver_database_read_scalar_float_by_id(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-            id, out_value, out_has,
-        ))
+        check(
+            lib.quiver_database_read_scalar_float_by_id(
+                self._ptr,
+                collection.encode("utf-8"),
+                attribute.encode("utf-8"),
+                id,
+                out_value,
+                out_has,
+            )
+        )
         if out_has[0] == 0:
             return None
         return out_value[0]
 
     def read_scalar_string_by_id(
-        self, collection: str, attribute: str, id: int,
+        self,
+        collection: str,
+        attribute: str,
+        id: int,
     ) -> str | None:
         """Read a string scalar attribute for a single element. Returns None if NULL."""
         self._ensure_open()
         lib = get_lib()
         out_value = ffi.new("char**")
         out_has = ffi.new("int*")
-        check(lib.quiver_database_read_scalar_string_by_id(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-            id, out_value, out_has,
-        ))
+        check(
+            lib.quiver_database_read_scalar_string_by_id(
+                self._ptr,
+                collection.encode("utf-8"),
+                attribute.encode("utf-8"),
+                id,
+                out_value,
+                out_has,
+            )
+        )
         if out_has[0] == 0 or out_value[0] == ffi.NULL:
             return None
         try:
@@ -525,9 +637,14 @@ class Database:
         lib = get_lib()
         out_ids = ffi.new("int64_t**")
         out_count = ffi.new("size_t*")
-        check(lib.quiver_database_read_element_ids(
-            self._ptr, collection.encode("utf-8"), out_ids, out_count,
-        ))
+        check(
+            lib.quiver_database_read_element_ids(
+                self._ptr,
+                collection.encode("utf-8"),
+                out_ids,
+                out_count,
+            )
+        )
         count = out_count[0]
         if count == 0 or out_ids[0] == ffi.NULL:
             return []
@@ -545,10 +662,16 @@ class Database:
         out_vectors = ffi.new("int64_t***")
         out_sizes = ffi.new("size_t**")
         out_count = ffi.new("size_t*")
-        check(lib.quiver_database_read_vector_integers(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-            out_vectors, out_sizes, out_count,
-        ))
+        check(
+            lib.quiver_database_read_vector_integers(
+                self._ptr,
+                collection.encode("utf-8"),
+                attribute.encode("utf-8"),
+                out_vectors,
+                out_sizes,
+                out_count,
+            )
+        )
         count = out_count[0]
         if count == 0 or out_vectors[0] == ffi.NULL:
             return []
@@ -571,10 +694,16 @@ class Database:
         out_vectors = ffi.new("double***")
         out_sizes = ffi.new("size_t**")
         out_count = ffi.new("size_t*")
-        check(lib.quiver_database_read_vector_floats(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-            out_vectors, out_sizes, out_count,
-        ))
+        check(
+            lib.quiver_database_read_vector_floats(
+                self._ptr,
+                collection.encode("utf-8"),
+                attribute.encode("utf-8"),
+                out_vectors,
+                out_sizes,
+                out_count,
+            )
+        )
         count = out_count[0]
         if count == 0 or out_vectors[0] == ffi.NULL:
             return []
@@ -597,10 +726,16 @@ class Database:
         out_vectors = ffi.new("char****")
         out_sizes = ffi.new("size_t**")
         out_count = ffi.new("size_t*")
-        check(lib.quiver_database_read_vector_strings(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-            out_vectors, out_sizes, out_count,
-        ))
+        check(
+            lib.quiver_database_read_vector_strings(
+                self._ptr,
+                collection.encode("utf-8"),
+                attribute.encode("utf-8"),
+                out_vectors,
+                out_sizes,
+                out_count,
+            )
+        )
         count = out_count[0]
         if count == 0 or out_vectors[0] == ffi.NULL:
             return []
@@ -611,10 +746,7 @@ class Database:
                 if out_vectors[0][i] == ffi.NULL or size == 0:
                     result.append([])
                 else:
-                    result.append([
-                        ffi.string(out_vectors[0][i][j]).decode("utf-8")
-                        for j in range(size)
-                    ])
+                    result.append([ffi.string(out_vectors[0][i][j]).decode("utf-8") for j in range(size)])
             return result
         finally:
             lib.quiver_database_free_string_vectors(out_vectors[0], out_sizes[0], count)
@@ -622,17 +754,26 @@ class Database:
     # -- Vector reads (by ID) ----------------------------------------------------
 
     def read_vector_integers_by_id(
-        self, collection: str, attribute: str, id: int,
+        self,
+        collection: str,
+        attribute: str,
+        id: int,
     ) -> list[int]:
         """Read an integer vector for a single element."""
         self._ensure_open()
         lib = get_lib()
         out_values = ffi.new("int64_t**")
         out_count = ffi.new("size_t*")
-        check(lib.quiver_database_read_vector_integers_by_id(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-            id, out_values, out_count,
-        ))
+        check(
+            lib.quiver_database_read_vector_integers_by_id(
+                self._ptr,
+                collection.encode("utf-8"),
+                attribute.encode("utf-8"),
+                id,
+                out_values,
+                out_count,
+            )
+        )
         count = out_count[0]
         if count == 0 or out_values[0] == ffi.NULL:
             return []
@@ -642,17 +783,26 @@ class Database:
             lib.quiver_database_free_integer_array(out_values[0])
 
     def read_vector_floats_by_id(
-        self, collection: str, attribute: str, id: int,
+        self,
+        collection: str,
+        attribute: str,
+        id: int,
     ) -> list[float]:
         """Read a float vector for a single element."""
         self._ensure_open()
         lib = get_lib()
         out_values = ffi.new("double**")
         out_count = ffi.new("size_t*")
-        check(lib.quiver_database_read_vector_floats_by_id(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-            id, out_values, out_count,
-        ))
+        check(
+            lib.quiver_database_read_vector_floats_by_id(
+                self._ptr,
+                collection.encode("utf-8"),
+                attribute.encode("utf-8"),
+                id,
+                out_values,
+                out_count,
+            )
+        )
         count = out_count[0]
         if count == 0 or out_values[0] == ffi.NULL:
             return []
@@ -662,25 +812,31 @@ class Database:
             lib.quiver_database_free_float_array(out_values[0])
 
     def read_vector_strings_by_id(
-        self, collection: str, attribute: str, id: int,
+        self,
+        collection: str,
+        attribute: str,
+        id: int,
     ) -> list[str]:
         """Read a string vector for a single element."""
         self._ensure_open()
         lib = get_lib()
         out_values = ffi.new("char***")
         out_count = ffi.new("size_t*")
-        check(lib.quiver_database_read_vector_strings_by_id(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-            id, out_values, out_count,
-        ))
+        check(
+            lib.quiver_database_read_vector_strings_by_id(
+                self._ptr,
+                collection.encode("utf-8"),
+                attribute.encode("utf-8"),
+                id,
+                out_values,
+                out_count,
+            )
+        )
         count = out_count[0]
         if count == 0 or out_values[0] == ffi.NULL:
             return []
         try:
-            return [
-                ffi.string(out_values[0][i]).decode("utf-8")
-                for i in range(count)
-            ]
+            return [ffi.string(out_values[0][i]).decode("utf-8") for i in range(count)]
         finally:
             lib.quiver_database_free_string_array(out_values[0], count)
 
@@ -693,10 +849,16 @@ class Database:
         out_sets = ffi.new("int64_t***")
         out_sizes = ffi.new("size_t**")
         out_count = ffi.new("size_t*")
-        check(lib.quiver_database_read_set_integers(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-            out_sets, out_sizes, out_count,
-        ))
+        check(
+            lib.quiver_database_read_set_integers(
+                self._ptr,
+                collection.encode("utf-8"),
+                attribute.encode("utf-8"),
+                out_sets,
+                out_sizes,
+                out_count,
+            )
+        )
         count = out_count[0]
         if count == 0 or out_sets[0] == ffi.NULL:
             return []
@@ -719,10 +881,16 @@ class Database:
         out_sets = ffi.new("double***")
         out_sizes = ffi.new("size_t**")
         out_count = ffi.new("size_t*")
-        check(lib.quiver_database_read_set_floats(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-            out_sets, out_sizes, out_count,
-        ))
+        check(
+            lib.quiver_database_read_set_floats(
+                self._ptr,
+                collection.encode("utf-8"),
+                attribute.encode("utf-8"),
+                out_sets,
+                out_sizes,
+                out_count,
+            )
+        )
         count = out_count[0]
         if count == 0 or out_sets[0] == ffi.NULL:
             return []
@@ -745,10 +913,16 @@ class Database:
         out_sets = ffi.new("char****")
         out_sizes = ffi.new("size_t**")
         out_count = ffi.new("size_t*")
-        check(lib.quiver_database_read_set_strings(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-            out_sets, out_sizes, out_count,
-        ))
+        check(
+            lib.quiver_database_read_set_strings(
+                self._ptr,
+                collection.encode("utf-8"),
+                attribute.encode("utf-8"),
+                out_sets,
+                out_sizes,
+                out_count,
+            )
+        )
         count = out_count[0]
         if count == 0 or out_sets[0] == ffi.NULL:
             return []
@@ -759,10 +933,7 @@ class Database:
                 if out_sets[0][i] == ffi.NULL or size == 0:
                     result.append([])
                 else:
-                    result.append([
-                        ffi.string(out_sets[0][i][j]).decode("utf-8")
-                        for j in range(size)
-                    ])
+                    result.append([ffi.string(out_sets[0][i][j]).decode("utf-8") for j in range(size)])
             return result
         finally:
             lib.quiver_database_free_string_vectors(out_sets[0], out_sizes[0], count)
@@ -770,17 +941,26 @@ class Database:
     # -- Set reads (by ID) -------------------------------------------------------
 
     def read_set_integers_by_id(
-        self, collection: str, attribute: str, id: int,
+        self,
+        collection: str,
+        attribute: str,
+        id: int,
     ) -> list[int]:
         """Read an integer set for a single element."""
         self._ensure_open()
         lib = get_lib()
         out_values = ffi.new("int64_t**")
         out_count = ffi.new("size_t*")
-        check(lib.quiver_database_read_set_integers_by_id(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-            id, out_values, out_count,
-        ))
+        check(
+            lib.quiver_database_read_set_integers_by_id(
+                self._ptr,
+                collection.encode("utf-8"),
+                attribute.encode("utf-8"),
+                id,
+                out_values,
+                out_count,
+            )
+        )
         count = out_count[0]
         if count == 0 or out_values[0] == ffi.NULL:
             return []
@@ -790,17 +970,26 @@ class Database:
             lib.quiver_database_free_integer_array(out_values[0])
 
     def read_set_floats_by_id(
-        self, collection: str, attribute: str, id: int,
+        self,
+        collection: str,
+        attribute: str,
+        id: int,
     ) -> list[float]:
         """Read a float set for a single element."""
         self._ensure_open()
         lib = get_lib()
         out_values = ffi.new("double**")
         out_count = ffi.new("size_t*")
-        check(lib.quiver_database_read_set_floats_by_id(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-            id, out_values, out_count,
-        ))
+        check(
+            lib.quiver_database_read_set_floats_by_id(
+                self._ptr,
+                collection.encode("utf-8"),
+                attribute.encode("utf-8"),
+                id,
+                out_values,
+                out_count,
+            )
+        )
         count = out_count[0]
         if count == 0 or out_values[0] == ffi.NULL:
             return []
@@ -810,85 +999,119 @@ class Database:
             lib.quiver_database_free_float_array(out_values[0])
 
     def read_set_strings_by_id(
-        self, collection: str, attribute: str, id: int,
+        self,
+        collection: str,
+        attribute: str,
+        id: int,
     ) -> list[str]:
         """Read a string set for a single element."""
         self._ensure_open()
         lib = get_lib()
         out_values = ffi.new("char***")
         out_count = ffi.new("size_t*")
-        check(lib.quiver_database_read_set_strings_by_id(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"),
-            id, out_values, out_count,
-        ))
+        check(
+            lib.quiver_database_read_set_strings_by_id(
+                self._ptr,
+                collection.encode("utf-8"),
+                attribute.encode("utf-8"),
+                id,
+                out_values,
+                out_count,
+            )
+        )
         count = out_count[0]
         if count == 0 or out_values[0] == ffi.NULL:
             return []
         try:
-            return [
-                ffi.string(out_values[0][i]).decode("utf-8")
-                for i in range(count)
-            ]
+            return [ffi.string(out_values[0][i]).decode("utf-8") for i in range(count)]
         finally:
             lib.quiver_database_free_string_array(out_values[0], count)
 
     # -- Metadata get ------------------------------------------------------------
 
     def get_scalar_metadata(
-        self, collection: str, attribute: str,
+        self,
+        collection: str,
+        attribute: str,
     ) -> ScalarMetadata:
         """Get metadata for a scalar attribute."""
         self._ensure_open()
         lib = get_lib()
         out = ffi.new("quiver_scalar_metadata_t*")
-        check(lib.quiver_database_get_scalar_metadata(
-            self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), out,
-        ))
+        check(
+            lib.quiver_database_get_scalar_metadata(
+                self._ptr,
+                collection.encode("utf-8"),
+                attribute.encode("utf-8"),
+                out,
+            )
+        )
         try:
             return _parse_scalar_metadata(out)
         finally:
             lib.quiver_database_free_scalar_metadata(out)
 
     def get_vector_metadata(
-        self, collection: str, group_name: str,
+        self,
+        collection: str,
+        group_name: str,
     ) -> GroupMetadata:
         """Get metadata for a vector group."""
         self._ensure_open()
         lib = get_lib()
         out = ffi.new("quiver_group_metadata_t*")
-        check(lib.quiver_database_get_vector_metadata(
-            self._ptr, collection.encode("utf-8"), group_name.encode("utf-8"), out,
-        ))
+        check(
+            lib.quiver_database_get_vector_metadata(
+                self._ptr,
+                collection.encode("utf-8"),
+                group_name.encode("utf-8"),
+                out,
+            )
+        )
         try:
             return _parse_group_metadata(out)
         finally:
             lib.quiver_database_free_group_metadata(out)
 
     def get_set_metadata(
-        self, collection: str, group_name: str,
+        self,
+        collection: str,
+        group_name: str,
     ) -> GroupMetadata:
         """Get metadata for a set group."""
         self._ensure_open()
         lib = get_lib()
         out = ffi.new("quiver_group_metadata_t*")
-        check(lib.quiver_database_get_set_metadata(
-            self._ptr, collection.encode("utf-8"), group_name.encode("utf-8"), out,
-        ))
+        check(
+            lib.quiver_database_get_set_metadata(
+                self._ptr,
+                collection.encode("utf-8"),
+                group_name.encode("utf-8"),
+                out,
+            )
+        )
         try:
             return _parse_group_metadata(out)
         finally:
             lib.quiver_database_free_group_metadata(out)
 
     def get_time_series_metadata(
-        self, collection: str, group_name: str,
+        self,
+        collection: str,
+        group_name: str,
     ) -> GroupMetadata:
         """Get metadata for a time series group."""
         self._ensure_open()
         lib = get_lib()
         out = ffi.new("quiver_group_metadata_t*")
-        check(lib.quiver_database_get_time_series_metadata(
-            self._ptr, collection.encode("utf-8"), group_name.encode("utf-8"), out,
-        ))
+        check(
+            lib.quiver_database_get_time_series_metadata(
+                self._ptr,
+                collection.encode("utf-8"),
+                group_name.encode("utf-8"),
+                out,
+            )
+        )
         try:
             return _parse_group_metadata(out)
         finally:
@@ -902,9 +1125,14 @@ class Database:
         lib = get_lib()
         out_metadata = ffi.new("quiver_scalar_metadata_t**")
         out_count = ffi.new("size_t*")
-        check(lib.quiver_database_list_scalar_attributes(
-            self._ptr, collection.encode("utf-8"), out_metadata, out_count,
-        ))
+        check(
+            lib.quiver_database_list_scalar_attributes(
+                self._ptr,
+                collection.encode("utf-8"),
+                out_metadata,
+                out_count,
+            )
+        )
         count = out_count[0]
         if count == 0 or out_metadata[0] == ffi.NULL:
             return []
@@ -919,9 +1147,14 @@ class Database:
         lib = get_lib()
         out_metadata = ffi.new("quiver_group_metadata_t**")
         out_count = ffi.new("size_t*")
-        check(lib.quiver_database_list_vector_groups(
-            self._ptr, collection.encode("utf-8"), out_metadata, out_count,
-        ))
+        check(
+            lib.quiver_database_list_vector_groups(
+                self._ptr,
+                collection.encode("utf-8"),
+                out_metadata,
+                out_count,
+            )
+        )
         count = out_count[0]
         if count == 0 or out_metadata[0] == ffi.NULL:
             return []
@@ -936,9 +1169,14 @@ class Database:
         lib = get_lib()
         out_metadata = ffi.new("quiver_group_metadata_t**")
         out_count = ffi.new("size_t*")
-        check(lib.quiver_database_list_set_groups(
-            self._ptr, collection.encode("utf-8"), out_metadata, out_count,
-        ))
+        check(
+            lib.quiver_database_list_set_groups(
+                self._ptr,
+                collection.encode("utf-8"),
+                out_metadata,
+                out_count,
+            )
+        )
         count = out_count[0]
         if count == 0 or out_metadata[0] == ffi.NULL:
             return []
@@ -953,9 +1191,14 @@ class Database:
         lib = get_lib()
         out_metadata = ffi.new("quiver_group_metadata_t**")
         out_count = ffi.new("size_t*")
-        check(lib.quiver_database_list_time_series_groups(
-            self._ptr, collection.encode("utf-8"), out_metadata, out_count,
-        ))
+        check(
+            lib.quiver_database_list_time_series_groups(
+                self._ptr,
+                collection.encode("utf-8"),
+                out_metadata,
+                out_count,
+            )
+        )
         count = out_count[0]
         if count == 0 or out_metadata[0] == ffi.NULL:
             return []
@@ -967,7 +1210,10 @@ class Database:
     # -- Time series group operations -------------------------------------------
 
     def read_time_series_group(
-        self, collection: str, group: str, id: int,
+        self,
+        collection: str,
+        group: str,
+        id: int,
     ) -> list[dict]:
         """Read time series data for an element. Returns list of row dicts with typed values."""
         self._ensure_open()
@@ -977,10 +1223,19 @@ class Database:
         out_data = ffi.new("void***")
         out_col_count = ffi.new("size_t*")
         out_row_count = ffi.new("size_t*")
-        check(lib.quiver_database_read_time_series_group(
-            self._ptr, collection.encode("utf-8"), group.encode("utf-8"), id,
-            out_names, out_types, out_data, out_col_count, out_row_count,
-        ))
+        check(
+            lib.quiver_database_read_time_series_group(
+                self._ptr,
+                collection.encode("utf-8"),
+                group.encode("utf-8"),
+                id,
+                out_names,
+                out_types,
+                out_data,
+                out_col_count,
+                out_row_count,
+            )
+        )
         col_count = out_col_count[0]
         row_count = out_row_count[0]
         if col_count == 0 or row_count == 0:
@@ -1003,17 +1258,18 @@ class Database:
                     elif ctype == 1:  # FLOAT
                         row[name] = ffi.cast("double*", out_data[0][c])[r]
                     else:  # STRING or DATE_TIME
-                        row[name] = ffi.string(
-                            ffi.cast("char**", out_data[0][c])[r]
-                        ).decode("utf-8")
+                        row[name] = ffi.string(ffi.cast("char**", out_data[0][c])[r]).decode("utf-8")
                 rows.append(row)
             return rows
         finally:
-            lib.quiver_database_free_time_series_data(
-                out_names[0], out_types[0], out_data[0], col_count, row_count)
+            lib.quiver_database_free_time_series_data(out_names[0], out_types[0], out_data[0], col_count, row_count)
 
     def update_time_series_group(
-        self, collection: str, group: str, id: int, rows: list[dict],
+        self,
+        collection: str,
+        group: str,
+        id: int,
+        rows: list[dict],
     ) -> None:
         """Update time series data for an element. Pass empty list to clear all rows."""
         self._ensure_open()
@@ -1023,19 +1279,23 @@ class Database:
 
         if not rows:
             # Clear operation
-            check(lib.quiver_database_update_time_series_group(
-                self._ptr, c_collection, c_group, id,
-                ffi.NULL, ffi.NULL, ffi.NULL, 0, 0))
+            check(
+                lib.quiver_database_update_time_series_group(
+                    self._ptr, c_collection, c_group, id, ffi.NULL, ffi.NULL, ffi.NULL, 0, 0
+                )
+            )
             return
 
         # Get metadata for column schema
         metadata = self.get_time_series_metadata(collection, group)
-        keepalive, c_col_names, c_col_types, c_col_data, col_count, row_count = (
-            _marshal_time_series_columns(rows, metadata)
+        keepalive, c_col_names, c_col_types, c_col_data, col_count, row_count = _marshal_time_series_columns(
+            rows, metadata
         )
-        check(lib.quiver_database_update_time_series_group(
-            self._ptr, c_collection, c_group, id,
-            c_col_names, c_col_types, c_col_data, col_count, row_count))
+        check(
+            lib.quiver_database_update_time_series_group(
+                self._ptr, c_collection, c_group, id, c_col_names, c_col_types, c_col_data, col_count, row_count
+            )
+        )
 
     # -- Time series files ------------------------------------------------------
 
@@ -1044,8 +1304,7 @@ class Database:
         self._ensure_open()
         lib = get_lib()
         out = ffi.new("int*")
-        check(lib.quiver_database_has_time_series_files(
-            self._ptr, collection.encode("utf-8"), out))
+        check(lib.quiver_database_has_time_series_files(self._ptr, collection.encode("utf-8"), out))
         return bool(out[0])
 
     def list_time_series_files_columns(self, collection: str) -> list[str]:
@@ -1054,16 +1313,16 @@ class Database:
         lib = get_lib()
         out_columns = ffi.new("char***")
         out_count = ffi.new("size_t*")
-        check(lib.quiver_database_list_time_series_files_columns(
-            self._ptr, collection.encode("utf-8"), out_columns, out_count))
+        check(
+            lib.quiver_database_list_time_series_files_columns(
+                self._ptr, collection.encode("utf-8"), out_columns, out_count
+            )
+        )
         count = out_count[0]
         if count == 0:
             return []
         try:
-            return [
-                ffi.string(out_columns[0][i]).decode("utf-8")
-                for i in range(count)
-            ]
+            return [ffi.string(out_columns[0][i]).decode("utf-8") for i in range(count)]
         finally:
             lib.quiver_database_free_string_array(out_columns[0], count)
 
@@ -1074,8 +1333,11 @@ class Database:
         out_columns = ffi.new("char***")
         out_paths = ffi.new("char***")
         out_count = ffi.new("size_t*")
-        check(lib.quiver_database_read_time_series_files(
-            self._ptr, collection.encode("utf-8"), out_columns, out_paths, out_count))
+        check(
+            lib.quiver_database_read_time_series_files(
+                self._ptr, collection.encode("utf-8"), out_columns, out_paths, out_count
+            )
+        )
         count = out_count[0]
         if count == 0:
             return {}
@@ -1089,11 +1351,12 @@ class Database:
                     result[col_name] = ffi.string(out_paths[0][i]).decode("utf-8")
             return result
         finally:
-            lib.quiver_database_free_time_series_files(
-                out_columns[0], out_paths[0], count)
+            lib.quiver_database_free_time_series_files(out_columns[0], out_paths[0], count)
 
     def update_time_series_files(
-        self, collection: str, data: dict[str, str | None],
+        self,
+        collection: str,
+        data: dict[str, str | None],
     ) -> None:
         """Update time series file paths. Pass None for a path to clear it."""
         self._ensure_open()
@@ -1116,13 +1379,20 @@ class Database:
                 keepalive.append(c_path)
                 c_paths[i] = c_path
 
-        check(lib.quiver_database_update_time_series_files(
-            self._ptr, collection.encode("utf-8"), c_columns, c_paths, count))
+        check(
+            lib.quiver_database_update_time_series_files(
+                self._ptr, collection.encode("utf-8"), c_columns, c_paths, count
+            )
+        )
 
     # -- CSV operations ---------------------------------------------------------
 
     def export_csv(
-        self, collection: str, group: str, path: str, *,
+        self,
+        collection: str,
+        group: str,
+        path: str,
+        *,
         options: CSVOptions | None = None,
     ) -> None:
         """Export a collection or group to CSV file."""
@@ -1131,12 +1401,18 @@ class Database:
         if options is None:
             options = CSVOptions()
         keepalive, c_opts = _marshal_csv_options(options)
-        check(lib.quiver_database_export_csv(
-            self._ptr, collection.encode("utf-8"), group.encode("utf-8"),
-            path.encode("utf-8"), c_opts))
+        check(
+            lib.quiver_database_export_csv(
+                self._ptr, collection.encode("utf-8"), group.encode("utf-8"), path.encode("utf-8"), c_opts
+            )
+        )
 
     def import_csv(
-        self, collection: str, group: str, path: str, *,
+        self,
+        collection: str,
+        group: str,
+        path: str,
+        *,
         options: CSVOptions | None = None,
     ) -> None:
         """Import CSV data into a collection."""
@@ -1145,9 +1421,11 @@ class Database:
         if options is None:
             options = CSVOptions()
         keepalive, c_opts = _marshal_csv_options(options)
-        check(lib.quiver_database_import_csv(
-            self._ptr, collection.encode("utf-8"), group.encode("utf-8"),
-            path.encode("utf-8"), c_opts))
+        check(
+            lib.quiver_database_import_csv(
+                self._ptr, collection.encode("utf-8"), group.encode("utf-8"), path.encode("utf-8"), c_opts
+            )
+        )
 
     # -- Convenience helpers ---------------------------------------------------
 
@@ -1161,13 +1439,13 @@ class Database:
         result = {}
         for attr in self.list_scalar_attributes(collection):
             name = attr.name
-            if attr.data_type == 0:    # INTEGER
+            if attr.data_type == 0:  # INTEGER
                 result[name] = self.read_scalar_integer_by_id(collection, name, id)
             elif attr.data_type == 1:  # FLOAT
                 result[name] = self.read_scalar_float_by_id(collection, name, id)
             elif attr.data_type == 3:  # DATE_TIME
                 result[name] = self.read_scalar_date_time_by_id(collection, name, id)
-            else:                      # STRING (2)
+            else:  # STRING (2)
                 result[name] = self.read_scalar_string_by_id(collection, name, id)
         return result
 
@@ -1183,13 +1461,13 @@ class Database:
         for group in self.list_vector_groups(collection):
             name = group.group_name
             dt = group.value_columns[0].data_type if group.value_columns else 2
-            if dt == 0:    # INTEGER
+            if dt == 0:  # INTEGER
                 result[name] = self.read_vector_integers_by_id(collection, name, id)
             elif dt == 1:  # FLOAT
                 result[name] = self.read_vector_floats_by_id(collection, name, id)
             elif dt == 3:  # DATE_TIME
                 result[name] = self.read_vector_date_time_by_id(collection, name, id)
-            else:          # STRING (2)
+            else:  # STRING (2)
                 result[name] = self.read_vector_strings_by_id(collection, name, id)
         return result
 
@@ -1205,18 +1483,21 @@ class Database:
         for group in self.list_set_groups(collection):
             name = group.group_name
             dt = group.value_columns[0].data_type if group.value_columns else 2
-            if dt == 0:    # INTEGER
+            if dt == 0:  # INTEGER
                 result[name] = self.read_set_integers_by_id(collection, name, id)
             elif dt == 1:  # FLOAT
                 result[name] = self.read_set_floats_by_id(collection, name, id)
             elif dt == 3:  # DATE_TIME
                 result[name] = self.read_set_date_time_by_id(collection, name, id)
-            else:          # STRING (2)
+            else:  # STRING (2)
                 result[name] = self.read_set_strings_by_id(collection, name, id)
         return result
 
     def read_vector_group_by_id(
-        self, collection: str, group: str, id: int,
+        self,
+        collection: str,
+        group: str,
+        id: int,
     ) -> list[dict]:
         """Read a multi-column vector group as row dicts.
 
@@ -1235,24 +1516,24 @@ class Database:
         row_count = 0
         for col in columns:
             name = col.name
-            if col.data_type == 0:      # INTEGER
+            if col.data_type == 0:  # INTEGER
                 values = self.read_vector_integers_by_id(collection, name, id)
-            elif col.data_type == 1:    # FLOAT
+            elif col.data_type == 1:  # FLOAT
                 values = self.read_vector_floats_by_id(collection, name, id)
-            elif col.data_type == 3:    # DATE_TIME
+            elif col.data_type == 3:  # DATE_TIME
                 values = self.read_vector_date_time_by_id(collection, name, id)
-            else:                       # STRING (2)
+            else:  # STRING (2)
                 values = self.read_vector_strings_by_id(collection, name, id)
             column_data[name] = values
             row_count = len(values)
 
-        return [
-            {"vector_index": i, **{name: vals[i] for name, vals in column_data.items()}}
-            for i in range(row_count)
-        ]
+        return [{"vector_index": i, **{name: vals[i] for name, vals in column_data.items()}} for i in range(row_count)]
 
     def read_set_group_by_id(
-        self, collection: str, group: str, id: int,
+        self,
+        collection: str,
+        group: str,
+        id: int,
     ) -> list[dict]:
         """Read a multi-column set group as row dicts.
 
@@ -1269,21 +1550,18 @@ class Database:
         row_count = 0
         for col in columns:
             name = col.name
-            if col.data_type == 0:      # INTEGER
+            if col.data_type == 0:  # INTEGER
                 values = self.read_set_integers_by_id(collection, name, id)
-            elif col.data_type == 1:    # FLOAT
+            elif col.data_type == 1:  # FLOAT
                 values = self.read_set_floats_by_id(collection, name, id)
-            elif col.data_type == 3:    # DATE_TIME
+            elif col.data_type == 3:  # DATE_TIME
                 values = self.read_set_date_time_by_id(collection, name, id)
-            else:                       # STRING (2)
+            else:  # STRING (2)
                 values = self.read_set_strings_by_id(collection, name, id)
             column_data[name] = values
             row_count = len(values)
 
-        return [
-            {name: vals[i] for name, vals in column_data.items()}
-            for i in range(row_count)
-        ]
+        return [{name: vals[i] for name, vals in column_data.items()} for i in range(row_count)]
 
     def __repr__(self) -> str:
         if self._closed:
@@ -1339,16 +1617,14 @@ def _marshal_params(params: list) -> tuple:
             keepalive.append(c_buf)
             c_values[i] = ffi.cast("void*", c_buf)
         else:
-            raise TypeError(
-                f"Unsupported parameter type: {type(p).__name__}. "
-                "Expected int, float, str, or None."
-            )
+            raise TypeError(f"Unsupported parameter type: {type(p).__name__}. Expected int, float, str, or None.")
 
     return keepalive, c_types, c_values
 
 
 def _marshal_time_series_columns(
-    rows: list[dict], metadata: GroupMetadata,
+    rows: list[dict],
+    metadata: GroupMetadata,
 ) -> tuple:
     """Marshal Python row dicts into columnar C API arrays for time series update.
 
@@ -1374,16 +1650,13 @@ def _marshal_time_series_columns(
             v = row[name]
             if col_type == 0:  # INTEGER
                 if type(v) is not int:
-                    raise TypeError(
-                        f"Column '{name}' expects int, got {type(v).__name__}")
+                    raise TypeError(f"Column '{name}' expects int, got {type(v).__name__}")
             elif col_type == 1:  # FLOAT
                 if type(v) is not float:
-                    raise TypeError(
-                        f"Column '{name}' expects float, got {type(v).__name__}")
+                    raise TypeError(f"Column '{name}' expects float, got {type(v).__name__}")
             else:  # STRING or DATE_TIME
                 if type(v) is not str:
-                    raise TypeError(
-                        f"Column '{name}' expects str, got {type(v).__name__}")
+                    raise TypeError(f"Column '{name}' expects str, got {type(v).__name__}")
 
     # Build column name array
     c_col_names = ffi.new("const char*[]", col_count)

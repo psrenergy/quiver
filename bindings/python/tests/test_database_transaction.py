@@ -12,7 +12,8 @@ class TestExplicitTransaction:
         collections_db.create_element("Configuration", Element().set("label", "Config"))
         collections_db.begin_transaction()
         collections_db.create_element(
-            "Collection", Element().set("label", "Item 1").set("some_integer", 10),
+            "Collection",
+            Element().set("label", "Item 1").set("some_integer", 10),
         )
         collections_db.commit()
 
@@ -24,7 +25,8 @@ class TestExplicitTransaction:
         collections_db.create_element("Configuration", Element().set("label", "Config"))
         collections_db.begin_transaction()
         collections_db.create_element(
-            "Collection", Element().set("label", "Item 1").set("some_integer", 10),
+            "Collection",
+            Element().set("label", "Item 1").set("some_integer", 10),
         )
         collections_db.rollback()
 
@@ -52,7 +54,8 @@ class TestTransactionContextManager:
         collections_db.create_element("Configuration", Element().set("label", "Config"))
         with collections_db.transaction() as db:
             db.create_element(
-                "Collection", Element().set("label", "Item 1").set("some_integer", 42),
+                "Collection",
+                Element().set("label", "Item 1").set("some_integer", 42),
             )
 
         labels = collections_db.read_scalar_strings("Collection", "label")
@@ -64,7 +67,8 @@ class TestTransactionContextManager:
         try:
             with collections_db.transaction() as db:
                 db.create_element(
-                    "Collection", Element().set("label", "Item 1").set("some_integer", 10),
+                    "Collection",
+                    Element().set("label", "Item 1").set("some_integer", 10),
                 )
                 raise ValueError("intentional error")
         except ValueError:
@@ -86,7 +90,8 @@ class TestTransactionContextManager:
         collections_db.create_element("Configuration", Element().set("label", "Config"))
         with collections_db.transaction() as db:
             db.create_element(
-                "Collection", Element().set("label", "Item 1").set("some_integer", 10),
+                "Collection",
+                Element().set("label", "Item 1").set("some_integer", 10),
             )
             db.update_scalar_integer("Collection", "some_integer", 1, 100)
 

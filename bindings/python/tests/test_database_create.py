@@ -18,10 +18,12 @@ class TestCreateElement:
     def test_create_multiple_elements(self, collections_db: Database) -> None:
         collections_db.create_element("Configuration", Element().set("label", "cfg"))
         id1 = collections_db.create_element(
-            "Collection", Element().set("label", "Item1").set("some_integer", 10),
+            "Collection",
+            Element().set("label", "Item1").set("some_integer", 10),
         )
         id2 = collections_db.create_element(
-            "Collection", Element().set("label", "Item2").set("some_integer", 20),
+            "Collection",
+            Element().set("label", "Item2").set("some_integer", 20),
         )
         assert id1 != id2
         assert id1 > 0
@@ -30,7 +32,8 @@ class TestCreateElement:
     def test_create_with_float(self, collections_db: Database) -> None:
         collections_db.create_element("Configuration", Element().set("label", "cfg"))
         elem_id = collections_db.create_element(
-            "Collection", Element().set("label", "Item1").set("some_float", 3.14),
+            "Collection",
+            Element().set("label", "Item1").set("some_float", 3.14),
         )
         value = collections_db.read_scalar_float_by_id("Collection", "some_float", elem_id)
         assert value is not None
@@ -39,7 +42,8 @@ class TestCreateElement:
     def test_create_with_set_array(self, collections_db: Database) -> None:
         collections_db.create_element("Configuration", Element().set("label", "cfg"))
         elem_id = collections_db.create_element(
-            "Collection", Element().set("label", "Item1"),
+            "Collection",
+            Element().set("label", "Item1"),
         )
         collections_db.update_set_strings("Collection", "tag", elem_id, ["a", "b"])
         result = collections_db.read_set_strings_by_id("Collection", "tag", elem_id)
@@ -151,10 +155,7 @@ class TestFKResolutionCreate:
         """No FK columns: pre-resolve pass is a no-op for non-FK schemas."""
         db.create_element(
             "Configuration",
-            Element()
-            .set("label", "Config 1")
-            .set("integer_attribute", 42)
-            .set("float_attribute", 3.14),
+            Element().set("label", "Config 1").set("integer_attribute", 42).set("float_attribute", 3.14),
         )
         assert db.read_scalar_strings("Configuration", "label") == ["Config 1"]
         assert db.read_scalar_integers("Configuration", "integer_attribute") == [42]
@@ -179,10 +180,7 @@ class TestFKResolutionCreate:
         with pytest.raises(QuiverError):
             relations_db.create_element(
                 "Child",
-                Element()
-                .set("label", "Child 1")
-                .set("parent_id", 1)
-                .set("score", ["not_a_label"]),
+                Element().set("label", "Child 1").set("parent_id", 1).set("score", ["not_a_label"]),
             )
 
     def test_resolution_failure_no_partial_writes(self, relations_db: Database) -> None:

@@ -18,15 +18,11 @@ class TestQueryString:
             "Configuration",
             Element().set("label", "item1").set("string_attribute", "hello"),
         )
-        result = db.query_string(
-            "SELECT string_attribute FROM Configuration WHERE label = 'item1'"
-        )
+        result = db.query_string("SELECT string_attribute FROM Configuration WHERE label = 'item1'")
         assert result == "hello"
 
     def test_query_string_no_rows_returns_none(self, db: Database) -> None:
-        result = db.query_string(
-            "SELECT string_attribute FROM Configuration WHERE 1 = 0"
-        )
+        result = db.query_string("SELECT string_attribute FROM Configuration WHERE 1 = 0")
         assert result is None
 
 
@@ -36,16 +32,12 @@ class TestQueryInteger:
             "Configuration",
             Element().set("label", "item1").set("integer_attribute", 42),
         )
-        result = db.query_integer(
-            "SELECT integer_attribute FROM Configuration WHERE label = 'item1'"
-        )
+        result = db.query_integer("SELECT integer_attribute FROM Configuration WHERE label = 'item1'")
         assert result == 42
         assert isinstance(result, int)
 
     def test_query_integer_no_rows_returns_none(self, db: Database) -> None:
-        result = db.query_integer(
-            "SELECT integer_attribute FROM Configuration WHERE 1 = 0"
-        )
+        result = db.query_integer("SELECT integer_attribute FROM Configuration WHERE 1 = 0")
         assert result is None
 
     def test_query_integer_count(self, db: Database) -> None:
@@ -61,17 +53,13 @@ class TestQueryFloat:
             "Configuration",
             Element().set("label", "item1").set("float_attribute", 3.14),
         )
-        result = db.query_float(
-            "SELECT float_attribute FROM Configuration WHERE label = 'item1'"
-        )
+        result = db.query_float("SELECT float_attribute FROM Configuration WHERE label = 'item1'")
         assert result is not None
         assert isinstance(result, float)
         assert abs(result - 3.14) < 1e-9
 
     def test_query_float_no_rows_returns_none(self, db: Database) -> None:
-        result = db.query_float(
-            "SELECT float_attribute FROM Configuration WHERE 1 = 0"
-        )
+        result = db.query_float("SELECT float_attribute FROM Configuration WHERE 1 = 0")
         assert result is None
 
 
@@ -165,15 +153,11 @@ class TestQueryEmptyParams:
 
 
 class TestMarshalParamsErrors:
-    def test_marshal_params_unsupported_type_raises_typeerror(
-        self, db: Database
-    ) -> None:
+    def test_marshal_params_unsupported_type_raises_typeerror(self, db: Database) -> None:
         with pytest.raises(TypeError, match="Unsupported parameter type: dict"):
             db.query_string("SELECT 1", params=[{"bad": "type"}])
 
-    def test_marshal_params_list_type_raises_typeerror(
-        self, db: Database
-    ) -> None:
+    def test_marshal_params_list_type_raises_typeerror(self, db: Database) -> None:
         with pytest.raises(TypeError, match="Unsupported parameter type: list"):
             db.query_string("SELECT 1", params=[[1, 2, 3]])
 
@@ -187,9 +171,7 @@ class TestQueryDateTime:
             "Configuration",
             Element().set("label", "item1").set("date_attribute", "2025-06-15T10:30:00"),
         )
-        result = db.query_date_time(
-            "SELECT date_attribute FROM Configuration WHERE label = 'item1'"
-        )
+        result = db.query_date_time("SELECT date_attribute FROM Configuration WHERE label = 'item1'")
         assert result is not None
         assert isinstance(result, datetime)
         assert result.year == 2025
@@ -199,9 +181,7 @@ class TestQueryDateTime:
         assert result.minute == 30
 
     def test_query_date_time_no_rows_returns_none(self, db: Database) -> None:
-        result = db.query_date_time(
-            "SELECT date_attribute FROM Configuration WHERE 1 = 0"
-        )
+        result = db.query_date_time("SELECT date_attribute FROM Configuration WHERE 1 = 0")
         assert result is None
 
     def test_query_date_time_with_params(self, db: Database) -> None:
@@ -218,14 +198,10 @@ class TestQueryDateTime:
         assert result.year == 2025
         assert result.month == 1
 
-    def test_query_date_time_invalid_format_raises_valueerror(
-        self, db: Database
-    ) -> None:
+    def test_query_date_time_invalid_format_raises_valueerror(self, db: Database) -> None:
         db.create_element(
             "Configuration",
             Element().set("label", "item1").set("date_attribute", "not-a-date"),
         )
         with pytest.raises(ValueError):
-            db.query_date_time(
-                "SELECT date_attribute FROM Configuration WHERE label = 'item1'"
-            )
+            db.query_date_time("SELECT date_attribute FROM Configuration WHERE label = 'item1'")

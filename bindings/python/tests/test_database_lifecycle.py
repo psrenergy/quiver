@@ -22,9 +22,7 @@ def test_from_schema_context_manager(valid_schema_path: Path, tmp_path: Path) ->
         db.path()
 
 
-def test_from_migrations_creates_database(
-    migrations_path: Path, tmp_path: Path
-) -> None:
+def test_from_migrations_creates_database(migrations_path: Path, tmp_path: Path) -> None:
     db = Database.from_migrations(str(tmp_path / "test.db"), str(migrations_path))
     assert db is not None
     db.close()
@@ -35,9 +33,7 @@ def test_close_is_idempotent(db: Database) -> None:
     db.close()  # Should not raise
 
 
-def test_operations_after_close_raise(
-    valid_schema_path: Path, tmp_path: Path
-) -> None:
+def test_operations_after_close_raise(valid_schema_path: Path, tmp_path: Path) -> None:
     db = Database.from_schema(str(tmp_path / "test.db"), str(valid_schema_path))
     db.close()
     with pytest.raises(QuiverError, match="closed"):

@@ -36,9 +36,7 @@ class Element:
         elif isinstance(value, list):
             self._set_array(name, value)
         else:
-            raise TypeError(
-                f"Unsupported type {type(value).__name__} for Element.set('{name}')"
-            )
+            raise TypeError(f"Unsupported type {type(value).__name__} for Element.set('{name}')")
         return self
 
     def _set_integer(self, name: str, value: int) -> None:
@@ -51,11 +49,7 @@ class Element:
 
     def _set_string(self, name: str, value: str) -> None:
         lib = get_lib()
-        check(
-            lib.quiver_element_set_string(
-                self._ptr, name.encode("utf-8"), value.encode("utf-8")
-            )
-        )
+        check(lib.quiver_element_set_string(self._ptr, name.encode("utf-8"), value.encode("utf-8")))
 
     def _set_null(self, name: str) -> None:
         lib = get_lib()
@@ -65,11 +59,7 @@ class Element:
         lib = get_lib()
         if len(values) == 0:
             # Empty array -- type doesn't matter
-            check(
-                lib.quiver_element_set_array_integer(
-                    self._ptr, name.encode("utf-8"), ffi.NULL, 0
-                )
-            )
+            check(lib.quiver_element_set_array_integer(self._ptr, name.encode("utf-8"), ffi.NULL, 0))
             return
 
         first = values[0]
@@ -82,38 +72,24 @@ class Element:
         elif isinstance(first, str):
             self._set_array_string(name, values)
         else:
-            raise TypeError(
-                f"Unsupported array element type {type(first).__name__} for Element.set('{name}')"
-            )
+            raise TypeError(f"Unsupported array element type {type(first).__name__} for Element.set('{name}')")
 
     def _set_array_integer(self, name: str, values: list[int]) -> None:
         lib = get_lib()
         c_arr = ffi.new("int64_t[]", values)
-        check(
-            lib.quiver_element_set_array_integer(
-                self._ptr, name.encode("utf-8"), c_arr, len(values)
-            )
-        )
+        check(lib.quiver_element_set_array_integer(self._ptr, name.encode("utf-8"), c_arr, len(values)))
 
     def _set_array_float(self, name: str, values: list[float]) -> None:
         lib = get_lib()
         c_arr = ffi.new("double[]", values)
-        check(
-            lib.quiver_element_set_array_float(
-                self._ptr, name.encode("utf-8"), c_arr, len(values)
-            )
-        )
+        check(lib.quiver_element_set_array_float(self._ptr, name.encode("utf-8"), c_arr, len(values)))
 
     def _set_array_string(self, name: str, values: list[str]) -> None:
         lib = get_lib()
         encoded = [v.encode("utf-8") for v in values]
         c_strings = [ffi.new("char[]", e) for e in encoded]
         c_arr = ffi.new("const char*[]", c_strings)
-        check(
-            lib.quiver_element_set_array_string(
-                self._ptr, name.encode("utf-8"), c_arr, len(values)
-            )
-        )
+        check(lib.quiver_element_set_array_string(self._ptr, name.encode("utf-8"), c_arr, len(values)))
 
     def _ensure_valid(self) -> None:
         if self._destroyed:

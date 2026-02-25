@@ -9,6 +9,7 @@ from quiverdb import Database, Element
 
 # -- Helpers ------------------------------------------------------------------
 
+
 def _create_sensor(db: Database, label: str) -> int:
     """Create a Sensor element and return its ID."""
     elem = Element()
@@ -32,8 +33,8 @@ SAMPLE_ROWS = [
 
 # -- Read tests (mixed_time_series_db: Sensor schema) -------------------------
 
-class TestReadTimeSeriesGroup:
 
+class TestReadTimeSeriesGroup:
     def test_read_time_series_group_empty(self, mixed_time_series_db: Database) -> None:
         """Read from element with no rows returns empty list."""
         eid = _create_sensor(mixed_time_series_db, "S1")
@@ -75,16 +76,16 @@ class TestReadTimeSeriesGroup:
 
         result = mixed_time_series_db.read_time_series_group("Sensor", "readings", eid)
         row = result[0]
-        assert type(row["date_time"]) is str       # DATE_TIME -> str
-        assert type(row["temperature"]) is float    # FLOAT -> float
-        assert type(row["humidity"]) is int         # INTEGER -> int
-        assert type(row["status"]) is str           # STRING -> str
+        assert type(row["date_time"]) is str  # DATE_TIME -> str
+        assert type(row["temperature"]) is float  # FLOAT -> float
+        assert type(row["humidity"]) is int  # INTEGER -> int
+        assert type(row["status"]) is str  # STRING -> str
 
 
 # -- Write tests (mixed_time_series_db: Sensor schema) ------------------------
 
-class TestUpdateTimeSeriesGroup:
 
+class TestUpdateTimeSeriesGroup:
     def test_update_time_series_group_round_trip(self, mixed_time_series_db: Database) -> None:
         """Write rows, read back, assert exact match."""
         eid = _create_sensor(mixed_time_series_db, "S1")
@@ -119,8 +120,8 @@ class TestUpdateTimeSeriesGroup:
 
 # -- Validation tests ----------------------------------------------------------
 
-class TestTimeSeriesValidation:
 
+class TestTimeSeriesValidation:
     def test_update_time_series_group_missing_column(self, mixed_time_series_db: Database) -> None:
         """Omit a column from row dict, expect ValueError."""
         eid = _create_sensor(mixed_time_series_db, "S1")
@@ -153,8 +154,8 @@ class TestTimeSeriesValidation:
 
 # -- Single-column tests (collections_db) -------------------------------------
 
-class TestTimeSeriesSingleColumn:
 
+class TestTimeSeriesSingleColumn:
     def test_read_time_series_group_single_column(self, collections_db: Database) -> None:
         """Write and read a simple date_time+value time series."""
         eid = _create_collection_element(collections_db, "Item1")
@@ -171,8 +172,8 @@ class TestTimeSeriesSingleColumn:
 
 # -- Time series files tests ---------------------------------------------------
 
-class TestHasTimeSeriesFiles:
 
+class TestHasTimeSeriesFiles:
     def test_has_time_series_files_true(self, collections_db: Database) -> None:
         """Collection with a files table returns True."""
         assert collections_db.has_time_series_files("Collection") is True
@@ -183,7 +184,6 @@ class TestHasTimeSeriesFiles:
 
 
 class TestListTimeSeriesFilesColumns:
-
     def test_list_time_series_files_columns(self, collections_db: Database) -> None:
         """Returns column names from the files table."""
         columns = collections_db.list_time_series_files_columns("Collection")
@@ -191,7 +191,6 @@ class TestListTimeSeriesFilesColumns:
 
 
 class TestReadTimeSeriesFiles:
-
     def test_read_time_series_files_initial(self, collections_db: Database) -> None:
         """Before any update, all columns map to None."""
         result = collections_db.read_time_series_files("Collection")
@@ -202,7 +201,6 @@ class TestReadTimeSeriesFiles:
 
 
 class TestUpdateTimeSeriesFiles:
-
     def test_update_and_read_time_series_files(self, collections_db: Database) -> None:
         """Update with paths, read back, verify exact match."""
         data = {"data_file": "/path/to/data.csv", "metadata_file": "/path/to/meta.json"}

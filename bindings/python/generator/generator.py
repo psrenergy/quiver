@@ -123,7 +123,7 @@ def main() -> None:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(
             f'"""Auto-generated CFFI declarations. Do not edit manually.\n\n'
-            f'Regenerate with: python generator/generator.py --output {args.output}\n'
+            f"Regenerate with: python generator/generator.py --output {args.output}\n"
             f'"""\n\n'
             f'DECLARATIONS = """\n{declarations}\n"""\n',
             encoding="utf-8",

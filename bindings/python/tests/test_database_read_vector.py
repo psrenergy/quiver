@@ -156,10 +156,12 @@ class TestReadVectorGroupByID:
 class TestReadVectorStringsBulk:
     def test_read_vector_strings(self, all_types_db: Database) -> None:
         id1 = all_types_db.create_element(
-            "AllTypes", Element().set("label", "item1"),
+            "AllTypes",
+            Element().set("label", "item1"),
         )
         id2 = all_types_db.create_element(
-            "AllTypes", Element().set("label", "item2"),
+            "AllTypes",
+            Element().set("label", "item2"),
         )
         all_types_db.update_vector_strings("AllTypes", "label_value", id1, ["alpha", "beta"])
         all_types_db.update_vector_strings("AllTypes", "label_value", id2, ["gamma", "delta", "epsilon"])
@@ -172,7 +174,8 @@ class TestReadVectorStringsBulk:
 class TestReadVectorStringsByID:
     def test_read_vector_strings_by_id(self, all_types_db: Database) -> None:
         id1 = all_types_db.create_element(
-            "AllTypes", Element().set("label", "item1"),
+            "AllTypes",
+            Element().set("label", "item1"),
         )
         all_types_db.update_vector_strings("AllTypes", "label_value", id1, ["hello", "world"])
         result = all_types_db.read_vector_strings_by_id("AllTypes", "label_value", id1)
@@ -183,10 +186,13 @@ class TestReadVectorDateTimeByID:
     def test_read_vector_date_time_by_id(self, all_types_db: Database) -> None:
         """read_vector_date_time_by_id wraps read_vector_strings_by_id + datetime parsing."""
         id1 = all_types_db.create_element(
-            "AllTypes", Element().set("label", "item1"),
+            "AllTypes",
+            Element().set("label", "item1"),
         )
         all_types_db.update_vector_strings(
-            "AllTypes", "label_value", id1,
+            "AllTypes",
+            "label_value",
+            id1,
             ["2024-01-15T10:30:00", "2024-06-20T08:00:00"],
         )
         result = all_types_db.read_vector_date_time_by_id("AllTypes", "label_value", id1)

@@ -82,7 +82,7 @@ class TestGetGroupMetadata:
     def test_get_vector_metadata_value_column_types(self, collections_db: Database) -> None:
         meta = collections_db.get_vector_metadata("Collection", "values")
         by_name = {c.name: c for c in meta.value_columns}
-        assert by_name["value_int"].data_type == 0   # INTEGER
+        assert by_name["value_int"].data_type == 0  # INTEGER
         assert by_name["value_float"].data_type == 1  # FLOAT
 
     def test_get_set_metadata(self, collections_db: Database) -> None:
