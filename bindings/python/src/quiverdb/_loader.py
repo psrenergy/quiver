@@ -64,4 +64,10 @@ def load_library(ffi: FFI):
     except Exception:
         pass
 
-    return ffi.dlopen("libquiver_c" if sys.platform == "win32" else "libquiver_c.so" if sys.platform != "darwin" else "libquiver_c.dylib")
+    return ffi.dlopen(
+        "libquiver_c"
+        if sys.platform == "win32"
+        else "libquiver_c.so"
+        if sys.platform != "darwin"
+        else "libquiver_c.dylib"
+    )
