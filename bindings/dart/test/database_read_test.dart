@@ -568,8 +568,12 @@ void main() {
         db.createElement('AllTypes', {'label': 'Item 1'});
         db.createElement('AllTypes', {'label': 'Item 2'});
 
-        db.updateElement('AllTypes', 1, {'label_value': ['alpha', 'beta']});
-        db.updateElement('AllTypes', 2, {'label_value': ['gamma']});
+        db.updateElement('AllTypes', 1, {
+          'label_value': ['alpha', 'beta'],
+        });
+        db.updateElement('AllTypes', 2, {
+          'label_value': ['gamma'],
+        });
 
         final result = db.readVectorStrings('AllTypes', 'label_value');
         expect(result.length, equals(2));
@@ -587,7 +591,9 @@ void main() {
       );
       try {
         db.createElement('AllTypes', {'label': 'Item 1'});
-        db.updateElement('AllTypes', 1, {'label_value': ['alpha', 'beta', 'gamma']});
+        db.updateElement('AllTypes', 1, {
+          'label_value': ['alpha', 'beta', 'gamma'],
+        });
 
         final result = db.readVectorStringsById('AllTypes', 'label_value', 1);
         expect(result, equals(['alpha', 'beta', 'gamma']));
@@ -622,8 +628,12 @@ void main() {
         db.createElement('AllTypes', {'label': 'Item 1'});
         db.createElement('AllTypes', {'label': 'Item 2'});
 
-        db.updateElement('AllTypes', 1, {'code': [10, 20, 30]});
-        db.updateElement('AllTypes', 2, {'code': [40, 50]});
+        db.updateElement('AllTypes', 1, {
+          'code': [10, 20, 30],
+        });
+        db.updateElement('AllTypes', 2, {
+          'code': [40, 50],
+        });
 
         final result = db.readSetIntegers('AllTypes', 'code');
         expect(result.length, equals(2));
@@ -641,7 +651,9 @@ void main() {
       );
       try {
         db.createElement('AllTypes', {'label': 'Item 1'});
-        db.updateElement('AllTypes', 1, {'code': [10, 20, 30]});
+        db.updateElement('AllTypes', 1, {
+          'code': [10, 20, 30],
+        });
 
         final result = db.readSetIntegersById('AllTypes', 'code', 1);
         expect(result..sort(), equals([10, 20, 30]));
@@ -676,8 +688,12 @@ void main() {
         db.createElement('AllTypes', {'label': 'Item 1'});
         db.createElement('AllTypes', {'label': 'Item 2'});
 
-        db.updateElement('AllTypes', 1, {'weight': [1.1, 2.2]});
-        db.updateElement('AllTypes', 2, {'weight': [3.3, 4.4, 5.5]});
+        db.updateElement('AllTypes', 1, {
+          'weight': [1.1, 2.2],
+        });
+        db.updateElement('AllTypes', 2, {
+          'weight': [3.3, 4.4, 5.5],
+        });
 
         final result = db.readSetFloats('AllTypes', 'weight');
         expect(result.length, equals(2));
@@ -695,7 +711,9 @@ void main() {
       );
       try {
         db.createElement('AllTypes', {'label': 'Item 1'});
-        db.updateElement('AllTypes', 1, {'weight': [1.1, 2.2]});
+        db.updateElement('AllTypes', 1, {
+          'weight': [1.1, 2.2],
+        });
 
         final result = db.readSetFloatsById('AllTypes', 'weight', 1);
         expect(result..sort(), equals([1.1, 2.2]));

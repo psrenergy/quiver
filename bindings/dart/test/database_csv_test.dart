@@ -62,8 +62,12 @@ void main() {
           'label': 'Item2',
           'name': 'Beta',
         });
-        db.updateElement('Items', id1, {'measurement': [1.1, 2.2, 3.3]});
-        db.updateElement('Items', id2, {'measurement': [4.4, 5.5]});
+        db.updateElement('Items', id1, {
+          'measurement': [1.1, 2.2, 3.3],
+        });
+        db.updateElement('Items', id2, {
+          'measurement': [4.4, 5.5],
+        });
 
         db.exportCSV('Items', 'measurements', csvPath);
         final content = File(csvPath).readAsStringSync();
@@ -274,7 +278,9 @@ void main() {
           'label': 'Item1',
           'name': 'Alpha',
         });
-        db.updateElement('Items', id1, {'measurement': [1.1, 2.2, 3.3]});
+        db.updateElement('Items', id1, {
+          'measurement': [1.1, 2.2, 3.3],
+        });
 
         db.exportCSV('Items', 'measurements', csvPath);
 
