@@ -59,10 +59,10 @@ class TestExportCSVWithEnumLabels:
         csv_db.create_element("Items", e2)
 
         out = str(tmp_path / "enums.csv")
-        opts = CSVOptions(
+        options = CSVOptions(
             enum_labels={"status": {"en": {"Active": 1, "Inactive": 2}}},
         )
-        csv_db.export_csv("Items", "", out, options=opts)
+        csv_db.export_csv("Items", "", out, options=options)
 
         content = _read_file(out)
         assert "Item1,Alpha,Active," in content
@@ -85,8 +85,8 @@ class TestExportCSVWithDateFormat:
         csv_db.create_element("Items", e1)
 
         out = str(tmp_path / "dates.csv")
-        opts = CSVOptions(date_time_format="%Y/%m/%d")
-        csv_db.export_csv("Items", "", out, options=opts)
+        options = CSVOptions(date_time_format="%Y/%m/%d")
+        csv_db.export_csv("Items", "", out, options=options)
 
         content = _read_file(out)
         # date_created formatted
@@ -108,11 +108,11 @@ class TestExportCSVWithEnumAndDate:
         csv_db.create_element("Items", e1)
 
         out = str(tmp_path / "combined.csv")
-        opts = CSVOptions(
+        options = CSVOptions(
             date_time_format="%Y-%m-%d",
             enum_labels={"status": {"en": {"Active": 1}}},
         )
-        csv_db.export_csv("Items", "", out, options=opts)
+        csv_db.export_csv("Items", "", out, options=options)
 
         content = _read_file(out)
         assert "Active" in content
@@ -177,18 +177,18 @@ class TestCSVOptionsDefaults:
 
     def test_default_options(self):
         """Default options have empty date_time_format and no enum labels."""
-        opts = CSVOptions()
-        assert opts.date_time_format == ""
-        assert opts.enum_labels == {}
+        options = CSVOptions()
+        assert options.date_time_format == ""
+        assert options.enum_labels == {}
 
     def test_custom_options(self):
         """Options can be constructed with custom values."""
-        opts = CSVOptions(
+        options = CSVOptions(
             date_time_format="%Y",
             enum_labels={"status": {"en": {"Active": 1}}},
         )
-        assert opts.date_time_format == "%Y"
-        assert opts.enum_labels == {"status": {"en": {"Active": 1}}}
+        assert options.date_time_format == "%Y"
+        assert options.enum_labels == {"status": {"en": {"Active": 1}}}
 
 
 # -- Helper -------------------------------------------------------------------

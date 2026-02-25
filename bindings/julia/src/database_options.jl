@@ -11,11 +11,11 @@ Supported kwargs:
   - `enum_labels::Dict{String, Dict{String, Dict{String, Int}}}` — attribute → locale → (label → value)
 """
 function build_quiver_csv_options(; kwargs...)
-    opts = C.quiver_csv_options_default()
+    options = C.quiver_csv_options_default()
     temps = Any[]
 
     # Date-time format
-    dtf_ptr = opts.date_time_format
+    dtf_ptr = options.date_time_format
     if haskey(kwargs, :date_time_format)
         dtf_str = kwargs[:date_time_format]::String
         dtf_buf = Vector{UInt8}([codeunits(dtf_str)..., 0x00])
@@ -24,12 +24,12 @@ function build_quiver_csv_options(; kwargs...)
     end
 
     # Enum labels: flatten Dict{String, Dict{String, Dict{String, Int}}} into grouped parallel arrays
-    attr_names_ptr = opts.enum_attribute_names
-    locale_names_ptr = opts.enum_locale_names
-    entry_counts_ptr = opts.enum_entry_counts
-    labels_ptr = opts.enum_labels
-    values_ptr = opts.enum_values
-    group_count = opts.enum_group_count
+    attr_names_ptr = options.enum_attribute_names
+    locale_names_ptr = options.enum_locale_names
+    entry_counts_ptr = options.enum_entry_counts
+    labels_ptr = options.enum_labels
+    values_ptr = options.enum_values
+    group_count = options.enum_group_count
 
     if haskey(kwargs, :enum_labels)
         enum_map = kwargs[:enum_labels]::Dict{String, Dict{String, Dict{String, Int}}}

@@ -114,10 +114,10 @@ TEST(DatabaseCSV, ImportCSV_Scalar_EnumResolution) {
     auto csv_path = temp_csv("ImportScalarEnum");
     write_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,Active,,,\n");
 
-    quiver::CSVOptions opts;
-    opts.enum_labels["status"]["en"] = {{"Active", 1}, {"Inactive", 2}};
+    quiver::CSVOptions options;
+    options.enum_labels["status"]["en"] = {{"Active", 1}, {"Inactive", 2}};
 
-    db.import_csv("Items", "", csv_path.string(), opts);
+    db.import_csv("Items", "", csv_path.string(), options);
 
     auto status = db.read_scalar_integer_by_id("Items", "status", 1);
     ASSERT_TRUE(status.has_value());
@@ -136,10 +136,10 @@ TEST(DatabaseCSV, ImportCSV_Scalar_EnumCaseInsensitive) {
                    "Item2,Beta,active,,,\n"
                    "Item3,Gamma,Active,,,\n");
 
-    quiver::CSVOptions opts;
-    opts.enum_labels["status"]["en"] = {{"Active", 1}};
+    quiver::CSVOptions options;
+    options.enum_labels["status"]["en"] = {{"Active", 1}};
 
-    db.import_csv("Items", "", csv_path.string(), opts);
+    db.import_csv("Items", "", csv_path.string(), options);
 
     auto statuses = db.read_scalar_integers("Items", "status");
     ASSERT_EQ(statuses.size(), 3u);
@@ -161,11 +161,11 @@ TEST(DatabaseCSV, ImportCSV_Scalar_EnumMultiLanguage) {
                    "Item2,Beta,Inactive,,,\n"
                    "Item3,Gamma,Inativo,,,\n");
 
-    quiver::CSVOptions opts;
-    opts.enum_labels["status"]["en"] = {{"Active", 1}, {"Inactive", 2}};
-    opts.enum_labels["status"]["pt"] = {{"Ativo", 1}, {"Inativo", 2}};
+    quiver::CSVOptions options;
+    options.enum_labels["status"]["en"] = {{"Active", 1}, {"Inactive", 2}};
+    options.enum_labels["status"]["pt"] = {{"Ativo", 1}, {"Inativo", 2}};
 
-    db.import_csv("Items", "", csv_path.string(), opts);
+    db.import_csv("Items", "", csv_path.string(), options);
 
     auto statuses = db.read_scalar_integers("Items", "status");
     ASSERT_EQ(statuses.size(), 3u);
@@ -182,10 +182,10 @@ TEST(DatabaseCSV, ImportCSV_Scalar_DateTimeFormat) {
     auto csv_path = temp_csv("ImportScalarDateTime");
     write_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,2024/01/15,\n");
 
-    quiver::CSVOptions opts;
-    opts.date_time_format = "%Y/%m/%d";
+    quiver::CSVOptions options;
+    options.date_time_format = "%Y/%m/%d";
 
-    db.import_csv("Items", "", csv_path.string(), opts);
+    db.import_csv("Items", "", csv_path.string(), options);
 
     auto date = db.read_scalar_string_by_id("Items", "date_created", 1);
     ASSERT_TRUE(date.has_value());
@@ -470,13 +470,13 @@ TEST(DatabaseCSV, ImportCSV_Scalar_InvalidEnumWithMapping_Throws) {
     auto csv_path = temp_csv("ImportBadEnumMap");
     write_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,Unknown,,,\n");
 
-    quiver::CSVOptions opts;
-    opts.enum_labels["status"]["en"] = {{"Active", 1}, {"Inactive", 2}};
+    quiver::CSVOptions options;
+    options.enum_labels["status"]["en"] = {{"Active", 1}, {"Inactive", 2}};
 
     EXPECT_THROW(
         {
             try {
-                db.import_csv("Items", "", csv_path.string(), opts);
+                db.import_csv("Items", "", csv_path.string(), options);
             } catch (const std::runtime_error& e) {
                 EXPECT_NE(std::string(e.what()).find("Invalid enum value"), std::string::npos);
                 throw;
@@ -638,10 +638,10 @@ TEST(DatabaseCSV, ImportCSV_TimeSeries_DateTimeParsing) {
     auto csv_path = temp_csv("ImportTSDateTime");
     write_csv_file(csv_path.string(), "sep=,\nid,date_time,temperature,humidity\nItem1,2024/01/15,22.5,60\n");
 
-    quiver::CSVOptions opts;
-    opts.date_time_format = "%Y/%m/%d";
+    quiver::CSVOptions options;
+    options.date_time_format = "%Y/%m/%d";
 
-    db.import_csv("Items", "readings", csv_path.string(), opts);
+    db.import_csv("Items", "readings", csv_path.string(), options);
 
     auto ts_rows = db.read_time_series_group("Items", "readings", id1);
     ASSERT_EQ(ts_rows.size(), 1);
@@ -820,13 +820,13 @@ TEST(DatabaseCSV, ImportCSV_Scalar_BadCustomDateTimeFormat_Throws) {
     auto csv_path = temp_csv("ImportBadCustomDateTime");
     write_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,not-a-date,\n");
 
-    quiver::CSVOptions opts;
-    opts.date_time_format = "%Y/%m/%d";
+    quiver::CSVOptions options;
+    options.date_time_format = "%Y/%m/%d";
 
     EXPECT_THROW(
         {
             try {
-                db.import_csv("Items", "", csv_path.string(), opts);
+                db.import_csv("Items", "", csv_path.string(), options);
             } catch (const std::runtime_error& e) {
                 std::string msg = e.what();
                 EXPECT_NE(msg.find("Timestamp not-a-date is not valid"), std::string::npos);
@@ -1012,10 +1012,10 @@ TEST(DatabaseCSV, ImportCSV_TimeSeries_EnumInGroup_RoundTrip) {
                    "Item1,2024-01-01T10:00:00,22.5,Low\n"
                    "Item1,2024-01-01T11:00:00,23.0,High\n");
 
-    quiver::CSVOptions opts;
-    opts.enum_labels["humidity"]["en"] = {{"Low", 60}, {"High", 90}};
+    quiver::CSVOptions options;
+    options.enum_labels["humidity"]["en"] = {{"Low", 60}, {"High", 90}};
 
-    db.import_csv("Items", "readings", csv_path.string(), opts);
+    db.import_csv("Items", "readings", csv_path.string(), options);
 
     auto ts_rows = db.read_time_series_group("Items", "readings", id1);
     ASSERT_EQ(ts_rows.size(), 2);
@@ -1042,13 +1042,13 @@ TEST(DatabaseCSV, ImportCSV_Group_InvalidEnum_Throws) {
                    "sep=,\nid,date_time,temperature,humidity\n"
                    "Item1,2024-01-01T10:00:00,22.5,Unknown\n");
 
-    quiver::CSVOptions opts;
-    opts.enum_labels["humidity"]["en"] = {{"Low", 60}, {"High", 90}};
+    quiver::CSVOptions options;
+    options.enum_labels["humidity"]["en"] = {{"Low", 60}, {"High", 90}};
 
     EXPECT_THROW(
         {
             try {
-                db.import_csv("Items", "readings", csv_path.string(), opts);
+                db.import_csv("Items", "readings", csv_path.string(), options);
             } catch (const std::runtime_error& e) {
                 EXPECT_NE(std::string(e.what()).find("Invalid enum value"), std::string::npos);
                 throw;

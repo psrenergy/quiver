@@ -723,19 +723,19 @@ TEST(DatabaseCApiCSV, ExportCSV_DateTimeFormat_NonDateColumnsUnaffected) {
 // ============================================================================
 
 TEST(DatabaseCApiCSV, ExportCSV_DefaultOptionsFactory) {
-    auto opts = quiver_csv_options_default();
+    auto options = quiver_csv_options_default();
 
     // date_time_format is empty string (not NULL)
-    ASSERT_NE(opts.date_time_format, nullptr);
-    EXPECT_STREQ(opts.date_time_format, "");
+    ASSERT_NE(options.date_time_format, nullptr);
+    EXPECT_STREQ(options.date_time_format, "");
 
     // No enum mappings
-    EXPECT_EQ(opts.enum_group_count, 0u);
-    EXPECT_EQ(opts.enum_attribute_names, nullptr);
-    EXPECT_EQ(opts.enum_locale_names, nullptr);
-    EXPECT_EQ(opts.enum_entry_counts, nullptr);
-    EXPECT_EQ(opts.enum_values, nullptr);
-    EXPECT_EQ(opts.enum_labels, nullptr);
+    EXPECT_EQ(options.enum_group_count, 0u);
+    EXPECT_EQ(options.enum_attribute_names, nullptr);
+    EXPECT_EQ(options.enum_locale_names, nullptr);
+    EXPECT_EQ(options.enum_entry_counts, nullptr);
+    EXPECT_EQ(options.enum_values, nullptr);
+    EXPECT_EQ(options.enum_labels, nullptr);
 }
 
 // ============================================================================

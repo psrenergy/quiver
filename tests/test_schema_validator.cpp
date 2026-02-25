@@ -5,70 +5,70 @@
 
 class SchemaValidatorFixture : public ::testing::Test {
 protected:
-    quiver::DatabaseOptions opts{.read_only = 0, .console_level = QUIVER_LOG_OFF};
+    quiver::DatabaseOptions options{.read_only = 0, .console_level = QUIVER_LOG_OFF};
 };
 
 // Valid schemas
 TEST_F(SchemaValidatorFixture, ValidSchemaBasic) {
-    EXPECT_NO_THROW(quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), opts));
+    EXPECT_NO_THROW(quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), options));
 }
 
 TEST_F(SchemaValidatorFixture, ValidSchemaCollections) {
-    EXPECT_NO_THROW(quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), opts));
+    EXPECT_NO_THROW(quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), options));
 }
 
 TEST_F(SchemaValidatorFixture, ValidSchemaRelations) {
-    EXPECT_NO_THROW(quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), opts));
+    EXPECT_NO_THROW(quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), options));
 }
 
 // Invalid schemas
 TEST_F(SchemaValidatorFixture, InvalidNoConfiguration) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("no_configuration.sql"), opts),
+    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("no_configuration.sql"), options),
                  std::runtime_error);
 }
 
 TEST_F(SchemaValidatorFixture, InvalidLabelNotNull) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("label_not_null.sql"), opts),
+    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("label_not_null.sql"), options),
                  std::runtime_error);
 }
 
 TEST_F(SchemaValidatorFixture, InvalidLabelNotUnique) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("label_not_unique.sql"), opts),
+    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("label_not_unique.sql"), options),
                  std::runtime_error);
 }
 
 TEST_F(SchemaValidatorFixture, InvalidLabelWrongType) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("label_wrong_type.sql"), opts),
+    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("label_wrong_type.sql"), options),
                  std::runtime_error);
 }
 
 TEST_F(SchemaValidatorFixture, InvalidDuplicateAttribute) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("duplicate_attribute_vector.sql"), opts),
+    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("duplicate_attribute_vector.sql"), options),
                  std::runtime_error);
 }
 
 TEST_F(SchemaValidatorFixture, InvalidDuplicateAttributeTimeSeries) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("duplicate_attribute_time_series.sql"), opts),
+    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("duplicate_attribute_time_series.sql"), options),
                  std::runtime_error);
 }
 
 TEST_F(SchemaValidatorFixture, InvalidVectorNoIndex) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("vector_no_index.sql"), opts),
+    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("vector_no_index.sql"), options),
                  std::runtime_error);
 }
 
 TEST_F(SchemaValidatorFixture, InvalidSetNoUnique) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("set_no_unique.sql"), opts),
+    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("set_no_unique.sql"), options),
                  std::runtime_error);
 }
 
 TEST_F(SchemaValidatorFixture, InvalidFkNotNullSetNull) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("fk_not_null_set_null.sql"), opts),
+    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("fk_not_null_set_null.sql"), options),
                  std::runtime_error);
 }
 
 TEST_F(SchemaValidatorFixture, InvalidFkActions) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("fk_actions.sql"), opts), std::runtime_error);
+    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("fk_actions.sql"), options), std::runtime_error);
 }
 
 // ============================================================================
@@ -76,7 +76,7 @@ TEST_F(SchemaValidatorFixture, InvalidFkActions) {
 // ============================================================================
 
 TEST_F(SchemaValidatorFixture, TypeMismatchIntegerExpectedReal) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), opts);
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), options);
 
     // Try to set a string where a float is expected
     quiver::Element e;
@@ -86,7 +86,7 @@ TEST_F(SchemaValidatorFixture, TypeMismatchIntegerExpectedReal) {
 }
 
 TEST_F(SchemaValidatorFixture, TypeMismatchStringExpectedInteger) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), opts);
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), options);
 
     // Try to set a string where an integer is expected
     quiver::Element e;
@@ -96,7 +96,7 @@ TEST_F(SchemaValidatorFixture, TypeMismatchStringExpectedInteger) {
 }
 
 TEST_F(SchemaValidatorFixture, TypeMismatchIntegerExpectedText) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), opts);
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), options);
 
     // Try to set an integer where a string is expected
     quiver::Element e;
@@ -106,7 +106,7 @@ TEST_F(SchemaValidatorFixture, TypeMismatchIntegerExpectedText) {
 }
 
 TEST_F(SchemaValidatorFixture, ArrayTypeValidation) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), opts);
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), options);
 
     quiver::Element config;
     config.set("label", std::string("Config"));
@@ -127,7 +127,7 @@ TEST_F(SchemaValidatorFixture, ArrayTypeValidation) {
 // ============================================================================
 
 TEST_F(SchemaValidatorFixture, GetScalarMetadataInteger) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), opts);
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), options);
 
     auto metadata = db.get_scalar_metadata("Configuration", "integer_attribute");
 
@@ -136,7 +136,7 @@ TEST_F(SchemaValidatorFixture, GetScalarMetadataInteger) {
 }
 
 TEST_F(SchemaValidatorFixture, GetScalarMetadataReal) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), opts);
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), options);
 
     auto metadata = db.get_scalar_metadata("Configuration", "float_attribute");
 
@@ -145,7 +145,7 @@ TEST_F(SchemaValidatorFixture, GetScalarMetadataReal) {
 }
 
 TEST_F(SchemaValidatorFixture, GetScalarMetadataText) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), opts);
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), options);
 
     auto metadata = db.get_scalar_metadata("Configuration", "label");
 
@@ -154,7 +154,7 @@ TEST_F(SchemaValidatorFixture, GetScalarMetadataText) {
 }
 
 TEST_F(SchemaValidatorFixture, GetVectorMetadataValues) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), opts);
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), options);
 
     // Vector table is Collection_vector_values, so group name is "values"
     auto metadata = db.get_vector_metadata("Collection", "values");
@@ -178,7 +178,7 @@ TEST_F(SchemaValidatorFixture, GetVectorMetadataValues) {
 }
 
 TEST_F(SchemaValidatorFixture, GetSetMetadataTags) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), opts);
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), options);
 
     // Set table is Collection_set_tags, so group name is "tags"
     auto metadata = db.get_set_metadata("Collection", "tags");
@@ -190,7 +190,7 @@ TEST_F(SchemaValidatorFixture, GetSetMetadataTags) {
 }
 
 TEST_F(SchemaValidatorFixture, GetScalarMetadataForeignKeyAsInteger) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), opts);
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), options);
 
     // parent_id is a foreign key but stored as INTEGER
     auto metadata = db.get_scalar_metadata("Child", "parent_id");
@@ -203,7 +203,7 @@ TEST_F(SchemaValidatorFixture, GetScalarMetadataForeignKeyAsInteger) {
 }
 
 TEST_F(SchemaValidatorFixture, GetScalarMetadataSelfReference) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), opts);
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), options);
 
     // sibling_id is a self-referencing foreign key
     auto metadata = db.get_scalar_metadata("Child", "sibling_id");
@@ -216,7 +216,7 @@ TEST_F(SchemaValidatorFixture, GetScalarMetadataSelfReference) {
 }
 
 TEST_F(SchemaValidatorFixture, GetScalarMetadataNonForeignKey) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), opts);
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), options);
 
     auto metadata = db.get_scalar_metadata("Child", "label");
 
@@ -226,7 +226,7 @@ TEST_F(SchemaValidatorFixture, GetScalarMetadataNonForeignKey) {
 }
 
 TEST_F(SchemaValidatorFixture, ListScalarAttributesForeignKeys) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), opts);
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), options);
 
     auto attributes = db.list_scalar_attributes("Child");
 
@@ -249,7 +249,7 @@ TEST_F(SchemaValidatorFixture, ListScalarAttributesForeignKeys) {
 // ============================================================================
 
 TEST_F(SchemaValidatorFixture, CollectionWithOptionalScalars) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), opts);
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("collections.sql"), options);
 
     // Create element with only label (other scalars are optional)
     quiver::Element config;
@@ -268,7 +268,7 @@ TEST_F(SchemaValidatorFixture, CollectionWithOptionalScalars) {
 }
 
 TEST_F(SchemaValidatorFixture, RelationsSchemaWithVectorFK) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), opts);
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), options);
 
     // Verify the schema loaded successfully with vector FK table
     auto metadata = db.get_scalar_metadata("Child", "label");
@@ -280,7 +280,7 @@ TEST_F(SchemaValidatorFixture, RelationsSchemaWithVectorFK) {
 // ============================================================================
 
 TEST_F(SchemaValidatorFixture, CreateElementWithDefaultValue) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), opts);
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), options);
 
     // The basic.sql schema has integer_attribute with DEFAULT 6
     quiver::Element e;
@@ -294,7 +294,7 @@ TEST_F(SchemaValidatorFixture, CreateElementWithDefaultValue) {
 }
 
 TEST_F(SchemaValidatorFixture, CreateElementWithNullableColumn) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), opts);
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), options);
 
     // float_attribute is nullable (no NOT NULL constraint)
     quiver::Element e;
@@ -310,7 +310,7 @@ TEST_F(SchemaValidatorFixture, CreateElementWithNullableColumn) {
 // ============================================================================
 
 TEST_F(SchemaValidatorFixture, ReadFromMultipleCollections) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), opts);
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"), options);
 
     // Create elements in different collections
     quiver::Element parent;
@@ -336,7 +336,7 @@ TEST_F(SchemaValidatorFixture, ReadFromMultipleCollections) {
 // ============================================================================
 
 TEST_F(SchemaValidatorFixture, GetScalarMetadataIdColumn) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), opts);
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), options);
 
     // 'id' column should exist and be INTEGER
     auto metadata = db.get_scalar_metadata("Configuration", "id");
