@@ -15,9 +15,9 @@ Catch-up milestone: align Python bindings with upstream C++ changes (relation re
 ### CSV
 
 - [ ] **CSV-01**: Implement import_csv in Python by calling the real C API function (collection, group, path, options)
-- [ ] **CSV-02**: Rename CSVExportOptions -> CSVOptions and fix enum_labels structure to match C++ (attribute -> locale -> label -> value, with full locale support)
+- [x] **CSV-02**: Rename CSVExportOptions -> CSVOptions and fix enum_labels structure to match C++ (attribute -> locale -> label -> value, with full locale support)
 - [ ] **CSV-03**: Add import_csv tests covering scalar and group import round-trips
-- [ ] **CSV-04**: Update CLAUDE.md references from CSVExportOptions to CSVOptions
+- [x] **CSV-04**: Update CLAUDE.md references from CSVExportOptions to CSVOptions
 
 ## Future Requirements
 
@@ -38,9 +38,9 @@ None -- this is a catch-up milestone.
 | REL-01 | Phase 8 | Complete |
 | REL-02 | Phase 8 | Complete |
 | CSV-01 | Phase 9 | Pending |
-| CSV-02 | Phase 9 | Pending |
+| CSV-02 | Phase 9 | Complete |
 | CSV-03 | Phase 9 | Pending |
-| CSV-04 | Phase 9 | Pending |
+| CSV-04 | Phase 9 | Complete |
 
 **Coverage:**
 - v0.4.1 requirements: 6 total
