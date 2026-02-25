@@ -5,33 +5,33 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** `pip install quiverdb` is self-contained with bundled native libraries
-**Current focus:** Phase 2 - Loader Rewrite
+**Current focus:** Phase 2 - Loader Rewrite (Complete)
 
 ## Current Position
 
 Phase: 2 of 4 (Loader Rewrite)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-25 -- Completed 02-01-PLAN.md
+Plan: 2 of 2 in current phase
+Status: Phase Complete
+Last activity: 2026-02-25 -- Completed 02-02-PLAN.md
 
-Progress: [████░░░░░░] 37%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 11min
-- Total execution time: 0.5 hours
+- Total plans completed: 4
+- Average duration: 10min
+- Total execution time: 0.6 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-build-system-migration | 2 | 30min | 15min |
-| 02-loader-rewrite | 1 | 2min | 2min |
+| 02-loader-rewrite | 2 | 7min | 3.5min |
 
 **Recent Trend:**
-- Last 5 plans: 22min, 8min, 2min
+- Last 5 plans: 22min, 8min, 2min, 5min
 - Trend: improving
 
 *Updated after each plan completion*
@@ -51,6 +51,8 @@ Recent decisions affecting current work:
 - [02-01]: PATH-only for dev mode fallback (no walk-up directory search)
 - [02-01]: Check specific library file existence inside _libs/, not just directory existence
 - [02-01]: Store os.add_dll_directory handle at module level to prevent garbage collection
+- [02-02]: Validation script checks _load_source == 'bundled' to confirm bundled discovery path
+- [02-02]: Tests run without build/bin/ in PATH to prove wheel self-containment
 
 ### Pending Todos
 
@@ -64,5 +66,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 02-01-PLAN.md (Loader rewrite with bundled-first discovery)
+Stopped at: Completed 02-02-PLAN.md (End-to-end wheel install validation)
 Resume file: None

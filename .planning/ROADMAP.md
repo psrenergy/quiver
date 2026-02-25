@@ -13,7 +13,7 @@ Transform the existing Python binding (`quiverdb`) from a development-only packa
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Build System Migration** - Replace hatchling with scikit-build-core and add CMake install targets for native library bundling
-- [ ] **Phase 2: Loader Rewrite** - Rewrite _loader.py to discover bundled native libraries and fall back to development mode
+- [x] **Phase 2: Loader Rewrite** - Rewrite _loader.py to discover bundled native libraries and fall back to development mode
 - [ ] **Phase 3: CI Wheel Building** - GitHub Actions workflow builds and tests platform-specific wheels via cibuildwheel
 - [ ] **Phase 4: PyPI Publishing** - Automated trusted publisher release to PyPI on tagged commits
 
@@ -46,8 +46,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md -- Rewrite _loader.py with bundled-first discovery and add Linux RPATH
-- [ ] 02-02-PLAN.md -- End-to-end wheel install validation in clean venv
+- [x] 02-01-PLAN.md -- Rewrite _loader.py with bundled-first discovery and add Linux RPATH
+- [x] 02-02-PLAN.md -- End-to-end wheel install validation in clean venv
 
 ### Phase 3: CI Wheel Building
 **Goal**: GitHub Actions automatically builds and tests correct wheels for both target platforms on every push
@@ -84,6 +84,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Build System Migration | 2/2 | Complete | 2026-02-25 |
-| 2. Loader Rewrite | 0/2 | In progress | - |
+| 2. Loader Rewrite | 2/2 | Complete | 2026-02-25 |
 | 3. CI Wheel Building | 0/0 | Not started | - |
 | 4. PyPI Publishing | 0/0 | Not started | - |
