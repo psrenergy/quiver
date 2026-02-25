@@ -642,7 +642,7 @@ void main() {
           'value_int': [1, 2, 3],
         });
 
-        db.updateVectorIntegers('Collection', 'value_int', 1, [10, 20, 30, 40]);
+        db.updateElement('Collection', 1, {'value_int': [10, 20, 30, 40]});
 
         final values = db.readVectorIntegersById('Collection', 'value_int', 1);
         expect(values, equals([10, 20, 30, 40]));
@@ -663,7 +663,7 @@ void main() {
           'value_int': [1, 2, 3],
         });
 
-        db.updateVectorIntegers('Collection', 'value_int', 1, [100]);
+        db.updateElement('Collection', 1, {'value_int': [100]});
 
         final values = db.readVectorIntegersById('Collection', 'value_int', 1);
         expect(values, equals([100]));
@@ -684,7 +684,7 @@ void main() {
           'value_int': [1, 2, 3],
         });
 
-        db.updateVectorIntegers('Collection', 'value_int', 1, []);
+        db.updateElement('Collection', 1, {'value_int': []});
 
         final values = db.readVectorIntegersById('Collection', 'value_int', 1);
         expect(values, isEmpty);
@@ -705,7 +705,7 @@ void main() {
         // Verify initially empty
         expect(db.readVectorIntegersById('Collection', 'value_int', 1), isEmpty);
 
-        db.updateVectorIntegers('Collection', 'value_int', 1, [1, 2, 3]);
+        db.updateElement('Collection', 1, {'value_int': [1, 2, 3]});
 
         final values = db.readVectorIntegersById('Collection', 'value_int', 1);
         expect(values, equals([1, 2, 3]));
@@ -730,7 +730,7 @@ void main() {
           'value_int': [10, 20],
         });
 
-        db.updateVectorIntegers('Collection', 'value_int', 1, [100, 200]);
+        db.updateElement('Collection', 1, {'value_int': [100, 200]});
 
         expect(db.readVectorIntegersById('Collection', 'value_int', 1), equals([100, 200]));
         expect(db.readVectorIntegersById('Collection', 'value_int', 2), equals([10, 20]));
@@ -747,7 +747,7 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Test Config'});
         expect(
-          () => db.updateVectorIntegers('NonexistentCollection', 'value_int', 1, [1, 2, 3]),
+          () => db.updateElement('NonexistentCollection', 1, {'value_int': [1, 2, 3]}),
           throwsA(isA<DatabaseException>()),
         );
       } finally {
@@ -769,7 +769,7 @@ void main() {
           'value_float': [1.5, 2.5, 3.5],
         });
 
-        db.updateVectorFloats('Collection', 'value_float', 1, [10.5, 20.5]);
+        db.updateElement('Collection', 1, {'value_float': [10.5, 20.5]});
 
         final values = db.readVectorFloatsById('Collection', 'value_float', 1);
         expect(values, equals([10.5, 20.5]));
@@ -790,7 +790,7 @@ void main() {
           'value_float': [1.0],
         });
 
-        db.updateVectorFloats('Collection', 'value_float', 1, [1.23456789, 9.87654321]);
+        db.updateElement('Collection', 1, {'value_float': [1.23456789, 9.87654321]});
 
         final values = db.readVectorFloatsById('Collection', 'value_float', 1);
         expect(values[0], closeTo(1.23456789, 1e-8));
@@ -812,7 +812,7 @@ void main() {
           'value_float': [1.5, 2.5, 3.5],
         });
 
-        db.updateVectorFloats('Collection', 'value_float', 1, []);
+        db.updateElement('Collection', 1, {'value_float': []});
 
         final values = db.readVectorFloatsById('Collection', 'value_float', 1);
         expect(values, isEmpty);
@@ -987,7 +987,7 @@ void main() {
       try {
         db.createElement('AllTypes', {'label': 'Item 1'});
 
-        db.updateVectorStrings('AllTypes', 'label_value', 1, ['alpha', 'beta']);
+        db.updateElement('AllTypes', 1, {'label_value': ['alpha', 'beta']});
 
         final result = db.readVectorStringsById('AllTypes', 'label_value', 1);
         expect(result, equals(['alpha', 'beta']));
