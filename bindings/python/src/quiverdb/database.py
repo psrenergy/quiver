@@ -6,11 +6,13 @@ from datetime import datetime, timezone
 
 from quiverdb._c_api import ffi, get_lib
 from quiverdb._helpers import check, decode_string, decode_string_or_none
+from quiverdb.database_csv_export import DatabaseCSVExport
+from quiverdb.database_csv_import import DatabaseCSVImport
 from quiverdb.exceptions import QuiverError
 from quiverdb.metadata import GroupMetadata, ScalarMetadata
 
 
-class Database:
+class Database(DatabaseCSVExport, DatabaseCSVImport):
     """Thin Python wrapper around the Quiver C API database handle."""
 
     def __init__(self, ptr) -> None:
