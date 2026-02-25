@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Consistent, type-safe database operations across multiple languages through a single C++ implementation
-**Current focus:** v0.4.1 — Python binding catch-up with upstream C++ changes
+**Current focus:** v0.4.1 Phase 8 -- Relations Cleanup
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-24 — Milestone v0.4.1 started
+Phase: 8 of 9 (Relations Cleanup)
+Plan: 0 of ? in current phase
+Status: Ready to plan
+Last activity: 2026-02-24 -- Roadmap created for v0.4.1
 
-Progress: Initializing
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -23,11 +23,20 @@ Progress: Initializing
 - Average duration: 5min
 - Total execution time: 79min
 
+**v0.4.1 Velocity:**
+- Total plans completed: 0
+- Average duration: --
+- Total execution time: 0min
+
 ## Accumulated Context
 
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
+Recent decisions affecting current work:
+
+- v0.4 audit: Scalar relations as pure-Python convenience methods should be removed (C++ integrated relations into CRUD)
+- v0.4 audit: import_csv NotImplementedError stub should be replaced with real C API call
 
 ### Pending Todos
 
@@ -35,11 +44,10 @@ None.
 
 ### Blockers/Concerns
 
-- C++ upstream changed: relations removed (integrated into CRUD), import_csv implemented, CSVExportOptions → CSVOptions
-- Python bindings need catch-up with these 3 changes
+None.
 
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: v0.4.1 milestone initialization
-Resume: Define requirements, then create roadmap
+Stopped at: Roadmap created for v0.4.1 milestone
+Resume: Plan Phase 8 (Relations Cleanup)
