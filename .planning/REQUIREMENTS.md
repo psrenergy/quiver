@@ -9,8 +9,8 @@ Requirements for PyPI distribution milestone. Each maps to roadmap phases.
 
 ### Build System
 
-- [ ] **BUILD-01**: pyproject.toml uses scikit-build-core as build backend (replaces hatchling)
-- [ ] **BUILD-02**: CMake install targets place libquiver and libquiver_c into wheel package directory (SKBUILD-guarded)
+- [x] **BUILD-01**: pyproject.toml uses scikit-build-core as build backend (replaces hatchling)
+- [x] **BUILD-02**: CMake install targets place libquiver and libquiver_c into wheel package directory (SKBUILD-guarded)
 
 ### Loader
 
@@ -50,8 +50,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUILD-01 | Phase 1 | Pending |
-| BUILD-02 | Phase 1 | Pending |
+| BUILD-01 | Phase 1 | Complete |
+| BUILD-02 | Phase 1 | Complete |
 | LOAD-01 | Phase 2 | Pending |
 | LOAD-02 | Phase 2 | Pending |
 | LOAD-03 | Phase 2 | Pending |
