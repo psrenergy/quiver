@@ -57,12 +57,11 @@ include("fixture.jl")
                 label = "Item1",
                 name = "Alpha",
             )
-            Quiver.update_vector_floats!(db, "Items", "measurement", id1, [1.1, 2.2, 3.3])
+            Quiver.update_element!(db, "Items", id1; measurement = [1.1, 2.2, 3.3])
 
             Quiver.export_csv(db, "Items", "measurements", csv_path)
 
-            # Clear and re-import
-            Quiver.update_vector_floats!(db, "Items", "measurement", id1, Float64[])
+            Quiver.update_element!(db, "Items", id1; measurement = Float64[])
             Quiver.import_csv(db, "Items", "measurements", csv_path)
 
             vals = Quiver.read_vector_floats_by_id(db, "Items", "measurement", id1)

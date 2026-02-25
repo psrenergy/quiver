@@ -81,7 +81,7 @@ class Element {
           set(entry.key, entry.value);
         }
       case List v when v.isEmpty:
-        throw ArgumentError("Empty list not allowed for '$name'");
+        throw ArgumentError("Empty mixed list not allowed for '$name'");
       case List v:
         _setMixedList(name, v);
       default:

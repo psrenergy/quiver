@@ -239,14 +239,16 @@ TEST(DatabaseCSV, ImportCSV_Vector_RoundTrip) {
     e1.set("label", std::string("Item1")).set("name", std::string("Alpha"));
     auto id1 = db.create_element("Items", e1);
 
-    db.update_vector_floats("Items", "measurement", id1, {1.1, 2.2, 3.3});
+    quiver::Element update1;
+    update1.set("measurement", std::vector<double>{1.1, 2.2, 3.3});
+    db.update_element("Items", id1, update1);
 
     // Export
     auto csv_path = temp_csv("ImportVectorRT");
     db.export_csv("Items", "measurements", csv_path.string());
 
-    // Clear and re-import
-    db.update_vector_floats("Items", "measurement", id1, {});
+    // Clear vector data and re-import (parent element must exist for group import)
+    db.update_element("Items", id1, quiver::Element().set("measurement", std::vector<double>{}));
     db.import_csv("Items", "measurements", csv_path.string());
 
     auto vals = db.read_vector_floats_by_id("Items", "measurement", id1);
@@ -265,14 +267,16 @@ TEST(DatabaseCSV, ImportCSV_Set_RoundTrip) {
     e1.set("label", std::string("Item1")).set("name", std::string("Alpha"));
     auto id1 = db.create_element("Items", e1);
 
-    db.update_set_strings("Items", "tag", id1, {"red", "green", "blue"});
+    quiver::Element update1;
+    update1.set("tag", std::vector<std::string>{"red", "green", "blue"});
+    db.update_element("Items", id1, update1);
 
     // Export
     auto csv_path = temp_csv("ImportSetRT");
     db.export_csv("Items", "tags", csv_path.string());
 
-    // Clear and re-import
-    db.update_set_strings("Items", "tag", id1, {});
+    // Clear set data and re-import (parent element must exist for group import)
+    db.update_element("Items", id1, quiver::Element().set("tag", std::vector<std::string>{}));
     db.import_csv("Items", "tags", csv_path.string());
 
     auto tags = db.read_set_strings_by_id("Items", "tag", id1);
@@ -321,7 +325,9 @@ TEST(DatabaseCSV, ImportCSV_Group_HeaderOnly_ClearsGroup) {
     e1.set("label", std::string("Item1")).set("name", std::string("Alpha"));
     auto id1 = db.create_element("Items", e1);
 
-    db.update_set_strings("Items", "tag", id1, {"red", "green"});
+    quiver::Element update;
+    update.set("tag", std::vector<std::string>{"red", "green"});
+    db.update_element("Items", id1, update);
 
     // Import header-only CSV
     auto csv_path = temp_csv("ImportGroupHeaderOnly");

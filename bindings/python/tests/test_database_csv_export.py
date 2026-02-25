@@ -136,8 +136,8 @@ class TestExportCSVGroup:
         e2.set("name", "Beta")
         csv_db.create_element("Items", e2)
 
-        csv_db.update_vector_floats("Items", "measurement", 1, [1.1, 2.2, 3.3])
-        csv_db.update_vector_floats("Items", "measurement", 2, [4.4, 5.5])
+        csv_db.update_element("Items", 1, Element().set("measurement", [1.1, 2.2, 3.3]))
+        csv_db.update_element("Items", 2, Element().set("measurement", [4.4, 5.5]))
 
         out = str(tmp_path / "group.csv")
         csv_db.export_csv("Items", "measurements", out)

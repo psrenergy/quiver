@@ -98,6 +98,7 @@ if(QUIVER_BUILD_C_API)
         c/database_csv_export.cpp
         c/database_csv_import.cpp
         c/database_create.cpp
+        c/database_delete.cpp
         c/database_read.cpp
         c/database_update.cpp
         c/database_metadata.cpp

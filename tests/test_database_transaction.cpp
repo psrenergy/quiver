@@ -82,8 +82,10 @@ TEST(DatabaseTransaction, WriteMethodsInsideTransaction) {
     db.begin_transaction();
 
     // Exercise multiple write method types inside explicit transaction
-    db.update_vector_integers("Collection", "value_int", id1, {10, 20, 30});
-    db.update_set_strings("Collection", "tag", id1, {"alpha", "beta"});
+    quiver::Element update1;
+    update1.set("value_int", std::vector<int64_t>{10, 20, 30});
+    update1.set("tag", std::vector<std::string>{"alpha", "beta"});
+    db.update_element("Collection", id1, update1);
 
     // Update time series group
     std::vector<std::map<std::string, quiver::Value>> ts_rows = {
@@ -128,12 +130,16 @@ TEST(DatabaseTransaction, RollbackUndoesMixedWrites) {
     quiver::Element e1;
     e1.set("label", std::string("Item 1"));
     int64_t id1 = db.create_element("Collection", e1);
-    db.update_vector_integers("Collection", "value_int", id1, {1, 2, 3});
+    quiver::Element update_before;
+    update_before.set("value_int", std::vector<int64_t>{1, 2, 3});
+    db.update_element("Collection", id1, update_before);
 
     db.begin_transaction();
 
     // Update vectors and create another element
-    db.update_vector_integers("Collection", "value_int", id1, {99, 98, 97});
+    quiver::Element update;
+    update.set("value_int", std::vector<int64_t>{99, 98, 97});
+    db.update_element("Collection", id1, update);
 
     quiver::Element e2;
     e2.set("label", std::string("Item 2"));

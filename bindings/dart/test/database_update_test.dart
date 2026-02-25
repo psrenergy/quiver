@@ -642,7 +642,9 @@ void main() {
           'value_int': [1, 2, 3],
         });
 
-        db.updateVectorIntegers('Collection', 'value_int', 1, [10, 20, 30, 40]);
+        db.updateElement('Collection', 1, {
+          'value_int': [10, 20, 30, 40],
+        });
 
         final values = db.readVectorIntegersById('Collection', 'value_int', 1);
         expect(values, equals([10, 20, 30, 40]));
@@ -663,7 +665,9 @@ void main() {
           'value_int': [1, 2, 3],
         });
 
-        db.updateVectorIntegers('Collection', 'value_int', 1, [100]);
+        db.updateElement('Collection', 1, {
+          'value_int': [100],
+        });
 
         final values = db.readVectorIntegersById('Collection', 'value_int', 1);
         expect(values, equals([100]));
@@ -684,7 +688,7 @@ void main() {
           'value_int': [1, 2, 3],
         });
 
-        db.updateVectorIntegers('Collection', 'value_int', 1, []);
+        db.updateElement('Collection', 1, {'value_int': <int>[]});
 
         final values = db.readVectorIntegersById('Collection', 'value_int', 1);
         expect(values, isEmpty);
@@ -705,7 +709,9 @@ void main() {
         // Verify initially empty
         expect(db.readVectorIntegersById('Collection', 'value_int', 1), isEmpty);
 
-        db.updateVectorIntegers('Collection', 'value_int', 1, [1, 2, 3]);
+        db.updateElement('Collection', 1, {
+          'value_int': [1, 2, 3],
+        });
 
         final values = db.readVectorIntegersById('Collection', 'value_int', 1);
         expect(values, equals([1, 2, 3]));
@@ -730,7 +736,9 @@ void main() {
           'value_int': [10, 20],
         });
 
-        db.updateVectorIntegers('Collection', 'value_int', 1, [100, 200]);
+        db.updateElement('Collection', 1, {
+          'value_int': [100, 200],
+        });
 
         expect(db.readVectorIntegersById('Collection', 'value_int', 1), equals([100, 200]));
         expect(db.readVectorIntegersById('Collection', 'value_int', 2), equals([10, 20]));
@@ -747,7 +755,9 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Test Config'});
         expect(
-          () => db.updateVectorIntegers('NonexistentCollection', 'value_int', 1, [1, 2, 3]),
+          () => db.updateElement('NonexistentCollection', 1, {
+            'value_int': [1, 2, 3],
+          }),
           throwsA(isA<DatabaseException>()),
         );
       } finally {
@@ -769,7 +779,9 @@ void main() {
           'value_float': [1.5, 2.5, 3.5],
         });
 
-        db.updateVectorFloats('Collection', 'value_float', 1, [10.5, 20.5]);
+        db.updateElement('Collection', 1, {
+          'value_float': [10.5, 20.5],
+        });
 
         final values = db.readVectorFloatsById('Collection', 'value_float', 1);
         expect(values, equals([10.5, 20.5]));
@@ -790,7 +802,9 @@ void main() {
           'value_float': [1.0],
         });
 
-        db.updateVectorFloats('Collection', 'value_float', 1, [1.23456789, 9.87654321]);
+        db.updateElement('Collection', 1, {
+          'value_float': [1.23456789, 9.87654321],
+        });
 
         final values = db.readVectorFloatsById('Collection', 'value_float', 1);
         expect(values[0], closeTo(1.23456789, 1e-8));
@@ -812,7 +826,7 @@ void main() {
           'value_float': [1.5, 2.5, 3.5],
         });
 
-        db.updateVectorFloats('Collection', 'value_float', 1, []);
+        db.updateElement('Collection', 1, {'value_float': <double>[]});
 
         final values = db.readVectorFloatsById('Collection', 'value_float', 1);
         expect(values, isEmpty);
@@ -839,7 +853,9 @@ void main() {
           'tag': ['important', 'urgent'],
         });
 
-        db.updateSetStrings('Collection', 'tag', 1, ['new_tag1', 'new_tag2', 'new_tag3']);
+        db.updateElement('Collection', 1, {
+          'tag': ['new_tag1', 'new_tag2', 'new_tag3'],
+        });
 
         final values = db.readSetStringsById('Collection', 'tag', 1);
         expect(values.toSet(), equals({'new_tag1', 'new_tag2', 'new_tag3'}));
@@ -860,31 +876,12 @@ void main() {
           'tag': ['important', 'urgent'],
         });
 
-        db.updateSetStrings('Collection', 'tag', 1, ['single_tag']);
+        db.updateElement('Collection', 1, {
+          'tag': ['single_tag'],
+        });
 
         final values = db.readSetStringsById('Collection', 'tag', 1);
         expect(values, equals(['single_tag']));
-      } finally {
-        db.close();
-      }
-    });
-
-    test('update to empty set', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
-      );
-      try {
-        db.createElement('Configuration', {'label': 'Test Config'});
-        db.createElement('Collection', {
-          'label': 'Item 1',
-          'tag': ['important', 'urgent'],
-        });
-
-        db.updateSetStrings('Collection', 'tag', 1, []);
-
-        final values = db.readSetStringsById('Collection', 'tag', 1);
-        expect(values, isEmpty);
       } finally {
         db.close();
       }
@@ -902,7 +899,9 @@ void main() {
         // Verify initially empty
         expect(db.readSetStringsById('Collection', 'tag', 1), isEmpty);
 
-        db.updateSetStrings('Collection', 'tag', 1, ['important', 'urgent']);
+        db.updateElement('Collection', 1, {
+          'tag': ['important', 'urgent'],
+        });
 
         final values = db.readSetStringsById('Collection', 'tag', 1);
         expect(values.toSet(), equals({'important', 'urgent'}));
@@ -927,7 +926,9 @@ void main() {
           'tag': ['urgent', 'review'],
         });
 
-        db.updateSetStrings('Collection', 'tag', 1, ['updated']);
+        db.updateElement('Collection', 1, {
+          'tag': ['updated'],
+        });
 
         expect(db.readSetStringsById('Collection', 'tag', 1), equals(['updated']));
         expect(db.readSetStringsById('Collection', 'tag', 2).toSet(), equals({'urgent', 'review'}));
@@ -948,7 +949,9 @@ void main() {
           'tag': ['tag1'],
         });
 
-        db.updateSetStrings('Collection', 'tag', 1, ['日本語', '中文', '한국어']);
+        db.updateElement('Collection', 1, {
+          'tag': ['日本語', '中文', '한국어'],
+        });
 
         final values = db.readSetStringsById('Collection', 'tag', 1);
         expect(values.toSet(), equals({'日本語', '中文', '한국어'}));
@@ -965,7 +968,9 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Test Config'});
         expect(
-          () => db.updateSetStrings('NonexistentCollection', 'tag', 1, ['tag1']),
+          () => db.updateElement('NonexistentCollection', 1, {
+            'tag': ['tag1'],
+          }),
           throwsA(isA<DatabaseException>()),
         );
       } finally {
@@ -987,7 +992,9 @@ void main() {
       try {
         db.createElement('AllTypes', {'label': 'Item 1'});
 
-        db.updateVectorStrings('AllTypes', 'label_value', 1, ['alpha', 'beta']);
+        db.updateElement('AllTypes', 1, {
+          'label_value': ['alpha', 'beta'],
+        });
 
         final result = db.readVectorStringsById('AllTypes', 'label_value', 1);
         expect(result, equals(['alpha', 'beta']));
@@ -1006,7 +1013,9 @@ void main() {
       try {
         db.createElement('AllTypes', {'label': 'Item 1'});
 
-        db.updateSetIntegers('AllTypes', 'code', 1, [10, 20, 30]);
+        db.updateElement('AllTypes', 1, {
+          'code': [10, 20, 30],
+        });
 
         final result = db.readSetIntegersById('AllTypes', 'code', 1);
         expect(result..sort(), equals([10, 20, 30]));
@@ -1025,7 +1034,9 @@ void main() {
       try {
         db.createElement('AllTypes', {'label': 'Item 1'});
 
-        db.updateSetFloats('AllTypes', 'weight', 1, [1.1, 2.2]);
+        db.updateElement('AllTypes', 1, {
+          'weight': [1.1, 2.2],
+        });
 
         final result = db.readSetFloatsById('AllTypes', 'weight', 1);
         expect(result..sort(), equals([1.1, 2.2]));

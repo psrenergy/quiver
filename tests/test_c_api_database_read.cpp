@@ -1709,8 +1709,12 @@ TEST(DatabaseCApi, ReadVectorStringsHappyPath) {
     quiver_database_create_element(db, "AllTypes", e, &id);
     EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     const char* str_values[] = {"alpha", "beta", "gamma"};
-    ASSERT_EQ(quiver_database_update_vector_strings(db, "AllTypes", "label_value", id, str_values, 3), QUIVER_OK);
+    quiver_element_set_array_string(update, "label_value", str_values, 3);
+    ASSERT_EQ(quiver_database_update_element(db, "AllTypes", id, update), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
 
     char*** vectors = nullptr;
     size_t* sizes = nullptr;
@@ -1748,8 +1752,12 @@ TEST(DatabaseCApi, ReadVectorStringsByIdHappyPath) {
     quiver_database_create_element(db, "AllTypes", e, &id);
     EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     const char* str_values[] = {"hello", "world"};
-    ASSERT_EQ(quiver_database_update_vector_strings(db, "AllTypes", "label_value", id, str_values, 2), QUIVER_OK);
+    quiver_element_set_array_string(update, "label_value", str_values, 2);
+    ASSERT_EQ(quiver_database_update_element(db, "AllTypes", id, update), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
 
     char** read_values = nullptr;
     size_t count = 0;
@@ -1788,8 +1796,12 @@ TEST(DatabaseCApi, ReadSetIntegersHappyPath) {
     quiver_database_create_element(db, "AllTypes", e, &id);
     EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     int64_t int_values[] = {10, 20, 30};
-    ASSERT_EQ(quiver_database_update_set_integers(db, "AllTypes", "code", id, int_values, 3), QUIVER_OK);
+    quiver_element_set_array_integer(update, "code", int_values, 3);
+    ASSERT_EQ(quiver_database_update_element(db, "AllTypes", id, update), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
 
     int64_t** sets = nullptr;
     size_t* sizes = nullptr;
@@ -1830,8 +1842,12 @@ TEST(DatabaseCApi, ReadSetIntegersByIdHappyPath) {
     quiver_database_create_element(db, "AllTypes", e, &id);
     EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     int64_t int_values[] = {100, 200};
-    ASSERT_EQ(quiver_database_update_set_integers(db, "AllTypes", "code", id, int_values, 2), QUIVER_OK);
+    quiver_element_set_array_integer(update, "code", int_values, 2);
+    ASSERT_EQ(quiver_database_update_element(db, "AllTypes", id, update), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
 
     int64_t* read_values = nullptr;
     size_t count = 0;
@@ -1873,8 +1889,12 @@ TEST(DatabaseCApi, ReadSetFloatsHappyPath) {
     quiver_database_create_element(db, "AllTypes", e, &id);
     EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     double float_values[] = {1.1, 2.2, 3.3};
-    ASSERT_EQ(quiver_database_update_set_floats(db, "AllTypes", "weight", id, float_values, 3), QUIVER_OK);
+    quiver_element_set_array_float(update, "weight", float_values, 3);
+    ASSERT_EQ(quiver_database_update_element(db, "AllTypes", id, update), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
 
     double** sets = nullptr;
     size_t* sizes = nullptr;
@@ -1915,8 +1935,12 @@ TEST(DatabaseCApi, ReadSetFloatsByIdHappyPath) {
     quiver_database_create_element(db, "AllTypes", e, &id);
     EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     double float_values[] = {9.9, 8.8};
-    ASSERT_EQ(quiver_database_update_set_floats(db, "AllTypes", "weight", id, float_values, 2), QUIVER_OK);
+    quiver_element_set_array_float(update, "weight", float_values, 2);
+    ASSERT_EQ(quiver_database_update_element(db, "AllTypes", id, update), QUIVER_OK);
+    EXPECT_EQ(quiver_element_destroy(update), QUIVER_OK);
 
     double* read_values = nullptr;
     size_t count = 0;

@@ -22,7 +22,8 @@
       "WebSearch",
       "Bash(cmd:*)",
       "Bash(powershell:*)",
-      "Bash(julia:*)"
+      "Bash(julia:*)",
+      "Bash(cmake:*)"
     ]
   }
 }

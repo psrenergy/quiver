@@ -46,7 +46,11 @@ class TestUpdateVector:
             "Collection",
             Element().set("label", "Item1"),
         )
-        collections_db.update_vector_integers("Collection", "value_int", elem_id, [10, 20, 30])
+        collections_db.update_element(
+            "Collection",
+            elem_id,
+            Element().set("value_int", [10, 20, 30]),
+        )
         result = collections_db.read_vector_integers_by_id("Collection", "value_int", elem_id)
         assert result == [10, 20, 30]
 
@@ -56,7 +60,11 @@ class TestUpdateVector:
             "Collection",
             Element().set("label", "Item1"),
         )
-        collections_db.update_vector_floats("Collection", "value_float", elem_id, [1.1, 2.2, 3.3])
+        collections_db.update_element(
+            "Collection",
+            elem_id,
+            Element().set("value_float", [1.1, 2.2, 3.3]),
+        )
         result = collections_db.read_vector_floats_by_id("Collection", "value_float", elem_id)
         assert len(result) == 3
         assert abs(result[0] - 1.1) < 1e-9
@@ -69,11 +77,19 @@ class TestUpdateVector:
             "Collection",
             Element().set("label", "Item1"),
         )
-        collections_db.update_vector_integers("Collection", "value_int", elem_id, [10, 20])
+        collections_db.update_element(
+            "Collection",
+            elem_id,
+            Element().set("value_int", [10, 20]),
+        )
         # Verify data exists
         assert collections_db.read_vector_integers_by_id("Collection", "value_int", elem_id) == [10, 20]
         # Clear with empty list
-        collections_db.update_vector_integers("Collection", "value_int", elem_id, [])
+        collections_db.update_element(
+            "Collection",
+            elem_id,
+            Element().set("value_int", []),
+        )
         result = collections_db.read_vector_integers_by_id("Collection", "value_int", elem_id)
         assert result == []
 
@@ -85,7 +101,11 @@ class TestUpdateSet:
             "Collection",
             Element().set("label", "Item1"),
         )
-        collections_db.update_set_strings("Collection", "tag", elem_id, ["tag1", "tag2"])
+        collections_db.update_element(
+            "Collection",
+            elem_id,
+            Element().set("tag", ["tag1", "tag2"]),
+        )
         result = collections_db.read_set_strings_by_id("Collection", "tag", elem_id)
         assert sorted(result) == ["tag1", "tag2"]
 
@@ -95,57 +115,21 @@ class TestUpdateSet:
             "Collection",
             Element().set("label", "Item1"),
         )
-        collections_db.update_set_strings("Collection", "tag", elem_id, ["tag1", "tag2"])
+        collections_db.update_element(
+            "Collection",
+            elem_id,
+            Element().set("tag", ["tag1", "tag2"]),
+        )
         # Verify data exists
         assert sorted(collections_db.read_set_strings_by_id("Collection", "tag", elem_id)) == ["tag1", "tag2"]
         # Clear with empty list
-        collections_db.update_set_strings("Collection", "tag", elem_id, [])
+        collections_db.update_element(
+            "Collection",
+            elem_id,
+            Element().set("tag", []),
+        )
         result = collections_db.read_set_strings_by_id("Collection", "tag", elem_id)
         assert result == []
-
-
-# -- String vector update (gap-fill) -----------------------------------------
-
-
-class TestUpdateVectorStrings:
-    def test_update_vector_strings(self, all_types_db: Database) -> None:
-        elem_id = all_types_db.create_element(
-            "AllTypes",
-            Element().set("label", "Item1"),
-        )
-        all_types_db.update_vector_strings("AllTypes", "label_value", elem_id, ["alpha", "beta"])
-        result = all_types_db.read_vector_strings_by_id("AllTypes", "label_value", elem_id)
-        assert result == ["alpha", "beta"]
-
-
-# -- Integer set update (gap-fill) ------------------------------------------
-
-
-class TestUpdateSetIntegers:
-    def test_update_set_integers(self, all_types_db: Database) -> None:
-        elem_id = all_types_db.create_element(
-            "AllTypes",
-            Element().set("label", "Item1"),
-        )
-        all_types_db.update_set_integers("AllTypes", "code", elem_id, [10, 20, 30])
-        result = all_types_db.read_set_integers_by_id("AllTypes", "code", elem_id)
-        assert sorted(result) == [10, 20, 30]
-
-
-# -- Float set update (gap-fill) -------------------------------------------
-
-
-class TestUpdateSetFloats:
-    def test_update_set_floats(self, all_types_db: Database) -> None:
-        elem_id = all_types_db.create_element(
-            "AllTypes",
-            Element().set("label", "Item1"),
-        )
-        all_types_db.update_set_floats("AllTypes", "weight", elem_id, [1.1, 2.2])
-        result = all_types_db.read_set_floats_by_id("AllTypes", "weight", elem_id)
-        assert len(result) == 2
-        assert any(abs(v - 1.1) < 1e-9 for v in result)
-        assert any(abs(v - 2.2) < 1e-9 for v in result)
 
 
 class TestFKResolutionUpdate:

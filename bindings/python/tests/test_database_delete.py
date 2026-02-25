@@ -39,7 +39,7 @@ class TestDeleteElement:
             "Collection",
             Element().set("label", "Item1"),
         )
-        collections_db.update_vector_integers("Collection", "value_int", elem_id, [10, 20, 30])
+        collections_db.update_element("Collection", elem_id, Element().set("value_int", [10, 20, 30]))
         # Verify vector data exists
         assert collections_db.read_vector_integers_by_id("Collection", "value_int", elem_id) == [10, 20, 30]
         # Delete element -- cascade should clean up vectors

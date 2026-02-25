@@ -108,16 +108,24 @@ TEST(DatabaseCApiCSV, ImportCSV_Vector_RoundTrip) {
     ASSERT_EQ(quiver_database_create_element(db, "Items", e1, &id1), QUIVER_OK);
     quiver_element_destroy(e1);
 
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     double vec_values[] = {1.1, 2.2, 3.3};
-    ASSERT_EQ(quiver_database_update_vector_floats(db, "Items", "measurement", id1, vec_values, 3), QUIVER_OK);
+    quiver_element_set_array_float(update, "measurement", vec_values, 3);
+    ASSERT_EQ(quiver_database_update_element(db, "Items", id1, update), QUIVER_OK);
+    quiver_element_destroy(update);
 
     // Export
     auto csv_path = temp_csv("ImportVectorRT");
     auto csv_opts = quiver_csv_options_default();
     ASSERT_EQ(quiver_database_export_csv(db, "Items", "measurements", csv_path.string().c_str(), &csv_opts), QUIVER_OK);
 
-    // Clear and re-import
-    ASSERT_EQ(quiver_database_update_vector_floats(db, "Items", "measurement", id1, nullptr, 0), QUIVER_OK);
+    // Clear vector data and re-import (parent element must exist for group import)
+    quiver_element_t* clear_vec = nullptr;
+    ASSERT_EQ(quiver_element_create(&clear_vec), QUIVER_OK);
+    quiver_element_set_array_float(clear_vec, "measurement", nullptr, 0);
+    ASSERT_EQ(quiver_database_update_element(db, "Items", id1, clear_vec), QUIVER_OK);
+    quiver_element_destroy(clear_vec);
 
     auto import_opts = quiver_csv_options_default();
     ASSERT_EQ(quiver_database_import_csv(db, "Items", "measurements", csv_path.string().c_str(), &import_opts),
@@ -152,16 +160,25 @@ TEST(DatabaseCApiCSV, ImportCSV_Set_RoundTrip) {
     ASSERT_EQ(quiver_database_create_element(db, "Items", e1, &id1), QUIVER_OK);
     quiver_element_destroy(e1);
 
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     const char* set_values[] = {"red", "green", "blue"};
-    ASSERT_EQ(quiver_database_update_set_strings(db, "Items", "tag", id1, set_values, 3), QUIVER_OK);
+    quiver_element_set_array_string(update, "tag", set_values, 3);
+    ASSERT_EQ(quiver_database_update_element(db, "Items", id1, update), QUIVER_OK);
+    quiver_element_destroy(update);
 
     // Export
     auto csv_path = temp_csv("ImportSetRT");
     auto csv_opts = quiver_csv_options_default();
     ASSERT_EQ(quiver_database_export_csv(db, "Items", "tags", csv_path.string().c_str(), &csv_opts), QUIVER_OK);
 
-    // Clear and re-import
-    ASSERT_EQ(quiver_database_update_set_strings(db, "Items", "tag", id1, nullptr, 0), QUIVER_OK);
+    // Clear set data and re-import (parent element must exist for group import)
+    quiver_element_t* clear_set = nullptr;
+    ASSERT_EQ(quiver_element_create(&clear_set), QUIVER_OK);
+    const char* empty_set[] = {nullptr};
+    quiver_element_set_array_string(clear_set, "tag", empty_set, 0);
+    ASSERT_EQ(quiver_database_update_element(db, "Items", id1, clear_set), QUIVER_OK);
+    quiver_element_destroy(clear_set);
 
     auto import_opts = quiver_csv_options_default();
     ASSERT_EQ(quiver_database_import_csv(db, "Items", "tags", csv_path.string().c_str(), &import_opts), QUIVER_OK);

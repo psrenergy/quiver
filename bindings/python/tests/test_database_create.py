@@ -45,7 +45,7 @@ class TestCreateElement:
             "Collection",
             Element().set("label", "Item1"),
         )
-        collections_db.update_set_strings("Collection", "tag", elem_id, ["a", "b"])
+        collections_db.update_element("Collection", elem_id, Element().set("tag", ["a", "b"]))
         result = collections_db.read_set_strings_by_id("Collection", "tag", elem_id)
         assert sorted(result) == ["a", "b"]
 
