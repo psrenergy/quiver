@@ -83,6 +83,18 @@ def csv_db(csv_export_schema_path: Path, tmp_path: Path) -> Generator[Database, 
 
 
 @pytest.fixture
+def csv_db_export(csv_db: Database) -> Database:
+    """Return csv_db typed as DatabaseCSVExport (Database inherits it)."""
+    return csv_db
+
+
+@pytest.fixture
+def csv_db_import(csv_db: Database) -> Database:
+    """Return csv_db typed as DatabaseCSVImport (Database inherits it)."""
+    return csv_db
+
+
+@pytest.fixture
 def all_types_schema_path(schemas_path: Path) -> Path:
     """Return the path to the all_types test schema."""
     return schemas_path / "valid" / "all_types.sql"
