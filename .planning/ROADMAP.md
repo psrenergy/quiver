@@ -12,7 +12,7 @@ Transform the existing Python binding (`quiverdb`) from a development-only packa
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Build System Migration** - Replace hatchling with scikit-build-core and add CMake install targets for native library bundling
+- [x] **Phase 1: Build System Migration** - Replace hatchling with scikit-build-core and add CMake install targets for native library bundling
 - [ ] **Phase 2: Loader Rewrite** - Rewrite _loader.py to discover bundled native libraries and fall back to development mode
 - [ ] **Phase 3: CI Wheel Building** - GitHub Actions workflow builds and tests platform-specific wheels via cibuildwheel
 - [ ] **Phase 4: PyPI Publishing** - Automated trusted publisher release to PyPI on tagged commits
@@ -31,8 +31,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md -- Replace hatchling with scikit-build-core and add SKBUILD CMake guard
-- [ ] 01-02-PLAN.md -- Create wheel validation script and verify end-to-end build
+- [x] 01-01-PLAN.md -- Replace hatchling with scikit-build-core and add SKBUILD CMake guard
+- [x] 01-02-PLAN.md -- Create wheel validation script and verify end-to-end build
 
 ### Phase 2: Loader Rewrite
 **Goal**: Python code discovers and loads bundled native libraries from an installed wheel, with fallback for development
@@ -82,7 +82,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Build System Migration | 0/2 | Planning complete | - |
+| 1. Build System Migration | 2/2 | Complete | 2026-02-25 |
 | 2. Loader Rewrite | 0/0 | Not started | - |
 | 3. CI Wheel Building | 0/0 | Not started | - |
 | 4. PyPI Publishing | 0/0 | Not started | - |

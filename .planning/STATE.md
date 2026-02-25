@@ -9,29 +9,29 @@ See: .planning/PROJECT.md (updated 2026-02-25)
 
 ## Current Position
 
-Phase: 1 of 4 (Build System Migration)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-25 -- Completed 01-01-PLAN.md
+Phase: 1 of 4 (Build System Migration) -- COMPLETE
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-25 -- Completed 01-02-PLAN.md
 
-Progress: [█░░░░░░░░░] 12%
+Progress: [██░░░░░░░░] 25%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 22min
-- Total execution time: 0.4 hours
+- Total plans completed: 2
+- Average duration: 15min
+- Total execution time: 0.5 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-build-system-migration | 1 | 22min | 22min |
+| 01-build-system-migration | 2 | 30min | 15min |
 
 **Recent Trend:**
-- Last 5 plans: 22min
-- Trend: starting
+- Last 5 plans: 22min, 8min
+- Trend: improving
 
 *Updated after each plan completion*
 
@@ -45,6 +45,8 @@ Recent decisions affecting current work:
 - [Roadmap]: scikit-build-core replaces hatchling (research-validated, standard for CMake+Python)
 - [Roadmap]: 4 phases -- Build, Loader, CI, Publish -- derived from requirement categories
 - [01-01]: Guard package config/export install commands under NOT DEFINED SKBUILD to prevent CMake INSTALL(EXPORT) error during wheel builds
+- [01-02]: Use uv build --wheel instead of pip wheel for faster wheel building
+- [01-02]: Add wheel.exclude to pyproject.toml to filter dependency install artifacts from wheel
 
 ### Pending Todos
 
@@ -58,5 +60,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 01-01-PLAN.md (Build System Migration - scikit-build-core backend swap)
+Stopped at: Completed 01-02-PLAN.md (Phase 1 complete -- Build System Migration fully validated)
 Resume file: None
