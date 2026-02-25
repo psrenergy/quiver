@@ -4,7 +4,7 @@
 
 extern "C" {
 
-quiver_error_t quiver_database_delete_element(quiver_database_t* db, const char* collection, int64_t id) {
+QUIVER_C_API quiver_error_t quiver_database_delete_element(quiver_database_t* db, const char* collection, int64_t id) {
     QUIVER_REQUIRE(db, collection);
 
     try {
