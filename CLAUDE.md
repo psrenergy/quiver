@@ -23,7 +23,7 @@ src/c/                    # C API implementation
   internal.h              # Shared structs (quiver_database, quiver_element), QUIVER_REQUIRE macro
   database_helpers.h      # Marshaling templates, strdup_safe, metadata converters
   database.cpp            # Lifecycle: open, close, factory methods, describe
-  database_csv_options.h  # Shared CSV options: convert_options inline, quiver_csv_options_default
+  database_options.h      # Shared CSV options: convert_options inline, quiver_csv_options_default
   database_csv_export.cpp # CSV export function
   database_csv_import.cpp # CSV import function
   database_create.cpp     # Element CRUD: create, update, delete
