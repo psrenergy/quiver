@@ -115,4 +115,10 @@ if(DEFINED SKBUILD)
         LIBRARY DESTINATION quiverdb/_libs
         RUNTIME DESTINATION quiverdb/_libs
     )
+    # On Linux, set RPATH so libquiver_c.so finds libquiver.so in same directory
+    if(NOT WIN32)
+        set_target_properties(quiver_c PROPERTIES
+            INSTALL_RPATH "$ORIGIN"
+        )
+    endif()
 endif()
