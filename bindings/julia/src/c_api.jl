@@ -295,30 +295,6 @@ function quiver_database_free_group_metadata_array(metadata, count)
     @ccall libquiver_c.quiver_database_free_group_metadata_array(metadata::Ptr{quiver_group_metadata_t}, count::Csize_t)::quiver_error_t
 end
 
-function quiver_database_update_vector_integers(db, collection, attribute, id, values, count)
-    @ccall libquiver_c.quiver_database_update_vector_integers(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Int64}, count::Csize_t)::quiver_error_t
-end
-
-function quiver_database_update_vector_floats(db, collection, attribute, id, values, count)
-    @ccall libquiver_c.quiver_database_update_vector_floats(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Cdouble}, count::Csize_t)::quiver_error_t
-end
-
-function quiver_database_update_vector_strings(db, collection, attribute, id, values, count)
-    @ccall libquiver_c.quiver_database_update_vector_strings(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Ptr{Cchar}}, count::Csize_t)::quiver_error_t
-end
-
-function quiver_database_update_set_integers(db, collection, attribute, id, values, count)
-    @ccall libquiver_c.quiver_database_update_set_integers(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Int64}, count::Csize_t)::quiver_error_t
-end
-
-function quiver_database_update_set_floats(db, collection, attribute, id, values, count)
-    @ccall libquiver_c.quiver_database_update_set_floats(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Cdouble}, count::Csize_t)::quiver_error_t
-end
-
-function quiver_database_update_set_strings(db, collection, attribute, id, values, count)
-    @ccall libquiver_c.quiver_database_update_set_strings(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Ptr{Cchar}}, count::Csize_t)::quiver_error_t
-end
-
 function quiver_database_read_time_series_group(db, collection, group, id, out_column_names, out_column_types, out_column_data, out_column_count, out_row_count)
     @ccall libquiver_c.quiver_database_read_time_series_group(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, out_column_names::Ptr{Ptr{Ptr{Cchar}}}, out_column_types::Ptr{Ptr{Cint}}, out_column_data::Ptr{Ptr{Ptr{Cvoid}}}, out_column_count::Ptr{Csize_t}, out_row_count::Ptr{Csize_t})::quiver_error_t
 end

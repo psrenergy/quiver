@@ -507,7 +507,7 @@ include("fixture.jl")
         db = Quiver.from_schema(":memory:", path_schema)
 
         Quiver.create_element!(db, "AllTypes"; label = "Item 1")
-        Quiver.update_set_integers!(db, "AllTypes", "code", Int64(1), [10, 20, 30])
+        Quiver.update_element!(db, "AllTypes", Int64(1); code = [10, 20, 30])
 
         result = Quiver.read_set_integers_by_id(db, "AllTypes", "code", Int64(1))
         @test sort(result) == [10, 20, 30]
@@ -522,8 +522,8 @@ include("fixture.jl")
         Quiver.create_element!(db, "AllTypes"; label = "Item 1")
         Quiver.create_element!(db, "AllTypes"; label = "Item 2")
 
-        Quiver.update_set_floats!(db, "AllTypes", "weight", Int64(1), [1.1, 2.2])
-        Quiver.update_set_floats!(db, "AllTypes", "weight", Int64(2), [3.3, 4.4, 5.5])
+        Quiver.update_element!(db, "AllTypes", Int64(1); weight = [1.1, 2.2])
+        Quiver.update_element!(db, "AllTypes", Int64(2); weight = [3.3, 4.4, 5.5])
 
         result = Quiver.read_set_floats(db, "AllTypes", "weight")
         @test length(result) == 2
@@ -538,7 +538,7 @@ include("fixture.jl")
         db = Quiver.from_schema(":memory:", path_schema)
 
         Quiver.create_element!(db, "AllTypes"; label = "Item 1")
-        Quiver.update_set_floats!(db, "AllTypes", "weight", Int64(1), [1.1, 2.2])
+        Quiver.update_element!(db, "AllTypes", Int64(1); weight = [1.1, 2.2])
 
         result = Quiver.read_set_floats_by_id(db, "AllTypes", "weight", Int64(1))
         @test sort(result) == [1.1, 2.2]

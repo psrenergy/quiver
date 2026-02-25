@@ -368,7 +368,7 @@ include("fixture.jl")
         Quiver.create_element!(db, "Configuration"; label = "Test Config")
         Quiver.create_element!(db, "Collection"; label = "Item 1", tag = ["old"])
 
-        Quiver.update_set_strings!(db, "Collection", "tag", Int64(1), ["  alpha  ", "\turgent\n", " gamma "])
+        Quiver.update_element!(db, "Collection", Int64(1); tag = ["  alpha  ", "\turgent\n", " gamma "])
 
         values = Quiver.read_set_strings_by_id(db, "Collection", "tag", Int64(1))
         @test sort(values) == ["alpha", "gamma", "urgent"]
@@ -453,17 +453,17 @@ include("fixture.jl")
         Quiver.create_element!(db, "Collection"; label = "Item 1", value_float = [1.5, 2.5, 3.5])
 
         # Replace existing vector
-        Quiver.update_vector_floats!(db, "Collection", "value_float", Int64(1), [10.5, 20.5])
+        Quiver.update_element!(db, "Collection", Int64(1); value_float = [10.5, 20.5])
         values = Quiver.read_vector_floats_by_id(db, "Collection", "value_float", Int64(1))
         @test values == [10.5, 20.5]
 
         # Precision test
-        Quiver.update_vector_floats!(db, "Collection", "value_float", Int64(1), [1.23456789, 9.87654321])
+        Quiver.update_element!(db, "Collection", Int64(1); value_float = [1.23456789, 9.87654321])
         values = Quiver.read_vector_floats_by_id(db, "Collection", "value_float", Int64(1))
         @test values ≈ [1.23456789, 9.87654321]
 
         # Update to empty vector
-        Quiver.update_vector_floats!(db, "Collection", "value_float", Int64(1), Float64[])
+        Quiver.update_element!(db, "Collection", Int64(1); value_float = Float64[])
         values = Quiver.read_vector_floats_by_id(db, "Collection", "value_float", Int64(1))
         @test isempty(values)
 
@@ -482,17 +482,17 @@ include("fixture.jl")
         Quiver.create_element!(db, "Collection"; label = "Item 1", tag = ["important", "urgent"])
 
         # Replace existing set
-        Quiver.update_set_strings!(db, "Collection", "tag", Int64(1), ["new_tag1", "new_tag2", "new_tag3"])
+        Quiver.update_element!(db, "Collection", Int64(1); tag = ["new_tag1", "new_tag2", "new_tag3"])
         values = Quiver.read_set_strings_by_id(db, "Collection", "tag", Int64(1))
         @test sort(values) == sort(["new_tag1", "new_tag2", "new_tag3"])
 
         # Update to single element
-        Quiver.update_set_strings!(db, "Collection", "tag", Int64(1), ["single_tag"])
+        Quiver.update_element!(db, "Collection", Int64(1); tag = ["single_tag"])
         values = Quiver.read_set_strings_by_id(db, "Collection", "tag", Int64(1))
         @test values == ["single_tag"]
 
         # Update to empty set
-        Quiver.update_set_strings!(db, "Collection", "tag", Int64(1), String[])
+        Quiver.update_element!(db, "Collection", Int64(1); tag = String[])
         values = Quiver.read_set_strings_by_id(db, "Collection", "tag", Int64(1))
         @test isempty(values)
 
@@ -511,7 +511,7 @@ include("fixture.jl")
         @test isempty(values)
 
         # Update to non-empty
-        Quiver.update_set_strings!(db, "Collection", "tag", Int64(1), ["important", "urgent"])
+        Quiver.update_element!(db, "Collection", Int64(1); tag = ["important", "urgent"])
         values = Quiver.read_set_strings_by_id(db, "Collection", "tag", Int64(1))
         @test sort(values) == sort(["important", "urgent"])
 
@@ -527,7 +527,7 @@ include("fixture.jl")
         Quiver.create_element!(db, "Collection"; label = "Item 2", tag = ["urgent", "review"])
 
         # Update only first element
-        Quiver.update_set_strings!(db, "Collection", "tag", Int64(1), ["updated"])
+        Quiver.update_element!(db, "Collection", Int64(1); tag = ["updated"])
 
         # Verify first element changed
         @test Quiver.read_set_strings_by_id(db, "Collection", "tag", Int64(1)) == ["updated"]
@@ -547,7 +547,7 @@ include("fixture.jl")
         Quiver.create_element!(db, "Collection"; label = "Item 1", tag = ["tag1"])
 
         # Unicode support
-        Quiver.update_set_strings!(db, "Collection", "tag", Int64(1), ["日本語", "中文", "한국어"])
+        Quiver.update_element!(db, "Collection", Int64(1); tag = ["日本語", "中文", "한국어"])
         values = Quiver.read_set_strings_by_id(db, "Collection", "tag", Int64(1))
         @test sort(values) == sort(["日本語", "中文", "한국어"])
 
@@ -564,7 +564,7 @@ include("fixture.jl")
 
         Quiver.create_element!(db, "AllTypes"; label = "Item 1")
 
-        Quiver.update_vector_strings!(db, "AllTypes", "label_value", Int64(1), ["alpha", "beta"])
+        Quiver.update_element!(db, "AllTypes", Int64(1); label_value = ["alpha", "beta"])
         result = Quiver.read_vector_strings_by_id(db, "AllTypes", "label_value", Int64(1))
         @test result == ["alpha", "beta"]
 
@@ -577,7 +577,7 @@ include("fixture.jl")
 
         Quiver.create_element!(db, "AllTypes"; label = "Item 1")
 
-        Quiver.update_set_integers!(db, "AllTypes", "code", Int64(1), [10, 20, 30])
+        Quiver.update_element!(db, "AllTypes", Int64(1); code = [10, 20, 30])
         result = Quiver.read_set_integers_by_id(db, "AllTypes", "code", Int64(1))
         @test sort(result) == [10, 20, 30]
 
@@ -590,7 +590,7 @@ include("fixture.jl")
 
         Quiver.create_element!(db, "AllTypes"; label = "Item 1")
 
-        Quiver.update_set_floats!(db, "AllTypes", "weight", Int64(1), [1.1, 2.2])
+        Quiver.update_element!(db, "AllTypes", Int64(1); weight = [1.1, 2.2])
         result = Quiver.read_set_floats_by_id(db, "AllTypes", "weight", Int64(1))
         @test sort(result) == [1.1, 2.2]
 
