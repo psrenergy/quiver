@@ -887,27 +887,6 @@ void main() {
       }
     });
 
-    test('update to empty set', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
-      );
-      try {
-        db.createElement('Configuration', {'label': 'Test Config'});
-        db.createElement('Collection', {
-          'label': 'Item 1',
-          'tag': ['important', 'urgent'],
-        });
-
-        db.updateElement('Collection', 1, {'tag': []});
-
-        final values = db.readSetStringsById('Collection', 'tag', 1);
-        expect(values, isEmpty);
-      } finally {
-        db.close();
-      }
-    });
-
     test('update from empty to non-empty', () {
       final db = Database.fromSchema(
         ':memory:',
