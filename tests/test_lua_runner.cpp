@@ -2477,6 +2477,58 @@ TEST(LuaRunner_ImportCSV, DateTimeFormat) {
 }
 
 // ============================================================================
+// import_csv: Trailing empty columns (Excel artifact)
+// ============================================================================
+
+TEST(LuaRunner_ImportCSV, ScalarTrailingEmptyColumns) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(":memory:", csv_schema);
+    quiver::LuaRunner lua(db);
+
+    auto csv_path = lua_csv_temp("ImportScalarTrailing");
+    write_lua_csv_file(csv_path.string(),
+                       "sep=,\n"
+                       "label,name,status,price,date_created,notes,,,,\n"
+                       "Item1,Alpha,1,9.99,2024-01-15T10:30:00,first,,,,\n");
+
+    lua.run("db:import_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) + "\")");
+
+    lua.run(R"(
+        local names = db:read_scalar_strings("Items", "name")
+        assert(#names == 1, "Expected 1 name, got " .. #names)
+        assert(names[1] == "Alpha", "Expected Alpha, got " .. names[1])
+    )");
+
+    std::filesystem::remove(csv_path);
+}
+
+TEST(LuaRunner_ImportCSV, VectorTrailingEmptyColumns) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(":memory:", csv_schema);
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:create_element("Items", { label = "Item1", name = "Alpha" })
+    )");
+
+    auto csv_path = lua_csv_temp("ImportVectorTrailing");
+    write_lua_csv_file(csv_path.string(),
+                       "sep=,\n"
+                       "id,vector_index,measurement,,,\n"
+                       "Item1,1,1.1,,,\n"
+                       "Item1,2,2.2,,,\n");
+
+    lua.run("db:import_csv(\"Items\", \"measurements\", \"" + lua_safe_path(csv_path) + "\")");
+
+    lua.run(R"(
+        local vals = db:read_vector_floats_by_id("Items", "measurement", 1)
+        assert(#vals == 2, "Expected 2 values, got " .. #vals)
+    )");
+
+    std::filesystem::remove(csv_path);
+}
+
+// ============================================================================
 // FK label resolution tests
 // ============================================================================
 
