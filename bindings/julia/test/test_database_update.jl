@@ -388,17 +388,17 @@ include("fixture.jl")
         Quiver.create_element!(db, "Collection"; label = "Item 1", value_int = [1, 2, 3])
 
         # Replace existing vector
-        Quiver.update_vector_integers!(db, "Collection", "value_int", Int64(1), [10, 20, 30, 40])
+        Quiver.update_element!(db, "Collection", Int64(1); value_int = [10, 20, 30, 40])
         values = Quiver.read_vector_integers_by_id(db, "Collection", "value_int", Int64(1))
         @test values == [10, 20, 30, 40]
 
         # Update to smaller vector
-        Quiver.update_vector_integers!(db, "Collection", "value_int", Int64(1), [100])
+        Quiver.update_element!(db, "Collection", Int64(1); value_int = [100])
         values = Quiver.read_vector_integers_by_id(db, "Collection", "value_int", Int64(1))
         @test values == [100]
 
         # Update to empty vector
-        Quiver.update_vector_integers!(db, "Collection", "value_int", Int64(1), Int64[])
+        Quiver.update_element!(db, "Collection", Int64(1); value_int = Int64[])
         values = Quiver.read_vector_integers_by_id(db, "Collection", "value_int", Int64(1))
         @test isempty(values)
 
@@ -417,7 +417,8 @@ include("fixture.jl")
         @test isempty(values)
 
         # Update to non-empty
-        Quiver.update_vector_integers!(db, "Collection", "value_int", Int64(1), [1, 2, 3])
+        Quiver.update_element!(db, "Collection", Int64(1); value_int = [1, 2, 3])
+
         values = Quiver.read_vector_integers_by_id(db, "Collection", "value_int", Int64(1))
         @test values == [1, 2, 3]
 
@@ -433,7 +434,7 @@ include("fixture.jl")
         Quiver.create_element!(db, "Collection"; label = "Item 2", value_int = [10, 20])
 
         # Update only first element
-        Quiver.update_vector_integers!(db, "Collection", "value_int", Int64(1), [100, 200])
+        Quiver.update_element!(db, "Collection", Int64(1); value_int = [100, 200])
 
         # Verify first element changed
         @test Quiver.read_vector_integers_by_id(db, "Collection", "value_int", Int64(1)) == [100, 200]
@@ -606,13 +607,7 @@ include("fixture.jl")
 
         Quiver.create_element!(db, "Configuration"; label = "Test Config")
 
-        @test_throws Quiver.DatabaseException Quiver.update_vector_integers!(
-            db,
-            "NonexistentCollection",
-            "value_int",
-            Int64(1),
-            [1, 2, 3],
-        )
+        @test_throws Quiver.DatabaseException Quiver.update_element!(db, "NonexistentCollection", Int64(1); value_int = [1, 2, 3])
 
         Quiver.close!(db)
     end
@@ -623,12 +618,11 @@ include("fixture.jl")
 
         Quiver.create_element!(db, "Configuration"; label = "Test Config")
 
-        @test_throws Quiver.DatabaseException Quiver.update_set_strings!(
+        @test_throws Quiver.DatabaseException Quiver.update_element!(
             db,
             "NonexistentCollection",
-            "tag",
-            Int64(1),
-            ["tag1"],
+            Int64(1);
+            tag = ["tag1"],
         )
 
         Quiver.close!(db)

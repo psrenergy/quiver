@@ -460,8 +460,8 @@ include("fixture.jl")
         Quiver.create_element!(db, "AllTypes"; label = "Item 1")
         Quiver.create_element!(db, "AllTypes"; label = "Item 2")
 
-        Quiver.update_vector_strings!(db, "AllTypes", "label_value", Int64(1), ["alpha", "beta"])
-        Quiver.update_vector_strings!(db, "AllTypes", "label_value", Int64(2), ["gamma"])
+        Quiver.update_element!(db, "AllTypes", Int64(1); label_value = ["alpha", "beta"])
+        Quiver.update_element!(db, "AllTypes", Int64(2); label_value = ["gamma"])
 
         result = Quiver.read_vector_strings(db, "AllTypes", "label_value")
         @test length(result) == 2
@@ -476,7 +476,7 @@ include("fixture.jl")
         db = Quiver.from_schema(":memory:", path_schema)
 
         Quiver.create_element!(db, "AllTypes"; label = "Item 1")
-        Quiver.update_vector_strings!(db, "AllTypes", "label_value", Int64(1), ["alpha", "beta", "gamma"])
+        Quiver.update_element!(db, "AllTypes", Int64(1); label_value = ["alpha", "beta", "gamma"])
 
         result = Quiver.read_vector_strings_by_id(db, "AllTypes", "label_value", Int64(1))
         @test result == ["alpha", "beta", "gamma"]
@@ -491,8 +491,8 @@ include("fixture.jl")
         Quiver.create_element!(db, "AllTypes"; label = "Item 1")
         Quiver.create_element!(db, "AllTypes"; label = "Item 2")
 
-        Quiver.update_set_integers!(db, "AllTypes", "code", Int64(1), [10, 20, 30])
-        Quiver.update_set_integers!(db, "AllTypes", "code", Int64(2), [40, 50])
+        Quiver.update_element!(db, "AllTypes", Int64(1); code = [10, 20, 30])
+        Quiver.update_element!(db, "AllTypes", Int64(2); code = [40, 50])
 
         result = Quiver.read_set_integers(db, "AllTypes", "code")
         @test length(result) == 2
