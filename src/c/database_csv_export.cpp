@@ -1,4 +1,4 @@
-#include "database_csv_options.h"
+#include "database_options.h"
 #include "internal.h"
 #include "quiver/c/database.h"
 #include "quiver/c/options.h"

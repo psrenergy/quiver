@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from quiverdb._c_api import get_lib
 from quiverdb._helpers import check
-from quiverdb.database_csv_options import _marshal_csv_options
+from quiverdb.database_options import _marshal_csv_options
 from quiverdb.metadata import CSVOptions
 
 

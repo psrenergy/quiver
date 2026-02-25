@@ -1,5 +1,5 @@
-#ifndef QUIVER_C_DATABASE_CSV_OPTIONS_H
-#define QUIVER_C_DATABASE_CSV_OPTIONS_H
+#ifndef QUIVER_C_DATABASE_OPTIONS_H
+#define QUIVER_C_DATABASE_OPTIONS_H
 
 #include "quiver/c/options.h"
 #include "quiver/options.h"
