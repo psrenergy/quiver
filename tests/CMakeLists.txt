@@ -88,6 +88,18 @@ add_executable(quiver_benchmark
     benchmark/benchmark.cpp
 )
 
+# Sandbox executable (not part of test suite)
+add_executable(quiver_sandbox
+    sandbox/sandbox.cpp
+)
+
+target_link_libraries(quiver_sandbox
+    PRIVATE
+        quiver
+        quiver_c
+        quiver_compiler_options
+)
+
 target_link_libraries(quiver_benchmark
     PRIVATE
         quiver
