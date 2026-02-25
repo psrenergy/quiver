@@ -8,7 +8,8 @@ set(QUIVER_SOURCES
     database_metadata.cpp
     database_time_series.cpp
     database_query.cpp
-    database_csv.cpp
+    database_csv_export.cpp
+    database_csv_import.cpp
     database_describe.cpp
     element.cpp
     lua_runner.cpp
