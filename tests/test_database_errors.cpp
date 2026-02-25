@@ -193,7 +193,9 @@ TEST(DatabaseErrors, UpdateVectorIntegersCollectionNotFound) {
     config.set("label", std::string("Config"));
     db.create_element("Configuration", config);
 
-    EXPECT_THROW(db.update_element("NonexistentCollection", 1, quiver::Element().set("value_int", std::vector<int64_t>{1, 2, 3})), std::exception);
+    EXPECT_THROW(db.update_element(
+                     "NonexistentCollection", 1, quiver::Element().set("value_int", std::vector<int64_t>{1, 2, 3})),
+                 std::exception);
 }
 
 TEST(DatabaseErrors, UpdateVectorFloatsCollectionNotFound) {
@@ -204,7 +206,9 @@ TEST(DatabaseErrors, UpdateVectorFloatsCollectionNotFound) {
     config.set("label", std::string("Config"));
     db.create_element("Configuration", config);
 
-    EXPECT_THROW(db.update_element("NonexistentCollection", 1, quiver::Element().set("value_float", std::vector<double>{1.5, 2.5})), std::exception);
+    EXPECT_THROW(db.update_element(
+                     "NonexistentCollection", 1, quiver::Element().set("value_float", std::vector<double>{1.5, 2.5})),
+                 std::exception);
 }
 
 // ============================================================================
@@ -222,7 +226,9 @@ TEST(DatabaseErrors, UpdateSetStringsCollectionNotFound) {
     config.set("label", std::string("Config"));
     db.create_element("Configuration", config);
 
-    EXPECT_THROW(db.update_element("NonexistentCollection", 1, quiver::Element().set("tag", std::vector<std::string>{"a", "b"})), std::exception);
+    EXPECT_THROW(
+        db.update_element("NonexistentCollection", 1, quiver::Element().set("tag", std::vector<std::string>{"a", "b"})),
+        std::exception);
 }
 
 // ============================================================================

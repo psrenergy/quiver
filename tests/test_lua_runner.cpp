@@ -1955,7 +1955,8 @@ TEST_F(LuaRunnerAllTypesTest, ReadVectorStringsBulkFromLua) {
     db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
     db.create_element("AllTypes", quiver::Element().set("label", "Item 2"));
     db.update_element("AllTypes", 1, quiver::Element().set("label_value", std::vector<std::string>{"alpha", "beta"}));
-    db.update_element("AllTypes", 2, quiver::Element().set("label_value", std::vector<std::string>{"gamma", "delta", "epsilon"}));
+    db.update_element(
+        "AllTypes", 2, quiver::Element().set("label_value", std::vector<std::string>{"gamma", "delta", "epsilon"}));
 
     quiver::LuaRunner lua(db);
 
@@ -1973,7 +1974,8 @@ TEST_F(LuaRunnerAllTypesTest, ReadVectorStringsBulkFromLua) {
 TEST_F(LuaRunnerAllTypesTest, ReadVectorStringsByIdFromLua) {
     auto db = quiver::Database::from_schema(":memory:", all_types_schema);
     int64_t id1 = db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
-    db.update_element("AllTypes", id1, quiver::Element().set("label_value", std::vector<std::string>{"hello", "world"}));
+    db.update_element(
+        "AllTypes", id1, quiver::Element().set("label_value", std::vector<std::string>{"hello", "world"}));
 
     quiver::LuaRunner lua(db);
 
@@ -2058,7 +2060,8 @@ TEST_F(LuaRunnerAllTypesTest, UpdateSetIntegersFromLua) {
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        db:update_element("AllTypes", )" + std::to_string(id1) + R"(, { code = {10, 20, 30} })
+        db:update_element("AllTypes", )" +
+                         std::to_string(id1) + R"(, { code = {10, 20, 30} })
         local vals = db:read_set_integers_by_id("AllTypes", "code", )" +
                          std::to_string(id1) + R"()
         assert(#vals == 3, "Expected 3 values after update, got " .. #vals)
@@ -2076,7 +2079,8 @@ TEST_F(LuaRunnerAllTypesTest, UpdateSetFloatsFromLua) {
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        db:update_element("AllTypes", )" + std::to_string(id1) + R"(, { weight = {1.1, 2.2} })
+        db:update_element("AllTypes", )" +
+                         std::to_string(id1) + R"(, { weight = {1.1, 2.2} })
         local vals = db:read_set_floats_by_id("AllTypes", "weight", )" +
                          std::to_string(id1) + R"()
         assert(#vals == 2, "Expected 2 values after update, got " .. #vals)

@@ -607,7 +607,12 @@ include("fixture.jl")
 
         Quiver.create_element!(db, "Configuration"; label = "Test Config")
 
-        @test_throws Quiver.DatabaseException Quiver.update_element!(db, "NonexistentCollection", Int64(1); value_int = [1, 2, 3])
+        @test_throws Quiver.DatabaseException Quiver.update_element!(
+            db,
+            "NonexistentCollection",
+            Int64(1);
+            value_int = [1, 2, 3],
+        )
 
         Quiver.close!(db)
     end
