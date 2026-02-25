@@ -86,7 +86,8 @@ Standalone executable comparing individual vs batched transaction performance. N
 Test files organized by functionality:
 - `test_database_lifecycle.cpp` - open, close, move semantics, options
 - `test_database_create.cpp` - create element operations
-- `test_database_csv.cpp` - CSV export operations (scalar, group, options, formatting)
+- `test_database_csv_export.cpp` - CSV export operations (scalar, group, options, formatting)
+- `test_database_csv_import.cpp` - CSV import operations (round-trip, enum resolution, delimiters, error handling)
 - `test_database_read.cpp` - read scalar/vector/set operations
 - `test_database_update.cpp` - update scalar/vector/set operations
 - `test_database_delete.cpp` - delete element operations
@@ -95,7 +96,8 @@ Test files organized by functionality:
 - `test_database_transaction.cpp` - explicit transaction control (begin/commit/rollback)
 
 C API tests follow same pattern with `test_c_api_database_*.cpp` prefix:
-- `test_c_api_database_csv.cpp` - CSV export options struct, enum labels, date formatting, scalar/group export
+- `test_c_api_database_csv_export.cpp` - CSV export: scalar/group, RFC 4180, enum labels, date formatting, options
+- `test_c_api_database_csv_import.cpp` - CSV import: round-trip, semicolons, FK resolution, enum, trailing columns
 - `test_c_api_database_metadata.cpp` - Metadata get/list operations (vector, set, time series, scalar)
 
 All test schemas located in `tests/schemas/valid/` and `tests/schemas/invalid/`.
