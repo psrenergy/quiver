@@ -52,12 +52,12 @@ end
     QUIVER_LOG_OFF = 4
 end
 
-struct quiver_database_options_t
+mutable struct quiver_database_options_t
     read_only::Cint
     console_level::quiver_log_level_t
 end
 
-struct quiver_csv_options_t
+mutable struct quiver_csv_options_t
     date_time_format::Ptr{Cchar}
     enum_attribute_names::Ptr{Ptr{Cchar}}
     enum_locale_names::Ptr{Ptr{Cchar}}
