@@ -26,47 +26,59 @@ std::vector<int64_t> compute_time_dimension_initial_values(const std::vector<qui
 
             // Yearly and weekly frequencies must always be at index 1, so they error if encountered as inner time dimensions
             switch(current_frequency) {
-            case quiver::TimeFrequency::Yearly:
-                throw std::logic_error("YEARLY frequency not implemented. This function should only be used for inner time dimensions.");
-            case quiver::TimeFrequency::Monthly:
-                int64_t month = static_cast<unsigned>(ymd.month());
-                initial_values.push_back(month);
-                break;
-            case quiver::TimeFrequency::Weekly:
-                throw std::logic_error("WEEKLY frequency not implemented. This function should only be used for inner time dimensions.");
-            case quiver::TimeFrequency::Daily:
-                int64_t day;
-                switch(parent_frequency) {
-                case quiver::TimeFrequency::Weekly:
-                    day = quiver::day_of_week(initial_datetime);
-                    break;
-                case quiver::TimeFrequency::Monthly:
-                    day = static_cast<unsigned>(ymd.day());
-                    break;
                 case quiver::TimeFrequency::Yearly:
-                    day = quiver::day_of_year(initial_datetime);
+                    throw std::logic_error("YEARLY frequency not implemented. This function should only be used for inner time dimensions.");
+                case quiver::TimeFrequency::Monthly: {
+                    int64_t month = static_cast<unsigned>(ymd.month());
+                    initial_values.push_back(month);
                     break;
                 }
-                initial_values.push_back(day);
-                break;
-            case quiver::TimeFrequency::Hourly:
-                auto time_of_day = std::chrono::hh_mm_ss{initial_datetime - date};
-                int64_t hour = time_of_day.hours().count() + 1; // 0-23 -> 1-24
-                switch(parent_frequency) {
-                case quiver::TimeFrequency::Daily:
-                    break;
                 case quiver::TimeFrequency::Weekly:
-                    hour += (quiver::day_of_week(initial_datetime) - 1) * quiver::time::MAX_HOURS_IN_DAY;
-                    break;
-                case quiver::TimeFrequency::Monthly:
-                    hour += (static_cast<unsigned>(ymd.day()) - 1) * quiver::time::MAX_HOURS_IN_DAY;
-                    break;
-                case quiver::TimeFrequency::Yearly:
-                    hour += (quiver::day_of_year(initial_datetime) - 1) * quiver::time::MAX_HOURS_IN_DAY;
+                    throw std::logic_error("WEEKLY frequency not implemented. This function should only be used for inner time dimensions.");
+                case quiver::TimeFrequency::Daily: {
+                    int64_t day;
+                    switch(parent_frequency) {
+                        case quiver::TimeFrequency::Weekly: {
+                            day = quiver::day_of_week(initial_datetime);
+                            break;
+                        }
+                        case quiver::TimeFrequency::Monthly: {
+                            day = static_cast<unsigned>(ymd.day());
+                            break;
+                        }
+                        case quiver::TimeFrequency::Yearly: {
+                            day = quiver::day_of_year(initial_datetime);
+                            break;
+                        }
+                        default:
+                            throw std::logic_error("Invalid parent frequency " + frequency_to_string(parent_frequency) + " for DAILY dimension.");
+                    }
+                    initial_values.push_back(day);
                     break;
                 }
-                initial_values.push_back(hour);
-                break;
+                case quiver::TimeFrequency::Hourly: {
+                    auto time_of_day = std::chrono::hh_mm_ss{initial_datetime - date};
+                    int64_t hour = time_of_day.hours().count() + 1; // 0-23 -> 1-24
+                    switch(parent_frequency) {
+                    case quiver::TimeFrequency::Daily:
+                        break;
+                    case quiver::TimeFrequency::Weekly:
+                        hour += (quiver::day_of_week(initial_datetime) - 1) * quiver::time::MAX_HOURS_IN_DAY;
+                        break;
+                    case quiver::TimeFrequency::Monthly:
+                        hour += (static_cast<unsigned>(ymd.day()) - 1) * quiver::time::MAX_HOURS_IN_DAY;
+                        break;
+                    case quiver::TimeFrequency::Yearly:
+                        hour += (quiver::day_of_year(initial_datetime) - 1) * quiver::time::MAX_HOURS_IN_DAY;
+                        break;
+                    default:
+                        throw std::logic_error("Invalid parent frequency " + frequency_to_string(parent_frequency) + " for HOURLY dimension.");
+                    }
+                    initial_values.push_back(hour);
+                    break;
+                }
+                default:
+                    throw std::logic_error("Unhandled frequency " + frequency_to_string(current_frequency) + " in compute_time_dimension_initial_values.");
             }
         }
     }
