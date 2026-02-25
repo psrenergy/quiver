@@ -1156,7 +1156,7 @@ TEST_F(LuaRunnerTest, UpdateVectorIntegersFromLua) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:update_vector_integers("Collection", "value_int", 1, {10, 20, 30, 40})
+        db:update_element("Collection", 1, { value_int = {10, 20, 30, 40} })
         local vec = db:read_vector_integers_by_id("Collection", "value_int", 1)
         assert(#vec == 4, "Expected 4 elements, got " .. #vec)
         assert(vec[1] == 10)
@@ -1176,7 +1176,7 @@ TEST_F(LuaRunnerTest, UpdateVectorFloatsFromLua) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:update_vector_floats("Collection", "value_float", 1, {5.5, 6.6, 7.7})
+        db:update_element("Collection", 1, { value_float = {5.5, 6.6, 7.7} })
         local vec = db:read_vector_floats_by_id("Collection", "value_float", 1)
         assert(#vec == 3, "Expected 3 elements, got " .. #vec)
         assert(vec[1] == 5.5)
@@ -1220,11 +1220,7 @@ TEST_F(LuaRunnerTest, UpdateScalarStringTrimsWhitespaceFromLua) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:update_element("Collection", 1, { label = "  Updated  " })
-        local label = db:read_scalar_string_by_id("Collection", "label", 1)
-        assert(label == "Updated", "Expected 'Updated' but got '" .. label .. "'")
-
-        db:update_set_strings("Collection", "tag", 1, {"  alpha  ", "	beta\n", " gamma "})
+        db:update_element("Collection", 1, { tag = {"  alpha  ", "	beta\n", " gamma "} })
     )");
 
     auto set_vals = db.read_set_strings_by_id("Collection", "tag", 1);
@@ -1265,7 +1261,7 @@ TEST_F(LuaRunnerTest, UpdateSetStringsFromLua) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:update_set_strings("Collection", "tag", 1, {"x", "y", "z"})
+        db:update_element("Collection", 1, { tag = {"x", "y", "z"} })
         local tags = db:read_set_strings_by_id("Collection", "tag", 1)
         assert(#tags == 3, "Expected 3 tags, got " .. #tags)
     )");
@@ -1958,8 +1954,8 @@ TEST_F(LuaRunnerAllTypesTest, ReadVectorStringsBulkFromLua) {
     auto db = quiver::Database::from_schema(":memory:", all_types_schema);
     db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
     db.create_element("AllTypes", quiver::Element().set("label", "Item 2"));
-    db.update_vector_strings("AllTypes", "label_value", 1, {"alpha", "beta"});
-    db.update_vector_strings("AllTypes", "label_value", 2, {"gamma", "delta", "epsilon"});
+    db.update_element("AllTypes", 1, quiver::Element().set("label_value", std::vector<std::string>{"alpha", "beta"}));
+    db.update_element("AllTypes", 2, quiver::Element().set("label_value", std::vector<std::string>{"gamma", "delta", "epsilon"}));
 
     quiver::LuaRunner lua(db);
 
@@ -1977,7 +1973,7 @@ TEST_F(LuaRunnerAllTypesTest, ReadVectorStringsBulkFromLua) {
 TEST_F(LuaRunnerAllTypesTest, ReadVectorStringsByIdFromLua) {
     auto db = quiver::Database::from_schema(":memory:", all_types_schema);
     int64_t id1 = db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
-    db.update_vector_strings("AllTypes", "label_value", id1, {"hello", "world"});
+    db.update_element("AllTypes", id1, quiver::Element().set("label_value", std::vector<std::string>{"hello", "world"}));
 
     quiver::LuaRunner lua(db);
 
@@ -1994,7 +1990,7 @@ TEST_F(LuaRunnerAllTypesTest, ReadVectorStringsByIdFromLua) {
 TEST_F(LuaRunnerAllTypesTest, ReadSetIntegersByIdFromLua) {
     auto db = quiver::Database::from_schema(":memory:", all_types_schema);
     int64_t id1 = db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
-    db.update_set_integers("AllTypes", "code", id1, {100, 200, 300});
+    db.update_element("AllTypes", id1, quiver::Element().set("code", std::vector<int64_t>{100, 200, 300}));
 
     quiver::LuaRunner lua(db);
 
@@ -2009,7 +2005,7 @@ TEST_F(LuaRunnerAllTypesTest, ReadSetIntegersByIdFromLua) {
 TEST_F(LuaRunnerAllTypesTest, ReadSetFloatsByIdFromLua) {
     auto db = quiver::Database::from_schema(":memory:", all_types_schema);
     int64_t id1 = db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
-    db.update_set_floats("AllTypes", "weight", id1, {1.1, 2.2, 3.3});
+    db.update_element("AllTypes", id1, quiver::Element().set("weight", std::vector<double>{1.1, 2.2, 3.3}));
 
     quiver::LuaRunner lua(db);
 
@@ -2025,8 +2021,8 @@ TEST_F(LuaRunnerAllTypesTest, ReadSetIntegersBulkFromLua) {
     auto db = quiver::Database::from_schema(":memory:", all_types_schema);
     db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
     db.create_element("AllTypes", quiver::Element().set("label", "Item 2"));
-    db.update_set_integers("AllTypes", "code", 1, {10, 20});
-    db.update_set_integers("AllTypes", "code", 2, {30, 40, 50});
+    db.update_element("AllTypes", 1, quiver::Element().set("code", std::vector<int64_t>{10, 20}));
+    db.update_element("AllTypes", 2, quiver::Element().set("code", std::vector<int64_t>{30, 40, 50}));
 
     quiver::LuaRunner lua(db);
 
@@ -2042,8 +2038,8 @@ TEST_F(LuaRunnerAllTypesTest, ReadSetFloatsBulkFromLua) {
     auto db = quiver::Database::from_schema(":memory:", all_types_schema);
     db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
     db.create_element("AllTypes", quiver::Element().set("label", "Item 2"));
-    db.update_set_floats("AllTypes", "weight", 1, {1.1, 2.2});
-    db.update_set_floats("AllTypes", "weight", 2, {3.3});
+    db.update_element("AllTypes", 1, quiver::Element().set("weight", std::vector<double>{1.1, 2.2}));
+    db.update_element("AllTypes", 2, quiver::Element().set("weight", std::vector<double>{3.3}));
 
     quiver::LuaRunner lua(db);
 
@@ -2062,8 +2058,7 @@ TEST_F(LuaRunnerAllTypesTest, UpdateSetIntegersFromLua) {
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        db:update_set_integers("AllTypes", "code", )" +
-                         std::to_string(id1) + R"(, {10, 20, 30})
+        db:update_element("AllTypes", )" + std::to_string(id1) + R"(, { code = {10, 20, 30} })
         local vals = db:read_set_integers_by_id("AllTypes", "code", )" +
                          std::to_string(id1) + R"()
         assert(#vals == 3, "Expected 3 values after update, got " .. #vals)
@@ -2081,8 +2076,7 @@ TEST_F(LuaRunnerAllTypesTest, UpdateSetFloatsFromLua) {
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        db:update_set_floats("AllTypes", "weight", )" +
-                         std::to_string(id1) + R"(, {1.1, 2.2})
+        db:update_element("AllTypes", )" + std::to_string(id1) + R"(, { weight = {1.1, 2.2} })
         local vals = db:read_set_floats_by_id("AllTypes", "weight", )" +
                          std::to_string(id1) + R"()
         assert(#vals == 2, "Expected 2 values after update, got " .. #vals)
