@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from quiverdb import CSVOptions, Database, Element, DatabaseCSVImport
+from quiverdb import CSVOptions, Database, Element, DatabaseCSVImport, DatabaseCSVExport
 
 
 class TestImportCSVScalarRoundTrip:
     """Test scalar CSV import round-trip: export -> import -> verify."""
 
-    def test_scalar_round_trip(self, csv_db: Database, tmp_path, csv_export_schema_path):
+    def test_scalar_round_trip(self, csv_db: Database, csv_db_export: DatabaseCSVExport, csv_db_import: DatabaseCSVImport, tmp_path, csv_export_schema_path):
         """Export scalars, import into fresh DB, read back matches original."""
         e1 = Element()
         e1.set("label", "Item1")
@@ -31,11 +31,11 @@ class TestImportCSVScalarRoundTrip:
         csv_db.create_element("Items", e2)
 
         csv_path = str(tmp_path / "scalars_rt.csv")
-        csv_db.export_csv("Items", "", csv_path)
+        csv_db_export.export_csv("Items", "", csv_path)
 
         db2 = Database.from_schema(str(tmp_path / "csv2.db"), str(csv_export_schema_path))
         try:
-            db2.import_csv("Items", "", csv_path)
+            DatabaseCSVImport.import_csv("Items", "", csv_path)
 
             names = db2.read_scalar_strings("Items", "name")
             assert sorted(names) == ["Alpha", "Beta"]
@@ -55,7 +55,7 @@ class TestImportCSVScalarRoundTrip:
 class TestImportCSVGroupRoundTrip:
     """Test group (vector) CSV import round-trip: export -> import -> verify."""
 
-    def test_group_round_trip(self, csv_db: Database, tmp_path, csv_export_schema_path):
+    def test_group_round_trip(self, csv_db: Database, csv_db_export: DatabaseCSVExport, csv_db_import: DatabaseCSVImport, tmp_path, csv_export_schema_path):
         """Export vector group, import into fresh DB, read back matches original."""
         e1 = Element()
         e1.set("label", "Item1")
@@ -71,7 +71,7 @@ class TestImportCSVGroupRoundTrip:
         csv_db.update_vector_floats("Items", "measurement", 2, [4.4, 5.5])
 
         csv_path = str(tmp_path / "group_rt.csv")
-        csv_db.export_csv("Items", "measurements", csv_path)
+        csv_db_export.export_csv("Items", "measurements", csv_path)
 
         db2 = Database.from_schema(str(tmp_path / "csv2.db"), str(csv_export_schema_path))
         try:
@@ -86,7 +86,7 @@ class TestImportCSVGroupRoundTrip:
             e2b.set("name", "Beta")
             db2.create_element("Items", e2b)
 
-            db2.import_csv("Items", "measurements", csv_path)
+            DatabaseCSVImport.import_csv("Items", "measurements", csv_path)
 
             v1 = db2.read_vector_floats_by_id("Items", "measurement", 1)
             assert v1 == pytest.approx([1.1, 2.2, 3.3])
@@ -100,7 +100,7 @@ class TestImportCSVGroupRoundTrip:
 class TestImportCSVEnumResolution:
     """Test CSV import with enum label resolution."""
 
-    def test_enum_labels_resolve_on_import(self, csv_db: Database, tmp_path):
+    def test_enum_labels_resolve_on_import(self, csv_db: Database, csv_db_import: DatabaseCSVImport, tmp_path):
         """CSV with string enum labels imports as integer values."""
         csv_path = str(tmp_path / "enum_import.csv")
         with open(csv_path, "w", newline="") as f:
@@ -111,7 +111,7 @@ class TestImportCSVEnumResolution:
         opts = CSVOptions(
             enum_labels={"status": {"en": {"Active": 1, "Inactive": 2}}},
         )
-        csv_db.import_csv("Items", "", csv_path, options=opts)
+        csv_db_import.import_csv("Items", "", csv_path, options=opts)
 
         status = csv_db.read_scalar_integer_by_id("Items", "status", 1)
         assert status == 1

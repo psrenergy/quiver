@@ -10,7 +10,7 @@ from quiverdb import CSVOptions, Database, Element, DatabaseCSVExport
 class TestExportCSVScalarsDefault:
     """Test scalar CSV export with default options."""
 
-    def test_export_csv_scalars_default(self, csv_db: Database, tmp_path):
+    def test_export_csv_scalars_default(self, csv_db: Database, csv_db_export: DatabaseCSVExport, tmp_path):
         """Export scalars with default options: verify header and data rows."""
         e1 = Element()
         e1.set("label", "Item1")
@@ -31,7 +31,7 @@ class TestExportCSVScalarsDefault:
         csv_db.create_element("Items", e2)
 
         out = str(tmp_path / "scalars.csv")
-        csv_db.export_csv("Items", "", out)
+        csv_db_export.export_csv("Items", "", out)
 
         content = _read_file(out)
         # Header row (after sep=, line)
@@ -44,7 +44,7 @@ class TestExportCSVScalarsDefault:
 class TestExportCSVWithEnumLabels:
     """Test CSV export with enum label resolution."""
 
-    def test_export_csv_with_enum_labels(self, csv_db: Database, tmp_path):
+    def test_export_csv_with_enum_labels(self, csv_db: Database, csv_db_export: DatabaseCSVExport, tmp_path):
         """Enum labels replace integer values in CSV output."""
         e1 = Element()
         e1.set("label", "Item1")
@@ -62,7 +62,7 @@ class TestExportCSVWithEnumLabels:
         opts = CSVOptions(
             enum_labels={"status": {"en": {"Active": 1, "Inactive": 2}}},
         )
-        csv_db.export_csv("Items", "", out, options=opts)
+        csv_db_export.export_csv("Items", "", out, options=opts)
 
         content = _read_file(out)
         assert "Item1,Alpha,Active," in content
@@ -75,7 +75,7 @@ class TestExportCSVWithEnumLabels:
 class TestExportCSVWithDateFormat:
     """Test CSV export with date formatting."""
 
-    def test_export_csv_with_date_format(self, csv_db: Database, tmp_path):
+    def test_export_csv_with_date_format(self, csv_db: Database, csv_db_export: DatabaseCSVExport, tmp_path):
         """DateTime formatting applies strftime to date columns."""
         e1 = Element()
         e1.set("label", "Item1")
@@ -86,7 +86,7 @@ class TestExportCSVWithDateFormat:
 
         out = str(tmp_path / "dates.csv")
         opts = CSVOptions(date_time_format="%Y/%m/%d")
-        csv_db.export_csv("Items", "", out, options=opts)
+        csv_db_export.export_csv("Items", "", out, options=opts)
 
         content = _read_file(out)
         # date_created formatted
@@ -98,7 +98,7 @@ class TestExportCSVWithDateFormat:
 class TestExportCSVWithEnumAndDate:
     """Test CSV export with both enum labels and date formatting."""
 
-    def test_export_csv_with_enum_and_date(self, csv_db: Database, tmp_path):
+    def test_export_csv_with_enum_and_date(self, csv_db: Database, csv_db_export: DatabaseCSVExport, tmp_path):
         """Combined options: both enum and date formatting applied."""
         e1 = Element()
         e1.set("label", "Item1")
@@ -112,7 +112,7 @@ class TestExportCSVWithEnumAndDate:
             date_time_format="%Y-%m-%d",
             enum_labels={"status": {"en": {"Active": 1}}},
         )
-        csv_db.export_csv("Items", "", out, options=opts)
+        csv_db_export.export_csv("Items", "", out, options=opts)
 
         content = _read_file(out)
         assert "Active" in content
@@ -124,7 +124,7 @@ class TestExportCSVWithEnumAndDate:
 class TestExportCSVGroup:
     """Test CSV export for vector groups."""
 
-    def test_export_csv_group(self, csv_db: Database, tmp_path):
+    def test_export_csv_group(self, csv_db: Database, csv_db_export: DatabaseCSVExport, tmp_path):
         """Export vector group: verify header and data rows."""
         e1 = Element()
         e1.set("label", "Item1")
@@ -140,7 +140,7 @@ class TestExportCSVGroup:
         csv_db.update_vector_floats("Items", "measurement", 2, [4.4, 5.5])
 
         out = str(tmp_path / "group.csv")
-        csv_db.export_csv("Items", "measurements", out)
+        csv_db_export.export_csv("Items", "measurements", out)
 
         content = _read_file(out)
         # Header: sep line + id,vector_index,value column(s)
@@ -156,7 +156,7 @@ class TestExportCSVGroup:
 class TestExportCSVNullValues:
     """Test CSV export with NULL values."""
 
-    def test_export_csv_null_values(self, csv_db: Database, tmp_path):
+    def test_export_csv_null_values(self, csv_db: Database, csv_db_export: DatabaseCSVExport, tmp_path):
         """NULL values appear as empty fields in CSV."""
         e1 = Element()
         e1.set("label", "Item1")
@@ -165,7 +165,7 @@ class TestExportCSVNullValues:
         csv_db.create_element("Items", e1)
 
         out = str(tmp_path / "nulls.csv")
-        csv_db.export_csv("Items", "", out)
+        csv_db_export.export_csv("Items", "", out)
 
         content = _read_file(out)
         # NULL fields as empty: Item1,Alpha,,,,
