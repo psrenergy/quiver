@@ -116,34 +116,6 @@ public:
     void update_time_series_files(const std::string& collection,
                                   const std::map<std::string, std::optional<std::string>>& paths);
 
-    // Update vector attributes (by element ID) - replaces entire vector
-    void update_vector_integers(const std::string& collection,
-                                const std::string& attribute,
-                                int64_t id,
-                                const std::vector<int64_t>& values);
-    void update_vector_floats(const std::string& collection,
-                              const std::string& attribute,
-                              int64_t id,
-                              const std::vector<double>& values);
-    void update_vector_strings(const std::string& collection,
-                               const std::string& attribute,
-                               int64_t id,
-                               const std::vector<std::string>& values);
-
-    // Update set attributes (by element ID) - replaces entire set
-    void update_set_integers(const std::string& collection,
-                             const std::string& attribute,
-                             int64_t id,
-                             const std::vector<int64_t>& values);
-    void update_set_floats(const std::string& collection,
-                           const std::string& attribute,
-                           int64_t id,
-                           const std::vector<double>& values);
-    void update_set_strings(const std::string& collection,
-                            const std::string& attribute,
-                            int64_t id,
-                            const std::vector<std::string>& values);
-
     const std::string& path() const;
 
     // Schema inspection

@@ -2,7 +2,6 @@
 #include "quiver/c/database.h"
 
 #include <string>
-#include <vector>
 
 extern "C" {
 
