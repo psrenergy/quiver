@@ -688,7 +688,7 @@ void main() {
           'value_int': [1, 2, 3],
         });
 
-        db.updateElement('Collection', 1, {'value_int': []});
+        db.updateElement('Collection', 1, {'value_int': <int>[]});
 
         final values = db.readVectorIntegersById('Collection', 'value_int', 1);
         expect(values, isEmpty);
@@ -826,7 +826,7 @@ void main() {
           'value_float': [1.5, 2.5, 3.5],
         });
 
-        db.updateElement('Collection', 1, {'value_float': []});
+        db.updateElement('Collection', 1, {'value_float': <double>[]});
 
         final values = db.readVectorFloatsById('Collection', 'value_float', 1);
         expect(values, isEmpty);
