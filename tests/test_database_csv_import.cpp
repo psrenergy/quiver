@@ -247,10 +247,7 @@ TEST(DatabaseCSV, ImportCSV_Vector_RoundTrip) {
     auto csv_path = temp_csv("ImportVectorRT");
     db.export_csv("Items", "measurements", csv_path.string());
 
-    // Clear and re-import
-    quiver::Element update2;
-    update2.set("measurement", std::vector<double>{});
-    db.update_element("Items", id1, update2);
+    db.delete_element("Items", id1);
     db.import_csv("Items", "measurements", csv_path.string());
 
     auto vals = db.read_vector_floats_by_id("Items", "measurement", id1);
@@ -277,10 +274,7 @@ TEST(DatabaseCSV, ImportCSV_Set_RoundTrip) {
     auto csv_path = temp_csv("ImportSetRT");
     db.export_csv("Items", "tags", csv_path.string());
 
-    // Clear and re-import
-    quiver::Element update2;
-    update2.set("tag", std::vector<std::string>{});
-    db.update_element("Items", id1, update2);
+    db.delete_element("Items", id1);
     db.import_csv("Items", "tags", csv_path.string());
 
     auto tags = db.read_set_strings_by_id("Items", "tag", id1);
