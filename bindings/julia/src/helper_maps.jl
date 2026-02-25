@@ -6,8 +6,8 @@
         relation_type::String,
     )
 
-The function returns a vector of integers that represent the position of 
-the related collection's element in the list of ids of the related collection. 
+The function returns a vector of integers that represent the position of
+the related collection's element in the list of ids of the related collection.
 The vector is ordered according to the order of the elements in the `collection_from`.
 If there is no relation, the value is -1.
 """
@@ -32,7 +32,7 @@ function scalar_relation_map(
             map_of_indexes[index_from] = -1
         end
     end
-    
+
     return map_of_indexes
 end
 
@@ -70,6 +70,6 @@ function set_relation_map(
         end
         map_of_indexes[index_from] = set_relation_map
     end
-    
+
     return map_of_indexes
 end

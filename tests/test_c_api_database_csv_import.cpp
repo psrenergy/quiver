@@ -118,7 +118,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Vector_RoundTrip) {
     // Export
     auto csv_path = temp_csv("ImportVectorRT");
     auto csv_options = quiver_csv_options_default();
-    ASSERT_EQ(quiver_database_export_csv(db, "Items", "measurements", csv_path.string().c_str(), &csv_options), QUIVER_OK);
+    ASSERT_EQ(quiver_database_export_csv(db, "Items", "measurements", csv_path.string().c_str(), &csv_options),
+              QUIVER_OK);
 
     // Clear vector data and re-import (parent element must exist for group import)
     quiver_element_t* clear_vec = nullptr;
@@ -237,7 +238,8 @@ TEST(DatabaseCApiCSV, ImportCSV_TimeSeries_RoundTrip) {
               QUIVER_OK);
 
     auto import_options = quiver_csv_options_default();
-    ASSERT_EQ(quiver_database_import_csv(db, "Items", "readings", csv_path.string().c_str(), &import_options), QUIVER_OK);
+    ASSERT_EQ(quiver_database_import_csv(db, "Items", "readings", csv_path.string().c_str(), &import_options),
+              QUIVER_OK);
 
     // Verify via read
     char** out_col_names = nullptr;
@@ -542,7 +544,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Vector_FK_InvalidLabel_ReturnsError) {
     write_csv_file(csv_path.string(), "sep=,\nid,vector_index,parent_ref\nChild1,1,NonExistent\n");
 
     auto import_options = quiver_csv_options_default();
-    EXPECT_EQ(quiver_database_import_csv(db, "Child", "refs", csv_path.string().c_str(), &import_options), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_import_csv(db, "Child", "refs", csv_path.string().c_str(), &import_options),
+              QUIVER_ERROR);
 
     std::string err = quiver_get_last_error();
     EXPECT_NE(err.find("Could not find an existing element from collection Parent with label NonExistent"),
@@ -575,7 +578,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Group_NotNull_ReturnsError) {
     write_csv_file(csv_path.string(), "sep=,\nid,tag\nItem1,\n");
 
     auto import_options = quiver_csv_options_default();
-    EXPECT_EQ(quiver_database_import_csv(db, "Items", "tags", csv_path.string().c_str(), &import_options), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_import_csv(db, "Items", "tags", csv_path.string().c_str(), &import_options),
+              QUIVER_ERROR);
 
     std::string err = quiver_get_last_error();
     EXPECT_NE(err.find("Column tag cannot be NULL"), std::string::npos);
@@ -704,7 +708,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Group_InvalidEnum_ReturnsError) {
     csv_options.enum_values = values;
     csv_options.enum_group_count = 1;
 
-    EXPECT_EQ(quiver_database_import_csv(db, "Items", "readings", csv_path.string().c_str(), &csv_options), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_import_csv(db, "Items", "readings", csv_path.string().c_str(), &csv_options),
+              QUIVER_ERROR);
 
     std::string err = quiver_get_last_error();
     EXPECT_NE(err.find("Invalid enum value"), std::string::npos);
@@ -736,7 +741,8 @@ TEST(DatabaseCApiCSV, ImportCSV_Group_DuplicateEntries_ReturnsError) {
     write_csv_file(csv_path.string(), "sep=,\nid,tag\nItem1,red\nItem1,red\n");
 
     auto import_options = quiver_csv_options_default();
-    EXPECT_EQ(quiver_database_import_csv(db, "Items", "tags", csv_path.string().c_str(), &import_options), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_import_csv(db, "Items", "tags", csv_path.string().c_str(), &import_options),
+              QUIVER_ERROR);
 
     std::string err = quiver_get_last_error();
     EXPECT_NE(err.find("duplicate entries"), std::string::npos);

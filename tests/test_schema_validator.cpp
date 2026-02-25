@@ -48,8 +48,9 @@ TEST_F(SchemaValidatorFixture, InvalidDuplicateAttribute) {
 }
 
 TEST_F(SchemaValidatorFixture, InvalidDuplicateAttributeTimeSeries) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("duplicate_attribute_time_series.sql"), options),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_schema(":memory:", INVALID_SCHEMA("duplicate_attribute_time_series.sql"), options),
+        std::runtime_error);
 }
 
 TEST_F(SchemaValidatorFixture, InvalidVectorNoIndex) {
@@ -68,7 +69,8 @@ TEST_F(SchemaValidatorFixture, InvalidFkNotNullSetNull) {
 }
 
 TEST_F(SchemaValidatorFixture, InvalidFkActions) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("fk_actions.sql"), options), std::runtime_error);
+    EXPECT_THROW(quiver::Database::from_schema(":memory:", INVALID_SCHEMA("fk_actions.sql"), options),
+                 std::runtime_error);
 }
 
 // ============================================================================

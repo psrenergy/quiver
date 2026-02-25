@@ -118,7 +118,8 @@ TEST(DatabaseCApiCSV, ExportCSV_VectorGroupExport) {
 
     auto csv_path = temp_csv("VectorExport");
     auto csv_options = quiver_csv_options_default();
-    ASSERT_EQ(quiver_database_export_csv(db, "Items", "measurements", csv_path.string().c_str(), &csv_options), QUIVER_OK);
+    ASSERT_EQ(quiver_database_export_csv(db, "Items", "measurements", csv_path.string().c_str(), &csv_options),
+              QUIVER_OK);
 
     auto content = read_file(csv_path.string());
 
