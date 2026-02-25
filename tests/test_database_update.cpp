@@ -640,7 +640,9 @@ TEST(Database, UpdateVectorIntegersInvalidColumnThrows) {
     EXPECT_THROW(
         {
             try {
-                db.update_vector_integers("Collection", "nonexistent_column", id, {1, 2, 3});
+                quiver::Element update;
+                update.set("nonexistent_column", std::vector<int64_t>{1, 2, 3});
+                db.update_element("Collection", id, update);
             } catch (const std::runtime_error& err) {
                 EXPECT_THAT(std::string(err.what()), testing::HasSubstr("not found"));
                 throw;
