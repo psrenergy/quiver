@@ -639,9 +639,9 @@ TEST(Database, UpdateVectorIntegersInvalidColumnThrows) {
 
     EXPECT_THROW(
         {
-                quiver::Element update;
-                update.set("nonexistent_column", std::vector<int64_t>{1, 2, 3});
-                db.update_element("Collection", id, update);
+            quiver::Element update;
+            update.set("nonexistent_column", std::vector<int64_t>{1, 2, 3});
+            db.update_element("Collection", id, update);
         },
         std::runtime_error);
 }
