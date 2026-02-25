@@ -227,7 +227,7 @@ jobs:
           env:
             LD_LIBRARY_PATH: ${{ github.workspace }}/build/lib
           run: |
-            uv run pytest --cov=quiver --cov-report=xml
+            uv run pytest --cov=quiverdb --cov-report=xml
 
         - name: Upload to Codecov
           uses: codecov/codecov-action@v5
