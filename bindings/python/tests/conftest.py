@@ -109,6 +109,20 @@ def all_types_db(all_types_schema_path: Path, tmp_path: Path) -> Generator[Datab
 
 
 @pytest.fixture
+def composite_helpers_schema_path(schemas_path: Path) -> Path:
+    """Return the path to the composite helpers test schema."""
+    return schemas_path / "valid" / "composite_helpers.sql"
+
+
+@pytest.fixture
+def composite_helpers_db(composite_helpers_schema_path: Path, tmp_path: Path) -> Generator[Database, None, None]:
+    """Create a test database with the composite helpers schema."""
+    database = Database.from_schema(str(tmp_path / "composite.db"), str(composite_helpers_schema_path))
+    yield database
+    database.close()
+
+
+@pytest.fixture
 def mixed_time_series_schema_path(schemas_path: Path) -> Path:
     """Return the path to the mixed time series test schema."""
     return schemas_path / "valid" / "mixed_time_series.sql"

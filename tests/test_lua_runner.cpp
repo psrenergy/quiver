@@ -1783,6 +1783,87 @@ TEST_F(LuaRunnerTest, ReadAllSetsByIdFromLua) {
     lua.run(script);
 }
 
+TEST_F(LuaRunnerTest, ReadAllVectorsByIdWithDataFromLua) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("composite_helpers.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+    int64_t id = db.create_element(
+        "Items",
+        quiver::Element()
+            .set("label", "Item 1")
+            .set("amount", std::vector<int64_t>{10, 20, 30})
+            .set("score", std::vector<double>{1.1, 2.2})
+            .set("note", std::vector<std::string>{"hello", "world"}));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        local vectors = db:read_all_vectors_by_id("Items", )" +
+                         std::to_string(id) + R"()
+
+        -- Verify 3 vector groups
+        local count = 0
+        for _ in pairs(vectors) do count = count + 1 end
+        assert(count == 3, "Expected 3 vector groups, got " .. count)
+
+        -- Verify integer vector
+        assert(vectors.amount ~= nil, "Missing 'amount' vector group")
+        assert(#vectors.amount == 3, "Expected 3 amount values, got " .. #vectors.amount)
+        assert(vectors.amount[1] == 10, "amount[1] expected 10, got " .. tostring(vectors.amount[1]))
+        assert(vectors.amount[2] == 20, "amount[2] expected 20, got " .. tostring(vectors.amount[2]))
+        assert(vectors.amount[3] == 30, "amount[3] expected 30, got " .. tostring(vectors.amount[3]))
+
+        -- Verify float vector
+        assert(vectors.score ~= nil, "Missing 'score' vector group")
+        assert(#vectors.score == 2, "Expected 2 score values, got " .. #vectors.score)
+        assert(math.abs(vectors.score[1] - 1.1) < 1e-9, "score[1] expected 1.1")
+        assert(math.abs(vectors.score[2] - 2.2) < 1e-9, "score[2] expected 2.2")
+
+        -- Verify string vector
+        assert(vectors.note ~= nil, "Missing 'note' vector group")
+        assert(#vectors.note == 2, "Expected 2 note values, got " .. #vectors.note)
+        assert(vectors.note[1] == "hello", "note[1] expected 'hello', got " .. tostring(vectors.note[1]))
+        assert(vectors.note[2] == "world", "note[2] expected 'world', got " .. tostring(vectors.note[2]))
+    )";
+    lua.run(script);
+}
+
+TEST_F(LuaRunnerTest, ReadAllSetsByIdWithDataFromLua) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("composite_helpers.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+    int64_t id = db.create_element(
+        "Items",
+        quiver::Element()
+            .set("label", "Item 1")
+            .set("code", std::vector<int64_t>{10, 20, 30})
+            .set("weight", std::vector<double>{1.1, 2.2})
+            .set("tag", std::vector<std::string>{"alpha", "beta"}));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        local sets = db:read_all_sets_by_id("Items", )" +
+                         std::to_string(id) + R"()
+
+        -- Verify 3 set groups
+        local count = 0
+        for _ in pairs(sets) do count = count + 1 end
+        assert(count == 3, "Expected 3 set groups, got " .. count)
+
+        -- Verify integer set
+        assert(sets.code ~= nil, "Missing 'code' set group")
+        assert(#sets.code == 3, "Expected 3 code values, got " .. #sets.code)
+
+        -- Verify float set
+        assert(sets.weight ~= nil, "Missing 'weight' set group")
+        assert(#sets.weight == 2, "Expected 2 weight values, got " .. #sets.weight)
+
+        -- Verify string set
+        assert(sets.tag ~= nil, "Missing 'tag' set group")
+        assert(#sets.tag == 2, "Expected 2 tag values, got " .. #sets.tag)
+    )";
+    lua.run(script);
+}
+
 // ============================================================================
 // Transaction tests
 // ============================================================================
