@@ -43,8 +43,7 @@ private:
 
     // CSV Builders
     std::string build_line(const std::vector<double>& data, const std::vector<int64_t>& current_dimensions);
-    std::string
-    build_datetime_string_from_time_dimension_values(const std::vector<int64_t>& time_dimension_values) const;
+    std::string build_datetime_string_from_time_dimension_values(const std::vector<int64_t>& time_dimension_values) const;
     void write_header();
 
     // Iterators
@@ -55,9 +54,9 @@ private:
     CSVRow read_line();
 
     // Validations
-    void validate_dimensions(const std::vector<std::string>& dimension_values);  // validate_csv_dimensions
-    void validate_header();                              // validate_csv_header
     std::vector<std::string> expected_dimension_names() const;
+    void validate_dimensions(const std::vector<std::string>& dimension_values, const std::vector<int64_t>& current_dimensions);
+    void validate_header();
 };
 
 }  // namespace quiver

@@ -9,6 +9,7 @@
 #include <format>
 #include <fstream>
 #include <sstream>
+#include <stdexcept>
 
 namespace quiver {
 
@@ -64,7 +65,7 @@ void BlobCSV::csv_to_bin(const std::string& file_path) {
     std::vector<int64_t> current_dimensions = initial_dimensions;
     for (int64_t i = 0; i < max_lines; ++i) {
         auto row = csv_reader.read_line();
-        csv_reader.validate_dimensions(row.dimension_values);
+        csv_reader.validate_dimensions(row.dimension_values, current_dimensions);
 
         std::unordered_map<std::string, int64_t> dims;
         for (size_t j = 0; j < dimensions.size(); ++j) {
@@ -135,8 +136,13 @@ BlobCSV::CSVRow BlobCSV::read_line() {
     size_t field_start = 0;
     while (field_start <= line.size()) {
         // Find the next comma, or use end-of-line if none remains.
-        size_t comma     = line.find(',', field_start);
-        size_t field_end = (comma == std::string::npos) ? line.size() : comma;
+        size_t comma_position = line.find(',', field_start);
+        size_t field_end;
+        if (comma_position == std::string::npos) {
+            field_end = line.size();
+        } else {
+            field_end = comma_position;
+        }
         std::string field(line, field_start, field_end - field_start);
 
         // Route the field: dimension labels come first, data values follow.
@@ -147,7 +153,11 @@ BlobCSV::CSVRow BlobCSV::read_line() {
         }
 
         // Advance past the comma. If there was no comma, jump past end-of-line to exit the loop.
-        field_start = (comma == std::string::npos) ? line.size() + 1 : comma + 1;
+        if (comma_position == std::string::npos) {
+            field_start = line.size() + 1;
+        } else {
+            field_start = comma_position + 1;
+        }
     }
     return row;
 }
@@ -330,6 +340,123 @@ std::vector<int64_t> BlobCSV::dimension_sizes_at_values(const std::vector<int64_
     }
 
     return sizes;
+}
+
+std::vector<std::string> BlobCSV::expected_dimension_names() const {
+    const auto& metadata   = get_metadata();
+    const auto& dimensions = metadata.dimensions;
+
+    std::vector<std::string> names;
+    if (impl_->aggregate_time_dimensions) {
+        bool has_hourly = false;
+        for (const auto& dim : dimensions) {
+            if (dim.is_time_dimension() && dim.time->frequency == TimeFrequency::Hourly) {
+                has_hourly = true;
+                break;
+            }
+        }
+        if (has_hourly) {
+            names.push_back("datetime");
+        } else {
+            names.push_back("date");
+        }
+        for (const auto& dim : dimensions) {
+            if (!dim.is_time_dimension()) {
+                names.push_back(dim.name);
+            }
+        }
+    }
+    else {
+        for (const auto& dim : dimensions) {
+            names.push_back(dim.name);
+        }
+    }
+    return names;
+}
+
+void BlobCSV::validate_header() {
+    const auto& metadata = get_metadata();
+    std::string header_line;
+    std::getline(get_io(), header_line);
+
+    // Build the expected header: dimension names (or aggregated date/datetime) followed by labels.
+    std::vector<std::string> expected = expected_dimension_names();
+    for (const auto& label : metadata.labels) {
+        expected.push_back(label);
+    }
+
+    // Split the header line on commas and compare each field against the expected column name.
+    size_t field_start = 0;
+    size_t field_index = 0;
+    while (field_start <= header_line.size()) {
+        size_t comma_position = header_line.find(',', field_start);
+        size_t field_end;
+        if (comma_position == std::string::npos) {
+            field_end = header_line.size();
+        } else {
+            field_end = comma_position;
+        }
+        std::string field(header_line, field_start, field_end - field_start);
+
+        if (field_index >= expected.size() || field != expected[field_index]) {
+            std::string expected_str;
+            for (size_t i = 0; i < expected.size(); ++i) {
+                if (i > 0) expected_str += ", ";
+                expected_str += expected[i];
+            }
+            throw std::runtime_error(
+                "Unexpected header in CSV file: '" + header_line +
+                "'. Expected columns are: " + expected_str);
+        }
+
+        field_index++;
+        // Advance past the comma. If there was no comma, jump past end-of-line to exit the loop.
+        if (comma_position == std::string::npos) {
+            field_start = header_line.size() + 1;
+        } else {
+            field_start = comma_position + 1;
+        }
+    }
+
+    if (field_index != expected.size()) {
+        throw std::runtime_error(
+            "CSV header has " + std::to_string(field_index) +
+            " columns, expected " + std::to_string(expected.size()));
+    }
+}
+
+void BlobCSV::validate_dimensions(const std::vector<std::string>& csv_dimension_values, const std::vector<int64_t>& current_bin_dimension_values) {
+    const auto& metadata   = get_metadata();
+    const auto& dimensions = metadata.dimensions;
+
+    std::vector<std::string> expected_names  = expected_dimension_names();
+    std::vector<std::string> expected_values;
+
+    // Build expected values
+    if (impl_->aggregate_time_dimensions) {
+        // First expected value is the aggregated datetime string.
+        expected_values.push_back(build_datetime_string_from_time_dimension_values(current_bin_dimension_values));
+        // Remaining expected values are the non-time dimension integers.
+        for (size_t i = 0; i < dimensions.size(); ++i) {
+            if (!dimensions[i].is_time_dimension()) {
+                expected_values.push_back(std::to_string(current_bin_dimension_values[i]));
+            }
+        }
+    } else {
+        for (size_t i = 0; i < dimensions.size(); ++i) {
+            expected_values.push_back(std::to_string(current_bin_dimension_values[i]));
+        }
+    }
+
+    // Compare CSV dimension values against expected values
+    for (size_t i = 0; i < expected_names.size(); ++i) {
+        if (csv_dimension_values[i] != expected_values[i]) {
+            throw std::runtime_error(
+                "CSV dimension '" + expected_names[i] +
+                "' has value '" + csv_dimension_values[i] +
+                "', expected '" + expected_values[i] + "'");
+        }
+    }
 }
 
 }  // namespace quiver
