@@ -640,10 +640,10 @@ include("fixture.jl")
         @test result["score"] == [1.1, 2.2]
         @test result["note"] == ["hello", "world"]
 
-        # Verify types
-        @test eltype(result["amount"]) == Int64
-        @test eltype(result["score"]) == Float64
-        @test eltype(result["note"]) == String
+        # Verify element types (Dict values are Vector{Any}, check individual elements)
+        @test all(v -> v isa Int64, result["amount"])
+        @test all(v -> v isa Float64, result["score"])
+        @test all(v -> v isa String, result["note"])
 
         Quiver.close!(db)
     end
@@ -669,10 +669,10 @@ include("fixture.jl")
         @test sort(result["weight"]) == [1.1, 2.2]
         @test sort(result["tag"]) == ["alpha", "beta"]
 
-        # Verify types
-        @test eltype(result["code"]) == Int64
-        @test eltype(result["weight"]) == Float64
-        @test eltype(result["tag"]) == String
+        # Verify element types (Dict values are Vector{Any}, check individual elements)
+        @test all(v -> v isa Int64, result["code"])
+        @test all(v -> v isa Float64, result["weight"])
+        @test all(v -> v isa String, result["tag"])
 
         Quiver.close!(db)
     end
