@@ -1786,13 +1786,12 @@ TEST_F(LuaRunnerTest, ReadAllSetsByIdFromLua) {
 TEST_F(LuaRunnerTest, ReadAllVectorsByIdWithDataFromLua) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("composite_helpers.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
-    int64_t id = db.create_element(
-        "Items",
-        quiver::Element()
-            .set("label", "Item 1")
-            .set("amount", std::vector<int64_t>{10, 20, 30})
-            .set("score", std::vector<double>{1.1, 2.2})
-            .set("note", std::vector<std::string>{"hello", "world"}));
+    int64_t id = db.create_element("Items",
+                                   quiver::Element()
+                                       .set("label", "Item 1")
+                                       .set("amount", std::vector<int64_t>{10, 20, 30})
+                                       .set("score", std::vector<double>{1.1, 2.2})
+                                       .set("note", std::vector<std::string>{"hello", "world"}));
 
     quiver::LuaRunner lua(db);
 
@@ -1832,13 +1831,12 @@ TEST_F(LuaRunnerTest, ReadAllVectorsByIdWithDataFromLua) {
 TEST_F(LuaRunnerTest, ReadAllSetsByIdWithDataFromLua) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("composite_helpers.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
-    int64_t id = db.create_element(
-        "Items",
-        quiver::Element()
-            .set("label", "Item 1")
-            .set("code", std::vector<int64_t>{10, 20, 30})
-            .set("weight", std::vector<double>{1.1, 2.2})
-            .set("tag", std::vector<std::string>{"alpha", "beta"}));
+    int64_t id = db.create_element("Items",
+                                   quiver::Element()
+                                       .set("label", "Item 1")
+                                       .set("code", std::vector<int64_t>{10, 20, 30})
+                                       .set("weight", std::vector<double>{1.1, 2.2})
+                                       .set("tag", std::vector<std::string>{"alpha", "beta"}));
 
     quiver::LuaRunner lua(db);
 
