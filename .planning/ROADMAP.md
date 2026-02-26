@@ -32,8 +32,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md -- Implement read_element_by_id in Lua and Julia bindings with tests
-- [ ] 01-02-PLAN.md -- Implement read_element_by_id in Dart and Python bindings with tests
+- [x] 01-01-PLAN.md -- Implement read_element_by_id in Lua and Julia bindings with tests
+- [x] 01-02-PLAN.md -- Implement read_element_by_id in Dart and Python bindings with tests
 
 ### Phase 2: Binding Wrappers
 **Goal**: Users in any supported language can call `read_element_by_id` and get back a native data structure
@@ -72,6 +72,6 @@ Phases execute in numeric order: 1 -> 2 -> 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Implementation | 0/2 | Planned | - |
+| 1. Core Implementation | 2/2 | Complete | 2026-02-26 |
 | 2. Binding Wrappers | 0/0 | Not started | - |
 | 3. Binding Cleanup | 0/0 | Not started | - |

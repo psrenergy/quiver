@@ -1,3 +1,16 @@
+---
+gsd_state_version: 1.0
+milestone: v0.5
+milestone_name: milestone
+status: executing
+last_updated: "2026-02-26T18:07:22.062Z"
+progress:
+  total_phases: 3
+  completed_phases: 0
+  total_plans: 2
+  completed_plans: 2
+---
+
 # Project State
 
 ## Project Reference
@@ -10,18 +23,18 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Phase: 1 of 3 (Core Implementation)
-Plan: 0 of 0 in current phase
-Status: Ready to plan
-Last activity: 2026-02-26 — Roadmap created for milestone v0.5
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-26 — Completed 01-02-PLAN.md (read_element_by_id Dart + Python)
 
-Progress: [..........] 0%
+Progress: [==========] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0 hours
+- Total plans completed: 2
+- Average duration: 11 min
+- Total execution time: 0.35 hours
 
 **By Phase:**
 
@@ -34,6 +47,8 @@ Progress: [..........] 0%
 - Trend: —
 
 *Updated after each plan completion*
+| Phase 01 P01 | 10min | 2 tasks | 5 files |
+| Phase 01 P02 | 11min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -44,6 +59,11 @@ Recent decisions affecting current work:
 
 - Transparent C API structs (not opaque handles) for `read_element_by_id` return types
 - Tests co-located with implementation (C++/C tests in Phase 1, binding tests in Phase 2)
+- [Phase 01]: id excluded from result, label included as regular scalar
+- [Phase 01]: Nonexistent IDs detected via nil label -- no extra validation query
+- [Phase 01]: Multi-column vectors/sets: each column as own top-level key, not nested under group name
+- [Phase 01-02]: Per-column iteration for vectors/sets to produce flat maps (not group-name keying)
+- [Phase 01-02]: Nonexistent element detection via label==null rather than separate existence check
 
 ### Pending Todos
 
@@ -56,5 +76,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Roadmap created, ready to plan Phase 1
+Stopped at: Completed 01-02-PLAN.md (read_element_by_id Dart + Python)
 Resume file: None

@@ -443,13 +443,14 @@ Julia, Dart, and Lua provide additional convenience methods that compose core op
 | `read_set_date_time_by_id` | `readSetDateTimesById` | string set read + date parsing |
 | `query_date_time` | `queryDateTime` | string query + date parsing |
 
-**Composite read helpers (Julia, Dart, and Lua):**
+**Composite read helpers (Julia, Dart, Lua, and Python):**
 
-| Julia | Dart | Lua | Wraps |
-|-------|------|-----|-------|
-| `read_all_scalars_by_id` | `readAllScalarsById` | `read_all_scalars_by_id` | `list_scalar_attributes` + typed reads |
-| `read_all_vectors_by_id` | `readAllVectorsById` | `read_all_vectors_by_id` | `list_vector_groups` + typed reads |
-| `read_all_sets_by_id` | `readAllSetsById` | `read_all_sets_by_id` | `list_set_groups` + typed reads |
+| Julia | Dart | Lua | Python | Wraps |
+|-------|------|-----|--------|-------|
+| `read_all_scalars_by_id` | `readAllScalarsById` | `read_all_scalars_by_id` | N/A | `list_scalar_attributes` + typed reads |
+| `read_all_vectors_by_id` | `readAllVectorsById` | `read_all_vectors_by_id` | N/A | `list_vector_groups` + typed reads |
+| `read_all_sets_by_id` | `readAllSetsById` | `read_all_sets_by_id` | N/A | `list_set_groups` + typed reads |
+| `read_element_by_id` | `readElementById` | `read_element_by_id` | `read_element_by_id` | all three above merged into flat result |
 
 **Transaction block wrappers (Julia, Dart, and Lua):**
 
