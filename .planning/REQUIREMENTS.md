@@ -24,7 +24,7 @@ Requirements for milestone v0.5. Each maps to roadmap phases.
 
 ## Future Requirements
 
-(None — this is the first tracked milestone)
+(None -- this is the first tracked milestone)
 
 ## Out of Scope
 
@@ -38,18 +38,18 @@ Requirements for milestone v0.5. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| READ-01 | — | Pending |
-| READ-02 | — | Pending |
-| READ-03 | — | Pending |
-| CLEAN-01 | — | Pending |
-| CLEAN-02 | — | Pending |
-| TEST-01 | — | Pending |
+| READ-01 | Phase 1 | Pending |
+| READ-02 | Phase 1 | Pending |
+| READ-03 | Phase 2 | Pending |
+| CLEAN-01 | Phase 3 | Pending |
+| CLEAN-02 | Phase 3 | Pending |
+| TEST-01 | Phase 2 | Pending |
 
 **Coverage:**
 - v0.5 requirements: 6 total
-- Mapped to phases: 0
-- Unmapped: 6
+- Mapped to phases: 6
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-26*
-*Last updated: 2026-02-26 after initial definition*
+*Last updated: 2026-02-26 after roadmap creation*
