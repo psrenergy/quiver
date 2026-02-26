@@ -7,8 +7,15 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["scikit-build-core>=0.10"]
+build-backend = "scikit_build_core.build"
+
+[tool.scikit-build]
+cmake.source-dir = "../.."
+cmake.build-type = "Release"
+cmake.args = ["-DQUIVER_BUILD_TESTS=OFF"]
+wheel.packages = ["src/quiverdb"]
+wheel.exclude = ["bin", "lib", "include", "share"]
 
 [dependency-groups]
 dev = [
@@ -17,7 +24,7 @@ dev = [
     "ruff>=0.12.2",
 ]
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/quiverdb"]
-
-[project.scripts]
+[tool.cibuildwheel]
+build = ["cp313-win_amd64", "cp313-manylinux_x86_64"]
+test-requires = ["pytest"]
+test-command = "pytest {project}/bindings/python/tests"
