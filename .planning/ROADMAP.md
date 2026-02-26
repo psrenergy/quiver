@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Build System Migration** - Replace hatchling with scikit-build-core and add CMake install targets for native library bundling
 - [x] **Phase 2: Loader Rewrite** - Rewrite _loader.py to discover bundled native libraries and fall back to development mode
 - [x] **Phase 3: CI Wheel Building** - GitHub Actions workflow builds and tests platform-specific wheels via cibuildwheel
-- [ ] **Phase 4: PyPI Publishing** - Automated trusted publisher release to PyPI on tagged commits
+- [x] **Phase 4: PyPI Publishing** - Automated trusted publisher release to PyPI on tagged commits
 
 ## Phase Details
 
@@ -74,7 +74,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 04-01-PLAN.md -- Tag-triggered publish workflow with OIDC trusted publishing and GitHub Release
+- [x] 04-01-PLAN.md -- Tag-triggered publish workflow with OIDC trusted publishing and GitHub Release
 
 ## Progress
 
@@ -86,4 +86,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 1. Build System Migration | 2/2 | Complete | 2026-02-25 |
 | 2. Loader Rewrite | 2/2 | Complete | 2026-02-25 |
 | 3. CI Wheel Building | 1/1 | Complete | 2026-02-25 |
-| 4. PyPI Publishing | 0/0 | Not started | - |
+| 4. PyPI Publishing | 1/1 | Complete | 2026-02-25 |

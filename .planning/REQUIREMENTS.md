@@ -23,7 +23,7 @@ Requirements for PyPI distribution milestone. Each maps to roadmap phases.
 - [x] **CI-01**: GitHub Actions workflow builds platform-specific wheels via cibuildwheel
 - [x] **CI-02**: Wheels built for Windows x64 and Linux x64 (manylinux_2_28)
 - [x] **CI-03**: Wheels tested in clean environment inside CI before publishing
-- [ ] **CI-04**: PyPI trusted publisher (OIDC) publishes wheels on tagged release
+- [x] **CI-04**: PyPI trusted publisher (OIDC) publishes wheels on tagged release
 
 ## Future Requirements
 
@@ -58,7 +58,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CI-01 | Phase 3 | Complete |
 | CI-02 | Phase 3 | Complete |
 | CI-03 | Phase 3 | Complete |
-| CI-04 | Phase 4 | Pending |
+| CI-04 | Phase 4 | Complete |
 
 **Coverage:**
 - v0.5 requirements: 9 total

@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** `pip install quiverdb` is self-contained with bundled native libraries
-**Current focus:** Phase 3 - CI Wheel Building (Complete)
+**Current focus:** Phase 4 - PyPI Publishing (Complete)
 
 ## Current Position
 
-Phase: 3 of 4 (CI Wheel Building)
+Phase: 4 of 4 (PyPI Publishing)
 Plan: 1 of 1 in current phase
-Status: Phase Complete
-Last activity: 2026-02-25 -- Completed 03-01-PLAN.md
+Status: All Phases Complete
+Last activity: 2026-02-25 -- Completed 04-01-PLAN.md
 
-Progress: [███████░░░] 75%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 8min
+- Total plans completed: 6
+- Average duration: 7min
 - Total execution time: 0.7 hours
 
 **By Phase:**
@@ -30,9 +30,10 @@ Progress: [███████░░░] 75%
 | 01-build-system-migration | 2 | 30min | 15min |
 | 02-loader-rewrite | 2 | 7min | 3.5min |
 | 03-ci-wheel-building | 1 | 3min | 3min |
+| 04-pypi-publishing | 1 | 2min | 2min |
 
 **Recent Trend:**
-- Last 5 plans: 22min, 8min, 2min, 5min, 3min
+- Last 5 plans: 8min, 2min, 5min, 3min, 2min
 - Trend: improving
 
 *Updated after each plan completion*
@@ -58,6 +59,10 @@ Recent decisions affecting current work:
 - [03-01]: fail-fast: false so both platforms report independently, merge job gates artifact creation
 - [03-01]: No before-all step -- scikit-build-core auto-provides cmake and ninja
 - [03-01]: test-command uses {project} path for explicit repo-root reference inside containers
+- [04-01]: id-token: write scoped to publish job only (least privilege)
+- [04-01]: release and publish jobs run in parallel after validate (both need: validate)
+- [04-01]: Tag version validated against pyproject.toml before publish (no version drift)
+- [04-01]: Exactly 2 wheels validated (Windows x64 + Linux x64) before publish
 
 ### Pending Todos
 
@@ -71,5 +76,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 03-01-PLAN.md (CI wheel building workflow)
+Stopped at: Completed 04-01-PLAN.md (PyPI publish workflow + trusted publisher registration)
 Resume file: None
