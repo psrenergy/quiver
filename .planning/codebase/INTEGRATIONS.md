@@ -1,86 +1,129 @@
 # External Integrations
 
-**Analysis Date:** 2026-02-23
+**Analysis Date:** 2026-02-26
 
 ## APIs & External Services
 
-**No external APIs configured.**
-- Quiver is a self-contained database library with no outbound integrations
-- All operations are local to the SQLite database
-- No third-party service calls (payments, analytics, auth, etc.)
+**None.**
+- Quiver is a self-contained database library with no outbound network calls
+- All operations are local to an on-disk SQLite database file
+- No third-party service calls (payments, analytics, auth providers, etc.)
 
 ## Data Storage
 
 **Databases:**
-- SQLite3 (local file-based)
-  - Connection: File path passed to `Database()` constructor
-  - Client: `sqlite3` C API (included in dependencies)
-  - Implementation: `include/quiver/database.h` / `src/database.cpp`
+- SQLite3 v3.50.2 (local file-based, embedded)
+  - Connection: File path passed to factory methods (`Database::from_schema()`, `Database::from_migrations()`)
+  - Client: `sqlite3` C API; dependency fetched from `https://github.com/sjinks/sqlite3-cmake.git`
+  - Core implementation: `src/database.cpp`, `src/database_impl.h`
   - Schema validation: `src/schema_validator.cpp`
+  - Schema must include a `Configuration` table; validated at open time
 
 **File Storage:**
 - Local filesystem only
-- CSV export functionality via `database_csv.cpp`
-  - Export target: Local file path parameter
-  - Formatting: Optional enum mapping and date/time formatting via `CSVExportOptions`
-  - Implementation: `src/database_csv.cpp` / `src/c/database_csv.cpp`
+- CSV export: path parameter in `export_csv()` / `quiver_database_export_csv()`
+  - Implementation: `src/database_csv_export.cpp`, `src/c/database_csv_export.cpp`
+  - Formatting options via `CSVOptions` / `quiver_csv_options_t` (enum labels, date format)
+- CSV import: path parameter in `import_csv()` / `quiver_database_import_csv()`
+  - Implementation: `src/database_csv_import.cpp`, `src/c/database_csv_import.cpp`
+- Log files: written to `<db_path>.log` in same directory as database file (one log file per database instance)
 
 **Caching:**
-- None - all data operations direct to SQLite
+- None; all data operations go directly to SQLite
 
 ## Authentication & Identity
 
 **Auth Provider:**
-- None - library operates without authentication
-- Database file access controlled by OS filesystem permissions
-- Log levels configurable per database via `DatabaseOptions.console_level`
+- None; library operates without authentication
+- Database file access is controlled entirely by OS filesystem permissions
+- `DatabaseOptions.read_only` flag opens SQLite in read-only mode
+- Log level configurable via `DatabaseOptions.console_level` (`quiver_log_level_t`)
 
 ## Monitoring & Observability
 
 **Error Tracking:**
-- None - errors surface as exceptions (C++) or error codes (C API)
+- None (no external error tracking service)
+- Errors surface as `std::runtime_error` exceptions in C++, or `QUIVER_ERROR` return codes with `quiver_get_last_error()` in C API
+- Binding layers convert to native exception types (Julia: `QuiverError`, Dart: `QuiverException`, Python: `QuiverError`)
 
 **Logs:**
-- spdlog-based file and console logging
-  - Location: Logs written to `<db_path>.log` in same directory as database file
-  - Levels: DEBUG, INFO, WARN, ERROR, OFF (configurable via `quiver_log_level_t`)
-  - Implementation: `src/database.cpp` (logger creation and setup)
-  - Thread-safe with unique logger instance per database
-  - Sinks: Console (colored) + file (basic file sink)
+- spdlog v1.17.0 with console (colored) + rotating file sinks
+- Log file path: `<db_path>.log` in same directory as database file
+- Levels: DEBUG, INFO, WARN, ERROR, OFF (configurable per `DatabaseOptions`)
+- Thread-safe; unique spdlog logger instance per `Database` object
+- Implementation: `src/database.cpp` (logger creation and sink setup in `Database::Impl`)
+
+**Coverage:**
+- Codecov integration via `codecov.yml` and `codecov/codecov-action@v5` in CI
+- Coverage flags per language: `cpp`, `julia`, `dart`, `python`
+- Codecov token stored as GitHub Actions secret `CODECOV_TOKEN`
 
 ## CI/CD & Deployment
 
 **Hosting:**
-- Standalone C++ library - no hosted services
-- Bindings provide wrappers for Julia, Dart, and Lua applications
-- Distribution: Binary libraries (`.dll`/`.so`/`.dylib` + static `.lib`/`.a`)
+- Standalone C++ shared library; no server or hosted service
+- Python wheels published to PyPI via OIDC trusted publisher (environment: `pypi`)
 
 **CI Pipeline:**
-- None detected - build/test scripts are local (Windows `.bat` files)
-  - `scripts/build-all.bat` - Build + test (Debug/Release)
-  - `scripts/test-all.bat` - Run all tests
-  - Individual test executables:
-    - `./build/bin/quiver_tests.exe` - C++ core tests
-    - `./build/bin/quiver_c_tests.exe` - C API tests
-    - `bindings/julia/test/test.bat` - Julia binding tests
-    - `bindings/dart/test/test.bat` - Dart binding tests
-  - No continuous integration service configured
+- GitHub Actions (`.github/workflows/`)
+  - `ci.yml` - Full matrix build and test:
+    - Platforms: `ubuntu-latest`, `windows-latest`, `macos-latest`
+    - Build types: `Release`, `Debug`
+    - Separate coverage jobs per language (C++, Julia, Dart, Python)
+    - Formatting check via `clang-format --dry-run --Werror`
+  - `build-wheels.yml` - Python wheel builds on every push/PR to master
+    - Uses `pypa/cibuildwheel@v3.3.1`; targets `cp313-win_amd64` and `cp313-manylinux_x86_64`
+  - `publish.yml` - Triggered by `v*.*.*` tags:
+    - Builds and validates wheels (version tag must match `pyproject.toml` version)
+    - Creates GitHub Release with wheel artifacts
+    - Publishes to PyPI via `pypa/gh-action-pypi-publish`
+
+**Dependabot:**
+- `.github/dependabot.yml` configured for weekly GitHub Actions dependency updates only
+
+## FFI / Native Integrations
+
+**Julia Binding (`bindings/julia/`):**
+- Uses `Libdl` stdlib to dynamically load `libquiver_c` at runtime
+- FFI declarations in `bindings/julia/src/c_api.jl` (generated by Clang.jl; config: `bindings/julia/generator/generator.toml`)
+- Generator regenerated via `bindings/julia/generator/generator.bat`
+- Runtime: library located via `LD_LIBRARY_PATH` (Linux) or PATH (Windows)
+
+**Dart Binding (`bindings/dart/`):**
+- Uses `dart:ffi` + `ffigen`-generated bindings in `bindings/dart/lib/src/ffi/bindings.dart`
+- `bindings/dart/hook/build.dart` uses `native_toolchain_cmake` to compile quiver via CMake on first `dart pub get`
+- Supports Windows (VS 2022), macOS (Xcode), Linux (Ninja) generators
+- `ffigen` config embedded in `bindings/dart/pubspec.yaml`; entry points are `include/quiver/c/*.h` headers
+- Generator regenerated via `bindings/dart/generator/generator.bat`
+
+**Python Binding (`bindings/python/`):**
+- Uses CFFI ABI-mode (no compiler required at install time)
+- Hand-written cdef declarations in `bindings/python/src/quiverdb/_c_api.py`
+- Auto-generated reference in `bindings/python/src/quiverdb/_declarations.py`
+- `_loader.py` loads shared libraries:
+  1. Bundled mode: `_libs/` subdirectory (wheel install)
+  2. Dev mode: system PATH
+- Windows: `os.add_dll_directory()` called to register `_libs/` for DLL dependency resolution
+- Generator regenerated via `bindings/python/generator/generator.bat`
+
+**Lua Integration (in-process):**
+- Lua 5.4.8 embedded directly in `libquiver` via sol2 v3.5.0
+- No separate process or network service
+- `LuaRunner` class (`include/quiver/lua_runner.h`, `src/lua_runner.cpp`) injects `db` userdata into Lua context
+- C API wrapper in `src/c/lua_runner.cpp` / `include/quiver/c/lua_runner.h`
 
 ## Environment Configuration
 
-**Required env vars:**
-- None - all configuration via constructor parameters and options structs
+**Required environment variables:**
+- None; all configuration passed via options structs at construction time
 
-**Configuration Inputs:**
-- `DatabaseOptions` struct:
-  - `read_only` (int) - Open database read-only
-  - `console_level` (quiver_log_level_t) - Logging level
-- `CSVExportOptions` struct:
-  - `date_time_format` - strftime format string for date columns (empty = no formatting)
-  - `enum_labels` - Map attribute names to (integer_value -> string_label) for CSV enum resolution
+**Configuration structs:**
+- `DatabaseOptions` / `quiver_database_options_t`: `read_only` (int), `console_level` (log level enum)
+- `CSVOptions` / `quiver_csv_options_t`: `delimiter` (char), `date_time_format` (string), `enum_labels` (map)
 
-**Secrets location:**
-- N/A - no secrets required
+**Secrets:**
+- `CODECOV_TOKEN` - GitHub Actions secret for Codecov uploads
+- PyPI OIDC trusted publisher - no token stored; configured via GitHub environment `pypi`
 
 ## Webhooks & Callbacks
 
@@ -90,42 +133,12 @@
 **Outgoing:**
 - None
 
-## Language-Specific Integrations
-
-**Julia Bindings (`bindings/julia/`):**
-- Direct FFI calls to C API via `libdl` dynamic loading
-- Dependencies: CEnum, DataFrames, Dates, Libdl (standard library)
-- Compatibility: Julia 1.12+
-- Provides convenience wrappers:
-  - DateTime parsing methods (Lua and Dart equivalents)
-  - Composite read helpers (all scalars, vectors, sets by ID)
-  - Transaction blocks with automatic commit/rollback
-
-**Dart Bindings (`bindings/dart/`):**
-- FFI via `dart:ffi` package
-- Auto-generated C bindings via `ffigen` from C API headers
-- Dependencies: `ffi`, `code_assets`, `hooks`, `logging`, `native_toolchain_cmake`
-- Compatibility: Dart SDK 3.10.0+
-- DLL Dependency: Both `libquiver.dll` and `libquiver_c.dll` must be in PATH
-- Build: `native_toolchain_cmake` compiles C API on first build
-- Code generation: `ffigen` in `pubspec.yaml` points to C API headers:
-  - `include/quiver/c/common.h`
-  - `include/quiver/c/database.h`
-  - `include/quiver/c/element.h`
-  - `include/quiver/c/lua_runner.h`
-
-**Lua Integration (in-process):**
-- sol2 C++ binding library embedded in core (`src/lua_runner.cpp`)
-- No separate process or service
-- Database reference injected as `db` userdata in Lua context
-- C API: `quiver_lua_runner` functions for Lua script execution
-
 ## Network & Remote Access
 
-- Not applicable - library is local-only
+- Not applicable; library is entirely local
 - No network ports opened
-- No RPC/REST API exposed
+- No RPC, REST, or gRPC interface exposed
 
 ---
 
-*Integration audit: 2026-02-23*
+*Integration audit: 2026-02-26*

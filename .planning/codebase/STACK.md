@@ -1,140 +1,130 @@
 # Technology Stack
 
-**Analysis Date:** 2026-02-23
+**Analysis Date:** 2026-02-26
 
 ## Languages
 
 **Primary:**
-- C++20 - Core library and database implementation
-- C - FFI API layer for language bindings (`include/quiver/c/`)
-- Julia - Language bindings (`bindings/julia/`)
-- Dart - Language bindings (`bindings/dart/`)
+- C++20 - Core library and database implementation (`src/`, `include/quiver/`)
+- C - C API layer for FFI interop (`src/c/`, `include/quiver/c/`)
 
 **Secondary:**
-- Lua - Scripting support via `sol2`
-- CMake - Build system
-- Bash/Batch - Build scripts (`scripts/`)
+- Julia 1.12+ - Language binding (`bindings/julia/`)
+- Dart 3.10+ - Language binding (`bindings/dart/`)
+- Python 3.13+ - Language binding (`bindings/python/`)
+- Lua 5.4.8 - Embedded scripting engine, consumed inside C++ core via sol2
 
 ## Runtime
 
 **Environment:**
 - C++20 compiler required (CMake enforces `CMAKE_CXX_STANDARD 20`)
-- MSVC on Windows, GCC/Clang on Linux/macOS
-- Julia 1.12+ for Julia bindings
-- Dart SDK 3.10.0+ for Dart bindings
+- MSVC 2022 on Windows, GCC 13+ on Linux/macOS
+- Output artifacts: `libquiver.dll/.so/.dylib` (core), `libquiver_c.dll/.so/.dylib` (C API)
+- Symbol visibility hidden by default; explicit exports required
 
 **Package Manager:**
-- Julia: `Pkg` (built-in)
-- Dart: `pub`
-- CMake: FetchContent for dependency management
+- CMake 3.21+ with FetchContent for C++ dependencies (`cmake/Dependencies.cmake`)
+- Julia: built-in `Pkg` (lockfile `Manifest.toml` generated at runtime; delete if version conflicts)
+- Dart: `pub` (`dart pub get`)
+- Python: `uv` (`bindings/python/uv.lock` committed)
 
 ## Frameworks
 
-**Core:**
-- SQLite3 3.50.2 - Database engine
-- sol2 3.5.0 - Lua C++ bindings
-- spdlog 1.17.0 - Logging framework
+**Core Build System:**
+- CMake 3.21+ configured via `CMakeLists.txt`, `CMakePresets.json`, `cmake/`
+- Build presets: `dev` (Debug + tests + C API), `release`, `windows-release`, `linux-release`, `all-bindings`
 
 **Testing:**
-- GoogleTest 1.17.0 - C++ test framework
+- GoogleTest v1.17.0 - C++ and C API tests (`tests/`)
+- Julia `Test` stdlib + `Aqua` 0.8 - Julia binding tests (`bindings/julia/test/`)
+- Dart `test` ^1.24.0 - Dart binding tests (`bindings/dart/test/`)
+- Python `pytest` 8.4.1+ - Python binding tests (`bindings/python/tests/`)
 
 **Build/Dev:**
-- CMake 3.21+ - Build system
-- clang-format - Code formatting
-- clang-tidy - Static analysis
-- ffigen - FFI binding generator (Dart)
+- scikit-build-core 0.10+ - Python wheel packaging (`bindings/python/pyproject.toml`)
+- cibuildwheel 3.3.1 - Wheel matrix builds: `cp313-win_amd64`, `cp313-manylinux_x86_64`
+- clang-format - C++ code formatting (config: `.clang-format`)
+- clang-tidy - C++ static analysis (run via `scripts/tidy.bat`)
+- Ruff 0.12.2+ - Python linting and formatting (`bindings/python/ruff.toml`)
+- Dart `lints` ^3.0.0 + `ffigen` ^11.0.0 - Dart analysis and FFI generator (`bindings/dart/analysis_options.yaml`)
+- Clang.jl (Julia) - Julia FFI binding generator (`bindings/julia/generator/`)
 
 ## Key Dependencies
 
 **Critical:**
-- SQLite::SQLite3 3.50.2 - Primary data storage
-  - Fetched from: https://github.com/sjinks/sqlite3-cmake.git
-  - Why: Core persistence layer for all operations
+- SQLite3 v3.50.2 - Core embedded relational database; fetched via `sjinks/sqlite3-cmake`; linked `PUBLIC` so consumers inherit the dependency
+- sol2 v3.5.0 - C++ Lua binding (heavy templates; requires `/bigobj` on MSVC, `-Wa,-mbig-obj` on MinGW)
+- Lua 5.4.8 - Scripting engine built from source via `lua-cmake` wrapper (`gitlab.com/codelibre/lua/lua-cmake`)
+- CFFI 2.0.0+ - Python ABI-mode FFI; cdef declarations in `bindings/python/src/quiverdb/_c_api.py`
 
 **Infrastructure:**
-- tomlplusplus 3.4.0 - Configuration file parsing
-- spdlog 1.17.0 - Structured logging (debug/info/warn/error/off levels)
-- lua (lua-cmake) 5.4.8 - Scripting engine
-  - Fetched from: https://gitlab.com/codelibre/lua/lua-cmake.git
-- sol2 3.5.0 - Lua usertype binding library
-  - Fetched from: https://github.com/ThePhD/sol2.git
-  - Requires `/bigobj` (MSVC) or `-Wa,-mbig-obj` (MinGW) compiler flags due to heavy template instantiation
-- rapidcsv 8.92 - CSV reading/writing (header-only)
-  - Fetched from: https://github.com/d99kris/rapidcsv.git
+- spdlog v1.17.0 - Structured logging (debug/info/warn/error/off), console + file sinks per database instance
+- toml++ v3.4.0 - TOML configuration file parsing (`marzer/tomlplusplus`)
+- rapidcsv v8.92 - Header-only CSV read/write (`d99kris/rapidcsv`); used in `src/database_csv_export.cpp`, `src/database_csv_import.cpp`
+- native_toolchain_cmake ^0.2.2 - Dart native build hook invokes CMake to compile quiver (`bindings/dart/hook/build.dart`)
+- ffigen ^11.0.0 - Dart FFI binding generator; output `bindings/dart/lib/src/ffi/bindings.dart` (excluded from Dart analysis)
 
-**Testing:**
-- GoogleTest 1.17.0 - C++ unit testing
+**Julia Binding Dependencies:**
+- `CEnum` 0.5 - C enum interop
+- `DataFrames` 1.x - Multi-row query result type
+- `Dates` stdlib - DateTime parsing
+- `Libdl` stdlib - Native library loading
+
+**Python Dev Dependencies:**
+- `pytest` 8.4.1+ - Test runner
+- `ruff` 0.12.2+ - Linter/formatter
+- `dotenv` 0.9.9+ - Optional env overrides in tests
 
 ## Configuration
 
-**Environment:**
-- CMakePresets.json defines build configurations:
-  - `dev` - Debug build with tests enabled
-  - `release` - Release build without tests
-  - `windows-release` - Windows-specific Release (MSVC)
-  - `linux-release` - Linux-specific Release
-  - `all-bindings` - Release with Python binding option (placeholder)
+**C++ Build Flags:**
+- MSVC: `/W4 /permissive- /Zc:__cplusplus /utf-8`; disables C4251 (DLL interface warning)
+- GCC/Clang: `-Wall -Wextra -Wpedantic -Wno-unused-parameter`
+- MinGW: Static link of `libgcc`, `libstdc++`, `winpthread` for portable binaries
+- All platforms: Position-independent code (`CMAKE_POSITION_INDEPENDENT_CODE ON`)
 
-**Build:**
-- CMakeLists.txt - Root configuration
-- src/CMakeLists.txt - Core library configuration
-- tests/CMakeLists.txt - Test suite configuration
-- cmake/Dependencies.cmake - External dependency declarations
-- cmake/CompilerOptions.cmake - Warning levels and compiler flags
-- cmake/Platform.cmake - Platform-specific settings (Windows/Linux/macOS)
+**C++ Formatting (`/.clang-format`):**
+- BasedOnStyle: LLVM; IndentWidth: 4; ColumnLimit: 120; Standard: c++20
+- PointerAlignment: Left; BreakBeforeBraces: Attach; SortIncludes: true; IncludeBlocks: Regroup
 
-**Compiler Flags:**
-- MSVC: `/W4 /permissive- /Zc:__cplusplus /utf-8`
-- GCC/Clang: `-Wall -Wextra -Wpedantic`
-- MinGW: Static linking of libgcc/libstdc++ for portability
-- All platforms: Position-independent code enabled, symbols hidden by default
+**Python Formatting (`bindings/python/ruff.toml`):**
+- line-length: 120; indent-width: 4; target-version: py313; quote-style: double; line-ending: LF
+
+**Dart Formatting (`bindings/dart/analysis_options.yaml`):**
+- page_width: 120; based on `package:lints/recommended.yaml`
+
+**Build Config Files:**
+- `CMakeLists.txt` - Root build entry
+- `CMakePresets.json` - Named configuration/build/test presets
+- `cmake/Dependencies.cmake` - FetchContent dependency declarations with pinned Git tags
+- `cmake/CompilerOptions.cmake` - Warning levels and linker flags
+- `cmake/Platform.cmake` - RPATH, symbol visibility, lib prefix/suffix per OS
+- `bindings/python/pyproject.toml` - Python package, build-system, cibuildwheel config
+- `bindings/dart/pubspec.yaml` - Dart package and ffigen config
+- `bindings/julia/Project.toml` - Julia package with compat constraints
+- `codecov.yml` - Coverage threshold configuration (1% minimum)
 
 ## Platform Requirements
 
 **Development:**
-- Windows 10+: MSVC 2022 or MinGW-w64
-- Linux: GCC 10+ or Clang 11+
-- macOS: Clang 12+ (Xcode)
-- CMake 3.21+
-- Optional: clang-format, clang-tidy for code quality
+- CMake 3.21+ and C++20 compiler
+- Julia 1.12+ for Julia binding work
+- Dart SDK 3.10+ for Dart binding work
+- Python 3.13+ with `uv` for Python binding work
+- `clang-format` and `clang-tidy` optional (for format/tidy CMake targets)
 
 **Production:**
-- Windows: `.dll` (shared library) or `.lib` (static)
-- Linux: `.so` (shared library) or `.a` (static)
-- macOS: `.dylib` (shared library) or `.a` (static)
-- RPATH configured for executable-relative library loading (Linux/macOS)
-
-## Library Architecture
-
-**Core Library (quiver):**
-- Built as SHARED (default) or STATIC library
-- Exports C++ API and optionally C API (`QUIVER_BUILD_C_API`)
-- Compiled sources:
-  - `database_*.cpp` - Database operations (create, read, update, delete, metadata, csv, query, relations, time series, describe)
-  - `element.cpp` - Element builder pattern
-  - `lua_runner.cpp` - Lua integration via sol2
-  - `migration.cpp`, `migrations.cpp` - Schema migration support
-  - `result.cpp`, `row.cpp` - Query result handling
-  - `schema.cpp`, `schema_validator.cpp`, `type_validator.cpp` - Schema validation
-
-**C API Wrapper (quiver_c) [Optional]:**
-- Shared library only (no static option)
-- Provides C FFI interface for language bindings
-- Includes:
-  - `c/common.cpp` - Shared error handling and utilities
-  - `c/database*.cpp` - C function wrappers matching C++ API
-  - `c/element.cpp`, `c/lua_runner.cpp` - C binding support
-
-**Bindings:**
-- Julia: Uses FFI via direct C API calls (`bindings/julia/`)
-- Dart: Uses native FFI via `ffigen` code generator (`bindings/dart/`)
+- Shared libraries: `libquiver.dll/.so/.dylib` + `libquiver_c.dll/.so/.dylib`
+- Windows: both DLLs must be in PATH; on Linux `$ORIGIN` RPATH handles co-location
+- Python wheels target `cp313-win_amd64` and `cp313-manylinux_x86_64`; bundled `_libs/` directory for wheel installs
+- PyPI publishing via OIDC trusted publisher on `v*.*.*` tags (`.github/workflows/publish.yml`)
+- GitHub Releases automatically attach `.whl` files
 
 ## Version
 
-**Current Release:** 0.3.0 (as of CMakeLists.txt)
-- Supports breaking changes (WIP status)
-- No backward compatibility guarantees
+**Current Release:** 0.5.0 (defined in `CMakeLists.txt`, mirrored in all binding package manifests)
+- WIP status; breaking changes acceptable; no backwards compatibility guarantees
 
 ---
 
-*Stack analysis: 2026-02-23*
+*Stack analysis: 2026-02-26*
