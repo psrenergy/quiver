@@ -58,10 +58,10 @@ Plans:
   2. Wheels are produced for Windows x64 (win_amd64) and Linux x64 (manylinux_2_28_x86_64)
   3. cibuildwheel runs the test suite inside a clean environment for each platform before the wheel is considered successful
   4. Built wheels are uploaded as workflow artifacts and downloadable from the Actions UI
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 03-01: TBD
+- [ ] 03-01-PLAN.md -- cibuildwheel workflow and configuration for Windows x64 + Linux x64
 
 ### Phase 4: PyPI Publishing
 **Goal**: Tagged releases automatically publish tested wheels to PyPI with no manual intervention
@@ -85,5 +85,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 |-------|----------------|--------|-----------|
 | 1. Build System Migration | 2/2 | Complete | 2026-02-25 |
 | 2. Loader Rewrite | 2/2 | Complete | 2026-02-25 |
-| 3. CI Wheel Building | 0/0 | Not started | - |
+| 3. CI Wheel Building | 0/1 | In Progress | - |
 | 4. PyPI Publishing | 0/0 | Not started | - |
