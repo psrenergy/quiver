@@ -4,12 +4,7 @@ import 'package:path/path.dart' as path;
 
 void main() {
   // Path to central tests folder
-  final testsPath = path.join(
-    path.current,
-    '..',
-    '..',
-    'tests',
-  );
+  final testsPath = path.join(path.current, '..', '..', 'tests');
 
   group('Read Scalar Attributes', () {
     test('reads strings from Configuration', () {
@@ -343,9 +338,18 @@ void main() {
           'integer_attribute': 100,
         });
 
-        expect(db.readScalarIntegerById('Configuration', 'integer_attribute', 1), equals(42));
-        expect(db.readScalarIntegerById('Configuration', 'integer_attribute', 2), equals(100));
-        expect(db.readScalarIntegerById('Configuration', 'integer_attribute', 999), isNull);
+        expect(
+          db.readScalarIntegerById('Configuration', 'integer_attribute', 1),
+          equals(42),
+        );
+        expect(
+          db.readScalarIntegerById('Configuration', 'integer_attribute', 2),
+          equals(100),
+        );
+        expect(
+          db.readScalarIntegerById('Configuration', 'integer_attribute', 999),
+          isNull,
+        );
       } finally {
         db.close();
       }
@@ -368,8 +372,14 @@ void main() {
           'float_attribute': 2.71,
         });
 
-        expect(db.readScalarFloatById('Configuration', 'float_attribute', 1), equals(3.14));
-        expect(db.readScalarFloatById('Configuration', 'float_attribute', 2), equals(2.71));
+        expect(
+          db.readScalarFloatById('Configuration', 'float_attribute', 1),
+          equals(3.14),
+        );
+        expect(
+          db.readScalarFloatById('Configuration', 'float_attribute', 2),
+          equals(2.71),
+        );
       } finally {
         db.close();
       }
@@ -392,8 +402,14 @@ void main() {
           'string_attribute': 'world',
         });
 
-        expect(db.readScalarStringById('Configuration', 'string_attribute', 1), equals('hello'));
-        expect(db.readScalarStringById('Configuration', 'string_attribute', 2), equals('world'));
+        expect(
+          db.readScalarStringById('Configuration', 'string_attribute', 1),
+          equals('hello'),
+        );
+        expect(
+          db.readScalarStringById('Configuration', 'string_attribute', 2),
+          equals('world'),
+        );
       } finally {
         db.close();
       }
@@ -436,7 +452,11 @@ void main() {
           'date_attribute': '2024-01-15T10:30:00',
         });
 
-        final date = db.readScalarStringById('Configuration', 'date_attribute', 1);
+        final date = db.readScalarStringById(
+          'Configuration',
+          'date_attribute',
+          1,
+        );
         expect(date, equals('2024-01-15T10:30:00'));
       } finally {
         db.close();
@@ -483,8 +503,14 @@ void main() {
           'value_int': [10, 20],
         });
 
-        expect(db.readVectorIntegersById('Collection', 'value_int', 1), equals([1, 2, 3]));
-        expect(db.readVectorIntegersById('Collection', 'value_int', 2), equals([10, 20]));
+        expect(
+          db.readVectorIntegersById('Collection', 'value_int', 1),
+          equals([1, 2, 3]),
+        );
+        expect(
+          db.readVectorIntegersById('Collection', 'value_int', 2),
+          equals([10, 20]),
+        );
       } finally {
         db.close();
       }
@@ -504,7 +530,10 @@ void main() {
           'value_float': [1.5, 2.5, 3.5],
         });
 
-        expect(db.readVectorFloatsById('Collection', 'value_float', 1), equals([1.5, 2.5, 3.5]));
+        expect(
+          db.readVectorFloatsById('Collection', 'value_float', 1),
+          equals([1.5, 2.5, 3.5]),
+        );
       } finally {
         db.close();
       }
@@ -530,7 +559,10 @@ void main() {
 
         final result1 = db.readSetStringsById('Collection', 'tag', 1);
         expect(result1..sort(), equals(['important', 'urgent']));
-        expect(db.readSetStringsById('Collection', 'tag', 2), equals(['review']));
+        expect(
+          db.readSetStringsById('Collection', 'tag', 2),
+          equals(['review']),
+        );
       } finally {
         db.close();
       }
@@ -547,7 +579,10 @@ void main() {
         db.createElement('Configuration', {'label': 'Test Config'});
         db.createElement('Collection', {'label': 'Item 1'}); // No vector data
 
-        expect(db.readVectorIntegersById('Collection', 'value_int', 1), isEmpty);
+        expect(
+          db.readVectorIntegersById('Collection', 'value_int', 1),
+          isEmpty,
+        );
       } finally {
         db.close();
       }
@@ -895,7 +930,10 @@ void main() {
           'integer_attribute': 42,
         });
 
-        expect(db.readScalarIntegerById('Configuration', 'integer_attribute', 999), isNull);
+        expect(
+          db.readScalarIntegerById('Configuration', 'integer_attribute', 999),
+          isNull,
+        );
       } finally {
         db.close();
       }
@@ -912,7 +950,10 @@ void main() {
           'float_attribute': 3.14,
         });
 
-        expect(db.readScalarFloatById('Configuration', 'float_attribute', 999), isNull);
+        expect(
+          db.readScalarFloatById('Configuration', 'float_attribute', 999),
+          isNull,
+        );
       } finally {
         db.close();
       }
@@ -929,7 +970,10 @@ void main() {
           'string_attribute': 'hello',
         });
 
-        expect(db.readScalarStringById('Configuration', 'string_attribute', 999), isNull);
+        expect(
+          db.readScalarStringById('Configuration', 'string_attribute', 999),
+          isNull,
+        );
       } finally {
         db.close();
       }

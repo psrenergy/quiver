@@ -4,12 +4,7 @@ import 'package:path/path.dart' as path;
 
 void main() {
   // Path to central tests folder
-  final testsPath = path.join(
-    path.current,
-    '..',
-    '..',
-    'tests',
-  );
+  final testsPath = path.join(path.current, '..', '..', 'tests');
 
   group('Delete Element By ID', () {
     test('deletes element by id', () {
@@ -159,7 +154,10 @@ void main() {
         expect(labels.contains('Config 3'), isTrue);
         expect(labels.contains('Config 2'), isFalse);
 
-        final values = db.readScalarIntegers('Configuration', 'integer_attribute');
+        final values = db.readScalarIntegers(
+          'Configuration',
+          'integer_attribute',
+        );
         expect(values.length, equals(2));
         expect(values.contains(100), isTrue);
         expect(values.contains(300), isTrue);

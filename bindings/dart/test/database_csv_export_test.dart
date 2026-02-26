@@ -6,12 +6,7 @@ import 'package:path/path.dart' as path;
 
 void main() {
   // Path to central tests folder
-  final testsPath = path.join(
-    path.current,
-    '..',
-    '..',
-    'tests',
-  );
+  final testsPath = path.join(path.current, '..', '..', 'tests');
 
   final schemaPath = path.join(testsPath, 'schemas', 'valid', 'csv_export.sql');
 
@@ -40,9 +35,18 @@ void main() {
         db.exportCSV('Items', '', csvPath);
         final content = File(csvPath).readAsStringSync();
 
-        expect(content, contains('label,name,status,price,date_created,notes\n'));
-        expect(content, contains('Item1,Alpha,1,9.99,2024-01-15T10:30:00,first\n'));
-        expect(content, contains('Item2,Beta,2,19.5,2024-02-20T08:00:00,second\n'));
+        expect(
+          content,
+          contains('label,name,status,price,date_created,notes\n'),
+        );
+        expect(
+          content,
+          contains('Item1,Alpha,1,9.99,2024-01-15T10:30:00,first\n'),
+        );
+        expect(
+          content,
+          contains('Item2,Beta,2,19.5,2024-02-20T08:00:00,second\n'),
+        );
       } finally {
         final f = File(csvPath);
         if (f.existsSync()) f.deleteSync();
@@ -135,12 +139,7 @@ void main() {
           'date_created': '2024-01-15T10:30:00',
         });
 
-        db.exportCSV(
-          'Items',
-          '',
-          csvPath,
-          dateTimeFormat: '%Y/%m/%d',
-        );
+        db.exportCSV('Items', '', csvPath, dateTimeFormat: '%Y/%m/%d');
         final content = File(csvPath).readAsStringSync();
 
         expect(content, contains('2024/01/15'));
@@ -155,7 +154,8 @@ void main() {
 
     test('invalid datetime returns raw value', () {
       final db = Database.fromSchema(':memory:', schemaPath);
-      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_invalid_date.csv';
+      final csvPath =
+          '${Directory.systemTemp.path}/quiver_dart_csv_invalid_date.csv';
       try {
         db.createElement('Items', {
           'label': 'Item1',
@@ -163,12 +163,7 @@ void main() {
           'date_created': 'not-a-date',
         });
 
-        db.exportCSV(
-          'Items',
-          '',
-          csvPath,
-          dateTimeFormat: '%Y/%m/%d',
-        );
+        db.exportCSV('Items', '', csvPath, dateTimeFormat: '%Y/%m/%d');
         final content = File(csvPath).readAsStringSync();
 
         // Invalid datetime should be returned as-is
@@ -182,7 +177,8 @@ void main() {
 
     test('combined options (enum_labels + date_time_format)', () {
       final db = Database.fromSchema(':memory:', schemaPath);
-      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_combined.csv';
+      final csvPath =
+          '${Directory.systemTemp.path}/quiver_dart_csv_combined.csv';
       try {
         db.createElement('Items', {
           'label': 'Item1',

@@ -96,15 +96,15 @@ class Database {
     String? referencesCollection,
     String? referencesColumn,
   })
-  _parseScalarMetadata(
-    quiver_scalar_metadata_t attribute,
-  ) {
+  _parseScalarMetadata(quiver_scalar_metadata_t attribute) {
     return (
       name: attribute.name.cast<Utf8>().toDartString(),
       dataType: attribute.data_type,
       notNull: attribute.not_null != 0,
       primaryKey: attribute.primary_key != 0,
-      defaultValue: attribute.default_value == nullptr ? null : attribute.default_value.cast<Utf8>().toDartString(),
+      defaultValue: attribute.default_value == nullptr
+          ? null
+          : attribute.default_value.cast<Utf8>().toDartString(),
       isForeignKey: attribute.is_foreign_key != 0,
       referencesCollection: attribute.references_collection == nullptr
           ? null

@@ -8,7 +8,9 @@ void _fillCSVOptions(
   String? dateTimeFormat,
 }) {
   // date_time_format: empty string means no formatting
-  optionsPtr.ref.date_time_format = (dateTimeFormat ?? '').toNativeUtf8(allocator: arena).cast();
+  optionsPtr.ref.date_time_format = (dateTimeFormat ?? '')
+      .toNativeUtf8(allocator: arena)
+      .cast();
 
   if (enumLabels != null && enumLabels.isNotEmpty) {
     // Flatten attribute -> locale -> entries into grouped parallel arrays
@@ -37,7 +39,9 @@ void _fillCSVOptions(
 
     for (var i = 0; i < groupCount; i++) {
       cAttrNames[i] = groupAttrNames[i].toNativeUtf8(allocator: arena).cast();
-      cLocaleNames[i] = groupLocaleNames[i].toNativeUtf8(allocator: arena).cast();
+      cLocaleNames[i] = groupLocaleNames[i]
+          .toNativeUtf8(allocator: arena)
+          .cast();
       cEntryCounts[i] = groupEntryCounts[i];
     }
 
