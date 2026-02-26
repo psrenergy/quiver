@@ -435,6 +435,66 @@ function read_all_sets_by_id(db::Database, collection::String, id::Int64)
     return result
 end
 
+function read_element_by_id(db::Database, collection::String, id::Int64)
+    result = Dict{String, Any}()
+
+    # 1. Scalars (skip "id" -- caller already knows it)
+    for attribute in list_scalar_attributes(db, collection)
+        name = attribute.name
+        if name == "id"
+            continue
+        end
+        if attribute.data_type == C.QUIVER_DATA_TYPE_INTEGER
+            result[name] = read_scalar_integer_by_id(db, collection, name, id)
+        elseif attribute.data_type == C.QUIVER_DATA_TYPE_FLOAT
+            result[name] = read_scalar_float_by_id(db, collection, name, id)
+        elseif attribute.data_type == C.QUIVER_DATA_TYPE_DATE_TIME
+            result[name] = read_scalar_date_time_by_id(db, collection, name, id)
+        else
+            result[name] = read_scalar_string_by_id(db, collection, name, id)
+        end
+    end
+
+    # Early exit for nonexistent element (label is NOT NULL, so nothing means no row)
+    if haskey(result, "label") && result["label"] === nothing
+        return Dict{String, Any}()
+    end
+
+    # 2. Vectors -- each column is a separate top-level key
+    for group in list_vector_groups(db, collection)
+        for col in group.value_columns
+            name = col.name
+            if col.data_type == C.QUIVER_DATA_TYPE_INTEGER
+                result[name] = read_vector_integers_by_id(db, collection, name, id)
+            elseif col.data_type == C.QUIVER_DATA_TYPE_FLOAT
+                result[name] = read_vector_floats_by_id(db, collection, name, id)
+            elseif col.data_type == C.QUIVER_DATA_TYPE_DATE_TIME
+                result[name] = read_vector_date_time_by_id(db, collection, name, id)
+            else
+                result[name] = read_vector_strings_by_id(db, collection, name, id)
+            end
+        end
+    end
+
+    # 3. Sets -- each column is a separate top-level key
+    for group in list_set_groups(db, collection)
+        for col in group.value_columns
+            name = col.name
+            if col.data_type == C.QUIVER_DATA_TYPE_INTEGER
+                result[name] = read_set_integers_by_id(db, collection, name, id)
+            elseif col.data_type == C.QUIVER_DATA_TYPE_FLOAT
+                result[name] = read_set_floats_by_id(db, collection, name, id)
+            elseif col.data_type == C.QUIVER_DATA_TYPE_DATE_TIME
+                result[name] = read_set_date_time_by_id(db, collection, name, id)
+            else
+                result[name] = read_set_strings_by_id(db, collection, name, id)
+            end
+        end
+    end
+
+    return result
+end
+
 function read_vector_group_by_id(db::Database, collection::String, group::String, id::Int64)
     metadata = get_vector_metadata(db, collection, group)
     columns = metadata.value_columns

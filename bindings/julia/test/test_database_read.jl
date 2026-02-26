@@ -676,6 +676,95 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    # ============================================================================
+    # read_element_by_id tests
+    # ============================================================================
+
+    @testset "read_element_by_id with all categories" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id = Quiver.create_element!(db, "Collection";
+            label = "Item 1",
+            some_integer = 42,
+            some_float = 3.14,
+            value_int = [10, 20, 30],
+            value_float = [1.5, 2.5, 3.5],
+            tag = ["alpha", "beta"],
+        )
+
+        result = Quiver.read_element_by_id(db, "Collection", id)
+
+        # Verify scalars
+        @test result["label"] == "Item 1"
+        @test result["some_integer"] == 42
+        @test result["some_float"] == 3.14
+
+        # Verify id is NOT present
+        @test !haskey(result, "id")
+
+        # Verify vector columns as separate top-level keys (not nested under group)
+        @test haskey(result, "value_int")
+        @test result["value_int"] == [10, 20, 30]
+        @test haskey(result, "value_float")
+        @test result["value_float"] == [1.5, 2.5, 3.5]
+
+        # Verify no group-level key exists
+        @test !haskey(result, "values")
+
+        # Verify set column as top-level key
+        @test haskey(result, "tag")
+        @test sort(result["tag"]) == ["alpha", "beta"]
+
+        # Verify no group-level key exists
+        @test !haskey(result, "tags")
+
+        Quiver.close!(db)
+    end
+
+    @testset "read_element_by_id nonexistent ID" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+
+        result = Quiver.read_element_by_id(db, "Collection", Int64(9999))
+        @test isempty(result)
+
+        Quiver.close!(db)
+    end
+
+    @testset "read_element_by_id scalars only" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        id = Quiver.create_element!(db, "Configuration";
+            label = "Config 1",
+            integer_attribute = 42,
+            float_attribute = 3.14,
+            string_attribute = "hello",
+        )
+
+        result = Quiver.read_element_by_id(db, "Configuration", id)
+
+        # Verify scalars present
+        @test result["label"] == "Config 1"
+        @test result["integer_attribute"] == 42
+        @test result["float_attribute"] == 3.14
+        @test result["string_attribute"] == "hello"
+
+        # Verify id is NOT present
+        @test !haskey(result, "id")
+
+        # Count non-nothing keys (basic.sql has date_attribute and boolean_attribute too,
+        # but they were not set so they'll be nothing)
+        non_nothing = filter(p -> p.second !== nothing, result)
+        @test length(non_nothing) == 4
+
+        Quiver.close!(db)
+    end
 end
 
 end
