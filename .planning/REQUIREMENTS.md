@@ -41,8 +41,8 @@ None — v0.5 is a focused milestone.
 **Coverage:**
 - v0.5 requirements: 5 total
 - Mapped to phases: 5
-- Unmapped: 0 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-26*
-*Last updated: 2026-02-26 after initial definition*
+*Last updated: 2026-02-26 after roadmap creation*
