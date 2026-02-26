@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
 milestone: v0.5
-milestone_name: milestone
-status: unknown
-last_updated: "2026-02-26T14:13:22.536Z"
+milestone_name: Python API Alignment
+status: complete
+last_updated: "2026-02-26T14:15:33.465Z"
 progress:
   total_phases: 1
   completed_phases: 1
@@ -18,14 +18,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** A single, consistent API surface across all language bindings
-**Current focus:** Phase 1 - Python kwargs API
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 1 of 1 (Python kwargs API)
-Plan: 2 of 2 in current phase
-Status: Phase Complete
-Last activity: 2026-02-26 — Completed 01-02-PLAN.md
+Milestone: v0.5 Python API Alignment — SHIPPED 2026-02-26
+Status: Complete
+Last activity: 2026-02-26 — Milestone archived
 
 Progress: [██████████] 100%
 
@@ -47,25 +46,18 @@ Progress: [██████████] 100%
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
-
-- kwargs over dict positional arg (Julia pattern is more Pythonic)
-- Delete Element class entirely (no use case that kwargs cannot handle)
-- kwargs-to-Element conversion uses try/finally for RAII-style cleanup (01-01)
-- Element import in database.py is internal: from quiverdb.element import Element (01-01)
-- Non-chained CSV test patterns collapsed into single kwargs calls (01-02)
-- CLAUDE.md updated with Python kwargs documentation in 4 sections (01-02)
+Full log archived in `.planning/milestones/v0.5-ROADMAP.md`.
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
-None yet.
+None.
 
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 01-02-PLAN.md (Phase 01 complete)
+Stopped at: Milestone v0.5 archived
 Resume file: None

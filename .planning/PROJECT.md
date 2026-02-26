@@ -23,40 +23,36 @@ A single, consistent API surface across all language bindings — thin wrappers 
 - ✓ Julia binding: kwargs-based create/update, complete API coverage
 - ✓ Dart binding: dict-based create/update, complete API coverage
 - ✓ Python binding: CFFI ABI-mode, complete API coverage
+- ✓ Python kwargs-based create_element/update_element — v0.5
+- ✓ Element class removed from Python public API — v0.5
+- ✓ All Python tests converted to kwargs API — v0.5
 
 ### Active
 
 <!-- Current scope. Building toward these. -->
 
-- [ ] Python binding follows Julia/Dart pattern: kwargs for create_element/update_element
-- [ ] Element class removed from Python public API
-- [ ] Python tests updated for new API
+(None — planning next milestone)
 
 ### Out of Scope
 
 - Blob subsystem bindings — experimental, not exposed via C API
-- New C++ core features — v0.5 is binding alignment only
-- Julia/Dart binding changes — already follow the target pattern
 - Lua binding changes — separate concern from Python alignment
-
-## Current Milestone: v0.5 Python API Alignment
-
-**Goal:** Make Python binding follow the same kwargs/dict pattern as Julia and Dart for element creation and updates.
-
-**Target features:**
-- kwargs-based `create_element` and `update_element`
-- Remove Element from public API (delete unused code)
-- Update all Python tests
+- Dict positional arg for create/update — `**my_dict` unpacking covers this
 
 ## Context
 
-- Python currently requires `Element().set("k", v)` builder pattern
-- Julia uses kwargs: `create_element!(db, "C"; label="x")`
-- Dart uses dict: `createElement("C", {"label": "x"})`
-- Python should use kwargs: `create_element("C", label="x")`
-- `**my_dict` unpacking covers dynamic construction use cases
-- CFFI ABI-mode means no compiler needed at install time
-- Element is a C-level object — must still be constructed internally for FFI calls
+Shipped v0.5 on 2026-02-26. Python binding now uses kwargs for create/update, matching Julia and Dart patterns. All 198 Python tests pass with kwargs-only API. Element class is internal-only for FFI marshaling.
+
+Tech stack: C++20, CMake, SQLite, spdlog, sol2, CFFI (Python), CxxWrap (Julia), dart:ffi (Dart).
+
+## Key Decisions
+
+| Decision | Rationale | Outcome |
+|----------|-----------|---------|
+| kwargs over dict positional arg | Julia pattern is more Pythonic; `**dict` unpacking covers dict use case | ✓ Good |
+| Delete Element class entirely | No use case that kwargs can't handle; "delete unused code, do not deprecate" | ✓ Good |
+| kwargs-to-Element try/finally cleanup | Matches Julia binding pattern; ensures C-level Element is always freed | ✓ Good |
+| Internal Element import in database.py | `from quiverdb.element import Element` — not in `__init__.py` exports | ✓ Good |
 
 ## Constraints
 
@@ -64,12 +60,5 @@ A single, consistent API surface across all language bindings — thin wrappers 
 - **Breaking changes**: Acceptable. No backwards compatibility required.
 - **Code quality**: Human-readable, clean, maintainable. Delete unused code.
 
-## Key Decisions
-
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| kwargs over dict positional arg | Julia pattern is more Pythonic; `**dict` unpacking covers dict use case | — Pending |
-| Delete Element class entirely | No use case that kwargs can't handle; "delete unused code, do not deprecate" | — Pending |
-
 ---
-*Last updated: 2026-02-26 after milestone v0.5 started*
+*Last updated: 2026-02-26 after v0.5 milestone*
