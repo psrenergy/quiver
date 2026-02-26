@@ -4,12 +4,7 @@ import 'package:path/path.dart' as path;
 
 void main() {
   // Path to central tests folder
-  final testsPath = path.join(
-    path.current,
-    '..',
-    '..',
-    'tests',
-  );
+  final testsPath = path.join(path.current, '..', '..', 'tests');
 
   group('Update Element', () {
     test('updates single scalar attribute', () {
@@ -18,14 +13,24 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 100});
-        db.createElement('Configuration', {'label': 'Config 2', 'integer_attribute': 200});
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 100,
+        });
+        db.createElement('Configuration', {
+          'label': 'Config 2',
+          'integer_attribute': 200,
+        });
 
         // Update single attribute
         db.updateElement('Configuration', 1, {'integer_attribute': 999});
 
         // Verify update
-        final value = db.readScalarIntegerById('Configuration', 'integer_attribute', 1);
+        final value = db.readScalarIntegerById(
+          'Configuration',
+          'integer_attribute',
+          1,
+        );
         expect(value, equals(999));
 
         // Verify label unchanged
@@ -55,10 +60,18 @@ void main() {
         });
 
         // Verify updates
-        final intValue = db.readScalarIntegerById('Configuration', 'integer_attribute', 1);
+        final intValue = db.readScalarIntegerById(
+          'Configuration',
+          'integer_attribute',
+          1,
+        );
         expect(intValue, equals(500));
 
-        final floatValue = db.readScalarFloatById('Configuration', 'float_attribute', 1);
+        final floatValue = db.readScalarFloatById(
+          'Configuration',
+          'float_attribute',
+          1,
+        );
         expect(floatValue, equals(9.9));
 
         // Verify label unchanged
@@ -75,22 +88,43 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 100});
-        db.createElement('Configuration', {'label': 'Config 2', 'integer_attribute': 200});
-        db.createElement('Configuration', {'label': 'Config 3', 'integer_attribute': 300});
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 100,
+        });
+        db.createElement('Configuration', {
+          'label': 'Config 2',
+          'integer_attribute': 200,
+        });
+        db.createElement('Configuration', {
+          'label': 'Config 3',
+          'integer_attribute': 300,
+        });
 
         // Update only element 2
         db.updateElement('Configuration', 2, {'integer_attribute': 999});
 
         // Verify element 2 updated
-        final value2 = db.readScalarIntegerById('Configuration', 'integer_attribute', 2);
+        final value2 = db.readScalarIntegerById(
+          'Configuration',
+          'integer_attribute',
+          2,
+        );
         expect(value2, equals(999));
 
         // Verify elements 1 and 3 unchanged
-        final value1 = db.readScalarIntegerById('Configuration', 'integer_attribute', 1);
+        final value1 = db.readScalarIntegerById(
+          'Configuration',
+          'integer_attribute',
+          1,
+        );
         expect(value1, equals(100));
 
-        final value3 = db.readScalarIntegerById('Configuration', 'integer_attribute', 3);
+        final value3 = db.readScalarIntegerById(
+          'Configuration',
+          'integer_attribute',
+          3,
+        );
         expect(value3, equals(300));
       } finally {
         db.close();
@@ -119,11 +153,19 @@ void main() {
         });
 
         // Verify scalar was updated
-        final intValue = db.readScalarIntegerById('Collection', 'some_integer', 1);
+        final intValue = db.readScalarIntegerById(
+          'Collection',
+          'some_integer',
+          1,
+        );
         expect(intValue, equals(999));
 
         // Verify vector was also updated
-        final vecValues = db.readVectorIntegersById('Collection', 'value_int', 1);
+        final vecValues = db.readVectorIntegersById(
+          'Collection',
+          'value_int',
+          1,
+        );
         expect(vecValues, equals([7, 8, 9]));
       } finally {
         db.close();
@@ -216,7 +258,10 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 100});
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 100,
+        });
 
         // Update using Element builder
         final element = Element();
@@ -228,7 +273,11 @@ void main() {
         }
 
         // Verify update
-        final value = db.readScalarIntegerById('Configuration', 'integer_attribute', 1);
+        final value = db.readScalarIntegerById(
+          'Configuration',
+          'integer_attribute',
+          1,
+        );
         expect(value, equals(777));
       } finally {
         db.close();
@@ -245,9 +294,14 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 100});
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 100,
+        });
         expect(
-          () => db.updateElement('NonexistentCollection', 1, {'integer_attribute': 999}),
+          () => db.updateElement('NonexistentCollection', 1, {
+            'integer_attribute': 999,
+          }),
           throwsA(isA<DatabaseException>()),
         );
       } finally {
@@ -263,13 +317,20 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 100});
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 100,
+        });
 
         // Update element that doesn't exist - should not throw
         db.updateElement('Configuration', 999, {'integer_attribute': 500});
 
         // Verify original element unchanged
-        final value = db.readScalarIntegerById('Configuration', 'integer_attribute', 1);
+        final value = db.readScalarIntegerById(
+          'Configuration',
+          'integer_attribute',
+          1,
+        );
         expect(value, equals(100));
       } finally {
         db.close();
@@ -284,9 +345,14 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 100});
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 100,
+        });
         expect(
-          () => db.updateElement('Configuration', 1, {'nonexistent_attribute': 999}),
+          () => db.updateElement('Configuration', 1, {
+            'nonexistent_attribute': 999,
+          }),
           throwsA(isA<DatabaseException>()),
         );
       } finally {
@@ -302,11 +368,18 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Config 1', 'string_attribute': 'original'});
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'string_attribute': 'original',
+        });
 
         db.updateElement('Configuration', 1, {'string_attribute': 'updated'});
 
-        final value = db.readScalarStringById('Configuration', 'string_attribute', 1);
+        final value = db.readScalarStringById(
+          'Configuration',
+          'string_attribute',
+          1,
+        );
         expect(value, equals('updated'));
       } finally {
         db.close();
@@ -321,11 +394,18 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Config 1', 'float_attribute': 1.5});
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'float_attribute': 1.5,
+        });
 
         db.updateElement('Configuration', 1, {'float_attribute': 99.99});
 
-        final value = db.readScalarFloatById('Configuration', 'float_attribute', 1);
+        final value = db.readScalarFloatById(
+          'Configuration',
+          'float_attribute',
+          1,
+        );
         expect(value, equals(99.99));
       } finally {
         db.close();
@@ -340,15 +420,27 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 100});
-        db.createElement('Configuration', {'label': 'Config 2', 'integer_attribute': 200});
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 100,
+        });
+        db.createElement('Configuration', {
+          'label': 'Config 2',
+          'integer_attribute': 200,
+        });
 
         // Update both elements
         db.updateElement('Configuration', 1, {'integer_attribute': 111});
         db.updateElement('Configuration', 2, {'integer_attribute': 222});
 
-        expect(db.readScalarIntegerById('Configuration', 'integer_attribute', 1), equals(111));
-        expect(db.readScalarIntegerById('Configuration', 'integer_attribute', 2), equals(222));
+        expect(
+          db.readScalarIntegerById('Configuration', 'integer_attribute', 1),
+          equals(111),
+        );
+        expect(
+          db.readScalarIntegerById('Configuration', 'integer_attribute', 2),
+          equals(222),
+        );
       } finally {
         db.close();
       }
@@ -366,13 +458,18 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 42});
-
-        db.updateElement('Configuration', 1, {
-          'integer_attribute': 100,
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 42,
         });
 
-        final value = db.readScalarIntegerById('Configuration', 'integer_attribute', 1);
+        db.updateElement('Configuration', 1, {'integer_attribute': 100});
+
+        final value = db.readScalarIntegerById(
+          'Configuration',
+          'integer_attribute',
+          1,
+        );
         expect(value, equals(100));
       } finally {
         db.close();
@@ -385,13 +482,18 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 42});
-
-        db.updateElement('Configuration', 1, {
-          'integer_attribute': 0,
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 42,
         });
 
-        final value = db.readScalarIntegerById('Configuration', 'integer_attribute', 1);
+        db.updateElement('Configuration', 1, {'integer_attribute': 0});
+
+        final value = db.readScalarIntegerById(
+          'Configuration',
+          'integer_attribute',
+          1,
+        );
         expect(value, equals(0));
       } finally {
         db.close();
@@ -404,11 +506,18 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 42});
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 42,
+        });
 
         db.updateElement('Configuration', 1, {'integer_attribute': -999});
 
-        final value = db.readScalarIntegerById('Configuration', 'integer_attribute', 1);
+        final value = db.readScalarIntegerById(
+          'Configuration',
+          'integer_attribute',
+          1,
+        );
         expect(value, equals(-999));
       } finally {
         db.close();
@@ -421,13 +530,25 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 42});
-        db.createElement('Configuration', {'label': 'Config 2', 'integer_attribute': 100});
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 42,
+        });
+        db.createElement('Configuration', {
+          'label': 'Config 2',
+          'integer_attribute': 100,
+        });
 
         db.updateElement('Configuration', 1, {'integer_attribute': 999});
 
-        expect(db.readScalarIntegerById('Configuration', 'integer_attribute', 1), equals(999));
-        expect(db.readScalarIntegerById('Configuration', 'integer_attribute', 2), equals(100));
+        expect(
+          db.readScalarIntegerById('Configuration', 'integer_attribute', 1),
+          equals(999),
+        );
+        expect(
+          db.readScalarIntegerById('Configuration', 'integer_attribute', 2),
+          equals(100),
+        );
       } finally {
         db.close();
       }
@@ -440,7 +561,9 @@ void main() {
       );
       try {
         expect(
-          () => db.updateElement('NonexistentCollection', 1, {'integer_attribute': 42}),
+          () => db.updateElement('NonexistentCollection', 1, {
+            'integer_attribute': 42,
+          }),
           throwsA(isA<DatabaseException>()),
         );
       } finally {
@@ -454,9 +577,14 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Config 1', 'integer_attribute': 42});
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'integer_attribute': 42,
+        });
         expect(
-          () => db.updateElement('Configuration', 1, {'nonexistent_attribute': 100}),
+          () => db.updateElement('Configuration', 1, {
+            'nonexistent_attribute': 100,
+          }),
           throwsA(isA<DatabaseException>()),
         );
       } finally {
@@ -472,11 +600,18 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Config 1', 'float_attribute': 3.14});
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'float_attribute': 3.14,
+        });
 
         db.updateElement('Configuration', 1, {'float_attribute': 2.71});
 
-        final value = db.readScalarFloatById('Configuration', 'float_attribute', 1);
+        final value = db.readScalarFloatById(
+          'Configuration',
+          'float_attribute',
+          1,
+        );
         expect(value, equals(2.71));
       } finally {
         db.close();
@@ -489,11 +624,18 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Config 1', 'float_attribute': 3.14});
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'float_attribute': 3.14,
+        });
 
         db.updateElement('Configuration', 1, {'float_attribute': 0.0});
 
-        final value = db.readScalarFloatById('Configuration', 'float_attribute', 1);
+        final value = db.readScalarFloatById(
+          'Configuration',
+          'float_attribute',
+          1,
+        );
         expect(value, equals(0.0));
       } finally {
         db.close();
@@ -506,11 +648,20 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Config 1', 'float_attribute': 1.0});
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'float_attribute': 1.0,
+        });
 
-        db.updateElement('Configuration', 1, {'float_attribute': 1.23456789012345});
+        db.updateElement('Configuration', 1, {
+          'float_attribute': 1.23456789012345,
+        });
 
-        final value = db.readScalarFloatById('Configuration', 'float_attribute', 1);
+        final value = db.readScalarFloatById(
+          'Configuration',
+          'float_attribute',
+          1,
+        );
         expect(value, closeTo(1.23456789012345, 1e-10));
       } finally {
         db.close();
@@ -525,11 +676,18 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Config 1', 'string_attribute': 'hello'});
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'string_attribute': 'hello',
+        });
 
         db.updateElement('Configuration', 1, {'string_attribute': 'world'});
 
-        final value = db.readScalarStringById('Configuration', 'string_attribute', 1);
+        final value = db.readScalarStringById(
+          'Configuration',
+          'string_attribute',
+          1,
+        );
         expect(value, equals('world'));
       } finally {
         db.close();
@@ -542,11 +700,18 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Config 1', 'string_attribute': 'hello'});
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'string_attribute': 'hello',
+        });
 
         db.updateElement('Configuration', 1, {'string_attribute': ''});
 
-        final value = db.readScalarStringById('Configuration', 'string_attribute', 1);
+        final value = db.readScalarStringById(
+          'Configuration',
+          'string_attribute',
+          1,
+        );
         expect(value, equals(''));
       } finally {
         db.close();
@@ -559,11 +724,18 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Config 1', 'string_attribute': 'hello'});
+        db.createElement('Configuration', {
+          'label': 'Config 1',
+          'string_attribute': 'hello',
+        });
 
         db.updateElement('Configuration', 1, {'string_attribute': '日本語テスト'});
 
-        final value = db.readScalarStringById('Configuration', 'string_attribute', 1);
+        final value = db.readScalarStringById(
+          'Configuration',
+          'string_attribute',
+          1,
+        );
         expect(value, equals('日本語テスト'));
       } finally {
         db.close();
@@ -583,9 +755,15 @@ void main() {
           'date_attribute': '2024-01-01T00:00:00',
         });
 
-        db.updateElement('Configuration', 1, {'date_attribute': '2025-12-31T23:59:59'});
+        db.updateElement('Configuration', 1, {
+          'date_attribute': '2025-12-31T23:59:59',
+        });
 
-        final date = db.readScalarStringById('Configuration', 'date_attribute', 1);
+        final date = db.readScalarStringById(
+          'Configuration',
+          'date_attribute',
+          1,
+        );
         expect(date, equals('2025-12-31T23:59:59'));
       } finally {
         db.close();
@@ -612,13 +790,20 @@ void main() {
         }
 
         // Verify it was stored correctly
-        final dateStr = db.readScalarStringById('Configuration', 'date_attribute', 1);
+        final dateStr = db.readScalarStringById(
+          'Configuration',
+          'date_attribute',
+          1,
+        );
         expect(dateStr, equals('2025-06-15T12:30:45'));
 
         // Verify readAllScalarsById returns native DateTime
         final scalars = db.readAllScalarsById('Configuration', 1);
         expect(scalars['date_attribute'], isA<DateTime>());
-        expect(scalars['date_attribute'], equals(DateTime(2025, 6, 15, 12, 30, 45)));
+        expect(
+          scalars['date_attribute'],
+          equals(DateTime(2025, 6, 15, 12, 30, 45)),
+        );
       } finally {
         db.close();
       }
@@ -707,7 +892,10 @@ void main() {
         db.createElement('Collection', {'label': 'Item 1'});
 
         // Verify initially empty
-        expect(db.readVectorIntegersById('Collection', 'value_int', 1), isEmpty);
+        expect(
+          db.readVectorIntegersById('Collection', 'value_int', 1),
+          isEmpty,
+        );
 
         db.updateElement('Collection', 1, {
           'value_int': [1, 2, 3],
@@ -740,8 +928,14 @@ void main() {
           'value_int': [100, 200],
         });
 
-        expect(db.readVectorIntegersById('Collection', 'value_int', 1), equals([100, 200]));
-        expect(db.readVectorIntegersById('Collection', 'value_int', 2), equals([10, 20]));
+        expect(
+          db.readVectorIntegersById('Collection', 'value_int', 1),
+          equals([100, 200]),
+        );
+        expect(
+          db.readVectorIntegersById('Collection', 'value_int', 2),
+          equals([10, 20]),
+        );
       } finally {
         db.close();
       }
@@ -930,8 +1124,14 @@ void main() {
           'tag': ['updated'],
         });
 
-        expect(db.readSetStringsById('Collection', 'tag', 1), equals(['updated']));
-        expect(db.readSetStringsById('Collection', 'tag', 2).toSet(), equals({'urgent', 'review'}));
+        expect(
+          db.readSetStringsById('Collection', 'tag', 1),
+          equals(['updated']),
+        );
+        expect(
+          db.readSetStringsById('Collection', 'tag', 2).toSet(),
+          equals({'urgent', 'review'}),
+        );
       } finally {
         db.close();
       }
@@ -1060,7 +1260,10 @@ void main() {
         db.createElement('Configuration', {'label': 'Test Config'});
         db.createElement('Parent', {'label': 'Parent 1'});
         db.createElement('Parent', {'label': 'Parent 2'});
-        db.createElement('Child', {'label': 'Child 1', 'parent_id': 'Parent 1'});
+        db.createElement('Child', {
+          'label': 'Child 1',
+          'parent_id': 'Parent 1',
+        });
 
         // Update child: change parent_id to Parent 2 using string label
         db.updateElement('Child', 1, {'parent_id': 'Parent 2'});
@@ -1249,9 +1452,18 @@ void main() {
         });
 
         // Verify values updated correctly (pre-resolve passthrough safe for non-FK schemas)
-        expect(db.readScalarIntegerById('Configuration', 'integer_attribute', 1), equals(100));
-        expect(db.readScalarFloatById('Configuration', 'float_attribute', 1), equals(2.71));
-        expect(db.readScalarStringById('Configuration', 'string_attribute', 1), equals('world'));
+        expect(
+          db.readScalarIntegerById('Configuration', 'integer_attribute', 1),
+          equals(100),
+        );
+        expect(
+          db.readScalarFloatById('Configuration', 'float_attribute', 1),
+          equals(2.71),
+        );
+        expect(
+          db.readScalarStringById('Configuration', 'string_attribute', 1),
+          equals('world'),
+        );
       } finally {
         db.close();
       }
@@ -1265,11 +1477,15 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Test Config'});
         db.createElement('Parent', {'label': 'Parent 1'});
-        db.createElement('Child', {'label': 'Child 1', 'parent_id': 'Parent 1'});
+        db.createElement('Child', {
+          'label': 'Child 1',
+          'parent_id': 'Parent 1',
+        });
 
         // Attempt update with nonexistent FK label
         expect(
-          () => db.updateElement('Child', 1, {'parent_id': 'Nonexistent Parent'}),
+          () =>
+              db.updateElement('Child', 1, {'parent_id': 'Nonexistent Parent'}),
           throwsA(isA<DatabaseException>()),
         );
 
@@ -1296,7 +1512,11 @@ void main() {
 
         db.updateElement('Configuration', 1, {'string_attribute': '  world  '});
 
-        final value = db.readScalarStringById('Configuration', 'string_attribute', 1);
+        final value = db.readScalarStringById(
+          'Configuration',
+          'string_attribute',
+          1,
+        );
         expect(value, equals('world'));
       } finally {
         db.close();

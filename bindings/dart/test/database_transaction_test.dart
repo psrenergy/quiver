@@ -4,12 +4,7 @@ import 'package:path/path.dart' as path;
 
 void main() {
   // Path to central tests folder
-  final testsPath = path.join(
-    path.current,
-    '..',
-    '..',
-    'tests',
-  );
+  final testsPath = path.join(path.current, '..', '..', 'tests');
 
   group('Transaction', () {
     test('begin and commit persists', () {
@@ -20,10 +15,7 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Config'});
         db.beginTransaction();
-        db.createElement('Collection', {
-          'label': 'Item 1',
-          'some_integer': 10,
-        });
+        db.createElement('Collection', {'label': 'Item 1', 'some_integer': 10});
         db.commit();
 
         final labels = db.readScalarStrings('Collection', 'label');
@@ -42,10 +34,7 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Config'});
         db.beginTransaction();
-        db.createElement('Collection', {
-          'label': 'Item 1',
-          'some_integer': 10,
-        });
+        db.createElement('Collection', {'label': 'Item 1', 'some_integer': 10});
         db.rollback();
 
         final labels = db.readScalarStrings('Collection', 'label');
@@ -63,10 +52,7 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Config'});
         db.beginTransaction();
-        expect(
-          () => db.beginTransaction(),
-          throwsA(isA<DatabaseException>()),
-        );
+        expect(() => db.beginTransaction(), throwsA(isA<DatabaseException>()));
         // Clean up: rollback the first transaction
         db.rollback();
       } finally {
@@ -81,10 +67,7 @@ void main() {
       );
       try {
         db.createElement('Configuration', {'label': 'Config'});
-        expect(
-          () => db.commit(),
-          throwsA(isA<DatabaseException>()),
-        );
+        expect(() => db.commit(), throwsA(isA<DatabaseException>()));
       } finally {
         db.close();
       }
@@ -97,10 +80,7 @@ void main() {
       );
       try {
         db.createElement('Configuration', {'label': 'Config'});
-        expect(
-          () => db.rollback(),
-          throwsA(isA<DatabaseException>()),
-        );
+        expect(() => db.rollback(), throwsA(isA<DatabaseException>()));
       } finally {
         db.close();
       }
@@ -193,9 +173,7 @@ void main() {
             'some_integer': 20,
           });
 
-          db.updateElement('Collection', 1, {
-            'some_integer': 100,
-          });
+          db.updateElement('Collection', 1, {'some_integer': 100});
           return null;
         });
 

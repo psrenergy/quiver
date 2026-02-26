@@ -4,12 +4,7 @@ import 'package:path/path.dart' as path;
 
 void main() {
   // Path to central tests folder
-  final testsPath = path.join(
-    path.current,
-    '..',
-    '..',
-    'tests',
-  );
+  final testsPath = path.join(path.current, '..', '..', 'tests');
 
   group('Time Series Metadata', () {
     test('getTimeSeriesMetadata returns metadata for group', () {
@@ -43,18 +38,21 @@ void main() {
       }
     });
 
-    test('listTimeSeriesGroups returns empty for collection without time series', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
-      );
-      try {
-        final groups = db.listTimeSeriesGroups('Configuration');
-        expect(groups, isEmpty);
-      } finally {
-        db.close();
-      }
-    });
+    test(
+      'listTimeSeriesGroups returns empty for collection without time series',
+      () {
+        final db = Database.fromSchema(
+          ':memory:',
+          path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+        );
+        try {
+          final groups = db.listTimeSeriesGroups('Configuration');
+          expect(groups, isEmpty);
+        } finally {
+          db.close();
+        }
+      },
+    );
   });
 
   group('Time Series Read', () {
@@ -69,7 +67,11 @@ void main() {
 
         // Insert time series data using Map-based columnar interface
         db.updateTimeSeriesGroup('Collection', 'data', id, {
-          'date_time': ['2024-01-01T10:00:00', '2024-01-01T11:00:00', '2024-01-01T12:00:00'],
+          'date_time': [
+            '2024-01-01T10:00:00',
+            '2024-01-01T11:00:00',
+            '2024-01-01T12:00:00',
+          ],
           'value': [1.5, 2.5, 3.5],
         });
 
@@ -179,7 +181,11 @@ void main() {
 
         // Insert out of order using Map-based columnar interface
         db.updateTimeSeriesGroup('Collection', 'data', id, {
-          'date_time': ['2024-01-03T10:00:00', '2024-01-01T10:00:00', '2024-01-02T10:00:00'],
+          'date_time': [
+            '2024-01-03T10:00:00',
+            '2024-01-01T10:00:00',
+            '2024-01-02T10:00:00',
+          ],
           'value': [3.0, 1.0, 2.0],
         });
 
@@ -318,20 +324,23 @@ void main() {
       }
     });
 
-    test('listTimeSeriesFilesColumns throws for collection without files table', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
-      );
-      try {
-        expect(
-          () => db.listTimeSeriesFilesColumns('Configuration'),
-          throwsA(isA<DatabaseException>()),
+    test(
+      'listTimeSeriesFilesColumns throws for collection without files table',
+      () {
+        final db = Database.fromSchema(
+          ':memory:',
+          path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
         );
-      } finally {
-        db.close();
-      }
-    });
+        try {
+          expect(
+            () => db.listTimeSeriesFilesColumns('Configuration'),
+            throwsA(isA<DatabaseException>()),
+          );
+        } finally {
+          db.close();
+        }
+      },
+    );
   });
 
   group('Multi-Column Time Series', () {
@@ -467,7 +476,11 @@ void main() {
 
         // Insert out of order
         db.updateTimeSeriesGroup('Sensor', 'readings', id, {
-          'date_time': ['2024-01-03T10:00:00', '2024-01-01T10:00:00', '2024-01-02T10:00:00'],
+          'date_time': [
+            '2024-01-03T10:00:00',
+            '2024-01-01T10:00:00',
+            '2024-01-02T10:00:00',
+          ],
           'temperature': [22.0, 20.0, 21.0],
           'humidity': [55, 45, 50],
           'status': ['high', 'normal', 'medium'],
@@ -507,7 +520,10 @@ void main() {
 
         // Read back as DateTime objects
         final result = db.readTimeSeriesGroup('Sensor', 'readings', id);
-        expect(result['date_time']![0], equals(DateTime(2024, 3, 20, 8, 15, 0)));
+        expect(
+          result['date_time']![0],
+          equals(DateTime(2024, 3, 20, 8, 15, 0)),
+        );
         expect(result['date_time'], isA<List<DateTime>>());
       } finally {
         db.close();

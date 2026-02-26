@@ -44,7 +44,12 @@ extension DatabaseUpdate on Database {
   /// Takes a Map of column names to typed Lists.
   /// Supported value types: int, double, String, DateTime.
   /// An empty Map clears all rows for that element.
-  void updateTimeSeriesGroup(String collection, String group, int id, Map<String, List<Object>> data) {
+  void updateTimeSeriesGroup(
+    String collection,
+    String group,
+    int id,
+    Map<String, List<Object>> data,
+  ) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -105,18 +110,24 @@ extension DatabaseUpdate on Database {
           columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_STRING;
           final arr = arena<Pointer<Char>>(rowCount);
           for (var r = 0; r < rowCount; r++) {
-            arr[r] = (values[r] as String).toNativeUtf8(allocator: arena).cast();
+            arr[r] = (values[r] as String)
+                .toNativeUtf8(allocator: arena)
+                .cast();
           }
           columnData[i] = arr.cast();
         } else if (values.first is DateTime) {
           columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_STRING;
           final arr = arena<Pointer<Char>>(rowCount);
           for (var r = 0; r < rowCount; r++) {
-            arr[r] = dateTimeToString(values[r] as DateTime).toNativeUtf8(allocator: arena).cast();
+            arr[r] = dateTimeToString(
+              values[r] as DateTime,
+            ).toNativeUtf8(allocator: arena).cast();
           }
           columnData[i] = arr.cast();
         } else {
-          throw ArgumentError('Unsupported value type: ${values.first.runtimeType}');
+          throw ArgumentError(
+            'Unsupported value type: ${values.first.runtimeType}',
+          );
         }
         i++;
       }

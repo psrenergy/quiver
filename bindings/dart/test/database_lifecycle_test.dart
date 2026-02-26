@@ -123,10 +123,7 @@ void main() {
     test('throws after close', () {
       final db = Database.fromSchema(':memory:', schemaPath);
       db.close();
-      expect(
-        () => db.currentVersion(),
-        throwsA(isA<StateError>()),
-      );
+      expect(() => db.currentVersion(), throwsA(isA<StateError>()));
     });
   });
 

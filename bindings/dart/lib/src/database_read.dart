@@ -94,7 +94,10 @@ extension DatabaseRead on Database {
         return [];
       }
 
-      final result = List<String>.generate(count, (i) => outValues.value[i].cast<Utf8>().toDartString());
+      final result = List<String>.generate(
+        count,
+        (i) => outValues.value[i].cast<Utf8>().toDartString(),
+      );
       bindings.quiver_database_free_string_array(outValues.value, count);
       return result;
     } finally {
@@ -137,7 +140,11 @@ extension DatabaseRead on Database {
           result.add(List<int>.generate(size, (j) => outVectors.value[i][j]));
         }
       }
-      bindings.quiver_database_free_integer_vectors(outVectors.value, outSizes.value, count);
+      bindings.quiver_database_free_integer_vectors(
+        outVectors.value,
+        outSizes.value,
+        count,
+      );
       return result;
     } finally {
       arena.releaseAll();
@@ -176,10 +183,16 @@ extension DatabaseRead on Database {
         if (size == 0 || outVectors.value[i] == nullptr) {
           result.add([]);
         } else {
-          result.add(List<double>.generate(size, (j) => outVectors.value[i][j]));
+          result.add(
+            List<double>.generate(size, (j) => outVectors.value[i][j]),
+          );
         }
       }
-      bindings.quiver_database_free_float_vectors(outVectors.value, outSizes.value, count);
+      bindings.quiver_database_free_float_vectors(
+        outVectors.value,
+        outSizes.value,
+        count,
+      );
       return result;
     } finally {
       arena.releaseAll();
@@ -218,10 +231,19 @@ extension DatabaseRead on Database {
         if (size == 0 || outVectors.value[i] == nullptr) {
           result.add([]);
         } else {
-          result.add(List<String>.generate(size, (j) => outVectors.value[i][j].cast<Utf8>().toDartString()));
+          result.add(
+            List<String>.generate(
+              size,
+              (j) => outVectors.value[i][j].cast<Utf8>().toDartString(),
+            ),
+          );
         }
       }
-      bindings.quiver_database_free_string_vectors(outVectors.value, outSizes.value, count);
+      bindings.quiver_database_free_string_vectors(
+        outVectors.value,
+        outSizes.value,
+        count,
+      );
       return result;
     } finally {
       arena.releaseAll();
@@ -263,7 +285,11 @@ extension DatabaseRead on Database {
           result.add(List<int>.generate(size, (j) => outSets.value[i][j]));
         }
       }
-      bindings.quiver_database_free_integer_vectors(outSets.value, outSizes.value, count);
+      bindings.quiver_database_free_integer_vectors(
+        outSets.value,
+        outSizes.value,
+        count,
+      );
       return result;
     } finally {
       arena.releaseAll();
@@ -305,7 +331,11 @@ extension DatabaseRead on Database {
           result.add(List<double>.generate(size, (j) => outSets.value[i][j]));
         }
       }
-      bindings.quiver_database_free_float_vectors(outSets.value, outSizes.value, count);
+      bindings.quiver_database_free_float_vectors(
+        outSets.value,
+        outSizes.value,
+        count,
+      );
       return result;
     } finally {
       arena.releaseAll();
@@ -344,10 +374,19 @@ extension DatabaseRead on Database {
         if (size == 0 || outSets.value[i] == nullptr) {
           result.add([]);
         } else {
-          result.add(List<String>.generate(size, (j) => outSets.value[i][j].cast<Utf8>().toDartString()));
+          result.add(
+            List<String>.generate(
+              size,
+              (j) => outSets.value[i][j].cast<Utf8>().toDartString(),
+            ),
+          );
         }
       }
-      bindings.quiver_database_free_string_vectors(outSets.value, outSizes.value, count);
+      bindings.quiver_database_free_string_vectors(
+        outSets.value,
+        outSizes.value,
+        count,
+      );
       return result;
     } finally {
       arena.releaseAll();
@@ -452,7 +491,11 @@ extension DatabaseRead on Database {
 
   /// Reads a DateTime value for a scalar attribute by element ID.
   /// Returns null if the element is not found.
-  DateTime? readScalarDateTimeById(String collection, String attribute, int id) {
+  DateTime? readScalarDateTimeById(
+    String collection,
+    String attribute,
+    int id,
+  ) {
     final strValue = readScalarStringById(collection, attribute, id);
     return strValue == null ? null : stringToDateTime(strValue);
   }
@@ -462,7 +505,11 @@ extension DatabaseRead on Database {
   // ==========================================================================
 
   /// Reads integer vector for a vector attribute by element ID.
-  List<int> readVectorIntegersById(String collection, String attribute, int id) {
+  List<int> readVectorIntegersById(
+    String collection,
+    String attribute,
+    int id,
+  ) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -495,7 +542,11 @@ extension DatabaseRead on Database {
   }
 
   /// Reads float vector for a vector attribute by element ID.
-  List<double> readVectorFloatsById(String collection, String attribute, int id) {
+  List<double> readVectorFloatsById(
+    String collection,
+    String attribute,
+    int id,
+  ) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -528,7 +579,11 @@ extension DatabaseRead on Database {
   }
 
   /// Reads string vector for a vector attribute by element ID.
-  List<String> readVectorStringsById(String collection, String attribute, int id) {
+  List<String> readVectorStringsById(
+    String collection,
+    String attribute,
+    int id,
+  ) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -552,7 +607,10 @@ extension DatabaseRead on Database {
         return [];
       }
 
-      final result = List<String>.generate(count, (i) => outValues.value[i].cast<Utf8>().toDartString());
+      final result = List<String>.generate(
+        count,
+        (i) => outValues.value[i].cast<Utf8>().toDartString(),
+      );
       bindings.quiver_database_free_string_array(outValues.value, count);
       return result;
     } finally {
@@ -561,8 +619,16 @@ extension DatabaseRead on Database {
   }
 
   /// Reads DateTime vector for a vector attribute by element ID.
-  List<DateTime> readVectorDateTimesById(String collection, String attribute, int id) {
-    return readVectorStringsById(collection, attribute, id).map((s) => stringToDateTime(s)).toList();
+  List<DateTime> readVectorDateTimesById(
+    String collection,
+    String attribute,
+    int id,
+  ) {
+    return readVectorStringsById(
+      collection,
+      attribute,
+      id,
+    ).map((s) => stringToDateTime(s)).toList();
   }
 
   // ==========================================================================
@@ -660,7 +726,10 @@ extension DatabaseRead on Database {
         return [];
       }
 
-      final result = List<String>.generate(count, (i) => outValues.value[i].cast<Utf8>().toDartString());
+      final result = List<String>.generate(
+        count,
+        (i) => outValues.value[i].cast<Utf8>().toDartString(),
+      );
       bindings.quiver_database_free_string_array(outValues.value, count);
       return result;
     } finally {
@@ -669,8 +738,16 @@ extension DatabaseRead on Database {
   }
 
   /// Reads DateTime set for a set attribute by element ID.
-  List<DateTime> readSetDateTimesById(String collection, String attribute, int id) {
-    return readSetStringsById(collection, attribute, id).map((s) => stringToDateTime(s)).toList();
+  List<DateTime> readSetDateTimesById(
+    String collection,
+    String attribute,
+    int id,
+  ) {
+    return readSetStringsById(
+      collection,
+      attribute,
+      id,
+    ).map((s) => stringToDateTime(s)).toList();
   }
 
   // ==========================================================================
@@ -786,7 +863,11 @@ extension DatabaseRead on Database {
   /// Reads a vector group for an element by ID, returning rows as maps.
   /// Each row contains column names mapped to their values.
   /// Useful for multi-column vector tables.
-  List<Map<String, Object?>> readVectorGroupById(String collection, String group, int id) {
+  List<Map<String, Object?>> readVectorGroupById(
+    String collection,
+    String group,
+    int id,
+  ) {
     _ensureNotClosed();
 
     // Get metadata for this group
@@ -836,7 +917,11 @@ extension DatabaseRead on Database {
   /// Reads a set group for an element by ID, returning rows as maps.
   /// Each row contains column names mapped to their values.
   /// Useful for multi-column set tables.
-  List<Map<String, Object?>> readSetGroupById(String collection, String group, int id) {
+  List<Map<String, Object?>> readSetGroupById(
+    String collection,
+    String group,
+    int id,
+  ) {
     _ensureNotClosed();
 
     // Get metadata for this group
@@ -892,7 +977,11 @@ extension DatabaseRead on Database {
   /// The dimension column is parsed to List<DateTime>.
   /// INTEGER columns return List<int>, FLOAT columns return List<double>,
   /// other TEXT columns return List<String>.
-  Map<String, List<Object>> readTimeSeriesGroup(String collection, String group, int id) {
+  Map<String, List<Object>> readTimeSeriesGroup(
+    String collection,
+    String group,
+    int id,
+  ) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -1002,11 +1091,17 @@ extension DatabaseRead on Database {
       final result = <String, String?>{};
       for (var i = 0; i < count; i++) {
         final column = outColumns.value[i].cast<Utf8>().toDartString();
-        final path = outPaths.value[i] == nullptr ? null : outPaths.value[i].cast<Utf8>().toDartString();
+        final path = outPaths.value[i] == nullptr
+            ? null
+            : outPaths.value[i].cast<Utf8>().toDartString();
         result[column] = path;
       }
 
-      bindings.quiver_database_free_time_series_files(outColumns.value, outPaths.value, count);
+      bindings.quiver_database_free_time_series_files(
+        outColumns.value,
+        outPaths.value,
+        count,
+      );
       return result;
     } finally {
       arena.releaseAll();

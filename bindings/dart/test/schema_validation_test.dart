@@ -5,12 +5,7 @@ import 'package:path/path.dart' as path;
 
 void main() {
   // Path to central tests folder
-  final testsPath = path.join(
-    path.current,
-    '..',
-    '..',
-    'tests',
-  );
+  final testsPath = path.join(path.current, '..', '..', 'tests');
   final invalidPath = path.join(testsPath, 'schemas', 'invalid');
 
   late String dbPath;

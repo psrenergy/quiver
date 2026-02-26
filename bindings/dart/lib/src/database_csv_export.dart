@@ -23,7 +23,12 @@ extension DatabaseCSVExport on Database {
     final arena = Arena();
     try {
       final optsPtr = arena<quiver_csv_options_t>();
-      _fillCSVOptions(optsPtr, arena, enumLabels: enumLabels, dateTimeFormat: dateTimeFormat);
+      _fillCSVOptions(
+        optsPtr,
+        arena,
+        enumLabels: enumLabels,
+        dateTimeFormat: dateTimeFormat,
+      );
 
       check(
         bindings.quiver_database_export_csv(

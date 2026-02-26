@@ -4,12 +4,7 @@ import 'package:path/path.dart' as path;
 
 void main() {
   // Path to central tests folder
-  final testsPath = path.join(
-    path.current,
-    '..',
-    '..',
-    'tests',
-  );
+  final testsPath = path.join(path.current, '..', '..', 'tests');
 
   group('Create Scalar Attributes', () {
     test('creates Configuration with all scalar types', () {
@@ -389,44 +384,73 @@ void main() {
   });
 
   group('Create With Multiple Time Series Groups', () {
-    test('creates element with shared dimension across two time series tables', () {
-      final db = Database.fromSchema(
-        ':memory:',
-        path.join(testsPath, 'schemas', 'valid', 'multi_time_series.sql'),
-      );
-      try {
-        db.createElement('Configuration', {'label': 'Test Config'});
-        final id = db.createElement('Sensor', {
-          'label': 'Sensor 1',
-          'date_time': ['2024-01-01T10:00:00', '2024-01-02T10:00:00', '2024-01-03T10:00:00'],
-          'temperature': [20.0, 21.5, 22.0],
-          'humidity': [45.0, 50.0, 55.0],
-        });
-        expect(id, greaterThan(0));
+    test(
+      'creates element with shared dimension across two time series tables',
+      () {
+        final db = Database.fromSchema(
+          ':memory:',
+          path.join(testsPath, 'schemas', 'valid', 'multi_time_series.sql'),
+        );
+        try {
+          db.createElement('Configuration', {'label': 'Test Config'});
+          final id = db.createElement('Sensor', {
+            'label': 'Sensor 1',
+            'date_time': [
+              '2024-01-01T10:00:00',
+              '2024-01-02T10:00:00',
+              '2024-01-03T10:00:00',
+            ],
+            'temperature': [20.0, 21.5, 22.0],
+            'humidity': [45.0, 50.0, 55.0],
+          });
+          expect(id, greaterThan(0));
 
-        // Verify temperature group (Map-based columnar return)
-        final tempResult = db.readTimeSeriesGroup('Sensor', 'temperature', id);
-        expect(tempResult['date_time']!.length, equals(3));
-        expect(tempResult['date_time']![0], equals(DateTime(2024, 1, 1, 10, 0, 0)));
-        expect(tempResult['date_time']![1], equals(DateTime(2024, 1, 2, 10, 0, 0)));
-        expect(tempResult['date_time']![2], equals(DateTime(2024, 1, 3, 10, 0, 0)));
-        expect(tempResult['temperature']![0], equals(20.0));
-        expect(tempResult['temperature']![1], equals(21.5));
-        expect(tempResult['temperature']![2], equals(22.0));
+          // Verify temperature group (Map-based columnar return)
+          final tempResult = db.readTimeSeriesGroup(
+            'Sensor',
+            'temperature',
+            id,
+          );
+          expect(tempResult['date_time']!.length, equals(3));
+          expect(
+            tempResult['date_time']![0],
+            equals(DateTime(2024, 1, 1, 10, 0, 0)),
+          );
+          expect(
+            tempResult['date_time']![1],
+            equals(DateTime(2024, 1, 2, 10, 0, 0)),
+          );
+          expect(
+            tempResult['date_time']![2],
+            equals(DateTime(2024, 1, 3, 10, 0, 0)),
+          );
+          expect(tempResult['temperature']![0], equals(20.0));
+          expect(tempResult['temperature']![1], equals(21.5));
+          expect(tempResult['temperature']![2], equals(22.0));
 
-        // Verify humidity group (Map-based columnar return)
-        final humResult = db.readTimeSeriesGroup('Sensor', 'humidity', id);
-        expect(humResult['date_time']!.length, equals(3));
-        expect(humResult['date_time']![0], equals(DateTime(2024, 1, 1, 10, 0, 0)));
-        expect(humResult['date_time']![1], equals(DateTime(2024, 1, 2, 10, 0, 0)));
-        expect(humResult['date_time']![2], equals(DateTime(2024, 1, 3, 10, 0, 0)));
-        expect(humResult['humidity']![0], equals(45.0));
-        expect(humResult['humidity']![1], equals(50.0));
-        expect(humResult['humidity']![2], equals(55.0));
-      } finally {
-        db.close();
-      }
-    });
+          // Verify humidity group (Map-based columnar return)
+          final humResult = db.readTimeSeriesGroup('Sensor', 'humidity', id);
+          expect(humResult['date_time']!.length, equals(3));
+          expect(
+            humResult['date_time']![0],
+            equals(DateTime(2024, 1, 1, 10, 0, 0)),
+          );
+          expect(
+            humResult['date_time']![1],
+            equals(DateTime(2024, 1, 2, 10, 0, 0)),
+          );
+          expect(
+            humResult['date_time']![2],
+            equals(DateTime(2024, 1, 3, 10, 0, 0)),
+          );
+          expect(humResult['humidity']![0], equals(45.0));
+          expect(humResult['humidity']![1], equals(50.0));
+          expect(humResult['humidity']![2], equals(55.0));
+        } finally {
+          db.close();
+        }
+      },
+    );
 
     test('rejects mismatched lengths across time series groups', () {
       final db = Database.fromSchema(
@@ -438,7 +462,11 @@ void main() {
         expect(
           () => db.createElement('Sensor', {
             'label': 'Sensor 1',
-            'date_time': ['2024-01-01T10:00:00', '2024-01-02T10:00:00', '2024-01-03T10:00:00'],
+            'date_time': [
+              '2024-01-01T10:00:00',
+              '2024-01-02T10:00:00',
+              '2024-01-03T10:00:00',
+            ],
             'temperature': [20.0, 21.5, 22.0],
             'humidity': [45.0, 50.0],
           }),
@@ -495,7 +523,11 @@ void main() {
         expect(id, greaterThan(0));
 
         // Verify it was stored correctly as ISO 8601 string
-        final dateStr = db.readScalarStringById('Configuration', 'date_attribute', 1);
+        final dateStr = db.readScalarStringById(
+          'Configuration',
+          'date_attribute',
+          1,
+        );
         expect(dateStr, equals('2024-03-15T14:30:45'));
 
         // Verify readAllScalarsById returns native DateTime
@@ -598,10 +630,7 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Test Config'});
         db.createElement('Parent', {'label': 'Parent 1'});
-        db.createElement('Child', {
-          'label': 'Child 1',
-          'parent_id': 1,
-        });
+        db.createElement('Child', {'label': 'Child 1', 'parent_id': 1});
 
         final result = db.readScalarIntegers('Child', 'parent_id');
         expect(result, equals([1]));
@@ -674,11 +703,20 @@ void main() {
         // Verify scalar FK
         expect(db.readScalarIntegers('Child', 'parent_id'), equals([1]));
         // Verify set FK
-        expect(db.readSetIntegersById('Child', 'mentor_id', 1)..sort(), equals([2]));
+        expect(
+          db.readSetIntegersById('Child', 'mentor_id', 1)..sort(),
+          equals([2]),
+        );
         // Verify vector FK
-        expect(db.readVectorIntegersById('Child', 'parent_ref', 1), equals([1]));
+        expect(
+          db.readVectorIntegersById('Child', 'parent_ref', 1),
+          equals([1]),
+        );
         // Verify time series FK
-        expect(db.readTimeSeriesGroup('Child', 'events', 1)['sponsor_id'], equals([2]));
+        expect(
+          db.readTimeSeriesGroup('Child', 'events', 1)['sponsor_id'],
+          equals([2]),
+        );
       } finally {
         db.close();
       }
@@ -696,9 +734,18 @@ void main() {
           'float_attribute': 3.14,
         });
 
-        expect(db.readScalarStrings('Configuration', 'label'), equals(['Config 1']));
-        expect(db.readScalarIntegers('Configuration', 'integer_attribute'), equals([42]));
-        expect(db.readScalarFloats('Configuration', 'float_attribute'), equals([3.14]));
+        expect(
+          db.readScalarStrings('Configuration', 'label'),
+          equals(['Config 1']),
+        );
+        expect(
+          db.readScalarIntegers('Configuration', 'integer_attribute'),
+          equals([42]),
+        );
+        expect(
+          db.readScalarFloats('Configuration', 'float_attribute'),
+          equals([3.14]),
+        );
       } finally {
         db.close();
       }

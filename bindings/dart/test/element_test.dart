@@ -4,12 +4,7 @@ import 'package:path/path.dart' as path;
 
 void main() {
   // Path to central tests folder
-  final testsPath = path.join(
-    path.current,
-    '..',
-    '..',
-    'tests',
-  );
+  final testsPath = path.join(path.current, '..', '..', 'tests');
 
   group('Element Set Values', () {
     test('sets integer value', () {
@@ -88,10 +83,7 @@ void main() {
     test('rejects empty array', () {
       final element = Element();
       try {
-        expect(
-          () => element.set('values', []),
-          throwsA(isA<ArgumentError>()),
-        );
+        expect(() => element.set('values', []), throwsA(isA<ArgumentError>()));
       } finally {
         element.dispose();
       }
@@ -182,10 +174,7 @@ void main() {
     test('throws after dispose', () {
       final element = Element();
       element.dispose();
-      expect(
-        () => element.set('value', 42),
-        throwsA(isA<StateError>()),
-      );
+      expect(() => element.set('value', 42), throwsA(isA<StateError>()));
     });
   });
 
