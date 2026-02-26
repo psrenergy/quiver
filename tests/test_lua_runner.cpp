@@ -1815,8 +1815,10 @@ TEST_F(LuaRunnerTest, ReadAllVectorsByIdWithDataFromLua) {
         -- Verify float vector
         assert(vectors.score ~= nil, "Missing 'score' vector group")
         assert(#vectors.score == 2, "Expected 2 score values, got " .. #vectors.score)
-        assert(math.abs(vectors.score[1] - 1.1) < 1e-9, "score[1] expected 1.1")
-        assert(math.abs(vectors.score[2] - 2.2) < 1e-9, "score[2] expected 2.2")
+        local d1 = vectors.score[1] - 1.1
+        assert(d1 > -1e-9 and d1 < 1e-9, "score[1] expected 1.1")
+        local d2 = vectors.score[2] - 2.2
+        assert(d2 > -1e-9 and d2 < 1e-9, "score[2] expected 2.2")
 
         -- Verify string vector
         assert(vectors.note ~= nil, "Missing 'note' vector group")
