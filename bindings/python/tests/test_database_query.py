@@ -6,7 +6,7 @@ from datetime import datetime
 
 import pytest
 
-from quiverdb import Database, Element
+from quiverdb import Database
 
 
 # -- Simple queries (QUERY-01) ------------------------------------------------
@@ -14,10 +14,7 @@ from quiverdb import Database, Element
 
 class TestQueryString:
     def test_query_string_returns_value(self, db: Database) -> None:
-        db.create_element(
-            "Configuration",
-            Element().set("label", "item1").set("string_attribute", "hello"),
-        )
+        db.create_element("Configuration", label="item1", string_attribute="hello")
         result = db.query_string("SELECT string_attribute FROM Configuration WHERE label = 'item1'")
         assert result == "hello"
 
@@ -28,10 +25,7 @@ class TestQueryString:
 
 class TestQueryInteger:
     def test_query_integer_returns_value(self, db: Database) -> None:
-        db.create_element(
-            "Configuration",
-            Element().set("label", "item1").set("integer_attribute", 42),
-        )
+        db.create_element("Configuration", label="item1", integer_attribute=42)
         result = db.query_integer("SELECT integer_attribute FROM Configuration WHERE label = 'item1'")
         assert result == 42
         assert isinstance(result, int)
@@ -41,18 +35,15 @@ class TestQueryInteger:
         assert result is None
 
     def test_query_integer_count(self, db: Database) -> None:
-        db.create_element("Configuration", Element().set("label", "a"))
-        db.create_element("Configuration", Element().set("label", "b"))
+        db.create_element("Configuration", label="a")
+        db.create_element("Configuration", label="b")
         result = db.query_integer("SELECT COUNT(*) FROM Configuration")
         assert result == 2
 
 
 class TestQueryFloat:
     def test_query_float_returns_value(self, db: Database) -> None:
-        db.create_element(
-            "Configuration",
-            Element().set("label", "item1").set("float_attribute", 3.14),
-        )
+        db.create_element("Configuration", label="item1", float_attribute=3.14)
         result = db.query_float("SELECT float_attribute FROM Configuration WHERE label = 'item1'")
         assert result is not None
         assert isinstance(result, float)
@@ -68,10 +59,7 @@ class TestQueryFloat:
 
 class TestQueryStringParameterized:
     def test_query_string_with_string_param(self, db: Database) -> None:
-        db.create_element(
-            "Configuration",
-            Element().set("label", "item1").set("string_attribute", "hello"),
-        )
+        db.create_element("Configuration", label="item1", string_attribute="hello")
         result = db.query_string(
             "SELECT string_attribute FROM Configuration WHERE label = ?",
             params=["item1"],
@@ -79,7 +67,7 @@ class TestQueryStringParameterized:
         assert result == "hello"
 
     def test_query_string_with_none_param(self, db: Database) -> None:
-        db.create_element("Configuration", Element().set("label", "item1"))
+        db.create_element("Configuration", label="item1")
         result = db.query_integer(
             "SELECT COUNT(*) FROM Configuration WHERE ? IS NULL",
             params=[None],
@@ -89,10 +77,7 @@ class TestQueryStringParameterized:
 
 class TestQueryIntegerParameterized:
     def test_query_integer_with_integer_param(self, db: Database) -> None:
-        db.create_element(
-            "Configuration",
-            Element().set("label", "item1").set("integer_attribute", 99),
-        )
+        db.create_element("Configuration", label="item1", integer_attribute=99)
         result = db.query_integer(
             "SELECT integer_attribute FROM Configuration WHERE id = ?",
             params=[1],
@@ -100,10 +85,7 @@ class TestQueryIntegerParameterized:
         assert result == 99
 
     def test_query_with_bool_param(self, db: Database) -> None:
-        db.create_element(
-            "Configuration",
-            Element().set("label", "item1").set("boolean_attribute", 1),
-        )
+        db.create_element("Configuration", label="item1", boolean_attribute=1)
         result = db.query_integer(
             "SELECT boolean_attribute FROM Configuration WHERE boolean_attribute = ?",
             params=[True],
@@ -111,10 +93,7 @@ class TestQueryIntegerParameterized:
         assert result == 1
 
     def test_query_with_mixed_params(self, db: Database) -> None:
-        db.create_element(
-            "Configuration",
-            Element().set("label", "item1").set("integer_attribute", 42),
-        )
+        db.create_element("Configuration", label="item1", integer_attribute=42)
         result = db.query_integer(
             "SELECT integer_attribute FROM Configuration WHERE label = ? AND id = ?",
             params=["item1", 1],
@@ -124,10 +103,7 @@ class TestQueryIntegerParameterized:
 
 class TestQueryFloatParameterized:
     def test_query_with_float_param(self, db: Database) -> None:
-        db.create_element(
-            "Configuration",
-            Element().set("label", "item1").set("float_attribute", 2.718),
-        )
+        db.create_element("Configuration", label="item1", float_attribute=2.718)
         result = db.query_float(
             "SELECT float_attribute FROM Configuration WHERE float_attribute > ?",
             params=[2.0],
@@ -138,10 +114,7 @@ class TestQueryFloatParameterized:
 
 class TestQueryEmptyParams:
     def test_query_with_empty_params_routes_to_simple(self, db: Database) -> None:
-        db.create_element(
-            "Configuration",
-            Element().set("label", "item1").set("integer_attribute", 7),
-        )
+        db.create_element("Configuration", label="item1", integer_attribute=7)
         result = db.query_integer(
             "SELECT integer_attribute FROM Configuration WHERE label = 'item1'",
             params=[],
@@ -167,10 +140,7 @@ class TestMarshalParamsErrors:
 
 class TestQueryDateTime:
     def test_query_date_time_returns_datetime(self, db: Database) -> None:
-        db.create_element(
-            "Configuration",
-            Element().set("label", "item1").set("date_attribute", "2025-06-15T10:30:00"),
-        )
+        db.create_element("Configuration", label="item1", date_attribute="2025-06-15T10:30:00")
         result = db.query_date_time("SELECT date_attribute FROM Configuration WHERE label = 'item1'")
         assert result is not None
         assert isinstance(result, datetime)
@@ -185,10 +155,7 @@ class TestQueryDateTime:
         assert result is None
 
     def test_query_date_time_with_params(self, db: Database) -> None:
-        db.create_element(
-            "Configuration",
-            Element().set("label", "item1").set("date_attribute", "2025-01-01T00:00:00"),
-        )
+        db.create_element("Configuration", label="item1", date_attribute="2025-01-01T00:00:00")
         result = db.query_date_time(
             "SELECT date_attribute FROM Configuration WHERE label = ?",
             params=["item1"],
@@ -199,9 +166,6 @@ class TestQueryDateTime:
         assert result.month == 1
 
     def test_query_date_time_invalid_format_raises_valueerror(self, db: Database) -> None:
-        db.create_element(
-            "Configuration",
-            Element().set("label", "item1").set("date_attribute", "not-a-date"),
-        )
+        db.create_element("Configuration", label="item1", date_attribute="not-a-date")
         with pytest.raises(ValueError):
             db.query_date_time("SELECT date_attribute FROM Configuration WHERE label = 'item1'")
