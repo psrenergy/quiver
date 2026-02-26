@@ -18,7 +18,7 @@ class QUIVER_API BlobCSV : public Blob {
     explicit BlobCSV(const std::string& file_path,
                      const BlobMetadata& metadata,
                      std::unique_ptr<std::iostream> io,
-                     bool aggregate_time_dimensions = true);
+                     bool aggregate_time_dimensions);
     ~BlobCSV();
 
     // Non-copyable

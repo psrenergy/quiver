@@ -36,9 +36,18 @@ void BlobCSV::csv_to_bin(const std::string& file_path) {
                                 std::istreambuf_iterator<char>());
     auto metadata = BlobMetadata::from_toml(toml_content);
 
-    // Open the CSV file in read mode
+    // Open the CSV file and detect whether time dimensions are aggregated
     auto csv_io = std::make_unique<std::fstream>(file_path + std::string(CSV_EXTENSION), std::ios::in);
-    BlobCSV csv_reader(file_path, metadata, std::move(csv_io));
+    std::string header_line;
+    std::getline(*csv_io, header_line);
+    bool aggregate_time_dimensions = false;
+    if (metadata.number_of_time_dimensions > 0) {
+        std::string first_field = header_line.substr(0, header_line.find(','));
+        aggregate_time_dimensions = (first_field == "datetime" || first_field == "date");
+    }
+    csv_io->seekg(0);  // Rewind so validate_header can re-read
+
+    BlobCSV csv_reader(file_path, metadata, std::move(csv_io), aggregate_time_dimensions);
     csv_reader.validate_header();
 
     // Open the binary file in write mode
@@ -130,8 +139,8 @@ BlobCSV::CSVRow BlobCSV::read_line() {
     std::getline(get_io(), line);
 
     // The first N fields are dimension labels (strings), the rest are data values (doubles).
-    // N equals the number of dimensions in the metadata.
-    const size_t n_dim_fields = get_metadata().dimensions.size();
+    // N depends on whether time dimensions are aggregated into a single datetime column.
+    const size_t n_dim_fields = expected_dimension_names().size();
     CSVRow row;
     size_t field_start = 0;
     while (field_start <= line.size()) {

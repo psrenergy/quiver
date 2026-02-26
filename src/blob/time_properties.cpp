@@ -68,6 +68,8 @@ std::chrono::system_clock::time_point TimeProperties::add_offset_from_int(std::c
         return std::chrono::sys_days{ymd + std::chrono::years{relative_value}};
     case TimeFrequency::Monthly:
         return std::chrono::sys_days{ymd + std::chrono::months{relative_value}};
+    case TimeFrequency::Weekly:
+        return base_datetime + std::chrono::weeks{relative_value};
     case TimeFrequency::Daily:
         return base_datetime + std::chrono::days{relative_value};
     case TimeFrequency::Hourly:

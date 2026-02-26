@@ -23,7 +23,7 @@ std::vector<int64_t> compute_time_dimension_initial_values(const std::vector<qui
     auto ymd = std::chrono::year_month_day{date};
 
     for (const auto& dim : dimensions) {
-        if (dim.time->parent_dimension_index != -1) {
+        if (dim.is_time_dimension() && dim.time->parent_dimension_index != -1) {
             quiver::TimeFrequency current_frequency = dim.time->frequency;
             quiver::TimeFrequency parent_frequency = dimensions[dim.time->parent_dimension_index].time->frequency;
 
@@ -174,10 +174,10 @@ BlobMetadata BlobMetadata::from_toml(const std::string& toml_content) {
         }
     }
     metadata.number_of_time_dimensions = time_dim_index;
+    time_dim_index = 0;
 
     // Compute and set initial values for time dimensions
     std::vector<int64_t> initial_values = compute_time_dimension_initial_values(metadata.dimensions, initial_datetime);
-    int64_t time_dim_index = 0;
     for (auto& dim : metadata.dimensions) {
         if (dim.is_time_dimension()) {
             dim.time->set_initial_value(initial_values[time_dim_index]);
@@ -185,6 +185,7 @@ BlobMetadata BlobMetadata::from_toml(const std::string& toml_content) {
         }
     }
 
+    metadata.validate();
     return metadata;
 }
 
