@@ -6,11 +6,13 @@ from datetime import datetime, timezone
 
 from quiverdb._c_api import ffi, get_lib
 from quiverdb._helpers import check, decode_string, decode_string_or_none
+from quiverdb.database_csv_export import DatabaseCSVExport
+from quiverdb.database_csv_import import DatabaseCSVImport
 from quiverdb.exceptions import QuiverError
-from quiverdb.metadata import CSVOptions, GroupMetadata, ScalarMetadata
+from quiverdb.metadata import GroupMetadata, ScalarMetadata
 
 
-class Database:
+class Database(DatabaseCSVExport, DatabaseCSVImport):
     """Thin Python wrapper around the Quiver C API database handle."""
 
     def __init__(self, ptr) -> None:
@@ -137,155 +139,6 @@ class Database:
         self._ensure_open()
         lib = get_lib()
         check(lib.quiver_database_delete_element(self._ptr, collection.encode("utf-8"), id))
-
-    # -- Scalar updates ---------------------------------------------------------
-
-    def update_scalar_integer(self, collection, attribute, id, value):
-        """Update an integer scalar attribute for a single element."""
-        self._ensure_open()
-        lib = get_lib()
-        check(
-            lib.quiver_database_update_scalar_integer(
-                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, value
-            )
-        )
-
-    def update_scalar_float(self, collection, attribute, id, value):
-        """Update a float scalar attribute for a single element."""
-        self._ensure_open()
-        lib = get_lib()
-        check(
-            lib.quiver_database_update_scalar_float(
-                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, value
-            )
-        )
-
-    def update_scalar_string(self, collection, attribute, id, value):
-        """Update a string scalar attribute. Pass None to set NULL."""
-        self._ensure_open()
-        lib = get_lib()
-        c_value = value.encode("utf-8") if value is not None else ffi.NULL
-        check(
-            lib.quiver_database_update_scalar_string(
-                self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, c_value
-            )
-        )
-
-    # -- Vector updates ---------------------------------------------------------
-
-    def update_vector_integers(self, collection, attribute, id, values):
-        """Replace an integer vector for a single element. Empty list clears."""
-        self._ensure_open()
-        lib = get_lib()
-        if not values:
-            check(
-                lib.quiver_database_update_vector_integers(
-                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, ffi.NULL, 0
-                )
-            )
-        else:
-            c_arr = ffi.new("int64_t[]", values)
-            check(
-                lib.quiver_database_update_vector_integers(
-                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, c_arr, len(values)
-                )
-            )
-
-    def update_vector_floats(self, collection, attribute, id, values):
-        """Replace a float vector for a single element. Empty list clears."""
-        self._ensure_open()
-        lib = get_lib()
-        if not values:
-            check(
-                lib.quiver_database_update_vector_floats(
-                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, ffi.NULL, 0
-                )
-            )
-        else:
-            c_arr = ffi.new("double[]", values)
-            check(
-                lib.quiver_database_update_vector_floats(
-                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, c_arr, len(values)
-                )
-            )
-
-    def update_vector_strings(self, collection, attribute, id, values):
-        """Replace a string vector for a single element. Empty list clears."""
-        self._ensure_open()
-        lib = get_lib()
-        if not values:
-            check(
-                lib.quiver_database_update_vector_strings(
-                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, ffi.NULL, 0
-                )
-            )
-        else:
-            encoded = [v.encode("utf-8") for v in values]
-            c_strings = [ffi.new("char[]", e) for e in encoded]
-            c_arr = ffi.new("const char*[]", c_strings)
-            check(
-                lib.quiver_database_update_vector_strings(
-                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, c_arr, len(values)
-                )
-            )
-
-    # -- Set updates ------------------------------------------------------------
-
-    def update_set_integers(self, collection, attribute, id, values):
-        """Replace an integer set for a single element. Empty list clears."""
-        self._ensure_open()
-        lib = get_lib()
-        if not values:
-            check(
-                lib.quiver_database_update_set_integers(
-                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, ffi.NULL, 0
-                )
-            )
-        else:
-            c_arr = ffi.new("int64_t[]", values)
-            check(
-                lib.quiver_database_update_set_integers(
-                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, c_arr, len(values)
-                )
-            )
-
-    def update_set_floats(self, collection, attribute, id, values):
-        """Replace a float set for a single element. Empty list clears."""
-        self._ensure_open()
-        lib = get_lib()
-        if not values:
-            check(
-                lib.quiver_database_update_set_floats(
-                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, ffi.NULL, 0
-                )
-            )
-        else:
-            c_arr = ffi.new("double[]", values)
-            check(
-                lib.quiver_database_update_set_floats(
-                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, c_arr, len(values)
-                )
-            )
-
-    def update_set_strings(self, collection, attribute, id, values):
-        """Replace a string set for a single element. Empty list clears."""
-        self._ensure_open()
-        lib = get_lib()
-        if not values:
-            check(
-                lib.quiver_database_update_set_strings(
-                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, ffi.NULL, 0
-                )
-            )
-        else:
-            encoded = [v.encode("utf-8") for v in values]
-            c_strings = [ffi.new("char[]", e) for e in encoded]
-            c_arr = ffi.new("const char*[]", c_strings)
-            check(
-                lib.quiver_database_update_set_strings(
-                    self._ptr, collection.encode("utf-8"), attribute.encode("utf-8"), id, c_arr, len(values)
-                )
-            )
 
     # -- Transaction control ----------------------------------------------------
 
@@ -1385,48 +1238,6 @@ class Database:
             )
         )
 
-    # -- CSV operations ---------------------------------------------------------
-
-    def export_csv(
-        self,
-        collection: str,
-        group: str,
-        path: str,
-        *,
-        options: CSVOptions | None = None,
-    ) -> None:
-        """Export a collection or group to CSV file."""
-        self._ensure_open()
-        lib = get_lib()
-        if options is None:
-            options = CSVOptions()
-        keepalive, c_opts = _marshal_csv_options(options)
-        check(
-            lib.quiver_database_export_csv(
-                self._ptr, collection.encode("utf-8"), group.encode("utf-8"), path.encode("utf-8"), c_opts
-            )
-        )
-
-    def import_csv(
-        self,
-        collection: str,
-        group: str,
-        path: str,
-        *,
-        options: CSVOptions | None = None,
-    ) -> None:
-        """Import CSV data into a collection."""
-        self._ensure_open()
-        lib = get_lib()
-        if options is None:
-            options = CSVOptions()
-        keepalive, c_opts = _marshal_csv_options(options)
-        check(
-            lib.quiver_database_import_csv(
-                self._ptr, collection.encode("utf-8"), group.encode("utf-8"), path.encode("utf-8"), c_opts
-            )
-        )
-
     # -- Convenience helpers ---------------------------------------------------
 
     def read_all_scalars_by_id(self, collection: str, id: int) -> dict:
@@ -1688,85 +1499,6 @@ def _marshal_time_series_columns(
             c_col_data[c] = ffi.cast("void*", c_arr)
 
     return keepalive, c_col_names, c_col_types, c_col_data, col_count, row_count
-
-
-def _marshal_csv_options(options: CSVOptions) -> tuple:
-    """Marshal CSVOptions into C API struct pointer.
-
-    Returns (keepalive, c_opts) where keepalive must stay referenced
-    during the C API call.
-    """
-    keepalive: list = []
-    c_opts = ffi.new("quiver_csv_options_t*")
-
-    # date_time_format
-    dtf_buf = ffi.new("char[]", options.date_time_format.encode("utf-8"))
-    keepalive.append(dtf_buf)
-    c_opts.date_time_format = dtf_buf
-
-    if not options.enum_labels:
-        c_opts.enum_attribute_names = ffi.NULL
-        c_opts.enum_locale_names = ffi.NULL
-        c_opts.enum_entry_counts = ffi.NULL
-        c_opts.enum_labels = ffi.NULL
-        c_opts.enum_values = ffi.NULL
-        c_opts.enum_group_count = 0
-        return keepalive, c_opts
-
-    # Flatten attribute -> locale -> entries into grouped parallel arrays
-    # Each (attribute, locale) pair is one group
-    group_attr_names: list[str] = []
-    group_locale_names: list[str] = []
-    group_entry_counts: list[int] = []
-    all_labels: list[str] = []
-    all_values: list[int] = []
-
-    for attr_name, locales in options.enum_labels.items():
-        for locale_name, entries in locales.items():
-            group_attr_names.append(attr_name)
-            group_locale_names.append(locale_name)
-            group_entry_counts.append(len(entries))
-            for label, value in entries.items():
-                all_labels.append(label)
-                all_values.append(value)
-
-    group_count = len(group_attr_names)
-    total_entries = len(all_labels)
-
-    c_attr_names = ffi.new("const char*[]", group_count)
-    keepalive.append(c_attr_names)
-    c_locale_names = ffi.new("const char*[]", group_count)
-    keepalive.append(c_locale_names)
-    c_entry_counts = ffi.new("size_t[]", group_count)
-    keepalive.append(c_entry_counts)
-    c_labels = ffi.new("const char*[]", total_entries)
-    keepalive.append(c_labels)
-    c_values = ffi.new("int64_t[]", total_entries)
-    keepalive.append(c_values)
-
-    for i in range(group_count):
-        name_buf = ffi.new("char[]", group_attr_names[i].encode("utf-8"))
-        keepalive.append(name_buf)
-        c_attr_names[i] = name_buf
-        locale_buf = ffi.new("char[]", group_locale_names[i].encode("utf-8"))
-        keepalive.append(locale_buf)
-        c_locale_names[i] = locale_buf
-        c_entry_counts[i] = group_entry_counts[i]
-
-    for i in range(total_entries):
-        label_buf = ffi.new("char[]", all_labels[i].encode("utf-8"))
-        keepalive.append(label_buf)
-        c_labels[i] = label_buf
-        c_values[i] = all_values[i]
-
-    c_opts.enum_attribute_names = c_attr_names
-    c_opts.enum_locale_names = c_locale_names
-    c_opts.enum_entry_counts = c_entry_counts
-    c_opts.enum_labels = c_labels
-    c_opts.enum_values = c_values
-    c_opts.enum_group_count = group_count
-
-    return keepalive, c_opts
 
 
 # -- Metadata parsing helpers (module-level) ---------------------------------

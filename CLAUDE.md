@@ -17,12 +17,15 @@ include/quiver/c/         # C API headers (for FFI)
   element.h
   lua_runner.h
 src/                      # C++ implementation
-  database_csv.cpp        # CSV export implementation
+  database_csv_export.cpp # CSV export implementation
+  database_csv_import.cpp # CSV import implementation
 src/c/                    # C API implementation
   internal.h              # Shared structs (quiver_database, quiver_element), QUIVER_REQUIRE macro
   database_helpers.h      # Marshaling templates, strdup_safe, metadata converters
   database.cpp            # Lifecycle: open, close, factory methods, describe
-  database_csv.cpp        # CSV export: options conversion, export function
+  database_options.h      # Shared CSV options: convert_options inline, quiver_csv_options_default
+  database_csv_export.cpp # CSV export function
+  database_csv_import.cpp # CSV import function
   database_create.cpp     # Element CRUD: create, update, delete
   database_read.cpp       # All read operations + co-located free functions
   database_update.cpp     # All scalar/vector/set update operations
@@ -86,7 +89,8 @@ Standalone executable comparing individual vs batched transaction performance. N
 Test files organized by functionality:
 - `test_database_lifecycle.cpp` - open, close, move semantics, options
 - `test_database_create.cpp` - create element operations
-- `test_database_csv.cpp` - CSV export operations (scalar, group, options, formatting)
+- `test_database_csv_export.cpp` - CSV export operations (scalar, group, options, formatting)
+- `test_database_csv_import.cpp` - CSV import operations (round-trip, enum resolution, delimiters, error handling)
 - `test_database_read.cpp` - read scalar/vector/set operations
 - `test_database_update.cpp` - update scalar/vector/set operations
 - `test_database_delete.cpp` - delete element operations
@@ -95,7 +99,8 @@ Test files organized by functionality:
 - `test_database_transaction.cpp` - explicit transaction control (begin/commit/rollback)
 
 C API tests follow same pattern with `test_c_api_database_*.cpp` prefix:
-- `test_c_api_database_csv.cpp` - CSV export options struct, enum labels, date formatting, scalar/group export
+- `test_c_api_database_csv_export.cpp` - CSV export: scalar/group, RFC 4180, enum labels, date formatting, options
+- `test_c_api_database_csv_import.cpp` - CSV import: round-trip, semicolons, FK resolution, enum, trailing columns
 - `test_c_api_database_metadata.cpp` - Metadata get/list operations (vector, set, time series, scalar)
 
 All test schemas located in `tests/schemas/valid/` and `tests/schemas/invalid/`.
@@ -129,7 +134,7 @@ db.commit();   // or db.rollback();
 bool active = db.in_transaction();
 ```
 
-Internally, `Impl::TransactionGuard` is nest-aware RAII: if an explicit transaction is already active (checked via `sqlite3_get_autocommit()`), the guard becomes a no-op. This allows write methods (`create_element`, `update_vector_*`, etc.) to work both standalone and inside explicit transactions without double-beginning.
+Internally, `Impl::TransactionGuard` is nest-aware RAII: if an explicit transaction is already active (checked via `sqlite3_get_autocommit()`), the guard becomes a no-op. This allows write methods (`create_element`, etc.) to work both standalone and inside explicit transactions without double-beginning.
 
 ```cpp
 // Internal RAII guard (nest-aware)
@@ -410,8 +415,6 @@ lua.run(R"(
 | Create | `create_element()` | `quiver_database_create_element()` | `create_element!()` | `createElement()` | `create_element()` |
 | Read scalar | `read_scalar_integers()` | `quiver_database_read_scalar_integers()` | `read_scalar_integers()` | `readScalarIntegers()` | `read_scalar_integers()` |
 | Read by ID | `read_scalar_integer_by_id()` | `quiver_database_read_scalar_integer_by_id()` | `read_scalar_integer_by_id()` | `readScalarIntegerById()` | `read_scalar_integer_by_id()` |
-| Update scalar | `update_scalar_integer()` | `quiver_database_update_scalar_integer()` | `update_scalar_integer!()` | `updateScalarInteger()` | `update_scalar_integer()` |
-| Update vector | `update_vector_strings()` | `quiver_database_update_vector_strings()` | `update_vector_strings!()` | `updateVectorStrings()` | `update_vector_strings()` |
 | Delete | `delete_element()` | `quiver_database_delete_element()` | `delete_element!()` | `deleteElement()` | `delete_element()` |
 | Metadata | `get_scalar_metadata()` | `quiver_database_get_scalar_metadata()` | `get_scalar_metadata()` | `getScalarMetadata()` | `get_scalar_metadata()` |
 | List groups | `list_vector_groups()` | `quiver_database_list_vector_groups()` | `list_vector_groups()` | `listVectorGroups()` | `list_vector_groups()` |

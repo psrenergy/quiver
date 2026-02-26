@@ -103,7 +103,7 @@ include("fixture.jl")
         )
 
         # Verify time series data was persisted
-        result = Quiver.read_time_series_group(db, "Collection", "data", Int64(1))
+        result = Quiver.read_time_series_group(db, "Collection", "data", 1)
         @test length(result) == 2  # 2 columns: date_time, value
         @test length(result["date_time"]) == 3
         @test result["date_time"][1] == DateTime(2024, 1, 1, 10, 0, 0)
@@ -130,7 +130,7 @@ include("fixture.jl")
         )
 
         # Verify temperature group
-        temp_result = Quiver.read_time_series_group(db, "Sensor", "temperature", Int64(1))
+        temp_result = Quiver.read_time_series_group(db, "Sensor", "temperature", 1)
         @test length(temp_result) == 2  # 2 columns: date_time, temperature
         @test length(temp_result["date_time"]) == 3
         @test temp_result["date_time"][1] == DateTime(2024, 1, 1, 10, 0, 0)
@@ -141,7 +141,7 @@ include("fixture.jl")
         @test temp_result["temperature"][3] == 22.0
 
         # Verify humidity group
-        hum_result = Quiver.read_time_series_group(db, "Sensor", "humidity", Int64(1))
+        hum_result = Quiver.read_time_series_group(db, "Sensor", "humidity", 1)
         @test length(hum_result) == 2  # 2 columns: date_time, humidity
         @test length(hum_result["date_time"]) == 3
         @test hum_result["date_time"][1] == DateTime(2024, 1, 1, 10, 0, 0)
@@ -207,7 +207,7 @@ include("fixture.jl")
         # Create element with single element vector
         Quiver.create_element!(db, "Collection"; label = "Item 1", value_int = [42])
 
-        result = Quiver.read_vector_integers_by_id(db, "Collection", "value_int", Int64(1))
+        result = Quiver.read_vector_integers_by_id(db, "Collection", "value_int", 1)
         @test length(result) == 1
         @test result[1] == 42
 
@@ -224,7 +224,7 @@ include("fixture.jl")
         large_vector = collect(1:150)
         Quiver.create_element!(db, "Collection"; label = "Item 1", value_int = large_vector)
 
-        result = Quiver.read_vector_integers_by_id(db, "Collection", "value_int", Int64(1))
+        result = Quiver.read_vector_integers_by_id(db, "Collection", "value_int", 1)
         @test length(result) == 150
         @test result == large_vector
 
@@ -269,7 +269,7 @@ include("fixture.jl")
         # Create element with set attribute containing multiple values
         Quiver.create_element!(db, "Collection"; label = "Item 1", tag = ["a", "b", "c", "d", "e"])
 
-        result = Quiver.read_set_strings_by_id(db, "Collection", "tag", Int64(1))
+        result = Quiver.read_set_strings_by_id(db, "Collection", "tag", 1)
         @test length(result) == 5
         @test sort(result) == ["a", "b", "c", "d", "e"]
 
@@ -300,7 +300,7 @@ include("fixture.jl")
 
         Quiver.create_element!(db, "Collection"; label = "Item 1", value_float = [1.1, 2.2, 3.3])
 
-        result = Quiver.read_vector_floats_by_id(db, "Collection", "value_float", Int64(1))
+        result = Quiver.read_vector_floats_by_id(db, "Collection", "value_float", 1)
         @test length(result) == 3
         @test result == [1.1, 2.2, 3.3]
 
@@ -334,11 +334,11 @@ include("fixture.jl")
         )
 
         # Scalar string should be trimmed
-        label = Quiver.read_scalar_string_by_id(db, "Collection", "label", Int64(1))
+        label = Quiver.read_scalar_string_by_id(db, "Collection", "label", 1)
         @test label == "Item 1"
 
         # Set strings should be trimmed
-        tags = Quiver.read_set_strings_by_id(db, "Collection", "tag", Int64(1))
+        tags = Quiver.read_set_strings_by_id(db, "Collection", "tag", 1)
         @test sort(tags) == ["important", "review", "urgent"]
 
         Quiver.close!(db)
@@ -356,11 +356,11 @@ include("fixture.jl")
         )
 
         # Verify it was stored correctly as ISO 8601 string
-        date_str = Quiver.read_scalar_string_by_id(db, "Configuration", "date_attribute", Int64(1))
+        date_str = Quiver.read_scalar_string_by_id(db, "Configuration", "date_attribute", 1)
         @test date_str == "2024-03-15T14:30:45"
 
         # Verify read_all_scalars_by_id returns native DateTime
-        scalars = Quiver.read_all_scalars_by_id(db, "Configuration", Int64(1))
+        scalars = Quiver.read_all_scalars_by_id(db, "Configuration", 1)
         @test scalars["date_attribute"] isa DateTime
         @test scalars["date_attribute"] == dt
 
@@ -383,7 +383,7 @@ include("fixture.jl")
         Quiver.create_element!(db, "Child"; label = "Child 1", mentor_id = ["Parent 1", "Parent 2"])
 
         # Read back resolved integer IDs
-        result = Quiver.read_set_integers_by_id(db, "Child", "mentor_id", Int64(1))
+        result = Quiver.read_set_integers_by_id(db, "Child", "mentor_id", 1)
         @test sort(result) == [1, 2]
 
         Quiver.close!(db)
@@ -465,7 +465,7 @@ include("fixture.jl")
         Quiver.create_element!(db, "Child"; label = "Child 1", parent_ref = ["Parent 1", "Parent 2"])
 
         # Verify: read back vector integers
-        result = Quiver.read_vector_integers_by_id(db, "Child", "parent_ref", Int64(1))
+        result = Quiver.read_vector_integers_by_id(db, "Child", "parent_ref", 1)
         @test result == [1, 2]
 
         Quiver.close!(db)
@@ -487,7 +487,7 @@ include("fixture.jl")
         )
 
         # Verify: read time series group and check sponsor_id values
-        result = Quiver.read_time_series_group(db, "Child", "events", Int64(1))
+        result = Quiver.read_time_series_group(db, "Child", "events", 1)
         @test result["sponsor_id"] == [1, 2]
 
         Quiver.close!(db)
@@ -515,13 +515,13 @@ include("fixture.jl")
         @test Quiver.read_scalar_integers(db, "Child", "parent_id") == [1]
 
         # Verify set FK (mentor_id)
-        @test sort(Quiver.read_set_integers_by_id(db, "Child", "mentor_id", Int64(1))) == [2]
+        @test sort(Quiver.read_set_integers_by_id(db, "Child", "mentor_id", 1)) == [2]
 
         # Verify vector FK (parent_ref)
-        @test Quiver.read_vector_integers_by_id(db, "Child", "parent_ref", Int64(1)) == [1]
+        @test Quiver.read_vector_integers_by_id(db, "Child", "parent_ref", 1) == [1]
 
         # Verify time series FK (sponsor_id)
-        ts = Quiver.read_time_series_group(db, "Child", "events", Int64(1))
+        ts = Quiver.read_time_series_group(db, "Child", "events", 1)
         @test ts["sponsor_id"] == [2]
 
         Quiver.close!(db)

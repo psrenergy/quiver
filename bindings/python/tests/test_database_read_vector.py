@@ -163,8 +163,8 @@ class TestReadVectorStringsBulk:
             "AllTypes",
             Element().set("label", "item2"),
         )
-        all_types_db.update_vector_strings("AllTypes", "label_value", id1, ["alpha", "beta"])
-        all_types_db.update_vector_strings("AllTypes", "label_value", id2, ["gamma", "delta", "epsilon"])
+        all_types_db.update_element("AllTypes", id1, Element().set("label_value", ["alpha", "beta"]))
+        all_types_db.update_element("AllTypes", id2, Element().set("label_value", ["gamma", "delta", "epsilon"]))
         result = all_types_db.read_vector_strings("AllTypes", "label_value")
         assert len(result) == 2
         assert result[0] == ["alpha", "beta"]
@@ -177,7 +177,7 @@ class TestReadVectorStringsByID:
             "AllTypes",
             Element().set("label", "item1"),
         )
-        all_types_db.update_vector_strings("AllTypes", "label_value", id1, ["hello", "world"])
+        all_types_db.update_element("AllTypes", id1, Element().set("label_value", ["hello", "world"]))
         result = all_types_db.read_vector_strings_by_id("AllTypes", "label_value", id1)
         assert result == ["hello", "world"]
 
@@ -189,11 +189,10 @@ class TestReadVectorDateTimeByID:
             "AllTypes",
             Element().set("label", "item1"),
         )
-        all_types_db.update_vector_strings(
+        all_types_db.update_element(
             "AllTypes",
-            "label_value",
             id1,
-            ["2024-01-15T10:30:00", "2024-06-20T08:00:00"],
+            Element().set("label_value", ["2024-01-15T10:30:00", "2024-06-20T08:00:00"]),
         )
         result = all_types_db.read_vector_date_time_by_id("AllTypes", "label_value", id1)
         assert len(result) == 2

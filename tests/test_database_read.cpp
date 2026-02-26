@@ -605,12 +605,16 @@ TEST(Database, ReadVectorStringsBulk) {
     quiver::Element e1;
     e1.set("label", std::string("Item 1"));
     int64_t id1 = db.create_element("AllTypes", e1);
-    db.update_vector_strings("AllTypes", "label_value", id1, {"alpha", "beta", "gamma"});
+    quiver::Element update1;
+    update1.set("label_value", std::vector<std::string>{"alpha", "beta", "gamma"});
+    db.update_element("AllTypes", id1, update1);
 
     quiver::Element e2;
     e2.set("label", std::string("Item 2"));
     int64_t id2 = db.create_element("AllTypes", e2);
-    db.update_vector_strings("AllTypes", "label_value", id2, {"delta", "epsilon"});
+    quiver::Element update2;
+    update2.set("label_value", std::vector<std::string>{"delta", "epsilon"});
+    db.update_element("AllTypes", id2, update2);
 
     auto vectors = db.read_vector_strings("AllTypes", "label_value");
     EXPECT_EQ(vectors.size(), 2);
@@ -629,7 +633,9 @@ TEST(Database, ReadVectorStringsByIdBasic) {
     quiver::Element e;
     e.set("label", std::string("Item 1"));
     int64_t id = db.create_element("AllTypes", e);
-    db.update_vector_strings("AllTypes", "label_value", id, {"hello", "world"});
+    quiver::Element update;
+    update.set("label_value", std::vector<std::string>{"hello", "world"});
+    db.update_element("AllTypes", id, update);
 
     auto vec = db.read_vector_strings_by_id("AllTypes", "label_value", id);
     EXPECT_EQ(vec, (std::vector<std::string>{"hello", "world"}));
@@ -650,12 +656,16 @@ TEST(Database, ReadSetIntegersBulk) {
     quiver::Element e1;
     e1.set("label", std::string("Item 1"));
     int64_t id1 = db.create_element("AllTypes", e1);
-    db.update_set_integers("AllTypes", "code", id1, {10, 20, 30});
+    quiver::Element update1;
+    update1.set("code", std::vector<int64_t>{10, 20, 30});
+    db.update_element("AllTypes", id1, update1);
 
     quiver::Element e2;
     e2.set("label", std::string("Item 2"));
     int64_t id2 = db.create_element("AllTypes", e2);
-    db.update_set_integers("AllTypes", "code", id2, {40, 50});
+    quiver::Element update2;
+    update2.set("code", std::vector<int64_t>{40, 50});
+    db.update_element("AllTypes", id2, update2);
 
     auto sets = db.read_set_integers("AllTypes", "code");
     EXPECT_EQ(sets.size(), 2);
@@ -678,7 +688,9 @@ TEST(Database, ReadSetIntegersByIdBasic) {
     quiver::Element e;
     e.set("label", std::string("Item 1"));
     int64_t id = db.create_element("AllTypes", e);
-    db.update_set_integers("AllTypes", "code", id, {100, 200, 300});
+    quiver::Element update;
+    update.set("code", std::vector<int64_t>{100, 200, 300});
+    db.update_element("AllTypes", id, update);
 
     auto set = db.read_set_integers_by_id("AllTypes", "code", id);
     std::sort(set.begin(), set.end());
@@ -696,12 +708,16 @@ TEST(Database, ReadSetFloatsBulk) {
     quiver::Element e1;
     e1.set("label", std::string("Item 1"));
     int64_t id1 = db.create_element("AllTypes", e1);
-    db.update_set_floats("AllTypes", "weight", id1, {1.1, 2.2, 3.3});
+    quiver::Element update1;
+    update1.set("weight", std::vector<double>{1.1, 2.2, 3.3});
+    db.update_element("AllTypes", id1, update1);
 
     quiver::Element e2;
     e2.set("label", std::string("Item 2"));
     int64_t id2 = db.create_element("AllTypes", e2);
-    db.update_set_floats("AllTypes", "weight", id2, {4.4, 5.5});
+    quiver::Element update2;
+    update2.set("weight", std::vector<double>{4.4, 5.5});
+    db.update_element("AllTypes", id2, update2);
 
     auto sets = db.read_set_floats("AllTypes", "weight");
     EXPECT_EQ(sets.size(), 2);
@@ -729,7 +745,9 @@ TEST(Database, ReadSetFloatsByIdBasic) {
     quiver::Element e;
     e.set("label", std::string("Item 1"));
     int64_t id = db.create_element("AllTypes", e);
-    db.update_set_floats("AllTypes", "weight", id, {9.9, 8.8});
+    quiver::Element update;
+    update.set("weight", std::vector<double>{9.9, 8.8});
+    db.update_element("AllTypes", id, update);
 
     auto set = db.read_set_floats_by_id("AllTypes", "weight", id);
     std::sort(set.begin(), set.end());

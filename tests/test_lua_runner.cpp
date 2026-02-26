@@ -1144,61 +1144,6 @@ TEST_F(LuaRunnerTest, PathFromLua) {
 }
 
 // ============================================================================
-// Scalar update tests
-// ============================================================================
-
-TEST_F(LuaRunnerTest, UpdateScalarIntegerFromLua) {
-    auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{10}));
-
-    quiver::LuaRunner lua(db);
-
-    lua.run(R"(
-        db:update_scalar_integer("Collection", "some_integer", 1, 999)
-        local val = db:read_scalar_integer_by_id("Collection", "some_integer", 1)
-        assert(val == 999, "Expected 999, got " .. tostring(val))
-    )");
-
-    auto val = db.read_scalar_integer_by_id("Collection", "some_integer", 1);
-    EXPECT_EQ(*val, 999);
-}
-
-TEST_F(LuaRunnerTest, UpdateScalarFloatFromLua) {
-    auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_float", 1.0));
-
-    quiver::LuaRunner lua(db);
-
-    lua.run(R"(
-        db:update_scalar_float("Collection", "some_float", 1, 9.99)
-        local val = db:read_scalar_float_by_id("Collection", "some_float", 1)
-        assert(val == 9.99, "Expected 9.99, got " .. tostring(val))
-    )");
-
-    auto val = db.read_scalar_float_by_id("Collection", "some_float", 1);
-    EXPECT_DOUBLE_EQ(*val, 9.99);
-}
-
-TEST_F(LuaRunnerTest, UpdateScalarStringFromLua) {
-    auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element("Collection", quiver::Element().set("label", "Item 1"));
-
-    quiver::LuaRunner lua(db);
-
-    lua.run(R"(
-        db:update_scalar_string("Collection", "label", 1, "Updated Item")
-        local val = db:read_scalar_string_by_id("Collection", "label", 1)
-        assert(val == "Updated Item", "Expected 'Updated Item', got " .. tostring(val))
-    )");
-
-    auto val = db.read_scalar_string_by_id("Collection", "label", 1);
-    EXPECT_EQ(*val, "Updated Item");
-}
-
-// ============================================================================
 // Vector update tests
 // ============================================================================
 
@@ -1211,7 +1156,7 @@ TEST_F(LuaRunnerTest, UpdateVectorIntegersFromLua) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:update_vector_integers("Collection", "value_int", 1, {10, 20, 30, 40})
+        db:update_element("Collection", 1, { value_int = {10, 20, 30, 40} })
         local vec = db:read_vector_integers_by_id("Collection", "value_int", 1)
         assert(#vec == 4, "Expected 4 elements, got " .. #vec)
         assert(vec[1] == 10)
@@ -1231,7 +1176,7 @@ TEST_F(LuaRunnerTest, UpdateVectorFloatsFromLua) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:update_vector_floats("Collection", "value_float", 1, {5.5, 6.6, 7.7})
+        db:update_element("Collection", 1, { value_float = {5.5, 6.6, 7.7} })
         local vec = db:read_vector_floats_by_id("Collection", "value_float", 1)
         assert(#vec == 3, "Expected 3 elements, got " .. #vec)
         assert(vec[1] == 5.5)
@@ -1275,11 +1220,7 @@ TEST_F(LuaRunnerTest, UpdateScalarStringTrimsWhitespaceFromLua) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:update_scalar_string("Collection", "label", 1, "  Updated  ")
-        local label = db:read_scalar_string_by_id("Collection", "label", 1)
-        assert(label == "Updated", "Expected 'Updated' but got '" .. label .. "'")
-
-        db:update_set_strings("Collection", "tag", 1, {"  alpha  ", "	beta\n", " gamma "})
+        db:update_element("Collection", 1, { tag = {"  alpha  ", "	beta\n", " gamma "} })
     )");
 
     auto set_vals = db.read_set_strings_by_id("Collection", "tag", 1);
@@ -1320,7 +1261,7 @@ TEST_F(LuaRunnerTest, UpdateSetStringsFromLua) {
     quiver::LuaRunner lua(db);
 
     lua.run(R"(
-        db:update_set_strings("Collection", "tag", 1, {"x", "y", "z"})
+        db:update_element("Collection", 1, { tag = {"x", "y", "z"} })
         local tags = db:read_set_strings_by_id("Collection", "tag", 1)
         assert(#tags == 3, "Expected 3 tags, got " .. #tags)
     )");
@@ -1978,7 +1919,7 @@ TEST_F(LuaRunnerTest, TransactionBlockMultiOps) {
         db:transaction(function(db)
             db:create_element("Collection", { label = "Item 1", some_integer = 10 })
             db:create_element("Collection", { label = "Item 2", some_integer = 20 })
-            db:update_scalar_integer("Collection", "some_integer", 1, 100)
+            db:update_element("Collection", 1, { some_integer = 100 })
         end)
     )");
 
@@ -2013,8 +1954,9 @@ TEST_F(LuaRunnerAllTypesTest, ReadVectorStringsBulkFromLua) {
     auto db = quiver::Database::from_schema(":memory:", all_types_schema);
     db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
     db.create_element("AllTypes", quiver::Element().set("label", "Item 2"));
-    db.update_vector_strings("AllTypes", "label_value", 1, {"alpha", "beta"});
-    db.update_vector_strings("AllTypes", "label_value", 2, {"gamma", "delta", "epsilon"});
+    db.update_element("AllTypes", 1, quiver::Element().set("label_value", std::vector<std::string>{"alpha", "beta"}));
+    db.update_element(
+        "AllTypes", 2, quiver::Element().set("label_value", std::vector<std::string>{"gamma", "delta", "epsilon"}));
 
     quiver::LuaRunner lua(db);
 
@@ -2032,7 +1974,8 @@ TEST_F(LuaRunnerAllTypesTest, ReadVectorStringsBulkFromLua) {
 TEST_F(LuaRunnerAllTypesTest, ReadVectorStringsByIdFromLua) {
     auto db = quiver::Database::from_schema(":memory:", all_types_schema);
     int64_t id1 = db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
-    db.update_vector_strings("AllTypes", "label_value", id1, {"hello", "world"});
+    db.update_element(
+        "AllTypes", id1, quiver::Element().set("label_value", std::vector<std::string>{"hello", "world"}));
 
     quiver::LuaRunner lua(db);
 
@@ -2049,7 +1992,7 @@ TEST_F(LuaRunnerAllTypesTest, ReadVectorStringsByIdFromLua) {
 TEST_F(LuaRunnerAllTypesTest, ReadSetIntegersByIdFromLua) {
     auto db = quiver::Database::from_schema(":memory:", all_types_schema);
     int64_t id1 = db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
-    db.update_set_integers("AllTypes", "code", id1, {100, 200, 300});
+    db.update_element("AllTypes", id1, quiver::Element().set("code", std::vector<int64_t>{100, 200, 300}));
 
     quiver::LuaRunner lua(db);
 
@@ -2064,7 +2007,7 @@ TEST_F(LuaRunnerAllTypesTest, ReadSetIntegersByIdFromLua) {
 TEST_F(LuaRunnerAllTypesTest, ReadSetFloatsByIdFromLua) {
     auto db = quiver::Database::from_schema(":memory:", all_types_schema);
     int64_t id1 = db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
-    db.update_set_floats("AllTypes", "weight", id1, {1.1, 2.2, 3.3});
+    db.update_element("AllTypes", id1, quiver::Element().set("weight", std::vector<double>{1.1, 2.2, 3.3}));
 
     quiver::LuaRunner lua(db);
 
@@ -2080,8 +2023,8 @@ TEST_F(LuaRunnerAllTypesTest, ReadSetIntegersBulkFromLua) {
     auto db = quiver::Database::from_schema(":memory:", all_types_schema);
     db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
     db.create_element("AllTypes", quiver::Element().set("label", "Item 2"));
-    db.update_set_integers("AllTypes", "code", 1, {10, 20});
-    db.update_set_integers("AllTypes", "code", 2, {30, 40, 50});
+    db.update_element("AllTypes", 1, quiver::Element().set("code", std::vector<int64_t>{10, 20}));
+    db.update_element("AllTypes", 2, quiver::Element().set("code", std::vector<int64_t>{30, 40, 50}));
 
     quiver::LuaRunner lua(db);
 
@@ -2097,8 +2040,8 @@ TEST_F(LuaRunnerAllTypesTest, ReadSetFloatsBulkFromLua) {
     auto db = quiver::Database::from_schema(":memory:", all_types_schema);
     db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
     db.create_element("AllTypes", quiver::Element().set("label", "Item 2"));
-    db.update_set_floats("AllTypes", "weight", 1, {1.1, 2.2});
-    db.update_set_floats("AllTypes", "weight", 2, {3.3});
+    db.update_element("AllTypes", 1, quiver::Element().set("weight", std::vector<double>{1.1, 2.2}));
+    db.update_element("AllTypes", 2, quiver::Element().set("weight", std::vector<double>{3.3}));
 
     quiver::LuaRunner lua(db);
 
@@ -2117,8 +2060,8 @@ TEST_F(LuaRunnerAllTypesTest, UpdateSetIntegersFromLua) {
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        db:update_set_integers("AllTypes", "code", )" +
-                         std::to_string(id1) + R"(, {10, 20, 30})
+        db:update_element("AllTypes", )" +
+                         std::to_string(id1) + R"(, { code = {10, 20, 30} })
         local vals = db:read_set_integers_by_id("AllTypes", "code", )" +
                          std::to_string(id1) + R"()
         assert(#vals == 3, "Expected 3 values after update, got " .. #vals)
@@ -2136,8 +2079,8 @@ TEST_F(LuaRunnerAllTypesTest, UpdateSetFloatsFromLua) {
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        db:update_set_floats("AllTypes", "weight", )" +
-                         std::to_string(id1) + R"(, {1.1, 2.2})
+        db:update_element("AllTypes", )" +
+                         std::to_string(id1) + R"(, { weight = {1.1, 2.2} })
         local vals = db:read_set_floats_by_id("AllTypes", "weight", )" +
                          std::to_string(id1) + R"()
         assert(#vals == 2, "Expected 2 values after update, got " .. #vals)
@@ -2200,7 +2143,7 @@ TEST(LuaRunner_ExportCSV, ScalarDefaults) {
         })
     )");
 
-    lua.run("db:export_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) + "\")");
+    lua.run(R"(db:export_csv("Items", "", ")" + lua_safe_path(csv_path) + "\")");
 
     auto content = read_csv_file(csv_path.string());
     EXPECT_NE(content.find("label,name,status,price,date_created,notes\n"), std::string::npos);
@@ -2220,11 +2163,11 @@ TEST(LuaRunner_ExportCSV, GroupExport) {
     lua.run(R"(
         local id1 = db:create_element("Items", { label = "Item1", name = "Alpha" })
         local id2 = db:create_element("Items", { label = "Item2", name = "Beta" })
-        db:update_vector_floats("Items", "measurement", id1, {1.1, 2.2, 3.3})
-        db:update_vector_floats("Items", "measurement", id2, {4.4, 5.5})
+        db:update_element("Items", id1, { measurement = {1.1, 2.2, 3.3} })
+        db:update_element("Items", id2, { measurement = {4.4, 5.5} })
     )");
 
-    lua.run("db:export_csv(\"Items\", \"measurements\", \"" + lua_safe_path(csv_path) + "\")");
+    lua.run(R"(db:export_csv("Items", "measurements", ")" + lua_safe_path(csv_path) + "\")");
 
     auto content = read_csv_file(csv_path.string());
     EXPECT_NE(content.find("sep=,\nid,vector_index,measurement\n"), std::string::npos);
@@ -2255,7 +2198,7 @@ TEST(LuaRunner_ExportCSV, EnumLabels) {
         })
     )");
 
-    lua.run("db:export_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) +
+    lua.run(R"(db:export_csv("Items", "", ")" + lua_safe_path(csv_path) +
             "\", {\n"
             "    enum_labels = {\n"
             "        status = { en = { Active = 1, Inactive = 2 } }\n"
@@ -2283,7 +2226,7 @@ TEST(LuaRunner_ExportCSV, DateTimeFormat) {
         })
     )");
 
-    lua.run("db:export_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) +
+    lua.run(R"(db:export_csv("Items", "", ")" + lua_safe_path(csv_path) +
             "\", {\n"
             "    date_time_format = \"%Y/%m/%d\"\n"
             "})");
@@ -2312,7 +2255,7 @@ TEST(LuaRunner_ExportCSV, CombinedOptions) {
         })
     )");
 
-    lua.run("db:export_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) +
+    lua.run(R"(db:export_csv("Items", "", ")" + lua_safe_path(csv_path) +
             "\", {\n"
             "    enum_labels = {\n"
             "        status = { en = { Active = 1, Inactive = 2 } }\n"
@@ -2357,7 +2300,7 @@ TEST(LuaRunner_ImportCSV, ScalarRoundTrip) {
     )");
 
     // Export
-    lua.run("db:export_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) + "\")");
+    lua.run(R"(db:export_csv("Items", "", ")" + lua_safe_path(csv_path) + "\")");
 
     // Delete all elements and re-import
     lua.run(R"(
@@ -2365,7 +2308,7 @@ TEST(LuaRunner_ImportCSV, ScalarRoundTrip) {
         db:delete_element("Items", 2)
     )");
 
-    lua.run("db:import_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) + "\")");
+    lua.run(R"(db:import_csv("Items", "", ")" + lua_safe_path(csv_path) + "\")");
 
     lua.run(R"(
         local names = db:read_scalar_strings("Items", "name")
@@ -2386,18 +2329,14 @@ TEST(LuaRunner_ImportCSV, VectorGroupRoundTrip) {
 
     lua.run(R"(
         local id1 = db:create_element("Items", { label = "Item1", name = "Alpha" })
-        db:update_vector_floats("Items", "measurement", id1, {1.1, 2.2, 3.3})
+        db:update_element("Items", id1, { measurement = {1.1, 2.2, 3.3} })
     )");
 
     // Export
-    lua.run("db:export_csv(\"Items\", \"measurements\", \"" + lua_safe_path(csv_path) + "\")");
+    lua.run(R"(db:export_csv("Items", "measurements", ")" + lua_safe_path(csv_path) + R"("))");
 
-    // Clear vector and re-import
-    lua.run(R"(
-        db:update_vector_floats("Items", "measurement", 1, {})
-    )");
-
-    lua.run("db:import_csv(\"Items\", \"measurements\", \"" + lua_safe_path(csv_path) + "\")");
+    // Re-import (import will overwrite existing values)
+    lua.run(R"(db:import_csv("Items", "measurements", ")" + lua_safe_path(csv_path) + R"("))");
 
     lua.run(R"(
         local vals = db:read_vector_floats_by_id("Items", "measurement", 1)
@@ -2421,7 +2360,7 @@ TEST(LuaRunner_ImportCSV, ScalarHeaderOnlyClearsTable) {
     // Write header-only CSV
     write_lua_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\n");
 
-    lua.run("db:import_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) + "\")");
+    lua.run(R"(db:import_csv("Items", "", ")" + lua_safe_path(csv_path) + "\")");
 
     lua.run(R"(
         local names = db:read_scalar_strings("Items", "name")
@@ -2439,7 +2378,7 @@ TEST(LuaRunner_ImportCSV, EnumResolution) {
     auto csv_path = lua_csv_temp("ImportEnum");
     write_lua_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,Active,,,\n");
 
-    lua.run("db:import_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) +
+    lua.run(R"(db:import_csv("Items", "", ")" + lua_safe_path(csv_path) +
             "\", {\n"
             "    enum_labels = {\n"
             "        status = { en = { Active = 1, Inactive = 2 } }\n"
@@ -2463,7 +2402,7 @@ TEST(LuaRunner_ImportCSV, DateTimeFormat) {
     write_lua_csv_file(csv_path.string(),
                        "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,2024/01/15,\n");
 
-    lua.run("db:import_csv(\"Items\", \"\", \"" + lua_safe_path(csv_path) +
+    lua.run(R"(db:import_csv("Items", "", ")" + lua_safe_path(csv_path) +
             "\", {\n"
             "    date_time_format = \"%Y/%m/%d\"\n"
             "})");
@@ -2471,6 +2410,58 @@ TEST(LuaRunner_ImportCSV, DateTimeFormat) {
     lua.run(R"(
         local date = db:read_scalar_string_by_id("Items", "date_created", 1)
         assert(date == "2024-01-15T00:00:00", "Expected 2024-01-15T00:00:00, got " .. tostring(date))
+    )");
+
+    std::filesystem::remove(csv_path);
+}
+
+// ============================================================================
+// import_csv: Trailing empty columns (Excel artifact)
+// ============================================================================
+
+TEST(LuaRunner_ImportCSV, ScalarTrailingEmptyColumns) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(":memory:", csv_schema);
+    quiver::LuaRunner lua(db);
+
+    auto csv_path = lua_csv_temp("ImportScalarTrailing");
+    write_lua_csv_file(csv_path.string(),
+                       "sep=,\n"
+                       "label,name,status,price,date_created,notes,,,,\n"
+                       "Item1,Alpha,1,9.99,2024-01-15T10:30:00,first,,,,\n");
+
+    lua.run(R"(db:import_csv("Items", "", ")" + lua_safe_path(csv_path) + "\")");
+
+    lua.run(R"(
+        local names = db:read_scalar_strings("Items", "name")
+        assert(#names == 1, "Expected 1 name, got " .. #names)
+        assert(names[1] == "Alpha", "Expected Alpha, got " .. names[1])
+    )");
+
+    std::filesystem::remove(csv_path);
+}
+
+TEST(LuaRunner_ImportCSV, VectorTrailingEmptyColumns) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(":memory:", csv_schema);
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:create_element("Items", { label = "Item1", name = "Alpha" })
+    )");
+
+    auto csv_path = lua_csv_temp("ImportVectorTrailing");
+    write_lua_csv_file(csv_path.string(),
+                       "sep=,\n"
+                       "id,vector_index,measurement,,,\n"
+                       "Item1,1,1.1,,,\n"
+                       "Item1,2,2.2,,,\n");
+
+    lua.run(R"(db:import_csv("Items", "measurements", ")" + lua_safe_path(csv_path) + "\")");
+
+    lua.run(R"(
+        local vals = db:read_vector_floats_by_id("Items", "measurement", 1)
+        assert(#vals == 2, "Expected 2 values, got " .. #vals)
     )");
 
     std::filesystem::remove(csv_path);
@@ -2878,7 +2869,7 @@ TEST_F(LuaRunnerFkTest, UpdateVectorFkViaTypedMethod) {
         label = "Child 1",
         parent_ref = {"Parent 1"}
     })
-    db:update_vector_integers("Child", "parent_ref", 1, {2, 1})
+    db:update_element("Child", 1, { parent_ref = {2, 1} })
 )");
 
     auto refs = db.read_vector_integers_by_id("Child", "parent_ref", 1);

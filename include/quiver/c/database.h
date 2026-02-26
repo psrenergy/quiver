@@ -274,69 +274,6 @@ QUIVER_C_API quiver_error_t quiver_database_free_scalar_metadata_array(quiver_sc
                                                                        size_t count);
 QUIVER_C_API quiver_error_t quiver_database_free_group_metadata_array(quiver_group_metadata_t* metadata, size_t count);
 
-// Update scalar attributes (by element ID)
-QUIVER_C_API quiver_error_t quiver_database_update_scalar_integer(quiver_database_t* db,
-                                                                  const char* collection,
-                                                                  const char* attribute,
-                                                                  int64_t id,
-                                                                  int64_t value);
-
-QUIVER_C_API quiver_error_t quiver_database_update_scalar_float(quiver_database_t* db,
-                                                                const char* collection,
-                                                                const char* attribute,
-                                                                int64_t id,
-                                                                double value);
-
-QUIVER_C_API quiver_error_t quiver_database_update_scalar_string(quiver_database_t* db,
-                                                                 const char* collection,
-                                                                 const char* attribute,
-                                                                 int64_t id,
-                                                                 const char* value);
-
-// Update vector attributes (by element ID) - replaces entire vector
-QUIVER_C_API quiver_error_t quiver_database_update_vector_integers(quiver_database_t* db,
-                                                                   const char* collection,
-                                                                   const char* attribute,
-                                                                   int64_t id,
-                                                                   const int64_t* values,
-                                                                   size_t count);
-
-QUIVER_C_API quiver_error_t quiver_database_update_vector_floats(quiver_database_t* db,
-                                                                 const char* collection,
-                                                                 const char* attribute,
-                                                                 int64_t id,
-                                                                 const double* values,
-                                                                 size_t count);
-
-QUIVER_C_API quiver_error_t quiver_database_update_vector_strings(quiver_database_t* db,
-                                                                  const char* collection,
-                                                                  const char* attribute,
-                                                                  int64_t id,
-                                                                  const char* const* values,
-                                                                  size_t count);
-
-// Update set attributes (by element ID) - replaces entire set
-QUIVER_C_API quiver_error_t quiver_database_update_set_integers(quiver_database_t* db,
-                                                                const char* collection,
-                                                                const char* attribute,
-                                                                int64_t id,
-                                                                const int64_t* values,
-                                                                size_t count);
-
-QUIVER_C_API quiver_error_t quiver_database_update_set_floats(quiver_database_t* db,
-                                                              const char* collection,
-                                                              const char* attribute,
-                                                              int64_t id,
-                                                              const double* values,
-                                                              size_t count);
-
-QUIVER_C_API quiver_error_t quiver_database_update_set_strings(quiver_database_t* db,
-                                                               const char* collection,
-                                                               const char* attribute,
-                                                               int64_t id,
-                                                               const char* const* values,
-                                                               size_t count);
-
 // Read time series group by element ID - returns multi-column typed data
 // Columns are returned in schema definition order (dimension first, then value columns)
 // Column data arrays are typed: INTEGER -> int64_t*, FLOAT -> double*, STRING/DATE_TIME -> char**
@@ -417,12 +354,12 @@ QUIVER_C_API quiver_error_t quiver_database_export_csv(quiver_database_t* db,
                                                        const char* collection,
                                                        const char* group,
                                                        const char* path,
-                                                       const quiver_csv_options_t* opts);
+                                                       const quiver_csv_options_t* options);
 QUIVER_C_API quiver_error_t quiver_database_import_csv(quiver_database_t* db,
                                                        const char* collection,
                                                        const char* group,
                                                        const char* path,
-                                                       const quiver_csv_options_t* opts);
+                                                       const quiver_csv_options_t* options);
 
 // Query methods - execute SQL and return first row's first column
 QUIVER_C_API quiver_error_t quiver_database_query_string(quiver_database_t* db,

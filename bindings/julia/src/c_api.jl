@@ -52,12 +52,12 @@ end
     QUIVER_LOG_OFF = 4
 end
 
-struct quiver_database_options_t
+mutable struct quiver_database_options_t
     read_only::Cint
     console_level::quiver_log_level_t
 end
 
-struct quiver_csv_options_t
+mutable struct quiver_csv_options_t
     date_time_format::Ptr{Cchar}
     enum_attribute_names::Ptr{Ptr{Cchar}}
     enum_locale_names::Ptr{Ptr{Cchar}}
@@ -295,42 +295,6 @@ function quiver_database_free_group_metadata_array(metadata, count)
     @ccall libquiver_c.quiver_database_free_group_metadata_array(metadata::Ptr{quiver_group_metadata_t}, count::Csize_t)::quiver_error_t
 end
 
-function quiver_database_update_scalar_integer(db, collection, attribute, id, value)
-    @ccall libquiver_c.quiver_database_update_scalar_integer(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, value::Int64)::quiver_error_t
-end
-
-function quiver_database_update_scalar_float(db, collection, attribute, id, value)
-    @ccall libquiver_c.quiver_database_update_scalar_float(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, value::Cdouble)::quiver_error_t
-end
-
-function quiver_database_update_scalar_string(db, collection, attribute, id, value)
-    @ccall libquiver_c.quiver_database_update_scalar_string(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, value::Ptr{Cchar})::quiver_error_t
-end
-
-function quiver_database_update_vector_integers(db, collection, attribute, id, values, count)
-    @ccall libquiver_c.quiver_database_update_vector_integers(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Int64}, count::Csize_t)::quiver_error_t
-end
-
-function quiver_database_update_vector_floats(db, collection, attribute, id, values, count)
-    @ccall libquiver_c.quiver_database_update_vector_floats(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Cdouble}, count::Csize_t)::quiver_error_t
-end
-
-function quiver_database_update_vector_strings(db, collection, attribute, id, values, count)
-    @ccall libquiver_c.quiver_database_update_vector_strings(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Ptr{Cchar}}, count::Csize_t)::quiver_error_t
-end
-
-function quiver_database_update_set_integers(db, collection, attribute, id, values, count)
-    @ccall libquiver_c.quiver_database_update_set_integers(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Int64}, count::Csize_t)::quiver_error_t
-end
-
-function quiver_database_update_set_floats(db, collection, attribute, id, values, count)
-    @ccall libquiver_c.quiver_database_update_set_floats(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Cdouble}, count::Csize_t)::quiver_error_t
-end
-
-function quiver_database_update_set_strings(db, collection, attribute, id, values, count)
-    @ccall libquiver_c.quiver_database_update_set_strings(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, id::Int64, values::Ptr{Ptr{Cchar}}, count::Csize_t)::quiver_error_t
-end
-
 function quiver_database_read_time_series_group(db, collection, group, id, out_column_names, out_column_types, out_column_data, out_column_count, out_row_count)
     @ccall libquiver_c.quiver_database_read_time_series_group(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, out_column_names::Ptr{Ptr{Ptr{Cchar}}}, out_column_types::Ptr{Ptr{Cint}}, out_column_data::Ptr{Ptr{Ptr{Cvoid}}}, out_column_count::Ptr{Csize_t}, out_row_count::Ptr{Csize_t})::quiver_error_t
 end
@@ -387,12 +351,12 @@ function quiver_database_free_string_vectors(vectors, sizes, count)
     @ccall libquiver_c.quiver_database_free_string_vectors(vectors::Ptr{Ptr{Ptr{Cchar}}}, sizes::Ptr{Csize_t}, count::Csize_t)::quiver_error_t
 end
 
-function quiver_database_export_csv(db, collection, group, path, opts)
-    @ccall libquiver_c.quiver_database_export_csv(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, path::Ptr{Cchar}, opts::Ptr{quiver_csv_options_t})::quiver_error_t
+function quiver_database_export_csv(db, collection, group, path, options)
+    @ccall libquiver_c.quiver_database_export_csv(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, path::Ptr{Cchar}, options::Ptr{quiver_csv_options_t})::quiver_error_t
 end
 
-function quiver_database_import_csv(db, collection, group, path, opts)
-    @ccall libquiver_c.quiver_database_import_csv(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, path::Ptr{Cchar}, opts::Ptr{quiver_csv_options_t})::quiver_error_t
+function quiver_database_import_csv(db, collection, group, path, options)
+    @ccall libquiver_c.quiver_database_import_csv(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, path::Ptr{Cchar}, options::Ptr{quiver_csv_options_t})::quiver_error_t
 end
 
 function quiver_database_query_string(db, sql, out_value, out_has_value)

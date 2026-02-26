@@ -308,7 +308,9 @@ void main() {
       );
       try {
         db.createElement('AllTypes', {'label': 'Item 1'});
-        db.updateSetIntegers('AllTypes', 'code', 1, [10, 20, 30]);
+        db.updateElement('AllTypes', 1, {
+          'code': [10, 20, 30],
+        });
 
         final rows = db.readSetGroupById('AllTypes', 'codes', 1);
         expect(rows, isNotEmpty);
