@@ -1865,6 +1865,117 @@ TEST_F(LuaRunnerTest, ReadAllSetsByIdWithDataFromLua) {
 }
 
 // ============================================================================
+// read_element_by_id tests
+// ============================================================================
+
+TEST_F(LuaRunnerTest, ReadElementById_WithAllCategories) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", collections_schema, {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element(
+        "Collection",
+        quiver::Element()
+            .set("label", "Item 1")
+            .set("some_integer", int64_t{42})
+            .set("some_float", 3.14)
+            .set("value_int", std::vector<int64_t>{10, 20, 30})
+            .set("value_float", std::vector<double>{1.5, 2.5, 3.5})
+            .set("tag", std::vector<std::string>{"alpha", "beta"}));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        local elem = db:read_element_by_id("Collection", )" +
+                         std::to_string(id) + R"()
+
+        -- Verify scalars
+        assert(elem.label == "Item 1", "Expected label 'Item 1', got " .. tostring(elem.label))
+        assert(elem.some_integer == 42, "Expected some_integer 42, got " .. tostring(elem.some_integer))
+        local d = elem.some_float - 3.14
+        assert(d > -1e-9 and d < 1e-9, "Expected some_float 3.14, got " .. tostring(elem.some_float))
+
+        -- Verify id is NOT present
+        assert(elem.id == nil, "id should not be in result")
+
+        -- Verify vector columns are separate top-level keys (not nested under group name)
+        assert(elem.value_int ~= nil, "Missing 'value_int' vector column")
+        assert(#elem.value_int == 3, "Expected 3 value_int entries, got " .. #elem.value_int)
+        assert(elem.value_int[1] == 10, "value_int[1] expected 10")
+        assert(elem.value_int[2] == 20, "value_int[2] expected 20")
+        assert(elem.value_int[3] == 30, "value_int[3] expected 30")
+
+        assert(elem.value_float ~= nil, "Missing 'value_float' vector column")
+        assert(#elem.value_float == 3, "Expected 3 value_float entries, got " .. #elem.value_float)
+        local vf1 = elem.value_float[1] - 1.5
+        assert(vf1 > -1e-9 and vf1 < 1e-9, "value_float[1] expected 1.5")
+
+        -- Verify no group-level key 'values' exists (only column names)
+        assert(elem.values == nil, "Group name 'values' should not exist, only column names")
+
+        -- Verify set column
+        assert(elem.tag ~= nil, "Missing 'tag' set column")
+        assert(#elem.tag == 2, "Expected 2 tag entries, got " .. #elem.tag)
+
+        -- Verify no group-level key 'tags' exists
+        assert(elem.tags == nil, "Group name 'tags' should not exist, only column names")
+    )";
+    lua.run(script);
+}
+
+TEST_F(LuaRunnerTest, ReadElementById_NonexistentId) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", collections_schema, {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        local elem = db:read_element_by_id("Collection", 9999)
+
+        -- Nonexistent ID should return empty table
+        local count = 0
+        for _ in pairs(elem) do count = count + 1 end
+        assert(count == 0, "Expected empty table for nonexistent ID, got " .. count .. " entries")
+    )");
+}
+
+TEST_F(LuaRunnerTest, ReadElementById_ScalarsOnly) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+    int64_t id = db.create_element(
+        "Configuration",
+        quiver::Element()
+            .set("label", "Config 1")
+            .set("integer_attribute", int64_t{42})
+            .set("float_attribute", 3.14)
+            .set("string_attribute", std::string{"hello"}));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        local elem = db:read_element_by_id("Configuration", )" +
+                         std::to_string(id) + R"()
+
+        -- Verify scalars are present
+        assert(elem.label == "Config 1", "Expected label 'Config 1', got " .. tostring(elem.label))
+        assert(elem.integer_attribute == 42, "Expected integer_attribute 42")
+        assert(elem.string_attribute == "hello", "Expected string_attribute 'hello'")
+
+        -- Verify id is NOT present
+        assert(elem.id == nil, "id should not be in result")
+
+        -- Count keys: label, integer_attribute, float_attribute, string_attribute, date_attribute, boolean_attribute = 6
+        -- (date_attribute and boolean_attribute will be nil since we didn't set them, but keys are still present)
+        -- Actually, nil keys in Lua don't count in pairs() iteration
+        -- So we should have: label, integer_attribute, float_attribute, string_attribute = 4 non-nil keys
+        local count = 0
+        for _ in pairs(elem) do count = count + 1 end
+        assert(count == 4, "Expected 4 non-nil scalar keys, got " .. count)
+    )";
+    lua.run(script);
+}
+
+// ============================================================================
 // Transaction tests
 // ============================================================================
 

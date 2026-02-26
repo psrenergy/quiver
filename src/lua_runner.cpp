@@ -161,6 +161,7 @@ struct LuaRunner::Impl {
         bind.set_function("read_all_scalars_by_id", &read_all_scalars_by_id_lua);
         bind.set_function("read_all_vectors_by_id", &read_all_vectors_by_id_lua);
         bind.set_function("read_all_sets_by_id", &read_all_sets_by_id_lua);
+        bind.set_function("read_element_by_id", &read_element_by_id_lua);
 
         bind.set_function("update_element", &update_element_lua);
         bind.set_function("update_time_series_group", &update_time_series_group_lua);
@@ -803,6 +804,96 @@ struct LuaRunner::Impl {
             }
             result[group.group_name] = set;
         }
+        return result;
+    }
+
+    static sol::table
+    read_element_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
+        sol::state_view lua(s);
+        auto result = lua.create_table();
+
+        // 1. Scalars (exclude "id" -- caller already knows it)
+        for (const auto& attribute : db.list_scalar_attributes(collection)) {
+            if (attribute.name == "id") continue;
+            switch (attribute.data_type) {
+            case DataType::Integer: {
+                auto val = db.read_scalar_integer_by_id(collection, attribute.name, id);
+                result[attribute.name] = val.has_value() ? sol::make_object(lua, *val) : sol::lua_nil;
+                break;
+            }
+            case DataType::Real: {
+                auto val = db.read_scalar_float_by_id(collection, attribute.name, id);
+                result[attribute.name] = val.has_value() ? sol::make_object(lua, *val) : sol::lua_nil;
+                break;
+            }
+            case DataType::Text:
+            case DataType::DateTime: {
+                auto val = db.read_scalar_string_by_id(collection, attribute.name, id);
+                result[attribute.name] = val.has_value() ? sol::make_object(lua, *val) : sol::lua_nil;
+                break;
+            }
+            }
+        }
+
+        // Early exit for nonexistent element: label is NOT NULL in schema,
+        // so if it reads as nil the element does not exist -- return empty table
+        sol::object label_val = result["label"];
+        if (label_val.get_type() == sol::type::lua_nil) {
+            return lua.create_table();
+        }
+
+        // 2. Vectors -- each column is a separate top-level key
+        for (const auto& group : db.list_vector_groups(collection)) {
+            for (const auto& col : group.value_columns) {
+                auto vec = lua.create_table();
+                switch (col.data_type) {
+                case DataType::Integer: {
+                    auto values = db.read_vector_integers_by_id(collection, col.name, id);
+                    for (size_t i = 0; i < values.size(); ++i) vec[i + 1] = values[i];
+                    break;
+                }
+                case DataType::Real: {
+                    auto values = db.read_vector_floats_by_id(collection, col.name, id);
+                    for (size_t i = 0; i < values.size(); ++i) vec[i + 1] = values[i];
+                    break;
+                }
+                case DataType::Text:
+                case DataType::DateTime: {
+                    auto values = db.read_vector_strings_by_id(collection, col.name, id);
+                    for (size_t i = 0; i < values.size(); ++i) vec[i + 1] = values[i];
+                    break;
+                }
+                }
+                result[col.name] = vec;
+            }
+        }
+
+        // 3. Sets -- each column is a separate top-level key
+        for (const auto& group : db.list_set_groups(collection)) {
+            for (const auto& col : group.value_columns) {
+                auto set_table = lua.create_table();
+                switch (col.data_type) {
+                case DataType::Integer: {
+                    auto values = db.read_set_integers_by_id(collection, col.name, id);
+                    for (size_t i = 0; i < values.size(); ++i) set_table[i + 1] = values[i];
+                    break;
+                }
+                case DataType::Real: {
+                    auto values = db.read_set_floats_by_id(collection, col.name, id);
+                    for (size_t i = 0; i < values.size(); ++i) set_table[i + 1] = values[i];
+                    break;
+                }
+                case DataType::Text:
+                case DataType::DateTime: {
+                    auto values = db.read_set_strings_by_id(collection, col.name, id);
+                    for (size_t i = 0; i < values.size(); ++i) set_table[i + 1] = values[i];
+                    break;
+                }
+                }
+                result[col.name] = set_table;
+            }
+        }
+
         return result;
     }
 
