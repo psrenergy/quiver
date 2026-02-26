@@ -1324,6 +1324,66 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 result[name] = self.read_set_strings_by_id(collection, name, id)
         return result
 
+    def read_element_by_id(self, collection: str, id: int) -> dict:
+        """Read all scalar, vector, and set values for an element by ID.
+
+        Returns a flat dict with attribute/column names as keys.
+        Multi-column vector/set groups have each column as a separate top-level key.
+        DATE_TIME attributes are parsed to datetime objects.
+        Returns an empty dict if the element does not exist.
+        The 'id' field is excluded (caller already knows it).
+        """
+        self._ensure_open()
+        result = {}
+
+        # 1. Scalars (skip "id" -- caller already knows it)
+        for attr in self.list_scalar_attributes(collection):
+            name = attr.name
+            if name == "id":
+                continue
+            if attr.data_type == 0:  # INTEGER
+                result[name] = self.read_scalar_integer_by_id(collection, name, id)
+            elif attr.data_type == 1:  # FLOAT
+                result[name] = self.read_scalar_float_by_id(collection, name, id)
+            elif attr.data_type == 3:  # DATE_TIME
+                result[name] = self.read_scalar_date_time_by_id(collection, name, id)
+            else:  # STRING (2)
+                result[name] = self.read_scalar_string_by_id(collection, name, id)
+
+        # Early exit for nonexistent element (label is NOT NULL, None means no row)
+        if "label" in result and result["label"] is None:
+            return {}
+
+        # 2. Vectors -- each column is a separate top-level key
+        for group in self.list_vector_groups(collection):
+            for col in group.value_columns:
+                name = col.name
+                dt = col.data_type
+                if dt == 0:  # INTEGER
+                    result[name] = self.read_vector_integers_by_id(collection, name, id)
+                elif dt == 1:  # FLOAT
+                    result[name] = self.read_vector_floats_by_id(collection, name, id)
+                elif dt == 3:  # DATE_TIME
+                    result[name] = self.read_vector_date_time_by_id(collection, name, id)
+                else:  # STRING (2)
+                    result[name] = self.read_vector_strings_by_id(collection, name, id)
+
+        # 3. Sets -- each column is a separate top-level key
+        for group in self.list_set_groups(collection):
+            for col in group.value_columns:
+                name = col.name
+                dt = col.data_type
+                if dt == 0:  # INTEGER
+                    result[name] = self.read_set_integers_by_id(collection, name, id)
+                elif dt == 1:  # FLOAT
+                    result[name] = self.read_set_floats_by_id(collection, name, id)
+                elif dt == 3:  # DATE_TIME
+                    result[name] = self.read_set_date_time_by_id(collection, name, id)
+                else:  # STRING (2)
+                    result[name] = self.read_set_strings_by_id(collection, name, id)
+
+        return result
+
     def read_vector_group_by_id(
         self,
         collection: str,
