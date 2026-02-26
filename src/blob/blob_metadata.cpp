@@ -13,6 +13,8 @@
 
 namespace {
 
+constexpr std::string_view QUIVER_FILE_VERSION = "1";
+
 std::vector<int64_t> compute_time_dimension_initial_values(const std::vector<quiver::Dimension>& dimensions, const std::chrono::system_clock::time_point& initial_datetime) {
     std::vector<int64_t> initial_values;
     initial_values.push_back(1); // The largest time dimension always starts at 1
@@ -229,15 +231,161 @@ std::string BlobMetadata::to_toml() const {
 }
 
 void BlobMetadata::validate() const {
+    // Version check
+    if (version != QUIVER_FILE_VERSION) {
+        throw std::runtime_error("Incompatible file version: expected " + std::string(QUIVER_FILE_VERSION) + ", got " + version);
+    }
 
+    // Dimension count
+    if (dimensions.empty()) {
+        throw std::runtime_error("Number of dimensions must be positive, got 0");
+    }
+
+    // Label count
+    if (labels.empty()) {
+        throw std::runtime_error("Number of labels must be positive, got 0");
+    }
+
+    // Time dimension count must not exceed total dimensions
+    if (number_of_time_dimensions < 0 || number_of_time_dimensions > static_cast<int64_t>(dimensions.size())) {
+        throw std::runtime_error(
+            "Number of time dimensions must be non-negative and <= number of dimensions. "
+            "Got number_of_time_dimensions=" + std::to_string(number_of_time_dimensions) +
+            ", number_of_dimensions=" + std::to_string(dimensions.size()));
+    }
+
+    // Dimension sizes must be positive
+    for (size_t i = 0; i < dimensions.size(); ++i) {
+        if (dimensions[i].size <= 0) {
+            throw std::runtime_error(
+                "Dimension size at index " + std::to_string(i) +
+                " must be positive, got " + std::to_string(dimensions[i].size));
+        }
+    }
+
+    // Dimension name uniqueness
+    for (size_t i = 0; i < dimensions.size(); ++i) {
+        for (size_t j = i + 1; j < dimensions.size(); ++j) {
+            if (dimensions[i].name == dimensions[j].name) {
+                throw std::runtime_error("Dimension names must be unique, duplicate: '" + dimensions[i].name + "'");
+            }
+        }
+    }
+
+    // Label uniqueness
+    for (size_t i = 0; i < labels.size(); ++i) {
+        for (size_t j = i + 1; j < labels.size(); ++j) {
+            if (labels[i] == labels[j]) {
+                throw std::runtime_error("Label names must be unique, duplicate: '" + labels[i] + "'");
+            }
+        }
+    }
+
+    validate_time_dimension_metadata();
 }
 
 void BlobMetadata::validate_time_dimension_metadata() const {
+    if (number_of_time_dimensions == 0) return;
 
+    // Collect time dimensions in order
+    std::vector<const Dimension*> time_dims;
+    for (const auto& dim : dimensions) {
+        if (dim.is_time_dimension()) {
+            time_dims.push_back(&dim);
+        }
+    }
+
+    // Frequencies must be unique
+    for (size_t i = 0; i < time_dims.size(); ++i) {
+        for (size_t j = i + 1; j < time_dims.size(); ++j) {
+            if (time_dims[i]->time->frequency == time_dims[j]->time->frequency) {
+                throw std::runtime_error(
+                    "Time dimension frequencies must be unique. Duplicate: " +
+                    frequency_to_string(time_dims[i]->time->frequency));
+            }
+        }
+    }
+
+    // Frequencies must be sorted from lowest to highest (Yearly < Monthly < Weekly < Daily < Hourly)
+    for (size_t i = 1; i < time_dims.size(); ++i) {
+        if (time_dims[i]->time->frequency <= time_dims[i - 1]->time->frequency) {
+            throw std::runtime_error(
+                "Time dimension frequencies must be ordered from lowest to highest frequency.");
+        }
+    }
+
+    // If WEEKLY is present it must be the lowest (first) frequency
+    for (size_t i = 1; i < time_dims.size(); ++i) {
+        if (time_dims[i]->time->frequency == TimeFrequency::Weekly) {
+            throw std::runtime_error("If WEEKLY frequency is present, it must be the lowest frequency.");
+        }
+    }
+
+    validate_time_dimension_sizes();
 }
 
 void BlobMetadata::validate_time_dimension_sizes() const {
+    using namespace quiver::time;
 
+    // Skip the outermost time dimension (parent_dimension_index == -1) — its size is unconstrained
+    for (const auto& dim : dimensions) {
+        if (!dim.is_time_dimension() || dim.time->parent_dimension_index == -1) continue;
+        const Dimension& parent = dimensions[dim.time->parent_dimension_index];
+        TimeFrequency freq = dim.time->frequency;
+        TimeFrequency parent_freq = parent.time->frequency;
+        int64_t size = dim.size;
+
+        int64_t min_size = 0, max_size = 0;
+        bool found = true;
+        switch (freq) {
+        case TimeFrequency::Hourly:
+            switch (parent_freq) {
+                case TimeFrequency::Daily:   min_size = MIN_HOURS_IN_DAY;   max_size = MAX_HOURS_IN_DAY;   break;
+                case TimeFrequency::Weekly:  min_size = MIN_HOURS_IN_WEEK;  max_size = MAX_HOURS_IN_WEEK;  break;
+                case TimeFrequency::Monthly: min_size = MIN_HOURS_IN_MONTH; max_size = MAX_HOURS_IN_MONTH; break;
+                case TimeFrequency::Yearly:  min_size = MIN_HOURS_IN_YEAR;  max_size = MAX_HOURS_IN_YEAR;  break;
+                default: found = false; break;
+            }
+            break;
+        case TimeFrequency::Daily:
+            switch (parent_freq) {
+                case TimeFrequency::Weekly:  min_size = MIN_DAYS_IN_WEEK;  max_size = MAX_DAYS_IN_WEEK;  break;
+                case TimeFrequency::Monthly: min_size = MIN_DAYS_IN_MONTH; max_size = MAX_DAYS_IN_MONTH; break;
+                case TimeFrequency::Yearly:  min_size = MIN_DAYS_IN_YEAR;  max_size = MAX_DAYS_IN_YEAR;  break;
+                default: found = false; break;
+            }
+            break;
+        case TimeFrequency::Weekly:
+            switch (parent_freq) {
+                case TimeFrequency::Yearly: min_size = MIN_WEEKS_IN_YEAR; max_size = MAX_WEEKS_IN_YEAR; break;
+                default: found = false; break;
+            }
+            break;
+        case TimeFrequency::Monthly:
+            switch (parent_freq) {
+                case TimeFrequency::Yearly: min_size = MIN_MONTHS_IN_YEAR; max_size = MAX_MONTHS_IN_YEAR; break;
+                default: found = false; break;
+            }
+            break;
+        default:
+            found = false;
+            break;
+        }
+
+        if (!found) {
+            throw std::runtime_error(
+                "Invalid parent/child frequency combination: " +
+                frequency_to_string(freq) + " inside " + frequency_to_string(parent_freq));
+        }
+
+        if (size < min_size || size > max_size) {
+            throw std::runtime_error(
+                "Time dimension '" + dim.name + "' with frequency '" + frequency_to_string(freq) +
+                "' has size " + std::to_string(size) +
+                " which is out of bounds [" + std::to_string(min_size) + ", " + std::to_string(max_size) +
+                "] based on the next lower frequency: '" + frequency_to_string(parent_freq) + "'");
+        }
+    }
 }
 
 void BlobMetadata::add_dimension(const std::string& name, int64_t size) {

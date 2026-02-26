@@ -7,6 +7,11 @@
 #include <iostream>
 #include <string>
 
+namespace {
+constexpr std::string_view QVR_EXTENSION  = ".qvr";
+constexpr std::string_view TOML_EXTENSION = ".toml";
+}  // namespace
+
 namespace quiver {
 
 struct Blob::Impl {
@@ -28,18 +33,18 @@ Blob Blob::open_file(const std::string& file_path, char mode, const std::optiona
     switch(mode) {
     case 'r': {
         // Validate file exists
-        if (!fs::exists(file_path + ".qvr") || !fs::exists(file_path + ".toml")) {
+        if (!fs::exists(file_path + std::string(QVR_EXTENSION)) || !fs::exists(file_path + std::string(TOML_EXTENSION))) {
             throw std::invalid_argument("File not found: " + file_path);
         }
 
         // Read TOML metadata
-        std::ifstream toml_file(file_path + ".toml");
+        std::ifstream toml_file(file_path + std::string(TOML_EXTENSION));
         std::string toml_content((std::istreambuf_iterator<char>(toml_file)),
                                   std::istreambuf_iterator<char>());
         auto metadata = BlobMetadata::from_toml(toml_content);
 
         // Open binary data file
-        auto io = std::make_unique<std::fstream>(file_path + ".qvr", std::ios::in | std::ios::binary);
+        auto io = std::make_unique<std::fstream>(file_path + std::string(QVR_EXTENSION), std::ios::in | std::ios::binary);
         return Blob(file_path, metadata, std::move(io));
     }
     case 'w': {
@@ -49,10 +54,11 @@ Blob Blob::open_file(const std::string& file_path, char mode, const std::optiona
         }
 
         // Write metadata to TOML file
-        metadata->to_toml();
+        std::ofstream toml_file(file_path + std::string(TOML_EXTENSION));
+        toml_file << metadata->to_toml();
 
         // Open binary data file
-        auto io = std::make_unique<std::fstream>(file_path + ".qvr", std::ios::out | std::ios::binary);
+        auto io = std::make_unique<std::fstream>(file_path + std::string(QVR_EXTENSION), std::ios::out | std::ios::binary);
         return Blob(file_path, metadata.value(), std::move(io));
     }
     default:
