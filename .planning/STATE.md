@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-25)
 
 **Core value:** `pip install quiverdb` is self-contained with bundled native libraries
-**Current focus:** Phase 2 - Loader Rewrite (Complete)
+**Current focus:** Phase 3 - CI Wheel Building (Complete)
 
 ## Current Position
 
-Phase: 2 of 4 (Loader Rewrite)
-Plan: 2 of 2 in current phase
+Phase: 3 of 4 (CI Wheel Building)
+Plan: 1 of 1 in current phase
 Status: Phase Complete
-Last activity: 2026-02-25 -- Completed 02-02-PLAN.md
+Last activity: 2026-02-25 -- Completed 03-01-PLAN.md
 
-Progress: [█████░░░░░] 50%
+Progress: [███████░░░] 75%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 10min
-- Total execution time: 0.6 hours
+- Total plans completed: 5
+- Average duration: 8min
+- Total execution time: 0.7 hours
 
 **By Phase:**
 
@@ -29,9 +29,10 @@ Progress: [█████░░░░░] 50%
 |-------|-------|-------|----------|
 | 01-build-system-migration | 2 | 30min | 15min |
 | 02-loader-rewrite | 2 | 7min | 3.5min |
+| 03-ci-wheel-building | 1 | 3min | 3min |
 
 **Recent Trend:**
-- Last 5 plans: 22min, 8min, 2min, 5min
+- Last 5 plans: 22min, 8min, 2min, 5min, 3min
 - Trend: improving
 
 *Updated after each plan completion*
@@ -53,6 +54,10 @@ Recent decisions affecting current work:
 - [02-01]: Store os.add_dll_directory handle at module level to prevent garbage collection
 - [02-02]: Validation script checks _load_source == 'bundled' to confirm bundled discovery path
 - [02-02]: Tests run without build/bin/ in PATH to prove wheel self-containment
+- [03-01]: cibuildwheel config in pyproject.toml (not env vars) for readability and version control
+- [03-01]: fail-fast: false so both platforms report independently, merge job gates artifact creation
+- [03-01]: No before-all step -- scikit-build-core auto-provides cmake and ninja
+- [03-01]: test-command uses {project} path for explicit repo-root reference inside containers
 
 ### Pending Todos
 
@@ -66,5 +71,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 02-02-PLAN.md (End-to-end wheel install validation)
+Stopped at: Completed 03-01-PLAN.md (CI wheel building workflow)
 Resume file: None
