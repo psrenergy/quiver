@@ -19,19 +19,21 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Phase Details
 
 ### Phase 1: Core Implementation
-**Goal**: Callers can retrieve all scalars, vectors, and sets for an element in a single C++ or C API call
+**Goal**: Callers in all four bindings can retrieve all scalars, vectors, and sets for an element in a single call via binding-level composition of existing C API reads
 **Depends on**: Nothing (first phase)
 **Requirements**: READ-01, READ-02
 **Success Criteria** (what must be TRUE):
-  1. C++ caller can call `read_element_by_id(collection, id)` and receive an `ElementData` struct containing all scalar values, all vector values, and all set values for that element
-  2. C API caller can call `quiver_database_read_element_by_id` and receive transparent structs (`quiver_scalar_entry_t`, `quiver_array_entry_t`, `quiver_element_data_t`) that can be read without accessor functions
-  3. C API caller can free the returned data with `quiver_element_data_free` without memory leaks
-  4. C++ and C API tests pass, covering: element with scalars/vectors/sets, element with only scalars, nonexistent element ID
-**Plans**: TBD
+  1. Lua caller can call `db:read_element_by_id(collection, id)` and receive a flat Lua table with all scalar, vector column, and set column values as top-level keys
+  2. Julia caller can call `read_element_by_id(db, collection, id)` and receive a flat Dict{String,Any} with the same structure
+  3. Dart caller can call `db.readElementById(collection, id)` and receive a flat Map<String, Object?> with the same structure
+  4. Python caller can call `db.read_element_by_id(collection, id)` and receive a flat dict with the same structure
+  5. All four bindings return empty table/dict/map for nonexistent element IDs
+  6. Tests pass in all four bindings covering: element with scalars/vectors/sets, scalars only, nonexistent ID
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md -- Implement read_element_by_id in Lua and Julia bindings with tests
+- [ ] 01-02-PLAN.md -- Implement read_element_by_id in Dart and Python bindings with tests
 
 ### Phase 2: Binding Wrappers
 **Goal**: Users in any supported language can call `read_element_by_id` and get back a native data structure
@@ -70,6 +72,6 @@ Phases execute in numeric order: 1 -> 2 -> 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Implementation | 0/0 | Not started | - |
+| 1. Core Implementation | 0/2 | Planned | - |
 | 2. Binding Wrappers | 0/0 | Not started | - |
 | 3. Binding Cleanup | 0/0 | Not started | - |
