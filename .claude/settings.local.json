@@ -24,7 +24,8 @@
       "Bash(powershell:*)",
       "Bash(julia:*)",
       "Bash(cmake:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(dart pub:*)"
     ]
   }
 }
