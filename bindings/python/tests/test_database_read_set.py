@@ -171,9 +171,7 @@ class TestReadAllSetsByIDWithData:
 
     def test_read_all_sets_by_id_correct_types(self, composite_helpers_db: Database) -> None:
         """Each set group returns the correct Python type."""
-        id1 = composite_helpers_db.create_element(
-            "Items", label="item1", code=[5], weight=[9.9], tag=["text"]
-        )
+        id1 = composite_helpers_db.create_element("Items", label="item1", code=[5], weight=[9.9], tag=["text"])
         result = composite_helpers_db.read_all_sets_by_id("Items", id1)
 
         assert all(isinstance(v, int) for v in result["code"])

@@ -186,9 +186,7 @@ class TestReadAllVectorsByIDWithData:
 
     def test_read_all_vectors_by_id_correct_types(self, composite_helpers_db: Database) -> None:
         """Each vector group returns the correct Python type."""
-        id1 = composite_helpers_db.create_element(
-            "Items", label="item1", amount=[5], score=[9.9], note=["text"]
-        )
+        id1 = composite_helpers_db.create_element("Items", label="item1", amount=[5], score=[9.9], note=["text"])
         result = composite_helpers_db.read_all_vectors_by_id("Items", id1)
 
         assert all(isinstance(v, int) for v in result["amount"])
