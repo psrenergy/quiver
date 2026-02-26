@@ -1155,4 +1155,87 @@ void main() {
       }
     });
   });
+
+  // ===========================================================================
+  // Read Element By ID (composite convenience method)
+  // ===========================================================================
+
+  group('Read Element By ID', () {
+    test('element with all categories returns flat map', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Collection', {
+          'label': 'Item 1',
+          'some_integer': 42,
+          'some_float': 3.14,
+          'value_int': [10, 20, 30],
+          'value_float': [1.1, 2.2, 3.3],
+          'tag': ['alpha', 'beta'],
+        });
+
+        final result = db.readElementById('Collection', id);
+
+        // Scalars
+        expect(result['label'], equals('Item 1'));
+        expect(result['some_integer'], equals(42));
+        expect(result['some_float'], equals(3.14));
+
+        // Vector columns (flat, not nested under group name)
+        expect(result['value_int'], equals([10, 20, 30]));
+        expect(result['value_float'], equals([1.1, 2.2, 3.3]));
+
+        // Set column
+        expect((result['tag'] as List<String>)..sort(), equals(['alpha', 'beta']));
+
+        // id is excluded
+        expect(result.containsKey('id'), isFalse);
+
+        // No group-name keys like 'values' or 'tags'
+        expect(result.containsKey('values'), isFalse);
+        expect(result.containsKey('tags'), isFalse);
+      } finally {
+        db.close();
+      }
+    });
+
+    test('nonexistent element ID returns empty map', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+
+        final result = db.readElementById('Collection', 9999);
+        expect(result, isEmpty);
+      } finally {
+        db.close();
+      }
+    });
+
+    test('scalars only schema returns only scalar keys', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {
+          'label': 'Config1',
+          'integer_attribute': 7,
+        });
+
+        final result = db.readElementById('Configuration', 1);
+
+        expect(result['label'], equals('Config1'));
+        expect(result['integer_attribute'], equals(7));
+        expect(result.containsKey('id'), isFalse);
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

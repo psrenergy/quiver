@@ -860,6 +860,75 @@ extension DatabaseRead on Database {
     return result;
   }
 
+  /// Reads all scalar, vector, and set attribute values for an element by ID.
+  /// Returns a flat map with attribute/column names as keys.
+  /// Multi-column vector/set groups have each column as a separate top-level key.
+  /// DateTime columns are converted to DateTime objects.
+  /// Returns an empty map if the element does not exist.
+  /// The `id` field is excluded (caller already knows it).
+  Map<String, Object?> readElementById(String collection, int id) {
+    _ensureNotClosed();
+
+    final result = <String, Object?>{};
+
+    // 1. Scalars (skip "id" -- caller already knows it)
+    for (final attribute in listScalarAttributes(collection)) {
+      final name = attribute.name;
+      if (name == 'id') continue;
+      switch (attribute.dataType) {
+        case quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER:
+          result[name] = readScalarIntegerById(collection, name, id);
+        case quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT:
+          result[name] = readScalarFloatById(collection, name, id);
+        case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
+          result[name] = readScalarStringById(collection, name, id);
+        case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
+          result[name] = readScalarDateTimeById(collection, name, id);
+      }
+    }
+
+    // Early exit for nonexistent element (label is NOT NULL, null means no row)
+    if (result.containsKey('label') && result['label'] == null) {
+      return {};
+    }
+
+    // 2. Vectors -- each column is a separate top-level key
+    for (final group in listVectorGroups(collection)) {
+      for (final col in group.valueColumns) {
+        final name = col.name;
+        switch (col.dataType) {
+          case quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER:
+            result[name] = readVectorIntegersById(collection, name, id);
+          case quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT:
+            result[name] = readVectorFloatsById(collection, name, id);
+          case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
+            result[name] = readVectorStringsById(collection, name, id);
+          case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
+            result[name] = readVectorDateTimesById(collection, name, id);
+        }
+      }
+    }
+
+    // 3. Sets -- each column is a separate top-level key
+    for (final group in listSetGroups(collection)) {
+      for (final col in group.valueColumns) {
+        final name = col.name;
+        switch (col.dataType) {
+          case quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER:
+            result[name] = readSetIntegersById(collection, name, id);
+          case quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT:
+            result[name] = readSetFloatsById(collection, name, id);
+          case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
+            result[name] = readSetStringsById(collection, name, id);
+          case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
+            result[name] = readSetDateTimesById(collection, name, id);
+        }
+      }
+    }
+
+    return result;
+  }
+
   /// Reads a vector group for an element by ID, returning rows as maps.
   /// Each row contains column names mapped to their values.
   /// Useful for multi-column vector tables.

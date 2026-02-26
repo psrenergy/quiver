@@ -39,8 +39,11 @@ DynamicLibrary get library {
     // On Windows, load the core library first so the C API library can find it
     if (Platform.isWindows) {
       final corePath = '$libDir/$_coreLibraryName';
+      final libCorePath = '$libDir/lib$_coreLibraryName';
       if (File(corePath).existsSync()) {
         DynamicLibrary.open(corePath);
+      } else if (File(libCorePath).existsSync()) {
+        DynamicLibrary.open(libCorePath);
       }
     }
 
