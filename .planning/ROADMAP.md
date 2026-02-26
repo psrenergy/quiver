@@ -24,13 +24,14 @@ Python binding currently uses the `Element` builder pattern for create/update op
   3. `Element` class is not importable from the quiver Python package (`from quiver import Element` fails)
   4. All existing Python tests pass after being rewritten to use the kwargs API
   5. CLAUDE.md cross-layer naming table accurately reflects the new Python pattern
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: TBD
+- [ ] 01-01-PLAN.md -- Core API change (kwargs create/update, remove Element from exports) + convert create/update/delete test files
+- [ ] 01-02-PLAN.md -- Convert remaining 9 test files + update CLAUDE.md documentation
 
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Python kwargs API | 0/0 | Not started | - |
+| 1. Python kwargs API | 0/2 | Not started | - |
