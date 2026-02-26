@@ -140,7 +140,9 @@ class TestReadElementIDs:
 class TestReadScalarDateTimeByID:
     def test_read_scalar_date_time_by_id(self, db: Database) -> None:
         id1 = db.create_element(
-            "Configuration", label="item1", date_attribute="2024-01-15T10:30:00",
+            "Configuration",
+            label="item1",
+            date_attribute="2024-01-15T10:30:00",
         )
         result = db.read_scalar_date_time_by_id("Configuration", "date_attribute", id1)
         assert result == datetime(2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc)
@@ -148,7 +150,9 @@ class TestReadScalarDateTimeByID:
 
     def test_read_scalar_date_time_by_id_space_format(self, db: Database) -> None:
         id1 = db.create_element(
-            "Configuration", label="item1", date_attribute="2024-01-15 10:30:00",
+            "Configuration",
+            label="item1",
+            date_attribute="2024-01-15 10:30:00",
         )
         result = db.read_scalar_date_time_by_id("Configuration", "date_attribute", id1)
         assert result == datetime(2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc)

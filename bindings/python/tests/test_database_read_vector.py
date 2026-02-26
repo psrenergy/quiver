@@ -153,7 +153,9 @@ class TestReadVectorDateTimeByID:
         """read_vector_date_time_by_id wraps read_vector_strings_by_id + datetime parsing."""
         id1 = all_types_db.create_element("AllTypes", label="item1")
         all_types_db.update_element(
-            "AllTypes", id1, label_value=["2024-01-15T10:30:00", "2024-06-20T08:00:00"],
+            "AllTypes",
+            id1,
+            label_value=["2024-01-15T10:30:00", "2024-06-20T08:00:00"],
         )
         result = all_types_db.read_vector_date_time_by_id("AllTypes", "label_value", id1)
         assert len(result) == 2

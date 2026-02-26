@@ -12,8 +12,24 @@ class TestImportCSVScalarRoundTrip:
 
     def test_scalar_round_trip(self, csv_db: Database, tmp_path, csv_export_schema_path):
         """Export scalars, import into fresh DB, read back matches original."""
-        csv_db.create_element("Items", label="Item1", name="Alpha", status=1, price=9.99, date_created="2024-01-15T10:30:00", notes="first")
-        csv_db.create_element("Items", label="Item2", name="Beta", status=2, price=19.5, date_created="2024-02-20T08:00:00", notes="second")
+        csv_db.create_element(
+            "Items",
+            label="Item1",
+            name="Alpha",
+            status=1,
+            price=9.99,
+            date_created="2024-01-15T10:30:00",
+            notes="first",
+        )
+        csv_db.create_element(
+            "Items",
+            label="Item2",
+            name="Beta",
+            status=2,
+            price=19.5,
+            date_created="2024-02-20T08:00:00",
+            notes="second",
+        )
 
         csv_path = str(tmp_path / "scalars_rt.csv")
         csv_db.export_csv("Items", "", csv_path)

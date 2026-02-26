@@ -140,7 +140,9 @@ class TestReadSetDateTimeByID:
         """read_set_date_time_by_id wraps read_set_strings_by_id + datetime parsing."""
         id1 = all_types_db.create_element("AllTypes", label="item1")
         all_types_db.update_element(
-            "AllTypes", id1, tag=["2024-01-15T10:30:00", "2024-06-20T08:00:00"],
+            "AllTypes",
+            id1,
+            tag=["2024-01-15T10:30:00", "2024-06-20T08:00:00"],
         )
         result = all_types_db.read_set_date_time_by_id("AllTypes", "tag", id1)
         assert len(result) == 2
