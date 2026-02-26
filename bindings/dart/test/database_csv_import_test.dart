@@ -316,6 +316,58 @@ void main() {
       }
     });
 
+    test('self-reference FK re-import', () {
+      final relationsPath = path.join(testsPath, 'schemas', 'valid', 'relations.sql');
+      final db = Database.fromSchema(':memory:', relationsPath);
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_self_fk_reimport.csv';
+      try {
+        db.createElement('Parent', {'label': 'Parent1'});
+
+        // First import: 2 children, one with self-FK
+        File(csvPath).writeAsStringSync(
+          'sep=,\n'
+          'label,parent_id,sibling_id\n'
+          'Child1,Parent1,\n'
+          'Child2,Parent1,Child1\n',
+        );
+
+        db.importCSV('Child', '', csvPath);
+
+        final sib1 = db.queryInteger('SELECT sibling_id FROM Child WHERE label = ?', params: ['Child1']);
+        expect(sib1, isNull);
+
+        final sib2 = db.queryInteger('SELECT sibling_id FROM Child WHERE label = ?', params: ['Child2']);
+        final child1Id = db.queryInteger('SELECT id FROM Child WHERE label = ?', params: ['Child1']);
+        expect(sib2, child1Id);
+
+        // Second import (re-import): 4 children, includes self-referencing row
+        File(csvPath).writeAsStringSync(
+          'sep=,\n'
+          'label,parent_id,sibling_id\n'
+          'Child1,Parent1,\n'
+          'Child2,Parent1,Child1\n'
+          'Child3,Parent1,Child3\n'
+          'Child4,Parent1,Child3\n',
+        );
+
+        db.importCSV('Child', '', csvPath);
+
+        final labels = db.readScalarStrings('Child', 'label');
+        expect(labels.length, 4);
+
+        final child3Id = db.queryInteger('SELECT id FROM Child WHERE label = ?', params: ['Child3']);
+        final sib3 = db.queryInteger('SELECT sibling_id FROM Child WHERE label = ?', params: ['Child3']);
+        expect(sib3, child3Id);
+
+        final sib4 = db.queryInteger('SELECT sibling_id FROM Child WHERE label = ?', params: ['Child4']);
+        expect(sib4, child3Id);
+      } finally {
+        final f = File(csvPath);
+        if (f.existsSync()) f.deleteSync();
+        db.close();
+      }
+    });
+
     test('vector trailing empty columns', () {
       final db = Database.fromSchema(':memory:', schemaPath);
       final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_trailing_vector.csv';

@@ -299,6 +299,52 @@ include("fixture.jl")
         end
     end
 
+    @testset "Self-reference FK re-import" begin
+        path_relations = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_relations)
+        csv_path = tempname() * ".csv"
+        try
+            Quiver.create_element!(db, "Parent"; label = "Parent1")
+
+            # First import: 2 children, one with self-FK
+            open(csv_path, "w") do f
+                return write(f, "sep=,\nlabel,parent_id,sibling_id\nChild1,Parent1,\nChild2,Parent1,Child1\n")
+            end
+
+            Quiver.import_csv(db, "Child", "", csv_path)
+
+            sib1 = Quiver.query_integer(db, "SELECT sibling_id FROM Child WHERE label = ?"; params = ["Child1"])
+            @test isnothing(sib1)
+
+            sib2 = Quiver.query_integer(db, "SELECT sibling_id FROM Child WHERE label = ?"; params = ["Child2"])
+            child1_id = Quiver.query_integer(db, "SELECT id FROM Child WHERE label = ?"; params = ["Child1"])
+            @test sib2 == child1_id
+
+            # Second import (re-import): 4 children, includes self-referencing row
+            open(csv_path, "w") do f
+                return write(
+                    f,
+                    "sep=,\nlabel,parent_id,sibling_id\nChild1,Parent1,\nChild2,Parent1,Child1\nChild3,Parent1,Child3\nChild4,Parent1,Child3\n",
+                )
+            end
+
+            Quiver.import_csv(db, "Child", "", csv_path)
+
+            labels = Quiver.read_scalar_strings(db, "Child", "label")
+            @test length(labels) == 4
+
+            child3_id = Quiver.query_integer(db, "SELECT id FROM Child WHERE label = ?"; params = ["Child3"])
+            sib3 = Quiver.query_integer(db, "SELECT sibling_id FROM Child WHERE label = ?"; params = ["Child3"])
+            @test sib3 == child3_id
+
+            sib4 = Quiver.query_integer(db, "SELECT sibling_id FROM Child WHERE label = ?"; params = ["Child4"])
+            @test sib4 == child3_id
+        finally
+            isfile(csv_path) && rm(csv_path)
+            Quiver.close!(db)
+        end
+    end
+
     @testset "Group invalid enum throws" begin
         db = Quiver.from_schema(":memory:", path_schema)
         csv_path = tempname() * ".csv"
