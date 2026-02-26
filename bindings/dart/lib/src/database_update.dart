@@ -110,9 +110,7 @@ extension DatabaseUpdate on Database {
           columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_STRING;
           final arr = arena<Pointer<Char>>(rowCount);
           for (var r = 0; r < rowCount; r++) {
-            arr[r] = (values[r] as String)
-                .toNativeUtf8(allocator: arena)
-                .cast();
+            arr[r] = (values[r] as String).toNativeUtf8(allocator: arena).cast();
           }
           columnData[i] = arr.cast();
         } else if (values.first is DateTime) {

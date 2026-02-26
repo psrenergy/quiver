@@ -1091,9 +1091,7 @@ extension DatabaseRead on Database {
       final result = <String, String?>{};
       for (var i = 0; i < count; i++) {
         final column = outColumns.value[i].cast<Utf8>().toDartString();
-        final path = outPaths.value[i] == nullptr
-            ? null
-            : outPaths.value[i].cast<Utf8>().toDartString();
+        final path = outPaths.value[i] == nullptr ? null : outPaths.value[i].cast<Utf8>().toDartString();
         result[column] = path;
       }
 

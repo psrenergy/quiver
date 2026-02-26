@@ -154,8 +154,7 @@ void main() {
 
     test('invalid datetime returns raw value', () {
       final db = Database.fromSchema(':memory:', schemaPath);
-      final csvPath =
-          '${Directory.systemTemp.path}/quiver_dart_csv_invalid_date.csv';
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_invalid_date.csv';
       try {
         db.createElement('Items', {
           'label': 'Item1',
@@ -177,8 +176,7 @@ void main() {
 
     test('combined options (enum_labels + date_time_format)', () {
       final db = Database.fromSchema(':memory:', schemaPath);
-      final csvPath =
-          '${Directory.systemTemp.path}/quiver_dart_csv_combined.csv';
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_combined.csv';
       try {
         db.createElement('Items', {
           'label': 'Item1',

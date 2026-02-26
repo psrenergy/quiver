@@ -1484,8 +1484,7 @@ void main() {
 
         // Attempt update with nonexistent FK label
         expect(
-          () =>
-              db.updateElement('Child', 1, {'parent_id': 'Nonexistent Parent'}),
+          () => db.updateElement('Child', 1, {'parent_id': 'Nonexistent Parent'}),
           throwsA(isA<DatabaseException>()),
         );
 

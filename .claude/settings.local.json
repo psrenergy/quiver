@@ -23,7 +23,8 @@
       "Bash(cmd:*)",
       "Bash(powershell:*)",
       "Bash(julia:*)",
-      "Bash(cmake:*)"
+      "Bash(cmake:*)",
+      "Bash(dir:*)"
     ]
   }
 }

@@ -155,9 +155,25 @@ class TestReadSetDateTimeByID:
 
 
 class TestReadAllSetsByIDWithData:
-    """Skipped: read_all_sets_by_id uses group name as attribute, but no existing
-    schema has single-column set groups where group name == column name.
-    The convenience method has a known limitation (decision 06-02). The empty-case
-    test above covers the method plumbing."""
+    def test_read_all_sets_by_id_returns_all_groups(self, composite_helpers_db: Database) -> None:
+        """read_all_sets_by_id returns dict with integer, float, and string set groups."""
+        id1 = composite_helpers_db.create_element(
+            "Items", label="item1", code=[10, 20, 30], weight=[1.1, 2.2], tag=["alpha", "beta"]
+        )
+        result = composite_helpers_db.read_all_sets_by_id("Items", id1)
 
-    pass
+        assert len(result) == 3
+        assert sorted(result["code"]) == [10, 20, 30]
+        assert len(result["weight"]) == 2
+        assert any(abs(v - 1.1) < 1e-9 for v in result["weight"])
+        assert any(abs(v - 2.2) < 1e-9 for v in result["weight"])
+        assert sorted(result["tag"]) == ["alpha", "beta"]
+
+    def test_read_all_sets_by_id_correct_types(self, composite_helpers_db: Database) -> None:
+        """Each set group returns the correct Python type."""
+        id1 = composite_helpers_db.create_element("Items", label="item1", code=[5], weight=[9.9], tag=["text"])
+        result = composite_helpers_db.read_all_sets_by_id("Items", id1)
+
+        assert all(isinstance(v, int) for v in result["code"])
+        assert all(isinstance(v, float) for v in result["weight"])
+        assert all(isinstance(v, str) for v in result["tag"])

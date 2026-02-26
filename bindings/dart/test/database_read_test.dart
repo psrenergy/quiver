@@ -1049,6 +1049,72 @@ void main() {
     });
   });
 
+  // ===========================================================================
+  // Composite helper tests (using composite_helpers.sql)
+  // ===========================================================================
+
+  group('readAllVectorsById', () {
+    test('returns all vector groups with correct types', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'composite_helpers.sql'),
+      );
+      try {
+        final id = db.createElement('Items', {
+          'label': 'Item 1',
+          'amount': [10, 20, 30],
+          'score': [1.1, 2.2],
+          'note': ['hello', 'world'],
+        });
+
+        final result = db.readAllVectorsById('Items', id);
+
+        expect(result.length, equals(3));
+        expect(result['amount'], equals([10, 20, 30]));
+        expect(result['score'], equals([1.1, 2.2]));
+        expect(result['note'], equals(['hello', 'world']));
+
+        // Verify types
+        expect(result['amount']!.every((v) => v is int), isTrue);
+        expect(result['score']!.every((v) => v is double), isTrue);
+        expect(result['note']!.every((v) => v is String), isTrue);
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('readAllSetsById', () {
+    test('returns all set groups with correct types', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'composite_helpers.sql'),
+      );
+      try {
+        final id = db.createElement('Items', {
+          'label': 'Item 1',
+          'code': [10, 20, 30],
+          'weight': [1.1, 2.2],
+          'tag': ['alpha', 'beta'],
+        });
+
+        final result = db.readAllSetsById('Items', id);
+
+        expect(result.length, equals(3));
+        expect(result['code']!..sort(), equals([10, 20, 30]));
+        expect(result['weight']!..sort(), equals([1.1, 2.2]));
+        expect(result['tag']!..sort(), equals(['alpha', 'beta']));
+
+        // Verify types
+        expect(result['code']!.every((v) => v is int), isTrue);
+        expect(result['weight']!.every((v) => v is double), isTrue);
+        expect(result['tag']!.every((v) => v is String), isTrue);
+      } finally {
+        db.close();
+      }
+    });
+  });
+
   group('Read Vector Group by ID', () {
     test('readVectorGroupById returns all columns as rows', () {
       final db = Database.fromSchema(

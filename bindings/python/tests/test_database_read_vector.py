@@ -170,10 +170,25 @@ class TestReadVectorDateTimeByID:
 
 
 class TestReadAllVectorsByIDWithData:
-    """Skipped: read_all_vectors_by_id uses group name as attribute, but no existing
-    schema has single-column vector groups where group name == column name.
-    The convenience method has a known limitation (decision 06-02). The empty-case
-    test above covers the method plumbing. Testing with data would require a new
-    schema where group name matches column name."""
+    def test_read_all_vectors_by_id_returns_all_groups(self, composite_helpers_db: Database) -> None:
+        """read_all_vectors_by_id returns dict with integer, float, and string vector groups."""
+        id1 = composite_helpers_db.create_element(
+            "Items", label="item1", amount=[10, 20, 30], score=[1.1, 2.2], note=["hello", "world"]
+        )
+        result = composite_helpers_db.read_all_vectors_by_id("Items", id1)
 
-    pass
+        assert len(result) == 3
+        assert result["amount"] == [10, 20, 30]
+        assert len(result["score"]) == 2
+        assert abs(result["score"][0] - 1.1) < 1e-9
+        assert abs(result["score"][1] - 2.2) < 1e-9
+        assert result["note"] == ["hello", "world"]
+
+    def test_read_all_vectors_by_id_correct_types(self, composite_helpers_db: Database) -> None:
+        """Each vector group returns the correct Python type."""
+        id1 = composite_helpers_db.create_element("Items", label="item1", amount=[5], score=[9.9], note=["text"])
+        result = composite_helpers_db.read_all_vectors_by_id("Items", id1)
+
+        assert all(isinstance(v, int) for v in result["amount"])
+        assert all(isinstance(v, float) for v in result["score"])
+        assert all(isinstance(v, str) for v in result["note"])

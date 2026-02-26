@@ -614,6 +614,68 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    # ============================================================================
+    # Composite helper tests (using composite_helpers.sql)
+    # ============================================================================
+
+    @testset "read_all_vectors_by_id" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "composite_helpers.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        id = Quiver.create_element!(db, "Items";
+            label = "Item 1",
+            amount = [10, 20, 30],
+            score = [1.1, 2.2],
+            note = ["hello", "world"],
+        )
+
+        result = Quiver.read_all_vectors_by_id(db, "Items", id)
+
+        @test length(result) == 3
+        @test haskey(result, "amount")
+        @test haskey(result, "score")
+        @test haskey(result, "note")
+        @test result["amount"] == [10, 20, 30]
+        @test result["score"] == [1.1, 2.2]
+        @test result["note"] == ["hello", "world"]
+
+        # Verify element types (Dict values are Vector{Any}, check individual elements)
+        @test all(v -> v isa Int64, result["amount"])
+        @test all(v -> v isa Float64, result["score"])
+        @test all(v -> v isa String, result["note"])
+
+        Quiver.close!(db)
+    end
+
+    @testset "read_all_sets_by_id" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "composite_helpers.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        id = Quiver.create_element!(db, "Items";
+            label = "Item 1",
+            code = [10, 20, 30],
+            weight = [1.1, 2.2],
+            tag = ["alpha", "beta"],
+        )
+
+        result = Quiver.read_all_sets_by_id(db, "Items", id)
+
+        @test length(result) == 3
+        @test haskey(result, "code")
+        @test haskey(result, "weight")
+        @test haskey(result, "tag")
+        @test sort(result["code"]) == [10, 20, 30]
+        @test sort(result["weight"]) == [1.1, 2.2]
+        @test sort(result["tag"]) == ["alpha", "beta"]
+
+        # Verify element types (Dict values are Vector{Any}, check individual elements)
+        @test all(v -> v isa Int64, result["code"])
+        @test all(v -> v isa Float64, result["weight"])
+        @test all(v -> v isa String, result["tag"])
+
+        Quiver.close!(db)
+    end
 end
 
 end

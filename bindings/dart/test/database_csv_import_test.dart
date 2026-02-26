@@ -13,8 +13,7 @@ void main() {
   group('CSV Import', () {
     test('scalar round-trip', () {
       final db = Database.fromSchema(':memory:', schemaPath);
-      final csvPath =
-          '${Directory.systemTemp.path}/quiver_dart_csv_import_scalar.csv';
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_scalar.csv';
       try {
         db.createElement('Items', {
           'label': 'Item1',
@@ -56,8 +55,7 @@ void main() {
 
     test('vector group round-trip', () {
       final db = Database.fromSchema(':memory:', schemaPath);
-      final csvPath =
-          '${Directory.systemTemp.path}/quiver_dart_csv_import_vector.csv';
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_vector.csv';
       try {
         final id1 = db.createElement('Items', {
           'label': 'Item1',
@@ -87,8 +85,7 @@ void main() {
 
     test('scalar header-only clears table', () {
       final db = Database.fromSchema(':memory:', schemaPath);
-      final csvPath =
-          '${Directory.systemTemp.path}/quiver_dart_csv_import_header.csv';
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_header.csv';
       try {
         db.createElement('Items', {'label': 'Item1', 'name': 'Alpha'});
 
@@ -110,8 +107,7 @@ void main() {
 
     test('enum resolution', () {
       final db = Database.fromSchema(':memory:', schemaPath);
-      final csvPath =
-          '${Directory.systemTemp.path}/quiver_dart_csv_import_enum.csv';
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_enum.csv';
       try {
         File(csvPath).writeAsStringSync(
           'sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,Active,,,\n',
@@ -140,8 +136,7 @@ void main() {
 
     test('datetime format', () {
       final db = Database.fromSchema(':memory:', schemaPath);
-      final csvPath =
-          '${Directory.systemTemp.path}/quiver_dart_csv_import_date.csv';
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_date.csv';
       try {
         File(csvPath).writeAsStringSync(
           'sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,2024/01/15,\n',
@@ -161,8 +156,7 @@ void main() {
 
     test('semicolon sep= header round-trip', () {
       final db = Database.fromSchema(':memory:', schemaPath);
-      final csvPath =
-          '${Directory.systemTemp.path}/quiver_dart_csv_import_semicolon.csv';
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_semicolon.csv';
       try {
         File(csvPath).writeAsStringSync(
           'sep=;\nlabel;name;status;price;date_created;notes\nItem1;Alpha;1;9.99;;\n',
@@ -182,8 +176,7 @@ void main() {
 
     test('semicolon auto-detect round-trip', () {
       final db = Database.fromSchema(':memory:', schemaPath);
-      final csvPath =
-          '${Directory.systemTemp.path}/quiver_dart_csv_import_semicolon_auto.csv';
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_semicolon_auto.csv';
       try {
         File(csvPath).writeAsStringSync(
           'label;name;status;price;date_created;notes\nItem1;Alpha;1;9.99;;\n',
@@ -215,8 +208,7 @@ void main() {
 
     test('group duplicate entries throws', () {
       final db = Database.fromSchema(':memory:', schemaPath);
-      final csvPath =
-          '${Directory.systemTemp.path}/quiver_dart_csv_import_dup_group.csv';
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_dup_group.csv';
       try {
         db.createElement('Items', {'label': 'Item1', 'name': 'Alpha'});
 
@@ -234,8 +226,7 @@ void main() {
 
     test('group invalid enum throws', () {
       final db = Database.fromSchema(':memory:', schemaPath);
-      final csvPath =
-          '${Directory.systemTemp.path}/quiver_dart_csv_import_bad_group_enum.csv';
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_bad_group_enum.csv';
       try {
         db.createElement('Items', {'label': 'Item1', 'name': 'Alpha'});
 
@@ -265,8 +256,7 @@ void main() {
 
     test('scalar trailing empty columns', () {
       final db = Database.fromSchema(':memory:', schemaPath);
-      final csvPath =
-          '${Directory.systemTemp.path}/quiver_dart_csv_import_trailing_scalar.csv';
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_trailing_scalar.csv';
       try {
         File(csvPath).writeAsStringSync(
           'sep=,\n'
@@ -290,8 +280,7 @@ void main() {
 
     test('vector trailing empty columns', () {
       final db = Database.fromSchema(':memory:', schemaPath);
-      final csvPath =
-          '${Directory.systemTemp.path}/quiver_dart_csv_import_trailing_vector.csv';
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_trailing_vector.csv';
       try {
         db.createElement('Items', {'label': 'Item1', 'name': 'Alpha'});
 
