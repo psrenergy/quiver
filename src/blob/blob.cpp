@@ -43,9 +43,15 @@ Blob Blob::open_file(const std::string& file_path, char mode, const std::optiona
         return Blob(file_path, metadata, std::move(io));
     }
     case 'w': {
+        // Validate metadata provided
         if (!metadata.has_value()) {
             throw std::invalid_argument("Metadata must be provided when opening a file in write mode.");
         }
+
+        // Write metadata to TOML file
+        metadata->to_toml();
+
+        // Open binary data file
         auto io = std::make_unique<std::fstream>(file_path + ".qvr", std::ios::out | std::ios::binary);
         return Blob(file_path, metadata.value(), std::move(io));
     }

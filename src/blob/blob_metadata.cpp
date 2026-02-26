@@ -6,6 +6,7 @@
 #include "blob_utils.h"
 
 #include <algorithm>
+#include <format>
 #include <sstream>
 #include <toml++/toml.hpp>
 #include <stdexcept>
@@ -88,16 +89,6 @@ std::vector<int64_t> compute_time_dimension_initial_values(const std::vector<qui
 }
 
 namespace quiver {
-
-void BlobMetadata::add_dimension(const std::string& name, int64_t size) {
-    dimensions.push_back({name, size, std::nullopt});
-}
-
-void BlobMetadata::add_time_dimension(const std::string& name, int64_t size, const std::string& frequency) {
-    TimeFrequency freq_enum = frequency_from_string(frequency);
-    TimeProperties time_props{freq_enum, 0, -1};
-    dimensions.push_back({name, size, std::move(time_props)});
-}
 
 BlobMetadata BlobMetadata::from_toml(const std::string& toml_content) {
     // Parse toml content
@@ -193,6 +184,70 @@ BlobMetadata BlobMetadata::from_toml(const std::string& toml_content) {
     }
 
     return metadata;
+}
+
+std::string BlobMetadata::to_toml() const {
+    validate();
+
+    auto dim_names = toml::array{};
+    auto dim_sizes = toml::array{};
+    auto time_dim_names = toml::array{};
+    auto freq_strings = toml::array{};
+
+    for (const auto& dim : dimensions) {
+        dim_names.push_back(dim.name);
+        dim_sizes.push_back(dim.size);
+        if (dim.is_time_dimension()) {
+            time_dim_names.push_back(dim.name);
+            freq_strings.push_back(frequency_to_string(dim.time->frequency));
+        }
+    }
+
+    auto label_arr = toml::array{};
+    for (const auto& label : labels) {
+        label_arr.push_back(label);
+    }
+
+    // std::format with chrono requires C++20 + compiler support for <chrono> formatting.
+    // If this fails to compile, fall back to: to_time_t + gmtime + put_time.
+    std::string datetime_str = std::format("{:%Y-%m-%dT%H:%M:%S}", std::chrono::floor<std::chrono::seconds>(initial_datetime));
+
+    toml::table tbl{
+        {"version", version},
+        {"dimensions", std::move(dim_names)},
+        {"dimension_sizes", std::move(dim_sizes)},
+        {"time_dimensions", std::move(time_dim_names)},
+        {"frequencies", std::move(freq_strings)},
+        {"initial_datetime", datetime_str},
+        {"unit", unit},
+        {"labels", std::move(label_arr)},
+    };
+
+    std::ostringstream oss;
+    oss << tbl;
+    return oss.str();
+}
+
+void BlobMetadata::validate() const {
+
+}
+
+void BlobMetadata::validate_time_dimension_metadata() const {
+
+}
+
+void BlobMetadata::validate_time_dimension_sizes() const {
+
+}
+
+void BlobMetadata::add_dimension(const std::string& name, int64_t size) {
+    dimensions.push_back({name, size, std::nullopt});
+}
+
+void BlobMetadata::add_time_dimension(const std::string& name, int64_t size, const std::string& frequency) {
+    TimeFrequency freq_enum = frequency_from_string(frequency);
+    TimeProperties time_props{freq_enum, 0, -1};
+    dimensions.push_back({name, size, std::move(time_props)});
 }
 
 }  // namespace quiver
