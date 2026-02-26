@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from quiverdb import Element
+from quiverdb.element import Element
 
 
 def test_element_set_integer() -> None:
@@ -127,3 +127,9 @@ def test_element_clear() -> None:
         e.set("label", "new_test").set("value", 99)
     finally:
         e.destroy()
+
+
+def test_element_not_in_public_api() -> None:
+    """Element is not importable from quiverdb public API."""
+    with pytest.raises(ImportError):
+        from quiverdb import Element  # noqa: F401

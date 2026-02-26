@@ -4,34 +4,37 @@ from __future__ import annotations
 
 import pytest
 
-from quiverdb import Database, Element, QuiverError
+from quiverdb import Database, QuiverError
 
 
 class TestUpdateElement:
     def test_update_single_scalar(self, collections_db: Database) -> None:
-        collections_db.create_element("Configuration", Element().set("label", "cfg"))
+        collections_db.create_element("Configuration", label="cfg")
         elem_id = collections_db.create_element(
             "Collection",
-            Element().set("label", "Item1").set("some_integer", 10),
+            label="Item1",
+            some_integer=10,
         )
         collections_db.update_element(
             "Collection",
             elem_id,
-            Element().set("some_integer", 99),
+            some_integer=99,
         )
         value = collections_db.read_scalar_integer_by_id("Collection", "some_integer", elem_id)
         assert value == 99
 
     def test_update_preserves_other_attributes(self, collections_db: Database) -> None:
-        collections_db.create_element("Configuration", Element().set("label", "cfg"))
+        collections_db.create_element("Configuration", label="cfg")
         elem_id = collections_db.create_element(
             "Collection",
-            Element().set("label", "Item1").set("some_integer", 10).set("some_float", 2.5),
+            label="Item1",
+            some_integer=10,
+            some_float=2.5,
         )
         collections_db.update_element(
             "Collection",
             elem_id,
-            Element().set("some_integer", 99),
+            some_integer=99,
         )
         # some_float should be unchanged
         float_val = collections_db.read_scalar_float_by_id("Collection", "some_float", elem_id)
@@ -41,29 +44,29 @@ class TestUpdateElement:
 
 class TestUpdateVector:
     def test_update_vector_integers(self, collections_db: Database) -> None:
-        collections_db.create_element("Configuration", Element().set("label", "cfg"))
+        collections_db.create_element("Configuration", label="cfg")
         elem_id = collections_db.create_element(
             "Collection",
-            Element().set("label", "Item1"),
+            label="Item1",
         )
         collections_db.update_element(
             "Collection",
             elem_id,
-            Element().set("value_int", [10, 20, 30]),
+            value_int=[10, 20, 30],
         )
         result = collections_db.read_vector_integers_by_id("Collection", "value_int", elem_id)
         assert result == [10, 20, 30]
 
     def test_update_vector_floats(self, collections_db: Database) -> None:
-        collections_db.create_element("Configuration", Element().set("label", "cfg"))
+        collections_db.create_element("Configuration", label="cfg")
         elem_id = collections_db.create_element(
             "Collection",
-            Element().set("label", "Item1"),
+            label="Item1",
         )
         collections_db.update_element(
             "Collection",
             elem_id,
-            Element().set("value_float", [1.1, 2.2, 3.3]),
+            value_float=[1.1, 2.2, 3.3],
         )
         result = collections_db.read_vector_floats_by_id("Collection", "value_float", elem_id)
         assert len(result) == 3
@@ -72,15 +75,15 @@ class TestUpdateVector:
         assert abs(result[2] - 3.3) < 1e-9
 
     def test_update_vector_empty_clears(self, collections_db: Database) -> None:
-        collections_db.create_element("Configuration", Element().set("label", "cfg"))
+        collections_db.create_element("Configuration", label="cfg")
         elem_id = collections_db.create_element(
             "Collection",
-            Element().set("label", "Item1"),
+            label="Item1",
         )
         collections_db.update_element(
             "Collection",
             elem_id,
-            Element().set("value_int", [10, 20]),
+            value_int=[10, 20],
         )
         # Verify data exists
         assert collections_db.read_vector_integers_by_id("Collection", "value_int", elem_id) == [10, 20]
@@ -88,7 +91,7 @@ class TestUpdateVector:
         collections_db.update_element(
             "Collection",
             elem_id,
-            Element().set("value_int", []),
+            value_int=[],
         )
         result = collections_db.read_vector_integers_by_id("Collection", "value_int", elem_id)
         assert result == []
@@ -96,29 +99,29 @@ class TestUpdateVector:
 
 class TestUpdateSet:
     def test_update_set_strings(self, collections_db: Database) -> None:
-        collections_db.create_element("Configuration", Element().set("label", "cfg"))
+        collections_db.create_element("Configuration", label="cfg")
         elem_id = collections_db.create_element(
             "Collection",
-            Element().set("label", "Item1"),
+            label="Item1",
         )
         collections_db.update_element(
             "Collection",
             elem_id,
-            Element().set("tag", ["tag1", "tag2"]),
+            tag=["tag1", "tag2"],
         )
         result = collections_db.read_set_strings_by_id("Collection", "tag", elem_id)
         assert sorted(result) == ["tag1", "tag2"]
 
     def test_update_set_empty_clears(self, collections_db: Database) -> None:
-        collections_db.create_element("Configuration", Element().set("label", "cfg"))
+        collections_db.create_element("Configuration", label="cfg")
         elem_id = collections_db.create_element(
             "Collection",
-            Element().set("label", "Item1"),
+            label="Item1",
         )
         collections_db.update_element(
             "Collection",
             elem_id,
-            Element().set("tag", ["tag1", "tag2"]),
+            tag=["tag1", "tag2"],
         )
         # Verify data exists
         assert sorted(collections_db.read_set_strings_by_id("Collection", "tag", elem_id)) == ["tag1", "tag2"]
@@ -126,7 +129,7 @@ class TestUpdateSet:
         collections_db.update_element(
             "Collection",
             elem_id,
-            Element().set("tag", []),
+            tag=[],
         )
         result = collections_db.read_set_strings_by_id("Collection", "tag", elem_id)
         assert result == []
@@ -137,77 +140,84 @@ class TestFKResolutionUpdate:
 
     def test_scalar_fk_label(self, relations_db: Database) -> None:
         """Update scalar FK with string label resolves to new parent ID."""
-        relations_db.create_element("Configuration", Element().set("label", "cfg"))
-        relations_db.create_element("Parent", Element().set("label", "Parent 1"))
-        relations_db.create_element("Parent", Element().set("label", "Parent 2"))
+        relations_db.create_element("Configuration", label="cfg")
+        relations_db.create_element("Parent", label="Parent 1")
+        relations_db.create_element("Parent", label="Parent 2")
         relations_db.create_element(
             "Child",
-            Element().set("label", "Child 1").set("parent_id", "Parent 1"),
+            label="Child 1",
+            parent_id="Parent 1",
         )
-        relations_db.update_element("Child", 1, Element().set("parent_id", "Parent 2"))
+        relations_db.update_element("Child", 1, parent_id="Parent 2")
         result = relations_db.read_scalar_integer_by_id("Child", "parent_id", 1)
         assert result == 2
 
     def test_scalar_fk_integer(self, relations_db: Database) -> None:
         """Update scalar FK with integer value passed through as-is."""
-        relations_db.create_element("Configuration", Element().set("label", "cfg"))
-        relations_db.create_element("Parent", Element().set("label", "Parent 1"))
-        relations_db.create_element("Parent", Element().set("label", "Parent 2"))
+        relations_db.create_element("Configuration", label="cfg")
+        relations_db.create_element("Parent", label="Parent 1")
+        relations_db.create_element("Parent", label="Parent 2")
         relations_db.create_element(
             "Child",
-            Element().set("label", "Child 1").set("parent_id", 1),
+            label="Child 1",
+            parent_id=1,
         )
-        relations_db.update_element("Child", 1, Element().set("parent_id", 2))
+        relations_db.update_element("Child", 1, parent_id=2)
         result = relations_db.read_scalar_integer_by_id("Child", "parent_id", 1)
         assert result == 2
 
     def test_vector_fk_labels(self, relations_db: Database) -> None:
         """Update vector FK with string labels resolves to parent IDs."""
-        relations_db.create_element("Configuration", Element().set("label", "cfg"))
-        relations_db.create_element("Parent", Element().set("label", "Parent 1"))
-        relations_db.create_element("Parent", Element().set("label", "Parent 2"))
+        relations_db.create_element("Configuration", label="cfg")
+        relations_db.create_element("Parent", label="Parent 1")
+        relations_db.create_element("Parent", label="Parent 2")
         relations_db.create_element(
             "Child",
-            Element().set("label", "Child 1").set("parent_ref", ["Parent 1"]),
+            label="Child 1",
+            parent_ref=["Parent 1"],
         )
         relations_db.update_element(
             "Child",
             1,
-            Element().set("parent_ref", ["Parent 2", "Parent 1"]),
+            parent_ref=["Parent 2", "Parent 1"],
         )
         result = relations_db.read_vector_integers_by_id("Child", "parent_ref", 1)
         assert result == [2, 1]
 
     def test_set_fk_labels(self, relations_db: Database) -> None:
         """Update set FK with string labels resolves to parent IDs."""
-        relations_db.create_element("Configuration", Element().set("label", "cfg"))
-        relations_db.create_element("Parent", Element().set("label", "Parent 1"))
-        relations_db.create_element("Parent", Element().set("label", "Parent 2"))
+        relations_db.create_element("Configuration", label="cfg")
+        relations_db.create_element("Parent", label="Parent 1")
+        relations_db.create_element("Parent", label="Parent 2")
         relations_db.create_element(
             "Child",
-            Element().set("label", "Child 1").set("mentor_id", ["Parent 1"]),
+            label="Child 1",
+            mentor_id=["Parent 1"],
         )
         relations_db.update_element(
             "Child",
             1,
-            Element().set("mentor_id", ["Parent 2"]),
+            mentor_id=["Parent 2"],
         )
         result = relations_db.read_set_integers_by_id("Child", "mentor_id", 1)
         assert result == [2]
 
     def test_time_series_fk_labels(self, relations_db: Database) -> None:
         """Update time series FK with string labels resolves to parent IDs."""
-        relations_db.create_element("Configuration", Element().set("label", "cfg"))
-        relations_db.create_element("Parent", Element().set("label", "Parent 1"))
-        relations_db.create_element("Parent", Element().set("label", "Parent 2"))
+        relations_db.create_element("Configuration", label="cfg")
+        relations_db.create_element("Parent", label="Parent 1")
+        relations_db.create_element("Parent", label="Parent 2")
         relations_db.create_element(
             "Child",
-            Element().set("label", "Child 1").set("date_time", ["2024-01-01"]).set("sponsor_id", ["Parent 1"]),
+            label="Child 1",
+            date_time=["2024-01-01"],
+            sponsor_id=["Parent 1"],
         )
         relations_db.update_element(
             "Child",
             1,
-            Element().set("date_time", ["2024-06-01", "2024-06-02"]).set("sponsor_id", ["Parent 2", "Parent 1"]),
+            date_time=["2024-06-01", "2024-06-02"],
+            sponsor_id=["Parent 2", "Parent 1"],
         )
         rows = relations_db.read_time_series_group("Child", "events", 1)
         sponsor_ids = [row["sponsor_id"] for row in rows]
@@ -216,30 +226,28 @@ class TestFKResolutionUpdate:
 
     def test_all_fk_types_in_one_call(self, relations_db: Database) -> None:
         """Update all FK types in a single update_element call."""
-        relations_db.create_element("Configuration", Element().set("label", "cfg"))
-        relations_db.create_element("Parent", Element().set("label", "Parent 1"))
-        relations_db.create_element("Parent", Element().set("label", "Parent 2"))
+        relations_db.create_element("Configuration", label="cfg")
+        relations_db.create_element("Parent", label="Parent 1")
+        relations_db.create_element("Parent", label="Parent 2")
         # Create with all FK types pointing to Parent 1
         relations_db.create_element(
             "Child",
-            Element()
-            .set("label", "Child 1")
-            .set("parent_id", "Parent 1")
-            .set("mentor_id", ["Parent 1"])
-            .set("parent_ref", ["Parent 1"])
-            .set("date_time", ["2024-01-01"])
-            .set("sponsor_id", ["Parent 1"]),
+            label="Child 1",
+            parent_id="Parent 1",
+            mentor_id=["Parent 1"],
+            parent_ref=["Parent 1"],
+            date_time=["2024-01-01"],
+            sponsor_id=["Parent 1"],
         )
         # Update all FK types to Parent 2
         relations_db.update_element(
             "Child",
             1,
-            Element()
-            .set("parent_id", "Parent 2")
-            .set("mentor_id", ["Parent 2"])
-            .set("parent_ref", ["Parent 2"])
-            .set("date_time", ["2025-01-01"])
-            .set("sponsor_id", ["Parent 2"]),
+            parent_id="Parent 2",
+            mentor_id=["Parent 2"],
+            parent_ref=["Parent 2"],
+            date_time=["2025-01-01"],
+            sponsor_id=["Parent 2"],
         )
         # Verify scalar FK
         assert relations_db.read_scalar_integer_by_id("Child", "parent_id", 1) == 2
@@ -255,16 +263,17 @@ class TestFKResolutionUpdate:
         """No FK columns: update_element works normally for non-FK schemas."""
         db.create_element(
             "Configuration",
-            Element()
-            .set("label", "Config 1")
-            .set("integer_attribute", 42)
-            .set("float_attribute", 3.14)
-            .set("string_attribute", "hello"),
+            label="Config 1",
+            integer_attribute=42,
+            float_attribute=3.14,
+            string_attribute="hello",
         )
         db.update_element(
             "Configuration",
             1,
-            Element().set("integer_attribute", 100).set("float_attribute", 2.71).set("string_attribute", "world"),
+            integer_attribute=100,
+            float_attribute=2.71,
+            string_attribute="world",
         )
         assert db.read_scalar_integer_by_id("Configuration", "integer_attribute", 1) == 100
         float_val = db.read_scalar_float_by_id("Configuration", "float_attribute", 1)
@@ -274,17 +283,18 @@ class TestFKResolutionUpdate:
 
     def test_resolution_failure_preserves_existing(self, relations_db: Database) -> None:
         """Failed FK resolution preserves existing values."""
-        relations_db.create_element("Configuration", Element().set("label", "cfg"))
-        relations_db.create_element("Parent", Element().set("label", "Parent 1"))
+        relations_db.create_element("Configuration", label="cfg")
+        relations_db.create_element("Parent", label="Parent 1")
         relations_db.create_element(
             "Child",
-            Element().set("label", "Child 1").set("parent_id", "Parent 1"),
+            label="Child 1",
+            parent_id="Parent 1",
         )
         with pytest.raises(QuiverError):
             relations_db.update_element(
                 "Child",
                 1,
-                Element().set("parent_id", "Nonexistent Parent"),
+                parent_id="Nonexistent Parent",
             )
         # Verify original value preserved
         result = relations_db.read_scalar_integer_by_id("Child", "parent_id", 1)

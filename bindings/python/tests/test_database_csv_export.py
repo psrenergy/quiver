@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from quiverdb import CSVOptions, Database, Element
+from quiverdb import CSVOptions, Database
 
 
 class TestExportCSVScalarsDefault:
@@ -12,23 +12,24 @@ class TestExportCSVScalarsDefault:
 
     def test_export_csv_scalars_default(self, csv_db: Database, tmp_path):
         """Export scalars with default options: verify header and data rows."""
-        e1 = Element()
-        e1.set("label", "Item1")
-        e1.set("name", "Alpha")
-        e1.set("status", 1)
-        e1.set("price", 9.99)
-        e1.set("date_created", "2024-01-15T10:30:00")
-        e1.set("notes", "first")
-        csv_db.create_element("Items", e1)
-
-        e2 = Element()
-        e2.set("label", "Item2")
-        e2.set("name", "Beta")
-        e2.set("status", 2)
-        e2.set("price", 19.5)
-        e2.set("date_created", "2024-02-20T08:00:00")
-        e2.set("notes", "second")
-        csv_db.create_element("Items", e2)
+        csv_db.create_element(
+            "Items",
+            label="Item1",
+            name="Alpha",
+            status=1,
+            price=9.99,
+            date_created="2024-01-15T10:30:00",
+            notes="first",
+        )
+        csv_db.create_element(
+            "Items",
+            label="Item2",
+            name="Beta",
+            status=2,
+            price=19.5,
+            date_created="2024-02-20T08:00:00",
+            notes="second",
+        )
 
         out = str(tmp_path / "scalars.csv")
         csv_db.export_csv("Items", "", out)
@@ -46,17 +47,8 @@ class TestExportCSVWithEnumLabels:
 
     def test_export_csv_with_enum_labels(self, csv_db: Database, tmp_path):
         """Enum labels replace integer values in CSV output."""
-        e1 = Element()
-        e1.set("label", "Item1")
-        e1.set("name", "Alpha")
-        e1.set("status", 1)
-        csv_db.create_element("Items", e1)
-
-        e2 = Element()
-        e2.set("label", "Item2")
-        e2.set("name", "Beta")
-        e2.set("status", 2)
-        csv_db.create_element("Items", e2)
+        csv_db.create_element("Items", label="Item1", name="Alpha", status=1)
+        csv_db.create_element("Items", label="Item2", name="Beta", status=2)
 
         out = str(tmp_path / "enums.csv")
         options = CSVOptions(
@@ -77,12 +69,7 @@ class TestExportCSVWithDateFormat:
 
     def test_export_csv_with_date_format(self, csv_db: Database, tmp_path):
         """DateTime formatting applies strftime to date columns."""
-        e1 = Element()
-        e1.set("label", "Item1")
-        e1.set("name", "Alpha")
-        e1.set("status", 1)
-        e1.set("date_created", "2024-01-15T10:30:00")
-        csv_db.create_element("Items", e1)
+        csv_db.create_element("Items", label="Item1", name="Alpha", status=1, date_created="2024-01-15T10:30:00")
 
         out = str(tmp_path / "dates.csv")
         options = CSVOptions(date_time_format="%Y/%m/%d")
@@ -100,12 +87,7 @@ class TestExportCSVWithEnumAndDate:
 
     def test_export_csv_with_enum_and_date(self, csv_db: Database, tmp_path):
         """Combined options: both enum and date formatting applied."""
-        e1 = Element()
-        e1.set("label", "Item1")
-        e1.set("name", "Alpha")
-        e1.set("status", 1)
-        e1.set("date_created", "2024-01-15T10:30:00")
-        csv_db.create_element("Items", e1)
+        csv_db.create_element("Items", label="Item1", name="Alpha", status=1, date_created="2024-01-15T10:30:00")
 
         out = str(tmp_path / "combined.csv")
         options = CSVOptions(
@@ -126,18 +108,11 @@ class TestExportCSVGroup:
 
     def test_export_csv_group(self, csv_db: Database, tmp_path):
         """Export vector group: verify header and data rows."""
-        e1 = Element()
-        e1.set("label", "Item1")
-        e1.set("name", "Alpha")
-        csv_db.create_element("Items", e1)
+        csv_db.create_element("Items", label="Item1", name="Alpha")
+        csv_db.create_element("Items", label="Item2", name="Beta")
 
-        e2 = Element()
-        e2.set("label", "Item2")
-        e2.set("name", "Beta")
-        csv_db.create_element("Items", e2)
-
-        csv_db.update_element("Items", 1, Element().set("measurement", [1.1, 2.2, 3.3]))
-        csv_db.update_element("Items", 2, Element().set("measurement", [4.4, 5.5]))
+        csv_db.update_element("Items", 1, measurement=[1.1, 2.2, 3.3])
+        csv_db.update_element("Items", 2, measurement=[4.4, 5.5])
 
         out = str(tmp_path / "group.csv")
         csv_db.export_csv("Items", "measurements", out)
@@ -158,11 +133,7 @@ class TestExportCSVNullValues:
 
     def test_export_csv_null_values(self, csv_db: Database, tmp_path):
         """NULL values appear as empty fields in CSV."""
-        e1 = Element()
-        e1.set("label", "Item1")
-        e1.set("name", "Alpha")
-        # status, price, date_created, notes all NULL
-        csv_db.create_element("Items", e1)
+        csv_db.create_element("Items", label="Item1", name="Alpha")
 
         out = str(tmp_path / "nulls.csv")
         csv_db.export_csv("Items", "", out)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from quiverdb import CSVOptions, Database, Element
+from quiverdb import CSVOptions, Database
 
 
 class TestImportCSVScalarRoundTrip:
@@ -12,23 +12,24 @@ class TestImportCSVScalarRoundTrip:
 
     def test_scalar_round_trip(self, csv_db: Database, tmp_path, csv_export_schema_path):
         """Export scalars, import into fresh DB, read back matches original."""
-        e1 = Element()
-        e1.set("label", "Item1")
-        e1.set("name", "Alpha")
-        e1.set("status", 1)
-        e1.set("price", 9.99)
-        e1.set("date_created", "2024-01-15T10:30:00")
-        e1.set("notes", "first")
-        csv_db.create_element("Items", e1)
-
-        e2 = Element()
-        e2.set("label", "Item2")
-        e2.set("name", "Beta")
-        e2.set("status", 2)
-        e2.set("price", 19.5)
-        e2.set("date_created", "2024-02-20T08:00:00")
-        e2.set("notes", "second")
-        csv_db.create_element("Items", e2)
+        csv_db.create_element(
+            "Items",
+            label="Item1",
+            name="Alpha",
+            status=1,
+            price=9.99,
+            date_created="2024-01-15T10:30:00",
+            notes="first",
+        )
+        csv_db.create_element(
+            "Items",
+            label="Item2",
+            name="Beta",
+            status=2,
+            price=19.5,
+            date_created="2024-02-20T08:00:00",
+            notes="second",
+        )
 
         csv_path = str(tmp_path / "scalars_rt.csv")
         csv_db.export_csv("Items", "", csv_path)
@@ -57,18 +58,11 @@ class TestImportCSVGroupRoundTrip:
 
     def test_group_round_trip(self, csv_db: Database, tmp_path, csv_export_schema_path):
         """Export vector group, import into fresh DB, read back matches original."""
-        e1 = Element()
-        e1.set("label", "Item1")
-        e1.set("name", "Alpha")
-        csv_db.create_element("Items", e1)
+        csv_db.create_element("Items", label="Item1", name="Alpha")
+        csv_db.create_element("Items", label="Item2", name="Beta")
 
-        e2 = Element()
-        e2.set("label", "Item2")
-        e2.set("name", "Beta")
-        csv_db.create_element("Items", e2)
-
-        csv_db.update_element("Items", 1, Element().set("measurement", [1.1, 2.2, 3.3]))
-        csv_db.update_element("Items", 2, Element().set("measurement", [4.4, 5.5]))
+        csv_db.update_element("Items", 1, measurement=[1.1, 2.2, 3.3])
+        csv_db.update_element("Items", 2, measurement=[4.4, 5.5])
 
         csv_path = str(tmp_path / "group_rt.csv")
         csv_db.export_csv("Items", "measurements", csv_path)
@@ -76,15 +70,8 @@ class TestImportCSVGroupRoundTrip:
         db2 = Database.from_schema(str(tmp_path / "csv2.db"), str(csv_export_schema_path))
         try:
             # Parent elements must exist before importing vector group data
-            e1b = Element()
-            e1b.set("label", "Item1")
-            e1b.set("name", "Alpha")
-            db2.create_element("Items", e1b)
-
-            e2b = Element()
-            e2b.set("label", "Item2")
-            e2b.set("name", "Beta")
-            db2.create_element("Items", e2b)
+            db2.create_element("Items", label="Item1", name="Alpha")
+            db2.create_element("Items", label="Item2", name="Beta")
 
             db2.import_csv("Items", "measurements", csv_path)
 

@@ -2,19 +2,16 @@ from __future__ import annotations
 
 import pytest
 
-from quiverdb import Database, Element
+from quiverdb import Database
 
 
 class TestExplicitTransaction:
     """Tests for explicit begin/commit/rollback transaction control."""
 
     def test_begin_and_commit_persists(self, collections_db: Database) -> None:
-        collections_db.create_element("Configuration", Element().set("label", "Config"))
+        collections_db.create_element("Configuration", label="Config")
         collections_db.begin_transaction()
-        collections_db.create_element(
-            "Collection",
-            Element().set("label", "Item 1").set("some_integer", 10),
-        )
+        collections_db.create_element("Collection", label="Item 1", some_integer=10)
         collections_db.commit()
 
         labels = collections_db.read_scalar_strings("Collection", "label")
@@ -22,12 +19,9 @@ class TestExplicitTransaction:
         assert labels[0] == "Item 1"
 
     def test_begin_and_rollback_discards(self, collections_db: Database) -> None:
-        collections_db.create_element("Configuration", Element().set("label", "Config"))
+        collections_db.create_element("Configuration", label="Config")
         collections_db.begin_transaction()
-        collections_db.create_element(
-            "Collection",
-            Element().set("label", "Item 1").set("some_integer", 10),
-        )
+        collections_db.create_element("Collection", label="Item 1", some_integer=10)
         collections_db.rollback()
 
         ids = collections_db.read_element_ids("Collection")
@@ -51,25 +45,19 @@ class TestTransactionContextManager:
     """Tests for the transaction() context manager."""
 
     def test_auto_commits_on_success(self, collections_db: Database) -> None:
-        collections_db.create_element("Configuration", Element().set("label", "Config"))
+        collections_db.create_element("Configuration", label="Config")
         with collections_db.transaction() as db:
-            db.create_element(
-                "Collection",
-                Element().set("label", "Item 1").set("some_integer", 42),
-            )
+            db.create_element("Collection", label="Item 1", some_integer=42)
 
         labels = collections_db.read_scalar_strings("Collection", "label")
         assert len(labels) == 1
         assert labels[0] == "Item 1"
 
     def test_auto_rollback_on_exception(self, collections_db: Database) -> None:
-        collections_db.create_element("Configuration", Element().set("label", "Config"))
+        collections_db.create_element("Configuration", label="Config")
         try:
             with collections_db.transaction() as db:
-                db.create_element(
-                    "Collection",
-                    Element().set("label", "Item 1").set("some_integer", 10),
-                )
+                db.create_element("Collection", label="Item 1", some_integer=10)
                 raise ValueError("intentional error")
         except ValueError:
             pass
@@ -87,13 +75,10 @@ class TestTransactionContextManager:
                 raise ValueError("test error")
 
     def test_multiple_operations_in_transaction(self, collections_db: Database) -> None:
-        collections_db.create_element("Configuration", Element().set("label", "Config"))
+        collections_db.create_element("Configuration", label="Config")
         with collections_db.transaction() as db:
-            db.create_element(
-                "Collection",
-                Element().set("label", "Item 1").set("some_integer", 10),
-            )
-            db.update_element("Collection", 1, Element().set("some_integer", 100))
+            db.create_element("Collection", label="Item 1", some_integer=10)
+            db.update_element("Collection", 1, some_integer=100)
 
         labels = collections_db.read_scalar_strings("Collection", "label")
         assert len(labels) == 1

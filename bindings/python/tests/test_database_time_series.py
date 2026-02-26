@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from quiverdb import Database, Element
+from quiverdb import Database
 
 
 # -- Helpers ------------------------------------------------------------------
@@ -12,16 +12,12 @@ from quiverdb import Database, Element
 
 def _create_sensor(db: Database, label: str) -> int:
     """Create a Sensor element and return its ID."""
-    elem = Element()
-    elem.set("label", label)
-    return db.create_element("Sensor", elem)
+    return db.create_element("Sensor", label=label)
 
 
 def _create_collection_element(db: Database, label: str) -> int:
     """Create a Collection element and return its ID."""
-    elem = Element()
-    elem.set("label", label)
-    return db.create_element("Collection", elem)
+    return db.create_element("Collection", label=label)
 
 
 SAMPLE_ROWS = [

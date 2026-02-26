@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from quiverdb import Database, Element
+from quiverdb import Database
 
 
 # -- Vector reads by ID -------------------------------------------------------
@@ -12,28 +12,24 @@ from quiverdb import Database, Element
 
 class TestReadVectorIntegersByID:
     def test_read_vector_integers_by_id(self, collections_db: Database) -> None:
-        elem = Element().set("label", "item1").set("some_integer", 10).set("value_int", [1, 2, 3])
-        id1 = collections_db.create_element("Collection", elem)
+        id1 = collections_db.create_element("Collection", label="item1", some_integer=10, value_int=[1, 2, 3])
         result = collections_db.read_vector_integers_by_id("Collection", "value_int", id1)
         assert result == [1, 2, 3]
 
     def test_read_vector_integers_by_id_empty(self, collections_db: Database) -> None:
-        elem = Element().set("label", "item1").set("some_integer", 10)
-        id1 = collections_db.create_element("Collection", elem)
+        id1 = collections_db.create_element("Collection", label="item1", some_integer=10)
         result = collections_db.read_vector_integers_by_id("Collection", "value_int", id1)
         assert result == []
 
     def test_read_vector_integers_by_id_single(self, collections_db: Database) -> None:
-        elem = Element().set("label", "item1").set("some_integer", 10).set("value_int", [42])
-        id1 = collections_db.create_element("Collection", elem)
+        id1 = collections_db.create_element("Collection", label="item1", some_integer=10, value_int=[42])
         result = collections_db.read_vector_integers_by_id("Collection", "value_int", id1)
         assert result == [42]
 
 
 class TestReadVectorFloatsByID:
     def test_read_vector_floats_by_id(self, collections_db: Database) -> None:
-        elem = Element().set("label", "item1").set("some_integer", 10).set("value_float", [1.5, 2.5, 3.5])
-        id1 = collections_db.create_element("Collection", elem)
+        id1 = collections_db.create_element("Collection", label="item1", some_integer=10, value_float=[1.5, 2.5, 3.5])
         result = collections_db.read_vector_floats_by_id("Collection", "value_float", id1)
         assert len(result) == 3
         assert abs(result[0] - 1.5) < 1e-9
@@ -41,8 +37,7 @@ class TestReadVectorFloatsByID:
         assert abs(result[2] - 3.5) < 1e-9
 
     def test_read_vector_floats_by_id_empty(self, collections_db: Database) -> None:
-        elem = Element().set("label", "item1").set("some_integer", 10)
-        id1 = collections_db.create_element("Collection", elem)
+        id1 = collections_db.create_element("Collection", label="item1", some_integer=10)
         result = collections_db.read_vector_floats_by_id("Collection", "value_float", id1)
         assert result == []
 
@@ -52,14 +47,8 @@ class TestReadVectorFloatsByID:
 
 class TestReadVectorIntegersBulk:
     def test_read_vector_integers(self, collections_db: Database) -> None:
-        collections_db.create_element(
-            "Collection",
-            Element().set("label", "item1").set("some_integer", 10).set("value_int", [1, 2]),
-        )
-        collections_db.create_element(
-            "Collection",
-            Element().set("label", "item2").set("some_integer", 20).set("value_int", [3, 4, 5]),
-        )
+        collections_db.create_element("Collection", label="item1", some_integer=10, value_int=[1, 2])
+        collections_db.create_element("Collection", label="item2", some_integer=20, value_int=[3, 4, 5])
         result = collections_db.read_vector_integers("Collection", "value_int")
         assert len(result) == 2
         assert result[0] == [1, 2]
@@ -71,14 +60,8 @@ class TestReadVectorIntegersBulk:
 
     def test_read_vector_integers_with_empty_vector(self, collections_db: Database) -> None:
         # C++ bulk read skips elements with no vector data (same as scalar NULL skipping)
-        collections_db.create_element(
-            "Collection",
-            Element().set("label", "item1").set("some_integer", 10).set("value_int", [1, 2]),
-        )
-        collections_db.create_element(
-            "Collection",
-            Element().set("label", "item2").set("some_integer", 20),
-        )
+        collections_db.create_element("Collection", label="item1", some_integer=10, value_int=[1, 2])
+        collections_db.create_element("Collection", label="item2", some_integer=20)
         result = collections_db.read_vector_integers("Collection", "value_int")
         assert len(result) == 1
         assert result[0] == [1, 2]
@@ -86,14 +69,8 @@ class TestReadVectorIntegersBulk:
 
 class TestReadVectorFloatsBulk:
     def test_read_vector_floats(self, collections_db: Database) -> None:
-        collections_db.create_element(
-            "Collection",
-            Element().set("label", "item1").set("some_integer", 10).set("value_float", [1.1, 2.2]),
-        )
-        collections_db.create_element(
-            "Collection",
-            Element().set("label", "item2").set("some_integer", 20).set("value_float", [3.3]),
-        )
+        collections_db.create_element("Collection", label="item1", some_integer=10, value_float=[1.1, 2.2])
+        collections_db.create_element("Collection", label="item2", some_integer=20, value_float=[3.3])
         result = collections_db.read_vector_floats("Collection", "value_float")
         assert len(result) == 2
         assert len(result[0]) == 2
@@ -109,21 +86,20 @@ class TestReadVectorFloatsBulk:
 class TestReadAllVectorsByID:
     def test_read_all_vectors_by_id_no_groups(self, db: Database) -> None:
         """read_all_vectors_by_id returns empty dict for collections with no vector groups."""
-        id1 = db.create_element("Configuration", Element().set("label", "item1"))
+        id1 = db.create_element("Configuration", label="item1")
         result = db.read_all_vectors_by_id("Configuration", id1)
         assert result == {}
 
 
 class TestReadVectorGroupByID:
     def test_read_vector_group_by_id(self, collections_db: Database) -> None:
-        elem = (
-            Element()
-            .set("label", "item1")
-            .set("some_integer", 10)
-            .set("value_int", [1, 2, 3])
-            .set("value_float", [1.1, 2.2, 3.3])
+        id1 = collections_db.create_element(
+            "Collection",
+            label="item1",
+            some_integer=10,
+            value_int=[1, 2, 3],
+            value_float=[1.1, 2.2, 3.3],
         )
-        id1 = collections_db.create_element("Collection", elem)
 
         result = collections_db.read_vector_group_by_id("Collection", "values", id1)
         assert len(result) == 3
@@ -144,8 +120,7 @@ class TestReadVectorGroupByID:
             assert isinstance(row["vector_index"], int)
 
     def test_read_vector_group_by_id_empty(self, collections_db: Database) -> None:
-        elem = Element().set("label", "item1").set("some_integer", 10)
-        id1 = collections_db.create_element("Collection", elem)
+        id1 = collections_db.create_element("Collection", label="item1", some_integer=10)
         result = collections_db.read_vector_group_by_id("Collection", "values", id1)
         assert result == []
 
@@ -155,16 +130,10 @@ class TestReadVectorGroupByID:
 
 class TestReadVectorStringsBulk:
     def test_read_vector_strings(self, all_types_db: Database) -> None:
-        id1 = all_types_db.create_element(
-            "AllTypes",
-            Element().set("label", "item1"),
-        )
-        id2 = all_types_db.create_element(
-            "AllTypes",
-            Element().set("label", "item2"),
-        )
-        all_types_db.update_element("AllTypes", id1, Element().set("label_value", ["alpha", "beta"]))
-        all_types_db.update_element("AllTypes", id2, Element().set("label_value", ["gamma", "delta", "epsilon"]))
+        id1 = all_types_db.create_element("AllTypes", label="item1")
+        id2 = all_types_db.create_element("AllTypes", label="item2")
+        all_types_db.update_element("AllTypes", id1, label_value=["alpha", "beta"])
+        all_types_db.update_element("AllTypes", id2, label_value=["gamma", "delta", "epsilon"])
         result = all_types_db.read_vector_strings("AllTypes", "label_value")
         assert len(result) == 2
         assert result[0] == ["alpha", "beta"]
@@ -173,11 +142,8 @@ class TestReadVectorStringsBulk:
 
 class TestReadVectorStringsByID:
     def test_read_vector_strings_by_id(self, all_types_db: Database) -> None:
-        id1 = all_types_db.create_element(
-            "AllTypes",
-            Element().set("label", "item1"),
-        )
-        all_types_db.update_element("AllTypes", id1, Element().set("label_value", ["hello", "world"]))
+        id1 = all_types_db.create_element("AllTypes", label="item1")
+        all_types_db.update_element("AllTypes", id1, label_value=["hello", "world"])
         result = all_types_db.read_vector_strings_by_id("AllTypes", "label_value", id1)
         assert result == ["hello", "world"]
 
@@ -185,14 +151,11 @@ class TestReadVectorStringsByID:
 class TestReadVectorDateTimeByID:
     def test_read_vector_date_time_by_id(self, all_types_db: Database) -> None:
         """read_vector_date_time_by_id wraps read_vector_strings_by_id + datetime parsing."""
-        id1 = all_types_db.create_element(
-            "AllTypes",
-            Element().set("label", "item1"),
-        )
+        id1 = all_types_db.create_element("AllTypes", label="item1")
         all_types_db.update_element(
             "AllTypes",
             id1,
-            Element().set("label_value", ["2024-01-15T10:30:00", "2024-06-20T08:00:00"]),
+            label_value=["2024-01-15T10:30:00", "2024-06-20T08:00:00"],
         )
         result = all_types_db.read_vector_date_time_by_id("AllTypes", "label_value", id1)
         assert len(result) == 2

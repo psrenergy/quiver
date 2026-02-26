@@ -8,6 +8,7 @@ from quiverdb._c_api import ffi, get_lib
 from quiverdb._helpers import check, decode_string, decode_string_or_none
 from quiverdb.database_csv_export import DatabaseCSVExport
 from quiverdb.database_csv_import import DatabaseCSVImport
+from quiverdb.element import Element
 from quiverdb.exceptions import QuiverError
 from quiverdb.metadata import GroupMetadata, ScalarMetadata
 
@@ -111,28 +112,47 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         lib = get_lib()
         check(lib.quiver_database_describe(self._ptr))
 
-    def create_element(self, collection: str, element) -> int:
+    def create_element(self, collection: str, **kwargs: object) -> int:
         """Create a new element. Returns the new element ID."""
         self._ensure_open()
-        lib = get_lib()
-        out_id = ffi.new("int64_t*")
-        check(
-            lib.quiver_database_create_element(
-                self._ptr,
-                collection.encode("utf-8"),
-                element._ptr,
-                out_id,
+        elem = Element()
+        try:
+            for name, value in kwargs.items():
+                elem.set(name, value)
+            lib = get_lib()
+            out_id = ffi.new("int64_t*")
+            check(
+                lib.quiver_database_create_element(
+                    self._ptr,
+                    collection.encode("utf-8"),
+                    elem._ptr,
+                    out_id,
+                )
             )
-        )
-        return out_id[0]
+            return out_id[0]
+        finally:
+            elem.destroy()
 
     # -- Write operations -------------------------------------------------------
 
-    def update_element(self, collection: str, id: int, element) -> None:
-        """Update an existing element's scalar attributes."""
+    def update_element(self, collection: str, id: int, **kwargs: object) -> None:
+        """Update an existing element's attributes."""
         self._ensure_open()
-        lib = get_lib()
-        check(lib.quiver_database_update_element(self._ptr, collection.encode("utf-8"), id, element._ptr))
+        elem = Element()
+        try:
+            for name, value in kwargs.items():
+                elem.set(name, value)
+            lib = get_lib()
+            check(
+                lib.quiver_database_update_element(
+                    self._ptr,
+                    collection.encode("utf-8"),
+                    id,
+                    elem._ptr,
+                )
+            )
+        finally:
+            elem.destroy()
 
     def delete_element(self, collection: str, id: int) -> None:
         """Delete an element by ID."""

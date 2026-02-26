@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from quiverdb import Database, Element
+from quiverdb import Database
 
 
 @pytest.fixture

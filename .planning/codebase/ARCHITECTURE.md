@@ -1,227 +1,178 @@
 # Architecture
 
-**Analysis Date:** 2026-02-23
+**Analysis Date:** 2026-02-26
 
 ## Pattern Overview
 
-**Overall:** Layered architecture with domain logic in C++ core, C API for FFI interop, and thin language bindings.
+**Overall:** Layered FFI Library with Thin Bindings
 
 **Key Characteristics:**
-- Three distinct layers: C++ core → C API → language bindings (Julia, Dart, Python, Lua)
-- Pimpl pattern for classes hiding private dependencies (Database, LuaRunner)
-- Value types for simple data structures without private state
-- Logic lives in C++ layer; bindings are mechanical and thin
-- Strict separation between public interfaces (headers) and implementation (cpp files)
-- Schema-driven validation and type checking
-- Explicit transaction control with nest-aware RAII guards
+- All logic lives in the C++ core (`libquiver`); higher layers are strictly thin wrappers
+- A C API shim (`libquiver_c`) wraps the C++ core as an ABI-stable FFI surface
+- Language bindings (Julia, Dart, Python) call the C API exclusively — never the C++ layer directly
+- Schema-introspective: the database loads and validates its own schema at open-time, which drives routing of reads/writes to correct tables
+- RAII throughout: `Database` (Pimpl), `LuaRunner` (Pimpl), `Element` (value type), `Row`/`Result`/`Migration` (value types); resource ownership is explicit and unambiguous
 
 ## Layers
 
-**C++ Core Layer (`include/quiver/`, `src/`):**
-- Purpose: Domain logic, database operations, schema validation, type checking
-- Location: `include/quiver/` (public headers), `src/` (implementations)
-- Contains: Database class (Pimpl), Element builder, Metadata types, Options, Schema/SchemaValidator, TypeValidator
-- Depends on: SQLite3, spdlog for logging, Lua (for LuaRunner), RapidCSV (for CSV)
-- Used by: C API layer wraps all public methods
+**C++ Core Library (`libquiver`):**
+- Purpose: All database logic, SQL generation, schema introspection, type validation, migrations, CSV, Lua scripting
+- Public headers: `include/quiver/`
+- Implementation: `src/*.cpp`
+- Main class: `quiver::Database` — Pimpl with `sqlite3*` inside `Database::Impl`
+- Depends on: SQLite3, spdlog, sol2/Lua, rapidcsv, tomlplusplus
+- Used by: C API shim, tests
 
-**C API Layer (`include/quiver/c/`, `src/c/`):**
-- Purpose: FFI-safe C interface for language bindings
-- Location: `include/quiver/c/` (header contracts), `src/c/` (thin wrappers)
-- Contains: Function definitions wrapping each C++ public method; error handling via `quiver_set_last_error()`
-- Depends on: C++ core layer
-- Used by: Julia, Dart, Python, and Lua bindings call C API
-- Key pattern: Try-catch with binary return codes (QUIVER_OK/QUIVER_ERROR), values via output parameters
+**C API Shim (`libquiver_c`):**
+- Purpose: C-linkage FFI surface; wraps C++ types in opaque handles; marshals errors to thread-local string + binary return codes
+- Public headers: `include/quiver/c/`
+- Implementation: `src/c/*.cpp`
+- Opaque handles: `quiver_database_t` (wraps `quiver::Database`), `quiver_element_t` (wraps `quiver::Element`)
+- Shared internals: `src/c/internal.h` (handle structs, `QUIVER_REQUIRE` macro), `src/c/database_helpers.h` (marshaling templates, `strdup_safe`, metadata converters)
+- Depends on: `libquiver`
+- Used by: Julia, Dart, Python bindings
 
-**Language Bindings (`bindings/julia/`, `bindings/dart/`, `bindings/python/`):**
-- Purpose: Idiomatic language-specific wrappers
-- Location: Each in respective binding directory
-- Contains: FFI stubs, type conversions, convenience methods (e.g., transaction blocks, composite readers)
-- Depends on: C API layer only (via FFI/bindings)
-- Used by: End-user applications in Julia, Dart, Python
+**Language Bindings:**
+- Purpose: Thin, idiomatic wrappers in each host language; no logic, no error message crafting
+- Julia: `bindings/julia/src/` — uses `@ccall` via generated `c_api.jl`; loads `libquiver_c.dll/.so/.dylib`
+- Dart: `bindings/dart/lib/src/` — uses `dart:ffi`; generated bindings in `ffi/bindings.dart`
+- Python: `bindings/python/src/quiverdb/` — uses CFFI ABI-mode; hand-written cdef in `_c_api.py`, loader in `_loader.py`
+- Depends on: `libquiver_c`
+
+**Blob Subsystem (experimental):**
+- Purpose: Binary flat-file storage for multi-dimensional numerical data with TOML metadata
+- Headers: `include/quiver/blob/`
+- Implementation: `src/blob/`
+- Not exposed through C API or bindings; standalone subsystem
 
 ## Data Flow
 
-**Create Element Flow:**
+**Write Operation (create_element):**
 
-1. User calls `database.create_element(collection, element)` in C++
-2. Element builder holds scalars (map<string, Value>) and arrays (map<string, vector<Value>>)
-3. Database::create_element:
-   - Validates all scalars against schema/type validator
-   - Inserts scalars into main collection table in transaction
-   - Routes arrays to vector/set/time-series tables based on schema
-   - Zips multi-column arrays together with proper indices
-   - Commits transaction guard on success
-4. C API wrapper catches exceptions, sets `quiver_last_error`, returns QUIVER_ERROR/QUIVER_OK
-5. Language binding calls C API, unmarshals error state, converts to idiomatic exception
+1. Binding calls `quiver_database_create_element(db, collection, element, &id)` in C API
+2. `src/c/database_create.cpp` unwraps handles, calls `db->db.create_element(collection, element)`
+3. C++ `Database::create_element` validates collection exists via `Schema` introspection
+4. `Impl::resolve_element_fk_labels` resolves string FK references to integer IDs before any writes
+5. `TypeValidator` checks resolved scalar types against schema column definitions
+6. `Impl::TransactionGuard` begins a SQLite transaction (no-op if one is already active — nest-aware)
+7. SQL INSERT built dynamically from element scalars; array fields routed to `_vector_`, `_set_`, or `_time_series_` tables via `Schema::find_table_for_column`
+8. `TransactionGuard` commits; auto-rollback on exception
+9. C API returns `QUIVER_OK` and writes inserted id to out-parameter
 
-**Read Scalar Flow:**
+**Read Operation:**
 
-1. User calls `database.read_scalar_integers(collection, attribute)`
-2. Database verifies collection/attribute exist via schema
-3. Executes `SELECT id, attribute FROM collection ORDER BY id`
-4. Returns `vector<int64_t>` to caller
-5. C API wrapper allocates new int64_t array, copies data, returns array + count
-6. Language binding receives pointers, wraps in language array type, provides free function
+1. Binding calls typed read function (e.g., `quiver_database_read_scalar_integers`)
+2. `src/c/database_read.cpp` calls `db->db.read_scalar_integers(collection, attribute)`
+3. C++ executes parameterized SQL via internal `Database::execute`, returning `Result` (rows of `Value` variants)
+4. C API marshals result to C arrays using `database_helpers.h` templates (`read_scalars_impl`, `copy_strings_to_c`)
+5. Caller receives typed pointer + count out-parameters; must call matching `quiver_database_free_*` function to release memory
 
-**Query Flow:**
+**Schema Loading at Open Time:**
 
-1. User calls `database.query_string(sql, params)` with optional Value vector
-2. Parameterized queries use positional `?` placeholders
-3. Params converted to SQLite types based on Value variant
-4. Statement executed, first row first column extracted
-5. Returns `optional<T>` (absent if query returns no rows)
+1. `Database` constructor opens SQLite file, calls `Impl::load_schema_metadata()`
+2. `Schema::from_database(sqlite3*)` queries `sqlite_schema` to build full `TableDefinition` map
+3. `SchemaValidator` validates Quiver conventions: Configuration table exists, collections have `id`/`label`, vector/set tables have correct FK and UNIQUE constraints
+4. `TypeValidator` constructed from loaded schema for runtime type-checking on all writes
 
-**State Management:**
+**Transaction Flow:**
 
-- Database lifecycle managed via RAII (Pimpl holds sqlite3* and logger)
-- Transactions explicit: `begin_transaction()`, `commit()`, `rollback()` methods
-- `TransactionGuard` (in database_impl.h) nest-aware: only owns transaction if one not already active (checked via `sqlite3_get_autocommit()`)
-- Write operations (`create_element`, `update_*`) use TransactionGuard internally to auto-commit standalone operations or participate in explicit transactions
-- Schema loaded once at database open, cached in Impl
-- Error state thread-local in C API layer via `quiver_set_last_error()`
+1. Explicit transactions: caller calls `begin_transaction` then `commit`/`rollback`
+2. Internal writes use `Impl::TransactionGuard`: checks `sqlite3_get_autocommit()` — if an explicit transaction is active, guard becomes a no-op; otherwise it begins and owns the transaction
+3. Same C++ write methods work correctly both standalone and inside explicit transaction blocks
 
 ## Key Abstractions
 
-**Database (Pimpl Pattern):**
-- Purpose: Main API gateway for all database operations
-- File: `include/quiver/database.h`, `src/database.cpp`, `src/database_impl.h`
-- Pattern: Pimpl hides sqlite3 and spdlog dependencies
-- Operations organized by category: create/read/update/delete, metadata queries, transactions, CSV export/import, parameterized queries
+**`quiver::Database` — Main API class:**
+- Purpose: Single facade for all database operations
+- Location: `include/quiver/database.h`; implementation split across `src/database.cpp`, `src/database_create.cpp`, `src/database_read.cpp`, `src/database_update.cpp`, `src/database_delete.cpp`, `src/database_metadata.cpp`, `src/database_time_series.cpp`, `src/database_query.cpp`, `src/database_csv_export.cpp`, `src/database_csv_import.cpp`, `src/database_describe.cpp`
+- Pattern: Pimpl (`struct Impl` in `src/database_impl.h`); hides `sqlite3*`, `Schema`, `TypeValidator`, and spdlog logger from public headers
 
-**Element (Value Type):**
-- Purpose: Builder for element creation
-- File: `include/quiver/element.h`, `src/element.cpp`
-- Pattern: Plain struct with fluent API, no private dependencies
-- Holds two maps: scalars and arrays, routed to appropriate tables on create
+**`quiver::Schema` — Runtime schema model:**
+- Purpose: In-memory representation of all SQLite tables, columns, FKs, and indexes; drives routing and validation
+- Location: `include/quiver/schema.h`, `src/schema.cpp`
+- Pattern: Value type; loaded once per `Database` open via `Schema::from_database(sqlite3*)`
+- Key operations: `find_table_for_column` (routes array writes), `is_collection`/`is_vector_table`/`is_set_table`/`is_time_series_table` (table classification), `vector_table_name`/`set_table_name`/`time_series_table_name` (naming convention enforcement)
 
-**Schema & SchemaValidator (Value Type Immutable):**
-- Purpose: Parse and validate database schema structure
-- File: `include/quiver/schema.h`, `src/schema.cpp`, `src/schema_validator.cpp`
-- Pattern: Loaded once at database open, cached immutably
-- Determines table classification (collection vs vector vs set vs time-series)
-- Validates required tables (Configuration) and naming conventions
+**`quiver::Element` — Write input builder:**
+- Purpose: Fluent builder for element creation and updates; holds scalars and arrays
+- Location: `include/quiver/element.h`, `src/element.cpp`
+- Pattern: Plain value type (Rule of Zero); no Pimpl
+- Usage: `Element().set("label", "x").set("value", 42).set("tags", {"a", "b"})`
 
-**TypeValidator (Value Type):**
-- Purpose: Runtime type checking for scalar and array values
-- File: `include/quiver/type_validator.h`, `src/type_validator.cpp`
-- Validates scalar values match expected DataType before insert
-- Validates array element types before insert
-
-**Metadata Types (Value Types):**
-- Purpose: Describe schema of attributes and groups
-- Files: `include/quiver/attribute_metadata.h`
-- ScalarMetadata: name, data_type, not_null, primary_key, default_value, foreign key info
-- GroupMetadata: group_name, dimension_column (empty for vector/set, populated for time-series), value_columns array
-
-**LuaRunner (Pimpl Pattern):**
-- Purpose: Execute Lua scripts with database access
-- File: `include/quiver/lua_runner.h`, `src/lua_runner.cpp`
-- Pattern: Pimpl hides lua_State dependency
-- Injects database as `db` userdata in Lua environment
-
-**Result (Value Type):**
-- Purpose: Hold query results
-- File: `include/quiver/result.h`, `src/result.cpp`
-- Holds columns (vector<string>) and rows (vector<Row>)
-- Provides row indexing and iteration support
-
-**Value (Type Alias):**
-- Purpose: Type-safe variant for scalar values in queries/elements
-- File: `include/quiver/value.h`
+**`quiver::Value` — Type-safe scalar variant:**
+- Purpose: Holds any supported data value
+- Location: `include/quiver/value.h`
 - Definition: `using Value = std::variant<std::nullptr_t, int64_t, double, std::string>`
-- Used throughout: Element scalars, parameterized query params, time series rows
+
+**`quiver::Result` / `quiver::Row` — Internal query results:**
+- Purpose: Typed result set returned by `Database::execute` (internal only); `Row` provides per-column typed accessors via `get_integer`/`get_float`/`get_string` returning `std::optional`
+- Location: `include/quiver/result.h`, `include/quiver/row.h`
+- Pattern: Plain value types; iterable
+
+**`quiver_database_t` / `quiver_element_t` — C API opaque handles:**
+- Purpose: Wrap C++ objects for C-linkage FFI callers
+- Location: `src/c/internal.h`
+- `quiver_database` struct: contains `quiver::Database db` member
+- `quiver_element` struct: contains `quiver::Element element` member
+
+**`quiver::SchemaValidator` — Schema convention enforcer:**
+- Purpose: Validates loaded schema follows Quiver conventions at `Database` open time
+- Location: `include/quiver/schema_validator.h`, `src/schema_validator.cpp`
+- Throws `std::runtime_error` on any convention violation
+
+**`quiver::TypeValidator` — Runtime type checker:**
+- Purpose: Validates values match schema column types before writes
+- Location: `include/quiver/type_validator.h`, `src/type_validator.cpp`
+
+**`quiver::LuaRunner` — Embedded scripting host:**
+- Purpose: Executes Lua scripts with a bound `db` userdata exposing the full Database API
+- Location: `include/quiver/lua_runner.h`, `src/lua_runner.cpp`
+- Pattern: Pimpl (hides sol2/Lua headers from public API)
+
+**`quiver::Migration` / `quiver::Migrations` — Schema versioning:**
+- Purpose: Load numbered migration directories (`1/up.sql`, `2/up.sql`, …); apply pending migrations in order
+- Location: `include/quiver/migration.h`, `include/quiver/migrations.h`, `src/migration.cpp`, `src/migrations.cpp`
+- Pattern: Plain value types
 
 ## Entry Points
 
-**C++ API Entry (Library):**
-- Location: `include/quiver/quiver.h` (includes all public headers)
-- Key constructor: `Database(path, options)` or static factories `from_schema()`, `from_migrations()`
-- Options: DatabaseOptions (version, log_level), CSVExportOptions (enum_labels, date formatting)
+**C++ Core:**
+- Direct open: `Database db(path, options)` — opens existing database
+- Factory (schema): `Database::from_schema(db_path, schema_path)` — creates/opens with SQL schema file
+- Factory (migrations): `Database::from_migrations(db_path, migrations_path)` — applies pending versioned migrations
 
-**C API Entry (FFI):**
-- Location: `include/quiver/c/database.h`, `include/quiver/c/element.h`, `include/quiver/c/options.h`
-- Functions: `quiver_database_open()`, `quiver_database_from_schema()`, etc.
-- Pattern: Factory functions return `QUIVER_OK`/`QUIVER_ERROR`, values via output parameters
-- Error retrieval: `quiver_get_last_error()` (thread-local)
+**C API:**
+- `quiver_database_open(path, options, &out_db)` in `src/c/database.cpp`
+- `quiver_database_from_schema(db_path, schema_path, options, &out_db)` in `src/c/database.cpp`
+- `quiver_database_from_migrations(db_path, migrations_path, options, &out_db)` in `src/c/database.cpp`
+- All return `quiver_error_t`; error detail via `quiver_get_last_error()`
 
-**Lua Entry:**
-- Location: `include/quiver/lua_runner.h`
-- Constructor: `LuaRunner(database&)` injects db into Lua environment
-- Method: `run(script_string)` executes Lua with `db` userdata available
-
-**Language Bindings Entry:**
-- Julia: `bindings/julia/src/Quiver.jl` (module root)
-- Dart: `bindings/dart/lib/src/database.dart` (Database class)
-- Python: `bindings/python/src/quiver/*.py`
+**Bindings:**
+- Julia: `Quiver.from_schema(db_path, schema_path)` → `Database` — `bindings/julia/src/database.jl`
+- Dart: `Database.fromSchema(dbPath, schemaPath)` → `Database` — `bindings/dart/lib/src/database.dart`
+- Python: `Database.from_schema(db_path, schema_path)` → `Database` — `bindings/python/src/quiverdb/database.py`
 
 ## Error Handling
 
-**Strategy:** Exceptions in C++ layer, binary error codes in C layer, propagated to language bindings
+**Strategy:** C++ exceptions caught at the C API boundary; converted to binary return codes plus thread-local error strings; bindings re-raise as native exceptions
 
 **Patterns:**
-
-1. **C++ Precondition Failure:**
-   ```cpp
-   throw std::runtime_error("Cannot {operation}: {reason}");
-   // Example: "Cannot create_element: element must have at least one scalar attribute"
-   ```
-
-2. **C++ Not Found:**
-   ```cpp
-   throw std::runtime_error("{Entity} not found: {identifier}");
-   // Example: "Scalar attribute not found: 'value' in collection 'Items'"
-   ```
-
-3. **C++ Operation Failure:**
-   ```cpp
-   throw std::runtime_error("Failed to {operation}: {reason}");
-   // Example: "Failed to execute statement: {sqlite3_errmsg(db)}"
-   ```
-
-4. **C API Wrapper:**
-   ```cpp
-   try {
-       // C++ call
-       return QUIVER_OK;
-   } catch (const std::exception& e) {
-       quiver_set_last_error(e.what());
-       return QUIVER_ERROR;
-   }
-   ```
-
-5. **Language Binding:** Retrieves error via `quiver_get_last_error()`, throws idiomatic exception (Julia exception, Dart exception, Python exception)
-
-**Precondition Checks (C API):** QUIVER_REQUIRE macro validates null pointers, sets error message, returns QUIVER_ERROR
+- C++ throws `std::runtime_error` with exactly three message formats: `"Cannot {op}: {reason}"`, `"{Entity} not found: {id}"`, `"Failed to {op}: {reason}"`
+- C API wraps every function in `try { ... return QUIVER_OK; } catch (const std::exception& e) { quiver_set_last_error(e.what()); return QUIVER_ERROR; }`
+- `QUIVER_REQUIRE(args...)` macro (`src/c/internal.h`) validates non-null pointer arguments before the try-block; auto-generates `"Null argument: {name}"` messages via stringification
+- Bindings check return code with a `check()` helper and raise language-native exceptions using `quiver_get_last_error()` for the message (Julia: `DatabaseException`, Dart: `QuiverException`, Python: `QuiverError`)
+- Rollback does not throw — errors during rollback are logged only
 
 ## Cross-Cutting Concerns
 
-**Logging:**
-- Framework: spdlog
-- Per-database instance logger with unique name
-- Console sink (color) at configured level; file sink (if file-based DB) at debug level
-- Typical usage: `impl_->logger->debug("Opening database: {}", path)`
+**Logging:** Per-instance spdlog logger (`std::shared_ptr<spdlog::logger>` in `Database::Impl`); dual-sink to stdout (colored, configurable level) and `quiver_database.log` file in the database directory; in-memory databases log to stdout only
 
-**Validation:**
-- Schema validation: `SchemaValidator` checks required tables (Configuration), naming conventions
-- Type validation: `TypeValidator` validates scalar and array values match schema before insert
-- Null pointer validation: `QUIVER_REQUIRE` macro in C API layer
+**Validation:** Schema validation at open time (`SchemaValidator`); type validation at write time (`TypeValidator`); FK label-to-ID resolution before writes (`Impl::resolve_element_fk_labels` in `src/database_impl.h`)
 
-**Authentication:**
-- Not implemented; SQLite operates at file level
-- File permissions managed by OS
+**Memory Ownership in C API:** All heap allocations by C API functions are matched with explicit `quiver_database_free_*` / `quiver_element_free_*` free functions co-located in the same translation unit as the allocating function (`database_read.cpp` owns read alloc+free pairs, `database_metadata.cpp` owns metadata alloc+free pairs, etc.)
 
-**Transaction Control:**
-- Explicit API: `begin_transaction()`, `commit()`, `rollback()`, `in_transaction()`
-- Implicit RAII: `TransactionGuard` in write operations, nest-aware (only owns if one not already active)
-- Autocommit disabled when explicit transaction active
-
-**Memory Management (C API):**
-- Allocate with `new`, deallocate with provided free functions
-- String arrays: `quiver_database_free_string_array(char**, size_t)`
-- Typed arrays: `quiver_database_free_integer_array(int64_t*)`, etc.
-- Metadata: `quiver_database_free_scalar_metadata()`, `quiver_database_free_group_metadata()`
-- Alloc/free pairs co-located in same translation unit (read ops in database_read.cpp, metadata ops in database_metadata.cpp, etc.)
+**Thread Safety:** SQLite initialized once via `std::call_once` in `src/database.cpp`; each `Database` instance has its own connection and logger; thread-local storage for C API error messages (`quiver_get_last_error`)
 
 ---
 
-*Architecture analysis: 2026-02-23*
+*Architecture analysis: 2026-02-26*
