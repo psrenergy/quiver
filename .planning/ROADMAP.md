@@ -71,10 +71,10 @@ Plans:
   1. Pushing a version tag (e.g., `v0.5.0`) triggers the publish workflow
   2. Publishing uses PyPI trusted publisher (OIDC) -- no API tokens stored in repository secrets
   3. `pip install quiverdb` on a clean machine (Windows or Linux) installs the package and `import quiverdb` works without any system-level setup
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 04-01: TBD
+- [ ] 04-01-PLAN.md -- Tag-triggered publish workflow with OIDC trusted publishing and GitHub Release
 
 ## Progress
 
