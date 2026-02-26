@@ -313,11 +313,11 @@ include("fixture.jl")
 
             Quiver.import_csv(db, "Child", "", csv_path)
 
-            sib1 = Quiver.query_integer(db, "SELECT sibling_id FROM Child WHERE label = ?"; params = ["Child1"])
+            sib1 = Quiver.query_integer(db, "SELECT sibling_id FROM Child WHERE label = ?", ["Child1"])
             @test isnothing(sib1)
 
-            sib2 = Quiver.query_integer(db, "SELECT sibling_id FROM Child WHERE label = ?"; params = ["Child2"])
-            child1_id = Quiver.query_integer(db, "SELECT id FROM Child WHERE label = ?"; params = ["Child1"])
+            sib2 = Quiver.query_integer(db, "SELECT sibling_id FROM Child WHERE label = ?", ["Child2"])
+            child1_id = Quiver.query_integer(db, "SELECT id FROM Child WHERE label = ?", ["Child1"])
             @test sib2 == child1_id
 
             # Second import (re-import): 4 children, includes self-referencing row
@@ -333,11 +333,11 @@ include("fixture.jl")
             labels = Quiver.read_scalar_strings(db, "Child", "label")
             @test length(labels) == 4
 
-            child3_id = Quiver.query_integer(db, "SELECT id FROM Child WHERE label = ?"; params = ["Child3"])
-            sib3 = Quiver.query_integer(db, "SELECT sibling_id FROM Child WHERE label = ?"; params = ["Child3"])
+            child3_id = Quiver.query_integer(db, "SELECT id FROM Child WHERE label = ?", ["Child3"])
+            sib3 = Quiver.query_integer(db, "SELECT sibling_id FROM Child WHERE label = ?", ["Child3"])
             @test sib3 == child3_id
 
-            sib4 = Quiver.query_integer(db, "SELECT sibling_id FROM Child WHERE label = ?"; params = ["Child4"])
+            sib4 = Quiver.query_integer(db, "SELECT sibling_id FROM Child WHERE label = ?", ["Child4"])
             @test sib4 == child3_id
         finally
             isfile(csv_path) && rm(csv_path)

@@ -333,11 +333,11 @@ void main() {
 
         db.importCSV('Child', '', csvPath);
 
-        final sib1 = db.queryInteger('SELECT sibling_id FROM Child WHERE label = ?', params: ['Child1']);
+        final sib1 = db.queryIntegerParams('SELECT sibling_id FROM Child WHERE label = ?', ['Child1']);
         expect(sib1, isNull);
 
-        final sib2 = db.queryInteger('SELECT sibling_id FROM Child WHERE label = ?', params: ['Child2']);
-        final child1Id = db.queryInteger('SELECT id FROM Child WHERE label = ?', params: ['Child1']);
+        final sib2 = db.queryIntegerParams('SELECT sibling_id FROM Child WHERE label = ?', ['Child2']);
+        final child1Id = db.queryIntegerParams('SELECT id FROM Child WHERE label = ?', ['Child1']);
         expect(sib2, child1Id);
 
         // Second import (re-import): 4 children, includes self-referencing row
@@ -355,11 +355,11 @@ void main() {
         final labels = db.readScalarStrings('Child', 'label');
         expect(labels.length, 4);
 
-        final child3Id = db.queryInteger('SELECT id FROM Child WHERE label = ?', params: ['Child3']);
-        final sib3 = db.queryInteger('SELECT sibling_id FROM Child WHERE label = ?', params: ['Child3']);
+        final child3Id = db.queryIntegerParams('SELECT id FROM Child WHERE label = ?', ['Child3']);
+        final sib3 = db.queryIntegerParams('SELECT sibling_id FROM Child WHERE label = ?', ['Child3']);
         expect(sib3, child3Id);
 
-        final sib4 = db.queryInteger('SELECT sibling_id FROM Child WHERE label = ?', params: ['Child4']);
+        final sib4 = db.queryIntegerParams('SELECT sibling_id FROM Child WHERE label = ?', ['Child4']);
         expect(sib4, child3Id);
       } finally {
         final f = File(csvPath);
