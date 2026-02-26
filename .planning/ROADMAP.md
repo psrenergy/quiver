@@ -27,11 +27,11 @@ Python binding currently uses the `Element` builder pattern for create/update op
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md -- Core API change (kwargs create/update, remove Element from exports) + convert create/update/delete test files
+- [x] 01-01-PLAN.md -- Core API change (kwargs create/update, remove Element from exports) + convert create/update/delete test files
 - [ ] 01-02-PLAN.md -- Convert remaining 9 test files + update CLAUDE.md documentation
 
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Python kwargs API | 0/2 | Not started | - |
+| 1. Python kwargs API | 1/2 | In Progress | - |
