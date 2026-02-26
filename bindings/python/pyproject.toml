@@ -23,3 +23,8 @@ dev = [
     "pytest>=8.4.1",
     "ruff>=0.12.2",
 ]
+
+[tool.cibuildwheel]
+build = ["cp313-win_amd64", "cp313-manylinux_x86_64"]
+test-requires = ["pytest"]
+test-command = "pytest {project}/bindings/python/tests"
