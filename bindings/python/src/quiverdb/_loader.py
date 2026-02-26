@@ -41,10 +41,7 @@ def load_library(ffi: FFI):
             _load_source = "bundled"
             return lib
         except OSError as e:
-            raise RuntimeError(
-                f"Cannot load bundled native libraries: {e}. "
-                f"Searched: {_LIBS_DIR}"
-            ) from None
+            raise RuntimeError(f"Cannot load bundled native libraries: {e}. Searched: {_LIBS_DIR}") from None
 
     # --- Dev mode ---
     dev_core = "libquiver" if sys.platform == "win32" else f"libquiver{_EXT}"
@@ -60,9 +57,7 @@ def load_library(ffi: FFI):
         return lib
     except OSError:
         raise RuntimeError(
-            f"Cannot load native libraries. "
-            f"Searched: {_LIBS_DIR} (not found), system PATH. "
-            f"Missing: {_LIB_C_API}"
+            f"Cannot load native libraries. Searched: {_LIBS_DIR} (not found), system PATH. Missing: {_LIB_C_API}"
         ) from None
 
 

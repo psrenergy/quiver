@@ -73,6 +73,7 @@ set_target_properties(quiver PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}
     OUTPUT_NAME quiver
+    PREFIX "lib"
 )
 
 # Alias for use in subdirectories
@@ -129,6 +130,7 @@ if(QUIVER_BUILD_C_API)
     set_target_properties(quiver_c PROPERTIES
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR}
+        PREFIX "lib"
     )
 
     add_library(quiver::database_c ALIAS quiver_c)
