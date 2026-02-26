@@ -102,9 +102,7 @@ class Database {
       dataType: attribute.data_type,
       notNull: attribute.not_null != 0,
       primaryKey: attribute.primary_key != 0,
-      defaultValue: attribute.default_value == nullptr
-          ? null
-          : attribute.default_value.cast<Utf8>().toDartString(),
+      defaultValue: attribute.default_value == nullptr ? null : attribute.default_value.cast<Utf8>().toDartString(),
       isForeignKey: attribute.is_foreign_key != 0,
       referencesCollection: attribute.references_collection == nullptr
           ? null
