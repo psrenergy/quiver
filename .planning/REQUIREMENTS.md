@@ -12,8 +12,8 @@ Requirements for Python API alignment. Each maps to roadmap phases.
 - [x] **PYAPI-01**: User can create an element with kwargs: `db.create_element("Collection", label="x", value=42)`
 - [x] **PYAPI-02**: User can update an element with kwargs: `db.update_element("Collection", id, label="y")`
 - [x] **PYAPI-03**: Element class is removed from public API and `__init__.py` exports
-- [ ] **PYAPI-04**: All Python tests pass with the new kwargs API
-- [ ] **PYAPI-05**: CLAUDE.md cross-layer naming table updated with new Python pattern
+- [x] **PYAPI-04**: All Python tests pass with the new kwargs API
+- [x] **PYAPI-05**: CLAUDE.md cross-layer naming table updated with new Python pattern
 
 ## Future Requirements
 
@@ -35,8 +35,8 @@ None — v0.5 is a focused milestone.
 | PYAPI-01 | Phase 1 | Complete |
 | PYAPI-02 | Phase 1 | Complete |
 | PYAPI-03 | Phase 1 | Complete |
-| PYAPI-04 | Phase 1 | Pending |
-| PYAPI-05 | Phase 1 | Pending |
+| PYAPI-04 | Phase 1 | Complete |
+| PYAPI-05 | Phase 1 | Complete |
 
 **Coverage:**
 - v0.5 requirements: 5 total
