@@ -370,10 +370,10 @@ function read_element_ids(db::Database, collection::String)
 end
 
 function _get_value_data_type(value_columns::Vector{ScalarMetadata})
-    if !isempty(value_columns)
-        return value_columns[1].data_type
+    if isempty(value_columns)
+        throw(ArgumentError("No value columns found in group metadata"))
     end
-    return C.QUIVER_DATA_TYPE_STRING
+    return value_columns[1].data_type
 end
 
 function read_all_scalars_by_id(db::Database, collection::String, id::Int64)
