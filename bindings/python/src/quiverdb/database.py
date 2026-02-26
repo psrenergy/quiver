@@ -1260,7 +1260,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
 
     # -- Convenience helpers ---------------------------------------------------
 
-    def read_all_scalars_by_id(self, collection: str, id: int) -> dict:
+    def read_scalars_by_id(self, collection: str, id: int) -> dict:
         """Read all scalar attribute values for an element.
 
         Returns dict mapping attribute names to typed values.
@@ -1280,7 +1280,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 result[name] = self.read_scalar_string_by_id(collection, name, id)
         return result
 
-    def read_all_vectors_by_id(self, collection: str, id: int) -> dict:
+    def read_vectors_by_id(self, collection: str, id: int) -> dict:
         """Read all vector group values for an element (single-column groups).
 
         Returns dict mapping group names to typed lists.
@@ -1302,7 +1302,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 result[name] = self.read_vector_strings_by_id(collection, name, id)
         return result
 
-    def read_all_sets_by_id(self, collection: str, id: int) -> dict:
+    def read_sets_by_id(self, collection: str, id: int) -> dict:
         """Read all set group values for an element (single-column groups).
 
         Returns dict mapping group names to typed lists.

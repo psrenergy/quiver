@@ -158,9 +158,9 @@ struct LuaRunner::Impl {
         bind.set_function("read_time_series_group", &read_time_series_group_lua);
         bind.set_function("read_time_series_files", &read_time_series_files_lua);
 
-        bind.set_function("read_all_scalars_by_id", &read_all_scalars_by_id_lua);
-        bind.set_function("read_all_vectors_by_id", &read_all_vectors_by_id_lua);
-        bind.set_function("read_all_sets_by_id", &read_all_sets_by_id_lua);
+        bind.set_function("read_scalars_by_id", &read_scalars_by_id_lua);
+        bind.set_function("read_vectors_by_id", &read_vectors_by_id_lua);
+        bind.set_function("read_sets_by_id", &read_sets_by_id_lua);
 
         bind.set_function("update_element", &update_element_lua);
         bind.set_function("update_time_series_group", &update_time_series_group_lua);
@@ -705,7 +705,7 @@ struct LuaRunner::Impl {
     }
 
     static sol::table
-    read_all_scalars_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
+    read_scalars_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
         sol::state_view lua(s);
         auto result = lua.create_table();
 
@@ -733,7 +733,7 @@ struct LuaRunner::Impl {
     }
 
     static sol::table
-    read_all_vectors_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
+    read_vectors_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
         sol::state_view lua(s);
         auto result = lua.create_table();
 
@@ -770,7 +770,7 @@ struct LuaRunner::Impl {
     }
 
     static sol::table
-    read_all_sets_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
+    read_sets_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
         sol::state_view lua(s);
         auto result = lua.create_table();
 

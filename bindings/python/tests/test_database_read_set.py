@@ -62,10 +62,10 @@ class TestReadSetStringsBulk:
 
 
 class TestReadAllSetsByID:
-    def test_read_all_sets_by_id_no_groups(self, db: Database) -> None:
-        """read_all_sets_by_id returns empty dict for collections with no set groups."""
+    def test_read_sets_by_id_no_groups(self, db: Database) -> None:
+        """read_sets_by_id returns empty dict for collections with no set groups."""
         id1 = db.create_element("Configuration", label="item1")
-        result = db.read_all_sets_by_id("Configuration", id1)
+        result = db.read_sets_by_id("Configuration", id1)
         assert result == {}
 
 
@@ -155,12 +155,12 @@ class TestReadSetDateTimeByID:
 
 
 class TestReadAllSetsByIDWithData:
-    def test_read_all_sets_by_id_returns_all_groups(self, composite_helpers_db: Database) -> None:
-        """read_all_sets_by_id returns dict with integer, float, and string set groups."""
+    def test_read_sets_by_id_returns_all_groups(self, composite_helpers_db: Database) -> None:
+        """read_sets_by_id returns dict with integer, float, and string set groups."""
         id1 = composite_helpers_db.create_element(
             "Items", label="item1", code=[10, 20, 30], weight=[1.1, 2.2], tag=["alpha", "beta"]
         )
-        result = composite_helpers_db.read_all_sets_by_id("Items", id1)
+        result = composite_helpers_db.read_sets_by_id("Items", id1)
 
         assert len(result) == 3
         assert sorted(result["code"]) == [10, 20, 30]
@@ -169,10 +169,10 @@ class TestReadAllSetsByIDWithData:
         assert any(abs(v - 2.2) < 1e-9 for v in result["weight"])
         assert sorted(result["tag"]) == ["alpha", "beta"]
 
-    def test_read_all_sets_by_id_correct_types(self, composite_helpers_db: Database) -> None:
+    def test_read_sets_by_id_correct_types(self, composite_helpers_db: Database) -> None:
         """Each set group returns the correct Python type."""
         id1 = composite_helpers_db.create_element("Items", label="item1", code=[5], weight=[9.9], tag=["text"])
-        result = composite_helpers_db.read_all_sets_by_id("Items", id1)
+        result = composite_helpers_db.read_sets_by_id("Items", id1)
 
         assert all(isinstance(v, int) for v in result["code"])
         assert all(isinstance(v, float) for v in result["weight"])

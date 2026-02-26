@@ -1,4 +1,4 @@
--- Schema: Composite helper tests (read_all_vectors_by_id, read_all_sets_by_id)
+-- Schema: Composite helper tests (read_vectors_by_id, read_sets_by_id)
 -- Tests: Single-column vector/set groups where group_name == column_name
 PRAGMA foreign_keys = ON;
 

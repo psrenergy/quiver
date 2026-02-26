@@ -436,20 +436,20 @@ Julia, Dart, and Lua provide additional convenience methods that compose core op
 
 **DateTime wrappers (Julia and Dart only):**
 
-| Julia | Dart | Wraps |
-|-------|------|-------|
-| `read_scalar_date_time_by_id` | `readScalarDateTimeById` | string read + date parsing |
+|             Julia             |           Dart            |               Wraps               |
+| ----------------------------- | ------------------------- | --------------------------------- |
+| `read_scalar_date_time_by_id` | `readScalarDateTimeById`  | string read + date parsing        |
 | `read_vector_date_time_by_id` | `readVectorDateTimesById` | string vector read + date parsing |
-| `read_set_date_time_by_id` | `readSetDateTimesById` | string set read + date parsing |
-| `query_date_time` | `queryDateTime` | string query + date parsing |
+| `read_set_date_time_by_id`    | `readSetDateTimesById`    | string set read + date parsing    |
+| `query_date_time`             | `queryDateTime`           | string query + date parsing       |
 
 **Composite read helpers (Julia, Dart, and Lua):**
 
-| Julia | Dart | Lua | Wraps |
-|-------|------|-----|-------|
-| `read_all_scalars_by_id` | `readAllScalarsById` | `read_all_scalars_by_id` | `list_scalar_attributes` + typed reads |
-| `read_all_vectors_by_id` | `readAllVectorsById` | `read_all_vectors_by_id` | `list_vector_groups` + typed reads |
-| `read_all_sets_by_id` | `readAllSetsById` | `read_all_sets_by_id` | `list_set_groups` + typed reads |
+|        Julia         |       Dart        |         Lua          |                 Wraps                  |
+| -------------------- | ----------------- | -------------------- | -------------------------------------- |
+| `read_scalars_by_id` | `readScalarsById` | `read_scalars_by_id` | `list_scalar_attributes` + typed reads |
+| `read_vectors_by_id` | `readVectorsById` | `read_vectors_by_id` | `list_vector_groups` + typed reads     |
+| `read_sets_by_id`    | `readSetsById`    | `read_sets_by_id`    | `list_set_groups` + typed reads        |
 
 **Transaction block wrappers (Julia, Dart, and Lua):**
 

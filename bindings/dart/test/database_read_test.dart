@@ -463,7 +463,7 @@ void main() {
       }
     });
 
-    test('readAllScalarsById returns native DateTime objects', () {
+    test('readScalarsById returns native DateTime objects', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
@@ -474,7 +474,7 @@ void main() {
           'date_attribute': '2024-01-15T10:30:00',
         });
 
-        final scalars = db.readAllScalarsById('Configuration', 1);
+        final scalars = db.readScalarsById('Configuration', 1);
         expect(scalars['date_attribute'], isA<DateTime>());
         expect(
           scalars['date_attribute'],
@@ -1053,7 +1053,7 @@ void main() {
   // Composite helper tests (using composite_helpers.sql)
   // ===========================================================================
 
-  group('readAllVectorsById', () {
+  group('readVectorsById', () {
     test('returns all vector groups with correct types', () {
       final db = Database.fromSchema(
         ':memory:',
@@ -1067,7 +1067,7 @@ void main() {
           'note': ['hello', 'world'],
         });
 
-        final result = db.readAllVectorsById('Items', id);
+        final result = db.readVectorsById('Items', id);
 
         expect(result.length, equals(3));
         expect(result['amount'], equals([10, 20, 30]));
@@ -1084,7 +1084,7 @@ void main() {
     });
   });
 
-  group('readAllSetsById', () {
+  group('readSetsById', () {
     test('returns all set groups with correct types', () {
       final db = Database.fromSchema(
         ':memory:',
@@ -1098,7 +1098,7 @@ void main() {
           'tag': ['alpha', 'beta'],
         });
 
-        final result = db.readAllSetsById('Items', id);
+        final result = db.readSetsById('Items', id);
 
         expect(result.length, equals(3));
         expect(result['code']!..sort(), equals([10, 20, 30]));

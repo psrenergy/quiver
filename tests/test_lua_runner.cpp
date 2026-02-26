@@ -1715,7 +1715,7 @@ TEST_F(LuaRunnerTest, ReadAllScalarsByIdFromLua) {
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        local scalars = db:read_all_scalars_by_id("Collection", )" +
+        local scalars = db:read_scalars_by_id("Collection", )" +
                          std::to_string(id) + R"()
 
         -- Verify label (TEXT)
@@ -1744,7 +1744,7 @@ TEST_F(LuaRunnerTest, ReadAllVectorsByIdFromLua) {
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        local vectors = db:read_all_vectors_by_id("Configuration", )" +
+        local vectors = db:read_vectors_by_id("Configuration", )" +
                          std::to_string(id) + R"()
 
         -- basic.sql has no vector groups, so result should be an empty table
@@ -1769,7 +1769,7 @@ TEST_F(LuaRunnerTest, ReadAllSetsByIdFromLua) {
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        local sets = db:read_all_sets_by_id("Configuration", )" +
+        local sets = db:read_sets_by_id("Configuration", )" +
                          std::to_string(id) + R"()
 
         -- basic.sql has no set groups, so result should be an empty table
@@ -1796,7 +1796,7 @@ TEST_F(LuaRunnerTest, ReadAllVectorsByIdWithDataFromLua) {
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        local vectors = db:read_all_vectors_by_id("Items", )" +
+        local vectors = db:read_vectors_by_id("Items", )" +
                          std::to_string(id) + R"()
 
         -- Verify 3 vector groups
@@ -1841,7 +1841,7 @@ TEST_F(LuaRunnerTest, ReadAllSetsByIdWithDataFromLua) {
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        local sets = db:read_all_sets_by_id("Items", )" +
+        local sets = db:read_sets_by_id("Items", )" +
                          std::to_string(id) + R"()
 
         -- Verify 3 set groups

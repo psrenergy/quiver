@@ -792,7 +792,7 @@ extension DatabaseRead on Database {
   /// Reads all scalar attributes for an element by ID.
   /// Returns a map of attribute name to value.
   /// DateTime columns are converted to DateTime objects.
-  Map<String, Object?> readAllScalarsById(String collection, int id) {
+  Map<String, Object?> readScalarsById(String collection, int id) {
     _ensureNotClosed();
 
     final result = <String, Object?>{};
@@ -815,7 +815,7 @@ extension DatabaseRead on Database {
   /// Reads all vector attributes for an element by ID.
   /// Returns a map of group name to list of values.
   /// DateTime columns are converted to DateTime objects.
-  Map<String, List<Object>> readAllVectorsById(String collection, int id) {
+  Map<String, List<Object>> readVectorsById(String collection, int id) {
     _ensureNotClosed();
 
     final result = <String, List<Object>>{};
@@ -839,7 +839,7 @@ extension DatabaseRead on Database {
   /// Reads all set attributes for an element by ID.
   /// Returns a map of group name to list of values.
   /// DateTime columns are converted to DateTime objects.
-  Map<String, List<Object>> readAllSetsById(String collection, int id) {
+  Map<String, List<Object>> readSetsById(String collection, int id) {
     _ensureNotClosed();
 
     final result = <String, List<Object>>{};

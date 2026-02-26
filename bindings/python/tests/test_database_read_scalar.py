@@ -167,7 +167,7 @@ class TestReadScalarDateTimeByID:
 
 
 class TestReadAllScalarsByID:
-    def test_read_all_scalars_by_id(self, db: Database) -> None:
+    def test_read_scalars_by_id(self, db: Database) -> None:
         id1 = db.create_element(
             "Configuration",
             label="item1",
@@ -176,7 +176,7 @@ class TestReadAllScalarsByID:
             string_attribute="hello",
             date_attribute="2024-01-15T10:30:00",
         )
-        result = db.read_all_scalars_by_id("Configuration", id1)
+        result = db.read_scalars_by_id("Configuration", id1)
 
         # Check all expected keys present
         assert "id" in result

@@ -530,8 +530,8 @@ void main() {
         );
         expect(dateStr, equals('2024-03-15T14:30:45'));
 
-        // Verify readAllScalarsById returns native DateTime
-        final scalars = db.readAllScalarsById('Configuration', 1);
+        // Verify readScalarsById returns native DateTime
+        final scalars = db.readScalarsById('Configuration', 1);
         expect(scalars['date_attribute'], isA<DateTime>());
         expect(scalars['date_attribute'], equals(dt));
       } finally {

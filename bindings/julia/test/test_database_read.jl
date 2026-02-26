@@ -239,7 +239,7 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
-    @testset "DateTime Native Objects via read_all_scalars_by_id" begin
+    @testset "DateTime Native Objects via read_scalars_by_id" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
@@ -249,7 +249,7 @@ include("fixture.jl")
         )
 
         # Read all scalars for an element - date_attribute should be converted to DateTime
-        scalars = Quiver.read_all_scalars_by_id(db, "Configuration", 1)
+        scalars = Quiver.read_scalars_by_id(db, "Configuration", 1)
 
         @test haskey(scalars, "date_attribute")
         @test scalars["date_attribute"] isa DateTime
@@ -619,7 +619,7 @@ include("fixture.jl")
     # Composite helper tests (using composite_helpers.sql)
     # ============================================================================
 
-    @testset "read_all_vectors_by_id" begin
+    @testset "read_vectors_by_id" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "composite_helpers.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
@@ -630,7 +630,7 @@ include("fixture.jl")
             note = ["hello", "world"],
         )
 
-        result = Quiver.read_all_vectors_by_id(db, "Items", id)
+        result = Quiver.read_vectors_by_id(db, "Items", id)
 
         @test length(result) == 3
         @test haskey(result, "amount")
@@ -648,7 +648,7 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
-    @testset "read_all_sets_by_id" begin
+    @testset "read_sets_by_id" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "composite_helpers.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
@@ -659,7 +659,7 @@ include("fixture.jl")
             tag = ["alpha", "beta"],
         )
 
-        result = Quiver.read_all_sets_by_id(db, "Items", id)
+        result = Quiver.read_sets_by_id(db, "Items", id)
 
         @test length(result) == 3
         @test haskey(result, "code")

@@ -84,10 +84,10 @@ class TestReadVectorFloatsBulk:
 
 
 class TestReadAllVectorsByID:
-    def test_read_all_vectors_by_id_no_groups(self, db: Database) -> None:
-        """read_all_vectors_by_id returns empty dict for collections with no vector groups."""
+    def test_read_vectors_by_id_no_groups(self, db: Database) -> None:
+        """read_vectors_by_id returns empty dict for collections with no vector groups."""
         id1 = db.create_element("Configuration", label="item1")
-        result = db.read_all_vectors_by_id("Configuration", id1)
+        result = db.read_vectors_by_id("Configuration", id1)
         assert result == {}
 
 
@@ -170,12 +170,12 @@ class TestReadVectorDateTimeByID:
 
 
 class TestReadAllVectorsByIDWithData:
-    def test_read_all_vectors_by_id_returns_all_groups(self, composite_helpers_db: Database) -> None:
-        """read_all_vectors_by_id returns dict with integer, float, and string vector groups."""
+    def test_read_vectors_by_id_returns_all_groups(self, composite_helpers_db: Database) -> None:
+        """read_vectors_by_id returns dict with integer, float, and string vector groups."""
         id1 = composite_helpers_db.create_element(
             "Items", label="item1", amount=[10, 20, 30], score=[1.1, 2.2], note=["hello", "world"]
         )
-        result = composite_helpers_db.read_all_vectors_by_id("Items", id1)
+        result = composite_helpers_db.read_vectors_by_id("Items", id1)
 
         assert len(result) == 3
         assert result["amount"] == [10, 20, 30]
@@ -184,10 +184,10 @@ class TestReadAllVectorsByIDWithData:
         assert abs(result["score"][1] - 2.2) < 1e-9
         assert result["note"] == ["hello", "world"]
 
-    def test_read_all_vectors_by_id_correct_types(self, composite_helpers_db: Database) -> None:
+    def test_read_vectors_by_id_correct_types(self, composite_helpers_db: Database) -> None:
         """Each vector group returns the correct Python type."""
         id1 = composite_helpers_db.create_element("Items", label="item1", amount=[5], score=[9.9], note=["text"])
-        result = composite_helpers_db.read_all_vectors_by_id("Items", id1)
+        result = composite_helpers_db.read_vectors_by_id("Items", id1)
 
         assert all(isinstance(v, int) for v in result["amount"])
         assert all(isinstance(v, float) for v in result["score"])
