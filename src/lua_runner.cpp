@@ -810,30 +810,10 @@ struct LuaRunner::Impl {
     static sol::table
     read_element_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
         sol::state_view lua(s);
-        auto result = lua.create_table();
 
-        // 1. Scalars (exclude "id" -- caller already knows it)
-        for (const auto& attribute : db.list_scalar_attributes(collection)) {
-            if (attribute.name == "id") continue;
-            switch (attribute.data_type) {
-            case DataType::Integer: {
-                auto val = db.read_scalar_integer_by_id(collection, attribute.name, id);
-                result[attribute.name] = val.has_value() ? sol::make_object(lua, *val) : sol::lua_nil;
-                break;
-            }
-            case DataType::Real: {
-                auto val = db.read_scalar_float_by_id(collection, attribute.name, id);
-                result[attribute.name] = val.has_value() ? sol::make_object(lua, *val) : sol::lua_nil;
-                break;
-            }
-            case DataType::Text:
-            case DataType::DateTime: {
-                auto val = db.read_scalar_string_by_id(collection, attribute.name, id);
-                result[attribute.name] = val.has_value() ? sol::make_object(lua, *val) : sol::lua_nil;
-                break;
-            }
-            }
-        }
+        // 1. Scalars (compose existing helper, remove "id")
+        auto result = read_all_scalars_by_id_lua(db, collection, id, s);
+        result["id"] = sol::lua_nil;
 
         // Early exit for nonexistent element: label is NOT NULL in schema,
         // so if it reads as nil the element does not exist -- return empty table
@@ -842,7 +822,7 @@ struct LuaRunner::Impl {
             return lua.create_table();
         }
 
-        // 2. Vectors -- each column is a separate top-level key
+        // 2. Vectors -- per-column keying (different from read_all_vectors_by_id which keys by group name)
         for (const auto& group : db.list_vector_groups(collection)) {
             for (const auto& col : group.value_columns) {
                 auto vec = lua.create_table();

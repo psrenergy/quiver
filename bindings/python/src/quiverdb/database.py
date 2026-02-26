@@ -1334,27 +1334,16 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         The 'id' field is excluded (caller already knows it).
         """
         self._ensure_open()
-        result = {}
 
-        # 1. Scalars (skip "id" -- caller already knows it)
-        for attr in self.list_scalar_attributes(collection):
-            name = attr.name
-            if name == "id":
-                continue
-            if attr.data_type == 0:  # INTEGER
-                result[name] = self.read_scalar_integer_by_id(collection, name, id)
-            elif attr.data_type == 1:  # FLOAT
-                result[name] = self.read_scalar_float_by_id(collection, name, id)
-            elif attr.data_type == 3:  # DATE_TIME
-                result[name] = self.read_scalar_date_time_by_id(collection, name, id)
-            else:  # STRING (2)
-                result[name] = self.read_scalar_string_by_id(collection, name, id)
+        # 1. Scalars (compose existing helper, remove 'id')
+        result = self.read_all_scalars_by_id(collection, id)
+        result.pop("id", None)
 
         # Early exit for nonexistent element (label is NOT NULL, None means no row)
         if "label" in result and result["label"] is None:
             return {}
 
-        # 2. Vectors -- each column is a separate top-level key
+        # 2. Vectors -- per-column keying (different from read_all_vectors_by_id which keys by group name)
         for group in self.list_vector_groups(collection):
             for col in group.value_columns:
                 name = col.name

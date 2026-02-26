@@ -869,30 +869,16 @@ extension DatabaseRead on Database {
   Map<String, Object?> readElementById(String collection, int id) {
     _ensureNotClosed();
 
-    final result = <String, Object?>{};
-
-    // 1. Scalars (skip "id" -- caller already knows it)
-    for (final attribute in listScalarAttributes(collection)) {
-      final name = attribute.name;
-      if (name == 'id') continue;
-      switch (attribute.dataType) {
-        case quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER:
-          result[name] = readScalarIntegerById(collection, name, id);
-        case quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT:
-          result[name] = readScalarFloatById(collection, name, id);
-        case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
-          result[name] = readScalarStringById(collection, name, id);
-        case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
-          result[name] = readScalarDateTimeById(collection, name, id);
-      }
-    }
+    // 1. Scalars (compose existing helper, remove 'id')
+    final result = readAllScalarsById(collection, id);
+    result.remove('id');
 
     // Early exit for nonexistent element (label is NOT NULL, null means no row)
     if (result.containsKey('label') && result['label'] == null) {
       return {};
     }
 
-    // 2. Vectors -- each column is a separate top-level key
+    // 2. Vectors -- per-column keying (different from readAllVectorsById which keys by group name)
     for (final group in listVectorGroups(collection)) {
       for (final col in group.valueColumns) {
         final name = col.name;
