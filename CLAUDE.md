@@ -378,6 +378,8 @@ Builder for element creation with fluent API:
 Element().set("label", "Item 1").set("value", 42).set("tags", {"a", "b"})
 ```
 
+> **Python:** Element is internal-only (not part of the public API). Python users pass `**kwargs` to `create_element`/`update_element` instead.
+
 ### LuaRunner Class
 Executes Lua scripts with database access:
 ```cpp
@@ -400,7 +402,7 @@ lua.run(R"(
 - **C++ to C API:** Prefix `quiver_database_` to the C++ method name. Example: `create_element` -> `quiver_database_create_element`
 - **C++ to Julia:** Same name. Add `!` suffix for mutating operations (create, update, delete). Example: `create_element` -> `create_element!`, `read_scalar_integers` -> `read_scalar_integers`
 - **C++ to Dart:** Convert `snake_case` to `camelCase`. Example: `read_scalar_integers` -> `readScalarIntegers`. Factory methods use Dart named constructors: `from_schema` -> `Database.fromSchema()`
-- **C++ to Python:** Same `snake_case` name. Factory methods are `@staticmethod`: `from_schema` -> `Database.from_schema()`. Properties are regular methods (not `@property`).
+- **C++ to Python:** Same `snake_case` name. Factory methods are `@staticmethod`: `from_schema` -> `Database.from_schema()`. Properties are regular methods (not `@property`). Create/update use `**kwargs`: `create_element("Collection", label="x")`.
 - **C++ to Lua:** Same name exactly (1:1 match). Example: `read_scalar_integers` -> `read_scalar_integers`. Lua has no lifecycle methods (open/close) -- database is provided as `db` userdata by LuaRunner.
 
 ### Representative Cross-Layer Examples
@@ -413,6 +415,8 @@ lua.run(R"(
 | Transaction | `rollback()` | `quiver_database_rollback()` | `rollback!()` | `rollback()` | `rollback()` |
 | Transaction | `in_transaction()` | `quiver_database_in_transaction()` | `in_transaction()` | `inTransaction()` | `in_transaction()` |
 | Create | `create_element()` | `quiver_database_create_element()` | `create_element!()` | `createElement()` | `create_element()` |
+
+> **Note:** Python's `create_element` and `update_element` accept `**kwargs` instead of a positional Element argument: `db.create_element("Collection", label="x", value=42)`.
 | Read scalar | `read_scalar_integers()` | `quiver_database_read_scalar_integers()` | `read_scalar_integers()` | `readScalarIntegers()` | `read_scalar_integers()` |
 | Read by ID | `read_scalar_integer_by_id()` | `quiver_database_read_scalar_integer_by_id()` | `read_scalar_integer_by_id()` | `readScalarIntegerById()` | `read_scalar_integer_by_id()` |
 | Delete | `delete_element()` | `quiver_database_delete_element()` | `delete_element!()` | `deleteElement()` | `delete_element()` |
@@ -487,3 +491,5 @@ bindings/python/generator/generator.bat  # Python
 - `_c_api.py` contains hand-written CFFI cdef declarations (generator output in `_declarations.py` for reference)
 - Properties are regular methods, not `@property` (per design decision)
 - test.bat prepends `build/bin/` to PATH for DLL discovery
+- `create_element` and `update_element` accept `**kwargs` (not an Element builder). Element class is internal.
+- Dict unpacking supported: `db.create_element("Collection", **my_dict)`
