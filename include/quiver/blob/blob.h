@@ -15,6 +15,7 @@
 namespace quiver {
 
 class QUIVER_API Blob {
+public:
     explicit Blob(const std::string& file_path, const BlobMetadata& metadata, std::unique_ptr<std::iostream> io);
     ~Blob();
 
@@ -27,11 +28,15 @@ class QUIVER_API Blob {
     Blob& operator=(Blob&& other) noexcept;
 
     // File handling
-    static Blob open_file(const std::string& file_path, char mode, const std::optional<BlobMetadata>& metadata);
+    static Blob open_file(const std::string& file_path, char mode, const std::optional<BlobMetadata>& metadata = {});
 
     // Data handling
     std::vector<double> read(const std::unordered_map<std::string, int64_t>& dims);
     void write(const std::vector<double>& data, const std::unordered_map<std::string, int64_t>& dims);
+
+    // Getters
+    const BlobMetadata& get_metadata() const;
+    const std::string& get_file_path() const;
 
 private:
     struct Impl;
@@ -47,10 +52,7 @@ private:
     void validate_data_length(const std::vector<double>& data);
 
 protected:
-    // Getters
-    const BlobMetadata& get_metadata() const;
-    const std::string& get_file_path() const;
-    const std::iostream& get_io() const;
+    std::iostream& get_io();
 };
 
 }  // namespace quiver

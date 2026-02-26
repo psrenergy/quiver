@@ -7,10 +7,7 @@
 #include <iostream>
 #include <string>
 
-namespace {
-constexpr std::string_view QVR_EXTENSION  = ".qvr";
-constexpr std::string_view TOML_EXTENSION = ".toml";
-}  // namespace
+#include "blob_utils.h"
 
 namespace quiver {
 
@@ -187,7 +184,7 @@ const std::string& Blob::get_file_path() const {
     return impl_->file_path;
 }
 
-const std::iostream& Blob::get_io() const {
+std::iostream& Blob::get_io() {
     return *impl_->io;
 }
 

@@ -3,10 +3,13 @@
 
 #include <chrono>
 #include <cstdint>
+#include <string_view>
 
 namespace quiver {
 
-// TODO: if day_of_year and day_of_week end up being the only functions in this file, consider moving them to time_constants.h and renaming it to time_utils.h or similar
+constexpr std::string_view QVR_EXTENSION  = ".qvr";
+constexpr std::string_view TOML_EXTENSION = ".toml";
+constexpr std::string_view CSV_EXTENSION  = ".csv";
 
 namespace chrono = std::chrono;
 
@@ -17,7 +20,7 @@ inline int64_t day_of_year(chrono::system_clock::time_point datetime) {
     return (day - jan1).count() + 1;
 }
 
-inline int64_t day_of_week(std::chrono::system_clock::time_point datetime) {
+inline int64_t day_of_week(chrono::system_clock::time_point datetime) {
     int day_of_year = quiver::day_of_year(datetime);
     return (day_of_year - 1) % quiver::time::MAX_DAYS_IN_WEEK + 1; // 1-7 instead of 0-6
 }
