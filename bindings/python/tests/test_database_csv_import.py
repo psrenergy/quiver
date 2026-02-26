@@ -53,6 +53,33 @@ class TestImportCSVScalarRoundTrip:
             db2.close()
 
 
+class TestImportCSVLabelOnThirdColumn:
+    """Test that label column works when not in the first position."""
+
+    def test_label_on_third_column(self, csv_db: Database, tmp_path):
+        """CSV with label as 3rd column imports correctly."""
+        csv_path = str(tmp_path / "label_col3.csv")
+        with open(csv_path, "w", newline="") as f:
+            f.write("sep=,\n")
+            f.write("name,status,label,price,date_created,notes\n")
+            f.write("Alpha,1,Item1,10.5,,\n")
+            f.write("Beta,2,Item2,20.0,,\n")
+
+        csv_db.import_csv("Items", "", csv_path)
+
+        labels = csv_db.read_scalar_strings("Items", "label")
+        assert labels == ["Item1", "Item2"]
+
+        names = csv_db.read_scalar_strings("Items", "name")
+        assert names == ["Alpha", "Beta"]
+
+        statuses = csv_db.read_scalar_integers("Items", "status")
+        assert statuses == [1, 2]
+
+        prices = csv_db.read_scalar_floats("Items", "price")
+        assert prices == pytest.approx([10.5, 20.0])
+
+
 class TestImportCSVGroupRoundTrip:
     """Test group (vector) CSV import round-trip: export -> import -> verify."""
 

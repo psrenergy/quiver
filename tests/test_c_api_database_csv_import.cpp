@@ -93,6 +93,62 @@ TEST(DatabaseCApiCSV, ImportCSV_Scalar_RoundTrip) {
     quiver_database_close(db2);
 }
 
+TEST(DatabaseCApiCSV, ImportCSV_Scalar_LabelOnThirdColumn) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+              QUIVER_OK);
+
+    auto csv_path = temp_csv("ImportScalarLabelCol3");
+    write_csv_file(csv_path.string(),
+                   "sep=,\nname,status,label,price,date_created,notes\n"
+                   "Alpha,1,Item1,10.5,,\n"
+                   "Beta,2,Item2,20.0,,\n");
+
+    auto import_options = quiver_csv_options_default();
+    ASSERT_EQ(quiver_database_import_csv(db, "Items", "", csv_path.string().c_str(), &import_options), QUIVER_OK);
+
+    // Verify labels
+    char** labels = nullptr;
+    size_t label_count = 0;
+    ASSERT_EQ(quiver_database_read_scalar_strings(db, "Items", "label", &labels, &label_count), QUIVER_OK);
+    ASSERT_EQ(label_count, 2u);
+    EXPECT_STREQ(labels[0], "Item1");
+    EXPECT_STREQ(labels[1], "Item2");
+    quiver_database_free_string_array(labels, label_count);
+
+    // Verify names
+    char** names = nullptr;
+    size_t name_count = 0;
+    ASSERT_EQ(quiver_database_read_scalar_strings(db, "Items", "name", &names, &name_count), QUIVER_OK);
+    ASSERT_EQ(name_count, 2u);
+    EXPECT_STREQ(names[0], "Alpha");
+    EXPECT_STREQ(names[1], "Beta");
+    quiver_database_free_string_array(names, name_count);
+
+    // Verify statuses
+    int64_t* statuses = nullptr;
+    size_t status_count = 0;
+    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Items", "status", &statuses, &status_count), QUIVER_OK);
+    ASSERT_EQ(status_count, 2u);
+    EXPECT_EQ(statuses[0], 1);
+    EXPECT_EQ(statuses[1], 2);
+    quiver_database_free_integer_array(statuses);
+
+    // Verify prices
+    double* prices = nullptr;
+    size_t price_count = 0;
+    ASSERT_EQ(quiver_database_read_scalar_floats(db, "Items", "price", &prices, &price_count), QUIVER_OK);
+    ASSERT_EQ(price_count, 2u);
+    EXPECT_NEAR(prices[0], 10.5, 0.001);
+    EXPECT_NEAR(prices[1], 20.0, 0.001);
+    quiver_database_free_float_array(prices);
+
+    fs::remove(csv_path);
+    quiver_database_close(db);
+}
+
 TEST(DatabaseCApiCSV, ImportCSV_Vector_RoundTrip) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;

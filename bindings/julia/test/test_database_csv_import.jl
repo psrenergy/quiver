@@ -49,6 +49,44 @@ include("fixture.jl")
         end
     end
 
+    @testset "Scalar label on third column" begin
+        db = Quiver.from_schema(":memory:", path_schema)
+        csv_path = tempname() * ".csv"
+        try
+            open(csv_path, "w") do f
+                return write(
+                    f,
+                    "sep=,\nname,status,label,price,date_created,notes\nAlpha,1,Item1,10.5,,\nBeta,2,Item2,20.0,,\n",
+                )
+            end
+
+            Quiver.import_csv(db, "Items", "", csv_path)
+
+            labels = Quiver.read_scalar_strings(db, "Items", "label")
+            @test length(labels) == 2
+            @test labels[1] == "Item1"
+            @test labels[2] == "Item2"
+
+            names = Quiver.read_scalar_strings(db, "Items", "name")
+            @test length(names) == 2
+            @test names[1] == "Alpha"
+            @test names[2] == "Beta"
+
+            statuses = Quiver.read_scalar_integers(db, "Items", "status")
+            @test length(statuses) == 2
+            @test statuses[1] == 1
+            @test statuses[2] == 2
+
+            prices = Quiver.read_scalar_floats(db, "Items", "price")
+            @test length(prices) == 2
+            @test prices[1] ≈ 10.5 atol=0.001
+            @test prices[2] ≈ 20.0 atol=0.001
+        finally
+            isfile(csv_path) && rm(csv_path)
+            Quiver.close!(db)
+        end
+    end
+
     @testset "Vector group round-trip" begin
         db = Quiver.from_schema(":memory:", path_schema)
         csv_path = tempname() * ".csv"

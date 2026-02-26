@@ -232,6 +232,40 @@ TEST(DatabaseCSV, ImportCSV_Scalar_Whitespace_Trimmed) {
     fs::remove(csv_path);
 }
 
+TEST(DatabaseCSV, ImportCSV_Scalar_LabelOnThirdColumn) {
+    auto db = make_db();
+
+    auto csv_path = temp_csv("ImportScalarLabelCol3");
+    write_csv_file(csv_path.string(),
+                   "sep=,\nname,status,label,price,date_created,notes\n"
+                   "Alpha,1,Item1,10.5,,\n"
+                   "Beta,2,Item2,20.0,,\n");
+
+    db.import_csv("Items", "", csv_path.string());
+
+    auto labels = db.read_scalar_strings("Items", "label");
+    ASSERT_EQ(labels.size(), 2);
+    EXPECT_EQ(labels[0], "Item1");
+    EXPECT_EQ(labels[1], "Item2");
+
+    auto names = db.read_scalar_strings("Items", "name");
+    ASSERT_EQ(names.size(), 2);
+    EXPECT_EQ(names[0], "Alpha");
+    EXPECT_EQ(names[1], "Beta");
+
+    auto statuses = db.read_scalar_integers("Items", "status");
+    ASSERT_EQ(statuses.size(), 2);
+    EXPECT_EQ(statuses[0], 1);
+    EXPECT_EQ(statuses[1], 2);
+
+    auto prices = db.read_scalar_floats("Items", "price");
+    ASSERT_EQ(prices.size(), 2);
+    EXPECT_NEAR(prices[0], 10.5, 0.001);
+    EXPECT_NEAR(prices[1], 20.0, 0.001);
+
+    fs::remove(csv_path);
+}
+
 TEST(DatabaseCSV, ImportCSV_Vector_RoundTrip) {
     auto db = make_db();
 
