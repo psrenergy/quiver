@@ -683,7 +683,13 @@ include("fixture.jl")
             value_float = [0.1, 0.2, 0.3],
         )
 
-        @show Quiver.read_element_by_id(db, "Collection", 1)
+        element = Quiver.read_element_by_id(db, "Collection", 1)
+
+        @test element["label"] == "Item 1"
+        @test element["some_integer"] == 10
+        @test element["some_float"] == 1.5
+        @test element["value_int"] == [1, 2, 3]
+        @test element["value_float"] == [0.1, 0.2, 0.3]
 
         Quiver.close!(db)
     end    
