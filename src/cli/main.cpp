@@ -1,11 +1,9 @@
-#include <quiver/database.h>
-#include <quiver/lua_runner.h>
-
 #include <argparse/argparse.hpp>
-
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <quiver/database.h>
+#include <quiver/lua_runner.h>
 #include <string>
 
 static std::string read_script_file(const std::string& path) {
@@ -17,10 +15,7 @@ static std::string read_script_file(const std::string& path) {
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
     // Strip UTF-8 BOM if present
-    if (content.size() >= 3 &&
-        content[0] == '\xEF' &&
-        content[1] == '\xBB' &&
-        content[2] == '\xBF') {
+    if (content.size() >= 3 && content[0] == '\xEF' && content[1] == '\xBB' && content[2] == '\xBF') {
         content.erase(0, 3);
     }
 
@@ -28,33 +23,31 @@ static std::string read_script_file(const std::string& path) {
 }
 
 static quiver_log_level_t parse_log_level(const std::string& level) {
-    if (level == "debug") return QUIVER_LOG_DEBUG;
-    if (level == "info") return QUIVER_LOG_INFO;
-    if (level == "warn") return QUIVER_LOG_WARN;
-    if (level == "error") return QUIVER_LOG_ERROR;
-    if (level == "off") return QUIVER_LOG_OFF;
+    if (level == "debug")
+        return QUIVER_LOG_DEBUG;
+    if (level == "info")
+        return QUIVER_LOG_INFO;
+    if (level == "warn")
+        return QUIVER_LOG_WARN;
+    if (level == "error")
+        return QUIVER_LOG_ERROR;
+    if (level == "off")
+        return QUIVER_LOG_OFF;
     throw std::runtime_error("Unknown log level: " + level);
 }
 
 int main(int argc, char* argv[]) {
     argparse::ArgumentParser program("quiver_cli", "quiver_cli " QUIVER_VERSION);
 
-    program.add_argument("database")
-        .help("path to the database file");
+    program.add_argument("database").help("path to the database file");
 
-    program.add_argument("script")
-        .help("path to the Lua script file")
-        .nargs(argparse::nargs_pattern::optional);
+    program.add_argument("script").help("path to the Lua script file").nargs(argparse::nargs_pattern::optional);
 
-    program.add_argument("--schema")
-        .help("create database from schema file");
+    program.add_argument("--schema").help("create database from schema file");
 
-    program.add_argument("--migrations")
-        .help("create database from migrations directory");
+    program.add_argument("--migrations").help("create database from migrations directory");
 
-    program.add_argument("--read-only")
-        .help("open database in read-only mode")
-        .flag();
+    program.add_argument("--read-only").help("open database in read-only mode").flag();
 
     program.add_argument("--log-level")
         .help("set log verbosity (debug, info, warn, error, off)")

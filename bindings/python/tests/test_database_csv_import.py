@@ -128,17 +128,11 @@ class TestImportCSVSelfReferenceFKReImport:
 
         relations_db.import_csv("Child", "", csv_path)
 
-        sib1 = relations_db.query_integer(
-            "SELECT sibling_id FROM Child WHERE label = ?", params=["Child1"]
-        )
+        sib1 = relations_db.query_integer("SELECT sibling_id FROM Child WHERE label = ?", params=["Child1"])
         assert sib1 is None
 
-        sib2 = relations_db.query_integer(
-            "SELECT sibling_id FROM Child WHERE label = ?", params=["Child2"]
-        )
-        child1_id = relations_db.query_integer(
-            "SELECT id FROM Child WHERE label = ?", params=["Child1"]
-        )
+        sib2 = relations_db.query_integer("SELECT sibling_id FROM Child WHERE label = ?", params=["Child2"])
+        child1_id = relations_db.query_integer("SELECT id FROM Child WHERE label = ?", params=["Child1"])
         assert sib2 == child1_id
 
         # Second import (re-import): 4 children, includes self-referencing row
@@ -155,17 +149,11 @@ class TestImportCSVSelfReferenceFKReImport:
         labels = relations_db.read_scalar_strings("Child", "label")
         assert len(labels) == 4
 
-        child3_id = relations_db.query_integer(
-            "SELECT id FROM Child WHERE label = ?", params=["Child3"]
-        )
-        sib3 = relations_db.query_integer(
-            "SELECT sibling_id FROM Child WHERE label = ?", params=["Child3"]
-        )
+        child3_id = relations_db.query_integer("SELECT id FROM Child WHERE label = ?", params=["Child3"])
+        sib3 = relations_db.query_integer("SELECT sibling_id FROM Child WHERE label = ?", params=["Child3"])
         assert sib3 == child3_id
 
-        sib4 = relations_db.query_integer(
-            "SELECT sibling_id FROM Child WHERE label = ?", params=["Child4"]
-        )
+        sib4 = relations_db.query_integer("SELECT sibling_id FROM Child WHERE label = ?", params=["Child4"])
         assert sib4 == child3_id
 
 

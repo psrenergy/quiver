@@ -85,9 +85,11 @@ file(GLOB_RECURSE ALL_SOURCE_FILES
     ${CMAKE_SOURCE_DIR}/src/blob/*.h
     ${CMAKE_SOURCE_DIR}/src/c/*.cpp
     ${CMAKE_SOURCE_DIR}/src/c/*.h
+    ${CMAKE_SOURCE_DIR}/src/cli/*.cpp
     ${CMAKE_SOURCE_DIR}/src/utils/*.h
     ${CMAKE_SOURCE_DIR}/tests/*.cpp
     ${CMAKE_SOURCE_DIR}/tests/*.h
+    ${CMAKE_SOURCE_DIR}/tests/benchmark/*.cpp
 )
 
 # Format target
