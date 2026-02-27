@@ -610,7 +610,7 @@ function read_element_by_id(db::Database, collection::String, id::Int64)
     scalars = read_scalars_by_id(db, collection, id)
     vectors = read_vectors_by_id(db, collection, id)
     sets = read_sets_by_id(db, collection, id)
-    
+
     # delete!(result, "id")
 
     # # Early exit for nonexistent element (label is NOT NULL, so nothing means no row)

@@ -692,7 +692,7 @@ include("fixture.jl")
         @test element["value_float"] == [0.1, 0.2, 0.3]
 
         Quiver.close!(db)
-    end    
+    end
 end
 
 end
