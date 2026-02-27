@@ -166,7 +166,7 @@ class TestReadScalarDateTimeByID:
 # -- Composite scalar reads --------------------------------------------------
 
 
-class TestReadAllScalarsByID:
+class TestReadScalarsByID:
     def test_read_scalars_by_id(self, db: Database) -> None:
         id1 = db.create_element(
             "Configuration",

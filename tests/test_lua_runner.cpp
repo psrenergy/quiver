@@ -1704,7 +1704,7 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesMultiRowFromLua) {
 // Composite read helper tests
 // ============================================================================
 
-TEST_F(LuaRunnerTest, ReadAllScalarsByIdFromLua) {
+TEST_F(LuaRunnerTest, ReadScalarsByIDFromLua) {
     auto db = quiver::Database::from_schema(
         ":memory:", collections_schema, {.read_only = 0, .console_level = QUIVER_LOG_OFF});
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -1733,7 +1733,7 @@ TEST_F(LuaRunnerTest, ReadAllScalarsByIdFromLua) {
     lua.run(script);
 }
 
-TEST_F(LuaRunnerTest, ReadAllVectorsByIdFromLua) {
+TEST_F(LuaRunnerTest, ReadVectorsByIdFromLua) {
     // Use basic.sql which has no vector groups -- verifies the binding is callable
     // and returns an empty table. Note: collections.sql has multi-column vector groups
     // where group_name != column_name, which is a known limitation of the composite helper.
@@ -1758,7 +1758,7 @@ TEST_F(LuaRunnerTest, ReadAllVectorsByIdFromLua) {
     lua.run(script);
 }
 
-TEST_F(LuaRunnerTest, ReadAllSetsByIdFromLua) {
+TEST_F(LuaRunnerTest, ReadSetsByIdFromLua) {
     // Use basic.sql which has no set groups -- verifies the binding is callable
     // and returns an empty table. Note: collections.sql has set groups where
     // group_name != column_name, which is a known limitation of the composite helper.
@@ -1783,7 +1783,7 @@ TEST_F(LuaRunnerTest, ReadAllSetsByIdFromLua) {
     lua.run(script);
 }
 
-TEST_F(LuaRunnerTest, ReadAllVectorsByIdWithDataFromLua) {
+TEST_F(LuaRunnerTest, ReadVectorsByIdWithDataFromLua) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("composite_helpers.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
     int64_t id = db.create_element("Items",
@@ -1828,7 +1828,7 @@ TEST_F(LuaRunnerTest, ReadAllVectorsByIdWithDataFromLua) {
     lua.run(script);
 }
 
-TEST_F(LuaRunnerTest, ReadAllSetsByIdWithDataFromLua) {
+TEST_F(LuaRunnerTest, ReadSetsByIdWithDataFromLua) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("composite_helpers.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
     int64_t id = db.create_element("Items",

@@ -61,7 +61,7 @@ class TestReadSetStringsBulk:
 # -- Convenience set reads ---------------------------------------------------
 
 
-class TestReadAllSetsByID:
+class TestReadSetsByID:
     def test_read_sets_by_id_no_groups(self, db: Database) -> None:
         """read_sets_by_id returns empty dict for collections with no set groups."""
         id1 = db.create_element("Configuration", label="item1")
@@ -154,7 +154,7 @@ class TestReadSetDateTimeByID:
 # -- Convenience set reads with data (gap-fill) ------------------------------
 
 
-class TestReadAllSetsByIDWithData:
+class TestReadSetsByIDWithData:
     def test_read_sets_by_id_returns_all_groups(self, composite_helpers_db: Database) -> None:
         """read_sets_by_id returns dict with integer, float, and string set groups."""
         id1 = composite_helpers_db.create_element(
