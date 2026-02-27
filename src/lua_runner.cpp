@@ -143,24 +143,13 @@ struct LuaRunner::Impl {
         bind.set_function("read_set_floats", &read_set_floats_lua);
         bind.set_function("read_set_strings", &read_set_strings_lua);
 
-        bind.set_function("read_scalar_string_by_id", &read_scalar_string_by_id_lua);
-        bind.set_function("read_scalar_integer_by_id", &read_scalar_integer_by_id_lua);
-        bind.set_function("read_scalar_float_by_id", &read_scalar_float_by_id_lua);
-
-        bind.set_function("read_vector_integers_by_id", &read_vector_integers_by_id_lua);
-        bind.set_function("read_vector_floats_by_id", &read_vector_floats_by_id_lua);
-        bind.set_function("read_vector_strings_by_id", &read_vector_strings_by_id_lua);
-
-        bind.set_function("read_set_integers_by_id", &read_set_integers_by_id_lua);
-        bind.set_function("read_set_floats_by_id", &read_set_floats_by_id_lua);
-        bind.set_function("read_set_strings_by_id", &read_set_strings_by_id_lua);
-
         bind.set_function("read_time_series_group", &read_time_series_group_lua);
         bind.set_function("read_time_series_files", &read_time_series_files_lua);
 
         bind.set_function("read_scalars_by_id", &read_scalars_by_id_lua);
         bind.set_function("read_vectors_by_id", &read_vectors_by_id_lua);
         bind.set_function("read_sets_by_id", &read_sets_by_id_lua);
+        bind.set_function("read_element_by_id", &read_element_by_id_lua);
 
         bind.set_function("update_element", &update_element_lua);
         bind.set_function("update_time_series_group", &update_time_series_group_lua);
@@ -384,132 +373,6 @@ struct LuaRunner::Impl {
         return outer;
     }
 
-    // Read scalar by Id helpers - return nil if not found
-    static sol::object read_scalar_string_by_id_lua(Database& db,
-                                                    const std::string& collection,
-                                                    const std::string& attribute,
-                                                    int64_t id,
-                                                    sol::this_state s) {
-        sol::state_view lua(s);
-        auto result = db.read_scalar_string_by_id(collection, attribute, id);
-        if (result.has_value()) {
-            return sol::make_object(lua, *result);
-        }
-        return sol::make_object(lua, sol::lua_nil);
-    }
-
-    static sol::object read_scalar_integer_by_id_lua(Database& db,
-                                                     const std::string& collection,
-                                                     const std::string& attribute,
-                                                     int64_t id,
-                                                     sol::this_state s) {
-        sol::state_view lua(s);
-        auto result = db.read_scalar_integer_by_id(collection, attribute, id);
-        if (result.has_value()) {
-            return sol::make_object(lua, *result);
-        }
-        return sol::make_object(lua, sol::lua_nil);
-    }
-
-    static sol::object read_scalar_float_by_id_lua(Database& db,
-                                                   const std::string& collection,
-                                                   const std::string& attribute,
-                                                   int64_t id,
-                                                   sol::this_state s) {
-        sol::state_view lua(s);
-        auto result = db.read_scalar_float_by_id(collection, attribute, id);
-        if (result.has_value()) {
-            return sol::make_object(lua, *result);
-        }
-        return sol::make_object(lua, sol::lua_nil);
-    }
-
-    // Read vector by Id helpers - return table
-    static sol::table read_vector_integers_by_id_lua(Database& db,
-                                                     const std::string& collection,
-                                                     const std::string& attribute,
-                                                     int64_t id,
-                                                     sol::this_state s) {
-        sol::state_view lua(s);
-        auto result = db.read_vector_integers_by_id(collection, attribute, id);
-        auto t = lua.create_table();
-        for (size_t i = 0; i < result.size(); ++i) {
-            t[i + 1] = result[i];
-        }
-        return t;
-    }
-
-    static sol::table read_vector_floats_by_id_lua(Database& db,
-                                                   const std::string& collection,
-                                                   const std::string& attribute,
-                                                   int64_t id,
-                                                   sol::this_state s) {
-        sol::state_view lua(s);
-        auto result = db.read_vector_floats_by_id(collection, attribute, id);
-        auto t = lua.create_table();
-        for (size_t i = 0; i < result.size(); ++i) {
-            t[i + 1] = result[i];
-        }
-        return t;
-    }
-
-    static sol::table read_vector_strings_by_id_lua(Database& db,
-                                                    const std::string& collection,
-                                                    const std::string& attribute,
-                                                    int64_t id,
-                                                    sol::this_state s) {
-        sol::state_view lua(s);
-        auto result = db.read_vector_strings_by_id(collection, attribute, id);
-        auto t = lua.create_table();
-        for (size_t i = 0; i < result.size(); ++i) {
-            t[i + 1] = result[i];
-        }
-        return t;
-    }
-
-    // Read set by Id helpers - return table
-    static sol::table read_set_integers_by_id_lua(Database& db,
-                                                  const std::string& collection,
-                                                  const std::string& attribute,
-                                                  int64_t id,
-                                                  sol::this_state s) {
-        sol::state_view lua(s);
-        auto result = db.read_set_integers_by_id(collection, attribute, id);
-        auto t = lua.create_table();
-        for (size_t i = 0; i < result.size(); ++i) {
-            t[i + 1] = result[i];
-        }
-        return t;
-    }
-
-    static sol::table read_set_floats_by_id_lua(Database& db,
-                                                const std::string& collection,
-                                                const std::string& attribute,
-                                                int64_t id,
-                                                sol::this_state s) {
-        sol::state_view lua(s);
-        auto result = db.read_set_floats_by_id(collection, attribute, id);
-        auto t = lua.create_table();
-        for (size_t i = 0; i < result.size(); ++i) {
-            t[i + 1] = result[i];
-        }
-        return t;
-    }
-
-    static sol::table read_set_strings_by_id_lua(Database& db,
-                                                 const std::string& collection,
-                                                 const std::string& attribute,
-                                                 int64_t id,
-                                                 sol::this_state s) {
-        sol::state_view lua(s);
-        auto result = db.read_set_strings_by_id(collection, attribute, id);
-        auto t = lua.create_table();
-        for (size_t i = 0; i < result.size(); ++i) {
-            t[i + 1] = result[i];
-        }
-        return t;
-    }
-
     static sol::table read_element_ids_lua(Database& db, const std::string& collection, sol::this_state s) {
         sol::state_view lua(s);
         auto result = db.read_element_ids(collection);
@@ -697,13 +560,6 @@ struct LuaRunner::Impl {
         return sol::make_object(lua, sol::lua_nil);
     }
 
-    static DataType get_value_data_type(const std::vector<ScalarMetadata>& value_columns) {
-        if (!value_columns.empty()) {
-            return value_columns[0].data_type;
-        }
-        return DataType::Text;
-    }
-
     static sol::table
     read_scalars_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
         sol::state_view lua(s);
@@ -738,33 +594,31 @@ struct LuaRunner::Impl {
         auto result = lua.create_table();
 
         for (const auto& group : db.list_vector_groups(collection)) {
-            auto vec = lua.create_table();
-            auto data_type = get_value_data_type(group.value_columns);
-            switch (data_type) {
-            case DataType::Integer: {
-                auto values = db.read_vector_integers_by_id(collection, group.group_name, id);
-                for (size_t i = 0; i < values.size(); ++i) {
-                    vec[i + 1] = values[i];
+            for (const auto& col : group.value_columns) {
+                auto t = lua.create_table();
+                switch (col.data_type) {
+                case DataType::Integer: {
+                    auto values = db.read_vector_integers_by_id(collection, col.name, id);
+                    for (size_t i = 0; i < values.size(); ++i)
+                        t[i + 1] = values[i];
+                    break;
                 }
-                break;
-            }
-            case DataType::Real: {
-                auto values = db.read_vector_floats_by_id(collection, group.group_name, id);
-                for (size_t i = 0; i < values.size(); ++i) {
-                    vec[i + 1] = values[i];
+                case DataType::Real: {
+                    auto values = db.read_vector_floats_by_id(collection, col.name, id);
+                    for (size_t i = 0; i < values.size(); ++i)
+                        t[i + 1] = values[i];
+                    break;
                 }
-                break;
-            }
-            case DataType::Text:
-            case DataType::DateTime: {
-                auto values = db.read_vector_strings_by_id(collection, group.group_name, id);
-                for (size_t i = 0; i < values.size(); ++i) {
-                    vec[i + 1] = values[i];
+                case DataType::Text:
+                case DataType::DateTime: {
+                    auto values = db.read_vector_strings_by_id(collection, col.name, id);
+                    for (size_t i = 0; i < values.size(); ++i)
+                        t[i + 1] = values[i];
+                    break;
                 }
-                break;
+                }
+                result[col.name] = t;
             }
-            }
-            result[group.group_name] = vec;
         }
         return result;
     }
@@ -774,35 +628,49 @@ struct LuaRunner::Impl {
         auto result = lua.create_table();
 
         for (const auto& group : db.list_set_groups(collection)) {
-            auto set = lua.create_table();
-            auto data_type = get_value_data_type(group.value_columns);
-            switch (data_type) {
-            case DataType::Integer: {
-                auto values = db.read_set_integers_by_id(collection, group.group_name, id);
-                for (size_t i = 0; i < values.size(); ++i) {
-                    set[i + 1] = values[i];
+            for (const auto& col : group.value_columns) {
+                auto t = lua.create_table();
+                switch (col.data_type) {
+                case DataType::Integer: {
+                    auto values = db.read_set_integers_by_id(collection, col.name, id);
+                    for (size_t i = 0; i < values.size(); ++i)
+                        t[i + 1] = values[i];
+                    break;
                 }
-                break;
-            }
-            case DataType::Real: {
-                auto values = db.read_set_floats_by_id(collection, group.group_name, id);
-                for (size_t i = 0; i < values.size(); ++i) {
-                    set[i + 1] = values[i];
+                case DataType::Real: {
+                    auto values = db.read_set_floats_by_id(collection, col.name, id);
+                    for (size_t i = 0; i < values.size(); ++i)
+                        t[i + 1] = values[i];
+                    break;
                 }
-                break;
-            }
-            case DataType::Text:
-            case DataType::DateTime: {
-                auto values = db.read_set_strings_by_id(collection, group.group_name, id);
-                for (size_t i = 0; i < values.size(); ++i) {
-                    set[i + 1] = values[i];
+                case DataType::Text:
+                case DataType::DateTime: {
+                    auto values = db.read_set_strings_by_id(collection, col.name, id);
+                    for (size_t i = 0; i < values.size(); ++i)
+                        t[i + 1] = values[i];
+                    break;
                 }
-                break;
+                }
+                result[col.name] = t;
             }
-            }
-            result[group.group_name] = set;
         }
         return result;
+    }
+
+    static sol::table
+    read_element_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
+        auto scalars = read_scalars_by_id_lua(db, collection, id, s);
+        auto vectors = read_vectors_by_id_lua(db, collection, id, s);
+        auto sets = read_sets_by_id_lua(db, collection, id, s);
+
+        // Merge vectors and sets into scalars
+        for (auto& pair : vectors) {
+            scalars[pair.first] = pair.second;
+        }
+        for (auto& pair : sets) {
+            scalars[pair.first] = pair.second;
+        }
+        return scalars;
     }
 
     // ========================================================================

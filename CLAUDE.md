@@ -19,6 +19,7 @@ include/quiver/c/         # C API headers (for FFI)
 src/                      # C++ implementation
   database_csv_export.cpp # CSV export implementation
   database_csv_import.cpp # CSV import implementation
+  cli/main.cpp            # quiver_cli CLI entry point
 src/c/                    # C API implementation
   internal.h              # Shared structs (quiver_database, quiver_element), QUIVER_REQUIRE macro
   database_helpers.h      # Marshaling templates, strdup_safe, metadata converters
@@ -77,6 +78,11 @@ scripts/test-all.bat             # Run all tests (assumes already built)
 bindings/julia/test/test.bat      # Julia tests
 bindings/dart/test/test.bat       # Dart tests
 bindings/python/test/test.bat     # Python tests
+```
+
+### CLI Executable
+```bash
+./build/bin/quiver_cli.exe        # CLI entry point
 ```
 
 ### Benchmark
@@ -418,7 +424,7 @@ lua.run(R"(
 
 > **Note:** Python's `create_element` and `update_element` accept `**kwargs` instead of a positional Element argument: `db.create_element("Collection", label="x", value=42)`.
 | Read scalar | `read_scalar_integers()` | `quiver_database_read_scalar_integers()` | `read_scalar_integers()` | `readScalarIntegers()` | `read_scalar_integers()` |
-| Read by Id | `read_scalar_integer_by_id()` | `quiver_database_read_scalar_integer_by_id()` | `read_scalar_integer_by_id()` | `readScalarIntegerById()` | `read_scalar_integer_by_id()` |
+| Read by Id | `read_scalar_integer_by_id()` | `quiver_database_read_scalar_integer_by_id()` | `read_scalar_integer_by_id()` | `readScalarIntegerById()` | N/A (use composites) |
 | Delete | `delete_element()` | `quiver_database_delete_element()` | `delete_element!()` | `deleteElement()` | `delete_element()` |
 | Metadata | `get_scalar_metadata()` | `quiver_database_get_scalar_metadata()` | `get_scalar_metadata()` | `getScalarMetadata()` | `get_scalar_metadata()` |
 | List groups | `list_vector_groups()` | `quiver_database_list_vector_groups()` | `list_vector_groups()` | `listVectorGroups()` | `list_vector_groups()` |

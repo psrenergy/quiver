@@ -45,6 +45,13 @@ FetchContent_Declare(rapidcsv
 )
 FetchContent_MakeAvailable(rapidcsv)
 
+# argparse for CLI argument parsing (header-only)
+FetchContent_Declare(argparse
+    GIT_REPOSITORY https://github.com/p-ranav/argparse.git
+    GIT_TAG v3.2
+)
+FetchContent_MakeAvailable(argparse)
+
 # GoogleTest for testing
 if(QUIVER_BUILD_TESTS)
     FetchContent_Declare(googletest

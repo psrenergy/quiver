@@ -308,8 +308,8 @@ TEST_F(LuaRunnerCApiTest, UpdateElement) {
 
         db:update_element("Collection", 1, { some_integer = 999 })
 
-        local val = db:read_scalar_integer_by_id("Collection", "some_integer", 1)
-        assert(val == 999, "Expected 999 after update")
+        local scalars = db:read_scalars_by_id("Collection", 1)
+        assert(scalars.some_integer == 999, "Expected 999 after update")
     )");
     EXPECT_EQ(result, QUIVER_OK);
 

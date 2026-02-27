@@ -813,50 +813,62 @@ extension DatabaseRead on Database {
   }
 
   /// Reads all vector attributes for an element by Id.
-  /// Returns a map of group name to list of values.
+  /// Returns a map of column name to list of values.
   /// DateTime columns are converted to DateTime objects.
   Map<String, List<Object>> readVectorsById(String collection, int id) {
     _ensureNotClosed();
 
     final result = <String, List<Object>>{};
     for (final group in listVectorGroups(collection)) {
-      final name = group.groupName;
-      final dataType = _getValueDataType(group.valueColumns);
-      switch (dataType) {
-        case quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER:
-          result[name] = readVectorIntegersById(collection, name, id);
-        case quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT:
-          result[name] = readVectorFloatsById(collection, name, id);
-        case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
-          result[name] = readVectorStringsById(collection, name, id);
-        case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
-          result[name] = readVectorDateTimesById(collection, name, id);
+      for (final col in group.valueColumns) {
+        final name = col.name;
+        switch (col.dataType) {
+          case quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER:
+            result[name] = readVectorIntegersById(collection, name, id);
+          case quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT:
+            result[name] = readVectorFloatsById(collection, name, id);
+          case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
+            result[name] = readVectorStringsById(collection, name, id);
+          case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
+            result[name] = readVectorDateTimesById(collection, name, id);
+        }
       }
     }
     return result;
   }
 
   /// Reads all set attributes for an element by Id.
-  /// Returns a map of group name to list of values.
+  /// Returns a map of column name to list of values.
   /// DateTime columns are converted to DateTime objects.
   Map<String, List<Object>> readSetsById(String collection, int id) {
     _ensureNotClosed();
 
     final result = <String, List<Object>>{};
     for (final group in listSetGroups(collection)) {
-      final name = group.groupName;
-      final dataType = _getValueDataType(group.valueColumns);
-      switch (dataType) {
-        case quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER:
-          result[name] = readSetIntegersById(collection, name, id);
-        case quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT:
-          result[name] = readSetFloatsById(collection, name, id);
-        case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
-          result[name] = readSetStringsById(collection, name, id);
-        case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
-          result[name] = readSetDateTimesById(collection, name, id);
+      for (final col in group.valueColumns) {
+        final name = col.name;
+        switch (col.dataType) {
+          case quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER:
+            result[name] = readSetIntegersById(collection, name, id);
+          case quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT:
+            result[name] = readSetFloatsById(collection, name, id);
+          case quiver_data_type_t.QUIVER_DATA_TYPE_STRING:
+            result[name] = readSetStringsById(collection, name, id);
+          case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
+            result[name] = readSetDateTimesById(collection, name, id);
+        }
       }
     }
+    return result;
+  }
+
+  /// Reads all scalar, vector, and set attributes for an element by Id.
+  /// Returns a single map merging all attribute types.
+  Map<String, Object?> readElementById(String collection, int id) {
+    final result = <String, Object?>{};
+    result.addAll(readScalarsById(collection, id));
+    result.addAll(readVectorsById(collection, id));
+    result.addAll(readSetsById(collection, id));
     return result;
   }
 

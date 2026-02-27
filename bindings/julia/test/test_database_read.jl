@@ -449,10 +449,6 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
-    # ============================================================================
-    # Gap-fill: String vector, integer set, float set reads (using all_types.sql)
-    # ============================================================================
-
     @testset "Read Vector Strings Bulk" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "all_types.sql")
         db = Quiver.from_schema(":memory:", path_schema)
@@ -615,10 +611,6 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
-    # ============================================================================
-    # Composite helper tests (using composite_helpers.sql)
-    # ============================================================================
-
     @testset "read_vectors_by_id" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "composite_helpers.sql")
         db = Quiver.from_schema(":memory:", path_schema)
@@ -673,6 +665,31 @@ include("fixture.jl")
         @test all(v -> v isa Int64, result["code"])
         @test all(v -> v isa Float64, result["weight"])
         @test all(v -> v isa String, result["tag"])
+
+        Quiver.close!(db)
+    end
+
+    @testset "read_element_by_id" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+
+        Quiver.create_element!(db, "Collection";
+            label = "Item 1",
+            some_integer = 10,
+            some_float = 1.5,
+            value_int = [1, 2, 3],
+            value_float = [0.1, 0.2, 0.3],
+        )
+
+        element = Quiver.read_element_by_id(db, "Collection", 1)
+
+        @test element["label"] == "Item 1"
+        @test element["some_integer"] == 10
+        @test element["some_float"] == 1.5
+        @test element["value_int"] == [1, 2, 3]
+        @test element["value_float"] == [0.1, 0.2, 0.3]
 
         Quiver.close!(db)
     end

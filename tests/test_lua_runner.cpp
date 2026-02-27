@@ -257,124 +257,6 @@ TEST_F(LuaRunnerTest, ComplexLuaScript) {
 }
 
 // ============================================================================
-// Read by Id tests
-// ============================================================================
-
-TEST_F(LuaRunnerTest, ReadScalarIntegerById) {
-    auto db = quiver::Database::from_schema(":memory:", collections_schema);
-
-    db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    int64_t id1 =
-        db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{42}));
-    int64_t id2 =
-        db.create_element("Collection", quiver::Element().set("label", "Item 2").set("some_integer", int64_t{100}));
-
-    quiver::LuaRunner lua(db);
-
-    std::string script = R"(
-        local val1 = db:read_scalar_integer_by_id("Collection", "some_integer", )" +
-                         std::to_string(id1) + R"()
-        local val2 = db:read_scalar_integer_by_id("Collection", "some_integer", )" +
-                         std::to_string(id2) + R"()
-        assert(val1 == 42, "Expected 42, got " .. tostring(val1))
-        assert(val2 == 100, "Expected 100, got " .. tostring(val2))
-    )";
-    lua.run(script);
-}
-
-TEST_F(LuaRunnerTest, ReadScalarFloatById) {
-    auto db = quiver::Database::from_schema(":memory:", collections_schema);
-
-    db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    int64_t id1 = db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_float", 3.14));
-
-    quiver::LuaRunner lua(db);
-
-    std::string script = R"(
-        local val1 = db:read_scalar_float_by_id("Collection", "some_float", )" +
-                         std::to_string(id1) + R"()
-        assert(val1 == 3.14, "Expected 3.14, got " .. tostring(val1))
-    )";
-    lua.run(script);
-}
-
-TEST_F(LuaRunnerTest, ReadScalarStringById) {
-    auto db = quiver::Database::from_schema(":memory:", collections_schema);
-
-    db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    int64_t id1 = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
-
-    quiver::LuaRunner lua(db);
-
-    std::string script = R"(
-        local val1 = db:read_scalar_string_by_id("Collection", "label", )" +
-                         std::to_string(id1) + R"()
-        assert(val1 == "Item 1", "Expected 'Item 1', got " .. tostring(val1))
-    )";
-    lua.run(script);
-}
-
-TEST_F(LuaRunnerTest, ReadScalarByIdNotFound) {
-    auto db = quiver::Database::from_schema(":memory:", collections_schema);
-
-    db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{42}));
-
-    quiver::LuaRunner lua(db);
-
-    lua.run(R"(
-        local val = db:read_scalar_integer_by_id("Collection", "some_integer", 999)
-        assert(val == nil, "Expected nil for non-existent Id")
-    )");
-}
-
-TEST_F(LuaRunnerTest, ReadVectorIntegerById) {
-    auto db = quiver::Database::from_schema(":memory:", collections_schema);
-
-    db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    int64_t id1 = db.create_element(
-        "Collection", quiver::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{1, 2, 3}));
-    int64_t id2 = db.create_element(
-        "Collection", quiver::Element().set("label", "Item 2").set("value_int", std::vector<int64_t>{10, 20}));
-
-    quiver::LuaRunner lua(db);
-
-    std::string script = R"(
-        local vec1 = db:read_vector_integers_by_id("Collection", "value_int", )" +
-                         std::to_string(id1) + R"()
-        assert(#vec1 == 3, "Expected 3 elements in vec1")
-        assert(vec1[1] == 1, "vec1[1] should be 1")
-        assert(vec1[2] == 2, "vec1[2] should be 2")
-        assert(vec1[3] == 3, "vec1[3] should be 3")
-
-        local vec2 = db:read_vector_integers_by_id("Collection", "value_int", )" +
-                         std::to_string(id2) + R"()
-        assert(#vec2 == 2, "Expected 2 elements in vec2")
-        assert(vec2[1] == 10, "vec2[1] should be 10")
-        assert(vec2[2] == 20, "vec2[2] should be 20")
-    )";
-    lua.run(script);
-}
-
-TEST_F(LuaRunnerTest, ReadSetStringsById) {
-    auto db = quiver::Database::from_schema(":memory:", collections_schema);
-
-    db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    int64_t id1 = db.create_element(
-        "Collection",
-        quiver::Element().set("label", "Item 1").set("tag", std::vector<std::string>{"important", "urgent"}));
-
-    quiver::LuaRunner lua(db);
-
-    std::string script = R"(
-        local tags = db:read_set_strings_by_id("Collection", "tag", )" +
-                         std::to_string(id1) + R"()
-        assert(#tags == 2, "Expected 2 tags, got " .. #tags)
-    )";
-    lua.run(script);
-}
-
-// ============================================================================
 // Read element Ids tests
 // ============================================================================
 
@@ -534,12 +416,9 @@ TEST_F(LuaRunnerTest, UpdateElementSingleScalar) {
     lua.run(R"(
         db:update_element("Collection", 1, { some_integer = 999 })
 
-        local val = db:read_scalar_integer_by_id("Collection", "some_integer", 1)
-        assert(val == 999, "Expected 999, got " .. tostring(val))
-
-        -- Verify label unchanged
-        local label = db:read_scalar_string_by_id("Collection", "label", 1)
-        assert(label == "Item 1", "Label should be unchanged")
+        local scalars = db:read_scalars_by_id("Collection", 1)
+        assert(scalars.some_integer == 999, "Expected 999, got " .. tostring(scalars.some_integer))
+        assert(scalars.label == "Item 1", "Label should be unchanged")
     )");
 
     // Verify from C++ side
@@ -565,15 +444,10 @@ TEST_F(LuaRunnerTest, UpdateElementMultipleScalars) {
     lua.run(R"(
         db:update_element("Collection", 1, { some_integer = 500, some_float = 9.9 })
 
-        local integer_val = db:read_scalar_integer_by_id("Collection", "some_integer", 1)
-        assert(integer_val == 500, "Expected integer 500, got " .. tostring(integer_val))
-
-        local float_val = db:read_scalar_float_by_id("Collection", "some_float", 1)
-        assert(float_val == 9.9, "Expected float 9.9, got " .. tostring(float_val))
-
-        -- Verify label unchanged
-        local label = db:read_scalar_string_by_id("Collection", "label", 1)
-        assert(label == "Item 1", "Label should be unchanged")
+        local scalars = db:read_scalars_by_id("Collection", 1)
+        assert(scalars.some_integer == 500, "Expected integer 500, got " .. tostring(scalars.some_integer))
+        assert(scalars.some_float == 9.9, "Expected float 9.9, got " .. tostring(scalars.some_float))
+        assert(scalars.label == "Item 1", "Label should be unchanged")
     )");
 
     // Verify from C++ side
@@ -601,15 +475,15 @@ TEST_F(LuaRunnerTest, UpdateElementOtherElementsUnchanged) {
         db:update_element("Collection", 2, { some_integer = 999 })
 
         -- Verify element 2 updated
-        local val2 = db:read_scalar_integer_by_id("Collection", "some_integer", 2)
-        assert(val2 == 999, "Element 2 should be updated to 999")
+        local s2 = db:read_scalars_by_id("Collection", 2)
+        assert(s2.some_integer == 999, "Element 2 should be updated to 999")
 
         -- Verify elements 1 and 3 unchanged
-        local val1 = db:read_scalar_integer_by_id("Collection", "some_integer", 1)
-        assert(val1 == 100, "Element 1 should be unchanged at 100")
+        local s1 = db:read_scalars_by_id("Collection", 1)
+        assert(s1.some_integer == 100, "Element 1 should be unchanged at 100")
 
-        local val3 = db:read_scalar_integer_by_id("Collection", "some_integer", 3)
-        assert(val3 == 300, "Element 3 should be unchanged at 300")
+        local s3 = db:read_scalars_by_id("Collection", 3)
+        assert(s3.some_integer == 300, "Element 3 should be unchanged at 300")
     )");
 
     // Verify from C++ side
@@ -633,17 +507,6 @@ TEST_F(LuaRunnerTest, UpdateElementWithArrays) {
     // Update with both scalar and array values - both should be updated
     lua.run(R"(
         db:update_element("Collection", 1, { some_integer = 999, value_int = {7, 8, 9} })
-
-        -- Verify scalar was updated
-        local integer_val = db:read_scalar_integer_by_id("Collection", "some_integer", 1)
-        assert(integer_val == 999, "Scalar should be updated to 999")
-
-        -- Verify vector was also updated
-        local vec = db:read_vector_integers_by_id("Collection", "value_int", 1)
-        assert(#vec == 3, "Vector should have 3 elements")
-        assert(vec[1] == 7, "Vector[1] should be 7")
-        assert(vec[2] == 8, "Vector[2] should be 8")
-        assert(vec[3] == 9, "Vector[3] should be 9")
     )");
 
     // Verify from C++ side
@@ -789,23 +652,6 @@ TEST_F(LuaRunnerTest, ReadVectorIntegersEmpty) {
     )");
 }
 
-TEST_F(LuaRunnerTest, ReadSetStringsByIdEmpty) {
-    auto db = quiver::Database::from_schema(":memory:", collections_schema);
-    db.create_element("Configuration", quiver::Element().set("label", "Config"));
-
-    // Create a collection element without any set values
-    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
-
-    quiver::LuaRunner lua(db);
-
-    std::string script = R"(
-        local set = db:read_set_strings_by_id("Collection", "tag", )" +
-                         std::to_string(id) + R"()
-        assert(#set == 0, "Expected empty set, got " .. #set .. " items")
-    )";
-    lua.run(script);
-}
-
 TEST_F(LuaRunnerTest, CreateElementWithOnlyLabel) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::LuaRunner lua(db);
@@ -840,46 +686,6 @@ TEST_F(LuaRunnerTest, CreateElementMixedTypes) {
     auto floats = db.read_scalar_floats("Collection", "some_float");
     EXPECT_EQ(floats.size(), 1);
     EXPECT_DOUBLE_EQ(floats[0], 3.14);
-}
-
-TEST_F(LuaRunnerTest, ReadVectorIntegersById) {
-    auto db = quiver::Database::from_schema(":memory:", collections_schema);
-
-    db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    int64_t id1 = db.create_element(
-        "Collection", quiver::Element().set("label", "Item 1").set("value_int", std::vector<int64_t>{10, 20, 30}));
-
-    quiver::LuaRunner lua(db);
-
-    std::string script = R"(
-        local vec = db:read_vector_integers_by_id("Collection", "value_int", )" +
-                         std::to_string(id1) + R"()
-        assert(#vec == 3, "Expected 3 elements, got " .. #vec)
-        assert(vec[1] == 10, "First element should be 10")
-        assert(vec[2] == 20, "Second element should be 20")
-        assert(vec[3] == 30, "Third element should be 30")
-    )";
-    lua.run(script);
-}
-
-TEST_F(LuaRunnerTest, ReadVectorFloatsById) {
-    auto db = quiver::Database::from_schema(":memory:", collections_schema);
-
-    db.create_element("Configuration", quiver::Element().set("label", "Config"));
-    int64_t id1 = db.create_element(
-        "Collection", quiver::Element().set("label", "Item 1").set("value_float", std::vector<double>{1.1, 2.2, 3.3}));
-
-    quiver::LuaRunner lua(db);
-
-    std::string script = R"(
-        local vec = db:read_vector_floats_by_id("Collection", "value_float", )" +
-                         std::to_string(id1) + R"()
-        assert(#vec == 3, "Expected 3 elements, got " .. #vec)
-        assert(vec[1] == 1.1, "First element should be 1.1")
-        assert(vec[2] == 2.2, "Second element should be 2.2")
-        assert(vec[3] == 3.3, "Third element should be 3.3")
-    )";
-    lua.run(script);
 }
 
 // ============================================================================
@@ -1157,10 +963,6 @@ TEST_F(LuaRunnerTest, UpdateVectorIntegers) {
 
     lua.run(R"(
         db:update_element("Collection", 1, { value_int = {10, 20, 30, 40} })
-        local vec = db:read_vector_integers_by_id("Collection", "value_int", 1)
-        assert(#vec == 4, "Expected 4 elements, got " .. #vec)
-        assert(vec[1] == 10)
-        assert(vec[4] == 40)
     )");
 
     auto vec = db.read_vector_integers_by_id("Collection", "value_int", 1);
@@ -1177,10 +979,6 @@ TEST_F(LuaRunnerTest, UpdateVectorFloats) {
 
     lua.run(R"(
         db:update_element("Collection", 1, { value_float = {5.5, 6.6, 7.7} })
-        local vec = db:read_vector_floats_by_id("Collection", "value_float", 1)
-        assert(#vec == 3, "Expected 3 elements, got " .. #vec)
-        assert(vec[1] == 5.5)
-        assert(vec[3] == 7.7)
     )");
 
     auto vec = db.read_vector_floats_by_id("Collection", "value_float", 1);
@@ -1242,10 +1040,8 @@ TEST_F(LuaRunnerTest, UpdateVectorStrings) {
     // The collections.sql schema has value_int and value_float vectors but no string vector.
     // We test that update_vector_strings compiles and runs; actual schema support depends on schema.
     // For now, just verify no crash when calling with an empty vector on a valid attribute.
-    lua.run(R"(
-        local vec = db:read_vector_integers_by_id("Collection", "value_int", 1)
-        assert(#vec == 1, "Expected 1 element")
-    )");
+    auto vec = db.read_vector_integers_by_id("Collection", "value_int", 1);
+    EXPECT_EQ(vec.size(), 1);
 }
 
 // ============================================================================
@@ -1262,8 +1058,6 @@ TEST_F(LuaRunnerTest, UpdateSetStrings) {
 
     lua.run(R"(
         db:update_element("Collection", 1, { tag = {"x", "y", "z"} })
-        local tags = db:read_set_strings_by_id("Collection", "tag", 1)
-        assert(#tags == 3, "Expected 3 tags, got " .. #tags)
     )");
 
     auto tags = db.read_set_strings_by_id("Collection", "tag", 1);
@@ -1864,6 +1658,45 @@ TEST_F(LuaRunnerTest, ReadSetsByIdWithData) {
     lua.run(script);
 }
 
+TEST_F(LuaRunnerTest, ReadElementById) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("composite_helpers.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+    int64_t id = db.create_element("Items",
+                                   quiver::Element()
+                                       .set("label", "Item 1")
+                                       .set("amount", std::vector<int64_t>{10, 20, 30})
+                                       .set("score", std::vector<double>{1.1, 2.2})
+                                       .set("note", std::vector<std::string>{"hello", "world"})
+                                       .set("code", std::vector<int64_t>{5, 6})
+                                       .set("weight", std::vector<double>{9.9})
+                                       .set("tag", std::vector<std::string>{"alpha", "beta"}));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        local elem = db:read_element_by_id("Items", )" +
+                         std::to_string(id) + R"()
+
+        -- Verify scalars
+        assert(elem.label == "Item 1", "Expected label 'Item 1', got " .. tostring(elem.label))
+
+        -- Verify vectors
+        assert(elem.amount ~= nil, "Missing vector 'amount'")
+        assert(#elem.amount == 3, "Expected 3 amount values, got " .. #elem.amount)
+        assert(elem.amount[1] == 10, "Expected amount[1] == 10")
+
+        -- Verify sets
+        assert(elem.tag ~= nil, "Missing set 'tag'")
+        assert(#elem.tag == 2, "Expected 2 tag values, got " .. #elem.tag)
+
+        -- Verify all keys present (label + id + vectors + sets = 1 scalar + 3 vectors + 3 sets = 7+)
+        local count = 0
+        for _ in pairs(elem) do count = count + 1 end
+        assert(count >= 7, "Expected at least 7 keys, got " .. count)
+    )";
+    lua.run(script);
+}
+
 // ============================================================================
 // Transaction tests
 // ============================================================================
@@ -2052,54 +1885,6 @@ TEST_F(LuaRunnerAllTypesTest, ReadVectorStringsBulk) {
     )");
 }
 
-TEST_F(LuaRunnerAllTypesTest, ReadVectorStringsById) {
-    auto db = quiver::Database::from_schema(":memory:", all_types_schema);
-    int64_t id1 = db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
-    db.update_element(
-        "AllTypes", id1, quiver::Element().set("label_value", std::vector<std::string>{"hello", "world"}));
-
-    quiver::LuaRunner lua(db);
-
-    std::string script = R"(
-        local vec = db:read_vector_strings_by_id("AllTypes", "label_value", )" +
-                         std::to_string(id1) + R"()
-        assert(#vec == 2, "Expected 2 elements, got " .. #vec)
-        assert(vec[1] == "hello", "First element should be 'hello'")
-        assert(vec[2] == "world", "Second element should be 'world'")
-    )";
-    lua.run(script);
-}
-
-TEST_F(LuaRunnerAllTypesTest, ReadSetIntegersById) {
-    auto db = quiver::Database::from_schema(":memory:", all_types_schema);
-    int64_t id1 = db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
-    db.update_element("AllTypes", id1, quiver::Element().set("code", std::vector<int64_t>{100, 200, 300}));
-
-    quiver::LuaRunner lua(db);
-
-    std::string script = R"(
-        local vals = db:read_set_integers_by_id("AllTypes", "code", )" +
-                         std::to_string(id1) + R"()
-        assert(#vals == 3, "Expected 3 values, got " .. #vals)
-    )";
-    lua.run(script);
-}
-
-TEST_F(LuaRunnerAllTypesTest, ReadSetFloatsById) {
-    auto db = quiver::Database::from_schema(":memory:", all_types_schema);
-    int64_t id1 = db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
-    db.update_element("AllTypes", id1, quiver::Element().set("weight", std::vector<double>{1.1, 2.2, 3.3}));
-
-    quiver::LuaRunner lua(db);
-
-    std::string script = R"(
-        local vals = db:read_set_floats_by_id("AllTypes", "weight", )" +
-                         std::to_string(id1) + R"()
-        assert(#vals == 3, "Expected 3 values, got " .. #vals)
-    )";
-    lua.run(script);
-}
-
 TEST_F(LuaRunnerAllTypesTest, ReadSetIntegersBulk) {
     auto db = quiver::Database::from_schema(":memory:", all_types_schema);
     db.create_element("AllTypes", quiver::Element().set("label", "Item 1"));
@@ -2143,9 +1928,6 @@ TEST_F(LuaRunnerAllTypesTest, UpdateSetIntegers) {
     std::string script = R"(
         db:update_element("AllTypes", )" +
                          std::to_string(id1) + R"(, { code = {10, 20, 30} })
-        local vals = db:read_set_integers_by_id("AllTypes", "code", )" +
-                         std::to_string(id1) + R"()
-        assert(#vals == 3, "Expected 3 values after update, got " .. #vals)
     )";
     lua.run(script);
 
@@ -2162,9 +1944,6 @@ TEST_F(LuaRunnerAllTypesTest, UpdateSetFloats) {
     std::string script = R"(
         db:update_element("AllTypes", )" +
                          std::to_string(id1) + R"(, { weight = {1.1, 2.2} })
-        local vals = db:read_set_floats_by_id("AllTypes", "weight", )" +
-                         std::to_string(id1) + R"()
-        assert(#vals == 2, "Expected 2 values after update, got " .. #vals)
     )";
     lua.run(script);
 
@@ -2419,10 +2198,8 @@ TEST(LuaRunner_ImportCSV, VectorGroupRoundTrip) {
     // Re-import (import will overwrite existing values)
     lua.run(R"(db:import_csv("Items", "measurements", ")" + lua_safe_path(csv_path) + R"("))");
 
-    lua.run(R"(
-        local vals = db:read_vector_floats_by_id("Items", "measurement", 1)
-        assert(#vals == 3, "Expected 3 values, got " .. #vals)
-    )");
+    auto vals = db.read_vector_floats_by_id("Items", "measurement", 1);
+    EXPECT_EQ(vals.size(), 3);
 
     std::filesystem::remove(csv_path);
 }
@@ -2467,8 +2244,8 @@ TEST(LuaRunner_ImportCSV, EnumResolution) {
             "})");
 
     lua.run(R"(
-        local status = db:read_scalar_integer_by_id("Items", "status", 1)
-        assert(status == 1, "Expected status 1, got " .. tostring(status))
+        local scalars = db:read_scalars_by_id("Items", 1)
+        assert(scalars.status == 1, "Expected status 1, got " .. tostring(scalars.status))
     )");
 
     std::filesystem::remove(csv_path);
@@ -2489,8 +2266,8 @@ TEST(LuaRunner_ImportCSV, DateTimeFormat) {
             "})");
 
     lua.run(R"(
-        local date = db:read_scalar_string_by_id("Items", "date_created", 1)
-        assert(date == "2024-01-15T00:00:00", "Expected 2024-01-15T00:00:00, got " .. tostring(date))
+        local scalars = db:read_scalars_by_id("Items", 1)
+        assert(scalars.date_created == "2024-01-15T00:00:00", "Expected 2024-01-15T00:00:00, got " .. tostring(scalars.date_created))
     )");
 
     std::filesystem::remove(csv_path);
@@ -2540,10 +2317,8 @@ TEST(LuaRunner_ImportCSV, VectorTrailingEmptyColumns) {
 
     lua.run(R"(db:import_csv("Items", "measurements", ")" + lua_safe_path(csv_path) + "\")");
 
-    lua.run(R"(
-        local vals = db:read_vector_floats_by_id("Items", "measurement", 1)
-        assert(#vals == 2, "Expected 2 values, got " .. #vals)
-    )");
+    auto vals = db.read_vector_floats_by_id("Items", "measurement", 1);
+    EXPECT_EQ(vals.size(), 2);
 
     std::filesystem::remove(csv_path);
 }

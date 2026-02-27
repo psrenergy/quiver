@@ -144,3 +144,16 @@ if(QUIVER_BUILD_C_API)
         )
     endif()
 endif()
+
+# CLI executable
+add_executable(quiver_cli cli/main.cpp)
+
+target_compile_definitions(quiver_cli PRIVATE
+    QUIVER_VERSION="${PROJECT_VERSION}"
+)
+
+target_link_libraries(quiver_cli PRIVATE
+    quiver
+    quiver_compiler_options
+    argparse
+)

@@ -48,7 +48,7 @@ std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_pat
     auto logger_name = "quiver_database_" + std::to_string(id);
 
     // Create console sink (thread-safe)
-    auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+    auto console_sink = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
     console_sink->set_level(to_spdlog_level(console_level));
 
     if (db_path == ":memory:") {
