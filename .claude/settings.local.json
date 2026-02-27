@@ -30,7 +30,8 @@
       "Bash(objdump:*)",
       "Bash(ninja:*)",
       "Bash(scripts/clean-all.bat:*)",
-      "Bash(scripts/build-all.bat:*)"
+      "Bash(scripts/build-all.bat:*)",
+      "Bash(bash:*)"
     ]
   }
 }
