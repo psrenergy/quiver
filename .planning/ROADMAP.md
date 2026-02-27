@@ -10,7 +10,7 @@ Milestone v0.5 delivers a standalone `quiver_lua` executable that opens a Quiver
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: quiver_lua CLI Executable** - Ship a working command-line tool that runs Lua scripts against Quiver databases
+- [x] **Phase 1: quiver_lua CLI Executable** - Ship a working command-line tool that runs Lua scripts against Quiver databases
 
 ## Phase Details
 
@@ -27,7 +27,7 @@ Milestone v0.5 delivers a standalone `quiver_lua` executable that opens a Quiver
 **Plans**: 1 plan
 
 Plans:
-- [ ] 01-01-PLAN.md -- Build infrastructure + CLI implementation (argparse, CMake target, spdlog fix, main.cpp)
+- [x] 01-01-PLAN.md -- Build infrastructure + CLI implementation (argparse, CMake target, spdlog fix, main.cpp)
 
 ## Progress
 
@@ -36,4 +36,4 @@ Phases execute in numeric order: 1
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. quiver_lua CLI Executable | 0/1 | Not started | - |
+| 1. quiver_lua CLI Executable | 1/1 | Complete | 2026-02-27 |

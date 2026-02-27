@@ -9,29 +9,29 @@ Requirements for the Lua CLI executable. Each maps to roadmap phases.
 
 ### CLI
 
-- [ ] **CLI-01**: User can run `quiver_lua --help` to see usage information
-- [ ] **CLI-02**: User can run `quiver_lua --version` to see the version number
-- [ ] **CLI-03**: User receives a usage error (exit code 2) when providing invalid arguments
+- [x] **CLI-01**: User can run `quiver_lua --help` to see usage information
+- [x] **CLI-02**: User can run `quiver_lua --version` to see the version number
+- [x] **CLI-03**: User receives a usage error (exit code 2) when providing invalid arguments
 
 ### Database
 
-- [ ] **DB-01**: User can open an existing database by providing the database path as a positional argument
-- [ ] **DB-02**: User can create/open a database with a schema file via `--schema PATH`
-- [ ] **DB-03**: User can create/open a database with migrations via `--migrations PATH`
-- [ ] **DB-04**: User receives an error when specifying both `--schema` and `--migrations`
-- [ ] **DB-05**: User can open a database in read-only mode via `--read-only`
+- [x] **DB-01**: User can open an existing database by providing the database path as a positional argument
+- [x] **DB-02**: User can create/open a database with a schema file via `--schema PATH`
+- [x] **DB-03**: User can create/open a database with migrations via `--migrations PATH`
+- [x] **DB-04**: User receives an error when specifying both `--schema` and `--migrations`
+- [x] **DB-05**: User can open a database in read-only mode via `--read-only`
 
 ### Script
 
-- [ ] **SCRIPT-01**: User can execute a Lua script by providing the script path as a positional argument
-- [ ] **SCRIPT-02**: User receives a clear error when the script file does not exist
-- [ ] **SCRIPT-03**: Lua scripts with UTF-8 BOM are handled correctly on Windows
+- [x] **SCRIPT-01**: User can execute a Lua script by providing the script path as a positional argument
+- [x] **SCRIPT-02**: User receives a clear error when the script file does not exist
+- [x] **SCRIPT-03**: Lua scripts with UTF-8 BOM are handled correctly on Windows
 
 ### Error Handling
 
-- [ ] **ERR-01**: User sees Lua runtime errors on stderr with exit code 1
-- [ ] **ERR-02**: User sees database errors on stderr with exit code 1
-- [ ] **ERR-03**: User can control log verbosity via `--log-level` (debug/info/warn/error/off)
+- [x] **ERR-01**: User sees Lua runtime errors on stderr with exit code 1
+- [x] **ERR-02**: User sees database errors on stderr with exit code 1
+- [x] **ERR-03**: User can control log verbosity via `--log-level` (debug/info/warn/error/off)
 
 ## Future Requirements
 
@@ -71,20 +71,20 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLI-01 | Phase 1 | Pending |
-| CLI-02 | Phase 1 | Pending |
-| CLI-03 | Phase 1 | Pending |
-| DB-01 | Phase 1 | Pending |
-| DB-02 | Phase 1 | Pending |
-| DB-03 | Phase 1 | Pending |
-| DB-04 | Phase 1 | Pending |
-| DB-05 | Phase 1 | Pending |
-| SCRIPT-01 | Phase 1 | Pending |
-| SCRIPT-02 | Phase 1 | Pending |
-| SCRIPT-03 | Phase 1 | Pending |
-| ERR-01 | Phase 1 | Pending |
-| ERR-02 | Phase 1 | Pending |
-| ERR-03 | Phase 1 | Pending |
+| CLI-01 | Phase 1 | Complete |
+| CLI-02 | Phase 1 | Complete |
+| CLI-03 | Phase 1 | Complete |
+| DB-01 | Phase 1 | Complete |
+| DB-02 | Phase 1 | Complete |
+| DB-03 | Phase 1 | Complete |
+| DB-04 | Phase 1 | Complete |
+| DB-05 | Phase 1 | Complete |
+| SCRIPT-01 | Phase 1 | Complete |
+| SCRIPT-02 | Phase 1 | Complete |
+| SCRIPT-03 | Phase 1 | Complete |
+| ERR-01 | Phase 1 | Complete |
+| ERR-02 | Phase 1 | Complete |
+| ERR-03 | Phase 1 | Complete |
 
 **Coverage:**
 - v0.5 requirements: 14 total
@@ -93,4 +93,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-27*
-*Last updated: 2026-02-27 after roadmap creation*
+*Last updated: 2026-02-27 after 01-01-PLAN.md execution*
