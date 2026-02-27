@@ -19,7 +19,7 @@ include/quiver/c/         # C API headers (for FFI)
 src/                      # C++ implementation
   database_csv_export.cpp # CSV export implementation
   database_csv_import.cpp # CSV import implementation
-  cli/main.cpp            # quiver_lua CLI entry point
+  cli/main.cpp            # quiver_cli CLI entry point
 src/c/                    # C API implementation
   internal.h              # Shared structs (quiver_database, quiver_element), QUIVER_REQUIRE macro
   database_helpers.h      # Marshaling templates, strdup_safe, metadata converters
@@ -82,7 +82,7 @@ bindings/python/test/test.bat     # Python tests
 
 ### CLI Executable
 ```bash
-./build/bin/quiver_lua.exe        # Lua script runner (v0.5 deliverable)
+./build/bin/quiver_cli.exe        # CLI entry point
 ```
 
 ### Benchmark
