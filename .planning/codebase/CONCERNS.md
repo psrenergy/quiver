@@ -1,202 +1,186 @@
 # Codebase Concerns
 
-**Analysis Date:** 2026-02-26
+**Analysis Date:** 2026-02-27
 
 ## Tech Debt
 
-**Lua binding is entirely hand-written with no generation:**
-- Issue: `src/lua_runner.cpp` is 990 lines of manual sol2 lambda wrappers covering every database method. Each new C++ API method requires a parallel Lua binding added by hand. The pattern for every scalar/vector/set read method is nearly identical boilerplate.
-- Files: `src/lua_runner.cpp`
-- Impact: High synchronization risk between C++ API and Lua bindings. When a method is added to `Database`, there is no tooling to detect that the Lua binding is missing. The file will keep growing linearly with API surface.
-- Fix approach: Generate Lua bindings from C API like Julia/Dart/Python generators do (`bindings/julia/generator/generator.bat`). The repetitive patterns are machine-derivable.
+**Blob subsystem is a dead stub:**
+- Issue: `src/blob/` contains stub implementations with empty function bodies. `blob.cpp` has `open_reader` and `open_writer` that return nothing. `blob_csv.cpp` and `blob_metadata.cpp` are empty. The `BlobMetadata` header references `Dimension` which is unresolved.
+- Files: `src/blob/blob.cpp`, `src/blob/blob_csv.cpp`, `src/blob/blob_metadata.cpp`, `include/quiver/blob/blob.h`, `include/quiver/blob/blob_csv.h`, `include/quiver/blob/blob_metadata.h`
+- Impact: The blob subsystem is included in CMake's format/tidy targets (`CMakeLists.txt` lines 84-85) but not in the actual build target. It is unfinished dead code. The public headers declare API that cannot be used.
+- Fix approach: Either implement the blob subsystem fully or remove all files in `src/blob/` and `include/quiver/blob/` and clean up the CMakeLists.txt format target references.
 
-**Lua empty array in `table_to_element` is silently dropped:**
-- Issue: In `src/lua_runner.cpp` line 253, `table_to_element` skips arrays where `arr.size() == 0`. An empty `{}` Lua table for a vector attribute is silently not set on the element rather than setting an empty vector.
-- Files: `src/lua_runner.cpp` lines 252-274
-- Impact: Lua callers cannot clear a vector to empty via `create_element` or `update_element` — the field is simply ignored. This is a behavioral inconsistency versus the C++ API which can accept an empty `std::vector`.
-- Fix approach: Detect empty arrays and call `element.set(k, std::vector<...>{})`. Requires inferring the target column type from schema since the first element is not available for type detection.
+**Python binding lacks LuaRunner:**
+- Issue: Python has no `LuaRunner` class or Lua scripting exposure. Julia, Dart, and C++ all provide Lua integration. Python is missing the feature entirely.
+- Files: `bindings/python/src/quiverdb/` (no `lua_runner.py` present)
+- Impact: Python users cannot execute Lua scripts against the database. The feature gap is not documented anywhere in the Python binding.
+- Fix approach: Add `bindings/python/src/quiverdb/lua_runner.py` wrapping `quiver_lua_runner_new`, `quiver_lua_runner_run`, `quiver_lua_runner_get_error`, and `quiver_lua_runner_free` from the C API. Follow the same pattern as `bindings/dart/lib/src/lua_runner.dart`.
 
-**CSV import silently drops self-referencing FK values:**
-- Issue: In `src/database_csv_import.cpp` lines 403-407, self-referencing foreign key columns are set to `nullptr` (SQL NULL) during the first insert pass, then resolved in a second pass (lines 441-469). If the second pass update fails or is skipped, the NULL value persists with no error.
-- Files: `src/database_csv_import.cpp` lines 403-407, 441-469
-- Impact: A self-FK import failure may produce rows with NULL parent references instead of the correct ID, violating data integrity without a clear error.
-- Fix approach: Validate that the second-pass UPDATE successfully sets a non-NULL value for all rows where the CSV cell was non-empty. Throw if any UPDATE produces 0 affected rows.
+**Python `_c_api.py` is maintained by hand:**
+- Issue: `_c_api.py` contains hand-written CFFI `cdef` declarations. `_declarations.py` is the auto-generated reference copy. If the C API changes, both files must be manually kept in sync. The generator output goes to `_declarations.py`, not `_c_api.py`.
+- Files: `bindings/python/src/quiverdb/_c_api.py`, `bindings/python/src/quiverdb/_declarations.py`, `bindings/python/generator/`
+- Impact: C API changes not manually reflected in `_c_api.py` cause silent runtime failures or crashes with CFFI ABI mode.
+- Fix approach: Evaluate whether `_c_api.py` can be made the direct generator output, eliminating the dual-file maintenance burden.
 
-**`is_date_time_column` convention is implicit and undocumented in schema:**
-- Issue: DateTime detection uses `col.name.starts_with("date_")` as defined in `include/quiver/data_type.h` line 39. This convention is applied in `src/schema.cpp` line 356, `src/database_internal.h` line 72, and `src/database_csv_import.cpp` lines 341, 593, 648. There is no schema-level `DATE_TIME` column type — it is entirely inferred from naming.
-- Files: `include/quiver/data_type.h`, `src/schema.cpp`, `src/database_internal.h`, `src/database_csv_import.cpp`
-- Impact: A column named `date_of_birth` or `date_created` will be treated as DateTime even if the developer intends it as plain TEXT. This is a silent semantic imposition that can cause unexpected datetime parsing errors during CSV import.
-- Fix approach: Add explicit `DATE_TIME` as a storable SQLite column type alias (e.g., using `TEXT` affinity with a `CHECK` or a column comment). Or document the `date_` prefix convention prominently and add schema validator enforcement.
+**`QUIVER_BUILD_C_API` defaults to OFF:**
+- Issue: The top-level `CMakeLists.txt` line 17 sets `QUIVER_BUILD_C_API OFF` by default. Building the core library without the C API disables all language bindings. The `scripts/build-all.bat` forces it ON, but direct `cmake` invocations will miss it.
+- Files: `CMakeLists.txt` line 17
+- Impact: New contributors may build without the C API, producing a library that powers no bindings, with no error or warning surfaced.
+- Fix approach: Change the default to `ON`, or add a `message(STATUS ...)` that clearly warns when C API is disabled.
 
-**Python `_c_api.py` is hand-maintained and diverges from generator output:**
-- Issue: `bindings/python/src/quiverdb/_c_api.py` (330 lines, 96 function declarations) is hand-written. `bindings/python/src/quiverdb/_declarations.py` (507 lines, 99 function declarations) is generated output used only as reference. These two files can and do diverge when the C API changes.
-- Files: `bindings/python/src/quiverdb/_c_api.py`, `bindings/python/src/quiverdb/_declarations.py`
-- Impact: The Python binding silently uses stale CFFI declarations. Any new C API function added since the last manual sync is unavailable to Python callers without error at import time.
-- Fix approach: Use `_declarations.py` as the actual CFFI source of truth, or add a CI step that diffs the two files to detect drift.
+**`read_scalar_integers/floats/strings` lack ORDER BY:**
+- Issue: The three bulk read methods in `src/database_read.cpp` execute `SELECT attribute FROM collection` without `ORDER BY`. SQLite does not guarantee row order without explicit ordering.
+- Files: `src/database_read.cpp` lines 9, 26, 43
+- Impact: Callers receive values in indeterminate order. If callers expect results to correspond positionally to `read_element_ids` results, they will get mismatched data on tables with deletions or fragmented rowids.
+- Fix approach: Add `ORDER BY rowid` or `ORDER BY id` to the three queries, consistent with `read_element_ids` at `src/database_read.cpp` line 206.
 
-**`data_type_from_string` throws on unknown SQLite column types:**
-- Issue: `include/quiver/data_type.h` line 20 throws `std::runtime_error("Unknown data type: " + type_str)` for any column type that is not exactly `INTEGER`, `REAL`, `TEXT`, or `DATE_TIME`. SQLite allows many type affinities (e.g., `VARCHAR`, `NUMERIC`, `BLOB`, `BOOLEAN`). Opening an existing SQLite database with non-standard column types will fail entirely.
-- Files: `include/quiver/data_type.h` lines 11-21, `src/schema.cpp` line 348
-- Impact: Third-party databases or databases using SQLite type affinities for compatibility cannot be opened via Quiver at all. The error appears as a schema load failure rather than a column-level warning.
-- Fix approach: Fall back to `DataType::Text` for unrecognised types and log a warning, rather than throwing. Optionally add `NUMERIC` -> `Real` and `VARCHAR` -> `Text` mappings.
+**Column ordering in metadata iterates `std::map` alphabetically, not schema order:**
+- Issue: `TableDefinition::columns` is a `std::map<std::string, ColumnDefinition>` (see `include/quiver/schema.h` line 42). Iterating it in metadata and time series functions returns columns in alphabetical order, not the order defined in the SQL schema.
+- Files: `include/quiver/schema.h` line 42, `src/database_metadata.cpp` lines 45, 71, 88, `src/database_time_series.cpp` lines 44, 69
+- Impact: Multi-column group metadata (time series, vectors) may present value columns in alphabetical rather than schema-definition order, confusing callers that depend on positional column ordering. The C API's columnar time series output depends on this ordering.
+- Fix approach: Replace `std::map` with a structure that preserves insertion order (e.g. `std::vector<std::pair<std::string, ColumnDefinition>>` with a lookup helper). Schema loading via `PRAGMA table_info` returns columns in definition order — that order is lost when inserted into `std::map`.
 
 ## Known Bugs
 
-**`quiver_database_free_time_series_files` will crash on NULL path entries:**
-- Symptoms: Calling `quiver_database_free_time_series_files` after a `read_time_series_files` where some columns have NULL paths (optional values stored as `nullptr`) causes a crash.
-- Files: `src/c/database_time_series.cpp` lines 447-460
-- Trigger: `read_time_series_files` stores `nullptr` for optional path entries (line 405). `free_time_series_files` calls `delete[] paths[i]` unconditionally for all `i` without checking for NULL.
-- Workaround: None at API level. Callers must not call `free_time_series_files` if any path was NULL (inconsistent with the "free what you receive" contract).
+**`update_element` and `delete_element` silently succeed for nonexistent IDs:**
+- Symptoms: Calling `db.update_element("Collection", 999, ...)` or `db.delete_element("Collection", 999)` on a nonexistent ID returns success without error. SQLite executes the SQL and reports 0 rows affected, but the library never calls `sqlite3_changes()`.
+- Files: `src/database_update.cpp` line 46, `src/database_delete.cpp` line 10
+- Trigger: Call either operation with an ID that does not exist in the collection.
+- Workaround: Callers must validate existence before calling via `read_scalar_integer_by_id` or similar.
 
-**Null values in time series numeric columns are silently converted to zero:**
-- Symptoms: When `quiver_database_read_time_series_group` processes a row where a numeric column value is a null `Value` variant (i.e., `std::nullptr_t`), line 133 sets `arr[r] = 0` (integer) or line 147 sets `arr[r] = 0.0` (float). The caller has no way to distinguish a stored `0` from a missing value.
-- Files: `src/c/database_time_series.cpp` lines 125-148
-- Trigger: Any time series group where a value column contains SQL NULL.
-- Workaround: Avoid NULL values in time series numeric columns. The C++ API itself returns `Value` which holds `std::nullptr_t`, so the information is present before the C API layer loses it.
-
-**Issue 70: Configuration table without `label` column fails migrations silently (Dart only tested):**
-- Symptoms: A migration schema where `Configuration` lacks the `label` column (as in `tests/schemas/issues/issue70/`) is tested only in `bindings/dart/test/issues_test.dart`. The C++ regression test `tests/test_issues.cpp` only covers issue 52. If the issue recurs in other bindings, it would be undetected.
-- Files: `tests/test_issues.cpp`, `bindings/dart/test/issues_test.dart`
-- Trigger: Running `from_migrations` with the issue70 schema in C++, Julia, or Python.
+**`import_csv` disables foreign keys globally without crash recovery:**
+- Symptoms: `import_csv` calls `PRAGMA foreign_keys = OFF` before DELETE/INSERT, then re-enables in catch/finally. If the process crashes between disable and re-enable, the database session is left with foreign keys disabled on next open (SQLite resets PRAGMAs per connection, so this is actually safe across reconnects, but within a single session a crash leaves state inconsistent).
+- Files: `src/database_csv_import.cpp` lines 276-283, 370-376, 602-609
+- Trigger: Process crash or kill signal during `import_csv` execution.
+- Workaround: None at the library level. Callers should make backups before import.
 
 ## Security Considerations
 
-**Column and attribute names concatenated directly into SQL strings:**
-- Risk: Functions like `read_scalar_integers` (`src/database_read.cpp` line 9) build SQL as `"SELECT " + attribute + " FROM " + collection`. The `require_collection` and `require_column` checks verify the names exist in the schema, but they do not validate that the names are safe SQL identifiers. A schema column with a name like `value; DROP TABLE--` (crafted via a malicious schema file) would produce valid-looking SQL that executes injected statements.
-- Files: `src/database_read.cpp` lines 9, 26, 43; `src/database_create.cpp` lines 27-44; `src/database_update.cpp` lines 28-79
-- Current mitigation: Schema validation (`src/schema_validator.cpp`) enforces collection names without underscores, but no `is_safe_identifier` check runs on column names or attribute names at query time. `src/schema.cpp` line 11 has `is_safe_identifier` used only for PRAGMA queries.
-- Recommendations: Call `is_safe_identifier` on collection and attribute/column name arguments before constructing any SQL string. This is a defence-in-depth measure since schema is expected to be trusted, but it costs nothing.
+**SQL injection via user-controlled collection and attribute names:**
+- Risk: Methods like `read_scalar_integers`, `update_element`, `create_element`, and all group operations build raw SQL strings by concatenating `collection`, `attribute`, `vector_table`, and `ts_table` names. Example: `"SELECT " + attribute + " FROM " + collection` in `src/database_read.cpp` line 9.
+- Files: `src/database_read.cpp` lines 9, 26, 43, 61, 74, 87; throughout `src/database_create.cpp`, `src/database_update.cpp`, `src/database_time_series.cpp`
+- Current mitigation: `is_safe_identifier` (alphanumeric + underscore only) is applied during schema loading in `src/schema.cpp` lines 329, 367, 399, 417. The `require_collection` and `require_column` guards validate that names exist in the loaded schema before SQL construction. Names cannot be injected unless the schema itself is compromised. The `query_string/integer/float` methods accept raw SQL from callers with no sanitization — this is by design and is a trust boundary.
+- Recommendations: Add a doc comment in `include/quiver/database.h` near the `query_string/integer/float` declarations stating that these accept arbitrary SQL and must only be called with trusted or application-controlled input.
 
-**Thread-local error store means error from concurrent operations on same thread can be lost:**
-- Risk: `src/c/common.cpp` line 8 stores `thread_local std::string g_last_error`. In async or coroutine contexts where multiple C API calls interleave on the same OS thread, `quiver_get_last_error()` returns the most recent error, not the error for a specific call. The prior error is silently overwritten.
-- Files: `src/c/common.cpp`
-- Current mitigation: Thread-local storage is correct for true multi-threaded parallel use. The risk is specific to coroutines/async schedulers (e.g., Dart's event loop, Python asyncio).
-- Recommendations: Document this limitation in the C API header. Provide a pattern for users to save/restore error state when interleaving calls.
+**`quiver_database_path` returns a pointer into internal C++ string storage:**
+- Risk: `src/c/database.cpp` line 51 returns `db->db.path().c_str()`. This pointer is valid only as long as the `quiver_database_t` is alive and the path string is not modified. The caller receives a raw `const char*` into C++ object internals with no documented lifetime.
+- Files: `src/c/database.cpp` lines 48-53
+- Current mitigation: The path string is set once at construction and never changed, so the pointer is stable for the lifetime of the database object. However this is not documented in `include/quiver/c/database.h`.
+- Recommendations: Add a lifetime comment to `include/quiver/c/database.h`. Consider using `strdup_safe` and a matching `free` function, consistent with all other string-returning C API functions.
 
 ## Performance Bottlenecks
 
-**Schema loaded entirely on every `migrate_up` and `apply_schema` call:**
-- Problem: `load_schema_metadata()` (`src/database_impl.h` lines 127-132) runs `Schema::from_database(db)` which queries `sqlite_master`, then `PRAGMA table_info`, `PRAGMA foreign_key_list`, and `PRAGMA index_list` for every table. This runs on every `from_schema`, `from_migrations`, and at the end of each `migrate_up` call.
-- Files: `src/database_impl.h` lines 127-132, `src/schema.cpp` lines 293-326
-- Cause: No incremental schema update — full re-parse every time.
-- Improvement path: For migrations, build schema incrementally by parsing only the newly applied SQL. For `from_schema`, parse once at open and cache.
+**Schema validation runs on every database open:**
+- Problem: `impl_->load_schema_metadata()` runs `Schema::from_database()` (multiple PRAGMA queries per table) and `SchemaValidator::validate()` on every `from_schema` or `from_migrations` call.
+- Files: `src/database_impl.h` lines 127-132, `src/database.cpp` lines 363, 391, `src/schema_validator.cpp`
+- Cause: No schema caching. For schemas with many tables this adds measurable startup cost.
+- Improvement path: For the current use case (small schemas) this is acceptable. If schemas grow large, cache the parsed schema to avoid repeated PRAGMA queries.
 
-**All vector/set read operations fetch full result set into memory:**
-- Problem: `read_vector_integers`, `read_vector_floats`, `read_vector_strings`, and all set variants in `src/database_read.cpp` execute a SELECT and load all rows into `std::vector<Row>` in `Database::execute()`. There is no streaming or pagination.
-- Files: `src/database_read.cpp` lines 96-174, `src/database.cpp` lines 131-212
-- Cause: `execute()` collects all `SQLITE_ROW` results before returning. No cursor-based iteration.
-- Improvement path: Add a cursor/iterator API to `Database::execute()` or expose a streaming variant. For the current API, document the memory constraint.
+**`read_time_series_group` in C API executes two database calls:**
+- Problem: `quiver_database_read_time_series_group` in `src/c/database_time_series.cpp` line 86-87 calls `get_time_series_metadata` then `read_time_series_group` — two separate database operations for what could be one.
+- Files: `src/c/database_time_series.cpp` lines 85-87
+- Cause: The metadata call is needed to build the column type list for the C API's columnar output format, but this information is already in the loaded in-memory schema.
+- Improvement path: Read column type information directly from `Impl::schema` rather than re-querying the database via `get_time_series_metadata`.
 
-**Full delete-then-reinsert for every vector/set update:**
-- Problem: `update_element` in `src/database_update.cpp` lines 76-138 issues `DELETE FROM <table> WHERE id = ?` for every vector/set group, then reinserts all values. This scans and rewrites the entire group even for single-element changes.
-- Files: `src/database_update.cpp` lines 76-138
-- Cause: Simpler to implement full replacement. The PK structure (id, vector_index) would allow upsert but requires tracking which rows to remove.
-- Improvement path: Use INSERT OR REPLACE with a stable PK, or DELETE only rows with indices exceeding the new length and UPSERT the rest.
-
-**`string::trim` applied unconditionally to every string parameter in `execute()`:**
-- Problem: `src/database.cpp` line 154 calls `string::trim(arg)` on every string parameter passed to `execute()`. This creates a new `std::string` allocation per string parameter, regardless of whether trimming is needed.
-- Files: `src/database.cpp` line 154
-- Cause: Defensive trimming for all strings. Likely introduced for CSV import safety.
-- Improvement path: Trim only in CSV import paths, not in the core `execute()` function. This avoids silently modifying user-provided string values (a user who intentionally stores a value with leading/trailing whitespace will have it stripped).
+**`import_csv` replaces semicolons via full string copy:**
+- Problem: `src/database_csv_import.cpp` lines 57-62 replace every `;` with `,` in the entire file content string before parsing. For large CSV files this copies the entire content twice in memory.
+- Files: `src/database_csv_import.cpp` lines 40-116
+- Cause: rapidcsv does not natively handle `sep=` headers, so detection and replacement is done manually.
+- Improvement path: Use rapidcsv's `SeparatorParams` directly with the detected separator character rather than replacing file content.
 
 ## Fragile Areas
 
-**`read_grouped_values_all` depends on consistent ID ordering across result sets:**
-- Files: `src/database_internal.h` lines 29-51
-- Why fragile: The template groups rows by consecutive equal Ids. If any query returns rows in non-ID-consecutive order (e.g., due to a missing `ORDER BY id`), groups are split incorrectly producing duplicate entries. The `read_vector_*` queries use `ORDER BY id, vector_index` but `read_set_*` queries use only `ORDER BY id` (no secondary sort) — set values within each group have non-deterministic order.
-- Safe modification: Add `ORDER BY id, rowid` or a stable column to all set queries. Add an assertion or comment documenting the ID-consecutive dependency.
-- Test coverage: Tests exercise correctness of returned values but not ordering stability.
+**`find_dimension_column` uses column name heuristic, not schema constraint:**
+- Files: `src/database_internal.h` lines 68-77, `src/schema.cpp` (the `is_date_time_column` helper)
+- Why fragile: The time series dimension column is identified by checking if `col.type == DataType::DateTime` or if `is_date_time_column(col_name)` returns true (the latter checks for a `date_` name prefix). Any column named with a `date_` prefix (e.g. `date_notes TEXT`) would be incorrectly identified as the dimension column.
+- Safe modification: Always use the `date_` prefix strictly for the dimension column. The schema validator does not enforce this naming rule beyond requiring at least one dimension column be discoverable.
+- Test coverage: All time series tests in `tests/test_database_time_series.cpp` use `date_time` as the dimension column name; edge cases with other `date_`-prefixed columns are untested.
 
-**CSV import disables foreign keys globally during import:**
-- Files: `src/database_csv_import.cpp` lines 276, 370, 602
-- Why fragile: `PRAGMA foreign_keys = OFF` is a connection-level setting. If another operation runs concurrently on the same database connection between `PRAGMA foreign_keys = OFF` and `PRAGMA foreign_keys = ON`, FK constraints are silently unenforced for that operation too. The `try/catch` that restores `PRAGMA foreign_keys = ON` is correct but any exception thrown inside `execute_raw("PRAGMA foreign_keys = ON")` itself would leave FKs disabled permanently for the connection.
-- Safe modification: Use SQLite's `PRAGMA defer_foreign_keys = ON` or savepoint-based FK deferral instead of disabling FKs globally. Add a RAII guard that restores FK state in its destructor.
-- Test coverage: FK disabled/enabled state is not directly tested; only the resulting data is checked.
+**`resolve_fk_label` silently skips FK resolution if schema lookup fails:**
+- Files: `src/database_impl.h` lines 95-125
+- Why fragile: When resolving FK labels for array columns, if `find_all_tables_for_column` returns matches but `schema->get_table(match.table_name)` returns null for all of them, `resolve_table` stays null and values pass through without FK resolution — silently skipping validation for malformed schemas.
+- Safe modification: Throw if any match from `find_all_tables_for_column` has a table name not present in the loaded schema.
 
-**`quiver_database_open` returns a usable handle with no schema loaded:**
-- Files: `src/c/database.cpp` lines 14-34, `src/database_impl.h` line 24 (`schema` member starts as `nullptr`)
-- Why fragile: Calling `quiver_database_open` opens a database without applying or loading any schema. `impl_->schema` is `nullptr`. Any operation that calls `require_schema` will throw with "no schema loaded", but operations that skip that check (or where `require_collection` is not called) may dereference a null schema. The Python and Julia bindings do not expose `quiver_database_open` to users, but Dart's `bindings.dart` includes the binding.
-- Safe modification: Document clearly that `quiver_database_open` is for bare SQLite access only. Add a guard in all schema-dependent paths that produces a clear error rather than a null dereference.
-- Test coverage: `test_c_api_database_lifecycle.cpp` tests `quiver_database_open` but likely does not test schema-dependent operations on the resulting handle.
+**`QUIVER_REQUIRE` macro is capped at 9 arguments:**
+- Files: `src/c/internal.h` lines 28-116
+- Why fragile: `QUIVER_REQUIRE` supports 1-9 arguments via manual overloads. If any C API function needs to validate more than 9 pointer parameters, adding a 10th will silently mismatch the macro dispatch. The current maximum use is 9 parameters (`quiver_database_read_time_series_group` at `src/c/database_time_series.cpp` lines 82-83).
+- Safe modification: Before adding new C API functions, count the pointer parameters and ensure they total 9 or fewer, or extend `src/c/internal.h` with a `QUIVER_REQUIRE_10` overload.
 
-**Lua `transaction` wrapper swallows rollback errors:**
-- Files: `src/lua_runner.cpp` lines 53-68
-- Why fragile: The `transaction` implementation catches a Lua error, calls `self.rollback()` inside a bare `catch (...)` that discards any rollback exception, then rethrows the Lua error. If rollback fails (e.g., because the transaction was already committed by the user before the error), the database may be in an inconsistent state but only the Lua script error is surfaced.
-- Safe modification: Log rollback failures even when swallowing the exception. Use the same logger instance available elsewhere in `Impl`.
-- Test coverage: No test verifies the rollback failure code path in Lua transactions.
+**`is_collection` detection relies on absence of underscore:**
+- Files: `src/schema.cpp` lines 89-94
+- Why fragile: `is_collection` returns true for any table name without an underscore (plus the hardcoded `Configuration` exception). Any table added to the database by SQLite internals or third-party tools that has an underscore-free name would be misclassified as a collection. The converse — collection names cannot contain underscores — is enforced by the schema validator but only during validation.
+- Safe modification: This is a documented constraint enforced at schema load time. No change needed for normal usage.
 
 ## Scaling Limits
 
-**spdlog logger registry grows unbounded for long-lived processes:**
-- Current capacity: Each `Database` instance creates a uniquely named logger via `g_logger_counter` (`src/database.cpp` line 47). Loggers are registered in spdlog's global registry.
-- Limit: spdlog's default registry does not remove loggers automatically. In a process that repeatedly opens and closes Database instances, the logger registry accumulates entries indefinitely.
-- Scaling path: Call `spdlog::drop(logger_name)` in `Database::Impl::~Impl()` to deregister the logger when the database closes.
+**No WAL mode enabled (single-writer bottleneck):**
+- Current capacity: One writer at a time; SQLite default DELETE journal mode.
+- Limit: Multiple processes or threads opening the same database file simultaneously will block on writes, and concurrent readers are blocked during writes.
+- Scaling path: Add `PRAGMA journal_mode = WAL;` to `Database::Database()` in `src/database.cpp` after the foreign keys pragma. WAL allows concurrent reads during writes without blocking.
 
-**Time series columnar read allocates one heap array per column per call:**
-- Current capacity: `quiver_database_read_time_series_group` allocates `col_count` separate heap arrays. Each string column allocates `row_count` individual `char*` strings.
-- Limit: For 10 columns and 100,000 rows, this is 1,000,000+ individual allocations per read call. Heap fragmentation compounds over repeated calls.
-- Scaling path: Use a single arena allocation per call. Pre-compute total string byte count and allocate one contiguous buffer, then assign pointers into it. This converts 1M allocations to 1.
+**All results materialized in memory:**
+- Current capacity: `Result` stores all rows as `std::vector<Row>`. Time series reads return `std::vector<std::map<std::string, Value>>`.
+- Limit: Large datasets (millions of rows) will exhaust memory. There is no streaming or cursor API.
+- Scaling path: Add cursor-based read variants that yield rows incrementally. This requires a new public API surface.
 
 ## Dependencies at Risk
 
-**`rapidcsv` is a minimal header-only library with limited active development:**
-- Risk: `rapidcsv` has no streaming support, limited delimiter handling, and no RFC 4180 quoting guarantees. The current CSV import in `src/database_csv_import.cpp` works around limitations by pre-processing the content string (lines 41-105) before passing to rapidcsv.
-- Impact: CSV files with quoted delimiters inside values, multi-line quoted fields, or embedded newlines may parse incorrectly or crash.
-- Migration plan: Replace rapidcsv with a more robust library (e.g., `csv2`, `fast-cpp-csv-parser`) or implement a direct RFC 4180 parser. The pre-processing workaround layer makes future migration easier.
+**sol2 causes heavy compilation on `lua_runner.cpp`:**
+- Risk: sol2 is a header-only library causing heavy template instantiations. `src/CMakeLists.txt` lines 51-55 add `/bigobj` (MSVC) or `-Wa,-mbig-obj` (MinGW) flags specifically for `lua_runner.cpp` to avoid object file section count overflow.
+- Impact: `lua_runner.cpp` is the slowest file to compile. Any changes trigger a full recompile of the largest translation unit in the project.
+- Migration plan: No immediate risk. sol2 is stable. Monitor for sol3 or lighter alternatives if build times become unacceptable.
 
-**`sol2` Lua binding requires C++17 and specific Lua versions:**
-- Risk: `sol2` is deeply template-heavy and version-sensitive to both Lua and the C++ standard. Upgrading from Lua 5.4 to a hypothetical 5.5 would require auditing all bindings. sol2 major releases (2.x vs 3.x) had breaking API changes.
-- Impact: `src/lua_runner.cpp` (990 lines) would need significant rework on any sol2 major version change.
-- Migration plan: Pin sol2 version in CMakeLists.txt with explicit version comment. Test against Lua 5.4 specifically. Have a rollback plan before upgrading.
+**rapidcsv version is not pinned:**
+- Risk: rapidcsv is fetched via CMake FetchContent without a pinned version. Upstream behavior changes could silently break CSV import/export round-trips.
+- Impact: CSV accuracy could regress without any test failure if the library changes its quoting or parsing behavior.
+- Migration plan: Pin the rapidcsv version tag or commit hash in the CMake FetchContent declaration in `cmake/Dependencies.cmake`.
 
 ## Missing Critical Features
 
-**No `quiver_database_open` counterpart in Python or Julia (bare open without schema):**
-- Problem: Python and Julia bindings do not expose the `quiver_database_open` function for opening an existing database without re-applying a schema. Users who have an existing Quiver database and just want to open it (not create it) must use `from_schema` or `from_migrations` even when the schema is already applied.
-- Blocks: Adopters with existing databases who want lightweight re-opens.
+**No `update_element` / `delete_element` existence verification:**
+- Problem: Neither operation verifies the element ID exists before executing SQL. Both succeed silently for nonexistent IDs.
+- Blocks: Callers cannot distinguish "operation succeeded" from "operation silently did nothing."
 
-**No multi-column vector/set CSV export:**
-- Problem: `src/database_csv_export.cpp` generates one CSV file per group, and the SELECT for group export (`lines 245-250`) selects a single `value` column. Multi-column vector/set groups (where `value_columns` has more than one entry) may not export all columns correctly.
-- Files: `src/database_csv_export.cpp` lines 185-252
-- Blocks: Round-trip CSV export/import for multi-column group schemas.
+**No multi-row query API:**
+- Problem: `query_string`, `query_integer`, and `query_float` return only the first row's first column. There is no API for retrieving multiple rows or multiple columns from a user-provided SQL query.
+- Blocks: Users who need joins, aggregates across rows, or tabular results must resort to multiple single-row queries or use the lower-level `execute()` method (which is private).
 
-**No Lua runner in Python bindings:**
-- Problem: `bindings/python/src/quiverdb/` has no `lua_runner.py` and `_c_api.py` does not declare `quiver_lua_runner_*` functions. Julia and Dart both expose `LuaRunner`.
-- Files: `bindings/python/src/quiverdb/_c_api.py`, `bindings/python/src/quiverdb/database.py`
-- Blocks: Python users cannot run Lua scripts against Quiver databases.
+**No streaming/cursor read API:**
+- Problem: All read operations materialize all rows before returning. There is no way to iterate results row-by-row.
+- Blocks: Use with collections exceeding available memory.
 
 ## Test Coverage Gaps
 
-**Issue 70 has no C++ or Julia regression test:**
-- What's not tested: The `tests/schemas/issues/issue70/` migration (Configuration table without `label` during migrate_up) is only tested in `bindings/dart/test/issues_test.dart`.
-- Files: `tests/test_issues.cpp`, `bindings/julia/test/` (no issues test file)
-- Risk: The regression could reappear in Julia or the C++ core without detection.
-- Priority: Medium
-
-**Multi-column vector/set group operations largely untested:**
-- What's not tested: Creating, reading, and updating vector or set groups that have more than one `value_column`. The standard test schemas use single-column groups.
-- Files: `tests/test_database_read.cpp`, `tests/test_database_update.cpp`, `tests/test_database_create.cpp`
-- Risk: Silent schema mis-routing or incorrect data on multi-column groups.
-- Priority: Medium
-
-**`quiver_database_free_time_series_files` null-path crash is untested:**
-- What's not tested: Calling `free_time_series_files` when some paths are NULL (i.e., the collection has no path set for a column).
-- Files: `src/c/database_time_series.cpp`, `tests/test_c_api_database_time_series.cpp`
-- Risk: Crash in production when time series file columns have NULL paths.
+**`update_element` with nonexistent ID is not tested:**
+- What's not tested: Calling `update_element("Collection", 99999, elem)` where the ID does not exist. Expected to fail; currently succeeds silently.
+- Files: `src/database_update.cpp`, `tests/test_database_update.cpp`
+- Risk: Callers may believe an update succeeded when no row was changed.
 - Priority: High
 
-**String trimming side-effect in `execute()` has no explicit test:**
-- What's not tested: That storing a string with intentional leading/trailing whitespace via any API call and reading it back returns the original value unchanged.
-- Files: `src/database.cpp` line 154
-- Risk: Silent data corruption for whitespace-significant string values.
+**`delete_element` with nonexistent ID is not tested:**
+- What's not tested: Calling `delete_element("Collection", 99999)` where the ID does not exist. Currently succeeds silently.
+- Files: `src/database_delete.cpp`, `tests/test_database_delete.cpp`
+- Risk: Callers may believe a deletion succeeded when no row was removed.
+- Priority: High
+
+**Blob subsystem has no tests:**
+- What's not tested: Everything in `src/blob/` and `include/quiver/blob/` — the entire blob read/write/CSV/metadata API.
+- Files: `src/blob/blob.cpp`, `src/blob/blob_csv.cpp`, `src/blob/blob_metadata.cpp`
+- Risk: The stubs compile without signals of incompleteness. No test coverage for when the feature is eventually implemented.
+- Priority: Low (stubs only, not buildable)
+
+**Python binding has no LuaRunner tests:**
+- What's not tested: Python Lua scripting integration — the feature is absent.
+- Files: `bindings/python/tests/`
+- Risk: If LuaRunner is added to Python, there is no test baseline.
 - Priority: Medium
 
-**Lua binding tests do not cover all method groups:**
-- What's not tested: Lua bindings for `list_time_series_files_columns`, `read_time_series_files`, `update_time_series_files`, `export_csv`, `import_csv`, and metadata list methods are present in `src/lua_runner.cpp` but not covered in `tests/test_lua_runner.cpp` or `tests/test_c_api_lua_runner.cpp`.
-- Files: `tests/test_lua_runner.cpp`, `src/lua_runner.cpp` lines 934-971
-- Risk: Lua binding bugs in these methods go undetected until production use.
+**`quiver_database_path` pointer lifetime is not tested in C API tests:**
+- What's not tested: Using the returned `const char*` from `quiver_database_path` after the database is closed.
+- Files: `src/c/database.cpp` lines 48-53, `tests/test_c_api_database_lifecycle.cpp`
+- Risk: Use-after-free if bindings cache the raw pointer beyond the database lifetime. Currently only `database.py` in the Python binding calls `quiver_database_path` and immediately decodes it, so there is no current unsafe usage.
 - Priority: Medium
 
 ---
 
-*Concerns audit: 2026-02-26*
+*Concerns audit: 2026-02-27*
