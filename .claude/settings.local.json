@@ -25,7 +25,9 @@
       "Bash(julia:*)",
       "Bash(cmake:*)",
       "Bash(dir:*)",
-      "Bash(dart pub:*)"
+      "Bash(dart pub:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(objdump:*)"
     ]
   }
 }
