@@ -72,7 +72,7 @@ class TestReadScalarStrings:
 # -- Scalar reads by ID -------------------------------------------------------
 
 
-class TestReadScalarByID:
+class TestReadScalarById:
     def test_read_scalar_integer_by_id(self, db: Database) -> None:
         id1 = db.create_element("Configuration", label="item1", integer_attribute=42)
         result = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id1)
@@ -137,7 +137,7 @@ class TestReadElementIds:
 # -- DateTime scalar reads ---------------------------------------------------
 
 
-class TestReadScalarDateTimeByID:
+class TestReadScalarDateTimeById:
     def test_read_scalar_date_time_by_id(self, db: Database) -> None:
         id1 = db.create_element(
             "Configuration",
@@ -166,7 +166,7 @@ class TestReadScalarDateTimeByID:
 # -- Composite scalar reads --------------------------------------------------
 
 
-class TestReadScalarsByID:
+class TestReadScalarsById:
     def test_read_scalars_by_id(self, db: Database) -> None:
         id1 = db.create_element(
             "Configuration",

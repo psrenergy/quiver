@@ -340,7 +340,7 @@ void main() {
           'code': [10, 20, 30],
         });
 
-        final rows = db.readSetGroupByID('AllTypes', 'codes', 1);
+        final rows = db.readSetGroupById('AllTypes', 'codes', 1);
         expect(rows, isNotEmpty);
         final codes = rows.map((row) => row['code']).toList()..sort();
         expect(codes, equals([10, 20, 30]));
