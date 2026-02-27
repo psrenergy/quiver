@@ -599,18 +599,21 @@ struct LuaRunner::Impl {
                 switch (col.data_type) {
                 case DataType::Integer: {
                     auto values = db.read_vector_integers_by_id(collection, col.name, id);
-                    for (size_t i = 0; i < values.size(); ++i) t[i + 1] = values[i];
+                    for (size_t i = 0; i < values.size(); ++i)
+                        t[i + 1] = values[i];
                     break;
                 }
                 case DataType::Real: {
                     auto values = db.read_vector_floats_by_id(collection, col.name, id);
-                    for (size_t i = 0; i < values.size(); ++i) t[i + 1] = values[i];
+                    for (size_t i = 0; i < values.size(); ++i)
+                        t[i + 1] = values[i];
                     break;
                 }
                 case DataType::Text:
                 case DataType::DateTime: {
                     auto values = db.read_vector_strings_by_id(collection, col.name, id);
-                    for (size_t i = 0; i < values.size(); ++i) t[i + 1] = values[i];
+                    for (size_t i = 0; i < values.size(); ++i)
+                        t[i + 1] = values[i];
                     break;
                 }
                 }
@@ -630,18 +633,21 @@ struct LuaRunner::Impl {
                 switch (col.data_type) {
                 case DataType::Integer: {
                     auto values = db.read_set_integers_by_id(collection, col.name, id);
-                    for (size_t i = 0; i < values.size(); ++i) t[i + 1] = values[i];
+                    for (size_t i = 0; i < values.size(); ++i)
+                        t[i + 1] = values[i];
                     break;
                 }
                 case DataType::Real: {
                     auto values = db.read_set_floats_by_id(collection, col.name, id);
-                    for (size_t i = 0; i < values.size(); ++i) t[i + 1] = values[i];
+                    for (size_t i = 0; i < values.size(); ++i)
+                        t[i + 1] = values[i];
                     break;
                 }
                 case DataType::Text:
                 case DataType::DateTime: {
                     auto values = db.read_set_strings_by_id(collection, col.name, id);
-                    for (size_t i = 0; i < values.size(); ++i) t[i + 1] = values[i];
+                    for (size_t i = 0; i < values.size(); ++i)
+                        t[i + 1] = values[i];
                     break;
                 }
                 }
