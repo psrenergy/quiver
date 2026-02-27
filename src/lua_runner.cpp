@@ -384,7 +384,7 @@ struct LuaRunner::Impl {
         return outer;
     }
 
-    // Read scalar by ID helpers - return nil if not found
+    // Read scalar by Id helpers - return nil if not found
     static sol::object read_scalar_string_by_id_lua(Database& db,
                                                     const std::string& collection,
                                                     const std::string& attribute,
@@ -424,7 +424,7 @@ struct LuaRunner::Impl {
         return sol::make_object(lua, sol::lua_nil);
     }
 
-    // Read vector by ID helpers - return table
+    // Read vector by Id helpers - return table
     static sol::table read_vector_integers_by_id_lua(Database& db,
                                                      const std::string& collection,
                                                      const std::string& attribute,
@@ -467,7 +467,7 @@ struct LuaRunner::Impl {
         return t;
     }
 
-    // Read set by ID helpers - return table
+    // Read set by Id helpers - return table
     static sol::table read_set_integers_by_id_lua(Database& db,
                                                   const std::string& collection,
                                                   const std::string& attribute,
