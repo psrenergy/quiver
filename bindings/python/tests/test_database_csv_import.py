@@ -53,6 +53,33 @@ class TestImportCSVScalarRoundTrip:
             db2.close()
 
 
+class TestImportCSVLabelOnThirdColumn:
+    """Test that label column works when not in the first position."""
+
+    def test_label_on_third_column(self, csv_db: Database, tmp_path):
+        """CSV with label as 3rd column imports correctly."""
+        csv_path = str(tmp_path / "label_col3.csv")
+        with open(csv_path, "w", newline="") as f:
+            f.write("sep=,\n")
+            f.write("name,status,label,price,date_created,notes\n")
+            f.write("Alpha,1,Item1,10.5,,\n")
+            f.write("Beta,2,Item2,20.0,,\n")
+
+        csv_db.import_csv("Items", "", csv_path)
+
+        labels = csv_db.read_scalar_strings("Items", "label")
+        assert labels == ["Item1", "Item2"]
+
+        names = csv_db.read_scalar_strings("Items", "name")
+        assert names == ["Alpha", "Beta"]
+
+        statuses = csv_db.read_scalar_integers("Items", "status")
+        assert statuses == [1, 2]
+
+        prices = csv_db.read_scalar_floats("Items", "price")
+        assert prices == pytest.approx([10.5, 20.0])
+
+
 class TestImportCSVGroupRoundTrip:
     """Test group (vector) CSV import round-trip: export -> import -> verify."""
 
@@ -82,6 +109,64 @@ class TestImportCSVGroupRoundTrip:
             assert v2 == pytest.approx([4.4, 5.5])
         finally:
             db2.close()
+
+
+class TestImportCSVSelfReferenceFKReImport:
+    """Test CSV import with self-referencing FK re-import."""
+
+    def test_self_reference_fk_reimport(self, relations_db: Database, tmp_path):
+        """Import children with self-FK, then re-import with self-referencing rows."""
+        relations_db.create_element("Parent", label="Parent1")
+
+        # First import: 2 children, one with self-FK
+        csv_path = str(tmp_path / "self_fk_reimport.csv")
+        with open(csv_path, "w", newline="") as f:
+            f.write("sep=,\n")
+            f.write("label,parent_id,sibling_id\n")
+            f.write("Child1,Parent1,\n")
+            f.write("Child2,Parent1,Child1\n")
+
+        relations_db.import_csv("Child", "", csv_path)
+
+        sib1 = relations_db.query_integer(
+            "SELECT sibling_id FROM Child WHERE label = ?", params=["Child1"]
+        )
+        assert sib1 is None
+
+        sib2 = relations_db.query_integer(
+            "SELECT sibling_id FROM Child WHERE label = ?", params=["Child2"]
+        )
+        child1_id = relations_db.query_integer(
+            "SELECT id FROM Child WHERE label = ?", params=["Child1"]
+        )
+        assert sib2 == child1_id
+
+        # Second import (re-import): 4 children, includes self-referencing row
+        with open(csv_path, "w", newline="") as f:
+            f.write("sep=,\n")
+            f.write("label,parent_id,sibling_id\n")
+            f.write("Child1,Parent1,\n")
+            f.write("Child2,Parent1,Child1\n")
+            f.write("Child3,Parent1,Child3\n")
+            f.write("Child4,Parent1,Child3\n")
+
+        relations_db.import_csv("Child", "", csv_path)
+
+        labels = relations_db.read_scalar_strings("Child", "label")
+        assert len(labels) == 4
+
+        child3_id = relations_db.query_integer(
+            "SELECT id FROM Child WHERE label = ?", params=["Child3"]
+        )
+        sib3 = relations_db.query_integer(
+            "SELECT sibling_id FROM Child WHERE label = ?", params=["Child3"]
+        )
+        assert sib3 == child3_id
+
+        sib4 = relations_db.query_integer(
+            "SELECT sibling_id FROM Child WHERE label = ?", params=["Child4"]
+        )
+        assert sib4 == child3_id
 
 
 class TestImportCSVEnumResolution:

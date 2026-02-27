@@ -49,6 +49,44 @@ include("fixture.jl")
         end
     end
 
+    @testset "Scalar label on third column" begin
+        db = Quiver.from_schema(":memory:", path_schema)
+        csv_path = tempname() * ".csv"
+        try
+            open(csv_path, "w") do f
+                return write(
+                    f,
+                    "sep=,\nname,status,label,price,date_created,notes\nAlpha,1,Item1,10.5,,\nBeta,2,Item2,20.0,,\n",
+                )
+            end
+
+            Quiver.import_csv(db, "Items", "", csv_path)
+
+            labels = Quiver.read_scalar_strings(db, "Items", "label")
+            @test length(labels) == 2
+            @test labels[1] == "Item1"
+            @test labels[2] == "Item2"
+
+            names = Quiver.read_scalar_strings(db, "Items", "name")
+            @test length(names) == 2
+            @test names[1] == "Alpha"
+            @test names[2] == "Beta"
+
+            statuses = Quiver.read_scalar_integers(db, "Items", "status")
+            @test length(statuses) == 2
+            @test statuses[1] == 1
+            @test statuses[2] == 2
+
+            prices = Quiver.read_scalar_floats(db, "Items", "price")
+            @test length(prices) == 2
+            @test prices[1] ≈ 10.5 atol=0.001
+            @test prices[2] ≈ 20.0 atol=0.001
+        finally
+            isfile(csv_path) && rm(csv_path)
+            Quiver.close!(db)
+        end
+    end
+
     @testset "Vector group round-trip" begin
         db = Quiver.from_schema(":memory:", path_schema)
         csv_path = tempname() * ".csv"
@@ -255,6 +293,52 @@ include("fixture.jl")
             @test length(vals) == 2
             @test vals[1] ≈ 1.1 atol = 0.001
             @test vals[2] ≈ 2.2 atol = 0.001
+        finally
+            isfile(csv_path) && rm(csv_path)
+            Quiver.close!(db)
+        end
+    end
+
+    @testset "Self-reference FK re-import" begin
+        path_relations = joinpath(tests_path(), "schemas", "valid", "relations.sql")
+        db = Quiver.from_schema(":memory:", path_relations)
+        csv_path = tempname() * ".csv"
+        try
+            Quiver.create_element!(db, "Parent"; label = "Parent1")
+
+            # First import: 2 children, one with self-FK
+            open(csv_path, "w") do f
+                return write(f, "sep=,\nlabel,parent_id,sibling_id\nChild1,Parent1,\nChild2,Parent1,Child1\n")
+            end
+
+            Quiver.import_csv(db, "Child", "", csv_path)
+
+            sib1 = Quiver.query_integer(db, "SELECT sibling_id FROM Child WHERE label = ?", ["Child1"])
+            @test isnothing(sib1)
+
+            sib2 = Quiver.query_integer(db, "SELECT sibling_id FROM Child WHERE label = ?", ["Child2"])
+            child1_id = Quiver.query_integer(db, "SELECT id FROM Child WHERE label = ?", ["Child1"])
+            @test sib2 == child1_id
+
+            # Second import (re-import): 4 children, includes self-referencing row
+            open(csv_path, "w") do f
+                return write(
+                    f,
+                    "sep=,\nlabel,parent_id,sibling_id\nChild1,Parent1,\nChild2,Parent1,Child1\nChild3,Parent1,Child3\nChild4,Parent1,Child3\n",
+                )
+            end
+
+            Quiver.import_csv(db, "Child", "", csv_path)
+
+            labels = Quiver.read_scalar_strings(db, "Child", "label")
+            @test length(labels) == 4
+
+            child3_id = Quiver.query_integer(db, "SELECT id FROM Child WHERE label = ?", ["Child3"])
+            sib3 = Quiver.query_integer(db, "SELECT sibling_id FROM Child WHERE label = ?", ["Child3"])
+            @test sib3 == child3_id
+
+            sib4 = Quiver.query_integer(db, "SELECT sibling_id FROM Child WHERE label = ?", ["Child4"])
+            @test sib4 == child3_id
         finally
             isfile(csv_path) && rm(csv_path)
             Quiver.close!(db)

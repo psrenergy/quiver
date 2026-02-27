@@ -53,6 +53,44 @@ void main() {
       }
     });
 
+    test('scalar label on third column', () {
+      final db = Database.fromSchema(':memory:', schemaPath);
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_label_col3.csv';
+      try {
+        File(csvPath).writeAsStringSync(
+          'sep=,\nname,status,label,price,date_created,notes\n'
+          'Alpha,1,Item1,10.5,,\n'
+          'Beta,2,Item2,20.0,,\n',
+        );
+
+        db.importCSV('Items', '', csvPath);
+
+        final labels = db.readScalarStrings('Items', 'label');
+        expect(labels.length, 2);
+        expect(labels[0], 'Item1');
+        expect(labels[1], 'Item2');
+
+        final names = db.readScalarStrings('Items', 'name');
+        expect(names.length, 2);
+        expect(names[0], 'Alpha');
+        expect(names[1], 'Beta');
+
+        final statuses = db.readScalarIntegers('Items', 'status');
+        expect(statuses.length, 2);
+        expect(statuses[0], 1);
+        expect(statuses[1], 2);
+
+        final prices = db.readScalarFloats('Items', 'price');
+        expect(prices.length, 2);
+        expect(prices[0], closeTo(10.5, 0.001));
+        expect(prices[1], closeTo(20.0, 0.001));
+      } finally {
+        final f = File(csvPath);
+        if (f.existsSync()) f.deleteSync();
+        db.close();
+      }
+    });
+
     test('vector group round-trip', () {
       final db = Database.fromSchema(':memory:', schemaPath);
       final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_vector.csv';
@@ -271,6 +309,58 @@ void main() {
         expect(names.length, 2);
         expect(names[0], 'Alpha');
         expect(names[1], 'Beta');
+      } finally {
+        final f = File(csvPath);
+        if (f.existsSync()) f.deleteSync();
+        db.close();
+      }
+    });
+
+    test('self-reference FK re-import', () {
+      final relationsPath = path.join(testsPath, 'schemas', 'valid', 'relations.sql');
+      final db = Database.fromSchema(':memory:', relationsPath);
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_self_fk_reimport.csv';
+      try {
+        db.createElement('Parent', {'label': 'Parent1'});
+
+        // First import: 2 children, one with self-FK
+        File(csvPath).writeAsStringSync(
+          'sep=,\n'
+          'label,parent_id,sibling_id\n'
+          'Child1,Parent1,\n'
+          'Child2,Parent1,Child1\n',
+        );
+
+        db.importCSV('Child', '', csvPath);
+
+        final sib1 = db.queryIntegerParams('SELECT sibling_id FROM Child WHERE label = ?', ['Child1']);
+        expect(sib1, isNull);
+
+        final sib2 = db.queryIntegerParams('SELECT sibling_id FROM Child WHERE label = ?', ['Child2']);
+        final child1Id = db.queryIntegerParams('SELECT id FROM Child WHERE label = ?', ['Child1']);
+        expect(sib2, child1Id);
+
+        // Second import (re-import): 4 children, includes self-referencing row
+        File(csvPath).writeAsStringSync(
+          'sep=,\n'
+          'label,parent_id,sibling_id\n'
+          'Child1,Parent1,\n'
+          'Child2,Parent1,Child1\n'
+          'Child3,Parent1,Child3\n'
+          'Child4,Parent1,Child3\n',
+        );
+
+        db.importCSV('Child', '', csvPath);
+
+        final labels = db.readScalarStrings('Child', 'label');
+        expect(labels.length, 4);
+
+        final child3Id = db.queryIntegerParams('SELECT id FROM Child WHERE label = ?', ['Child3']);
+        final sib3 = db.queryIntegerParams('SELECT sibling_id FROM Child WHERE label = ?', ['Child3']);
+        expect(sib3, child3Id);
+
+        final sib4 = db.queryIntegerParams('SELECT sibling_id FROM Child WHERE label = ?', ['Child4']);
+        expect(sib4, child3Id);
       } finally {
         final f = File(csvPath);
         if (f.existsSync()) f.deleteSync();

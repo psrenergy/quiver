@@ -232,6 +232,40 @@ TEST(DatabaseCSV, ImportCSV_Scalar_Whitespace_Trimmed) {
     fs::remove(csv_path);
 }
 
+TEST(DatabaseCSV, ImportCSV_Scalar_LabelOnThirdColumn) {
+    auto db = make_db();
+
+    auto csv_path = temp_csv("ImportScalarLabelCol3");
+    write_csv_file(csv_path.string(),
+                   "sep=,\nname,status,label,price,date_created,notes\n"
+                   "Alpha,1,Item1,10.5,,\n"
+                   "Beta,2,Item2,20.0,,\n");
+
+    db.import_csv("Items", "", csv_path.string());
+
+    auto labels = db.read_scalar_strings("Items", "label");
+    ASSERT_EQ(labels.size(), 2);
+    EXPECT_EQ(labels[0], "Item1");
+    EXPECT_EQ(labels[1], "Item2");
+
+    auto names = db.read_scalar_strings("Items", "name");
+    ASSERT_EQ(names.size(), 2);
+    EXPECT_EQ(names[0], "Alpha");
+    EXPECT_EQ(names[1], "Beta");
+
+    auto statuses = db.read_scalar_integers("Items", "status");
+    ASSERT_EQ(statuses.size(), 2);
+    EXPECT_EQ(statuses[0], 1);
+    EXPECT_EQ(statuses[1], 2);
+
+    auto prices = db.read_scalar_floats("Items", "price");
+    ASSERT_EQ(prices.size(), 2);
+    EXPECT_NEAR(prices[0], 10.5, 0.001);
+    EXPECT_NEAR(prices[1], 20.0, 0.001);
+
+    fs::remove(csv_path);
+}
+
 TEST(DatabaseCSV, ImportCSV_Vector_RoundTrip) {
     auto db = make_db();
 
@@ -700,6 +734,60 @@ TEST(DatabaseCSV, ImportCSV_Scalar_SelfReferenceFK_RoundTrip) {
     auto sibling = db.read_scalar_integer_by_id("Child", "sibling_id", 2);
     ASSERT_TRUE(sibling.has_value());
     EXPECT_EQ(sibling.value(), 1);
+
+    fs::remove(csv_path);
+}
+
+TEST(DatabaseCSV, ImportCSV_Scalar_SelfReferenceFK_ReImport) {
+    auto db = make_relations_db();
+
+    // Create parent (needed for FK)
+    quiver::Element p1;
+    p1.set("label", std::string("Parent1"));
+    db.create_element("Parent", p1);
+
+    // First import: 2 children, one with self-FK
+    auto csv_path = temp_csv("ImportSelfFKReImport");
+    write_csv_file(csv_path.string(),
+                   "sep=,\nlabel,parent_id,sibling_id\n"
+                   "Child1,Parent1,\n"
+                   "Child2,Parent1,Child1\n");
+
+    db.import_csv("Child", "", csv_path.string());
+
+    // Use query to look up by label (IDs depend on AUTOINCREMENT state)
+    auto sib1 = db.query_integer("SELECT sibling_id FROM Child WHERE label = ?", {std::string("Child1")});
+    EXPECT_FALSE(sib1.has_value());
+
+    auto sib2 = db.query_integer("SELECT sibling_id FROM Child WHERE label = ?", {std::string("Child2")});
+    ASSERT_TRUE(sib2.has_value());
+    // Child2.sibling_id should point to Child1's id
+    auto child1_id = db.query_integer("SELECT id FROM Child WHERE label = ?", {std::string("Child1")});
+    EXPECT_EQ(sib2.value(), child1_id.value());
+
+    // Second import (re-import): 4 children, includes self-referencing row
+    write_csv_file(csv_path.string(),
+                   "sep=,\nlabel,parent_id,sibling_id\n"
+                   "Child1,Parent1,\n"
+                   "Child2,Parent1,Child1\n"
+                   "Child3,Parent1,Child3\n"
+                   "Child4,Parent1,Child3\n");
+
+    db.import_csv("Child", "", csv_path.string());
+
+    auto labels = db.read_scalar_strings("Child", "label");
+    ASSERT_EQ(labels.size(), 4u);
+
+    // Child3.sibling_id should point to itself
+    auto child3_id = db.query_integer("SELECT id FROM Child WHERE label = ?", {std::string("Child3")});
+    auto sib3 = db.query_integer("SELECT sibling_id FROM Child WHERE label = ?", {std::string("Child3")});
+    ASSERT_TRUE(sib3.has_value());
+    EXPECT_EQ(sib3.value(), child3_id.value());
+
+    // Child4.sibling_id should point to Child3
+    auto sib4 = db.query_integer("SELECT sibling_id FROM Child WHERE label = ?", {std::string("Child4")});
+    ASSERT_TRUE(sib4.has_value());
+    EXPECT_EQ(sib4.value(), child3_id.value());
 
     fs::remove(csv_path);
 }

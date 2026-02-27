@@ -93,6 +93,62 @@ TEST(DatabaseCApiCSV, ImportCSV_Scalar_RoundTrip) {
     quiver_database_close(db2);
 }
 
+TEST(DatabaseCApiCSV, ImportCSV_Scalar_LabelOnThirdColumn) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+              QUIVER_OK);
+
+    auto csv_path = temp_csv("ImportScalarLabelCol3");
+    write_csv_file(csv_path.string(),
+                   "sep=,\nname,status,label,price,date_created,notes\n"
+                   "Alpha,1,Item1,10.5,,\n"
+                   "Beta,2,Item2,20.0,,\n");
+
+    auto import_options = quiver_csv_options_default();
+    ASSERT_EQ(quiver_database_import_csv(db, "Items", "", csv_path.string().c_str(), &import_options), QUIVER_OK);
+
+    // Verify labels
+    char** labels = nullptr;
+    size_t label_count = 0;
+    ASSERT_EQ(quiver_database_read_scalar_strings(db, "Items", "label", &labels, &label_count), QUIVER_OK);
+    ASSERT_EQ(label_count, 2u);
+    EXPECT_STREQ(labels[0], "Item1");
+    EXPECT_STREQ(labels[1], "Item2");
+    quiver_database_free_string_array(labels, label_count);
+
+    // Verify names
+    char** names = nullptr;
+    size_t name_count = 0;
+    ASSERT_EQ(quiver_database_read_scalar_strings(db, "Items", "name", &names, &name_count), QUIVER_OK);
+    ASSERT_EQ(name_count, 2u);
+    EXPECT_STREQ(names[0], "Alpha");
+    EXPECT_STREQ(names[1], "Beta");
+    quiver_database_free_string_array(names, name_count);
+
+    // Verify statuses
+    int64_t* statuses = nullptr;
+    size_t status_count = 0;
+    ASSERT_EQ(quiver_database_read_scalar_integers(db, "Items", "status", &statuses, &status_count), QUIVER_OK);
+    ASSERT_EQ(status_count, 2u);
+    EXPECT_EQ(statuses[0], 1);
+    EXPECT_EQ(statuses[1], 2);
+    quiver_database_free_integer_array(statuses);
+
+    // Verify prices
+    double* prices = nullptr;
+    size_t price_count = 0;
+    ASSERT_EQ(quiver_database_read_scalar_floats(db, "Items", "price", &prices, &price_count), QUIVER_OK);
+    ASSERT_EQ(price_count, 2u);
+    EXPECT_NEAR(prices[0], 10.5, 0.001);
+    EXPECT_NEAR(prices[1], 20.0, 0.001);
+    quiver_database_free_float_array(prices);
+
+    fs::remove(csv_path);
+    quiver_database_close(db);
+}
+
 TEST(DatabaseCApiCSV, ImportCSV_Vector_RoundTrip) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
@@ -458,6 +514,83 @@ TEST(DatabaseCApiCSV, ImportCSV_Scalar_SelfFK_InvalidLabel_ReturnsError) {
     std::string err = quiver_get_last_error();
     EXPECT_NE(err.find("Could not find an existing element from collection Child with label NonExistent"),
               std::string::npos);
+
+    fs::remove(csv_path);
+    quiver_database_close(db);
+}
+
+// ============================================================================
+// CSV Import: Self-FK re-import (self-referencing rows)
+// ============================================================================
+
+TEST(DatabaseCApiCSV, ImportCSV_Scalar_SelfReferenceFK_ReImport) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("relations.sql").c_str(), &options, &db), QUIVER_OK);
+
+    // Helper: query integer by label using parameterized query
+    auto query_int_by_label = [&](const char* sql, const char* label) -> std::pair<int64_t, int> {
+        int param_type = QUIVER_DATA_TYPE_STRING;
+        const void* param_val = label;
+        int64_t out = 0;
+        int has = 0;
+        EXPECT_EQ(quiver_database_query_integer_params(db, sql, &param_type, &param_val, 1, &out, &has), QUIVER_OK);
+        return {out, has};
+    };
+
+    // Create a Parent element
+    quiver_element_t* p1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&p1), QUIVER_OK);
+    quiver_element_set_string(p1, "label", "Parent1");
+    int64_t pid = 0;
+    ASSERT_EQ(quiver_database_create_element(db, "Parent", p1, &pid), QUIVER_OK);
+    quiver_element_destroy(p1);
+
+    // First import: 2 children
+    auto csv_path = temp_csv("ImportSelfFKReImport");
+    write_csv_file(csv_path.string(),
+                   "sep=,\nlabel,parent_id,sibling_id\n"
+                   "Child1,Parent1,\n"
+                   "Child2,Parent1,Child1\n");
+
+    auto import_options = quiver_csv_options_default();
+    ASSERT_EQ(quiver_database_import_csv(db, "Child", "", csv_path.string().c_str(), &import_options), QUIVER_OK);
+
+    auto [sib1, has_sib1] = query_int_by_label("SELECT sibling_id FROM Child WHERE label = ?", "Child1");
+    EXPECT_EQ(has_sib1, 0);
+
+    auto [sib2, has_sib2] = query_int_by_label("SELECT sibling_id FROM Child WHERE label = ?", "Child2");
+    EXPECT_EQ(has_sib2, 1);
+    auto [child1_id, _h1] = query_int_by_label("SELECT id FROM Child WHERE label = ?", "Child1");
+    EXPECT_EQ(sib2, child1_id);
+
+    // Second import (re-import): 4 children, includes self-referencing row
+    write_csv_file(csv_path.string(),
+                   "sep=,\nlabel,parent_id,sibling_id\n"
+                   "Child1,Parent1,\n"
+                   "Child2,Parent1,Child1\n"
+                   "Child3,Parent1,Child3\n"
+                   "Child4,Parent1,Child3\n");
+
+    ASSERT_EQ(quiver_database_import_csv(db, "Child", "", csv_path.string().c_str(), &import_options), QUIVER_OK);
+
+    char** labels = nullptr;
+    size_t label_count = 0;
+    ASSERT_EQ(quiver_database_read_scalar_strings(db, "Child", "label", &labels, &label_count), QUIVER_OK);
+    EXPECT_EQ(label_count, 4u);
+    quiver_database_free_string_array(labels, label_count);
+
+    // Child3.sibling_id should point to itself
+    auto [child3_id, _h3] = query_int_by_label("SELECT id FROM Child WHERE label = ?", "Child3");
+    auto [sib3, has_sib3] = query_int_by_label("SELECT sibling_id FROM Child WHERE label = ?", "Child3");
+    EXPECT_EQ(has_sib3, 1);
+    EXPECT_EQ(sib3, child3_id);
+
+    // Child4.sibling_id should point to Child3
+    auto [sib4, has_sib4] = query_int_by_label("SELECT sibling_id FROM Child WHERE label = ?", "Child4");
+    EXPECT_EQ(has_sib4, 1);
+    EXPECT_EQ(sib4, child3_id);
 
     fs::remove(csv_path);
     quiver_database_close(db);
