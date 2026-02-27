@@ -15,6 +15,7 @@
 namespace quiver {
 
 class QUIVER_API BlobCSV : public Blob {
+public:
     explicit BlobCSV(const std::string& file_path,
                      const BlobMetadata& metadata,
                      std::unique_ptr<std::iostream> io,
@@ -29,8 +30,8 @@ class QUIVER_API BlobCSV : public Blob {
     BlobCSV(BlobCSV&& other) noexcept;
     BlobCSV& operator=(BlobCSV&& other) noexcept;
 
-    void csv_to_bin(const std::string& file_path);
-    void bin_to_csv(const std::string& file_path, bool aggregate_time_dimensions = true);
+    static void csv_to_bin(const std::string& file_path);
+    static void bin_to_csv(const std::string& file_path, bool aggregate_time_dimensions = true);
 
 private:
     struct Impl;
