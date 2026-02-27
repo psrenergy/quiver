@@ -2,7 +2,7 @@
 #define QUIVER_BLOB_H
 
 #include "blob_metadata.h"
-#include "export.h"
+#include "../export.h"
 
 #include <cstdint>
 #include <iostream>

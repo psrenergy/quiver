@@ -100,6 +100,9 @@ compute_time_dimension_initial_values(const std::vector<quiver::Dimension>& dime
 
 namespace quiver {
 
+BlobMetadata::BlobMetadata() = default;
+BlobMetadata::~BlobMetadata() = default;
+
 BlobMetadata BlobMetadata::from_toml(const std::string& toml_content) {
     // Parse toml content
     toml::table tbl = toml::parse(toml_content);

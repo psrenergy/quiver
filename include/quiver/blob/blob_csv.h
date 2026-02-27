@@ -2,7 +2,7 @@
 #define QUIVER_BLOB_CSV_H
 
 #include "blob.h"
-#include "export.h"
+#include "../export.h"
 
 #include <cstdint>
 #include <ctime>

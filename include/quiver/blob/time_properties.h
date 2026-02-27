@@ -1,7 +1,7 @@
 #ifndef QUIVER_TIME_PROPERTIES_H
 #define QUIVER_TIME_PROPERTIES_H
 
-#include "export.h"
+#include "../export.h"
 
 #include <chrono>
 #include <cstdint>

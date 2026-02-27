@@ -1,7 +1,8 @@
 #ifndef QUIVER_BLOB_METADATA_H
 #define QUIVER_BLOB_METADATA_H
 
-#include "export.h"
+#include "dimension.h"
+#include "../export.h"
 
 #include <chrono>
 #include <cstdint>
@@ -9,8 +10,6 @@
 #include <vector>
 
 namespace quiver {
-
-struct Dimension;
 
 struct QUIVER_API BlobMetadata {
     std::vector<Dimension> dimensions;
@@ -20,6 +19,9 @@ struct QUIVER_API BlobMetadata {
     std::string version;
     //
     int64_t number_of_time_dimensions;
+
+    BlobMetadata();
+    ~BlobMetadata();
 
     // TOML Serialization
     static BlobMetadata from_toml(const std::string& toml_content);

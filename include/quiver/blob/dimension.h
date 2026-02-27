@@ -1,7 +1,7 @@
 #ifndef QUIVER_DIMENSION_H
 #define QUIVER_DIMENSION_H
 
-#include "export.h"
+#include "../export.h"
 #include "time_properties.h"
 
 #include <cstdint>
