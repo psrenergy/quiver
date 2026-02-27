@@ -177,3 +177,48 @@ class TestReadSetsByIdWithData:
         assert all(isinstance(v, int) for v in result["code"])
         assert all(isinstance(v, float) for v in result["weight"])
         assert all(isinstance(v, str) for v in result["tag"])
+
+
+# -- read_element_by_id -------------------------------------------------------
+
+
+class TestReadElementById:
+    def test_read_element_by_id_merges_all(self, composite_helpers_db: Database) -> None:
+        """read_element_by_id returns scalars, vectors, and sets merged."""
+        id1 = composite_helpers_db.create_element(
+            "Items",
+            label="item1",
+            amount=[10, 20, 30],
+            score=[1.1, 2.2],
+            note=["hello", "world"],
+            code=[5, 6],
+            weight=[9.9],
+            tag=["alpha", "beta"],
+        )
+        result = composite_helpers_db.read_element_by_id("Items", id1)
+
+        # Scalars
+        assert result["label"] == "item1"
+
+        # Vectors
+        assert result["amount"] == [10, 20, 30]
+        assert result["note"] == ["hello", "world"]
+
+        # Sets (unordered)
+        assert sorted(result["code"]) == [5, 6]
+        assert sorted(result["tag"]) == ["alpha", "beta"]
+
+    def test_read_element_by_id_correct_types(self, composite_helpers_db: Database) -> None:
+        """Merged dict preserves correct Python types for each attribute."""
+        id1 = composite_helpers_db.create_element(
+            "Items", label="item1", amount=[1], score=[2.0], note=["x"], code=[3], weight=[4.0], tag=["y"]
+        )
+        result = composite_helpers_db.read_element_by_id("Items", id1)
+
+        assert isinstance(result["label"], str)
+        assert all(isinstance(v, int) for v in result["amount"])
+        assert all(isinstance(v, float) for v in result["score"])
+        assert all(isinstance(v, str) for v in result["note"])
+        assert all(isinstance(v, int) for v in result["code"])
+        assert all(isinstance(v, float) for v in result["weight"])
+        assert all(isinstance(v, str) for v in result["tag"])

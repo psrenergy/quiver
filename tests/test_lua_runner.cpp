@@ -1864,6 +1864,45 @@ TEST_F(LuaRunnerTest, ReadSetsByIdWithData) {
     lua.run(script);
 }
 
+TEST_F(LuaRunnerTest, ReadElementById) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("composite_helpers.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+    int64_t id = db.create_element("Items",
+                                   quiver::Element()
+                                       .set("label", "Item 1")
+                                       .set("amount", std::vector<int64_t>{10, 20, 30})
+                                       .set("score", std::vector<double>{1.1, 2.2})
+                                       .set("note", std::vector<std::string>{"hello", "world"})
+                                       .set("code", std::vector<int64_t>{5, 6})
+                                       .set("weight", std::vector<double>{9.9})
+                                       .set("tag", std::vector<std::string>{"alpha", "beta"}));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        local elem = db:read_element_by_id("Items", )" +
+                         std::to_string(id) + R"()
+
+        -- Verify scalars
+        assert(elem.label == "Item 1", "Expected label 'Item 1', got " .. tostring(elem.label))
+
+        -- Verify vectors
+        assert(elem.amount ~= nil, "Missing vector 'amount'")
+        assert(#elem.amount == 3, "Expected 3 amount values, got " .. #elem.amount)
+        assert(elem.amount[1] == 10, "Expected amount[1] == 10")
+
+        -- Verify sets
+        assert(elem.tag ~= nil, "Missing set 'tag'")
+        assert(#elem.tag == 2, "Expected 2 tag values, got " .. #elem.tag)
+
+        -- Verify all keys present (label + id + vectors + sets = 1 scalar + 3 vectors + 3 sets = 7+)
+        local count = 0
+        for _ in pairs(elem) do count = count + 1 end
+        assert(count >= 7, "Expected at least 7 keys, got " .. count)
+    )";
+    lua.run(script);
+}
+
 // ============================================================================
 // Transaction tests
 // ============================================================================

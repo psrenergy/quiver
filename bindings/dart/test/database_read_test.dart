@@ -1115,6 +1115,42 @@ void main() {
     });
   });
 
+  group('readElementById', () {
+    test('returns scalars, vectors, and sets merged', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'composite_helpers.sql'),
+      );
+      try {
+        final id = db.createElement('Items', {
+          'label': 'Item 1',
+          'amount': [10, 20, 30],
+          'score': [1.1, 2.2],
+          'note': ['hello', 'world'],
+          'code': [5, 6],
+          'weight': [9.9],
+          'tag': ['alpha', 'beta'],
+        });
+
+        final result = db.readElementById('Items', id);
+
+        // Scalars
+        expect(result['label'], equals('Item 1'));
+
+        // Vectors
+        expect(result['amount'], equals([10, 20, 30]));
+        expect(result['score'], equals([1.1, 2.2]));
+        expect(result['note'], equals(['hello', 'world']));
+
+        // Sets (unordered)
+        expect((result['code'] as List)..sort(), equals([5, 6]));
+        expect((result['tag'] as List)..sort(), equals(['alpha', 'beta']));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
   group('Read Vector Group by Id', () {
     test('readVectorGroupById returns all columns as rows', () {
       final db = Database.fromSchema(
