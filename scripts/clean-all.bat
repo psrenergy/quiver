@@ -28,7 +28,7 @@ if exist "%ROOT_DIR%\build" (
     rmdir /s /q "%ROOT_DIR%\build"
     echo       Removed build/
 ) else (
-    echo       Skipped build/ (not found)
+    echo       Skipped build/ ^(not found^)
 )
 
 echo.
@@ -42,14 +42,14 @@ if exist "%ROOT_DIR%\bindings\dart\.dart_tool" (
     rmdir /s /q "%ROOT_DIR%\bindings\dart\.dart_tool"
     echo       Removed bindings/dart/.dart_tool/
 ) else (
-    echo       Skipped bindings/dart/.dart_tool/ (not found)
+    echo       Skipped bindings/dart/.dart_tool/ ^(not found^)
 )
 
 if exist "%ROOT_DIR%\bindings\dart\pubspec.lock" (
     del /q "%ROOT_DIR%\bindings\dart\pubspec.lock"
     echo       Removed bindings/dart/pubspec.lock
 ) else (
-    echo       Skipped bindings/dart/pubspec.lock (not found)
+    echo       Skipped bindings/dart/pubspec.lock ^(not found^)
 )
 
 echo.
@@ -63,7 +63,7 @@ if exist "%ROOT_DIR%\bindings\julia\Manifest.toml" (
     del /q "%ROOT_DIR%\bindings\julia\Manifest.toml"
     echo       Removed bindings/julia/Manifest.toml
 ) else (
-    echo       Skipped bindings/julia/Manifest.toml (not found)
+    echo       Skipped bindings/julia/Manifest.toml ^(not found^)
 )
 
 echo.
@@ -77,21 +77,21 @@ if exist "%ROOT_DIR%\bindings\python\build" (
     rmdir /s /q "%ROOT_DIR%\bindings\python\build"
     echo       Removed bindings/python/build/
 ) else (
-    echo       Skipped bindings/python/build/ (not found)
+    echo       Skipped bindings/python/build/ ^(not found^)
 )
 
 if exist "%ROOT_DIR%\bindings\python\dist" (
     rmdir /s /q "%ROOT_DIR%\bindings\python\dist"
     echo       Removed bindings/python/dist/
 ) else (
-    echo       Skipped bindings/python/dist/ (not found)
+    echo       Skipped bindings/python/dist/ ^(not found^)
 )
 
 if exist "%ROOT_DIR%\bindings\python\.pytest_cache" (
     rmdir /s /q "%ROOT_DIR%\bindings\python\.pytest_cache"
     echo       Removed bindings/python/.pytest_cache/
 ) else (
-    echo       Skipped bindings/python/.pytest_cache/ (not found)
+    echo       Skipped bindings/python/.pytest_cache/ ^(not found^)
 )
 
 REM Remove __pycache__ directories recursively under bindings/python/

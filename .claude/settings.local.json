@@ -27,7 +27,10 @@
       "Bash(dir:*)",
       "Bash(dart pub:*)",
       "Bash(cmd.exe:*)",
-      "Bash(objdump:*)"
+      "Bash(objdump:*)",
+      "Bash(ninja:*)",
+      "Bash(scripts/clean-all.bat:*)",
+      "Bash(scripts/build-all.bat:*)"
     ]
   }
 }
