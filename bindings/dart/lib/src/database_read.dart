@@ -394,10 +394,10 @@ extension DatabaseRead on Database {
   }
 
   // ==========================================================================
-  // Read scalar by ID
+  // Read scalar by Id
   // ==========================================================================
 
-  /// Reads an integer value for a scalar attribute by element ID.
+  /// Reads an integer value for a scalar attribute by element Id.
   /// Returns null if the element is not found.
   int? readScalarIntegerById(String collection, String attribute, int id) {
     _ensureNotClosed();
@@ -427,7 +427,7 @@ extension DatabaseRead on Database {
     }
   }
 
-  /// Reads a float value for a scalar attribute by element ID.
+  /// Reads a float value for a scalar attribute by element Id.
   /// Returns null if the element is not found.
   double? readScalarFloatById(String collection, String attribute, int id) {
     _ensureNotClosed();
@@ -457,7 +457,7 @@ extension DatabaseRead on Database {
     }
   }
 
-  /// Reads a string value for a scalar attribute by element ID.
+  /// Reads a string value for a scalar attribute by element Id.
   /// Returns null if the element is not found.
   String? readScalarStringById(String collection, String attribute, int id) {
     _ensureNotClosed();
@@ -489,7 +489,7 @@ extension DatabaseRead on Database {
     }
   }
 
-  /// Reads a DateTime value for a scalar attribute by element ID.
+  /// Reads a DateTime value for a scalar attribute by element Id.
   /// Returns null if the element is not found.
   DateTime? readScalarDateTimeById(
     String collection,
@@ -501,10 +501,10 @@ extension DatabaseRead on Database {
   }
 
   // ==========================================================================
-  // Read vector by ID
+  // Read vector by Id
   // ==========================================================================
 
-  /// Reads integer vector for a vector attribute by element ID.
+  /// Reads integer vector for a vector attribute by element Id.
   List<int> readVectorIntegersById(
     String collection,
     String attribute,
@@ -541,7 +541,7 @@ extension DatabaseRead on Database {
     }
   }
 
-  /// Reads float vector for a vector attribute by element ID.
+  /// Reads float vector for a vector attribute by element Id.
   List<double> readVectorFloatsById(
     String collection,
     String attribute,
@@ -578,7 +578,7 @@ extension DatabaseRead on Database {
     }
   }
 
-  /// Reads string vector for a vector attribute by element ID.
+  /// Reads string vector for a vector attribute by element Id.
   List<String> readVectorStringsById(
     String collection,
     String attribute,
@@ -618,7 +618,7 @@ extension DatabaseRead on Database {
     }
   }
 
-  /// Reads DateTime vector for a vector attribute by element ID.
+  /// Reads DateTime vector for a vector attribute by element Id.
   List<DateTime> readVectorDateTimesById(
     String collection,
     String attribute,
@@ -632,10 +632,10 @@ extension DatabaseRead on Database {
   }
 
   // ==========================================================================
-  // Read set by ID
+  // Read set by Id
   // ==========================================================================
 
-  /// Reads integer set for a set attribute by element ID.
+  /// Reads integer set for a set attribute by element Id.
   List<int> readSetIntegersById(String collection, String attribute, int id) {
     _ensureNotClosed();
 
@@ -668,7 +668,7 @@ extension DatabaseRead on Database {
     }
   }
 
-  /// Reads float set for a set attribute by element ID.
+  /// Reads float set for a set attribute by element Id.
   List<double> readSetFloatsById(String collection, String attribute, int id) {
     _ensureNotClosed();
 
@@ -701,7 +701,7 @@ extension DatabaseRead on Database {
     }
   }
 
-  /// Reads string set for a set attribute by element ID.
+  /// Reads string set for a set attribute by element Id.
   List<String> readSetStringsById(String collection, String attribute, int id) {
     _ensureNotClosed();
 
@@ -737,7 +737,7 @@ extension DatabaseRead on Database {
     }
   }
 
-  /// Reads DateTime set for a set attribute by element ID.
+  /// Reads DateTime set for a set attribute by element Id.
   List<DateTime> readSetDateTimesById(
     String collection,
     String attribute,
@@ -751,10 +751,10 @@ extension DatabaseRead on Database {
   }
 
   // ==========================================================================
-  // Read element IDs
+  // Read element Ids
   // ==========================================================================
 
-  /// Reads all element IDs from a collection.
+  /// Reads all element Ids from a collection.
   List<int> readElementIds(String collection) {
     _ensureNotClosed();
 
@@ -786,10 +786,10 @@ extension DatabaseRead on Database {
   }
 
   // ==========================================================================
-  // Read all attributes by ID (convenience methods)
+  // Read all attributes by Id (convenience methods)
   // ==========================================================================
 
-  /// Reads all scalar attributes for an element by ID.
+  /// Reads all scalar attributes for an element by Id.
   /// Returns a map of attribute name to value.
   /// DateTime columns are converted to DateTime objects.
   Map<String, Object?> readScalarsById(String collection, int id) {
@@ -812,7 +812,7 @@ extension DatabaseRead on Database {
     return result;
   }
 
-  /// Reads all vector attributes for an element by ID.
+  /// Reads all vector attributes for an element by Id.
   /// Returns a map of group name to list of values.
   /// DateTime columns are converted to DateTime objects.
   Map<String, List<Object>> readVectorsById(String collection, int id) {
@@ -836,7 +836,7 @@ extension DatabaseRead on Database {
     return result;
   }
 
-  /// Reads all set attributes for an element by ID.
+  /// Reads all set attributes for an element by Id.
   /// Returns a map of group name to list of values.
   /// DateTime columns are converted to DateTime objects.
   Map<String, List<Object>> readSetsById(String collection, int id) {
@@ -860,7 +860,7 @@ extension DatabaseRead on Database {
     return result;
   }
 
-  /// Reads a vector group for an element by ID, returning rows as maps.
+  /// Reads a vector group for an element by Id, returning rows as maps.
   /// Each row contains column names mapped to their values.
   /// Useful for multi-column vector tables.
   List<Map<String, Object?>> readVectorGroupById(
@@ -914,7 +914,7 @@ extension DatabaseRead on Database {
     return rows;
   }
 
-  /// Reads a set group for an element by ID, returning rows as maps.
+  /// Reads a set group for an element by Id, returning rows as maps.
   /// Each row contains column names mapped to their values.
   /// Useful for multi-column set tables.
   List<Map<String, Object?>> readSetGroupById(
@@ -969,10 +969,10 @@ extension DatabaseRead on Database {
   }
 
   // ==========================================================================
-  // Read time series by ID
+  // Read time series by Id
   // ==========================================================================
 
-  /// Reads a time series group for an element by ID.
+  /// Reads a time series group for an element by Id.
   /// Returns a Map of column names to typed Lists.
   /// The dimension column is parsed to List<DateTime>.
   /// INTEGER columns return List<int>, FLOAT columns return List<double>,

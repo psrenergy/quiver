@@ -859,7 +859,7 @@ TEST(DatabaseCApi, ReadSetByIdEmpty) {
 // Read element IDs tests
 // ============================================================================
 
-TEST(DatabaseCApi, ReadElementIds) {
+TEST(DatabaseCApi, ReadElementIDs) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
@@ -904,7 +904,7 @@ TEST(DatabaseCApi, ReadElementIds) {
     quiver_database_close(db);
 }
 
-TEST(DatabaseCApi, ReadElementIdsEmpty) {
+TEST(DatabaseCApi, ReadElementIDsEmpty) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
@@ -1511,14 +1511,14 @@ TEST(DatabaseCApi, ReadSetStringsByIdNullOutput) {
 // Read element IDs null pointer tests
 // ============================================================================
 
-TEST(DatabaseCApi, ReadElementIdsNullDb) {
+TEST(DatabaseCApi, ReadElementIDsNullDb) {
     int64_t* ids = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_element_ids(nullptr, "Configuration", &ids, &count);
     EXPECT_EQ(err, QUIVER_ERROR);
 }
 
-TEST(DatabaseCApi, ReadElementIdsNullCollection) {
+TEST(DatabaseCApi, ReadElementIDsNullCollection) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
@@ -1533,7 +1533,7 @@ TEST(DatabaseCApi, ReadElementIdsNullCollection) {
     quiver_database_close(db);
 }
 
-TEST(DatabaseCApi, ReadElementIdsNullOutput) {
+TEST(DatabaseCApi, ReadElementIDsNullOutput) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;

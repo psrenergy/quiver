@@ -211,19 +211,19 @@ void main() {
 
           // Verify the element was created correctly
           expect(
-            db.readScalarStringById('Configuration', 'label', id),
+            db.readScalarStringByID('Configuration', 'label', id),
             equals('Config via Builder'),
           );
           expect(
-            db.readScalarIntegerById('Configuration', 'integer_attribute', id),
+            db.readScalarIntegerByID('Configuration', 'integer_attribute', id),
             equals(42),
           );
           expect(
-            db.readScalarFloatById('Configuration', 'float_attribute', id),
+            db.readScalarFloatByID('Configuration', 'float_attribute', id),
             equals(3.14),
           );
           expect(
-            db.readScalarStringById('Configuration', 'string_attribute', id),
+            db.readScalarStringByID('Configuration', 'string_attribute', id),
             equals('hello'),
           );
         } finally {
@@ -253,11 +253,11 @@ void main() {
 
           // Verify vectors were created correctly
           expect(
-            db.readVectorIntegersById('Collection', 'value_int', id),
+            db.readVectorIntegersByID('Collection', 'value_int', id),
             equals([1, 2, 3]),
           );
           expect(
-            db.readVectorFloatsById('Collection', 'value_float', id),
+            db.readVectorFloatsByID('Collection', 'value_float', id),
             equals([1.5, 2.5, 3.5]),
           );
         } finally {
@@ -285,7 +285,7 @@ void main() {
           expect(id, greaterThan(0));
 
           // Verify set was created correctly
-          final result = db.readSetStringsById('Collection', 'tag', id);
+          final result = db.readSetStringsByID('Collection', 'tag', id);
           expect(result..sort(), equals(['alpha', 'beta', 'gamma']));
         } finally {
           element.dispose();
@@ -316,7 +316,7 @@ void main() {
 
         // Verify update
         expect(
-          db.readScalarIntegerById('Configuration', 'integer_attribute', 1),
+          db.readScalarIntegerByID('Configuration', 'integer_attribute', 1),
           equals(777),
         );
       } finally {

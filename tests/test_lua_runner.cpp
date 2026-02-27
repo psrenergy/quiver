@@ -378,7 +378,7 @@ TEST_F(LuaRunnerTest, ReadSetStringsByIdFromLua) {
 // Read element IDs tests
 // ============================================================================
 
-TEST_F(LuaRunnerTest, ReadElementIdsFromLua) {
+TEST_F(LuaRunnerTest, ReadElementIDsFromLua) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -401,7 +401,7 @@ TEST_F(LuaRunnerTest, ReadElementIdsFromLua) {
     lua.run(script);
 }
 
-TEST_F(LuaRunnerTest, ReadElementIdsEmptyFromLua) {
+TEST_F(LuaRunnerTest, ReadElementIDsEmptyFromLua) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
 
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
@@ -964,7 +964,7 @@ TEST_F(LuaRunnerTest, LuaTypeCoercionInteger) {
     EXPECT_EQ(integers[0], 42);
 }
 
-TEST_F(LuaRunnerTest, ReadElementIdsFromNonExistentCollection) {
+TEST_F(LuaRunnerTest, ReadElementIDsFromNonExistentCollection) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
 

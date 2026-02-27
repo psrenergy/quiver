@@ -320,10 +320,10 @@ void main() {
     });
   });
 
-  // Read by ID tests
+  // Read by Id tests
 
-  group('Read Scalar Integers by ID', () {
-    test('reads integer by specific element ID', () {
+  group('Read Scalar Integers by Id', () {
+    test('reads integer by specific element Id', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
@@ -356,8 +356,8 @@ void main() {
     });
   });
 
-  group('Read Scalar Floats by ID', () {
-    test('reads float by specific element ID', () {
+  group('Read Scalar Floats by Id', () {
+    test('reads float by specific element Id', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
@@ -386,8 +386,8 @@ void main() {
     });
   });
 
-  group('Read Scalar Strings by ID', () {
-    test('reads string by specific element ID', () {
+  group('Read Scalar Strings by Id', () {
+    test('reads string by specific element Id', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
@@ -441,7 +441,7 @@ void main() {
       }
     });
 
-    test('reads date time by ID', () {
+    test('reads date time by Id', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
@@ -486,8 +486,8 @@ void main() {
     });
   });
 
-  group('Read Vector Integers by ID', () {
-    test('reads int vector by specific element ID', () {
+  group('Read Vector Integers by Id', () {
+    test('reads int vector by specific element Id', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
@@ -517,8 +517,8 @@ void main() {
     });
   });
 
-  group('Read Vector Floats by ID', () {
-    test('reads float vector by specific element ID', () {
+  group('Read Vector Floats by Id', () {
+    test('reads float vector by specific element Id', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
@@ -540,8 +540,8 @@ void main() {
     });
   });
 
-  group('Read Set Strings by ID', () {
-    test('reads string set by specific element ID', () {
+  group('Read Set Strings by Id', () {
+    test('reads string set by specific element Id', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
@@ -569,7 +569,7 @@ void main() {
     });
   });
 
-  group('Read Vector by ID Empty', () {
+  group('Read Vector by Id Empty', () {
     test('returns empty list when element has no vector data', () {
       final db = Database.fromSchema(
         ':memory:',
@@ -773,10 +773,10 @@ void main() {
     });
   });
 
-  // Read element IDs tests
+  // Read element Ids tests
 
-  group('Read Element IDs', () {
-    test('reads all element IDs from collection', () {
+  group('Read Element Ids', () {
+    test('reads all element Ids from collection', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
@@ -918,8 +918,8 @@ void main() {
     });
   });
 
-  group('Read By ID Not Found', () {
-    test('returns null for nonexistent integer ID', () {
+  group('Read By Id Not Found', () {
+    test('returns null for nonexistent integer Id', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
@@ -939,7 +939,7 @@ void main() {
       }
     });
 
-    test('returns null for nonexistent float ID', () {
+    test('returns null for nonexistent float Id', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
@@ -959,7 +959,7 @@ void main() {
       }
     });
 
-    test('returns null for nonexistent string ID', () {
+    test('returns null for nonexistent string Id', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
@@ -1032,7 +1032,7 @@ void main() {
     });
   });
 
-  group('Read Element IDs Invalid Collection', () {
+  group('Read Element Ids Invalid Collection', () {
     test('throws on nonexistent collection', () {
       final db = Database.fromSchema(
         ':memory:',
@@ -1115,7 +1115,7 @@ void main() {
     });
   });
 
-  group('Read Vector Group by ID', () {
+  group('Read Vector Group by Id', () {
     test('readVectorGroupById returns all columns as rows', () {
       final db = Database.fromSchema(
         ':memory:',

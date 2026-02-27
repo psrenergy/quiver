@@ -17,12 +17,12 @@ void main() {
         db.createElement('Configuration', {'label': 'Config 2'});
         db.createElement('Configuration', {'label': 'Config 3'});
 
-        var ids = db.readElementIds('Configuration');
+        var ids = db.readElementIDs('Configuration');
         expect(ids.length, equals(3));
 
         db.deleteElement('Configuration', 2);
 
-        ids = db.readElementIds('Configuration');
+        ids = db.readElementIDs('Configuration');
         expect(ids.length, equals(2));
         expect(ids.contains(2), isFalse);
         expect(ids.contains(1), isTrue);
@@ -53,12 +53,12 @@ void main() {
           'value_int': [4, 5, 6],
         });
 
-        var ids = db.readElementIds('Collection');
+        var ids = db.readElementIDs('Collection');
         expect(ids.length, equals(2));
 
         db.deleteElement('Collection', 1);
 
-        ids = db.readElementIds('Collection');
+        ids = db.readElementIDs('Collection');
         expect(ids.length, equals(1));
         expect(ids[0], equals(2));
 
@@ -89,12 +89,12 @@ void main() {
           'tag': ['gamma', 'delta'],
         });
 
-        var ids = db.readElementIds('Collection');
+        var ids = db.readElementIDs('Collection');
         expect(ids.length, equals(2));
 
         db.deleteElement('Collection', 1);
 
-        ids = db.readElementIds('Collection');
+        ids = db.readElementIDs('Collection');
         expect(ids.length, equals(1));
         expect(ids[0], equals(2));
 
@@ -119,7 +119,7 @@ void main() {
         db.deleteElement('Configuration', 999);
 
         // Verify original element still exists
-        final ids = db.readElementIds('Configuration');
+        final ids = db.readElementIDs('Configuration');
         expect(ids.length, equals(1));
         expect(ids[0], equals(1));
       } finally {

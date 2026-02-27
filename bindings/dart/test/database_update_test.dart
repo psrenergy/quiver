@@ -310,8 +310,8 @@ void main() {
     });
   });
 
-  group('Update Invalid Element ID', () {
-    test('does not throw for nonexistent ID', () {
+  group('Update Invalid Element Id', () {
+    test('does not throw for nonexistent Id', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
@@ -1251,7 +1251,7 @@ void main() {
   // ==========================================================================
 
   group('FK Resolution - Update', () {
-    test('resolves scalar FK labels to IDs', () {
+    test('resolves scalar FK labels to Ids', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
@@ -1268,7 +1268,7 @@ void main() {
         // Update child: change parent_id to Parent 2 using string label
         db.updateElement('Child', 1, {'parent_id': 'Parent 2'});
 
-        // Verify: parent_id resolved to Parent 2's ID (2)
+        // Verify: parent_id resolved to Parent 2's Id (2)
         final parentIds = db.readScalarIntegers('Child', 'parent_id');
         expect(parentIds, equals([2]));
       } finally {
@@ -1276,7 +1276,7 @@ void main() {
       }
     });
 
-    test('updates scalar FK with integer ID directly', () {
+    test('updates scalar FK with integer Id directly', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
@@ -1287,7 +1287,7 @@ void main() {
         db.createElement('Parent', {'label': 'Parent 2'});
         db.createElement('Child', {'label': 'Child 1', 'parent_id': 1});
 
-        // Update child: change parent_id to 2 using integer ID directly
+        // Update child: change parent_id to 2 using integer Id directly
         db.updateElement('Child', 1, {'parent_id': 2});
 
         // Verify: parent_id updated to 2
@@ -1298,7 +1298,7 @@ void main() {
       }
     });
 
-    test('resolves vector FK labels to IDs', () {
+    test('resolves vector FK labels to Ids', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
@@ -1325,7 +1325,7 @@ void main() {
       }
     });
 
-    test('resolves set FK labels to IDs', () {
+    test('resolves set FK labels to Ids', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
@@ -1352,7 +1352,7 @@ void main() {
       }
     });
 
-    test('resolves time series FK labels to IDs', () {
+    test('resolves time series FK labels to Ids', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
