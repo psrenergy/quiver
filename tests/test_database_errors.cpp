@@ -348,10 +348,10 @@ TEST(DatabaseErrors, ApplySchemaFileNotFound) {
 }
 
 // ============================================================================
-// Read element IDs errors
+// Read element Ids errors
 // ============================================================================
 
-TEST(DatabaseErrors, ReadElementIDsNoSchema) {
+TEST(DatabaseErrors, ReadElementIdsNoSchema) {
     quiver::Database db(":memory:", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     // Without schema, executing SQL will fail due to missing table

@@ -439,10 +439,10 @@ TEST(Database, ReadSetByIdEmpty) {
 }
 
 // ============================================================================
-// Read element IDs tests
+// Read element Ids tests
 // ============================================================================
 
-TEST(Database, ReadElementIDs) {
+TEST(Database, ReadElementIds) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
@@ -465,7 +465,7 @@ TEST(Database, ReadElementIDs) {
     EXPECT_EQ(ids[2], id3);
 }
 
-TEST(Database, ReadElementIDsEmpty) {
+TEST(Database, ReadElementIdsEmpty) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
@@ -554,7 +554,7 @@ TEST(Database, ReadSetStringsInvalidAttribute) {
     EXPECT_THROW(db.read_set_strings("Collection", "nonexistent_attribute"), std::runtime_error);
 }
 
-TEST(Database, ReadElementIDsInvalidCollection) {
+TEST(Database, ReadElementIdsInvalidCollection) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 

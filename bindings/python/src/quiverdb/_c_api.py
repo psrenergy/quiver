@@ -164,7 +164,7 @@ ffi.cdef("""
         const char* collection, const char* attribute, int64_t id,
         char*** out_values, size_t* out_count);
 
-    // Read element IDs
+    // Read element Ids
     quiver_error_t quiver_database_read_element_ids(quiver_database_t* db,
         const char* collection, int64_t** out_ids, size_t* out_count);
 

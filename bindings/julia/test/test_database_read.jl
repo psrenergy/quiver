@@ -311,9 +311,9 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
-    # Read element IDs tests
+    # Read element Ids tests
 
-    @testset "Element IDs" begin
+    @testset "Element Ids" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
@@ -330,7 +330,7 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
-    @testset "Element IDs Empty" begin
+    @testset "Element Ids Empty" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 
@@ -440,7 +440,7 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
-    @testset "Element IDs Invalid Collection" begin
+    @testset "Element Ids Invalid Collection" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 

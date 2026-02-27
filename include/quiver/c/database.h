@@ -198,7 +198,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_set_strings_by_id(quiver_databa
                                                                    char*** out_values,
                                                                    size_t* out_count);
 
-// Read element IDs
+// Read element Ids
 QUIVER_C_API quiver_error_t quiver_database_read_element_ids(quiver_database_t* db,
                                                              const char* collection,
                                                              int64_t** out_ids,

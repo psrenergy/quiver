@@ -502,10 +502,10 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         finally:
             lib.quiver_element_free_string(out_value[0])
 
-    # -- Element IDs -----------------------------------------------------------
+    # -- Element Ids -----------------------------------------------------------
 
     def read_element_ids(self, collection: str) -> list[int]:
-        """Read all element IDs in a collection."""
+        """Read all element Ids in a collection."""
         self._ensure_open()
         lib = get_lib()
         out_ids = ffi.new("int64_t**")

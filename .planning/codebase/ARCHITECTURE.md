@@ -52,7 +52,7 @@
 1. Binding calls `quiver_database_create_element(db, collection, element, &id)` in C API
 2. `src/c/database_create.cpp` unwraps handles, calls `db->db.create_element(collection, element)`
 3. C++ `Database::create_element` validates collection exists via `Schema` introspection
-4. `Impl::resolve_element_fk_labels` resolves string FK references to integer IDs before any writes
+4. `Impl::resolve_element_fk_labels` resolves string FK references to integer Ids before any writes
 5. `TypeValidator` checks resolved scalar types against schema column definitions
 6. `Impl::TransactionGuard` begins a SQLite transaction (no-op if one is already active — nest-aware)
 7. SQL INSERT built dynamically from element scalars; array fields routed to `_vector_`, `_set_`, or `_time_series_` tables via `Schema::find_table_for_column`

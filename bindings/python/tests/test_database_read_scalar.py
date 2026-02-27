@@ -1,4 +1,4 @@
-"""Tests for scalar read operations, element IDs, and convenience helpers."""
+"""Tests for scalar read operations, element Ids, and convenience helpers."""
 
 from __future__ import annotations
 
@@ -117,10 +117,10 @@ class TestReadScalarByID:
         assert result == ""
 
 
-# -- Element IDs ---------------------------------------------------------------
+# -- Element Ids ---------------------------------------------------------------
 
 
-class TestReadElementIDs:
+class TestReadElementIds:
     def test_read_element_ids(self, db: Database) -> None:
         id1 = db.create_element("Configuration", label="item1")
         id2 = db.create_element("Configuration", label="item2")

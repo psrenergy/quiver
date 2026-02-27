@@ -309,14 +309,14 @@ TEST_F(TempFileFixture, FromSchemaValidPath) {
 // Element ID operations
 // ============================================================================
 
-TEST_F(TempFileFixture, ReadElementIDsNullDb) {
+TEST_F(TempFileFixture, ReadElementIdsNullDb) {
     int64_t* ids = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_element_ids(nullptr, "Collection", &ids, &count);
     EXPECT_EQ(err, QUIVER_ERROR);
 }
 
-TEST_F(TempFileFixture, ReadElementIDsNullCollection) {
+TEST_F(TempFileFixture, ReadElementIdsNullCollection) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
@@ -332,7 +332,7 @@ TEST_F(TempFileFixture, ReadElementIDsNullCollection) {
     quiver_database_close(db);
 }
 
-TEST_F(TempFileFixture, ReadElementIDsNullOutput) {
+TEST_F(TempFileFixture, ReadElementIdsNullOutput) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
@@ -351,7 +351,7 @@ TEST_F(TempFileFixture, ReadElementIDsNullOutput) {
     quiver_database_close(db);
 }
 
-TEST_F(TempFileFixture, ReadElementIDsValid) {
+TEST_F(TempFileFixture, ReadElementIdsValid) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
@@ -377,7 +377,7 @@ TEST_F(TempFileFixture, ReadElementIDsValid) {
         EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     }
 
-    // Read element IDs
+    // Read element Ids
     int64_t* ids = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_element_ids(db, "Collection", &ids, &count);

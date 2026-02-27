@@ -382,7 +382,7 @@ include("fixture.jl")
         # Create child with set FK using string labels (mentor_id is unique to set table)
         Quiver.create_element!(db, "Child"; label = "Child 1", mentor_id = ["Parent 1", "Parent 2"])
 
-        # Read back resolved integer IDs
+        # Read back resolved integer Ids
         result = Quiver.read_set_integers_by_id(db, "Child", "mentor_id", 1)
         @test sort(result) == [1, 2]
 
