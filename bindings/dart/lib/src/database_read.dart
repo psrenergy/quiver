@@ -15,17 +15,15 @@ extension DatabaseRead on Database {
       final outValues = arena<Pointer<Int64>>();
       final outCount = arena<Size>();
 
-      final err = bindings.quiver_database_read_scalar_integers(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        outValues,
-        outCount,
+      check(
+        bindings.quiver_database_read_scalar_integers(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          outValues,
+          outCount,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to read scalar integers from '$collection.$attribute'");
-      }
 
       final count = outCount.value;
       if (count == 0 || outValues.value == nullptr) {
@@ -33,7 +31,7 @@ extension DatabaseRead on Database {
       }
 
       final result = List<int>.generate(count, (i) => outValues.value[i]);
-      bindings.quiver_free_integer_array(outValues.value);
+      bindings.quiver_database_free_integer_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -49,17 +47,15 @@ extension DatabaseRead on Database {
       final outValues = arena<Pointer<Double>>();
       final outCount = arena<Size>();
 
-      final err = bindings.quiver_database_read_scalar_floats(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        outValues,
-        outCount,
+      check(
+        bindings.quiver_database_read_scalar_floats(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          outValues,
+          outCount,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to read scalar floats from '$collection.$attribute'");
-      }
 
       final count = outCount.value;
       if (count == 0 || outValues.value == nullptr) {
@@ -67,7 +63,7 @@ extension DatabaseRead on Database {
       }
 
       final result = List<double>.generate(count, (i) => outValues.value[i]);
-      bindings.quiver_free_float_array(outValues.value);
+      bindings.quiver_database_free_float_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -83,25 +79,26 @@ extension DatabaseRead on Database {
       final outValues = arena<Pointer<Pointer<Char>>>();
       final outCount = arena<Size>();
 
-      final err = bindings.quiver_database_read_scalar_strings(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        outValues,
-        outCount,
+      check(
+        bindings.quiver_database_read_scalar_strings(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          outValues,
+          outCount,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to read scalar strings from '$collection.$attribute'");
-      }
 
       final count = outCount.value;
       if (count == 0 || outValues.value == nullptr) {
         return [];
       }
 
-      final result = List<String>.generate(count, (i) => outValues.value[i].cast<Utf8>().toDartString());
-      bindings.quiver_free_string_array(outValues.value, count);
+      final result = List<String>.generate(
+        count,
+        (i) => outValues.value[i].cast<Utf8>().toDartString(),
+      );
+      bindings.quiver_database_free_string_array(outValues.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -118,18 +115,16 @@ extension DatabaseRead on Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      final err = bindings.quiver_database_read_vector_integers(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        outVectors,
-        outSizes,
-        outCount,
+      check(
+        bindings.quiver_database_read_vector_integers(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          outVectors,
+          outSizes,
+          outCount,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to read vector integers from '$collection.$attribute'");
-      }
 
       final count = outCount.value;
       if (count == 0 || outVectors.value == nullptr) {
@@ -145,7 +140,11 @@ extension DatabaseRead on Database {
           result.add(List<int>.generate(size, (j) => outVectors.value[i][j]));
         }
       }
-      bindings.quiver_free_integer_vectors(outVectors.value, outSizes.value, count);
+      bindings.quiver_database_free_integer_vectors(
+        outVectors.value,
+        outSizes.value,
+        count,
+      );
       return result;
     } finally {
       arena.releaseAll();
@@ -162,18 +161,16 @@ extension DatabaseRead on Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      final err = bindings.quiver_database_read_vector_floats(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        outVectors,
-        outSizes,
-        outCount,
+      check(
+        bindings.quiver_database_read_vector_floats(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          outVectors,
+          outSizes,
+          outCount,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to read vector floats from '$collection.$attribute'");
-      }
 
       final count = outCount.value;
       if (count == 0 || outVectors.value == nullptr) {
@@ -186,10 +183,16 @@ extension DatabaseRead on Database {
         if (size == 0 || outVectors.value[i] == nullptr) {
           result.add([]);
         } else {
-          result.add(List<double>.generate(size, (j) => outVectors.value[i][j]));
+          result.add(
+            List<double>.generate(size, (j) => outVectors.value[i][j]),
+          );
         }
       }
-      bindings.quiver_free_float_vectors(outVectors.value, outSizes.value, count);
+      bindings.quiver_database_free_float_vectors(
+        outVectors.value,
+        outSizes.value,
+        count,
+      );
       return result;
     } finally {
       arena.releaseAll();
@@ -206,18 +209,16 @@ extension DatabaseRead on Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      final err = bindings.quiver_database_read_vector_strings(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        outVectors,
-        outSizes,
-        outCount,
+      check(
+        bindings.quiver_database_read_vector_strings(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          outVectors,
+          outSizes,
+          outCount,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to read vector strings from '$collection.$attribute'");
-      }
 
       final count = outCount.value;
       if (count == 0 || outVectors.value == nullptr) {
@@ -230,10 +231,19 @@ extension DatabaseRead on Database {
         if (size == 0 || outVectors.value[i] == nullptr) {
           result.add([]);
         } else {
-          result.add(List<String>.generate(size, (j) => outVectors.value[i][j].cast<Utf8>().toDartString()));
+          result.add(
+            List<String>.generate(
+              size,
+              (j) => outVectors.value[i][j].cast<Utf8>().toDartString(),
+            ),
+          );
         }
       }
-      bindings.quiver_free_string_vectors(outVectors.value, outSizes.value, count);
+      bindings.quiver_database_free_string_vectors(
+        outVectors.value,
+        outSizes.value,
+        count,
+      );
       return result;
     } finally {
       arena.releaseAll();
@@ -250,18 +260,16 @@ extension DatabaseRead on Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      final err = bindings.quiver_database_read_set_integers(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        outSets,
-        outSizes,
-        outCount,
+      check(
+        bindings.quiver_database_read_set_integers(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          outSets,
+          outSizes,
+          outCount,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to read set integers from '$collection.$attribute'");
-      }
 
       final count = outCount.value;
       if (count == 0 || outSets.value == nullptr) {
@@ -277,7 +285,11 @@ extension DatabaseRead on Database {
           result.add(List<int>.generate(size, (j) => outSets.value[i][j]));
         }
       }
-      bindings.quiver_free_integer_vectors(outSets.value, outSizes.value, count);
+      bindings.quiver_database_free_integer_vectors(
+        outSets.value,
+        outSizes.value,
+        count,
+      );
       return result;
     } finally {
       arena.releaseAll();
@@ -294,18 +306,16 @@ extension DatabaseRead on Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      final err = bindings.quiver_database_read_set_floats(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        outSets,
-        outSizes,
-        outCount,
+      check(
+        bindings.quiver_database_read_set_floats(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          outSets,
+          outSizes,
+          outCount,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to read set floats from '$collection.$attribute'");
-      }
 
       final count = outCount.value;
       if (count == 0 || outSets.value == nullptr) {
@@ -321,7 +331,11 @@ extension DatabaseRead on Database {
           result.add(List<double>.generate(size, (j) => outSets.value[i][j]));
         }
       }
-      bindings.quiver_free_float_vectors(outSets.value, outSizes.value, count);
+      bindings.quiver_database_free_float_vectors(
+        outSets.value,
+        outSizes.value,
+        count,
+      );
       return result;
     } finally {
       arena.releaseAll();
@@ -338,18 +352,16 @@ extension DatabaseRead on Database {
       final outSizes = arena<Pointer<Size>>();
       final outCount = arena<Size>();
 
-      final err = bindings.quiver_database_read_set_strings(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        outSets,
-        outSizes,
-        outCount,
+      check(
+        bindings.quiver_database_read_set_strings(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          outSets,
+          outSizes,
+          outCount,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to read set strings from '$collection.$attribute'");
-      }
 
       final count = outCount.value;
       if (count == 0 || outSets.value == nullptr) {
@@ -362,10 +374,19 @@ extension DatabaseRead on Database {
         if (size == 0 || outSets.value[i] == nullptr) {
           result.add([]);
         } else {
-          result.add(List<String>.generate(size, (j) => outSets.value[i][j].cast<Utf8>().toDartString()));
+          result.add(
+            List<String>.generate(
+              size,
+              (j) => outSets.value[i][j].cast<Utf8>().toDartString(),
+            ),
+          );
         }
       }
-      bindings.quiver_free_string_vectors(outSets.value, outSizes.value, count);
+      bindings.quiver_database_free_string_vectors(
+        outSets.value,
+        outSizes.value,
+        count,
+      );
       return result;
     } finally {
       arena.releaseAll();
@@ -386,18 +407,16 @@ extension DatabaseRead on Database {
       final outValue = arena<Int64>();
       final outHasValue = arena<Int>();
 
-      final err = bindings.quiver_database_read_scalar_integers_by_id(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        outValue,
-        outHasValue,
+      check(
+        bindings.quiver_database_read_scalar_integer_by_id(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          outValue,
+          outHasValue,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to read scalar integer by id from '$collection.$attribute'");
-      }
 
       if (outHasValue.value == 0) {
         return null;
@@ -418,18 +437,16 @@ extension DatabaseRead on Database {
       final outValue = arena<Double>();
       final outHasValue = arena<Int>();
 
-      final err = bindings.quiver_database_read_scalar_floats_by_id(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        outValue,
-        outHasValue,
+      check(
+        bindings.quiver_database_read_scalar_float_by_id(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          outValue,
+          outHasValue,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to read scalar float by id from '$collection.$attribute'");
-      }
 
       if (outHasValue.value == 0) {
         return null;
@@ -450,24 +467,22 @@ extension DatabaseRead on Database {
       final outValue = arena<Pointer<Char>>();
       final outHasValue = arena<Int>();
 
-      final err = bindings.quiver_database_read_scalar_strings_by_id(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        outValue,
-        outHasValue,
+      check(
+        bindings.quiver_database_read_scalar_string_by_id(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          outValue,
+          outHasValue,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to read scalar string by id from '$collection.$attribute'");
-      }
 
       if (outHasValue.value == 0 || outValue.value == nullptr) {
         return null;
       }
       final result = outValue.value.cast<Utf8>().toDartString();
-      bindings.quiver_string_free(outValue.value);
+      bindings.quiver_element_free_string(outValue.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -476,7 +491,11 @@ extension DatabaseRead on Database {
 
   /// Reads a DateTime value for a scalar attribute by element ID.
   /// Returns null if the element is not found.
-  DateTime? readScalarDateTimeById(String collection, String attribute, int id) {
+  DateTime? readScalarDateTimeById(
+    String collection,
+    String attribute,
+    int id,
+  ) {
     final strValue = readScalarStringById(collection, attribute, id);
     return strValue == null ? null : stringToDateTime(strValue);
   }
@@ -486,7 +505,11 @@ extension DatabaseRead on Database {
   // ==========================================================================
 
   /// Reads integer vector for a vector attribute by element ID.
-  List<int> readVectorIntegersById(String collection, String attribute, int id) {
+  List<int> readVectorIntegersById(
+    String collection,
+    String attribute,
+    int id,
+  ) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -494,18 +517,16 @@ extension DatabaseRead on Database {
       final outValues = arena<Pointer<Int64>>();
       final outCount = arena<Size>();
 
-      final err = bindings.quiver_database_read_vector_integers_by_id(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        outValues,
-        outCount,
+      check(
+        bindings.quiver_database_read_vector_integers_by_id(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          outValues,
+          outCount,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to read vector integers by id from '$collection.$attribute'");
-      }
 
       final count = outCount.value;
       if (count == 0 || outValues.value == nullptr) {
@@ -513,7 +534,7 @@ extension DatabaseRead on Database {
       }
 
       final result = List<int>.generate(count, (i) => outValues.value[i]);
-      bindings.quiver_free_integer_array(outValues.value);
+      bindings.quiver_database_free_integer_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -521,7 +542,11 @@ extension DatabaseRead on Database {
   }
 
   /// Reads float vector for a vector attribute by element ID.
-  List<double> readVectorFloatsById(String collection, String attribute, int id) {
+  List<double> readVectorFloatsById(
+    String collection,
+    String attribute,
+    int id,
+  ) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -529,18 +554,16 @@ extension DatabaseRead on Database {
       final outValues = arena<Pointer<Double>>();
       final outCount = arena<Size>();
 
-      final err = bindings.quiver_database_read_vector_floats_by_id(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        outValues,
-        outCount,
+      check(
+        bindings.quiver_database_read_vector_floats_by_id(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          outValues,
+          outCount,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to read vector floats by id from '$collection.$attribute'");
-      }
 
       final count = outCount.value;
       if (count == 0 || outValues.value == nullptr) {
@@ -548,7 +571,7 @@ extension DatabaseRead on Database {
       }
 
       final result = List<double>.generate(count, (i) => outValues.value[i]);
-      bindings.quiver_free_float_array(outValues.value);
+      bindings.quiver_database_free_float_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -556,7 +579,11 @@ extension DatabaseRead on Database {
   }
 
   /// Reads string vector for a vector attribute by element ID.
-  List<String> readVectorStringsById(String collection, String attribute, int id) {
+  List<String> readVectorStringsById(
+    String collection,
+    String attribute,
+    int id,
+  ) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -564,26 +591,27 @@ extension DatabaseRead on Database {
       final outValues = arena<Pointer<Pointer<Char>>>();
       final outCount = arena<Size>();
 
-      final err = bindings.quiver_database_read_vector_strings_by_id(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        outValues,
-        outCount,
+      check(
+        bindings.quiver_database_read_vector_strings_by_id(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          outValues,
+          outCount,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to read vector strings by id from '$collection.$attribute'");
-      }
 
       final count = outCount.value;
       if (count == 0 || outValues.value == nullptr) {
         return [];
       }
 
-      final result = List<String>.generate(count, (i) => outValues.value[i].cast<Utf8>().toDartString());
-      bindings.quiver_free_string_array(outValues.value, count);
+      final result = List<String>.generate(
+        count,
+        (i) => outValues.value[i].cast<Utf8>().toDartString(),
+      );
+      bindings.quiver_database_free_string_array(outValues.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -591,8 +619,16 @@ extension DatabaseRead on Database {
   }
 
   /// Reads DateTime vector for a vector attribute by element ID.
-  List<DateTime> readVectorDateTimesById(String collection, String attribute, int id) {
-    return readVectorStringsById(collection, attribute, id).map((s) => stringToDateTime(s)).toList();
+  List<DateTime> readVectorDateTimesById(
+    String collection,
+    String attribute,
+    int id,
+  ) {
+    return readVectorStringsById(
+      collection,
+      attribute,
+      id,
+    ).map((s) => stringToDateTime(s)).toList();
   }
 
   // ==========================================================================
@@ -608,18 +644,16 @@ extension DatabaseRead on Database {
       final outValues = arena<Pointer<Int64>>();
       final outCount = arena<Size>();
 
-      final err = bindings.quiver_database_read_set_integers_by_id(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        outValues,
-        outCount,
+      check(
+        bindings.quiver_database_read_set_integers_by_id(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          outValues,
+          outCount,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to read set integers by id from '$collection.$attribute'");
-      }
 
       final count = outCount.value;
       if (count == 0 || outValues.value == nullptr) {
@@ -627,7 +661,7 @@ extension DatabaseRead on Database {
       }
 
       final result = List<int>.generate(count, (i) => outValues.value[i]);
-      bindings.quiver_free_integer_array(outValues.value);
+      bindings.quiver_database_free_integer_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -643,18 +677,16 @@ extension DatabaseRead on Database {
       final outValues = arena<Pointer<Double>>();
       final outCount = arena<Size>();
 
-      final err = bindings.quiver_database_read_set_floats_by_id(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        outValues,
-        outCount,
+      check(
+        bindings.quiver_database_read_set_floats_by_id(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          outValues,
+          outCount,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to read set floats by id from '$collection.$attribute'");
-      }
 
       final count = outCount.value;
       if (count == 0 || outValues.value == nullptr) {
@@ -662,7 +694,7 @@ extension DatabaseRead on Database {
       }
 
       final result = List<double>.generate(count, (i) => outValues.value[i]);
-      bindings.quiver_free_float_array(outValues.value);
+      bindings.quiver_database_free_float_array(outValues.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -678,26 +710,27 @@ extension DatabaseRead on Database {
       final outValues = arena<Pointer<Pointer<Char>>>();
       final outCount = arena<Size>();
 
-      final err = bindings.quiver_database_read_set_strings_by_id(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        outValues,
-        outCount,
+      check(
+        bindings.quiver_database_read_set_strings_by_id(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          id,
+          outValues,
+          outCount,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to read set strings by id from '$collection.$attribute'");
-      }
 
       final count = outCount.value;
       if (count == 0 || outValues.value == nullptr) {
         return [];
       }
 
-      final result = List<String>.generate(count, (i) => outValues.value[i].cast<Utf8>().toDartString());
-      bindings.quiver_free_string_array(outValues.value, count);
+      final result = List<String>.generate(
+        count,
+        (i) => outValues.value[i].cast<Utf8>().toDartString(),
+      );
+      bindings.quiver_database_free_string_array(outValues.value, count);
       return result;
     } finally {
       arena.releaseAll();
@@ -705,8 +738,16 @@ extension DatabaseRead on Database {
   }
 
   /// Reads DateTime set for a set attribute by element ID.
-  List<DateTime> readSetDateTimesById(String collection, String attribute, int id) {
-    return readSetStringsById(collection, attribute, id).map((s) => stringToDateTime(s)).toList();
+  List<DateTime> readSetDateTimesById(
+    String collection,
+    String attribute,
+    int id,
+  ) {
+    return readSetStringsById(
+      collection,
+      attribute,
+      id,
+    ).map((s) => stringToDateTime(s)).toList();
   }
 
   // ==========================================================================
@@ -722,16 +763,14 @@ extension DatabaseRead on Database {
       final outIds = arena<Pointer<Int64>>();
       final outCount = arena<Size>();
 
-      final err = bindings.quiver_database_read_element_ids(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        outIds,
-        outCount,
+      check(
+        bindings.quiver_database_read_element_ids(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          outIds,
+          outCount,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to read element ids from '$collection'");
-      }
 
       final count = outCount.value;
       if (count == 0 || outIds.value == nullptr) {
@@ -739,7 +778,7 @@ extension DatabaseRead on Database {
       }
 
       final result = List<int>.generate(count, (i) => outIds.value[i]);
-      bindings.quiver_free_integer_array(outIds.value);
+      bindings.quiver_database_free_integer_array(outIds.value);
       return result;
     } finally {
       arena.releaseAll();
@@ -757,9 +796,9 @@ extension DatabaseRead on Database {
     _ensureNotClosed();
 
     final result = <String, Object?>{};
-    for (final attr in listScalarAttributes(collection)) {
-      final name = attr.name;
-      switch (attr.dataType) {
+    for (final attribute in listScalarAttributes(collection)) {
+      final name = attribute.name;
+      switch (attribute.dataType) {
         case quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER:
           result[name] = readScalarIntegerById(collection, name, id);
         case quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT:
@@ -824,7 +863,11 @@ extension DatabaseRead on Database {
   /// Reads a vector group for an element by ID, returning rows as maps.
   /// Each row contains column names mapped to their values.
   /// Useful for multi-column vector tables.
-  List<Map<String, Object?>> readVectorGroupById(String collection, String group, int id) {
+  List<Map<String, Object?>> readVectorGroupById(
+    String collection,
+    String group,
+    int id,
+  ) {
     _ensureNotClosed();
 
     // Get metadata for this group
@@ -851,7 +894,7 @@ extension DatabaseRead on Database {
         case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
           values = readVectorDateTimesById(collection, name, id);
         default:
-          throw Exception('Unknown data type: ${col.dataType}');
+          throw ArgumentError('Unknown data type: ${col.dataType}');
       }
 
       columnData[name] = values;
@@ -874,7 +917,11 @@ extension DatabaseRead on Database {
   /// Reads a set group for an element by ID, returning rows as maps.
   /// Each row contains column names mapped to their values.
   /// Useful for multi-column set tables.
-  List<Map<String, Object?>> readSetGroupById(String collection, String group, int id) {
+  List<Map<String, Object?>> readSetGroupById(
+    String collection,
+    String group,
+    int id,
+  ) {
     _ensureNotClosed();
 
     // Get metadata for this group
@@ -901,7 +948,7 @@ extension DatabaseRead on Database {
         case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
           values = readSetDateTimesById(collection, name, id);
         default:
-          throw Exception('Unknown data type: ${col.dataType}');
+          throw ArgumentError('Unknown data type: ${col.dataType}');
       }
 
       columnData[name] = values;
@@ -919,5 +966,143 @@ extension DatabaseRead on Database {
     }
 
     return rows;
+  }
+
+  // ==========================================================================
+  // Read time series by ID
+  // ==========================================================================
+
+  /// Reads a time series group for an element by ID.
+  /// Returns a Map of column names to typed Lists.
+  /// The dimension column is parsed to List<DateTime>.
+  /// INTEGER columns return List<int>, FLOAT columns return List<double>,
+  /// other TEXT columns return List<String>.
+  Map<String, List<Object>> readTimeSeriesGroup(
+    String collection,
+    String group,
+    int id,
+  ) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outColNames = arena<Pointer<Pointer<Char>>>();
+      final outColTypes = arena<Pointer<Int>>();
+      final outColData = arena<Pointer<Pointer<Void>>>();
+      final outColCount = arena<Size>();
+      final outRowCount = arena<Size>();
+
+      check(
+        bindings.quiver_database_read_time_series_group(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          group.toNativeUtf8(allocator: arena).cast(),
+          id,
+          outColNames,
+          outColTypes,
+          outColData,
+          outColCount,
+          outRowCount,
+        ),
+      );
+
+      final colCount = outColCount.value;
+      final rowCount = outRowCount.value;
+
+      if (colCount == 0 || rowCount == 0) return {};
+
+      // Get dimension column for DateTime parsing
+      final meta = getTimeSeriesMetadata(collection, group);
+      final dimCol = meta.dimensionColumn;
+
+      final result = <String, List<Object>>{};
+      for (var c = 0; c < colCount; c++) {
+        final colName = outColNames.value[c].cast<Utf8>().toDartString();
+        final colType = outColTypes.value[c];
+
+        if (colType == quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER) {
+          final ptr = outColData.value[c].cast<Int64>();
+          result[colName] = List<int>.generate(rowCount, (r) => ptr[r]);
+        } else if (colType == quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT) {
+          final ptr = outColData.value[c].cast<Double>();
+          result[colName] = List<double>.generate(rowCount, (r) => ptr[r]);
+        } else {
+          // STRING or DATE_TIME
+          final ptr = outColData.value[c].cast<Pointer<Char>>();
+          if (colName == dimCol) {
+            result[colName] = List<DateTime>.generate(
+              rowCount,
+              (r) => stringToDateTime(ptr[r].cast<Utf8>().toDartString()),
+            );
+          } else {
+            result[colName] = List<String>.generate(
+              rowCount,
+              (r) => ptr[r].cast<Utf8>().toDartString(),
+            );
+          }
+        }
+      }
+
+      // Free C-allocated memory
+      bindings.quiver_database_free_time_series_data(
+        outColNames.value,
+        outColTypes.value,
+        outColData.value,
+        colCount,
+        rowCount,
+      );
+
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  // ==========================================================================
+  // Read time series files
+  // ==========================================================================
+
+  /// Reads time series files paths for a collection.
+  /// Returns a map of column name to file path (null if not set).
+  Map<String, String?> readTimeSeriesFiles(String collection) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outColumns = arena<Pointer<Pointer<Char>>>();
+      final outPaths = arena<Pointer<Pointer<Char>>>();
+      final outCount = arena<Size>();
+
+      check(
+        bindings.quiver_database_read_time_series_files(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          outColumns,
+          outPaths,
+          outCount,
+        ),
+      );
+
+      final count = outCount.value;
+      if (count == 0 || outColumns.value == nullptr) {
+        return {};
+      }
+
+      final result = <String, String?>{};
+      for (var i = 0; i < count; i++) {
+        final column = outColumns.value[i].cast<Utf8>().toDartString();
+        final path = outPaths.value[i] == nullptr ? null : outPaths.value[i].cast<Utf8>().toDartString();
+        result[column] = path;
+      }
+
+      bindings.quiver_database_free_time_series_files(
+        outColumns.value,
+        outPaths.value,
+        count,
+      );
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
   }
 }

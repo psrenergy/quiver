@@ -1,15 +1,10 @@
-import 'package:quiver_db/quiver_db.dart';
+import 'package:quiverdb/quiverdb.dart';
 import 'package:test/test.dart';
 import 'package:path/path.dart' as path;
 
 void main() {
   // Path to central tests folder
-  final testsPath = path.join(
-    path.current,
-    '..',
-    '..',
-    'tests',
-  );
+  final testsPath = path.join(path.current, '..', '..', 'tests');
 
   group('Delete Element By ID', () {
     test('deletes element by id', () {
@@ -25,7 +20,7 @@ void main() {
         var ids = db.readElementIds('Configuration');
         expect(ids.length, equals(3));
 
-        db.deleteElementById('Configuration', 2);
+        db.deleteElement('Configuration', 2);
 
         ids = db.readElementIds('Configuration');
         expect(ids.length, equals(2));
@@ -61,7 +56,7 @@ void main() {
         var ids = db.readElementIds('Collection');
         expect(ids.length, equals(2));
 
-        db.deleteElementById('Collection', 1);
+        db.deleteElement('Collection', 1);
 
         ids = db.readElementIds('Collection');
         expect(ids.length, equals(1));
@@ -97,7 +92,7 @@ void main() {
         var ids = db.readElementIds('Collection');
         expect(ids.length, equals(2));
 
-        db.deleteElementById('Collection', 1);
+        db.deleteElement('Collection', 1);
 
         ids = db.readElementIds('Collection');
         expect(ids.length, equals(1));
@@ -121,7 +116,7 @@ void main() {
         db.createElement('Configuration', {'label': 'Config 1'});
 
         // Delete non-existent element should succeed
-        db.deleteElementById('Configuration', 999);
+        db.deleteElement('Configuration', 999);
 
         // Verify original element still exists
         final ids = db.readElementIds('Configuration');
@@ -151,7 +146,7 @@ void main() {
           'integer_attribute': 300,
         });
 
-        db.deleteElementById('Configuration', 2);
+        db.deleteElement('Configuration', 2);
 
         final labels = db.readScalarStrings('Configuration', 'label');
         expect(labels.length, equals(2));
@@ -159,7 +154,10 @@ void main() {
         expect(labels.contains('Config 3'), isTrue);
         expect(labels.contains('Config 2'), isFalse);
 
-        final values = db.readScalarIntegers('Configuration', 'integer_attribute');
+        final values = db.readScalarIntegers(
+          'Configuration',
+          'integer_attribute',
+        );
         expect(values.length, equals(2));
         expect(values.contains(100), isTrue);
         expect(values.contains(300), isTrue);

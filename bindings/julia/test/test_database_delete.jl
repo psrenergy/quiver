@@ -20,7 +20,7 @@ include("fixture.jl")
         @test length(ids) == 3
 
         # Delete element with id 2
-        Quiver.delete_element_by_id!(db, "Configuration", Int64(2))
+        Quiver.delete_element!(db, "Configuration", Int64(2))
 
         # Verify element is deleted
         ids = Quiver.read_element_ids(db, "Configuration")
@@ -57,7 +57,7 @@ include("fixture.jl")
         @test length(ids) == 2
 
         # Delete element with id 1 (CASCADE should delete vector data)
-        Quiver.delete_element_by_id!(db, "Collection", Int64(1))
+        Quiver.delete_element!(db, "Collection", 1)
 
         # Verify element is deleted
         ids = Quiver.read_element_ids(db, "Collection")
@@ -87,7 +87,7 @@ include("fixture.jl")
         @test length(ids) == 2
 
         # Delete element with id 1 (CASCADE should delete set data)
-        Quiver.delete_element_by_id!(db, "Collection", Int64(1))
+        Quiver.delete_element!(db, "Collection", 1)
 
         # Verify element is deleted
         ids = Quiver.read_element_ids(db, "Collection")
@@ -109,7 +109,7 @@ include("fixture.jl")
         Quiver.create_element!(db, "Configuration"; label = "Config 1")
 
         # Delete non-existent element should succeed (idempotent)
-        Quiver.delete_element_by_id!(db, "Configuration", Int64(999))
+        Quiver.delete_element!(db, "Configuration", Int64(999))
 
         # Verify original element still exists
         ids = Quiver.read_element_ids(db, "Configuration")
@@ -129,7 +129,7 @@ include("fixture.jl")
         Quiver.create_element!(db, "Configuration"; label = "Config 3", integer_attribute = 300)
 
         # Delete middle element
-        Quiver.delete_element_by_id!(db, "Configuration", Int64(2))
+        Quiver.delete_element!(db, "Configuration", Int64(2))
 
         # Verify other elements are unchanged
         labels = Quiver.read_scalar_strings(db, "Configuration", "label")

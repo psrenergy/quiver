@@ -53,16 +53,13 @@ function query_string(db::Database, sql::String)
     out_value = Ref{Ptr{Cchar}}(C_NULL)
     out_has_value = Ref{Cint}(0)
 
-    err = C.quiver_database_query_string(db.ptr, sql, out_value, out_has_value)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to execute query"))
-    end
+    check(C.quiver_database_query_string(db.ptr, sql, out_value, out_has_value))
 
     if out_has_value[] == 0 || out_value[] == C_NULL
         return nothing
     end
     result = unsafe_string(out_value[])
-    C.quiver_string_free(out_value[])
+    C.quiver_element_free_string(out_value[])
     return result
 end
 
@@ -76,10 +73,7 @@ function query_integer(db::Database, sql::String)
     out_value = Ref{Int64}(0)
     out_has_value = Ref{Cint}(0)
 
-    err = C.quiver_database_query_integer(db.ptr, sql, out_value, out_has_value)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to execute query"))
-    end
+    check(C.quiver_database_query_integer(db.ptr, sql, out_value, out_has_value))
 
     if out_has_value[] == 0
         return nothing
@@ -97,10 +91,7 @@ function query_float(db::Database, sql::String)
     out_value = Ref{Float64}(0.0)
     out_has_value = Ref{Cint}(0)
 
-    err = C.quiver_database_query_float(db.ptr, sql, out_value, out_has_value)
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to execute query"))
-    end
+    check(C.quiver_database_query_float(db.ptr, sql, out_value, out_has_value))
 
     if out_has_value[] == 0
         return nothing
@@ -119,24 +110,23 @@ function query_string(db::Database, sql::String, params::Vector)
     out_value = Ref{Ptr{Cchar}}(C_NULL)
     out_has_value = Ref{Cint}(0)
 
-    err = C.quiver_database_query_string_params(
-        db.ptr,
-        sql,
-        param_types,
-        param_values,
-        length(params),
-        out_value,
-        out_has_value,
+    check(
+        C.quiver_database_query_string_params(
+            db.ptr,
+            sql,
+            param_types,
+            param_values,
+            length(params),
+            out_value,
+            out_has_value,
+        ),
     )
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to execute query"))
-    end
 
     if out_has_value[] == 0 || out_value[] == C_NULL
         return nothing
     end
     result = unsafe_string(out_value[])
-    C.quiver_string_free(out_value[])
+    C.quiver_element_free_string(out_value[])
     return result
 end
 
@@ -151,18 +141,17 @@ function query_integer(db::Database, sql::String, params::Vector)
     out_value = Ref{Int64}(0)
     out_has_value = Ref{Cint}(0)
 
-    err = C.quiver_database_query_integer_params(
-        db.ptr,
-        sql,
-        param_types,
-        param_values,
-        length(params),
-        out_value,
-        out_has_value,
+    check(
+        C.quiver_database_query_integer_params(
+            db.ptr,
+            sql,
+            param_types,
+            param_values,
+            length(params),
+            out_value,
+            out_has_value,
+        ),
     )
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to execute query"))
-    end
 
     if out_has_value[] == 0
         return nothing
@@ -181,18 +170,17 @@ function query_float(db::Database, sql::String, params::Vector)
     out_value = Ref{Float64}(0.0)
     out_has_value = Ref{Cint}(0)
 
-    err = C.quiver_database_query_float_params(
-        db.ptr,
-        sql,
-        param_types,
-        param_values,
-        length(params),
-        out_value,
-        out_has_value,
+    check(
+        C.quiver_database_query_float_params(
+            db.ptr,
+            sql,
+            param_types,
+            param_values,
+            length(params),
+            out_value,
+            out_has_value,
+        ),
     )
-    if err != C.QUIVER_OK
-        throw(DatabaseException("Failed to execute query"))
-    end
 
     if out_has_value[] == 0
         return nothing

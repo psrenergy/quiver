@@ -65,8 +65,19 @@ include("fixture.jl")
 
     @testset "Empty Array Rejected" begin
         el = Quiver.Element()
-        @test_throws Quiver.DatabaseException el["values"] = Any[]
+        @test_throws ArgumentError el["values"] = Any[]
         Quiver.destroy!(el)
+    end
+
+    @testset "Clear Element" begin
+        el = Quiver.Element()
+        el["label"] = "Test"
+        el["value"] = 42
+        Quiver.clear!(el)
+        # After clear, element can be reused with new values
+        el["label"] = "Reused"
+        Quiver.destroy!(el)
+        @test true
     end
 
     @testset "Create Element with Builder" begin
@@ -85,10 +96,10 @@ include("fixture.jl")
         @test id > 0
 
         # Verify the element was created correctly
-        @test Quiver.read_scalar_strings_by_id(db, "Configuration", "label", id) == "Config via Builder"
-        @test Quiver.read_scalar_integers_by_id(db, "Configuration", "integer_attribute", id) == 42
-        @test Quiver.read_scalar_floats_by_id(db, "Configuration", "float_attribute", id) == 3.14
-        @test Quiver.read_scalar_strings_by_id(db, "Configuration", "string_attribute", id) == "hello"
+        @test Quiver.read_scalar_string_by_id(db, "Configuration", "label", id) == "Config via Builder"
+        @test Quiver.read_scalar_integer_by_id(db, "Configuration", "integer_attribute", id) == 42
+        @test Quiver.read_scalar_float_by_id(db, "Configuration", "float_attribute", id) == 3.14
+        @test Quiver.read_scalar_string_by_id(db, "Configuration", "string_attribute", id) == "hello"
 
         Quiver.close!(db)
     end

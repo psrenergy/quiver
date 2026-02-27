@@ -1,6 +1,6 @@
-name: quiver_db
+name: quiverdb
 description: Dart bindings for Quiver
-version: 0.2.0
+version: 0.5.0
 
 environment:
   sdk: ^3.10.0

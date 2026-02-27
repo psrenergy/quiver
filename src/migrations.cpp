@@ -7,16 +7,9 @@ namespace quiver {
 
 namespace fs = std::filesystem;
 
-struct Migrations::Impl {
-    std::vector<Migration> versions;
+Migrations::Migrations() = default;
 
-    Impl() = default;
-    Impl(const Impl& other) : versions(other.versions) {}
-};
-
-Migrations::Migrations() : impl_(std::make_unique<Impl>()) {}
-
-Migrations::Migrations(const std::string& path) : impl_(std::make_unique<Impl>()) {
+Migrations::Migrations(const std::string& path) {
     if (!fs::exists(path) || !fs::is_directory(path)) {
         return;
     }
@@ -32,37 +25,23 @@ Migrations::Migrations(const std::string& path) : impl_(std::make_unique<Impl>()
             const auto migration_version = std::stoll(dirname, &pos);
             if (pos == dirname.size() && migration_version > 0) {
                 const auto migration_path = entry.path().string();
-                impl_->versions.emplace_back(migration_version, migration_path);
+                versions_.emplace_back(migration_version, migration_path);
             }
-        } catch (const std::exception&) {
-            // Not a valid version number, skip
+        } catch (  // NOLINT(bugprone-empty-catch) intentionally skip non-numeric directory names
+            const std::exception&) {
         }
     }
 
-    std::sort(impl_->versions.begin(), impl_->versions.end());
+    std::sort(versions_.begin(), versions_.end());
 }
-
-Migrations::~Migrations() = default;
-
-Migrations::Migrations(const Migrations& other) : impl_(std::make_unique<Impl>(*other.impl_)) {}
-
-Migrations& Migrations::operator=(const Migrations& other) {
-    if (this != &other) {
-        impl_ = std::make_unique<Impl>(*other.impl_);
-    }
-    return *this;
-}
-
-Migrations::Migrations(Migrations&& other) noexcept = default;
-Migrations& Migrations::operator=(Migrations&& other) noexcept = default;
 
 const std::vector<Migration>& Migrations::all() const {
-    return impl_->versions;
+    return versions_;
 }
 
 std::vector<Migration> Migrations::pending(int64_t current_version) const {
     std::vector<Migration> result;
-    for (const auto& migration : impl_->versions) {
+    for (const auto& migration : versions_) {
         if (migration.version() > current_version) {
             result.push_back(migration);
         }
@@ -71,26 +50,26 @@ std::vector<Migration> Migrations::pending(int64_t current_version) const {
 }
 
 int64_t Migrations::latest_version() const {
-    if (impl_->versions.empty()) {
+    if (versions_.empty()) {
         return 0;
     }
-    return impl_->versions.back().version();
+    return versions_.back().version();
 }
 
 size_t Migrations::count() const {
-    return impl_->versions.size();
+    return versions_.size();
 }
 
 bool Migrations::empty() const {
-    return impl_->versions.empty();
+    return versions_.empty();
 }
 
 Migrations::iterator Migrations::begin() const {
-    return impl_->versions.begin();
+    return versions_.begin();
 }
 
 Migrations::iterator Migrations::end() const {
-    return impl_->versions.end();
+    return versions_.end();
 }
 
 }  // namespace quiver

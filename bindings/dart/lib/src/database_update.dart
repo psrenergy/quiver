@@ -23,261 +23,171 @@ extension DatabaseUpdate on Database {
     _ensureNotClosed();
     final arena = Arena();
     try {
-      final err = bindings.quiver_database_update_element(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        id,
-        element.ptr.cast(),
+      check(
+        bindings.quiver_database_update_element(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          id,
+          element.ptr.cast(),
+        ),
       );
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to update element $id in '$collection'");
-      }
     } finally {
       arena.releaseAll();
     }
   }
 
   // ==========================================================================
-  // Update scalar attributes
+  // Update time series attributes
   // ==========================================================================
 
-  /// Updates an integer scalar attribute value by element ID.
-  void updateScalarInteger(String collection, String attribute, int id, int value) {
+  /// Updates a time series group by element ID (replaces all rows).
+  /// Takes a Map of column names to typed Lists.
+  /// Supported value types: int, double, String, DateTime.
+  /// An empty Map clears all rows for that element.
+  void updateTimeSeriesGroup(
+    String collection,
+    String group,
+    int id,
+    Map<String, List<Object>> data,
+  ) {
     _ensureNotClosed();
 
     final arena = Arena();
     try {
-      final err = bindings.quiver_database_update_scalar_integer(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        value,
+      if (data.isEmpty) {
+        check(
+          bindings.quiver_database_update_time_series_group(
+            _ptr,
+            collection.toNativeUtf8(allocator: arena).cast(),
+            group.toNativeUtf8(allocator: arena).cast(),
+            id,
+            nullptr,
+            nullptr,
+            nullptr,
+            0,
+            0,
+          ),
+        );
+        return;
+      }
+
+      // Validate equal lengths
+      final rowCount = data.values.first.length;
+      for (final entry in data.entries) {
+        if (entry.value.length != rowCount) {
+          throw ArgumentError('All column lists must have the same length');
+        }
+      }
+
+      final columnCount = data.length;
+      final columnNames = arena<Pointer<Char>>(columnCount);
+      final columnTypes = arena<Int>(columnCount);
+      final columnData = arena<Pointer<Void>>(columnCount);
+
+      var i = 0;
+      for (final entry in data.entries) {
+        columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
+        final values = entry.value;
+
+        if (values.isEmpty) {
+          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_STRING;
+          columnData[i] = nullptr;
+        } else if (values.first is int) {
+          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER;
+          final arr = arena<Int64>(rowCount);
+          for (var r = 0; r < rowCount; r++) {
+            arr[r] = values[r] as int;
+          }
+          columnData[i] = arr.cast();
+        } else if (values.first is double) {
+          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT;
+          final arr = arena<Double>(rowCount);
+          for (var r = 0; r < rowCount; r++) {
+            arr[r] = values[r] as double;
+          }
+          columnData[i] = arr.cast();
+        } else if (values.first is String) {
+          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_STRING;
+          final arr = arena<Pointer<Char>>(rowCount);
+          for (var r = 0; r < rowCount; r++) {
+            arr[r] = (values[r] as String).toNativeUtf8(allocator: arena).cast();
+          }
+          columnData[i] = arr.cast();
+        } else if (values.first is DateTime) {
+          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_STRING;
+          final arr = arena<Pointer<Char>>(rowCount);
+          for (var r = 0; r < rowCount; r++) {
+            arr[r] = dateTimeToString(
+              values[r] as DateTime,
+            ).toNativeUtf8(allocator: arena).cast();
+          }
+          columnData[i] = arr.cast();
+        } else {
+          throw ArgumentError(
+            'Unsupported value type: ${values.first.runtimeType}',
+          );
+        }
+        i++;
+      }
+
+      check(
+        bindings.quiver_database_update_time_series_group(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          group.toNativeUtf8(allocator: arena).cast(),
+          id,
+          columnNames,
+          columnTypes,
+          columnData,
+          columnCount,
+          rowCount,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to update scalar integer '$collection.$attribute' for id $id");
-      }
-    } finally {
-      arena.releaseAll();
-    }
-  }
-
-  /// Updates a float scalar attribute value by element ID.
-  void updateScalarFloat(String collection, String attribute, int id, double value) {
-    _ensureNotClosed();
-
-    final arena = Arena();
-    try {
-      final err = bindings.quiver_database_update_scalar_float(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        value,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to update scalar float '$collection.$attribute' for id $id");
-      }
-    } finally {
-      arena.releaseAll();
-    }
-  }
-
-  /// Updates a string scalar attribute value by element ID.
-  void updateScalarString(String collection, String attribute, int id, String value) {
-    _ensureNotClosed();
-
-    final arena = Arena();
-    try {
-      final err = bindings.quiver_database_update_scalar_string(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        value.toNativeUtf8(allocator: arena).cast(),
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to update scalar string '$collection.$attribute' for id $id");
-      }
-    } finally {
-      arena.releaseAll();
-    }
-  }
-
-  // ==========================================================================
-  // Update vector attributes
-  // ==========================================================================
-
-  /// Updates an integer vector attribute by element ID (replaces entire vector).
-  void updateVectorIntegers(String collection, String attribute, int id, List<int> values) {
-    _ensureNotClosed();
-
-    final arena = Arena();
-    try {
-      final nativeValues = arena<Int64>(values.length);
-      for (var i = 0; i < values.length; i++) {
-        nativeValues[i] = values[i];
-      }
-
-      final err = bindings.quiver_database_update_vector_integers(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        nativeValues,
-        values.length,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to update vector integers '$collection.$attribute' for id $id");
-      }
-    } finally {
-      arena.releaseAll();
-    }
-  }
-
-  /// Updates a float vector attribute by element ID (replaces entire vector).
-  void updateVectorFloats(String collection, String attribute, int id, List<double> values) {
-    _ensureNotClosed();
-
-    final arena = Arena();
-    try {
-      final nativeValues = arena<Double>(values.length);
-      for (var i = 0; i < values.length; i++) {
-        nativeValues[i] = values[i];
-      }
-
-      final err = bindings.quiver_database_update_vector_floats(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        nativeValues,
-        values.length,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to update vector floats '$collection.$attribute' for id $id");
-      }
-    } finally {
-      arena.releaseAll();
-    }
-  }
-
-  /// Updates a string vector attribute by element ID (replaces entire vector).
-  void updateVectorStrings(String collection, String attribute, int id, List<String> values) {
-    _ensureNotClosed();
-
-    final arena = Arena();
-    try {
-      final nativePtrs = arena<Pointer<Char>>(values.length);
-      for (var i = 0; i < values.length; i++) {
-        nativePtrs[i] = values[i].toNativeUtf8(allocator: arena).cast();
-      }
-
-      final err = bindings.quiver_database_update_vector_strings(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        nativePtrs,
-        values.length,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to update vector strings '$collection.$attribute' for id $id");
-      }
     } finally {
       arena.releaseAll();
     }
   }
 
   // ==========================================================================
-  // Update set attributes
+  // Update time series files
   // ==========================================================================
 
-  /// Updates an integer set attribute by element ID (replaces entire set).
-  void updateSetIntegers(String collection, String attribute, int id, List<int> values) {
+  /// Updates time series files paths for a collection.
+  /// Takes a map of column name to file path (null to clear the path).
+  void updateTimeSeriesFiles(String collection, Map<String, String?> paths) {
     _ensureNotClosed();
 
     final arena = Arena();
     try {
-      final nativeValues = arena<Int64>(values.length);
-      for (var i = 0; i < values.length; i++) {
-        nativeValues[i] = values[i];
+      final count = paths.length;
+
+      if (count == 0) {
+        return;
       }
 
-      final err = bindings.quiver_database_update_set_integers(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        nativeValues,
-        values.length,
+      final columns = arena<Pointer<Char>>(count);
+      final pathPtrs = arena<Pointer<Char>>(count);
+
+      var i = 0;
+      for (final entry in paths.entries) {
+        columns[i] = entry.key.toNativeUtf8(allocator: arena).cast();
+        if (entry.value != null) {
+          pathPtrs[i] = entry.value!.toNativeUtf8(allocator: arena).cast();
+        } else {
+          pathPtrs[i] = nullptr;
+        }
+        i++;
+      }
+
+      check(
+        bindings.quiver_database_update_time_series_files(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          columns,
+          pathPtrs,
+          count,
+        ),
       );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to update set integers '$collection.$attribute' for id $id");
-      }
-    } finally {
-      arena.releaseAll();
-    }
-  }
-
-  /// Updates a float set attribute by element ID (replaces entire set).
-  void updateSetFloats(String collection, String attribute, int id, List<double> values) {
-    _ensureNotClosed();
-
-    final arena = Arena();
-    try {
-      final nativeValues = arena<Double>(values.length);
-      for (var i = 0; i < values.length; i++) {
-        nativeValues[i] = values[i];
-      }
-
-      final err = bindings.quiver_database_update_set_floats(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        nativeValues,
-        values.length,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to update set floats '$collection.$attribute' for id $id");
-      }
-    } finally {
-      arena.releaseAll();
-    }
-  }
-
-  /// Updates a string set attribute by element ID (replaces entire set).
-  void updateSetStrings(String collection, String attribute, int id, List<String> values) {
-    _ensureNotClosed();
-
-    final arena = Arena();
-    try {
-      final nativePtrs = arena<Pointer<Char>>(values.length);
-      for (var i = 0; i < values.length; i++) {
-        nativePtrs[i] = values[i].toNativeUtf8(allocator: arena).cast();
-      }
-
-      final err = bindings.quiver_database_update_set_strings(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        attribute.toNativeUtf8(allocator: arena).cast(),
-        id,
-        nativePtrs,
-        values.length,
-      );
-
-      if (err != quiver_error_t.QUIVER_OK) {
-        throw DatabaseException.fromError(err, "Failed to update set strings '$collection.$attribute' for id $id");
-      }
     } finally {
       arena.releaseAll();
     }

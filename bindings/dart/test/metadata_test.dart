@@ -1,16 +1,11 @@
-import 'package:quiver_db/quiver_db.dart';
-import 'package:quiver_db/src/ffi/bindings.dart';
+import 'package:quiverdb/quiverdb.dart';
+import 'package:quiverdb/src/ffi/bindings.dart';
 import 'package:test/test.dart';
 import 'package:path/path.dart' as path;
 
 void main() {
   // Path to central tests folder
-  final testsPath = path.join(
-    path.current,
-    '..',
-    '..',
-    'tests',
-  );
+  final testsPath = path.join(path.current, '..', '..', 'tests');
 
   group('Scalar Metadata', () {
     test('returns metadata for text attribute', () {
@@ -19,11 +14,14 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final meta = db.getScalarMetadata('Collection', 'label');
-        expect(meta.name, equals('label'));
-        expect(meta.dataType, equals(quiver_data_type_t.QUIVER_DATA_TYPE_STRING));
-        expect(meta.notNull, isTrue);
-        expect(meta.primaryKey, isFalse);
+        final metadata = db.getScalarMetadata('Collection', 'label');
+        expect(metadata.name, equals('label'));
+        expect(
+          metadata.dataType,
+          equals(quiver_data_type_t.QUIVER_DATA_TYPE_STRING),
+        );
+        expect(metadata.notNull, isTrue);
+        expect(metadata.primaryKey, isFalse);
       } finally {
         db.close();
       }
@@ -35,11 +33,14 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final meta = db.getScalarMetadata('Collection', 'some_integer');
-        expect(meta.name, equals('some_integer'));
-        expect(meta.dataType, equals(quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER));
-        expect(meta.notNull, isFalse);
-        expect(meta.primaryKey, isFalse);
+        final metadata = db.getScalarMetadata('Collection', 'some_integer');
+        expect(metadata.name, equals('some_integer'));
+        expect(
+          metadata.dataType,
+          equals(quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER),
+        );
+        expect(metadata.notNull, isFalse);
+        expect(metadata.primaryKey, isFalse);
       } finally {
         db.close();
       }
@@ -51,11 +52,14 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final meta = db.getScalarMetadata('Collection', 'some_float');
-        expect(meta.name, equals('some_float'));
-        expect(meta.dataType, equals(quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT));
-        expect(meta.notNull, isFalse);
-        expect(meta.primaryKey, isFalse);
+        final metadata = db.getScalarMetadata('Collection', 'some_float');
+        expect(metadata.name, equals('some_float'));
+        expect(
+          metadata.dataType,
+          equals(quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT),
+        );
+        expect(metadata.notNull, isFalse);
+        expect(metadata.primaryKey, isFalse);
       } finally {
         db.close();
       }
@@ -67,10 +71,13 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final meta = db.getScalarMetadata('Collection', 'id');
-        expect(meta.name, equals('id'));
-        expect(meta.dataType, equals(quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER));
-        expect(meta.primaryKey, isTrue);
+        final metadata = db.getScalarMetadata('Collection', 'id');
+        expect(metadata.name, equals('id'));
+        expect(
+          metadata.dataType,
+          equals(quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER),
+        );
+        expect(metadata.primaryKey, isTrue);
       } finally {
         db.close();
       }
@@ -114,19 +121,29 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final meta = db.getVectorMetadata('Collection', 'values');
-        expect(meta.groupName, equals('values'));
-        expect(meta.valueColumns.length, equals(2));
+        final metadata = db.getVectorMetadata('Collection', 'values');
+        expect(metadata.groupName, equals('values'));
+        expect(metadata.valueColumns.length, equals(2));
 
-        final colNames = meta.valueColumns.map((a) => a.name).toList();
+        final colNames = metadata.valueColumns.map((a) => a.name).toList();
         expect(colNames, contains('value_int'));
         expect(colNames, contains('value_float'));
 
-        final valueIntCol = meta.valueColumns.firstWhere((a) => a.name == 'value_int');
-        expect(valueIntCol.dataType, equals(quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER));
+        final valueIntCol = metadata.valueColumns.firstWhere(
+          (a) => a.name == 'value_int',
+        );
+        expect(
+          valueIntCol.dataType,
+          equals(quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER),
+        );
 
-        final valueFloatCol = meta.valueColumns.firstWhere((a) => a.name == 'value_float');
-        expect(valueFloatCol.dataType, equals(quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT));
+        final valueFloatCol = metadata.valueColumns.firstWhere(
+          (a) => a.name == 'value_float',
+        );
+        expect(
+          valueFloatCol.dataType,
+          equals(quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT),
+        );
       } finally {
         db.close();
       }
@@ -155,13 +172,16 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final meta = db.getSetMetadata('Collection', 'tags');
-        expect(meta.groupName, equals('tags'));
-        expect(meta.valueColumns.length, equals(1));
+        final metadata = db.getSetMetadata('Collection', 'tags');
+        expect(metadata.groupName, equals('tags'));
+        expect(metadata.valueColumns.length, equals(1));
 
-        final tagCol = meta.valueColumns[0];
+        final tagCol = metadata.valueColumns[0];
         expect(tagCol.name, equals('tag'));
-        expect(tagCol.dataType, equals(quiver_data_type_t.QUIVER_DATA_TYPE_STRING));
+        expect(
+          tagCol.dataType,
+          equals(quiver_data_type_t.QUIVER_DATA_TYPE_STRING),
+        );
       } finally {
         db.close();
       }
@@ -190,10 +210,10 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
       );
       try {
-        final meta = db.getScalarMetadata('Child', 'parent_id');
-        expect(meta.isForeignKey, isTrue);
-        expect(meta.referencesCollection, equals('Parent'));
-        expect(meta.referencesColumn, equals('id'));
+        final metadata = db.getScalarMetadata('Child', 'parent_id');
+        expect(metadata.isForeignKey, isTrue);
+        expect(metadata.referencesCollection, equals('Parent'));
+        expect(metadata.referencesColumn, equals('id'));
       } finally {
         db.close();
       }
@@ -205,10 +225,10 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
       );
       try {
-        final meta = db.getScalarMetadata('Child', 'sibling_id');
-        expect(meta.isForeignKey, isTrue);
-        expect(meta.referencesCollection, equals('Child'));
-        expect(meta.referencesColumn, equals('id'));
+        final metadata = db.getScalarMetadata('Child', 'sibling_id');
+        expect(metadata.isForeignKey, isTrue);
+        expect(metadata.referencesCollection, equals('Child'));
+        expect(metadata.referencesColumn, equals('id'));
       } finally {
         db.close();
       }
@@ -220,10 +240,10 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
       );
       try {
-        final meta = db.getScalarMetadata('Child', 'label');
-        expect(meta.isForeignKey, isFalse);
-        expect(meta.referencesCollection, isNull);
-        expect(meta.referencesColumn, isNull);
+        final metadata = db.getScalarMetadata('Child', 'label');
+        expect(metadata.isForeignKey, isFalse);
+        expect(metadata.referencesCollection, isNull);
+        expect(metadata.referencesColumn, isNull);
       } finally {
         db.close();
       }
@@ -235,12 +255,12 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
       );
       try {
-        final attrs = db.listScalarAttributes('Child');
-        final parentAttr = attrs.firstWhere((a) => a.name == 'parent_id');
+        final attributes = db.listScalarAttributes('Child');
+        final parentAttr = attributes.firstWhere((a) => a.name == 'parent_id');
         expect(parentAttr.isForeignKey, isTrue);
         expect(parentAttr.referencesCollection, equals('Parent'));
 
-        final labelAttr = attrs.firstWhere((a) => a.name == 'label');
+        final labelAttr = attributes.firstWhere((a) => a.name == 'label');
         expect(labelAttr.isForeignKey, isFalse);
         expect(labelAttr.referencesCollection, isNull);
       } finally {
@@ -256,20 +276,28 @@ void main() {
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
-        final attrs = db.listScalarAttributes('Collection');
-        final attrNames = attrs.map((a) => a.name).toList();
+        final attributes = db.listScalarAttributes('Collection');
+        final attrNames = attributes.map((a) => a.name).toList();
         expect(attrNames, contains('id'));
         expect(attrNames, contains('label'));
         expect(attrNames, contains('some_integer'));
         expect(attrNames, contains('some_float'));
 
         // Verify metadata is included
-        final labelAttr = attrs.firstWhere((a) => a.name == 'label');
-        expect(labelAttr.dataType, equals(quiver_data_type_t.QUIVER_DATA_TYPE_STRING));
+        final labelAttr = attributes.firstWhere((a) => a.name == 'label');
+        expect(
+          labelAttr.dataType,
+          equals(quiver_data_type_t.QUIVER_DATA_TYPE_STRING),
+        );
         expect(labelAttr.notNull, isTrue);
 
-        final someIntAttr = attrs.firstWhere((a) => a.name == 'some_integer');
-        expect(someIntAttr.dataType, equals(quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER));
+        final someIntAttr = attributes.firstWhere(
+          (a) => a.name == 'some_integer',
+        );
+        expect(
+          someIntAttr.dataType,
+          equals(quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER),
+        );
         expect(someIntAttr.notNull, isFalse);
       } finally {
         db.close();
@@ -300,6 +328,28 @@ void main() {
     });
   });
 
+  group('Read Set Group By ID', () {
+    test('reads set group by id', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'all_types.sql'),
+      );
+      try {
+        db.createElement('AllTypes', {'label': 'Item 1'});
+        db.updateElement('AllTypes', 1, {
+          'code': [10, 20, 30],
+        });
+
+        final rows = db.readSetGroupById('AllTypes', 'codes', 1);
+        expect(rows, isNotEmpty);
+        final codes = rows.map((row) => row['code']).toList()..sort();
+        expect(codes, equals([10, 20, 30]));
+      } finally {
+        db.close();
+      }
+    });
+  });
+
   group('List Set Groups', () {
     test('returns all set groups with metadata', () {
       final db = Database.fromSchema(
@@ -315,7 +365,10 @@ void main() {
         final tagsGroup = groups.firstWhere((g) => g.groupName == 'tags');
         expect(tagsGroup.valueColumns.length, equals(1));
         expect(tagsGroup.valueColumns[0].name, equals('tag'));
-        expect(tagsGroup.valueColumns[0].dataType, equals(quiver_data_type_t.QUIVER_DATA_TYPE_STRING));
+        expect(
+          tagsGroup.valueColumns[0].dataType,
+          equals(quiver_data_type_t.QUIVER_DATA_TYPE_STRING),
+        );
       } finally {
         db.close();
       }

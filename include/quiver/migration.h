@@ -3,21 +3,15 @@
 
 #include "export.h"
 
-#include <memory>
+#include <compare>
+#include <cstdint>
 #include <string>
 
 namespace quiver {
 
 class QUIVER_API Migration {
 public:
-    Migration(int64_t version, const std::string& path);
-    ~Migration();
-
-    // Copy and move
-    Migration(const Migration& other);
-    Migration& operator=(const Migration& other);
-    Migration(Migration&& other) noexcept;
-    Migration& operator=(Migration&& other) noexcept;
+    Migration(int64_t version, std::string path);
 
     // Accessors
     int64_t version() const;
@@ -28,16 +22,12 @@ public:
     std::string down_sql() const;
 
     // Comparison operators (for sorting by version)
-    bool operator<(const Migration& other) const;
+    std::strong_ordering operator<=>(const Migration& other) const;
     bool operator==(const Migration& other) const;
-    bool operator!=(const Migration& other) const;
-    bool operator>(const Migration& other) const;
-    bool operator<=(const Migration& other) const;
-    bool operator>=(const Migration& other) const;
 
 private:
-    struct Impl;
-    std::unique_ptr<Impl> impl_;
+    int64_t version_;
+    std::string path_;
 };
 
 }  // namespace quiver

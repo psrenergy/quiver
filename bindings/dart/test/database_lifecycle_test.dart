@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:quiver_db/quiver_db.dart';
+import 'package:quiverdb/quiverdb.dart';
 import 'package:test/test.dart';
 import 'package:path/path.dart' as path;
 
@@ -92,10 +92,10 @@ void main() {
     });
 
     test('throws on invalid migrations path', () {
-      // Invalid path should throw MigrationException
+      // Invalid path should throw DatabaseException
       expect(
         () => Database.fromMigrations(':memory:', 'nonexistent/path'),
-        throwsA(isA<MigrationException>()),
+        throwsA(isA<DatabaseException>()),
       );
     });
   });
@@ -123,10 +123,18 @@ void main() {
     test('throws after close', () {
       final db = Database.fromSchema(':memory:', schemaPath);
       db.close();
-      expect(
-        () => db.currentVersion(),
-        throwsA(isA<DatabaseException>()),
-      );
+      expect(() => db.currentVersion(), throwsA(isA<StateError>()));
+    });
+  });
+
+  group('Database describe', () {
+    test('describe does not throw', () {
+      final db = Database.fromSchema(':memory:', schemaPath);
+      try {
+        db.describe();
+      } finally {
+        db.close();
+      }
     });
   });
 
@@ -143,7 +151,7 @@ void main() {
       db.close();
       expect(
         () => db.createElement('Configuration', {'label': 'Test'}),
-        throwsA(isA<DatabaseException>()),
+        throwsA(isA<StateError>()),
       );
     });
   });

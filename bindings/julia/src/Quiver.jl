@@ -10,16 +10,20 @@ include("date_time.jl")
 include("element.jl")
 include("database.jl")
 include("database_create.jl")
-include("database_csv.jl")
+include("database_options.jl")
+include("database_csv_export.jl")
+include("database_csv_import.jl")
 include("database_metadata.jl")
 include("database_query.jl")
 include("database_read.jl")
 include("database_update.jl")
 include("database_delete.jl")
+include("database_transaction.jl")
+include("helper_maps.jl")
 include("lua_runner.jl")
 
 export Element, Database, LuaRunner, DatabaseException
-export ScalarMetadata, VectorMetadata, SetMetadata
+export ScalarMetadata, GroupMetadata
 export QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_FLOAT, QUIVER_DATA_TYPE_STRING
 
 # Re-export C enum constants for data types

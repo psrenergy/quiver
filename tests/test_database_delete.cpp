@@ -5,8 +5,8 @@
 #include <quiver/element.h>
 
 TEST(Database, DeleteElementById) {
-    auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e;
     e.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
@@ -17,7 +17,7 @@ TEST(Database, DeleteElementById) {
     EXPECT_EQ(ids.size(), 1);
 
     // Delete element
-    db.delete_element_by_id("Configuration", id);
+    db.delete_element("Configuration", id);
 
     // Verify element is gone
     ids = db.read_element_ids("Configuration");
@@ -26,7 +26,7 @@ TEST(Database, DeleteElementById) {
 
 TEST(Database, DeleteElementByIdWithVectorData) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -41,7 +41,7 @@ TEST(Database, DeleteElementByIdWithVectorData) {
     EXPECT_EQ(vec.size(), 3);
 
     // Delete element - CASCADE should delete vector rows too
-    db.delete_element_by_id("Collection", id);
+    db.delete_element("Collection", id);
 
     // Verify element is gone
     auto ids = db.read_element_ids("Collection");
@@ -54,7 +54,7 @@ TEST(Database, DeleteElementByIdWithVectorData) {
 
 TEST(Database, DeleteElementByIdWithSetData) {
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("collections.sql"), {.console_level = quiver::LogLevel::off});
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -69,7 +69,7 @@ TEST(Database, DeleteElementByIdWithSetData) {
     EXPECT_EQ(set.size(), 2);
 
     // Delete element - CASCADE should delete set rows too
-    db.delete_element_by_id("Collection", id);
+    db.delete_element("Collection", id);
 
     // Verify element is gone
     auto ids = db.read_element_ids("Collection");
@@ -81,15 +81,15 @@ TEST(Database, DeleteElementByIdWithSetData) {
 }
 
 TEST(Database, DeleteElementByIdNonExistent) {
-    auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e;
     e.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
     db.create_element("Configuration", e);
 
     // Delete non-existent ID - should succeed silently (SQL DELETE is idempotent)
-    db.delete_element_by_id("Configuration", 999);
+    db.delete_element("Configuration", 999);
 
     // Verify original element still exists
     auto ids = db.read_element_ids("Configuration");
@@ -97,8 +97,8 @@ TEST(Database, DeleteElementByIdNonExistent) {
 }
 
 TEST(Database, DeleteElementByIdOtherElementsUnchanged) {
-    auto db =
-        quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), {.console_level = quiver::LogLevel::off});
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
 
     quiver::Element e1;
     e1.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
@@ -113,7 +113,7 @@ TEST(Database, DeleteElementByIdOtherElementsUnchanged) {
     int64_t id3 = db.create_element("Configuration", e3);
 
     // Delete middle element
-    db.delete_element_by_id("Configuration", id2);
+    db.delete_element("Configuration", id2);
 
     // Verify only two elements remain
     auto ids = db.read_element_ids("Configuration");
@@ -122,12 +122,12 @@ TEST(Database, DeleteElementByIdOtherElementsUnchanged) {
     EXPECT_EQ(ids[1], id3);
 
     // Verify first element unchanged
-    auto val1 = db.read_scalar_integers_by_id("Configuration", "integer_attribute", id1);
+    auto val1 = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id1);
     EXPECT_TRUE(val1.has_value());
     EXPECT_EQ(*val1, 42);
 
     // Verify third element unchanged
-    auto val3 = db.read_scalar_integers_by_id("Configuration", "integer_attribute", id3);
+    auto val3 = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id3);
     EXPECT_TRUE(val3.has_value());
     EXPECT_EQ(*val3, 200);
 }

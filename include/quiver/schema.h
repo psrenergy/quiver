@@ -35,6 +35,8 @@ struct Index {
     std::vector<std::string> columns;
 };
 
+enum class GroupTableType { Vector, Set, TimeSeries };
+
 struct TableDefinition {
     std::string name;
     std::map<std::string, ColumnDefinition> columns;
@@ -58,20 +60,34 @@ public:
     // Column type lookup (throws if table/column not found)
     DataType get_data_type(const std::string& table, const std::string& column) const;
 
-    // Vector/Set table naming convention
+    // Vector/Set/TimeSeries table naming convention
     static std::string vector_table_name(const std::string& collection, const std::string& group);
     static std::string set_table_name(const std::string& collection, const std::string& group);
+    static std::string time_series_table_name(const std::string& collection, const std::string& group);
+    static std::string time_series_files_table_name(const std::string& collection);
 
     // Table classification
     bool is_collection(const std::string& table) const;
     bool is_vector_table(const std::string& table) const;
     bool is_set_table(const std::string& table) const;
     bool is_time_series_table(const std::string& table) const;
+    bool is_time_series_files_table(const std::string& table) const;
     std::string get_parent_collection(const std::string& table) const;
+    std::string get_time_series_files_parent_collection(const std::string& table) const;
 
     // Find table for attribute (throws if not found)
     std::string find_vector_table(const std::string& collection, const std::string& attribute) const;
     std::string find_set_table(const std::string& collection, const std::string& attribute) const;
+    std::string find_time_series_table(const std::string& collection, const std::string& group) const;
+    std::string find_time_series_files_table(const std::string& collection) const;
+
+    // Find which group table contains a given column (for routing in create_element/update_element)
+    struct TableMatch {
+        std::string table_name;
+        GroupTableType type;
+    };
+    std::optional<TableMatch> find_table_for_column(const std::string& collection, const std::string& column) const;
+    std::vector<TableMatch> find_all_tables_for_column(const std::string& collection, const std::string& column) const;
 
     // All tables/collections
     std::vector<std::string> table_names() const;

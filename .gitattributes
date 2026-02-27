@@ -1,3 +1,6 @@
 * text=auto
 *.cpp text eol=lf
+*.dart text eol=lf
 *.h text eol=lf
+*.jl text eol=lf
+*.py text eol=lf

@@ -23,17 +23,18 @@ extension DatabaseCreate on Database {
 
     final arena = Arena();
     try {
-      final id = bindings.quiver_database_create_element(
-        _ptr,
-        collection.toNativeUtf8(allocator: arena).cast(),
-        element.ptr.cast(),
+      final outId = arena<Int64>();
+
+      check(
+        bindings.quiver_database_create_element(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          element.ptr.cast(),
+          outId,
+        ),
       );
 
-      if (id < 0) {
-        throw DatabaseException.fromError(id, "Failed to create element in '$collection'");
-      }
-
-      return id;
+      return outId.value;
     } finally {
       arena.releaseAll();
     }

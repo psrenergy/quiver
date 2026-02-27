@@ -1,6 +1,16 @@
 # Core library sources
 set(QUIVER_SOURCES
     database.cpp
+    database_create.cpp
+    database_read.cpp
+    database_update.cpp
+    database_delete.cpp
+    database_metadata.cpp
+    database_time_series.cpp
+    database_query.cpp
+    database_csv_export.cpp
+    database_csv_import.cpp
+    database_describe.cpp
     element.cpp
     lua_runner.cpp
     migration.cpp
@@ -36,6 +46,14 @@ target_compile_definitions(quiver PRIVATE
     SOL_SAFE_FUNCTION=1
 )
 
+# MSVC needs /bigobj for sol2 heavy template instantiations
+# Other Windows compilers need -Wa,-mbig-obj for the same reason
+if(MSVC)
+    set_source_files_properties(lua_runner.cpp PROPERTIES COMPILE_OPTIONS "/bigobj")
+elseif(WIN32)
+    set_source_files_properties(lua_runner.cpp PROPERTIES COMPILE_OPTIONS "-Wa,-mbig-obj")
+endif()
+
 # Link dependencies
 target_link_libraries(quiver
     PUBLIC
@@ -46,6 +64,7 @@ target_link_libraries(quiver
         spdlog::spdlog
         lua_library
         sol2
+        rapidcsv
         ${CMAKE_DL_LIBS}
 )
 
@@ -54,6 +73,7 @@ set_target_properties(quiver PROPERTIES
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION_MAJOR}
     OUTPUT_NAME quiver
+    PREFIX "lib"
 )
 
 # Alias for use in subdirectories
@@ -61,23 +81,35 @@ add_library(quiver::database ALIAS quiver)
 
 # Installation rules
 include(GNUInstallDirs)
-install(TARGETS quiver
-    EXPORT quiverTargets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/quiver
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
+if(NOT DEFINED SKBUILD)
+    install(TARGETS quiver
+        EXPORT quiverTargets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+    install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/quiver
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+endif()
 
 # C API wrapper (optional)
 if(QUIVER_BUILD_C_API)
     add_library(quiver_c SHARED
-        c_api_common.cpp
-        c_api_database.cpp
-        c_api_element.cpp
-        c_api_lua_runner.cpp
+        c/common.cpp
+        c/database.cpp
+        c/database_csv_export.cpp
+        c/database_csv_import.cpp
+        c/database_create.cpp
+        c/database_delete.cpp
+        c/database_read.cpp
+        c/database_update.cpp
+        c/database_metadata.cpp
+        c/database_query.cpp
+        c/database_time_series.cpp
+        c/database_transaction.cpp
+        c/element.cpp
+        c/lua_runner.cpp
     )
 
     target_compile_definitions(quiver_c PRIVATE
@@ -98,14 +130,17 @@ if(QUIVER_BUILD_C_API)
     set_target_properties(quiver_c PROPERTIES
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR}
+        PREFIX "lib"
     )
 
     add_library(quiver::database_c ALIAS quiver_c)
 
-    install(TARGETS quiver_c
-        EXPORT quiverTargets
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    )
+    if(NOT DEFINED SKBUILD)
+        install(TARGETS quiver_c
+            EXPORT quiverTargets
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        )
+    endif()
 endif()

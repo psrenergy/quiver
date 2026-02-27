@@ -1,16 +1,11 @@
 import 'dart:io';
-import 'package:quiver_db/quiver_db.dart';
+import 'package:quiverdb/quiverdb.dart';
 import 'package:test/test.dart';
 import 'package:path/path.dart' as path;
 
 void main() {
   // Path to central tests folder
-  final testsPath = path.join(
-    path.current,
-    '..',
-    '..',
-    'tests',
-  );
+  final testsPath = path.join(path.current, '..', '..', 'tests');
   final invalidPath = path.join(testsPath, 'schemas', 'invalid');
 
   late String dbPath;
@@ -64,7 +59,7 @@ void main() {
           dbPath,
           path.join(invalidPath, 'no_configuration.sql'),
         ),
-        throwsA(isA<SchemaException>()),
+        throwsA(isA<DatabaseException>()),
       );
     });
 
@@ -74,7 +69,7 @@ void main() {
           dbPath,
           path.join(invalidPath, 'label_not_null.sql'),
         ),
-        throwsA(isA<SchemaException>()),
+        throwsA(isA<DatabaseException>()),
       );
     });
 
@@ -84,7 +79,7 @@ void main() {
           dbPath,
           path.join(invalidPath, 'label_not_unique.sql'),
         ),
-        throwsA(isA<SchemaException>()),
+        throwsA(isA<DatabaseException>()),
       );
     });
 
@@ -94,7 +89,7 @@ void main() {
           dbPath,
           path.join(invalidPath, 'label_wrong_type.sql'),
         ),
-        throwsA(isA<SchemaException>()),
+        throwsA(isA<DatabaseException>()),
       );
     });
 
@@ -102,9 +97,19 @@ void main() {
       expect(
         () => Database.fromSchema(
           dbPath,
-          path.join(invalidPath, 'duplicate_attribute.sql'),
+          path.join(invalidPath, 'duplicate_attribute_vector.sql'),
         ),
-        throwsA(isA<SchemaException>()),
+        throwsA(isA<DatabaseException>()),
+      );
+    });
+
+    test('rejects schema with duplicate attribute in time series', () {
+      expect(
+        () => Database.fromSchema(
+          dbPath,
+          path.join(invalidPath, 'duplicate_attribute_time_series.sql'),
+        ),
+        throwsA(isA<DatabaseException>()),
       );
     });
 
@@ -114,7 +119,7 @@ void main() {
           dbPath,
           path.join(invalidPath, 'vector_no_index.sql'),
         ),
-        throwsA(isA<SchemaException>()),
+        throwsA(isA<DatabaseException>()),
       );
     });
 
@@ -124,7 +129,7 @@ void main() {
           dbPath,
           path.join(invalidPath, 'set_no_unique.sql'),
         ),
-        throwsA(isA<SchemaException>()),
+        throwsA(isA<DatabaseException>()),
       );
     });
 
@@ -134,7 +139,7 @@ void main() {
           dbPath,
           path.join(invalidPath, 'fk_not_null_set_null.sql'),
         ),
-        throwsA(isA<SchemaException>()),
+        throwsA(isA<DatabaseException>()),
       );
     });
 
@@ -144,7 +149,7 @@ void main() {
           dbPath,
           path.join(invalidPath, 'fk_actions.sql'),
         ),
-        throwsA(isA<SchemaException>()),
+        throwsA(isA<DatabaseException>()),
       );
     });
   });

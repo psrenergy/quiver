@@ -15,10 +15,17 @@ class Element {
   final Pointer<quiver_element_t1> _ptr;
   bool _isDisposed = false;
 
+  Element._(this._ptr);
+
   /// Creates a new empty element.
-  Element() : _ptr = bindings.quiver_element_create() {
-    if (_ptr == nullptr) {
-      throw const CreateElementException('Failed to create element');
+  factory Element() {
+    final arena = Arena();
+    try {
+      final outElementPtr = arena<Pointer<quiver_element_t1>>();
+      check(bindings.quiver_element_create(outElementPtr));
+      return Element._(outElementPtr.value);
+    } finally {
+      arena.releaseAll();
     }
   }
 
@@ -30,7 +37,7 @@ class Element {
 
   void _ensureNotDisposed() {
     if (_isDisposed) {
-      throw const DatabaseOperationException('Element has been disposed');
+      throw StateError('Element has been disposed');
     }
   }
 
@@ -41,9 +48,12 @@ class Element {
   /// - `int` - 64-bit integer
   /// - `double` - 64-bit floating point
   /// - `String` - UTF-8 string
+  /// - `DateTime` - converted to ISO 8601 string
   /// - `List<int>` - array of integers
   /// - `List<double>` - array of floats
   /// - `List<String>` - array of strings
+  /// - `List<DateTime>` - array of datetimes (converted to ISO 8601 strings)
+  /// - `Map<String, Object?>` - recursively sets each entry as a separate attribute
   void set(String name, Object? value) {
     _ensureNotDisposed();
 
@@ -64,12 +74,18 @@ class Element {
         setArrayFloat(name, v);
       case List<String> v:
         setArrayString(name, v);
+      case List<DateTime> v:
+        setArrayString(name, v.map(dateTimeToString).toList());
+      case Map<String, Object?> v:
+        for (final entry in v.entries) {
+          set(entry.key, entry.value);
+        }
       case List v when v.isEmpty:
-        throw InvalidArgumentException("Empty list not allowed for '$name'");
+        throw ArgumentError("Empty mixed list not allowed for '$name'");
       case List v:
         _setMixedList(name, v);
       default:
-        throw InvalidArgumentException(
+        throw ArgumentError(
           "Unsupported type ${value.runtimeType} for '$name'",
         );
     }
@@ -84,7 +100,7 @@ class Element {
     } else if (first is String) {
       setArrayString(name, values.cast<String>());
     } else {
-      throw InvalidArgumentException(
+      throw ArgumentError(
         "Unsupported array element type ${first.runtimeType} for '$name'",
       );
     }
@@ -95,10 +111,7 @@ class Element {
     _ensureNotDisposed();
     final namePtr = name.toNativeUtf8();
     try {
-      final error = bindings.quiver_element_set_integer(_ptr, namePtr.cast(), value);
-      if (error != 0) {
-        throw DatabaseException.fromError(error, "Failed to set int '$name'");
-      }
+      check(bindings.quiver_element_set_integer(_ptr, namePtr.cast(), value));
     } finally {
       malloc.free(namePtr);
     }
@@ -109,10 +122,7 @@ class Element {
     _ensureNotDisposed();
     final namePtr = name.toNativeUtf8();
     try {
-      final error = bindings.quiver_element_set_float(_ptr, namePtr.cast(), value);
-      if (error != 0) {
-        throw DatabaseException.fromError(error, "Failed to set float '$name'");
-      }
+      check(bindings.quiver_element_set_float(_ptr, namePtr.cast(), value));
     } finally {
       malloc.free(namePtr);
     }
@@ -124,14 +134,13 @@ class Element {
     final namePtr = name.toNativeUtf8();
     final valuePtr = value.toNativeUtf8();
     try {
-      final error = bindings.quiver_element_set_string(
-        _ptr,
-        namePtr.cast(),
-        valuePtr.cast(),
+      check(
+        bindings.quiver_element_set_string(
+          _ptr,
+          namePtr.cast(),
+          valuePtr.cast(),
+        ),
       );
-      if (error != 0) {
-        throw DatabaseException.fromError(error, "Failed to set string '$name'");
-      }
     } finally {
       malloc.free(namePtr);
       malloc.free(valuePtr);
@@ -148,10 +157,7 @@ class Element {
     _ensureNotDisposed();
     final namePtr = name.toNativeUtf8();
     try {
-      final error = bindings.quiver_element_set_null(_ptr, namePtr.cast());
-      if (error != 0) {
-        throw DatabaseException.fromError(error, "Failed to set null '$name'");
-      }
+      check(bindings.quiver_element_set_null(_ptr, namePtr.cast()));
     } finally {
       malloc.free(namePtr);
     }
@@ -167,15 +173,14 @@ class Element {
       for (var i = 0; i < values.length; i++) {
         arrayPtr[i] = values[i];
       }
-      final error = bindings.quiver_element_set_array_integer(
-        _ptr,
-        namePtr.cast(),
-        arrayPtr,
-        values.length,
+      check(
+        bindings.quiver_element_set_array_integer(
+          _ptr,
+          namePtr.cast(),
+          arrayPtr,
+          values.length,
+        ),
       );
-      if (error != 0) {
-        throw DatabaseException.fromError(error, "Failed to set int array '$name'");
-      }
     } finally {
       malloc.free(namePtr);
       malloc.free(arrayPtr);
@@ -192,15 +197,14 @@ class Element {
       for (var i = 0; i < values.length; i++) {
         arrayPtr[i] = values[i];
       }
-      final error = bindings.quiver_element_set_array_float(
-        _ptr,
-        namePtr.cast(),
-        arrayPtr,
-        values.length,
+      check(
+        bindings.quiver_element_set_array_float(
+          _ptr,
+          namePtr.cast(),
+          arrayPtr,
+          values.length,
+        ),
       );
-      if (error != 0) {
-        throw DatabaseException.fromError(error, "Failed to set float array '$name'");
-      }
     } finally {
       malloc.free(namePtr);
       malloc.free(arrayPtr);
@@ -220,15 +224,14 @@ class Element {
         stringPtrs.add(strPtr);
         arrayPtr[i] = strPtr.cast();
       }
-      final error = bindings.quiver_element_set_array_string(
-        _ptr,
-        namePtr.cast(),
-        arrayPtr,
-        values.length,
+      check(
+        bindings.quiver_element_set_array_string(
+          _ptr,
+          namePtr.cast(),
+          arrayPtr,
+          values.length,
+        ),
       );
-      if (error != 0) {
-        throw DatabaseException.fromError(error, "Failed to set string array '$name'");
-      }
     } finally {
       malloc.free(namePtr);
       for (final ptr in stringPtrs) {
@@ -241,13 +244,13 @@ class Element {
   /// Clears all values from this element.
   void clear() {
     _ensureNotDisposed();
-    bindings.quiver_element_clear(_ptr);
+    check(bindings.quiver_element_clear(_ptr));
   }
 
   /// Frees the native memory associated with this element.
   void dispose() {
     if (_isDisposed) return;
-    bindings.quiver_element_destroy(_ptr);
+    check(bindings.quiver_element_destroy(_ptr));
     _isDisposed = true;
   }
 }

@@ -1,15 +1,10 @@
-import 'package:quiver_db/quiver_db.dart';
+import 'package:quiverdb/quiverdb.dart';
 import 'package:test/test.dart';
 import 'package:path/path.dart' as path;
 
 void main() {
   // Path to central tests folder
-  final testsPath = path.join(
-    path.current,
-    '..',
-    '..',
-    'tests',
-  );
+  final testsPath = path.join(path.current, '..', '..', 'tests');
 
   group('Query String', () {
     test('returns value when row exists', () {

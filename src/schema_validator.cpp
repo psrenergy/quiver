@@ -32,6 +32,8 @@ void SchemaValidator::validate() {
             validate_vector_table(name);
         } else if (schema_.is_set_table(name)) {
             validate_set_table(name);
+        } else if (schema_.is_time_series_files_table(name)) {
+            validate_time_series_files_table(name);
         }
         // Time series tables have minimal validation (just file paths)
     }
@@ -49,7 +51,8 @@ void SchemaValidator::validate_configuration_exists() {
 void SchemaValidator::validate_collection_names() {
     for (const auto& name : schema_.table_names()) {
         // Skip special tables
-        if (schema_.is_vector_table(name) || schema_.is_set_table(name) || schema_.is_time_series_table(name)) {
+        if (schema_.is_vector_table(name) || schema_.is_set_table(name) || schema_.is_time_series_table(name) ||
+            schema_.is_time_series_files_table(name)) {
             continue;
         }
 
@@ -117,7 +120,7 @@ void SchemaValidator::validate_vector_table(const std::string& name) {
 
     // id should NOT be primary key alone (composite PK required)
     if (id_col && id_col->primary_key) {
-        int pk_count = 0;
+        auto pk_count = 0;
         for (const auto& [_, col] : table->columns) {
             if (col.primary_key) {
                 pk_count++;
@@ -197,8 +200,30 @@ void SchemaValidator::validate_set_table(const std::string& name) {
     }
 }
 
+void SchemaValidator::validate_time_series_files_table(const std::string& name) {
+    const auto* table = schema_.get_table(name);
+    if (!table) {
+        return;
+    }
+
+    // Get parent collection
+    auto parent = schema_.get_time_series_files_parent_collection(name);
+    if (std::find(collections_.begin(), collections_.end(), parent) == collections_.end()) {
+        validation_error("Time series files table '" + name + "' references non-existent collection '" + parent + "'");
+    }
+
+    // All columns should be TEXT type (for file paths)
+    for (const auto& [col_name, col] : table->columns) {
+        if (col.type != DataType::Text) {
+            validation_error("Time series files table '" + name + "' column '" + col_name +
+                             "' must be TEXT type (for file paths)");
+        }
+    }
+}
+
 void SchemaValidator::validate_no_duplicate_attributes() {
-    // For each collection, gather all attribute names from collection + vector tables
+    // For each collection, gather all attribute names from scalar columns and all group tables
+    // (vector, set, time series) and reject any duplicates.
     for (const auto& collection : collections_) {
         if (collection == "Configuration") {
             continue;
@@ -218,37 +243,49 @@ void SchemaValidator::validate_no_duplicate_attributes() {
             }
         }
 
-        // Check vector tables for duplicates
+        // Check all group tables (vector, set, time series) for duplicates
         for (const auto& table_name : schema_.table_names()) {
-            if (!schema_.is_vector_table(table_name)) {
+            const auto is_vector = schema_.is_vector_table(table_name);
+            const auto is_set = schema_.is_set_table(table_name);
+            const auto is_ts = schema_.is_time_series_table(table_name);
+
+            if (!is_vector && !is_set && !is_ts) {
                 continue;
             }
             if (schema_.get_parent_collection(table_name) != collection) {
                 continue;
             }
 
-            const auto* vec_table = schema_.get_table(table_name);
-            if (!vec_table) {
+            const auto* group_table = schema_.get_table(table_name);
+            if (!group_table) {
                 continue;
             }
 
-            // Get FK column names for this vector table
+            // Get FK column names
             std::set<std::string> fk_cols;
-            for (const auto& fk : vec_table->foreign_keys) {
+            for (const auto& fk : group_table->foreign_keys) {
                 fk_cols.insert(fk.from_column);
             }
 
-            for (const auto& [col_name, _] : vec_table->columns) {
-                // Skip id, vector_index, and FK columns
-                if (col_name == "id" || col_name == "vector_index" || fk_cols.count(col_name) > 0) {
+            for (const auto& [col_name, _] : group_table->columns) {
+                // Skip structural columns common to all group types
+                if (col_name == "id" || fk_cols.count(col_name) > 0) {
                     continue;
                 }
 
-                // Check if attribute already exists in collection
-                if (attributes.count(col_name) > 0) {
-                    validation_error("Duplicate attribute '" + col_name + "' in collection '" + collection +
-                                     "' and vector table '" + table_name + "'");
+                // Skip type-specific structural columns
+                if (is_vector && col_name == "vector_index") {
+                    continue;
                 }
+                if (is_ts && col_name.starts_with("date_")) {
+                    continue;
+                }
+
+                if (attributes.count(col_name) > 0) {
+                    validation_error("Duplicate attribute '" + col_name + "' found in table '" + table_name +
+                                     "' (already defined in collection '" + collection + "')");
+                }
+                attributes.insert(col_name);
             }
         }
     }
@@ -300,17 +337,17 @@ void SchemaValidator::validate_foreign_keys() {
             // Rule: FK column names should follow pattern <collection>_id or <collection>_<relation>
             // Skip vector table id column and set table columns
             if (!schema_.is_vector_table(table_name) || fk.from_column != "id") {
-                if (!schema_.is_set_table(table_name)) {
+                if (!schema_.is_set_table(table_name) && !schema_.is_time_series_table(table_name)) {
                     // Check if FK column name ends with _id or matches target_relation pattern
-                    std::string target = fk.to_table;
-                    std::string target_lower = target;
+                    auto target = fk.to_table;
+                    auto target_lower = target;
                     std::transform(target_lower.begin(), target_lower.end(), target_lower.begin(), ::tolower);
-                    std::string col_lower = fk.from_column;
+                    auto col_lower = fk.from_column;
                     std::transform(col_lower.begin(), col_lower.end(), col_lower.begin(), ::tolower);
 
                     // Expected pattern: <target>_id or <target>_<something>
-                    bool valid_name = (col_lower == target_lower + "_id") ||
-                                      (col_lower.find(target_lower + "_") == 0) ||
+                    auto valid_name = (col_lower == target_lower + "_id") ||
+                                      (col_lower.starts_with(target_lower + "_")) ||
                                       (col_lower.find("_id") != std::string::npos);
 
                     if (!valid_name) {

@@ -1,15 +1,10 @@
-import 'package:quiver_db/quiver_db.dart';
+import 'package:quiverdb/quiverdb.dart';
 import 'package:test/test.dart';
 import 'package:path/path.dart' as path;
 
 void main() {
   // Path to central tests folder
-  final testsPath = path.join(
-    path.current,
-    '..',
-    '..',
-    'tests',
-  );
+  final testsPath = path.join(path.current, '..', '..', 'tests');
 
   group('LuaRunner Create Element', () {
     test('creates element from Lua script', () {
@@ -150,9 +145,13 @@ void main() {
       try {
         final lua = LuaRunner(db);
         try {
-          lua.run('db:create_element("Configuration", { label = "Test Config" })');
+          lua.run(
+            'db:create_element("Configuration", { label = "Test Config" })',
+          );
           expect(
-            () => lua.run('db:create_element("NonexistentCollection", { label = "Item" })'),
+            () => lua.run(
+              'db:create_element("NonexistentCollection", { label = "Item" })',
+            ),
             throwsA(isA<LuaException>()),
           );
         } finally {
@@ -215,8 +214,14 @@ void main() {
       );
       try {
         db.createElement('Configuration', {'label': 'Config'});
-        db.createElement('Collection', {'label': 'Item 1', 'some_integer': 100});
-        db.createElement('Collection', {'label': 'Item 2', 'some_integer': 200});
+        db.createElement('Collection', {
+          'label': 'Item 1',
+          'some_integer': 100,
+        });
+        db.createElement('Collection', {
+          'label': 'Item 2',
+          'some_integer': 200,
+        });
 
         final lua = LuaRunner(db);
         try {

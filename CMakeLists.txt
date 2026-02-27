@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(quiver
-    VERSION 0.2.0
+    VERSION 0.5.0
     DESCRIPTION "Quiver library"
     LANGUAGES CXX C
 )
@@ -15,6 +15,14 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(QUIVER_BUILD_SHARED "Build shared library" ON)
 option(QUIVER_BUILD_TESTS "Build test suite" ON)
 option(QUIVER_BUILD_C_API "Build C API wrapper" OFF)
+
+# --- Python wheel packaging (scikit-build-core) ---
+# When building via scikit-build-core (pip wheel / python -m build),
+# SKBUILD is defined. Force C API on and disable tests for wheel builds.
+if(DEFINED SKBUILD)
+    set(QUIVER_BUILD_C_API ON CACHE BOOL "Build C API wrapper" FORCE)
+    set(QUIVER_BUILD_TESTS OFF CACHE BOOL "Build test suite" FORCE)
+endif()
 
 # Include CMake modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -38,46 +46,79 @@ if(QUIVER_BUILD_TESTS)
 endif()
 
 # Package config for find_package() support
-include(GNUInstallDirs)
-include(CMakePackageConfigHelpers)
+if(NOT DEFINED SKBUILD)
+    include(GNUInstallDirs)
+    include(CMakePackageConfigHelpers)
 
-write_basic_package_version_file(
-    "${CMAKE_CURRENT_BINARY_DIR}/quiverConfigVersion.cmake"
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMajorVersion
-)
+    write_basic_package_version_file(
+        "${CMAKE_CURRENT_BINARY_DIR}/quiverConfigVersion.cmake"
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion
+    )
 
-configure_package_config_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/quiverConfig.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/quiverConfig.cmake"
-    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/quiver
-)
+    configure_package_config_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/quiverConfig.cmake.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/quiverConfig.cmake"
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/quiver
+    )
 
-install(EXPORT quiverTargets
-    FILE quiverTargets.cmake
-    NAMESPACE quiver::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/quiver
-)
+    install(EXPORT quiverTargets
+        FILE quiverTargets.cmake
+        NAMESPACE quiver::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/quiver
+    )
 
-install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/quiverConfig.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/quiverConfigVersion.cmake"
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/quiver
+    install(FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/quiverConfig.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/quiverConfigVersion.cmake"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/quiver
+    )
+endif()
+
+# Source files for format and tidy targets
+file(GLOB_RECURSE ALL_SOURCE_FILES
+    ${CMAKE_SOURCE_DIR}/include/quiver/*.h
+    ${CMAKE_SOURCE_DIR}/include/quiver/c/*.h
+    ${CMAKE_SOURCE_DIR}/src/*.cpp
+    ${CMAKE_SOURCE_DIR}/src/*.h
+    ${CMAKE_SOURCE_DIR}/src/blob/*.cpp
+    ${CMAKE_SOURCE_DIR}/src/blob/*.h
+    ${CMAKE_SOURCE_DIR}/src/c/*.cpp
+    ${CMAKE_SOURCE_DIR}/src/c/*.h
+    ${CMAKE_SOURCE_DIR}/src/utils/*.h
+    ${CMAKE_SOURCE_DIR}/tests/*.cpp
+    ${CMAKE_SOURCE_DIR}/tests/*.h
 )
 
 # Format target
 find_program(CLANG_FORMAT clang-format)
 if(CLANG_FORMAT)
-    file(GLOB_RECURSE ALL_SOURCE_FILES
-        ${CMAKE_SOURCE_DIR}/include/quiver/*.h
-        ${CMAKE_SOURCE_DIR}/include/quiver/c/*.h
-        ${CMAKE_SOURCE_DIR}/src/*.cpp
-        ${CMAKE_SOURCE_DIR}/src/*.h
-        ${CMAKE_SOURCE_DIR}/tests/*.cpp
-        ${CMAKE_SOURCE_DIR}/tests/*.h
-    )
     add_custom_target(format
         COMMAND ${CLANG_FORMAT} -i ${ALL_SOURCE_FILES}
         COMMENT "Formatting code with clang-format"
     )
+endif()
+
+# Tidy target — runs clang-tidy via script to avoid command-line length limits on Windows
+find_program(CLANG_TIDY clang-tidy)
+if(CLANG_TIDY)
+    add_custom_target(tidy
+        COMMAND ${CMAKE_SOURCE_DIR}/scripts/tidy.bat
+        COMMENT "Running clang-tidy"
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+endif()
+
+# Install native libraries into the Python wheel package directory
+if(DEFINED SKBUILD)
+    install(TARGETS quiver quiver_c
+        LIBRARY DESTINATION quiverdb/_libs
+        RUNTIME DESTINATION quiverdb/_libs
+    )
+    # On Linux, set RPATH so libquiver_c.so finds libquiver.so in same directory
+    if(NOT WIN32)
+        set_target_properties(quiver_c PROPERTIES
+            INSTALL_RPATH "$ORIGIN"
+        )
+    endif()
 endif()

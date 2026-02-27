@@ -28,15 +28,19 @@ class LuaRunner {
 
   /// Creates a new LuaRunner for the given database.
   LuaRunner(Database db) : _ptr = nullptr {
-    _ptr = bindings.quiver_lua_runner_new(db.ptr);
-    if (_ptr == nullptr) {
-      throw const DatabaseOperationException('Failed to create LuaRunner');
+    final arena = Arena();
+    try {
+      final outRunnerPtr = arena<Pointer<quiver_lua_runner_t>>();
+      check(bindings.quiver_lua_runner_new(db.ptr, outRunnerPtr));
+      _ptr = outRunnerPtr.value;
+    } finally {
+      arena.releaseAll();
     }
   }
 
   void _ensureNotDisposed() {
     if (_isDisposed) {
-      throw const DatabaseOperationException('LuaRunner has been disposed');
+      throw StateError('LuaRunner has been disposed');
     }
   }
 
@@ -59,13 +63,16 @@ class LuaRunner {
       );
 
       if (err != quiver_error_t.QUIVER_OK) {
-        final errorPtr = bindings.quiver_lua_runner_get_error(_ptr);
-        if (errorPtr != nullptr) {
-          final errorMsg = errorPtr.cast<Utf8>().toDartString();
-          throw LuaException('Lua error: $errorMsg');
-        } else {
-          throw const LuaException('Lua script execution failed');
+        final outErrorPtr = arena<Pointer<Char>>();
+        final getErr = bindings.quiver_lua_runner_get_error(_ptr, outErrorPtr);
+        if (getErr == quiver_error_t.QUIVER_OK && outErrorPtr.value != nullptr) {
+          final errorMsg = outErrorPtr.value.cast<Utf8>().toDartString();
+          if (errorMsg.isNotEmpty) {
+            throw LuaException(errorMsg);
+          }
         }
+        // Fallback: try global error (for QUIVER_REQUIRE failures)
+        check(err);
       }
     } finally {
       arena.releaseAll();

@@ -4,7 +4,7 @@
 #include "export.h"
 #include "quiver/attribute_metadata.h"
 #include "quiver/element.h"
-#include "quiver/log_level.h"
+#include "quiver/options.h"
 #include "quiver/result.h"
 
 #include <memory>
@@ -14,14 +14,9 @@
 
 namespace quiver {
 
-struct QUIVER_API DatabaseOptions {
-    bool read_only = false;
-    LogLevel console_level = LogLevel::info;
-};
-
 class QUIVER_API Database {
 public:
-    explicit Database(const std::string& path, const DatabaseOptions& options = DatabaseOptions());
+    explicit Database(const std::string& path, const DatabaseOptions& options = default_database_options());
     ~Database();
 
     // Non-copyable
@@ -34,11 +29,11 @@ public:
 
     static Database from_migrations(const std::string& db_path,
                                     const std::string& migrations_path,
-                                    const DatabaseOptions& options = DatabaseOptions());
+                                    const DatabaseOptions& options = default_database_options());
 
     static Database from_schema(const std::string& db_path,
                                 const std::string& schema_path,
-                                const DatabaseOptions& options = DatabaseOptions());
+                                const DatabaseOptions& options = default_database_options());
     bool is_healthy() const;
 
     int64_t current_version() const;
@@ -46,15 +41,7 @@ public:
     // Element operations
     int64_t create_element(const std::string& collection, const Element& element);
     void update_element(const std::string& collection, int64_t id, const Element& element);
-    void delete_element_by_id(const std::string& collection, int64_t id);
-
-    // Relation operations
-    void set_scalar_relation(const std::string& collection,
-                             const std::string& attribute,
-                             const std::string& from_label,
-                             const std::string& to_label);
-
-    std::vector<std::string> read_scalar_relation(const std::string& collection, const std::string& attribute);
+    void delete_element(const std::string& collection, int64_t id);
 
     // Read scalar attributes (all elements)
     std::vector<int64_t> read_scalar_integers(const std::string& collection, const std::string& attribute);
@@ -63,11 +50,11 @@ public:
 
     // Read scalar attributes (by element ID)
     std::optional<int64_t>
-    read_scalar_integers_by_id(const std::string& collection, const std::string& attribute, int64_t id);
+    read_scalar_integer_by_id(const std::string& collection, const std::string& attribute, int64_t id);
     std::optional<double>
-    read_scalar_floats_by_id(const std::string& collection, const std::string& attribute, int64_t id);
+    read_scalar_float_by_id(const std::string& collection, const std::string& attribute, int64_t id);
     std::optional<std::string>
-    read_scalar_strings_by_id(const std::string& collection, const std::string& attribute, int64_t id);
+    read_scalar_string_by_id(const std::string& collection, const std::string& attribute, int64_t id);
 
     // Read vector attributes (all elements)
     std::vector<std::vector<int64_t>> read_vector_integers(const std::string& collection, const std::string& attribute);
@@ -100,49 +87,34 @@ public:
 
     // Attribute metadata queries
     ScalarMetadata get_scalar_metadata(const std::string& collection, const std::string& attribute) const;
-    VectorMetadata get_vector_metadata(const std::string& collection, const std::string& group_name) const;
-    SetMetadata get_set_metadata(const std::string& collection, const std::string& group_name) const;
+    GroupMetadata get_vector_metadata(const std::string& collection, const std::string& group_name) const;
+    GroupMetadata get_set_metadata(const std::string& collection, const std::string& group_name) const;
 
     // List attributes/groups - returns full metadata
     std::vector<ScalarMetadata> list_scalar_attributes(const std::string& collection) const;
-    std::vector<VectorMetadata> list_vector_groups(const std::string& collection) const;
-    std::vector<SetMetadata> list_set_groups(const std::string& collection) const;
+    std::vector<GroupMetadata> list_vector_groups(const std::string& collection) const;
+    std::vector<GroupMetadata> list_set_groups(const std::string& collection) const;
+    std::vector<GroupMetadata> list_time_series_groups(const std::string& collection) const;
 
-    // Update scalar attributes (by element ID)
-    void update_scalar_integer(const std::string& collection, const std::string& attribute, int64_t id, int64_t value);
-    void update_scalar_float(const std::string& collection, const std::string& attribute, int64_t id, double value);
-    void update_scalar_string(const std::string& collection,
-                              const std::string& attribute,
-                              int64_t id,
-                              const std::string& value);
+    // Time series metadata
+    GroupMetadata get_time_series_metadata(const std::string& collection, const std::string& group_name) const;
 
-    // Update vector attributes (by element ID) - replaces entire vector
-    void update_vector_integers(const std::string& collection,
-                                const std::string& attribute,
-                                int64_t id,
-                                const std::vector<int64_t>& values);
-    void update_vector_floats(const std::string& collection,
-                              const std::string& attribute,
-                              int64_t id,
-                              const std::vector<double>& values);
-    void update_vector_strings(const std::string& collection,
-                               const std::string& attribute,
-                               int64_t id,
-                               const std::vector<std::string>& values);
+    // Read time series group - returns rows with date_time and value columns
+    std::vector<std::map<std::string, Value>>
+    read_time_series_group(const std::string& collection, const std::string& group, int64_t id);
 
-    // Update set attributes (by element ID) - replaces entire set
-    void update_set_integers(const std::string& collection,
-                             const std::string& attribute,
-                             int64_t id,
-                             const std::vector<int64_t>& values);
-    void update_set_floats(const std::string& collection,
-                           const std::string& attribute,
-                           int64_t id,
-                           const std::vector<double>& values);
-    void update_set_strings(const std::string& collection,
-                            const std::string& attribute,
-                            int64_t id,
-                            const std::vector<std::string>& values);
+    // Update time series group - replaces all rows for element
+    void update_time_series_group(const std::string& collection,
+                                  const std::string& group,
+                                  int64_t id,
+                                  const std::vector<std::map<std::string, Value>>& rows);
+
+    // Time series files - singleton table storing file paths for external time series data
+    bool has_time_series_files(const std::string& collection) const;
+    std::vector<std::string> list_time_series_files_columns(const std::string& collection) const;
+    std::map<std::string, std::optional<std::string>> read_time_series_files(const std::string& collection);
+    void update_time_series_files(const std::string& collection,
+                                  const std::map<std::string, std::optional<std::string>>& paths);
 
     const std::string& path() const;
 
@@ -150,13 +122,25 @@ public:
     void describe() const;
 
     // CSV operations
-    void export_to_csv(const std::string& table, const std::string& path);
-    void import_from_csv(const std::string& table, const std::string& path);
+    void export_csv(const std::string& collection,
+                    const std::string& group,
+                    const std::string& path,
+                    const CSVOptions& options = default_csv_options());
+    void import_csv(const std::string& table,
+                    const std::string& group,
+                    const std::string& path,
+                    const CSVOptions& options = default_csv_options());
 
     // Query methods - execute SQL and return first row's first column
     std::optional<std::string> query_string(const std::string& sql, const std::vector<Value>& params = {});
     std::optional<int64_t> query_integer(const std::string& sql, const std::vector<Value>& params = {});
     std::optional<double> query_float(const std::string& sql, const std::vector<Value>& params = {});
+
+    // Transaction control
+    void begin_transaction();
+    void commit();
+    void rollback();
+    bool in_transaction() const;
 
 private:
     struct Impl;
@@ -172,9 +156,6 @@ private:
     void set_version(int64_t version);
     void migrate_up(const std::string& migration_path);
     void apply_schema(const std::string& schema_path);
-    void begin_transaction();
-    void commit();
-    void rollback();
 };
 
 }  // namespace quiver
