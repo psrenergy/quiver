@@ -610,3 +610,18 @@ function read_time_series_files(db::Database, collection::String)
     C.quiver_database_free_time_series_files(out_columns[], out_paths[], count)
     return result
 end
+
+function read_element_by_id(db::Database, collection::String, id::Int64)
+    scalars = read_scalars_by_id(db, collection, id)
+    vectors = read_vectors_by_id(db, collection, id)
+    sets = read_sets_by_id(db, collection, id)
+    
+    # delete!(result, "id")
+
+    # # Early exit for nonexistent element (label is NOT NULL, so nothing means no row)
+    # if haskey(result, "label") && result["label"] === nothing
+    #     return Dict{String, Any}()
+    # end
+
+    return merge(scalars, vectors, sets)
+end
