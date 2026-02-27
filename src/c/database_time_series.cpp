@@ -159,7 +159,8 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_databa
                     break;
                 }
                 default:
-                    throw std::runtime_error("Cannot read_time_series_group: unknown data type " + std::to_string(columns[c].second));
+                    throw std::runtime_error("Cannot read_time_series_group: unknown data type " +
+                                             std::to_string(columns[c].second));
                 }
             }
         } catch (...) {
@@ -283,7 +284,8 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
                     row[col_name] = std::string(static_cast<const char* const*>(column_data[c])[r]);
                     break;
                 default:
-                    throw std::runtime_error("Cannot update_time_series_group: unknown data type " + std::string(c_type_name(column_types[c])));
+                    throw std::runtime_error("Cannot update_time_series_group: unknown data type " +
+                                             std::string(c_type_name(column_types[c])));
                 }
             }
             rows.push_back(std::move(row));
@@ -339,7 +341,8 @@ QUIVER_C_API quiver_error_t quiver_database_free_time_series_data(char** column_
                 break;
             }
             default:
-                throw std::runtime_error("Cannot free_time_series_data: unknown data type " + std::to_string(column_types[i]));
+                throw std::runtime_error("Cannot free_time_series_data: unknown data type " +
+                                         std::to_string(column_types[i]));
             }
         }
         delete[] column_data;

@@ -31,7 +31,8 @@ inline const char* data_type_to_string(DataType type) {
     case DataType::DateTime:
         return "DATE_TIME";
     default:
-        throw std::runtime_error("Cannot data_type_to_string: unknown data type " + std::to_string(static_cast<int>(type)));
+        throw std::runtime_error("Cannot data_type_to_string: unknown data type " +
+                                 std::to_string(static_cast<int>(type)));
     }
 }
 
