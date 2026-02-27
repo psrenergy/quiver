@@ -242,7 +242,7 @@ void main() {
         });
         expect(id, greaterThan(0));
 
-        final result = db.readVectorIntegersByID('Collection', 'value_int', 1);
+        final result = db.readVectorIntegersById('Collection', 'value_int', 1);
         expect(result.length, equals(1));
         expect(result[0], equals(42));
       } finally {
@@ -267,7 +267,7 @@ void main() {
         });
         expect(id, greaterThan(0));
 
-        final result = db.readVectorIntegersByID('Collection', 'value_int', 1);
+        final result = db.readVectorIntegersById('Collection', 'value_int', 1);
         expect(result.length, equals(150));
         expect(result, equals(largeVector));
       } finally {
@@ -330,7 +330,7 @@ void main() {
         });
         expect(id, greaterThan(0));
 
-        final result = db.readSetStringsByID('Collection', 'tag', 1);
+        final result = db.readSetStringsById('Collection', 'tag', 1);
         expect(result.length, equals(5));
         expect(result..sort(), equals(['a', 'b', 'c', 'd', 'e']));
       } finally {
@@ -374,7 +374,7 @@ void main() {
         });
         expect(id, greaterThan(0));
 
-        final result = db.readVectorFloatsByID('Collection', 'value_float', 1);
+        final result = db.readVectorFloatsById('Collection', 'value_float', 1);
         expect(result.length, equals(3));
         expect(result, equals([1.1, 2.2, 3.3]));
       } finally {
@@ -495,11 +495,11 @@ void main() {
         expect(id, equals(1));
 
         // Scalar string should be trimmed
-        final label = db.readScalarStringByID('Collection', 'label', 1);
+        final label = db.readScalarStringById('Collection', 'label', 1);
         expect(label, equals('Item 1'));
 
         // Set strings should be trimmed
-        final tags = db.readSetStringsByID('Collection', 'tag', 1);
+        final tags = db.readSetStringsById('Collection', 'tag', 1);
         final sortedTags = List<String>.from(tags)..sort();
         expect(sortedTags, equals(['important', 'review', 'urgent']));
       } finally {
@@ -523,7 +523,7 @@ void main() {
         expect(id, greaterThan(0));
 
         // Verify it was stored correctly as ISO 8601 string
-        final dateStr = db.readScalarStringByID(
+        final dateStr = db.readScalarStringById(
           'Configuration',
           'date_attribute',
           1,
@@ -531,7 +531,7 @@ void main() {
         expect(dateStr, equals('2024-03-15T14:30:45'));
 
         // Verify readScalarsById returns native DateTime
-        final scalars = db.readScalarsByID('Configuration', 1);
+        final scalars = db.readScalarsById('Configuration', 1);
         expect(scalars['date_attribute'], isA<DateTime>());
         expect(scalars['date_attribute'], equals(dt));
       } finally {
@@ -541,7 +541,7 @@ void main() {
   });
 
   group('FK Resolution - Create', () {
-    test('resolves set FK labels to IDs', () {
+    test('resolves set FK labels to Ids', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
@@ -555,7 +555,7 @@ void main() {
           'mentor_id': ['Parent 1', 'Parent 2'],
         });
 
-        final result = db.readSetIntegersByID('Child', 'mentor_id', 1)..sort();
+        final result = db.readSetIntegersById('Child', 'mentor_id', 1)..sort();
         expect(result, equals([1, 2]));
       } finally {
         db.close();
@@ -602,7 +602,7 @@ void main() {
       }
     });
 
-    test('resolves scalar FK labels to IDs', () {
+    test('resolves scalar FK labels to Ids', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
@@ -622,7 +622,7 @@ void main() {
       }
     });
 
-    test('stores scalar FK integer ID directly', () {
+    test('stores scalar FK integer Id directly', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
@@ -639,7 +639,7 @@ void main() {
       }
     });
 
-    test('resolves vector FK labels to IDs', () {
+    test('resolves vector FK labels to Ids', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
@@ -653,14 +653,14 @@ void main() {
           'parent_ref': ['Parent 1', 'Parent 2'],
         });
 
-        final result = db.readVectorIntegersByID('Child', 'parent_ref', 1);
+        final result = db.readVectorIntegersById('Child', 'parent_ref', 1);
         expect(result, equals([1, 2]));
       } finally {
         db.close();
       }
     });
 
-    test('resolves time series FK labels to IDs', () {
+    test('resolves time series FK labels to Ids', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'relations.sql'),
@@ -704,12 +704,12 @@ void main() {
         expect(db.readScalarIntegers('Child', 'parent_id'), equals([1]));
         // Verify set FK
         expect(
-          db.readSetIntegersByID('Child', 'mentor_id', 1)..sort(),
+          db.readSetIntegersById('Child', 'mentor_id', 1)..sort(),
           equals([2]),
         );
         // Verify vector FK
         expect(
-          db.readVectorIntegersByID('Child', 'parent_ref', 1),
+          db.readVectorIntegersById('Child', 'parent_ref', 1),
           equals([1]),
         );
         // Verify time series FK

@@ -71,7 +71,7 @@ void main() {
         db.updateElement('Items', id1, {'measurement': <double>[]});
         db.importCSV('Items', 'measurements', csvPath);
 
-        final vals = db.readVectorFloatsByID('Items', 'measurement', id1);
+        final vals = db.readVectorFloatsById('Items', 'measurement', id1);
         expect(vals.length, 3);
         expect(vals[0], closeTo(1.1, 0.001));
         expect(vals[1], closeTo(2.2, 0.001));
@@ -124,7 +124,7 @@ void main() {
           },
         );
 
-        final status = db.readScalarIntegerByID('Items', 'status', 1);
+        final status = db.readScalarIntegerById('Items', 'status', 1);
         expect(status, isNotNull);
         expect(status, 1);
       } finally {
@@ -144,7 +144,7 @@ void main() {
 
         db.importCSV('Items', '', csvPath, dateTimeFormat: '%Y/%m/%d');
 
-        final date = db.readScalarStringByID('Items', 'date_created', 1);
+        final date = db.readScalarStringById('Items', 'date_created', 1);
         expect(date, isNotNull);
         expect(date, '2024-01-15T00:00:00');
       } finally {
@@ -293,7 +293,7 @@ void main() {
 
         db.importCSV('Items', 'measurements', csvPath);
 
-        final vals = db.readVectorFloatsByID('Items', 'measurement', 1);
+        final vals = db.readVectorFloatsById('Items', 'measurement', 1);
         expect(vals.length, 2);
         expect(vals[0], closeTo(1.1, 0.001));
         expect(vals[1], closeTo(2.2, 0.001));
