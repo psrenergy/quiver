@@ -30,8 +30,10 @@ inline const char* data_type_to_string(DataType type) {
         return "TEXT";
     case DataType::DateTime:
         return "DATE_TIME";
+    default:
+        throw std::runtime_error("Cannot data_type_to_string: unknown data type " +
+                                 std::to_string(static_cast<int>(type)));
     }
-    return "UNKNOWN";
 }
 
 // Check if a column name indicates a date time column

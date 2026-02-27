@@ -565,6 +565,8 @@ function read_time_series_group(db::Database, collection::String, group::String,
             else
                 result[col_name] = String[unsafe_string(p) for p in str_ptrs]
             end
+        else
+            throw(ArgumentError("Unsupported data type $(col_type) for column '$col_name'"))
         end
     end
 

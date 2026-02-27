@@ -87,8 +87,9 @@ inline quiver_data_type_t to_c_data_type(quiver::DataType type) {
         return QUIVER_DATA_TYPE_STRING;
     case quiver::DataType::DateTime:
         return QUIVER_DATA_TYPE_DATE_TIME;
+    default:
+        throw std::runtime_error("Cannot to_c_data_type: unknown data type " + std::to_string(static_cast<int>(type)));
     }
-    return QUIVER_DATA_TYPE_INTEGER;
 }
 
 inline char* strdup_safe(const std::string& str) {

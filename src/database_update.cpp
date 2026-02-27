@@ -70,6 +70,9 @@ void Database::update_element(const std::string& collection, int64_t id, const E
             case GroupTableType::TimeSeries:
                 time_series_table_columns[match.table_name][attr_name] = &values;
                 break;
+            default:
+                throw std::runtime_error("Cannot update_element: unknown group table type " +
+                                         std::to_string(static_cast<int>(match.type)));
             }
         }
     }

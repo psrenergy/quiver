@@ -807,6 +807,8 @@ extension DatabaseRead on Database {
           result[name] = readScalarStringById(collection, name, id);
         case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
           result[name] = readScalarDateTimeById(collection, name, id);
+        default:
+          throw ArgumentError('Unknown data type: ${attribute.dataType}');
       }
     }
     return result;
@@ -831,6 +833,8 @@ extension DatabaseRead on Database {
             result[name] = readVectorStringsById(collection, name, id);
           case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
             result[name] = readVectorDateTimesById(collection, name, id);
+          default:
+            throw ArgumentError('Unknown data type: ${col.dataType}');
         }
       }
     }
@@ -856,6 +860,8 @@ extension DatabaseRead on Database {
             result[name] = readSetStringsById(collection, name, id);
           case quiver_data_type_t.QUIVER_DATA_TYPE_DATE_TIME:
             result[name] = readSetDateTimesById(collection, name, id);
+          default:
+            throw ArgumentError('Unknown data type: ${col.dataType}');
         }
       }
     }
