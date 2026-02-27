@@ -1,23 +1,25 @@
 #include "quiver/blob/blob_metadata.h"
 
-#include "quiver/blob/dimension.h"
-#include "quiver/blob/time_properties.h"
-#include "quiver/blob/time_constants.h"
 #include "blob_utils.h"
+#include "quiver/blob/dimension.h"
+#include "quiver/blob/time_constants.h"
+#include "quiver/blob/time_properties.h"
 
 #include <algorithm>
 #include <format>
 #include <sstream>
-#include <toml++/toml.hpp>
 #include <stdexcept>
+#include <toml++/toml.hpp>
 
 namespace {
 
 constexpr std::string_view QUIVER_FILE_VERSION = "1";
 
-std::vector<int64_t> compute_time_dimension_initial_values(const std::vector<quiver::Dimension>& dimensions, const std::chrono::system_clock::time_point& initial_datetime) {
+std::vector<int64_t>
+compute_time_dimension_initial_values(const std::vector<quiver::Dimension>& dimensions,
+                                      const std::chrono::system_clock::time_point& initial_datetime) {
     std::vector<int64_t> initial_values;
-    initial_values.push_back(1); // The largest time dimension always starts at 1
+    initial_values.push_back(1);  // The largest time dimension always starts at 1
 
     auto date = std::chrono::floor<std::chrono::days>(initial_datetime);
     auto ymd = std::chrono::year_month_day{date};
@@ -27,68 +29,74 @@ std::vector<int64_t> compute_time_dimension_initial_values(const std::vector<qui
             quiver::TimeFrequency current_frequency = dim.time->frequency;
             quiver::TimeFrequency parent_frequency = dimensions[dim.time->parent_dimension_index].time->frequency;
 
-            // Yearly and weekly frequencies must always be at index 1, so they error if encountered as inner time dimensions
-            switch(current_frequency) {
-                case quiver::TimeFrequency::Yearly:
-                    throw std::logic_error("YEARLY frequency not implemented. This function should only be used for inner time dimensions.");
+            // Yearly and weekly frequencies must always be at index 1, so they error if encountered as inner time
+            // dimensions
+            switch (current_frequency) {
+            case quiver::TimeFrequency::Yearly:
+                throw std::logic_error(
+                    "YEARLY frequency not implemented. This function should only be used for inner time dimensions.");
+            case quiver::TimeFrequency::Monthly: {
+                int64_t month = static_cast<unsigned>(ymd.month());
+                initial_values.push_back(month);
+                break;
+            }
+            case quiver::TimeFrequency::Weekly:
+                throw std::logic_error(
+                    "WEEKLY frequency not implemented. This function should only be used for inner time dimensions.");
+            case quiver::TimeFrequency::Daily: {
+                int64_t day;
+                switch (parent_frequency) {
+                case quiver::TimeFrequency::Weekly: {
+                    day = quiver::day_of_week(initial_datetime);
+                    break;
+                }
                 case quiver::TimeFrequency::Monthly: {
-                    int64_t month = static_cast<unsigned>(ymd.month());
-                    initial_values.push_back(month);
+                    day = static_cast<unsigned>(ymd.day());
                     break;
                 }
-                case quiver::TimeFrequency::Weekly:
-                    throw std::logic_error("WEEKLY frequency not implemented. This function should only be used for inner time dimensions.");
-                case quiver::TimeFrequency::Daily: {
-                    int64_t day;
-                    switch(parent_frequency) {
-                        case quiver::TimeFrequency::Weekly: {
-                            day = quiver::day_of_week(initial_datetime);
-                            break;
-                        }
-                        case quiver::TimeFrequency::Monthly: {
-                            day = static_cast<unsigned>(ymd.day());
-                            break;
-                        }
-                        case quiver::TimeFrequency::Yearly: {
-                            day = quiver::day_of_year(initial_datetime);
-                            break;
-                        }
-                        default:
-                            throw std::logic_error("Invalid parent frequency " + frequency_to_string(parent_frequency) + " for DAILY dimension.");
-                    }
-                    initial_values.push_back(day);
-                    break;
-                }
-                case quiver::TimeFrequency::Hourly: {
-                    auto time_of_day = std::chrono::hh_mm_ss{initial_datetime - date};
-                    int64_t hour = time_of_day.hours().count() + 1; // 0-23 -> 1-24
-                    switch(parent_frequency) {
-                    case quiver::TimeFrequency::Daily:
-                        break;
-                    case quiver::TimeFrequency::Weekly:
-                        hour += (quiver::day_of_week(initial_datetime) - 1) * quiver::time::MAX_HOURS_IN_DAY;
-                        break;
-                    case quiver::TimeFrequency::Monthly:
-                        hour += (static_cast<unsigned>(ymd.day()) - 1) * quiver::time::MAX_HOURS_IN_DAY;
-                        break;
-                    case quiver::TimeFrequency::Yearly:
-                        hour += (quiver::day_of_year(initial_datetime) - 1) * quiver::time::MAX_HOURS_IN_DAY;
-                        break;
-                    default:
-                        throw std::logic_error("Invalid parent frequency " + frequency_to_string(parent_frequency) + " for HOURLY dimension.");
-                    }
-                    initial_values.push_back(hour);
+                case quiver::TimeFrequency::Yearly: {
+                    day = quiver::day_of_year(initial_datetime);
                     break;
                 }
                 default:
-                    throw std::logic_error("Unhandled frequency " + frequency_to_string(current_frequency) + " in compute_time_dimension_initial_values.");
+                    throw std::logic_error("Invalid parent frequency " + frequency_to_string(parent_frequency) +
+                                           " for DAILY dimension.");
+                }
+                initial_values.push_back(day);
+                break;
+            }
+            case quiver::TimeFrequency::Hourly: {
+                auto time_of_day = std::chrono::hh_mm_ss{initial_datetime - date};
+                int64_t hour = time_of_day.hours().count() + 1;  // 0-23 -> 1-24
+                switch (parent_frequency) {
+                case quiver::TimeFrequency::Daily:
+                    break;
+                case quiver::TimeFrequency::Weekly:
+                    hour += (quiver::day_of_week(initial_datetime) - 1) * quiver::time::MAX_HOURS_IN_DAY;
+                    break;
+                case quiver::TimeFrequency::Monthly:
+                    hour += (static_cast<unsigned>(ymd.day()) - 1) * quiver::time::MAX_HOURS_IN_DAY;
+                    break;
+                case quiver::TimeFrequency::Yearly:
+                    hour += (quiver::day_of_year(initial_datetime) - 1) * quiver::time::MAX_HOURS_IN_DAY;
+                    break;
+                default:
+                    throw std::logic_error("Invalid parent frequency " + frequency_to_string(parent_frequency) +
+                                           " for HOURLY dimension.");
+                }
+                initial_values.push_back(hour);
+                break;
+            }
+            default:
+                throw std::logic_error("Unhandled frequency " + frequency_to_string(current_frequency) +
+                                       " in compute_time_dimension_initial_values.");
             }
         }
     }
     return initial_values;
 }
 
-}
+}  // namespace
 
 namespace quiver {
 
@@ -145,7 +153,7 @@ BlobMetadata BlobMetadata::from_toml(const std::string& toml_content) {
     }
 
     std::string version = tbl["version"].value<std::string>().value();
-    
+
     // Create and populate BlobMetadata
     BlobMetadata metadata;
     metadata.unit = unit;
@@ -162,7 +170,8 @@ BlobMetadata BlobMetadata::from_toml(const std::string& toml_content) {
     int64_t previous_time_dim_index = -1;
     metadata.dimensions.clear();
     for (size_t i = 0; i < dimensions.size(); ++i) {
-        bool is_time = std::find(time_dimensions.begin(), time_dimensions.end(), dimensions[i]) != time_dimensions.end();
+        bool is_time =
+            std::find(time_dimensions.begin(), time_dimensions.end(), dimensions[i]) != time_dimensions.end();
         if (is_time) {
             TimeFrequency freq = frequency_from_string(frequencies[time_dim_index]);
             TimeProperties time_props{freq, 0, previous_time_dim_index};
@@ -213,7 +222,8 @@ std::string BlobMetadata::to_toml() const {
 
     // std::format with chrono requires C++20 + compiler support for <chrono> formatting.
     // If this fails to compile, fall back to: to_time_t + gmtime + put_time.
-    std::string datetime_str = std::format("{:%Y-%m-%dT%H:%M:%S}", std::chrono::floor<std::chrono::seconds>(initial_datetime));
+    std::string datetime_str =
+        std::format("{:%Y-%m-%dT%H:%M:%S}", std::chrono::floor<std::chrono::seconds>(initial_datetime));
 
     toml::table tbl{
         {"version", version},
@@ -234,7 +244,8 @@ std::string BlobMetadata::to_toml() const {
 void BlobMetadata::validate() const {
     // Version check
     if (version != QUIVER_FILE_VERSION) {
-        throw std::runtime_error("Incompatible file version: expected " + std::string(QUIVER_FILE_VERSION) + ", got " + version);
+        throw std::runtime_error("Incompatible file version: expected " + std::string(QUIVER_FILE_VERSION) + ", got " +
+                                 version);
     }
 
     // Dimension count
@@ -249,18 +260,17 @@ void BlobMetadata::validate() const {
 
     // Time dimension count must not exceed total dimensions
     if (number_of_time_dimensions < 0 || number_of_time_dimensions > static_cast<int64_t>(dimensions.size())) {
-        throw std::runtime_error(
-            "Number of time dimensions must be non-negative and <= number of dimensions. "
-            "Got number_of_time_dimensions=" + std::to_string(number_of_time_dimensions) +
-            ", number_of_dimensions=" + std::to_string(dimensions.size()));
+        throw std::runtime_error("Number of time dimensions must be non-negative and <= number of dimensions. "
+                                 "Got number_of_time_dimensions=" +
+                                 std::to_string(number_of_time_dimensions) +
+                                 ", number_of_dimensions=" + std::to_string(dimensions.size()));
     }
 
     // Dimension sizes must be positive
     for (size_t i = 0; i < dimensions.size(); ++i) {
         if (dimensions[i].size <= 0) {
-            throw std::runtime_error(
-                "Dimension size at index " + std::to_string(i) +
-                " must be positive, got " + std::to_string(dimensions[i].size));
+            throw std::runtime_error("Dimension size at index " + std::to_string(i) + " must be positive, got " +
+                                     std::to_string(dimensions[i].size));
         }
     }
 
@@ -286,7 +296,8 @@ void BlobMetadata::validate() const {
 }
 
 void BlobMetadata::validate_time_dimension_metadata() const {
-    if (number_of_time_dimensions == 0) return;
+    if (number_of_time_dimensions == 0)
+        return;
 
     // Collect time dimensions in order
     std::vector<const Dimension*> time_dims;
@@ -300,9 +311,8 @@ void BlobMetadata::validate_time_dimension_metadata() const {
     for (size_t i = 0; i < time_dims.size(); ++i) {
         for (size_t j = i + 1; j < time_dims.size(); ++j) {
             if (time_dims[i]->time->frequency == time_dims[j]->time->frequency) {
-                throw std::runtime_error(
-                    "Time dimension frequencies must be unique. Duplicate: " +
-                    frequency_to_string(time_dims[i]->time->frequency));
+                throw std::runtime_error("Time dimension frequencies must be unique. Duplicate: " +
+                                         frequency_to_string(time_dims[i]->time->frequency));
             }
         }
     }
@@ -310,8 +320,7 @@ void BlobMetadata::validate_time_dimension_metadata() const {
     // Frequencies must be sorted from lowest to highest (Yearly < Monthly < Weekly < Daily < Hourly)
     for (size_t i = 1; i < time_dims.size(); ++i) {
         if (time_dims[i]->time->frequency <= time_dims[i - 1]->time->frequency) {
-            throw std::runtime_error(
-                "Time dimension frequencies must be ordered from lowest to highest frequency.");
+            throw std::runtime_error("Time dimension frequencies must be ordered from lowest to highest frequency.");
         }
     }
 
@@ -330,7 +339,8 @@ void BlobMetadata::validate_time_dimension_sizes() const {
 
     // Skip the outermost time dimension (parent_dimension_index == -1) — its size is unconstrained
     for (const auto& dim : dimensions) {
-        if (!dim.is_time_dimension() || dim.time->parent_dimension_index == -1) continue;
+        if (!dim.is_time_dimension() || dim.time->parent_dimension_index == -1)
+            continue;
         const Dimension& parent = dimensions[dim.time->parent_dimension_index];
         TimeFrequency freq = dim.time->frequency;
         TimeFrequency parent_freq = parent.time->frequency;
@@ -341,31 +351,66 @@ void BlobMetadata::validate_time_dimension_sizes() const {
         switch (freq) {
         case TimeFrequency::Hourly:
             switch (parent_freq) {
-                case TimeFrequency::Daily:   min_size = MIN_HOURS_IN_DAY;   max_size = MAX_HOURS_IN_DAY;   break;
-                case TimeFrequency::Weekly:  min_size = MIN_HOURS_IN_WEEK;  max_size = MAX_HOURS_IN_WEEK;  break;
-                case TimeFrequency::Monthly: min_size = MIN_HOURS_IN_MONTH; max_size = MAX_HOURS_IN_MONTH; break;
-                case TimeFrequency::Yearly:  min_size = MIN_HOURS_IN_YEAR;  max_size = MAX_HOURS_IN_YEAR;  break;
-                default: found = false; break;
+            case TimeFrequency::Daily:
+                min_size = MIN_HOURS_IN_DAY;
+                max_size = MAX_HOURS_IN_DAY;
+                break;
+            case TimeFrequency::Weekly:
+                min_size = MIN_HOURS_IN_WEEK;
+                max_size = MAX_HOURS_IN_WEEK;
+                break;
+            case TimeFrequency::Monthly:
+                min_size = MIN_HOURS_IN_MONTH;
+                max_size = MAX_HOURS_IN_MONTH;
+                break;
+            case TimeFrequency::Yearly:
+                min_size = MIN_HOURS_IN_YEAR;
+                max_size = MAX_HOURS_IN_YEAR;
+                break;
+            default:
+                found = false;
+                break;
             }
             break;
         case TimeFrequency::Daily:
             switch (parent_freq) {
-                case TimeFrequency::Weekly:  min_size = MIN_DAYS_IN_WEEK;  max_size = MAX_DAYS_IN_WEEK;  break;
-                case TimeFrequency::Monthly: min_size = MIN_DAYS_IN_MONTH; max_size = MAX_DAYS_IN_MONTH; break;
-                case TimeFrequency::Yearly:  min_size = MIN_DAYS_IN_YEAR;  max_size = MAX_DAYS_IN_YEAR;  break;
-                default: found = false; break;
+            case TimeFrequency::Weekly:
+                min_size = MIN_DAYS_IN_WEEK;
+                max_size = MAX_DAYS_IN_WEEK;
+                break;
+            case TimeFrequency::Monthly:
+                min_size = MIN_DAYS_IN_MONTH;
+                max_size = MAX_DAYS_IN_MONTH;
+                break;
+            case TimeFrequency::Yearly:
+                min_size = MIN_DAYS_IN_YEAR;
+                max_size = MAX_DAYS_IN_YEAR;
+                break;
+            default:
+                found = false;
+                break;
             }
             break;
         case TimeFrequency::Weekly:
             switch (parent_freq) {
-                case TimeFrequency::Yearly: min_size = MIN_WEEKS_IN_YEAR; max_size = MAX_WEEKS_IN_YEAR; break;
-                default: found = false; break;
+            case TimeFrequency::Yearly:
+                min_size = MIN_WEEKS_IN_YEAR;
+                max_size = MAX_WEEKS_IN_YEAR;
+                break;
+            default:
+                found = false;
+                break;
             }
             break;
         case TimeFrequency::Monthly:
             switch (parent_freq) {
-                case TimeFrequency::Yearly: min_size = MIN_MONTHS_IN_YEAR; max_size = MAX_MONTHS_IN_YEAR; break;
-                default: found = false; break;
+            case TimeFrequency::Yearly:
+                min_size = MIN_MONTHS_IN_YEAR;
+                max_size = MAX_MONTHS_IN_YEAR;
+                break;
+            default:
+                found = false;
+                break;
             }
             break;
         default:
@@ -374,17 +419,15 @@ void BlobMetadata::validate_time_dimension_sizes() const {
         }
 
         if (!found) {
-            throw std::runtime_error(
-                "Invalid parent/child frequency combination: " +
-                frequency_to_string(freq) + " inside " + frequency_to_string(parent_freq));
+            throw std::runtime_error("Invalid parent/child frequency combination: " + frequency_to_string(freq) +
+                                     " inside " + frequency_to_string(parent_freq));
         }
 
         if (size < min_size || size > max_size) {
-            throw std::runtime_error(
-                "Time dimension '" + dim.name + "' with frequency '" + frequency_to_string(freq) +
-                "' has size " + std::to_string(size) +
-                " which is out of bounds [" + std::to_string(min_size) + ", " + std::to_string(max_size) +
-                "] based on the next lower frequency: '" + frequency_to_string(parent_freq) + "'");
+            throw std::runtime_error("Time dimension '" + dim.name + "' with frequency '" + frequency_to_string(freq) +
+                                     "' has size " + std::to_string(size) + " which is out of bounds [" +
+                                     std::to_string(min_size) + ", " + std::to_string(max_size) +
+                                     "] based on the next lower frequency: '" + frequency_to_string(parent_freq) + "'");
         }
     }
 }

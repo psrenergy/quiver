@@ -1,13 +1,12 @@
 #include "quiver/blob/blob.h"
 
+#include "blob_utils.h"
 #include "quiver/blob/dimension.h"
 
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
-
-#include "blob_utils.h"
 
 namespace quiver {
 
@@ -27,21 +26,22 @@ Blob& Blob::operator=(Blob&& other) noexcept = default;
 
 Blob Blob::open_file(const std::string& file_path, char mode, const std::optional<BlobMetadata>& metadata) {
     namespace fs = std::filesystem;
-    switch(mode) {
+    switch (mode) {
     case 'r': {
         // Validate file exists
-        if (!fs::exists(file_path + std::string(QVR_EXTENSION)) || !fs::exists(file_path + std::string(TOML_EXTENSION))) {
+        if (!fs::exists(file_path + std::string(QVR_EXTENSION)) ||
+            !fs::exists(file_path + std::string(TOML_EXTENSION))) {
             throw std::invalid_argument("File not found: " + file_path);
         }
 
         // Read TOML metadata
         std::ifstream toml_file(file_path + std::string(TOML_EXTENSION));
-        std::string toml_content((std::istreambuf_iterator<char>(toml_file)),
-                                  std::istreambuf_iterator<char>());
+        std::string toml_content((std::istreambuf_iterator<char>(toml_file)), std::istreambuf_iterator<char>());
         auto metadata = BlobMetadata::from_toml(toml_content);
 
         // Open binary data file
-        auto io = std::make_unique<std::fstream>(file_path + std::string(QVR_EXTENSION), std::ios::in | std::ios::binary);
+        auto io =
+            std::make_unique<std::fstream>(file_path + std::string(QVR_EXTENSION), std::ios::in | std::ios::binary);
         return Blob(file_path, metadata, std::move(io));
     }
     case 'w': {
@@ -55,11 +55,13 @@ Blob Blob::open_file(const std::string& file_path, char mode, const std::optiona
         toml_file << metadata->to_toml();
 
         // Open binary data file
-        auto io = std::make_unique<std::fstream>(file_path + std::string(QVR_EXTENSION), std::ios::out | std::ios::binary);
+        auto io =
+            std::make_unique<std::fstream>(file_path + std::string(QVR_EXTENSION), std::ios::out | std::ios::binary);
         return Blob(file_path, metadata.value(), std::move(io));
     }
     default:
-        throw std::invalid_argument("Invalid file mode: " + std::string(1, mode) + ". Use 'r' for read or 'w' for write.");
+        throw std::invalid_argument("Invalid file mode: " + std::string(1, mode) +
+                                    ". Use 'r' for read or 'w' for write.");
     }
 }
 
@@ -121,9 +123,8 @@ void Blob::validate_dimension_values(const std::unordered_map<std::string, int64
 
     // Check count
     if (dims.size() != dimensions.size()) {
-        throw std::invalid_argument(
-            "Expected " + std::to_string(dimensions.size()) +
-            " dimensions, got " + std::to_string(dims.size()));
+        throw std::invalid_argument("Expected " + std::to_string(dimensions.size()) + " dimensions, got " +
+                                    std::to_string(dims.size()));
     }
 
     // Check all dimension names exist and values are in bounds
@@ -135,9 +136,8 @@ void Blob::validate_dimension_values(const std::unordered_map<std::string, int64
         }
         int64_t value = it->second;
         if (value < 1 || value > dim.size) {
-            throw std::invalid_argument(
-                "Dimension '" + dim.name + "' value " + std::to_string(value) +
-                " is out of bounds [1, " + std::to_string(dim.size) + "]");
+            throw std::invalid_argument("Dimension '" + dim.name + "' value " + std::to_string(value) +
+                                        " is out of bounds [1, " + std::to_string(dim.size) + "]");
         }
     }
 
@@ -153,16 +153,19 @@ void Blob::validate_dimension_values(const std::unordered_map<std::string, int64
         // Verify that inner time dimensions are consistent with the resulting date
         bool first = true;
         for (const auto& dim : dimensions) {
-            if (!dim.is_time_dimension()) continue;
-            if (first) { first = false; continue; }  // skip outermost time dimension
+            if (!dim.is_time_dimension())
+                continue;
+            if (first) {
+                first = false;
+                continue;
+            }  // skip outermost time dimension
 
             int64_t expected_value = dims.at(dim.name);
             int64_t resulting_value = dim.time->datetime_to_int(datetime);
             if (expected_value != resulting_value) {
-                throw std::invalid_argument(
-                    "Invalid values for time dimensions: dimension '" + dim.name +
-                    "' has value " + std::to_string(expected_value) +
-                    " but the resulting datetime implies " + std::to_string(resulting_value));
+                throw std::invalid_argument("Invalid values for time dimensions: dimension '" + dim.name +
+                                            "' has value " + std::to_string(expected_value) +
+                                            " but the resulting datetime implies " + std::to_string(resulting_value));
             }
         }
     }
@@ -170,9 +173,8 @@ void Blob::validate_dimension_values(const std::unordered_map<std::string, int64
 
 void Blob::validate_data_length(const std::vector<double>& data) {
     if (data.size() != impl_->metadata.labels.size()) {
-        throw std::invalid_argument(
-            "Data length " + std::to_string(data.size()) +
-            " does not match expected length " + std::to_string(impl_->metadata.labels.size()));
+        throw std::invalid_argument("Data length " + std::to_string(data.size()) + " does not match expected length " +
+                                    std::to_string(impl_->metadata.labels.size()));
     }
 }
 

@@ -1,9 +1,9 @@
 #include "quiver/blob/blob_csv.h"
 
+#include "blob_utils.h"
+#include "quiver/blob/blob.h"
 #include "quiver/blob/dimension.h"
 #include "quiver/blob/time_constants.h"
-#include "quiver/blob/blob.h"
-#include "blob_utils.h"
 
 #include <chrono>
 #include <format>
@@ -21,8 +21,7 @@ BlobCSV::BlobCSV(const std::string& file_path,
                  const BlobMetadata& metadata,
                  std::unique_ptr<std::iostream> io,
                  bool aggregate_time_dimensions)
-    : Blob(file_path, metadata, std::move(io))
-    , impl_(std::make_unique<Impl>(Impl{aggregate_time_dimensions})) {}
+    : Blob(file_path, metadata, std::move(io)), impl_(std::make_unique<Impl>(Impl{aggregate_time_dimensions})) {}
 
 BlobCSV::~BlobCSV() = default;
 
@@ -32,8 +31,7 @@ BlobCSV& BlobCSV::operator=(BlobCSV&& other) noexcept = default;
 void BlobCSV::csv_to_bin(const std::string& file_path) {
     // Read TOML metadata
     std::ifstream toml_file(file_path + std::string(TOML_EXTENSION));
-    std::string toml_content((std::istreambuf_iterator<char>(toml_file)),
-                                std::istreambuf_iterator<char>());
+    std::string toml_content((std::istreambuf_iterator<char>(toml_file)), std::istreambuf_iterator<char>());
     auto metadata = BlobMetadata::from_toml(toml_content);
 
     // Open the CSV file and detect whether time dimensions are aggregated
@@ -92,7 +90,7 @@ void BlobCSV::csv_to_bin(const std::string& file_path) {
 void BlobCSV::bin_to_csv(const std::string& file_path, bool aggregate_time_dimensions) {
     // Open the binary file in read mode
     Blob bin_reader = Blob::open_file(file_path, 'r');
-    const auto& metadata   = bin_reader.get_metadata();
+    const auto& metadata = bin_reader.get_metadata();
 
     // Open the CSV file in write mode
     auto csv_io = std::make_unique<std::fstream>(file_path + std::string(CSV_EXTENSION), std::ios::out);
@@ -180,7 +178,8 @@ std::string BlobCSV::build_line(const std::vector<double>& data, const std::vect
     }
 
     for (size_t i = 0; i < dimensions.size(); ++i) {
-        if (impl_->aggregate_time_dimensions && dimensions[i].is_time_dimension()) continue;
+        if (impl_->aggregate_time_dimensions && dimensions[i].is_time_dimension())
+            continue;
         elements.push_back(std::to_string(current_dimensions[i]));
     }
 
@@ -190,23 +189,27 @@ std::string BlobCSV::build_line(const std::vector<double>& data, const std::vect
 
     std::ostringstream oss;
     for (size_t i = 0; i < elements.size(); ++i) {
-        if (i > 0) oss << ',';
+        if (i > 0)
+            oss << ',';
         oss << elements[i];
     }
     oss << '\n';
     return oss.str();
 }
 
-std::string BlobCSV::build_datetime_string_from_time_dimension_values(const std::vector<int64_t>& time_dimension_values) const {
-    const auto& metadata   = get_metadata();
+std::string
+BlobCSV::build_datetime_string_from_time_dimension_values(const std::vector<int64_t>& time_dimension_values) const {
+    const auto& metadata = get_metadata();
     const auto& dimensions = metadata.dimensions;
 
-    auto datetime   = metadata.initial_datetime;
+    auto datetime = metadata.initial_datetime;
     bool has_hourly = false;
     for (size_t i = 0; i < dimensions.size(); ++i) {
-        if (!dimensions[i].is_time_dimension()) continue;
+        if (!dimensions[i].is_time_dimension())
+            continue;
         datetime = dimensions[i].time->add_offset_from_int(datetime, time_dimension_values[i]);
-        if (dimensions[i].time->frequency == TimeFrequency::Hourly) has_hourly = true;
+        if (dimensions[i].time->frequency == TimeFrequency::Hourly)
+            has_hourly = true;
     }
 
     if (has_hourly) {
@@ -216,7 +219,7 @@ std::string BlobCSV::build_datetime_string_from_time_dimension_values(const std:
 }
 
 void BlobCSV::write_header() {
-    const auto& metadata   = get_metadata();
+    const auto& metadata = get_metadata();
     const auto& dimensions = metadata.dimensions;
 
     std::vector<std::string> header;
@@ -237,7 +240,8 @@ void BlobCSV::write_header() {
     }
 
     for (const auto& dim : dimensions) {
-        if (impl_->aggregate_time_dimensions && dim.is_time_dimension()) continue;
+        if (impl_->aggregate_time_dimensions && dim.is_time_dimension())
+            continue;
         header.push_back(dim.name);
     }
 
@@ -247,7 +251,8 @@ void BlobCSV::write_header() {
 
     auto& io = get_io();
     for (size_t i = 0; i < header.size(); ++i) {
-        if (i > 0) io << ',';
+        if (i > 0)
+            io << ',';
         io << header[i];
     }
     io << '\n';
@@ -273,10 +278,12 @@ std::vector<int64_t> BlobCSV::next_dimensions(const std::vector<int64_t>& curren
     // [1, 1, 31] -> [1, 2, 1] is incorrect, should be [1, 2, 2]
     for (size_t i = 0; i < next.size(); ++i) {
         const auto& dim = dimensions[i];
-        if (!dim.is_time_dimension()) continue;
+        if (!dim.is_time_dimension())
+            continue;
         int64_t initial_value = dim.time->initial_value;
-        int64_t parent_idx   = dim.time->parent_dimension_index;  // -1 = no parent
-        if (next[i] < initial_value && parent_idx != -1 && next[parent_idx] == dimensions[parent_idx].time->initial_value) {
+        int64_t parent_idx = dim.time->parent_dimension_index;  // -1 = no parent
+        if (next[i] < initial_value && parent_idx != -1 &&
+            next[parent_idx] == dimensions[parent_idx].time->initial_value) {
             next[i] = initial_value;
         }
     }
@@ -286,7 +293,7 @@ std::vector<int64_t> BlobCSV::next_dimensions(const std::vector<int64_t>& curren
 
 std::vector<int64_t> BlobCSV::dimension_sizes_at_values(const std::vector<int64_t>& dimension_values) const {
     using namespace quiver::time;
-    const auto& metadata   = get_metadata();
+    const auto& metadata = get_metadata();
     const auto& dimensions = metadata.dimensions;
 
     std::vector<int64_t> sizes;
@@ -297,7 +304,8 @@ std::vector<int64_t> BlobCSV::dimension_sizes_at_values(const std::vector<int64_
 
     auto datetime = metadata.initial_datetime;
     for (size_t i = 0; i < dimensions.size(); ++i) {
-        if (!dimensions[i].is_time_dimension()) continue;
+        if (!dimensions[i].is_time_dimension())
+            continue;
         datetime = dimensions[i].time->add_offset_from_int(datetime, dimension_values[i]);
     }
     const auto date = std::chrono::floor<std::chrono::days>(datetime);
@@ -305,10 +313,11 @@ std::vector<int64_t> BlobCSV::dimension_sizes_at_values(const std::vector<int64_
 
     for (size_t i = 0; i < dimensions.size(); ++i) {
         const auto& dim = dimensions[i];
-        if (!dim.is_time_dimension() || dim.time->parent_dimension_index == -1) continue;
+        if (!dim.is_time_dimension() || dim.time->parent_dimension_index == -1)
+            continue;
 
         const auto& parent = dimensions[dim.time->parent_dimension_index];
-        TimeFrequency freq        = dim.time->frequency;
+        TimeFrequency freq = dim.time->frequency;
         TimeFrequency parent_freq = parent.time->frequency;
 
         // Yearly and weekly frequencies must always be at index 1, so they are not considered in this loop
@@ -316,16 +325,18 @@ std::vector<int64_t> BlobCSV::dimension_sizes_at_values(const std::vector<int64_
         case TimeFrequency::Hourly:
             switch (parent_freq) {
             case TimeFrequency::Daily:
-                break; // Number of hours in a day is always the same
+                break;  // Number of hours in a day is always the same
             case TimeFrequency::Weekly:
-                break; // Number of hours in a week is always the same
+                break;  // Number of hours in a week is always the same
             case TimeFrequency::Monthly:
-                sizes[i] = static_cast<unsigned>((ymd.year() / ymd.month() / std::chrono::last).day()) * MAX_HOURS_IN_DAY;
+                sizes[i] =
+                    static_cast<unsigned>((ymd.year() / ymd.month() / std::chrono::last).day()) * MAX_HOURS_IN_DAY;
                 break;
             case TimeFrequency::Yearly:
                 sizes[i] = (ymd.year().is_leap() ? 366 : 365) * MAX_HOURS_IN_DAY;
                 break;
-            default: break;
+            default:
+                break;
             }
             break;
         case TimeFrequency::Daily:
@@ -338,7 +349,8 @@ std::vector<int64_t> BlobCSV::dimension_sizes_at_values(const std::vector<int64_
             case TimeFrequency::Yearly:
                 sizes[i] = ymd.year().is_leap() ? 366 : 365;
                 break;
-            default: break;
+            default:
+                break;
             }
             break;
         case TimeFrequency::Monthly:
@@ -352,7 +364,7 @@ std::vector<int64_t> BlobCSV::dimension_sizes_at_values(const std::vector<int64_
 }
 
 std::vector<std::string> BlobCSV::expected_dimension_names() const {
-    const auto& metadata   = get_metadata();
+    const auto& metadata = get_metadata();
     const auto& dimensions = metadata.dimensions;
 
     std::vector<std::string> names;
@@ -374,8 +386,7 @@ std::vector<std::string> BlobCSV::expected_dimension_names() const {
                 names.push_back(dim.name);
             }
         }
-    }
-    else {
+    } else {
         for (const auto& dim : dimensions) {
             names.push_back(dim.name);
         }
@@ -410,12 +421,12 @@ void BlobCSV::validate_header() {
         if (field_index >= expected.size() || field != expected[field_index]) {
             std::string expected_str;
             for (size_t i = 0; i < expected.size(); ++i) {
-                if (i > 0) expected_str += ", ";
+                if (i > 0)
+                    expected_str += ", ";
                 expected_str += expected[i];
             }
-            throw std::runtime_error(
-                "Unexpected header in CSV file: '" + header_line +
-                "'. Expected columns are: " + expected_str);
+            throw std::runtime_error("Unexpected header in CSV file: '" + header_line +
+                                     "'. Expected columns are: " + expected_str);
         }
 
         field_index++;
@@ -428,17 +439,17 @@ void BlobCSV::validate_header() {
     }
 
     if (field_index != expected.size()) {
-        throw std::runtime_error(
-            "CSV header has " + std::to_string(field_index) +
-            " columns, expected " + std::to_string(expected.size()));
+        throw std::runtime_error("CSV header has " + std::to_string(field_index) + " columns, expected " +
+                                 std::to_string(expected.size()));
     }
 }
 
-void BlobCSV::validate_dimensions(const std::vector<std::string>& csv_dimension_values, const std::vector<int64_t>& current_bin_dimension_values) {
-    const auto& metadata   = get_metadata();
+void BlobCSV::validate_dimensions(const std::vector<std::string>& csv_dimension_values,
+                                  const std::vector<int64_t>& current_bin_dimension_values) {
+    const auto& metadata = get_metadata();
     const auto& dimensions = metadata.dimensions;
 
-    std::vector<std::string> expected_names  = expected_dimension_names();
+    std::vector<std::string> expected_names = expected_dimension_names();
     std::vector<std::string> expected_values;
 
     // Build expected values
@@ -460,10 +471,8 @@ void BlobCSV::validate_dimensions(const std::vector<std::string>& csv_dimension_
     // Compare CSV dimension values against expected values
     for (size_t i = 0; i < expected_names.size(); ++i) {
         if (csv_dimension_values[i] != expected_values[i]) {
-            throw std::runtime_error(
-                "CSV dimension '" + expected_names[i] +
-                "' has value '" + csv_dimension_values[i] +
-                "', expected '" + expected_values[i] + "'");
+            throw std::runtime_error("CSV dimension '" + expected_names[i] + "' has value '" + csv_dimension_values[i] +
+                                     "', expected '" + expected_values[i] + "'");
         }
     }
 }
