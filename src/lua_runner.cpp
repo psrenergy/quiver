@@ -769,8 +769,7 @@ struct LuaRunner::Impl {
         return result;
     }
 
-    static sol::table
-    read_sets_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
+    static sol::table read_sets_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
         sol::state_view lua(s);
         auto result = lua.create_table();
 
