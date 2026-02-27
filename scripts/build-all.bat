@@ -47,7 +47,7 @@ REM ============================================================
 echo [1/6] Building C++ library and C API...
 echo.
 
-cmake -B build -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DQUIVER_BUILD_TESTS=ON -DQUIVER_BUILD_C_API=ON
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DQUIVER_BUILD_TESTS=ON -DQUIVER_BUILD_C_API=ON
 if errorlevel 1 (
     echo.
     echo ERROR: CMake configuration failed

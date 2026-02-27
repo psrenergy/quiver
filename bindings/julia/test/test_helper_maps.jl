@@ -54,7 +54,7 @@ include("fixture.jl")
             # Delete Parent 2 (FK action SET NULL will clear Child 2's parent_id)
             Quiver.delete_element!(db, "Parent", Int64(2))
 
-            # Now Parent IDs are [1, 3, 4] at positions [1, 2, 3]
+            # Now Parent Ids are [1, 3, 4] at positions [1, 2, 3]
             # Child 1 still points to Parent id=1 (position 1)
             # Child 2's parent_id was SET NULL (no relation, -1)
             # Child 3 still points to Parent id=4 (position 3)
@@ -85,7 +85,7 @@ include("fixture.jl")
             # Delete Child 2
             Quiver.delete_element!(db, "Child", Int64(2))
 
-            # Now Child IDs are [1, 3, 4]
+            # Now Child Ids are [1, 3, 4]
             # Child 1 -> Parent 1 (position 1)
             # Child 3 -> Parent 1 (position 1)
             # Child 4 -> Parent 2 (position 2)
@@ -123,8 +123,8 @@ include("fixture.jl")
             # Delete Child 3
             Quiver.delete_element!(db, "Child", Int64(3))
 
-            # Parent IDs remaining: [1, 3, 5] at positions [1, 2, 3]
-            # Child IDs remaining: [1, 2, 4, 5]
+            # Parent Ids remaining: [1, 3, 5] at positions [1, 2, 3]
+            # Child Ids remaining: [1, 2, 4, 5]
             # Child 1 -> Parent 1 (position 1)
             # Child 2 -> SET NULL (Parent 2 deleted), -1
             # Child 4 -> SET NULL (Parent 4 deleted), -1
@@ -213,7 +213,7 @@ include("fixture.jl")
             # Delete Parent 2 (CASCADE will remove its refs from set relations)
             Quiver.delete_element!(db, "Parent", Int64(2))
 
-            # Now Parent IDs are [1, 3, 4] at positions [1, 2, 3]
+            # Now Parent Ids are [1, 3, 4] at positions [1, 2, 3]
             # Child 1 refs [1] (2 was deleted) -> position [1]
             # Child 2 refs [3] (2 was deleted) -> position [2]
             # Child 3 refs [3, 4] -> positions [2, 3]
@@ -247,7 +247,7 @@ include("fixture.jl")
             # Delete Child 2
             Quiver.delete_element!(db, "Child", Int64(2))
 
-            # Now Child IDs are [1, 3, 4]
+            # Now Child Ids are [1, 3, 4]
             # Child 1 refs [1, 2] -> positions [1, 2]
             # Child 3 refs [2] -> position [2]
             # Child 4 refs [1, 2] -> positions [1, 2]
@@ -288,8 +288,8 @@ include("fixture.jl")
             # Delete Child 3
             Quiver.delete_element!(db, "Child", Int64(3))
 
-            # Parent IDs remaining: [1, 3, 5] at positions [1, 2, 3]
-            # Child IDs remaining: [1, 2, 4, 5]
+            # Parent Ids remaining: [1, 3, 5] at positions [1, 2, 3]
+            # Child Ids remaining: [1, 2, 4, 5]
             # Child 1 refs [1, 3] (2 deleted) -> positions [1, 2]
             # Child 2 refs [] (2 and 4 deleted) -> []
             # Child 4 refs [1, 5] -> positions [1, 3]

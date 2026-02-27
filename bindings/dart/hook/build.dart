@@ -17,7 +17,7 @@ void main(List<String> args) async {
     // Select generator based on target OS
     final targetOS = input.config.code.targetOS;
     final generator = switch (targetOS) {
-      OS.windows => Generator.vs2022,
+      OS.windows => Generator.ninja,
       OS.macOS => Generator.xcode,
       _ => Generator.ninja,
     };
@@ -43,7 +43,7 @@ void main(List<String> args) async {
     await builder.run(input: input, output: output, logger: logger);
 
     // Register built libraries as code assets
-    // Library names without prefix - CMake on Windows produces quiver.dll and quiver_c.dll
+    // CMake target names (not file names) — CMake always produces lib-prefixed DLLs (libquiver.dll, libquiver_c.dll)
     await output.findAndAddCodeAssets(
       input,
       names: {

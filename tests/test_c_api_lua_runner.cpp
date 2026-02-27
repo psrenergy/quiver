@@ -437,7 +437,7 @@ TEST_F(LuaRunnerCApiTest, ErrorClearedAfterSuccessfulRun) {
     quiver_database_close(db);
 }
 
-TEST_F(LuaRunnerCApiTest, ReadVectorIntegersFromLua) {
+TEST_F(LuaRunnerCApiTest, ReadVectorIntegers) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;

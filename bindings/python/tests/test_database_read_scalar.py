@@ -1,4 +1,4 @@
-"""Tests for scalar read operations, element IDs, and convenience helpers."""
+"""Tests for scalar read operations, element Ids, and convenience helpers."""
 
 from __future__ import annotations
 
@@ -72,7 +72,7 @@ class TestReadScalarStrings:
 # -- Scalar reads by ID -------------------------------------------------------
 
 
-class TestReadScalarByID:
+class TestReadScalarById:
     def test_read_scalar_integer_by_id(self, db: Database) -> None:
         id1 = db.create_element("Configuration", label="item1", integer_attribute=42)
         result = db.read_scalar_integer_by_id("Configuration", "integer_attribute", id1)
@@ -117,10 +117,10 @@ class TestReadScalarByID:
         assert result == ""
 
 
-# -- Element IDs ---------------------------------------------------------------
+# -- Element Ids ---------------------------------------------------------------
 
 
-class TestReadElementIDs:
+class TestReadElementIds:
     def test_read_element_ids(self, db: Database) -> None:
         id1 = db.create_element("Configuration", label="item1")
         id2 = db.create_element("Configuration", label="item2")
@@ -137,7 +137,7 @@ class TestReadElementIDs:
 # -- DateTime scalar reads ---------------------------------------------------
 
 
-class TestReadScalarDateTimeByID:
+class TestReadScalarDateTimeById:
     def test_read_scalar_date_time_by_id(self, db: Database) -> None:
         id1 = db.create_element(
             "Configuration",
@@ -166,8 +166,8 @@ class TestReadScalarDateTimeByID:
 # -- Composite scalar reads --------------------------------------------------
 
 
-class TestReadAllScalarsByID:
-    def test_read_all_scalars_by_id(self, db: Database) -> None:
+class TestReadScalarsById:
+    def test_read_scalars_by_id(self, db: Database) -> None:
         id1 = db.create_element(
             "Configuration",
             label="item1",
@@ -176,7 +176,7 @@ class TestReadAllScalarsByID:
             string_attribute="hello",
             date_attribute="2024-01-15T10:30:00",
         )
-        result = db.read_all_scalars_by_id("Configuration", id1)
+        result = db.read_scalars_by_id("Configuration", id1)
 
         # Check all expected keys present
         assert "id" in result

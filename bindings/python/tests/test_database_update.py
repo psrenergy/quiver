@@ -167,7 +167,7 @@ class TestFKResolutionUpdate:
         assert result == 2
 
     def test_vector_fk_labels(self, relations_db: Database) -> None:
-        """Update vector FK with string labels resolves to parent IDs."""
+        """Update vector FK with string labels resolves to parent Ids."""
         relations_db.create_element("Configuration", label="cfg")
         relations_db.create_element("Parent", label="Parent 1")
         relations_db.create_element("Parent", label="Parent 2")
@@ -185,7 +185,7 @@ class TestFKResolutionUpdate:
         assert result == [2, 1]
 
     def test_set_fk_labels(self, relations_db: Database) -> None:
-        """Update set FK with string labels resolves to parent IDs."""
+        """Update set FK with string labels resolves to parent Ids."""
         relations_db.create_element("Configuration", label="cfg")
         relations_db.create_element("Parent", label="Parent 1")
         relations_db.create_element("Parent", label="Parent 2")
@@ -203,7 +203,7 @@ class TestFKResolutionUpdate:
         assert result == [2]
 
     def test_time_series_fk_labels(self, relations_db: Database) -> None:
-        """Update time series FK with string labels resolves to parent IDs."""
+        """Update time series FK with string labels resolves to parent Ids."""
         relations_db.create_element("Configuration", label="cfg")
         relations_db.create_element("Parent", label="Parent 1")
         relations_db.create_element("Parent", label="Parent 2")

@@ -158,9 +158,9 @@ struct LuaRunner::Impl {
         bind.set_function("read_time_series_group", &read_time_series_group_lua);
         bind.set_function("read_time_series_files", &read_time_series_files_lua);
 
-        bind.set_function("read_all_scalars_by_id", &read_all_scalars_by_id_lua);
-        bind.set_function("read_all_vectors_by_id", &read_all_vectors_by_id_lua);
-        bind.set_function("read_all_sets_by_id", &read_all_sets_by_id_lua);
+        bind.set_function("read_scalars_by_id", &read_scalars_by_id_lua);
+        bind.set_function("read_vectors_by_id", &read_vectors_by_id_lua);
+        bind.set_function("read_sets_by_id", &read_sets_by_id_lua);
 
         bind.set_function("update_element", &update_element_lua);
         bind.set_function("update_time_series_group", &update_time_series_group_lua);
@@ -384,7 +384,7 @@ struct LuaRunner::Impl {
         return outer;
     }
 
-    // Read scalar by ID helpers - return nil if not found
+    // Read scalar by Id helpers - return nil if not found
     static sol::object read_scalar_string_by_id_lua(Database& db,
                                                     const std::string& collection,
                                                     const std::string& attribute,
@@ -424,7 +424,7 @@ struct LuaRunner::Impl {
         return sol::make_object(lua, sol::lua_nil);
     }
 
-    // Read vector by ID helpers - return table
+    // Read vector by Id helpers - return table
     static sol::table read_vector_integers_by_id_lua(Database& db,
                                                      const std::string& collection,
                                                      const std::string& attribute,
@@ -467,7 +467,7 @@ struct LuaRunner::Impl {
         return t;
     }
 
-    // Read set by ID helpers - return table
+    // Read set by Id helpers - return table
     static sol::table read_set_integers_by_id_lua(Database& db,
                                                   const std::string& collection,
                                                   const std::string& attribute,
@@ -705,7 +705,7 @@ struct LuaRunner::Impl {
     }
 
     static sol::table
-    read_all_scalars_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
+    read_scalars_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
         sol::state_view lua(s);
         auto result = lua.create_table();
 
@@ -733,7 +733,7 @@ struct LuaRunner::Impl {
     }
 
     static sol::table
-    read_all_vectors_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
+    read_vectors_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
         sol::state_view lua(s);
         auto result = lua.create_table();
 
@@ -769,8 +769,7 @@ struct LuaRunner::Impl {
         return result;
     }
 
-    static sol::table
-    read_all_sets_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
+    static sol::table read_sets_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
         sol::state_view lua(s);
         auto result = lua.create_table();
 

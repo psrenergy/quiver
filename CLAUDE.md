@@ -418,7 +418,7 @@ lua.run(R"(
 
 > **Note:** Python's `create_element` and `update_element` accept `**kwargs` instead of a positional Element argument: `db.create_element("Collection", label="x", value=42)`.
 | Read scalar | `read_scalar_integers()` | `quiver_database_read_scalar_integers()` | `read_scalar_integers()` | `readScalarIntegers()` | `read_scalar_integers()` |
-| Read by ID | `read_scalar_integer_by_id()` | `quiver_database_read_scalar_integer_by_id()` | `read_scalar_integer_by_id()` | `readScalarIntegerById()` | `read_scalar_integer_by_id()` |
+| Read by Id | `read_scalar_integer_by_id()` | `quiver_database_read_scalar_integer_by_id()` | `read_scalar_integer_by_id()` | `readScalarIntegerById()` | `read_scalar_integer_by_id()` |
 | Delete | `delete_element()` | `quiver_database_delete_element()` | `delete_element!()` | `deleteElement()` | `delete_element()` |
 | Metadata | `get_scalar_metadata()` | `quiver_database_get_scalar_metadata()` | `get_scalar_metadata()` | `getScalarMetadata()` | `get_scalar_metadata()` |
 | List groups | `list_vector_groups()` | `quiver_database_list_vector_groups()` | `list_vector_groups()` | `listVectorGroups()` | `list_vector_groups()` |
@@ -436,20 +436,20 @@ Julia, Dart, and Lua provide additional convenience methods that compose core op
 
 **DateTime wrappers (Julia and Dart only):**
 
-| Julia | Dart | Wraps |
-|-------|------|-------|
-| `read_scalar_date_time_by_id` | `readScalarDateTimeById` | string read + date parsing |
+|             Julia             |           Dart            |               Wraps               |
+| ----------------------------- | ------------------------- | --------------------------------- |
+| `read_scalar_date_time_by_id` | `readScalarDateTimeById`  | string read + date parsing        |
 | `read_vector_date_time_by_id` | `readVectorDateTimesById` | string vector read + date parsing |
-| `read_set_date_time_by_id` | `readSetDateTimesById` | string set read + date parsing |
-| `query_date_time` | `queryDateTime` | string query + date parsing |
+| `read_set_date_time_by_id`    | `readSetDateTimesById`    | string set read + date parsing    |
+| `query_date_time`             | `queryDateTime`           | string query + date parsing       |
 
 **Composite read helpers (Julia, Dart, and Lua):**
 
-| Julia | Dart | Lua | Wraps |
-|-------|------|-----|-------|
-| `read_all_scalars_by_id` | `readAllScalarsById` | `read_all_scalars_by_id` | `list_scalar_attributes` + typed reads |
-| `read_all_vectors_by_id` | `readAllVectorsById` | `read_all_vectors_by_id` | `list_vector_groups` + typed reads |
-| `read_all_sets_by_id` | `readAllSetsById` | `read_all_sets_by_id` | `list_set_groups` + typed reads |
+|        Julia         |       Dart        |         Lua          |                 Wraps                  |
+| -------------------- | ----------------- | -------------------- | -------------------------------------- |
+| `read_scalars_by_id` | `readScalarsById` | `read_scalars_by_id` | `list_scalar_attributes` + typed reads |
+| `read_vectors_by_id` | `readVectorsById` | `read_vectors_by_id` | `list_vector_groups` + typed reads     |
+| `read_sets_by_id`    | `readSetsById`    | `read_sets_by_id`    | `list_set_groups` + typed reads        |
 
 **Transaction block wrappers (Julia, Dart, and Lua):**
 

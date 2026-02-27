@@ -370,13 +370,13 @@ function read_element_ids(db::Database, collection::String)
 end
 
 function _get_value_data_type(value_columns::Vector{ScalarMetadata})
-    if !isempty(value_columns)
-        return value_columns[1].data_type
+    if isempty(value_columns)
+        throw(ArgumentError("No value columns found in group metadata"))
     end
-    return C.QUIVER_DATA_TYPE_STRING
+    return value_columns[1].data_type
 end
 
-function read_all_scalars_by_id(db::Database, collection::String, id::Int64)
+function read_scalars_by_id(db::Database, collection::String, id::Int64)
     result = Dict{String, Any}()
     for attribute in list_scalar_attributes(db, collection)
         name = attribute.name
@@ -395,7 +395,7 @@ function read_all_scalars_by_id(db::Database, collection::String, id::Int64)
     return result
 end
 
-function read_all_vectors_by_id(db::Database, collection::String, id::Int64)
+function read_vectors_by_id(db::Database, collection::String, id::Int64)
     result = Dict{String, Vector{Any}}()
     for group in list_vector_groups(db, collection)
         name = group.group_name
@@ -415,7 +415,7 @@ function read_all_vectors_by_id(db::Database, collection::String, id::Int64)
     return result
 end
 
-function read_all_sets_by_id(db::Database, collection::String, id::Int64)
+function read_sets_by_id(db::Database, collection::String, id::Int64)
     result = Dict{String, Vector{Any}}()
     for group in list_set_groups(db, collection)
         name = group.group_name

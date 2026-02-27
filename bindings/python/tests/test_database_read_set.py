@@ -10,7 +10,7 @@ from quiverdb import Database
 # -- Set reads by ID ----------------------------------------------------------
 
 
-class TestReadSetStringsByID:
+class TestReadSetStringsById:
     def test_read_set_strings_by_id(self, collections_db: Database) -> None:
         id1 = collections_db.create_element("Collection", label="item1", some_integer=10, tag=["alpha", "beta"])
         result = collections_db.read_set_strings_by_id("Collection", "tag", id1)
@@ -61,15 +61,15 @@ class TestReadSetStringsBulk:
 # -- Convenience set reads ---------------------------------------------------
 
 
-class TestReadAllSetsByID:
-    def test_read_all_sets_by_id_no_groups(self, db: Database) -> None:
-        """read_all_sets_by_id returns empty dict for collections with no set groups."""
+class TestReadSetsById:
+    def test_read_sets_by_id_no_groups(self, db: Database) -> None:
+        """read_sets_by_id returns empty dict for collections with no set groups."""
         id1 = db.create_element("Configuration", label="item1")
-        result = db.read_all_sets_by_id("Configuration", id1)
+        result = db.read_sets_by_id("Configuration", id1)
         assert result == {}
 
 
-class TestReadSetGroupByID:
+class TestReadSetGroupById:
     def test_read_set_group_by_id(self, collections_db: Database) -> None:
         id1 = collections_db.create_element("Collection", label="item1", some_integer=10, tag=["alpha", "beta"])
         result = collections_db.read_set_group_by_id("Collection", "tags", id1)
@@ -99,7 +99,7 @@ class TestReadSetIntegersBulk:
         assert sorted(result[1]) == [40, 50]
 
 
-class TestReadSetIntegersByID:
+class TestReadSetIntegersById:
     def test_read_set_integers_by_id(self, all_types_db: Database) -> None:
         id1 = all_types_db.create_element("AllTypes", label="item1")
         all_types_db.update_element("AllTypes", id1, code=[100, 200, 300])
@@ -122,7 +122,7 @@ class TestReadSetFloatsBulk:
         assert len(result[1]) == 3
 
 
-class TestReadSetFloatsByID:
+class TestReadSetFloatsById:
     def test_read_set_floats_by_id(self, all_types_db: Database) -> None:
         id1 = all_types_db.create_element("AllTypes", label="item1")
         all_types_db.update_element("AllTypes", id1, weight=[9.9, 8.8])
@@ -135,7 +135,7 @@ class TestReadSetFloatsByID:
 # -- DateTime set convenience (gap-fill) ------------------------------------
 
 
-class TestReadSetDateTimeByID:
+class TestReadSetDateTimeById:
     def test_read_set_date_time_by_id(self, all_types_db: Database) -> None:
         """read_set_date_time_by_id wraps read_set_strings_by_id + datetime parsing."""
         id1 = all_types_db.create_element("AllTypes", label="item1")
@@ -154,13 +154,13 @@ class TestReadSetDateTimeByID:
 # -- Convenience set reads with data (gap-fill) ------------------------------
 
 
-class TestReadAllSetsByIDWithData:
-    def test_read_all_sets_by_id_returns_all_groups(self, composite_helpers_db: Database) -> None:
-        """read_all_sets_by_id returns dict with integer, float, and string set groups."""
+class TestReadSetsByIdWithData:
+    def test_read_sets_by_id_returns_all_groups(self, composite_helpers_db: Database) -> None:
+        """read_sets_by_id returns dict with integer, float, and string set groups."""
         id1 = composite_helpers_db.create_element(
             "Items", label="item1", code=[10, 20, 30], weight=[1.1, 2.2], tag=["alpha", "beta"]
         )
-        result = composite_helpers_db.read_all_sets_by_id("Items", id1)
+        result = composite_helpers_db.read_sets_by_id("Items", id1)
 
         assert len(result) == 3
         assert sorted(result["code"]) == [10, 20, 30]
@@ -169,10 +169,10 @@ class TestReadAllSetsByIDWithData:
         assert any(abs(v - 2.2) < 1e-9 for v in result["weight"])
         assert sorted(result["tag"]) == ["alpha", "beta"]
 
-    def test_read_all_sets_by_id_correct_types(self, composite_helpers_db: Database) -> None:
+    def test_read_sets_by_id_correct_types(self, composite_helpers_db: Database) -> None:
         """Each set group returns the correct Python type."""
         id1 = composite_helpers_db.create_element("Items", label="item1", code=[5], weight=[9.9], tag=["text"])
-        result = composite_helpers_db.read_all_sets_by_id("Items", id1)
+        result = composite_helpers_db.read_sets_by_id("Items", id1)
 
         assert all(isinstance(v, int) for v in result["code"])
         assert all(isinstance(v, float) for v in result["weight"])

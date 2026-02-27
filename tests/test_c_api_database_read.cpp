@@ -509,7 +509,7 @@ TEST(DatabaseCApi, ReadSetOnlyReturnsElementsWithData) {
 }
 
 // ============================================================================
-// Read scalar by ID tests
+// Read scalar by Id tests
 // ============================================================================
 
 TEST(DatabaseCApi, ReadScalarIntegerById) {
@@ -633,7 +633,7 @@ TEST(DatabaseCApi, ReadScalarByIdNotFound) {
 }
 
 // ============================================================================
-// Read vector by ID tests
+// Read vector by Id tests
 // ============================================================================
 
 TEST(DatabaseCApi, ReadVectorIntegerById) {
@@ -762,7 +762,7 @@ TEST(DatabaseCApi, ReadVectorByIdEmpty) {
 }
 
 // ============================================================================
-// Read set by ID tests
+// Read set by Id tests
 // ============================================================================
 
 TEST(DatabaseCApi, ReadSetStringById) {
@@ -856,7 +856,7 @@ TEST(DatabaseCApi, ReadSetByIdEmpty) {
 }
 
 // ============================================================================
-// Read element IDs tests
+// Read element Ids tests
 // ============================================================================
 
 TEST(DatabaseCApi, ReadElementIds) {
@@ -1508,7 +1508,7 @@ TEST(DatabaseCApi, ReadSetStringsByIdNullOutput) {
 }
 
 // ============================================================================
-// Read element IDs null pointer tests
+// Read element Ids null pointer tests
 // ============================================================================
 
 TEST(DatabaseCApi, ReadElementIdsNullDb) {

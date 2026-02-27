@@ -359,8 +359,8 @@ include("fixture.jl")
         date_str = Quiver.read_scalar_string_by_id(db, "Configuration", "date_attribute", 1)
         @test date_str == "2024-03-15T14:30:45"
 
-        # Verify read_all_scalars_by_id returns native DateTime
-        scalars = Quiver.read_all_scalars_by_id(db, "Configuration", 1)
+        # Verify read_scalars_by_id returns native DateTime
+        scalars = Quiver.read_scalars_by_id(db, "Configuration", 1)
         @test scalars["date_attribute"] isa DateTime
         @test scalars["date_attribute"] == dt
 
@@ -382,7 +382,7 @@ include("fixture.jl")
         # Create child with set FK using string labels (mentor_id is unique to set table)
         Quiver.create_element!(db, "Child"; label = "Child 1", mentor_id = ["Parent 1", "Parent 2"])
 
-        # Read back resolved integer IDs
+        # Read back resolved integer Ids
         result = Quiver.read_set_integers_by_id(db, "Child", "mentor_id", 1)
         @test sort(result) == [1, 2]
 

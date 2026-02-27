@@ -439,7 +439,7 @@ TEST(Database, ReadSetByIdEmpty) {
 }
 
 // ============================================================================
-// Read element IDs tests
+// Read element Ids tests
 // ============================================================================
 
 TEST(Database, ReadElementIds) {

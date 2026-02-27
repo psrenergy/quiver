@@ -24,7 +24,13 @@
       "Bash(powershell:*)",
       "Bash(julia:*)",
       "Bash(cmake:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(dart pub:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(objdump:*)",
+      "Bash(ninja:*)",
+      "Bash(scripts/clean-all.bat:*)",
+      "Bash(scripts/build-all.bat:*)"
     ]
   }
 }

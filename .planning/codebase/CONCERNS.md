@@ -103,7 +103,7 @@
 
 **`read_grouped_values_all` depends on consistent ID ordering across result sets:**
 - Files: `src/database_internal.h` lines 29-51
-- Why fragile: The template groups rows by consecutive equal IDs. If any query returns rows in non-ID-consecutive order (e.g., due to a missing `ORDER BY id`), groups are split incorrectly producing duplicate entries. The `read_vector_*` queries use `ORDER BY id, vector_index` but `read_set_*` queries use only `ORDER BY id` (no secondary sort) — set values within each group have non-deterministic order.
+- Why fragile: The template groups rows by consecutive equal Ids. If any query returns rows in non-ID-consecutive order (e.g., due to a missing `ORDER BY id`), groups are split incorrectly producing duplicate entries. The `read_vector_*` queries use `ORDER BY id, vector_index` but `read_set_*` queries use only `ORDER BY id` (no secondary sort) — set values within each group have non-deterministic order.
 - Safe modification: Add `ORDER BY id, rowid` or a stable column to all set queries. Add an assertion or comment documenting the ID-consecutive dependency.
 - Test coverage: Tests exercise correctness of returned values but not ordering stability.
 

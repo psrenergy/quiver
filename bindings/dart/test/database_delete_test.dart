@@ -6,7 +6,7 @@ void main() {
   // Path to central tests folder
   final testsPath = path.join(path.current, '..', '..', 'tests');
 
-  group('Delete Element By ID', () {
+  group('Delete Element By Id', () {
     test('deletes element by id', () {
       final db = Database.fromSchema(
         ':memory:',

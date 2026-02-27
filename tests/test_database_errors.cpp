@@ -348,7 +348,7 @@ TEST(DatabaseErrors, ApplySchemaFileNotFound) {
 }
 
 // ============================================================================
-// Read element IDs errors
+// Read element Ids errors
 // ============================================================================
 
 TEST(DatabaseErrors, ReadElementIdsNoSchema) {

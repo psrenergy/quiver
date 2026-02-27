@@ -105,7 +105,7 @@ quiver2/                          # Project root
 │   │   │   ├── element.jl
 │   │   │   ├── lua_runner.jl
 │   │   │   ├── date_time.jl      # DateTime convenience wrappers
-│   │   │   ├── helper_maps.jl    # read_all_scalars_by_id etc.
+│   │   │   ├── helper_maps.jl    # read_scalars_by_id etc.
 │   │   │   └── exceptions.jl
 │   │   ├── test/
 │   │   └── generator/            # c_api.jl generator script

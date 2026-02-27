@@ -389,12 +389,12 @@ TEST(Database, ResolveFkLabelInSetCreate) {
     child.set("mentor_id", std::vector<std::string>{"Parent 1", "Parent 2"});
     db.create_element("Child", child);
 
-    // Read back resolved integer IDs
+    // Read back resolved integer Ids
     auto sets = db.read_set_integers("Child", "mentor_id");
     ASSERT_EQ(sets.size(), 1);
     ASSERT_EQ(sets[0].size(), 2);
 
-    // Resolved parent IDs should be 1 and 2
+    // Resolved parent Ids should be 1 and 2
     std::vector<int64_t> sorted_ids(sets[0].begin(), sets[0].end());
     std::sort(sorted_ids.begin(), sorted_ids.end());
     EXPECT_EQ(sorted_ids[0], 1);
@@ -526,7 +526,7 @@ TEST(Database, CreateElementTimeSeriesFkLabels) {
     ASSERT_EQ(ts_data.size(), 2);
 
     // Each row is a map with "date_time" and "sponsor_id" keys
-    // sponsor_id should be resolved to integer IDs
+    // sponsor_id should be resolved to integer Ids
     EXPECT_EQ(std::get<int64_t>(ts_data[0].at("sponsor_id")), 1);
     EXPECT_EQ(std::get<int64_t>(ts_data[1].at("sponsor_id")), 2);
 }

@@ -4,15 +4,14 @@ import 'dart:io';
 import 'bindings.dart';
 
 String get _libraryName {
-  // Windows CMake doesn't add 'lib' prefix by default
-  if (Platform.isWindows) return 'quiver_c.dll';
+  if (Platform.isWindows) return 'libquiver_c.dll';
   if (Platform.isMacOS) return 'libquiver_c.dylib';
   return 'libquiver_c.so';
 }
 
 String get _coreLibraryName {
   // Core library that the C API library depends on
-  if (Platform.isWindows) return 'quiver.dll';
+  if (Platform.isWindows) return 'libquiver.dll';
   if (Platform.isMacOS) return 'libquiver.dylib';
   return 'libquiver.so';
 }

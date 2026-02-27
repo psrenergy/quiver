@@ -377,7 +377,7 @@ TEST_F(TempFileFixture, ReadElementIdsValid) {
         EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     }
 
-    // Read element IDs
+    // Read element Ids
     int64_t* ids = nullptr;
     size_t count = 0;
     auto err = quiver_database_read_element_ids(db, "Collection", &ids, &count);

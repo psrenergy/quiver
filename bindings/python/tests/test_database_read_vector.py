@@ -10,7 +10,7 @@ from quiverdb import Database
 # -- Vector reads by ID -------------------------------------------------------
 
 
-class TestReadVectorIntegersByID:
+class TestReadVectorIntegersById:
     def test_read_vector_integers_by_id(self, collections_db: Database) -> None:
         id1 = collections_db.create_element("Collection", label="item1", some_integer=10, value_int=[1, 2, 3])
         result = collections_db.read_vector_integers_by_id("Collection", "value_int", id1)
@@ -27,7 +27,7 @@ class TestReadVectorIntegersByID:
         assert result == [42]
 
 
-class TestReadVectorFloatsByID:
+class TestReadVectorFloatsById:
     def test_read_vector_floats_by_id(self, collections_db: Database) -> None:
         id1 = collections_db.create_element("Collection", label="item1", some_integer=10, value_float=[1.5, 2.5, 3.5])
         result = collections_db.read_vector_floats_by_id("Collection", "value_float", id1)
@@ -83,15 +83,15 @@ class TestReadVectorFloatsBulk:
 # -- Convenience vector reads ------------------------------------------------
 
 
-class TestReadAllVectorsByID:
-    def test_read_all_vectors_by_id_no_groups(self, db: Database) -> None:
-        """read_all_vectors_by_id returns empty dict for collections with no vector groups."""
+class TestReadVectorsById:
+    def test_read_vectors_by_id_no_groups(self, db: Database) -> None:
+        """read_vectors_by_id returns empty dict for collections with no vector groups."""
         id1 = db.create_element("Configuration", label="item1")
-        result = db.read_all_vectors_by_id("Configuration", id1)
+        result = db.read_vectors_by_id("Configuration", id1)
         assert result == {}
 
 
-class TestReadVectorGroupByID:
+class TestReadVectorGroupById:
     def test_read_vector_group_by_id(self, collections_db: Database) -> None:
         id1 = collections_db.create_element(
             "Collection",
@@ -140,7 +140,7 @@ class TestReadVectorStringsBulk:
         assert result[1] == ["gamma", "delta", "epsilon"]
 
 
-class TestReadVectorStringsByID:
+class TestReadVectorStringsById:
     def test_read_vector_strings_by_id(self, all_types_db: Database) -> None:
         id1 = all_types_db.create_element("AllTypes", label="item1")
         all_types_db.update_element("AllTypes", id1, label_value=["hello", "world"])
@@ -148,7 +148,7 @@ class TestReadVectorStringsByID:
         assert result == ["hello", "world"]
 
 
-class TestReadVectorDateTimeByID:
+class TestReadVectorDateTimeById:
     def test_read_vector_date_time_by_id(self, all_types_db: Database) -> None:
         """read_vector_date_time_by_id wraps read_vector_strings_by_id + datetime parsing."""
         id1 = all_types_db.create_element("AllTypes", label="item1")
@@ -169,13 +169,13 @@ class TestReadVectorDateTimeByID:
 # -- Convenience vector reads with data (gap-fill) --------------------------
 
 
-class TestReadAllVectorsByIDWithData:
-    def test_read_all_vectors_by_id_returns_all_groups(self, composite_helpers_db: Database) -> None:
-        """read_all_vectors_by_id returns dict with integer, float, and string vector groups."""
+class TestReadVectorsByIdWithData:
+    def test_read_vectors_by_id_returns_all_groups(self, composite_helpers_db: Database) -> None:
+        """read_vectors_by_id returns dict with integer, float, and string vector groups."""
         id1 = composite_helpers_db.create_element(
             "Items", label="item1", amount=[10, 20, 30], score=[1.1, 2.2], note=["hello", "world"]
         )
-        result = composite_helpers_db.read_all_vectors_by_id("Items", id1)
+        result = composite_helpers_db.read_vectors_by_id("Items", id1)
 
         assert len(result) == 3
         assert result["amount"] == [10, 20, 30]
@@ -184,10 +184,10 @@ class TestReadAllVectorsByIDWithData:
         assert abs(result["score"][1] - 2.2) < 1e-9
         assert result["note"] == ["hello", "world"]
 
-    def test_read_all_vectors_by_id_correct_types(self, composite_helpers_db: Database) -> None:
+    def test_read_vectors_by_id_correct_types(self, composite_helpers_db: Database) -> None:
         """Each vector group returns the correct Python type."""
         id1 = composite_helpers_db.create_element("Items", label="item1", amount=[5], score=[9.9], note=["text"])
-        result = composite_helpers_db.read_all_vectors_by_id("Items", id1)
+        result = composite_helpers_db.read_vectors_by_id("Items", id1)
 
         assert all(isinstance(v, int) for v in result["amount"])
         assert all(isinstance(v, float) for v in result["score"])
