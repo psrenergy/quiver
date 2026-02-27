@@ -113,27 +113,6 @@ class Database {
     );
   }
 
-  int _getValueDataType(
-    List<
-      ({
-        String name,
-        int dataType,
-        bool notNull,
-        bool primaryKey,
-        String? defaultValue,
-        bool isForeignKey,
-        String? referencesCollection,
-        String? referencesColumn,
-      })
-    >
-    valueColumns,
-  ) {
-    if (valueColumns.isNotEmpty) {
-      return valueColumns.first.dataType;
-    }
-    return quiver_data_type_t.QUIVER_DATA_TYPE_STRING;
-  }
-
   ({
     String groupName,
     String dimensionColumn,

@@ -1281,47 +1281,47 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         return result
 
     def read_vectors_by_id(self, collection: str, id: int) -> dict:
-        """Read all vector group values for an element (single-column groups).
+        """Read all vector column values for an element.
 
-        Returns dict mapping group names to typed lists.
-        DATE_TIME groups are parsed to datetime objects.
-        For multi-column groups, use read_vector_group_by_id.
+        Returns dict mapping column names to typed lists.
+        DATE_TIME columns are parsed to datetime objects.
         """
         self._ensure_open()
         result = {}
         for group in self.list_vector_groups(collection):
-            name = group.group_name
-            dt = group.value_columns[0].data_type if group.value_columns else 2
-            if dt == 0:  # INTEGER
-                result[name] = self.read_vector_integers_by_id(collection, name, id)
-            elif dt == 1:  # FLOAT
-                result[name] = self.read_vector_floats_by_id(collection, name, id)
-            elif dt == 3:  # DATE_TIME
-                result[name] = self.read_vector_date_time_by_id(collection, name, id)
-            else:  # STRING (2)
-                result[name] = self.read_vector_strings_by_id(collection, name, id)
+            for col in group.value_columns:
+                name = col.name
+                dt = col.data_type
+                if dt == 0:  # INTEGER
+                    result[name] = self.read_vector_integers_by_id(collection, name, id)
+                elif dt == 1:  # FLOAT
+                    result[name] = self.read_vector_floats_by_id(collection, name, id)
+                elif dt == 3:  # DATE_TIME
+                    result[name] = self.read_vector_date_time_by_id(collection, name, id)
+                else:  # STRING (2)
+                    result[name] = self.read_vector_strings_by_id(collection, name, id)
         return result
 
     def read_sets_by_id(self, collection: str, id: int) -> dict:
-        """Read all set group values for an element (single-column groups).
+        """Read all set column values for an element.
 
-        Returns dict mapping group names to typed lists.
-        DATE_TIME groups are parsed to datetime objects.
-        For multi-column groups, use read_set_group_by_id.
+        Returns dict mapping column names to typed lists.
+        DATE_TIME columns are parsed to datetime objects.
         """
         self._ensure_open()
         result = {}
         for group in self.list_set_groups(collection):
-            name = group.group_name
-            dt = group.value_columns[0].data_type if group.value_columns else 2
-            if dt == 0:  # INTEGER
-                result[name] = self.read_set_integers_by_id(collection, name, id)
-            elif dt == 1:  # FLOAT
-                result[name] = self.read_set_floats_by_id(collection, name, id)
-            elif dt == 3:  # DATE_TIME
-                result[name] = self.read_set_date_time_by_id(collection, name, id)
-            else:  # STRING (2)
-                result[name] = self.read_set_strings_by_id(collection, name, id)
+            for col in group.value_columns:
+                name = col.name
+                dt = col.data_type
+                if dt == 0:  # INTEGER
+                    result[name] = self.read_set_integers_by_id(collection, name, id)
+                elif dt == 1:  # FLOAT
+                    result[name] = self.read_set_floats_by_id(collection, name, id)
+                elif dt == 3:  # DATE_TIME
+                    result[name] = self.read_set_date_time_by_id(collection, name, id)
+                else:  # STRING (2)
+                    result[name] = self.read_set_strings_by_id(collection, name, id)
         return result
 
     def read_element_by_id(self, collection: str, id: int) -> dict:
