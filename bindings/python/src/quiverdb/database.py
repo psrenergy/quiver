@@ -1324,6 +1324,16 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 result[name] = self.read_set_strings_by_id(collection, name, id)
         return result
 
+    def read_element_by_id(self, collection: str, id: int) -> dict:
+        """Read all scalar, vector, and set attribute values for an element.
+
+        Returns a single dict merging all attribute types.
+        """
+        result = self.read_scalars_by_id(collection, id)
+        result.update(self.read_vectors_by_id(collection, id))
+        result.update(self.read_sets_by_id(collection, id))
+        return result
+
     def read_vector_group_by_id(
         self,
         collection: str,

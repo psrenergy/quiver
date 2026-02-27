@@ -860,6 +860,16 @@ extension DatabaseRead on Database {
     return result;
   }
 
+  /// Reads all scalar, vector, and set attributes for an element by Id.
+  /// Returns a single map merging all attribute types.
+  Map<String, Object?> readElementById(String collection, int id) {
+    final result = <String, Object?>{};
+    result.addAll(readScalarsById(collection, id));
+    result.addAll(readVectorsById(collection, id));
+    result.addAll(readSetsById(collection, id));
+    return result;
+  }
+
   /// Reads a vector group for an element by Id, returning rows as maps.
   /// Each row contains column names mapped to their values.
   /// Useful for multi-column vector tables.

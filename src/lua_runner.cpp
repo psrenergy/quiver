@@ -161,6 +161,7 @@ struct LuaRunner::Impl {
         bind.set_function("read_scalars_by_id", &read_scalars_by_id_lua);
         bind.set_function("read_vectors_by_id", &read_vectors_by_id_lua);
         bind.set_function("read_sets_by_id", &read_sets_by_id_lua);
+        bind.set_function("read_element_by_id", &read_element_by_id_lua);
 
         bind.set_function("update_element", &update_element_lua);
         bind.set_function("update_time_series_group", &update_time_series_group_lua);
@@ -803,6 +804,22 @@ struct LuaRunner::Impl {
             result[group.group_name] = set;
         }
         return result;
+    }
+
+    static sol::table
+    read_element_by_id_lua(Database& db, const std::string& collection, int64_t id, sol::this_state s) {
+        auto scalars = read_scalars_by_id_lua(db, collection, id, s);
+        auto vectors = read_vectors_by_id_lua(db, collection, id, s);
+        auto sets = read_sets_by_id_lua(db, collection, id, s);
+
+        // Merge vectors and sets into scalars
+        for (auto& pair : vectors) {
+            scalars[pair.first] = pair.second;
+        }
+        for (auto& pair : sets) {
+            scalars[pair.first] = pair.second;
+        }
+        return scalars;
     }
 
     // ========================================================================
