@@ -24,11 +24,10 @@ Milestone v0.5 delivers a standalone `quiver_lua` executable that opens a Quiver
   3. User can pass `--read-only` to prevent writes and `--log-level` to control verbosity, with sensible defaults (warn level, read-write)
   4. User sees clear error messages on stderr with appropriate exit codes: exit 0 for success, exit 1 for runtime/database errors, exit 2 for usage errors (bad arguments, missing files)
   5. Lua scripts saved with UTF-8 BOM from Windows editors execute without errors
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md -- Build infrastructure + CLI implementation (argparse, CMake target, spdlog fix, main.cpp)
 
 ## Progress
 
@@ -37,4 +36,4 @@ Phases execute in numeric order: 1
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. quiver_lua CLI Executable | 0/? | Not started | - |
+| 1. quiver_lua CLI Executable | 0/1 | Not started | - |
