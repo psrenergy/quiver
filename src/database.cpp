@@ -257,6 +257,9 @@ Database::from_schema(const std::string& db_path, const std::string& schema_path
     if (!fs::exists(schema_path)) {
         throw std::runtime_error("Schema file not found: " + schema_path);
     }
+    if (db_path != ":memory:") {
+        fs::remove(db_path);
+    }
     auto db = Database(db_path, options);
     db.apply_schema(schema_path);
     return db;
