@@ -37,7 +37,7 @@ static quiver_log_level_t parse_log_level(const std::string& level) {
 }
 
 int main(int argc, char* argv[]) {
-    argparse::ArgumentParser program("quiver_lua", "quiver_lua " QUIVER_VERSION);
+    argparse::ArgumentParser program("quiver_cli", "quiver_cli " QUIVER_VERSION);
 
     program.add_argument("database")
         .help("path to the database file");
