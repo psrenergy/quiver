@@ -389,7 +389,7 @@ function read_scalars_by_id(db::Database, collection::String, id::Int64)
 end
 
 function read_vectors_by_id(db::Database, collection::String, id::Int64)
-    result = Dict{String, Vector{Any}}()
+    result = Dict{String, Any}()
     for group in list_vector_groups(db, collection)
         for col in group.value_columns
             name = col.name
@@ -410,7 +410,7 @@ function read_vectors_by_id(db::Database, collection::String, id::Int64)
 end
 
 function read_sets_by_id(db::Database, collection::String, id::Int64)
-    result = Dict{String, Vector{Any}}()
+    result = Dict{String, Any}()
     for group in list_set_groups(db, collection)
         for col in group.value_columns
             name = col.name
