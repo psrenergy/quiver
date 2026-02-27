@@ -78,6 +78,8 @@ int64_t Database::create_element(const std::string& collection, const Element& e
             case GroupTableType::TimeSeries:
                 time_series_table_columns[match.table_name][array_name] = &values;
                 break;
+            default:
+                throw std::runtime_error("Cannot create_element: unknown group table type " + std::to_string(static_cast<int>(match.type)));
             }
         }
     }

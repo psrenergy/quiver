@@ -437,8 +437,9 @@ struct LuaRunner::Impl {
             return "text";
         case DataType::DateTime:
             return "date_time";
+        default:
+            throw std::runtime_error("Cannot data_type_to_string: unknown data type " + std::to_string(static_cast<int>(type)));
         }
-        return "unknown";
     }
 
     static sol::table get_scalar_metadata_lua(Database& db,
@@ -583,6 +584,8 @@ struct LuaRunner::Impl {
                 result[attribute.name] = val.has_value() ? sol::make_object(lua, *val) : sol::lua_nil;
                 break;
             }
+            default:
+                throw std::runtime_error("Cannot read_scalars_by_id: unknown data type " + std::to_string(static_cast<int>(attribute.data_type)));
             }
         }
         return result;
@@ -616,6 +619,8 @@ struct LuaRunner::Impl {
                         t[i + 1] = values[i];
                     break;
                 }
+                default:
+                    throw std::runtime_error("Cannot read_vectors_by_id: unknown data type " + std::to_string(static_cast<int>(col.data_type)));
                 }
                 result[col.name] = t;
             }
@@ -650,6 +655,8 @@ struct LuaRunner::Impl {
                         t[i + 1] = values[i];
                     break;
                 }
+                default:
+                    throw std::runtime_error("Cannot read_sets_by_id: unknown data type " + std::to_string(static_cast<int>(col.data_type)));
                 }
                 result[col.name] = t;
             }
