@@ -20,6 +20,11 @@ set(QUIVER_SOURCES
     schema.cpp
     schema_validator.cpp
     type_validator.cpp
+    blob/blob.cpp
+    blob/blob_csv.cpp
+    blob/blob_metadata.cpp
+    blob/dimension.cpp
+    blob/time_properties.cpp
 )
 
 # Build type
