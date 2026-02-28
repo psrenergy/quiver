@@ -10,7 +10,7 @@ Phase 1 eliminates a layer inversion where the C++ core header (`include/quiver/
 
 The change is mechanically simple but has a wide blast radius in test files: 196 occurrences of `{.read_only = 0, .console_level = QUIVER_LOG_OFF}` designated initializers across 12 C++ test files reference the C enum values directly. These must be updated to use the new C++ `LogLevel::Off` enum class value. The C API tests and all bindings remain completely unchanged.
 
-**Primary recommendation:** Define `enum class LogLevel` and `struct DatabaseOptions` in `include/quiver/options.h`, add a `convert_options` function in `src/c/database_options.h`, update `src/database.cpp` and `src/cli/main.cpp` to use the C++ types, and mechanically update C++ test initializers.
+**Primary recommendation:** Define `enum class LogLevel` and `struct DatabaseOptions` in `include/quiver/options.h`, add a `convert_csv_options` function in `src/c/database_options.h`, update `src/database.cpp` and `src/cli/main.cpp` to use the C++ types, and mechanically update C++ test initializers.
 
 <user_constraints>
 ## User Constraints (from CONTEXT.md)
@@ -96,7 +96,7 @@ inline quiver::DatabaseOptions convert_database_options(const quiver_database_op
 
 ### Pattern 2: Existing CSVOptions Boundary Pattern (Reference Implementation)
 
-**What:** `CSVOptions` is already correctly owned by C++. The file `src/c/database_options.h` already contains `convert_options(const quiver_csv_options_t*)` that converts C flat arrays to C++ `std::unordered_map`. This is the exact pattern to follow for `DatabaseOptions`.
+**What:** `CSVOptions` is already correctly owned by C++. The file `src/c/database_options.h` already contains `convert_csv_options(const quiver_csv_options_t*)` that converts C flat arrays to C++ `std::unordered_map`. This is the exact pattern to follow for `DatabaseOptions`.
 
 **Source:** `src/c/database_options.h` lines 9-25
 
@@ -260,7 +260,7 @@ inline quiver::DatabaseOptions convert_database_options(const quiver_database_op
     };
 }
 
-inline quiver::CSVOptions convert_options(const quiver_csv_options_t* options) {
+inline quiver::CSVOptions convert_csv_options(const quiver_csv_options_t* options) {
     // ... existing code unchanged ...
 }
 

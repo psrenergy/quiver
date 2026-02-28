@@ -69,7 +69,7 @@ include/quiver/options.h            -- ALIASES: using DatabaseOptions = quiver_d
 - The C++ public API surface contains C-prefixed type names in its include chain
 - Any C++ consumer that includes `database.h` transitively pulls in C API headers
 
-**`CSVOptions` is already C++-owned** but uses a different pattern: it is a proper C++ struct with `std::unordered_map` and `std::string`, and `src/c/database_options.h` provides `convert_options()` to translate from `quiver_csv_options_t` to `quiver::CSVOptions`. This is the correct direction.
+**`CSVOptions` is already C++-owned** but uses a different pattern: it is a proper C++ struct with `std::unordered_map` and `std::string`, and `src/c/database_options.h` provides `convert_csv_options()` to translate from `quiver_csv_options_t` to `quiver::CSVOptions`. This is the correct direction.
 
 ### Target State
 
@@ -140,7 +140,7 @@ The C API header remains exactly as-is. It defines `quiver_log_level_t`, `quiver
 
 **Step 3: Add conversion in `src/c/database_options.h`**
 
-Add `convert_database_options()` alongside the existing `convert_options()`, with static asserts for enum correspondence:
+Add `convert_database_options()` alongside the existing `convert_csv_options()`, with static asserts for enum correspondence:
 
 ```cpp
 static_assert(static_cast<int>(quiver::LogLevel::Debug) == QUIVER_LOG_DEBUG);
@@ -678,7 +678,7 @@ All findings based on direct source file analysis of the Quiver codebase at comm
 
 - `include/quiver/options.h` -- layer inversion visible at line 6 (`#include "quiver/c/options.h"`)
 - `include/quiver/c/options.h` -- C API type definitions
-- `src/c/database_options.h` -- existing `convert_options()` pattern
+- `src/c/database_options.h` -- existing `convert_csv_options()` pattern
 - `src/c/database.cpp` -- C API lifecycle using `quiver_database_options_t` directly
 - `src/c/element.cpp:157` -- `quiver_element_free_string` implementation
 - `bindings/dart/lib/src/database_query.dart:29,131` -- Dart using element free for query results

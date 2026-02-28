@@ -13,7 +13,7 @@ inline quiver::DatabaseOptions convert_database_options(const quiver_database_op
     };
 }
 
-inline quiver::CSVOptions convert_options(const quiver_csv_options_t* options) {
+inline quiver::CSVOptions convert_csv_options(const quiver_csv_options_t* options) {
     quiver::CSVOptions cpp_options;
     cpp_options.date_time_format = options->date_time_format ? options->date_time_format : "";
 

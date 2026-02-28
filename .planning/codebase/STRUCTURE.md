@@ -67,7 +67,7 @@ quiver4/
 │   └── c/                     # C API implementation
 │       ├── internal.h         # quiver_database struct, quiver_element struct, QUIVER_REQUIRE macro
 │       ├── database_helpers.h # read_scalars_impl<T>, read_vectors_impl<T>, strdup_safe, convert_scalar_to_c, convert_group_to_c
-│       ├── database_options.h # convert_options helper, quiver_csv_options_default
+│       ├── database_options.h # convert_csv_options helper, quiver_csv_options_default
 │       ├── database.cpp       # Lifecycle: open, close, from_schema, from_migrations, describe
 │       ├── database_create.cpp # create_element, update_element, delete_element
 │       ├── database_read.cpp  # read_scalar/vector/set C API + free functions

@@ -38,7 +38,7 @@ Mistakes that cause crashes, silent corruption, or require cascading rewrites ac
 1. When modifying any struct in `include/quiver/c/options.h`, immediately update `bindings/python/src/quiverdb/_c_api.py` to match field-for-field.
 2. Add a C API test that validates struct sizes match expectations: `static_assert(sizeof(quiver_database_options_t) == expected_size)`. This catches unintentional layout changes.
 3. Run the Python generator (`bindings/python/generator/generator.bat`) and diff `_declarations.py` against `_c_api.py` to verify consistency.
-4. If the layer inversion results in a new C++ `DatabaseOptions` type that the C struct merely mirrors, ensure the C-to-C++ conversion function (`convert_options` pattern in `database_options.h`) handles every field.
+4. If the layer inversion results in a new C++ `DatabaseOptions` type that the C struct merely mirrors, ensure the C-to-C++ conversion function (`convert_csv_options` pattern in `database_options.h`) handles every field.
 
 **Detection:** Python tests that exercise non-default option values. A test that opens a database with `read_only=True` and verifies write operations fail will catch layout corruption that a default-options test would miss.
 
@@ -53,7 +53,7 @@ Mistakes that cause crashes, silent corruption, or require cascading rewrites ac
 **Prevention:**
 1. C++ options header (`include/quiver/options.h`) defines `DatabaseOptions` as a C++-native type. It does NOT include the C options header.
 2. C options header (`include/quiver/c/options.h`) defines `quiver_database_options_t` as a POD struct. It does NOT include the C++ options header.
-3. Conversion functions live in `src/c/database_options.h` (internal, not public), which includes both headers. This is where the existing `convert_options` pattern already lives.
+3. Conversion functions live in `src/c/database_options.h` (internal, not public), which includes both headers. This is where the existing `convert_csv_options` pattern already lives.
 4. The `using DatabaseOptions = quiver_database_options_t` alias in `include/quiver/options.h` is replaced with a proper C++ struct definition.
 
 **Detection:** Build failure. This one is caught at compile time, but fixing it after the fact can cascade into significant restructuring if the wrong include pattern was chosen initially.
@@ -123,14 +123,14 @@ Mistakes that cause crashes, silent corruption, or require cascading rewrites ac
 
 ### Pitfall 8: `CSVOptions` Struct Change Breaks Enum Labels Marshaling Across All Bindings
 
-**What goes wrong:** `CSVOptions` in C++ is a complex type with nested `unordered_map<string, unordered_map<string, unordered_map<string, int64_t>>>`. The C API flattens this into parallel arrays in `quiver_csv_options_t`. If the layer inversion fix changes the C++ `CSVOptions` type (e.g., different nesting, different key types), the C API's `convert_options` function in `database_options.h` must be updated, AND every binding that constructs `quiver_csv_options_t` structs must be updated too.
+**What goes wrong:** `CSVOptions` in C++ is a complex type with nested `unordered_map<string, unordered_map<string, unordered_map<string, int64_t>>>`. The C API flattens this into parallel arrays in `quiver_csv_options_t`. If the layer inversion fix changes the C++ `CSVOptions` type (e.g., different nesting, different key types), the C API's `convert_csv_options` function in `database_options.h` must be updated, AND every binding that constructs `quiver_csv_options_t` structs must be updated too.
 
 **Why it happens:** The enum labels parallel-array pattern is the most complex marshaling in the entire codebase. Julia (`database_csv_export.jl`), Dart (`database_csv_export.dart`), and Python (`database_csv_export.py`) each independently construct the parallel arrays (`enum_attribute_names`, `enum_locale_names`, `enum_entry_counts`, `enum_labels`, `enum_values`). A change to the struct layout or semantics requires synchronized updates in four places (C convert function + 3 bindings).
 
 **Consequences:** Incorrectly marshaled enum labels cause CSV export to write wrong enum values, or CSV import to resolve labels to wrong integers. The corruption is silent -- no error is raised, but data is wrong.
 
 **Prevention:**
-1. If the layer inversion fix touches `CSVOptions`, keep the `quiver_csv_options_t` C struct layout identical to what it is today. The C++ type can change freely; only the C struct and `convert_options` need to match.
+1. If the layer inversion fix touches `CSVOptions`, keep the `quiver_csv_options_t` C struct layout identical to what it is today. The C++ type can change freely; only the C struct and `convert_csv_options` need to match.
 2. Add a round-trip CSV test that exercises enum labels: export with enum labels, import back, verify values match. This test exists in C++ and C API layers but should be verified in all binding layers.
 3. If the C struct must change, update all four marshaling sites atomically (in a single phase/PR), not incrementally.
 

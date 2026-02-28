@@ -214,7 +214,7 @@ The C++ core library depends on the C API layer for its own type definitions. Th
 
 4. **C API conversion** in `src/c/database.cpp` or a new `database_options.h` helper:
    ```cpp
-   quiver::DatabaseOptions convert_options(const quiver_database_options_t* opts);
+   quiver::DatabaseOptions convert_csv_options(const quiver_database_options_t* opts);
    ```
 
 5. **C API factory functions** (`quiver_database_open`, `quiver_database_from_schema`, `quiver_database_from_migrations`) convert the C struct to C++ type before passing to the Database constructor.

@@ -25,7 +25,7 @@ src/c/                    # C API implementation
   database_helpers.h      # Marshaling templates, strdup_safe, metadata converters
   options.cpp             # Option defaults: quiver_database_options_default, quiver_csv_options_default
   database.cpp            # Lifecycle: open, close, factory methods, describe
-  database_options.h      # Option converters: convert_database_options, convert_options
+  database_options.h      # Option converters: convert_database_options, convert_csv_options
   database_csv_export.cpp # CSV export function
   database_csv_import.cpp # CSV import function
   database_create.cpp     # Element CRUD: create, update, delete

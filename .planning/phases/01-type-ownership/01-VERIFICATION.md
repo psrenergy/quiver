@@ -26,7 +26,7 @@ human_verification: []
 | 3 | `LogLevel` enum class has values Debug=0, Info=1, Warn=2, Error=3, Off=4 | VERIFIED | Lines 12-18 in `include/quiver/options.h` match exactly |
 | 4 | `default_database_options()` is removed — `DatabaseOptions{}` gives defaults via member initializers | VERIFIED | No occurrences of `default_database_options` anywhere in headers or src; database.h uses `= {}` for all three factory signatures |
 | 5 | C API boundary converts `quiver_database_options_t` to `quiver::DatabaseOptions` before calling C++ core | VERIFIED | `convert_database_options()` in `src/c/database_options.h:9-14`; called in `quiver_database_open`, `quiver_database_from_migrations`, `quiver_database_from_schema` |
-| 6 | `CSVOptions` remains unchanged — proper C++ type with boundary conversion in `src/c/` | VERIFIED | `convert_options()` in `src/c/database_options.h:16-32`; called in `database_csv_export.cpp:23` and `database_csv_import.cpp:19` |
+| 6 | `CSVOptions` remains unchanged — proper C++ type with boundary conversion in `src/c/` | VERIFIED | `convert_csv_options()` in `src/c/database_options.h:16-32`; called in `database_csv_export.cpp:23` and `database_csv_import.cpp:19` |
 | 7 | All C++ test files use `quiver::LogLevel::Off` instead of `QUIVER_LOG_OFF` | VERIFIED | Zero occurrences of `QUIVER_LOG_OFF` in 17 C++ test files; 216 occurrences of `quiver::LogLevel::Off` confirmed per file |
 | 8 | All C++ test files use `bool false` instead of `int 0` for `read_only` | VERIFIED | `{.read_only = false, .console_level = quiver::LogLevel::Off}` pattern confirmed in sample files; zero occurrences of `.read_only = 0` in test files |
 | 9 | No C++ test file includes `quiver/c/options.h` (C API tests unchanged) | PARTIAL-PASS | 15/17 test files have no include; `sandbox.cpp` and `benchmark.cpp` have a stale `#include <quiver/c/options.h>` with no actual C API type usage (see Anti-Patterns) |
@@ -58,7 +58,7 @@ human_verification: []
 | Requirement | Source Plan | Description | Status | Evidence |
 |-------------|------------|-------------|--------|----------|
 | TYPES-01 | 01-01, 01-02 | C++ defines `DatabaseOptions` with `enum class LogLevel` natively; C API converts at boundary | SATISFIED | `enum class LogLevel` in `options.h`; `convert_database_options()` at C API boundary; all 17 C++ test files updated |
-| TYPES-02 | 01-01 | C++ defines `CSVOptions` natively; C API converts at boundary | SATISFIED | `struct QUIVER_API CSVOptions` in `options.h:25-29`; `convert_options()` in `src/c/database_options.h:16-32`; used by CSV export/import |
+| TYPES-02 | 01-01 | C++ defines `CSVOptions` natively; C API converts at boundary | SATISFIED | `struct QUIVER_API CSVOptions` in `options.h:25-29`; `convert_csv_options()` in `src/c/database_options.h:16-32`; used by CSV export/import |
 
 No orphaned requirements — all Phase 1 requirements (TYPES-01, TYPES-02) are claimed by plans and verified in the codebase.
 

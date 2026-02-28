@@ -131,7 +131,7 @@ The codebase already does this correctly for `CSVOptions`:
 
 ```cpp
 // src/c/database_csv_export.cpp
-auto cpp_options = convert_options(options);  // C -> C++ conversion
+auto cpp_options = convert_csv_options(options);  // C -> C++ conversion
 db->db.export_csv(collection, group, path, cpp_options);
 ```
 
