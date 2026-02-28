@@ -29,11 +29,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. `DatabaseOptions` uses `enum class LogLevel` with member initializers (not a typedef of the C struct)
   3. `CSVOptions` is defined as a C++ type in `include/quiver/options.h` with boundary conversion in `src/c/`
   4. All existing C++, C API, Julia, Dart, and Python tests pass without modification (C API struct layout unchanged)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md -- Define native C++ types and update production code with boundary conversion
+- [ ] 01-02-PLAN.md -- Mechanical test file update (216 occurrences across 17 files)
 
 ### Phase 2: Free Function Naming
 **Goal**: Query/read string results are freed through the correct entity-scoped function across all layers
@@ -101,7 +101,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Type Ownership | 0/? | Not started | - |
+| 1. Type Ownership | 0/2 | Planned | - |
 | 2. Free Function Naming | 0/? | Not started | - |
 | 3. Python DataType Constants | 0/? | Not started | - |
 | 4. Python LuaRunner Binding | 0/? | Not started | - |
