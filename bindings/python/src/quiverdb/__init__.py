@@ -2,6 +2,7 @@ from quiverdb.database import Database
 from quiverdb.database_csv_export import DatabaseCSVExport
 from quiverdb.database_csv_import import DatabaseCSVImport
 from quiverdb.exceptions import QuiverError
+from quiverdb.lua_runner import LuaRunner
 from quiverdb.metadata import CSVOptions, DataType, GroupMetadata, ScalarMetadata
 
 __all__ = [
@@ -11,6 +12,7 @@ __all__ = [
     "DatabaseCSVExport",
     "DatabaseCSVImport",
     "GroupMetadata",
+    "LuaRunner",
     "QuiverError",
     "ScalarMetadata",
     "version",
