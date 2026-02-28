@@ -77,7 +77,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 04-01-PLAN.md -- Add LuaRunner class with CFFI declarations, lifecycle management, and test suite
+- [x] 04-01-PLAN.md -- Add LuaRunner class with CFFI declarations, lifecycle management, and test suite
 
 ### Phase 5: Cross-Binding Test Coverage
 **Goal**: All bindings have verified test coverage for health check and path accessors, and Python convenience helpers are tested
@@ -105,5 +105,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 1. Type Ownership | 2/2 | Complete | 2026-02-28 |
 | 2. Free Function Naming | 3/3 | Complete | 2026-02-28 |
 | 3. Python DataType Constants | 1/1 | Complete | 2026-02-28 |
-| 4. Python LuaRunner Binding | 0/1 | Not started | - |
+| 4. Python LuaRunner Binding | 1/1 | Complete | 2026-02-28 |
 | 5. Cross-Binding Test Coverage | 0/? | Not started | - |
