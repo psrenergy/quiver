@@ -9,8 +9,8 @@ Requirements for code quality milestone. Each maps to roadmap phases.
 
 ### Type Ownership
 
-- [ ] **TYPES-01**: C++ defines `DatabaseOptions` with `enum class LogLevel` natively; C API converts at boundary
-- [ ] **TYPES-02**: C++ defines `CSVOptions` natively; C API converts at boundary
+- [x] **TYPES-01**: C++ defines `DatabaseOptions` with `enum class LogLevel` natively; C API converts at boundary
+- [x] **TYPES-02**: C++ defines `CSVOptions` natively; C API converts at boundary
 
 ### API Naming
 
@@ -41,8 +41,8 @@ Requirements for code quality milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TYPES-01 | Phase 1 | Pending |
-| TYPES-02 | Phase 1 | Pending |
+| TYPES-01 | Phase 1 | Complete |
+| TYPES-02 | Phase 1 | Complete |
 | NAME-01 | Phase 2 | Pending |
 | NAME-02 | Phase 2 | Pending |
 | PY-01 | Phase 4 | Pending |
