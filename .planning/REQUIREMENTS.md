@@ -41,20 +41,20 @@ Requirements for code quality milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TYPES-01 | TBD | Pending |
-| TYPES-02 | TBD | Pending |
-| NAME-01 | TBD | Pending |
-| NAME-02 | TBD | Pending |
-| PY-01 | TBD | Pending |
-| PY-02 | TBD | Pending |
-| PY-03 | TBD | Pending |
-| TEST-01 | TBD | Pending |
+| TYPES-01 | Phase 1 | Pending |
+| TYPES-02 | Phase 1 | Pending |
+| NAME-01 | Phase 2 | Pending |
+| NAME-02 | Phase 2 | Pending |
+| PY-01 | Phase 4 | Pending |
+| PY-02 | Phase 3 | Pending |
+| PY-03 | Phase 5 | Pending |
+| TEST-01 | Phase 5 | Pending |
 
 **Coverage:**
 - v0.5 requirements: 8 total
-- Mapped to phases: 0
-- Unmapped: 8
+- Mapped to phases: 8
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-27*
-*Last updated: 2026-02-27 after initial definition*
+*Last updated: 2026-02-27 after roadmap creation*
