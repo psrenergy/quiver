@@ -77,6 +77,11 @@ QUIVER_C_API quiver_error_t quiver_database_free_string_array(char** values, siz
     return QUIVER_OK;
 }
 
+QUIVER_C_API quiver_error_t quiver_database_free_string(char* str) {
+    delete[] str;
+    return QUIVER_OK;
+}
+
 // Read vector attributes
 
 QUIVER_C_API quiver_error_t quiver_database_read_vector_integers(quiver_database_t* db,

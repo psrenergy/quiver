@@ -340,6 +340,8 @@ QUIVER_C_API quiver_error_t quiver_database_free_time_series_files(char** column
 QUIVER_C_API quiver_error_t quiver_database_free_integer_array(int64_t* values);
 QUIVER_C_API quiver_error_t quiver_database_free_float_array(double* values);
 QUIVER_C_API quiver_error_t quiver_database_free_string_array(char** values, size_t count);
+// Memory cleanup for single string returned by query/read-by-id operations
+QUIVER_C_API quiver_error_t quiver_database_free_string(char* str);
 
 // Memory cleanup for vector read results
 QUIVER_C_API quiver_error_t quiver_database_free_integer_vectors(int64_t** vectors, size_t* sizes, size_t count);

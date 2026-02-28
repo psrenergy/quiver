@@ -41,9 +41,8 @@ QUIVER_C_API quiver_error_t quiver_element_has_arrays(quiver_element_t* element,
 QUIVER_C_API quiver_error_t quiver_element_scalar_count(quiver_element_t* element, size_t* out_count);
 QUIVER_C_API quiver_error_t quiver_element_array_count(quiver_element_t* element, size_t* out_count);
 
-// Pretty print (caller must free returned string with quiver_element_free_string)
+// Pretty print (caller must free returned string with quiver_database_free_string)
 QUIVER_C_API quiver_error_t quiver_element_to_string(quiver_element_t* element, char** out_string);
-QUIVER_C_API quiver_error_t quiver_element_free_string(char* str);
 
 #ifdef __cplusplus
 }
