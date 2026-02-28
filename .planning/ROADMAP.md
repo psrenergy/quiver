@@ -60,10 +60,10 @@ Plans:
   2. No bare integer literals (0, 1, 2, 3, 4) remain in `database.py` for data type dispatch -- all replaced with `DataType` members
   3. `ScalarMetadata.data_type` returns a `DataType` enum value (not a plain int)
   4. Python test suite passes and includes a test validating DataType values match CFFI lib constants
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 03-01: TBD
+- [ ] 03-01-PLAN.md -- Define DataType IntEnum, replace all magic integers in database.py, add validation test
 
 ### Phase 4: Python LuaRunner Binding
 **Goal**: Python users can execute Lua scripts against a Quiver database, achieving feature parity with Julia/Dart/Lua bindings
