@@ -12,7 +12,7 @@ Quiver v0.5 is a code quality milestone that fixes architectural layering issues
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Type Ownership** - C++ owns DatabaseOptions and CSVOptions types independently of C API
+- [x] **Phase 1: Type Ownership** - C++ owns DatabaseOptions and CSVOptions types independently of C API
 - [ ] **Phase 2: Free Function Naming** - Add quiver_database_free_string, remove quiver_element_free_string, re-run all generators
 - [ ] **Phase 3: Python DataType Constants** - Replace 20+ magic integers with DataType IntEnum
 - [ ] **Phase 4: Python LuaRunner Binding** - Add LuaRunner wrapper to Python with lifetime-safe Database reference
@@ -32,8 +32,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md -- Define native C++ types and update production code with boundary conversion
-- [ ] 01-02-PLAN.md -- Mechanical test file update (216 occurrences across 17 files)
+- [x] 01-01-PLAN.md -- Define native C++ types and update production code with boundary conversion
+- [x] 01-02-PLAN.md -- Mechanical test file update (217 occurrences across 17 files)
 
 ### Phase 2: Free Function Naming
 **Goal**: Query/read string results are freed through the correct entity-scoped function across all layers
@@ -101,7 +101,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Type Ownership | 0/2 | Planned | - |
+| 1. Type Ownership | 2/2 | Complete | 2026-02-28 |
 | 2. Free Function Naming | 0/? | Not started | - |
 | 3. Python DataType Constants | 0/? | Not started | - |
 | 4. Python LuaRunner Binding | 0/? | Not started | - |
