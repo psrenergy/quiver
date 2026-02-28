@@ -89,11 +89,10 @@ Plans:
   3. Python tests exercise `is_healthy()` and `path()` on an open database and verify expected return values
   4. Python tests cover `read_scalars_by_id`, `read_vectors_by_id`, `read_sets_by_id`, `read_element_by_id`, `read_vector_group_by_id`, `read_set_group_by_id`, and `read_element_ids` with assertions on returned data
   5. All five test suites pass as the final milestone gate
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 05-01-PLAN.md -- Add is_healthy/path wrappers + tests to Julia and Dart, confirm Python coverage, run all test suites
 
 ## Progress
 
@@ -106,4 +105,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 2. Free Function Naming | 3/3 | Complete | 2026-02-28 |
 | 3. Python DataType Constants | 1/1 | Complete | 2026-02-28 |
 | 4. Python LuaRunner Binding | 1/1 | Complete | 2026-02-28 |
-| 5. Cross-Binding Test Coverage | 0/? | Not started | - |
+| 5. Cross-Binding Test Coverage | 0/1 | Not started | - |
