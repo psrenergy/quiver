@@ -44,11 +44,12 @@ Plans:
   2. `quiver_element_free_string()` no longer exists anywhere in the codebase (header, implementation, bindings, tests)
   3. Julia, Dart, and Python bindings call the new `quiver_database_free_string` for all database-returned strings (generators re-run, Python cdef updated)
   4. All five test suites (C++, C API, Julia, Dart, Python) pass after the rename
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md -- C API rename + build + generators (add quiver_database_free_string, remove quiver_element_free_string, regenerate bindings)
-- [ ] 02-02-PLAN.md -- Hand-written binding updates + CLAUDE.md + full test validation
+- [x] 02-01-PLAN.md -- C API rename + build + generators (add quiver_database_free_string, remove quiver_element_free_string, regenerate bindings)
+- [x] 02-02-PLAN.md -- Hand-written binding updates + CLAUDE.md + full test validation
+- [ ] 02-03-PLAN.md -- Gap closure: fix Dart ffigen.yaml to include options.h, regenerate bindings, verify Dart tests pass
 
 ### Phase 3: Python DataType Constants
 **Goal**: Python binding uses named constants instead of magic integers for data types
