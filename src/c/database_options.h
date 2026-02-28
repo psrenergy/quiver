@@ -6,6 +6,13 @@
 
 #include <string>
 
+inline quiver::DatabaseOptions convert_database_options(const quiver_database_options_t& c_opts) {
+    return {
+        .read_only = c_opts.read_only != 0,
+        .console_level = static_cast<quiver::LogLevel>(c_opts.console_level),
+    };
+}
+
 inline quiver::CSVOptions convert_options(const quiver_csv_options_t* options) {
     quiver::CSVOptions cpp_options;
     cpp_options.date_time_format = options->date_time_format ? options->date_time_format : "";

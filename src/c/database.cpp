@@ -1,5 +1,6 @@
 #include "quiver/c/database.h"
 
+#include "database_options.h"
 #include "internal.h"
 
 #include <new>
@@ -8,7 +9,7 @@
 extern "C" {
 
 QUIVER_C_API quiver_database_options_t quiver_database_options_default(void) {
-    return quiver::default_database_options();
+    return {0, QUIVER_LOG_INFO};
 }
 
 QUIVER_C_API quiver_error_t quiver_database_open(const char* path,
@@ -18,10 +19,9 @@ QUIVER_C_API quiver_error_t quiver_database_open(const char* path,
 
     try {
         if (options) {
-            *out_db = new quiver_database(path, *options);
+            *out_db = new quiver_database(path, convert_database_options(*options));
         } else {
-            auto default_options = quiver::default_database_options();
-            *out_db = new quiver_database(path, default_options);
+            *out_db = new quiver_database(path, quiver::DatabaseOptions{});
         }
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
@@ -60,11 +60,10 @@ QUIVER_C_API quiver_error_t quiver_database_from_migrations(const char* db_path,
 
     try {
         if (options) {
-            auto db = quiver::Database::from_migrations(db_path, migrations_path, *options);
+            auto db = quiver::Database::from_migrations(db_path, migrations_path, convert_database_options(*options));
             *out_db = new quiver_database(std::move(db));
         } else {
-            auto default_options = quiver::default_database_options();
-            auto db = quiver::Database::from_migrations(db_path, migrations_path, default_options);
+            auto db = quiver::Database::from_migrations(db_path, migrations_path, quiver::DatabaseOptions{});
             *out_db = new quiver_database(std::move(db));
         }
         return QUIVER_OK;
@@ -97,11 +96,10 @@ QUIVER_C_API quiver_error_t quiver_database_from_schema(const char* db_path,
 
     try {
         if (options) {
-            auto db = quiver::Database::from_schema(db_path, schema_path, *options);
+            auto db = quiver::Database::from_schema(db_path, schema_path, convert_database_options(*options));
             *out_db = new quiver_database(std::move(db));
         } else {
-            auto default_options = quiver::default_database_options();
-            auto db = quiver::Database::from_schema(db_path, schema_path, default_options);
+            auto db = quiver::Database::from_schema(db_path, schema_path, quiver::DatabaseOptions{});
             *out_db = new quiver_database(std::move(db));
         }
         return QUIVER_OK;

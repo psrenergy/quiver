@@ -22,17 +22,17 @@ static std::string read_script_file(const std::string& path) {
     return content;
 }
 
-static quiver_log_level_t parse_log_level(const std::string& level) {
+static quiver::LogLevel parse_log_level(const std::string& level) {
     if (level == "debug")
-        return QUIVER_LOG_DEBUG;
+        return quiver::LogLevel::Debug;
     if (level == "info")
-        return QUIVER_LOG_INFO;
+        return quiver::LogLevel::Info;
     if (level == "warn")
-        return QUIVER_LOG_WARN;
+        return quiver::LogLevel::Warn;
     if (level == "error")
-        return QUIVER_LOG_ERROR;
+        return quiver::LogLevel::Error;
     if (level == "off")
-        return QUIVER_LOG_OFF;
+        return quiver::LogLevel::Off;
     throw std::runtime_error("Unknown log level: " + level);
 }
 
@@ -82,7 +82,7 @@ int main(int argc, char* argv[]) {
 
         // Configure database options
         quiver::DatabaseOptions options{};
-        options.read_only = program.get<bool>("--read-only") ? 1 : 0;
+        options.read_only = program.get<bool>("--read-only");
         options.console_level = parse_log_level(program.get<std::string>("--log-level"));
 
         // Construct database (one of three modes)
