@@ -13,7 +13,7 @@ Quiver v0.5 is a code quality milestone that fixes architectural layering issues
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Type Ownership** - C++ owns DatabaseOptions and CSVOptions types independently of C API
-- [ ] **Phase 2: Free Function Naming** - Add quiver_database_free_string, remove quiver_element_free_string, re-run all generators
+- [x] **Phase 2: Free Function Naming** - Add quiver_database_free_string, remove quiver_element_free_string, re-run all generators
 - [ ] **Phase 3: Python DataType Constants** - Replace 20+ magic integers with DataType IntEnum
 - [ ] **Phase 4: Python LuaRunner Binding** - Add LuaRunner wrapper to Python with lifetime-safe Database reference
 - [ ] **Phase 5: Cross-Binding Test Coverage** - Validate is_healthy/path across bindings and Python convenience helpers
@@ -49,7 +49,7 @@ Plans:
 Plans:
 - [x] 02-01-PLAN.md -- C API rename + build + generators (add quiver_database_free_string, remove quiver_element_free_string, regenerate bindings)
 - [x] 02-02-PLAN.md -- Hand-written binding updates + CLAUDE.md + full test validation
-- [ ] 02-03-PLAN.md -- Gap closure: fix Dart ffigen.yaml to include options.h, regenerate bindings, verify Dart tests pass
+- [x] 02-03-PLAN.md -- Gap closure: fix Dart ffigen.yaml to include options.h, regenerate bindings, verify Dart tests pass
 
 ### Phase 3: Python DataType Constants
 **Goal**: Python binding uses named constants instead of magic integers for data types
@@ -103,7 +103,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Type Ownership | 2/2 | Complete | 2026-02-28 |
-| 2. Free Function Naming | 0/2 | Not started | - |
+| 2. Free Function Naming | 3/3 | Complete | 2026-02-28 |
 | 3. Python DataType Constants | 0/? | Not started | - |
 | 4. Python LuaRunner Binding | 0/? | Not started | - |
 | 5. Cross-Binding Test Coverage | 0/? | Not started | - |
