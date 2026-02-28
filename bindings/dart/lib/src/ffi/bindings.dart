@@ -42,6 +42,25 @@ class QuiverDatabaseBindings {
   late final _quiver_clear_last_errorPtr = _lookup<ffi.NativeFunction<ffi.Void Function()>>('quiver_clear_last_error');
   late final _quiver_clear_last_error = _quiver_clear_last_errorPtr.asFunction<void Function()>();
 
+  quiver_database_options_t quiver_database_options_default() {
+    return _quiver_database_options_default();
+  }
+
+  late final _quiver_database_options_defaultPtr = _lookup<ffi.NativeFunction<quiver_database_options_t Function()>>(
+    'quiver_database_options_default',
+  );
+  late final _quiver_database_options_default = _quiver_database_options_defaultPtr
+      .asFunction<quiver_database_options_t Function()>();
+
+  quiver_csv_options_t quiver_csv_options_default() {
+    return _quiver_csv_options_default();
+  }
+
+  late final _quiver_csv_options_defaultPtr = _lookup<ffi.NativeFunction<quiver_csv_options_t Function()>>(
+    'quiver_csv_options_default',
+  );
+  late final _quiver_csv_options_default = _quiver_csv_options_defaultPtr.asFunction<quiver_csv_options_t Function()>();
+
   int quiver_database_open(
     ffi.Pointer<ffi.Char> path,
     ffi.Pointer<quiver_database_options_t> options,
@@ -2598,6 +2617,39 @@ abstract class quiver_error_t {
   static const int QUIVER_ERROR = 1;
 }
 
+abstract class quiver_log_level_t {
+  static const int QUIVER_LOG_DEBUG = 0;
+  static const int QUIVER_LOG_INFO = 1;
+  static const int QUIVER_LOG_WARN = 2;
+  static const int QUIVER_LOG_ERROR = 3;
+  static const int QUIVER_LOG_OFF = 4;
+}
+
+final class quiver_database_options_t extends ffi.Struct {
+  @ffi.Int()
+  external int read_only;
+
+  @ffi.Int32()
+  external int console_level;
+}
+
+final class quiver_csv_options_t extends ffi.Struct {
+  external ffi.Pointer<ffi.Char> date_time_format;
+
+  external ffi.Pointer<ffi.Pointer<ffi.Char>> enum_attribute_names;
+
+  external ffi.Pointer<ffi.Pointer<ffi.Char>> enum_locale_names;
+
+  external ffi.Pointer<ffi.Size> enum_entry_counts;
+
+  external ffi.Pointer<ffi.Pointer<ffi.Char>> enum_labels;
+
+  external ffi.Pointer<ffi.Int64> enum_values;
+
+  @ffi.Size()
+  external int enum_group_count;
+}
+
 abstract class quiver_data_structure_t {
   static const int QUIVER_DATA_STRUCTURE_SCALAR = 0;
   static const int QUIVER_DATA_STRUCTURE_VECTOR = 1;
@@ -2613,22 +2665,6 @@ abstract class quiver_data_type_t {
 }
 
 final class quiver_database extends ffi.Opaque {}
-
-final class quiver_database_options_t extends ffi.Struct {
-  @ffi.Int()
-  external int read_only;
-
-  @ffi.Int32()
-  external int console_level;
-}
-
-abstract class quiver_log_level_t {
-  static const int QUIVER_LOG_DEBUG = 0;
-  static const int QUIVER_LOG_INFO = 1;
-  static const int QUIVER_LOG_WARN = 2;
-  static const int QUIVER_LOG_ERROR = 3;
-  static const int QUIVER_LOG_OFF = 4;
-}
 
 typedef quiver_database_t = quiver_database;
 
@@ -2667,23 +2703,6 @@ final class quiver_group_metadata_t extends ffi.Struct {
 
   @ffi.Size()
   external int value_column_count;
-}
-
-final class quiver_csv_options_t extends ffi.Struct {
-  external ffi.Pointer<ffi.Char> date_time_format;
-
-  external ffi.Pointer<ffi.Pointer<ffi.Char>> enum_attribute_names;
-
-  external ffi.Pointer<ffi.Pointer<ffi.Char>> enum_locale_names;
-
-  external ffi.Pointer<ffi.Size> enum_entry_counts;
-
-  external ffi.Pointer<ffi.Pointer<ffi.Char>> enum_labels;
-
-  external ffi.Pointer<ffi.Int64> enum_values;
-
-  @ffi.Size()
-  external int enum_group_count;
 }
 
 typedef quiver_element_t1 = quiver_element;
