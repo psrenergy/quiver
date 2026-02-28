@@ -14,8 +14,8 @@ Requirements for code quality milestone. Each maps to roadmap phases.
 
 ### API Naming
 
-- [ ] **NAME-01**: Add `quiver_database_free_string()` for database query results; update all bindings to use it
-- [ ] **NAME-02**: Remove `quiver_element_free_string()` entirely (breaking change); update all bindings
+- [x] **NAME-01**: Add `quiver_database_free_string()` for database query results; update all bindings to use it
+- [x] **NAME-02**: Remove `quiver_element_free_string()` entirely (breaking change); update all bindings
 
 ### Python Binding
 
@@ -43,8 +43,8 @@ Requirements for code quality milestone. Each maps to roadmap phases.
 |-------------|-------|--------|
 | TYPES-01 | Phase 1 | Complete |
 | TYPES-02 | Phase 1 | Complete |
-| NAME-01 | Phase 2 | Pending |
-| NAME-02 | Phase 2 | Pending |
+| NAME-01 | Phase 2 | Complete |
+| NAME-02 | Phase 2 | Complete |
 | PY-01 | Phase 4 | Pending |
 | PY-02 | Phase 3 | Pending |
 | PY-03 | Phase 5 | Pending |

@@ -254,8 +254,8 @@ quiver_database_free_integer_array(int64_t*)
 quiver_database_free_float_array(double*)
 quiver_database_free_string_array(char**, size_t)
 
-// Element entity free function (strings returned by element/query operations)
-quiver_element_free_string(char*)
+// Single string cleanup (strings returned by query/read-by-id/element operations)
+quiver_database_free_string(char*)
 ```
 
 ### Metadata Types
