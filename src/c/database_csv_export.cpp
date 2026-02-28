@@ -8,10 +8,6 @@
 
 extern "C" {
 
-QUIVER_C_API quiver_csv_options_t quiver_csv_options_default(void) {
-    return csv_options_default();
-}
-
 QUIVER_C_API quiver_error_t quiver_database_export_csv(quiver_database_t* db,
                                                        const char* collection,
                                                        const char* group,

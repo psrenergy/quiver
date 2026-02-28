@@ -8,10 +8,6 @@
 
 extern "C" {
 
-QUIVER_C_API quiver_database_options_t quiver_database_options_default(void) {
-    return {0, QUIVER_LOG_INFO};
-}
-
 QUIVER_C_API quiver_error_t quiver_database_open(const char* path,
                                                  const quiver_database_options_t* options,
                                                  quiver_database_t** out_db) {

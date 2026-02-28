@@ -10,9 +10,6 @@
 extern "C" {
 #endif
 
-// Default options
-QUIVER_C_API quiver_database_options_t quiver_database_options_default(void);
-
 // Attribute data structure
 typedef enum {
     QUIVER_DATA_STRUCTURE_SCALAR = 0,
