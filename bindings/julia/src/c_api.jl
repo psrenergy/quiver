@@ -67,12 +67,12 @@ mutable struct quiver_csv_options_t
     enum_group_count::Csize_t
 end
 
-function quiver_csv_options_default()
-    @ccall libquiver_c.quiver_csv_options_default()::quiver_csv_options_t
-end
-
 function quiver_database_options_default()
     @ccall libquiver_c.quiver_database_options_default()::quiver_database_options_t
+end
+
+function quiver_csv_options_default()
+    @ccall libquiver_c.quiver_csv_options_default()::quiver_csv_options_t
 end
 
 @cenum quiver_data_structure_t::UInt32 begin
