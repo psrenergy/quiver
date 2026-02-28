@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Type Ownership** - C++ owns DatabaseOptions and CSVOptions types independently of C API
 - [x] **Phase 2: Free Function Naming** - Add quiver_database_free_string, remove quiver_element_free_string, re-run all generators
-- [ ] **Phase 3: Python DataType Constants** - Replace 20+ magic integers with DataType IntEnum
+- [x] **Phase 3: Python DataType Constants** - Replace 20+ magic integers with DataType IntEnum
 - [ ] **Phase 4: Python LuaRunner Binding** - Add LuaRunner wrapper to Python with lifetime-safe Database reference
 - [ ] **Phase 5: Cross-Binding Test Coverage** - Validate is_healthy/path across bindings and Python convenience helpers
 
@@ -74,10 +74,10 @@ Plans:
   2. Python LuaRunner holds a reference to the Database object (preventing GC from collecting the database while the runner is alive)
   3. Lua scripts executed via Python LuaRunner can create/read/update/delete elements in the database
   4. Calling `run()` with invalid Lua raises a Python exception with the error message from `quiver_lua_runner_get_error` (not the global error)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 04-01: TBD
+- [ ] 04-01-PLAN.md -- Add LuaRunner class with CFFI declarations, lifecycle management, and test suite
 
 ### Phase 5: Cross-Binding Test Coverage
 **Goal**: All bindings have verified test coverage for health check and path accessors, and Python convenience helpers are tested
@@ -105,5 +105,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 1. Type Ownership | 2/2 | Complete | 2026-02-28 |
 | 2. Free Function Naming | 3/3 | Complete | 2026-02-28 |
 | 3. Python DataType Constants | 1/1 | Complete | 2026-02-28 |
-| 4. Python LuaRunner Binding | 0/? | Not started | - |
+| 4. Python LuaRunner Binding | 0/1 | Not started | - |
 | 5. Cross-Binding Test Coverage | 0/? | Not started | - |
