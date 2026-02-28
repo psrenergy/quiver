@@ -239,7 +239,7 @@ function read_scalar_string_by_id(db::Database, collection::String, attribute::S
         return nothing
     end
     result = unsafe_string(out_value[])
-    C.quiver_element_free_string(out_value[])
+    C.quiver_database_free_string(out_value[])
     return result
 end
 

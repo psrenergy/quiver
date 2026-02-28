@@ -67,12 +67,12 @@ mutable struct quiver_csv_options_t
     enum_group_count::Csize_t
 end
 
-function quiver_csv_options_default()
-    @ccall libquiver_c.quiver_csv_options_default()::quiver_csv_options_t
-end
-
 function quiver_database_options_default()
     @ccall libquiver_c.quiver_database_options_default()::quiver_database_options_t
+end
+
+function quiver_csv_options_default()
+    @ccall libquiver_c.quiver_csv_options_default()::quiver_csv_options_t
 end
 
 @cenum quiver_data_structure_t::UInt32 begin
@@ -339,6 +339,10 @@ function quiver_database_free_string_array(values, count)
     @ccall libquiver_c.quiver_database_free_string_array(values::Ptr{Ptr{Cchar}}, count::Csize_t)::quiver_error_t
 end
 
+function quiver_database_free_string(str)
+    @ccall libquiver_c.quiver_database_free_string(str::Ptr{Cchar})::quiver_error_t
+end
+
 function quiver_database_free_integer_vectors(vectors, sizes, count)
     @ccall libquiver_c.quiver_database_free_integer_vectors(vectors::Ptr{Ptr{Int64}}, sizes::Ptr{Csize_t}, count::Csize_t)::quiver_error_t
 end
@@ -445,10 +449,6 @@ end
 
 function quiver_element_to_string(element, out_string)
     @ccall libquiver_c.quiver_element_to_string(element::Ptr{quiver_element_t}, out_string::Ptr{Ptr{Cchar}})::quiver_error_t
-end
-
-function quiver_element_free_string(str)
-    @ccall libquiver_c.quiver_element_free_string(str::Ptr{Cchar})::quiver_error_t
 end
 
 mutable struct quiver_lua_runner end

@@ -51,3 +51,15 @@ function describe(db::Database)
     check(C.quiver_database_describe(db.ptr))
     return nothing
 end
+
+function is_healthy(db::Database)
+    out = Ref{Cint}(0)
+    check(C.quiver_database_is_healthy(db.ptr, out))
+    return out[] != 0
+end
+
+function path(db::Database)
+    out = Ref{Ptr{Cchar}}(C_NULL)
+    check(C.quiver_database_path(db.ptr, out))
+    return unsafe_string(out[])
+end

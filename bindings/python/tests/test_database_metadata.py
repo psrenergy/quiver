@@ -6,7 +6,7 @@ import dataclasses
 
 import pytest
 
-from quiverdb import Database, GroupMetadata, ScalarMetadata
+from quiverdb import DataType, Database, GroupMetadata, ScalarMetadata
 
 
 # -- get_scalar_metadata -------------------------------------------------------
@@ -16,7 +16,7 @@ class TestGetScalarMetadata:
     def test_get_scalar_metadata_integer(self, db: Database) -> None:
         meta = db.get_scalar_metadata("Configuration", "integer_attribute")
         assert meta.name == "integer_attribute"
-        assert meta.data_type == 0  # QUIVER_DATA_TYPE_INTEGER
+        assert meta.data_type == DataType.INTEGER
         assert meta.not_null is False
         assert meta.primary_key is False
         assert meta.is_foreign_key is False
@@ -26,18 +26,18 @@ class TestGetScalarMetadata:
     def test_get_scalar_metadata_string(self, db: Database) -> None:
         meta = db.get_scalar_metadata("Configuration", "string_attribute")
         assert meta.name == "string_attribute"
-        assert meta.data_type == 2  # QUIVER_DATA_TYPE_STRING
+        assert meta.data_type == DataType.STRING
 
     def test_get_scalar_metadata_label(self, db: Database) -> None:
         meta = db.get_scalar_metadata("Configuration", "label")
         assert meta.name == "label"
-        assert meta.data_type == 2  # TEXT -> STRING
+        assert meta.data_type == DataType.STRING
         assert meta.not_null is True
 
     def test_get_scalar_metadata_primary_key(self, db: Database) -> None:
         meta = db.get_scalar_metadata("Configuration", "id")
         assert meta.name == "id"
-        assert meta.data_type == 0  # INTEGER
+        assert meta.data_type == DataType.INTEGER
         assert meta.primary_key is True
 
     def test_get_scalar_metadata_with_default(self, db: Database) -> None:
@@ -49,7 +49,7 @@ class TestGetScalarMetadata:
     def test_get_scalar_metadata_date_attribute(self, db: Database) -> None:
         meta = db.get_scalar_metadata("Configuration", "date_attribute")
         assert meta.name == "date_attribute"
-        assert meta.data_type == 3  # QUIVER_DATA_TYPE_DATE_TIME
+        assert meta.data_type == DataType.DATE_TIME
 
     def test_get_scalar_metadata_foreign_key(self, relations_db: Database) -> None:
         meta = relations_db.get_scalar_metadata("Child", "parent_id")
@@ -82,8 +82,8 @@ class TestGetGroupMetadata:
     def test_get_vector_metadata_value_column_types(self, collections_db: Database) -> None:
         meta = collections_db.get_vector_metadata("Collection", "values")
         by_name = {c.name: c for c in meta.value_columns}
-        assert by_name["value_int"].data_type == 0  # INTEGER
-        assert by_name["value_float"].data_type == 1  # FLOAT
+        assert by_name["value_int"].data_type == DataType.INTEGER
+        assert by_name["value_float"].data_type == DataType.FLOAT
 
     def test_get_set_metadata(self, collections_db: Database) -> None:
         meta = collections_db.get_set_metadata("Collection", "tags")
@@ -122,7 +122,7 @@ class TestListScalarAttributes:
         by_name = {a.name: a for a in attrs}
         label = by_name["label"]
         assert label.not_null is True
-        assert label.data_type == 2  # TEXT -> STRING
+        assert label.data_type == DataType.STRING
 
 
 # -- list_vector_groups / list_set_groups / list_time_series_groups -----------
@@ -168,3 +168,25 @@ class TestMetadataFrozen:
         meta = collections_db.get_vector_metadata("Collection", "values")
         with pytest.raises(dataclasses.FrozenInstanceError):
             meta.group_name = "changed"  # type: ignore[misc]
+
+
+# -- DataType enum validation -------------------------------------------------
+
+
+class TestDataType:
+    def test_datatype_values_match_c_api(self) -> None:
+        """Verify DataType enum values match CFFI quiver_data_type_t constants."""
+        from quiverdb._c_api import get_lib
+
+        lib = get_lib()
+        assert DataType.INTEGER == lib.QUIVER_DATA_TYPE_INTEGER
+        assert DataType.FLOAT == lib.QUIVER_DATA_TYPE_FLOAT
+        assert DataType.STRING == lib.QUIVER_DATA_TYPE_STRING
+        assert DataType.DATE_TIME == lib.QUIVER_DATA_TYPE_DATE_TIME
+        assert DataType.NULL == lib.QUIVER_DATA_TYPE_NULL
+
+    def test_scalar_metadata_data_type_is_datatype_enum(self, db: Database) -> None:
+        """Verify ScalarMetadata.data_type returns DataType enum, not plain int."""
+        meta = db.get_scalar_metadata("Configuration", "label")
+        assert isinstance(meta.data_type, DataType)
+        assert meta.data_type == DataType.STRING

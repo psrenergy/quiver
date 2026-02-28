@@ -2,7 +2,6 @@
 #define QUIVER_OPTIONS_H
 
 #include "export.h"
-#include "quiver/c/options.h"
 
 #include <cstdint>
 #include <string>
@@ -10,11 +9,18 @@
 
 namespace quiver {
 
-using DatabaseOptions = quiver_database_options_t;
+enum class LogLevel {
+    Debug = 0,
+    Info = 1,
+    Warn = 2,
+    Error = 3,
+    Off = 4,
+};
 
-inline DatabaseOptions default_database_options() {
-    return {0, QUIVER_LOG_INFO};
-}
+struct QUIVER_API DatabaseOptions {
+    bool read_only = false;
+    LogLevel console_level = LogLevel::Info;
+};
 
 struct QUIVER_API CSVOptions {
     std::unordered_map<std::string, std::unordered_map<std::string, std::unordered_map<std::string, int64_t>>>

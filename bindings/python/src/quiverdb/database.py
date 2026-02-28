@@ -10,7 +10,7 @@ from quiverdb.database_csv_export import DatabaseCSVExport
 from quiverdb.database_csv_import import DatabaseCSVImport
 from quiverdb.element import Element
 from quiverdb.exceptions import QuiverError
-from quiverdb.metadata import GroupMetadata, ScalarMetadata
+from quiverdb.metadata import DataType, GroupMetadata, ScalarMetadata
 
 
 class Database(DatabaseCSVExport, DatabaseCSVImport):
@@ -240,7 +240,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         try:
             return ffi.string(out_value[0]).decode("utf-8")
         finally:
-            lib.quiver_element_free_string(out_value[0])
+            lib.quiver_database_free_string(out_value[0])
 
     def query_integer(self, sql: str, *, params: list | None = None) -> int | None:
         """Execute SQL and return the first column of the first row as int, or None."""
@@ -500,7 +500,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         try:
             return ffi.string(out_value[0]).decode("utf-8")
         finally:
-            lib.quiver_element_free_string(out_value[0])
+            lib.quiver_database_free_string(out_value[0])
 
     # -- Element Ids -----------------------------------------------------------
 
@@ -1126,9 +1126,9 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             for r in range(row_count):
                 row: dict = {}
                 for c, (name, ctype) in enumerate(columns):
-                    if ctype == 0:  # INTEGER
+                    if ctype == DataType.INTEGER:
                         row[name] = ffi.cast("int64_t*", out_data[0][c])[r]
-                    elif ctype == 1:  # FLOAT
+                    elif ctype == DataType.FLOAT:
                         row[name] = ffi.cast("double*", out_data[0][c])[r]
                     else:  # STRING or DATE_TIME
                         row[name] = ffi.string(ffi.cast("char**", out_data[0][c])[r]).decode("utf-8")
@@ -1270,13 +1270,13 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         result = {}
         for attr in self.list_scalar_attributes(collection):
             name = attr.name
-            if attr.data_type == 0:  # INTEGER
+            if attr.data_type == DataType.INTEGER:
                 result[name] = self.read_scalar_integer_by_id(collection, name, id)
-            elif attr.data_type == 1:  # FLOAT
+            elif attr.data_type == DataType.FLOAT:
                 result[name] = self.read_scalar_float_by_id(collection, name, id)
-            elif attr.data_type == 3:  # DATE_TIME
+            elif attr.data_type == DataType.DATE_TIME:
                 result[name] = self.read_scalar_date_time_by_id(collection, name, id)
-            else:  # STRING (2)
+            else:  # STRING
                 result[name] = self.read_scalar_string_by_id(collection, name, id)
         return result
 
@@ -1292,13 +1292,13 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             for col in group.value_columns:
                 name = col.name
                 dt = col.data_type
-                if dt == 0:  # INTEGER
+                if dt == DataType.INTEGER:
                     result[name] = self.read_vector_integers_by_id(collection, name, id)
-                elif dt == 1:  # FLOAT
+                elif dt == DataType.FLOAT:
                     result[name] = self.read_vector_floats_by_id(collection, name, id)
-                elif dt == 3:  # DATE_TIME
+                elif dt == DataType.DATE_TIME:
                     result[name] = self.read_vector_date_time_by_id(collection, name, id)
-                else:  # STRING (2)
+                else:  # STRING
                     result[name] = self.read_vector_strings_by_id(collection, name, id)
         return result
 
@@ -1314,13 +1314,13 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             for col in group.value_columns:
                 name = col.name
                 dt = col.data_type
-                if dt == 0:  # INTEGER
+                if dt == DataType.INTEGER:
                     result[name] = self.read_set_integers_by_id(collection, name, id)
-                elif dt == 1:  # FLOAT
+                elif dt == DataType.FLOAT:
                     result[name] = self.read_set_floats_by_id(collection, name, id)
-                elif dt == 3:  # DATE_TIME
+                elif dt == DataType.DATE_TIME:
                     result[name] = self.read_set_date_time_by_id(collection, name, id)
-                else:  # STRING (2)
+                else:  # STRING
                     result[name] = self.read_set_strings_by_id(collection, name, id)
         return result
 
@@ -1357,13 +1357,13 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         row_count = 0
         for col in columns:
             name = col.name
-            if col.data_type == 0:  # INTEGER
+            if col.data_type == DataType.INTEGER:
                 values = self.read_vector_integers_by_id(collection, name, id)
-            elif col.data_type == 1:  # FLOAT
+            elif col.data_type == DataType.FLOAT:
                 values = self.read_vector_floats_by_id(collection, name, id)
-            elif col.data_type == 3:  # DATE_TIME
+            elif col.data_type == DataType.DATE_TIME:
                 values = self.read_vector_date_time_by_id(collection, name, id)
-            else:  # STRING (2)
+            else:  # STRING
                 values = self.read_vector_strings_by_id(collection, name, id)
             column_data[name] = values
             row_count = len(values)
@@ -1391,13 +1391,13 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         row_count = 0
         for col in columns:
             name = col.name
-            if col.data_type == 0:  # INTEGER
+            if col.data_type == DataType.INTEGER:
                 values = self.read_set_integers_by_id(collection, name, id)
-            elif col.data_type == 1:  # FLOAT
+            elif col.data_type == DataType.FLOAT:
                 values = self.read_set_floats_by_id(collection, name, id)
-            elif col.data_type == 3:  # DATE_TIME
+            elif col.data_type == DataType.DATE_TIME:
                 values = self.read_set_date_time_by_id(collection, name, id)
-            else:  # STRING (2)
+            else:  # STRING
                 values = self.read_set_strings_by_id(collection, name, id)
             column_data[name] = values
             row_count = len(values)
@@ -1440,20 +1440,20 @@ def _marshal_params(params: list) -> tuple:
 
     for i, p in enumerate(params):
         if p is None:
-            c_types[i] = 4  # QUIVER_DATA_TYPE_NULL
+            c_types[i] = DataType.NULL
             c_values[i] = ffi.NULL
         elif isinstance(p, int):  # bool is subclass of int, handled here
-            c_types[i] = 0  # QUIVER_DATA_TYPE_INTEGER
+            c_types[i] = DataType.INTEGER
             buf = ffi.new("int64_t*", p)
             keepalive.append(buf)
             c_values[i] = ffi.cast("void*", buf)
         elif isinstance(p, float):
-            c_types[i] = 1  # QUIVER_DATA_TYPE_FLOAT
+            c_types[i] = DataType.FLOAT
             buf = ffi.new("double*", p)
             keepalive.append(buf)
             c_values[i] = ffi.cast("void*", buf)
         elif isinstance(p, str):
-            c_types[i] = 2  # QUIVER_DATA_TYPE_STRING
+            c_types[i] = DataType.STRING
             c_buf = ffi.new("char[]", p.encode("utf-8"))
             keepalive.append(c_buf)
             c_values[i] = ffi.cast("void*", c_buf)
@@ -1473,9 +1473,9 @@ def _marshal_time_series_columns(
     where keepalive must remain referenced until the C API call completes.
     """
     # Build column schema from metadata: dimension column first, then value columns
-    # Dimension column type is always STRING (2) since it's TEXT in SQL
+    # Dimension column type is always STRING since it's TEXT in SQL
     columns: list[tuple[str, int]] = []
-    columns.append((metadata.dimension_column, 2))  # STRING for dimension
+    columns.append((metadata.dimension_column, DataType.STRING))
     for vc in metadata.value_columns:
         columns.append((vc.name, vc.data_type))
 
@@ -1489,10 +1489,10 @@ def _marshal_time_series_columns(
             if name not in row:
                 raise ValueError(f"Row {r} is missing column '{name}'")
             v = row[name]
-            if col_type == 0:  # INTEGER
+            if col_type == DataType.INTEGER:
                 if type(v) is not int:
                     raise TypeError(f"Column '{name}' expects int, got {type(v).__name__}")
-            elif col_type == 1:  # FLOAT
+            elif col_type == DataType.FLOAT:
                 if type(v) is not float:
                     raise TypeError(f"Column '{name}' expects float, got {type(v).__name__}")
             else:  # STRING or DATE_TIME
@@ -1512,11 +1512,11 @@ def _marshal_time_series_columns(
     # Build column data arrays (transpose rows to columnar)
     c_col_data = ffi.new("void*[]", col_count)
     for c, (name, col_type) in enumerate(columns):
-        if col_type == 0:  # INTEGER
+        if col_type == DataType.INTEGER:
             arr = ffi.new("int64_t[]", [row[name] for row in rows])
             keepalive.append(arr)
             c_col_data[c] = ffi.cast("void*", arr)
-        elif col_type == 1:  # FLOAT
+        elif col_type == DataType.FLOAT:
             arr = ffi.new("double[]", [row[name] for row in rows])
             keepalive.append(arr)
             c_col_data[c] = ffi.cast("void*", arr)
@@ -1538,7 +1538,7 @@ def _parse_scalar_metadata(meta) -> ScalarMetadata:
     """Parse a quiver_scalar_metadata_t struct into a ScalarMetadata dataclass."""
     return ScalarMetadata(
         name=decode_string(meta.name),
-        data_type=int(meta.data_type),
+        data_type=DataType(int(meta.data_type)),
         not_null=bool(meta.not_null),
         primary_key=bool(meta.primary_key),
         default_value=decode_string_or_none(meta.default_value),

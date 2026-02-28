@@ -482,7 +482,7 @@ extension DatabaseRead on Database {
         return null;
       }
       final result = outValue.value.cast<Utf8>().toDartString();
-      bindings.quiver_element_free_string(outValue.value);
+      bindings.quiver_database_free_string(outValue.value);
       return result;
     } finally {
       arena.releaseAll();

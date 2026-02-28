@@ -10,7 +10,7 @@
 
 int main() {
     auto db = quiver::Database::from_schema(
-        ":memory:", "tests/schemas/valid/basic.sql", {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+        ":memory:", "tests/schemas/valid/basic.sql", {.read_only = false, .console_level = quiver::LogLevel::Off});
 
     quiver::Element element;
     element.set("label", std::string("Test Config")).set("integer_attribute", int64_t{42}).set("float_attribute", 3.14);

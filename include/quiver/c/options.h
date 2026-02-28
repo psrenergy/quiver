@@ -49,6 +49,7 @@ typedef struct {
     size_t enum_group_count;                  // number of (attribute, locale) groups
 } quiver_csv_options_t;
 
+QUIVER_C_API quiver_database_options_t quiver_database_options_default(void);
 QUIVER_C_API quiver_csv_options_t quiver_csv_options_default(void);
 
 #ifdef __cplusplus

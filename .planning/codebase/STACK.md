@@ -1,6 +1,6 @@
 # Technology Stack
 
-**Analysis Date:** 2026-02-26
+**Analysis Date:** 2026-02-27
 
 ## Languages
 
@@ -35,7 +35,7 @@
 - Build presets: `dev` (Debug + tests + C API), `release`, `windows-release`, `linux-release`, `all-bindings`
 
 **Testing:**
-- GoogleTest v1.17.0 - C++ and C API tests (`tests/`)
+- GoogleTest v1.17.0 + GMock - C++ and C API tests (`tests/`)
 - Julia `Test` stdlib + `Aqua` 0.8 - Julia binding tests (`bindings/julia/test/`)
 - Dart `test` ^1.24.0 - Dart binding tests (`bindings/dart/test/`)
 - Python `pytest` 8.4.1+ - Python binding tests (`bindings/python/tests/`)
@@ -43,24 +43,25 @@
 **Build/Dev:**
 - scikit-build-core 0.10+ - Python wheel packaging (`bindings/python/pyproject.toml`)
 - cibuildwheel 3.3.1 - Wheel matrix builds: `cp313-win_amd64`, `cp313-manylinux_x86_64`
-- clang-format - C++ code formatting (config: `.clang-format`)
-- clang-tidy - C++ static analysis (run via `scripts/tidy.bat`)
+- clang-format - C++ code formatting (format target in `CMakeLists.txt`)
+- clang-tidy - C++ static analysis (run via `scripts/tidy.bat`, tidy target in `CMakeLists.txt`)
 - Ruff 0.12.2+ - Python linting and formatting (`bindings/python/ruff.toml`)
 - Dart `lints` ^3.0.0 + `ffigen` ^11.0.0 - Dart analysis and FFI generator (`bindings/dart/analysis_options.yaml`)
 - Clang.jl (Julia) - Julia FFI binding generator (`bindings/julia/generator/`)
 
 ## Key Dependencies
 
-**Critical:**
+**Critical (fetched via CMake FetchContent — `cmake/Dependencies.cmake`):**
 - SQLite3 v3.50.2 - Core embedded relational database; fetched via `sjinks/sqlite3-cmake`; linked `PUBLIC` so consumers inherit the dependency
 - sol2 v3.5.0 - C++ Lua binding (heavy templates; requires `/bigobj` on MSVC, `-Wa,-mbig-obj` on MinGW)
-- Lua 5.4.8 - Scripting engine built from source via `lua-cmake` wrapper (`gitlab.com/codelibre/lua/lua-cmake`)
+- Lua 5.4.8 - Scripting engine built from source via `lua-cmake` wrapper (`gitlab.com/codelibre/lua/lua-cmake`); interpreter and compiler disabled, library only
 - CFFI 2.0.0+ - Python ABI-mode FFI; cdef declarations in `bindings/python/src/quiverdb/_c_api.py`
 
 **Infrastructure:**
 - spdlog v1.17.0 - Structured logging (debug/info/warn/error/off), console + file sinks per database instance
 - toml++ v3.4.0 - TOML configuration file parsing (`marzer/tomlplusplus`)
 - rapidcsv v8.92 - Header-only CSV read/write (`d99kris/rapidcsv`); used in `src/database_csv_export.cpp`, `src/database_csv_import.cpp`
+- argparse v3.2 - Header-only CLI argument parsing (`p-ranav/argparse`); used only in `src/cli/main.cpp`
 - native_toolchain_cmake ^0.2.2 - Dart native build hook invokes CMake to compile quiver (`bindings/dart/hook/build.dart`)
 - ffigen ^11.0.0 - Dart FFI binding generator; output `bindings/dart/lib/src/ffi/bindings.dart` (excluded from Dart analysis)
 
@@ -83,15 +84,15 @@
 - MinGW: Static link of `libgcc`, `libstdc++`, `winpthread` for portable binaries
 - All platforms: Position-independent code (`CMAKE_POSITION_INDEPENDENT_CODE ON`)
 
-**C++ Formatting (`/.clang-format`):**
-- BasedOnStyle: LLVM; IndentWidth: 4; ColumnLimit: 120; Standard: c++20
-- PointerAlignment: Left; BreakBeforeBraces: Attach; SortIncludes: true; IncludeBlocks: Regroup
-
 **Python Formatting (`bindings/python/ruff.toml`):**
 - line-length: 120; indent-width: 4; target-version: py313; quote-style: double; line-ending: LF
+- Lint: isort checks only (`select = ["I"]`)
 
 **Dart Formatting (`bindings/dart/analysis_options.yaml`):**
-- page_width: 120; based on `package:lints/recommended.yaml`
+- page_width: 120; trailing_commas: preserve; based on `package:lints/recommended.yaml`
+
+**sol2 Safety (`src/CMakeLists.txt`):**
+- `SOL_SAFE_NUMERICS=1`, `SOL_SAFE_FUNCTION=1` compile definitions on `quiver` target
 
 **Build Config Files:**
 - `CMakeLists.txt` - Root build entry
@@ -99,10 +100,11 @@
 - `cmake/Dependencies.cmake` - FetchContent dependency declarations with pinned Git tags
 - `cmake/CompilerOptions.cmake` - Warning levels and linker flags
 - `cmake/Platform.cmake` - RPATH, symbol visibility, lib prefix/suffix per OS
+- `cmake/quiverConfig.cmake.in` - Package config for `find_package(quiver)` support
 - `bindings/python/pyproject.toml` - Python package, build-system, cibuildwheel config
-- `bindings/dart/pubspec.yaml` - Dart package and ffigen config
+- `bindings/dart/pubspec.yaml` - Dart package manifest (includes ffigen config)
 - `bindings/julia/Project.toml` - Julia package with compat constraints
-- `codecov.yml` - Coverage threshold configuration (1% minimum)
+- `codecov.yml` - Coverage threshold configuration (1% minimum, ignores `tests/` and `build/`)
 
 ## Platform Requirements
 
@@ -127,4 +129,4 @@
 
 ---
 
-*Stack analysis: 2026-02-26*
+*Stack analysis: 2026-02-27*

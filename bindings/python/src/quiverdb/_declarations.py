@@ -64,12 +64,10 @@ typedef struct {
     size_t enum_group_count;                  // number of (attribute, locale) groups
 } quiver_csv_options_t;
 
+quiver_database_options_t quiver_database_options_default(void);
 quiver_csv_options_t quiver_csv_options_default(void);
 
 // database.h
-// Default options
-quiver_database_options_t quiver_database_options_default(void);
-
 // Attribute data structure
 typedef enum {
     QUIVER_DATA_STRUCTURE_SCALAR = 0,
@@ -400,6 +398,8 @@ quiver_error_t quiver_database_free_time_series_files(char** columns, char** pat
 quiver_error_t quiver_database_free_integer_array(int64_t* values);
 quiver_error_t quiver_database_free_float_array(double* values);
 quiver_error_t quiver_database_free_string_array(char** values, size_t count);
+// Memory cleanup for single string returned by query/read-by-id operations
+quiver_error_t quiver_database_free_string(char* str);
 
 // Memory cleanup for vector read results
 quiver_error_t quiver_database_free_integer_vectors(int64_t** vectors, size_t* sizes, size_t count);
@@ -500,8 +500,7 @@ quiver_error_t quiver_element_has_arrays(quiver_element_t* element, int* out_res
 quiver_error_t quiver_element_scalar_count(quiver_element_t* element, size_t* out_count);
 quiver_error_t quiver_element_array_count(quiver_element_t* element, size_t* out_count);
 
-// Pretty print (caller must free returned string with quiver_element_free_string)
+// Pretty print (caller must free returned string with quiver_database_free_string)
 quiver_error_t quiver_element_to_string(quiver_element_t* element, char** out_string);
-quiver_error_t quiver_element_free_string(char* str);
 
 """

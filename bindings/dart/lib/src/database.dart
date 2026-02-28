@@ -189,6 +189,32 @@ class Database {
     return (types: types, values: values);
   }
 
+  /// Returns true if the database passes integrity checks.
+  bool isHealthy() {
+    _ensureNotClosed();
+    final arena = Arena();
+    try {
+      final outHealthy = arena<Int>();
+      check(bindings.quiver_database_is_healthy(_ptr, outHealthy));
+      return outHealthy.value != 0;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Returns the database file path.
+  String path() {
+    _ensureNotClosed();
+    final arena = Arena();
+    try {
+      final outPath = arena<Pointer<Char>>();
+      check(bindings.quiver_database_path(_ptr, outPath));
+      return outPath.value.cast<Utf8>().toDartString();
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
   /// Closes the database and frees native resources.
   void close() {
     if (_isClosed) return;

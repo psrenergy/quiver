@@ -55,4 +55,24 @@ end
     end
 end
 
+@testset "is_healthy" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    db = Quiver.from_schema(":memory:", path_schema)
+    @test Quiver.is_healthy(db) == true
+    Quiver.close!(db)
+end
+
+@testset "path" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    mktempdir() do dir
+        db_path = joinpath(dir, "test.db")
+        db = Quiver.from_schema(db_path, path_schema)
+        result = Quiver.path(db)
+        @test result isa String
+        @test occursin("test.db", result)
+        Quiver.close!(db)
+        return nothing
+    end
+end
+
 end

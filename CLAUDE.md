@@ -12,7 +12,7 @@ include/quiver/           # C++ public headers
   element.h               # Element builder for create operations
   lua_runner.h            # Lua scripting support
 include/quiver/c/         # C API headers (for FFI)
-  options.h               # All option types: LogLevel, DatabaseOptions, CSVOptions
+  options.h               # All option types and defaults: LogLevel, DatabaseOptions, CSVOptions
   database.h
   element.h
   lua_runner.h
@@ -23,8 +23,9 @@ src/                      # C++ implementation
 src/c/                    # C API implementation
   internal.h              # Shared structs (quiver_database, quiver_element), QUIVER_REQUIRE macro
   database_helpers.h      # Marshaling templates, strdup_safe, metadata converters
+  options.cpp             # Option defaults: quiver_database_options_default, quiver_csv_options_default
   database.cpp            # Lifecycle: open, close, factory methods, describe
-  database_options.h      # Shared CSV options: convert_options inline, quiver_csv_options_default
+  database_options.h      # Option converters: convert_database_options, convert_csv_options
   database_csv_export.cpp # CSV export function
   database_csv_import.cpp # CSV import function
   database_create.cpp     # Element CRUD: create, update, delete
@@ -209,7 +210,7 @@ static Database from_migrations(const std::string& path, const std::vector<std::
 
 ### Return Codes
 All C API functions return binary `quiver_error_t` (`QUIVER_OK = 0` or `QUIVER_ERROR = 1`). Values are returned via output parameters.
-Exceptions: `quiver_get_last_error`, `quiver_version`, `quiver_clear_last_error`, `quiver_database_options_default` (utility functions with direct return).
+Exceptions: `quiver_get_last_error`, `quiver_version`, `quiver_clear_last_error`, `quiver_database_options_default`, `quiver_csv_options_default` (utility functions with direct return).
 
 ### Error Handling
 Try-catch with `quiver_set_last_error()`, binary return codes. Error details come from `quiver_get_last_error()`:
@@ -253,8 +254,8 @@ quiver_database_free_integer_array(int64_t*)
 quiver_database_free_float_array(double*)
 quiver_database_free_string_array(char**, size_t)
 
-// Element entity free function (strings returned by element/query operations)
-quiver_element_free_string(char*)
+// Single string cleanup (strings returned by query/read-by-id/element operations)
+quiver_database_free_string(char*)
 ```
 
 ### Metadata Types

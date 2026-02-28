@@ -16,7 +16,7 @@ QUIVER_C_API quiver_error_t quiver_database_import_csv(quiver_database_t* db,
     QUIVER_REQUIRE(db, collection, group, path, options);
 
     try {
-        auto cpp_options = convert_options(options);
+        auto cpp_options = convert_csv_options(options);
         db->db.import_csv(collection, group, path, cpp_options);
         return QUIVER_OK;
     } catch (const std::exception& e) {

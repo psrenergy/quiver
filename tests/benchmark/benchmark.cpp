@@ -99,8 +99,8 @@ static double run_individual(const std::string& schema_path, int element_count) 
     double elapsed_ms;
 
     {
-        auto db =
-            quiver::Database::from_schema(db_path, schema_path, {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+        auto db = quiver::Database::from_schema(
+            db_path, schema_path, {.read_only = false, .console_level = quiver::LogLevel::Off});
 
         // Configuration element (outside timed region)
         quiver::Element config;
@@ -130,8 +130,8 @@ static double run_batched(const std::string& schema_path, int element_count) {
     double elapsed_ms;
 
     {
-        auto db =
-            quiver::Database::from_schema(db_path, schema_path, {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+        auto db = quiver::Database::from_schema(
+            db_path, schema_path, {.read_only = false, .console_level = quiver::LogLevel::Off});
 
         // Configuration element (outside timed region)
         quiver::Element config;

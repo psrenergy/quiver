@@ -52,6 +52,15 @@ class QuiverDatabaseBindings {
   late final _quiver_database_options_default = _quiver_database_options_defaultPtr
       .asFunction<quiver_database_options_t Function()>();
 
+  quiver_csv_options_t quiver_csv_options_default() {
+    return _quiver_csv_options_default();
+  }
+
+  late final _quiver_csv_options_defaultPtr = _lookup<ffi.NativeFunction<quiver_csv_options_t Function()>>(
+    'quiver_csv_options_default',
+  );
+  late final _quiver_csv_options_default = _quiver_csv_options_defaultPtr.asFunction<quiver_csv_options_t Function()>();
+
   int quiver_database_open(
     ffi.Pointer<ffi.Char> path,
     ffi.Pointer<quiver_database_options_t> options,
@@ -1847,6 +1856,20 @@ class QuiverDatabaseBindings {
   late final _quiver_database_free_string_array = _quiver_database_free_string_arrayPtr
       .asFunction<int Function(ffi.Pointer<ffi.Pointer<ffi.Char>>, int)>();
 
+  int quiver_database_free_string(
+    ffi.Pointer<ffi.Char> str,
+  ) {
+    return _quiver_database_free_string(
+      str,
+    );
+  }
+
+  late final _quiver_database_free_stringPtr = _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Char>)>>(
+    'quiver_database_free_string',
+  );
+  late final _quiver_database_free_string = _quiver_database_free_stringPtr
+      .asFunction<int Function(ffi.Pointer<ffi.Char>)>();
+
   int quiver_database_free_integer_vectors(
     ffi.Pointer<ffi.Pointer<ffi.Int64>> vectors,
     ffi.Pointer<ffi.Size> sizes,
@@ -2522,20 +2545,6 @@ class QuiverDatabaseBindings {
   late final _quiver_element_to_string = _quiver_element_to_stringPtr
       .asFunction<int Function(ffi.Pointer<quiver_element_t1>, ffi.Pointer<ffi.Pointer<ffi.Char>>)>();
 
-  int quiver_element_free_string(
-    ffi.Pointer<ffi.Char> str,
-  ) {
-    return _quiver_element_free_string(
-      str,
-    );
-  }
-
-  late final _quiver_element_free_stringPtr = _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<ffi.Char>)>>(
-    'quiver_element_free_string',
-  );
-  late final _quiver_element_free_string = _quiver_element_free_stringPtr
-      .asFunction<int Function(ffi.Pointer<ffi.Char>)>();
-
   int quiver_lua_runner_new(
     ffi.Pointer<quiver_database_t> db,
     ffi.Pointer<ffi.Pointer<quiver_lua_runner_t>> out_runner,
@@ -2608,6 +2617,14 @@ abstract class quiver_error_t {
   static const int QUIVER_ERROR = 1;
 }
 
+abstract class quiver_log_level_t {
+  static const int QUIVER_LOG_DEBUG = 0;
+  static const int QUIVER_LOG_INFO = 1;
+  static const int QUIVER_LOG_WARN = 2;
+  static const int QUIVER_LOG_ERROR = 3;
+  static const int QUIVER_LOG_OFF = 4;
+}
+
 final class quiver_database_options_t extends ffi.Struct {
   @ffi.Int()
   external int read_only;
@@ -2616,12 +2633,21 @@ final class quiver_database_options_t extends ffi.Struct {
   external int console_level;
 }
 
-abstract class quiver_log_level_t {
-  static const int QUIVER_LOG_DEBUG = 0;
-  static const int QUIVER_LOG_INFO = 1;
-  static const int QUIVER_LOG_WARN = 2;
-  static const int QUIVER_LOG_ERROR = 3;
-  static const int QUIVER_LOG_OFF = 4;
+final class quiver_csv_options_t extends ffi.Struct {
+  external ffi.Pointer<ffi.Char> date_time_format;
+
+  external ffi.Pointer<ffi.Pointer<ffi.Char>> enum_attribute_names;
+
+  external ffi.Pointer<ffi.Pointer<ffi.Char>> enum_locale_names;
+
+  external ffi.Pointer<ffi.Size> enum_entry_counts;
+
+  external ffi.Pointer<ffi.Pointer<ffi.Char>> enum_labels;
+
+  external ffi.Pointer<ffi.Int64> enum_values;
+
+  @ffi.Size()
+  external int enum_group_count;
 }
 
 abstract class quiver_data_structure_t {
@@ -2677,23 +2703,6 @@ final class quiver_group_metadata_t extends ffi.Struct {
 
   @ffi.Size()
   external int value_column_count;
-}
-
-final class quiver_csv_options_t extends ffi.Struct {
-  external ffi.Pointer<ffi.Char> date_time_format;
-
-  external ffi.Pointer<ffi.Pointer<ffi.Char>> enum_attribute_names;
-
-  external ffi.Pointer<ffi.Pointer<ffi.Char>> enum_locale_names;
-
-  external ffi.Pointer<ffi.Size> enum_entry_counts;
-
-  external ffi.Pointer<ffi.Pointer<ffi.Char>> enum_labels;
-
-  external ffi.Pointer<ffi.Int64> enum_values;
-
-  @ffi.Size()
-  external int enum_group_count;
 }
 
 typedef quiver_element_t1 = quiver_element;
