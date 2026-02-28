@@ -138,6 +138,35 @@ void main() {
     });
   });
 
+  group('Database isHealthy', () {
+    test('returns true for open database', () {
+      final db = Database.fromSchema(':memory:', schemaPath);
+      try {
+        expect(db.isHealthy(), isTrue);
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Database path', () {
+    test('returns path for file-based database', () {
+      final tempDir = Directory.systemTemp.createTempSync('quiver_test_');
+      final dbPath = path.join(tempDir.path, 'test.db');
+      try {
+        final db = Database.fromSchema(dbPath, schemaPath);
+        try {
+          final result = db.path();
+          expect(result, contains('test.db'));
+        } finally {
+          db.close();
+        }
+      } finally {
+        tempDir.deleteSync(recursive: true);
+      }
+    });
+  });
+
   group('Database close', () {
     test('close is idempotent', () {
       final db = Database.fromSchema(':memory:', schemaPath);
