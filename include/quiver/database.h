@@ -16,7 +16,7 @@ namespace quiver {
 
 class QUIVER_API Database {
 public:
-    explicit Database(const std::string& path, const DatabaseOptions& options = default_database_options());
+    explicit Database(const std::string& path, const DatabaseOptions& options = {});
     ~Database();
 
     // Non-copyable
@@ -29,11 +29,11 @@ public:
 
     static Database from_migrations(const std::string& db_path,
                                     const std::string& migrations_path,
-                                    const DatabaseOptions& options = default_database_options());
+                                    const DatabaseOptions& options = {});
 
     static Database from_schema(const std::string& db_path,
                                 const std::string& schema_path,
-                                const DatabaseOptions& options = default_database_options());
+                                const DatabaseOptions& options = {});
     bool is_healthy() const;
 
     int64_t current_version() const;
