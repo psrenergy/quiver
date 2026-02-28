@@ -17,7 +17,7 @@ namespace fs = std::filesystem;
 // Helper: create a database from the csv_export schema
 static quiver::Database make_db() {
     return quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("csv_export.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+        ":memory:", VALID_SCHEMA("csv_export.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
 }
 
 // Helper: get a unique temp path for a test
@@ -34,7 +34,7 @@ static void write_csv_file(const std::string& path, const std::string& content) 
 // Helper: create a database from the relations schema (has FK)
 static quiver::Database make_relations_db() {
     return quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+        ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
 }
 
 // ============================================================================
