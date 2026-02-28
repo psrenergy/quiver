@@ -1,6 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import IntEnum
+
+
+class DataType(IntEnum):
+    """Data type constants matching C API quiver_data_type_t."""
+
+    INTEGER = 0
+    FLOAT = 1
+    STRING = 2
+    DATE_TIME = 3
+    NULL = 4
 
 
 @dataclass(frozen=True)
@@ -16,7 +27,7 @@ class ScalarMetadata:
     """Metadata for a scalar attribute in a collection."""
 
     name: str
-    data_type: int
+    data_type: DataType
     not_null: bool
     primary_key: bool
     default_value: str | None
