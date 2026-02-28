@@ -75,7 +75,5 @@ class LuaRunner:
 
     def __del__(self) -> None:
         if not self._closed:
-            warnings.warn(
-                "LuaRunner was not closed explicitly", ResourceWarning, stacklevel=2
-            )
+            warnings.warn("LuaRunner was not closed explicitly", ResourceWarning, stacklevel=2)
             self.close()

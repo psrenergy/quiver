@@ -71,6 +71,7 @@ end
         @test result isa String
         @test occursin("test.db", result)
         Quiver.close!(db)
+        return nothing
     end
 end
 
