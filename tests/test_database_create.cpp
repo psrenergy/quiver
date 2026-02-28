@@ -264,8 +264,9 @@ TEST(Database, CreateElementWithTimeSeries) {
 }
 
 TEST(Database, CreateElementWithMultiTimeSeries) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("multi_time_series.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("multi_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
 
     // Configuration required first
     quiver::Element config;
@@ -304,8 +305,9 @@ TEST(Database, CreateElementWithMultiTimeSeries) {
 }
 
 TEST(Database, CreateElementWithMultiTimeSeriesMismatchedLengths) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("multi_time_series.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("multi_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
 
     // Configuration required first
     quiver::Element config;

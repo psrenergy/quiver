@@ -31,9 +31,8 @@ public:
                                     const std::string& migrations_path,
                                     const DatabaseOptions& options = {});
 
-    static Database from_schema(const std::string& db_path,
-                                const std::string& schema_path,
-                                const DatabaseOptions& options = {});
+    static Database
+    from_schema(const std::string& db_path, const std::string& schema_path, const DatabaseOptions& options = {});
     bool is_healthy() const;
 
     int64_t current_version() const;

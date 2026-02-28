@@ -1289,8 +1289,9 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesFiles) {
 // ============================================================================
 
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesUpdateAndRead) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("mixed_time_series.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("mixed_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Sensor", quiver::Element().set("label", "Sensor 1"));
 
@@ -1329,8 +1330,9 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesUpdateAndRead) {
 }
 
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesReadEmpty) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("mixed_time_series.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("mixed_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Sensor", quiver::Element().set("label", "Sensor 1"));
 
@@ -1345,8 +1347,9 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesReadEmpty) {
 }
 
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesReplace) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("mixed_time_series.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("mixed_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Sensor", quiver::Element().set("label", "Sensor 1"));
 
@@ -1383,8 +1386,9 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesReplace) {
 }
 
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesClear) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("mixed_time_series.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("mixed_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Sensor", quiver::Element().set("label", "Sensor 1"));
 
@@ -1414,8 +1418,9 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesClear) {
 }
 
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesOrdering) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("mixed_time_series.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("mixed_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Sensor", quiver::Element().set("label", "Sensor 1"));
 
@@ -1451,8 +1456,9 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesOrdering) {
 }
 
 TEST_F(LuaRunnerTest, MultiColumnTimeSeriesMultiRow) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("mixed_time_series.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("mixed_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Sensor", quiver::Element().set("label", "Sensor 1"));
 
@@ -1578,8 +1584,9 @@ TEST_F(LuaRunnerTest, ReadSetsById) {
 }
 
 TEST_F(LuaRunnerTest, ReadVectorsByIdWithData) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("composite_helpers.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("composite_helpers.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
     int64_t id = db.create_element("Items",
                                    quiver::Element()
                                        .set("label", "Item 1")
@@ -1623,8 +1630,9 @@ TEST_F(LuaRunnerTest, ReadVectorsByIdWithData) {
 }
 
 TEST_F(LuaRunnerTest, ReadSetsByIdWithData) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("composite_helpers.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("composite_helpers.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
     int64_t id = db.create_element("Items",
                                    quiver::Element()
                                        .set("label", "Item 1")
@@ -1659,8 +1667,9 @@ TEST_F(LuaRunnerTest, ReadSetsByIdWithData) {
 }
 
 TEST_F(LuaRunnerTest, ReadElementById) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("composite_helpers.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("composite_helpers.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
     int64_t id = db.create_element("Items",
                                    quiver::Element()
                                        .set("label", "Item 1")

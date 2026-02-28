@@ -337,14 +337,16 @@ TEST(DatabaseErrors, ReadSetFloatsAttributeNotFound) {
 // ============================================================================
 
 TEST(DatabaseErrors, ApplySchemaEmptyPath) {
-    EXPECT_THROW(quiver::Database::from_schema(":memory:", "", {.read_only = false, .console_level = quiver::LogLevel::Off}),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_schema(":memory:", "", {.read_only = false, .console_level = quiver::LogLevel::Off}),
+        std::runtime_error);
 }
 
 TEST(DatabaseErrors, ApplySchemaFileNotFound) {
-    EXPECT_THROW(quiver::Database::from_schema(
-                     ":memory:", "nonexistent/path/schema.sql", {.read_only = false, .console_level = quiver::LogLevel::Off}),
-                 std::runtime_error);
+    EXPECT_THROW(
+        quiver::Database::from_schema(
+            ":memory:", "nonexistent/path/schema.sql", {.read_only = false, .console_level = quiver::LogLevel::Off}),
+        std::runtime_error);
 }
 
 // ============================================================================

@@ -199,9 +199,9 @@ TEST_F(MigrationsTestFixture, DatabaseMigrationWithEmptyUpSql) {
     up_file.close();
 
     // Empty up.sql should cause migration to fail
-    EXPECT_THROW(
-        quiver::Database::from_migrations(":memory:", temp_dir, {.read_only = false, .console_level = quiver::LogLevel::Off}),
-        std::runtime_error);
+    EXPECT_THROW(quiver::Database::from_migrations(
+                     ":memory:", temp_dir, {.read_only = false, .console_level = quiver::LogLevel::Off}),
+                 std::runtime_error);
 }
 
 TEST_F(MigrationsTestFixture, DatabaseMigrationWithInvalidSQL) {
@@ -211,9 +211,9 @@ TEST_F(MigrationsTestFixture, DatabaseMigrationWithInvalidSQL) {
     up_file << "THIS IS NOT VALID SQL AT ALL;";
     up_file.close();
 
-    EXPECT_THROW(
-        quiver::Database::from_migrations(":memory:", temp_dir, {.read_only = false, .console_level = quiver::LogLevel::Off}),
-        std::runtime_error);
+    EXPECT_THROW(quiver::Database::from_migrations(
+                     ":memory:", temp_dir, {.read_only = false, .console_level = quiver::LogLevel::Off}),
+                 std::runtime_error);
 }
 
 TEST_F(MigrationsTestFixture, MigrationsWithNonNumericDirectories) {
