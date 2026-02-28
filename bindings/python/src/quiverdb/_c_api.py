@@ -87,7 +87,7 @@ ffi.cdef("""
     quiver_error_t quiver_element_array_count(quiver_element_t* element, size_t* out_count);
 
     quiver_error_t quiver_element_to_string(quiver_element_t* element, char** out_string);
-    quiver_error_t quiver_element_free_string(char* str);
+    quiver_error_t quiver_database_free_string(char* str);
 
     // Data type enum
     typedef enum {

@@ -240,7 +240,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         try:
             return ffi.string(out_value[0]).decode("utf-8")
         finally:
-            lib.quiver_element_free_string(out_value[0])
+            lib.quiver_database_free_string(out_value[0])
 
     def query_integer(self, sql: str, *, params: list | None = None) -> int | None:
         """Execute SQL and return the first column of the first row as int, or None."""
@@ -500,7 +500,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         try:
             return ffi.string(out_value[0]).decode("utf-8")
         finally:
-            lib.quiver_element_free_string(out_value[0])
+            lib.quiver_database_free_string(out_value[0])
 
     # -- Element Ids -----------------------------------------------------------
 

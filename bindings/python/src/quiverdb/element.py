@@ -117,7 +117,7 @@ class Element:
         out = ffi.new("char**")
         check(lib.quiver_element_to_string(self._ptr, out))
         result = decode_string(out[0])
-        lib.quiver_element_free_string(out[0])
+        lib.quiver_database_free_string(out[0])
         return result
 
     def __del__(self) -> None:
