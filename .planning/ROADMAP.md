@@ -63,7 +63,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 03-01-PLAN.md -- Define DataType IntEnum, replace all magic integers in database.py, add validation test
+- [x] 03-01-PLAN.md -- Define DataType IntEnum, replace all magic integers in database.py, add validation test
 
 ### Phase 4: Python LuaRunner Binding
 **Goal**: Python users can execute Lua scripts against a Quiver database, achieving feature parity with Julia/Dart/Lua bindings
@@ -104,6 +104,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 |-------|----------------|--------|-----------|
 | 1. Type Ownership | 2/2 | Complete | 2026-02-28 |
 | 2. Free Function Naming | 3/3 | Complete | 2026-02-28 |
-| 3. Python DataType Constants | 0/? | Not started | - |
+| 3. Python DataType Constants | 1/1 | Complete | 2026-02-28 |
 | 4. Python LuaRunner Binding | 0/? | Not started | - |
 | 5. Cross-Binding Test Coverage | 0/? | Not started | - |

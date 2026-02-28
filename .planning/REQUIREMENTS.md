@@ -20,7 +20,7 @@ Requirements for code quality milestone. Each maps to roadmap phases.
 ### Python Binding
 
 - [ ] **PY-01**: Python LuaRunner binding wraps `quiver_lua_runner_new/run/get_error/free`; stores Database reference to prevent GC lifetime hazard
-- [ ] **PY-02**: Python `DataType` IntEnum replaces all hardcoded `0/1/2/3/4` magic numbers in `database.py`
+- [x] **PY-02**: Python `DataType` IntEnum replaces all hardcoded `0/1/2/3/4` magic numbers in `database.py`
 - [ ] **PY-03**: Python tests cover `read_scalars_by_id`, `read_vectors_by_id`, `read_sets_by_id`, `read_element_by_id`, `read_vector_group_by_id`, `read_set_group_by_id`, `read_element_ids`
 
 ### Test Coverage
@@ -46,7 +46,7 @@ Requirements for code quality milestone. Each maps to roadmap phases.
 | NAME-01 | Phase 2 | Complete |
 | NAME-02 | Phase 2 | Complete |
 | PY-01 | Phase 4 | Pending |
-| PY-02 | Phase 3 | Pending |
+| PY-02 | Phase 3 | Complete |
 | PY-03 | Phase 5 | Pending |
 | TEST-01 | Phase 5 | Pending |
 
