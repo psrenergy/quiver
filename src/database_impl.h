@@ -15,6 +15,8 @@
 
 namespace quiver {
 
+using StmtPtr = std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)>;
+
 struct ResolvedElement {
     std::map<std::string, Value> scalars;
     std::map<std::string, std::vector<Value>> arrays;

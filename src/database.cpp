@@ -134,7 +134,7 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
     if (rc != SQLITE_OK) {
         throw std::runtime_error("Failed to prepare statement: " + std::string(sqlite3_errmsg(impl_->db)));
     }
-    std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)> stmt(raw_stmt, sqlite3_finalize);
+    StmtPtr stmt(raw_stmt, sqlite3_finalize);
 
     // Bind parameters
     for (size_t i = 0; i < params.size(); ++i) {
@@ -212,24 +212,19 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
 }
 
 int64_t Database::current_version() const {
-    sqlite3_stmt* stmt = nullptr;
+    sqlite3_stmt* raw_stmt = nullptr;
     const char* sql = "PRAGMA user_version;";
-    auto rc = sqlite3_prepare_v2(impl_->db, sql, -1, &stmt, nullptr);
+    auto rc = sqlite3_prepare_v2(impl_->db, sql, -1, &raw_stmt, nullptr);
     if (rc != SQLITE_OK) {
         throw std::runtime_error("Failed to prepare statement: " + std::string(sqlite3_errmsg(impl_->db)));
     }
+    StmtPtr stmt(raw_stmt, sqlite3_finalize);
 
-    rc = sqlite3_step(stmt);
-    int64_t user_version = 0;
-    if (rc == SQLITE_ROW) {
-        user_version = sqlite3_column_int(stmt, 0);
-    } else {
-        sqlite3_finalize(stmt);
+    rc = sqlite3_step(stmt.get());
+    if (rc != SQLITE_ROW) {
         throw std::runtime_error("Failed to read user_version: " + std::string(sqlite3_errmsg(impl_->db)));
     }
-
-    sqlite3_finalize(stmt);
-    return user_version;
+    return sqlite3_column_int(stmt.get(), 0);
 }
 
 const std::string& Database::path() const {
