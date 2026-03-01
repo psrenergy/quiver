@@ -7,8 +7,6 @@
 #include <new>
 #include <string>
 
-using quiver::string::strdup_safe;
-
 extern "C" {
 
 QUIVER_C_API quiver_error_t quiver_element_create(quiver_element_t** out_element) {
@@ -147,7 +145,7 @@ QUIVER_C_API quiver_error_t quiver_element_to_string(quiver_element_t* element, 
 
     try {
         auto str = element->element.to_string();
-        *out_string = strdup_safe(str);
+        *out_string = quiver::string::new_c_str(str);
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());

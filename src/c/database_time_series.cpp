@@ -117,7 +117,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_databa
 
         try {
             for (size_t c = 0; c < col_count; ++c) {
-                (*out_column_names)[c] = strdup_safe(columns[c].first);
+                (*out_column_names)[c] = new_c_str(columns[c].first);
                 (*out_column_types)[c] = columns[c].second;
 
                 switch (columns[c].second) {
@@ -153,7 +153,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_databa
                 case QUIVER_DATA_TYPE_DATE_TIME: {
                     auto** arr = new char*[row_count];
                     for (size_t r = 0; r < row_count; ++r) {
-                        arr[r] = strdup_safe(std::get<std::string>(rows[r].at(columns[c].first)));
+                        arr[r] = new_c_str(std::get<std::string>(rows[r].at(columns[c].first)));
                     }
                     (*out_column_data)[c] = arr;
                     break;
@@ -407,9 +407,9 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_files(quiver_databa
 
         size_t i = 0;
         for (const auto& [col_name, path] : paths_map) {
-            (*out_columns)[i] = strdup_safe(col_name);
+            (*out_columns)[i] = new_c_str(col_name);
             if (path) {
-                (*out_paths)[i] = strdup_safe(*path);
+                (*out_paths)[i] = new_c_str(*path);
             } else {
                 (*out_paths)[i] = nullptr;
             }

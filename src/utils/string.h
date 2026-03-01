@@ -13,7 +13,7 @@ inline std::string trim(const std::string& str) {
     return str.substr(start, str.find_last_not_of(" \t\n\r") - start + 1);
 }
 
-inline char* strdup_safe(const std::string& str) {
+inline char* new_c_str(const std::string& str) {
     auto result = new char[str.size() + 1];
     std::copy(str.begin(), str.end(), result);
     result[str.size()] = '\0';
