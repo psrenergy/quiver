@@ -20,9 +20,10 @@ src/                      # C++ implementation
   database_csv_export.cpp # CSV export implementation
   database_csv_import.cpp # CSV import implementation
   cli/main.cpp            # quiver_cli CLI entry point
+  utils/string.h          # String utilities: strdup_safe, trim
 src/c/                    # C API implementation
   internal.h              # Shared structs (quiver_database, quiver_element), QUIVER_REQUIRE macro
-  database_helpers.h      # Marshaling templates, strdup_safe, metadata converters
+  database_helpers.h      # Marshaling templates, metadata converters
   options.cpp             # Option defaults: quiver_database_options_default, quiver_csv_options_default
   database.cpp            # Lifecycle: open, close, factory methods, describe
   database_options.h      # Option converters: convert_database_options, convert_csv_options
@@ -272,14 +273,17 @@ Internal helpers `convert_scalar_to_c`, `convert_group_to_c`, `free_scalar_field
 Every allocation function and its corresponding free function live in the same translation unit. Read alloc/free pairs in `database_read.cpp`, metadata alloc/free pairs in `database_metadata.cpp`, time series alloc/free pairs in `database_time_series.cpp`.
 
 ### String Handling
-Always null-terminate, use `strdup_safe()`:
+Always null-terminate, use `strdup_safe()` from `src/utils/string.h`:
 ```cpp
-static char* strdup_safe(const std::string& str) {
-    char* result = new char[str.size() + 1];
-    std::memcpy(result, str.c_str(), str.size() + 1);
+// src/utils/string.h — namespace quiver::string
+inline char* strdup_safe(const std::string& str) {
+    auto result = new char[str.size() + 1];
+    std::copy(str.begin(), str.end(), result);
+    result[str.size()] = '\0';
     return result;
 }
 ```
+C API files access `strdup_safe` via `using quiver::string::strdup_safe;` in `database_helpers.h`.
 
 ### Multi-Column Time Series
 The C API uses a columnar typed-arrays pattern for time series read and update:
