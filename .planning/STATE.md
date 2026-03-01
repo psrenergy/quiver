@@ -1,8 +1,8 @@
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
+Phase: Phase 1 (Dart Metadata Types)
+Plan: Not yet planned
+Status: Ready to plan
 Last activity: 2026-03-01 — Milestone v0.5 started
 
 ## Project Reference
