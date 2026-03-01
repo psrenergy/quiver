@@ -100,7 +100,8 @@ inline void convert_scalar_to_c(const quiver::ScalarMetadata& src, quiver_scalar
     dst.is_foreign_key = src.is_foreign_key ? 1 : 0;
     dst.references_collection =
         src.references_collection.has_value() ? quiver::string::new_c_str(*src.references_collection) : nullptr;
-    dst.references_column = src.references_column.has_value() ? quiver::string::new_c_str(*src.references_column) : nullptr;
+    dst.references_column =
+        src.references_column.has_value() ? quiver::string::new_c_str(*src.references_column) : nullptr;
 }
 
 inline void free_scalar_fields(quiver_scalar_metadata_t& m) {
