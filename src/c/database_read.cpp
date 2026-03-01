@@ -141,9 +141,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_vector_strings(quiver_database_
             } else {
                 (*out_vectors)[i] = new char*[vectors[i].size()];
                 for (size_t j = 0; j < vectors[i].size(); ++j) {
-                    (*out_vectors)[i][j] = new char[vectors[i][j].size() + 1];
-                    std::copy(vectors[i][j].begin(), vectors[i][j].end(), (*out_vectors)[i][j]);
-                    (*out_vectors)[i][j][vectors[i][j].size()] = '\0';
+                    (*out_vectors)[i][j] = strdup_safe(vectors[i][j]);
                 }
             }
         }
@@ -243,9 +241,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_set_strings(quiver_database_t* 
             } else {
                 (*out_sets)[i] = new char*[sets[i].size()];
                 for (size_t j = 0; j < sets[i].size(); ++j) {
-                    (*out_sets)[i][j] = new char[sets[i][j].size() + 1];
-                    std::copy(sets[i][j].begin(), sets[i][j].end(), (*out_sets)[i][j]);
-                    (*out_sets)[i][j][sets[i][j].size()] = '\0';
+                    (*out_sets)[i][j] = strdup_safe(sets[i][j]);
                 }
             }
         }
@@ -315,9 +311,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_scalar_string_by_id(quiver_data
     try {
         auto result = db->db.read_scalar_string_by_id(collection, attribute, id);
         if (result.has_value()) {
-            *out_value = new char[result->size() + 1];
-            std::copy(result->begin(), result->end(), *out_value);
-            (*out_value)[result->size()] = '\0';
+            *out_value = strdup_safe(*result);
             *out_has_value = 1;
         } else {
             *out_value = nullptr;

@@ -1,10 +1,13 @@
 #include "quiver/c/element.h"
 
 #include "internal.h"
+#include "utils/string.h"
 
 #include <cstring>
 #include <new>
 #include <string>
+
+using quiver::string::strdup_safe;
 
 extern "C" {
 
@@ -144,12 +147,10 @@ QUIVER_C_API quiver_error_t quiver_element_to_string(quiver_element_t* element, 
 
     try {
         auto str = element->element.to_string();
-        auto result = new char[str.size() + 1];
-        std::memcpy(result, str.c_str(), str.size() + 1);
-        *out_string = result;
+        *out_string = strdup_safe(str);
         return QUIVER_OK;
-    } catch (const std::bad_alloc&) {
-        quiver_set_last_error("Memory allocation failed");
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
         return QUIVER_ERROR;
     }
 }
