@@ -27,11 +27,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. `describe()` output for a collection with multiple vectors, sets, or time series groups shows each category header exactly once
   3. `import_csv` accepts `collection` (not `table`) as its parameter name across C++, C API, and all bindings
   4. `create_element` and `update_element` both call the same internal helper for inserting vector, set, and time series data -- no duplicated insertion logic remains
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md — Fix import_csv parameter rename (BUG-03) and restructure describe() output (BUG-02)
+- [ ] 01-02-PLAN.md — Extract shared group insertion helper (QUAL-03) fixing update_element type validation (BUG-01)
 
 ### Phase 2: C++ Core Refactoring
 **Goal**: C++ internals use idiomatic RAII and template patterns, eliminating manual resource management and loop duplication in read paths
@@ -65,6 +65,6 @@ Phases execute in numeric order: 1 -> 2 -> 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Bug Fixes and Element Dedup | 0/? | Not started | - |
+| 1. Bug Fixes and Element Dedup | 0/2 | Not started | - |
 | 2. C++ Core Refactoring | 0/? | Not started | - |
 | 3. C API String Consistency | 0/? | Not started | - |
