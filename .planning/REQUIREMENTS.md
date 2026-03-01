@@ -18,7 +18,7 @@ Requirements for milestone v0.5. Each maps to roadmap phases.
 - [x] **QUAL-01**: `current_version()` uses RAII `unique_ptr` with custom deleter instead of manual `sqlite3_finalize`
 - [x] **QUAL-02**: Scalar read methods use `read_column_values` template instead of manual loops
 - [x] **QUAL-03**: Group insertion logic extracted into shared helper used by both `create_element` and `update_element`
-- [ ] **QUAL-04**: C API string copies use `strdup_safe` instead of inline allocation
+- [x] **QUAL-04**: C API string copies use `strdup_safe` instead of inline allocation
 
 ## v2 Requirements
 
@@ -45,7 +45,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | QUAL-01 | Phase 2 | Complete |
 | QUAL-02 | Phase 2 | Complete |
 | QUAL-03 | Phase 1 | Complete |
-| QUAL-04 | Phase 3 | Pending |
+| QUAL-04 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 7 total

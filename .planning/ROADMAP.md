@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Bug Fixes and Element Dedup** - Fix update_element validation, describe headers, import_csv naming, and extract shared group insertion helper
 - [x] **Phase 2: C++ Core Refactoring** - Apply RAII to current_version and template to scalar reads
-- [ ] **Phase 3: C API String Consistency** - Replace inline string allocations with strdup_safe
+- [x] **Phase 3: C API String Consistency** - Replace inline string allocations with strdup_safe
 
 ## Phase Details
 
@@ -56,7 +56,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 03-01-PLAN.md — Extract strdup_safe to utils/string.h, replace all 5 inline allocation sites, update CLAUDE.md (QUAL-04)
+- [x] 03-01-PLAN.md — Extract strdup_safe to utils/string.h, replace all 5 inline allocation sites, update CLAUDE.md (QUAL-04)
 
 ## Progress
 
@@ -67,4 +67,4 @@ Phases execute in numeric order: 1 -> 2 -> 3
 |-------|----------------|--------|-----------|
 | 1. Bug Fixes and Element Dedup | 2/2 | Complete | 2026-03-01 |
 | 2. C++ Core Refactoring | 1/1 | Complete | 2026-03-01 |
-| 3. C API String Consistency | 0/1 | Not started | - |
+| 3. C API String Consistency | 1/1 | Complete | 2026-03-01 |
