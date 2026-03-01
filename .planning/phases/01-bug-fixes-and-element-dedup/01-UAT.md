@@ -38,9 +38,11 @@ result: pass
 verified: Database.UpdateElementTypeMismatchIntegerVectorWithStrings, Database.UpdateElementTypeMismatchTextSetWithIntegers
 
 ### 6. create_element with empty array skips silently
-expected: Calling create_element with an empty array attribute succeeds without error — the empty group is simply skipped.
-result: pass
-verified: Database.CreateElementWithEmptyArraySkipsSilently, DatabaseErrors.CreateElementEmptyArraySkipsSilently
+expected: Calling create_element with an empty array attribute succeeds without error — the empty group is simply skipped. All bindings reflect this behavior.
+result: issue
+reported: "Julia binding test at test_database_create.jl:49 still expected empty arrays to throw DatabaseException. Test not updated when C++ behavior changed."
+severity: major
+fix: Updated Julia test to assert success + empty result instead of @test_throws
 
 ### 7. update_element with empty array clears rows
 expected: Calling update_element with an empty array for a group attribute deletes all existing rows for that group (consistent with replace semantics), rather than throwing an error.
@@ -50,11 +52,20 @@ verified: Database.UpdateElementEmptyArrayClearsRows
 ## Summary
 
 total: 7
-passed: 7
-issues: 0
+passed: 6
+issues: 1
 pending: 0
 skipped: 0
 
 ## Gaps
 
-[none]
+- truth: "All bindings reflect empty-array-skips-silently behavior from BUG-01 fix"
+  status: fixed
+  reason: "Julia test_database_create.jl:49 still asserted @test_throws for empty arrays, contradicting the new C++ behavior"
+  severity: major
+  test: 6
+  root_cause: "Julia binding test not updated when create_element empty array semantics changed from throw to skip-silently"
+  artifacts:
+    - path: "bindings/julia/test/test_database_create.jl"
+      issue: "Line 49 used @test_throws for empty vector, now asserts success + empty result"
+  missing: []

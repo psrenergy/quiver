@@ -45,13 +45,10 @@ include("fixture.jl")
         # Create element with only scalars
         Quiver.create_element!(db, "Collection"; label = "Item 2", some_integer = 20)
 
-        # Reject empty vector
-        @test_throws Quiver.DatabaseException Quiver.create_element!(
-            db,
-            "Collection";
-            label = "Item 3",
-            value_int = Int64[],
-        )
+        # Empty vector skips silently (no rows inserted, no error)
+        Quiver.create_element!(db, "Collection"; label = "Item 3", value_int = Int64[])
+        result = Quiver.read_vector_integers_by_id(db, "Collection", "value_int", 3)
+        @test isempty(result)
 
         Quiver.close!(db)
     end
