@@ -124,14 +124,12 @@ struct Database::Impl {
         return resolved;
     }
 
-    void insert_group_data(
-        const char* caller,
-        const std::string& collection,
-        int64_t element_id,
-        const std::map<std::string, std::vector<Value>>& arrays,
-        bool delete_existing,
-        Database& db
-    ) {
+    void insert_group_data(const char* caller,
+                           const std::string& collection,
+                           int64_t element_id,
+                           const std::map<std::string, std::vector<Value>>& arrays,
+                           bool delete_existing,
+                           Database& db) {
         // Route arrays to their target tables
         std::map<std::string, std::map<std::string, const std::vector<Value>*>> vector_table_columns;
         std::map<std::string, std::map<std::string, const std::vector<Value>*>> set_table_columns;
@@ -222,8 +220,8 @@ struct Database::Impl {
                 if (num_rows == 0) {
                     num_rows = values_ptr->size();
                 } else if (values_ptr->size() != num_rows) {
-                    throw std::runtime_error(std::string("Cannot ") + caller + ": set columns in table '" +
-                                             set_table + "' must have the same length");
+                    throw std::runtime_error(std::string("Cannot ") + caller + ": set columns in table '" + set_table +
+                                             "' must have the same length");
                 }
             }
 

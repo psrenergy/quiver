@@ -395,9 +395,9 @@ static std::string capture_describe(const quiver::Database& db) {
 }
 
 TEST_F(TempFileFixture, DescribeVectorsHeaderPrintedOnce) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("describe_multi_group.sql"),
-        {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("describe_multi_group.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
 
     auto output = capture_describe(db);
 
@@ -416,9 +416,9 @@ TEST_F(TempFileFixture, DescribeVectorsHeaderPrintedOnce) {
 }
 
 TEST_F(TempFileFixture, DescribeSetsHeaderPrintedOnce) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("describe_multi_group.sql"),
-        {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("describe_multi_group.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
 
     auto output = capture_describe(db);
 
@@ -437,9 +437,9 @@ TEST_F(TempFileFixture, DescribeSetsHeaderPrintedOnce) {
 }
 
 TEST_F(TempFileFixture, DescribeTimeSeriesWithDimensionColumn) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("describe_multi_group.sql"),
-        {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("describe_multi_group.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
 
     auto output = capture_describe(db);
 
@@ -454,15 +454,17 @@ TEST_F(TempFileFixture, DescribeTimeSeriesWithDimensionColumn) {
 
     // Dimension column should be in brackets
     EXPECT_NE(output.find("[date_time]"), std::string::npos)
-        << "Expected dimension column [date_time] in brackets. Output:\n" << output;
+        << "Expected dimension column [date_time] in brackets. Output:\n"
+        << output;
     EXPECT_NE(output.find("[date_recorded]"), std::string::npos)
-        << "Expected dimension column [date_recorded] in brackets. Output:\n" << output;
+        << "Expected dimension column [date_recorded] in brackets. Output:\n"
+        << output;
 }
 
 TEST_F(TempFileFixture, DescribeColumnOrderMatchesSchema) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("describe_multi_group.sql"),
-        {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("describe_multi_group.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
 
     auto output = capture_describe(db);
 
@@ -491,9 +493,11 @@ TEST_F(TempFileFixture, DescribeNoCategoryHeaderWhenEmpty) {
     auto output = capture_describe(db);
 
     EXPECT_EQ(output.find("Vectors:"), std::string::npos)
-        << "Vectors: header should not appear when no vectors exist. Output:\n" << output;
-    EXPECT_EQ(output.find("Sets:"), std::string::npos)
-        << "Sets: header should not appear when no sets exist. Output:\n" << output;
+        << "Vectors: header should not appear when no vectors exist. Output:\n"
+        << output;
+    EXPECT_EQ(output.find("Sets:"), std::string::npos) << "Sets: header should not appear when no sets exist. Output:\n"
+                                                       << output;
     EXPECT_EQ(output.find("Time Series:"), std::string::npos)
-        << "Time Series: header should not appear when no time series exist. Output:\n" << output;
+        << "Time Series: header should not appear when no time series exist. Output:\n"
+        << output;
 }
