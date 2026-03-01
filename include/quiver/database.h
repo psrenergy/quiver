@@ -125,7 +125,7 @@ public:
                     const std::string& group,
                     const std::string& path,
                     const CSVOptions& options = default_csv_options());
-    void import_csv(const std::string& table,
+    void import_csv(const std::string& collection,
                     const std::string& group,
                     const std::string& path,
                     const CSVOptions& options = default_csv_options());
