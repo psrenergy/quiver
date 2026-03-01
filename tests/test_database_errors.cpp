@@ -36,7 +36,7 @@ TEST(DatabaseErrors, CreateElementEmptyElement) {
     EXPECT_THROW(db.create_element("Configuration", element), std::runtime_error);
 }
 
-TEST(DatabaseErrors, CreateElementEmptyArray) {
+TEST(DatabaseErrors, CreateElementEmptyArraySkipsSilently) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
 
@@ -45,11 +45,12 @@ TEST(DatabaseErrors, CreateElementEmptyArray) {
     config.set("label", std::string("Test Config"));
     db.create_element("Configuration", config);
 
-    // Try to create element with empty array
+    // Create element with empty array -- should succeed (empty arrays are skipped silently)
     quiver::Element element;
     element.set("label", std::string("Item 1")).set("value_int", std::vector<int64_t>{});
 
-    EXPECT_THROW(db.create_element("Collection", element), std::runtime_error);
+    int64_t id = db.create_element("Collection", element);
+    EXPECT_GT(id, 0);
 }
 
 // ============================================================================

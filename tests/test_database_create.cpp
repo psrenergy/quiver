@@ -324,6 +324,35 @@ TEST(Database, CreateElementWithMultiTimeSeriesMismatchedLengths) {
     EXPECT_THROW(db.create_element("Sensor", element), std::runtime_error);
 }
 
+// ============================================================================
+// Empty array behavior tests
+// ============================================================================
+
+TEST(Database, CreateElementWithEmptyArraySkipsSilently) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    // Create element with empty vector array -- should succeed with no vector rows
+    quiver::Element element;
+    element.set("label", std::string("Item 1")).set("value_int", std::vector<int64_t>{});
+
+    int64_t id = db.create_element("Collection", element);
+    EXPECT_EQ(id, 1);
+
+    // Verify element was created
+    auto labels = db.read_scalar_strings("Collection", "label");
+    EXPECT_EQ(labels.size(), 1);
+    EXPECT_EQ(labels[0], "Item 1");
+
+    // Verify no vector rows were inserted
+    auto vectors = db.read_vector_integers_by_id("Collection", "value_int", id);
+    EXPECT_TRUE(vectors.empty());
+}
+
 TEST(Database, CreateElementTrimsWhitespaceFromStrings) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
