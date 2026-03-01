@@ -129,20 +129,20 @@ void main() {
       }
     });
 
-    test('rejects empty vector', () {
+    test('empty vector skips silently', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
       );
       try {
         db.createElement('Configuration', {'label': 'Test Config'});
-        expect(
-          () => db.createElement('Collection', {
-            'label': 'Item 1',
-            'value_int': <int>[],
-          }),
-          throwsA(isA<DatabaseException>()),
-        );
+        final id = db.createElement('Collection', {
+          'label': 'Item 1',
+          'value_int': <int>[],
+        });
+        expect(id, greaterThan(0));
+        final result = db.readVectorIntegersById('Collection', 'value_int', id);
+        expect(result, isEmpty);
       } finally {
         db.close();
       }
