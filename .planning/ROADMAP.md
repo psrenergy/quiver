@@ -12,7 +12,7 @@ Milestone v0.5 addresses code quality: fixing bugs in element operations, descri
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Bug Fixes and Element Dedup** - Fix update_element validation, describe headers, import_csv naming, and extract shared group insertion helper
+- [x] **Phase 1: Bug Fixes and Element Dedup** - Fix update_element validation, describe headers, import_csv naming, and extract shared group insertion helper
 - [ ] **Phase 2: C++ Core Refactoring** - Apply RAII to current_version and template to scalar reads
 - [ ] **Phase 3: C API String Consistency** - Replace inline string allocations with strdup_safe
 
@@ -30,8 +30,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Fix import_csv parameter rename (BUG-03) and restructure describe() output (BUG-02)
-- [ ] 01-02-PLAN.md — Extract shared group insertion helper (QUAL-03) fixing update_element type validation (BUG-01)
+- [x] 01-01-PLAN.md — Fix import_csv parameter rename (BUG-03) and restructure describe() output (BUG-02)
+- [x] 01-02-PLAN.md — Extract shared group insertion helper (QUAL-03) fixing update_element type validation (BUG-01)
 
 ### Phase 2: C++ Core Refactoring
 **Goal**: C++ internals use idiomatic RAII and template patterns, eliminating manual resource management and loop duplication in read paths
@@ -65,6 +65,6 @@ Phases execute in numeric order: 1 -> 2 -> 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Bug Fixes and Element Dedup | 0/2 | Not started | - |
+| 1. Bug Fixes and Element Dedup | 2/2 | Complete | 2026-03-01 |
 | 2. C++ Core Refactoring | 0/? | Not started | - |
 | 3. C API String Consistency | 0/? | Not started | - |

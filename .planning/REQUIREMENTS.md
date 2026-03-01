@@ -9,15 +9,15 @@ Requirements for milestone v0.5. Each maps to roadmap phases.
 
 ### Bugs
 
-- [ ] **BUG-01**: `update_element` validates array types for vector, set, and time series groups (matching `create_element` behavior)
-- [ ] **BUG-02**: `describe()` prints each category header (Vectors, Sets, Time Series) exactly once per collection
-- [ ] **BUG-03**: `import_csv` header parameter renamed from `table` to `collection` for consistency
+- [x] **BUG-01**: `update_element` validates array types for vector, set, and time series groups (matching `create_element` behavior)
+- [x] **BUG-02**: `describe()` prints each category header (Vectors, Sets, Time Series) exactly once per collection
+- [x] **BUG-03**: `import_csv` header parameter renamed from `table` to `collection` for consistency
 
 ### Code Quality
 
 - [ ] **QUAL-01**: `current_version()` uses RAII `unique_ptr` with custom deleter instead of manual `sqlite3_finalize`
 - [ ] **QUAL-02**: Scalar read methods use `read_grouped_values_by_id` template instead of manual loops
-- [ ] **QUAL-03**: Group insertion logic extracted into shared helper used by both `create_element` and `update_element`
+- [x] **QUAL-03**: Group insertion logic extracted into shared helper used by both `create_element` and `update_element`
 - [ ] **QUAL-04**: C API string copies use `strdup_safe` instead of inline allocation
 
 ## v2 Requirements
@@ -39,12 +39,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUG-01 | Phase 1 | Pending |
-| BUG-02 | Phase 1 | Pending |
-| BUG-03 | Phase 1 | Pending |
+| BUG-01 | Phase 1 | Complete |
+| BUG-02 | Phase 1 | Complete |
+| BUG-03 | Phase 1 | Complete |
 | QUAL-01 | Phase 2 | Pending |
 | QUAL-02 | Phase 2 | Pending |
-| QUAL-03 | Phase 1 | Pending |
+| QUAL-03 | Phase 1 | Complete |
 | QUAL-04 | Phase 3 | Pending |
 
 **Coverage:**
