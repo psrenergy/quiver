@@ -1,7 +1,5 @@
 #include "database_impl.h"
 
-#include <map>
-
 namespace quiver {
 
 void Database::update_element(const std::string& collection, int64_t id, const Element& element) {
@@ -46,124 +44,8 @@ void Database::update_element(const std::string& collection, int64_t id, const E
         execute(sql, params);
     }
 
-    // Route arrays to their tables (grouped by table name)
-    std::map<std::string, std::map<std::string, const std::vector<Value>*>> vector_table_columns;
-    std::map<std::string, std::map<std::string, const std::vector<Value>*>> set_table_columns;
-    std::map<std::string, std::map<std::string, const std::vector<Value>*>> time_series_table_columns;
-
-    for (const auto& [attr_name, values] : resolved.arrays) {
-        auto matches = impl_->schema->find_all_tables_for_column(collection, attr_name);
-        if (matches.empty()) {
-            throw std::runtime_error("Cannot update_element: attribute '" + attr_name +
-                                     "' is not a vector, set, or time series attribute in collection '" + collection +
-                                     "'");
-        }
-
-        for (const auto& match : matches) {
-            switch (match.type) {
-            case GroupTableType::Vector:
-                vector_table_columns[match.table_name][attr_name] = &values;
-                break;
-            case GroupTableType::Set:
-                set_table_columns[match.table_name][attr_name] = &values;
-                break;
-            case GroupTableType::TimeSeries:
-                time_series_table_columns[match.table_name][attr_name] = &values;
-                break;
-            default:
-                throw std::runtime_error("Cannot update_element: unknown group table type " +
-                                         std::to_string(static_cast<int>(match.type)));
-            }
-        }
-    }
-
-    // Update vector tables
-    for (const auto& [table, columns] : vector_table_columns) {
-        execute("DELETE FROM " + table + " WHERE id = ?", {id});
-
-        size_t num_rows = 0;
-        for (const auto& [col_name, values_ptr] : columns) {
-            if (num_rows == 0) {
-                num_rows = values_ptr->size();
-            } else if (values_ptr->size() != num_rows) {
-                throw std::runtime_error("Cannot update_element: vector columns in table '" + table +
-                                         "' must have the same length");
-            }
-        }
-
-        for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
-            auto vector_index = static_cast<int64_t>(row_idx + 1);
-            auto sql = "INSERT INTO " + table + " (id, vector_index";
-            std::string placeholders = "?, ?";
-            std::vector<Value> params = {id, vector_index};
-            for (const auto& [col_name, values_ptr] : columns) {
-                sql += ", " + col_name;
-                placeholders += ", ?";
-                params.push_back((*values_ptr)[row_idx]);
-            }
-            sql += ") VALUES (" + placeholders + ")";
-            execute(sql, params);
-        }
-        impl_->logger->debug("Updated vector table {} for id {} with {} rows", table, id, num_rows);
-    }
-
-    // Update set tables
-    for (const auto& [table, columns] : set_table_columns) {
-        execute("DELETE FROM " + table + " WHERE id = ?", {id});
-
-        size_t num_rows = 0;
-        for (const auto& [col_name, values_ptr] : columns) {
-            if (num_rows == 0) {
-                num_rows = values_ptr->size();
-            } else if (values_ptr->size() != num_rows) {
-                throw std::runtime_error("Cannot update_element: set columns in table '" + table +
-                                         "' must have the same length");
-            }
-        }
-
-        for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
-            auto sql = "INSERT INTO " + table + " (id";
-            std::string placeholders = "?";
-            std::vector<Value> params = {id};
-            for (const auto& [col_name, values_ptr] : columns) {
-                sql += ", " + col_name;
-                placeholders += ", ?";
-                params.push_back((*values_ptr)[row_idx]);
-            }
-            sql += ") VALUES (" + placeholders + ")";
-            execute(sql, params);
-        }
-        impl_->logger->debug("Updated set table {} for id {} with {} rows", table, id, num_rows);
-    }
-
-    // Update time series tables
-    for (const auto& [table, columns] : time_series_table_columns) {
-        execute("DELETE FROM " + table + " WHERE id = ?", {id});
-
-        size_t num_rows = 0;
-        for (const auto& [col_name, values_ptr] : columns) {
-            if (num_rows == 0) {
-                num_rows = values_ptr->size();
-            } else if (values_ptr->size() != num_rows) {
-                throw std::runtime_error("Cannot update_element: time series columns in table '" + table +
-                                         "' must have the same length");
-            }
-        }
-
-        for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
-            auto sql = "INSERT INTO " + table + " (id";
-            std::string placeholders = "?";
-            std::vector<Value> params = {id};
-            for (const auto& [col_name, values_ptr] : columns) {
-                sql += ", " + col_name;
-                placeholders += ", ?";
-                params.push_back((*values_ptr)[row_idx]);
-            }
-            sql += ") VALUES (" + placeholders + ")";
-            execute(sql, params);
-        }
-        impl_->logger->debug("Updated time series table {} for id {} with {} rows", table, id, num_rows);
-    }
+    // Delegate group insertion to shared helper (delete_existing=true for updates)
+    impl_->insert_group_data("update_element", collection, id, resolved.arrays, true, *this);
 
     txn.commit();
     impl_->logger->info("Updated element {} in {}", id, collection);
