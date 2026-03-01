@@ -13,7 +13,7 @@ Milestone v0.5 addresses code quality: fixing bugs in element operations, descri
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Bug Fixes and Element Dedup** - Fix update_element validation, describe headers, import_csv naming, and extract shared group insertion helper
-- [ ] **Phase 2: C++ Core Refactoring** - Apply RAII to current_version and template to scalar reads
+- [x] **Phase 2: C++ Core Refactoring** - Apply RAII to current_version and template to scalar reads
 - [ ] **Phase 3: C API String Consistency** - Replace inline string allocations with strdup_safe
 
 ## Phase Details
@@ -41,10 +41,10 @@ Plans:
   1. `current_version()` manages its SQLite statement via `unique_ptr` with custom deleter -- no manual `sqlite3_finalize` call exists in the function
   2. All scalar read methods (`read_scalar_integers`, `read_scalar_floats`, `read_scalar_strings`) delegate to the `read_grouped_values_by_id` template -- no manual row-iteration loops remain in scalar read implementations
   3. All existing tests pass unchanged (behavior is identical, only implementation differs)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 02-01: TBD
+- [x] 02-01-PLAN.md — Add StmtPtr RAII typedef, refactor current_version(), rename read template, refactor all 6 scalar reads (QUAL-01, QUAL-02)
 
 ### Phase 3: C API String Consistency
 **Goal**: All C API string copies use the `strdup_safe` helper, eliminating inline `new char[]` + `memcpy` patterns
@@ -66,5 +66,5 @@ Phases execute in numeric order: 1 -> 2 -> 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Bug Fixes and Element Dedup | 2/2 | Complete | 2026-03-01 |
-| 2. C++ Core Refactoring | 0/? | Not started | - |
+| 2. C++ Core Refactoring | 1/1 | Complete | 2026-03-01 |
 | 3. C API String Consistency | 0/? | Not started | - |
