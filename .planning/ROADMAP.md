@@ -51,12 +51,12 @@ Plans:
 **Depends on**: Phase 2
 **Requirements**: QUAL-04
 **Success Criteria** (what must be TRUE):
-  1. Every C API function that copies a C++ string to a returned `char*` uses `strdup_safe` -- no inline `new char[size + 1]` followed by `memcpy` exists in `src/c/` files
+  1. Every C API function that copies a C++ string to a returned `char*` uses `strdup_safe` -- no inline `new char[size + 1]` followed by `memcpy` or `std::copy` exists in `src/c/` files
   2. All existing C API tests pass unchanged (behavior is identical, only implementation differs)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 03-01: TBD
+- [ ] 03-01-PLAN.md — Extract strdup_safe to utils/string.h, replace all 5 inline allocation sites, update CLAUDE.md (QUAL-04)
 
 ## Progress
 
@@ -67,4 +67,4 @@ Phases execute in numeric order: 1 -> 2 -> 3
 |-------|----------------|--------|-----------|
 | 1. Bug Fixes and Element Dedup | 2/2 | Complete | 2026-03-01 |
 | 2. C++ Core Refactoring | 1/1 | Complete | 2026-03-01 |
-| 3. C API String Consistency | 0/? | Not started | - |
+| 3. C API String Consistency | 0/1 | Not started | - |
