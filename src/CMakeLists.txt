@@ -118,9 +118,12 @@ if(QUIVER_BUILD_C_API)
         QUIVER_VERSION="${PROJECT_VERSION}"
     )
 
-    target_include_directories(quiver_c PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>
+    target_include_directories(quiver_c
+        PUBLIC
+            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+            $<INSTALL_INTERFACE:include>
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
     target_link_libraries(quiver_c PRIVATE

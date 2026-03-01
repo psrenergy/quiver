@@ -918,6 +918,87 @@ TEST(Database, UpdateElementNoFkColumnsUnchanged) {
     EXPECT_EQ(*str_val, "world");
 }
 
+// ============================================================================
+// Type validation regression tests (BUG-01)
+// ============================================================================
+
+TEST(Database, UpdateElementTypeMismatchIntegerVectorWithStrings) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    // Create element with valid integer vector data
+    quiver::Element e;
+    e.set("label", std::string("Item 1")).set("value_int", std::vector<int64_t>{1, 2, 3});
+    int64_t id = db.create_element("Collection", e);
+
+    // Try to update with string values in the integer vector column -- should throw
+    // (error comes from FK resolution or type validation, either way it must not succeed)
+    quiver::Element update;
+    update.set("value_int", std::vector<std::string>{"bad", "data"});
+
+    EXPECT_THROW(db.update_element("Collection", id, update), std::runtime_error);
+}
+
+TEST(Database, UpdateElementTypeMismatchTextSetWithIntegers) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    // Create element with valid text set data
+    quiver::Element e;
+    e.set("label", std::string("Item 1")).set("tag", std::vector<std::string>{"important", "urgent"});
+    int64_t id = db.create_element("Collection", e);
+
+    // Try to update with integer values in the text set column -- should throw type validation error
+    quiver::Element update;
+    update.set("tag", std::vector<int64_t>{1, 2, 3});
+
+    try {
+        db.update_element("Collection", id, update);
+        FAIL() << "Expected std::runtime_error for type mismatch in update_element";
+    } catch (const std::runtime_error& e) {
+        std::string msg = e.what();
+        EXPECT_TRUE(msg.find("Type mismatch") != std::string::npos) << "Expected Type mismatch error, got: " << msg;
+    }
+}
+
+// ============================================================================
+// Empty array behavior tests
+// ============================================================================
+
+TEST(Database, UpdateElementEmptyArrayClearsRows) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    // Create element with vector data
+    quiver::Element e;
+    e.set("label", std::string("Item 1")).set("value_int", std::vector<int64_t>{1, 2, 3});
+    int64_t id = db.create_element("Collection", e);
+
+    // Verify data exists
+    auto vec_before = db.read_vector_integers_by_id("Collection", "value_int", id);
+    EXPECT_EQ(vec_before.size(), 3);
+
+    // Update with empty array -- should clear existing rows
+    quiver::Element update;
+    update.set("value_int", std::vector<int64_t>{});
+    db.update_element("Collection", id, update);
+
+    auto vec_after = db.read_vector_integers_by_id("Collection", "value_int", id);
+    EXPECT_TRUE(vec_after.empty());
+}
+
 TEST(Database, UpdateElementFkResolutionFailurePreservesExisting) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("relations.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});

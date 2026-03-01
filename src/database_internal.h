@@ -50,9 +50,9 @@ std::vector<std::vector<T>> read_grouped_values_all(const Result& result) {
     return groups;
 }
 
-// Template for reading grouped values (vectors or sets) for a single element by ID
+// Template for reading column 0 values from query results
 template <typename T>
-std::vector<T> read_grouped_values_by_id(const Result& result) {
+std::vector<T> read_column_values(const Result& result) {
     std::vector<T> values;
     values.reserve(result.row_count());
     for (size_t i = 0; i < result.row_count(); ++i) {
@@ -62,6 +62,15 @@ std::vector<T> read_grouped_values_by_id(const Result& result) {
         }
     }
     return values;
+}
+
+// Template for reading a single optional value (column 0, row 0) from query results
+template <typename T>
+std::optional<T> read_single_value(const Result& result) {
+    if (result.empty()) {
+        return std::nullopt;
+    }
+    return get_row_value(result[0], 0, static_cast<T*>(nullptr));
 }
 
 // Find the dimension/ordering column in a time series table

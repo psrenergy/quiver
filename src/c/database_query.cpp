@@ -48,7 +48,7 @@ QUIVER_C_API quiver_error_t quiver_database_query_string(quiver_database_t* db,
     try {
         auto result = db->db.query_string(sql);
         if (result.has_value()) {
-            *out_value = strdup_safe(*result);
+            *out_value = quiver::string::new_c_str(*result);
             *out_has_value = 1;
         } else {
             *out_value = nullptr;
@@ -122,7 +122,7 @@ QUIVER_C_API quiver_error_t quiver_database_query_string_params(quiver_database_
         auto params = convert_params(param_types, param_values, param_count);
         auto result = db->db.query_string(sql, params);
         if (result.has_value()) {
-            *out_value = strdup_safe(*result);
+            *out_value = quiver::string::new_c_str(*result);
             *out_has_value = 1;
         } else {
             *out_value = nullptr;

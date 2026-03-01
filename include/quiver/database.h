@@ -7,6 +7,7 @@
 #include "quiver/options.h"
 #include "quiver/result.h"
 
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <string>
@@ -118,14 +119,14 @@ public:
     const std::string& path() const;
 
     // Schema inspection
-    void describe() const;
+    void describe(std::ostream& out = std::cout) const;
 
     // CSV operations
     void export_csv(const std::string& collection,
                     const std::string& group,
                     const std::string& path,
                     const CSVOptions& options = default_csv_options());
-    void import_csv(const std::string& table,
+    void import_csv(const std::string& collection,
                     const std::string& group,
                     const std::string& path,
                     const CSVOptions& options = default_csv_options());

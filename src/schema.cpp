@@ -314,6 +314,9 @@ void Schema::load_from_database(sqlite3* db) {
         table.name = name;
 
         auto columns = query_columns(db, name);
+        for (const auto& col : columns) {
+            table.column_order.push_back(col.name);
+        }
         for (auto& col : columns) {
             table.columns[col.name] = std::move(col);
         }

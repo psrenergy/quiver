@@ -15,6 +15,8 @@
 
 namespace quiver {
 
+using StmtPtr = std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)>;
+
 struct ResolvedElement {
     std::map<std::string, Value> scalars;
     std::map<std::string, std::vector<Value>> arrays;
@@ -122,6 +124,163 @@ struct Database::Impl {
         }
 
         return resolved;
+    }
+
+    void insert_group_data(const char* caller,
+                           const std::string& collection,
+                           int64_t element_id,
+                           const std::map<std::string, std::vector<Value>>& arrays,
+                           bool delete_existing,
+                           Database& db) {
+        // Route arrays to their target tables
+        std::map<std::string, std::map<std::string, const std::vector<Value>*>> vector_table_columns;
+        std::map<std::string, std::map<std::string, const std::vector<Value>*>> set_table_columns;
+        std::map<std::string, std::map<std::string, const std::vector<Value>*>> time_series_table_columns;
+
+        for (const auto& [array_name, values] : arrays) {
+            // Empty array handling: create skips silently, update still routes (for DELETE)
+            if (values.empty() && !delete_existing) {
+                continue;
+            }
+
+            auto matches = schema->find_all_tables_for_column(collection, array_name);
+            if (matches.empty()) {
+                throw std::runtime_error(std::string("Cannot ") + caller + ": array '" + array_name +
+                                         "' does not match any vector, set, or time series table in collection '" +
+                                         collection + "'");
+            }
+
+            for (const auto& match : matches) {
+                switch (match.type) {
+                case GroupTableType::Vector:
+                    vector_table_columns[match.table_name][array_name] = &values;
+                    break;
+                case GroupTableType::Set:
+                    set_table_columns[match.table_name][array_name] = &values;
+                    break;
+                case GroupTableType::TimeSeries:
+                    time_series_table_columns[match.table_name][array_name] = &values;
+                    break;
+                default:
+                    throw std::runtime_error(std::string("Cannot ") + caller + ": unknown group table type " +
+                                             std::to_string(static_cast<int>(match.type)));
+                }
+            }
+        }
+
+        // Process vector tables
+        for (const auto& [vector_table, columns] : vector_table_columns) {
+            if (delete_existing) {
+                db.execute("DELETE FROM " + vector_table + " WHERE id = ?", {element_id});
+            }
+
+            // Validate types and verify same-length arrays
+            size_t num_rows = 0;
+            for (const auto& [col_name, values_ptr] : columns) {
+                if (!values_ptr->empty()) {
+                    type_validator->validate_array(vector_table, col_name, *values_ptr);
+                }
+                if (num_rows == 0) {
+                    num_rows = values_ptr->size();
+                } else if (values_ptr->size() != num_rows) {
+                    throw std::runtime_error(std::string("Cannot ") + caller + ": vector columns in table '" +
+                                             vector_table + "' must have the same length");
+                }
+            }
+
+            // Insert rows with vector_index
+            for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
+                auto vector_index = static_cast<int64_t>(row_idx + 1);
+                auto sql = "INSERT INTO " + vector_table + " (id, vector_index";
+                std::string placeholders = "?, ?";
+                std::vector<Value> params = {element_id, vector_index};
+
+                for (const auto& [col_name, values_ptr] : columns) {
+                    sql += ", " + col_name;
+                    placeholders += ", ?";
+                    params.push_back((*values_ptr)[row_idx]);
+                }
+
+                sql += ") VALUES (" + placeholders + ")";
+                db.execute(sql, params);
+            }
+            logger->debug("Inserted {} vector rows into {}", num_rows, vector_table);
+        }
+
+        // Process set tables
+        for (const auto& [set_table, columns] : set_table_columns) {
+            if (delete_existing) {
+                db.execute("DELETE FROM " + set_table + " WHERE id = ?", {element_id});
+            }
+
+            // Validate types and verify same-length arrays
+            size_t num_rows = 0;
+            for (const auto& [col_name, values_ptr] : columns) {
+                if (!values_ptr->empty()) {
+                    type_validator->validate_array(set_table, col_name, *values_ptr);
+                }
+                if (num_rows == 0) {
+                    num_rows = values_ptr->size();
+                } else if (values_ptr->size() != num_rows) {
+                    throw std::runtime_error(std::string("Cannot ") + caller + ": set columns in table '" + set_table +
+                                             "' must have the same length");
+                }
+            }
+
+            // Insert rows
+            for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
+                auto sql = "INSERT INTO " + set_table + " (id";
+                std::string placeholders = "?";
+                std::vector<Value> params = {element_id};
+
+                for (const auto& [col_name, values_ptr] : columns) {
+                    sql += ", " + col_name;
+                    placeholders += ", ?";
+                    params.push_back((*values_ptr)[row_idx]);
+                }
+                sql += ") VALUES (" + placeholders + ")";
+                db.execute(sql, params);
+            }
+            logger->debug("Inserted {} set rows for table {}", num_rows, set_table);
+        }
+
+        // Process time series tables
+        for (const auto& [ts_table, columns] : time_series_table_columns) {
+            if (delete_existing) {
+                db.execute("DELETE FROM " + ts_table + " WHERE id = ?", {element_id});
+            }
+
+            // Validate types and verify same-length arrays
+            size_t num_rows = 0;
+            for (const auto& [col_name, values_ptr] : columns) {
+                if (!values_ptr->empty()) {
+                    type_validator->validate_array(ts_table, col_name, *values_ptr);
+                }
+                if (num_rows == 0) {
+                    num_rows = values_ptr->size();
+                } else if (values_ptr->size() != num_rows) {
+                    throw std::runtime_error(std::string("Cannot ") + caller + ": time series columns in table '" +
+                                             ts_table + "' must have the same length");
+                }
+            }
+
+            // Insert rows
+            for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
+                auto sql = "INSERT INTO " + ts_table + " (id";
+                std::string placeholders = "?";
+                std::vector<Value> params = {element_id};
+
+                for (const auto& [col_name, values_ptr] : columns) {
+                    sql += ", " + col_name;
+                    placeholders += ", ?";
+                    params.push_back((*values_ptr)[row_idx]);
+                }
+
+                sql += ") VALUES (" + placeholders + ")";
+                db.execute(sql, params);
+            }
+            logger->debug("Inserted {} time series rows into {}", num_rows, ts_table);
+        }
     }
 
     void load_schema_metadata() {

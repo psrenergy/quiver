@@ -40,6 +40,7 @@ enum class GroupTableType { Vector, Set, TimeSeries };
 struct TableDefinition {
     std::string name;
     std::map<std::string, ColumnDefinition> columns;
+    std::vector<std::string> column_order;
     std::vector<ForeignKey> foreign_keys;
     std::vector<Index> indexes;
 

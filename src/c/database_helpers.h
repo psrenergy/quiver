@@ -4,6 +4,7 @@
 #include "internal.h"
 #include "quiver/c/database.h"
 #include "quiver/database.h"
+#include "utils/string.h"
 
 #include <cstring>
 #include <string>
@@ -69,9 +70,7 @@ inline quiver_error_t copy_strings_to_c(const std::vector<std::string>& values, 
     }
     *out_values = new char*[values.size()];
     for (size_t i = 0; i < values.size(); ++i) {
-        (*out_values)[i] = new char[values[i].size() + 1];
-        std::copy(values[i].begin(), values[i].end(), (*out_values)[i]);
-        (*out_values)[i][values[i].size()] = '\0';
+        (*out_values)[i] = quiver::string::new_c_str(values[i]);
     }
     return QUIVER_OK;
 }
@@ -92,23 +91,17 @@ inline quiver_data_type_t to_c_data_type(quiver::DataType type) {
     }
 }
 
-inline char* strdup_safe(const std::string& str) {
-    auto result = new char[str.size() + 1];
-    std::copy(str.begin(), str.end(), result);
-    result[str.size()] = '\0';
-    return result;
-}
-
 inline void convert_scalar_to_c(const quiver::ScalarMetadata& src, quiver_scalar_metadata_t& dst) {
-    dst.name = strdup_safe(src.name);
+    dst.name = quiver::string::new_c_str(src.name);
     dst.data_type = to_c_data_type(src.data_type);
     dst.not_null = src.not_null ? 1 : 0;
     dst.primary_key = src.primary_key ? 1 : 0;
-    dst.default_value = src.default_value.has_value() ? strdup_safe(*src.default_value) : nullptr;
+    dst.default_value = src.default_value.has_value() ? quiver::string::new_c_str(*src.default_value) : nullptr;
     dst.is_foreign_key = src.is_foreign_key ? 1 : 0;
     dst.references_collection =
-        src.references_collection.has_value() ? strdup_safe(*src.references_collection) : nullptr;
-    dst.references_column = src.references_column.has_value() ? strdup_safe(*src.references_column) : nullptr;
+        src.references_collection.has_value() ? quiver::string::new_c_str(*src.references_collection) : nullptr;
+    dst.references_column =
+        src.references_column.has_value() ? quiver::string::new_c_str(*src.references_column) : nullptr;
 }
 
 inline void free_scalar_fields(quiver_scalar_metadata_t& m) {
@@ -119,8 +112,8 @@ inline void free_scalar_fields(quiver_scalar_metadata_t& m) {
 }
 
 inline void convert_group_to_c(const quiver::GroupMetadata& src, quiver_group_metadata_t& dst) {
-    dst.group_name = strdup_safe(src.group_name);
-    dst.dimension_column = src.dimension_column.empty() ? nullptr : strdup_safe(src.dimension_column);
+    dst.group_name = quiver::string::new_c_str(src.group_name);
+    dst.dimension_column = src.dimension_column.empty() ? nullptr : quiver::string::new_c_str(src.dimension_column);
     dst.value_column_count = src.value_columns.size();
     if (src.value_columns.empty()) {
         dst.value_columns = nullptr;
