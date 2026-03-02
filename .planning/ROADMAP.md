@@ -6,6 +6,11 @@
 
 **Requirements:** DART-01, DART-02, DART-03, DART-04, DART-05, DART-06, DART-07, DART-08
 
+**Plans:** 1 plan
+
+Plans:
+- [ ] 01-01-PLAN.md — Create ScalarMetadata/GroupMetadata classes, replace all inline record types, add construction tests
+
 **Success Criteria:**
 1. ScalarMetadata and GroupMetadata classes exist in a new `metadata.dart` file
 2. All inline record types in database.dart, database_metadata.dart, and database_read.dart replaced
