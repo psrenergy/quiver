@@ -9,7 +9,7 @@
 **Plans:** 1 plan
 
 Plans:
-- [ ] 01-01-PLAN.md — Create ScalarMetadata/GroupMetadata classes, replace all inline record types, add construction tests
+- [x] 01-01-PLAN.md — Create ScalarMetadata/GroupMetadata classes, replace all inline record types, add construction tests
 
 **Success Criteria:**
 1. ScalarMetadata and GroupMetadata classes exist in a new `metadata.dart` file
@@ -27,7 +27,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 02-01-PLAN.md — Delete dead code (Julia quiver_database_sqlite_error, Python encode_string) and verify all binding tests pass
+- [x] 02-01-PLAN.md — Delete dead code (Julia quiver_database_sqlite_error, Python encode_string) and verify all binding tests pass
 
 **Success Criteria:**
 1. quiver_database_sqlite_error deleted from Julia exceptions.jl

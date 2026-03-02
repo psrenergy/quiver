@@ -2,22 +2,22 @@
 gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
-status: unknown
-stopped_at: Phase 2 context gathered
-last_updated: "2026-03-02T01:07:12.324Z"
+status: in-progress
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-03-02T01:25:14Z"
 progress:
   total_phases: 2
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
+  completed_phases: 2
+  total_plans: 2
+  completed_plans: 2
 ---
 
 ## Current Position
 
-Phase: Phase 1 (Dart Metadata Types)
-Plan: 01-01-PLAN.md -- COMPLETE (1/1 plans, 2/2 tasks)
-Status: Phase complete
-Last activity: 2026-03-02 -- Executed 01-01-PLAN.md (metadata types)
+Phase: Phase 2 (Binding Cleanup)
+Plan: 02-01-PLAN.md -- COMPLETE (1/1 plans, 2/2 tasks)
+Status: Plan complete
+Last activity: 2026-03-02 -- Executed 02-01-PLAN.md (dead code removal)
 
 ## Project Reference
 
@@ -32,9 +32,10 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 - fromNative named constructor pattern established for FFI struct conversion
 - dataType stored as int (not Dart enum) matching C enum values
 - dimensionColumn is empty string for vectors/sets (not nullable) matching Julia/Python
-- Julia `quiver_database_sqlite_error` in exceptions.jl:5 is dead code
+- Julia `quiver_database_sqlite_error` removed from exceptions.jl (was dead code)
+- Python `encode_string` removed from _helpers.py (was dead code)
 - Julia `helper_maps.jl` (scalar_relation_map, set_relation_map) is Julia-only, breaks homogeneity
-- All other binding code is clean and consistent
+- All binding tests pass: Julia (567), Dart (307), Python (220)
 
 ## Decisions
 
@@ -47,8 +48,9 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 01    | 01   | 4min     | 2     | 5     |
+| 02    | 01   | 4min     | 2     | 2     |
 
 ## Last Session
 
-- **Stopped at:** Phase 2 context gathered
-- **Timestamp:** 2026-03-02T00:52:11Z
+- **Stopped at:** Completed 02-01-PLAN.md
+- **Timestamp:** 2026-03-02T01:25:14Z

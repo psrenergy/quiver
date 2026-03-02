@@ -18,11 +18,11 @@
 
 ### Binding Cleanup
 
-- [ ] **JUL-01**: Delete quiver_database_sqlite_error from exceptions.jl
+- [x] **JUL-01**: Delete quiver_database_sqlite_error from exceptions.jl
 - [x] ~~**JUL-02**: Remove helper_maps.jl include from Quiver.jl~~ — Dropped: user actively uses helper_maps
 - [x] ~~**JUL-03**: Delete helper_maps.jl file~~ — Dropped: user actively uses helper_maps
 - [x] ~~**JUL-04**: Delete test_helper_maps.jl file~~ — Dropped: keeping tests for kept code
-- [ ] **JUL-05**: All existing tests pass across all bindings (Julia, Dart, Python)
+- [x] **JUL-05**: All existing tests pass across all bindings (Julia, Dart, Python)
 - [ ] **BIND-01**: Light audit of all bindings for dead code — clean up any findings
 
 ## Out of Scope
@@ -46,11 +46,11 @@
 | DART-06 | Phase 1 | Complete |
 | DART-07 | Phase 1 | Complete |
 | DART-08 | Phase 1 | Complete |
-| JUL-01 | Phase 2 | Pending |
+| JUL-01 | Phase 2 | Complete |
 | JUL-02 | Phase 2 | Dropped |
 | JUL-03 | Phase 2 | Dropped |
 | JUL-04 | Phase 2 | Dropped |
-| JUL-05 | Phase 2 | Pending |
+| JUL-05 | Phase 2 | Complete |
 | BIND-01 | Phase 2 | Pending |
 
 **Coverage:**
