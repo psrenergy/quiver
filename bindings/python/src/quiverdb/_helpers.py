@@ -17,11 +17,6 @@ def check(err: int) -> None:
         raise QuiverError(detail or "Unknown error")
 
 
-def encode_string(s: str) -> bytes:
-    """Encode a Python string to UTF-8 bytes for passing to the C API."""
-    return s.encode("utf-8")
-
-
 def decode_string(ptr) -> str:
     """Decode a non-null char* pointer from the C API to a Python string."""
     return ffi.string(ptr).decode("utf-8")

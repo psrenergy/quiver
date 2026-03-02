@@ -3,17 +3,7 @@ part of 'database.dart';
 /// Metadata operations for Database.
 extension DatabaseMetadata on Database {
   /// Returns metadata for a scalar attribute.
-  ({
-    String name,
-    int dataType,
-    bool notNull,
-    bool primaryKey,
-    String? defaultValue,
-    bool isForeignKey,
-    String? referencesCollection,
-    String? referencesColumn,
-  })
-  getScalarMetadata(String collection, String attribute) {
+  ScalarMetadata getScalarMetadata(String collection, String attribute) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -29,7 +19,7 @@ extension DatabaseMetadata on Database {
         ),
       );
 
-      final result = _parseScalarMetadata(outMetadata.ref);
+      final result = ScalarMetadata.fromNative(outMetadata.ref);
 
       bindings.quiver_database_free_scalar_metadata(outMetadata);
       return result;
@@ -39,24 +29,7 @@ extension DatabaseMetadata on Database {
   }
 
   /// Returns metadata for a vector group, including all value columns in the group.
-  ({
-    String groupName,
-    String dimensionColumn,
-    List<
-      ({
-        String name,
-        int dataType,
-        bool notNull,
-        bool primaryKey,
-        String? defaultValue,
-        bool isForeignKey,
-        String? referencesCollection,
-        String? referencesColumn,
-      })
-    >
-    valueColumns,
-  })
-  getVectorMetadata(String collection, String groupName) {
+  GroupMetadata getVectorMetadata(String collection, String groupName) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -72,7 +45,7 @@ extension DatabaseMetadata on Database {
         ),
       );
 
-      final result = _parseGroupMetadata(outMetadata.ref);
+      final result = GroupMetadata.fromNative(outMetadata.ref);
 
       bindings.quiver_database_free_group_metadata(outMetadata);
       return result;
@@ -82,24 +55,7 @@ extension DatabaseMetadata on Database {
   }
 
   /// Returns metadata for a set group, including all value columns in the group.
-  ({
-    String groupName,
-    String dimensionColumn,
-    List<
-      ({
-        String name,
-        int dataType,
-        bool notNull,
-        bool primaryKey,
-        String? defaultValue,
-        bool isForeignKey,
-        String? referencesCollection,
-        String? referencesColumn,
-      })
-    >
-    valueColumns,
-  })
-  getSetMetadata(String collection, String groupName) {
+  GroupMetadata getSetMetadata(String collection, String groupName) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -115,7 +71,7 @@ extension DatabaseMetadata on Database {
         ),
       );
 
-      final result = _parseGroupMetadata(outMetadata.ref);
+      final result = GroupMetadata.fromNative(outMetadata.ref);
 
       bindings.quiver_database_free_group_metadata(outMetadata);
       return result;
@@ -125,19 +81,7 @@ extension DatabaseMetadata on Database {
   }
 
   /// Lists all scalar attributes for a collection with full metadata.
-  List<
-    ({
-      String name,
-      int dataType,
-      bool notNull,
-      bool primaryKey,
-      String? defaultValue,
-      bool isForeignKey,
-      String? referencesCollection,
-      String? referencesColumn,
-    })
-  >
-  listScalarAttributes(String collection) {
+  List<ScalarMetadata> listScalarAttributes(String collection) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -159,21 +103,9 @@ extension DatabaseMetadata on Database {
         return [];
       }
 
-      final result =
-          <
-            ({
-              String name,
-              int dataType,
-              bool notNull,
-              bool primaryKey,
-              String? defaultValue,
-              bool isForeignKey,
-              String? referencesCollection,
-              String? referencesColumn,
-            })
-          >[];
+      final result = <ScalarMetadata>[];
       for (var i = 0; i < count; i++) {
-        result.add(_parseScalarMetadata(outMetadata.value[i]));
+        result.add(ScalarMetadata.fromNative(outMetadata.value[i]));
       }
       bindings.quiver_database_free_scalar_metadata_array(
         outMetadata.value,
@@ -186,26 +118,7 @@ extension DatabaseMetadata on Database {
   }
 
   /// Lists all vector groups for a collection with full metadata.
-  List<
-    ({
-      String groupName,
-      String dimensionColumn,
-      List<
-        ({
-          String name,
-          int dataType,
-          bool notNull,
-          bool primaryKey,
-          String? defaultValue,
-          bool isForeignKey,
-          String? referencesCollection,
-          String? referencesColumn,
-        })
-      >
-      valueColumns,
-    })
-  >
-  listVectorGroups(String collection) {
+  List<GroupMetadata> listVectorGroups(String collection) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -227,28 +140,9 @@ extension DatabaseMetadata on Database {
         return [];
       }
 
-      final result =
-          <
-            ({
-              String groupName,
-              String dimensionColumn,
-              List<
-                ({
-                  String name,
-                  int dataType,
-                  bool notNull,
-                  bool primaryKey,
-                  String? defaultValue,
-                  bool isForeignKey,
-                  String? referencesCollection,
-                  String? referencesColumn,
-                })
-              >
-              valueColumns,
-            })
-          >[];
+      final result = <GroupMetadata>[];
       for (var i = 0; i < count; i++) {
-        result.add(_parseGroupMetadata(outMetadata.value[i]));
+        result.add(GroupMetadata.fromNative(outMetadata.value[i]));
       }
       bindings.quiver_database_free_group_metadata_array(
         outMetadata.value,
@@ -261,26 +155,7 @@ extension DatabaseMetadata on Database {
   }
 
   /// Lists all set groups for a collection with full metadata.
-  List<
-    ({
-      String groupName,
-      String dimensionColumn,
-      List<
-        ({
-          String name,
-          int dataType,
-          bool notNull,
-          bool primaryKey,
-          String? defaultValue,
-          bool isForeignKey,
-          String? referencesCollection,
-          String? referencesColumn,
-        })
-      >
-      valueColumns,
-    })
-  >
-  listSetGroups(String collection) {
+  List<GroupMetadata> listSetGroups(String collection) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -302,28 +177,9 @@ extension DatabaseMetadata on Database {
         return [];
       }
 
-      final result =
-          <
-            ({
-              String groupName,
-              String dimensionColumn,
-              List<
-                ({
-                  String name,
-                  int dataType,
-                  bool notNull,
-                  bool primaryKey,
-                  String? defaultValue,
-                  bool isForeignKey,
-                  String? referencesCollection,
-                  String? referencesColumn,
-                })
-              >
-              valueColumns,
-            })
-          >[];
+      final result = <GroupMetadata>[];
       for (var i = 0; i < count; i++) {
-        result.add(_parseGroupMetadata(outMetadata.value[i]));
+        result.add(GroupMetadata.fromNative(outMetadata.value[i]));
       }
       bindings.quiver_database_free_group_metadata_array(
         outMetadata.value,
@@ -352,24 +208,7 @@ extension DatabaseMetadata on Database {
   }
 
   /// Returns metadata for a time series group, including all value columns in the group.
-  ({
-    String groupName,
-    String dimensionColumn,
-    List<
-      ({
-        String name,
-        int dataType,
-        bool notNull,
-        bool primaryKey,
-        String? defaultValue,
-        bool isForeignKey,
-        String? referencesCollection,
-        String? referencesColumn,
-      })
-    >
-    valueColumns,
-  })
-  getTimeSeriesMetadata(String collection, String groupName) {
+  GroupMetadata getTimeSeriesMetadata(String collection, String groupName) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -385,7 +224,7 @@ extension DatabaseMetadata on Database {
         ),
       );
 
-      final result = _parseGroupMetadata(outMetadata.ref);
+      final result = GroupMetadata.fromNative(outMetadata.ref);
 
       bindings.quiver_database_free_group_metadata(outMetadata);
       return result;
@@ -395,26 +234,7 @@ extension DatabaseMetadata on Database {
   }
 
   /// Lists all time series groups for a collection with full metadata.
-  List<
-    ({
-      String groupName,
-      String dimensionColumn,
-      List<
-        ({
-          String name,
-          int dataType,
-          bool notNull,
-          bool primaryKey,
-          String? defaultValue,
-          bool isForeignKey,
-          String? referencesCollection,
-          String? referencesColumn,
-        })
-      >
-      valueColumns,
-    })
-  >
-  listTimeSeriesGroups(String collection) {
+  List<GroupMetadata> listTimeSeriesGroups(String collection) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -436,28 +256,9 @@ extension DatabaseMetadata on Database {
         return [];
       }
 
-      final result =
-          <
-            ({
-              String groupName,
-              String dimensionColumn,
-              List<
-                ({
-                  String name,
-                  int dataType,
-                  bool notNull,
-                  bool primaryKey,
-                  String? defaultValue,
-                  bool isForeignKey,
-                  String? referencesCollection,
-                  String? referencesColumn,
-                })
-              >
-              valueColumns,
-            })
-          >[];
+      final result = <GroupMetadata>[];
       for (var i = 0; i < count; i++) {
-        result.add(_parseGroupMetadata(outMetadata.value[i]));
+        result.add(GroupMetadata.fromNative(outMetadata.value[i]));
       }
       bindings.quiver_database_free_group_metadata_array(
         outMetadata.value,
