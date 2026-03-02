@@ -1,3 +1,17 @@
+---
+gsd_state_version: 1.0
+milestone: v0.5
+milestone_name: milestone
+status: unknown
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-03-02T00:56:30.021Z"
+progress:
+  total_phases: 1
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
+---
+
 ## Current Position
 
 Phase: Phase 1 (Dart Metadata Types)
