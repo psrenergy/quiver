@@ -54,7 +54,7 @@ jobs:
         run: ctest -C ${{ matrix.build_type }} --output-on-failure
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: quiver-${{ matrix.os }}-${{ matrix.build_type }}
           path: |
