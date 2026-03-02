@@ -23,7 +23,7 @@
 - [x] ~~**JUL-03**: Delete helper_maps.jl file~~ — Dropped: user actively uses helper_maps
 - [x] ~~**JUL-04**: Delete test_helper_maps.jl file~~ — Dropped: keeping tests for kept code
 - [x] **JUL-05**: All existing tests pass across all bindings (Julia, Dart, Python)
-- [ ] **BIND-01**: Light audit of all bindings for dead code — clean up any findings
+- [x] **BIND-01**: Light audit of all bindings for dead code — clean up any findings
 
 ## Out of Scope
 
@@ -51,7 +51,7 @@
 | JUL-03 | Phase 2 | Dropped |
 | JUL-04 | Phase 2 | Dropped |
 | JUL-05 | Phase 2 | Complete |
-| BIND-01 | Phase 2 | Pending |
+| BIND-01 | Phase 2 | Complete |
 
 **Coverage:**
 - v0.5 requirements: 11 active (3 dropped, 1 added)
