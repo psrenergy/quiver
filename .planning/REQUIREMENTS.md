@@ -7,14 +7,14 @@
 
 ### Dart Metadata Types
 
-- [ ] **DART-01**: Define ScalarMetadata class with named fields matching Julia/Python (name, dataType, notNull, primaryKey, defaultValue, isForeignKey, referencesCollection, referencesColumn)
-- [ ] **DART-02**: Define GroupMetadata class with named fields matching Julia/Python (groupName, dimensionColumn, valueColumns)
-- [ ] **DART-03**: Replace all inline record types in database.dart with ScalarMetadata/GroupMetadata
-- [ ] **DART-04**: Replace all inline record types in database_metadata.dart with ScalarMetadata/GroupMetadata
-- [ ] **DART-05**: Replace all inline record types in database_read.dart that dispatch on dataType
-- [ ] **DART-06**: Export ScalarMetadata and GroupMetadata from quiverdb.dart
-- [ ] **DART-07**: All existing Dart tests pass with new metadata types
-- [ ] **DART-08**: Add Dart tests for ScalarMetadata and GroupMetadata construction and field access
+- [x] **DART-01**: Define ScalarMetadata class with named fields matching Julia/Python (name, dataType, notNull, primaryKey, defaultValue, isForeignKey, referencesCollection, referencesColumn)
+- [x] **DART-02**: Define GroupMetadata class with named fields matching Julia/Python (groupName, dimensionColumn, valueColumns)
+- [x] **DART-03**: Replace all inline record types in database.dart with ScalarMetadata/GroupMetadata
+- [x] **DART-04**: Replace all inline record types in database_metadata.dart with ScalarMetadata/GroupMetadata
+- [x] **DART-05**: Replace all inline record types in database_read.dart that dispatch on dataType
+- [x] **DART-06**: Export ScalarMetadata and GroupMetadata from quiverdb.dart
+- [x] **DART-07**: All existing Dart tests pass with new metadata types
+- [x] **DART-08**: Add Dart tests for ScalarMetadata and GroupMetadata construction and field access
 
 ### Julia Cleanup
 
@@ -37,14 +37,14 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DART-01 | Phase 1 | Pending |
-| DART-02 | Phase 1 | Pending |
-| DART-03 | Phase 1 | Pending |
-| DART-04 | Phase 1 | Pending |
-| DART-05 | Phase 1 | Pending |
-| DART-06 | Phase 1 | Pending |
-| DART-07 | Phase 1 | Pending |
-| DART-08 | Phase 1 | Pending |
+| DART-01 | Phase 1 | Complete |
+| DART-02 | Phase 1 | Complete |
+| DART-03 | Phase 1 | Complete |
+| DART-04 | Phase 1 | Complete |
+| DART-05 | Phase 1 | Complete |
+| DART-06 | Phase 1 | Complete |
+| DART-07 | Phase 1 | Complete |
+| DART-08 | Phase 1 | Complete |
 | JUL-01 | Phase 2 | Pending |
 | JUL-02 | Phase 2 | Pending |
 | JUL-03 | Phase 2 | Pending |
