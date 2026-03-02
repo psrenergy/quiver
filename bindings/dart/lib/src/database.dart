@@ -7,6 +7,7 @@ import 'ffi/library_loader.dart';
 import 'date_time.dart';
 import 'element.dart';
 import 'exceptions.dart';
+import 'metadata.dart';
 
 part 'database_create.dart';
 part 'database_options.dart';
@@ -84,76 +85,6 @@ class Database {
     if (_isClosed) {
       throw StateError('Database has been closed');
     }
-  }
-
-  ({
-    String name,
-    int dataType,
-    bool notNull,
-    bool primaryKey,
-    String? defaultValue,
-    bool isForeignKey,
-    String? referencesCollection,
-    String? referencesColumn,
-  })
-  _parseScalarMetadata(quiver_scalar_metadata_t attribute) {
-    return (
-      name: attribute.name.cast<Utf8>().toDartString(),
-      dataType: attribute.data_type,
-      notNull: attribute.not_null != 0,
-      primaryKey: attribute.primary_key != 0,
-      defaultValue: attribute.default_value == nullptr ? null : attribute.default_value.cast<Utf8>().toDartString(),
-      isForeignKey: attribute.is_foreign_key != 0,
-      referencesCollection: attribute.references_collection == nullptr
-          ? null
-          : attribute.references_collection.cast<Utf8>().toDartString(),
-      referencesColumn: attribute.references_column == nullptr
-          ? null
-          : attribute.references_column.cast<Utf8>().toDartString(),
-    );
-  }
-
-  ({
-    String groupName,
-    String dimensionColumn,
-    List<
-      ({
-        String name,
-        int dataType,
-        bool notNull,
-        bool primaryKey,
-        String? defaultValue,
-        bool isForeignKey,
-        String? referencesCollection,
-        String? referencesColumn,
-      })
-    >
-    valueColumns,
-  })
-  _parseGroupMetadata(quiver_group_metadata_t metadata) {
-    final valueColumns =
-        <
-          ({
-            String name,
-            int dataType,
-            bool notNull,
-            bool primaryKey,
-            String? defaultValue,
-            bool isForeignKey,
-            String? referencesCollection,
-            String? referencesColumn,
-          })
-        >[];
-    for (var i = 0; i < metadata.value_column_count; i++) {
-      valueColumns.add(_parseScalarMetadata(metadata.value_columns[i]));
-    }
-    return (
-      groupName: metadata.group_name.cast<Utf8>().toDartString(),
-      dimensionColumn: metadata.dimension_column == nullptr
-          ? ''
-          : metadata.dimension_column.cast<Utf8>().toDartString(),
-      valueColumns: valueColumns,
-    );
   }
 
   ({Pointer<Int> types, Pointer<Pointer<Void>> values}) _marshalParams(
