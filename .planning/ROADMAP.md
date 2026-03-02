@@ -24,6 +24,11 @@ Plans:
 
 **Requirements:** JUL-01, JUL-05
 
+**Plans:** 1 plan
+
+Plans:
+- [ ] 02-01-PLAN.md — Delete dead code (Julia quiver_database_sqlite_error, Python encode_string) and verify all binding tests pass
+
 **Success Criteria:**
 1. quiver_database_sqlite_error deleted from Julia exceptions.jl
 2. Light audit of all bindings (Julia, Dart, Python) for additional dead code — findings cleaned up
