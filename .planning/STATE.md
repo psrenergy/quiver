@@ -1,9 +1,9 @@
 ## Current Position
 
 Phase: Phase 1 (Dart Metadata Types)
-Plan: Not yet planned
-Status: Ready to plan
-Last activity: 2026-03-01 — Milestone v0.5 started
+Plan: 01-01-PLAN.md (1 plan, 2 tasks, wave 1)
+Status: Planned — ready to execute
+Last activity: 2026-03-01 — Phase 1 plan created
 
 ## Project Reference
 
