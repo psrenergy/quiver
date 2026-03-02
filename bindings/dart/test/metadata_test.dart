@@ -7,6 +7,96 @@ void main() {
   // Path to central tests folder
   final testsPath = path.join(path.current, '..', '..', 'tests');
 
+  group('ScalarMetadata construction', () {
+    test('const constructor sets all fields', () {
+      const metadata = ScalarMetadata(
+        name: 'test_field',
+        dataType: 0,
+        notNull: true,
+        primaryKey: false,
+        defaultValue: null,
+        isForeignKey: false,
+        referencesCollection: null,
+        referencesColumn: null,
+      );
+      expect(metadata.name, equals('test_field'));
+      expect(metadata.dataType, equals(0));
+      expect(metadata.notNull, isTrue);
+      expect(metadata.primaryKey, isFalse);
+      expect(metadata.defaultValue, isNull);
+      expect(metadata.isForeignKey, isFalse);
+      expect(metadata.referencesCollection, isNull);
+      expect(metadata.referencesColumn, isNull);
+    });
+
+    test('const constructor with FK fields', () {
+      const metadata = ScalarMetadata(
+        name: 'parent_id',
+        dataType: 0,
+        notNull: true,
+        primaryKey: false,
+        defaultValue: null,
+        isForeignKey: true,
+        referencesCollection: 'Parent',
+        referencesColumn: 'id',
+      );
+      expect(metadata.isForeignKey, isTrue);
+      expect(metadata.referencesCollection, equals('Parent'));
+      expect(metadata.referencesColumn, equals('id'));
+    });
+
+    test('const constructor with default value', () {
+      const metadata = ScalarMetadata(
+        name: 'status',
+        dataType: 2,
+        notNull: true,
+        primaryKey: false,
+        defaultValue: 'active',
+        isForeignKey: false,
+        referencesCollection: null,
+        referencesColumn: null,
+      );
+      expect(metadata.defaultValue, equals('active'));
+    });
+  });
+
+  group('GroupMetadata construction', () {
+    test('const constructor with empty dimension (vector/set)', () {
+      const metadata = GroupMetadata(
+        groupName: 'values',
+        dimensionColumn: '',
+        valueColumns: [],
+      );
+      expect(metadata.groupName, equals('values'));
+      expect(metadata.dimensionColumn, equals(''));
+      expect(metadata.valueColumns, isEmpty);
+    });
+
+    test('const constructor with dimension column and value columns', () {
+      const metadata = GroupMetadata(
+        groupName: 'data',
+        dimensionColumn: 'date_time',
+        valueColumns: [
+          ScalarMetadata(
+            name: 'value',
+            dataType: 1,
+            notNull: true,
+            primaryKey: false,
+            defaultValue: null,
+            isForeignKey: false,
+            referencesCollection: null,
+            referencesColumn: null,
+          ),
+        ],
+      );
+      expect(metadata.groupName, equals('data'));
+      expect(metadata.dimensionColumn, equals('date_time'));
+      expect(metadata.valueColumns.length, equals(1));
+      expect(metadata.valueColumns[0].name, equals('value'));
+      expect(metadata.valueColumns[0].dataType, equals(1));
+    });
+  });
+
   group('Scalar Metadata', () {
     test('returns metadata for text attribute', () {
       final db = Database.fromSchema(
