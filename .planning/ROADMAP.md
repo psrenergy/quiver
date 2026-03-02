@@ -18,17 +18,17 @@ Plans:
 4. All existing Dart tests pass unchanged (API compatible)
 5. New tests verify metadata class construction and field access
 
-## Phase 2: Julia Cleanup
+## Phase 2: Binding Cleanup
 
-**Goal:** Remove dead code and application-specific helpers to restore homogeneity
+**Goal:** Remove dead code across all language bindings (Julia, Dart, Python) to restore homogeneity
 
-**Requirements:** JUL-01, JUL-02, JUL-03, JUL-04, JUL-05
+**Requirements:** JUL-01, JUL-05
 
 **Success Criteria:**
-1. quiver_database_sqlite_error deleted from exceptions.jl
-2. helper_maps.jl removed from Quiver.jl includes and file deleted
-3. test_helper_maps.jl deleted
-4. All remaining Julia tests pass
+1. quiver_database_sqlite_error deleted from Julia exceptions.jl
+2. Light audit of all bindings (Julia, Dart, Python) for additional dead code — findings cleaned up
+3. helper_maps.jl and test_helper_maps.jl preserved (actively used)
+4. All existing tests pass across all bindings
 
 ---
 *Roadmap created: 2026-03-01*
