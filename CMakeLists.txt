@@ -93,7 +93,7 @@ file(GLOB_RECURSE ALL_SOURCE_FILES
 )
 
 # Format target
-find_program(CLANG_FORMAT clang-format)
+find_program(CLANG_FORMAT clang-format-21 clang-format)
 if(CLANG_FORMAT)
     add_custom_target(format
         COMMAND ${CLANG_FORMAT} -i ${ALL_SOURCE_FILES}

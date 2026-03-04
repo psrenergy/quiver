@@ -1,11 +1,12 @@
 #ifndef QUIVER_BLOB_METADATA_H
 #define QUIVER_BLOB_METADATA_H
 
-#include "export.h"
+#include "../element.h"
+#include "../export.h"
+#include "dimension.h"
 
+#include <chrono>
 #include <cstdint>
-#include <ctime>
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -13,15 +14,21 @@ namespace quiver {
 
 struct QUIVER_API BlobMetadata {
     std::vector<Dimension> dimensions;
-    std::time_t initial_datetime;
+    std::chrono::system_clock::time_point initial_datetime;
     std::string unit;
     std::vector<std::string> labels;
     std::string version;
     //
     int64_t number_of_time_dimensions;
 
+    BlobMetadata();
+    ~BlobMetadata();
+
+    // Create metadata from Element
+    static BlobMetadata from_element(const Element& element);
+
     // TOML Serialization
-    static BlobMetadata& from_toml(const std::string& toml_content);
+    static BlobMetadata from_toml(const std::string& toml_content);
     std::string to_toml() const;
 
     // Validation

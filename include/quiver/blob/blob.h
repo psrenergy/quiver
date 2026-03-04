@@ -1,8 +1,8 @@
 #ifndef QUIVER_BLOB_H
 #define QUIVER_BLOB_H
 
+#include "../export.h"
 #include "blob_metadata.h"
-#include "export.h"
 
 #include <cstdint>
 #include <iostream>
@@ -15,7 +15,8 @@
 namespace quiver {
 
 class QUIVER_API Blob {
-    explicit Blob(const std::string& file_path, const BlobMetadata& metadata, const std::iostream& io);
+public:
+    explicit Blob(const std::string& file_path, const BlobMetadata& metadata, std::unique_ptr<std::iostream> io);
     ~Blob();
 
     // Non-copyable
@@ -27,12 +28,15 @@ class QUIVER_API Blob {
     Blob& operator=(Blob&& other) noexcept;
 
     // File handling
-    static Blob&
-    open_file(const std::string& file_path, const std::string& mode, const std::optional<BlobMetadata>& metadata);
+    static Blob open_file(const std::string& file_path, char mode, const std::optional<BlobMetadata>& metadata = {});
 
     // Data handling
-    double read(const std::unordered_map<std::string, int64_t>& dims);
-    double write(const std::vector<double>& data, const std::unordered_map<std::string, int64_t>& dims);
+    std::vector<double> read(const std::unordered_map<std::string, int64_t>& dims, bool allow_nulls = false);
+    void write(const std::vector<double>& data, const std::unordered_map<std::string, int64_t>& dims);
+
+    // Getters
+    const BlobMetadata& get_metadata() const;
+    const std::string& get_file_path() const;
 
 private:
     struct Impl;
@@ -40,19 +44,20 @@ private:
 
     // File traversal
     int64_t calculate_file_position(const std::unordered_map<std::string, int64_t>& dims) const;
-    void go_to_position(int64_t position);
+    void go_to_position(int64_t position, char mode);
+    void fill_file_with_nulls();
 
     // Validations
     void validate_file_is_open() const;
     void validate_dimension_values(const std::unordered_map<std::string, int64_t>& dims);
     void validate_data_length(const std::vector<double>& data);
-    // validate_time_dimension_values implemented inline inside validate_dimension_values
 
 protected:
-    // Getters
-    const BlobMetadata& get_metadata() const;
-    const std::string& get_file_path() const;
-    const std::iostream& get_io() const;
+    std::iostream& get_io();
+
+    // Dimension iteration
+    std::vector<int64_t> next_dimensions(const std::vector<int64_t>& current_dimensions);
+    std::vector<int64_t> dimension_sizes_at_values(const std::vector<int64_t>& dimension_values) const;
 };
 
 }  // namespace quiver

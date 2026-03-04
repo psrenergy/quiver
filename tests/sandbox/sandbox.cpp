@@ -6,7 +6,7 @@
 
 // This is a sandbox for quick prototyping and testing. It is not intended to be a comprehensive test suite.
 // cmake --build build --config Debug --target quiver_sandbox
-// ./build/Debug/quiver_sandbox.exe
+// ./build/bin/Debug/quiver_sandbox.exe
 
 int main() {
     auto db = quiver::Database::from_schema(
