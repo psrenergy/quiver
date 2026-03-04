@@ -1,6 +1,10 @@
 include(GoogleTest)
 
 add_executable(quiver_tests
+    test_blob.cpp
+    test_blob_csv.cpp
+    test_blob_metadata.cpp
+    test_blob_time_properties.cpp
     test_database_create.cpp
     test_database_csv_export.cpp
     test_database_csv_import.cpp

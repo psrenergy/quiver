@@ -4,6 +4,7 @@
 #include "quiver/blob/blob.h"
 #include "quiver/blob/dimension.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <format>
@@ -156,7 +157,12 @@ BlobCSV::CSVRow BlobCSV::read_line() {
         if (row.dimension_values.size() < n_dim_fields) {
             row.dimension_values.push_back(std::move(field));
         } else {
-            row.data.push_back(std::stod(field));
+            // Convert data value to double, treating "null" as NaN.
+            if (field == "null") {
+                row.data.push_back(std::numeric_limits<double>::quiet_NaN());
+            } else {
+                row.data.push_back(std::stod(field));
+            }
         }
 
         // Advance past the comma. If there was no comma, jump past end-of-line to exit the loop.
@@ -173,12 +179,16 @@ std::string BlobCSV::build_line(const std::vector<double>& data, const std::vect
     const auto& dimensions = get_metadata().dimensions;
     std::vector<std::string> elements;
 
-    if (impl_->aggregate_time_dimensions) {
+    bool aggregate_time =
+        impl_->aggregate_time_dimensions &&
+        std::any_of(dimensions.begin(), dimensions.end(), [](const auto& d) { return d.is_time_dimension(); });
+
+    if (aggregate_time) {
         elements.push_back(build_datetime_string_from_time_dimension_values(current_dimensions));
     }
 
     for (size_t i = 0; i < dimensions.size(); ++i) {
-        if (impl_->aggregate_time_dimensions && dimensions[i].is_time_dimension())
+        if (aggregate_time && dimensions[i].is_time_dimension())
             continue;
         elements.push_back(std::to_string(current_dimensions[i]));
     }
@@ -228,7 +238,11 @@ void BlobCSV::write_header() {
 
     std::vector<std::string> header;
 
-    if (impl_->aggregate_time_dimensions) {
+    bool aggregate_time =
+        impl_->aggregate_time_dimensions &&
+        std::any_of(dimensions.begin(), dimensions.end(), [](const auto& d) { return d.is_time_dimension(); });
+
+    if (aggregate_time) {
         bool has_hourly = false;
         for (const auto& d : dimensions) {
             if (d.is_time_dimension() && d.time->frequency == TimeFrequency::Hourly) {
@@ -244,7 +258,7 @@ void BlobCSV::write_header() {
     }
 
     for (const auto& dim : dimensions) {
-        if (impl_->aggregate_time_dimensions && dim.is_time_dimension())
+        if (aggregate_time && dim.is_time_dimension())
             continue;
         header.push_back(dim.name);
     }
@@ -267,7 +281,11 @@ std::vector<std::string> BlobCSV::expected_dimension_names() const {
     const auto& dimensions = metadata.dimensions;
 
     std::vector<std::string> names;
-    if (impl_->aggregate_time_dimensions) {
+    bool aggregate_time =
+        impl_->aggregate_time_dimensions &&
+        std::any_of(dimensions.begin(), dimensions.end(), [](const auto& d) { return d.is_time_dimension(); });
+
+    if (aggregate_time) {
         bool has_hourly = false;
         for (const auto& dim : dimensions) {
             if (dim.is_time_dimension() && dim.time->frequency == TimeFrequency::Hourly) {
@@ -351,8 +369,12 @@ void BlobCSV::validate_dimensions(const std::vector<std::string>& csv_dimension_
     std::vector<std::string> expected_names = expected_dimension_names();
     std::vector<std::string> expected_values;
 
+    bool aggregate_time =
+        impl_->aggregate_time_dimensions &&
+        std::any_of(dimensions.begin(), dimensions.end(), [](const auto& d) { return d.is_time_dimension(); });
+
     // Build expected values
-    if (impl_->aggregate_time_dimensions) {
+    if (aggregate_time) {
         // First expected value is the aggregated datetime string.
         expected_values.push_back(build_datetime_string_from_time_dimension_values(current_bin_dimension_values));
         // Remaining expected values are the non-time dimension integers.
