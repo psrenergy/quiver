@@ -1,8 +1,8 @@
 #ifndef QUIVER_BLOB_CSV_H
 #define QUIVER_BLOB_CSV_H
 
-#include "blob.h"
 #include "../export.h"
+#include "blob.h"
 
 #include <cstdint>
 #include <ctime>

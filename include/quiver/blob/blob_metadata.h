@@ -1,8 +1,8 @@
 #ifndef QUIVER_BLOB_METADATA_H
 #define QUIVER_BLOB_METADATA_H
 
-#include "dimension.h"
 #include "../export.h"
+#include "dimension.h"
 
 #include <chrono>
 #include <cstdint>

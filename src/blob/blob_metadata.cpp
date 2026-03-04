@@ -160,7 +160,8 @@ BlobMetadata BlobMetadata::from_toml(const std::string& toml_content) {
     // Validate time_dimensions are a subset of dimensions
     for (const auto& td : time_dimensions) {
         if (std::find(dimensions.begin(), dimensions.end(), td) == dimensions.end()) {
-            throw std::runtime_error("Error building metadata from toml: time dimension '" + td + "' is not in dimensions");
+            throw std::runtime_error("Error building metadata from toml: time dimension '" + td +
+                                     "' is not in dimensions");
         }
     }
 
@@ -169,7 +170,8 @@ BlobMetadata BlobMetadata::from_toml(const std::string& toml_content) {
     for (const auto& td : time_dimensions) {
         auto it = std::find(dimensions.begin() + last_pos, dimensions.end(), td);
         if (it == dimensions.end()) {
-            throw std::runtime_error("Error building metadata from toml: time dimensions must appear in the same order as dimensions");
+            throw std::runtime_error(
+                "Error building metadata from toml: time dimensions must appear in the same order as dimensions");
         }
         last_pos = static_cast<size_t>(std::distance(dimensions.begin(), it)) + 1;
     }

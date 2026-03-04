@@ -1,8 +1,8 @@
 #ifndef QUIVER_BLOB_H
 #define QUIVER_BLOB_H
 
-#include "blob_metadata.h"
 #include "../export.h"
+#include "blob_metadata.h"
 
 #include <cstdint>
 #include <iostream>

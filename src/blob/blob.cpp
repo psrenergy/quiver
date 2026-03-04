@@ -83,7 +83,8 @@ std::vector<double> Blob::read(const std::unordered_map<std::string, int64_t>& d
             if (std::isnan(data[i])) {
                 std::string dim_str;
                 for (const auto& [name, value] : dims) {
-                    if (!dim_str.empty()) dim_str += ", ";
+                    if (!dim_str.empty())
+                        dim_str += ", ";
                     dim_str += name + "=" + std::to_string(value);
                 }
                 throw std::runtime_error("Cannot read: data at {" + dim_str + "} contains null values");
@@ -126,8 +127,12 @@ void Blob::go_to_position(int64_t position, char mode) {
     }
     validate_file_is_open();
     switch (mode) {
-    case 'r': impl_->io->seekg(position); break;
-    case 'w': impl_->io->seekp(position); break;
+    case 'r':
+        impl_->io->seekg(position);
+        break;
+    case 'w':
+        impl_->io->seekp(position);
+        break;
     default:
         throw std::invalid_argument("Invalid seek mode: " + std::string(1, mode) +
                                     ". Use 'r' for read or 'w' for write.");
