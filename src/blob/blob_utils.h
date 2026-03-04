@@ -23,7 +23,7 @@ inline int64_t day_of_year(chrono::system_clock::time_point datetime) {
 }
 
 inline int64_t day_of_week(chrono::system_clock::time_point datetime) {
-    int day_of_year = quiver::day_of_year(datetime);
+    int64_t day_of_year = quiver::day_of_year(datetime);
     return (day_of_year - 1) % quiver::time::MAX_DAYS_IN_WEEK + 1;  // 1-7 instead of 0-6
 }
 

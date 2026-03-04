@@ -48,10 +48,6 @@ private:
     build_datetime_string_from_time_dimension_values(const std::vector<int64_t>& time_dimension_values) const;
     void write_header();
 
-    // Iterators
-    std::vector<int64_t> next_dimensions(const std::vector<int64_t>& current_dimensions);
-    std::vector<int64_t> dimension_sizes_at_values(const std::vector<int64_t>& dimension_values) const;
-
     // CSV Readers
     CSVRow read_line();
 

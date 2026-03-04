@@ -3,9 +3,9 @@
 #include "blob_utils.h"
 #include "quiver/blob/blob.h"
 #include "quiver/blob/dimension.h"
-#include "quiver/blob/time_constants.h"
 
 #include <chrono>
+#include <cmath>
 #include <format>
 #include <fstream>
 #include <sstream>
@@ -122,7 +122,7 @@ void BlobCSV::bin_to_csv(const std::string& file_path, bool aggregate_time_dimen
             dims[dimensions[j].name] = current_dimensions[j];
         }
 
-        std::vector<double> data = bin_reader.read(dims);
+        std::vector<double> data = bin_reader.read(dims, true);
         csv_writer.get_io() << csv_writer.build_line(data, current_dimensions);
 
         current_dimensions = csv_writer.next_dimensions(current_dimensions);
@@ -184,7 +184,11 @@ std::string BlobCSV::build_line(const std::vector<double>& data, const std::vect
     }
 
     for (double v : data) {
-        elements.push_back(std::format("{:.6g}", v));
+        if (std::isnan(v)) {
+            elements.push_back("null");
+        } else {
+            elements.push_back(std::format("{:.6g}", v));
+        }
     }
 
     std::ostringstream oss;
@@ -256,111 +260,6 @@ void BlobCSV::write_header() {
         io << header[i];
     }
     io << '\n';
-}
-
-std::vector<int64_t> BlobCSV::next_dimensions(const std::vector<int64_t>& current_dimensions) {
-    const auto& dimensions = get_metadata().dimensions;
-    const auto& current_sizes = dimension_sizes_at_values(current_dimensions);
-
-    std::vector<int64_t> next = current_dimensions;
-
-    for (int i = static_cast<int>(next.size()) - 1; i >= 0; --i) {
-        if (next[i] < current_sizes[i]) {
-            next[i] += 1;
-            break;
-        } else {
-            next[i] = 1;
-        }
-    }
-
-    // Adjust time dimensions which were reset to 1 before their parent dimension is incremented.
-    // Ex: [month, scenario, day] when initial date is 2025-01-02
-    // [1, 1, 31] -> [1, 2, 1] is incorrect, should be [1, 2, 2]
-    for (size_t i = 0; i < next.size(); ++i) {
-        const auto& dim = dimensions[i];
-        if (!dim.is_time_dimension())
-            continue;
-        int64_t initial_value = dim.time->initial_value;
-        int64_t parent_idx = dim.time->parent_dimension_index;  // -1 = no parent
-        if (next[i] < initial_value && parent_idx != -1 &&
-            next[parent_idx] == dimensions[parent_idx].time->initial_value) {
-            next[i] = initial_value;
-        }
-    }
-
-    return next;
-}
-
-std::vector<int64_t> BlobCSV::dimension_sizes_at_values(const std::vector<int64_t>& dimension_values) const {
-    using namespace quiver::time;
-    const auto& metadata = get_metadata();
-    const auto& dimensions = metadata.dimensions;
-
-    std::vector<int64_t> sizes;
-    sizes.reserve(dimensions.size());
-    for (const auto& dim : dimensions) {
-        sizes.push_back(dim.size);
-    }
-
-    auto datetime = metadata.initial_datetime;
-    for (size_t i = 0; i < dimensions.size(); ++i) {
-        if (!dimensions[i].is_time_dimension())
-            continue;
-        datetime = dimensions[i].time->add_offset_from_int(datetime, dimension_values[i]);
-    }
-    const auto date = std::chrono::floor<std::chrono::days>(datetime);
-    const auto ymd = std::chrono::year_month_day{date};
-
-    for (size_t i = 0; i < dimensions.size(); ++i) {
-        const auto& dim = dimensions[i];
-        if (!dim.is_time_dimension() || dim.time->parent_dimension_index == -1)
-            continue;
-
-        const auto& parent = dimensions[dim.time->parent_dimension_index];
-        TimeFrequency freq = dim.time->frequency;
-        TimeFrequency parent_freq = parent.time->frequency;
-
-        // Yearly and weekly frequencies must always be at index 1, so they are not considered in this loop
-        switch (freq) {
-        case TimeFrequency::Hourly:
-            switch (parent_freq) {
-            case TimeFrequency::Daily:
-                break;  // Number of hours in a day is always the same
-            case TimeFrequency::Weekly:
-                break;  // Number of hours in a week is always the same
-            case TimeFrequency::Monthly:
-                sizes[i] =
-                    static_cast<unsigned>((ymd.year() / ymd.month() / std::chrono::last).day()) * MAX_HOURS_IN_DAY;
-                break;
-            case TimeFrequency::Yearly:
-                sizes[i] = (ymd.year().is_leap() ? 366 : 365) * MAX_HOURS_IN_DAY;
-                break;
-            default:
-                break;
-            }
-            break;
-        case TimeFrequency::Daily:
-            switch (parent_freq) {
-            case TimeFrequency::Weekly:
-                break;  // Number of days in a week is always the same
-            case TimeFrequency::Monthly:
-                sizes[i] = static_cast<unsigned>((ymd.year() / ymd.month() / std::chrono::last).day());
-                break;
-            case TimeFrequency::Yearly:
-                sizes[i] = ymd.year().is_leap() ? 366 : 365;
-                break;
-            default:
-                break;
-            }
-            break;
-        case TimeFrequency::Monthly:
-            break;  // Number of months in a year is always the same
-        default:
-            break;
-        }
-    }
-
-    return sizes;
 }
 
 std::vector<std::string> BlobCSV::expected_dimension_names() const {

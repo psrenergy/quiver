@@ -31,7 +31,7 @@ public:
     static Blob open_file(const std::string& file_path, char mode, const std::optional<BlobMetadata>& metadata = {});
 
     // Data handling
-    std::vector<double> read(const std::unordered_map<std::string, int64_t>& dims);
+    std::vector<double> read(const std::unordered_map<std::string, int64_t>& dims, bool allow_nulls = false);
     void write(const std::vector<double>& data, const std::unordered_map<std::string, int64_t>& dims);
 
     // Getters
@@ -44,7 +44,8 @@ private:
 
     // File traversal
     int64_t calculate_file_position(const std::unordered_map<std::string, int64_t>& dims) const;
-    void go_to_position(int64_t position);
+    void go_to_position(int64_t position, char mode);
+    void fill_file_with_nulls();
 
     // Validations
     void validate_file_is_open() const;
@@ -53,6 +54,10 @@ private:
 
 protected:
     std::iostream& get_io();
+
+    // Dimension iteration
+    std::vector<int64_t> next_dimensions(const std::vector<int64_t>& current_dimensions);
+    std::vector<int64_t> dimension_sizes_at_values(const std::vector<int64_t>& dimension_values) const;
 };
 
 }  // namespace quiver
