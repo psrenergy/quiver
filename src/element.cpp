@@ -28,6 +28,11 @@ std::string value_to_string(const Value& value) {
 
 }  // namespace
 
+Element& Element::set(const std::string& name, const char* value) {
+    scalars_[name] = std::string(value);
+    return *this;
+}
+
 Element& Element::set(const std::string& name, int64_t value) {
     scalars_[name] = value;
     return *this;
@@ -59,6 +64,20 @@ Element& Element::set(const std::string& name, const std::vector<double>& values
 }
 
 Element& Element::set(const std::string& name, const std::vector<std::string>& values) {
+    arrays_[name] = std::vector<Value>(values.begin(), values.end());
+    return *this;
+}
+
+Element& Element::set(const std::string& name, std::initializer_list<const char*> values) {
+    std::vector<Value> vec;
+    vec.reserve(values.size());
+    for (const char* v : values)
+        vec.emplace_back(std::string(v));
+    arrays_[name] = std::move(vec);
+    return *this;
+}
+
+Element& Element::set(const std::string& name, std::initializer_list<int64_t> values) {
     arrays_[name] = std::vector<Value>(values.begin(), values.end());
     return *this;
 }

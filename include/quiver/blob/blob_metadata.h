@@ -1,6 +1,7 @@
 #ifndef QUIVER_BLOB_METADATA_H
 #define QUIVER_BLOB_METADATA_H
 
+#include "../element.h"
 #include "../export.h"
 #include "dimension.h"
 
@@ -22,6 +23,9 @@ struct QUIVER_API BlobMetadata {
 
     BlobMetadata();
     ~BlobMetadata();
+
+    // Create metadata from Element
+    static BlobMetadata from_element(const Element& element);
 
     // TOML Serialization
     static BlobMetadata from_toml(const std::string& toml_content);

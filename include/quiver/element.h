@@ -15,6 +15,7 @@ public:
     Element() = default;
 
     // Scalars
+    Element& set(const std::string& name, const char* value);
     Element& set(const std::string& name, int64_t value);
     Element& set(const std::string& name, double value);
     Element& set(const std::string& name, const std::string& value);
@@ -24,6 +25,8 @@ public:
     Element& set(const std::string& name, const std::vector<int64_t>& values);
     Element& set(const std::string& name, const std::vector<double>& values);
     Element& set(const std::string& name, const std::vector<std::string>& values);
+    Element& set(const std::string& name, std::initializer_list<const char*> values);
+    Element& set(const std::string& name, std::initializer_list<int64_t> values);
 
     // Accessors
     const std::map<std::string, Value>& scalars() const;

@@ -103,6 +103,108 @@ namespace quiver {
 BlobMetadata::BlobMetadata() = default;
 BlobMetadata::~BlobMetadata() = default;
 
+BlobMetadata BlobMetadata::from_element(const Element& element) {
+    const auto& scalars = element.scalars();
+    const auto& arrays = element.arrays();
+
+    // Helper: Extract scalar fields
+    auto get_string = [&](const std::string& name) -> std::string {
+        auto it = scalars.find(name);
+        if (it == scalars.end()) {
+            throw std::runtime_error("Cannot from_element: missing scalar '" + name + "'");
+        }
+        if (!std::holds_alternative<std::string>(it->second)) {
+            throw std::runtime_error("Cannot from_element: scalar '" + name + "' must be a string");
+        }
+        return std::get<std::string>(it->second);
+    };
+
+    // Helper: Extract array fields as strings
+    auto get_string_array = [&](const std::string& name) -> std::vector<std::string> {
+        auto it = arrays.find(name);
+        if (it == arrays.end()) {
+            throw std::runtime_error("Cannot from_element: missing array '" + name + "'");
+        }
+        std::vector<std::string> result;
+        for (const auto& v : it->second) {
+            if (!std::holds_alternative<std::string>(v)) {
+                throw std::runtime_error("Cannot from_element: array '" + name + "' must contain strings");
+            }
+            result.push_back(std::get<std::string>(v));
+        }
+        return result;
+    };
+
+    // Helper: Extract array fields as int64_t
+    auto get_int_array = [&](const std::string& name) -> std::vector<int64_t> {
+        auto it = arrays.find(name);
+        if (it == arrays.end()) {
+            throw std::runtime_error("Cannot from_element: missing array '" + name + "'");
+        }
+        std::vector<int64_t> result;
+        for (const auto& v : it->second) {
+            if (!std::holds_alternative<int64_t>(v)) {
+                throw std::runtime_error("Cannot from_element: array '" + name + "' must contain integers");
+            }
+            result.push_back(std::get<int64_t>(v));
+        }
+        return result;
+    };
+
+    // Helper: Optional array (returns empty if missing)
+    auto get_string_array_opt = [&](const std::string& name) -> std::vector<std::string> {
+        auto it = arrays.find(name);
+        if (it == arrays.end()) {
+            return {};
+        }
+        std::vector<std::string> result;
+        for (const auto& v : it->second) {
+            if (!std::holds_alternative<std::string>(v)) {
+                throw std::runtime_error("Cannot from_element: array '" + name + "' must contain strings");
+            }
+            result.push_back(std::get<std::string>(v));
+        }
+        return result;
+    };
+
+    std::vector<std::string> dimensions = get_string_array("dimensions");
+    std::vector<int64_t> dimension_sizes = get_int_array("dimension_sizes");
+    std::vector<std::string> time_dimensions = get_string_array_opt("time_dimensions");
+    std::vector<std::string> frequencies = get_string_array_opt("frequencies");
+    std::string initial_datetime_str = get_string("initial_datetime");
+    std::string unit = get_string("unit");
+    std::vector<std::string> labels = get_string_array("labels");
+    std::string version = get_string("version");
+
+    // Build TOML and delegate
+    toml::array dim_arr, size_arr, time_dim_arr, freq_arr, label_arr;
+    for (const auto& d : dimensions)
+        dim_arr.push_back(d);
+    for (auto s : dimension_sizes)
+        size_arr.push_back(s);
+    for (const auto& td : time_dimensions)
+        time_dim_arr.push_back(td);
+    for (const auto& f : frequencies)
+        freq_arr.push_back(f);
+    for (const auto& l : labels)
+        label_arr.push_back(l);
+
+    toml::table tbl{
+        {"version", version},
+        {"dimensions", std::move(dim_arr)},
+        {"dimension_sizes", std::move(size_arr)},
+        {"time_dimensions", std::move(time_dim_arr)},
+        {"frequencies", std::move(freq_arr)},
+        {"initial_datetime", initial_datetime_str},
+        {"unit", unit},
+        {"labels", std::move(label_arr)},
+    };
+
+    std::ostringstream oss;
+    oss << tbl;
+    return from_toml(oss.str());
+}
+
 BlobMetadata BlobMetadata::from_toml(const std::string& toml_content) {
     // Parse toml content
     toml::table tbl = toml::parse(toml_content);

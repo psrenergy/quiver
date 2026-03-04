@@ -5,6 +5,7 @@
 #include "quiver/blob/time_constants.h"
 
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
