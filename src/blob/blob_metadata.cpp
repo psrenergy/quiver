@@ -4,6 +4,7 @@
 #include "quiver/blob/dimension.h"
 #include "quiver/blob/time_constants.h"
 #include "quiver/blob/time_properties.h"
+#include "utils/datetime.h"
 
 #include <algorithm>
 #include <format>
@@ -284,10 +285,11 @@ BlobMetadata BlobMetadata::from_toml(const std::string& toml_content) {
     metadata.labels = labels;
     metadata.version = version;
 
-    std::chrono::system_clock::time_point initial_datetime;
-    std::istringstream iss{initial_datetime_str};
-    iss >> std::chrono::parse("%Y-%m-%dT%H:%M:%S", initial_datetime);
-    metadata.initial_datetime = initial_datetime;
+    std::tm tm{};
+    if (!quiver::datetime::parse_iso8601(initial_datetime_str, tm)) {
+        throw std::runtime_error(std::format("Failed to parse initial_datetime: {}", initial_datetime_str));
+    }
+    metadata.initial_datetime = std::chrono::system_clock::from_time_t(std::mktime(&tm));
 
     // Add dimensions to metadata
     int64_t time_dim_index = 0;
@@ -310,7 +312,8 @@ BlobMetadata BlobMetadata::from_toml(const std::string& toml_content) {
     time_dim_index = 0;
 
     // Compute and set initial values for time dimensions
-    std::vector<int64_t> initial_values = compute_time_dimension_initial_values(metadata.dimensions, initial_datetime);
+    std::vector<int64_t> initial_values =
+        compute_time_dimension_initial_values(metadata.dimensions, metadata.initial_datetime);
     for (auto& dim : metadata.dimensions) {
         if (dim.is_time_dimension()) {
             dim.time->set_initial_value(initial_values[time_dim_index]);
