@@ -1,6 +1,9 @@
 #ifndef QUIVER_DATETIME_H
 #define QUIVER_DATETIME_H
 
+#include <cstring>
+#include <iomanip>
+#include <sstream>
 #include <string>
 
 namespace quiver::datetime {
