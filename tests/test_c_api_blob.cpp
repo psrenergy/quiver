@@ -1,8 +1,10 @@
 #include <cmath>
 #include <filesystem>
 #include <gtest/gtest.h>
+#include <limits>
 #include <quiver/c/blob/blob.h>
 #include <quiver/c/blob/blob_metadata.h>
+#include <quiver/c/common.h>
 #include <quiver/c/element.h>
 #include <string>
 
@@ -223,6 +225,208 @@ TEST_F(BlobCApiFixture, NullArgs) {
     EXPECT_EQ(quiver_blob_open_write(nullptr, nullptr, nullptr), QUIVER_ERROR);
     EXPECT_EQ(quiver_blob_close(nullptr), QUIVER_OK);
     EXPECT_EQ(quiver_blob_get_file_path(nullptr, nullptr), QUIVER_ERROR);
+    EXPECT_EQ(quiver_blob_get_metadata(nullptr, nullptr), QUIVER_ERROR);
+}
+
+TEST_F(BlobCApiFixture, NullArgsErrorMessages) {
+    EXPECT_EQ(quiver_blob_open_read(nullptr, nullptr), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Null argument: path");
+
+    EXPECT_EQ(quiver_blob_open_write(nullptr, nullptr, nullptr), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Null argument: path");
+
+    EXPECT_EQ(quiver_blob_get_file_path(nullptr, nullptr), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Null argument: blob");
+
+    EXPECT_EQ(quiver_blob_get_metadata(nullptr, nullptr), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Null argument: blob");
+}
+
+TEST_F(BlobCApiFixture, OpenReadNullOut) {
+    EXPECT_EQ(quiver_blob_open_read("some_path", nullptr), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Null argument: out");
+}
+
+TEST_F(BlobCApiFixture, OpenWriteNullMetadata) {
+    quiver_blob_t* blob = nullptr;
+    EXPECT_EQ(quiver_blob_open_write(path.c_str(), nullptr, &blob), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Null argument: md");
+}
+
+TEST_F(BlobCApiFixture, OpenWriteNullOut) {
+    auto* md = make_simple_metadata();
+    EXPECT_EQ(quiver_blob_open_write(path.c_str(), md, nullptr), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Null argument: out");
+    quiver_blob_metadata_destroy(md);
+}
+
+TEST_F(BlobCApiFixture, ReadNullBlob) {
+    double* out_data = nullptr;
+    size_t out_count = 0;
+    EXPECT_EQ(quiver_blob_read(nullptr, nullptr, nullptr, 0, 0, &out_data, &out_count), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Null argument: blob");
+}
+
+TEST_F(BlobCApiFixture, ReadNullOutParams) {
+    auto* md = make_simple_metadata();
+    quiver_blob_t* blob = nullptr;
+    ASSERT_EQ(quiver_blob_open_write(path.c_str(), md, &blob), QUIVER_OK);
+    quiver_blob_close(blob);
+    quiver_blob_metadata_destroy(md);
+
+    ASSERT_EQ(quiver_blob_open_read(path.c_str(), &blob), QUIVER_OK);
+
+    const char* dim_names[] = {"row", "col"};
+    int64_t dim_values[] = {1, 1};
+
+    EXPECT_EQ(quiver_blob_read(blob, dim_names, dim_values, 2, 0, nullptr, nullptr), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Null argument: out_data");
+
+    quiver_blob_close(blob);
+}
+
+TEST_F(BlobCApiFixture, WriteNullBlob) {
+    const char* dim_names[] = {"row", "col"};
+    int64_t dim_values[] = {1, 1};
+    double data[] = {1.0};
+    EXPECT_EQ(quiver_blob_write(nullptr, dim_names, dim_values, 2, data, 1), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Null argument: blob");
+}
+
+TEST_F(BlobCApiFixture, WriteNullData) {
+    auto* md = make_simple_metadata();
+    quiver_blob_t* blob = nullptr;
+    ASSERT_EQ(quiver_blob_open_write(path.c_str(), md, &blob), QUIVER_OK);
+
+    const char* dim_names[] = {"row", "col"};
+    int64_t dim_values[] = {1, 1};
+    EXPECT_EQ(quiver_blob_write(blob, dim_names, dim_values, 2, nullptr, 2), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Null argument: data");
+
+    quiver_blob_close(blob);
+    quiver_blob_metadata_destroy(md);
+}
+
+TEST_F(BlobCApiFixture, OpenReadNonExistentErrorMessage) {
+    quiver_blob_t* blob = nullptr;
+    EXPECT_EQ(quiver_blob_open_read("nonexistent_path", &blob), QUIVER_ERROR);
+    std::string err = quiver_get_last_error();
+    EXPECT_FALSE(err.empty());
+}
+
+// ============================================================================
+// Edge-case values
+// ============================================================================
+
+TEST_F(BlobCApiFixture, WriteReadSpecialFloatValues) {
+    auto* md = make_simple_metadata();
+
+    {
+        quiver_blob_t* blob = nullptr;
+        ASSERT_EQ(quiver_blob_open_write(path.c_str(), md, &blob), QUIVER_OK);
+
+        const char* dim_names[] = {"row", "col"};
+        int64_t dim_values[] = {1, 1};
+        double data[] = {std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()};
+        EXPECT_EQ(quiver_blob_write(blob, dim_names, dim_values, 2, data, 2), QUIVER_OK);
+
+        quiver_blob_close(blob);
+    }
+    quiver_blob_metadata_destroy(md);
+
+    {
+        quiver_blob_t* blob = nullptr;
+        ASSERT_EQ(quiver_blob_open_read(path.c_str(), &blob), QUIVER_OK);
+
+        const char* dim_names[] = {"row", "col"};
+        int64_t dim_values[] = {1, 1};
+        double* out_data = nullptr;
+        size_t out_count = 0;
+        EXPECT_EQ(quiver_blob_read(blob, dim_names, dim_values, 2, 0, &out_data, &out_count), QUIVER_OK);
+        ASSERT_EQ(out_count, 2u);
+        EXPECT_TRUE(std::isinf(out_data[0]) && out_data[0] > 0);
+        EXPECT_TRUE(std::isinf(out_data[1]) && out_data[1] < 0);
+
+        quiver_blob_free_float_array(out_data);
+        quiver_blob_close(blob);
+    }
+}
+
+TEST_F(BlobCApiFixture, WriteReadLargeSmallValues) {
+    auto* md = make_simple_metadata();
+
+    {
+        quiver_blob_t* blob = nullptr;
+        ASSERT_EQ(quiver_blob_open_write(path.c_str(), md, &blob), QUIVER_OK);
+
+        const char* dim_names[] = {"row", "col"};
+        int64_t dim_values[] = {1, 1};
+        double data[] = {std::numeric_limits<double>::max(), std::numeric_limits<double>::min()};
+        EXPECT_EQ(quiver_blob_write(blob, dim_names, dim_values, 2, data, 2), QUIVER_OK);
+
+        quiver_blob_close(blob);
+    }
+    quiver_blob_metadata_destroy(md);
+
+    {
+        quiver_blob_t* blob = nullptr;
+        ASSERT_EQ(quiver_blob_open_read(path.c_str(), &blob), QUIVER_OK);
+
+        const char* dim_names[] = {"row", "col"};
+        int64_t dim_values[] = {1, 1};
+        double* out_data = nullptr;
+        size_t out_count = 0;
+        EXPECT_EQ(quiver_blob_read(blob, dim_names, dim_values, 2, 0, &out_data, &out_count), QUIVER_OK);
+        ASSERT_EQ(out_count, 2u);
+        EXPECT_DOUBLE_EQ(out_data[0], std::numeric_limits<double>::max());
+        EXPECT_DOUBLE_EQ(out_data[1], std::numeric_limits<double>::min());
+
+        quiver_blob_free_float_array(out_data);
+        quiver_blob_close(blob);
+    }
+}
+
+// ============================================================================
+// Free function validation
+// ============================================================================
+
+TEST_F(BlobCApiFixture, FreeFloatArrayNull) {
+    EXPECT_EQ(quiver_blob_free_float_array(nullptr), QUIVER_OK);
+}
+
+// ============================================================================
+// Dimension mismatch errors
+// ============================================================================
+
+TEST_F(BlobCApiFixture, ReadUnwrittenPositionFails) {
+    auto* md = make_simple_metadata();
+    {
+        quiver_blob_t* blob = nullptr;
+        ASSERT_EQ(quiver_blob_open_write(path.c_str(), md, &blob), QUIVER_OK);
+
+        const char* dim_names[] = {"row", "col"};
+        int64_t dim_values[] = {1, 1};
+        double data[] = {1.0, 2.0};
+        quiver_blob_write(blob, dim_names, dim_values, 2, data, 2);
+        quiver_blob_close(blob);
+    }
+    quiver_blob_metadata_destroy(md);
+
+    {
+        quiver_blob_t* blob = nullptr;
+        ASSERT_EQ(quiver_blob_open_read(path.c_str(), &blob), QUIVER_OK);
+
+        // Position (2,1) was never written
+        const char* dim_names[] = {"row", "col"};
+        int64_t dim_values[] = {2, 1};
+        double* out_data = nullptr;
+        size_t out_count = 0;
+        EXPECT_EQ(quiver_blob_read(blob, dim_names, dim_values, 2, 0, &out_data, &out_count), QUIVER_ERROR);
+        std::string err = quiver_get_last_error();
+        EXPECT_NE(err.find("null values"), std::string::npos);
+
+        quiver_blob_close(blob);
+    }
 }
 
 TEST_F(BlobCApiFixture, ReadAllowNulls) {

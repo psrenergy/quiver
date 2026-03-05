@@ -1,9 +1,11 @@
 #include <cmath>
 #include <filesystem>
+#include <fstream>
 #include <gtest/gtest.h>
 #include <quiver/c/blob/blob.h>
 #include <quiver/c/blob/blob_csv.h>
 #include <quiver/c/blob/blob_metadata.h>
+#include <quiver/c/common.h>
 #include <quiver/c/element.h>
 #include <string>
 
@@ -142,10 +144,137 @@ TEST_F(BlobCApiCSVFixture, RoundTrip) {
 }
 
 // ============================================================================
+// Aggregate parameter
+// ============================================================================
+
+TEST_F(BlobCApiCSVFixture, BinToCsvNoAggregate) {
+    auto* md = make_simple_metadata();
+    {
+        quiver_blob_t* blob = nullptr;
+        quiver_blob_open_write(path.c_str(), md, &blob);
+
+        const char* dim_names[] = {"row", "col"};
+        for (int64_t r = 1; r <= 3; ++r) {
+            for (int64_t c = 1; c <= 2; ++c) {
+                int64_t dim_values[] = {r, c};
+                double data[] = {static_cast<double>(r * 10 + c), static_cast<double>(r * 10 + c + 100)};
+                quiver_blob_write(blob, dim_names, dim_values, 2, data, 2);
+            }
+        }
+        quiver_blob_close(blob);
+    }
+    quiver_blob_metadata_destroy(md);
+
+    EXPECT_EQ(quiver_blob_csv_bin_to_csv(path.c_str(), 0), QUIVER_OK);
+    EXPECT_TRUE(fs::exists(path + ".csv"));
+}
+
+TEST_F(BlobCApiCSVFixture, BinToCsvAggregate) {
+    auto* md = make_simple_metadata();
+    {
+        quiver_blob_t* blob = nullptr;
+        quiver_blob_open_write(path.c_str(), md, &blob);
+
+        const char* dim_names[] = {"row", "col"};
+        for (int64_t r = 1; r <= 3; ++r) {
+            for (int64_t c = 1; c <= 2; ++c) {
+                int64_t dim_values[] = {r, c};
+                double data[] = {static_cast<double>(r * 10 + c), static_cast<double>(r * 10 + c + 100)};
+                quiver_blob_write(blob, dim_names, dim_values, 2, data, 2);
+            }
+        }
+        quiver_blob_close(blob);
+    }
+    quiver_blob_metadata_destroy(md);
+
+    EXPECT_EQ(quiver_blob_csv_bin_to_csv(path.c_str(), 1), QUIVER_OK);
+    EXPECT_TRUE(fs::exists(path + ".csv"));
+}
+
+// ============================================================================
+// CSV round-trip with all positions written
+// ============================================================================
+
+TEST_F(BlobCApiCSVFixture, RoundTripAllPositions) {
+    auto* md = make_simple_metadata();
+
+    // Write all 3x2 positions
+    {
+        quiver_blob_t* blob = nullptr;
+        quiver_blob_open_write(path.c_str(), md, &blob);
+
+        const char* dim_names[] = {"row", "col"};
+        for (int64_t r = 1; r <= 3; ++r) {
+            for (int64_t c = 1; c <= 2; ++c) {
+                int64_t dim_values[] = {r, c};
+                double data[] = {r * 100.0 + c, r * 100.0 + c + 0.5};
+                quiver_blob_write(blob, dim_names, dim_values, 2, data, 2);
+            }
+        }
+        quiver_blob_close(blob);
+    }
+    quiver_blob_metadata_destroy(md);
+
+    ASSERT_EQ(quiver_blob_csv_bin_to_csv(path.c_str(), 0), QUIVER_OK);
+    fs::remove(path + ".qvr");
+    ASSERT_EQ(quiver_blob_csv_csv_to_bin(path.c_str()), QUIVER_OK);
+
+    // Verify all positions
+    {
+        quiver_blob_t* blob = nullptr;
+        ASSERT_EQ(quiver_blob_open_read(path.c_str(), &blob), QUIVER_OK);
+
+        const char* dim_names[] = {"row", "col"};
+        for (int64_t r = 1; r <= 3; ++r) {
+            for (int64_t c = 1; c <= 2; ++c) {
+                int64_t dim_values[] = {r, c};
+                double* out_data = nullptr;
+                size_t out_count = 0;
+                EXPECT_EQ(quiver_blob_read(blob, dim_names, dim_values, 2, 0, &out_data, &out_count), QUIVER_OK);
+                ASSERT_EQ(out_count, 2u);
+                EXPECT_DOUBLE_EQ(out_data[0], r * 100.0 + c);
+                EXPECT_DOUBLE_EQ(out_data[1], r * 100.0 + c + 0.5);
+                quiver_blob_free_float_array(out_data);
+            }
+        }
+        quiver_blob_close(blob);
+    }
+}
+
+// ============================================================================
 // Error cases
 // ============================================================================
 
 TEST_F(BlobCApiCSVFixture, NullPath) {
     EXPECT_EQ(quiver_blob_csv_bin_to_csv(nullptr, 1), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Null argument: path");
+
     EXPECT_EQ(quiver_blob_csv_csv_to_bin(nullptr), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Null argument: path");
+}
+
+TEST_F(BlobCApiCSVFixture, BinToCsvNonExistentFile) {
+    EXPECT_EQ(quiver_blob_csv_bin_to_csv("nonexistent_path", 0), QUIVER_ERROR);
+    std::string err = quiver_get_last_error();
+    EXPECT_FALSE(err.empty());
+}
+
+TEST_F(BlobCApiCSVFixture, CsvToBinNonExistentFile) {
+    EXPECT_EQ(quiver_blob_csv_csv_to_bin("nonexistent_path"), QUIVER_ERROR);
+    std::string err = quiver_get_last_error();
+    EXPECT_FALSE(err.empty());
+}
+
+TEST_F(BlobCApiCSVFixture, CsvToBinMissingToml) {
+    // Create a CSV file but no TOML sidecar
+    {
+        std::ofstream csv(path + ".csv");
+        csv << "row,col,val1,val2\n1,1,1.0,2.0\n";
+    }
+
+    EXPECT_EQ(quiver_blob_csv_csv_to_bin(path.c_str()), QUIVER_ERROR);
+    std::string err = quiver_get_last_error();
+    EXPECT_FALSE(err.empty());
+
+    fs::remove(path + ".csv");
 }
