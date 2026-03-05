@@ -24,7 +24,8 @@ end
                 initial_datetime = "2025-01-01T00:00:00",
                 unit = "MW",
                 labels = ["val1", "val2"],
-                dimensions = ["row" => Int64(3), "col" => Int64(2)],
+                dimensions = ["row", "col"],
+                dimension_sizes = Int64[3, 2],
             )
 
             blob = Quiver.open_file(path; mode = :write, metadata = md)
@@ -44,7 +45,8 @@ end
                 initial_datetime = "2025-01-01T00:00:00",
                 unit = "MW",
                 labels = ["val1", "val2"],
-                dimensions = ["row" => Int64(3), "col" => Int64(2)],
+                dimensions = ["row", "col"],
+                dimension_sizes = Int64[3, 2],
             )
 
             blob = Quiver.open_file(path; mode = :write, metadata = md)

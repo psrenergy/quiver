@@ -12,7 +12,8 @@ include("fixture.jl")
             unit = "MW",
             version = "1",
             labels = ["val1", "val2"],
-            dimensions = ["row" => Int64(3), "col" => Int64(2)],
+            dimensions = ["row", "col"],
+            dimension_sizes = Int64[3, 2],
         )
 
         @test Quiver.get_unit(md) == "MW"
@@ -28,11 +29,41 @@ include("fixture.jl")
         @test dims[2].size == 2
     end
 
+    @testset "Builder constructor with time dimensions" begin
+        md = Quiver.BlobMetadata(;
+            initial_datetime = "2025-01-01T00:00:00",
+            unit = "MW",
+            version = "1",
+            labels = ["plant_1", "plant_2", "plant_3"],
+            dimensions = ["stage", "block"],
+            dimension_sizes = Int64[4, 31],
+            time_dimensions = ["stage", "block"],
+            frequencies = ["monthly", "daily"],
+        )
+
+        @test Quiver.get_unit(md) == "MW"
+        @test Quiver.get_labels(md) == ["plant_1", "plant_2", "plant_3"]
+        @test Quiver.get_number_of_time_dimensions(md) == 2
+
+        dims = Quiver.get_dimensions(md)
+        @test length(dims) == 2
+        @test dims[1].name == "stage"
+        @test dims[1].size == 4
+        @test dims[1].is_time_dimension == true
+        @test dims[1].frequency == "monthly"
+        @test dims[2].name == "block"
+        @test dims[2].size == 31
+        @test dims[2].is_time_dimension == true
+        @test dims[2].frequency == "daily"
+    end
+
     @testset "Get initial datetime" begin
         md = Quiver.BlobMetadata(;
             initial_datetime = "2025-01-01T00:00:00",
             unit = "MW",
-            dimensions = ["row" => Int64(3)],
+            labels = ["val1"],
+            dimensions = ["row"],
+            dimension_sizes = Int64[3],
         )
 
         dt = Quiver.get_initial_datetime(md)

@@ -30,36 +30,21 @@ function BlobMetadata(;
     unit::String = "",
     version::String = "1",
     labels::Vector{String} = String[],
-    dimensions::Vector{Pair{String, Int64}} = Pair{String, Int64}[],
-    time_dimensions::Vector{Tuple{String, Int64, String}} = Tuple{String, Int64, String}[],
+    dimensions::Vector{String} = String[],
+    dimension_sizes::Vector{Int64} = Int64[],
+    time_dimensions::Vector{String} = String[],
+    frequencies::Vector{String} = String[],
 )
-    out_md = Ref{Ptr{C.quiver_blob_metadata}}(C_NULL)
-    check(C.quiver_blob_metadata_create(out_md))
-    md = BlobMetadata(out_md[])
-
-    if !isempty(version)
-        check(C.quiver_blob_metadata_set_version(md.ptr, version))
-    end
-    if !isempty(initial_datetime)
-        check(C.quiver_blob_metadata_set_initial_datetime(md.ptr, initial_datetime))
-    end
-    if !isempty(unit)
-        check(C.quiver_blob_metadata_set_unit(md.ptr, unit))
-    end
-    if !isempty(labels)
-        c_labels = [pointer(l) for l in labels]
-        GC.@preserve labels begin
-            check(C.quiver_blob_metadata_set_labels(md.ptr, c_labels, length(labels)))
-        end
-    end
-    for (name, size) in dimensions
-        check(C.quiver_blob_metadata_add_dimension(md.ptr, name, size))
-    end
-    for (name, size, frequency) in time_dimensions
-        check(C.quiver_blob_metadata_add_time_dimension(md.ptr, name, size, frequency))
-    end
-
-    return md
+    el = Element()
+    el["version"] = version
+    el["initial_datetime"] = initial_datetime
+    el["unit"] = unit
+    el["labels"] = labels
+    el["dimensions"] = dimensions
+    el["dimension_sizes"] = dimension_sizes
+    el["time_dimensions"] = time_dimensions
+    el["frequencies"] = frequencies
+    return from_element(el)
 end
 
 function from_toml(toml::AbstractString)
