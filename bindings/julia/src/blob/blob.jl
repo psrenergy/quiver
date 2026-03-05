@@ -40,11 +40,13 @@ function blob_read(blob::Blob, dims::Dict{String, Int64}; allow_nulls::Bool = fa
     out_count = Ref{Csize_t}(0)
 
     GC.@preserve dim_names_str begin
-        check(C.quiver_blob_read(
-            blob.ptr, c_dim_names, dim_values,
-            length(dims), allow_nulls ? Cint(1) : Cint(0),
-            out_data, out_count,
-        ))
+        check(
+            C.quiver_blob_read(
+                blob.ptr, c_dim_names, dim_values,
+                length(dims), allow_nulls ? Cint(1) : Cint(0),
+                out_data, out_count,
+            ),
+        )
     end
 
     count = out_count[]

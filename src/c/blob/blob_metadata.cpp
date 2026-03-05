@@ -1,6 +1,7 @@
+#include "quiver/c/blob/blob_metadata.h"
+
 #include "../database_helpers.h"
 #include "../internal.h"
-#include "quiver/c/blob/blob_metadata.h"
 #include "utils/datetime.h"
 
 #include <chrono>
@@ -107,8 +108,7 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_to_toml(quiver_blob_metadata_t*
 
 // Builders
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_set_initial_datetime(quiver_blob_metadata_t* md,
-                                                                       const char* iso8601) {
+QUIVER_C_API quiver_error_t quiver_blob_metadata_set_initial_datetime(quiver_blob_metadata_t* md, const char* iso8601) {
     QUIVER_REQUIRE(md, iso8601);
 
     try {
@@ -140,8 +140,8 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_set_version(quiver_blob_metadat
 }
 
 QUIVER_C_API quiver_error_t quiver_blob_metadata_set_labels(quiver_blob_metadata_t* md,
-                                                             const char* const* labels,
-                                                             size_t count) {
+                                                            const char* const* labels,
+                                                            size_t count) {
     QUIVER_REQUIRE(md, labels);
 
     md->metadata.labels.clear();
@@ -153,8 +153,8 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_set_labels(quiver_blob_metadata
 }
 
 QUIVER_C_API quiver_error_t quiver_blob_metadata_add_dimension(quiver_blob_metadata_t* md,
-                                                                const char* name,
-                                                                int64_t size) {
+                                                               const char* name,
+                                                               int64_t size) {
     QUIVER_REQUIRE(md, name);
 
     try {
@@ -167,9 +167,9 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_add_dimension(quiver_blob_metad
 }
 
 QUIVER_C_API quiver_error_t quiver_blob_metadata_add_time_dimension(quiver_blob_metadata_t* md,
-                                                                     const char* name,
-                                                                     int64_t size,
-                                                                     const char* frequency) {
+                                                                    const char* name,
+                                                                    int64_t size,
+                                                                    const char* frequency) {
     QUIVER_REQUIRE(md, name, frequency);
 
     try {
@@ -211,7 +211,7 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_get_initial_datetime(quiver_blo
 }
 
 QUIVER_C_API quiver_error_t quiver_blob_metadata_get_number_of_time_dimensions(quiver_blob_metadata_t* md,
-                                                                                int64_t* out) {
+                                                                               int64_t* out) {
     QUIVER_REQUIRE(md, out);
 
     *out = md->metadata.number_of_time_dimensions;
@@ -219,8 +219,8 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_get_number_of_time_dimensions(q
 }
 
 QUIVER_C_API quiver_error_t quiver_blob_metadata_get_labels(quiver_blob_metadata_t* md,
-                                                             char*** out,
-                                                             size_t* out_count) {
+                                                            char*** out,
+                                                            size_t* out_count) {
     QUIVER_REQUIRE(md, out, out_count);
 
     return copy_strings_to_c(md->metadata.labels, out, out_count);
@@ -234,8 +234,8 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_get_dimension_count(quiver_blob
 }
 
 QUIVER_C_API quiver_error_t quiver_blob_metadata_get_dimension(quiver_blob_metadata_t* md,
-                                                                size_t index,
-                                                                quiver_dimension_t* out) {
+                                                               size_t index,
+                                                               quiver_dimension_t* out) {
     QUIVER_REQUIRE(md, out);
 
     if (index >= md->metadata.dimensions.size()) {

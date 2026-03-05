@@ -1,5 +1,6 @@
-#include "../internal.h"
 #include "quiver/c/blob/blob_csv.h"
+
+#include "../internal.h"
 #include "quiver/blob/blob_csv.h"
 
 extern "C" {

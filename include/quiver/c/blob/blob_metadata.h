@@ -49,34 +49,31 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_from_element(quiver_element_t* 
 QUIVER_C_API quiver_error_t quiver_blob_metadata_to_toml(quiver_blob_metadata_t* md, char** out_toml);
 
 // Builders
-QUIVER_C_API quiver_error_t quiver_blob_metadata_set_initial_datetime(quiver_blob_metadata_t* md,
-                                                                       const char* iso8601);
+QUIVER_C_API quiver_error_t quiver_blob_metadata_set_initial_datetime(quiver_blob_metadata_t* md, const char* iso8601);
 QUIVER_C_API quiver_error_t quiver_blob_metadata_set_unit(quiver_blob_metadata_t* md, const char* unit);
 QUIVER_C_API quiver_error_t quiver_blob_metadata_set_version(quiver_blob_metadata_t* md, const char* version);
 QUIVER_C_API quiver_error_t quiver_blob_metadata_set_labels(quiver_blob_metadata_t* md,
-                                                             const char* const* labels,
-                                                             size_t count);
+                                                            const char* const* labels,
+                                                            size_t count);
 QUIVER_C_API quiver_error_t quiver_blob_metadata_add_dimension(quiver_blob_metadata_t* md,
-                                                                const char* name,
-                                                                int64_t size);
+                                                               const char* name,
+                                                               int64_t size);
 QUIVER_C_API quiver_error_t quiver_blob_metadata_add_time_dimension(quiver_blob_metadata_t* md,
-                                                                     const char* name,
-                                                                     int64_t size,
-                                                                     const char* frequency);
+                                                                    const char* name,
+                                                                    int64_t size,
+                                                                    const char* frequency);
 
 // Getters
 QUIVER_C_API quiver_error_t quiver_blob_metadata_get_unit(quiver_blob_metadata_t* md, const char** out);
 QUIVER_C_API quiver_error_t quiver_blob_metadata_get_version(quiver_blob_metadata_t* md, const char** out);
 QUIVER_C_API quiver_error_t quiver_blob_metadata_get_initial_datetime(quiver_blob_metadata_t* md, char** out);
 QUIVER_C_API quiver_error_t quiver_blob_metadata_get_number_of_time_dimensions(quiver_blob_metadata_t* md,
-                                                                                int64_t* out);
-QUIVER_C_API quiver_error_t quiver_blob_metadata_get_labels(quiver_blob_metadata_t* md,
-                                                             char*** out,
-                                                             size_t* out_count);
+                                                                               int64_t* out);
+QUIVER_C_API quiver_error_t quiver_blob_metadata_get_labels(quiver_blob_metadata_t* md, char*** out, size_t* out_count);
 QUIVER_C_API quiver_error_t quiver_blob_metadata_get_dimension_count(quiver_blob_metadata_t* md, size_t* out);
 QUIVER_C_API quiver_error_t quiver_blob_metadata_get_dimension(quiver_blob_metadata_t* md,
-                                                                size_t index,
-                                                                quiver_dimension_t* out);
+                                                               size_t index,
+                                                               quiver_dimension_t* out);
 
 // Free helpers
 QUIVER_C_API quiver_error_t quiver_blob_metadata_free_string(char* str);

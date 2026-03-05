@@ -124,7 +124,7 @@ function get_dimensions(md::BlobMetadata)
     count = out_count[]
 
     dims = BlobDimension[]
-    for i in 0:(count - 1)
+    for i in 0:(count-1)
         dim_ref = Ref(C.quiver_dimension_t(
             C_NULL, 0, 0,
             C.quiver_time_properties_t(C.QUIVER_TIME_FREQUENCY_YEARLY, 0, 0),
