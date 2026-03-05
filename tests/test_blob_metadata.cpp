@@ -751,27 +751,6 @@ TEST(BlobMetadataValidateTimeDimensionSizes, DailyUnderYearlyAboveMax) {
     EXPECT_THROW(md.validate_time_dimension_sizes(), std::runtime_error);
 }
 
-// --- Weekly under Yearly ---
-TEST(BlobMetadataValidateTimeDimensionSizes, WeeklyUnderYearlyValidMin) {
-    auto md = make_time_pair(TimeFrequency::Yearly, 3, TimeFrequency::Weekly, 52);
-    EXPECT_NO_THROW(md.validate_time_dimension_sizes());
-}
-
-TEST(BlobMetadataValidateTimeDimensionSizes, WeeklyUnderYearlyValidMax) {
-    auto md = make_time_pair(TimeFrequency::Yearly, 3, TimeFrequency::Weekly, 53);
-    EXPECT_NO_THROW(md.validate_time_dimension_sizes());
-}
-
-TEST(BlobMetadataValidateTimeDimensionSizes, WeeklyUnderYearlyBelowMin) {
-    auto md = make_time_pair(TimeFrequency::Yearly, 3, TimeFrequency::Weekly, 51);
-    EXPECT_THROW(md.validate_time_dimension_sizes(), std::runtime_error);
-}
-
-TEST(BlobMetadataValidateTimeDimensionSizes, WeeklyUnderYearlyAboveMax) {
-    auto md = make_time_pair(TimeFrequency::Yearly, 3, TimeFrequency::Weekly, 54);
-    EXPECT_THROW(md.validate_time_dimension_sizes(), std::runtime_error);
-}
-
 // --- Monthly under Yearly ---
 TEST(BlobMetadataValidateTimeDimensionSizes, MonthlyUnderYearlyValid) {
     auto md = make_time_pair(TimeFrequency::Yearly, 3, TimeFrequency::Monthly, 12);

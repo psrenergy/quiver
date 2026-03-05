@@ -36,6 +36,21 @@ inline bool parse_iso8601(const std::string& datetime_str, std::tm& tm) {
     return !ss.fail() && tm.tm_mday >= 1;
 }
 
+// Format a system_clock::time_point as ISO 8601 string in UTC.
+// Uses gmtime to avoid locale/timezone-dependent std::format behavior.
+inline std::string format_utc(const std::chrono::system_clock::time_point& tp) {
+    auto time_t_val = std::chrono::system_clock::to_time_t(tp);
+    std::tm tm{};
+#ifdef _WIN32
+    gmtime_s(&tm, &time_t_val);
+#else
+    gmtime_r(&time_t_val, &tm);
+#endif
+    char buffer[32];
+    std::strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%S", &tm);
+    return std::string(buffer);
+}
+
 // Format a datetime value using strftime. Returns raw_value if parsing fails.
 inline std::string format_datetime(const std::string& raw_value, const std::string& format) {
     std::tm tm{};
