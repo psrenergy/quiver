@@ -146,7 +146,7 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_set_labels(quiver_blob_metadata
 
     for (size_t i = 0; i < count; ++i) {
         if (!labels[i]) {
-            quiver_set_last_error("Null label at index " + std::to_string(i));
+            quiver_set_last_error("Cannot set_labels: null label at index " + std::to_string(i));
             return QUIVER_ERROR;
         }
     }
@@ -246,7 +246,7 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_get_dimension(quiver_blob_metad
     QUIVER_REQUIRE(md, out);
 
     if (index >= md->metadata.dimensions.size()) {
-        quiver_set_last_error("Dimension index out of range");
+        quiver_set_last_error("Cannot get_dimension: index out of range");
         return QUIVER_ERROR;
     }
 
