@@ -4,16 +4,10 @@ mutable struct Element
     function Element()
         out_element = Ref{Ptr{C.quiver_element}}(C_NULL)
         check(C.quiver_element_create(out_element))
-        return new(out_element[])
+        el = new(out_element[])
+        finalizer(x -> x.ptr != C_NULL && C.quiver_element_destroy(x.ptr), el)
+        return el
     end
-end
-
-function destroy!(el::Element)
-    if el.ptr != C_NULL
-        check(C.quiver_element_destroy(el.ptr))
-        el.ptr = C_NULL
-    end
-    return nothing
 end
 
 function clear!(el::Element)

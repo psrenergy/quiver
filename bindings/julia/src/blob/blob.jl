@@ -8,7 +8,7 @@ mutable struct Blob
     end
 end
 
-function open_blob(path::AbstractString, mode::Symbol; metadata::Union{BlobMetadata, Nothing} = nothing)
+function open_file(path::AbstractString; mode::Symbol, metadata::Union{BlobMetadata, Nothing} = nothing)
     out_blob = Ref{Ptr{C.quiver_blob}}(C_NULL)
     if mode == :read
         check(C.quiver_blob_open_read(path, out_blob))
@@ -31,9 +31,9 @@ function close!(blob::Blob)
     return nothing
 end
 
-function blob_read(blob::Blob, dims::Dict{String, Int64}; allow_nulls::Bool = false)
-    dim_names_str = collect(keys(dims))
-    dim_values = Int64[dims[k] for k in dim_names_str]
+function read(blob::Blob; allow_nulls::Bool = false, dims...)
+    dim_names_str = [String(k) for (k, _) in dims]
+    dim_values = Int64[Int64(v) for (_, v) in dims]
     c_dim_names = [pointer(s) for s in dim_names_str]
 
     out_data = Ref{Ptr{Cdouble}}(C_NULL)
@@ -55,9 +55,9 @@ function blob_read(blob::Blob, dims::Dict{String, Int64}; allow_nulls::Bool = fa
     return result
 end
 
-function blob_write!(blob::Blob, dims::Dict{String, Int64}, data::Vector{Float64})
-    dim_names_str = collect(keys(dims))
-    dim_values = Int64[dims[k] for k in dim_names_str]
+function write!(blob::Blob; data::Vector{Float64}, dims...)
+    dim_names_str = [String(k) for (k, _) in dims]
+    dim_values = Int64[Int64(v) for (_, v) in dims]
     c_dim_names = [pointer(s) for s in dim_names_str]
 
     GC.@preserve dim_names_str begin

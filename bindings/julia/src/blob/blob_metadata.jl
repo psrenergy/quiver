@@ -62,24 +62,16 @@ function BlobMetadata(;
     return md
 end
 
-function blob_metadata_from_toml(toml::AbstractString)
+function from_toml(toml::AbstractString)
     out_md = Ref{Ptr{C.quiver_blob_metadata}}(C_NULL)
     check(C.quiver_blob_metadata_from_toml(toml, out_md))
     return BlobMetadata(out_md[])
 end
 
-function blob_metadata_from_element(el::Element)
+function from_element(el::Element)
     out_md = Ref{Ptr{C.quiver_blob_metadata}}(C_NULL)
     check(C.quiver_blob_metadata_from_element(el.ptr, out_md))
     return BlobMetadata(out_md[])
-end
-
-function destroy!(md::BlobMetadata)
-    if md.ptr != C_NULL
-        C.quiver_blob_metadata_destroy(md.ptr)
-        md.ptr = C_NULL
-    end
-    return nothing
 end
 
 function get_unit(md::BlobMetadata)

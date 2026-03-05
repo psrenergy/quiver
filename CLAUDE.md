@@ -498,18 +498,18 @@ lua.run(R"(
 
 | Category | C++ | C API | Julia |
 |----------|-----|-------|-------|
-| Open read | `Blob::open_file(path, 'r')` | `quiver_blob_open_read()` | `open_blob(path, :read)` |
-| Open write | `Blob::open_file(path, 'w', md)` | `quiver_blob_open_write()` | `open_blob(path, :write; metadata=md)` |
+| Open read | `Blob::open_file(path, 'r')` | `quiver_blob_open_read()` | `open_file(path; mode=:read)` |
+| Open write | `Blob::open_file(path, 'w', md)` | `quiver_blob_open_write()` | `open_file(path; mode=:write, metadata=md)` |
 | Close | (destructor) | `quiver_blob_close()` | `close!(blob)` |
-| Read | `blob.read(dims)` | `quiver_blob_read()` | `blob_read(blob, dims)` |
-| Write | `blob.write(dims, data)` | `quiver_blob_write()` | `blob_write!(blob, dims, data)` |
+| Read | `blob.read(dims)` | `quiver_blob_read()` | `read(blob; dims...)` |
+| Write | `blob.write(dims, data)` | `quiver_blob_write()` | `write!(blob; data=data, dims...)` |
 | Get metadata | `blob.get_metadata()` | `quiver_blob_get_metadata()` | `get_metadata(blob)` |
 | Get file path | `blob.get_file_path()` | `quiver_blob_get_file_path()` | `get_file_path(blob)` |
-| Bin to CSV | `BlobCSV::bin_to_csv()` | `quiver_blob_csv_bin_to_csv()` | `blob_bin_to_csv()` |
-| CSV to bin | `BlobCSV::csv_to_bin()` | `quiver_blob_csv_csv_to_bin()` | `blob_csv_to_bin()` |
+| Bin to CSV | `BlobCSV::bin_to_csv()` | `quiver_blob_csv_bin_to_csv()` | `bin_to_csv()` |
+| CSV to bin | `BlobCSV::csv_to_bin()` | `quiver_blob_csv_csv_to_bin()` | `csv_to_bin()` |
 | Metadata builder | `BlobMetadata{}` | `quiver_blob_metadata_create()` | `BlobMetadata(; kwargs...)` |
-| Metadata from TOML | `BlobMetadata::from_toml()` | `quiver_blob_metadata_from_toml()` | `blob_metadata_from_toml()` |
-| Metadata from Element | `BlobMetadata::from_element()` | `quiver_blob_metadata_from_element()` | `blob_metadata_from_element()` |
+| Metadata from TOML | `BlobMetadata::from_toml()` | `quiver_blob_metadata_from_toml()` | `from_toml()` |
+| Metadata from Element | `BlobMetadata::from_element()` | `quiver_blob_metadata_from_element()` | `from_element()` |
 
 The transformation rules are mechanical. Given any C++ method name, you can derive the equivalent in any layer without consulting a lookup table.
 

@@ -8,11 +8,7 @@ function update_element!(db::Database, collection::String, id::Int64; kwargs...)
     for (k, v) in kwargs
         e[String(k)] = v
     end
-    try
-        update_element!(db, collection, id, e)
-    finally
-        destroy!(e)
-    end
+    update_element!(db, collection, id, e)
     return nothing
 end
 

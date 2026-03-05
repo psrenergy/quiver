@@ -26,8 +26,6 @@ include("fixture.jl")
         @test dims[1].is_time_dimension == false
         @test dims[2].name == "col"
         @test dims[2].size == 2
-
-        Quiver.destroy!(md)
     end
 
     @testset "Get initial datetime" begin
@@ -39,8 +37,6 @@ include("fixture.jl")
 
         dt = Quiver.get_initial_datetime(md)
         @test occursin("2025-01-01", dt)
-
-        Quiver.destroy!(md)
     end
 
     @testset "TOML round-trip" begin
@@ -55,13 +51,13 @@ include("fixture.jl")
             labels = ["val1", "val2"]
             """
 
-        md = Quiver.blob_metadata_from_toml(toml_input)
+        md = Quiver.from_toml(toml_input)
         @test Quiver.get_unit(md) == "MW"
 
         toml_str = Quiver.to_toml(md)
         @test occursin("MW", toml_str)
 
-        md2 = Quiver.blob_metadata_from_toml(toml_str)
+        md2 = Quiver.from_toml(toml_str)
         @test Quiver.get_unit(md2) == "MW"
         @test Quiver.get_version(md2) == "1"
         @test Quiver.get_labels(md2) == ["val1", "val2"]
@@ -70,9 +66,6 @@ include("fixture.jl")
         @test length(dims) == 2
         @test dims[1].name == "row"
         @test dims[1].size == 3
-
-        Quiver.destroy!(md)
-        Quiver.destroy!(md2)
     end
 
     @testset "From Element" begin
@@ -84,16 +77,13 @@ include("fixture.jl")
         el["dimension_sizes"] = Int64[3, 2]
         el["labels"] = ["val1", "val2"]
 
-        md = Quiver.blob_metadata_from_element(el)
+        md = Quiver.from_element(el)
         @test Quiver.get_unit(md) == "MW"
         @test Quiver.get_version(md) == "1"
 
         dims = Quiver.get_dimensions(md)
         @test length(dims) == 2
         @test dims[1].name == "row"
-
-        Quiver.destroy!(md)
-        Quiver.destroy!(el)
     end
 end
 
