@@ -116,6 +116,9 @@ if(QUIVER_BUILD_C_API)
         c/database_transaction.cpp
         c/element.cpp
         c/lua_runner.cpp
+        c/blob/blob.cpp
+        c/blob/blob_csv.cpp
+        c/blob/blob_metadata.cpp
     )
 
     target_compile_definitions(quiver_c PRIVATE

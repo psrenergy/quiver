@@ -289,7 +289,7 @@ BlobMetadata BlobMetadata::from_toml(const std::string& toml_content) {
     if (!quiver::datetime::parse_iso8601(initial_datetime_str, tm)) {
         throw std::runtime_error(std::format("Failed to parse initial_datetime: {}", initial_datetime_str));
     }
-    metadata.initial_datetime = std::chrono::system_clock::from_time_t(std::mktime(&tm));
+    metadata.initial_datetime = std::chrono::system_clock::from_time_t(quiver::datetime::mkgmtime_portable(&tm));
 
     // Add dimensions to metadata
     int64_t time_dim_index = 0;
@@ -347,10 +347,7 @@ std::string BlobMetadata::to_toml() const {
         label_arr.push_back(label);
     }
 
-    // std::format with chrono requires C++20 + compiler support for <chrono> formatting.
-    // If this fails to compile, fall back to: to_time_t + gmtime + put_time.
-    std::string datetime_str =
-        std::format("{:%Y-%m-%dT%H:%M:%S}", std::chrono::floor<std::chrono::seconds>(initial_datetime));
+    std::string datetime_str = quiver::datetime::format_utc_datetime(initial_datetime);
 
     toml::table tbl{
         {"version", version},

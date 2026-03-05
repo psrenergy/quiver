@@ -1,6 +1,8 @@
 #ifndef QUIVER_C_API_INTERNAL_H
 #define QUIVER_C_API_INTERNAL_H
 
+#include "quiver/blob/blob.h"
+#include "quiver/blob/blob_metadata.h"
 #include "quiver/database.h"
 #include "quiver/element.h"
 
@@ -20,6 +22,15 @@ struct quiver_database {
 
 struct quiver_element {
     quiver::Element element;
+};
+
+struct quiver_blob_metadata {
+    quiver::BlobMetadata metadata;
+};
+
+struct quiver_blob {
+    quiver::Blob blob;
+    quiver_blob(quiver::Blob&& b) : blob(std::move(b)) {}
 };
 
 // Validates pointer arguments are non-null. Sets descriptive error and returns QUIVER_ERROR.

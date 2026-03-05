@@ -471,6 +471,175 @@ function quiver_lua_runner_get_error(runner, out_error)
     @ccall libquiver_c.quiver_lua_runner_get_error(runner::Ptr{quiver_lua_runner_t}, out_error::Ptr{Ptr{Cchar}})::quiver_error_t
 end
 
+# ============================================================================
+# Blob types
+# ============================================================================
+
+@cenum quiver_time_frequency_t::UInt32 begin
+    QUIVER_TIME_FREQUENCY_YEARLY = 0
+    QUIVER_TIME_FREQUENCY_MONTHLY = 1
+    QUIVER_TIME_FREQUENCY_WEEKLY = 2
+    QUIVER_TIME_FREQUENCY_DAILY = 3
+    QUIVER_TIME_FREQUENCY_HOURLY = 4
+end
+
+struct quiver_time_properties_t
+    frequency::quiver_time_frequency_t
+    initial_value::Int64
+    parent_dimension_index::Int64
+end
+
+struct quiver_dimension_t
+    name::Ptr{Cchar}
+    size::Int64
+    is_time_dimension::Cint
+    time_properties::quiver_time_properties_t
+end
+
+mutable struct quiver_blob_metadata end
+
+const quiver_blob_metadata_t = quiver_blob_metadata
+
+mutable struct quiver_blob end
+
+const quiver_blob_t = quiver_blob
+
+# ============================================================================
+# Blob metadata functions
+# ============================================================================
+
+function quiver_blob_metadata_create(out)
+    @ccall libquiver_c.quiver_blob_metadata_create(out::Ptr{Ptr{quiver_blob_metadata_t}})::quiver_error_t
+end
+
+function quiver_blob_metadata_destroy(md)
+    @ccall libquiver_c.quiver_blob_metadata_destroy(md::Ptr{quiver_blob_metadata_t})::quiver_error_t
+end
+
+function quiver_blob_metadata_from_toml(toml, out)
+    @ccall libquiver_c.quiver_blob_metadata_from_toml(toml::Ptr{Cchar}, out::Ptr{Ptr{quiver_blob_metadata_t}})::quiver_error_t
+end
+
+function quiver_blob_metadata_from_element(el, out)
+    @ccall libquiver_c.quiver_blob_metadata_from_element(el::Ptr{quiver_element_t}, out::Ptr{Ptr{quiver_blob_metadata_t}})::quiver_error_t
+end
+
+function quiver_blob_metadata_to_toml(md, out_toml)
+    @ccall libquiver_c.quiver_blob_metadata_to_toml(md::Ptr{quiver_blob_metadata_t}, out_toml::Ptr{Ptr{Cchar}})::quiver_error_t
+end
+
+function quiver_blob_metadata_set_initial_datetime(md, iso8601)
+    @ccall libquiver_c.quiver_blob_metadata_set_initial_datetime(md::Ptr{quiver_blob_metadata_t}, iso8601::Ptr{Cchar})::quiver_error_t
+end
+
+function quiver_blob_metadata_set_unit(md, unit)
+    @ccall libquiver_c.quiver_blob_metadata_set_unit(md::Ptr{quiver_blob_metadata_t}, unit::Ptr{Cchar})::quiver_error_t
+end
+
+function quiver_blob_metadata_set_version(md, version)
+    @ccall libquiver_c.quiver_blob_metadata_set_version(md::Ptr{quiver_blob_metadata_t}, version::Ptr{Cchar})::quiver_error_t
+end
+
+function quiver_blob_metadata_set_labels(md, labels, count)
+    @ccall libquiver_c.quiver_blob_metadata_set_labels(md::Ptr{quiver_blob_metadata_t}, labels::Ptr{Ptr{Cchar}}, count::Csize_t)::quiver_error_t
+end
+
+function quiver_blob_metadata_add_dimension(md, name, size)
+    @ccall libquiver_c.quiver_blob_metadata_add_dimension(md::Ptr{quiver_blob_metadata_t}, name::Ptr{Cchar}, size::Int64)::quiver_error_t
+end
+
+function quiver_blob_metadata_add_time_dimension(md, name, size, frequency)
+    @ccall libquiver_c.quiver_blob_metadata_add_time_dimension(md::Ptr{quiver_blob_metadata_t}, name::Ptr{Cchar}, size::Int64, frequency::Ptr{Cchar})::quiver_error_t
+end
+
+function quiver_blob_metadata_get_unit(md, out)
+    @ccall libquiver_c.quiver_blob_metadata_get_unit(md::Ptr{quiver_blob_metadata_t}, out::Ptr{Ptr{Cchar}})::quiver_error_t
+end
+
+function quiver_blob_metadata_get_version(md, out)
+    @ccall libquiver_c.quiver_blob_metadata_get_version(md::Ptr{quiver_blob_metadata_t}, out::Ptr{Ptr{Cchar}})::quiver_error_t
+end
+
+function quiver_blob_metadata_get_initial_datetime(md, out)
+    @ccall libquiver_c.quiver_blob_metadata_get_initial_datetime(md::Ptr{quiver_blob_metadata_t}, out::Ptr{Ptr{Cchar}})::quiver_error_t
+end
+
+function quiver_blob_metadata_get_number_of_time_dimensions(md, out)
+    @ccall libquiver_c.quiver_blob_metadata_get_number_of_time_dimensions(md::Ptr{quiver_blob_metadata_t}, out::Ptr{Int64})::quiver_error_t
+end
+
+function quiver_blob_metadata_get_labels(md, out, out_count)
+    @ccall libquiver_c.quiver_blob_metadata_get_labels(md::Ptr{quiver_blob_metadata_t}, out::Ptr{Ptr{Ptr{Cchar}}}, out_count::Ptr{Csize_t})::quiver_error_t
+end
+
+function quiver_blob_metadata_get_dimension_count(md, out)
+    @ccall libquiver_c.quiver_blob_metadata_get_dimension_count(md::Ptr{quiver_blob_metadata_t}, out::Ptr{Csize_t})::quiver_error_t
+end
+
+function quiver_blob_metadata_get_dimension(md, index, out)
+    @ccall libquiver_c.quiver_blob_metadata_get_dimension(md::Ptr{quiver_blob_metadata_t}, index::Csize_t, out::Ptr{quiver_dimension_t})::quiver_error_t
+end
+
+function quiver_blob_metadata_free_string(str)
+    @ccall libquiver_c.quiver_blob_metadata_free_string(str::Ptr{Cchar})::quiver_error_t
+end
+
+function quiver_blob_metadata_free_string_array(strs, count)
+    @ccall libquiver_c.quiver_blob_metadata_free_string_array(strs::Ptr{Ptr{Cchar}}, count::Csize_t)::quiver_error_t
+end
+
+function quiver_blob_metadata_free_dimension(dim)
+    @ccall libquiver_c.quiver_blob_metadata_free_dimension(dim::Ptr{quiver_dimension_t})::quiver_error_t
+end
+
+# ============================================================================
+# Blob functions
+# ============================================================================
+
+function quiver_blob_open_read(path, out)
+    @ccall libquiver_c.quiver_blob_open_read(path::Ptr{Cchar}, out::Ptr{Ptr{quiver_blob_t}})::quiver_error_t
+end
+
+function quiver_blob_open_write(path, md, out)
+    @ccall libquiver_c.quiver_blob_open_write(path::Ptr{Cchar}, md::Ptr{quiver_blob_metadata_t}, out::Ptr{Ptr{quiver_blob_t}})::quiver_error_t
+end
+
+function quiver_blob_close(blob)
+    @ccall libquiver_c.quiver_blob_close(blob::Ptr{quiver_blob_t})::quiver_error_t
+end
+
+function quiver_blob_read(blob, dim_names, dim_values, dim_count, allow_nulls, out_data, out_count)
+    @ccall libquiver_c.quiver_blob_read(blob::Ptr{quiver_blob_t}, dim_names::Ptr{Ptr{Cchar}}, dim_values::Ptr{Int64}, dim_count::Csize_t, allow_nulls::Cint, out_data::Ptr{Ptr{Cdouble}}, out_count::Ptr{Csize_t})::quiver_error_t
+end
+
+function quiver_blob_write(blob, dim_names, dim_values, dim_count, data, data_count)
+    @ccall libquiver_c.quiver_blob_write(blob::Ptr{quiver_blob_t}, dim_names::Ptr{Ptr{Cchar}}, dim_values::Ptr{Int64}, dim_count::Csize_t, data::Ptr{Cdouble}, data_count::Csize_t)::quiver_error_t
+end
+
+function quiver_blob_get_metadata(blob, out)
+    @ccall libquiver_c.quiver_blob_get_metadata(blob::Ptr{quiver_blob_t}, out::Ptr{Ptr{quiver_blob_metadata_t}})::quiver_error_t
+end
+
+function quiver_blob_get_file_path(blob, out)
+    @ccall libquiver_c.quiver_blob_get_file_path(blob::Ptr{quiver_blob_t}, out::Ptr{Ptr{Cchar}})::quiver_error_t
+end
+
+function quiver_blob_free_float_array(data)
+    @ccall libquiver_c.quiver_blob_free_float_array(data::Ptr{Cdouble})::quiver_error_t
+end
+
+# ============================================================================
+# Blob CSV functions
+# ============================================================================
+
+function quiver_blob_csv_bin_to_csv(path, aggregate_time_dimensions)
+    @ccall libquiver_c.quiver_blob_csv_bin_to_csv(path::Ptr{Cchar}, aggregate_time_dimensions::Cint)::quiver_error_t
+end
+
+function quiver_blob_csv_csv_to_bin(path)
+    @ccall libquiver_c.quiver_blob_csv_csv_to_bin(path::Ptr{Cchar})::quiver_error_t
+end
+
 #! format: on
 
 

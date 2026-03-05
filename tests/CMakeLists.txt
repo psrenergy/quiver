@@ -48,6 +48,9 @@ gtest_discover_tests(quiver_tests
 # C API tests
 if(QUIVER_BUILD_C_API)
     add_executable(quiver_c_tests
+        test_c_api_blob.cpp
+        test_c_api_blob_csv.cpp
+        test_c_api_blob_metadata.cpp
         test_c_api_database_create.cpp
         test_c_api_database_csv_export.cpp
         test_c_api_database_csv_import.cpp
