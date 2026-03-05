@@ -418,11 +418,11 @@ TEST(BlobCApiMetadata, GetDimensionOutOfRangeErrorMessage) {
 
     quiver_dimension_t dim = {};
     EXPECT_EQ(quiver_blob_metadata_get_dimension(md, 0, &dim), QUIVER_ERROR);
-    EXPECT_STREQ(quiver_get_last_error(), "Dimension index out of range");
+    EXPECT_STREQ(quiver_get_last_error(), "Cannot get_dimension: index out of range");
 
     EXPECT_EQ(quiver_blob_metadata_add_dimension(md, "x", 5), QUIVER_OK);
     EXPECT_EQ(quiver_blob_metadata_get_dimension(md, 1, &dim), QUIVER_ERROR);
-    EXPECT_STREQ(quiver_get_last_error(), "Dimension index out of range");
+    EXPECT_STREQ(quiver_get_last_error(), "Cannot get_dimension: index out of range");
 
     quiver_blob_metadata_free(md);
 }
