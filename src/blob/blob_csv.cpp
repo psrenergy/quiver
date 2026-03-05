@@ -3,11 +3,11 @@
 #include "blob_utils.h"
 #include "quiver/blob/blob.h"
 #include "quiver/blob/dimension.h"
-#include "utils/datetime.h"
 
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <format>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
@@ -227,9 +227,9 @@ BlobCSV::build_datetime_string_from_time_dimension_values(const std::vector<int6
     }
 
     if (has_hourly) {
-        return quiver::datetime::format_utc_datetime(datetime);
+        return std::format("{:%Y-%m-%dT%H:%M:%S}", std::chrono::floor<std::chrono::seconds>(datetime));
     }
-    return quiver::datetime::format_utc_date(datetime);
+    return std::format("{:%Y-%m-%d}", std::chrono::floor<std::chrono::days>(datetime));
 }
 
 void BlobCSV::write_header() {

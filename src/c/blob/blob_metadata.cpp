@@ -5,6 +5,7 @@
 #include "utils/datetime.h"
 
 #include <chrono>
+#include <format>
 #include <new>
 #include <string>
 #include <vector>
@@ -201,7 +202,8 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_get_initial_datetime(quiver_blo
     QUIVER_REQUIRE(md, out);
 
     try {
-        auto datetime_str = quiver::datetime::format_utc_datetime(md->metadata.initial_datetime);
+        auto datetime_str = std::format("{:%Y-%m-%dT%H:%M:%S}",
+                                        std::chrono::floor<std::chrono::seconds>(md->metadata.initial_datetime));
         *out = quiver::string::new_c_str(datetime_str);
         return QUIVER_OK;
     } catch (const std::exception& e) {

@@ -20,35 +20,6 @@ inline std::time_t mkgmtime_portable(std::tm* tm) {
 #endif
 }
 
-// Portable gmtime: converts time_t to std::tm in UTC.
-inline std::tm gmtime_portable(std::time_t t) {
-    std::tm tm{};
-#ifdef _WIN32
-    gmtime_s(&tm, &t);
-#else
-    gmtime_r(&t, &tm);
-#endif
-    return tm;
-}
-
-// Format a system_clock::time_point as "YYYY-MM-DDTHH:MM:SS" in UTC.
-inline std::string format_utc_datetime(std::chrono::system_clock::time_point tp) {
-    auto t = std::chrono::system_clock::to_time_t(tp);
-    auto tm = gmtime_portable(t);
-    char buf[32];
-    std::strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S", &tm);
-    return buf;
-}
-
-// Format a system_clock::time_point as "YYYY-MM-DD" in UTC.
-inline std::string format_utc_date(std::chrono::system_clock::time_point tp) {
-    auto t = std::chrono::system_clock::to_time_t(tp);
-    auto tm = gmtime_portable(t);
-    char buf[16];
-    std::strftime(buf, sizeof(buf), "%Y-%m-%d", &tm);
-    return buf;
-}
-
 // Cross-platform ISO 8601 parser using std::get_time (not strptime).
 // Tries "YYYY-MM-DDTHH:MM:SS" first, then "YYYY-MM-DD HH:MM:SS".
 inline bool parse_iso8601(const std::string& datetime_str, std::tm& tm) {

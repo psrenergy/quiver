@@ -347,7 +347,8 @@ std::string BlobMetadata::to_toml() const {
         label_arr.push_back(label);
     }
 
-    std::string datetime_str = quiver::datetime::format_utc_datetime(initial_datetime);
+    std::string datetime_str =
+        std::format("{:%Y-%m-%dT%H:%M:%S}", std::chrono::floor<std::chrono::seconds>(initial_datetime));
 
     toml::table tbl{
         {"version", version},
