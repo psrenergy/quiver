@@ -9,9 +9,5 @@ function create_element!(db::Database, collection::String; kwargs...)
     for (k, v) in kwargs
         e[String(k)] = v
     end
-    try
-        return create_element!(db, collection, e)
-    finally
-        destroy!(e)
-    end
+    return create_element!(db, collection, e)
 end

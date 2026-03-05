@@ -21,9 +21,13 @@ include("database_delete.jl")
 include("database_transaction.jl")
 include("helper_maps.jl")
 include("lua_runner.jl")
+include("blob/blob_metadata.jl")
+include("blob/blob.jl")
+include("blob/blob_csv.jl")
 
 export Element, Database, LuaRunner, DatabaseException
 export ScalarMetadata, GroupMetadata
+export BlobMetadata, BlobDimension, Blob
 export QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_FLOAT, QUIVER_DATA_TYPE_STRING
 
 # Re-export C enum constants for data types

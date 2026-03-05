@@ -19,7 +19,7 @@ struct QUIVER_API BlobMetadata {
     std::vector<std::string> labels;
     std::string version;
     //
-    int64_t number_of_time_dimensions;
+    int64_t number_of_time_dimensions = 0;
 
     BlobMetadata();
     ~BlobMetadata();
