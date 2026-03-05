@@ -79,7 +79,7 @@ end
     end
 
     @testset "Write mode without metadata" begin
-        @test_throws ArgumentError Quiver.open_file("test"; mode = :write)
+        @test_throws Quiver.DatabaseException Quiver.open_file("test"; mode = :write)
     end
 
     @testset "Invalid mode" begin

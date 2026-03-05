@@ -47,7 +47,7 @@ function BlobMetadata(;
     return from_element(el)
 end
 
-function from_toml(toml::AbstractString)
+function from_toml(toml::String)
     out_md = Ref{Ptr{C.quiver_blob_metadata}}(C_NULL)
     check(C.quiver_blob_metadata_from_toml(toml, out_md))
     return BlobMetadata(out_md[])

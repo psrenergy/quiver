@@ -8,15 +8,13 @@ mutable struct Blob
     end
 end
 
-function open_file(path::AbstractString; mode::Symbol, metadata::Union{BlobMetadata, Nothing} = nothing)
+function open_file(path::String; mode::Symbol, metadata::Union{BlobMetadata, Nothing} = nothing)
     out_blob = Ref{Ptr{C.quiver_blob}}(C_NULL)
     if mode == :read
         check(C.quiver_blob_open_read(path, out_blob))
     elseif mode == :write
-        if metadata === nothing
-            throw(ArgumentError("metadata is required for write mode"))
-        end
-        check(C.quiver_blob_open_write(path, metadata.ptr, out_blob))
+        md_ptr = metadata === nothing ? Ptr{C.quiver_blob_metadata}(C_NULL) : metadata.ptr
+        check(C.quiver_blob_open_write(path, md_ptr, out_blob))
     else
         throw(ArgumentError("mode must be :read or :write, got :$mode"))
     end
@@ -50,6 +48,10 @@ function read(blob::Blob; allow_nulls::Bool = false, dims...)
     end
 
     count = out_count[]
+    if count == 0 || out_data[] == C_NULL
+        return Float64[]
+    end
+
     result = [unsafe_load(out_data[], i) for i in 1:count]
     C.quiver_blob_free_float_array(out_data[])
     return result
