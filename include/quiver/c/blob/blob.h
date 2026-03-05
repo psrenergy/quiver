@@ -33,9 +33,10 @@ QUIVER_C_API quiver_error_t quiver_blob_write(quiver_blob_t* blob,
 
 // Getters
 QUIVER_C_API quiver_error_t quiver_blob_get_metadata(quiver_blob_t* blob, quiver_blob_metadata_t** out);
-QUIVER_C_API quiver_error_t quiver_blob_get_file_path(quiver_blob_t* blob, const char** out);
+QUIVER_C_API quiver_error_t quiver_blob_get_file_path(quiver_blob_t* blob, char** out);
 
 // Free
+QUIVER_C_API quiver_error_t quiver_blob_free_string(char* str);
 QUIVER_C_API quiver_error_t quiver_blob_free_float_array(double* data);
 
 #ifdef __cplusplus

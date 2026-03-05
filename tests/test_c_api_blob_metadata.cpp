@@ -14,11 +14,11 @@ TEST(BlobCApiMetadata, CreateAndDestroy) {
     quiver_blob_metadata_t* md = nullptr;
     ASSERT_EQ(quiver_blob_metadata_create(&md), QUIVER_OK);
     ASSERT_NE(md, nullptr);
-    EXPECT_EQ(quiver_blob_metadata_destroy(md), QUIVER_OK);
+    EXPECT_EQ(quiver_blob_metadata_free(md), QUIVER_OK);
 }
 
 TEST(BlobCApiMetadata, DestroyNull) {
-    EXPECT_EQ(quiver_blob_metadata_destroy(nullptr), QUIVER_OK);
+    EXPECT_EQ(quiver_blob_metadata_free(nullptr), QUIVER_OK);
 }
 
 // ============================================================================
@@ -31,11 +31,12 @@ TEST(BlobCApiMetadata, SetAndGetUnit) {
 
     EXPECT_EQ(quiver_blob_metadata_set_unit(md, "MW"), QUIVER_OK);
 
-    const char* unit = nullptr;
+    char* unit = nullptr;
     EXPECT_EQ(quiver_blob_metadata_get_unit(md, &unit), QUIVER_OK);
     EXPECT_STREQ(unit, "MW");
+    quiver_blob_metadata_free_string(unit);
 
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 TEST(BlobCApiMetadata, SetAndGetVersion) {
@@ -44,11 +45,12 @@ TEST(BlobCApiMetadata, SetAndGetVersion) {
 
     EXPECT_EQ(quiver_blob_metadata_set_version(md, "1"), QUIVER_OK);
 
-    const char* version = nullptr;
+    char* version = nullptr;
     EXPECT_EQ(quiver_blob_metadata_get_version(md, &version), QUIVER_OK);
     EXPECT_STREQ(version, "1");
+    quiver_blob_metadata_free_string(version);
 
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 TEST(BlobCApiMetadata, SetAndGetInitialDatetime) {
@@ -65,7 +67,7 @@ TEST(BlobCApiMetadata, SetAndGetInitialDatetime) {
     EXPECT_NE(std::string(datetime).find("2025-01-01"), std::string::npos);
     quiver_blob_metadata_free_string(datetime);
 
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 TEST(BlobCApiMetadata, SetAndGetLabels) {
@@ -83,7 +85,7 @@ TEST(BlobCApiMetadata, SetAndGetLabels) {
     EXPECT_STREQ(out_labels[1], "plant_2");
     quiver_blob_metadata_free_string_array(out_labels, count);
 
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 // ============================================================================
@@ -114,7 +116,7 @@ TEST(BlobCApiMetadata, AddDimensionAndGet) {
     EXPECT_EQ(dim.is_time_dimension, 0);
     quiver_blob_metadata_free_dimension(&dim);
 
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 TEST(BlobCApiMetadata, AddTimeDimensionAndGet) {
@@ -131,7 +133,7 @@ TEST(BlobCApiMetadata, AddTimeDimensionAndGet) {
     EXPECT_EQ(dim.time_properties.frequency, QUIVER_TIME_FREQUENCY_MONTHLY);
     quiver_blob_metadata_free_dimension(&dim);
 
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 TEST(BlobCApiMetadata, GetDimensionOutOfRange) {
@@ -141,7 +143,7 @@ TEST(BlobCApiMetadata, GetDimensionOutOfRange) {
     quiver_dimension_t dim = {};
     EXPECT_EQ(quiver_blob_metadata_get_dimension(md, 0, &dim), QUIVER_ERROR);
 
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 TEST(BlobCApiMetadata, GetNumberOfTimeDimensions) {
@@ -163,7 +165,7 @@ labels = ["plant_1", "plant_2"]
     EXPECT_EQ(quiver_blob_metadata_get_number_of_time_dimensions(md, &num_time), QUIVER_OK);
     EXPECT_EQ(num_time, 2);
 
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 // ============================================================================
@@ -187,13 +189,15 @@ labels = ["plant_1", "plant_2"]
     ASSERT_NE(md, nullptr);
 
     // Verify fields
-    const char* unit = nullptr;
+    char* unit = nullptr;
     EXPECT_EQ(quiver_blob_metadata_get_unit(md, &unit), QUIVER_OK);
     EXPECT_STREQ(unit, "MW");
+    quiver_blob_metadata_free_string(unit);
 
-    const char* version = nullptr;
+    char* version = nullptr;
     EXPECT_EQ(quiver_blob_metadata_get_version(md, &version), QUIVER_OK);
     EXPECT_STREQ(version, "1");
+    quiver_blob_metadata_free_string(version);
 
     size_t dim_count = 0;
     EXPECT_EQ(quiver_blob_metadata_get_dimension_count(md, &dim_count), QUIVER_OK);
@@ -208,13 +212,14 @@ labels = ["plant_1", "plant_2"]
     quiver_blob_metadata_t* md2 = nullptr;
     ASSERT_EQ(quiver_blob_metadata_from_toml(toml_output, &md2), QUIVER_OK);
 
-    const char* unit2 = nullptr;
+    char* unit2 = nullptr;
     EXPECT_EQ(quiver_blob_metadata_get_unit(md2, &unit2), QUIVER_OK);
     EXPECT_STREQ(unit2, "MW");
+    quiver_blob_metadata_free_string(unit2);
 
     quiver_blob_metadata_free_string(toml_output);
-    quiver_blob_metadata_destroy(md2);
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md2);
+    quiver_blob_metadata_free(md);
 }
 
 // ============================================================================
@@ -240,15 +245,16 @@ TEST(BlobCApiMetadata, FromElement) {
     ASSERT_EQ(quiver_blob_metadata_from_element(el, &md), QUIVER_OK);
     ASSERT_NE(md, nullptr);
 
-    const char* unit = nullptr;
+    char* unit = nullptr;
     EXPECT_EQ(quiver_blob_metadata_get_unit(md, &unit), QUIVER_OK);
     EXPECT_STREQ(unit, "MW");
+    quiver_blob_metadata_free_string(unit);
 
     size_t dim_count = 0;
     EXPECT_EQ(quiver_blob_metadata_get_dimension_count(md, &dim_count), QUIVER_OK);
     EXPECT_EQ(dim_count, 2u);
 
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
     quiver_element_destroy(el);
 }
 
@@ -264,7 +270,7 @@ TEST(BlobCApiMetadata, NullArgs) {
     quiver_blob_metadata_t* md = nullptr;
     ASSERT_EQ(quiver_blob_metadata_create(&md), QUIVER_OK);
     EXPECT_EQ(quiver_blob_metadata_set_unit(md, nullptr), QUIVER_ERROR);
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 TEST(BlobCApiMetadata, NullArgsErrorMessages) {
@@ -342,7 +348,7 @@ TEST(BlobCApiMetadata, NullArgsOnSetters) {
     EXPECT_EQ(quiver_blob_metadata_add_time_dimension(md, "x", 10, nullptr), QUIVER_ERROR);
     EXPECT_STREQ(quiver_get_last_error(), "Null argument: frequency");
 
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 TEST(BlobCApiMetadata, NullArgsOnGetterOutParams) {
@@ -373,7 +379,7 @@ TEST(BlobCApiMetadata, NullArgsOnGetterOutParams) {
     EXPECT_EQ(quiver_blob_metadata_to_toml(md, nullptr), QUIVER_ERROR);
     EXPECT_STREQ(quiver_get_last_error(), "Null argument: out_toml");
 
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 // ============================================================================
@@ -394,7 +400,7 @@ TEST(BlobCApiMetadata, InvalidFrequency) {
     EXPECT_EQ(quiver_blob_metadata_add_time_dimension(md, "bad", 10, "invalid_freq"), QUIVER_ERROR);
     std::string err = quiver_get_last_error();
     EXPECT_NE(err.find("invalid_freq"), std::string::npos);
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 TEST(BlobCApiMetadata, InvalidInitialDatetime) {
@@ -403,7 +409,7 @@ TEST(BlobCApiMetadata, InvalidInitialDatetime) {
     EXPECT_EQ(quiver_blob_metadata_set_initial_datetime(md, "not-a-date"), QUIVER_ERROR);
     std::string err = quiver_get_last_error();
     EXPECT_NE(err.find("not-a-date"), std::string::npos);
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 TEST(BlobCApiMetadata, GetDimensionOutOfRangeErrorMessage) {
@@ -418,7 +424,7 @@ TEST(BlobCApiMetadata, GetDimensionOutOfRangeErrorMessage) {
     EXPECT_EQ(quiver_blob_metadata_get_dimension(md, 1, &dim), QUIVER_ERROR);
     EXPECT_STREQ(quiver_get_last_error(), "Dimension index out of range");
 
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 // ============================================================================
@@ -449,7 +455,7 @@ TEST(BlobCApiMetadata, FreeStringArrayExplicit) {
     EXPECT_STREQ(out_labels[2], "c");
     EXPECT_EQ(quiver_blob_metadata_free_string_array(out_labels, count), QUIVER_OK);
 
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 TEST(BlobCApiMetadata, FreeDimensionNull) {
@@ -484,7 +490,7 @@ TEST(BlobCApiMetadata, AllTimeFrequencies) {
         EXPECT_EQ(dim.is_time_dimension, 1);
         EXPECT_EQ(dim.time_properties.frequency, tc.expected);
         quiver_blob_metadata_free_dimension(&dim);
-        quiver_blob_metadata_destroy(md);
+        quiver_blob_metadata_free(md);
     }
 }
 
@@ -516,7 +522,7 @@ TEST(BlobCApiMetadata, MultipleDimensions) {
         quiver_blob_metadata_free_dimension(&dim);
     }
 
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 TEST(BlobCApiMetadata, MixedDimensionsAndTimeDimensions) {
@@ -543,7 +549,7 @@ TEST(BlobCApiMetadata, MixedDimensionsAndTimeDimensions) {
     EXPECT_EQ(dim1.is_time_dimension, 0);
     quiver_blob_metadata_free_dimension(&dim1);
 
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 // ============================================================================
@@ -574,13 +580,15 @@ TEST(BlobCApiMetadata, TomlRoundTripFromBuilders) {
     ASSERT_EQ(quiver_blob_metadata_from_toml(toml, &md2), QUIVER_OK);
 
     // Verify fields
-    const char* unit = nullptr;
+    char* unit = nullptr;
     EXPECT_EQ(quiver_blob_metadata_get_unit(md2, &unit), QUIVER_OK);
     EXPECT_STREQ(unit, "GWh");
+    quiver_blob_metadata_free_string(unit);
 
-    const char* version = nullptr;
+    char* version = nullptr;
     EXPECT_EQ(quiver_blob_metadata_get_version(md2, &version), QUIVER_OK);
     EXPECT_STREQ(version, "1");
+    quiver_blob_metadata_free_string(version);
 
     size_t dim_count = 0;
     EXPECT_EQ(quiver_blob_metadata_get_dimension_count(md2, &dim_count), QUIVER_OK);
@@ -600,8 +608,8 @@ TEST(BlobCApiMetadata, TomlRoundTripFromBuilders) {
     EXPECT_EQ(num_time, 1);
 
     quiver_blob_metadata_free_string(toml);
-    quiver_blob_metadata_destroy(md2);
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md2);
+    quiver_blob_metadata_free(md);
 }
 
 // ============================================================================
@@ -645,7 +653,7 @@ TEST(BlobCApiMetadata, EmptyLabels) {
     EXPECT_EQ(count, 0u);
 
     quiver_blob_metadata_free_string_array(out_labels, count);
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 TEST(BlobCApiMetadata, OverwriteLabels) {
@@ -667,7 +675,7 @@ TEST(BlobCApiMetadata, OverwriteLabels) {
     EXPECT_STREQ(out_labels[2], "z");
     quiver_blob_metadata_free_string_array(out_labels, count);
 
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 // ============================================================================
@@ -685,5 +693,5 @@ TEST(BlobCApiMetadata, ZeroTimeDimensions) {
     EXPECT_EQ(quiver_blob_metadata_get_number_of_time_dimensions(md, &num_time), QUIVER_OK);
     EXPECT_EQ(num_time, 0);
 
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }

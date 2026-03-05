@@ -65,7 +65,7 @@ TEST_F(BlobCApiFixture, OpenWriteAndClose) {
     EXPECT_TRUE(fs::exists(path + ".toml"));
 
     EXPECT_EQ(quiver_blob_close(blob), QUIVER_OK);
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 TEST_F(BlobCApiFixture, OpenReadAfterWrite) {
@@ -75,7 +75,7 @@ TEST_F(BlobCApiFixture, OpenReadAfterWrite) {
         quiver_blob_open_write(path.c_str(), md, &blob);
         quiver_blob_close(blob);
     }
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 
     quiver_blob_t* reader = nullptr;
     EXPECT_EQ(quiver_blob_open_read(path.c_str(), &reader), QUIVER_OK);
@@ -107,7 +107,7 @@ TEST_F(BlobCApiFixture, WriteReadRoundTrip) {
 
         quiver_blob_close(blob);
     }
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 
     // Read
     {
@@ -147,7 +147,7 @@ TEST_F(BlobCApiFixture, WriteReadMultiplePositions) {
 
         quiver_blob_close(blob);
     }
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 
     {
         quiver_blob_t* blob = nullptr;
@@ -182,7 +182,7 @@ TEST_F(BlobCApiFixture, GetMetadata) {
         quiver_blob_open_write(path.c_str(), md, &blob);
         quiver_blob_close(blob);
     }
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 
     quiver_blob_t* blob = nullptr;
     ASSERT_EQ(quiver_blob_open_read(path.c_str(), &blob), QUIVER_OK);
@@ -191,15 +191,16 @@ TEST_F(BlobCApiFixture, GetMetadata) {
     EXPECT_EQ(quiver_blob_get_metadata(blob, &read_md), QUIVER_OK);
     ASSERT_NE(read_md, nullptr);
 
-    const char* unit = nullptr;
+    char* unit = nullptr;
     quiver_blob_metadata_get_unit(read_md, &unit);
     EXPECT_STREQ(unit, "MW");
+    quiver_blob_metadata_free_string(unit);
 
     size_t dim_count = 0;
     quiver_blob_metadata_get_dimension_count(read_md, &dim_count);
     EXPECT_EQ(dim_count, 2u);
 
-    quiver_blob_metadata_destroy(read_md);
+    quiver_blob_metadata_free(read_md);
     quiver_blob_close(blob);
 }
 
@@ -208,12 +209,13 @@ TEST_F(BlobCApiFixture, GetFilePath) {
     quiver_blob_t* blob = nullptr;
     ASSERT_EQ(quiver_blob_open_write(path.c_str(), md, &blob), QUIVER_OK);
 
-    const char* file_path = nullptr;
+    char* file_path = nullptr;
     EXPECT_EQ(quiver_blob_get_file_path(blob, &file_path), QUIVER_OK);
     EXPECT_STREQ(file_path, path.c_str());
+    quiver_blob_free_string(file_path);
 
     quiver_blob_close(blob);
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 // ============================================================================
@@ -257,7 +259,7 @@ TEST_F(BlobCApiFixture, OpenWriteNullOut) {
     auto* md = make_simple_metadata();
     EXPECT_EQ(quiver_blob_open_write(path.c_str(), md, nullptr), QUIVER_ERROR);
     EXPECT_STREQ(quiver_get_last_error(), "Null argument: out");
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 TEST_F(BlobCApiFixture, ReadNullBlob) {
@@ -272,7 +274,7 @@ TEST_F(BlobCApiFixture, ReadNullOutParams) {
     quiver_blob_t* blob = nullptr;
     ASSERT_EQ(quiver_blob_open_write(path.c_str(), md, &blob), QUIVER_OK);
     quiver_blob_close(blob);
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 
     ASSERT_EQ(quiver_blob_open_read(path.c_str(), &blob), QUIVER_OK);
 
@@ -304,7 +306,7 @@ TEST_F(BlobCApiFixture, WriteNullData) {
     EXPECT_STREQ(quiver_get_last_error(), "Null argument: data");
 
     quiver_blob_close(blob);
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 }
 
 TEST_F(BlobCApiFixture, OpenReadNonExistentErrorMessage) {
@@ -332,7 +334,7 @@ TEST_F(BlobCApiFixture, WriteReadSpecialFloatValues) {
 
         quiver_blob_close(blob);
     }
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 
     {
         quiver_blob_t* blob = nullptr;
@@ -366,7 +368,7 @@ TEST_F(BlobCApiFixture, WriteReadLargeSmallValues) {
 
         quiver_blob_close(blob);
     }
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 
     {
         quiver_blob_t* blob = nullptr;
@@ -410,7 +412,7 @@ TEST_F(BlobCApiFixture, ReadUnwrittenPositionFails) {
         quiver_blob_write(blob, dim_names, dim_values, 2, data, 2);
         quiver_blob_close(blob);
     }
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 
     {
         quiver_blob_t* blob = nullptr;
@@ -436,7 +438,7 @@ TEST_F(BlobCApiFixture, ReadAllowNulls) {
         quiver_blob_open_write(path.c_str(), md, &blob);
         quiver_blob_close(blob);
     }
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 
     quiver_blob_t* blob = nullptr;
     ASSERT_EQ(quiver_blob_open_read(path.c_str(), &blob), QUIVER_OK);

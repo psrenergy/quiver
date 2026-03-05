@@ -59,6 +59,9 @@ QUIVER_C_API quiver_error_t quiver_blob_read(quiver_blob_t* blob,
                                              double** out_data,
                                              size_t* out_count) {
     QUIVER_REQUIRE(blob, out_data, out_count);
+    if (dim_count > 0) {
+        QUIVER_REQUIRE(dim_names, dim_values);
+    }
 
     try {
         std::unordered_map<std::string, int64_t> dims;
@@ -88,6 +91,9 @@ QUIVER_C_API quiver_error_t quiver_blob_write(quiver_blob_t* blob,
                                               const double* data,
                                               size_t data_count) {
     QUIVER_REQUIRE(blob, data);
+    if (dim_count > 0) {
+        QUIVER_REQUIRE(dim_names, dim_values);
+    }
 
     try {
         std::unordered_map<std::string, int64_t> dims;
@@ -118,14 +124,19 @@ QUIVER_C_API quiver_error_t quiver_blob_get_metadata(quiver_blob_t* blob, quiver
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_blob_get_file_path(quiver_blob_t* blob, const char** out) {
+QUIVER_C_API quiver_error_t quiver_blob_get_file_path(quiver_blob_t* blob, char** out) {
     QUIVER_REQUIRE(blob, out);
 
-    *out = blob->blob.get_file_path().c_str();
+    *out = quiver::string::new_c_str(blob->blob.get_file_path());
     return QUIVER_OK;
 }
 
 // Free
+
+QUIVER_C_API quiver_error_t quiver_blob_free_string(char* str) {
+    delete[] str;
+    return QUIVER_OK;
+}
 
 QUIVER_C_API quiver_error_t quiver_blob_free_float_array(double* data) {
     delete[] data;

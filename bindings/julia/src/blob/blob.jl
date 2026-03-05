@@ -78,5 +78,7 @@ end
 function get_file_path(blob::Blob)
     out = Ref{Ptr{Cchar}}(C_NULL)
     check(C.quiver_blob_get_file_path(blob.ptr, out))
-    return unsafe_string(out[])
+    result = unsafe_string(out[])
+    C.quiver_blob_free_string(out[])
+    return result
 end

@@ -292,8 +292,9 @@ quiver_database_free_string_array(char**, size_t)
 quiver_database_free_string(char*)
 
 // Blob entity free functions
-quiver_blob_metadata_create/destroy     // lifecycle
+quiver_blob_metadata_create/free        // lifecycle
 quiver_blob_open_read/open_write/close  // lifecycle
+quiver_blob_free_string(char*)
 quiver_blob_metadata_free_string(char*)
 quiver_blob_metadata_free_string_array(char**, size_t)
 quiver_blob_metadata_free_dimension(quiver_dimension_t*)

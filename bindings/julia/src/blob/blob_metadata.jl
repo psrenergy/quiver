@@ -12,7 +12,7 @@ mutable struct BlobMetadata
 
     function BlobMetadata(ptr::Ptr{C.quiver_blob_metadata})
         md = new(ptr)
-        finalizer(m -> m.ptr != C_NULL && C.quiver_blob_metadata_destroy(m.ptr), md)
+        finalizer(m -> m.ptr != C_NULL && C.quiver_blob_metadata_free(m.ptr), md)
         return md
     end
 end
@@ -62,13 +62,17 @@ end
 function get_unit(md::BlobMetadata)
     out = Ref{Ptr{Cchar}}(C_NULL)
     check(C.quiver_blob_metadata_get_unit(md.ptr, out))
-    return unsafe_string(out[])
+    result = unsafe_string(out[])
+    C.quiver_blob_metadata_free_string(out[])
+    return result
 end
 
 function get_version(md::BlobMetadata)
     out = Ref{Ptr{Cchar}}(C_NULL)
     check(C.quiver_blob_metadata_get_version(md.ptr, out))
-    return unsafe_string(out[])
+    result = unsafe_string(out[])
+    C.quiver_blob_metadata_free_string(out[])
+    return result
 end
 
 function get_initial_datetime(md::BlobMetadata)

@@ -61,7 +61,7 @@ TEST_F(BlobCApiCSVFixture, BinToCsvCreatesFile) {
         quiver_blob_open_write(path.c_str(), md, &blob);
         quiver_blob_close(blob);
     }
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 
     EXPECT_EQ(quiver_blob_csv_bin_to_csv(path.c_str(), 1), QUIVER_OK);
     EXPECT_TRUE(fs::exists(path + ".csv"));
@@ -87,7 +87,7 @@ TEST_F(BlobCApiCSVFixture, CsvToBinCreatesFile) {
         }
         quiver_blob_close(blob);
     }
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 
     quiver_blob_csv_bin_to_csv(path.c_str(), 0);
     fs::remove(path + ".qvr");
@@ -115,7 +115,7 @@ TEST_F(BlobCApiCSVFixture, RoundTrip) {
 
         quiver_blob_close(blob);
     }
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 
     // bin -> csv
     ASSERT_EQ(quiver_blob_csv_bin_to_csv(path.c_str(), 0), QUIVER_OK);
@@ -163,7 +163,7 @@ TEST_F(BlobCApiCSVFixture, BinToCsvNoAggregate) {
         }
         quiver_blob_close(blob);
     }
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 
     EXPECT_EQ(quiver_blob_csv_bin_to_csv(path.c_str(), 0), QUIVER_OK);
     EXPECT_TRUE(fs::exists(path + ".csv"));
@@ -185,7 +185,7 @@ TEST_F(BlobCApiCSVFixture, BinToCsvAggregate) {
         }
         quiver_blob_close(blob);
     }
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 
     EXPECT_EQ(quiver_blob_csv_bin_to_csv(path.c_str(), 1), QUIVER_OK);
     EXPECT_TRUE(fs::exists(path + ".csv"));
@@ -213,7 +213,7 @@ TEST_F(BlobCApiCSVFixture, RoundTripAllPositions) {
         }
         quiver_blob_close(blob);
     }
-    quiver_blob_metadata_destroy(md);
+    quiver_blob_metadata_free(md);
 
     ASSERT_EQ(quiver_blob_csv_bin_to_csv(path.c_str(), 0), QUIVER_OK);
     fs::remove(path + ".qvr");

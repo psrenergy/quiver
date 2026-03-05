@@ -58,7 +58,7 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_create(quiver_blob_metadata_t**
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_destroy(quiver_blob_metadata_t* md) {
+QUIVER_C_API quiver_error_t quiver_blob_metadata_free(quiver_blob_metadata_t* md) {
     delete md;
     return QUIVER_OK;
 }
@@ -144,6 +144,13 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_set_labels(quiver_blob_metadata
                                                             size_t count) {
     QUIVER_REQUIRE(md, labels);
 
+    for (size_t i = 0; i < count; ++i) {
+        if (!labels[i]) {
+            quiver_set_last_error("Null label at index " + std::to_string(i));
+            return QUIVER_ERROR;
+        }
+    }
+
     md->metadata.labels.clear();
     md->metadata.labels.reserve(count);
     for (size_t i = 0; i < count; ++i) {
@@ -183,17 +190,17 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_add_time_dimension(quiver_blob_
 
 // Getters
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_get_unit(quiver_blob_metadata_t* md, const char** out) {
+QUIVER_C_API quiver_error_t quiver_blob_metadata_get_unit(quiver_blob_metadata_t* md, char** out) {
     QUIVER_REQUIRE(md, out);
 
-    *out = md->metadata.unit.c_str();
+    *out = quiver::string::new_c_str(md->metadata.unit);
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_get_version(quiver_blob_metadata_t* md, const char** out) {
+QUIVER_C_API quiver_error_t quiver_blob_metadata_get_version(quiver_blob_metadata_t* md, char** out) {
     QUIVER_REQUIRE(md, out);
 
-    *out = md->metadata.version.c_str();
+    *out = quiver::string::new_c_str(md->metadata.version);
     return QUIVER_OK;
 }
 

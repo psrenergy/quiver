@@ -512,8 +512,8 @@ function quiver_blob_metadata_create(out)
     @ccall libquiver_c.quiver_blob_metadata_create(out::Ptr{Ptr{quiver_blob_metadata_t}})::quiver_error_t
 end
 
-function quiver_blob_metadata_destroy(md)
-    @ccall libquiver_c.quiver_blob_metadata_destroy(md::Ptr{quiver_blob_metadata_t})::quiver_error_t
+function quiver_blob_metadata_free(md)
+    @ccall libquiver_c.quiver_blob_metadata_free(md::Ptr{quiver_blob_metadata_t})::quiver_error_t
 end
 
 function quiver_blob_metadata_from_toml(toml, out)
@@ -622,6 +622,10 @@ end
 
 function quiver_blob_get_file_path(blob, out)
     @ccall libquiver_c.quiver_blob_get_file_path(blob::Ptr{quiver_blob_t}, out::Ptr{Ptr{Cchar}})::quiver_error_t
+end
+
+function quiver_blob_free_string(str)
+    @ccall libquiver_c.quiver_blob_free_string(str::Ptr{Cchar})::quiver_error_t
 end
 
 function quiver_blob_free_float_array(data)

@@ -24,7 +24,7 @@ typedef struct {
 } quiver_time_properties_t;
 
 // Flat struct (maps to quiver::Dimension)
-// name is allocated via strdup_safe, free with quiver_blob_metadata_free_dimension
+// name is allocated via new_c_str, free with quiver_blob_metadata_free_dimension
 typedef struct {
     const char* name;
     int64_t size;
@@ -37,7 +37,7 @@ typedef struct quiver_blob_metadata quiver_blob_metadata_t;
 
 // Lifecycle
 QUIVER_C_API quiver_error_t quiver_blob_metadata_create(quiver_blob_metadata_t** out);
-QUIVER_C_API quiver_error_t quiver_blob_metadata_destroy(quiver_blob_metadata_t* md);
+QUIVER_C_API quiver_error_t quiver_blob_metadata_free(quiver_blob_metadata_t* md);
 
 // Factories
 QUIVER_C_API quiver_error_t quiver_blob_metadata_from_toml(const char* toml, quiver_blob_metadata_t** out);
@@ -64,8 +64,8 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_add_time_dimension(quiver_blob_
                                                                     const char* frequency);
 
 // Getters
-QUIVER_C_API quiver_error_t quiver_blob_metadata_get_unit(quiver_blob_metadata_t* md, const char** out);
-QUIVER_C_API quiver_error_t quiver_blob_metadata_get_version(quiver_blob_metadata_t* md, const char** out);
+QUIVER_C_API quiver_error_t quiver_blob_metadata_get_unit(quiver_blob_metadata_t* md, char** out);
+QUIVER_C_API quiver_error_t quiver_blob_metadata_get_version(quiver_blob_metadata_t* md, char** out);
 QUIVER_C_API quiver_error_t quiver_blob_metadata_get_initial_datetime(quiver_blob_metadata_t* md, char** out);
 QUIVER_C_API quiver_error_t quiver_blob_metadata_get_number_of_time_dimensions(quiver_blob_metadata_t* md,
                                                                                int64_t* out);
