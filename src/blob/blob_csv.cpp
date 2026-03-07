@@ -9,6 +9,7 @@
 #include <chrono>
 #include <cmath>
 #include <fstream>
+#include <spdlog/fmt/fmt.h>
 #include <sstream>
 #include <stdexcept>
 
@@ -197,7 +198,7 @@ std::string BlobCSV::build_line(const std::vector<double>& data, const std::vect
         if (std::isnan(v)) {
             elements.push_back("null");
         } else {
-            elements.push_back(std::format("{:.6g}", v));
+            elements.push_back(fmt::format("{:.6g}", v));
         }
     }
 
