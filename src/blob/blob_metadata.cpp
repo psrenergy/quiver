@@ -287,7 +287,7 @@ BlobMetadata BlobMetadata::from_toml(const std::string& toml_content) {
 
     std::tm tm{};
     if (!quiver::datetime::parse_iso8601(initial_datetime_str, tm)) {
-        throw std::runtime_error(std::format("Failed to parse initial_datetime: {}", initial_datetime_str));
+        throw std::runtime_error("Failed to parse initial_datetime: " + initial_datetime_str);
     }
     metadata.initial_datetime = std::chrono::system_clock::from_time_t(quiver::datetime::mkgmtime_portable(&tm));
 

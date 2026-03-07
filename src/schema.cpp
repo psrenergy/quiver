@@ -11,7 +11,8 @@ namespace quiver {
 static bool is_safe_identifier(const std::string& name) {
     if (name.empty())
         return false;
-    return std::ranges::all_of(name, [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_'; });
+    return std::all_of(name.begin(), name.end(),
+                       [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_'; });
 }
 
 // TableDefinition methods
