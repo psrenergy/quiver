@@ -5,12 +5,11 @@
 #include "quiver/blob/dimension.h"
 #include "utils/datetime.h"
 
-#include <spdlog/fmt/fmt.h>
-
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <fstream>
+#include <spdlog/fmt/fmt.h>
 #include <sstream>
 #include <stdexcept>
 
