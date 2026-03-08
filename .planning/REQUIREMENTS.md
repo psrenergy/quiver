@@ -92,34 +92,34 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FFI-01 | — | Pending |
-| FFI-02 | — | Pending |
-| FFI-03 | — | Pending |
-| FFI-04 | — | Pending |
-| LIFE-01 | — | Pending |
-| LIFE-02 | — | Pending |
-| LIFE-03 | — | Pending |
-| CRUD-01 | — | Pending |
-| CRUD-02 | — | Pending |
-| CRUD-03 | — | Pending |
-| CRUD-04 | — | Pending |
-| READ-01 | — | Pending |
-| READ-02 | — | Pending |
-| READ-03 | — | Pending |
-| QUERY-01 | — | Pending |
-| QUERY-02 | — | Pending |
-| TXN-01 | — | Pending |
-| TXN-02 | — | Pending |
-| PKG-01 | — | Pending |
-| PKG-02 | — | Pending |
-| PKG-03 | — | Pending |
-| PKG-04 | — | Pending |
+| FFI-01 | Phase 1 | Pending |
+| FFI-02 | Phase 1 | Pending |
+| FFI-03 | Phase 1 | Pending |
+| FFI-04 | Phase 1 | Pending |
+| LIFE-01 | Phase 1 | Pending |
+| LIFE-02 | Phase 1 | Pending |
+| LIFE-03 | Phase 1 | Pending |
+| CRUD-01 | Phase 2 | Pending |
+| CRUD-02 | Phase 2 | Pending |
+| CRUD-03 | Phase 2 | Pending |
+| CRUD-04 | Phase 2 | Pending |
+| READ-01 | Phase 3 | Pending |
+| READ-02 | Phase 3 | Pending |
+| READ-03 | Phase 3 | Pending |
+| QUERY-01 | Phase 4 | Pending |
+| QUERY-02 | Phase 4 | Pending |
+| TXN-01 | Phase 4 | Pending |
+| TXN-02 | Phase 4 | Pending |
+| PKG-01 | Phase 5 | Pending |
+| PKG-02 | Phase 5 | Pending |
+| PKG-03 | Phase 5 | Pending |
+| PKG-04 | Phase 5 | Pending |
 
 **Coverage:**
 - v0.5 requirements: 22 total
-- Mapped to phases: 0
-- Unmapped: 22
+- Mapped to phases: 22
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-08 after initial definition*
+*Last updated: 2026-03-08 after roadmap creation*
