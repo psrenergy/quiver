@@ -6,8 +6,8 @@
     "moduleResolution": "bundler",
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    "types": ["bun-types"]
   },
-  "types": ["bun-types"],
   "include": ["src/**/*.ts", "test/**/*.ts"]
 }
