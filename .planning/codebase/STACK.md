@@ -1,132 +1,133 @@
 # Technology Stack
 
-**Analysis Date:** 2026-02-27
+**Analysis Date:** 2026-03-08
 
 ## Languages
 
 **Primary:**
-- C++20 - Core library and database implementation (`src/`, `include/quiver/`)
-- C - C API layer for FFI interop (`src/c/`, `include/quiver/c/`)
+- C++20 - Core library implementation (`src/`, `include/quiver/`)
+- C - C API wrapper layer (`include/quiver/c/`, `src/c/`)
 
 **Secondary:**
-- Julia 1.12+ - Language binding (`bindings/julia/`)
-- Dart 3.10+ - Language binding (`bindings/dart/`)
-- Python 3.13+ - Language binding (`bindings/python/`)
-- Lua 5.4.8 - Embedded scripting engine, consumed inside C++ core via sol2
+- Julia 1.12+ - Language bindings (`bindings/julia/`)
+- Dart 3.10+ - Language bindings (`bindings/dart/`)
+- Python 3.13+ - Language bindings (`bindings/python/`)
+- Lua 5.4 - Embedded scripting engine for database operations (`src/lua_runner.cpp`)
 
 ## Runtime
 
 **Environment:**
-- C++20 compiler required (CMake enforces `CMAKE_CXX_STANDARD 20`)
-- MSVC 2022 on Windows, GCC 13+ on Linux/macOS
-- Output artifacts: `libquiver.dll/.so/.dylib` (core), `libquiver_c.dll/.so/.dylib` (C API)
-- Symbol visibility hidden by default; explicit exports required
+- Native compiled library (shared/static); no managed runtime for C++ core
+- Julia runtime 1.12+ for Julia bindings
+- Dart VM / native compilation for Dart bindings
+- CPython 3.13+ for Python bindings
 
 **Package Manager:**
-- CMake 3.21+ with FetchContent for C++ dependencies (`cmake/Dependencies.cmake`)
-- Julia: built-in `Pkg` (lockfile `Manifest.toml` generated at runtime; delete if version conflicts)
-- Dart: `pub` (`dart pub get`)
-- Python: `uv` (`bindings/python/uv.lock` committed)
+- C++: CMake FetchContent (no lockfile — versions pinned by `GIT_TAG` in `cmake/Dependencies.cmake`)
+- Julia: Pkg (lockfile: `bindings/julia/Manifest.toml`)
+- Dart: pub (lockfile: `bindings/dart/pubspec.lock`)
+- Python: uv (lockfile: `bindings/python/uv.lock`)
 
 ## Frameworks
 
-**Core Build System:**
-- CMake 3.21+ configured via `CMakeLists.txt`, `CMakePresets.json`, `cmake/`
-- Build presets: `dev` (Debug + tests + C API), `release`, `windows-release`, `linux-release`, `all-bindings`
+**Core:**
+- CMake 3.26+ - Build system (`CMakeLists.txt`, `cmake/`)
+- CTest - C++ test runner (integrated with CMake)
+- Ninja - Preferred build generator (used in `scripts/build-all.bat`)
 
 **Testing:**
-- GoogleTest v1.17.0 + GMock - C++ and C API tests (`tests/`)
-- Julia `Test` stdlib + `Aqua` 0.8 - Julia binding tests (`bindings/julia/test/`)
-- Dart `test` ^1.24.0 - Dart binding tests (`bindings/dart/test/`)
-- Python `pytest` 8.4.1+ - Python binding tests (`bindings/python/tests/`)
+- GoogleTest v1.17.0 - C++ unit test framework (fetched via FetchContent)
+- GMock - Mocking (bundled with GoogleTest)
+- Julia `Test` stdlib + `Aqua` 0.8 - Julia binding tests
+- Dart `test` 1.24+ - Dart binding tests
+- pytest 8.4+ - Python binding tests
 
 **Build/Dev:**
-- scikit-build-core 0.10+ - Python wheel packaging (`bindings/python/pyproject.toml`)
-- cibuildwheel 3.3.1 - Wheel matrix builds: `cp313-win_amd64`, `cp313-manylinux_x86_64`
-- clang-format - C++ code formatting (format target in `CMakeLists.txt`)
-- clang-tidy - C++ static analysis (run via `scripts/tidy.bat`, tidy target in `CMakeLists.txt`)
-- Ruff 0.12.2+ - Python linting and formatting (`bindings/python/ruff.toml`)
-- Dart `lints` ^3.0.0 + `ffigen` ^11.0.0 - Dart analysis and FFI generator (`bindings/dart/analysis_options.yaml`)
-- Clang.jl (Julia) - Julia FFI binding generator (`bindings/julia/generator/`)
+- scikit-build-core 0.10+ - Python wheel packaging backend (`bindings/python/pyproject.toml`)
+- cibuildwheel 3.3.1 - Cross-platform wheel builder (GitHub Actions CI)
+- clang-format 21 - C++ code formatter (config: `.clang-format`)
+- clang-tidy - C++ static analysis (config: `.clang-tidy`)
+- ruff 0.12+ - Python linter/formatter (`bindings/python/ruff.toml`)
+- JuliaFormatter 2+ - Julia formatter (`bindings/julia/.JuliaFormatter.toml`)
+- Dart analyzer with `lints` 3.0+ (`bindings/dart/analysis_options.yaml`)
 
 ## Key Dependencies
 
-**Critical (fetched via CMake FetchContent — `cmake/Dependencies.cmake`):**
-- SQLite3 v3.50.2 - Core embedded relational database; fetched via `sjinks/sqlite3-cmake`; linked `PUBLIC` so consumers inherit the dependency
-- sol2 v3.5.0 - C++ Lua binding (heavy templates; requires `/bigobj` on MSVC, `-Wa,-mbig-obj` on MinGW)
-- Lua 5.4.8 - Scripting engine built from source via `lua-cmake` wrapper (`gitlab.com/codelibre/lua/lua-cmake`); interpreter and compiler disabled, library only
-- CFFI 2.0.0+ - Python ABI-mode FFI; cdef declarations in `bindings/python/src/quiverdb/_c_api.py`
-
-**Infrastructure:**
-- spdlog v1.17.0 - Structured logging (debug/info/warn/error/off), console + file sinks per database instance
-- toml++ v3.4.0 - TOML configuration file parsing (`marzer/tomlplusplus`)
-- rapidcsv v8.92 - Header-only CSV read/write (`d99kris/rapidcsv`); used in `src/database_csv_export.cpp`, `src/database_csv_import.cpp`
-- argparse v3.2 - Header-only CLI argument parsing (`p-ranav/argparse`); used only in `src/cli/main.cpp`
-- native_toolchain_cmake ^0.2.2 - Dart native build hook invokes CMake to compile quiver (`bindings/dart/hook/build.dart`)
-- ffigen ^11.0.0 - Dart FFI binding generator; output `bindings/dart/lib/src/ffi/bindings.dart` (excluded from Dart analysis)
+**Critical:**
+- SQLite 3.50.2 - Primary database engine; fetched via `sjinks/sqlite3-cmake` wrapper (`cmake/Dependencies.cmake`)
+- Lua 5.4.8 - Embedded scripting; fetched via `lua-cmake` GitLab wrapper (`cmake/Dependencies.cmake`)
+- sol2 v3.5.0 - C++ Lua binding library; enables fluent Lua/C++ interop (`cmake/Dependencies.cmake`, used in `src/lua_runner.cpp`)
+- toml++ v3.4.0 - TOML parsing for blob metadata sidecar files (`cmake/Dependencies.cmake`, used in `src/blob/blob_metadata.cpp`)
+- spdlog v1.17.0 - Structured logging (`cmake/Dependencies.cmake`)
+- rapidcsv v8.92 - Header-only CSV reading/writing (`cmake/Dependencies.cmake`)
+- argparse v3.2 - CLI argument parsing for `quiver_cli` (`cmake/Dependencies.cmake`)
 
 **Julia Binding Dependencies:**
-- `CEnum` 0.5 - C enum interop
-- `DataFrames` 1.x - Multi-row query result type
-- `Dates` stdlib - DateTime parsing
-- `Libdl` stdlib - Native library loading
+- `CEnum` 0.5 - Julia enum type wrappers
+- `DataFrames` 1 - DataFrame support for query results
+- `Dates` stdlib - DateTime parsing/formatting
+- `Libdl` stdlib - Dynamic library loading
+- `Clang` 0.19.2 (generator only) - FFI binding generator (`bindings/julia/generator/Project.toml`)
 
-**Python Dev Dependencies:**
-- `pytest` 8.4.1+ - Test runner
-- `ruff` 0.12.2+ - Linter/formatter
-- `dotenv` 0.9.9+ - Optional env overrides in tests
+**Dart Binding Dependencies:**
+- `ffi` 2.1+ - Dart FFI support
+- `code_assets` 1.0+ - Native asset support
+- `hooks` 1.0+ - Build hooks
+- `native_toolchain_cmake` 0.2.2+ - CMake integration for Dart native builds
+- `logging` 1.3+ - Logging support
+- `ffigen` 11.0+ (dev) - Dart FFI binding generator from C headers
+
+**Python Binding Dependencies:**
+- `cffi` 2.0.0 - C Foreign Function Interface (ABI-mode, no compiler at install time)
+- `pytest` 8.4+ (dev) - Test runner
+- `ruff` 0.12+ (dev) - Linter/formatter
+- `dotenv` 0.9.9+ (dev) - Environment loading
 
 ## Configuration
 
-**C++ Build Flags:**
-- MSVC: `/W4 /permissive- /Zc:__cplusplus /utf-8`; disables C4251 (DLL interface warning)
-- GCC/Clang: `-Wall -Wextra -Wpedantic -Wno-unused-parameter`
-- MinGW: Static link of `libgcc`, `libstdc++`, `winpthread` for portable binaries
-- All platforms: Position-independent code (`CMAKE_POSITION_INDEPENDENT_CODE ON`)
+**Environment:**
+- No required environment variables for the core library
+- Python dev mode requires build DLLs on PATH (handled by `bindings/python/tests/test.bat`)
+- Julia tests require `LD_LIBRARY_PATH` pointing to `build/lib/` on Linux
+- Dart tests require `libquiver.dll` and `libquiver_c.dll` in PATH (handled by `bindings/dart/test/test.bat`)
 
-**Python Formatting (`bindings/python/ruff.toml`):**
-- line-length: 120; indent-width: 4; target-version: py313; quote-style: double; line-ending: LF
-- Lint: isort checks only (`select = ["I"]`)
+**Build:**
+- `CMakePresets.json` - Defines `dev`, `release`, `windows-release`, `linux-release`, `all-bindings` presets
+- `cmake/Dependencies.cmake` - All external dependency version pins
+- `cmake/CompilerOptions.cmake` - MSVC/GCC/Clang warning flags and MinGW static link options
+- `cmake/Platform.cmake` - Platform detection, RPATH settings, symbol visibility
+- `.clang-format` - LLVM-based style, 4-space indent, 120-column limit, C++20 standard
+- `.clang-tidy` - `bugprone-*`, `modernize-*`, `performance-*`, `readability-identifier-naming` checks
 
-**Dart Formatting (`bindings/dart/analysis_options.yaml`):**
-- page_width: 120; trailing_commas: preserve; based on `package:lints/recommended.yaml`
-
-**sol2 Safety (`src/CMakeLists.txt`):**
-- `SOL_SAFE_NUMERICS=1`, `SOL_SAFE_FUNCTION=1` compile definitions on `quiver` target
-
-**Build Config Files:**
-- `CMakeLists.txt` - Root build entry
-- `CMakePresets.json` - Named configuration/build/test presets
-- `cmake/Dependencies.cmake` - FetchContent dependency declarations with pinned Git tags
-- `cmake/CompilerOptions.cmake` - Warning levels and linker flags
-- `cmake/Platform.cmake` - RPATH, symbol visibility, lib prefix/suffix per OS
-- `cmake/quiverConfig.cmake.in` - Package config for `find_package(quiver)` support
-- `bindings/python/pyproject.toml` - Python package, build-system, cibuildwheel config
-- `bindings/dart/pubspec.yaml` - Dart package manifest (includes ffigen config)
-- `bindings/julia/Project.toml` - Julia package with compat constraints
-- `codecov.yml` - Coverage threshold configuration (1% minimum, ignores `tests/` and `build/`)
+**Key Build Options:**
+- `QUIVER_BUILD_SHARED` (ON) - Build shared library (default ON)
+- `QUIVER_BUILD_TESTS` (ON) - Build test suite
+- `QUIVER_BUILD_C_API` (OFF default, ON in dev/CI) - Build C API wrapper (`libquiver_c`)
+- `SKBUILD` - Defined by scikit-build-core for Python wheel builds; auto-enables C API, disables tests
 
 ## Platform Requirements
 
 **Development:**
-- CMake 3.21+ and C++20 compiler
-- Julia 1.12+ for Julia binding work
-- Dart SDK 3.10+ for Dart binding work
-- Python 3.13+ with `uv` for Python binding work
-- `clang-format` and `clang-tidy` optional (for format/tidy CMake targets)
+- CMake 3.26+ required
+- C++20-capable compiler: MSVC (Visual Studio 2022 recommended), GCC 13+, Clang
+- Ninja generator recommended for local builds
+- Windows: MSVC `/W4 /permissive-` flags; MinGW supported with static runtime link
+- Linux/macOS: `-Wall -Wextra -Wpedantic` flags; GCC 13+ required on macOS CI
 
-**Production:**
-- Shared libraries: `libquiver.dll/.so/.dylib` + `libquiver_c.dll/.so/.dylib`
-- Windows: both DLLs must be in PATH; on Linux `$ORIGIN` RPATH handles co-location
-- Python wheels target `cp313-win_amd64` and `cp313-manylinux_x86_64`; bundled `_libs/` directory for wheel installs
-- PyPI publishing via OIDC trusted publisher on `v*.*.*` tags (`.github/workflows/publish.yml`)
-- GitHub Releases automatically attach `.whl` files
+**Production (Library Distribution):**
+- Windows: `libquiver.dll` + `libquiver_c.dll` (both needed in PATH for bindings)
+- Linux: `libquiver.so` + `libquiver_c.so` (RPATH `$ORIGIN/../lib` set for installed binaries)
+- macOS: `libquiver.dylib` + `libquiver_c.dylib` (RPATH `@executable_path/../lib`)
+- Python: Distributed as platform wheels via PyPI; wheels bundle DLLs in `quiverdb/_libs/`
 
-## Version
-
-**Current Release:** 0.5.0 (defined in `CMakeLists.txt`, mirrored in all binding package manifests)
-- WIP status; breaking changes acceptable; no backwards compatibility guarantees
+**Outputs:**
+- `build/bin/quiver_tests.exe` - C++ test executable
+- `build/bin/quiver_c_tests.exe` - C API test executable
+- `build/bin/quiver_cli.exe` - CLI tool
+- `build/bin/quiver_benchmark.exe` - Transaction performance benchmark (not in test suite)
+- `build/lib/libquiver.{dll,so,dylib}` - Core shared library
+- `build/lib/libquiver_c.{dll,so,dylib}` - C API shared library
 
 ---
 
-*Stack analysis: 2026-02-27*
+*Stack analysis: 2026-03-08*
