@@ -9,10 +9,10 @@ Requirements for JavaScript/TypeScript binding. Each maps to roadmap phases.
 
 ### FFI Foundation
 
-- [ ] **FFI-01**: Library loader detects platform and loads libquiver + libquiver_c shared libraries
-- [ ] **FFI-02**: Error handler reads C API error messages and throws typed QuiverError
-- [ ] **FFI-03**: Out-parameter helpers allocate and read pointer/integer/float/string out-params
-- [ ] **FFI-04**: Type conversion helpers handle int64 BigInt-to-number, C strings, typed arrays
+- [x] **FFI-01**: Library loader detects platform and loads libquiver + libquiver_c shared libraries
+- [x] **FFI-02**: Error handler reads C API error messages and throws typed QuiverError
+- [x] **FFI-03**: Out-parameter helpers allocate and read pointer/integer/float/string out-params
+- [x] **FFI-04**: Type conversion helpers handle int64 BigInt-to-number, C strings, typed arrays
 
 ### Database Lifecycle
 
@@ -92,10 +92,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FFI-01 | Phase 1 | Pending |
-| FFI-02 | Phase 1 | Pending |
-| FFI-03 | Phase 1 | Pending |
-| FFI-04 | Phase 1 | Pending |
+| FFI-01 | Phase 1 | Complete |
+| FFI-02 | Phase 1 | Complete |
+| FFI-03 | Phase 1 | Complete |
+| FFI-04 | Phase 1 | Complete |
 | LIFE-01 | Phase 1 | Pending |
 | LIFE-02 | Phase 1 | Pending |
 | LIFE-03 | Phase 1 | Pending |
