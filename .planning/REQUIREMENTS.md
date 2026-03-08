@@ -16,9 +16,9 @@ Requirements for JavaScript/TypeScript binding. Each maps to roadmap phases.
 
 ### Database Lifecycle
 
-- [ ] **LIFE-01**: User can open database from SQL schema file via `fromSchema()`
-- [ ] **LIFE-02**: User can open database from migration files via `fromMigrations()`
-- [ ] **LIFE-03**: User can close database and release native resources via `close()`
+- [x] **LIFE-01**: User can open database from SQL schema file via `fromSchema()`
+- [x] **LIFE-02**: User can open database from migration files via `fromMigrations()`
+- [x] **LIFE-03**: User can close database and release native resources via `close()`
 
 ### Element & CRUD
 
@@ -96,9 +96,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FFI-02 | Phase 1 | Complete |
 | FFI-03 | Phase 1 | Complete |
 | FFI-04 | Phase 1 | Complete |
-| LIFE-01 | Phase 1 | Pending |
-| LIFE-02 | Phase 1 | Pending |
-| LIFE-03 | Phase 1 | Pending |
+| LIFE-01 | Phase 1 | Complete |
+| LIFE-02 | Phase 1 | Complete |
+| LIFE-03 | Phase 1 | Complete |
 | CRUD-01 | Phase 2 | Pending |
 | CRUD-02 | Phase 2 | Pending |
 | CRUD-03 | Phase 2 | Pending |
