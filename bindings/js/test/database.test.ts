@@ -139,7 +139,10 @@ describe("Library loading", () => {
     const lib = getSymbols();
     const version = lib.quiver_version();
     expect(version).toBeTruthy();
-    expect(typeof version).toBe("string");
-    expect((version as string).length).toBeGreaterThan(0);
+    // bun:ffi cstring returns a CString (extends String), so typeof is "object"
+    // Use toString() for a plain JS string
+    const versionStr = version!.toString();
+    expect(typeof versionStr).toBe("string");
+    expect(versionStr.length).toBeGreaterThan(0);
   });
 });

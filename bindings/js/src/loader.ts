@@ -6,6 +6,19 @@ import { QuiverError } from "./errors";
 const CORE_LIB = `libquiver.${suffix}`;
 const C_API_LIB = `libquiver_c.${suffix}`;
 
+/**
+ * Pre-load a DLL on Windows using kernel32 LoadLibraryA.
+ * bun:ffi dlopen() requires at least one symbol, so it cannot be used
+ * for dependency-only pre-loading (libquiver.dll has no C API symbols).
+ * This is the equivalent of Python's os.add_dll_directory() approach.
+ */
+function preloadWindows(dllPath: string): void {
+  const kernel32 = dlopen("kernel32.dll", {
+    LoadLibraryA: { args: [FFIType.ptr], returns: FFIType.ptr },
+  });
+  kernel32.symbols.LoadLibraryA(Buffer.from(dllPath + "\0"));
+}
+
 const symbols = {
   quiver_version: {
     args: [],
@@ -66,7 +79,7 @@ export function loadLibrary(): Library {
     try {
       // Windows: pre-load core library (dependency chain)
       if (suffix === "dll" && existsSync(corePath)) {
-        dlopen(corePath, {});
+        preloadWindows(corePath);
       }
       _library = dlopen(cApiPath, symbols);
       return _library;
@@ -79,7 +92,7 @@ export function loadLibrary(): Library {
   try {
     if (suffix === "dll") {
       try {
-        dlopen(CORE_LIB, {});
+        preloadWindows(CORE_LIB);
       } catch {
         // Core lib may already be loaded or not needed on this platform
       }
