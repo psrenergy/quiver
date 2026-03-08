@@ -30,11 +30,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Calling `db.close()` releases native resources and subsequent operations on that instance throw
   4. When a C API call fails, a `QuiverError` is thrown with the error message from the C layer (not a generic FFI error)
   5. Library loading works on Windows (pre-loading libquiver.dll before libquiver_c.dll)
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md -- FFI foundation: project scaffolding, library loader, error handling, FFI helpers
+- [ ] 01-02-PLAN.md -- Database class lifecycle (fromSchema, fromMigrations, close) and integration tests
 
 ### Phase 2: Element Builder and CRUD
 **Goal**: Users can create and delete elements with typed scalar and array attributes
@@ -100,7 +100,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. FFI Foundation and Database Lifecycle | 0/? | Not started | - |
+| 1. FFI Foundation and Database Lifecycle | 0/2 | Planned | - |
 | 2. Element Builder and CRUD | 0/? | Not started | - |
 | 3. Read Operations | 0/? | Not started | - |
 | 4. Query and Transaction Control | 0/? | Not started | - |
