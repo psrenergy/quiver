@@ -6,7 +6,7 @@ using Test
 include("fixture.jl")
 
 function make_binary_path()
-    return joinpath(tempdir(), "quiver_julia_binary_csv_test")
+    return joinpath(tempdir(), "quiver_julia_csv_converter_test")
 end
 
 function cleanup_binary(path)

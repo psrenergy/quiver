@@ -5,8 +5,8 @@
 ## Tech Debt
 
 **Binary subsystem is a dead stub:**
-- Issue: `src/binary/` contains stub implementations with empty function bodies. `binary.cpp` has `open_reader` and `open_writer` that return nothing. `binary_csv.cpp` and `binary_metadata.cpp` are empty. The `BinaryMetadata` header references `Dimension` which is unresolved.
-- Files: `src/binary/binary.cpp`, `src/binary/binary_csv.cpp`, `src/binary/binary_metadata.cpp`, `include/quiver/binary/binary.h`, `include/quiver/binary/binary_csv.h`, `include/quiver/binary/binary_metadata.h`
+- Issue: `src/binary/` contains stub implementations with empty function bodies. `binary.cpp` has `open_reader` and `open_writer` that return nothing. `csv_converter.cpp` and `binary_metadata.cpp` are empty. The `BinaryMetadata` header references `Dimension` which is unresolved.
+- Files: `src/binary/binary.cpp`, `src/binary/csv_converter.cpp`, `src/binary/binary_metadata.cpp`, `include/quiver/binary/binary.h`, `include/quiver/binary/csv_converter.h`, `include/quiver/binary/binary_metadata.h`
 - Impact: The binary subsystem is included in CMake's format/tidy targets (`CMakeLists.txt` lines 84-85) but not in the actual build target. It is unfinished dead code. The public headers declare API that cannot be used.
 - Fix approach: Either implement the binary subsystem fully or remove all files in `src/binary/` and `include/quiver/binary/` and clean up the CMakeLists.txt format target references.
 
@@ -165,7 +165,7 @@
 
 **Binary subsystem has no tests:**
 - What's not tested: Everything in `src/binary/` and `include/quiver/binary/` — the entire binary read/write/CSV/metadata API.
-- Files: `src/binary/binary.cpp`, `src/binary/binary_csv.cpp`, `src/binary/binary_metadata.cpp`
+- Files: `src/binary/binary.cpp`, `src/binary/csv_converter.cpp`, `src/binary/binary_metadata.cpp`
 - Risk: The stubs compile without signals of incompleteness. No test coverage for when the feature is eventually implemented.
 - Priority: Low (stubs only, not buildable)
 

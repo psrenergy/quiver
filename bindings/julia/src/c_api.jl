@@ -636,12 +636,12 @@ end
 # Binary CSV functions
 # ============================================================================
 
-function quiver_binary_csv_bin_to_csv(path, aggregate_time_dimensions)
-    @ccall libquiver_c.quiver_binary_csv_bin_to_csv(path::Ptr{Cchar}, aggregate_time_dimensions::Cint)::quiver_error_t
+function quiver_csv_converter_bin_to_csv(path, aggregate_time_dimensions)
+    @ccall libquiver_c.quiver_csv_converter_bin_to_csv(path::Ptr{Cchar}, aggregate_time_dimensions::Cint)::quiver_error_t
 end
 
-function quiver_binary_csv_csv_to_bin(path)
-    @ccall libquiver_c.quiver_binary_csv_csv_to_bin(path::Ptr{Cchar})::quiver_error_t
+function quiver_csv_converter_csv_to_bin(path)
+    @ccall libquiver_c.quiver_csv_converter_csv_to_bin(path::Ptr{Cchar})::quiver_error_t
 end
 
 #! format: on

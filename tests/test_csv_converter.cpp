@@ -5,7 +5,7 @@
 #include <gtest/gtest.h>
 #include <limits>
 #include <quiver/binary/binary.h>
-#include <quiver/binary/binary_csv.h>
+#include <quiver/binary/csv_converter.h>
 #include <quiver/binary/binary_metadata.h>
 #include <quiver/element.h>
 #include <sstream>
@@ -20,7 +20,7 @@ namespace fs = std::filesystem;
 
 class CSVConverterFixture : public ::testing::Test {
 protected:
-    void SetUp() override { path = (fs::temp_directory_path() / "quiver_binary_csv_test").string(); }
+    void SetUp() override { path = (fs::temp_directory_path() / "quiver_csv_converter_test").string(); }
 
     void TearDown() override {
         for (auto ext : {".qvr", ".toml", ".csv"}) {

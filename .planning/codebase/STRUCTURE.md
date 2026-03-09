@@ -55,7 +55,7 @@ quiver4/
 │   ├── common.cpp             # Shared C API utility (version, error string)
 │   ├── binary/                  # Binary/time series internal utilities
 │   │   ├── binary.cpp
-│   │   ├── binary_csv.cpp
+│   │   ├── csv_converter.cpp
 │   │   ├── binary_metadata.cpp
 │   │   ├── dimension.cpp
 │   │   └── time_properties.cpp

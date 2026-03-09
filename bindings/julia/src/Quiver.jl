@@ -23,7 +23,7 @@ include("helper_maps.jl")
 include("lua_runner.jl")
 include("binary/binary_metadata.jl")
 include("binary/binary.jl")
-include("binary/binary_csv.jl")
+include("binary/csv_converter.jl")
 
 export Element, Database, LuaRunner, DatabaseException
 export ScalarMetadata, GroupMetadata

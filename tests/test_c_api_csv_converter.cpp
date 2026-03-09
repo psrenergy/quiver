@@ -3,7 +3,7 @@
 #include <fstream>
 #include <gtest/gtest.h>
 #include <quiver/c/binary/binary.h>
-#include <quiver/c/binary/binary_csv.h>
+#include <quiver/c/binary/csv_converter.h>
 #include <quiver/c/binary/binary_metadata.h>
 #include <quiver/c/common.h>
 #include <quiver/c/element.h>
@@ -17,7 +17,7 @@ namespace fs = std::filesystem;
 
 class BinaryCApiCSVFixture : public ::testing::Test {
 protected:
-    void SetUp() override { path = (fs::temp_directory_path() / "quiver_c_binary_csv_test").string(); }
+    void SetUp() override { path = (fs::temp_directory_path() / "quiver_c_csv_converter_test").string(); }
 
     void TearDown() override {
         for (auto ext : {".qvr", ".toml", ".csv"}) {
@@ -63,7 +63,7 @@ TEST_F(BinaryCApiCSVFixture, BinToCsvCreatesFile) {
     }
     quiver_binary_metadata_free(md);
 
-    EXPECT_EQ(quiver_binary_csv_bin_to_csv(path.c_str(), 1), QUIVER_OK);
+    EXPECT_EQ(quiver_csv_converter_bin_to_csv(path.c_str(), 1), QUIVER_OK);
     EXPECT_TRUE(fs::exists(path + ".csv"));
 }
 
@@ -89,10 +89,10 @@ TEST_F(BinaryCApiCSVFixture, CsvToBinCreatesFile) {
     }
     quiver_binary_metadata_free(md);
 
-    quiver_binary_csv_bin_to_csv(path.c_str(), 0);
+    quiver_csv_converter_bin_to_csv(path.c_str(), 0);
     fs::remove(path + ".qvr");
 
-    EXPECT_EQ(quiver_binary_csv_csv_to_bin(path.c_str()), QUIVER_OK);
+    EXPECT_EQ(quiver_csv_converter_csv_to_bin(path.c_str()), QUIVER_OK);
     EXPECT_TRUE(fs::exists(path + ".qvr"));
 }
 
@@ -118,11 +118,11 @@ TEST_F(BinaryCApiCSVFixture, RoundTrip) {
     quiver_binary_metadata_free(md);
 
     // bin -> csv
-    ASSERT_EQ(quiver_binary_csv_bin_to_csv(path.c_str(), 0), QUIVER_OK);
+    ASSERT_EQ(quiver_csv_converter_bin_to_csv(path.c_str(), 0), QUIVER_OK);
     fs::remove(path + ".qvr");
 
     // csv -> bin
-    ASSERT_EQ(quiver_binary_csv_csv_to_bin(path.c_str()), QUIVER_OK);
+    ASSERT_EQ(quiver_csv_converter_csv_to_bin(path.c_str()), QUIVER_OK);
 
     // Read back and verify
     {
@@ -165,7 +165,7 @@ TEST_F(BinaryCApiCSVFixture, BinToCsvNoAggregate) {
     }
     quiver_binary_metadata_free(md);
 
-    EXPECT_EQ(quiver_binary_csv_bin_to_csv(path.c_str(), 0), QUIVER_OK);
+    EXPECT_EQ(quiver_csv_converter_bin_to_csv(path.c_str(), 0), QUIVER_OK);
     EXPECT_TRUE(fs::exists(path + ".csv"));
 }
 
@@ -187,7 +187,7 @@ TEST_F(BinaryCApiCSVFixture, BinToCsvAggregate) {
     }
     quiver_binary_metadata_free(md);
 
-    EXPECT_EQ(quiver_binary_csv_bin_to_csv(path.c_str(), 1), QUIVER_OK);
+    EXPECT_EQ(quiver_csv_converter_bin_to_csv(path.c_str(), 1), QUIVER_OK);
     EXPECT_TRUE(fs::exists(path + ".csv"));
 }
 
@@ -215,9 +215,9 @@ TEST_F(BinaryCApiCSVFixture, RoundTripAllPositions) {
     }
     quiver_binary_metadata_free(md);
 
-    ASSERT_EQ(quiver_binary_csv_bin_to_csv(path.c_str(), 0), QUIVER_OK);
+    ASSERT_EQ(quiver_csv_converter_bin_to_csv(path.c_str(), 0), QUIVER_OK);
     fs::remove(path + ".qvr");
-    ASSERT_EQ(quiver_binary_csv_csv_to_bin(path.c_str()), QUIVER_OK);
+    ASSERT_EQ(quiver_csv_converter_csv_to_bin(path.c_str()), QUIVER_OK);
 
     // Verify all positions
     {
@@ -246,21 +246,21 @@ TEST_F(BinaryCApiCSVFixture, RoundTripAllPositions) {
 // ============================================================================
 
 TEST_F(BinaryCApiCSVFixture, NullPath) {
-    EXPECT_EQ(quiver_binary_csv_bin_to_csv(nullptr, 1), QUIVER_ERROR);
+    EXPECT_EQ(quiver_csv_converter_bin_to_csv(nullptr, 1), QUIVER_ERROR);
     EXPECT_STREQ(quiver_get_last_error(), "Null argument: path");
 
-    EXPECT_EQ(quiver_binary_csv_csv_to_bin(nullptr), QUIVER_ERROR);
+    EXPECT_EQ(quiver_csv_converter_csv_to_bin(nullptr), QUIVER_ERROR);
     EXPECT_STREQ(quiver_get_last_error(), "Null argument: path");
 }
 
 TEST_F(BinaryCApiCSVFixture, BinToCsvNonExistentFile) {
-    EXPECT_EQ(quiver_binary_csv_bin_to_csv("nonexistent_path", 0), QUIVER_ERROR);
+    EXPECT_EQ(quiver_csv_converter_bin_to_csv("nonexistent_path", 0), QUIVER_ERROR);
     std::string err = quiver_get_last_error();
     EXPECT_FALSE(err.empty());
 }
 
 TEST_F(BinaryCApiCSVFixture, CsvToBinNonExistentFile) {
-    EXPECT_EQ(quiver_binary_csv_csv_to_bin("nonexistent_path"), QUIVER_ERROR);
+    EXPECT_EQ(quiver_csv_converter_csv_to_bin("nonexistent_path"), QUIVER_ERROR);
     std::string err = quiver_get_last_error();
     EXPECT_FALSE(err.empty());
 }
@@ -272,7 +272,7 @@ TEST_F(BinaryCApiCSVFixture, CsvToBinMissingToml) {
         csv << "row,col,val1,val2\n1,1,1.0,2.0\n";
     }
 
-    EXPECT_EQ(quiver_binary_csv_csv_to_bin(path.c_str()), QUIVER_ERROR);
+    EXPECT_EQ(quiver_csv_converter_csv_to_bin(path.c_str()), QUIVER_ERROR);
     std::string err = quiver_get_last_error();
     EXPECT_FALSE(err.empty());
 

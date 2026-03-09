@@ -1,11 +1,11 @@
-#include "quiver/c/binary/binary_csv.h"
+#include "quiver/c/binary/csv_converter.h"
 
 #include "../internal.h"
-#include "quiver/binary/binary_csv.h"
+#include "quiver/binary/csv_converter.h"
 
 extern "C" {
 
-QUIVER_C_API quiver_error_t quiver_binary_csv_bin_to_csv(const char* path, int aggregate_time_dimensions) {
+QUIVER_C_API quiver_error_t quiver_csv_converter_bin_to_csv(const char* path, int aggregate_time_dimensions) {
     QUIVER_REQUIRE(path);
 
     try {
@@ -17,7 +17,7 @@ QUIVER_C_API quiver_error_t quiver_binary_csv_bin_to_csv(const char* path, int a
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_binary_csv_csv_to_bin(const char* path) {
+QUIVER_C_API quiver_error_t quiver_csv_converter_csv_to_bin(const char* path) {
     QUIVER_REQUIRE(path);
 
     try {
