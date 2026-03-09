@@ -96,6 +96,58 @@ const symbols = {
     args: [FFIType.ptr, FFIType.ptr, FFIType.i64],
     returns: FFIType.i32,
   },
+
+  // Read scalar arrays
+  quiver_database_read_scalar_integers: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_read_scalar_floats: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_read_scalar_strings: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // Read scalar by ID
+  quiver_database_read_scalar_integer_by_id: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.i64, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_read_scalar_float_by_id: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.i64, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_read_scalar_string_by_id: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.i64, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // Read element IDs
+  quiver_database_read_element_ids: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // Free functions
+  quiver_database_free_integer_array: {
+    args: [FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_free_float_array: {
+    args: [FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_free_string_array: {
+    args: [FFIType.ptr, FFIType.u64],
+    returns: FFIType.i32,
+  },
+  quiver_database_free_string: {
+    args: [FFIType.ptr],
+    returns: FFIType.i32,
+  },
 } as const;
 
 type Library = ReturnType<typeof dlopen<typeof symbols>>;
