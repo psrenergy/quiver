@@ -148,6 +148,52 @@ const symbols = {
     args: [FFIType.ptr],
     returns: FFIType.i32,
   },
+
+  // Query operations (plain)
+  quiver_database_query_string: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_query_integer: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_query_float: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // Query operations (parameterized)
+  quiver_database_query_string_params: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.u64, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_query_integer_params: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.u64, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_query_float_params: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.u64, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // Transaction control
+  quiver_database_begin_transaction: {
+    args: [FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_commit: {
+    args: [FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_rollback: {
+    args: [FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_in_transaction: {
+    args: [FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
 } as const;
 
 type Library = ReturnType<typeof dlopen<typeof symbols>>;

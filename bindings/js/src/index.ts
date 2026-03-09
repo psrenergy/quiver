@@ -3,4 +3,4 @@ import "./read";
 
 export { QuiverError } from "./errors";
 export { Database } from "./database";
-export type { ScalarValue, ArrayValue, Value, ElementData } from "./types";
+export type { ScalarValue, ArrayValue, Value, ElementData, QueryParam } from "./types";
