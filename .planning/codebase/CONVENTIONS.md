@@ -1,136 +1,162 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-02-27
+**Analysis Date:** 2026-03-08
 
 ## Naming Patterns
 
-**Files (C++ source):**
-- `snake_case` for all `.cpp` and `.h` files: `database_create.cpp`, `database_helpers.h`
-- Test files: `test_<subject>.cpp` (C++ layer), `test_c_api_<subject>.cpp` (C API layer)
-- Group related operations into one file per domain: `database_read.cpp`, `database_update.cpp`
+### C++ Core
 
-**Files (bindings):**
-- Julia: `test_database_create.jl` — same snake_case convention
-- Dart: `database_create_test.dart` — suffix `_test` per Dart convention
-- Python: `test_database_create.py` — prefixed `test_` per pytest convention
+**Files:**
+- `snake_case.cpp` / `snake_case.h` — all C++ source and header files
+- Subsystem grouping: `database_csv_export.cpp`, `database_read.cpp`, `database_metadata.cpp`
+- Internal headers (no install): `internal.h`, `database_helpers.h`, `database_options.h`
 
 **Classes and Structs:**
-- `CamelCase` for all class and struct names: `Database`, `Element`, `ScalarMetadata`, `GroupMetadata`
-- Public C++ classes use `QUIVER_API` macro: `class QUIVER_API Database`
-- Internal C API structs prefixed with `quiver_`: `quiver_database`, `quiver_element`
+- `CamelCase` — classes and structs: `Database`, `BlobMetadata`, `ScalarMetadata`, `GroupMetadata`
+- `CamelCase` — enums: `LogLevel`, `TimeFrequency`
+- `CamelCase` — enum constants: `TimeFrequency::Yearly`, `LogLevel::Off`
 
-**Functions and Methods (C++):**
-- `lower_case` (snake_case) for all function and method names
-- Public `Database` methods follow `verb_[category_]type[_by_id]` pattern:
+**Functions and Methods:**
+- `lower_case` (snake_case) — all functions and methods: `read_scalar_integers`, `create_element`, `from_schema`
+- Public `Database` methods follow `verb_[category_]type[_by_id]`:
   - Verbs: `create`, `read`, `update`, `delete`, `get`, `list`, `has`, `query`, `describe`, `export`, `import`
   - `_by_id` suffix only when both "all elements" and "single element" variants exist
-  - Singular vs plural matches return cardinality: `read_scalar_integers` returns `vector`, `read_scalar_integer_by_id` returns `optional`
-- Examples: `create_element`, `read_vector_floats_by_id`, `get_scalar_metadata`, `list_time_series_groups`
+  - Singular/plural matches cardinality: `read_scalar_integers` (vector), `read_scalar_integer_by_id` (optional)
 
-**C API Functions:**
-- Prefix `quiver_database_` for database operations: `quiver_database_create_element`
-- Prefix `quiver_element_` for element operations: `quiver_element_set_string`
-- Free functions follow: `quiver_database_free_integer_array`, `quiver_element_free_string`
-- Utility functions (no entity prefix): `quiver_get_last_error`, `quiver_version`
+**Variables and Members:**
+- `lower_case` — variables, parameters, members
+- Private members have `_` suffix: `impl_`, `ptr_`
 
-**Variables and Parameters:**
-- `lower_case` (snake_case): `out_db`, `collection`, `attribute`, `out_count`
-- Output parameters prefixed `out_`: `out_db`, `out_values`, `out_count`, `out_id`
-- Private class members suffixed `_`: `impl_`, `scalars_`, `arrays_`
+**Namespaces:**
+- `lower_case` — `quiver`, `quiver::string`, `quiver::test`
 
-**Macros:**
-- `UPPER_CASE` with `QUIVER_` prefix: `QUIVER_REQUIRE`, `QUIVER_OK`, `QUIVER_ERROR`, `QUIVER_C_API`, `QUIVER_API`
+### C API
 
-**Enums:**
-- `CamelCase` for C++ enum type and constant names: `DataType::Integer`, `DataType::Real`
-- C API enums use `UPPER_CASE` with prefix: `QUIVER_DATA_TYPE_INTEGER`, `QUIVER_LOG_OFF`
+**Functions:**
+- `quiver_{entity}_{method}` — e.g., `quiver_database_create_element`, `quiver_blob_open_read`
+- Free functions co-located with allocation functions: `quiver_database_free_integer_array`, `quiver_blob_free_string`
+
+**Types:**
+- `quiver_{entity}_t` — opaque handle types: `quiver_database_t`, `quiver_blob_t`, `quiver_element_t`
+- `quiver_{concept}_t` — value types: `quiver_database_options_t`, `quiver_blob_metadata_t`
+- Error code: `quiver_error_t` with constants `QUIVER_OK = 0`, `QUIVER_ERROR = 1`
+
+**Constants:**
+- `QUIVER_LOG_OFF`, `QUIVER_DATA_TYPE_INTEGER` — all-caps with `QUIVER_` prefix
+
+### Julia Bindings
+
+**Functions:** Same `snake_case` as C++. Mutating operations get `!` suffix:
+- `create_element!`, `update_element!`, `delete_element!`, `close!`, `commit!`, `rollback!`
+- Non-mutating: `read_scalar_integers`, `get_scalar_metadata`, `query_string`
+
+**Modules/Types:** `CamelCase` — `Database`, `BlobMetadata`, `DatabaseException`
+
+### Dart Bindings
+
+**Methods:** `camelCase` — `createElement`, `readScalarIntegers`, `fromSchema`
+- Factory constructors: `Database.fromSchema()`, `Database.fromMigrations()`
+
+**Classes:** `CamelCase` — `Database`, `DatabaseException`
+
+### Python Bindings
+
+**Methods/Functions:** Same `snake_case` as C++ — `create_element`, `read_scalar_integers`
+- Static factories: `Database.from_schema()`, `Database.from_migrations()`
+- `create_element` and `update_element` use `**kwargs`, not positional `Element` argument
+
+**Classes:** `CamelCase` — `Database`, `QuiverError`
 
 ## Code Style
 
-**Formatter:** `clang-format` with LLVM base style (see `.clang-format`)
+### C++ Formatting (`.clang-format`)
+- Based on LLVM style
+- `IndentWidth: 4`, `TabWidth: 4`, `UseTab: Never`
+- `ColumnLimit: 120`
+- `PointerAlignment: Left` — pointer on type side: `char* ptr`
+- `BreakBeforeBraces: Attach` — braces on same line
+- `SortIncludes: true`, `IncludeBlocks: Regroup`
+- `AllowShortFunctionsOnASingleLine: Inline` — only inline class methods on one line
 
-**Key settings:**
-- Indent: 4 spaces, no tabs
-- Line limit: 120 characters
-- LF line endings
-- `BinPackArguments: false` — all arguments on separate lines when they don't fit
-- `BreakBeforeBraces: Attach` — opening brace on same line
-- `PointerAlignment: Left` — `int64_t* out_values` not `int64_t *out_values`
-- `SortIncludes: true` — includes auto-sorted by clang-format
-- `AllowShortFunctionsOnASingleLine: Inline` — inline short functions permitted
-
-**Static analyzer:** `clang-tidy` (see `.clang-tidy`):
+### C++ Linting (`.clang-tidy`)
 - Enabled: `bugprone-*`, `modernize-*`, `performance-*`, `readability-identifier-naming`, `readability-redundant-*`, `readability-simplify-*`
-- Notable exclusions: `modernize-use-trailing-return-type`, `modernize-avoid-c-arrays`, `modernize-use-ranges`
-- Identifier naming enforced: classes/structs = `CamelCase`, functions/methods/variables = `lower_case`, private members = `lower_case_` with suffix
+- Disabled: `modernize-use-trailing-return-type`, `modernize-avoid-c-arrays`, `modernize-use-ranges`, `performance-enum-size`
+- Warnings are NOT treated as errors
 
-## Import Organization
+### Julia Formatting (`.JuliaFormatter.toml`)
+- `indent = 4`, `margin = 120`
+- `always_use_return = true`, `trailing_comma = true`
+- `format_docstrings = true`
 
-**C++ includes order** (enforced by clang-format):
+### Python Formatting (`ruff.toml`)
+- `line-length = 120`, `indent-width = 4`
+- `quote-style = "double"`, `line-ending = "lf"`
+- `isort` enabled; `from __future__ import annotations` at top of every file
+- `target-version = "py313"`
 
-1. Own header (for `.cpp` files matching the translation unit)
-2. Internal headers (quoted)
-3. Third-party and standard library headers (angle brackets)
+### Dart Formatting (`analysis_options.yaml`)
+- `page_width: 120`
+- `trailing_commas: preserve`
+- Based on `package:lints/recommended.yaml`
 
-Example from `src/c/database.cpp`:
+## Include Organization
+
+### C++ Include Order (managed by clang-format `IncludeBlocks: Regroup`):
+1. Module's own header (first, for `.cpp` files): `#include "quiver/blob/blob.h"`
+2. Internal project headers: `#include "blob_utils.h"` / `#include "internal.h"`
+3. Standard library headers: `#include <filesystem>`, `#include <string>`
+
+### Example pattern from `src/blob/blob.cpp`:
 ```cpp
-#include "quiver/c/database.h"
+#include "quiver/blob/blob.h"
 
-#include "internal.h"
+#include "blob_utils.h"
+#include "quiver/blob/dimension.h"
+#include "quiver/blob/time_constants.h"
 
-#include <new>
-#include <string>
+#include <chrono>
+#include <cmath>
+#include <filesystem>
 ```
 
-Example from `tests/test_database_create.cpp`:
+### Example pattern from `src/c/database_read.cpp`:
 ```cpp
-#include "test_utils.h"
+#include "database_helpers.h"
+#include "internal.h"
+#include "quiver/c/database.h"
 
-#include <algorithm>
-#include <gtest/gtest.h>
-#include <quiver/database.h>
-#include <quiver/element.h>
+extern "C" {
 ```
 
 ## Error Handling
 
 ### C++ Layer
-All `throw std::runtime_error(...)` use exactly three message patterns — no ad-hoc formats:
+Three exact error message patterns — no ad-hoc formats:
 
-**Pattern 1 — Precondition failure:** `"Cannot {operation}: {reason}"`
 ```cpp
+// Pattern 1: Precondition failure
 throw std::runtime_error("Cannot create_element: element must have at least one scalar attribute");
-throw std::runtime_error("Cannot begin_transaction: transaction already active");
-throw std::runtime_error("Cannot commit: no active transaction");
-throw std::runtime_error("Cannot rollback: no active transaction");
-```
 
-**Pattern 2 — Not found:** `"{Entity} not found: {identifier}"`
-```cpp
+// Pattern 2: Not found
 throw std::runtime_error("Scalar attribute not found: 'value' in collection 'Items'");
-throw std::runtime_error("Schema file not found: path/to/schema.sql");
-throw std::runtime_error("Time series table not found: Items_time_series_data");
-```
 
-**Pattern 3 — Operation failure:** `"Failed to {operation}: {reason}"`
-```cpp
+// Pattern 3: Operation failure
 throw std::runtime_error("Failed to open database: " + sqlite3_errmsg(db));
-throw std::runtime_error("Failed to execute statement: " + sqlite3_errmsg(db));
 ```
 
 ### C API Layer
-All C API functions use try-catch with `quiver_set_last_error()` and binary return codes:
+`QUIVER_REQUIRE` macro validates non-null pointers at entry; try/catch wraps all operations:
 
 ```cpp
-quiver_error_t quiver_some_function(quiver_database_t* db) {
-    QUIVER_REQUIRE(db);  // null-check; sets error and returns QUIVER_ERROR if null
+quiver_error_t quiver_database_create_element(quiver_database_t* db,
+                                              const char* collection,
+                                              quiver_element_t* element,
+                                              int64_t* out_id) {
+    QUIVER_REQUIRE(db, collection, element, out_id);
 
     try {
-        // operation...
+        *out_id = db->db.create_element(collection, element->element);
         return QUIVER_OK;
-    } catch (const std::bad_alloc&) {
-        quiver_set_last_error("Memory allocation failed");
-        return QUIVER_ERROR;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
         return QUIVER_ERROR;
@@ -138,125 +164,108 @@ quiver_error_t quiver_some_function(quiver_database_t* db) {
 }
 ```
 
-`bad_alloc` is caught separately only in factory functions (`quiver_database_open`, `quiver_database_from_schema`, `quiver_database_from_migrations`). Other functions catch only `std::exception`.
-
-### `QUIVER_REQUIRE` macro
-Validates pointer arguments at function entry, supports 1–9 arguments. Auto-generates error messages from argument names via stringification:
-```cpp
-QUIVER_REQUIRE(db, collection, attribute, out_values, out_count);
-// On null db: sets "Null argument: db" and returns QUIVER_ERROR
+### Julia Layer
+`check()` function in `bindings/julia/src/exceptions.jl`:
+```julia
+function check(err)
+    if err != C.QUIVER_OK
+        detail = unsafe_string(C.quiver_get_last_error())
+        throw(DatabaseException(detail))
+    end
+end
 ```
+Throws `DatabaseException <: Exception`.
 
-Defined in `src/c/internal.h`.
+### Dart Layer
+`check()` function in `bindings/dart/lib/src/exceptions.dart`:
+```dart
+void check(int err) {
+  if (err != 0) {
+    final detail = bindings.quiver_get_last_error().cast<Utf8>().toDartString();
+    throw DatabaseException(detail);
+  }
+}
+```
+Throws `DatabaseException implements Exception`.
+
+### Python Layer
+`check()` function in `bindings/python/src/quiverdb/_helpers.py`:
+```python
+def check(err: int) -> None:
+    if err != 0:
+        lib = get_lib()
+        ptr = lib.quiver_get_last_error()
+        detail = ffi.string(ptr).decode("utf-8") if ptr != ffi.NULL else ""
+        raise QuiverError(detail or "Unknown error")
+```
+Raises `QuiverError(Exception)`.
 
 ## Logging
 
-**Framework:** `spdlog`
+**Framework:** spdlog (`bindings/julia`: no logging; C API uses C++ layer logging)
 
-**Levels:** `debug`, `info`, `warn`, `error`
-
-**Format:** `{}` placeholder style (fmt/spdlog):
+**Usage in C++ (`src/`):**
 ```cpp
 spdlog::debug("Opening database: {}", path);
+spdlog::info("Applied migration {}", version);
+spdlog::warn("Something unexpected: {}", detail);
 spdlog::error("Failed to execute query: {}", sqlite3_errmsg(db));
 ```
 
-**In tests:** Always suppress logging via `{.read_only = 0, .console_level = QUIVER_LOG_OFF}`
+**Level control:** `quiver::LogLevel` enum passed via `DatabaseOptions::console_level`. Tests always use `LogLevel::Off`.
 
 ## Comments
 
-**Section headers** in test files and long implementation files use visual separators:
+**When to Comment:**
+- Describe non-obvious behavior, not what the code says
+- Section dividers in long test files use `// =====...=====` banners
+- Comments explain "why" for edge cases: `// Configuration required first`
+
+**No JSDoc/Doxygen:** C++ headers have no doc comments. Python uses short one-line docstrings on public methods only.
+
+## Struct/Class Design
+
+### Pimpl Pattern
+Used only for classes hiding external dependencies:
 ```cpp
-// ============================================================================
-// Vector/Set edge case tests
-// ============================================================================
-```
-
-**Inline comments** appear two spaces before `//`:
-```cpp
-(void)sizes;  // unused for numeric types
-```
-
-**No JSDoc/Doxygen.** Public API documented in `CLAUDE.md`, not inline.
-
-**Comments in tests:** Brief comment above test body explaining what is being set up or why:
-```cpp
-// Configuration required first
-quiver::Element config;
-config.set("label", std::string("Test Config"));
-```
-
-## Pimpl vs Value Types
-
-**Pimpl** used only when hiding private dependencies (sqlite3, lua headers):
-```cpp
-// include/quiver/database.h — Pimpl because it hides sqlite3*
+// database.h (public header - no SQLite exposure)
 class Database {
     struct Impl;
     std::unique_ptr<Impl> impl_;
 };
 ```
+`Database`, `Blob`, `BlobCSV`, `LuaRunner` use Pimpl.
 
-**Plain value types** (Rule of Zero) for classes with no private dependencies:
+### Rule of Zero (Plain Value Types)
+Classes with no private dependencies are plain value types — no Pimpl, no custom destructor:
+- `Element`, `BlobMetadata`, `Dimension`, `TimeProperties`, `ScalarMetadata`, `GroupMetadata`
+
+### Move-only Resource Types
 ```cpp
-// include/quiver/element.h — plain members, compiler-generated copy/move/dtor
-class Element {
-    std::map<std::string, Value> scalars_;
-    std::map<std::string, std::vector<Value>> arrays_;
-};
-```
-
-Types using Rule of Zero: `Element`, `Row`, `Migration`, `Migrations`, `GroupMetadata`, `ScalarMetadata`, `CSVOptions`
-
-## Move Semantics
-
-Resource types delete copy, explicitly define move:
-```cpp
-// include/quiver/database.h
 Database(const Database&) = delete;
 Database& operator=(const Database&) = delete;
-Database(Database&&) noexcept;
-Database& operator=(Database&&) noexcept;
+Database(Database&&) noexcept = default;
+Database& operator=(Database&&) noexcept = default;
 ```
 
 ## Module Design
 
-**C++ library namespace:** `quiver::` for all public types
-**C API:** All symbols prefixed `quiver_` with no namespace (C-compatible `extern "C"`)
-**No barrel/umbrella includes** — each header is self-contained
-**Exports:** `QUIVER_API` macro on all public C++ class/struct declarations; `QUIVER_C_API` on all C API function declarations
+### C++ Exports
+- `QUIVER_API` macro on public-facing class definitions (e.g., `class QUIVER_API Database`)
+- `QUIVER_C_API` on all C API functions
+- Internal implementation in `src/` is never exported
 
-## Memory Management (C API)
+### Translation Unit Organization
+- Alloc and free functions co-located in the same `.cpp` file
+- Read alloc/free: `src/c/database_read.cpp`
+- Metadata alloc/free: `src/c/database_metadata.cpp`
+- Time series alloc/free: `src/c/database_time_series.cpp`
 
-**Pattern:** `new`/`delete[]` with matching `quiver_{entity}_free_*` functions.
-
-**Alloc/free co-location:** Every allocation function and its corresponding free function live in the same translation unit:
-- Read alloc/free pairs: `src/c/database_read.cpp`
-- Metadata alloc/free pairs: `src/c/database_metadata.cpp`
-- Time series alloc/free pairs: `src/c/database_time_series.cpp`
-
-**String helper:** `strdup_safe()` in `src/c/database_helpers.h` — always null-terminates:
-```cpp
-static char* strdup_safe(const std::string& str) {
-    char* result = new char[str.size() + 1];
-    std::memcpy(result, str.c_str(), str.size() + 1);
-    return result;
-}
-```
-
-## Cross-Layer Naming Rules
-
-| Layer | Convention | Example |
-|-------|-----------|---------|
-| C++ | `snake_case` | `read_scalar_integers` |
-| C API | `quiver_database_` prefix | `quiver_database_read_scalar_integers` |
-| Julia | Same as C++, `!` suffix if mutating | `create_element!`, `read_scalar_integers` |
-| Dart | `camelCase`, named constructors for factories | `readScalarIntegers`, `Database.fromSchema()` |
-| Python | Same as C++, `**kwargs` for create/update | `create_element("Coll", label="x")` |
-| Lua | Same as C++ exactly | `read_scalar_integers` |
-
-The rules are mechanical — given any C++ method name, derive the equivalent in any layer without a lookup table.
+### Binding File Structure
+Julia: one `.jl` file per topic (`database_read.jl`, `database_create.jl`)
+Dart: one `.dart` file per topic, composed via `part` directives from `database.dart`
+Python: one `.py` file per topic, composed via multiple inheritance from `Database`
 
 ---
 
-*Convention analysis: 2026-02-27*
+*Convention analysis: 2026-03-08*

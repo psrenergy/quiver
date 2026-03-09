@@ -1,105 +1,211 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-02-27
+**Analysis Date:** 2026-03-08
 
 ## Test Framework
 
-**C++ / C API Runner:**
-- GoogleTest (GTest) with GMock
-- Config: `tests/CMakeLists.txt`
-- Discovery: `gtest_discover_tests()` via CMake CTest integration
+### C++ Core and C API Tests
 
-**Binding Test Runners:**
-- Julia: `Test` stdlib + `@testset` with `recursive_include` in `bindings/julia/test/runtests.jl`
-- Dart: `package:test` runner in `bindings/dart/test/`
-- Python: `pytest` with fixtures in `bindings/python/tests/`
+**Runner:**
+- GoogleTest v1.17.0 (fetched via CMake FetchContent)
+- Config: `tests/CMakeLists.txt`
+
+**Assertion Library:**
+- GoogleTest assertions (`EXPECT_EQ`, `ASSERT_EQ`, `EXPECT_THROW`, `EXPECT_NO_THROW`, etc.)
+- GMock also linked but not used for mocking (no mock objects — all tests use real SQLite databases)
 
 **Run Commands:**
 ```bash
-# Build all and run all tests
-scripts/build-all.bat
-
-# Run individual test executables (after build)
-./build/bin/quiver_tests.exe          # C++ core tests
-./build/bin/quiver_c_tests.exe        # C API tests
-
-# Binding tests
-bindings/julia/test/test.bat          # Julia tests
-bindings/dart/test/test.bat           # Dart tests
-bindings/python/test/test.bat         # Python tests
+cmake --build build --config Debug              # Build tests
+./build/bin/quiver_tests.exe                   # C++ core tests
+./build/bin/quiver_c_tests.exe                 # C API tests
+ctest --build-dir build                        # Run via CTest
+scripts/test-all.bat                           # All tests (C++, Julia, Dart, Python)
 ```
 
-**Coverage:** No coverage targets or thresholds enforced.
+### Julia Tests
+
+**Runner:** Julia's built-in `Test` stdlib
+- Entry point: `bindings/julia/test/runtests.jl`
+- Auto-discovers test files matching `test_*.jl` via `recursive_include()`
+
+**Run Commands:**
+```bash
+bindings/julia/test/test.bat                   # Run all Julia tests
+julia --project=bindings/julia bindings/julia/test/runtests.jl  test_database_create.jl  # Run single file
+```
+
+### Python Tests
+
+**Runner:** pytest v8.4.1+
+- Config: `bindings/python/pyproject.toml`
+- Test discovery: standard pytest (`test_*.py`)
+- Target: Python 3.13+
+
+**Run Commands:**
+```bash
+bindings/python/test/test.bat                  # Run all Python tests
+cd bindings/python && pytest tests/            # Direct pytest invocation
+```
+
+### Dart Tests
+
+**Runner:** `package:test`
+- Test files: `bindings/dart/test/*_test.dart`
+
+**Run Commands:**
+```bash
+bindings/dart/test/test.bat                    # Run all Dart tests
+bindings/dart/test/coverage.bat                # Run with coverage
+```
 
 ## Test File Organization
 
-**Location:** Tests live in a top-level `tests/` directory (not co-located with source). Binding tests are in `bindings/<lang>/test/` or `bindings/<lang>/tests/`.
+### C++ Tests
 
-**Naming:**
-- C++ core: `tests/test_<domain>.cpp` (e.g., `test_database_create.cpp`)
-- C API: `tests/test_c_api_<domain>.cpp` (e.g., `test_c_api_database_create.cpp`)
-- Julia: `bindings/julia/test/test_<domain>.jl`
-- Dart: `bindings/dart/test/<domain>_test.dart`
-- Python: `bindings/python/tests/test_<domain>.py`
+**Location:** `tests/` — separate from source code (not co-located)
 
-**Directory layout:**
+**Naming pattern:** `test_{area}.cpp` for C++ core, `test_c_api_{area}.cpp` for C API
+
 ```
 tests/
-├── test_database_create.cpp
-├── test_database_read.cpp
-├── test_database_update.cpp
-├── test_database_delete.cpp
-├── test_database_lifecycle.cpp
-├── test_database_transaction.cpp
-├── test_database_query.cpp
-├── test_database_csv_export.cpp
-├── test_database_csv_import.cpp
-├── test_database_time_series.cpp
-├── test_database_errors.cpp
-├── test_c_api_database_*.cpp          # C API variants
-├── test_element.cpp
-├── test_migrations.cpp
-├── test_schema_validator.cpp
-├── test_issues.cpp                    # Regression tests for specific issues
-├── test_utils.h                       # Shared helpers and macros
-├── benchmark/benchmark.cpp            # Benchmark (not in test suite)
-├── sandbox/sandbox.cpp                # Scratch file (not in test suite)
-└── schemas/                           # Shared SQL schemas (all tests reference here)
-    ├── valid/
-    │   ├── basic.sql
-    │   ├── collections.sql
-    │   ├── relations.sql
-    │   ├── all_types.sql
-    │   ├── csv_export.sql
-    │   ├── composite_helpers.sql
-    │   ├── mixed_time_series.sql
-    │   └── multi_time_series.sql
-    ├── invalid/                        # Invalid schemas for validation tests
-    └── migrations/                     # Migration directories (1/, 2/, 3/ with up.sql/down.sql)
+├── test_utils.h                      # Shared helpers (VALID_SCHEMA macro, quiet_options())
+├── test_database_lifecycle.cpp       # open, close, move semantics, options, migrations
+├── test_database_create.cpp          # create_element operations
+├── test_database_read.cpp            # read scalar/vector/set operations
+├── test_database_update.cpp          # update operations
+├── test_database_delete.cpp          # delete operations
+├── test_database_query.cpp           # parameterized and plain queries
+├── test_database_time_series.cpp     # time series read/update/metadata
+├── test_database_transaction.cpp     # begin/commit/rollback
+├── test_database_csv_export.cpp      # CSV export
+├── test_database_csv_import.cpp      # CSV import
+├── test_database_errors.cpp          # error paths: no schema, collection not found, etc.
+├── test_c_api_database_*.cpp         # C API equivalents of the above
+├── test_blob.cpp                     # Blob open/close/read/write
+├── test_blob_csv.cpp                 # BlobCSV bin_to_csv, csv_to_bin
+├── test_blob_metadata.cpp            # BlobMetadata factories, serialization
+├── test_c_api_blob*.cpp              # C API blob equivalents
+├── test_element.cpp                  # Element builder
+├── test_lua_runner.cpp               # LuaRunner script execution
+├── test_migrations.cpp               # Migration/Migrations class
+├── test_issues.cpp                   # Regression tests for tracked issues
+└── schemas/
+    ├── valid/                        # Valid SQL schemas used in tests
+    │   ├── basic.sql                 # Single-collection with scalar attributes
+    │   ├── collections.sql           # Collections with vectors, sets, time series
+    │   ├── relations.sql             # FK relationships (parent/child)
+    │   ├── all_types.sql             # All supported data types
+    │   ├── csv_export.sql            # CSV export testing schema
+    │   └── ...
+    ├── invalid/                      # Schemas expected to fail validation
+    │   ├── no_configuration.sql
+    │   ├── label_not_null.sql
+    │   └── ...
+    └── migrations/                   # Numbered migration directories (1/, 2/, 3/)
+```
+
+### Julia Tests
+
+**Location:** `bindings/julia/test/` — separate test directory
+
+**Naming:** `test_{area}.jl` — mirrors C++ test naming exactly
+
+```
+bindings/julia/test/
+├── runtests.jl               # Entry point: auto-discovers test_*.jl
+├── fixture.jl                # tests_path() helper
+├── test_database_create.jl
+├── test_database_lifecycle.jl
+├── test_database_read.jl
+├── test_database_update.jl
+├── test_database_delete.jl
+├── test_database_query.jl
+├── test_database_time_series.jl
+├── test_database_transaction.jl
+├── test_database_csv_export.jl
+├── test_database_csv_import.jl
+├── test_database_metadata.jl
+├── test_blob.jl
+├── test_blob_csv.jl
+├── test_blob_metadata.jl
+├── test_element.jl
+├── test_lua_runner.jl
+├── test_schema_validator.jl
+├── test_helper_maps.jl       # Julia-specific map helpers
+└── test_aqua.jl              # Aqua.jl package quality checks
+```
+
+### Python Tests
+
+**Location:** `bindings/python/tests/` — separate test directory
+
+**Naming:** `test_{area}.py` — mirrors C++ naming
+
+```
+bindings/python/tests/
+├── conftest.py               # All fixtures (db, collections_db, relations_db, etc.)
+├── test_database_lifecycle.py
+├── test_database_create.py
+├── test_database_read_scalar.py
+├── test_database_read_vector.py
+├── test_database_read_set.py
+├── test_database_update.py
+├── test_database_delete.py
+├── test_database_query.py
+├── test_database_time_series.py
+├── test_database_transaction.py
+├── test_database_csv_export.py
+├── test_database_csv_import.py
+├── test_database_metadata.py
+├── test_element.py
+└── test_lua_runner.py
+```
+
+### Dart Tests
+
+**Location:** `bindings/dart/test/`
+
+**Naming:** `{area}_test.dart` (Dart convention: suffix not prefix)
+
+```
+bindings/dart/test/
+├── database_create_test.dart
+├── database_lifecycle_test.dart
+├── database_read_test.dart
+├── database_update_test.dart
+├── database_delete_test.dart
+├── database_query_test.dart
+├── database_time_series_test.dart
+├── database_transaction_test.dart
+├── database_csv_export_test.dart
+├── database_csv_import_test.dart
+├── metadata_test.dart
+├── element_test.dart
+├── lua_runner_test.dart
+├── schema_validation_test.dart
+└── issues_test.dart
 ```
 
 ## Test Structure
 
-**C++ — Flat TEST() for most tests:**
+### C++ — GTest Suite Pattern
+
+Tests use free-standing `TEST()` macros (no class fixtures) for simple cases:
 ```cpp
 TEST(Database, CreateElementWithScalars) {
-    // Arrange: create in-memory database from schema, logging off
     auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
 
-    // Act: perform the operation
     quiver::Element element;
     element.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
-    int64_t id = db.create_element("Configuration", element);
 
-    // Assert
+    int64_t id = db.create_element("Configuration", element);
     EXPECT_EQ(id, 1);
-    auto integers = db.read_scalar_integers("Configuration", "integer_attribute");
-    EXPECT_EQ(integers[0], 42);
 }
 ```
 
-**C++ — TEST_F() fixture for lifecycle tests requiring temp files:**
+Class fixtures with `SetUp`/`TearDown` for tests requiring disk files:
 ```cpp
 class TempFileFixture : public ::testing::Test {
 protected:
@@ -117,83 +223,246 @@ TEST_F(TempFileFixture, OpenFileOnDisk) {
 }
 ```
 
-**Test naming convention:** `TEST(Suite, DescriptiveActionOrScenario)` — e.g.:
-- `TEST(Database, CreateElementWithVector)`
-- `TEST(DatabaseErrors, ReadScalarIntegersNoSchema)`
-- `TEST(DatabaseTransaction, BeginMultipleWritesRollback)`
-- `TEST(DatabaseCApi, CreateElementNullDb)`
-
-**Section headers** used in long test files to group related tests:
+**Section organization:** Long test files group related tests with banner comments:
 ```cpp
 // ============================================================================
-// FK label resolution in create_element (all column types)
+// Vector/Set edge case tests
 // ============================================================================
 ```
 
-## Schema Access in Tests
+### C++ — Error Testing Pattern
 
-**C++ tests** use macros from `tests/test_utils.h`:
 ```cpp
-#define VALID_SCHEMA(name)   quiver::test::path_from(__FILE__, "schemas/valid/" name)
-#define INVALID_SCHEMA(name) quiver::test::path_from(__FILE__, "schemas/invalid/" name)
+// Simple throw check
+EXPECT_THROW(db.create_element("NonexistentCollection", element), std::runtime_error);
 
-// Usage:
-auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("basic.sql"), ...);
-```
-
-**Binding tests** compute the path to `tests/schemas/` relative to the test file location:
-- Julia: `joinpath(@__DIR__, "..", "..", "..", "tests")` via `fixture.jl`
-- Dart: `path.join(path.current, '..', '..', 'tests')`
-- Python: `Path(__file__).resolve().parent.parent.parent.parent / "tests" / "schemas"` via `conftest.py`
-
-All bindings reference the same central `tests/schemas/` directory.
-
-## Assertion Patterns
-
-**C++ assertions:**
-```cpp
-EXPECT_EQ(id, 1);                             // equality (non-fatal)
-ASSERT_EQ(out_count, 2);                      // equality (fatal, aborts test on failure)
-EXPECT_DOUBLE_EQ(values[0], 3.14);            // floating point equality
-EXPECT_STREQ(label, "Item 1");                // C string equality
-EXPECT_TRUE(result.has_value());              // boolean
-EXPECT_THROW(db.create_element(...), std::runtime_error);  // exception thrown
-EXPECT_NO_THROW(db.describe());               // no exception
-FAIL() << "Expected std::runtime_error";      // explicit failure
-```
-
-**Use ASSERT_ when** subsequent assertions depend on the result (e.g., checking a count before indexing).
-
-**C API tests** prefer `ASSERT_EQ(call(), QUIVER_OK)` for setup operations and `EXPECT_EQ(call(), QUIVER_OK)` for the operation under test.
-
-**Error message testing** uses `try/catch` directly to check the exact message:
-```cpp
+// Specific message check (when message matters)
 try {
-    db.begin_transaction();
+    db.create_element("Child", child);
     FAIL() << "Expected std::runtime_error";
 } catch (const std::runtime_error& e) {
-    EXPECT_STREQ(e.what(), "Cannot begin_transaction: transaction already active");
+    EXPECT_STREQ(e.what(), "Failed to resolve label 'Nonexistent Parent' to ID in table 'Parent'");
 }
 ```
 
-## Test Database Setup Pattern
+### Julia — @testset Pattern
 
-Every test that needs data starts with an in-memory database, logging off:
+Julia uses nested `@testset` blocks within a wrapping module:
+```julia
+module TestDatabaseCreate
 
-**C++ pattern:**
-```cpp
-auto db = quiver::Database::from_schema(
-    ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = 0, .console_level = QUIVER_LOG_OFF});
+using Quiver
+using Test
 
-// Schemas with FK dependencies need the Configuration element first:
-quiver::Element config;
-config.set("label", std::string("Test Config"));
-db.create_element("Configuration", config);
+include("fixture.jl")
+
+@testset "Create" begin
+    @testset "Scalar Attributes" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config", integer_attribute = 42)
+
+        Quiver.close!(db)
+    end
+
+    @testset "Reject Invalid Element" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        @test_throws Quiver.DatabaseException Quiver.create_element!(db, "Configuration")
+
+        Quiver.close!(db)
+    end
+end
+
+end  # module
 ```
 
-**C API pattern:**
+All test modules wrap content in `module Test{Name}` to avoid name conflicts.
+
+### Python — Class-per-Feature Pattern
+
+Tests group into classes by feature area within each file:
+```python
+class TestCreateElement:
+    def test_create_element_returns_id(self, collections_db: Database) -> None:
+        collections_db.create_element("Configuration", label="cfg")
+        result = collections_db.create_element("Collection", label="Item1", some_integer=42)
+        assert isinstance(result, int)
+        assert result > 0
+
+    def test_create_with_fk_label(self, relations_db: Database) -> None:
+        """FK label resolution: string value for FK column resolves to parent ID."""
+        ...
+
+class TestFKResolutionCreate:
+    """FK label resolution tests for create_element -- ported from Julia/Dart."""
+    ...
+```
+
+Error testing in Python:
+```python
+with pytest.raises(QuiverError):
+    relations_db.create_element("Child", label="Child 1", mentor_id=["Nonexistent Parent"])
+```
+
+### Dart — group/test Pattern
+
+```dart
+void main() {
+  final testsPath = path.join(path.current, '..', '..', 'tests');
+
+  group('Create Scalar Attributes', () {
+    test('creates Configuration with all scalar types', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        final id = db.createElement('Configuration', {'label': 'Test Config'});
+        expect(id, greaterThan(0));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('rejects wrong type for attribute', () {
+      // ...
+      expect(
+        () => db.createElement('Configuration', {'label': 'Test', 'integer_attribute': 'not an int'}),
+        throwsA(isA<DatabaseException>()),
+      );
+    });
+  });
+}
+```
+
+Dart tests always use `try/finally` for database cleanup — no fixture system.
+
+## Mocking
+
+**No mocking used anywhere.** All tests use real SQLite databases:
+- C++ tests: `:memory:` databases (most) or `TempFileFixture` for disk I/O tests
+- Julia tests: `:memory:` databases via `Quiver.from_schema(":memory:", path)`
+- Python tests: `tmp_path` pytest fixture for disk databases
+- Dart tests: `:memory:` databases (most)
+
+GMock is linked in `quiver_tests` but no mock objects exist in the codebase.
+
+## Fixtures and Factories
+
+### C++ — `test_utils.h`
+
+Located at `tests/test_utils.h`. Provides macros and helper functions:
+
 ```cpp
-auto options = quiver::test::quiet_options();  // helper in test_utils.h
+namespace quiver::test {
+
+// Get path relative to the test file's directory
+inline std::string path_from(const char* test_file, const std::string& relative);
+
+// Default options with logging off for tests
+inline quiver_database_options_t quiet_options() {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    return options;
+}
+
+}  // namespace quiver::test
+
+// Convenience macros
+#define VALID_SCHEMA(name)   SCHEMA_PATH("schemas/valid/" name)
+#define INVALID_SCHEMA(name) SCHEMA_PATH("schemas/invalid/" name)
+```
+
+Usage: `VALID_SCHEMA("basic.sql")` expands to an absolute path at compile time.
+
+### Julia — `fixture.jl`
+
+Located at `bindings/julia/test/fixture.jl`:
+```julia
+function tests_path()
+    return joinpath(@__DIR__, "..", "..", "..", "tests")
+end
+```
+Schema paths built inline per test: `joinpath(tests_path(), "schemas", "valid", "basic.sql")`.
+
+### Python — `conftest.py`
+
+Located at `bindings/python/tests/conftest.py`. Provides schema-specific database fixtures:
+
+```python
+@pytest.fixture
+def db(valid_schema_path: Path, tmp_path: Path) -> Generator[Database, None, None]:
+    database = Database.from_schema(str(tmp_path / "test.db"), str(valid_schema_path))
+    yield database
+    database.close()
+
+@pytest.fixture
+def collections_db(collections_schema_path: Path, tmp_path: Path) -> Generator[Database, None, None]:
+    database = Database.from_schema(str(tmp_path / "collections.db"), str(collections_schema_path))
+    yield database
+    database.close()
+
+@pytest.fixture
+def relations_db(relations_schema_path: Path, tmp_path: Path) -> Generator[Database, None, None]:
+    database = Database.from_schema(str(tmp_path / "relations.db"), str(relations_schema_path))
+    yield database
+    database.close()
+```
+
+Available fixtures: `db`, `collections_db`, `relations_db`, `csv_db`, `all_types_db`, `composite_helpers_db`, `mixed_time_series_db`
+
+### Shared SQL Test Schemas
+
+All test schemas located in `tests/schemas/` — shared across all language bindings:
+- `tests/schemas/valid/` — schemas used to build test databases
+- `tests/schemas/invalid/` — schemas expected to fail on load
+- `tests/schemas/migrations/` — numbered migration directories (1/, 2/, 3/)
+
+Schema access path from each binding:
+- C++ tests: `VALID_SCHEMA("basic.sql")` → absolute path via `__FILE__`
+- Julia tests: `joinpath(tests_path(), "schemas", "valid", "basic.sql")`
+- Python tests: `schemas_path / "valid" / "basic.sql"` via `conftest.py` fixture
+- Dart tests: `path.join(path.current, '..', '..', 'tests', 'schemas', 'valid', 'basic.sql')`
+
+## Coverage
+
+**C++:** No coverage target defined in CMakeLists; no enforced requirement.
+
+**Julia:** Aqua.jl package quality tests in `bindings/julia/test/test_aqua.jl`.
+
+**Dart:** Coverage via `bindings/dart/test/coverage.bat` using `dart pub global run coverage:test_with_coverage`.
+
+**Python:** No coverage configuration found; no enforced requirement.
+
+## Test Types
+
+**Unit Tests:** All tests are integration-style — they exercise real database operations through the actual API surface. No isolated unit tests of internal methods.
+
+**Integration Tests:** Every test creates a real SQLite database (`:memory:` or disk), performs operations, and asserts outcomes. This is the primary test style across all layers.
+
+**Cross-Layer Parity:** Test cases are mirrored across C++, Julia, Python, and Dart. A feature added in C++ should have equivalent tests in all binding layers. Test names and scenarios match 1:1.
+
+**Regression Tests:** `tests/test_issues.cpp` and `bindings/dart/test/issues_test.dart` — named issue-tracking tests.
+
+**E2E Tests:** Not used.
+
+## Common Patterns
+
+### Test Database Setup (C++)
+
+All tests that use a schema create an in-memory database:
+```cpp
+auto db = quiver::Database::from_schema(
+    ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+```
+
+C API tests use `quiver_database_options_t` with logging off:
+```cpp
+auto options = quiver_database_options_default();
+options.console_level = QUIVER_LOG_OFF;
 quiver_database_t* db = nullptr;
 ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
 ASSERT_NE(db, nullptr);
@@ -201,138 +470,49 @@ ASSERT_NE(db, nullptr);
 quiver_database_close(db);
 ```
 
-`quiver::test::quiet_options()` in `tests/test_utils.h` returns default options with `console_level = QUIVER_LOG_OFF`.
+### Prerequisites in Tests
 
-## Mocking
-
-**No mocking framework used.** Tests exercise real operations against in-memory SQLite databases (`:memory:`). There are no mock objects or stubs.
-
-**GMock** is linked to the C++ test binary (`GTest::gmock`) but used only for matcher imports (e.g., `#include <gmock/gmock.h>` in `test_database_read.cpp` for advanced matchers), not for creating mocks.
-
-## Memory Management in C API Tests
-
-C API tests manually free all allocated resources using the matching free functions:
+Many collections require a `Configuration` element before other creates can succeed:
 ```cpp
-// Free arrays returned by read operations
-quiver_database_free_integer_array(values);
-quiver_database_free_float_array(values);
-quiver_database_free_string_array(values, count);
+quiver::Element config;
+config.set("label", std::string("Test Config"));
+db.create_element("Configuration", config);
 
-// Free time series columnar data
-quiver_database_free_time_series_data(col_names, col_types, col_data, col_count, row_count);
-
-// Close database
-quiver_database_close(db);
-
-// Destroy element
-quiver_element_destroy(element);
+// Now create the element under test
+quiver::Element element;
+element.set("label", std::string("Item 1"));
+int64_t id = db.create_element("Collection", element);
 ```
 
-Pattern: allocate, assert result, use, free — explicit in every test.
+### ASSERT vs EXPECT
 
-## Python Test Patterns
+- `ASSERT_*` — used for prerequisites that make further testing pointless if they fail (e.g., database opened successfully)
+- `EXPECT_*` — used for the actual property under test
 
-**Fixtures** in `bindings/python/tests/conftest.py` provide databases via pytest yield fixtures:
+```cpp
+ASSERT_EQ(quiver_database_from_schema(..., &db), QUIVER_OK);  // fail fast if DB not open
+ASSERT_NE(db, nullptr);
+EXPECT_EQ(id, 1);                                              // actual assertion
+```
+
+### Julia — Explicit Close
+
+Julia finalizers handle cleanup automatically, but tests call `Quiver.close!(db)` explicitly at the end of every test block — resource hygiene is explicit, not deferred.
+
+### Python — Context Manager
+
+Python provides both explicit `close()` and context manager:
 ```python
-@pytest.fixture
-def collections_db(collections_schema_path: Path, tmp_path: Path) -> Generator[Database, None, None]:
-    database = Database.from_schema(str(tmp_path / "collections.db"), str(collections_schema_path))
-    yield database
-    database.close()
+# Explicit close (used in fixtures via yield)
+database = Database.from_schema(...)
+yield database
+database.close()
+
+# Context manager
+with Database.from_schema(str(tmp_path / "test.db"), str(valid_schema_path)) as db:
+    assert db.is_healthy()
 ```
-
-**Test organization:** Mix of module-level functions and class-based grouping:
-```python
-# Flat function style (lifecycle tests):
-def test_from_schema_creates_database(valid_schema_path: Path, tmp_path: Path) -> None:
-    db = Database.from_schema(str(tmp_path / "test.db"), str(valid_schema_path))
-    assert db is not None
-    db.close()
-
-# Class-based style (create tests):
-class TestCreateElement:
-    def test_create_element_returns_id(self, collections_db: Database) -> None:
-        result = collections_db.create_element("Collection", label="Item1")
-        assert isinstance(result, int)
-        assert result > 0
-```
-
-**Exception testing:**
-```python
-with pytest.raises(QuiverError, match="closed"):
-    db.path()
-```
-
-## Julia Test Patterns
-
-Tests use `@testset` with nested `@testset` blocks for grouping:
-```julia
-@testset "Create" begin
-    @testset "Scalar Attributes" begin
-        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
-        db = Quiver.from_schema(":memory:", path_schema)
-
-        Quiver.create_element!(db, "Configuration"; label = "Test Config", integer_attribute = 42)
-        Quiver.close!(db)
-    end
-end
-```
-
-**Exception testing:**
-```julia
-@test_throws Quiver.DatabaseException Quiver.create_element!(db, "Collection"; label = "Bad", value_int = Int64[])
-```
-
-## Dart Test Patterns
-
-Tests use `group`/`test` blocks with explicit `try/finally` for cleanup:
-```dart
-group('Create Scalar Attributes', () {
-    test('creates Configuration with all scalar types', () {
-        final db = Database.fromSchema(':memory:', path.join(testsPath, 'schemas', 'valid', 'basic.sql'));
-        try {
-            final id = db.createElement('Configuration', {'label': 'Test Config', 'integer_attribute': 42});
-            expect(id, greaterThan(0));
-        } finally {
-            db.close();
-        }
-    });
-});
-```
-
-**Exception testing:**
-```dart
-expect(
-    () => db.createElement('Configuration', {'label': 'Test Config', 'integer_attribute': 'not an int'}),
-    throwsA(isA<DatabaseException>()),
-);
-```
-
-## Test Types
-
-**Unit tests (dominant):**
-- Single operation against an in-memory database
-- Verify output via public read APIs — no internal state inspection
-
-**Integration / round-trip tests:**
-- CSV export then import (`test_database_csv_export.cpp`, `test_database_csv_import.cpp`)
-- FK label resolution round-trips (`test_database_create.cpp`)
-- Migration-then-read sequences (`test_database_lifecycle.cpp`)
-- Transaction commit/rollback with mixed write types (`test_database_transaction.cpp`)
-
-**Regression tests:**
-- `tests/test_issues.cpp` — test cases for specific GitHub issues
-- `tests/schemas/issues/` — schema fixtures for issue-specific tests
-
-**No E2E or load tests** in the test suite. The benchmark (`tests/benchmark/benchmark.cpp`) is a standalone executable built but never run automatically.
-
-## What Is Not Tested
-
-- Internal Pimpl implementation details — tests only use the public API
-- Thread safety — no concurrent access tests
-- Cross-process database access
-- Error recovery after partial writes (partially covered in `ScalarFkResolutionFailureCausesNoPartialWrites` tests)
 
 ---
 
-*Testing analysis: 2026-02-27*
+*Testing analysis: 2026-03-08*
