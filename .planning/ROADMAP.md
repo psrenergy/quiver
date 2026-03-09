@@ -45,10 +45,10 @@ Plans:
   2. User can create an element with integer, float, and string array values
   3. User can delete an element by ID from a collection
   4. Creating an element with invalid data (e.g., missing required attribute) throws a QuiverError with a descriptive message from the C layer
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 02-01: TBD
+- [ ] 02-01-PLAN.md -- createElement and deleteElement with typed value marshaling, integration tests
 
 ### Phase 3: Read Operations
 **Goal**: Users can read scalar attribute values and element IDs from collections
@@ -101,7 +101,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. FFI Foundation and Database Lifecycle | 0/2 | Planned | - |
-| 2. Element Builder and CRUD | 0/? | Not started | - |
+| 2. Element Builder and CRUD | 0/1 | Planned | - |
 | 3. Read Operations | 0/? | Not started | - |
 | 4. Query and Transaction Control | 0/? | Not started | - |
 | 5. Package and Distribution | 0/? | Not started | - |
