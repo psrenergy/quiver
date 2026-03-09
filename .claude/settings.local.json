@@ -31,7 +31,11 @@
       "Bash(ninja:*)",
       "Bash(scripts/clean-all.bat:*)",
       "Bash(scripts/build-all.bat:*)",
-      "Bash(bash:*)"
+      "Bash(bash:*)",
+      "Bash(bindings/js/test/test.bat:*)",
+      "WebFetch(domain:bun.com)",
+      "Bash(bun eval:*)",
+      "Bash(test:*)"
     ]
   }
 }
