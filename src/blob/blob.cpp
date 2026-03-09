@@ -1,8 +1,8 @@
-#include "quiver/blob/blob.h"
+#include "quiver/binary/binary.h"
 
-#include "blob_utils.h"
-#include "quiver/blob/dimension.h"
-#include "quiver/blob/time_constants.h"
+#include "binary_utils.h"
+#include "quiver/binary/dimension.h"
+#include "quiver/binary/time_constants.h"
 
 #include <chrono>
 #include <cmath>
@@ -14,21 +14,21 @@
 
 namespace quiver {
 
-struct Blob::Impl {
+struct Binary::Impl {
     std::unique_ptr<std::iostream> io;
     std::string file_path;
-    BlobMetadata metadata;
+    BinaryMetadata metadata;
 };
 
-Blob::Blob(const std::string& file_path, const BlobMetadata& metadata, std::unique_ptr<std::iostream> io)
+Binary::Binary(const std::string& file_path, const BinaryMetadata& metadata, std::unique_ptr<std::iostream> io)
     : impl_(std::make_unique<Impl>(Impl{std::move(io), file_path, metadata})) {}
 
-Blob::~Blob() = default;
+Binary::~Binary() = default;
 
-Blob::Blob(Blob&& other) noexcept = default;
-Blob& Blob::operator=(Blob&& other) noexcept = default;
+Binary::Binary(Binary&& other) noexcept = default;
+Binary& Binary::operator=(Binary&& other) noexcept = default;
 
-Blob Blob::open_file(const std::string& file_path, char mode, const std::optional<BlobMetadata>& metadata) {
+Binary Binary::open_file(const std::string& file_path, char mode, const std::optional<BinaryMetadata>& metadata) {
     namespace fs = std::filesystem;
     switch (mode) {
     case 'r': {
@@ -41,12 +41,12 @@ Blob Blob::open_file(const std::string& file_path, char mode, const std::optiona
         // Read TOML metadata
         std::ifstream toml_file(file_path + std::string(TOML_EXTENSION));
         std::string toml_content((std::istreambuf_iterator<char>(toml_file)), std::istreambuf_iterator<char>());
-        auto metadata_from_toml = BlobMetadata::from_toml(toml_content);
+        auto metadata_from_toml = BinaryMetadata::from_toml(toml_content);
 
         // Open binary data file
         auto io =
             std::make_unique<std::fstream>(file_path + std::string(QVR_EXTENSION), std::ios::in | std::ios::binary);
-        return Blob(file_path, metadata_from_toml, std::move(io));
+        return Binary(file_path, metadata_from_toml, std::move(io));
     }
     case 'w': {
         // Validate metadata provided
@@ -61,9 +61,9 @@ Blob Blob::open_file(const std::string& file_path, char mode, const std::optiona
         // Open binary data file
         auto io =
             std::make_unique<std::fstream>(file_path + std::string(QVR_EXTENSION), std::ios::out | std::ios::binary);
-        Blob blob(file_path, metadata.value(), std::move(io));
-        blob.fill_file_with_nulls();
-        return blob;
+        Binary binary(file_path, metadata.value(), std::move(io));
+        binary.fill_file_with_nulls();
+        return binary;
     }
     default:
         throw std::invalid_argument("Invalid file mode: " + std::string(1, mode) +
@@ -71,7 +71,7 @@ Blob Blob::open_file(const std::string& file_path, char mode, const std::optiona
     }
 }
 
-std::vector<double> Blob::read(const std::unordered_map<std::string, int64_t>& dims, bool allow_nulls) {
+std::vector<double> Binary::read(const std::unordered_map<std::string, int64_t>& dims, bool allow_nulls) {
     validate_dimension_values(dims);
 
     go_to_position(calculate_file_position(dims), 'r');
@@ -96,7 +96,7 @@ std::vector<double> Blob::read(const std::unordered_map<std::string, int64_t>& d
     return data;
 }
 
-void Blob::write(const std::vector<double>& data, const std::unordered_map<std::string, int64_t>& dims) {
+void Binary::write(const std::vector<double>& data, const std::unordered_map<std::string, int64_t>& dims) {
     validate_dimension_values(dims);
     validate_data_length(data);
 
@@ -106,7 +106,7 @@ void Blob::write(const std::vector<double>& data, const std::unordered_map<std::
     impl_->io->flush();
 }
 
-int64_t Blob::calculate_file_position(const std::unordered_map<std::string, int64_t>& dims) const {
+int64_t Binary::calculate_file_position(const std::unordered_map<std::string, int64_t>& dims) const {
     const auto& metadata = impl_->metadata;
     const auto& dimensions = metadata.dimensions;
     int64_t position = 0;
@@ -122,7 +122,7 @@ int64_t Blob::calculate_file_position(const std::unordered_map<std::string, int6
     return position;
 }
 
-void Blob::go_to_position(int64_t position, char mode) {
+void Binary::go_to_position(int64_t position, char mode) {
     if (position < 0) {
         throw std::invalid_argument("File position must be non-negative, got " + std::to_string(position));
     }
@@ -140,13 +140,13 @@ void Blob::go_to_position(int64_t position, char mode) {
     }
 }
 
-void Blob::validate_file_is_open() const {
+void Binary::validate_file_is_open() const {
     if (!impl_->io || !impl_->io->good()) {
         throw std::runtime_error("File is not open: " + impl_->file_path);
     }
 }
 
-void Blob::validate_dimension_values(const std::unordered_map<std::string, int64_t>& dims) {
+void Binary::validate_dimension_values(const std::unordered_map<std::string, int64_t>& dims) {
     const auto& metadata = impl_->metadata;
     const auto& dimensions = metadata.dimensions;
 
@@ -200,14 +200,14 @@ void Blob::validate_dimension_values(const std::unordered_map<std::string, int64
     }
 }
 
-void Blob::validate_data_length(const std::vector<double>& data) {
+void Binary::validate_data_length(const std::vector<double>& data) {
     if (data.size() != impl_->metadata.labels.size()) {
         throw std::invalid_argument("Data length " + std::to_string(data.size()) + " does not match expected length " +
                                     std::to_string(impl_->metadata.labels.size()));
     }
 }
 
-std::vector<int64_t> Blob::next_dimensions(const std::vector<int64_t>& current_dimensions) {
+std::vector<int64_t> Binary::next_dimensions(const std::vector<int64_t>& current_dimensions) {
     const auto& dimensions = impl_->metadata.dimensions;
     const auto& current_sizes = dimension_sizes_at_values(current_dimensions);
 
@@ -240,7 +240,7 @@ std::vector<int64_t> Blob::next_dimensions(const std::vector<int64_t>& current_d
     return next;
 }
 
-std::vector<int64_t> Blob::dimension_sizes_at_values(const std::vector<int64_t>& dimension_values) const {
+std::vector<int64_t> Binary::dimension_sizes_at_values(const std::vector<int64_t>& dimension_values) const {
     using namespace quiver::time;
     const auto& metadata = impl_->metadata;
     const auto& dimensions = metadata.dimensions;
@@ -312,7 +312,7 @@ std::vector<int64_t> Blob::dimension_sizes_at_values(const std::vector<int64_t>&
     return sizes;
 }
 
-void Blob::fill_file_with_nulls() {
+void Binary::fill_file_with_nulls() {
     const auto& metadata = impl_->metadata;
 
     // Get initial dimension values
@@ -349,15 +349,15 @@ void Blob::fill_file_with_nulls() {
     }
 }
 
-const BlobMetadata& Blob::get_metadata() const {
+const BinaryMetadata& Binary::get_metadata() const {
     return impl_->metadata;
 }
 
-const std::string& Blob::get_file_path() const {
+const std::string& Binary::get_file_path() const {
     return impl_->file_path;
 }
 
-std::iostream& Blob::get_io() {
+std::iostream& Binary::get_io() {
     return *impl_->io;
 }
 

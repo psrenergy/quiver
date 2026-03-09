@@ -1,7 +1,7 @@
-#ifndef QUIVER_BLOB_UTILS_H
-#define QUIVER_BLOB_UTILS_H
+#ifndef QUIVER_BINARY_UTILS_H
+#define QUIVER_BINARY_UTILS_H
 
-#include "quiver/blob/time_constants.h"
+#include "quiver/binary/time_constants.h"
 
 #include <chrono>
 #include <cstdint>
@@ -29,4 +29,4 @@ inline int64_t day_of_week(chrono::system_clock::time_point datetime) {
 
 }  // namespace quiver
 
-#endif  // QUIVER_BLOB_UTILS_H
+#endif  // QUIVER_BINARY_UTILS_H

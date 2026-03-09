@@ -4,11 +4,11 @@
 
 ## Tech Debt
 
-**Blob subsystem is a dead stub:**
-- Issue: `src/blob/` contains stub implementations with empty function bodies. `blob.cpp` has `open_reader` and `open_writer` that return nothing. `blob_csv.cpp` and `blob_metadata.cpp` are empty. The `BlobMetadata` header references `Dimension` which is unresolved.
-- Files: `src/blob/blob.cpp`, `src/blob/blob_csv.cpp`, `src/blob/blob_metadata.cpp`, `include/quiver/blob/blob.h`, `include/quiver/blob/blob_csv.h`, `include/quiver/blob/blob_metadata.h`
-- Impact: The blob subsystem is included in CMake's format/tidy targets (`CMakeLists.txt` lines 84-85) but not in the actual build target. It is unfinished dead code. The public headers declare API that cannot be used.
-- Fix approach: Either implement the blob subsystem fully or remove all files in `src/blob/` and `include/quiver/blob/` and clean up the CMakeLists.txt format target references.
+**Binary subsystem is a dead stub:**
+- Issue: `src/binary/` contains stub implementations with empty function bodies. `binary.cpp` has `open_reader` and `open_writer` that return nothing. `binary_csv.cpp` and `binary_metadata.cpp` are empty. The `BinaryMetadata` header references `Dimension` which is unresolved.
+- Files: `src/binary/binary.cpp`, `src/binary/binary_csv.cpp`, `src/binary/binary_metadata.cpp`, `include/quiver/binary/binary.h`, `include/quiver/binary/binary_csv.h`, `include/quiver/binary/binary_metadata.h`
+- Impact: The binary subsystem is included in CMake's format/tidy targets (`CMakeLists.txt` lines 84-85) but not in the actual build target. It is unfinished dead code. The public headers declare API that cannot be used.
+- Fix approach: Either implement the binary subsystem fully or remove all files in `src/binary/` and `include/quiver/binary/` and clean up the CMakeLists.txt format target references.
 
 **Python binding lacks LuaRunner:**
 - Issue: Python has no `LuaRunner` class or Lua scripting exposure. Julia, Dart, and C++ all provide Lua integration. Python is missing the feature entirely.
@@ -163,9 +163,9 @@
 - Risk: Callers may believe a deletion succeeded when no row was removed.
 - Priority: High
 
-**Blob subsystem has no tests:**
-- What's not tested: Everything in `src/blob/` and `include/quiver/blob/` — the entire blob read/write/CSV/metadata API.
-- Files: `src/blob/blob.cpp`, `src/blob/blob_csv.cpp`, `src/blob/blob_metadata.cpp`
+**Binary subsystem has no tests:**
+- What's not tested: Everything in `src/binary/` and `include/quiver/binary/` — the entire binary read/write/CSV/metadata API.
+- Files: `src/binary/binary.cpp`, `src/binary/binary_csv.cpp`, `src/binary/binary_metadata.cpp`
 - Risk: The stubs compile without signals of incompleteness. No test coverage for when the feature is eventually implemented.
 - Priority: Low (stubs only, not buildable)
 

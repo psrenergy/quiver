@@ -1,8 +1,8 @@
-#include "quiver/blob/blob_csv.h"
+#include "quiver/binary/binary_csv.h"
 
-#include "blob_utils.h"
-#include "quiver/blob/blob.h"
-#include "quiver/blob/dimension.h"
+#include "binary_utils.h"
+#include "quiver/binary/binary.h"
+#include "quiver/binary/dimension.h"
 #include "utils/datetime.h"
 
 #include <algorithm>
@@ -15,26 +15,26 @@
 
 namespace quiver {
 
-struct BlobCSV::Impl {
+struct CSVConverter::Impl {
     bool aggregate_time_dimensions;
 };
 
-BlobCSV::BlobCSV(const std::string& file_path,
-                 const BlobMetadata& metadata,
+CSVConverter::CSVConverter(const std::string& file_path,
+                 const BinaryMetadata& metadata,
                  std::unique_ptr<std::iostream> io,
                  bool aggregate_time_dimensions)
-    : Blob(file_path, metadata, std::move(io)), impl_(std::make_unique<Impl>(Impl{aggregate_time_dimensions})) {}
+    : Binary(file_path, metadata, std::move(io)), impl_(std::make_unique<Impl>(Impl{aggregate_time_dimensions})) {}
 
-BlobCSV::~BlobCSV() = default;
+CSVConverter::~CSVConverter() = default;
 
-BlobCSV::BlobCSV(BlobCSV&& other) noexcept = default;
-BlobCSV& BlobCSV::operator=(BlobCSV&& other) noexcept = default;
+CSVConverter::CSVConverter(CSVConverter&& other) noexcept = default;
+CSVConverter& CSVConverter::operator=(CSVConverter&& other) noexcept = default;
 
-void BlobCSV::csv_to_bin(const std::string& file_path) {
+void CSVConverter::csv_to_bin(const std::string& file_path) {
     // Read TOML metadata
     std::ifstream toml_file(file_path + std::string(TOML_EXTENSION));
     std::string toml_content((std::istreambuf_iterator<char>(toml_file)), std::istreambuf_iterator<char>());
-    auto metadata = BlobMetadata::from_toml(toml_content);
+    auto metadata = BinaryMetadata::from_toml(toml_content);
 
     // Open the CSV file and detect whether time dimensions are aggregated
     auto csv_io = std::make_unique<std::fstream>(file_path + std::string(CSV_EXTENSION), std::ios::in);
@@ -47,11 +47,11 @@ void BlobCSV::csv_to_bin(const std::string& file_path) {
     }
     csv_io->seekg(0);  // Rewind so validate_header can re-read
 
-    BlobCSV csv_reader(file_path, metadata, std::move(csv_io), aggregate_time_dimensions);
+    CSVConverter csv_reader(file_path, metadata, std::move(csv_io), aggregate_time_dimensions);
     csv_reader.validate_header();
 
     // Open the binary file in write mode
-    Blob bin_writer = Blob::open_file(file_path, 'w', metadata);
+    Binary bin_writer = Binary::open_file(file_path, 'w', metadata);
 
     // Get initial dimension values
     const auto& dimensions = metadata.dimensions;
@@ -89,14 +89,14 @@ void BlobCSV::csv_to_bin(const std::string& file_path) {
     }
 }
 
-void BlobCSV::bin_to_csv(const std::string& file_path, bool aggregate_time_dimensions) {
+void CSVConverter::bin_to_csv(const std::string& file_path, bool aggregate_time_dimensions) {
     // Open the binary file in read mode
-    Blob bin_reader = Blob::open_file(file_path, 'r');
+    Binary bin_reader = Binary::open_file(file_path, 'r');
     const auto& metadata = bin_reader.get_metadata();
 
     // Open the CSV file in write mode
     auto csv_io = std::make_unique<std::fstream>(file_path + std::string(CSV_EXTENSION), std::ios::out);
-    BlobCSV csv_writer(file_path, metadata, std::move(csv_io), aggregate_time_dimensions);
+    CSVConverter csv_writer(file_path, metadata, std::move(csv_io), aggregate_time_dimensions);
     csv_writer.write_header();
 
     // Get initial dimension values
@@ -134,7 +134,7 @@ void BlobCSV::bin_to_csv(const std::string& file_path, bool aggregate_time_dimen
     }
 }
 
-BlobCSV::CSVRow BlobCSV::read_line() {
+CSVConverter::CSVRow CSVConverter::read_line() {
     std::string line;
     std::getline(get_io(), line);
 
@@ -176,7 +176,7 @@ BlobCSV::CSVRow BlobCSV::read_line() {
     return row;
 }
 
-std::string BlobCSV::build_line(const std::vector<double>& data, const std::vector<int64_t>& current_dimensions) {
+std::string CSVConverter::build_line(const std::vector<double>& data, const std::vector<int64_t>& current_dimensions) {
     const auto& dimensions = get_metadata().dimensions;
     std::vector<std::string> elements;
 
@@ -213,7 +213,7 @@ std::string BlobCSV::build_line(const std::vector<double>& data, const std::vect
 }
 
 std::string
-BlobCSV::build_datetime_string_from_time_dimension_values(const std::vector<int64_t>& time_dimension_values) const {
+CSVConverter::build_datetime_string_from_time_dimension_values(const std::vector<int64_t>& time_dimension_values) const {
     const auto& metadata = get_metadata();
     const auto& dimensions = metadata.dimensions;
 
@@ -234,7 +234,7 @@ BlobCSV::build_datetime_string_from_time_dimension_values(const std::vector<int6
     return quiver::datetime::format_utc(datetime).substr(0, 10);
 }
 
-void BlobCSV::write_header() {
+void CSVConverter::write_header() {
     const auto& metadata = get_metadata();
     const auto& dimensions = metadata.dimensions;
 
@@ -278,7 +278,7 @@ void BlobCSV::write_header() {
     io << '\n';
 }
 
-std::vector<std::string> BlobCSV::expected_dimension_names() const {
+std::vector<std::string> CSVConverter::expected_dimension_names() const {
     const auto& metadata = get_metadata();
     const auto& dimensions = metadata.dimensions;
 
@@ -313,7 +313,7 @@ std::vector<std::string> BlobCSV::expected_dimension_names() const {
     return names;
 }
 
-void BlobCSV::validate_header() {
+void CSVConverter::validate_header() {
     const auto& metadata = get_metadata();
     std::string header_line;
     std::getline(get_io(), header_line);
@@ -363,7 +363,7 @@ void BlobCSV::validate_header() {
     }
 }
 
-void BlobCSV::validate_dimensions(const std::vector<std::string>& csv_dimension_values,
+void CSVConverter::validate_dimensions(const std::vector<std::string>& csv_dimension_values,
                                   const std::vector<int64_t>& current_bin_dimension_values) {
     const auto& metadata = get_metadata();
     const auto& dimensions = metadata.dimensions;

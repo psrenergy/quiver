@@ -1,7 +1,7 @@
-#include "quiver/blob/time_properties.h"
+#include "quiver/binary/time_properties.h"
 
-#include "blob_utils.h"
-#include "quiver/blob/time_constants.h"
+#include "binary_utils.h"
+#include "quiver/binary/time_constants.h"
 
 #include <stdexcept>
 

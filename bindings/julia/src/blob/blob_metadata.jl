@@ -1,4 +1,4 @@
-struct BlobDimension
+struct BinaryDimension
     name::String
     size::Int64
     is_time_dimension::Bool
@@ -7,12 +7,12 @@ struct BlobDimension
     parent_dimension_index::Union{Int64, Nothing}
 end
 
-mutable struct BlobMetadata
-    ptr::Ptr{C.quiver_blob_metadata}
+mutable struct BinaryMetadata
+    ptr::Ptr{C.quiver_binary_metadata}
 
-    function BlobMetadata(ptr::Ptr{C.quiver_blob_metadata})
+    function BinaryMetadata(ptr::Ptr{C.quiver_binary_metadata})
         md = new(ptr)
-        finalizer(m -> m.ptr != C_NULL && C.quiver_blob_metadata_free(m.ptr), md)
+        finalizer(m -> m.ptr != C_NULL && C.quiver_binary_metadata_free(m.ptr), md)
         return md
     end
 end
@@ -25,7 +25,7 @@ const FREQUENCY_MAP = Dict(
     C.QUIVER_TIME_FREQUENCY_HOURLY => "hourly",
 )
 
-function BlobMetadata(;
+function BinaryMetadata(;
     initial_datetime::String = "",
     unit::String = "",
     version::String = "1",
@@ -48,45 +48,45 @@ function BlobMetadata(;
 end
 
 function from_toml(toml::String)
-    out_md = Ref{Ptr{C.quiver_blob_metadata}}(C_NULL)
-    check(C.quiver_blob_metadata_from_toml(toml, out_md))
-    return BlobMetadata(out_md[])
+    out_md = Ref{Ptr{C.quiver_binary_metadata}}(C_NULL)
+    check(C.quiver_binary_metadata_from_toml(toml, out_md))
+    return BinaryMetadata(out_md[])
 end
 
 function from_element(el::Element)
-    out_md = Ref{Ptr{C.quiver_blob_metadata}}(C_NULL)
-    check(C.quiver_blob_metadata_from_element(el.ptr, out_md))
-    return BlobMetadata(out_md[])
+    out_md = Ref{Ptr{C.quiver_binary_metadata}}(C_NULL)
+    check(C.quiver_binary_metadata_from_element(el.ptr, out_md))
+    return BinaryMetadata(out_md[])
 end
 
-function get_unit(md::BlobMetadata)
+function get_unit(md::BinaryMetadata)
     out = Ref{Ptr{Cchar}}(C_NULL)
-    check(C.quiver_blob_metadata_get_unit(md.ptr, out))
+    check(C.quiver_binary_metadata_get_unit(md.ptr, out))
     result = unsafe_string(out[])
-    C.quiver_blob_metadata_free_string(out[])
+    C.quiver_binary_metadata_free_string(out[])
     return result
 end
 
-function get_version(md::BlobMetadata)
+function get_version(md::BinaryMetadata)
     out = Ref{Ptr{Cchar}}(C_NULL)
-    check(C.quiver_blob_metadata_get_version(md.ptr, out))
+    check(C.quiver_binary_metadata_get_version(md.ptr, out))
     result = unsafe_string(out[])
-    C.quiver_blob_metadata_free_string(out[])
+    C.quiver_binary_metadata_free_string(out[])
     return result
 end
 
-function get_initial_datetime(md::BlobMetadata)
+function get_initial_datetime(md::BinaryMetadata)
     out = Ref{Ptr{Cchar}}(C_NULL)
-    check(C.quiver_blob_metadata_get_initial_datetime(md.ptr, out))
+    check(C.quiver_binary_metadata_get_initial_datetime(md.ptr, out))
     result = unsafe_string(out[])
-    C.quiver_blob_metadata_free_string(out[])
+    C.quiver_binary_metadata_free_string(out[])
     return result
 end
 
-function get_labels(md::BlobMetadata)
+function get_labels(md::BinaryMetadata)
     out = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
     out_count = Ref{Csize_t}(0)
-    check(C.quiver_blob_metadata_get_labels(md.ptr, out, out_count))
+    check(C.quiver_binary_metadata_get_labels(md.ptr, out, out_count))
 
     count = out_count[]
     if count == 0 || out[] == C_NULL
@@ -95,22 +95,22 @@ function get_labels(md::BlobMetadata)
 
     ptrs = unsafe_wrap(Array, out[], count)
     result = [unsafe_string(ptr) for ptr in ptrs]
-    C.quiver_blob_metadata_free_string_array(out[], count)
+    C.quiver_binary_metadata_free_string_array(out[], count)
     return result
 end
 
-function get_dimensions(md::BlobMetadata)
+function get_dimensions(md::BinaryMetadata)
     out_count = Ref{Csize_t}(0)
-    check(C.quiver_blob_metadata_get_dimension_count(md.ptr, out_count))
+    check(C.quiver_binary_metadata_get_dimension_count(md.ptr, out_count))
     count = out_count[]
 
-    dims = BlobDimension[]
+    dims = BinaryDimension[]
     for i in 0:(count-1)
         dim_ref = Ref(C.quiver_dimension_t(
             C_NULL, 0, 0,
             C.quiver_time_properties_t(C.QUIVER_TIME_FREQUENCY_YEARLY, 0, 0),
         ))
-        check(C.quiver_blob_metadata_get_dimension(md.ptr, i, dim_ref))
+        check(C.quiver_binary_metadata_get_dimension(md.ptr, i, dim_ref))
         dim = dim_ref[]
 
         is_time = dim.is_time_dimension != 0
@@ -119,24 +119,24 @@ function get_dimensions(md::BlobMetadata)
         parent_idx = is_time ? dim.time_properties.parent_dimension_index : nothing
 
         name = unsafe_string(dim.name)
-        C.quiver_blob_metadata_free_dimension(dim_ref)
+        C.quiver_binary_metadata_free_dimension(dim_ref)
 
-        push!(dims, BlobDimension(name, dim.size, is_time, freq, init_val, parent_idx))
+        push!(dims, BinaryDimension(name, dim.size, is_time, freq, init_val, parent_idx))
     end
 
     return dims
 end
 
-function get_number_of_time_dimensions(md::BlobMetadata)
+function get_number_of_time_dimensions(md::BinaryMetadata)
     out = Ref{Int64}(0)
-    check(C.quiver_blob_metadata_get_number_of_time_dimensions(md.ptr, out))
+    check(C.quiver_binary_metadata_get_number_of_time_dimensions(md.ptr, out))
     return out[]
 end
 
-function to_toml(md::BlobMetadata)
+function to_toml(md::BinaryMetadata)
     out = Ref{Ptr{Cchar}}(C_NULL)
-    check(C.quiver_blob_metadata_to_toml(md.ptr, out))
+    check(C.quiver_binary_metadata_to_toml(md.ptr, out))
     result = unsafe_string(out[])
-    C.quiver_blob_metadata_free_string(out[])
+    C.quiver_binary_metadata_free_string(out[])
     return result
 end

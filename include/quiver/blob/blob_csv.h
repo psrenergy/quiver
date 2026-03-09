@@ -1,8 +1,8 @@
-#ifndef QUIVER_BLOB_CSV_H
-#define QUIVER_BLOB_CSV_H
+#ifndef QUIVER_CSV_CONVERTER_H
+#define QUIVER_CSV_CONVERTER_H
 
 #include "../export.h"
-#include "blob.h"
+#include "binary.h"
 
 #include <cstdint>
 #include <ctime>
@@ -14,21 +14,21 @@
 
 namespace quiver {
 
-class QUIVER_API BlobCSV : public Blob {
+class QUIVER_API CSVConverter : public Binary {
 public:
-    explicit BlobCSV(const std::string& file_path,
-                     const BlobMetadata& metadata,
+    explicit CSVConverter(const std::string& file_path,
+                     const BinaryMetadata& metadata,
                      std::unique_ptr<std::iostream> io,
                      bool aggregate_time_dimensions);
-    ~BlobCSV();
+    ~CSVConverter();
 
     // Non-copyable
-    BlobCSV(const BlobCSV&) = delete;
-    BlobCSV& operator=(const BlobCSV&) = delete;
+    CSVConverter(const CSVConverter&) = delete;
+    CSVConverter& operator=(const CSVConverter&) = delete;
 
     // Movable
-    BlobCSV(BlobCSV&& other) noexcept;
-    BlobCSV& operator=(BlobCSV&& other) noexcept;
+    CSVConverter(CSVConverter&& other) noexcept;
+    CSVConverter& operator=(CSVConverter&& other) noexcept;
 
     static void csv_to_bin(const std::string& file_path);
     static void bin_to_csv(const std::string& file_path, bool aggregate_time_dimensions = true);
@@ -60,4 +60,4 @@ private:
 
 }  // namespace quiver
 
-#endif  // QUIVER_BLOB_CSV_H
+#endif  // QUIVER_CSV_CONVERTER_H

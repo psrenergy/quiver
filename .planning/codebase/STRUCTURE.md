@@ -53,10 +53,10 @@ quiver4/
 │   ├── result.cpp             # Result/Row implementation
 │   ├── row.cpp                # Row implementation
 │   ├── common.cpp             # Shared C API utility (version, error string)
-│   ├── blob/                  # Blob/time series internal utilities
-│   │   ├── blob.cpp
-│   │   ├── blob_csv.cpp
-│   │   ├── blob_metadata.cpp
+│   ├── binary/                  # Binary/time series internal utilities
+│   │   ├── binary.cpp
+│   │   ├── binary_csv.cpp
+│   │   ├── binary_metadata.cpp
 │   │   ├── dimension.cpp
 │   │   └── time_properties.cpp
 │   ├── utils/
@@ -235,9 +235,9 @@ quiver4/
 - Contains: Mirrors `src/` functional split; also contains marshaling helpers
 - Key files: `internal.h` (quiver_database/element structs, QUIVER_REQUIRE macro), `database_helpers.h` (marshal templates)
 
-**`src/blob/`:**
-- Purpose: Internal utilities for blob/time series data handling
-- Contains: Dimension helpers, time property utilities, blob CSV helpers
+**`src/binary/`:**
+- Purpose: Internal utilities for binary/time series data handling
+- Contains: Dimension helpers, time property utilities, binary CSV helpers
 - Generated: No
 
 **`src/cli/`:**

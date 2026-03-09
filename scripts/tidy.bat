@@ -16,5 +16,5 @@ REM Strip MinGW-specific flags that clang-tidy doesn't understand
 REM (cmake configure regenerates compile_commands.json, so in-place edit is safe)
 powershell -Command "(Get-Content '%BUILD%\compile_commands.json') -replace '-fno-keep-inline-dllexport','' | Set-Content '%BUILD%\compile_commands.json'"
 
-uv run python "%RUN_CLANG_TIDY%" -p "%BUILD%" -header-filter="(include/quiver/|quiver/src/)" -quiet "quiver[\\/]src[\\/](?!blob)"
+uv run python "%RUN_CLANG_TIDY%" -p "%BUILD%" -header-filter="(include/quiver/|quiver/src/)" -quiet "quiver[\\/]src[\\/](?!binary)"
 exit /b %ERRORLEVEL%

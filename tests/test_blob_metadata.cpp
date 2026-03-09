@@ -1,8 +1,8 @@
 #include <chrono>
 #include <gtest/gtest.h>
-#include <quiver/blob/blob_metadata.h>
-#include <quiver/blob/dimension.h>
-#include <quiver/blob/time_properties.h>
+#include <quiver/binary/binary_metadata.h>
+#include <quiver/binary/dimension.h>
+#include <quiver/binary/time_properties.h>
 #include <quiver/element.h>
 
 using namespace quiver;
@@ -38,11 +38,11 @@ static Element make_valid_element() {
 }
 
 // ============================================================================
-// BlobMetadataFromToml
+// BinaryMetadataFromToml
 // ============================================================================
 
-TEST(BlobMetadataFromToml, AllFieldsPopulated) {
-    auto md = BlobMetadata::from_toml(make_valid_toml());
+TEST(BinaryMetadataFromToml, AllFieldsPopulated) {
+    auto md = BinaryMetadata::from_toml(make_valid_toml());
     EXPECT_EQ(md.version, "1");
     EXPECT_EQ(md.unit, "MW");
     EXPECT_EQ(md.labels.size(), 2u);
@@ -56,33 +56,33 @@ TEST(BlobMetadataFromToml, AllFieldsPopulated) {
     EXPECT_EQ(md.number_of_time_dimensions, 2);
 }
 
-TEST(BlobMetadataFromToml, TimeDimensionsMarked) {
-    auto md = BlobMetadata::from_toml(make_valid_toml());
+TEST(BinaryMetadataFromToml, TimeDimensionsMarked) {
+    auto md = BinaryMetadata::from_toml(make_valid_toml());
     EXPECT_TRUE(md.dimensions[0].is_time_dimension());
     EXPECT_TRUE(md.dimensions[1].is_time_dimension());
 }
 
-TEST(BlobMetadataFromToml, FrequenciesAssigned) {
-    auto md = BlobMetadata::from_toml(make_valid_toml());
+TEST(BinaryMetadataFromToml, FrequenciesAssigned) {
+    auto md = BinaryMetadata::from_toml(make_valid_toml());
     EXPECT_EQ(md.dimensions[0].time->frequency, TimeFrequency::Monthly);
     EXPECT_EQ(md.dimensions[1].time->frequency, TimeFrequency::Daily);
 }
 
-TEST(BlobMetadataFromToml, ParentIndicesSet) {
-    auto md = BlobMetadata::from_toml(make_valid_toml());
+TEST(BinaryMetadataFromToml, ParentIndicesSet) {
+    auto md = BinaryMetadata::from_toml(make_valid_toml());
     EXPECT_EQ(md.dimensions[0].time->parent_dimension_index, -1);
     EXPECT_EQ(md.dimensions[1].time->parent_dimension_index, 0);
 }
 
-TEST(BlobMetadataFromToml, InitialValuesJan1st) {
-    auto md = BlobMetadata::from_toml(make_valid_toml());
+TEST(BinaryMetadataFromToml, InitialValuesJan1st) {
+    auto md = BinaryMetadata::from_toml(make_valid_toml());
     // Outermost time dim always starts at 1
     EXPECT_EQ(md.dimensions[0].time->initial_value, 1);
     // Daily under monthly, Jan 1st → day 1
     EXPECT_EQ(md.dimensions[1].time->initial_value, 1);
 }
 
-TEST(BlobMetadataFromToml, InitialValuesNonJan1st) {
+TEST(BinaryMetadataFromToml, InitialValuesNonJan1st) {
     std::string toml = R"(
 version = "1"
 dimensions = ["stage", "block"]
@@ -93,12 +93,12 @@ initial_datetime = "2025-03-15T00:00:00"
 unit = "MW"
 labels = ["val"]
 )";
-    auto md = BlobMetadata::from_toml(toml);
+    auto md = BinaryMetadata::from_toml(toml);
     EXPECT_EQ(md.dimensions[0].time->initial_value, 1);
     EXPECT_EQ(md.dimensions[1].time->initial_value, 15);
 }
 
-TEST(BlobMetadataFromToml, InitialValuesHourlyOffset) {
+TEST(BinaryMetadataFromToml, InitialValuesHourlyOffset) {
     std::string toml = R"(
 version = "1"
 dimensions = ["month", "day", "hour"]
@@ -109,13 +109,13 @@ initial_datetime = "2025-01-01T10:00:00"
 unit = "MW"
 labels = ["val"]
 )";
-    auto md = BlobMetadata::from_toml(toml);
+    auto md = BinaryMetadata::from_toml(toml);
     EXPECT_EQ(md.dimensions[0].time->initial_value, 1);
     EXPECT_EQ(md.dimensions[1].time->initial_value, 1);
     EXPECT_EQ(md.dimensions[2].time->initial_value, 11);  // hour 10 → 10+1=11
 }
 
-TEST(BlobMetadataFromToml, MixedTimeAndNonTime) {
+TEST(BinaryMetadataFromToml, MixedTimeAndNonTime) {
     std::string toml = R"(
 version = "1"
 dimensions = ["stage", "scenario", "block"]
@@ -126,7 +126,7 @@ initial_datetime = "2025-01-01T00:00:00"
 unit = "MW"
 labels = ["val"]
 )";
-    auto md = BlobMetadata::from_toml(toml);
+    auto md = BinaryMetadata::from_toml(toml);
     EXPECT_EQ(md.dimensions.size(), 3u);
     EXPECT_TRUE(md.dimensions[0].is_time_dimension());
     EXPECT_FALSE(md.dimensions[1].is_time_dimension());
@@ -134,7 +134,7 @@ labels = ["val"]
     EXPECT_EQ(md.number_of_time_dimensions, 2);
 }
 
-TEST(BlobMetadataFromToml, ErrorTimeDimensionNotInDimensions) {
+TEST(BinaryMetadataFromToml, ErrorTimeDimensionNotInDimensions) {
     std::string toml = R"(
 version = "1"
 dimensions = ["stage", "block"]
@@ -145,10 +145,10 @@ initial_datetime = "2025-01-01T00:00:00"
 unit = "MW"
 labels = ["val"]
 )";
-    EXPECT_THROW(BlobMetadata::from_toml(toml), std::runtime_error);
+    EXPECT_THROW(BinaryMetadata::from_toml(toml), std::runtime_error);
 }
 
-TEST(BlobMetadataFromToml, ErrorTimeDimensionsOutOfOrder) {
+TEST(BinaryMetadataFromToml, ErrorTimeDimensionsOutOfOrder) {
     std::string toml = R"(
 version = "1"
 dimensions = ["stage", "block"]
@@ -159,10 +159,10 @@ initial_datetime = "2025-01-01T00:00:00"
 unit = "MW"
 labels = ["val"]
 )";
-    EXPECT_THROW(BlobMetadata::from_toml(toml), std::runtime_error);
+    EXPECT_THROW(BinaryMetadata::from_toml(toml), std::runtime_error);
 }
 
-TEST(BlobMetadataFromToml, NoTimeDimensions) {
+TEST(BinaryMetadataFromToml, NoTimeDimensions) {
     std::string toml = R"(
 version = "1"
 dimensions = ["row", "col"]
@@ -173,18 +173,18 @@ initial_datetime = "2025-01-01T00:00:00"
 unit = "MW"
 labels = ["val"]
 )";
-    auto md = BlobMetadata::from_toml(toml);
+    auto md = BinaryMetadata::from_toml(toml);
     EXPECT_EQ(md.number_of_time_dimensions, 0);
     EXPECT_FALSE(md.dimensions[0].is_time_dimension());
     EXPECT_FALSE(md.dimensions[1].is_time_dimension());
 }
 
 // ============================================================================
-// BlobMetadataFromElement
+// BinaryMetadataFromElement
 // ============================================================================
 
-TEST(BlobMetadataFromElement, ValidWithTimeDimensions) {
-    auto md = BlobMetadata::from_element(make_valid_element());
+TEST(BinaryMetadataFromElement, ValidWithTimeDimensions) {
+    auto md = BinaryMetadata::from_element(make_valid_element());
     EXPECT_EQ(md.version, "1");
     EXPECT_EQ(md.unit, "MW");
     EXPECT_EQ(md.labels.size(), 2u);
@@ -202,8 +202,8 @@ TEST(BlobMetadataFromElement, ValidWithTimeDimensions) {
     EXPECT_EQ(md.number_of_time_dimensions, 2);
 }
 
-TEST(BlobMetadataFromElement, ValidWithoutTimeDimensions) {
-    auto md = BlobMetadata::from_element(Element()
+TEST(BinaryMetadataFromElement, ValidWithoutTimeDimensions) {
+    auto md = BinaryMetadata::from_element(Element()
                                              .set("version", "1")
                                              .set("initial_datetime", "2025-01-01T00:00:00")
                                              .set("unit", "MW")
@@ -215,8 +215,8 @@ TEST(BlobMetadataFromElement, ValidWithoutTimeDimensions) {
     EXPECT_FALSE(md.dimensions[1].is_time_dimension());
 }
 
-TEST(BlobMetadataFromElement, MixedTimeAndNonTime) {
-    auto md = BlobMetadata::from_element(Element()
+TEST(BinaryMetadataFromElement, MixedTimeAndNonTime) {
+    auto md = BinaryMetadata::from_element(Element()
                                              .set("version", "1")
                                              .set("initial_datetime", "2025-01-01T00:00:00")
                                              .set("unit", "MW")
@@ -231,9 +231,9 @@ TEST(BlobMetadataFromElement, MixedTimeAndNonTime) {
     EXPECT_TRUE(md.dimensions[2].is_time_dimension());
 }
 
-TEST(BlobMetadataFromElement, RoundTripEquivalenceWithToml) {
-    auto md_element = BlobMetadata::from_element(make_valid_element());
-    auto md_toml = BlobMetadata::from_toml(make_valid_toml());
+TEST(BinaryMetadataFromElement, RoundTripEquivalenceWithToml) {
+    auto md_element = BinaryMetadata::from_element(make_valid_element());
+    auto md_toml = BinaryMetadata::from_toml(make_valid_toml());
 
     EXPECT_EQ(md_element.version, md_toml.version);
     EXPECT_EQ(md_element.unit, md_toml.unit);
@@ -253,8 +253,8 @@ TEST(BlobMetadataFromElement, RoundTripEquivalenceWithToml) {
     }
 }
 
-TEST(BlobMetadataFromElement, MissingVersion) {
-    EXPECT_THROW(BlobMetadata::from_element(Element()
+TEST(BinaryMetadataFromElement, MissingVersion) {
+    EXPECT_THROW(BinaryMetadata::from_element(Element()
                                                 .set("initial_datetime", "2025-01-01T00:00:00")
                                                 .set("unit", "MW")
                                                 .set("dimensions", {"row"})
@@ -263,8 +263,8 @@ TEST(BlobMetadataFromElement, MissingVersion) {
                  std::runtime_error);
 }
 
-TEST(BlobMetadataFromElement, MissingUnit) {
-    EXPECT_THROW(BlobMetadata::from_element(Element()
+TEST(BinaryMetadataFromElement, MissingUnit) {
+    EXPECT_THROW(BinaryMetadata::from_element(Element()
                                                 .set("version", "1")
                                                 .set("initial_datetime", "2025-01-01T00:00:00")
                                                 .set("dimensions", {"row"})
@@ -273,8 +273,8 @@ TEST(BlobMetadataFromElement, MissingUnit) {
                  std::runtime_error);
 }
 
-TEST(BlobMetadataFromElement, MissingInitialDatetime) {
-    EXPECT_THROW(BlobMetadata::from_element(Element()
+TEST(BinaryMetadataFromElement, MissingInitialDatetime) {
+    EXPECT_THROW(BinaryMetadata::from_element(Element()
                                                 .set("version", "1")
                                                 .set("unit", "MW")
                                                 .set("dimensions", {"row"})
@@ -283,8 +283,8 @@ TEST(BlobMetadataFromElement, MissingInitialDatetime) {
                  std::runtime_error);
 }
 
-TEST(BlobMetadataFromElement, MissingDimensions) {
-    EXPECT_THROW(BlobMetadata::from_element(Element()
+TEST(BinaryMetadataFromElement, MissingDimensions) {
+    EXPECT_THROW(BinaryMetadata::from_element(Element()
                                                 .set("version", "1")
                                                 .set("initial_datetime", "2025-01-01T00:00:00")
                                                 .set("unit", "MW")
@@ -293,8 +293,8 @@ TEST(BlobMetadataFromElement, MissingDimensions) {
                  std::runtime_error);
 }
 
-TEST(BlobMetadataFromElement, MissingDimensionSizes) {
-    EXPECT_THROW(BlobMetadata::from_element(Element()
+TEST(BinaryMetadataFromElement, MissingDimensionSizes) {
+    EXPECT_THROW(BinaryMetadata::from_element(Element()
                                                 .set("version", "1")
                                                 .set("initial_datetime", "2025-01-01T00:00:00")
                                                 .set("unit", "MW")
@@ -303,8 +303,8 @@ TEST(BlobMetadataFromElement, MissingDimensionSizes) {
                  std::runtime_error);
 }
 
-TEST(BlobMetadataFromElement, MissingLabels) {
-    EXPECT_THROW(BlobMetadata::from_element(Element()
+TEST(BinaryMetadataFromElement, MissingLabels) {
+    EXPECT_THROW(BinaryMetadata::from_element(Element()
                                                 .set("version", "1")
                                                 .set("initial_datetime", "2025-01-01T00:00:00")
                                                 .set("unit", "MW")
@@ -313,8 +313,8 @@ TEST(BlobMetadataFromElement, MissingLabels) {
                  std::runtime_error);
 }
 
-TEST(BlobMetadataFromElement, VersionMustBeString) {
-    EXPECT_THROW(BlobMetadata::from_element(Element()
+TEST(BinaryMetadataFromElement, VersionMustBeString) {
+    EXPECT_THROW(BinaryMetadata::from_element(Element()
                                                 .set("version", int64_t{1})
                                                 .set("initial_datetime", "2025-01-01T00:00:00")
                                                 .set("unit", "MW")
@@ -324,8 +324,8 @@ TEST(BlobMetadataFromElement, VersionMustBeString) {
                  std::runtime_error);
 }
 
-TEST(BlobMetadataFromElement, DimensionsMustBeStrings) {
-    EXPECT_THROW(BlobMetadata::from_element(Element()
+TEST(BinaryMetadataFromElement, DimensionsMustBeStrings) {
+    EXPECT_THROW(BinaryMetadata::from_element(Element()
                                                 .set("version", "1")
                                                 .set("initial_datetime", "2025-01-01T00:00:00")
                                                 .set("unit", "MW")
@@ -335,8 +335,8 @@ TEST(BlobMetadataFromElement, DimensionsMustBeStrings) {
                  std::runtime_error);
 }
 
-TEST(BlobMetadataFromElement, DimensionSizesMustBeIntegers) {
-    EXPECT_THROW(BlobMetadata::from_element(Element()
+TEST(BinaryMetadataFromElement, DimensionSizesMustBeIntegers) {
+    EXPECT_THROW(BinaryMetadata::from_element(Element()
                                                 .set("version", "1")
                                                 .set("initial_datetime", "2025-01-01T00:00:00")
                                                 .set("unit", "MW")
@@ -346,8 +346,8 @@ TEST(BlobMetadataFromElement, DimensionSizesMustBeIntegers) {
                  std::runtime_error);
 }
 
-TEST(BlobMetadataFromElement, InvalidVersionPropagatesValidation) {
-    EXPECT_THROW(BlobMetadata::from_element(Element()
+TEST(BinaryMetadataFromElement, InvalidVersionPropagatesValidation) {
+    EXPECT_THROW(BinaryMetadata::from_element(Element()
                                                 .set("version", "2")
                                                 .set("initial_datetime", "2025-01-01T00:00:00")
                                                 .set("unit", "MW")
@@ -358,13 +358,13 @@ TEST(BlobMetadataFromElement, InvalidVersionPropagatesValidation) {
 }
 
 // ============================================================================
-// BlobMetadataToToml
+// BinaryMetadataToToml
 // ============================================================================
 
-TEST(BlobMetadataToToml, RoundTrip) {
-    auto md1 = BlobMetadata::from_toml(make_valid_toml());
+TEST(BinaryMetadataToToml, RoundTrip) {
+    auto md1 = BinaryMetadata::from_toml(make_valid_toml());
     auto toml_str = md1.to_toml();
-    auto md2 = BlobMetadata::from_toml(toml_str);
+    auto md2 = BinaryMetadata::from_toml(toml_str);
 
     EXPECT_EQ(md1.version, md2.version);
     EXPECT_EQ(md1.unit, md2.unit);
@@ -376,8 +376,8 @@ TEST(BlobMetadataToToml, RoundTrip) {
     }
 }
 
-TEST(BlobMetadataToToml, OutputContainsAllKeys) {
-    auto md = BlobMetadata::from_toml(make_valid_toml());
+TEST(BinaryMetadataToToml, OutputContainsAllKeys) {
+    auto md = BinaryMetadata::from_toml(make_valid_toml());
     auto toml_str = md.to_toml();
 
     EXPECT_NE(toml_str.find("version"), std::string::npos);
@@ -390,8 +390,8 @@ TEST(BlobMetadataToToml, OutputContainsAllKeys) {
     EXPECT_NE(toml_str.find("labels"), std::string::npos);
 }
 
-TEST(BlobMetadataToToml, ValidationCalledOnSerialize) {
-    BlobMetadata md;
+TEST(BinaryMetadataToToml, ValidationCalledOnSerialize) {
+    BinaryMetadata md;
     md.version = "";  // invalid
     md.unit = "MW";
     md.labels = {"val"};
@@ -400,23 +400,23 @@ TEST(BlobMetadataToToml, ValidationCalledOnSerialize) {
     EXPECT_THROW(md.to_toml(), std::runtime_error);
 }
 
-TEST(BlobMetadataToToml, ISO8601DatetimeFormat) {
-    auto md = BlobMetadata::from_toml(make_valid_toml());
+TEST(BinaryMetadataToToml, ISO8601DatetimeFormat) {
+    auto md = BinaryMetadata::from_toml(make_valid_toml());
     auto toml_str = md.to_toml();
     EXPECT_NE(toml_str.find("2025-01-01T00:00:00"), std::string::npos);
 }
 
 // ============================================================================
-// BlobMetadataValidate
+// BinaryMetadataValidate
 // ============================================================================
 
-TEST(BlobMetadataValidate, ValidMetadataPasses) {
-    auto md = BlobMetadata::from_toml(make_valid_toml());
+TEST(BinaryMetadataValidate, ValidMetadataPasses) {
+    auto md = BinaryMetadata::from_toml(make_valid_toml());
     EXPECT_NO_THROW(md.validate());
 }
 
-TEST(BlobMetadataValidate, WrongVersion) {
-    BlobMetadata md;
+TEST(BinaryMetadataValidate, WrongVersion) {
+    BinaryMetadata md;
     md.version = "2";
     md.unit = "MW";
     md.labels = {"val"};
@@ -425,8 +425,8 @@ TEST(BlobMetadataValidate, WrongVersion) {
     EXPECT_THROW(md.validate(), std::runtime_error);
 }
 
-TEST(BlobMetadataValidate, EmptyVersion) {
-    BlobMetadata md;
+TEST(BinaryMetadataValidate, EmptyVersion) {
+    BinaryMetadata md;
     md.version = "";
     md.unit = "MW";
     md.labels = {"val"};
@@ -435,8 +435,8 @@ TEST(BlobMetadataValidate, EmptyVersion) {
     EXPECT_THROW(md.validate(), std::runtime_error);
 }
 
-TEST(BlobMetadataValidate, EmptyDimensions) {
-    BlobMetadata md;
+TEST(BinaryMetadataValidate, EmptyDimensions) {
+    BinaryMetadata md;
     md.version = "1";
     md.unit = "MW";
     md.labels = {"val"};
@@ -445,8 +445,8 @@ TEST(BlobMetadataValidate, EmptyDimensions) {
     EXPECT_THROW(md.validate(), std::runtime_error);
 }
 
-TEST(BlobMetadataValidate, EmptyLabels) {
-    BlobMetadata md;
+TEST(BinaryMetadataValidate, EmptyLabels) {
+    BinaryMetadata md;
     md.version = "1";
     md.unit = "MW";
     md.labels = {};
@@ -455,8 +455,8 @@ TEST(BlobMetadataValidate, EmptyLabels) {
     EXPECT_THROW(md.validate(), std::runtime_error);
 }
 
-TEST(BlobMetadataValidate, NegativeTimeDimCount) {
-    BlobMetadata md;
+TEST(BinaryMetadataValidate, NegativeTimeDimCount) {
+    BinaryMetadata md;
     md.version = "1";
     md.unit = "MW";
     md.labels = {"val"};
@@ -465,8 +465,8 @@ TEST(BlobMetadataValidate, NegativeTimeDimCount) {
     EXPECT_THROW(md.validate(), std::runtime_error);
 }
 
-TEST(BlobMetadataValidate, ExcessTimeDimCount) {
-    BlobMetadata md;
+TEST(BinaryMetadataValidate, ExcessTimeDimCount) {
+    BinaryMetadata md;
     md.version = "1";
     md.unit = "MW";
     md.labels = {"val"};
@@ -475,8 +475,8 @@ TEST(BlobMetadataValidate, ExcessTimeDimCount) {
     EXPECT_THROW(md.validate(), std::runtime_error);
 }
 
-TEST(BlobMetadataValidate, ZeroDimensionSize) {
-    BlobMetadata md;
+TEST(BinaryMetadataValidate, ZeroDimensionSize) {
+    BinaryMetadata md;
     md.version = "1";
     md.unit = "MW";
     md.labels = {"val"};
@@ -485,8 +485,8 @@ TEST(BlobMetadataValidate, ZeroDimensionSize) {
     EXPECT_THROW(md.validate(), std::runtime_error);
 }
 
-TEST(BlobMetadataValidate, NegativeDimensionSize) {
-    BlobMetadata md;
+TEST(BinaryMetadataValidate, NegativeDimensionSize) {
+    BinaryMetadata md;
     md.version = "1";
     md.unit = "MW";
     md.labels = {"val"};
@@ -495,8 +495,8 @@ TEST(BlobMetadataValidate, NegativeDimensionSize) {
     EXPECT_THROW(md.validate(), std::runtime_error);
 }
 
-TEST(BlobMetadataValidate, DuplicateDimensionNames) {
-    BlobMetadata md;
+TEST(BinaryMetadataValidate, DuplicateDimensionNames) {
+    BinaryMetadata md;
     md.version = "1";
     md.unit = "MW";
     md.labels = {"val"};
@@ -505,8 +505,8 @@ TEST(BlobMetadataValidate, DuplicateDimensionNames) {
     EXPECT_THROW(md.validate(), std::runtime_error);
 }
 
-TEST(BlobMetadataValidate, DuplicateLabels) {
-    BlobMetadata md;
+TEST(BinaryMetadataValidate, DuplicateLabels) {
+    BinaryMetadata md;
     md.version = "1";
     md.unit = "MW";
     md.labels = {"val", "val"};
@@ -516,11 +516,11 @@ TEST(BlobMetadataValidate, DuplicateLabels) {
 }
 
 // ============================================================================
-// BlobMetadataValidateTimeDimensions
+// BinaryMetadataValidateTimeDimensions
 // ============================================================================
 
-TEST(BlobMetadataValidateTimeDimensions, ZeroTimeDimsSkipsValidation) {
-    BlobMetadata md;
+TEST(BinaryMetadataValidateTimeDimensions, ZeroTimeDimsSkipsValidation) {
+    BinaryMetadata md;
     md.version = "1";
     md.unit = "MW";
     md.labels = {"val"};
@@ -529,8 +529,8 @@ TEST(BlobMetadataValidateTimeDimensions, ZeroTimeDimsSkipsValidation) {
     EXPECT_NO_THROW(md.validate_time_dimension_metadata());
 }
 
-TEST(BlobMetadataValidateTimeDimensions, DuplicateFrequencies) {
-    BlobMetadata md;
+TEST(BinaryMetadataValidateTimeDimensions, DuplicateFrequencies) {
+    BinaryMetadata md;
     md.version = "1";
     md.unit = "MW";
     md.labels = {"val"};
@@ -541,8 +541,8 @@ TEST(BlobMetadataValidateTimeDimensions, DuplicateFrequencies) {
     EXPECT_THROW(md.validate_time_dimension_metadata(), std::runtime_error);
 }
 
-TEST(BlobMetadataValidateTimeDimensions, WrongFrequencyOrder) {
-    BlobMetadata md;
+TEST(BinaryMetadataValidateTimeDimensions, WrongFrequencyOrder) {
+    BinaryMetadata md;
     md.version = "1";
     md.unit = "MW";
     md.labels = {"val"};
@@ -553,8 +553,8 @@ TEST(BlobMetadataValidateTimeDimensions, WrongFrequencyOrder) {
     EXPECT_THROW(md.validate_time_dimension_metadata(), std::runtime_error);
 }
 
-TEST(BlobMetadataValidateTimeDimensions, WeeklyNotFirst) {
-    BlobMetadata md;
+TEST(BinaryMetadataValidateTimeDimensions, WeeklyNotFirst) {
+    BinaryMetadata md;
     md.version = "1";
     md.unit = "MW";
     md.labels = {"val"};
@@ -565,12 +565,12 @@ TEST(BlobMetadataValidateTimeDimensions, WeeklyNotFirst) {
     EXPECT_THROW(md.validate_time_dimension_metadata(), std::runtime_error);
 }
 
-TEST(BlobMetadataValidateTimeDimensions, ValidMonthlyDaily) {
-    auto md = BlobMetadata::from_toml(make_valid_toml());
+TEST(BinaryMetadataValidateTimeDimensions, ValidMonthlyDaily) {
+    auto md = BinaryMetadata::from_toml(make_valid_toml());
     EXPECT_NO_THROW(md.validate_time_dimension_metadata());
 }
 
-TEST(BlobMetadataValidateTimeDimensions, ValidYearlyMonthlyDailyHourly) {
+TEST(BinaryMetadataValidateTimeDimensions, ValidYearlyMonthlyDailyHourly) {
     std::string toml = R"(
 version = "1"
 dimensions = ["year", "month", "day", "hour"]
@@ -581,11 +581,11 @@ initial_datetime = "2025-01-01T00:00:00"
 unit = "MW"
 labels = ["val"]
 )";
-    auto md = BlobMetadata::from_toml(toml);
+    auto md = BinaryMetadata::from_toml(toml);
     EXPECT_NO_THROW(md.validate_time_dimension_metadata());
 }
 
-TEST(BlobMetadataValidateTimeDimensions, ValidWeeklyAlone) {
+TEST(BinaryMetadataValidateTimeDimensions, ValidWeeklyAlone) {
     std::string toml = R"(
 version = "1"
 dimensions = ["week"]
@@ -596,18 +596,18 @@ initial_datetime = "2025-01-01T00:00:00"
 unit = "MW"
 labels = ["val"]
 )";
-    auto md = BlobMetadata::from_toml(toml);
+    auto md = BinaryMetadata::from_toml(toml);
     EXPECT_NO_THROW(md.validate_time_dimension_metadata());
 }
 
 // ============================================================================
-// BlobMetadataValidateTimeDimensionSizes -- all 9 valid combinations
+// BinaryMetadataValidateTimeDimensionSizes -- all 9 valid combinations
 // ============================================================================
 
 // Helper: build metadata with a single parent/child time-dim pair
-static BlobMetadata
+static BinaryMetadata
 make_time_pair(TimeFrequency parent_freq, int64_t parent_size, TimeFrequency child_freq, int64_t child_size) {
-    BlobMetadata md;
+    BinaryMetadata md;
     md.version = "1";
     md.unit = "MW";
     md.labels = {"val"};
@@ -620,156 +620,156 @@ make_time_pair(TimeFrequency parent_freq, int64_t parent_size, TimeFrequency chi
 }
 
 // --- Hourly under Daily ---
-TEST(BlobMetadataValidateTimeDimensionSizes, HourlyUnderDailyValid) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, HourlyUnderDailyValid) {
     auto md = make_time_pair(TimeFrequency::Daily, 31, TimeFrequency::Hourly, 24);
     EXPECT_NO_THROW(md.validate_time_dimension_sizes());
 }
 
-TEST(BlobMetadataValidateTimeDimensionSizes, HourlyUnderDailyBelowMin) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, HourlyUnderDailyBelowMin) {
     auto md = make_time_pair(TimeFrequency::Daily, 31, TimeFrequency::Hourly, 23);
     EXPECT_THROW(md.validate_time_dimension_sizes(), std::runtime_error);
 }
 
-TEST(BlobMetadataValidateTimeDimensionSizes, HourlyUnderDailyAboveMax) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, HourlyUnderDailyAboveMax) {
     auto md = make_time_pair(TimeFrequency::Daily, 31, TimeFrequency::Hourly, 25);
     EXPECT_THROW(md.validate_time_dimension_sizes(), std::runtime_error);
 }
 
 // --- Hourly under Weekly ---
-TEST(BlobMetadataValidateTimeDimensionSizes, HourlyUnderWeeklyValid) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, HourlyUnderWeeklyValid) {
     auto md = make_time_pair(TimeFrequency::Weekly, 52, TimeFrequency::Hourly, 168);
     EXPECT_NO_THROW(md.validate_time_dimension_sizes());
 }
 
-TEST(BlobMetadataValidateTimeDimensionSizes, HourlyUnderWeeklyBelowMin) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, HourlyUnderWeeklyBelowMin) {
     auto md = make_time_pair(TimeFrequency::Weekly, 52, TimeFrequency::Hourly, 167);
     EXPECT_THROW(md.validate_time_dimension_sizes(), std::runtime_error);
 }
 
-TEST(BlobMetadataValidateTimeDimensionSizes, HourlyUnderWeeklyAboveMax) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, HourlyUnderWeeklyAboveMax) {
     auto md = make_time_pair(TimeFrequency::Weekly, 52, TimeFrequency::Hourly, 169);
     EXPECT_THROW(md.validate_time_dimension_sizes(), std::runtime_error);
 }
 
 // --- Hourly under Monthly ---
-TEST(BlobMetadataValidateTimeDimensionSizes, HourlyUnderMonthlyValidMin) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, HourlyUnderMonthlyValidMin) {
     auto md = make_time_pair(TimeFrequency::Monthly, 12, TimeFrequency::Hourly, 672);
     EXPECT_NO_THROW(md.validate_time_dimension_sizes());
 }
 
-TEST(BlobMetadataValidateTimeDimensionSizes, HourlyUnderMonthlyValidMax) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, HourlyUnderMonthlyValidMax) {
     auto md = make_time_pair(TimeFrequency::Monthly, 12, TimeFrequency::Hourly, 744);
     EXPECT_NO_THROW(md.validate_time_dimension_sizes());
 }
 
-TEST(BlobMetadataValidateTimeDimensionSizes, HourlyUnderMonthlyBelowMin) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, HourlyUnderMonthlyBelowMin) {
     auto md = make_time_pair(TimeFrequency::Monthly, 12, TimeFrequency::Hourly, 671);
     EXPECT_THROW(md.validate_time_dimension_sizes(), std::runtime_error);
 }
 
-TEST(BlobMetadataValidateTimeDimensionSizes, HourlyUnderMonthlyAboveMax) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, HourlyUnderMonthlyAboveMax) {
     auto md = make_time_pair(TimeFrequency::Monthly, 12, TimeFrequency::Hourly, 745);
     EXPECT_THROW(md.validate_time_dimension_sizes(), std::runtime_error);
 }
 
 // --- Hourly under Yearly ---
-TEST(BlobMetadataValidateTimeDimensionSizes, HourlyUnderYearlyValidMin) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, HourlyUnderYearlyValidMin) {
     auto md = make_time_pair(TimeFrequency::Yearly, 3, TimeFrequency::Hourly, 8760);
     EXPECT_NO_THROW(md.validate_time_dimension_sizes());
 }
 
-TEST(BlobMetadataValidateTimeDimensionSizes, HourlyUnderYearlyValidMax) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, HourlyUnderYearlyValidMax) {
     auto md = make_time_pair(TimeFrequency::Yearly, 3, TimeFrequency::Hourly, 8784);
     EXPECT_NO_THROW(md.validate_time_dimension_sizes());
 }
 
-TEST(BlobMetadataValidateTimeDimensionSizes, HourlyUnderYearlyBelowMin) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, HourlyUnderYearlyBelowMin) {
     auto md = make_time_pair(TimeFrequency::Yearly, 3, TimeFrequency::Hourly, 8759);
     EXPECT_THROW(md.validate_time_dimension_sizes(), std::runtime_error);
 }
 
-TEST(BlobMetadataValidateTimeDimensionSizes, HourlyUnderYearlyAboveMax) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, HourlyUnderYearlyAboveMax) {
     auto md = make_time_pair(TimeFrequency::Yearly, 3, TimeFrequency::Hourly, 8785);
     EXPECT_THROW(md.validate_time_dimension_sizes(), std::runtime_error);
 }
 
 // --- Daily under Weekly ---
-TEST(BlobMetadataValidateTimeDimensionSizes, DailyUnderWeeklyValid) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, DailyUnderWeeklyValid) {
     auto md = make_time_pair(TimeFrequency::Weekly, 52, TimeFrequency::Daily, 7);
     EXPECT_NO_THROW(md.validate_time_dimension_sizes());
 }
 
-TEST(BlobMetadataValidateTimeDimensionSizes, DailyUnderWeeklyBelowMin) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, DailyUnderWeeklyBelowMin) {
     auto md = make_time_pair(TimeFrequency::Weekly, 52, TimeFrequency::Daily, 6);
     EXPECT_THROW(md.validate_time_dimension_sizes(), std::runtime_error);
 }
 
-TEST(BlobMetadataValidateTimeDimensionSizes, DailyUnderWeeklyAboveMax) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, DailyUnderWeeklyAboveMax) {
     auto md = make_time_pair(TimeFrequency::Weekly, 52, TimeFrequency::Daily, 8);
     EXPECT_THROW(md.validate_time_dimension_sizes(), std::runtime_error);
 }
 
 // --- Daily under Monthly ---
-TEST(BlobMetadataValidateTimeDimensionSizes, DailyUnderMonthlyValidMin) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, DailyUnderMonthlyValidMin) {
     auto md = make_time_pair(TimeFrequency::Monthly, 12, TimeFrequency::Daily, 28);
     EXPECT_NO_THROW(md.validate_time_dimension_sizes());
 }
 
-TEST(BlobMetadataValidateTimeDimensionSizes, DailyUnderMonthlyValidMax) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, DailyUnderMonthlyValidMax) {
     auto md = make_time_pair(TimeFrequency::Monthly, 12, TimeFrequency::Daily, 31);
     EXPECT_NO_THROW(md.validate_time_dimension_sizes());
 }
 
-TEST(BlobMetadataValidateTimeDimensionSizes, DailyUnderMonthlyBelowMin) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, DailyUnderMonthlyBelowMin) {
     auto md = make_time_pair(TimeFrequency::Monthly, 12, TimeFrequency::Daily, 27);
     EXPECT_THROW(md.validate_time_dimension_sizes(), std::runtime_error);
 }
 
-TEST(BlobMetadataValidateTimeDimensionSizes, DailyUnderMonthlyAboveMax) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, DailyUnderMonthlyAboveMax) {
     auto md = make_time_pair(TimeFrequency::Monthly, 12, TimeFrequency::Daily, 32);
     EXPECT_THROW(md.validate_time_dimension_sizes(), std::runtime_error);
 }
 
 // --- Daily under Yearly ---
-TEST(BlobMetadataValidateTimeDimensionSizes, DailyUnderYearlyValidMin) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, DailyUnderYearlyValidMin) {
     auto md = make_time_pair(TimeFrequency::Yearly, 3, TimeFrequency::Daily, 365);
     EXPECT_NO_THROW(md.validate_time_dimension_sizes());
 }
 
-TEST(BlobMetadataValidateTimeDimensionSizes, DailyUnderYearlyValidMax) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, DailyUnderYearlyValidMax) {
     auto md = make_time_pair(TimeFrequency::Yearly, 3, TimeFrequency::Daily, 366);
     EXPECT_NO_THROW(md.validate_time_dimension_sizes());
 }
 
-TEST(BlobMetadataValidateTimeDimensionSizes, DailyUnderYearlyBelowMin) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, DailyUnderYearlyBelowMin) {
     auto md = make_time_pair(TimeFrequency::Yearly, 3, TimeFrequency::Daily, 364);
     EXPECT_THROW(md.validate_time_dimension_sizes(), std::runtime_error);
 }
 
-TEST(BlobMetadataValidateTimeDimensionSizes, DailyUnderYearlyAboveMax) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, DailyUnderYearlyAboveMax) {
     auto md = make_time_pair(TimeFrequency::Yearly, 3, TimeFrequency::Daily, 367);
     EXPECT_THROW(md.validate_time_dimension_sizes(), std::runtime_error);
 }
 
 // --- Monthly under Yearly ---
-TEST(BlobMetadataValidateTimeDimensionSizes, MonthlyUnderYearlyValid) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, MonthlyUnderYearlyValid) {
     auto md = make_time_pair(TimeFrequency::Yearly, 3, TimeFrequency::Monthly, 12);
     EXPECT_NO_THROW(md.validate_time_dimension_sizes());
 }
 
-TEST(BlobMetadataValidateTimeDimensionSizes, MonthlyUnderYearlyBelowMin) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, MonthlyUnderYearlyBelowMin) {
     auto md = make_time_pair(TimeFrequency::Yearly, 3, TimeFrequency::Monthly, 11);
     EXPECT_THROW(md.validate_time_dimension_sizes(), std::runtime_error);
 }
 
-TEST(BlobMetadataValidateTimeDimensionSizes, MonthlyUnderYearlyAboveMax) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, MonthlyUnderYearlyAboveMax) {
     auto md = make_time_pair(TimeFrequency::Yearly, 3, TimeFrequency::Monthly, 13);
     EXPECT_THROW(md.validate_time_dimension_sizes(), std::runtime_error);
 }
 
 // --- Outermost has no size constraint ---
-TEST(BlobMetadataValidateTimeDimensionSizes, OutermostHasNoSizeConstraint) {
-    BlobMetadata md;
+TEST(BinaryMetadataValidateTimeDimensionSizes, OutermostHasNoSizeConstraint) {
+    BinaryMetadata md;
     md.version = "1";
     md.unit = "MW";
     md.labels = {"val"};
@@ -780,17 +780,17 @@ TEST(BlobMetadataValidateTimeDimensionSizes, OutermostHasNoSizeConstraint) {
 }
 
 // --- Invalid combination ---
-TEST(BlobMetadataValidateTimeDimensionSizes, InvalidCombination) {
+TEST(BinaryMetadataValidateTimeDimensionSizes, InvalidCombination) {
     auto md = make_time_pair(TimeFrequency::Hourly, 24, TimeFrequency::Hourly, 24);
     EXPECT_THROW(md.validate_time_dimension_sizes(), std::runtime_error);
 }
 
 // ============================================================================
-// BlobMetadataAddDimension
+// BinaryMetadataAddDimension
 // ============================================================================
 
-TEST(BlobMetadataAddDimension, NonTimeDimension) {
-    BlobMetadata md;
+TEST(BinaryMetadataAddDimension, NonTimeDimension) {
+    BinaryMetadata md;
     md.add_dimension("row", 3);
     ASSERT_EQ(md.dimensions.size(), 1u);
     EXPECT_EQ(md.dimensions[0].name, "row");
@@ -798,8 +798,8 @@ TEST(BlobMetadataAddDimension, NonTimeDimension) {
     EXPECT_FALSE(md.dimensions[0].is_time_dimension());
 }
 
-TEST(BlobMetadataAddDimension, TimeDimension) {
-    BlobMetadata md;
+TEST(BinaryMetadataAddDimension, TimeDimension) {
+    BinaryMetadata md;
     md.add_time_dimension("month", 12, "monthly");
     ASSERT_EQ(md.dimensions.size(), 1u);
     EXPECT_EQ(md.dimensions[0].name, "month");
@@ -809,21 +809,21 @@ TEST(BlobMetadataAddDimension, TimeDimension) {
     EXPECT_EQ(md.dimensions[0].time->parent_dimension_index, -1);
 }
 
-TEST(BlobMetadataAddDimension, InvalidFrequencyThrows) {
-    BlobMetadata md;
+TEST(BinaryMetadataAddDimension, InvalidFrequencyThrows) {
+    BinaryMetadata md;
     EXPECT_THROW(md.add_time_dimension("bad", 10, "invalid_freq"), std::invalid_argument);
 }
 
-TEST(BlobMetadataAddDimension, MultipleAddsAccumulate) {
-    BlobMetadata md;
+TEST(BinaryMetadataAddDimension, MultipleAddsAccumulate) {
+    BinaryMetadata md;
     md.add_dimension("row", 3);
     md.add_dimension("col", 2);
     md.add_time_dimension("month", 12, "monthly");
     EXPECT_EQ(md.dimensions.size(), 3u);
 }
 
-TEST(BlobMetadataAddDimension, TimeDimensionParentIndexMinusOne) {
-    BlobMetadata md;
+TEST(BinaryMetadataAddDimension, TimeDimensionParentIndexMinusOne) {
+    BinaryMetadata md;
     md.add_time_dimension("year", 5, "yearly");
     EXPECT_EQ(md.dimensions[0].time->parent_dimension_index, -1);
 }

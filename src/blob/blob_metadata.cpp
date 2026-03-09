@@ -1,9 +1,9 @@
-#include "quiver/blob/blob_metadata.h"
+#include "quiver/binary/binary_metadata.h"
 
-#include "blob_utils.h"
-#include "quiver/blob/dimension.h"
-#include "quiver/blob/time_constants.h"
-#include "quiver/blob/time_properties.h"
+#include "binary_utils.h"
+#include "quiver/binary/dimension.h"
+#include "quiver/binary/time_constants.h"
+#include "quiver/binary/time_properties.h"
 #include "utils/datetime.h"
 
 #include <algorithm>
@@ -101,10 +101,10 @@ compute_time_dimension_initial_values(const std::vector<quiver::Dimension>& dime
 
 namespace quiver {
 
-BlobMetadata::BlobMetadata() = default;
-BlobMetadata::~BlobMetadata() = default;
+BinaryMetadata::BinaryMetadata() = default;
+BinaryMetadata::~BinaryMetadata() = default;
 
-BlobMetadata BlobMetadata::from_element(const Element& element) {
+BinaryMetadata BinaryMetadata::from_element(const Element& element) {
     const auto& scalars = element.scalars();
     const auto& arrays = element.arrays();
 
@@ -206,7 +206,7 @@ BlobMetadata BlobMetadata::from_element(const Element& element) {
     return from_toml(oss.str());
 }
 
-BlobMetadata BlobMetadata::from_toml(const std::string& toml_content) {
+BinaryMetadata BinaryMetadata::from_toml(const std::string& toml_content) {
     // Parse toml content
     toml::table tbl = toml::parse(toml_content);
 
@@ -279,8 +279,8 @@ BlobMetadata BlobMetadata::from_toml(const std::string& toml_content) {
         last_pos = static_cast<size_t>(std::distance(dimensions.begin(), it)) + 1;
     }
 
-    // Create and populate BlobMetadata
-    BlobMetadata metadata;
+    // Create and populate BinaryMetadata
+    BinaryMetadata metadata;
     metadata.unit = unit;
     metadata.labels = labels;
     metadata.version = version;
@@ -325,7 +325,7 @@ BlobMetadata BlobMetadata::from_toml(const std::string& toml_content) {
     return metadata;
 }
 
-std::string BlobMetadata::to_toml() const {
+std::string BinaryMetadata::to_toml() const {
     validate();
 
     auto dim_names = toml::array{};
@@ -365,7 +365,7 @@ std::string BlobMetadata::to_toml() const {
     return oss.str();
 }
 
-void BlobMetadata::validate() const {
+void BinaryMetadata::validate() const {
     // Version check
     if (version != QUIVER_FILE_VERSION) {
         throw std::runtime_error("Incompatible file version: expected " + std::string(QUIVER_FILE_VERSION) + ", got " +
@@ -419,7 +419,7 @@ void BlobMetadata::validate() const {
     validate_time_dimension_metadata();
 }
 
-void BlobMetadata::validate_time_dimension_metadata() const {
+void BinaryMetadata::validate_time_dimension_metadata() const {
     if (number_of_time_dimensions == 0)
         return;
 
@@ -458,7 +458,7 @@ void BlobMetadata::validate_time_dimension_metadata() const {
     validate_time_dimension_sizes();
 }
 
-void BlobMetadata::validate_time_dimension_sizes() const {
+void BinaryMetadata::validate_time_dimension_sizes() const {
     using namespace quiver::time;
 
     // Skip the outermost time dimension (parent_dimension_index == -1) — its size is unconstrained
@@ -556,11 +556,11 @@ void BlobMetadata::validate_time_dimension_sizes() const {
     }
 }
 
-void BlobMetadata::add_dimension(const std::string& name, int64_t size) {
+void BinaryMetadata::add_dimension(const std::string& name, int64_t size) {
     dimensions.push_back({name, size, std::nullopt});
 }
 
-void BlobMetadata::add_time_dimension(const std::string& name, int64_t size, const std::string& frequency) {
+void BinaryMetadata::add_time_dimension(const std::string& name, int64_t size, const std::string& frequency) {
     TimeFrequency freq_enum = frequency_from_string(frequency);
     TimeProperties time_props{freq_enum, 0, -1};
     dimensions.push_back({name, size, std::move(time_props)});

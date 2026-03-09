@@ -1,6 +1,6 @@
 #include <chrono>
 #include <gtest/gtest.h>
-#include <quiver/blob/time_properties.h>
+#include <quiver/binary/time_properties.h>
 
 using namespace quiver;
 using namespace std::chrono;

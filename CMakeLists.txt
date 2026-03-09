@@ -81,8 +81,8 @@ file(GLOB_RECURSE ALL_SOURCE_FILES
     ${CMAKE_SOURCE_DIR}/include/quiver/c/*.h
     ${CMAKE_SOURCE_DIR}/src/*.cpp
     ${CMAKE_SOURCE_DIR}/src/*.h
-    ${CMAKE_SOURCE_DIR}/src/blob/*.cpp
-    ${CMAKE_SOURCE_DIR}/src/blob/*.h
+    ${CMAKE_SOURCE_DIR}/src/binary/*.cpp
+    ${CMAKE_SOURCE_DIR}/src/binary/*.h
     ${CMAKE_SOURCE_DIR}/src/c/*.cpp
     ${CMAKE_SOURCE_DIR}/src/c/*.h
     ${CMAKE_SOURCE_DIR}/src/cli/*.cpp

@@ -1,8 +1,8 @@
-#ifndef QUIVER_BLOB_H
-#define QUIVER_BLOB_H
+#ifndef QUIVER_BINARY_H
+#define QUIVER_BINARY_H
 
 #include "../export.h"
-#include "blob_metadata.h"
+#include "binary_metadata.h"
 
 #include <cstdint>
 #include <iostream>
@@ -14,28 +14,28 @@
 
 namespace quiver {
 
-class QUIVER_API Blob {
+class QUIVER_API Binary {
 public:
-    explicit Blob(const std::string& file_path, const BlobMetadata& metadata, std::unique_ptr<std::iostream> io);
-    ~Blob();
+    explicit Binary(const std::string& file_path, const BinaryMetadata& metadata, std::unique_ptr<std::iostream> io);
+    ~Binary();
 
     // Non-copyable
-    Blob(const Blob&) = delete;
-    Blob& operator=(const Blob&) = delete;
+    Binary(const Binary&) = delete;
+    Binary& operator=(const Binary&) = delete;
 
     // Movable
-    Blob(Blob&& other) noexcept;
-    Blob& operator=(Blob&& other) noexcept;
+    Binary(Binary&& other) noexcept;
+    Binary& operator=(Binary&& other) noexcept;
 
     // File handling
-    static Blob open_file(const std::string& file_path, char mode, const std::optional<BlobMetadata>& metadata = {});
+    static Binary open_file(const std::string& file_path, char mode, const std::optional<BinaryMetadata>& metadata = {});
 
     // Data handling
     std::vector<double> read(const std::unordered_map<std::string, int64_t>& dims, bool allow_nulls = false);
     void write(const std::vector<double>& data, const std::unordered_map<std::string, int64_t>& dims);
 
     // Getters
-    const BlobMetadata& get_metadata() const;
+    const BinaryMetadata& get_metadata() const;
     const std::string& get_file_path() const;
 
 private:
@@ -62,4 +62,4 @@ protected:
 
 }  // namespace quiver
 
-#endif  // QUIVER_BLOB_H
+#endif  // QUIVER_BINARY_H

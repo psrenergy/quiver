@@ -1,4 +1,4 @@
-module TestBlobMetadata
+module TestBinaryMetadata
 
 using Quiver
 using Test
@@ -18,7 +18,7 @@ function make_valid_toml()
         """
 end
 
-@testset "BlobMetadata" begin
+@testset "BinaryMetadata" begin
     # ==========================================================================
     # from_toml
     # ==========================================================================
@@ -172,7 +172,7 @@ end
     # ==========================================================================
 
     @testset "Builder constructor without time dimensions" begin
-        md = Quiver.BlobMetadata(;
+        md = Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00",
             unit = "MW",
             version = "1",
@@ -195,7 +195,7 @@ end
     end
 
     @testset "Builder constructor with time dimensions" begin
-        md = Quiver.BlobMetadata(;
+        md = Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00",
             unit = "MW",
             version = "1",
@@ -223,7 +223,7 @@ end
     end
 
     @testset "Builder constructor mixed time and non-time" begin
-        md = Quiver.BlobMetadata(;
+        md = Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00",
             unit = "MW",
             labels = ["val"],
@@ -443,7 +443,7 @@ end
     end
 
     @testset "Get initial datetime" begin
-        md = Quiver.BlobMetadata(;
+        md = Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00",
             unit = "MW",
             labels = ["val1"],
@@ -629,7 +629,7 @@ end
 
     # --- Hourly under Daily ---
     @testset "Size: hourly under daily valid" begin
-        md = Quiver.BlobMetadata(;
+        md = Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["daily", "hourly"], dimension_sizes = Int64[31, 24],
             time_dimensions = ["daily", "hourly"], frequencies = ["daily", "hourly"],
@@ -638,7 +638,7 @@ end
     end
 
     @testset "Size: hourly under daily below min" begin
-        @test_throws Quiver.DatabaseException Quiver.BlobMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["daily", "hourly"], dimension_sizes = Int64[31, 23],
             time_dimensions = ["daily", "hourly"], frequencies = ["daily", "hourly"],
@@ -646,7 +646,7 @@ end
     end
 
     @testset "Size: hourly under daily above max" begin
-        @test_throws Quiver.DatabaseException Quiver.BlobMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["daily", "hourly"], dimension_sizes = Int64[31, 25],
             time_dimensions = ["daily", "hourly"], frequencies = ["daily", "hourly"],
@@ -655,7 +655,7 @@ end
 
     # --- Hourly under Monthly ---
     @testset "Size: hourly under monthly valid min" begin
-        md = Quiver.BlobMetadata(;
+        md = Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["monthly", "hourly"], dimension_sizes = Int64[12, 672],
             time_dimensions = ["monthly", "hourly"], frequencies = ["monthly", "hourly"],
@@ -664,7 +664,7 @@ end
     end
 
     @testset "Size: hourly under monthly valid max" begin
-        md = Quiver.BlobMetadata(;
+        md = Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["monthly", "hourly"], dimension_sizes = Int64[12, 744],
             time_dimensions = ["monthly", "hourly"], frequencies = ["monthly", "hourly"],
@@ -673,7 +673,7 @@ end
     end
 
     @testset "Size: hourly under monthly below min" begin
-        @test_throws Quiver.DatabaseException Quiver.BlobMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["monthly", "hourly"], dimension_sizes = Int64[12, 671],
             time_dimensions = ["monthly", "hourly"], frequencies = ["monthly", "hourly"],
@@ -681,7 +681,7 @@ end
     end
 
     @testset "Size: hourly under monthly above max" begin
-        @test_throws Quiver.DatabaseException Quiver.BlobMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["monthly", "hourly"], dimension_sizes = Int64[12, 745],
             time_dimensions = ["monthly", "hourly"], frequencies = ["monthly", "hourly"],
@@ -690,7 +690,7 @@ end
 
     # --- Hourly under Yearly ---
     @testset "Size: hourly under yearly valid min" begin
-        md = Quiver.BlobMetadata(;
+        md = Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["yearly", "hourly"], dimension_sizes = Int64[3, 8760],
             time_dimensions = ["yearly", "hourly"], frequencies = ["yearly", "hourly"],
@@ -699,7 +699,7 @@ end
     end
 
     @testset "Size: hourly under yearly valid max" begin
-        md = Quiver.BlobMetadata(;
+        md = Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["yearly", "hourly"], dimension_sizes = Int64[3, 8784],
             time_dimensions = ["yearly", "hourly"], frequencies = ["yearly", "hourly"],
@@ -708,7 +708,7 @@ end
     end
 
     @testset "Size: hourly under yearly below min" begin
-        @test_throws Quiver.DatabaseException Quiver.BlobMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["yearly", "hourly"], dimension_sizes = Int64[3, 8759],
             time_dimensions = ["yearly", "hourly"], frequencies = ["yearly", "hourly"],
@@ -716,7 +716,7 @@ end
     end
 
     @testset "Size: hourly under yearly above max" begin
-        @test_throws Quiver.DatabaseException Quiver.BlobMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["yearly", "hourly"], dimension_sizes = Int64[3, 8785],
             time_dimensions = ["yearly", "hourly"], frequencies = ["yearly", "hourly"],
@@ -725,7 +725,7 @@ end
 
     # --- Daily under Monthly ---
     @testset "Size: daily under monthly valid min" begin
-        md = Quiver.BlobMetadata(;
+        md = Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["monthly", "daily"], dimension_sizes = Int64[12, 28],
             time_dimensions = ["monthly", "daily"], frequencies = ["monthly", "daily"],
@@ -734,7 +734,7 @@ end
     end
 
     @testset "Size: daily under monthly valid max" begin
-        md = Quiver.BlobMetadata(;
+        md = Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["monthly", "daily"], dimension_sizes = Int64[12, 31],
             time_dimensions = ["monthly", "daily"], frequencies = ["monthly", "daily"],
@@ -743,7 +743,7 @@ end
     end
 
     @testset "Size: daily under monthly below min" begin
-        @test_throws Quiver.DatabaseException Quiver.BlobMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["monthly", "daily"], dimension_sizes = Int64[12, 27],
             time_dimensions = ["monthly", "daily"], frequencies = ["monthly", "daily"],
@@ -751,7 +751,7 @@ end
     end
 
     @testset "Size: daily under monthly above max" begin
-        @test_throws Quiver.DatabaseException Quiver.BlobMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["monthly", "daily"], dimension_sizes = Int64[12, 32],
             time_dimensions = ["monthly", "daily"], frequencies = ["monthly", "daily"],
@@ -760,7 +760,7 @@ end
 
     # --- Daily under Yearly ---
     @testset "Size: daily under yearly valid min" begin
-        md = Quiver.BlobMetadata(;
+        md = Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["yearly", "daily"], dimension_sizes = Int64[3, 365],
             time_dimensions = ["yearly", "daily"], frequencies = ["yearly", "daily"],
@@ -769,7 +769,7 @@ end
     end
 
     @testset "Size: daily under yearly valid max" begin
-        md = Quiver.BlobMetadata(;
+        md = Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["yearly", "daily"], dimension_sizes = Int64[3, 366],
             time_dimensions = ["yearly", "daily"], frequencies = ["yearly", "daily"],
@@ -778,7 +778,7 @@ end
     end
 
     @testset "Size: daily under yearly below min" begin
-        @test_throws Quiver.DatabaseException Quiver.BlobMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["yearly", "daily"], dimension_sizes = Int64[3, 364],
             time_dimensions = ["yearly", "daily"], frequencies = ["yearly", "daily"],
@@ -786,7 +786,7 @@ end
     end
 
     @testset "Size: daily under yearly above max" begin
-        @test_throws Quiver.DatabaseException Quiver.BlobMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["yearly", "daily"], dimension_sizes = Int64[3, 367],
             time_dimensions = ["yearly", "daily"], frequencies = ["yearly", "daily"],
@@ -795,7 +795,7 @@ end
 
     # --- Monthly under Yearly ---
     @testset "Size: monthly under yearly valid" begin
-        md = Quiver.BlobMetadata(;
+        md = Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["yearly", "monthly"], dimension_sizes = Int64[3, 12],
             time_dimensions = ["yearly", "monthly"], frequencies = ["yearly", "monthly"],
@@ -804,7 +804,7 @@ end
     end
 
     @testset "Size: monthly under yearly below min" begin
-        @test_throws Quiver.DatabaseException Quiver.BlobMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["yearly", "monthly"], dimension_sizes = Int64[3, 11],
             time_dimensions = ["yearly", "monthly"], frequencies = ["yearly", "monthly"],
@@ -812,7 +812,7 @@ end
     end
 
     @testset "Size: monthly under yearly above max" begin
-        @test_throws Quiver.DatabaseException Quiver.BlobMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["yearly", "monthly"], dimension_sizes = Int64[3, 13],
             time_dimensions = ["yearly", "monthly"], frequencies = ["yearly", "monthly"],

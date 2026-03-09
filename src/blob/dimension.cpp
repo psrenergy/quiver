@@ -1,4 +1,4 @@
-#include "quiver/blob/dimension.h"
+#include "quiver/binary/dimension.h"
 
 #include <string>
 

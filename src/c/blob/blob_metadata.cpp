@@ -1,4 +1,4 @@
-#include "quiver/c/blob/blob_metadata.h"
+#include "quiver/c/binary/binary_metadata.h"
 
 #include "../database_helpers.h"
 #include "../internal.h"
@@ -46,11 +46,11 @@ extern "C" {
 
 // Lifecycle
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_create(quiver_blob_metadata_t** out) {
+QUIVER_C_API quiver_error_t quiver_binary_metadata_create(quiver_binary_metadata_t** out) {
     QUIVER_REQUIRE(out);
 
     try {
-        *out = new quiver_blob_metadata{quiver::BlobMetadata{}};
+        *out = new quiver_binary_metadata{quiver::BinaryMetadata{}};
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
         quiver_set_last_error("Memory allocation failed");
@@ -58,19 +58,19 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_create(quiver_blob_metadata_t**
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_free(quiver_blob_metadata_t* md) {
+QUIVER_C_API quiver_error_t quiver_binary_metadata_free(quiver_binary_metadata_t* md) {
     delete md;
     return QUIVER_OK;
 }
 
 // Factories
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_from_toml(const char* toml, quiver_blob_metadata_t** out) {
+QUIVER_C_API quiver_error_t quiver_binary_metadata_from_toml(const char* toml, quiver_binary_metadata_t** out) {
     QUIVER_REQUIRE(toml, out);
 
     try {
-        auto metadata = quiver::BlobMetadata::from_toml(toml);
-        *out = new quiver_blob_metadata{std::move(metadata)};
+        auto metadata = quiver::BinaryMetadata::from_toml(toml);
+        *out = new quiver_binary_metadata{std::move(metadata)};
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
@@ -78,12 +78,12 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_from_toml(const char* toml, qui
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_from_element(quiver_element_t* el, quiver_blob_metadata_t** out) {
+QUIVER_C_API quiver_error_t quiver_binary_metadata_from_element(quiver_element_t* el, quiver_binary_metadata_t** out) {
     QUIVER_REQUIRE(el, out);
 
     try {
-        auto metadata = quiver::BlobMetadata::from_element(el->element);
-        *out = new quiver_blob_metadata{std::move(metadata)};
+        auto metadata = quiver::BinaryMetadata::from_element(el->element);
+        *out = new quiver_binary_metadata{std::move(metadata)};
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
@@ -93,7 +93,7 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_from_element(quiver_element_t* 
 
 // Serialization
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_to_toml(quiver_blob_metadata_t* md, char** out_toml) {
+QUIVER_C_API quiver_error_t quiver_binary_metadata_to_toml(quiver_binary_metadata_t* md, char** out_toml) {
     QUIVER_REQUIRE(md, out_toml);
 
     try {
@@ -108,7 +108,7 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_to_toml(quiver_blob_metadata_t*
 
 // Builders
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_set_initial_datetime(quiver_blob_metadata_t* md, const char* iso8601) {
+QUIVER_C_API quiver_error_t quiver_binary_metadata_set_initial_datetime(quiver_binary_metadata_t* md, const char* iso8601) {
     QUIVER_REQUIRE(md, iso8601);
 
     try {
@@ -125,21 +125,21 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_set_initial_datetime(quiver_blo
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_set_unit(quiver_blob_metadata_t* md, const char* unit) {
+QUIVER_C_API quiver_error_t quiver_binary_metadata_set_unit(quiver_binary_metadata_t* md, const char* unit) {
     QUIVER_REQUIRE(md, unit);
 
     md->metadata.unit = unit;
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_set_version(quiver_blob_metadata_t* md, const char* version) {
+QUIVER_C_API quiver_error_t quiver_binary_metadata_set_version(quiver_binary_metadata_t* md, const char* version) {
     QUIVER_REQUIRE(md, version);
 
     md->metadata.version = version;
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_set_labels(quiver_blob_metadata_t* md,
+QUIVER_C_API quiver_error_t quiver_binary_metadata_set_labels(quiver_binary_metadata_t* md,
                                                             const char* const* labels,
                                                             size_t count) {
     QUIVER_REQUIRE(md, labels);
@@ -159,7 +159,7 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_set_labels(quiver_blob_metadata
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_add_dimension(quiver_blob_metadata_t* md,
+QUIVER_C_API quiver_error_t quiver_binary_metadata_add_dimension(quiver_binary_metadata_t* md,
                                                                const char* name,
                                                                int64_t size) {
     QUIVER_REQUIRE(md, name);
@@ -173,7 +173,7 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_add_dimension(quiver_blob_metad
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_add_time_dimension(quiver_blob_metadata_t* md,
+QUIVER_C_API quiver_error_t quiver_binary_metadata_add_time_dimension(quiver_binary_metadata_t* md,
                                                                     const char* name,
                                                                     int64_t size,
                                                                     const char* frequency) {
@@ -190,21 +190,21 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_add_time_dimension(quiver_blob_
 
 // Getters
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_get_unit(quiver_blob_metadata_t* md, char** out) {
+QUIVER_C_API quiver_error_t quiver_binary_metadata_get_unit(quiver_binary_metadata_t* md, char** out) {
     QUIVER_REQUIRE(md, out);
 
     *out = quiver::string::new_c_str(md->metadata.unit);
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_get_version(quiver_blob_metadata_t* md, char** out) {
+QUIVER_C_API quiver_error_t quiver_binary_metadata_get_version(quiver_binary_metadata_t* md, char** out) {
     QUIVER_REQUIRE(md, out);
 
     *out = quiver::string::new_c_str(md->metadata.version);
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_get_initial_datetime(quiver_blob_metadata_t* md, char** out) {
+QUIVER_C_API quiver_error_t quiver_binary_metadata_get_initial_datetime(quiver_binary_metadata_t* md, char** out) {
     QUIVER_REQUIRE(md, out);
 
     try {
@@ -217,7 +217,7 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_get_initial_datetime(quiver_blo
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_get_number_of_time_dimensions(quiver_blob_metadata_t* md,
+QUIVER_C_API quiver_error_t quiver_binary_metadata_get_number_of_time_dimensions(quiver_binary_metadata_t* md,
                                                                                int64_t* out) {
     QUIVER_REQUIRE(md, out);
 
@@ -225,7 +225,7 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_get_number_of_time_dimensions(q
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_get_labels(quiver_blob_metadata_t* md,
+QUIVER_C_API quiver_error_t quiver_binary_metadata_get_labels(quiver_binary_metadata_t* md,
                                                             char*** out,
                                                             size_t* out_count) {
     QUIVER_REQUIRE(md, out, out_count);
@@ -233,14 +233,14 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_get_labels(quiver_blob_metadata
     return copy_strings_to_c(md->metadata.labels, out, out_count);
 }
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_get_dimension_count(quiver_blob_metadata_t* md, size_t* out) {
+QUIVER_C_API quiver_error_t quiver_binary_metadata_get_dimension_count(quiver_binary_metadata_t* md, size_t* out) {
     QUIVER_REQUIRE(md, out);
 
     *out = md->metadata.dimensions.size();
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_get_dimension(quiver_blob_metadata_t* md,
+QUIVER_C_API quiver_error_t quiver_binary_metadata_get_dimension(quiver_binary_metadata_t* md,
                                                                size_t index,
                                                                quiver_dimension_t* out) {
     QUIVER_REQUIRE(md, out);
@@ -256,12 +256,12 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_get_dimension(quiver_blob_metad
 
 // Free helpers
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_free_string(char* str) {
+QUIVER_C_API quiver_error_t quiver_binary_metadata_free_string(char* str) {
     delete[] str;
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_free_string_array(char** strs, size_t count) {
+QUIVER_C_API quiver_error_t quiver_binary_metadata_free_string_array(char** strs, size_t count) {
     if (!strs)
         return QUIVER_OK;
 
@@ -272,7 +272,7 @@ QUIVER_C_API quiver_error_t quiver_blob_metadata_free_string_array(char** strs, 
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t quiver_blob_metadata_free_dimension(quiver_dimension_t* dim) {
+QUIVER_C_API quiver_error_t quiver_binary_metadata_free_dimension(quiver_dimension_t* dim) {
     QUIVER_REQUIRE(dim);
 
     delete[] dim->name;
