@@ -29,9 +29,9 @@ Requirements for JavaScript/TypeScript binding. Each maps to roadmap phases.
 
 ### Read Operations
 
-- [ ] **READ-01**: User can read all scalar integers/floats/strings for a collection attribute
-- [ ] **READ-02**: User can read a scalar integer/float/string by element ID
-- [ ] **READ-03**: User can read all element IDs from a collection
+- [x] **READ-01**: User can read all scalar integers/floats/strings for a collection attribute
+- [x] **READ-02**: User can read a scalar integer/float/string by element ID
+- [x] **READ-03**: User can read all element IDs from a collection
 
 ### Query Operations
 
@@ -103,9 +103,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CRUD-02 | Phase 2 | Complete |
 | CRUD-03 | Phase 2 | Complete |
 | CRUD-04 | Phase 2 | Complete |
-| READ-01 | Phase 3 | Pending |
-| READ-02 | Phase 3 | Pending |
-| READ-03 | Phase 3 | Pending |
+| READ-01 | Phase 3 | Complete |
+| READ-02 | Phase 3 | Complete |
+| READ-03 | Phase 3 | Complete |
 | QUERY-01 | Phase 4 | Pending |
 | QUERY-02 | Phase 4 | Pending |
 | TXN-01 | Phase 4 | Pending |
