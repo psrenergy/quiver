@@ -1,10 +1,10 @@
 include(GoogleTest)
 
 add_executable(quiver_tests
-    test_blob.cpp
-    test_blob_csv.cpp
-    test_blob_metadata.cpp
-    test_blob_time_properties.cpp
+    test_binary.cpp
+    test_csv_converter.cpp
+    test_binary_metadata.cpp
+    test_binary_time_properties.cpp
     test_database_create.cpp
     test_database_csv_export.cpp
     test_database_csv_import.cpp
@@ -48,9 +48,9 @@ gtest_discover_tests(quiver_tests
 # C API tests
 if(QUIVER_BUILD_C_API)
     add_executable(quiver_c_tests
-        test_c_api_blob.cpp
-        test_c_api_blob_csv.cpp
-        test_c_api_blob_metadata.cpp
+        test_c_api_binary.cpp
+        test_c_api_csv_converter.cpp
+        test_c_api_binary_metadata.cpp
         test_c_api_database_create.cpp
         test_c_api_database_csv_export.cpp
         test_c_api_database_csv_import.cpp
