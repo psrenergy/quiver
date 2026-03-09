@@ -1,5 +1,6 @@
 import "./create";
 import "./read";
+import "./query";
 
 export { QuiverError } from "./errors";
 export { Database } from "./database";
