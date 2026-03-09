@@ -30,24 +30,24 @@ protected:
 
     static BinaryMetadata make_simple_metadata() {
         return BinaryMetadata::from_element(Element()
-                                              .set("version", "1")
-                                              .set("initial_datetime", "2025-01-01T00:00:00")
-                                              .set("unit", "MW")
-                                              .set("dimensions", {"row", "col"})
-                                              .set("dimension_sizes", {3, 2})
-                                              .set("labels", {"val1", "val2"}));
+                                                .set("version", "1")
+                                                .set("initial_datetime", "2025-01-01T00:00:00")
+                                                .set("unit", "MW")
+                                                .set("dimensions", {"row", "col"})
+                                                .set("dimension_sizes", {3, 2})
+                                                .set("labels", {"val1", "val2"}));
     }
 
     static BinaryMetadata make_time_metadata() {
         return BinaryMetadata::from_element(Element()
-                                              .set("version", "1")
-                                              .set("initial_datetime", "2025-01-01T00:00:00")
-                                              .set("unit", "MW")
-                                              .set("dimensions", {"stage", "block"})
-                                              .set("dimension_sizes", {4, 31})
-                                              .set("time_dimensions", {"stage", "block"})
-                                              .set("frequencies", {"monthly", "daily"})
-                                              .set("labels", {"plant_1", "plant_2"}));
+                                                .set("version", "1")
+                                                .set("initial_datetime", "2025-01-01T00:00:00")
+                                                .set("unit", "MW")
+                                                .set("dimensions", {"stage", "block"})
+                                                .set("dimension_sizes", {4, 31})
+                                                .set("time_dimensions", {"stage", "block"})
+                                                .set("frequencies", {"monthly", "daily"})
+                                                .set("labels", {"plant_1", "plant_2"}));
     }
 };
 
@@ -154,7 +154,8 @@ TEST_F(BinaryTempFileFixture, WriteReadAllPositions) {
         int counter = 0;
         for (int64_t r = 1; r <= 3; ++r) {
             for (int64_t c = 1; c <= 2; ++c) {
-                binary.write({static_cast<double>(counter), static_cast<double>(counter + 1)}, {{"row", r}, {"col", c}});
+                binary.write({static_cast<double>(counter), static_cast<double>(counter + 1)},
+                             {{"row", r}, {"col", c}});
                 counter += 2;
             }
         }
@@ -417,14 +418,14 @@ TEST_F(BinaryTempFileFixture, InvalidTimeDimensionCoordinates) {
 TEST_F(BinaryTempFileFixture, SingleTimeDimensionSkipsConsistencyCheck) {
     // With only one time dimension, there's no inner time dim to validate
     auto md = BinaryMetadata::from_element(Element()
-                                             .set("version", "1")
-                                             .set("initial_datetime", "2025-01-01T00:00:00")
-                                             .set("unit", "MW")
-                                             .set("dimensions", {"month", "scenario"})
-                                             .set("dimension_sizes", {12, 3})
-                                             .set("time_dimensions", {"month"})
-                                             .set("frequencies", {"monthly"})
-                                             .set("labels", {"val"}));
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-01-01T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"month", "scenario"})
+                                               .set("dimension_sizes", {12, 3})
+                                               .set("time_dimensions", {"month"})
+                                               .set("frequencies", {"monthly"})
+                                               .set("labels", {"val"}));
     auto binary = Binary::open_file(path, 'w', md);
     EXPECT_NO_THROW(binary.write({1.0}, {{"month", 12}, {"scenario", 3}}));
 }

@@ -11,14 +11,14 @@ int main() {
     try {
         // Build metadata: 2 dimensions (block x stage), 3 labels
         auto metadata = quiver::BinaryMetadata::from_element(quiver::Element()
-                                                               .set("version", "1")
-                                                               .set("initial_datetime", "2025-01-01T00:00:00")
-                                                               .set("unit", "MW")
-                                                               .set("dimensions", {"stage", "block"})
-                                                               .set("dimension_sizes", {4, 31})
-                                                               .set("time_dimensions", {"stage", "block"})
-                                                               .set("frequencies", {"monthly", "daily"})
-                                                               .set("labels", {"plant_1", "plant_2", "plant_3"}));
+                                                                 .set("version", "1")
+                                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                                 .set("unit", "MW")
+                                                                 .set("dimensions", {"stage", "block"})
+                                                                 .set("dimension_sizes", {4, 31})
+                                                                 .set("time_dimensions", {"stage", "block"})
+                                                                 .set("frequencies", {"monthly", "daily"})
+                                                                 .set("labels", {"plant_1", "plant_2", "plant_3"}));
 
         std::vector<int64_t> blocks_per_stage = {31, 28, 31, 28};
 

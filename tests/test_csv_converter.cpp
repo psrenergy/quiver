@@ -5,8 +5,8 @@
 #include <gtest/gtest.h>
 #include <limits>
 #include <quiver/binary/binary.h>
-#include <quiver/binary/csv_converter.h>
 #include <quiver/binary/binary_metadata.h>
+#include <quiver/binary/csv_converter.h>
 #include <quiver/element.h>
 #include <sstream>
 #include <string>
@@ -34,36 +34,36 @@ protected:
 
     static BinaryMetadata make_simple_metadata() {
         return BinaryMetadata::from_element(Element()
-                                              .set("version", "1")
-                                              .set("initial_datetime", "2025-01-01T00:00:00")
-                                              .set("unit", "MW")
-                                              .set("dimensions", {"row", "col"})
-                                              .set("dimension_sizes", {3, 2})
-                                              .set("labels", {"val1", "val2"}));
+                                                .set("version", "1")
+                                                .set("initial_datetime", "2025-01-01T00:00:00")
+                                                .set("unit", "MW")
+                                                .set("dimensions", {"row", "col"})
+                                                .set("dimension_sizes", {3, 2})
+                                                .set("labels", {"val1", "val2"}));
     }
 
     static BinaryMetadata make_time_metadata() {
         return BinaryMetadata::from_element(Element()
-                                              .set("version", "1")
-                                              .set("initial_datetime", "2025-01-01T00:00:00")
-                                              .set("unit", "MW")
-                                              .set("dimensions", {"stage", "block"})
-                                              .set("dimension_sizes", {4, 31})
-                                              .set("time_dimensions", {"stage", "block"})
-                                              .set("frequencies", {"monthly", "daily"})
-                                              .set("labels", {"plant_1", "plant_2"}));
+                                                .set("version", "1")
+                                                .set("initial_datetime", "2025-01-01T00:00:00")
+                                                .set("unit", "MW")
+                                                .set("dimensions", {"stage", "block"})
+                                                .set("dimension_sizes", {4, 31})
+                                                .set("time_dimensions", {"stage", "block"})
+                                                .set("frequencies", {"monthly", "daily"})
+                                                .set("labels", {"plant_1", "plant_2"}));
     }
 
     static BinaryMetadata make_hourly_metadata() {
         return BinaryMetadata::from_element(Element()
-                                              .set("version", "1")
-                                              .set("initial_datetime", "2025-01-01T00:00:00")
-                                              .set("unit", "MW")
-                                              .set("dimensions", {"day", "hour"})
-                                              .set("dimension_sizes", {3, 24})
-                                              .set("time_dimensions", {"day", "hour"})
-                                              .set("frequencies", {"daily", "hourly"})
-                                              .set("labels", {"val"}));
+                                                .set("version", "1")
+                                                .set("initial_datetime", "2025-01-01T00:00:00")
+                                                .set("unit", "MW")
+                                                .set("dimensions", {"day", "hour"})
+                                                .set("dimension_sizes", {3, 24})
+                                                .set("time_dimensions", {"day", "hour"})
+                                                .set("frequencies", {"daily", "hourly"})
+                                                .set("labels", {"val"}));
     }
 
     void write_toml(const BinaryMetadata& md) {
@@ -183,12 +183,12 @@ TEST_F(CSVConverterFixture, NaNValuesAppearAsNull) {
 
 TEST_F(CSVConverterFixture, FloatPrecision) {
     auto md = BinaryMetadata::from_element(Element()
-                                             .set("version", "1")
-                                             .set("initial_datetime", "2025-01-01T00:00:00")
-                                             .set("unit", "MW")
-                                             .set("dimensions", {"row"})
-                                             .set("dimension_sizes", {1})
-                                             .set("labels", {"val"}));
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-01-01T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"row"})
+                                               .set("dimension_sizes", {1})
+                                               .set("labels", {"val"}));
     {
         auto binary = Binary::open_file(path, 'w', md);
         binary.write({1.23456789}, {{"row", 1}});
@@ -544,14 +544,14 @@ TEST_F(CSVConverterFixture, AggregatedAndNonAggregatedProduceSameBinary) {
 
 TEST_F(CSVConverterFixture, RoundTripMixedTimeAndNonTime) {
     auto md = BinaryMetadata::from_element(Element()
-                                             .set("version", "1")
-                                             .set("initial_datetime", "2025-01-01T00:00:00")
-                                             .set("unit", "MW")
-                                             .set("dimensions", {"month", "scenario", "day"})
-                                             .set("dimension_sizes", {2, 2, 31})
-                                             .set("time_dimensions", {"month", "day"})
-                                             .set("frequencies", {"monthly", "daily"})
-                                             .set("labels", {"val"}));
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-01-01T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"month", "scenario", "day"})
+                                               .set("dimension_sizes", {2, 2, 31})
+                                               .set("time_dimensions", {"month", "day"})
+                                               .set("frequencies", {"monthly", "daily"})
+                                               .set("labels", {"val"}));
     {
         auto binary = Binary::open_file(path, 'w', md);
         binary.write({99.0}, {{"month", 1}, {"scenario", 1}, {"day", 1}});

@@ -28,7 +28,8 @@ public:
     Binary& operator=(Binary&& other) noexcept;
 
     // File handling
-    static Binary open_file(const std::string& file_path, char mode, const std::optional<BinaryMetadata>& metadata = {});
+    static Binary
+    open_file(const std::string& file_path, char mode, const std::optional<BinaryMetadata>& metadata = {});
 
     // Data handling
     std::vector<double> read(const std::unordered_map<std::string, int64_t>& dims, bool allow_nulls = false);

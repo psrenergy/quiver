@@ -28,7 +28,9 @@ QUIVER_C_API quiver_error_t quiver_binary_open_read(const char* path, quiver_bin
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_binary_open_write(const char* path, quiver_binary_metadata_t* md, quiver_binary_t** out) {
+QUIVER_C_API quiver_error_t quiver_binary_open_write(const char* path,
+                                                     quiver_binary_metadata_t* md,
+                                                     quiver_binary_t** out) {
     QUIVER_REQUIRE(path, md, out);
 
     try {
@@ -52,12 +54,12 @@ QUIVER_C_API quiver_error_t quiver_binary_close(quiver_binary_t* binary) {
 // I/O
 
 QUIVER_C_API quiver_error_t quiver_binary_read(quiver_binary_t* binary,
-                                             const char* const* dim_names,
-                                             const int64_t* dim_values,
-                                             size_t dim_count,
-                                             int allow_nulls,
-                                             double** out_data,
-                                             size_t* out_count) {
+                                               const char* const* dim_names,
+                                               const int64_t* dim_values,
+                                               size_t dim_count,
+                                               int allow_nulls,
+                                               double** out_data,
+                                               size_t* out_count) {
     QUIVER_REQUIRE(binary, out_data, out_count);
     if (dim_count > 0) {
         QUIVER_REQUIRE(dim_names, dim_values);
@@ -85,11 +87,11 @@ QUIVER_C_API quiver_error_t quiver_binary_read(quiver_binary_t* binary,
 }
 
 QUIVER_C_API quiver_error_t quiver_binary_write(quiver_binary_t* binary,
-                                              const char* const* dim_names,
-                                              const int64_t* dim_values,
-                                              size_t dim_count,
-                                              const double* data,
-                                              size_t data_count) {
+                                                const char* const* dim_names,
+                                                const int64_t* dim_values,
+                                                size_t dim_count,
+                                                const double* data,
+                                                size_t data_count) {
     QUIVER_REQUIRE(binary, data);
     if (dim_count > 0) {
         QUIVER_REQUIRE(dim_names, dim_values);

@@ -17,9 +17,9 @@ namespace quiver {
 class QUIVER_API CSVConverter : public Binary {
 public:
     explicit CSVConverter(const std::string& file_path,
-                     const BinaryMetadata& metadata,
-                     std::unique_ptr<std::iostream> io,
-                     bool aggregate_time_dimensions);
+                          const BinaryMetadata& metadata,
+                          std::unique_ptr<std::iostream> io,
+                          bool aggregate_time_dimensions);
     ~CSVConverter();
 
     // Non-copyable

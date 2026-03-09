@@ -204,12 +204,12 @@ TEST(BinaryMetadataFromElement, ValidWithTimeDimensions) {
 
 TEST(BinaryMetadataFromElement, ValidWithoutTimeDimensions) {
     auto md = BinaryMetadata::from_element(Element()
-                                             .set("version", "1")
-                                             .set("initial_datetime", "2025-01-01T00:00:00")
-                                             .set("unit", "MW")
-                                             .set("dimensions", {"row", "col"})
-                                             .set("dimension_sizes", {3, 2})
-                                             .set("labels", {"val"}));
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-01-01T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"row", "col"})
+                                               .set("dimension_sizes", {3, 2})
+                                               .set("labels", {"val"}));
     EXPECT_EQ(md.number_of_time_dimensions, 0);
     EXPECT_FALSE(md.dimensions[0].is_time_dimension());
     EXPECT_FALSE(md.dimensions[1].is_time_dimension());
@@ -217,14 +217,14 @@ TEST(BinaryMetadataFromElement, ValidWithoutTimeDimensions) {
 
 TEST(BinaryMetadataFromElement, MixedTimeAndNonTime) {
     auto md = BinaryMetadata::from_element(Element()
-                                             .set("version", "1")
-                                             .set("initial_datetime", "2025-01-01T00:00:00")
-                                             .set("unit", "MW")
-                                             .set("dimensions", {"stage", "scenario", "block"})
-                                             .set("dimension_sizes", {4, 3, 31})
-                                             .set("time_dimensions", {"stage", "block"})
-                                             .set("frequencies", {"monthly", "daily"})
-                                             .set("labels", {"val"}));
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-01-01T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"stage", "scenario", "block"})
+                                               .set("dimension_sizes", {4, 3, 31})
+                                               .set("time_dimensions", {"stage", "block"})
+                                               .set("frequencies", {"monthly", "daily"})
+                                               .set("labels", {"val"}));
     EXPECT_EQ(md.dimensions.size(), 3u);
     EXPECT_TRUE(md.dimensions[0].is_time_dimension());
     EXPECT_FALSE(md.dimensions[1].is_time_dimension());
@@ -255,105 +255,105 @@ TEST(BinaryMetadataFromElement, RoundTripEquivalenceWithToml) {
 
 TEST(BinaryMetadataFromElement, MissingVersion) {
     EXPECT_THROW(BinaryMetadata::from_element(Element()
-                                                .set("initial_datetime", "2025-01-01T00:00:00")
-                                                .set("unit", "MW")
-                                                .set("dimensions", {"row"})
-                                                .set("dimension_sizes", {3})
-                                                .set("labels", {"val"})),
+                                                  .set("initial_datetime", "2025-01-01T00:00:00")
+                                                  .set("unit", "MW")
+                                                  .set("dimensions", {"row"})
+                                                  .set("dimension_sizes", {3})
+                                                  .set("labels", {"val"})),
                  std::runtime_error);
 }
 
 TEST(BinaryMetadataFromElement, MissingUnit) {
     EXPECT_THROW(BinaryMetadata::from_element(Element()
-                                                .set("version", "1")
-                                                .set("initial_datetime", "2025-01-01T00:00:00")
-                                                .set("dimensions", {"row"})
-                                                .set("dimension_sizes", {3})
-                                                .set("labels", {"val"})),
+                                                  .set("version", "1")
+                                                  .set("initial_datetime", "2025-01-01T00:00:00")
+                                                  .set("dimensions", {"row"})
+                                                  .set("dimension_sizes", {3})
+                                                  .set("labels", {"val"})),
                  std::runtime_error);
 }
 
 TEST(BinaryMetadataFromElement, MissingInitialDatetime) {
     EXPECT_THROW(BinaryMetadata::from_element(Element()
-                                                .set("version", "1")
-                                                .set("unit", "MW")
-                                                .set("dimensions", {"row"})
-                                                .set("dimension_sizes", {3})
-                                                .set("labels", {"val"})),
+                                                  .set("version", "1")
+                                                  .set("unit", "MW")
+                                                  .set("dimensions", {"row"})
+                                                  .set("dimension_sizes", {3})
+                                                  .set("labels", {"val"})),
                  std::runtime_error);
 }
 
 TEST(BinaryMetadataFromElement, MissingDimensions) {
     EXPECT_THROW(BinaryMetadata::from_element(Element()
-                                                .set("version", "1")
-                                                .set("initial_datetime", "2025-01-01T00:00:00")
-                                                .set("unit", "MW")
-                                                .set("dimension_sizes", {3})
-                                                .set("labels", {"val"})),
+                                                  .set("version", "1")
+                                                  .set("initial_datetime", "2025-01-01T00:00:00")
+                                                  .set("unit", "MW")
+                                                  .set("dimension_sizes", {3})
+                                                  .set("labels", {"val"})),
                  std::runtime_error);
 }
 
 TEST(BinaryMetadataFromElement, MissingDimensionSizes) {
     EXPECT_THROW(BinaryMetadata::from_element(Element()
-                                                .set("version", "1")
-                                                .set("initial_datetime", "2025-01-01T00:00:00")
-                                                .set("unit", "MW")
-                                                .set("dimensions", {"row"})
-                                                .set("labels", {"val"})),
+                                                  .set("version", "1")
+                                                  .set("initial_datetime", "2025-01-01T00:00:00")
+                                                  .set("unit", "MW")
+                                                  .set("dimensions", {"row"})
+                                                  .set("labels", {"val"})),
                  std::runtime_error);
 }
 
 TEST(BinaryMetadataFromElement, MissingLabels) {
     EXPECT_THROW(BinaryMetadata::from_element(Element()
-                                                .set("version", "1")
-                                                .set("initial_datetime", "2025-01-01T00:00:00")
-                                                .set("unit", "MW")
-                                                .set("dimensions", {"row"})
-                                                .set("dimension_sizes", {3})),
+                                                  .set("version", "1")
+                                                  .set("initial_datetime", "2025-01-01T00:00:00")
+                                                  .set("unit", "MW")
+                                                  .set("dimensions", {"row"})
+                                                  .set("dimension_sizes", {3})),
                  std::runtime_error);
 }
 
 TEST(BinaryMetadataFromElement, VersionMustBeString) {
     EXPECT_THROW(BinaryMetadata::from_element(Element()
-                                                .set("version", int64_t{1})
-                                                .set("initial_datetime", "2025-01-01T00:00:00")
-                                                .set("unit", "MW")
-                                                .set("dimensions", {"row"})
-                                                .set("dimension_sizes", {3})
-                                                .set("labels", {"val"})),
+                                                  .set("version", int64_t{1})
+                                                  .set("initial_datetime", "2025-01-01T00:00:00")
+                                                  .set("unit", "MW")
+                                                  .set("dimensions", {"row"})
+                                                  .set("dimension_sizes", {3})
+                                                  .set("labels", {"val"})),
                  std::runtime_error);
 }
 
 TEST(BinaryMetadataFromElement, DimensionsMustBeStrings) {
     EXPECT_THROW(BinaryMetadata::from_element(Element()
-                                                .set("version", "1")
-                                                .set("initial_datetime", "2025-01-01T00:00:00")
-                                                .set("unit", "MW")
-                                                .set("dimensions", std::vector<int64_t>{1, 2})
-                                                .set("dimension_sizes", {3, 2})
-                                                .set("labels", {"val"})),
+                                                  .set("version", "1")
+                                                  .set("initial_datetime", "2025-01-01T00:00:00")
+                                                  .set("unit", "MW")
+                                                  .set("dimensions", std::vector<int64_t>{1, 2})
+                                                  .set("dimension_sizes", {3, 2})
+                                                  .set("labels", {"val"})),
                  std::runtime_error);
 }
 
 TEST(BinaryMetadataFromElement, DimensionSizesMustBeIntegers) {
     EXPECT_THROW(BinaryMetadata::from_element(Element()
-                                                .set("version", "1")
-                                                .set("initial_datetime", "2025-01-01T00:00:00")
-                                                .set("unit", "MW")
-                                                .set("dimensions", {"row"})
-                                                .set("dimension_sizes", std::vector<std::string>{"3"})
-                                                .set("labels", {"val"})),
+                                                  .set("version", "1")
+                                                  .set("initial_datetime", "2025-01-01T00:00:00")
+                                                  .set("unit", "MW")
+                                                  .set("dimensions", {"row"})
+                                                  .set("dimension_sizes", std::vector<std::string>{"3"})
+                                                  .set("labels", {"val"})),
                  std::runtime_error);
 }
 
 TEST(BinaryMetadataFromElement, InvalidVersionPropagatesValidation) {
     EXPECT_THROW(BinaryMetadata::from_element(Element()
-                                                .set("version", "2")
-                                                .set("initial_datetime", "2025-01-01T00:00:00")
-                                                .set("unit", "MW")
-                                                .set("dimensions", {"row"})
-                                                .set("dimension_sizes", {3})
-                                                .set("labels", {"val"})),
+                                                  .set("version", "2")
+                                                  .set("initial_datetime", "2025-01-01T00:00:00")
+                                                  .set("unit", "MW")
+                                                  .set("dimensions", {"row"})
+                                                  .set("dimension_sizes", {3})
+                                                  .set("labels", {"val"})),
                  std::runtime_error);
 }
 

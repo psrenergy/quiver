@@ -3,8 +3,8 @@
 #include <fstream>
 #include <gtest/gtest.h>
 #include <quiver/c/binary/binary.h>
-#include <quiver/c/binary/csv_converter.h>
 #include <quiver/c/binary/binary_metadata.h>
+#include <quiver/c/binary/csv_converter.h>
 #include <quiver/c/common.h>
 #include <quiver/c/element.h>
 #include <string>

@@ -20,9 +20,9 @@ struct CSVConverter::Impl {
 };
 
 CSVConverter::CSVConverter(const std::string& file_path,
-                 const BinaryMetadata& metadata,
-                 std::unique_ptr<std::iostream> io,
-                 bool aggregate_time_dimensions)
+                           const BinaryMetadata& metadata,
+                           std::unique_ptr<std::iostream> io,
+                           bool aggregate_time_dimensions)
     : Binary(file_path, metadata, std::move(io)), impl_(std::make_unique<Impl>(Impl{aggregate_time_dimensions})) {}
 
 CSVConverter::~CSVConverter() = default;
@@ -212,8 +212,8 @@ std::string CSVConverter::build_line(const std::vector<double>& data, const std:
     return oss.str();
 }
 
-std::string
-CSVConverter::build_datetime_string_from_time_dimension_values(const std::vector<int64_t>& time_dimension_values) const {
+std::string CSVConverter::build_datetime_string_from_time_dimension_values(
+    const std::vector<int64_t>& time_dimension_values) const {
     const auto& metadata = get_metadata();
     const auto& dimensions = metadata.dimensions;
 
@@ -364,7 +364,7 @@ void CSVConverter::validate_header() {
 }
 
 void CSVConverter::validate_dimensions(const std::vector<std::string>& csv_dimension_values,
-                                  const std::vector<int64_t>& current_bin_dimension_values) {
+                                       const std::vector<int64_t>& current_bin_dimension_values) {
     const auto& metadata = get_metadata();
     const auto& dimensions = metadata.dimensions;
 
