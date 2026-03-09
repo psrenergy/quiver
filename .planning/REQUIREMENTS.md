@@ -9,7 +9,7 @@ Requirements for JS binding parity milestone. Each maps to roadmap phases.
 
 ### C API Fix
 
-- [ ] **CAPI-01**: `quiver_database_in_transaction` uses `int*` instead of `bool*` for consistency with all other boolean out-params
+- [x] **CAPI-01**: `quiver_database_in_transaction` uses `int*` instead of `bool*` for consistency with all other boolean out-params
 
 ### JS Update
 
@@ -58,7 +58,7 @@ Requirements for JS binding parity milestone. Each maps to roadmap phases.
 
 ### Cleanup
 
-- [ ] **CLEAN-01**: Delete empty `src/blob/dimension.cpp`
+- [x] **CLEAN-01**: Delete empty `src/blob/dimension.cpp`
 
 ## Future Requirements
 
@@ -79,8 +79,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CAPI-01 | Phase 1 | Pending |
-| CLEAN-01 | Phase 1 | Pending |
+| CAPI-01 | Phase 1 | Complete |
+| CLEAN-01 | Phase 1 | Complete |
 | JSUP-01 | Phase 2 | Pending |
 | JSRD-01 | Phase 2 | Pending |
 | JSRD-02 | Phase 2 | Pending |
