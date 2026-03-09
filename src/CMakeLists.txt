@@ -23,7 +23,6 @@ set(QUIVER_SOURCES
     blob/blob.cpp
     blob/blob_csv.cpp
     blob/blob_metadata.cpp
-    blob/dimension.cpp
     blob/time_properties.cpp
 )
 
