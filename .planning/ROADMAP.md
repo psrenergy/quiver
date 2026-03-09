@@ -31,10 +31,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. `quiver_database_in_transaction` uses `int*` out-param, and all existing bindings (Julia, Dart, Python, JS) pass their `in_transaction` tests with the new signature
   2. `src/blob/dimension.cpp` no longer exists in the repository
   3. JS binding `inTransaction()` uses `Int32Array(1)` (not `Uint8Array(1)`)
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 01-01: TBD
+- [ ] 01-01-PLAN.md -- Fix in_transaction bool*/int* across C API and all bindings, delete dead code
 
 ### Phase 2: Update & Collection Reads
 **Goal**: JS users can modify elements and read vector/set data in bulk and by element ID
@@ -134,7 +134,7 @@ Note: Phases 5, 6, and 7 depend only on Phases 1-2 (not on each other) and could
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Fixes & Cleanup | 0/? | Not started | - |
+| 1. Fixes & Cleanup | 0/1 | Not started | - |
 | 2. Update & Collection Reads | 0/? | Not started | - |
 | 3. Metadata | 0/? | Not started | - |
 | 4. Time Series | 0/? | Not started | - |
