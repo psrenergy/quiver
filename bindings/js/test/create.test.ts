@@ -115,7 +115,7 @@ describe("createElement with arrays", () => {
   test("creates element with integer array", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
-      const id = db.createElement("AllTypes", { label: "Item1", codes: [10, 20, 30] });
+      const id = db.createElement("AllTypes", { label: "Item1", code: [10, 20, 30] });
       expect(id).toBeGreaterThan(0);
     } finally {
       db.close();
@@ -125,7 +125,7 @@ describe("createElement with arrays", () => {
   test("creates element with float array", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
-      const id = db.createElement("AllTypes", { label: "Item1", weights: [1.5, 2.5] });
+      const id = db.createElement("AllTypes", { label: "Item1", weight: [1.5, 2.5] });
       expect(id).toBeGreaterThan(0);
     } finally {
       db.close();
@@ -135,7 +135,7 @@ describe("createElement with arrays", () => {
   test("creates element with string array", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
-      const id = db.createElement("AllTypes", { label: "Item1", tags: ["a", "b", "c"] });
+      const id = db.createElement("AllTypes", { label: "Item1", tag: ["a", "b", "c"] });
       expect(id).toBeGreaterThan(0);
     } finally {
       db.close();
@@ -145,7 +145,7 @@ describe("createElement with arrays", () => {
   test("creates element with empty array", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
-      const id = db.createElement("AllTypes", { label: "Item1", tags: [] });
+      const id = db.createElement("AllTypes", { label: "Item1", tag: [] });
       expect(id).toBeGreaterThan(0);
     } finally {
       db.close();
@@ -155,7 +155,7 @@ describe("createElement with arrays", () => {
   test("treats number[] with all integers as integer array", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
-      const id = db.createElement("AllTypes", { label: "Item1", codes: [1, 2, 3] });
+      const id = db.createElement("AllTypes", { label: "Item1", code: [1, 2, 3] });
       expect(id).toBeGreaterThan(0);
     } finally {
       db.close();
@@ -165,7 +165,7 @@ describe("createElement with arrays", () => {
   test("treats number[] with any decimal as float array", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
-      const id = db.createElement("AllTypes", { label: "Item1", weights: [1, 2.5, 3] });
+      const id = db.createElement("AllTypes", { label: "Item1", weight: [1, 2.5, 3] });
       expect(id).toBeGreaterThan(0);
     } finally {
       db.close();
@@ -175,7 +175,7 @@ describe("createElement with arrays", () => {
   test("creates element with bigint array", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
-      const id = db.createElement("AllTypes", { label: "Item1", codes: [10n, 20n, 30n] });
+      const id = db.createElement("AllTypes", { label: "Item1", code: [10n, 20n, 30n] });
       expect(id).toBeGreaterThan(0);
     } finally {
       db.close();
