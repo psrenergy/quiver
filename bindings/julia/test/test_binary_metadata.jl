@@ -308,7 +308,8 @@ end
         @test Quiver.Binary.get_version(md_element) == Quiver.Binary.get_version(md_toml)
         @test Quiver.Binary.get_unit(md_element) == Quiver.Binary.get_unit(md_toml)
         @test Quiver.Binary.get_labels(md_element) == Quiver.Binary.get_labels(md_toml)
-        @test Quiver.Binary.get_number_of_time_dimensions(md_element) == Quiver.Binary.get_number_of_time_dimensions(md_toml)
+        @test Quiver.Binary.get_number_of_time_dimensions(md_element) ==
+              Quiver.Binary.get_number_of_time_dimensions(md_toml)
 
         dims_el = Quiver.Binary.get_dimensions(md_element)
         dims_toml = Quiver.Binary.get_dimensions(md_toml)

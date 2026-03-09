@@ -395,7 +395,13 @@ end
         try
             md = make_simple_metadata()
             binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
-            @test_throws Quiver.DatabaseException Quiver.Binary.read(binary; row = 1, col = 1, z = 1, allow_nulls = true)
+            @test_throws Quiver.DatabaseException Quiver.Binary.read(
+                binary;
+                row = 1,
+                col = 1,
+                z = 1,
+                allow_nulls = true,
+            )
             Quiver.Binary.close!(binary)
         finally
             cleanup_binary(path)
