@@ -22,10 +22,10 @@ Requirements for JavaScript/TypeScript binding. Each maps to roadmap phases.
 
 ### Element & CRUD
 
-- [ ] **CRUD-01**: User can build elements with integer, float, string, and null scalar values
-- [ ] **CRUD-02**: User can build elements with integer, float, and string array values
-- [ ] **CRUD-03**: User can create an element in a collection and receive its ID
-- [ ] **CRUD-04**: User can delete an element from a collection by ID
+- [x] **CRUD-01**: User can build elements with integer, float, string, and null scalar values
+- [x] **CRUD-02**: User can build elements with integer, float, and string array values
+- [x] **CRUD-03**: User can create an element in a collection and receive its ID
+- [x] **CRUD-04**: User can delete an element from a collection by ID
 
 ### Read Operations
 
@@ -99,10 +99,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LIFE-01 | Phase 1 | Complete |
 | LIFE-02 | Phase 1 | Complete |
 | LIFE-03 | Phase 1 | Complete |
-| CRUD-01 | Phase 2 | Pending |
-| CRUD-02 | Phase 2 | Pending |
-| CRUD-03 | Phase 2 | Pending |
-| CRUD-04 | Phase 2 | Pending |
+| CRUD-01 | Phase 2 | Complete |
+| CRUD-02 | Phase 2 | Complete |
+| CRUD-03 | Phase 2 | Complete |
+| CRUD-04 | Phase 2 | Complete |
 | READ-01 | Phase 3 | Pending |
 | READ-02 | Phase 3 | Pending |
 | READ-03 | Phase 3 | Pending |

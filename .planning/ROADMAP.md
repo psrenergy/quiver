@@ -13,7 +13,7 @@ Deliver a Bun-native JS/TS binding for Quiver's C API, covering database lifecyc
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: FFI Foundation and Database Lifecycle** - Load native libraries, establish error handling and memory helpers, open and close databases
-- [ ] **Phase 2: Element Builder and CRUD** - Create and delete elements with scalar and array attributes
+- [x] **Phase 2: Element Builder and CRUD** - Create and delete elements with scalar and array attributes (completed 2026-03-09)
 - [ ] **Phase 3: Read Operations** - Read scalar values (bulk and by-ID) and element IDs from collections
 - [ ] **Phase 4: Query and Transaction Control** - Execute plain and parameterized SQL queries, manage explicit transactions
 - [ ] **Phase 5: Package and Distribution** - npm package structure, TypeScript types, test suite, development tooling
@@ -45,7 +45,7 @@ Plans:
   2. User can create an element with integer, float, and string array values
   3. User can delete an element by ID from a collection
   4. Creating an element with invalid data (e.g., missing required attribute) throws a QuiverError with a descriptive message from the C layer
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 02-01-PLAN.md -- createElement and deleteElement with typed value marshaling, integration tests
@@ -101,7 +101,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. FFI Foundation and Database Lifecycle | 0/2 | Planned | - |
-| 2. Element Builder and CRUD | 0/1 | Planned | - |
+| 2. Element Builder and CRUD | 1/1 | Complete   | 2026-03-09 |
 | 3. Read Operations | 0/? | Not started | - |
 | 4. Query and Transaction Control | 0/? | Not started | - |
 | 5. Package and Distribution | 0/? | Not started | - |
