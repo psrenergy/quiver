@@ -1,131 +1,75 @@
 # External Integrations
 
-**Analysis Date:** 2026-02-27
+**Analysis Date:** 2026-03-08
 
 ## APIs & External Services
 
 **None.**
-- Quiver is a self-contained database library with no outbound network calls
-- All operations are local to an on-disk SQLite database file
-- No third-party service calls (payments, analytics, auth providers, etc.)
+Quiver is a self-contained library with no outbound HTTP calls, REST APIs, or third-party SaaS integrations. All external "integrations" are compile-time library dependencies resolved via CMake FetchContent from GitHub/GitLab.
 
 ## Data Storage
 
 **Databases:**
-- SQLite3 v3.50.2 (local file-based, embedded)
-  - Connection: File path passed to factory methods (`Database::from_schema()`, `Database::from_migrations()`)
-  - Client: `sqlite3` C API; dependency fetched from `https://github.com/sjinks/sqlite3-cmake.git`
-  - Core implementation: `src/database.cpp`, `src/database_impl.h`
-  - Schema validation: `src/schema_validator.cpp`
-  - Schema must include a `Configuration` table; validated at open time
+- SQLite 3.50.2
+  - Embedded — no separate server process
+  - Fetched from: `https://github.com/sjinks/sqlite3-cmake.git` (tag `v3.50.2`)
+  - Client: Direct `sqlite3_*` C API, accessed through C++20 `Database` class (`include/quiver/database.h`, `src/database.cpp`)
+  - All schema creation uses `STRICT` tables
+  - WAL mode not explicitly configured — SQLite defaults apply
+  - Connection string: file path passed to `quiver_database_open()` or factory methods
 
 **File Storage:**
 - Local filesystem only
-- CSV export: path parameter in `export_csv()` / `quiver_database_export_csv()`
-  - Implementation: `src/database_csv_export.cpp`, `src/c/database_csv_export.cpp`
-  - Formatting options via `CSVOptions` / `quiver_csv_options_t` (enum labels, date format)
-- CSV import: path parameter in `import_csv()` / `quiver_database_import_csv()`
-  - Implementation: `src/database_csv_import.cpp`, `src/c/database_csv_import.cpp`
-- Log files: written to `<db_path>.log` in same directory as database file (one log file per database instance)
+  - Binary blob files: `.qvr` format, written via `Blob` class (`include/quiver/blob/blob.h`)
+  - TOML metadata sidecar files: `.toml` format alongside `.qvr` files
+  - CSV export/import: local file paths via `export_csv()`/`import_csv()` (`src/database_csv_export.cpp`, `src/database_csv_import.cpp`)
 
 **Caching:**
-- None; all data operations go directly to SQLite
+- None — no in-memory cache layer beyond SQLite's own page cache
 
 ## Authentication & Identity
 
 **Auth Provider:**
-- None; library operates without authentication
-- Database file access is controlled entirely by OS filesystem permissions
-- `DatabaseOptions.read_only` flag opens SQLite in read-only mode
-- Log level configurable via `DatabaseOptions.console_level` (`quiver_log_level_t`)
+- None — no authentication layer
+- Database access control is filesystem-level only
+- Read-only mode available via `DatabaseOptions.read_only` flag (`include/quiver/c/options.h`)
 
 ## Monitoring & Observability
 
 **Error Tracking:**
-- None (no external error tracking service)
-- Errors surface as `std::runtime_error` exceptions in C++, or `QUIVER_ERROR` return codes with `quiver_get_last_error()` in C API
-- Binding layers convert to native exception types (Julia: `QuiverError`, Dart: `QuiverException`, Python: `QuiverError`)
+- None — no external error tracking service (no Sentry, Datadog, etc.)
 
 **Logs:**
-- spdlog v1.17.0 with console (colored) + rotating file sinks
-- Log file path: `<db_path>.log` in same directory as database file
-- Levels: DEBUG, INFO, WARN, ERROR, OFF (configurable per `DatabaseOptions`)
-- Thread-safe; unique spdlog logger instance per `Database` object
-- Implementation: `src/database.cpp` (logger creation and sink setup in `Database::Impl`)
+- spdlog v1.17.0 (`cmake/Dependencies.cmake`)
+- Console output only; log level configurable via `DatabaseOptions.console_level` (`quiver_log_level_t` enum in `include/quiver/c/options.h`)
+- Levels: `QUIVER_LOG_DEBUG`, `QUIVER_LOG_INFO`, `QUIVER_LOG_WARN`, `QUIVER_LOG_ERROR`, `QUIVER_LOG_OFF`
+- Log file: `quiver_database.log` present at project root (runtime output, not committed)
 
 **Coverage:**
-- Codecov integration via `codecov.yml` and `codecov/codecov-action` in CI
-- Coverage thresholds: 1% minimum per project and patch
-- `CODECOV_TOKEN` stored as GitHub Actions secret
+- Codecov (`codecov.yml`) — receives coverage reports from GitHub Actions CI
+  - C++ coverage: lcov + `codecov/codecov-action@v5` with flag `cpp`
+  - Julia coverage: `julia-actions/julia-processcoverage` with flag `julia`
+  - Dart coverage: lcov with flag `dart`
+  - Python coverage: pytest-cov with flag `python`
+  - Token: `${{ secrets.CODECOV_TOKEN }}` (secret in GitHub Actions environment)
 
 ## CI/CD & Deployment
 
 **Hosting:**
-- Standalone C++ shared library; no server or hosted service
-- Python wheels published to PyPI via OIDC trusted publisher (environment: `pypi`)
+- PyPI - Python wheel distribution (published via `pypa/gh-action-pypi-publish@release/v1` on version tag push)
+- GitHub Releases - Wheel artifacts attached on version tag push (via `softprops/action-gh-release@v2`)
+- No other hosted artifact registry
 
 **CI Pipeline:**
 - GitHub Actions (`.github/workflows/`)
-  - `ci.yml` - Full matrix build and test:
-    - Platforms: `ubuntu-latest`, `windows-latest`, `macos-latest`
-    - Build types: `Release`, `Debug`
-    - macOS uses GCC 13 explicitly (`-DCMAKE_C_COMPILER=gcc-13`, `-DCMAKE_CXX_COMPILER=g++-13`)
-  - `build-wheels.yml` - Python wheel builds on every push/PR to master
-    - Uses `pypa/cibuildwheel@v3.3.1`; targets `cp313-win_amd64` and `cp313-manylinux_x86_64`
-  - `publish.yml` - Triggered by `v*.*.*` tags:
-    - Validates tag version matches `bindings/python/pyproject.toml` version field
-    - Validates exactly 2 wheels were built
-    - Creates GitHub Release with wheel artifacts
-    - Publishes to PyPI via `pypa/gh-action-pypi-publish` (OIDC; no token stored)
+  - `ci.yml` - Main CI: build + test on ubuntu-latest, windows-latest, macos-latest in Debug and Release; coverage jobs for C++, Julia, Dart, Python; clang-format check
+  - `build-wheels.yml` - Python wheel build on push/PR to master (ubuntu + windows, Python 3.13)
+  - `publish.yml` - Triggered on `v*.*.*` tag push; builds wheels, validates version, creates GitHub Release, publishes to PyPI
+- Dependabot: weekly updates for GitHub Actions only (`github-actions` ecosystem in `.github/dependabot.yml`)
 
-**Dependabot:**
-- `.github/dependabot.yml` configured for weekly GitHub Actions dependency updates only
-- CMake FetchContent deps not covered by Dependabot; pinned manually in `cmake/Dependencies.cmake`
-
-## FFI / Native Integrations
-
-**Julia Binding (`bindings/julia/`):**
-- Uses `Libdl` stdlib to dynamically load `libquiver_c` at runtime
-- FFI declarations in `bindings/julia/src/c_api.jl` (generated by Clang.jl; config: `bindings/julia/generator/`)
-- Generator regenerated via `bindings/julia/generator/generator.bat`
-- Library located at build-relative path: `build/bin/libquiver_c.dll` (Windows) or `build/lib/libquiver_c.so` (Linux/macOS)
-
-**Dart Binding (`bindings/dart/`):**
-- Uses `dart:ffi` + `ffigen`-generated bindings in `bindings/dart/lib/src/ffi/bindings.dart`
-- `bindings/dart/hook/build.dart` uses `native_toolchain_cmake` to compile quiver via CMake on first `dart pub get`
-- `ffigen` config embedded in `bindings/dart/pubspec.yaml`; entry points are `include/quiver/c/*.h` headers
-- Generator regenerated via `bindings/dart/generator/generator.bat`
-- `libquiver_c.dll` depends on `libquiver.dll`; both must be in PATH on Windows
-
-**Python Binding (`bindings/python/`):**
-- Uses CFFI ABI-mode (no compiler required at install time)
-- Hand-written cdef declarations in `bindings/python/src/quiverdb/_c_api.py`
-- Auto-generated reference in `bindings/python/src/quiverdb/_declarations.py`
-- `bindings/python/src/quiverdb/_loader.py` loads shared libraries:
-  1. Bundled mode: `_libs/` subdirectory (wheel install)
-  2. Dev mode: system PATH
-- Windows: `os.add_dll_directory()` called to register `_libs/` for DLL dependency resolution
-- Generator regenerated via `bindings/python/generator/generator.bat`
-
-**Lua Integration (in-process):**
-- Lua 5.4.8 embedded directly in `libquiver` via sol2 v3.5.0
-- No separate process or network service
-- `LuaRunner` class (`include/quiver/lua_runner.h`, `src/lua_runner.cpp`) injects `db` userdata into Lua context
-- C API wrapper in `src/c/lua_runner.cpp` / `include/quiver/c/lua_runner.h`
-- CLI (`src/cli/main.cpp`) accepts a `.lua` script file path and executes it via `LuaRunner`
-
-## Environment Configuration
-
-**Required environment variables:**
-- None; all configuration passed via options structs at construction time
-
-**Configuration structs:**
-- `DatabaseOptions` / `quiver_database_options_t`: `read_only` (int), `console_level` (log level enum)
-- `CSVOptions` / `quiver_csv_options_t`: `delimiter` (char), `date_time_format` (string), `enum_labels` (map)
-
-**Secrets:**
-- `CODECOV_TOKEN` - GitHub Actions secret for Codecov uploads
-- PyPI OIDC trusted publisher - no token stored; configured via GitHub environment `pypi`
+**Secrets Required:**
+- `CODECOV_TOKEN` - Used in `ci.yml` for coverage upload to Codecov
+- PyPI OIDC (trusted publisher) - `id-token: write` permission in `publish.yml`; no stored secret needed for PyPI publish
 
 ## Webhooks & Callbacks
 
@@ -135,12 +79,30 @@
 **Outgoing:**
 - None
 
-## Network & Remote Access
+## Language Binding FFI Toolchain
 
-- Not applicable; library is entirely local
-- No network ports opened
-- No RPC, REST, or gRPC interface exposed
+These are dev-time toolchain integrations, not runtime integrations:
+
+**Julia FFI Generator:**
+- `Clang.jl` 0.19.2 - Generates `bindings/julia/src/c_api.jl` from C headers
+- Run: `bindings/julia/generator/generator.bat`
+- Config: `bindings/julia/generator/generator.toml`
+
+**Dart FFI Generator:**
+- `ffigen` 11.0+ - Generates `bindings/dart/lib/src/ffi/bindings.dart` from C headers
+- Run: `bindings/dart/generator/generator.bat`
+- Config: `bindings/dart/ffigen.yaml` and `bindings/dart/pubspec.yaml` `ffigen:` section
+
+**Python FFI:**
+- CFFI 2.0.0 ABI-mode - Hand-written declarations in `bindings/python/src/quiverdb/_c_api.py`
+- No compile-time binding generation; `_declarations.py` holds generator reference output
+- Generator: `bindings/python/generator/generator.bat`
+
+**Native Build Integration (Dart):**
+- `native_toolchain_cmake` 0.2.2 - Invokes CMake from Dart's build hook system
+- Hook: `bindings/dart/hook/`
+- Dart `.dart_tool/hooks_runner/` caches build artifacts (clear on C API struct changes)
 
 ---
 
-*Integration audit: 2026-02-27*
+*Integration audit: 2026-03-08*

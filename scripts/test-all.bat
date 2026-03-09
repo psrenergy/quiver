@@ -9,6 +9,8 @@ REM   - C++ unit tests
 REM   - C API tests
 REM   - Julia binding tests
 REM   - Dart binding tests
+REM   - JavaScript binding tests
+REM   - Python binding tests
 REM ============================================================
 
 SET ROOT_DIR=%~dp0..
@@ -24,11 +26,13 @@ SET CPP_RESULT=SKIP
 SET CAPI_RESULT=SKIP
 SET JULIA_RESULT=SKIP
 SET DART_RESULT=SKIP
+SET JS_RESULT=SKIP
+SET PYTHON_RESULT=SKIP
 
 REM ============================================================
 REM Step 1: Run C++ Tests
 REM ============================================================
-echo [1/5] Running C++ tests...
+echo [1/6] Running C++ tests...
 
 if exist "%ROOT_DIR%\build\bin\quiver_tests.exe" (
     "%ROOT_DIR%\build\bin\quiver_tests.exe"
@@ -47,7 +51,7 @@ echo.
 REM ============================================================
 REM Step 2: Run C API Tests
 REM ============================================================
-echo [2/5] Running C API tests...
+echo [2/6] Running C API tests...
 
 if exist "%ROOT_DIR%\build\bin\quiver_c_tests.exe" (
     "%ROOT_DIR%\build\bin\quiver_c_tests.exe"
@@ -66,7 +70,7 @@ echo.
 REM ============================================================
 REM Step 3: Run Julia Tests
 REM ============================================================
-echo [3/5] Running Julia tests...
+echo [3/6] Running Julia tests...
 
 call "%ROOT_DIR%\bindings\julia\test\test.bat"
 if errorlevel 1 (
@@ -80,7 +84,7 @@ echo.
 REM ============================================================
 REM Step 4: Run Dart Tests
 REM ============================================================
-echo [4/5] Running Dart tests...
+echo [4/6] Running Dart tests...
 
 call "%ROOT_DIR%\bindings\dart\test\test.bat"
 if errorlevel 1 (
@@ -92,9 +96,23 @@ if errorlevel 1 (
 echo.
 
 REM ============================================================
-REM Step 5: Run Python Tests
+REM Step 5: Run JavaScript Tests
 REM ============================================================
-echo [5/5] Running Python tests...
+echo [5/6] Running JavaScript tests...
+
+call "%ROOT_DIR%\bindings\js\test\test.bat"
+if errorlevel 1 (
+    SET JS_RESULT=FAIL
+    SET FAILED=1
+) else (
+    SET JS_RESULT=PASS
+)
+echo.
+
+REM ============================================================
+REM Step 6: Run Python Tests
+REM ============================================================
+echo [6/6] Running Python tests...
 
 call "%ROOT_DIR%\bindings\python\tests\test.bat"
 if errorlevel 1 (
@@ -112,10 +130,12 @@ echo ============================================================
 echo  Test Results
 echo ============================================================
 echo.
-echo   C++ tests:    %CPP_RESULT%
-echo   C API tests:  %CAPI_RESULT%
-echo   Julia tests:  %JULIA_RESULT%
-echo   Dart tests:   %DART_RESULT%
+echo   C++ tests:        %CPP_RESULT%
+echo   C API tests:      %CAPI_RESULT%
+echo   Julia tests:      %JULIA_RESULT%
+echo   Dart tests:       %DART_RESULT%
+echo   JavaScript tests: %JS_RESULT%
+echo   Python tests:     %PYTHON_RESULT%
 echo.
 
 if %FAILED%==1 (
