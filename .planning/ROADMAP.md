@@ -59,10 +59,10 @@ Plans:
   2. User can read a single scalar integer, float, or string by element ID
   3. User can read all element IDs from a collection
   4. Read operations on an empty collection return empty arrays (not errors)
-**Plans**: TBD
+**Plans:** 1 plans
 
 Plans:
-- [ ] 03-01: TBD
+- [ ] 03-01-PLAN.md -- All scalar read operations (bulk, by-ID) and readElementIds with TDD integration tests
 
 ### Phase 4: Query and Transaction Control
 **Goal**: Users can execute SQL queries with parameters and control transaction boundaries
@@ -102,7 +102,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 |-------|----------------|--------|-----------|
 | 1. FFI Foundation and Database Lifecycle | 0/2 | Planned | - |
 | 2. Element Builder and CRUD | 1/1 | Complete   | 2026-03-09 |
-| 3. Read Operations | 0/? | Not started | - |
+| 3. Read Operations | 0/1 | Planned | - |
 | 4. Query and Transaction Control | 0/? | Not started | - |
 | 5. Package and Distribution | 0/? | Not started | - |
 
