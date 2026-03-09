@@ -45,10 +45,10 @@ Requirements for JavaScript/TypeScript binding. Each maps to roadmap phases.
 
 ### Package & Distribution
 
-- [ ] **PKG-01**: Binding is an npm package installable via `bun add`
-- [ ] **PKG-02**: Package includes TypeScript type definitions
-- [ ] **PKG-03**: Test suite covers all bound operations using `bun:test`
-- [ ] **PKG-04**: Test runner script handles PATH/DLL setup for development
+- [x] **PKG-01**: Binding is an npm package installable via `bun add`
+- [x] **PKG-02**: Package includes TypeScript type definitions
+- [x] **PKG-03**: Test suite covers all bound operations using `bun:test`
+- [x] **PKG-04**: Test runner script handles PATH/DLL setup for development
 
 ## Future Requirements
 
@@ -110,10 +110,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | QUERY-02 | Phase 4 | Complete |
 | TXN-01 | Phase 4 | Complete |
 | TXN-02 | Phase 4 | Complete |
-| PKG-01 | Phase 5 | Pending |
-| PKG-02 | Phase 5 | Pending |
-| PKG-03 | Phase 5 | Pending |
-| PKG-04 | Phase 5 | Pending |
+| PKG-01 | Phase 5 | Complete |
+| PKG-02 | Phase 5 | Complete |
+| PKG-03 | Phase 5 | Complete |
+| PKG-04 | Phase 5 | Complete |
 
 **Coverage:**
 - v0.5 requirements: 22 total

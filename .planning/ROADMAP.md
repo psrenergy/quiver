@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Element Builder and CRUD** - Create and delete elements with scalar and array attributes (completed 2026-03-09)
 - [ ] **Phase 3: Read Operations** - Read scalar values (bulk and by-ID) and element IDs from collections
 - [x] **Phase 4: Query and Transaction Control** - Execute plain and parameterized SQL queries, manage explicit transactions (completed 2026-03-09)
-- [ ] **Phase 5: Package and Distribution** - npm package structure, TypeScript types, test suite, development tooling
+- [x] **Phase 5: Package and Distribution** - npm package structure, TypeScript types, test suite, development tooling (completed 2026-03-09)
 
 ## Phase Details
 
@@ -88,7 +88,7 @@ Plans:
   2. All public API functions and types have TypeScript type definitions (no `any` in public surface)
   3. Running the test script executes all tests via `bun:test` and they pass
   4. The test runner script handles PATH/DLL setup so tests work out of the box in the development environment
-**Plans:** 1 plans
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 05-01-PLAN.md -- Package metadata, Biome lint/format, bunfig.toml test preload, README, test-all.bat integration
@@ -104,7 +104,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 2. Element Builder and CRUD | 1/1 | Complete   | 2026-03-09 |
 | 3. Read Operations | 0/1 | Planned | - |
 | 4. Query and Transaction Control | 2/2 | Complete | 2026-03-09 |
-| 5. Package and Distribution | 0/1 | Planned | - |
+| 5. Package and Distribution | 1/1 | Complete   | 2026-03-09 |
 
 ---
 *Roadmap created: 2026-03-08*
