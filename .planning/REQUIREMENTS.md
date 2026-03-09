@@ -35,8 +35,8 @@ Requirements for JavaScript/TypeScript binding. Each maps to roadmap phases.
 
 ### Query Operations
 
-- [ ] **QUERY-01**: User can execute SQL and get string/integer/float results
-- [ ] **QUERY-02**: User can execute parameterized SQL with typed parameters
+- [x] **QUERY-01**: User can execute SQL and get string/integer/float results
+- [x] **QUERY-02**: User can execute parameterized SQL with typed parameters
 
 ### Transaction Control
 
@@ -106,8 +106,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | READ-01 | Phase 3 | Complete |
 | READ-02 | Phase 3 | Complete |
 | READ-03 | Phase 3 | Complete |
-| QUERY-01 | Phase 4 | Pending |
-| QUERY-02 | Phase 4 | Pending |
+| QUERY-01 | Phase 4 | Complete |
+| QUERY-02 | Phase 4 | Complete |
 | TXN-01 | Phase 4 | Pending |
 | TXN-02 | Phase 4 | Pending |
 | PKG-01 | Phase 5 | Pending |
