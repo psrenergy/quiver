@@ -79,32 +79,32 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CAPI-01 | -- | Pending |
-| JSUP-01 | -- | Pending |
-| JSRD-01 | -- | Pending |
-| JSRD-02 | -- | Pending |
-| JSRD-03 | -- | Pending |
-| JSRD-04 | -- | Pending |
-| JSMETA-01 | -- | Pending |
-| JSMETA-02 | -- | Pending |
-| JSTS-01 | -- | Pending |
-| JSTS-02 | -- | Pending |
-| JSTS-03 | -- | Pending |
-| JSCSV-01 | -- | Pending |
-| JSCSV-02 | -- | Pending |
-| JSDB-01 | -- | Pending |
-| JSLUA-01 | -- | Pending |
-| JSBLOB-01 | -- | Pending |
-| JSBLOB-02 | -- | Pending |
-| JSBLOB-03 | -- | Pending |
-| JSCONV-01 | -- | Pending |
-| CLEAN-01 | -- | Pending |
+| CAPI-01 | Phase 1 | Pending |
+| CLEAN-01 | Phase 1 | Pending |
+| JSUP-01 | Phase 2 | Pending |
+| JSRD-01 | Phase 2 | Pending |
+| JSRD-02 | Phase 2 | Pending |
+| JSRD-03 | Phase 2 | Pending |
+| JSRD-04 | Phase 2 | Pending |
+| JSMETA-01 | Phase 3 | Pending |
+| JSMETA-02 | Phase 3 | Pending |
+| JSTS-01 | Phase 4 | Pending |
+| JSTS-02 | Phase 4 | Pending |
+| JSTS-03 | Phase 4 | Pending |
+| JSCSV-01 | Phase 5 | Pending |
+| JSCSV-02 | Phase 5 | Pending |
+| JSDB-01 | Phase 6 | Pending |
+| JSLUA-01 | Phase 6 | Pending |
+| JSBLOB-01 | Phase 7 | Pending |
+| JSBLOB-02 | Phase 7 | Pending |
+| JSBLOB-03 | Phase 7 | Pending |
+| JSCONV-01 | Phase 8 | Pending |
 
 **Coverage:**
 - v0.5 requirements: 20 total
-- Mapped to phases: 0
-- Unmapped: 20
+- Mapped to phases: 20
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-09*
-*Last updated: 2026-03-09 after initial definition*
+*Last updated: 2026-03-09 after roadmap creation*
