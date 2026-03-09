@@ -49,7 +49,7 @@ QUIVER_C_API quiver_error_t quiver_database_path(quiver_database_t* db, const ch
 QUIVER_C_API quiver_error_t quiver_database_begin_transaction(quiver_database_t* db);
 QUIVER_C_API quiver_error_t quiver_database_commit(quiver_database_t* db);
 QUIVER_C_API quiver_error_t quiver_database_rollback(quiver_database_t* db);
-QUIVER_C_API quiver_error_t quiver_database_in_transaction(quiver_database_t* db, bool* out_active);
+QUIVER_C_API quiver_error_t quiver_database_in_transaction(quiver_database_t* db, int* out_active);
 
 // Version
 QUIVER_C_API quiver_error_t quiver_database_current_version(quiver_database_t* db, int64_t* out_version);

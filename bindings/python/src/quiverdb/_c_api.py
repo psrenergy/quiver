@@ -243,7 +243,7 @@ ffi.cdef("""
     quiver_error_t quiver_database_begin_transaction(quiver_database_t* db);
     quiver_error_t quiver_database_commit(quiver_database_t* db);
     quiver_error_t quiver_database_rollback(quiver_database_t* db);
-    quiver_error_t quiver_database_in_transaction(quiver_database_t* db, _Bool* out_active);
+    quiver_error_t quiver_database_in_transaction(quiver_database_t* db, int* out_active);
 
     // Query methods - simple
     quiver_error_t quiver_database_query_string(quiver_database_t* db,

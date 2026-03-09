@@ -29,7 +29,7 @@ Database.prototype.rollback = function (this: Database): void {
 
 Database.prototype.inTransaction = function (this: Database): boolean {
   const lib = getSymbols();
-  const outActive = new Uint8Array(1);
+  const outActive = new Int32Array(1);
   check(lib.quiver_database_in_transaction(this._handle, ptr(outActive)));
   return outActive[0] !== 0;
 };

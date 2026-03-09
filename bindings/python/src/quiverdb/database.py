@@ -184,9 +184,9 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         """Return True if a transaction is currently active."""
         self._ensure_open()
         lib = get_lib()
-        out = ffi.new("_Bool*")
+        out = ffi.new("int*")
         check(lib.quiver_database_in_transaction(self._ptr, out))
-        return bool(out[0])
+        return out[0] != 0
 
     @contextmanager
     def transaction(self):

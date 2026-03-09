@@ -107,7 +107,7 @@ quiver_error_t quiver_database_path(quiver_database_t* db, const char** out_path
 quiver_error_t quiver_database_begin_transaction(quiver_database_t* db);
 quiver_error_t quiver_database_commit(quiver_database_t* db);
 quiver_error_t quiver_database_rollback(quiver_database_t* db);
-quiver_error_t quiver_database_in_transaction(quiver_database_t* db, _Bool* out_active);
+quiver_error_t quiver_database_in_transaction(quiver_database_t* db, int* out_active);
 
 // Version
 quiver_error_t quiver_database_current_version(quiver_database_t* db, int64_t* out_version);
