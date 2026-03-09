@@ -44,6 +44,58 @@ const symbols = {
     args: [FFIType.ptr],
     returns: FFIType.i32,
   },
+
+  // Element lifecycle
+  quiver_element_create: {
+    args: [FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_element_destroy: {
+    args: [FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // Element scalar setters
+  quiver_element_set_integer: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.i64],
+    returns: FFIType.i32,
+  },
+  quiver_element_set_float: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.f64],
+    returns: FFIType.i32,
+  },
+  quiver_element_set_string: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_element_set_null: {
+    args: [FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // Element array setters
+  quiver_element_set_array_integer: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.i32],
+    returns: FFIType.i32,
+  },
+  quiver_element_set_array_float: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.i32],
+    returns: FFIType.i32,
+  },
+  quiver_element_set_array_string: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.i32],
+    returns: FFIType.i32,
+  },
+
+  // Database CRUD
+  quiver_database_create_element: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_delete_element: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.i64],
+    returns: FFIType.i32,
+  },
 } as const;
 
 type Library = ReturnType<typeof dlopen<typeof symbols>>;
