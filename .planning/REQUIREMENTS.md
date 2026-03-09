@@ -40,8 +40,8 @@ Requirements for JavaScript/TypeScript binding. Each maps to roadmap phases.
 
 ### Transaction Control
 
-- [ ] **TXN-01**: User can begin, commit, and rollback explicit transactions
-- [ ] **TXN-02**: User can check if a transaction is active via `inTransaction()`
+- [x] **TXN-01**: User can begin, commit, and rollback explicit transactions
+- [x] **TXN-02**: User can check if a transaction is active via `inTransaction()`
 
 ### Package & Distribution
 
@@ -108,8 +108,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | READ-03 | Phase 3 | Complete |
 | QUERY-01 | Phase 4 | Complete |
 | QUERY-02 | Phase 4 | Complete |
-| TXN-01 | Phase 4 | Pending |
-| TXN-02 | Phase 4 | Pending |
+| TXN-01 | Phase 4 | Complete |
+| TXN-02 | Phase 4 | Complete |
 | PKG-01 | Phase 5 | Pending |
 | PKG-02 | Phase 5 | Pending |
 | PKG-03 | Phase 5 | Pending |

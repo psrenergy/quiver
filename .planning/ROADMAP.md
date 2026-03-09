@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 1: FFI Foundation and Database Lifecycle** - Load native libraries, establish error handling and memory helpers, open and close databases
 - [x] **Phase 2: Element Builder and CRUD** - Create and delete elements with scalar and array attributes (completed 2026-03-09)
 - [ ] **Phase 3: Read Operations** - Read scalar values (bulk and by-ID) and element IDs from collections
-- [ ] **Phase 4: Query and Transaction Control** - Execute plain and parameterized SQL queries, manage explicit transactions
+- [x] **Phase 4: Query and Transaction Control** - Execute plain and parameterized SQL queries, manage explicit transactions (completed 2026-03-09)
 - [ ] **Phase 5: Package and Distribution** - npm package structure, TypeScript types, test suite, development tooling
 
 ## Phase Details
@@ -77,7 +77,7 @@ Plans:
 
 Plans:
 - [x] 04-01-PLAN.md -- Query operations (queryString, queryInteger, queryFloat) with plain and parameterized SQL, TDD
-- [ ] 04-02-PLAN.md -- Transaction control (beginTransaction, commit, rollback, inTransaction), TDD
+- [x] 04-02-PLAN.md -- Transaction control (beginTransaction, commit, rollback, inTransaction), TDD
 
 ### Phase 5: Package and Distribution
 **Goal**: The binding is a well-structured npm package with TypeScript types, a test suite, and development tooling
@@ -103,7 +103,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 1. FFI Foundation and Database Lifecycle | 0/2 | Planned | - |
 | 2. Element Builder and CRUD | 1/1 | Complete   | 2026-03-09 |
 | 3. Read Operations | 0/1 | Planned | - |
-| 4. Query and Transaction Control | 1/2 | In Progress | - |
+| 4. Query and Transaction Control | 2/2 | Complete | 2026-03-09 |
 | 5. Package and Distribution | 0/? | Not started | - |
 
 ---
