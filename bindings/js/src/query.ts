@@ -1,8 +1,8 @@
-import { ptr, CString } from "bun:ffi";
+import { CString, ptr } from "bun:ffi";
 import { Database } from "./database";
-import { getSymbols } from "./loader";
 import { check } from "./errors";
-import { toCString, allocPointerOut, readPointerOut } from "./ffi-helpers";
+import { allocPointerOut, readPointerOut, toCString } from "./ffi-helpers";
+import { getSymbols } from "./loader";
 import type { QueryParam } from "./types";
 
 declare module "./database" {
@@ -72,22 +72,21 @@ Database.prototype.queryString = function (
 
   if (params && params.length > 0) {
     const marshaled = marshalParams(params);
-    check(lib.quiver_database_query_string_params(
-      handle,
-      toCString(sql),
-      ptr(marshaled.types),
-      ptr(marshaled.values),
-      params.length,
-      ptr(outValue),
-      ptr(outHasValue),
-    ));
+    check(
+      lib.quiver_database_query_string_params(
+        handle,
+        toCString(sql),
+        ptr(marshaled.types),
+        ptr(marshaled.values),
+        params.length,
+        ptr(outValue),
+        ptr(outHasValue),
+      ),
+    );
   } else {
-    check(lib.quiver_database_query_string(
-      handle,
-      toCString(sql),
-      ptr(outValue),
-      ptr(outHasValue),
-    ));
+    check(
+      lib.quiver_database_query_string(handle, toCString(sql), ptr(outValue), ptr(outHasValue)),
+    );
   }
 
   if (outHasValue[0] === 0) return null;
@@ -111,22 +110,21 @@ Database.prototype.queryInteger = function (
 
   if (params && params.length > 0) {
     const marshaled = marshalParams(params);
-    check(lib.quiver_database_query_integer_params(
-      handle,
-      toCString(sql),
-      ptr(marshaled.types),
-      ptr(marshaled.values),
-      params.length,
-      ptr(outValue),
-      ptr(outHasValue),
-    ));
+    check(
+      lib.quiver_database_query_integer_params(
+        handle,
+        toCString(sql),
+        ptr(marshaled.types),
+        ptr(marshaled.values),
+        params.length,
+        ptr(outValue),
+        ptr(outHasValue),
+      ),
+    );
   } else {
-    check(lib.quiver_database_query_integer(
-      handle,
-      toCString(sql),
-      ptr(outValue),
-      ptr(outHasValue),
-    ));
+    check(
+      lib.quiver_database_query_integer(handle, toCString(sql), ptr(outValue), ptr(outHasValue)),
+    );
   }
 
   if (outHasValue[0] === 0) return null;
@@ -146,22 +144,19 @@ Database.prototype.queryFloat = function (
 
   if (params && params.length > 0) {
     const marshaled = marshalParams(params);
-    check(lib.quiver_database_query_float_params(
-      handle,
-      toCString(sql),
-      ptr(marshaled.types),
-      ptr(marshaled.values),
-      params.length,
-      ptr(outValue),
-      ptr(outHasValue),
-    ));
+    check(
+      lib.quiver_database_query_float_params(
+        handle,
+        toCString(sql),
+        ptr(marshaled.types),
+        ptr(marshaled.values),
+        params.length,
+        ptr(outValue),
+        ptr(outHasValue),
+      ),
+    );
   } else {
-    check(lib.quiver_database_query_float(
-      handle,
-      toCString(sql),
-      ptr(outValue),
-      ptr(outHasValue),
-    ));
+    check(lib.quiver_database_query_float(handle, toCString(sql), ptr(outValue), ptr(outHasValue)));
   }
 
   if (outHasValue[0] === 0) return null;

@@ -1,13 +1,13 @@
-import { ptr } from "bun:ffi";
+import { type Pointer, ptr } from "bun:ffi";
+import { check, QuiverError } from "./errors";
+import { allocPointerOut, makeDefaultOptions, readPointerOut, toCString } from "./ffi-helpers";
 import { getSymbols } from "./loader";
-import { QuiverError, check } from "./errors";
-import { makeDefaultOptions, allocPointerOut, readPointerOut, toCString } from "./ffi-helpers";
 
 export class Database {
-  private _ptr: number;
+  private _ptr: Pointer;
   private _closed = false;
 
-  private constructor(nativePtr: number) {
+  private constructor(nativePtr: Pointer) {
     this._ptr = nativePtr;
   }
 
@@ -16,12 +16,14 @@ export class Database {
     const options = makeDefaultOptions();
     const outDb = allocPointerOut();
 
-    check(lib.quiver_database_from_schema(
-      toCString(dbPath),
-      toCString(schemaPath),
-      ptr(options),
-      ptr(outDb),
-    ));
+    check(
+      lib.quiver_database_from_schema(
+        toCString(dbPath),
+        toCString(schemaPath),
+        ptr(options),
+        ptr(outDb),
+      ),
+    );
 
     const dbPtr = readPointerOut(outDb);
     return new Database(dbPtr);
@@ -32,12 +34,14 @@ export class Database {
     const options = makeDefaultOptions();
     const outDb = allocPointerOut();
 
-    check(lib.quiver_database_from_migrations(
-      toCString(dbPath),
-      toCString(migrationsPath),
-      ptr(options),
-      ptr(outDb),
-    ));
+    check(
+      lib.quiver_database_from_migrations(
+        toCString(dbPath),
+        toCString(migrationsPath),
+        ptr(options),
+        ptr(outDb),
+      ),
+    );
 
     const dbPtr = readPointerOut(outDb);
     return new Database(dbPtr);
@@ -57,7 +61,7 @@ export class Database {
   }
 
   /** @internal */
-  get _handle(): number {
+  get _handle(): Pointer {
     this.ensureOpen();
     return this._ptr;
   }

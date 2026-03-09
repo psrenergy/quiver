@@ -1,9 +1,18 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import { Database, QuiverError } from "../src/index";
-import type { ElementData } from "../src/types";
+import type { ElementData, Value } from "../src/types";
 
-const SCHEMA_PATH = join(import.meta.dir, "..", "..", "..", "tests", "schemas", "valid", "all_types.sql");
+const SCHEMA_PATH = join(
+  import.meta.dir,
+  "..",
+  "..",
+  "..",
+  "tests",
+  "schemas",
+  "valid",
+  "all_types.sql",
+);
 
 describe("createElement", () => {
   test("creates element with integer scalar and returns numeric ID", () => {
@@ -83,13 +92,15 @@ describe("createElement", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       expect(() => {
-        db.createElement("AllTypes", { label: "Item1", some_integer: true as any });
+        db.createElement("AllTypes", { label: "Item1", some_integer: true as unknown as Value });
       }).toThrow(QuiverError);
 
       try {
-        db.createElement("AllTypes", { label: "Item1", some_integer: true as any });
+        db.createElement("AllTypes", { label: "Item1", some_integer: true as unknown as Value });
       } catch (e) {
-        expect((e as QuiverError).message).toContain("Unsupported value type for 'some_integer': boolean");
+        expect((e as QuiverError).message).toContain(
+          "Unsupported value type for 'some_integer': boolean",
+        );
       }
     } finally {
       db.close();

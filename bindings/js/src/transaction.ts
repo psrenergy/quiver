@@ -1,7 +1,7 @@
 import { ptr } from "bun:ffi";
 import { Database } from "./database";
-import { getSymbols } from "./loader";
 import { check } from "./errors";
+import { getSymbols } from "./loader";
 
 declare module "./database" {
   interface Database {

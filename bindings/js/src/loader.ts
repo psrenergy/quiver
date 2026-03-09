@@ -1,6 +1,6 @@
 import { dlopen, FFIType, suffix } from "bun:ffi";
 import { existsSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { QuiverError } from "./errors";
 
 const CORE_LIB = `libquiver.${suffix}`;
@@ -16,7 +16,7 @@ function preloadWindows(dllPath: string): void {
   const kernel32 = dlopen("kernel32.dll", {
     LoadLibraryA: { args: [FFIType.ptr], returns: FFIType.ptr },
   });
-  kernel32.symbols.LoadLibraryA(Buffer.from(dllPath + "\0"));
+  kernel32.symbols.LoadLibraryA(Buffer.from(`${dllPath}\0`));
 }
 
 const symbols = {
@@ -165,15 +165,39 @@ const symbols = {
 
   // Query operations (parameterized)
   quiver_database_query_string_params: {
-    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.u64, FFIType.ptr, FFIType.ptr],
+    args: [
+      FFIType.ptr,
+      FFIType.ptr,
+      FFIType.ptr,
+      FFIType.ptr,
+      FFIType.u64,
+      FFIType.ptr,
+      FFIType.ptr,
+    ],
     returns: FFIType.i32,
   },
   quiver_database_query_integer_params: {
-    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.u64, FFIType.ptr, FFIType.ptr],
+    args: [
+      FFIType.ptr,
+      FFIType.ptr,
+      FFIType.ptr,
+      FFIType.ptr,
+      FFIType.u64,
+      FFIType.ptr,
+      FFIType.ptr,
+    ],
     returns: FFIType.i32,
   },
   quiver_database_query_float_params: {
-    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.u64, FFIType.ptr, FFIType.ptr],
+    args: [
+      FFIType.ptr,
+      FFIType.ptr,
+      FFIType.ptr,
+      FFIType.ptr,
+      FFIType.u64,
+      FFIType.ptr,
+      FFIType.ptr,
+    ],
     returns: FFIType.i32,
   },
 
@@ -233,9 +257,7 @@ export function loadLibrary(): Library {
       }
       _library = dlopen(cApiPath, symbols);
       return _library;
-    } catch {
-      continue;
-    }
+    } catch {}
   }
 
   // Fallback: try system PATH (bare library name)
@@ -253,13 +275,10 @@ export function loadLibrary(): Library {
     // Fall through to error
   }
 
-  const searched = searchPaths.length > 0
-    ? searchPaths.join(", ") + ", system PATH"
-    : "system PATH";
+  const searched =
+    searchPaths.length > 0 ? `${searchPaths.join(", ")}, system PATH` : "system PATH";
 
-  throw new QuiverError(
-    `Cannot load native library '${C_API_LIB}'. Searched: ${searched}`
-  );
+  throw new QuiverError(`Cannot load native library '${C_API_LIB}'. Searched: ${searched}`);
 }
 
 export function getSymbols(): Library["symbols"] {

@@ -1,9 +1,9 @@
-import { ptr } from "bun:ffi";
+import { type Pointer, ptr } from "bun:ffi";
 import { Database } from "./database";
-import { getSymbols } from "./loader";
 import { check, QuiverError } from "./errors";
 import { allocPointerOut, readPointerOut, toCString } from "./ffi-helpers";
-import type { Value, ElementData } from "./types";
+import { getSymbols } from "./loader";
+import type { ElementData, Value } from "./types";
 
 declare module "./database" {
   interface Database {
@@ -14,17 +14,12 @@ declare module "./database" {
 
 type Symbols = ReturnType<typeof getSymbols>;
 
-function setElementArray(
-  lib: Symbols,
-  elemPtr: number,
-  name: string,
-  values: unknown[],
-): void {
+function setElementArray(lib: Symbols, elemPtr: Pointer, name: string, values: unknown[]): void {
   const cName = toCString(name);
 
   if (values.length === 0) {
     // Empty array: pass null pointer with count 0
-    check(lib.quiver_element_set_array_integer(elemPtr, cName, 0, 0));
+    check(lib.quiver_element_set_array_integer(elemPtr, cName, null, 0));
     return;
   }
 
@@ -59,17 +54,10 @@ function setElementArray(
     return;
   }
 
-  throw new QuiverError(
-    `Unsupported array element type for '${name}': ${typeof first}`,
-  );
+  throw new QuiverError(`Unsupported array element type for '${name}': ${typeof first}`);
 }
 
-function setElementField(
-  lib: Symbols,
-  elemPtr: number,
-  name: string,
-  value: Value,
-): void {
+function setElementField(lib: Symbols, elemPtr: Pointer, name: string, value: Value): void {
   const cName = toCString(name);
 
   if (value === null) {
@@ -101,9 +89,7 @@ function setElementField(
     return;
   }
 
-  throw new QuiverError(
-    `Unsupported value type for '${name}': ${typeof value}`,
-  );
+  throw new QuiverError(`Unsupported value type for '${name}': ${typeof value}`);
 }
 
 Database.prototype.createElement = function (
@@ -128,14 +114,7 @@ Database.prototype.createElement = function (
 
     // Create element in database
     const outId = new BigInt64Array(1);
-    check(
-      lib.quiver_database_create_element(
-        handle,
-        toCString(collection),
-        elemPtr,
-        ptr(outId),
-      ),
-    );
+    check(lib.quiver_database_create_element(handle, toCString(collection), elemPtr, ptr(outId)));
 
     return Number(outId[0]);
   } finally {
@@ -143,17 +122,7 @@ Database.prototype.createElement = function (
   }
 };
 
-Database.prototype.deleteElement = function (
-  this: Database,
-  collection: string,
-  id: number,
-): void {
+Database.prototype.deleteElement = function (this: Database, collection: string, id: number): void {
   const lib = getSymbols();
-  check(
-    lib.quiver_database_delete_element(
-      this._handle,
-      toCString(collection),
-      id,
-    ),
-  );
+  check(lib.quiver_database_delete_element(this._handle, toCString(collection), id));
 };

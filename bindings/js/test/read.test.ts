@@ -1,8 +1,17 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import { Database, QuiverError } from "../src/index";
 
-const SCHEMA_PATH = join(import.meta.dir, "..", "..", "..", "tests", "schemas", "valid", "all_types.sql");
+const SCHEMA_PATH = join(
+  import.meta.dir,
+  "..",
+  "..",
+  "..",
+  "tests",
+  "schemas",
+  "valid",
+  "all_types.sql",
+);
 
 describe("readScalarIntegers / readScalarFloats / readScalarStrings", () => {
   test("reads integer scalars from collection", () => {

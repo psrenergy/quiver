@@ -1,8 +1,8 @@
-import { ptr, read, toArrayBuffer, CString } from "bun:ffi";
+import { CString, ptr, toArrayBuffer } from "bun:ffi";
 import { Database } from "./database";
-import { getSymbols } from "./loader";
 import { check } from "./errors";
-import { toCString, allocPointerOut, readPointerOut } from "./ffi-helpers";
+import { allocPointerOut, readPointerOut, readPtrAt, toCString } from "./ffi-helpers";
+import { getSymbols } from "./loader";
 
 declare module "./database" {
   interface Database {
@@ -111,7 +111,7 @@ Database.prototype.readScalarStrings = function (
   const arrPtr = readPointerOut(outValues);
   const result: string[] = new Array(count);
   for (let i = 0; i < count; i++) {
-    const strPtr = read.ptr(arrPtr, i * 8);
+    const strPtr = readPtrAt(arrPtr, i * 8);
     result[i] = new CString(strPtr).toString();
   }
 
@@ -204,10 +204,7 @@ Database.prototype.readScalarStringById = function (
   return result;
 };
 
-Database.prototype.readElementIds = function (
-  this: Database,
-  collection: string,
-): number[] {
+Database.prototype.readElementIds = function (this: Database, collection: string): number[] {
   const lib = getSymbols();
   const handle = this._handle;
 
@@ -215,12 +212,7 @@ Database.prototype.readElementIds = function (
   const outCount = new BigUint64Array(1);
 
   check(
-    lib.quiver_database_read_element_ids(
-      handle,
-      toCString(collection),
-      ptr(outIds),
-      ptr(outCount),
-    ),
+    lib.quiver_database_read_element_ids(handle, toCString(collection), ptr(outIds), ptr(outCount)),
   );
 
   const count = Number(outCount[0]);

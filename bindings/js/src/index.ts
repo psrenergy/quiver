@@ -3,6 +3,6 @@ import "./read";
 import "./query";
 import "./transaction";
 
-export { QuiverError } from "./errors";
 export { Database } from "./database";
-export type { ScalarValue, ArrayValue, Value, ElementData, QueryParam } from "./types";
+export { QuiverError } from "./errors";
+export type { ArrayValue, ElementData, QueryParam, ScalarValue, Value } from "./types";

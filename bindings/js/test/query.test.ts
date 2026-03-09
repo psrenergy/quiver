@@ -1,8 +1,17 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import { Database } from "../src/index";
 
-const SCHEMA_PATH = join(import.meta.dir, "..", "..", "..", "tests", "schemas", "valid", "all_types.sql");
+const SCHEMA_PATH = join(
+  import.meta.dir,
+  "..",
+  "..",
+  "..",
+  "tests",
+  "schemas",
+  "valid",
+  "all_types.sql",
+);
 
 describe("queryString", () => {
   test("returns string from plain SQL", () => {
@@ -75,7 +84,10 @@ describe("queryInteger", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1", some_integer: 42 });
-      const result = db.queryInteger("SELECT some_integer FROM AllTypes WHERE some_integer > ?", [10]);
+      const result = db.queryInteger(
+        "SELECT some_integer FROM AllTypes WHERE some_integer > ?",
+        [10],
+      );
       expect(result).toBe(42);
     } finally {
       db.close();
@@ -86,7 +98,10 @@ describe("queryInteger", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1", some_integer: 42 });
-      const result = db.queryInteger("SELECT some_integer FROM AllTypes WHERE id = ? AND some_integer > ?", [1, 0]);
+      const result = db.queryInteger(
+        "SELECT some_integer FROM AllTypes WHERE id = ? AND some_integer > ?",
+        [1, 0],
+      );
       expect(result).toBe(42);
     } finally {
       db.close();

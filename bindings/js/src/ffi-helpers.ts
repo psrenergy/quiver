@@ -1,4 +1,4 @@
-import { ptr, read } from "bun:ffi";
+import { type Pointer, ptr, read } from "bun:ffi";
 
 /**
  * Construct the 8-byte quiver_database_options_t struct manually.
@@ -24,10 +24,19 @@ export function allocPointerOut(): BigInt64Array {
 /**
  * Read the pointer value from an out-parameter buffer.
  * Dereferences the pointer stored at offset 0 of the typed array.
- * Returns a JS number (pointer value).
+ * Returns a branded Pointer suitable for passing to FFI functions.
+ * read.ptr() returns number at runtime; the cast to Pointer satisfies bun:ffi type signatures.
  */
-export function readPointerOut(buf: BigInt64Array): number {
-  return read.ptr(ptr(buf), 0);
+export function readPointerOut(buf: BigInt64Array): Pointer {
+  return read.ptr(ptr(buf), 0) as unknown as Pointer;
+}
+
+/**
+ * Read a pointer at the given byte offset from a base pointer.
+ * Wraps read.ptr() with a cast to the branded Pointer type.
+ */
+export function readPtrAt(base: Pointer, byteOffset: number): Pointer {
+  return read.ptr(base, byteOffset) as unknown as Pointer;
 }
 
 /**
@@ -35,5 +44,5 @@ export function readPointerOut(buf: BigInt64Array): number {
  * Returns a Buffer suitable for passing as FFIType.ptr.
  */
 export function toCString(str: string): Buffer {
-  return Buffer.from(str + "\0");
+  return Buffer.from(`${str}\0`);
 }
