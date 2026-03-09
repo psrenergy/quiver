@@ -73,11 +73,11 @@ Plans:
   2. User can execute a parameterized SQL query with typed parameters (string, integer, float, null) using positional placeholders
   3. User can begin, commit, and rollback explicit transactions
   4. User can check whether a transaction is currently active via `inTransaction()`
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
+- [ ] 04-01-PLAN.md -- Query operations (queryString, queryInteger, queryFloat) with plain and parameterized SQL, TDD
+- [ ] 04-02-PLAN.md -- Transaction control (beginTransaction, commit, rollback, inTransaction), TDD
 
 ### Phase 5: Package and Distribution
 **Goal**: The binding is a well-structured npm package with TypeScript types, a test suite, and development tooling
@@ -103,9 +103,9 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 1. FFI Foundation and Database Lifecycle | 0/2 | Planned | - |
 | 2. Element Builder and CRUD | 1/1 | Complete   | 2026-03-09 |
 | 3. Read Operations | 0/1 | Planned | - |
-| 4. Query and Transaction Control | 0/? | Not started | - |
+| 4. Query and Transaction Control | 0/2 | Planned | - |
 | 5. Package and Distribution | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-03-08*
-*Last updated: 2026-03-08*
+*Last updated: 2026-03-09*
