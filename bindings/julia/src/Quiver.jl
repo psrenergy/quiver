@@ -21,13 +21,10 @@ include("database_delete.jl")
 include("database_transaction.jl")
 include("helper_maps.jl")
 include("lua_runner.jl")
-include("binary/binary_metadata.jl")
-include("binary/binary.jl")
-include("binary/csv_converter.jl")
+include("binary/Binary.jl")
 
 export Element, Database, LuaRunner, DatabaseException
 export ScalarMetadata, GroupMetadata
-export BinaryMetadata, BinaryDimension, Binary
 export QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_FLOAT, QUIVER_DATA_TYPE_STRING
 
 # Re-export C enum constants for data types

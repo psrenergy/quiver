@@ -17,7 +17,7 @@ function cleanup_binary(path)
 end
 
 function make_simple_metadata()
-    return Quiver.BinaryMetadata(;
+    return Quiver.Binary.Metadata(;
         initial_datetime = "2025-01-01T00:00:00",
         unit = "MW",
         labels = ["val1", "val2"],
@@ -27,7 +27,7 @@ function make_simple_metadata()
 end
 
 function make_time_metadata()
-    return Quiver.BinaryMetadata(;
+    return Quiver.Binary.Metadata(;
         initial_datetime = "2025-01-01T00:00:00",
         unit = "MW",
         labels = ["plant_1", "plant_2"],
@@ -39,7 +39,7 @@ function make_time_metadata()
 end
 
 function make_hourly_metadata()
-    return Quiver.BinaryMetadata(;
+    return Quiver.Binary.Metadata(;
         initial_datetime = "2025-01-01T00:00:00",
         unit = "MW",
         labels = ["val"],
@@ -51,7 +51,7 @@ function make_hourly_metadata()
 end
 
 function write_toml(path, md)
-    toml_str = Quiver.to_toml(md)
+    toml_str = Quiver.Binary.to_toml(md)
     open(path * ".toml", "w") do f
         return write(f, toml_str)
     end
@@ -81,10 +81,10 @@ end
         path = make_binary_path()
         try
             md = make_simple_metadata()
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = false)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = false)
             lines = csv_lines(path)
             @test length(lines) >= 1
             @test lines[1] == "row,col,val1,val2"
@@ -97,10 +97,10 @@ end
         path = make_binary_path()
         try
             md = make_time_metadata()
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = true)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = true)
             lines = csv_lines(path)
             @test length(lines) >= 1
             @test lines[1] == "date,plant_1,plant_2"
@@ -113,10 +113,10 @@ end
         path = make_binary_path()
         try
             md = make_hourly_metadata()
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = true)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = true)
             lines = csv_lines(path)
             @test length(lines) >= 1
             @test lines[1] == "datetime,val"
@@ -129,10 +129,10 @@ end
         path = make_binary_path()
         try
             md = make_time_metadata()
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = false)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = false)
             lines = csv_lines(path)
             @test length(lines) >= 1
             @test lines[1] == "stage,block,plant_1,plant_2"
@@ -149,10 +149,10 @@ end
         path = make_binary_path()
         try
             md = make_simple_metadata()
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = true)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = true)
             @test isfile(path * ".csv")
         finally
             cleanup_binary(path)
@@ -163,12 +163,12 @@ end
         path = make_binary_path()
         try
             md = make_simple_metadata()
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.write!(binary; data = [1.5, 2.5], row = 1, col = 1)
-            Quiver.write!(binary; data = [3.5, 4.5], row = 1, col = 2)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.write!(binary; data = [1.5, 2.5], row = 1, col = 1)
+            Quiver.Binary.write!(binary; data = [3.5, 4.5], row = 1, col = 2)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = false)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = false)
             lines = csv_lines(path)
             @test length(lines) >= 3
             @test lines[2] == "1,1,1.5,2.5"
@@ -182,10 +182,10 @@ end
         path = make_binary_path()
         try
             md = make_simple_metadata()
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = false)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = false)
             lines = csv_lines(path)
             @test length(lines) >= 2
             @test occursin("null", lines[2])
@@ -197,18 +197,18 @@ end
     @testset "Float precision" begin
         path = make_binary_path()
         try
-            md = Quiver.BinaryMetadata(;
+            md = Quiver.Binary.Metadata(;
                 initial_datetime = "2025-01-01T00:00:00",
                 unit = "MW",
                 labels = ["val"],
                 dimensions = ["row"],
                 dimension_sizes = Int64[1],
             )
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.write!(binary; data = [1.23456789], row = 1)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.write!(binary; data = [1.23456789], row = 1)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = false)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = false)
             lines = csv_lines(path)
             @test length(lines) >= 2
             @test lines[2] == "1,1.23457"
@@ -225,10 +225,10 @@ end
         path = make_binary_path()
         try
             md = make_simple_metadata()
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = false)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = false)
             lines = csv_lines(path)
             # 3 * 2 = 6 data rows + 1 header
             @test length(lines) == 7
@@ -241,10 +241,10 @@ end
         path = make_binary_path()
         try
             md = make_time_metadata()
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = false)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = false)
             lines = csv_lines(path)
             data_rows = length(lines) - 1
             # Must be less than 4 * 31 = 124 (variable month lengths)
@@ -260,10 +260,10 @@ end
         path = make_binary_path()
         try
             md = make_hourly_metadata()
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = true)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = true)
             lines = csv_lines(path)
             data_rows = length(lines) - 1
             # 3 days * 24 hours = 72
@@ -287,7 +287,7 @@ end
             csv *= "2,1,5.0,6.0\n2,2,7.0,8.0\n"
             csv *= "3,1,9.0,10.0\n3,2,11.0,12.0\n"
             write_csv(path, csv)
-            Quiver.csv_to_bin(path)
+            Quiver.Binary.csv_to_bin(path)
             @test isfile(path * ".qvr")
         finally
             cleanup_binary(path)
@@ -304,16 +304,16 @@ end
             csv *= "2,1,5.5,6.5\n2,2,7.5,8.5\n"
             csv *= "3,1,9.5,10.5\n3,2,11.5,12.5\n"
             write_csv(path, csv)
-            Quiver.csv_to_bin(path)
+            Quiver.Binary.csv_to_bin(path)
 
-            binary = Quiver.open_file(path; mode = :read)
-            v = Quiver.read(binary; row = 1, col = 1)
+            binary = Quiver.Binary.open_file(path; mode = :read)
+            v = Quiver.Binary.read(binary; row = 1, col = 1)
             @test v[1] ≈ 1.5
             @test v[2] ≈ 2.5
-            v2 = Quiver.read(binary; row = 3, col = 2)
+            v2 = Quiver.Binary.read(binary; row = 3, col = 2)
             @test v2[1] ≈ 11.5
             @test v2[2] ≈ 12.5
-            Quiver.close!(binary)
+            Quiver.Binary.close!(binary)
         finally
             cleanup_binary(path)
         end
@@ -323,18 +323,18 @@ end
         path = make_binary_path()
         try
             md = make_hourly_metadata()
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.write!(binary; data = [42.0], day = 1, hour = 1)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.write!(binary; data = [42.0], day = 1, hour = 1)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = true)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = true)
             rm(path * ".qvr")
-            Quiver.csv_to_bin(path)
+            Quiver.Binary.csv_to_bin(path)
 
-            binary = Quiver.open_file(path; mode = :read)
-            v = Quiver.read(binary; day = 1, hour = 1)
+            binary = Quiver.Binary.open_file(path; mode = :read)
+            v = Quiver.Binary.read(binary; day = 1, hour = 1)
             @test v[1] ≈ 42.0
-            Quiver.close!(binary)
+            Quiver.Binary.close!(binary)
         finally
             cleanup_binary(path)
         end
@@ -344,19 +344,19 @@ end
         path = make_binary_path()
         try
             md = make_time_metadata()
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.write!(binary; data = [10.0, 20.0], stage = 1, block = 1)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.write!(binary; data = [10.0, 20.0], stage = 1, block = 1)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = true)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = true)
             rm(path * ".qvr")
-            Quiver.csv_to_bin(path)
+            Quiver.Binary.csv_to_bin(path)
 
-            binary = Quiver.open_file(path; mode = :read)
-            v = Quiver.read(binary; stage = 1, block = 1)
+            binary = Quiver.Binary.open_file(path; mode = :read)
+            v = Quiver.Binary.read(binary; stage = 1, block = 1)
             @test v[1] ≈ 10.0
             @test v[2] ≈ 20.0
-            Quiver.close!(binary)
+            Quiver.Binary.close!(binary)
         finally
             cleanup_binary(path)
         end
@@ -366,19 +366,19 @@ end
         path = make_binary_path()
         try
             md = make_time_metadata()
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.write!(binary; data = [5.0, 6.0], stage = 1, block = 1)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.write!(binary; data = [5.0, 6.0], stage = 1, block = 1)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = false)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = false)
             rm(path * ".qvr")
-            Quiver.csv_to_bin(path)
+            Quiver.Binary.csv_to_bin(path)
 
-            binary = Quiver.open_file(path; mode = :read)
-            v = Quiver.read(binary; stage = 1, block = 1)
+            binary = Quiver.Binary.open_file(path; mode = :read)
+            v = Quiver.Binary.read(binary; stage = 1, block = 1)
             @test v[1] ≈ 5.0
             @test v[2] ≈ 6.0
-            Quiver.close!(binary)
+            Quiver.Binary.close!(binary)
         finally
             cleanup_binary(path)
         end
@@ -394,7 +394,7 @@ end
             md = make_simple_metadata()
             write_toml(path, md)
             write_csv(path, "row,bad_name,val1,val2\n1,1,1.0,2.0\n")
-            @test_throws Quiver.DatabaseException Quiver.csv_to_bin(path)
+            @test_throws Quiver.DatabaseException Quiver.Binary.csv_to_bin(path)
         finally
             cleanup_binary(path)
         end
@@ -406,7 +406,7 @@ end
             md = make_simple_metadata()
             write_toml(path, md)
             write_csv(path, "row,col\n1,1\n")
-            @test_throws Quiver.DatabaseException Quiver.csv_to_bin(path)
+            @test_throws Quiver.DatabaseException Quiver.Binary.csv_to_bin(path)
         finally
             cleanup_binary(path)
         end
@@ -418,7 +418,7 @@ end
             md = make_simple_metadata()
             write_toml(path, md)
             write_csv(path, "row,col,val1,val2,extra\n1,1,1.0,2.0,3.0\n")
-            @test_throws Quiver.DatabaseException Quiver.csv_to_bin(path)
+            @test_throws Quiver.DatabaseException Quiver.Binary.csv_to_bin(path)
         finally
             cleanup_binary(path)
         end
@@ -430,7 +430,7 @@ end
             md = make_simple_metadata()
             write_toml(path, md)
             write_csv(path, "row,col,val1,val2\n2,1,1.0,2.0\n")
-            @test_throws Quiver.DatabaseException Quiver.csv_to_bin(path)
+            @test_throws Quiver.DatabaseException Quiver.Binary.csv_to_bin(path)
         finally
             cleanup_binary(path)
         end
@@ -442,7 +442,7 @@ end
             md = make_simple_metadata()
             write_toml(path, md)
             write_csv(path, "row,col,val1,val2\n1,1,abc,2.0\n")
-            @test_throws Quiver.DatabaseException Quiver.csv_to_bin(path)
+            @test_throws Quiver.DatabaseException Quiver.Binary.csv_to_bin(path)
         finally
             cleanup_binary(path)
         end
@@ -454,7 +454,7 @@ end
             md = make_simple_metadata()
             write_toml(path, md)
             write_csv(path, "row,col,val1,val2\n1,1,,2.0\n")
-            @test_throws Quiver.DatabaseException Quiver.csv_to_bin(path)
+            @test_throws Quiver.DatabaseException Quiver.Binary.csv_to_bin(path)
         finally
             cleanup_binary(path)
         end
@@ -466,7 +466,7 @@ end
             md = make_simple_metadata()
             write_toml(path, md)
             write_csv(path, "")
-            @test_throws Quiver.DatabaseException Quiver.csv_to_bin(path)
+            @test_throws Quiver.DatabaseException Quiver.Binary.csv_to_bin(path)
         finally
             cleanup_binary(path)
         end
@@ -480,23 +480,23 @@ end
         path = make_binary_path()
         try
             md = make_time_metadata()
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.write!(binary; data = [100.0, 200.0], stage = 1, block = 1)
-            Quiver.write!(binary; data = [300.0, 400.0], stage = 2, block = 15)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.write!(binary; data = [100.0, 200.0], stage = 1, block = 1)
+            Quiver.Binary.write!(binary; data = [300.0, 400.0], stage = 2, block = 15)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = true)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = true)
             rm(path * ".qvr")
-            Quiver.csv_to_bin(path)
+            Quiver.Binary.csv_to_bin(path)
 
-            binary = Quiver.open_file(path; mode = :read)
-            v1 = Quiver.read(binary; stage = 1, block = 1)
+            binary = Quiver.Binary.open_file(path; mode = :read)
+            v1 = Quiver.Binary.read(binary; stage = 1, block = 1)
             @test v1[1] ≈ 100.0
             @test v1[2] ≈ 200.0
-            v2 = Quiver.read(binary; stage = 2, block = 15)
+            v2 = Quiver.Binary.read(binary; stage = 2, block = 15)
             @test v2[1] ≈ 300.0
             @test v2[2] ≈ 400.0
-            Quiver.close!(binary)
+            Quiver.Binary.close!(binary)
         finally
             cleanup_binary(path)
         end
@@ -506,17 +506,17 @@ end
         path = make_binary_path()
         try
             md = make_time_metadata()
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.write!(binary; data = [1.0, 2.0], stage = 1, block = 1)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.write!(binary; data = [1.0, 2.0], stage = 1, block = 1)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = true)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = true)
             csv1 = read_csv(path)
 
             rm(path * ".qvr")
-            Quiver.csv_to_bin(path)
+            Quiver.Binary.csv_to_bin(path)
             rm(path * ".csv")
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = true)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = true)
             csv2 = read_csv(path)
 
             @test csv1 == csv2
@@ -529,12 +529,12 @@ end
         path = make_binary_path()
         try
             md = make_hourly_metadata()
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.write!(binary; data = [77.0], day = 1, hour = 12)
-            Quiver.write!(binary; data = [88.0], day = 3, hour = 24)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.write!(binary; data = [77.0], day = 1, hour = 12)
+            Quiver.Binary.write!(binary; data = [88.0], day = 3, hour = 24)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = true)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = true)
 
             # Verify datetime strings include time component
             lines = csv_lines(path)
@@ -544,12 +544,12 @@ end
             @test has_time_component
 
             rm(path * ".qvr")
-            Quiver.csv_to_bin(path)
+            Quiver.Binary.csv_to_bin(path)
 
-            binary = Quiver.open_file(path; mode = :read)
-            @test Quiver.read(binary; day = 1, hour = 12)[1] ≈ 77.0
-            @test Quiver.read(binary; day = 3, hour = 24)[1] ≈ 88.0
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :read)
+            @test Quiver.Binary.read(binary; day = 1, hour = 12)[1] ≈ 77.0
+            @test Quiver.Binary.read(binary; day = 3, hour = 24)[1] ≈ 88.0
+            Quiver.Binary.close!(binary)
         finally
             cleanup_binary(path)
         end
@@ -559,17 +559,17 @@ end
         path = make_binary_path()
         try
             md = make_hourly_metadata()
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.write!(binary; data = [1.0], day = 1, hour = 1)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.write!(binary; data = [1.0], day = 1, hour = 1)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = true)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = true)
             csv1 = read_csv(path)
 
             rm(path * ".qvr")
-            Quiver.csv_to_bin(path)
+            Quiver.Binary.csv_to_bin(path)
             rm(path * ".csv")
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = true)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = true)
             csv2 = read_csv(path)
 
             @test csv1 == csv2
@@ -582,23 +582,23 @@ end
         path = make_binary_path()
         try
             md = make_simple_metadata()
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = false)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = false)
 
             lines = csv_lines(path)
             @test length(lines) >= 2
             @test occursin("null", lines[2])
 
             rm(path * ".qvr")
-            Quiver.csv_to_bin(path)
+            Quiver.Binary.csv_to_bin(path)
 
-            binary = Quiver.open_file(path; mode = :read)
-            v = Quiver.read(binary; row = 1, col = 1, allow_nulls = true)
+            binary = Quiver.Binary.open_file(path; mode = :read)
+            v = Quiver.Binary.read(binary; row = 1, col = 1, allow_nulls = true)
             @test isnan(v[1])
             @test isnan(v[2])
-            Quiver.close!(binary)
+            Quiver.Binary.close!(binary)
         finally
             cleanup_binary(path)
         end
@@ -610,38 +610,38 @@ end
             md = make_time_metadata()
 
             # Aggregated round-trip
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.write!(binary; data = [1.0, 2.0], stage = 1, block = 1)
-            Quiver.write!(binary; data = [3.0, 4.0], stage = 1, block = 5)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.write!(binary; data = [1.0, 2.0], stage = 1, block = 1)
+            Quiver.Binary.write!(binary; data = [3.0, 4.0], stage = 1, block = 5)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = true)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = true)
             rm(path * ".qvr")
-            Quiver.csv_to_bin(path)
+            Quiver.Binary.csv_to_bin(path)
 
-            binary = Quiver.open_file(path; mode = :read)
-            v1a = Quiver.read(binary; stage = 1, block = 1)
-            v1b = Quiver.read(binary; stage = 1, block = 5)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :read)
+            v1a = Quiver.Binary.read(binary; stage = 1, block = 1)
+            v1b = Quiver.Binary.read(binary; stage = 1, block = 5)
+            Quiver.Binary.close!(binary)
 
             # Reset
             rm(path * ".qvr")
             rm(path * ".csv")
 
             # Non-aggregated round-trip
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.write!(binary; data = [1.0, 2.0], stage = 1, block = 1)
-            Quiver.write!(binary; data = [3.0, 4.0], stage = 1, block = 5)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.write!(binary; data = [1.0, 2.0], stage = 1, block = 1)
+            Quiver.Binary.write!(binary; data = [3.0, 4.0], stage = 1, block = 5)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = false)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = false)
             rm(path * ".qvr")
-            Quiver.csv_to_bin(path)
+            Quiver.Binary.csv_to_bin(path)
 
-            binary = Quiver.open_file(path; mode = :read)
-            v2a = Quiver.read(binary; stage = 1, block = 1)
-            v2b = Quiver.read(binary; stage = 1, block = 5)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :read)
+            v2a = Quiver.Binary.read(binary; stage = 1, block = 1)
+            v2b = Quiver.Binary.read(binary; stage = 1, block = 5)
+            Quiver.Binary.close!(binary)
 
             @test v1a[1] ≈ v2a[1]
             @test v1a[2] ≈ v2a[2]
@@ -655,7 +655,7 @@ end
     @testset "Round-trip mixed time and non-time" begin
         path = make_binary_path()
         try
-            md = Quiver.BinaryMetadata(;
+            md = Quiver.Binary.Metadata(;
                 initial_datetime = "2025-01-01T00:00:00",
                 unit = "MW",
                 labels = ["val"],
@@ -665,19 +665,19 @@ end
                 frequencies = ["monthly", "daily"],
             )
 
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.write!(binary; data = [99.0], month = 1, scenario = 1, day = 1)
-            Quiver.write!(binary; data = [77.0], month = 2, scenario = 2, day = 15)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.write!(binary; data = [99.0], month = 1, scenario = 1, day = 1)
+            Quiver.Binary.write!(binary; data = [77.0], month = 2, scenario = 2, day = 15)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = true)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = true)
             rm(path * ".qvr")
-            Quiver.csv_to_bin(path)
+            Quiver.Binary.csv_to_bin(path)
 
-            binary = Quiver.open_file(path; mode = :read)
-            @test Quiver.read(binary; month = 1, scenario = 1, day = 1)[1] ≈ 99.0
-            @test Quiver.read(binary; month = 2, scenario = 2, day = 15)[1] ≈ 77.0
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :read)
+            @test Quiver.Binary.read(binary; month = 1, scenario = 1, day = 1)[1] ≈ 99.0
+            @test Quiver.Binary.read(binary; month = 2, scenario = 2, day = 15)[1] ≈ 77.0
+            Quiver.Binary.close!(binary)
         finally
             cleanup_binary(path)
         end
@@ -691,13 +691,13 @@ end
         path = make_binary_path()
         try
             md = make_simple_metadata()
-            binary = Quiver.open_file(path; mode = :write, metadata = md)
-            Quiver.write!(binary; data = [1.0, 2.0], row = 1, col = 1)
-            Quiver.close!(binary)
+            binary = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.write!(binary; data = [1.0, 2.0], row = 1, col = 1)
+            Quiver.Binary.close!(binary)
 
-            Quiver.bin_to_csv(path; aggregate_time_dimensions = false)
+            Quiver.Binary.bin_to_csv(path; aggregate_time_dimensions = false)
             rm(path * ".qvr")
-            Quiver.csv_to_bin(path)
+            Quiver.Binary.csv_to_bin(path)
             @test isfile(path * ".qvr")
         finally
             cleanup_binary(path)
@@ -710,7 +710,7 @@ end
             md = make_simple_metadata()
             write_toml(path, md)
             write_csv(path, "row,wrong,val1,val2\n1,1,1.0,2.0\n")
-            @test_throws Quiver.DatabaseException Quiver.csv_to_bin(path)
+            @test_throws Quiver.DatabaseException Quiver.Binary.csv_to_bin(path)
         finally
             cleanup_binary(path)
         end
@@ -722,7 +722,7 @@ end
             md = make_simple_metadata()
             write_toml(path, md)
             write_csv(path, "row,col,val1,val2,extra\n1,1,1.0,2.0,3.0\n")
-            @test_throws Quiver.DatabaseException Quiver.csv_to_bin(path)
+            @test_throws Quiver.DatabaseException Quiver.Binary.csv_to_bin(path)
         finally
             cleanup_binary(path)
         end
@@ -734,7 +734,7 @@ end
             md = make_simple_metadata()
             write_toml(path, md)
             write_csv(path, "row,col,val1\n1,1,1.0\n")
-            @test_throws Quiver.DatabaseException Quiver.csv_to_bin(path)
+            @test_throws Quiver.DatabaseException Quiver.Binary.csv_to_bin(path)
         finally
             cleanup_binary(path)
         end
@@ -754,7 +754,7 @@ end
             csv *= "2,1,5.0,6.0\n2,2,7.0,8.0\n"
             csv *= "3,1,9.0,10.0\n3,2,11.0,12.0\n"
             write_csv(path, csv)
-            Quiver.csv_to_bin(path)
+            Quiver.Binary.csv_to_bin(path)
             @test isfile(path * ".qvr")
         finally
             cleanup_binary(path)
@@ -767,7 +767,7 @@ end
             md = make_simple_metadata()
             write_toml(path, md)
             write_csv(path, "row,col,val1,val2\n1,2,1.0,2.0\n")
-            @test_throws Quiver.DatabaseException Quiver.csv_to_bin(path)
+            @test_throws Quiver.DatabaseException Quiver.Binary.csv_to_bin(path)
         finally
             cleanup_binary(path)
         end
@@ -779,7 +779,7 @@ end
             md = make_time_metadata()
             write_toml(path, md)
             write_csv(path, "date,plant_1,plant_2\n2025-02-01,1.0,2.0\n")
-            @test_throws Quiver.DatabaseException Quiver.csv_to_bin(path)
+            @test_throws Quiver.DatabaseException Quiver.Binary.csv_to_bin(path)
         finally
             cleanup_binary(path)
         end

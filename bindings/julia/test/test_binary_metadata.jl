@@ -1,4 +1,4 @@
-module TestBinaryMetadata
+module TestMetadata
 
 using Quiver
 using Test
@@ -18,50 +18,50 @@ function make_valid_toml()
         """
 end
 
-@testset "BinaryMetadata" begin
+@testset "Metadata" begin
     # ==========================================================================
     # from_toml
     # ==========================================================================
 
     @testset "from_toml all fields populated" begin
-        md = Quiver.from_toml(make_valid_toml())
-        @test Quiver.get_version(md) == "1"
-        @test Quiver.get_unit(md) == "MW"
-        @test Quiver.get_labels(md) == ["plant_1", "plant_2"]
+        md = Quiver.Binary.from_toml(make_valid_toml())
+        @test Quiver.Binary.get_version(md) == "1"
+        @test Quiver.Binary.get_unit(md) == "MW"
+        @test Quiver.Binary.get_labels(md) == ["plant_1", "plant_2"]
 
-        dims = Quiver.get_dimensions(md)
+        dims = Quiver.Binary.get_dimensions(md)
         @test length(dims) == 2
         @test dims[1].name == "stage"
         @test dims[1].size == 4
         @test dims[2].name == "block"
         @test dims[2].size == 31
-        @test Quiver.get_number_of_time_dimensions(md) == 2
+        @test Quiver.Binary.get_number_of_time_dimensions(md) == 2
     end
 
     @testset "from_toml time dimensions marked" begin
-        md = Quiver.from_toml(make_valid_toml())
-        dims = Quiver.get_dimensions(md)
+        md = Quiver.Binary.from_toml(make_valid_toml())
+        dims = Quiver.Binary.get_dimensions(md)
         @test dims[1].is_time_dimension == true
         @test dims[2].is_time_dimension == true
     end
 
     @testset "from_toml frequencies assigned" begin
-        md = Quiver.from_toml(make_valid_toml())
-        dims = Quiver.get_dimensions(md)
+        md = Quiver.Binary.from_toml(make_valid_toml())
+        dims = Quiver.Binary.get_dimensions(md)
         @test dims[1].frequency == "monthly"
         @test dims[2].frequency == "daily"
     end
 
     @testset "from_toml parent indices set" begin
-        md = Quiver.from_toml(make_valid_toml())
-        dims = Quiver.get_dimensions(md)
+        md = Quiver.Binary.from_toml(make_valid_toml())
+        dims = Quiver.Binary.get_dimensions(md)
         @test dims[1].parent_dimension_index == -1
         @test dims[2].parent_dimension_index == 0
     end
 
     @testset "from_toml initial values Jan 1st" begin
-        md = Quiver.from_toml(make_valid_toml())
-        dims = Quiver.get_dimensions(md)
+        md = Quiver.Binary.from_toml(make_valid_toml())
+        dims = Quiver.Binary.get_dimensions(md)
         @test dims[1].initial_value == 1
         @test dims[2].initial_value == 1
     end
@@ -77,8 +77,8 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        md = Quiver.from_toml(toml)
-        dims = Quiver.get_dimensions(md)
+        md = Quiver.Binary.from_toml(toml)
+        dims = Quiver.Binary.get_dimensions(md)
         @test dims[1].initial_value == 1
         @test dims[2].initial_value == 15
     end
@@ -94,8 +94,8 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        md = Quiver.from_toml(toml)
-        dims = Quiver.get_dimensions(md)
+        md = Quiver.Binary.from_toml(toml)
+        dims = Quiver.Binary.get_dimensions(md)
         @test dims[1].initial_value == 1
         @test dims[2].initial_value == 1
         @test dims[3].initial_value == 11  # hour 10 -> 10+1=11
@@ -112,13 +112,13 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        md = Quiver.from_toml(toml)
-        dims = Quiver.get_dimensions(md)
+        md = Quiver.Binary.from_toml(toml)
+        dims = Quiver.Binary.get_dimensions(md)
         @test length(dims) == 3
         @test dims[1].is_time_dimension == true
         @test dims[2].is_time_dimension == false
         @test dims[3].is_time_dimension == true
-        @test Quiver.get_number_of_time_dimensions(md) == 2
+        @test Quiver.Binary.get_number_of_time_dimensions(md) == 2
     end
 
     @testset "from_toml error time dimension not in dimensions" begin
@@ -132,7 +132,7 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        @test_throws Quiver.DatabaseException Quiver.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
     end
 
     @testset "from_toml error time dimensions out of order" begin
@@ -146,7 +146,7 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        @test_throws Quiver.DatabaseException Quiver.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
     end
 
     @testset "from_toml no time dimensions" begin
@@ -160,9 +160,9 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        md = Quiver.from_toml(toml)
-        @test Quiver.get_number_of_time_dimensions(md) == 0
-        dims = Quiver.get_dimensions(md)
+        md = Quiver.Binary.from_toml(toml)
+        @test Quiver.Binary.get_number_of_time_dimensions(md) == 0
+        dims = Quiver.Binary.get_dimensions(md)
         @test dims[1].is_time_dimension == false
         @test dims[2].is_time_dimension == false
     end
@@ -172,7 +172,7 @@ end
     # ==========================================================================
 
     @testset "Builder constructor without time dimensions" begin
-        md = Quiver.BinaryMetadata(;
+        md = Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00",
             unit = "MW",
             version = "1",
@@ -181,11 +181,11 @@ end
             dimension_sizes = Int64[3, 2],
         )
 
-        @test Quiver.get_unit(md) == "MW"
-        @test Quiver.get_version(md) == "1"
-        @test Quiver.get_labels(md) == ["val1", "val2"]
+        @test Quiver.Binary.get_unit(md) == "MW"
+        @test Quiver.Binary.get_version(md) == "1"
+        @test Quiver.Binary.get_labels(md) == ["val1", "val2"]
 
-        dims = Quiver.get_dimensions(md)
+        dims = Quiver.Binary.get_dimensions(md)
         @test length(dims) == 2
         @test dims[1].name == "row"
         @test dims[1].size == 3
@@ -195,7 +195,7 @@ end
     end
 
     @testset "Builder constructor with time dimensions" begin
-        md = Quiver.BinaryMetadata(;
+        md = Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00",
             unit = "MW",
             version = "1",
@@ -206,11 +206,11 @@ end
             frequencies = ["monthly", "daily"],
         )
 
-        @test Quiver.get_unit(md) == "MW"
-        @test Quiver.get_labels(md) == ["plant_1", "plant_2", "plant_3"]
-        @test Quiver.get_number_of_time_dimensions(md) == 2
+        @test Quiver.Binary.get_unit(md) == "MW"
+        @test Quiver.Binary.get_labels(md) == ["plant_1", "plant_2", "plant_3"]
+        @test Quiver.Binary.get_number_of_time_dimensions(md) == 2
 
-        dims = Quiver.get_dimensions(md)
+        dims = Quiver.Binary.get_dimensions(md)
         @test length(dims) == 2
         @test dims[1].name == "stage"
         @test dims[1].size == 4
@@ -223,7 +223,7 @@ end
     end
 
     @testset "Builder constructor mixed time and non-time" begin
-        md = Quiver.BinaryMetadata(;
+        md = Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00",
             unit = "MW",
             labels = ["val"],
@@ -233,7 +233,7 @@ end
             frequencies = ["monthly", "daily"],
         )
 
-        dims = Quiver.get_dimensions(md)
+        dims = Quiver.Binary.get_dimensions(md)
         @test length(dims) == 3
         @test dims[1].is_time_dimension == true
         @test dims[2].is_time_dimension == false
@@ -255,13 +255,13 @@ end
         el["frequencies"] = ["monthly", "daily"]
         el["labels"] = ["plant_1", "plant_2"]
 
-        md = Quiver.from_element(el)
-        @test Quiver.get_unit(md) == "MW"
-        @test Quiver.get_version(md) == "1"
-        @test Quiver.get_labels(md) == ["plant_1", "plant_2"]
-        @test Quiver.get_number_of_time_dimensions(md) == 2
+        md = Quiver.Binary.from_element(el)
+        @test Quiver.Binary.get_unit(md) == "MW"
+        @test Quiver.Binary.get_version(md) == "1"
+        @test Quiver.Binary.get_labels(md) == ["plant_1", "plant_2"]
+        @test Quiver.Binary.get_number_of_time_dimensions(md) == 2
 
-        dims = Quiver.get_dimensions(md)
+        dims = Quiver.Binary.get_dimensions(md)
         @test length(dims) == 2
         @test dims[1].name == "stage"
         @test dims[1].size == 4
@@ -284,9 +284,9 @@ end
         el["dimension_sizes"] = Int64[3, 2]
         el["labels"] = ["val"]
 
-        md = Quiver.from_element(el)
-        @test Quiver.get_number_of_time_dimensions(md) == 0
-        dims = Quiver.get_dimensions(md)
+        md = Quiver.Binary.from_element(el)
+        @test Quiver.Binary.get_number_of_time_dimensions(md) == 0
+        dims = Quiver.Binary.get_dimensions(md)
         @test dims[1].is_time_dimension == false
         @test dims[2].is_time_dimension == false
     end
@@ -302,16 +302,16 @@ end
         el["frequencies"] = ["monthly", "daily"]
         el["labels"] = ["plant_1", "plant_2"]
 
-        md_element = Quiver.from_element(el)
-        md_toml = Quiver.from_toml(make_valid_toml())
+        md_element = Quiver.Binary.from_element(el)
+        md_toml = Quiver.Binary.from_toml(make_valid_toml())
 
-        @test Quiver.get_version(md_element) == Quiver.get_version(md_toml)
-        @test Quiver.get_unit(md_element) == Quiver.get_unit(md_toml)
-        @test Quiver.get_labels(md_element) == Quiver.get_labels(md_toml)
-        @test Quiver.get_number_of_time_dimensions(md_element) == Quiver.get_number_of_time_dimensions(md_toml)
+        @test Quiver.Binary.get_version(md_element) == Quiver.Binary.get_version(md_toml)
+        @test Quiver.Binary.get_unit(md_element) == Quiver.Binary.get_unit(md_toml)
+        @test Quiver.Binary.get_labels(md_element) == Quiver.Binary.get_labels(md_toml)
+        @test Quiver.Binary.get_number_of_time_dimensions(md_element) == Quiver.Binary.get_number_of_time_dimensions(md_toml)
 
-        dims_el = Quiver.get_dimensions(md_element)
-        dims_toml = Quiver.get_dimensions(md_toml)
+        dims_el = Quiver.Binary.get_dimensions(md_element)
+        dims_toml = Quiver.Binary.get_dimensions(md_toml)
         @test length(dims_el) == length(dims_toml)
         for i in eachindex(dims_el)
             @test dims_el[i].name == dims_toml[i].name
@@ -336,7 +336,7 @@ end
         el["dimensions"] = ["row"]
         el["dimension_sizes"] = Int64[3]
         el["labels"] = ["val"]
-        @test_throws Quiver.DatabaseException Quiver.from_element(el)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_element(el)
     end
 
     @testset "from_element missing unit" begin
@@ -346,7 +346,7 @@ end
         el["dimensions"] = ["row"]
         el["dimension_sizes"] = Int64[3]
         el["labels"] = ["val"]
-        @test_throws Quiver.DatabaseException Quiver.from_element(el)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_element(el)
     end
 
     @testset "from_element missing initial_datetime" begin
@@ -356,7 +356,7 @@ end
         el["dimensions"] = ["row"]
         el["dimension_sizes"] = Int64[3]
         el["labels"] = ["val"]
-        @test_throws Quiver.DatabaseException Quiver.from_element(el)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_element(el)
     end
 
     @testset "from_element missing dimensions" begin
@@ -366,7 +366,7 @@ end
         el["unit"] = "MW"
         el["dimension_sizes"] = Int64[3]
         el["labels"] = ["val"]
-        @test_throws Quiver.DatabaseException Quiver.from_element(el)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_element(el)
     end
 
     @testset "from_element missing dimension_sizes" begin
@@ -376,7 +376,7 @@ end
         el["unit"] = "MW"
         el["dimensions"] = ["row"]
         el["labels"] = ["val"]
-        @test_throws Quiver.DatabaseException Quiver.from_element(el)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_element(el)
     end
 
     @testset "from_element missing labels" begin
@@ -386,7 +386,7 @@ end
         el["unit"] = "MW"
         el["dimensions"] = ["row"]
         el["dimension_sizes"] = Int64[3]
-        @test_throws Quiver.DatabaseException Quiver.from_element(el)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_element(el)
     end
 
     @testset "from_element invalid version propagates validation" begin
@@ -397,7 +397,7 @@ end
         el["dimensions"] = ["row"]
         el["dimension_sizes"] = Int64[3]
         el["labels"] = ["val"]
-        @test_throws Quiver.DatabaseException Quiver.from_element(el)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_element(el)
     end
 
     # ==========================================================================
@@ -405,16 +405,16 @@ end
     # ==========================================================================
 
     @testset "to_toml round-trip" begin
-        md1 = Quiver.from_toml(make_valid_toml())
-        toml_str = Quiver.to_toml(md1)
-        md2 = Quiver.from_toml(toml_str)
+        md1 = Quiver.Binary.from_toml(make_valid_toml())
+        toml_str = Quiver.Binary.to_toml(md1)
+        md2 = Quiver.Binary.from_toml(toml_str)
 
-        @test Quiver.get_version(md1) == Quiver.get_version(md2)
-        @test Quiver.get_unit(md1) == Quiver.get_unit(md2)
-        @test Quiver.get_labels(md1) == Quiver.get_labels(md2)
+        @test Quiver.Binary.get_version(md1) == Quiver.Binary.get_version(md2)
+        @test Quiver.Binary.get_unit(md1) == Quiver.Binary.get_unit(md2)
+        @test Quiver.Binary.get_labels(md1) == Quiver.Binary.get_labels(md2)
 
-        dims1 = Quiver.get_dimensions(md1)
-        dims2 = Quiver.get_dimensions(md2)
+        dims1 = Quiver.Binary.get_dimensions(md1)
+        dims2 = Quiver.Binary.get_dimensions(md2)
         @test length(dims1) == length(dims2)
         for i in eachindex(dims1)
             @test dims1[i].name == dims2[i].name
@@ -423,8 +423,8 @@ end
     end
 
     @testset "to_toml output contains all keys" begin
-        md = Quiver.from_toml(make_valid_toml())
-        toml_str = Quiver.to_toml(md)
+        md = Quiver.Binary.from_toml(make_valid_toml())
+        toml_str = Quiver.Binary.to_toml(md)
 
         @test occursin("version", toml_str)
         @test occursin("dimensions", toml_str)
@@ -437,13 +437,13 @@ end
     end
 
     @testset "to_toml ISO8601 datetime format" begin
-        md = Quiver.from_toml(make_valid_toml())
-        toml_str = Quiver.to_toml(md)
+        md = Quiver.Binary.from_toml(make_valid_toml())
+        toml_str = Quiver.Binary.to_toml(md)
         @test occursin("2025-01-01T00:00:00", toml_str)
     end
 
     @testset "Get initial datetime" begin
-        md = Quiver.BinaryMetadata(;
+        md = Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00",
             unit = "MW",
             labels = ["val1"],
@@ -451,7 +451,7 @@ end
             dimension_sizes = Int64[3],
         )
 
-        dt = Quiver.get_initial_datetime(md)
+        dt = Quiver.Binary.get_initial_datetime(md)
         @test occursin("2025-01-01", dt)
     end
 
@@ -470,7 +470,7 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        @test_throws Quiver.DatabaseException Quiver.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
     end
 
     @testset "Validation: empty version" begin
@@ -484,7 +484,7 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        @test_throws Quiver.DatabaseException Quiver.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
     end
 
     @testset "Validation: empty dimensions" begin
@@ -498,7 +498,7 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        @test_throws Quiver.DatabaseException Quiver.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
     end
 
     @testset "Validation: empty labels" begin
@@ -512,7 +512,7 @@ end
             unit = "MW"
             labels = []
             """
-        @test_throws Quiver.DatabaseException Quiver.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
     end
 
     @testset "Validation: zero dimension size" begin
@@ -526,7 +526,7 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        @test_throws Quiver.DatabaseException Quiver.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
     end
 
     @testset "Validation: negative dimension size" begin
@@ -540,7 +540,7 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        @test_throws Quiver.DatabaseException Quiver.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
     end
 
     @testset "Validation: duplicate dimension names" begin
@@ -554,7 +554,7 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        @test_throws Quiver.DatabaseException Quiver.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
     end
 
     @testset "Validation: duplicate labels" begin
@@ -568,7 +568,7 @@ end
             unit = "MW"
             labels = ["val", "val"]
             """
-        @test_throws Quiver.DatabaseException Quiver.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
     end
 
     # ==========================================================================
@@ -586,7 +586,7 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        @test_throws Quiver.DatabaseException Quiver.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
     end
 
     @testset "Time validation: wrong frequency order" begin
@@ -600,12 +600,12 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        @test_throws Quiver.DatabaseException Quiver.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
     end
 
     @testset "Time validation: valid monthly daily" begin
-        md = Quiver.from_toml(make_valid_toml())
-        @test Quiver.get_number_of_time_dimensions(md) == 2
+        md = Quiver.Binary.from_toml(make_valid_toml())
+        @test Quiver.Binary.get_number_of_time_dimensions(md) == 2
     end
 
     @testset "Time validation: valid yearly monthly daily hourly" begin
@@ -619,8 +619,8 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        md = Quiver.from_toml(toml)
-        @test Quiver.get_number_of_time_dimensions(md) == 4
+        md = Quiver.Binary.from_toml(toml)
+        @test Quiver.Binary.get_number_of_time_dimensions(md) == 4
     end
 
     # ==========================================================================
@@ -629,16 +629,16 @@ end
 
     # --- Hourly under Daily ---
     @testset "Size: hourly under daily valid" begin
-        md = Quiver.BinaryMetadata(;
+        md = Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["daily", "hourly"], dimension_sizes = Int64[31, 24],
             time_dimensions = ["daily", "hourly"], frequencies = ["daily", "hourly"],
         )
-        @test Quiver.get_number_of_time_dimensions(md) == 2
+        @test Quiver.Binary.get_number_of_time_dimensions(md) == 2
     end
 
     @testset "Size: hourly under daily below min" begin
-        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["daily", "hourly"], dimension_sizes = Int64[31, 23],
             time_dimensions = ["daily", "hourly"], frequencies = ["daily", "hourly"],
@@ -646,7 +646,7 @@ end
     end
 
     @testset "Size: hourly under daily above max" begin
-        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["daily", "hourly"], dimension_sizes = Int64[31, 25],
             time_dimensions = ["daily", "hourly"], frequencies = ["daily", "hourly"],
@@ -655,25 +655,25 @@ end
 
     # --- Hourly under Monthly ---
     @testset "Size: hourly under monthly valid min" begin
-        md = Quiver.BinaryMetadata(;
+        md = Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["monthly", "hourly"], dimension_sizes = Int64[12, 672],
             time_dimensions = ["monthly", "hourly"], frequencies = ["monthly", "hourly"],
         )
-        @test Quiver.get_number_of_time_dimensions(md) == 2
+        @test Quiver.Binary.get_number_of_time_dimensions(md) == 2
     end
 
     @testset "Size: hourly under monthly valid max" begin
-        md = Quiver.BinaryMetadata(;
+        md = Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["monthly", "hourly"], dimension_sizes = Int64[12, 744],
             time_dimensions = ["monthly", "hourly"], frequencies = ["monthly", "hourly"],
         )
-        @test Quiver.get_number_of_time_dimensions(md) == 2
+        @test Quiver.Binary.get_number_of_time_dimensions(md) == 2
     end
 
     @testset "Size: hourly under monthly below min" begin
-        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["monthly", "hourly"], dimension_sizes = Int64[12, 671],
             time_dimensions = ["monthly", "hourly"], frequencies = ["monthly", "hourly"],
@@ -681,7 +681,7 @@ end
     end
 
     @testset "Size: hourly under monthly above max" begin
-        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["monthly", "hourly"], dimension_sizes = Int64[12, 745],
             time_dimensions = ["monthly", "hourly"], frequencies = ["monthly", "hourly"],
@@ -690,25 +690,25 @@ end
 
     # --- Hourly under Yearly ---
     @testset "Size: hourly under yearly valid min" begin
-        md = Quiver.BinaryMetadata(;
+        md = Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["yearly", "hourly"], dimension_sizes = Int64[3, 8760],
             time_dimensions = ["yearly", "hourly"], frequencies = ["yearly", "hourly"],
         )
-        @test Quiver.get_number_of_time_dimensions(md) == 2
+        @test Quiver.Binary.get_number_of_time_dimensions(md) == 2
     end
 
     @testset "Size: hourly under yearly valid max" begin
-        md = Quiver.BinaryMetadata(;
+        md = Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["yearly", "hourly"], dimension_sizes = Int64[3, 8784],
             time_dimensions = ["yearly", "hourly"], frequencies = ["yearly", "hourly"],
         )
-        @test Quiver.get_number_of_time_dimensions(md) == 2
+        @test Quiver.Binary.get_number_of_time_dimensions(md) == 2
     end
 
     @testset "Size: hourly under yearly below min" begin
-        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["yearly", "hourly"], dimension_sizes = Int64[3, 8759],
             time_dimensions = ["yearly", "hourly"], frequencies = ["yearly", "hourly"],
@@ -716,7 +716,7 @@ end
     end
 
     @testset "Size: hourly under yearly above max" begin
-        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["yearly", "hourly"], dimension_sizes = Int64[3, 8785],
             time_dimensions = ["yearly", "hourly"], frequencies = ["yearly", "hourly"],
@@ -725,25 +725,25 @@ end
 
     # --- Daily under Monthly ---
     @testset "Size: daily under monthly valid min" begin
-        md = Quiver.BinaryMetadata(;
+        md = Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["monthly", "daily"], dimension_sizes = Int64[12, 28],
             time_dimensions = ["monthly", "daily"], frequencies = ["monthly", "daily"],
         )
-        @test Quiver.get_number_of_time_dimensions(md) == 2
+        @test Quiver.Binary.get_number_of_time_dimensions(md) == 2
     end
 
     @testset "Size: daily under monthly valid max" begin
-        md = Quiver.BinaryMetadata(;
+        md = Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["monthly", "daily"], dimension_sizes = Int64[12, 31],
             time_dimensions = ["monthly", "daily"], frequencies = ["monthly", "daily"],
         )
-        @test Quiver.get_number_of_time_dimensions(md) == 2
+        @test Quiver.Binary.get_number_of_time_dimensions(md) == 2
     end
 
     @testset "Size: daily under monthly below min" begin
-        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["monthly", "daily"], dimension_sizes = Int64[12, 27],
             time_dimensions = ["monthly", "daily"], frequencies = ["monthly", "daily"],
@@ -751,7 +751,7 @@ end
     end
 
     @testset "Size: daily under monthly above max" begin
-        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["monthly", "daily"], dimension_sizes = Int64[12, 32],
             time_dimensions = ["monthly", "daily"], frequencies = ["monthly", "daily"],
@@ -760,25 +760,25 @@ end
 
     # --- Daily under Yearly ---
     @testset "Size: daily under yearly valid min" begin
-        md = Quiver.BinaryMetadata(;
+        md = Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["yearly", "daily"], dimension_sizes = Int64[3, 365],
             time_dimensions = ["yearly", "daily"], frequencies = ["yearly", "daily"],
         )
-        @test Quiver.get_number_of_time_dimensions(md) == 2
+        @test Quiver.Binary.get_number_of_time_dimensions(md) == 2
     end
 
     @testset "Size: daily under yearly valid max" begin
-        md = Quiver.BinaryMetadata(;
+        md = Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["yearly", "daily"], dimension_sizes = Int64[3, 366],
             time_dimensions = ["yearly", "daily"], frequencies = ["yearly", "daily"],
         )
-        @test Quiver.get_number_of_time_dimensions(md) == 2
+        @test Quiver.Binary.get_number_of_time_dimensions(md) == 2
     end
 
     @testset "Size: daily under yearly below min" begin
-        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["yearly", "daily"], dimension_sizes = Int64[3, 364],
             time_dimensions = ["yearly", "daily"], frequencies = ["yearly", "daily"],
@@ -786,7 +786,7 @@ end
     end
 
     @testset "Size: daily under yearly above max" begin
-        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["yearly", "daily"], dimension_sizes = Int64[3, 367],
             time_dimensions = ["yearly", "daily"], frequencies = ["yearly", "daily"],
@@ -795,16 +795,16 @@ end
 
     # --- Monthly under Yearly ---
     @testset "Size: monthly under yearly valid" begin
-        md = Quiver.BinaryMetadata(;
+        md = Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["yearly", "monthly"], dimension_sizes = Int64[3, 12],
             time_dimensions = ["yearly", "monthly"], frequencies = ["yearly", "monthly"],
         )
-        @test Quiver.get_number_of_time_dimensions(md) == 2
+        @test Quiver.Binary.get_number_of_time_dimensions(md) == 2
     end
 
     @testset "Size: monthly under yearly below min" begin
-        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["yearly", "monthly"], dimension_sizes = Int64[3, 11],
             time_dimensions = ["yearly", "monthly"], frequencies = ["yearly", "monthly"],
@@ -812,7 +812,7 @@ end
     end
 
     @testset "Size: monthly under yearly above max" begin
-        @test_throws Quiver.DatabaseException Quiver.BinaryMetadata(;
+        @test_throws Quiver.DatabaseException Quiver.Binary.Metadata(;
             initial_datetime = "2025-01-01T00:00:00", unit = "MW", labels = ["val"],
             dimensions = ["yearly", "monthly"], dimension_sizes = Int64[3, 13],
             time_dimensions = ["yearly", "monthly"], frequencies = ["yearly", "monthly"],
