@@ -71,10 +71,10 @@ Plans:
   1. User can call `db.readTimeSeriesGroup(collection, group, id)` and receive multi-column time series rows
   2. User can call `db.updateTimeSeriesGroup(collection, group, id, data)` to write time series rows and verify them with a subsequent read
   3. User can call `db.hasTimeSeriesFiles/listTimeSeriesFilesColumns/readTimeSeriesFiles/updateTimeSeriesFiles` to manage time series file path references
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 04-01: TBD
+- [ ] 04-01-PLAN.md -- Add 6 time series methods (read/update group + 4 files CRUD) with columnar FFI marshaling to JS binding
 
 ### Phase 5: CSV I/O
 **Goal**: JS users can export collections to CSV and import CSV data into collections
@@ -137,7 +137,7 @@ Note: Phases 5, 6, and 7 depend only on Phases 1-2 (not on each other) and could
 | 1. Fixes & Cleanup | 0/1 | Not started | - |
 | 2. Update & Collection Reads | 1/1 | Complete   | 2026-03-10 |
 | 3. Metadata | 1/1 | Complete   | 2026-03-10 |
-| 4. Time Series | 0/? | Not started | - |
+| 4. Time Series | 0/1 | Not started | - |
 | 5. CSV I/O | 0/? | Not started | - |
 | 6. Introspection & Lua | 0/? | Not started | - |
 | 7. Blob Subsystem | 0/? | Not started | - |
