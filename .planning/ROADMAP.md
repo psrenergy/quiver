@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Metadata** - JS get/list metadata for all attribute types (completed 2026-03-10)
 - [x] **Phase 4: Time Series** - JS time series read, update, and files operations (completed 2026-03-10)
 - [ ] **Phase 5: CSV I/O** - JS CSV export and import
-- [ ] **Phase 6: Introspection & Lua** - JS database introspection and LuaRunner binding
+- [x] **Phase 6: Introspection & Lua** - JS database introspection and LuaRunner binding (completed 2026-03-10)
 - [ ] **Phase 7: Blob Subsystem** - JS blob file I/O, CSV conversion, and metadata
 - [ ] **Phase 8: Convenience Composites** - JS composite read helpers (readScalarsById, etc.)
 
@@ -95,7 +95,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User can call `db.isHealthy()`, `db.currentVersion()`, `db.path()`, and `db.describe()` and receive correct results
   2. User can create a `LuaRunner` in JS, execute a Lua script that modifies the database, and verify the changes via JS reads
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 06-01-PLAN.md -- Add introspection methods and LuaRunner class to JS binding
@@ -139,6 +139,6 @@ Note: Phases 5, 6, and 7 depend only on Phases 1-2 (not on each other) and could
 | 3. Metadata | 1/1 | Complete   | 2026-03-10 |
 | 4. Time Series | 1/1 | Complete   | 2026-03-10 |
 | 5. CSV I/O | 0/1 | Not started | - |
-| 6. Introspection & Lua | 0/1 | Not started | - |
+| 6. Introspection & Lua | 1/1 | Complete   | 2026-03-10 |
 | 7. Blob Subsystem | 0/? | Not started | - |
 | 8. Convenience Composites | 0/? | Not started | - |

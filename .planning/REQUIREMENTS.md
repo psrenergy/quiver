@@ -40,11 +40,11 @@ Requirements for JS binding parity milestone. Each maps to roadmap phases.
 
 ### JS Introspection
 
-- [ ] **JSDB-01**: User can call isHealthy, currentVersion, path, describe
+- [x] **JSDB-01**: User can call isHealthy, currentVersion, path, describe
 
 ### JS LuaRunner
 
-- [ ] **JSLUA-01**: User can execute Lua scripts against a database
+- [x] **JSLUA-01**: User can execute Lua scripts against a database
 
 ### JS Blob
 
@@ -93,8 +93,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | JSTS-03 | Phase 4 | Complete |
 | JSCSV-01 | Phase 5 | Complete |
 | JSCSV-02 | Phase 5 | Complete |
-| JSDB-01 | Phase 6 | Pending |
-| JSLUA-01 | Phase 6 | Pending |
+| JSDB-01 | Phase 6 | Complete |
+| JSLUA-01 | Phase 6 | Complete |
 | JSBLOB-01 | Phase 7 | Pending |
 | JSBLOB-02 | Phase 7 | Pending |
 | JSBLOB-03 | Phase 7 | Pending |
