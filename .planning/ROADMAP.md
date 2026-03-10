@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 1: Fixes & Cleanup** - Fix C API bool inconsistency and delete dead code
 - [x] **Phase 2: Update & Collection Reads** - JS update element + vector/set bulk and by-id reads (completed 2026-03-10)
 - [x] **Phase 3: Metadata** - JS get/list metadata for all attribute types (completed 2026-03-10)
-- [x] **Phase 4: Time Series** - JS time series read, update, and files operations (completed 2026-03-10)
+- [x] **Phase 4: Time Series** - JS time series read, update, and files operations (completed 2026-03-10)
 - [ ] **Phase 5: CSV I/O** - JS CSV export and import
 - [ ] **Phase 6: Introspection & Lua** - JS database introspection and LuaRunner binding
 - [ ] **Phase 7: Blob Subsystem** - JS blob file I/O, CSV conversion, and metadata
@@ -83,10 +83,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User can call `db.exportCsv(collection, filePath, options?)` and a valid CSV file is produced on disk
   2. User can call `db.importCsv(collection, filePath, options?)` to load CSV data into a collection, and the imported data is readable via existing read operations
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 05-01: TBD
+- [ ] 05-01-PLAN.md -- Add exportCsv and importCsv methods with CSV options marshaling to JS binding
 
 ### Phase 6: Introspection & Lua
 **Goal**: JS users can inspect database state and execute Lua scripts
@@ -138,7 +138,7 @@ Note: Phases 5, 6, and 7 depend only on Phases 1-2 (not on each other) and could
 | 2. Update & Collection Reads | 1/1 | Complete   | 2026-03-10 |
 | 3. Metadata | 1/1 | Complete   | 2026-03-10 |
 | 4. Time Series | 1/1 | Complete   | 2026-03-10 |
-| 5. CSV I/O | 0/? | Not started | - |
+| 5. CSV I/O | 0/1 | Not started | - |
 | 6. Introspection & Lua | 0/? | Not started | - |
 | 7. Blob Subsystem | 0/? | Not started | - |
 | 8. Convenience Composites | 0/? | Not started | - |
