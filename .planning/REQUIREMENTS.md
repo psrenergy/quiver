@@ -29,9 +29,9 @@ Requirements for JS binding parity milestone. Each maps to roadmap phases.
 
 ### JS Time Series
 
-- [ ] **JSTS-01**: User can read time series group data
-- [ ] **JSTS-02**: User can update time series group data
-- [ ] **JSTS-03**: User can check/list/read/update time series files
+- [x] **JSTS-01**: User can read time series group data
+- [x] **JSTS-02**: User can update time series group data
+- [x] **JSTS-03**: User can check/list/read/update time series files
 
 ### JS CSV
 
@@ -88,9 +88,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | JSRD-04 | Phase 2 | Complete |
 | JSMETA-01 | Phase 3 | Complete |
 | JSMETA-02 | Phase 3 | Complete |
-| JSTS-01 | Phase 4 | Pending |
-| JSTS-02 | Phase 4 | Pending |
-| JSTS-03 | Phase 4 | Pending |
+| JSTS-01 | Phase 4 | Complete |
+| JSTS-02 | Phase 4 | Complete |
+| JSTS-03 | Phase 4 | Complete |
 | JSCSV-01 | Phase 5 | Pending |
 | JSCSV-02 | Phase 5 | Pending |
 | JSDB-01 | Phase 6 | Pending |
