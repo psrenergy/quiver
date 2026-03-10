@@ -13,14 +13,14 @@ Requirements for JS binding parity milestone. Each maps to roadmap phases.
 
 ### JS Update
 
-- [ ] **JSUP-01**: User can update an element via `updateElement(collection, id, data)`
+- [x] **JSUP-01**: User can update an element via `updateElement(collection, id, data)`
 
 ### JS Vector/Set Reads
 
-- [ ] **JSRD-01**: User can read vector integers/floats/strings (bulk)
-- [ ] **JSRD-02**: User can read vector integers/floats/strings by element ID
-- [ ] **JSRD-03**: User can read set integers/floats/strings (bulk)
-- [ ] **JSRD-04**: User can read set integers/floats/strings by element ID
+- [x] **JSRD-01**: User can read vector integers/floats/strings (bulk)
+- [x] **JSRD-02**: User can read vector integers/floats/strings by element ID
+- [x] **JSRD-03**: User can read set integers/floats/strings (bulk)
+- [x] **JSRD-04**: User can read set integers/floats/strings by element ID
 
 ### JS Metadata
 
@@ -81,11 +81,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | CAPI-01 | Phase 1 | Complete |
 | CLEAN-01 | Phase 1 | Complete |
-| JSUP-01 | Phase 2 | Pending |
-| JSRD-01 | Phase 2 | Pending |
-| JSRD-02 | Phase 2 | Pending |
-| JSRD-03 | Phase 2 | Pending |
-| JSRD-04 | Phase 2 | Pending |
+| JSUP-01 | Phase 2 | Complete |
+| JSRD-01 | Phase 2 | Complete |
+| JSRD-02 | Phase 2 | Complete |
+| JSRD-03 | Phase 2 | Complete |
+| JSRD-04 | Phase 2 | Complete |
 | JSMETA-01 | Phase 3 | Pending |
 | JSMETA-02 | Phase 3 | Pending |
 | JSTS-01 | Phase 4 | Pending |

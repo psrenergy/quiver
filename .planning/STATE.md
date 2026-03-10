@@ -2,30 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
-status: planning
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-03-09T21:54:23.355Z"
-last_activity: 2026-03-09 -- Completed 01-01-PLAN.md (Fixes & Cleanup)
+status: executing
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-03-10T00:14:59.169Z"
+last_activity: 2026-03-09 -- Completed 02-01-PLAN.md (Update & Collection Reads)
 progress:
   total_phases: 8
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
----
-
----
-gsd_state_version: 1.0
-milestone: v0.5
-milestone_name: milestone
-status: planning
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-03-09T21:51:14.003Z"
-last_activity: 2026-03-09 -- Completed 01-01-PLAN.md (Fixes & Cleanup)
-progress:
-  total_phases: 8
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
+  completed_phases: 2
+  total_plans: 2
+  completed_plans: 2
 ---
 
 # Project State
@@ -35,33 +20,34 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** Every public C++ method is accessible from every supported language binding with consistent naming, identical behavior, and comprehensive tests.
-**Current focus:** Phase 1: Fixes & Cleanup
+**Current focus:** Phase 2: Update & Collection Reads
 
 ## Current Position
 
-Phase: 1 of 8 (Fixes & Cleanup)
+Phase: 2 of 8 (Update & Collection Reads)
 Plan: 1 of 1 in current phase
-Status: Phase 1 complete
-Last activity: 2026-03-09 -- Completed 01-01-PLAN.md (Fixes & Cleanup)
+Status: Phase 2 complete
+Last activity: 2026-03-09 -- Completed 02-01-PLAN.md (Update & Collection Reads)
 
 Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 5min
-- Total execution time: 0.1 hours
+- Total plans completed: 2
+- Average duration: 4.5min
+- Total execution time: 0.15 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-fixes-cleanup | 1 | 5min | 5min |
+| 02-update-collection-reads | 1 | 4min | 4min |
 
 **Recent Trend:**
-- Last 5 plans: 5min
-- Trend: baseline
+- Last 5 plans: 5min, 4min
+- Trend: stable
 
 *Updated after each plan completion*
 
@@ -76,6 +62,8 @@ Recent decisions affecting current work:
 - [Roadmap]: Phase 1 (CAPI-01 + CLEAN-01) is prerequisite for all binding work
 - [Roadmap]: Phases 5, 6, 7 are independent after Phase 2; linear ordering is default
 - [Phase 01-fixes-cleanup]: Used explicit ternary in C API in_transaction impl for bool-to-int clarity
+- [Phase 02-update-collection-reads]: updateElement placed in create.ts to reuse setElementField helpers
+- [Phase 02-update-collection-reads]: Float vector table named AllTypes_vector_scores to avoid attribute collision with AllTypes_set_weights
 
 ### Prior Context
 
@@ -94,6 +82,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-09
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-03-10T00:14:59.164Z
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None

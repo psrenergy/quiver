@@ -13,7 +13,7 @@ Milestone v0.5 brings the JS/Bun binding to full parity with Julia, Dart, and Py
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Fixes & Cleanup** - Fix C API bool inconsistency and delete dead code
-- [ ] **Phase 2: Update & Collection Reads** - JS update element + vector/set bulk and by-id reads
+- [x] **Phase 2: Update & Collection Reads** - JS update element + vector/set bulk and by-id reads (completed 2026-03-10)
 - [ ] **Phase 3: Metadata** - JS get/list metadata for all attribute types
 - [ ] **Phase 4: Time Series** - JS time series read, update, and files operations
 - [ ] **Phase 5: CSV I/O** - JS CSV export and import
@@ -46,7 +46,7 @@ Plans:
   3. User can call `db.readVectorIntegers/Floats/StringsById(collection, attribute, id)` and receive a single element's vector data
   4. User can call `db.readSetIntegers/Floats/Strings(collection, attribute)` and receive all elements' set data
   5. User can call `db.readSetIntegers/Floats/StringsById(collection, attribute, id)` and receive a single element's set data
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 02-01-PLAN.md -- Add updateElement, vector/set bulk reads, and vector/set by-id reads to JS binding
@@ -135,7 +135,7 @@ Note: Phases 5, 6, and 7 depend only on Phases 1-2 (not on each other) and could
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Fixes & Cleanup | 0/1 | Not started | - |
-| 2. Update & Collection Reads | 0/1 | Not started | - |
+| 2. Update & Collection Reads | 1/1 | Complete   | 2026-03-10 |
 | 3. Metadata | 0/? | Not started | - |
 | 4. Time Series | 0/? | Not started | - |
 | 5. CSV I/O | 0/? | Not started | - |
