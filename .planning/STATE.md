@@ -3,29 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-03-10T00:18:12.826Z"
-last_activity: 2026-03-09 -- Completed 02-01-PLAN.md (Update & Collection Reads)
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-03-10T00:37:48Z"
+last_activity: 2026-03-09 -- Completed 03-01-PLAN.md (Metadata Inspection)
 progress:
   total_phases: 8
-  completed_phases: 2
-  total_plans: 2
-  completed_plans: 2
----
-
----
-gsd_state_version: 1.0
-milestone: v0.5
-milestone_name: milestone
-status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-03-10T00:14:59.169Z"
-last_activity: 2026-03-09 -- Completed 02-01-PLAN.md (Update & Collection Reads)
-progress:
-  total_phases: 8
-  completed_phases: 2
-  total_plans: 2
-  completed_plans: 2
+  completed_phases: 3
+  total_plans: 3
+  completed_plans: 3
 ---
 
 # Project State
@@ -35,23 +20,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** Every public C++ method is accessible from every supported language binding with consistent naming, identical behavior, and comprehensive tests.
-**Current focus:** Phase 2: Update & Collection Reads
+**Current focus:** Phase 3: Metadata
 
 ## Current Position
 
-Phase: 2 of 8 (Update & Collection Reads)
+Phase: 3 of 8 (Metadata)
 Plan: 1 of 1 in current phase
-Status: Phase 2 complete
-Last activity: 2026-03-09 -- Completed 02-01-PLAN.md (Update & Collection Reads)
+Status: Phase 3 complete
+Last activity: 2026-03-09 -- Completed 03-01-PLAN.md (Metadata Inspection)
 
 Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 4.5min
-- Total execution time: 0.15 hours
+- Total plans completed: 3
+- Average duration: 4min
+- Total execution time: 0.2 hours
 
 **By Phase:**
 
@@ -59,10 +44,11 @@ Progress: [██████████] 100%
 |-------|-------|-------|----------|
 | 01-fixes-cleanup | 1 | 5min | 5min |
 | 02-update-collection-reads | 1 | 4min | 4min |
+| 03-metadata | 1 | 3min | 3min |
 
 **Recent Trend:**
-- Last 5 plans: 5min, 4min
-- Trend: stable
+- Last 5 plans: 5min, 4min, 3min
+- Trend: improving
 
 *Updated after each plan completion*
 
@@ -79,6 +65,8 @@ Recent decisions affecting current work:
 - [Phase 01-fixes-cleanup]: Used explicit ternary in C API in_transaction impl for bool-to-int clarity
 - [Phase 02-update-collection-reads]: updateElement placed in create.ts to reuse setElementField helpers
 - [Phase 02-update-collection-reads]: Float vector table named AllTypes_vector_scores to avoid attribute collision with AllTypes_set_weights
+- [Phase 03-metadata]: Uint8Array buffer for struct out-parameters; readNullableString helper for nullable C string fields
+- [Phase 03-metadata]: PK notNull test relaxed -- SQLite INTEGER PRIMARY KEY does not set PRAGMA not_null flag
 
 ### Prior Context
 
@@ -97,6 +85,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-10T00:14:59.164Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-03-10T00:37:48Z
+Stopped at: Completed 03-01-PLAN.md
 Resume file: None

@@ -24,8 +24,8 @@ Requirements for JS binding parity milestone. Each maps to roadmap phases.
 
 ### JS Metadata
 
-- [ ] **JSMETA-01**: User can get scalar/vector/set/time-series metadata
-- [ ] **JSMETA-02**: User can list scalar attributes and vector/set/time-series groups
+- [x] **JSMETA-01**: User can get scalar/vector/set/time-series metadata
+- [x] **JSMETA-02**: User can list scalar attributes and vector/set/time-series groups
 
 ### JS Time Series
 
@@ -86,8 +86,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | JSRD-02 | Phase 2 | Complete |
 | JSRD-03 | Phase 2 | Complete |
 | JSRD-04 | Phase 2 | Complete |
-| JSMETA-01 | Phase 3 | Pending |
-| JSMETA-02 | Phase 3 | Pending |
+| JSMETA-01 | Phase 3 | Complete |
+| JSMETA-02 | Phase 3 | Complete |
 | JSTS-01 | Phase 4 | Pending |
 | JSTS-02 | Phase 4 | Pending |
 | JSTS-03 | Phase 4 | Pending |
