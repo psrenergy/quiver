@@ -348,6 +348,44 @@ const symbols = {
     args: [FFIType.ptr, FFIType.u64],
     returns: FFIType.i32,
   },
+
+  // Time series read/update
+  quiver_database_read_time_series_group: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.i64,
+           FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_update_time_series_group: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.i64,
+           FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.u64, FFIType.u64],
+    returns: FFIType.i32,
+  },
+  quiver_database_free_time_series_data: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.u64, FFIType.u64],
+    returns: FFIType.i32,
+  },
+
+  // Time series files
+  quiver_database_has_time_series_files: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_list_time_series_files_columns: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_read_time_series_files: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_update_time_series_files: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.u64],
+    returns: FFIType.i32,
+  },
+  quiver_database_free_time_series_files: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.u64],
+    returns: FFIType.i32,
+  },
 } as const;
 
 type Library = ReturnType<typeof dlopen<typeof symbols>>;
