@@ -292,6 +292,62 @@ const symbols = {
     args: [FFIType.ptr, FFIType.ptr],
     returns: FFIType.i32,
   },
+
+  // Metadata get functions
+  quiver_database_get_scalar_metadata: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_get_vector_metadata: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_get_set_metadata: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_get_time_series_metadata: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // Metadata free functions
+  quiver_database_free_scalar_metadata: {
+    args: [FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_free_group_metadata: {
+    args: [FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // Metadata list functions
+  quiver_database_list_scalar_attributes: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_list_vector_groups: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_list_set_groups: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_list_time_series_groups: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // Metadata array free functions
+  quiver_database_free_scalar_metadata_array: {
+    args: [FFIType.ptr, FFIType.u64],
+    returns: FFIType.i32,
+  },
+  quiver_database_free_group_metadata_array: {
+    args: [FFIType.ptr, FFIType.u64],
+    returns: FFIType.i32,
+  },
 } as const;
 
 type Library = ReturnType<typeof dlopen<typeof symbols>>;
