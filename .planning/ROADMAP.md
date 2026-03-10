@@ -46,10 +46,10 @@ Plans:
   3. User can call `db.readVectorIntegers/Floats/StringsById(collection, attribute, id)` and receive a single element's vector data
   4. User can call `db.readSetIntegers/Floats/Strings(collection, attribute)` and receive all elements' set data
   5. User can call `db.readSetIntegers/Floats/StringsById(collection, attribute, id)` and receive a single element's set data
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 02-01: TBD
+- [ ] 02-01-PLAN.md -- Add updateElement, vector/set bulk reads, and vector/set by-id reads to JS binding
 
 ### Phase 3: Metadata
 **Goal**: JS users can inspect schema metadata for all attribute types
@@ -135,7 +135,7 @@ Note: Phases 5, 6, and 7 depend only on Phases 1-2 (not on each other) and could
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Fixes & Cleanup | 0/1 | Not started | - |
-| 2. Update & Collection Reads | 0/? | Not started | - |
+| 2. Update & Collection Reads | 0/1 | Not started | - |
 | 3. Metadata | 0/? | Not started | - |
 | 4. Time Series | 0/? | Not started | - |
 | 5. CSV I/O | 0/? | Not started | - |
