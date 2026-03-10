@@ -129,6 +129,62 @@ const symbols = {
     returns: FFIType.i32,
   },
 
+  // Read vector bulk
+  quiver_database_read_vector_integers: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_read_vector_floats: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_read_vector_strings: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // Read set bulk
+  quiver_database_read_set_integers: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_read_set_floats: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_read_set_strings: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // Read vector by ID
+  quiver_database_read_vector_integers_by_id: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.i64, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_read_vector_floats_by_id: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.i64, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_read_vector_strings_by_id: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.i64, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // Read set by ID
+  quiver_database_read_set_integers_by_id: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.i64, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_read_set_floats_by_id: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.i64, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_read_set_strings_by_id: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.i64, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
   // Read element IDs
   quiver_database_read_element_ids: {
     args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
@@ -150,6 +206,20 @@ const symbols = {
   },
   quiver_database_free_string: {
     args: [FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // Free vector/set bulk read results
+  quiver_database_free_integer_vectors: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.u64],
+    returns: FFIType.i32,
+  },
+  quiver_database_free_float_vectors: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.u64],
+    returns: FFIType.i32,
+  },
+  quiver_database_free_string_vectors: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.u64],
     returns: FFIType.i32,
   },
 
