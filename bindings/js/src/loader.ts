@@ -387,6 +387,24 @@ const symbols = {
     returns: FFIType.i32,
   },
 
+  // Introspection
+  quiver_database_is_healthy: {
+    args: [FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_current_version: {
+    args: [FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_path: {
+    args: [FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_describe: {
+    args: [FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
   // CSV export/import
   quiver_database_export_csv: {
     args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],

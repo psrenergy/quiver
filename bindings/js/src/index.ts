@@ -5,6 +5,7 @@ import "./transaction";
 import "./metadata";
 import "./time-series";
 import "./csv";
+import "./introspection";
 
 export { Database } from "./database";
 export { QuiverError } from "./errors";
