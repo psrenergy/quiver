@@ -35,8 +35,8 @@ Requirements for JS binding parity milestone. Each maps to roadmap phases.
 
 ### JS CSV
 
-- [ ] **JSCSV-01**: User can export a collection/group to CSV
-- [ ] **JSCSV-02**: User can import a CSV into a collection/group
+- [x] **JSCSV-01**: User can export a collection/group to CSV
+- [x] **JSCSV-02**: User can import a CSV into a collection/group
 
 ### JS Introspection
 
@@ -91,8 +91,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | JSTS-01 | Phase 4 | Complete |
 | JSTS-02 | Phase 4 | Complete |
 | JSTS-03 | Phase 4 | Complete |
-| JSCSV-01 | Phase 5 | Pending |
-| JSCSV-02 | Phase 5 | Pending |
+| JSCSV-01 | Phase 5 | Complete |
+| JSCSV-02 | Phase 5 | Complete |
 | JSDB-01 | Phase 6 | Pending |
 | JSLUA-01 | Phase 6 | Pending |
 | JSBLOB-01 | Phase 7 | Pending |
