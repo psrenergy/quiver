@@ -13,7 +13,7 @@ Milestone v0.5 brings the JS/Bun binding to full parity with Julia, Dart, and Py
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Fixes & Cleanup** - Fix C API bool inconsistency and delete dead code
-- [x] **Phase 2: Update & Collection Reads** - JS update element + vector/set bulk and by-id reads (completed 2026-03-10)
+- [x] **Phase 2: Update & Collection Reads** - JS update element + vector/set bulk and by-id reads (completed 2026-03-10)
 - [ ] **Phase 3: Metadata** - JS get/list metadata for all attribute types
 - [ ] **Phase 4: Time Series** - JS time series read, update, and files operations
 - [ ] **Phase 5: CSV I/O** - JS CSV export and import
@@ -58,10 +58,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User can call `db.getScalarMetadata/getVectorMetadata/getSetMetadata/getTimeSeriesMetadata(collection, name)` and receive attribute metadata (type, nullable, etc.)
   2. User can call `db.listScalarAttributes/listVectorGroups/listSetGroups/listTimeSeriesGroups(collection)` and receive the list of available attributes/groups
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 03-01: TBD
+- [ ] 03-01-PLAN.md -- Add 8 metadata methods (4 get + 4 list) with struct deserialization to JS binding
 
 ### Phase 4: Time Series
 **Goal**: JS users can read and write time series data and manage time series file references
@@ -136,7 +136,7 @@ Note: Phases 5, 6, and 7 depend only on Phases 1-2 (not on each other) and could
 |-------|----------------|--------|-----------|
 | 1. Fixes & Cleanup | 0/1 | Not started | - |
 | 2. Update & Collection Reads | 1/1 | Complete   | 2026-03-10 |
-| 3. Metadata | 0/? | Not started | - |
+| 3. Metadata | 0/1 | Not started | - |
 | 4. Time Series | 0/? | Not started | - |
 | 5. CSV I/O | 0/? | Not started | - |
 | 6. Introspection & Lua | 0/? | Not started | - |
