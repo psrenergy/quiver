@@ -92,6 +92,10 @@ const symbols = {
     args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
     returns: FFIType.i32,
   },
+  quiver_database_update_element: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.i64, FFIType.ptr],
+    returns: FFIType.i32,
+  },
   quiver_database_delete_element: {
     args: [FFIType.ptr, FFIType.ptr, FFIType.i64],
     returns: FFIType.i32,

@@ -8,6 +8,7 @@ import type { ElementData, Value } from "./types";
 declare module "./database" {
   interface Database {
     createElement(collection: string, data: ElementData): number;
+    updateElement(collection: string, id: number, data: ElementData): void;
     deleteElement(collection: string, id: number): void;
   }
 }
@@ -117,6 +118,31 @@ Database.prototype.createElement = function (
     check(lib.quiver_database_create_element(handle, toCString(collection), elemPtr, ptr(outId)));
 
     return Number(outId[0]);
+  } finally {
+    lib.quiver_element_destroy(elemPtr);
+  }
+};
+
+Database.prototype.updateElement = function (
+  this: Database,
+  collection: string,
+  id: number,
+  data: ElementData,
+): void {
+  const lib = getSymbols();
+  const handle = this._handle;
+
+  const outElem = allocPointerOut();
+  check(lib.quiver_element_create(ptr(outElem)));
+  const elemPtr = readPointerOut(outElem);
+
+  try {
+    for (const [key, value] of Object.entries(data)) {
+      if (value === undefined) continue;
+      setElementField(lib, elemPtr, key, value);
+    }
+
+    check(lib.quiver_database_update_element(handle, toCString(collection), id, elemPtr));
   } finally {
     lib.quiver_element_destroy(elemPtr);
   }
