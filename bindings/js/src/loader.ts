@@ -414,6 +414,23 @@ const symbols = {
     args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
     returns: FFIType.i32,
   },
+  // LuaRunner
+  quiver_lua_runner_new: {
+    args: [FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_lua_runner_free: {
+    args: [FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_lua_runner_run: {
+    args: [FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_lua_runner_get_error: {
+    args: [FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
 } as const;
 
 type Library = ReturnType<typeof dlopen<typeof symbols>>;

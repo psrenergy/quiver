@@ -9,6 +9,7 @@ import "./introspection";
 
 export { Database } from "./database";
 export { QuiverError } from "./errors";
+export { LuaRunner } from "./lua-runner";
 export type { ArrayValue, ElementData, QueryParam, ScalarValue, Value } from "./types";
 export type { ScalarMetadata, GroupMetadata } from "./metadata";
 export type { TimeSeriesData } from "./time-series";
