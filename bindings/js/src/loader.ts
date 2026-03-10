@@ -386,6 +386,16 @@ const symbols = {
     args: [FFIType.ptr, FFIType.ptr, FFIType.u64],
     returns: FFIType.i32,
   },
+
+  // CSV export/import
+  quiver_database_export_csv: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_import_csv: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
 } as const;
 
 type Library = ReturnType<typeof dlopen<typeof symbols>>;
