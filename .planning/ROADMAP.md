@@ -95,10 +95,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User can call `db.isHealthy()`, `db.currentVersion()`, `db.path()`, and `db.describe()` and receive correct results
   2. User can create a `LuaRunner` in JS, execute a Lua script that modifies the database, and verify the changes via JS reads
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 06-01: TBD
+- [ ] 06-01-PLAN.md -- Add introspection methods and LuaRunner class to JS binding
 
 ### Phase 7: Blob Subsystem
 **Goal**: JS users can work with blob binary files, convert between binary and CSV, and manage blob metadata
@@ -139,6 +139,6 @@ Note: Phases 5, 6, and 7 depend only on Phases 1-2 (not on each other) and could
 | 3. Metadata | 1/1 | Complete   | 2026-03-10 |
 | 4. Time Series | 1/1 | Complete   | 2026-03-10 |
 | 5. CSV I/O | 0/1 | Not started | - |
-| 6. Introspection & Lua | 0/? | Not started | - |
+| 6. Introspection & Lua | 0/1 | Not started | - |
 | 7. Blob Subsystem | 0/? | Not started | - |
 | 8. Convenience Composites | 0/? | Not started | - |
