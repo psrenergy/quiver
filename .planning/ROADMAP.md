@@ -120,10 +120,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User can call `db.readScalarsById(collection, id)` and receive a dictionary of all scalar attribute values for that element
   2. User can call `db.readVectorsById(collection, id)` and `db.readSetsById(collection, id)` and receive grouped collection data for that element
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 08-01: TBD
+- [ ] 08-01-PLAN.md -- Add readScalarsById, readVectorsById, readSetsById composite methods to JS binding
 
 ## Progress
 
