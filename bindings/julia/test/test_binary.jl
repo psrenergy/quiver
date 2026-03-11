@@ -512,6 +512,37 @@ end
     end
 
     # ==========================================================================
+    # Write registry
+    # ==========================================================================
+
+    @testset "Writer blocks reader" begin
+        path = make_binary_path()
+        try
+            md = make_simple_metadata()
+            writer = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            @test_throws Quiver.DatabaseException Quiver.Binary.open_file(path; mode = :read)
+            Quiver.Binary.close!(writer)
+        finally
+            cleanup_binary(path)
+        end
+    end
+
+    @testset "Closed writer allows reader" begin
+        path = make_binary_path()
+        try
+            md = make_simple_metadata()
+            writer = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.close!(writer)
+
+            reader = Quiver.Binary.open_file(path; mode = :read)
+            Quiver.Binary.close!(reader)
+            @test true
+        finally
+            cleanup_binary(path)
+        end
+    end
+
+    # ==========================================================================
     # Time dimension validation
     # ==========================================================================
 
