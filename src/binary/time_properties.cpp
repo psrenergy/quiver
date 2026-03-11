@@ -61,8 +61,8 @@ int64_t TimeProperties::datetime_to_int(std::chrono::system_clock::time_point da
     case TimeFrequency::Daily:
         return static_cast<unsigned>(ymd.day());  // 1-31
     case TimeFrequency::Hourly:
-        auto time_of_day = std::chrono::hh_mm_ss{datetime - date};
-        return time_of_day.hours().count() + 1;  // 0-23 -> 1-24
+        int64_t hour = std::chrono::floor<std::chrono::hours>(datetime - date).count() + 1;  // 0-23 -> 1-24
+        return hour;
     }
 }
 
