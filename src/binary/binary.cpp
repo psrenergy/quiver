@@ -18,8 +18,8 @@ struct Binary::Impl {
     std::unique_ptr<std::iostream> io;
     std::string file_path;
     BinaryMetadata metadata;
-    std::vector<int64_t> strides;  // pre-computed strides per dimension (in bytes)
-    int64_t current_position = -1; // tracked file position to skip redundant seeks
+    std::vector<int64_t> strides;   // pre-computed strides per dimension (in bytes)
+    int64_t current_position = -1;  // tracked file position to skip redundant seeks
 
     void compute_strides() {
         const auto& dimensions = metadata.dimensions;
