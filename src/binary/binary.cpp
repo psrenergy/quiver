@@ -18,27 +18,11 @@ struct Binary::Impl {
     std::unique_ptr<std::iostream> io;
     std::string file_path;
     BinaryMetadata metadata;
-    std::vector<int64_t> strides;   // pre-computed strides per dimension (in bytes)
     int64_t current_position = -1;  // tracked file position to skip redundant seeks
-
-    void compute_strides() {
-        const auto& dimensions = metadata.dimensions;
-        strides.resize(dimensions.size());
-        int64_t labels_size = static_cast<int64_t>(metadata.labels.size());
-        for (size_t i = 0; i < dimensions.size(); ++i) {
-            int64_t stride = 1;
-            for (size_t j = i + 1; j < dimensions.size(); ++j) {
-                stride *= dimensions[j].size;
-            }
-            strides[i] = stride * labels_size * static_cast<int64_t>(sizeof(double));
-        }
-    }
 };
 
 Binary::Binary(const std::string& file_path, const BinaryMetadata& metadata, std::unique_ptr<std::iostream> io)
-    : impl_(std::make_unique<Impl>(Impl{std::move(io), file_path, metadata, {}})) {
-    impl_->compute_strides();
-}
+    : impl_(std::make_unique<Impl>(Impl{std::move(io), file_path, metadata})) {}
 
 Binary::~Binary() {
     if (impl_ && impl_->io) {
@@ -131,12 +115,18 @@ void Binary::write(const std::vector<double>& data, const std::unordered_map<std
 }
 
 int64_t Binary::calculate_file_position(const std::unordered_map<std::string, int64_t>& dims) const {
-    const auto& dimensions = impl_->metadata.dimensions;
-    const auto& strides = impl_->strides;
+    const auto& metadata = impl_->metadata;
+    const auto& dimensions = metadata.dimensions;
     int64_t position = 0;
     for (size_t i = 0; i < dimensions.size(); ++i) {
-        position += (dims.at(dimensions[i].name) - 1) * strides[i];
+        int64_t stride = 1;
+        for (size_t j = i + 1; j < dimensions.size(); ++j) {
+            stride *= dimensions[j].size;
+        }
+        position += (dims.at(dimensions[i].name) - 1) * stride;
     }
+    position *= static_cast<int64_t>(metadata.labels.size());
+    position *= static_cast<int64_t>(sizeof(double));
     return position;
 }
 
