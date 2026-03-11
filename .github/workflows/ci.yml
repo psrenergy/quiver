@@ -27,6 +27,22 @@ jobs:
             -DQUIVER_BUILD_TESTS=ON `
             -DQUIVER_BUILD_C_API=ON
 
+      - name: Configure CMake (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DQUIVER_BUILD_TESTS=ON \
+            -DQUIVER_BUILD_C_API=ON
+
+      - name: Configure CMake (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DQUIVER_BUILD_TESTS=ON \
+            -DQUIVER_BUILD_C_API=ON
+
       - name: Build
         run: cmake --build build --config ${{ matrix.build_type }}
 
