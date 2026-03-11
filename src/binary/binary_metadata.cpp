@@ -7,7 +7,6 @@
 #include "utils/datetime.h"
 
 #include <algorithm>
-#include <format>
 #include <sstream>
 #include <stdexcept>
 #include <toml++/toml.hpp>
