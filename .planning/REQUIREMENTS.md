@@ -54,7 +54,7 @@ Requirements for JS binding parity milestone. Each maps to roadmap phases.
 
 ### JS Convenience
 
-- [ ] **JSCONV-01**: User can read all scalars/vectors/sets for an element by ID
+- [x] **JSCONV-01**: User can read all scalars/vectors/sets for an element by ID
 
 ### Cleanup
 
@@ -98,7 +98,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | JSBLOB-01 | Phase 7 | Pending |
 | JSBLOB-02 | Phase 7 | Pending |
 | JSBLOB-03 | Phase 7 | Pending |
-| JSCONV-01 | Phase 8 | Pending |
+| JSCONV-01 | Phase 8 | Complete |
 
 **Coverage:**
 - v0.5 requirements: 20 total
