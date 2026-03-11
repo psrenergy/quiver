@@ -6,6 +6,7 @@ import "./metadata";
 import "./time-series";
 import "./csv";
 import "./introspection";
+import "./composites";
 
 export { Database } from "./database";
 export { QuiverError } from "./errors";
