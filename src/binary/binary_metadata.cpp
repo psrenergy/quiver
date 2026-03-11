@@ -7,7 +7,6 @@
 #include "utils/datetime.h"
 
 #include <algorithm>
-#include <format>
 #include <sstream>
 #include <stdexcept>
 #include <toml++/toml.hpp>
@@ -67,8 +66,8 @@ compute_time_dimension_initial_values(const std::vector<quiver::Dimension>& dime
                 break;
             }
             case quiver::TimeFrequency::Hourly: {
-                auto time_of_day = std::chrono::hh_mm_ss{initial_datetime - date};
-                int64_t hour = time_of_day.hours().count() + 1;  // 0-23 -> 1-24
+                int64_t hour =
+                    std::chrono::floor<std::chrono::hours>(initial_datetime - date).count() + 1;  // 0-23 -> 1-24
                 switch (parent_frequency) {
                 case quiver::TimeFrequency::Daily:
                     break;
