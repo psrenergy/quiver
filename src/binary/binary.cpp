@@ -18,12 +18,32 @@ struct Binary::Impl {
     std::unique_ptr<std::iostream> io;
     std::string file_path;
     BinaryMetadata metadata;
+    std::vector<int64_t> strides;  // pre-computed strides per dimension (in bytes)
+
+    void compute_strides() {
+        const auto& dimensions = metadata.dimensions;
+        strides.resize(dimensions.size());
+        int64_t labels_size = static_cast<int64_t>(metadata.labels.size());
+        for (size_t i = 0; i < dimensions.size(); ++i) {
+            int64_t stride = 1;
+            for (size_t j = i + 1; j < dimensions.size(); ++j) {
+                stride *= dimensions[j].size;
+            }
+            strides[i] = stride * labels_size * static_cast<int64_t>(sizeof(double));
+        }
+    }
 };
 
 Binary::Binary(const std::string& file_path, const BinaryMetadata& metadata, std::unique_ptr<std::iostream> io)
-    : impl_(std::make_unique<Impl>(Impl{std::move(io), file_path, metadata})) {}
+    : impl_(std::make_unique<Impl>(Impl{std::move(io), file_path, metadata, {}})) {
+    impl_->compute_strides();
+}
 
-Binary::~Binary() = default;
+Binary::~Binary() {
+    if (impl_ && impl_->io) {
+        impl_->io->flush();
+    }
+}
 
 Binary::Binary(Binary&& other) noexcept = default;
 Binary& Binary::operator=(Binary&& other) noexcept = default;
@@ -103,30 +123,19 @@ void Binary::write(const std::vector<double>& data, const std::unordered_map<std
     go_to_position(calculate_file_position(dims), 'w');
 
     impl_->io->write(reinterpret_cast<const char*>(data.data()), data.size() * sizeof(double));
-    impl_->io->flush();
 }
 
 int64_t Binary::calculate_file_position(const std::unordered_map<std::string, int64_t>& dims) const {
-    const auto& metadata = impl_->metadata;
-    const auto& dimensions = metadata.dimensions;
+    const auto& dimensions = impl_->metadata.dimensions;
+    const auto& strides = impl_->strides;
     int64_t position = 0;
     for (size_t i = 0; i < dimensions.size(); ++i) {
-        int64_t stride = 1;
-        for (size_t j = i + 1; j < dimensions.size(); ++j) {
-            stride *= dimensions[j].size;
-        }
-        position += (dims.at(dimensions[i].name) - 1) * stride;
+        position += (dims.at(dimensions[i].name) - 1) * strides[i];
     }
-    position *= static_cast<int64_t>(metadata.labels.size());
-    position *= static_cast<int64_t>(sizeof(double));
     return position;
 }
 
 void Binary::go_to_position(int64_t position, char mode) {
-    if (position < 0) {
-        throw std::invalid_argument("File position must be non-negative, got " + std::to_string(position));
-    }
-    validate_file_is_open();
     switch (mode) {
     case 'r':
         impl_->io->seekg(position);
@@ -315,38 +324,27 @@ std::vector<int64_t> Binary::dimension_sizes_at_values(const std::vector<int64_t
 void Binary::fill_file_with_nulls() {
     const auto& metadata = impl_->metadata;
 
-    // Get initial dimension values
-    const auto& dimensions = metadata.dimensions;
-    std::vector<int64_t> initial_dimensions;
-    for (const auto& dim : dimensions) {
-        if (dim.is_time_dimension()) {
-            initial_dimensions.push_back(dim.time->initial_value);
-        } else {
-            initial_dimensions.push_back(1);
-        }
+    // Calculate total number of cells
+    int64_t total_cells = 1;
+    for (const auto& dim : metadata.dimensions) {
+        total_cells *= dim.size;
     }
 
-    // Calculate maximum number of lines
-    int64_t max_lines = 1;
-    for (const auto& dim : dimensions) {
-        max_lines *= dim.size;
-    }
+    int64_t total_doubles = total_cells * static_cast<int64_t>(metadata.labels.size());
 
-    // Iterate CSV lines and write to binary
-    std::vector<int64_t> current_dimensions = initial_dimensions;
-    for (int64_t i = 0; i < max_lines; ++i) {
-        std::unordered_map<std::string, int64_t> dims;
-        for (size_t j = 0; j < dimensions.size(); ++j) {
-            dims[dimensions[j].name] = current_dimensions[j];
-        }
-        std::vector<double> data(metadata.labels.size(), std::numeric_limits<double>::quiet_NaN());
-        write(data, dims);
+    // Write NaN-filled buffer in chunks to avoid excessive memory usage
+    constexpr int64_t CHUNK_DOUBLES = 1024 * 1024;  // ~8 MB per chunk
+    std::vector<double> buffer(static_cast<size_t>(std::min(total_doubles, CHUNK_DOUBLES)),
+                               std::numeric_limits<double>::quiet_NaN());
 
-        current_dimensions = next_dimensions(current_dimensions);
-        if (current_dimensions == initial_dimensions) {
-            break;
-        }
+    impl_->io->seekp(0);
+    int64_t remaining = total_doubles;
+    while (remaining > 0) {
+        int64_t count = std::min(remaining, static_cast<int64_t>(buffer.size()));
+        impl_->io->write(reinterpret_cast<const char*>(buffer.data()), count * sizeof(double));
+        remaining -= count;
     }
+    impl_->io->flush();
 }
 
 const BinaryMetadata& Binary::get_metadata() const {
