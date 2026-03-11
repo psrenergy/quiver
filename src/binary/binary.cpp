@@ -19,6 +19,7 @@ struct Binary::Impl {
     std::string file_path;
     BinaryMetadata metadata;
     std::vector<int64_t> strides;  // pre-computed strides per dimension (in bytes)
+    int64_t current_position = -1; // tracked file position to skip redundant seeks
 
     void compute_strides() {
         const auto& dimensions = metadata.dimensions;
@@ -97,7 +98,9 @@ std::vector<double> Binary::read(const std::unordered_map<std::string, int64_t>&
     go_to_position(calculate_file_position(dims), 'r');
 
     std::vector<double> data(impl_->metadata.labels.size());
-    impl_->io->read(reinterpret_cast<char*>(data.data()), data.size() * sizeof(double));
+    auto bytes = static_cast<int64_t>(data.size() * sizeof(double));
+    impl_->io->read(reinterpret_cast<char*>(data.data()), bytes);
+    impl_->current_position += bytes;
 
     if (!allow_nulls) {
         for (size_t i = 0; i < data.size(); ++i) {
@@ -122,7 +125,9 @@ void Binary::write(const std::vector<double>& data, const std::unordered_map<std
 
     go_to_position(calculate_file_position(dims), 'w');
 
-    impl_->io->write(reinterpret_cast<const char*>(data.data()), data.size() * sizeof(double));
+    auto bytes = static_cast<int64_t>(data.size() * sizeof(double));
+    impl_->io->write(reinterpret_cast<const char*>(data.data()), bytes);
+    impl_->current_position += bytes;
 }
 
 int64_t Binary::calculate_file_position(const std::unordered_map<std::string, int64_t>& dims) const {
@@ -136,6 +141,9 @@ int64_t Binary::calculate_file_position(const std::unordered_map<std::string, in
 }
 
 void Binary::go_to_position(int64_t position, char mode) {
+    if (impl_->current_position == position) {
+        return;
+    }
     switch (mode) {
     case 'r':
         impl_->io->seekg(position);
@@ -147,6 +155,7 @@ void Binary::go_to_position(int64_t position, char mode) {
         throw std::invalid_argument("Invalid seek mode: " + std::string(1, mode) +
                                     ". Use 'r' for read or 'w' for write.");
     }
+    impl_->current_position = position;
 }
 
 void Binary::validate_file_is_open() const {
@@ -338,10 +347,13 @@ void Binary::fill_file_with_nulls() {
                                std::numeric_limits<double>::quiet_NaN());
 
     impl_->io->seekp(0);
+    impl_->current_position = 0;
     int64_t remaining = total_doubles;
     while (remaining > 0) {
         int64_t count = std::min(remaining, static_cast<int64_t>(buffer.size()));
-        impl_->io->write(reinterpret_cast<const char*>(buffer.data()), count * sizeof(double));
+        auto bytes = count * static_cast<int64_t>(sizeof(double));
+        impl_->io->write(reinterpret_cast<const char*>(buffer.data()), bytes);
+        impl_->current_position += bytes;
         remaining -= count;
     }
     impl_->io->flush();
