@@ -447,6 +447,9 @@ Standalone binary file I/O layer for `.qvr` files with `.toml` metadata sidecars
 - `TimeProperties` struct: `frequency`, `initial_value`, `parent_dimension_index`
 - `TimeFrequency` enum: `Yearly`, `Monthly`, `Weekly`, `Daily`, `Hourly`
 
+#### Write Registry
+In-process path registry prevents reading files that are currently open for writing. A `static std::unordered_set<std::string>` in `binary.cpp` tracks canonical paths of files open in write mode. Opening a reader or a second writer on a registered path throws `std::runtime_error`. The registry entry is removed in the `Binary` destructor (before flush). Move semantics work correctly: moved-from objects have null `impl_` and skip unregistration. Not thread-safe or multi-process safe.
+
 #### Binary Performance Bottlenecks
 Profiled with 480×500×31 dimensions (~7.3M read/write calls). Main bottlenecks in hot path:
 

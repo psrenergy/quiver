@@ -11,30 +11,53 @@
 #include <iostream>
 #include <limits>
 #include <string>
+#include <unordered_set>
 
 namespace quiver {
+
+static std::unordered_set<std::string> write_registry;
 
 struct Binary::Impl {
     std::unique_ptr<std::iostream> io;
     std::string file_path;
+    std::string registered_path;  // non-empty only for writers; used to unregister on destruction
     BinaryMetadata metadata;
     int64_t current_position = -1;  // tracked file position to skip redundant seeks
+
+    Impl(std::unique_ptr<std::iostream> io, std::string file_path, BinaryMetadata metadata)
+        : io(std::move(io)), file_path(std::move(file_path)), metadata(std::move(metadata)) {}
+
+    Impl(Impl&&) noexcept = default;
+    Impl& operator=(Impl&&) noexcept = default;
+
+    // Cleanup lives here, not in ~Binary(), because unique_ptr::operator= destroys the
+    // old Impl via ~Impl() without calling ~Binary(). Putting it here ensures move-assignment
+    // correctly flushes and unregisters the replaced writer.
+    ~Impl() {
+        if (!registered_path.empty()) {
+            write_registry.erase(registered_path);
+        }
+        if (io) {
+            io->flush();
+        }
+    }
 };
 
 Binary::Binary(const std::string& file_path, const BinaryMetadata& metadata, std::unique_ptr<std::iostream> io)
-    : impl_(std::make_unique<Impl>(Impl{std::move(io), file_path, metadata})) {}
+    : impl_(std::make_unique<Impl>(std::move(io), file_path, metadata)) {}
 
-Binary::~Binary() {
-    if (impl_ && impl_->io) {
-        impl_->io->flush();
-    }
-}
-
+Binary::~Binary() = default;
 Binary::Binary(Binary&& other) noexcept = default;
 Binary& Binary::operator=(Binary&& other) noexcept = default;
 
 Binary Binary::open_file(const std::string& file_path, char mode, const std::optional<BinaryMetadata>& metadata) {
     namespace fs = std::filesystem;
+    auto canonical = fs::weakly_canonical(file_path).string();
+
+    if (write_registry.count(canonical)) {
+        throw std::runtime_error("Cannot open_file: file is already open for writing: " + canonical);
+    }
+
     switch (mode) {
     case 'r': {
         // Validate file exists
@@ -59,6 +82,8 @@ Binary Binary::open_file(const std::string& file_path, char mode, const std::opt
             throw std::invalid_argument("Metadata must be provided when opening a file in write mode.");
         }
 
+        write_registry.insert(canonical);
+
         // Write metadata to TOML file
         std::ofstream toml_file(file_path + std::string(TOML_EXTENSION));
         toml_file << metadata->to_toml();
@@ -67,6 +92,7 @@ Binary Binary::open_file(const std::string& file_path, char mode, const std::opt
         auto io =
             std::make_unique<std::fstream>(file_path + std::string(QVR_EXTENSION), std::ios::out | std::ios::binary);
         Binary binary(file_path, metadata.value(), std::move(io));
+        binary.impl_->registered_path = canonical;
         binary.fill_file_with_nulls();
         return binary;
     }
