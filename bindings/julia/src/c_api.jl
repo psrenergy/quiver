@@ -24,7 +24,18 @@ function library_dir()
     end
 end
 
-const libquiver_c = joinpath(@__DIR__, "..", "..", "..", "build", library_dir(), library_name())
+const IS_JLL = haskey(ENV, "QUIVER_JLL")
+
+if IS_JLL
+    using Quiver_jll
+    export Quiver_jll
+end
+
+const libquiver_c = if IS_JLL
+    joinpath(Quiver_jll.artifact_dir, library_dir(), library_name())
+else
+    joinpath(@__DIR__, "..", "..", "..", "build", library_dir(), library_name())
+end
 
 
 @cenum quiver_error_t::UInt32 begin
@@ -645,6 +656,5 @@ function quiver_csv_converter_csv_to_bin(path)
 end
 
 #! format: on
-
 
 end # module
