@@ -24,14 +24,9 @@ function library_dir()
     end
 end
 
-const IS_JLL = haskey(ENV, "QUIVER_JLL")
-
-if IS_JLL
+const libquiver_c = if haskey(ENV, "QUIVER_JLL")
     using Quiver_jll
     export Quiver_jll
-end
-
-const libquiver_c = if IS_JLL
     joinpath(Quiver_jll.artifact_dir, library_dir(), library_name())
 else
     joinpath(@__DIR__, "..", "..", "..", "build", library_dir(), library_name())
