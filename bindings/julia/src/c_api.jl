@@ -3,7 +3,6 @@ module C
 #! format: off
 
 using CEnum
-using Libdl
 
 function library_name()
     if Sys.iswindows()
