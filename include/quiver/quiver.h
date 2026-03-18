@@ -2,6 +2,7 @@
 #define QUIVER_H
 
 #include "binary/binary.h"
+#include "binary/binary_comparator.h"
 #include "binary/binary_metadata.h"
 #include "binary/csv_converter.h"
 #include "database.h"

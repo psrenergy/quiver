@@ -77,31 +77,6 @@ function get_metadata(binary::Binary)
     return Metadata(out_md[])
 end
 
-function compare_files(path1::String, path2::String; detailed_report::Bool = false)
-    out_status = Ref{C.quiver_compare_status_t}(C.QUIVER_COMPARE_FILE_MATCH)
-    out_report = Ref{Ptr{Cchar}}(C_NULL)
-
-    check(C.quiver_binary_compare_files(path1, path2, detailed_report ? Cint(1) : Cint(0), out_status, out_report))
-
-    status = if out_status[] == C.QUIVER_COMPARE_FILE_MATCH
-        C.QUIVER_COMPARE_FILE_MATCH
-    elseif out_status[] == C.QUIVER_COMPARE_METADATA_MISMATCH
-        C.QUIVER_COMPARE_METADATA_MISMATCH
-    else
-        C.QUIVER_COMPARE_DATA_MISMATCH
-    end
-
-    report = if out_report[] != C_NULL
-        r = unsafe_string(out_report[])
-        C.quiver_binary_free_string(out_report[])
-        r
-    else
-        nothing
-    end
-
-    return (; status, report)
-end
-
 function get_file_path(binary::Binary)
     out = Ref{Ptr{Cchar}}(C_NULL)
     check(C.quiver_binary_get_file_path(binary.ptr, out))

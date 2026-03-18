@@ -133,43 +133,6 @@ QUIVER_C_API quiver_error_t quiver_binary_get_file_path(quiver_binary_t* binary,
     return QUIVER_OK;
 }
 
-// Compare
-
-QUIVER_C_API quiver_error_t quiver_binary_compare_files(const char* path1,
-                                                        const char* path2,
-                                                        int detailed_report,
-                                                        quiver_compare_status_t* out_status,
-                                                        char** out_report) {
-    QUIVER_REQUIRE(path1, path2, out_status, out_report);
-
-    try {
-        auto result = quiver::Binary::compare_files(path1, path2, detailed_report != 0);
-
-        switch (result.status) {
-        case quiver::CompareStatus::FileMatch:
-            *out_status = QUIVER_COMPARE_FILE_MATCH;
-            break;
-        case quiver::CompareStatus::MetadataMismatch:
-            *out_status = QUIVER_COMPARE_METADATA_MISMATCH;
-            break;
-        case quiver::CompareStatus::DataMismatch:
-            *out_status = QUIVER_COMPARE_DATA_MISMATCH;
-            break;
-        }
-
-        if (result.report.empty()) {
-            *out_report = nullptr;
-        } else {
-            *out_report = quiver::string::new_c_str(result.report);
-        }
-
-        return QUIVER_OK;
-    } catch (const std::exception& e) {
-        quiver_set_last_error(e.what());
-        return QUIVER_ERROR;
-    }
-}
-
 // Free
 
 QUIVER_C_API quiver_error_t quiver_binary_free_string(char* str) {

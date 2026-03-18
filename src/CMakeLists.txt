@@ -21,6 +21,7 @@ set(QUIVER_SOURCES
     schema_validator.cpp
     type_validator.cpp
     binary/binary.cpp
+    binary/binary_comparator.cpp
     binary/csv_converter.cpp
     binary/binary_metadata.cpp
     binary/dimension.cpp
@@ -117,6 +118,7 @@ if(QUIVER_BUILD_C_API)
         c/element.cpp
         c/lua_runner.cpp
         c/binary/binary.cpp
+        c/binary/binary_comparator.cpp
         c/binary/csv_converter.cpp
         c/binary/binary_metadata.cpp
     )

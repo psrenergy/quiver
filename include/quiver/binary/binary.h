@@ -14,13 +14,6 @@
 
 namespace quiver {
 
-enum class CompareStatus { FileMatch, MetadataMismatch, DataMismatch };
-
-struct CompareResult {
-    CompareStatus status;
-    std::string report;
-};
-
 class QUIVER_API Binary {
 public:
     explicit Binary(const std::string& file_path, const BinaryMetadata& metadata, std::unique_ptr<std::iostream> io);
@@ -37,8 +30,6 @@ public:
     // File handling
     static Binary
     open_file(const std::string& file_path, char mode, const std::optional<BinaryMetadata>& metadata = {});
-    static CompareResult
-    compare_files(const std::string& file_path1, const std::string& file_path2, bool detailed_report = false);
 
     // Data handling
     std::vector<double> read(const std::unordered_map<std::string, int64_t>& dims, bool allow_nulls = false);
@@ -47,6 +38,10 @@ public:
     // Getters
     const BinaryMetadata& get_metadata() const;
     const std::string& get_file_path() const;
+
+    // Dimension iteration
+    std::vector<int64_t> next_dimensions(const std::vector<int64_t>& current_dimensions);
+    std::vector<int64_t> dimension_sizes_at_values(const std::vector<int64_t>& dimension_values) const;
 
 private:
     struct Impl;
@@ -57,10 +52,6 @@ private:
     void go_to_position(int64_t position, char mode);
     void fill_file_with_nulls();
 
-    // Reporting
-    static std::string
-    build_data_report(const std::string& file_path1, const std::string& file_path2, Binary& binary1, Binary& binary2);
-
     // Validations
     void validate_file_is_open() const;
     void validate_dimension_values(const std::unordered_map<std::string, int64_t>& dims);
@@ -68,10 +59,6 @@ private:
 
 protected:
     std::iostream& get_io();
-
-    // Dimension iteration
-    std::vector<int64_t> next_dimensions(const std::vector<int64_t>& current_dimensions);
-    std::vector<int64_t> dimension_sizes_at_values(const std::vector<int64_t>& dimension_values) const;
 };
 
 }  // namespace quiver

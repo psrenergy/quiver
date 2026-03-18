@@ -630,8 +630,23 @@ end
     QUIVER_COMPARE_DATA_MISMATCH = 2
 end
 
-function quiver_binary_compare_files(path1, path2, detailed_report, out_status, out_report)
-    @ccall libquiver_c.quiver_binary_compare_files(path1::Ptr{Cchar}, path2::Ptr{Cchar}, detailed_report::Cint, out_status::Ptr{quiver_compare_status_t}, out_report::Ptr{Ptr{Cchar}})::quiver_error_t
+mutable struct quiver_compare_options_t
+    absolute_tolerance::Cdouble
+    relative_tolerance::Cdouble
+    detailed_report::Cint
+    max_report_lines::Cint
+end
+
+function quiver_compare_options_default()
+    @ccall libquiver_c.quiver_compare_options_default()::quiver_compare_options_t
+end
+
+function quiver_binary_compare_files(path1, path2, options, out_status, out_report)
+    @ccall libquiver_c.quiver_binary_compare_files(path1::Ptr{Cchar}, path2::Ptr{Cchar}, options::Ptr{quiver_compare_options_t}, out_status::Ptr{quiver_compare_status_t}, out_report::Ptr{Ptr{Cchar}})::quiver_error_t
+end
+
+function quiver_binary_comparator_free_string(str)
+    @ccall libquiver_c.quiver_binary_comparator_free_string(str::Ptr{Cchar})::quiver_error_t
 end
 
 function quiver_binary_free_string(str)
