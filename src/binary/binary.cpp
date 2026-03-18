@@ -6,6 +6,7 @@
 
 #include <chrono>
 #include <cmath>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -347,6 +348,144 @@ void Binary::fill_file_with_nulls() {
             break;
         }
     }
+}
+
+std::string Binary::build_data_report(const std::string& file_path1,
+                                      const std::string& file_path2,
+                                      Binary& binary1,
+                                      Binary& binary2) {
+    constexpr int MAX_REPORT_LINES = 5;
+
+    const auto& metadata = binary1.get_metadata();
+    const auto& dimensions = metadata.dimensions;
+
+    // Get initial dimension values
+    std::vector<int64_t> initial_dimensions;
+    for (const auto& dim : dimensions) {
+        if (dim.is_time_dimension()) {
+            initial_dimensions.push_back(dim.time->initial_value);
+        } else {
+            initial_dimensions.push_back(1);
+        }
+    }
+
+    // Calculate maximum number of lines
+    int64_t max_lines = 1;
+    for (const auto& dim : dimensions) {
+        max_lines *= dim.size;
+    }
+
+    std::string report = "Data mismatch between '" + file_path1 + "' and '" + file_path2 + "':\n";
+    int report_lines = 0;
+    auto current_dims = initial_dimensions;
+    for (int64_t i = 0; i < max_lines; ++i) {
+        std::unordered_map<std::string, int64_t> dims;
+        for (size_t j = 0; j < dimensions.size(); ++j) {
+            dims[dimensions[j].name] = current_dims[j];
+        }
+
+        auto data1 = binary1.read(dims, true);
+        auto data2 = binary2.read(dims, true);
+
+        for (size_t k = 0; k < data1.size(); ++k) {
+            bool nan1 = std::isnan(data1[k]);
+            bool nan2 = std::isnan(data2[k]);
+            if (nan1 != nan2 || (!nan1 && data1[k] != data2[k])) {
+                // Build dimension string
+                std::string dim_str;
+                for (size_t j = 0; j < dimensions.size(); ++j) {
+                    if (!dim_str.empty())
+                        dim_str += ", ";
+                    dim_str += dimensions[j].name + "=" + std::to_string(current_dims[j]);
+                }
+
+                // Build data string
+                std::string data_str = "'" + metadata.labels[k] + "': ";
+                if (nan1) {
+                    data_str += "NaN";
+                } else {
+                    data_str += std::to_string(data1[k]);
+                }
+                data_str += " vs ";
+                if (nan2) {
+                    data_str += "NaN";
+                } else {
+                    data_str += std::to_string(data2[k]);
+                }
+
+                // Append to report
+                report += "  {" + dim_str + "}, " + data_str + "\n";
+                report_lines++;
+                if (report_lines >= MAX_REPORT_LINES) {
+                    report += "  more ...\n";
+                    return report;
+                }
+            }
+        }
+
+        current_dims = binary1.next_dimensions(current_dims);
+        if (current_dims == initial_dimensions)
+            break;
+    }
+
+    return report;
+}
+
+CompareResult
+Binary::compare_files(const std::string& file_path1, const std::string& file_path2, bool detailed_report) {
+    auto binary1 = open_file(file_path1, 'r');
+    auto binary2 = open_file(file_path2, 'r');
+    std::string report;
+
+    const auto& metadata1 = binary1.get_metadata();
+    const auto& metadata2 = binary2.get_metadata();
+
+    if (metadata1 != metadata2) {
+        if (detailed_report) {
+            report = "Metadata mismatch between files '" + file_path1 + "' and '" + file_path2 + "'.\n";
+        }
+        return {CompareStatus::MetadataMismatch, report};
+    }
+
+    // Fast comparison via raw binary data
+    auto& io1 = binary1.get_io();
+    auto& io2 = binary2.get_io();
+    io1.seekg(0);
+    io2.seekg(0);
+
+    CompareStatus status = CompareStatus::FileMatch;
+    constexpr size_t BUFFER_SIZE = 8192;  // 8 KB chunks for raw binary comparison
+    char buf1[BUFFER_SIZE];
+    char buf2[BUFFER_SIZE];
+
+    while (io1.good() && io2.good()) {
+        io1.read(buf1, BUFFER_SIZE);
+        io2.read(buf2, BUFFER_SIZE);
+
+        auto bytes_read1 = io1.gcount();
+        auto bytes_read2 = io2.gcount();
+
+        if (bytes_read1 != bytes_read2 || std::memcmp(buf1, buf2, bytes_read1) != 0) {
+            status = CompareStatus::DataMismatch;
+            break;
+        }
+
+        if (bytes_read1 == 0)
+            break;
+    }
+
+    if (detailed_report) {
+        if (status == CompareStatus::DataMismatch) {
+            // Clear stream state flags (eofbit/failbit) set by the memcmp loop
+            io1.clear();
+            io2.clear();
+            report = build_data_report(file_path1, file_path2, binary1, binary2);
+        } else if (status == CompareStatus::FileMatch) {
+            report = "Files '" + file_path1 + "' and '" + file_path2 + "' match.";
+        }
+    }
+
+    return {status, report};
 }
 
 const BinaryMetadata& Binary::get_metadata() const {
