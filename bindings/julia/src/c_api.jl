@@ -624,6 +624,16 @@ function quiver_binary_get_file_path(binary, out)
     @ccall libquiver_c.quiver_binary_get_file_path(binary::Ptr{quiver_binary_t}, out::Ptr{Ptr{Cchar}})::quiver_error_t
 end
 
+@cenum quiver_compare_status_t::UInt32 begin
+    QUIVER_COMPARE_FILE_MATCH = 0
+    QUIVER_COMPARE_METADATA_MISMATCH = 1
+    QUIVER_COMPARE_DATA_MISMATCH = 2
+end
+
+function quiver_binary_compare_files(path1, path2, detailed_report, out_status, out_report)
+    @ccall libquiver_c.quiver_binary_compare_files(path1::Ptr{Cchar}, path2::Ptr{Cchar}, detailed_report::Cint, out_status::Ptr{quiver_compare_status_t}, out_report::Ptr{Ptr{Cchar}})::quiver_error_t
+end
+
 function quiver_binary_free_string(str)
     @ccall libquiver_c.quiver_binary_free_string(str::Ptr{Cchar})::quiver_error_t
 end
