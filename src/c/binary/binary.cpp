@@ -146,15 +146,15 @@ QUIVER_C_API quiver_error_t quiver_binary_compare_files(const char* path1,
         auto result = quiver::Binary::compare_files(path1, path2, detailed_report != 0);
 
         switch (result.status) {
-            case quiver::CompareStatus::FileMatch:
-                *out_status = QUIVER_COMPARE_FILE_MATCH;
-                break;
-            case quiver::CompareStatus::MetadataMismatch:
-                *out_status = QUIVER_COMPARE_METADATA_MISMATCH;
-                break;
-            case quiver::CompareStatus::DataMismatch:
-                *out_status = QUIVER_COMPARE_DATA_MISMATCH;
-                break;
+        case quiver::CompareStatus::FileMatch:
+            *out_status = QUIVER_COMPARE_FILE_MATCH;
+            break;
+        case quiver::CompareStatus::MetadataMismatch:
+            *out_status = QUIVER_COMPARE_METADATA_MISMATCH;
+            break;
+        case quiver::CompareStatus::DataMismatch:
+            *out_status = QUIVER_COMPARE_DATA_MISMATCH;
+            break;
         }
 
         if (result.report.empty()) {
