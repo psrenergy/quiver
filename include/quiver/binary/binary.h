@@ -38,7 +38,7 @@ public:
     static Binary
     open_file(const std::string& file_path, char mode, const std::optional<BinaryMetadata>& metadata = {});
     static CompareResult
-    compare_files(const std::string& file_path1, const std::string& file_path2, bool detailed_report = true);
+    compare_files(const std::string& file_path1, const std::string& file_path2, bool detailed_report = false);
 
     // Data handling
     std::vector<double> read(const std::unordered_map<std::string, int64_t>& dims, bool allow_nulls = false);
@@ -58,8 +58,8 @@ private:
     void fill_file_with_nulls();
 
     // Reporting
-    static std::string build_data_report(const std::string& file_path1, const std::string& file_path2, Binary& binary1,
-                                         Binary& binary2);
+    static std::string
+    build_data_report(const std::string& file_path1, const std::string& file_path2, Binary& binary1, Binary& binary2);
 
     // Validations
     void validate_file_is_open() const;

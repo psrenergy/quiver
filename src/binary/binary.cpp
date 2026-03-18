@@ -354,7 +354,7 @@ std::string Binary::build_data_report(const std::string& file_path1,
                                       const std::string& file_path2,
                                       Binary& binary1,
                                       Binary& binary2) {
-    constexpr int MAX_REPORT_LINES = 5;
+    constexpr int MAX_REPORT_LINES = 100;
 
     const auto& metadata = binary1.get_metadata();
     const auto& dimensions = metadata.dimensions;
