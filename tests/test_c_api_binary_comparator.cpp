@@ -1,7 +1,7 @@
 #include <filesystem>
 #include <gtest/gtest.h>
-#include <quiver/c/binary/binary_file.h>
 #include <quiver/c/binary/binary_comparator.h>
+#include <quiver/c/binary/binary_file.h>
 #include <quiver/c/binary/binary_metadata.h>
 #include <quiver/c/common.h>
 #include <quiver/c/element.h>
