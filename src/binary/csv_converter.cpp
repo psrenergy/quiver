@@ -1,7 +1,7 @@
 #include "quiver/binary/csv_converter.h"
 
 #include "binary_utils.h"
-#include "quiver/binary/binary.h"
+#include "quiver/binary/binary_file.h"
 #include "quiver/binary/dimension.h"
 #include "utils/datetime.h"
 
@@ -23,7 +23,7 @@ CSVConverter::CSVConverter(const std::string& file_path,
                            const BinaryMetadata& metadata,
                            std::unique_ptr<std::iostream> io,
                            bool aggregate_time_dimensions)
-    : Binary(file_path, metadata, std::move(io)), impl_(std::make_unique<Impl>(Impl{aggregate_time_dimensions})) {}
+    : BinaryFile(file_path, metadata, std::move(io)), impl_(std::make_unique<Impl>(Impl{aggregate_time_dimensions})) {}
 
 CSVConverter::~CSVConverter() = default;
 
@@ -51,7 +51,7 @@ void CSVConverter::csv_to_bin(const std::string& file_path) {
     csv_reader.validate_header();
 
     // Open the binary file in write mode
-    Binary bin_writer = Binary::open_file(file_path, 'w', metadata);
+    BinaryFile bin_writer = BinaryFile::open_file(file_path, 'w', metadata);
 
     // Get initial dimension values
     const auto& dimensions = metadata.dimensions;
@@ -91,7 +91,7 @@ void CSVConverter::csv_to_bin(const std::string& file_path) {
 
 void CSVConverter::bin_to_csv(const std::string& file_path, bool aggregate_time_dimensions) {
     // Open the binary file in read mode
-    Binary bin_reader = Binary::open_file(file_path, 'r');
+    BinaryFile bin_reader = BinaryFile::open_file(file_path, 'r');
     const auto& metadata = bin_reader.get_metadata();
 
     // Open the CSV file in write mode

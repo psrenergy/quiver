@@ -3,7 +3,6 @@ module C
 #! format: off
 
 using CEnum
-using Libdl
 
 function library_name()
     if Sys.iswindows()
@@ -500,9 +499,9 @@ mutable struct quiver_binary_metadata end
 
 const quiver_binary_metadata_t = quiver_binary_metadata
 
-mutable struct quiver_binary end
+mutable struct quiver_binary_file end
 
-const quiver_binary_t = quiver_binary
+const quiver_binary_file_t = quiver_binary_file
 
 # ============================================================================
 # Binary metadata functions
@@ -593,43 +592,43 @@ function quiver_binary_metadata_free_dimension(dim)
 end
 
 # ============================================================================
-# Binary functions
+# Binary file functions
 # ============================================================================
 
-function quiver_binary_open_read(path, out)
-    @ccall libquiver_c.quiver_binary_open_read(path::Ptr{Cchar}, out::Ptr{Ptr{quiver_binary_t}})::quiver_error_t
+function quiver_binary_file_open_read(path, out)
+    @ccall libquiver_c.quiver_binary_file_open_read(path::Ptr{Cchar}, out::Ptr{Ptr{quiver_binary_file_t}})::quiver_error_t
 end
 
-function quiver_binary_open_write(path, md, out)
-    @ccall libquiver_c.quiver_binary_open_write(path::Ptr{Cchar}, md::Ptr{quiver_binary_metadata_t}, out::Ptr{Ptr{quiver_binary_t}})::quiver_error_t
+function quiver_binary_file_open_write(path, md, out)
+    @ccall libquiver_c.quiver_binary_file_open_write(path::Ptr{Cchar}, md::Ptr{quiver_binary_metadata_t}, out::Ptr{Ptr{quiver_binary_file_t}})::quiver_error_t
 end
 
-function quiver_binary_close(binary)
-    @ccall libquiver_c.quiver_binary_close(binary::Ptr{quiver_binary_t})::quiver_error_t
+function quiver_binary_file_close(binary_file)
+    @ccall libquiver_c.quiver_binary_file_close(binary_file::Ptr{quiver_binary_file_t})::quiver_error_t
 end
 
-function quiver_binary_read(binary, dim_names, dim_values, dim_count, allow_nulls, out_data, out_count)
-    @ccall libquiver_c.quiver_binary_read(binary::Ptr{quiver_binary_t}, dim_names::Ptr{Ptr{Cchar}}, dim_values::Ptr{Int64}, dim_count::Csize_t, allow_nulls::Cint, out_data::Ptr{Ptr{Cdouble}}, out_count::Ptr{Csize_t})::quiver_error_t
+function quiver_binary_file_read(binary_file, dim_names, dim_values, dim_count, allow_nulls, out_data, out_count)
+    @ccall libquiver_c.quiver_binary_file_read(binary_file::Ptr{quiver_binary_file_t}, dim_names::Ptr{Ptr{Cchar}}, dim_values::Ptr{Int64}, dim_count::Csize_t, allow_nulls::Cint, out_data::Ptr{Ptr{Cdouble}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
-function quiver_binary_write(binary, dim_names, dim_values, dim_count, data, data_count)
-    @ccall libquiver_c.quiver_binary_write(binary::Ptr{quiver_binary_t}, dim_names::Ptr{Ptr{Cchar}}, dim_values::Ptr{Int64}, dim_count::Csize_t, data::Ptr{Cdouble}, data_count::Csize_t)::quiver_error_t
+function quiver_binary_file_write(binary_file, dim_names, dim_values, dim_count, data, data_count)
+    @ccall libquiver_c.quiver_binary_file_write(binary_file::Ptr{quiver_binary_file_t}, dim_names::Ptr{Ptr{Cchar}}, dim_values::Ptr{Int64}, dim_count::Csize_t, data::Ptr{Cdouble}, data_count::Csize_t)::quiver_error_t
 end
 
-function quiver_binary_get_metadata(binary, out)
-    @ccall libquiver_c.quiver_binary_get_metadata(binary::Ptr{quiver_binary_t}, out::Ptr{Ptr{quiver_binary_metadata_t}})::quiver_error_t
+function quiver_binary_file_get_metadata(binary_file, out)
+    @ccall libquiver_c.quiver_binary_file_get_metadata(binary_file::Ptr{quiver_binary_file_t}, out::Ptr{Ptr{quiver_binary_metadata_t}})::quiver_error_t
 end
 
-function quiver_binary_get_file_path(binary, out)
-    @ccall libquiver_c.quiver_binary_get_file_path(binary::Ptr{quiver_binary_t}, out::Ptr{Ptr{Cchar}})::quiver_error_t
+function quiver_binary_file_get_file_path(binary_file, out)
+    @ccall libquiver_c.quiver_binary_file_get_file_path(binary_file::Ptr{quiver_binary_file_t}, out::Ptr{Ptr{Cchar}})::quiver_error_t
 end
 
-function quiver_binary_free_string(str)
-    @ccall libquiver_c.quiver_binary_free_string(str::Ptr{Cchar})::quiver_error_t
+function quiver_binary_file_free_string(str)
+    @ccall libquiver_c.quiver_binary_file_free_string(str::Ptr{Cchar})::quiver_error_t
 end
 
-function quiver_binary_free_float_array(data)
-    @ccall libquiver_c.quiver_binary_free_float_array(data::Ptr{Cdouble})::quiver_error_t
+function quiver_binary_file_free_float_array(data)
+    @ccall libquiver_c.quiver_binary_file_free_float_array(data::Ptr{Cdouble})::quiver_error_t
 end
 
 # ============================================================================
@@ -645,6 +644,5 @@ function quiver_csv_converter_csv_to_bin(path)
 end
 
 #! format: on
-
 
 end # module

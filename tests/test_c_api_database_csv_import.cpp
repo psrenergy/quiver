@@ -11,14 +11,6 @@
 
 namespace fs = std::filesystem;
 
-// Helper: read file contents as a string (binary mode to preserve LF)
-static std::string read_file(const std::string& path) {
-    std::ifstream f(path, std::ios::binary);
-    std::ostringstream ss;
-    ss << f.rdbuf();
-    return ss.str();
-}
-
 // Helper: get a unique temp path for a test
 static fs::path temp_csv(const std::string& name) {
     return fs::temp_directory_path() / ("quiver_c_test_" + name + ".csv");

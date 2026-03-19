@@ -1,4 +1,4 @@
-#include "quiver/binary/binary.h"
+#include "quiver/binary/binary_file.h"
 
 #include "binary_utils.h"
 #include "quiver/binary/dimension.h"
@@ -17,7 +17,7 @@ namespace quiver {
 
 static std::unordered_set<std::string> write_registry;
 
-struct Binary::Impl {
+struct BinaryFile::Impl {
     std::unique_ptr<std::iostream> io;
     std::string file_path;
     std::string registered_path;  // non-empty only for writers; used to unregister on destruction
@@ -43,14 +43,15 @@ struct Binary::Impl {
     }
 };
 
-Binary::Binary(const std::string& file_path, const BinaryMetadata& metadata, std::unique_ptr<std::iostream> io)
+BinaryFile::BinaryFile(const std::string& file_path, const BinaryMetadata& metadata, std::unique_ptr<std::iostream> io)
     : impl_(std::make_unique<Impl>(std::move(io), file_path, metadata)) {}
 
-Binary::~Binary() = default;
-Binary::Binary(Binary&& other) noexcept = default;
-Binary& Binary::operator=(Binary&& other) noexcept = default;
+BinaryFile::~BinaryFile() = default;
+BinaryFile::BinaryFile(BinaryFile&& other) noexcept = default;
+BinaryFile& BinaryFile::operator=(BinaryFile&& other) noexcept = default;
 
-Binary Binary::open_file(const std::string& file_path, char mode, const std::optional<BinaryMetadata>& metadata) {
+BinaryFile
+BinaryFile::open_file(const std::string& file_path, char mode, const std::optional<BinaryMetadata>& metadata) {
     namespace fs = std::filesystem;
     auto canonical = fs::weakly_canonical(file_path).string();
 
@@ -74,7 +75,7 @@ Binary Binary::open_file(const std::string& file_path, char mode, const std::opt
         // Open binary data file
         auto io =
             std::make_unique<std::fstream>(file_path + std::string(QVR_EXTENSION), std::ios::in | std::ios::binary);
-        return Binary(file_path, metadata_from_toml, std::move(io));
+        return BinaryFile(file_path, metadata_from_toml, std::move(io));
     }
     case 'w': {
         // Validate metadata provided
@@ -91,10 +92,10 @@ Binary Binary::open_file(const std::string& file_path, char mode, const std::opt
         // Open binary data file
         auto io =
             std::make_unique<std::fstream>(file_path + std::string(QVR_EXTENSION), std::ios::out | std::ios::binary);
-        Binary binary(file_path, metadata.value(), std::move(io));
-        binary.impl_->registered_path = canonical;
-        binary.fill_file_with_nulls();
-        return binary;
+        BinaryFile binary_file(file_path, metadata.value(), std::move(io));
+        binary_file.impl_->registered_path = canonical;
+        binary_file.fill_file_with_nulls();
+        return binary_file;
     }
     default:
         throw std::invalid_argument("Invalid file mode: " + std::string(1, mode) +
@@ -102,7 +103,7 @@ Binary Binary::open_file(const std::string& file_path, char mode, const std::opt
     }
 }
 
-std::vector<double> Binary::read(const std::unordered_map<std::string, int64_t>& dims, bool allow_nulls) {
+std::vector<double> BinaryFile::read(const std::unordered_map<std::string, int64_t>& dims, bool allow_nulls) {
     validate_dimension_values(dims);
 
     go_to_position(calculate_file_position(dims), 'r');
@@ -129,7 +130,7 @@ std::vector<double> Binary::read(const std::unordered_map<std::string, int64_t>&
     return data;
 }
 
-void Binary::write(const std::vector<double>& data, const std::unordered_map<std::string, int64_t>& dims) {
+void BinaryFile::write(const std::vector<double>& data, const std::unordered_map<std::string, int64_t>& dims) {
     validate_dimension_values(dims);
     validate_data_length(data);
 
@@ -140,7 +141,7 @@ void Binary::write(const std::vector<double>& data, const std::unordered_map<std
     impl_->current_position += bytes;
 }
 
-int64_t Binary::calculate_file_position(const std::unordered_map<std::string, int64_t>& dims) const {
+int64_t BinaryFile::calculate_file_position(const std::unordered_map<std::string, int64_t>& dims) const {
     const auto& metadata = impl_->metadata;
     const auto& dimensions = metadata.dimensions;
     int64_t position = 0;
@@ -156,7 +157,7 @@ int64_t Binary::calculate_file_position(const std::unordered_map<std::string, in
     return position;
 }
 
-void Binary::go_to_position(int64_t position, char mode) {
+void BinaryFile::go_to_position(int64_t position, char mode) {
     if (impl_->current_position == position) {
         return;
     }
@@ -174,13 +175,13 @@ void Binary::go_to_position(int64_t position, char mode) {
     impl_->current_position = position;
 }
 
-void Binary::validate_file_is_open() const {
+void BinaryFile::validate_file_is_open() const {
     if (!impl_->io || !impl_->io->good()) {
         throw std::runtime_error("File is not open: " + impl_->file_path);
     }
 }
 
-void Binary::validate_dimension_values(const std::unordered_map<std::string, int64_t>& dims) {
+void BinaryFile::validate_dimension_values(const std::unordered_map<std::string, int64_t>& dims) {
     const auto& metadata = impl_->metadata;
     const auto& dimensions = metadata.dimensions;
 
@@ -234,14 +235,14 @@ void Binary::validate_dimension_values(const std::unordered_map<std::string, int
     }
 }
 
-void Binary::validate_data_length(const std::vector<double>& data) {
+void BinaryFile::validate_data_length(const std::vector<double>& data) {
     if (data.size() != impl_->metadata.labels.size()) {
         throw std::invalid_argument("Data length " + std::to_string(data.size()) + " does not match expected length " +
                                     std::to_string(impl_->metadata.labels.size()));
     }
 }
 
-std::vector<int64_t> Binary::next_dimensions(const std::vector<int64_t>& current_dimensions) {
+std::vector<int64_t> BinaryFile::next_dimensions(const std::vector<int64_t>& current_dimensions) {
     const auto& dimensions = impl_->metadata.dimensions;
     const auto& current_sizes = dimension_sizes_at_values(current_dimensions);
 
@@ -274,7 +275,7 @@ std::vector<int64_t> Binary::next_dimensions(const std::vector<int64_t>& current
     return next;
 }
 
-std::vector<int64_t> Binary::dimension_sizes_at_values(const std::vector<int64_t>& dimension_values) const {
+std::vector<int64_t> BinaryFile::dimension_sizes_at_values(const std::vector<int64_t>& dimension_values) const {
     using namespace quiver::time;
     const auto& metadata = impl_->metadata;
     const auto& dimensions = metadata.dimensions;
@@ -346,7 +347,7 @@ std::vector<int64_t> Binary::dimension_sizes_at_values(const std::vector<int64_t
     return sizes;
 }
 
-void Binary::fill_file_with_nulls() {
+void BinaryFile::fill_file_with_nulls() {
     const auto& metadata = impl_->metadata;
 
     // Calculate total number of cells
@@ -375,15 +376,15 @@ void Binary::fill_file_with_nulls() {
     impl_->io->flush();
 }
 
-const BinaryMetadata& Binary::get_metadata() const {
+const BinaryMetadata& BinaryFile::get_metadata() const {
     return impl_->metadata;
 }
 
-const std::string& Binary::get_file_path() const {
+const std::string& BinaryFile::get_file_path() const {
     return impl_->file_path;
 }
 
-std::iostream& Binary::get_io() {
+std::iostream& BinaryFile::get_io() {
     return *impl_->io;
 }
 

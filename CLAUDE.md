@@ -12,7 +12,7 @@ include/quiver/           # C++ public headers
   element.h               # Element builder for create operations
   lua_runner.h            # Lua scripting support
 include/quiver/binary/      # Binary subsystem headers (binary file I/O)
-  binary.h                  # Binary class (Pimpl) - open_file, read, write, get_metadata
+  binary_file.h               # BinaryFile class (Pimpl) - open_file, read, write, get_metadata
   csv_converter.h              # CSVConverter class - bin_to_csv, csv_to_bin
   binary_metadata.h         # BinaryMetadata struct - dimensions, labels, serialization
   dimension.h             # Dimension struct (name, size, optional TimeProperties)
@@ -24,7 +24,7 @@ include/quiver/c/         # C API headers (for FFI)
   element.h
   lua_runner.h
 include/quiver/c/binary/    # Binary C API headers
-  binary.h                  # quiver_binary_t opaque handle, open/close/read/write
+  binary_file.h               # quiver_binary_file_t opaque handle, open/close/read/write
   csv_converter.h              # bin_to_csv, csv_to_bin functions
   binary_metadata.h         # quiver_binary_metadata_t + flat structs (quiver_dimension_t, quiver_time_properties_t)
 src/                      # C++ implementation
@@ -33,12 +33,12 @@ src/                      # C++ implementation
   cli/main.cpp            # quiver_cli CLI entry point
   utils/string.h          # String utilities: new_c_str, trim
 src/binary/                 # Binary C++ implementation
-  binary.cpp                # Binary class (Pimpl impl)
+  binary_file.cpp             # BinaryFile class (Pimpl impl)
   csv_converter.cpp            # CSVConverter implementation
   binary_metadata.cpp       # BinaryMetadata factories, serialization, validation
   time_properties.cpp     # TimeFrequency string conversion
 src/c/                    # C API implementation
-  internal.h              # Shared structs (quiver_database, quiver_element, quiver_binary, quiver_binary_metadata), QUIVER_REQUIRE macro
+  internal.h              # Shared structs (quiver_database, quiver_element, quiver_binary_file, quiver_binary_metadata), QUIVER_REQUIRE macro
   database_helpers.h      # Marshaling templates, strdup_safe, metadata converters
   options.cpp             # Option defaults: quiver_database_options_default, quiver_csv_options_default
   database.cpp            # Lifecycle: open, close, factory methods, describe
@@ -53,11 +53,11 @@ src/c/                    # C API implementation
   database_time_series.cpp # Time series operations + co-located free functions
   database_transaction.cpp # Transaction control (begin, commit, rollback, in_transaction)
 src/c/binary/               # Binary C API implementation
-  binary.cpp                # Binary lifecycle, read/write, getters
+  binary_file.cpp             # BinaryFile lifecycle, read/write, getters
   csv_converter.cpp            # CSV conversion wrappers
   binary_metadata.cpp       # Metadata lifecycle, builders, getters, serialization
 bindings/julia/           # Julia bindings (Quiver.jl)
-  src/binary/               # Binary Julia wrappers (BinaryMetadata, Binary, csv_converter)
+  src/binary/               # Binary Julia wrappers (Metadata, File, csv_converter)
 bindings/dart/            # Dart bindings (quiver)
 bindings/python/          # Python bindings (quiver) - CFFI ABI-mode
 tests/                    # C++ tests
@@ -133,12 +133,12 @@ C API tests follow same pattern with `test_c_api_database_*.cpp` prefix:
 - `test_c_api_database_metadata.cpp` - Metadata get/list operations (vector, set, time series, scalar)
 
 Binary C API tests with `test_c_api_binary_*.cpp` prefix:
-- `test_c_api_binary.cpp` - Binary open/close, write/read round-trip, getters, allow_nulls
+- `test_c_api_binary_file.cpp` - BinaryFile open/close, write/read round-trip, getters, allow_nulls
 - `test_c_api_csv_converter.cpp` - bin_to_csv, csv_to_bin, round-trip verification
 - `test_c_api_binary_metadata.cpp` - Metadata lifecycle, builders/getters, dimensions, TOML round-trip, from_element
 
 Julia binary tests:
-- `test_binary.jl` - Binary open/close, write/read round-trip, getters, allow_nulls
+- `test_binary_file.jl` - BinaryFile open/close, write/read round-trip, getters, allow_nulls
 - `test_csv_converter.jl` - bin_to_csv, csv_to_bin, round-trip verification
 - `test_binary_metadata.jl` - Metadata builder, getters, TOML round-trip, from_element
 
@@ -162,7 +162,7 @@ struct Database::Impl {
 };
 ```
 
-Binary subsystem: `Binary` and `CSVConverter` use Pimpl (hide file I/O dependencies). `BinaryMetadata`, `Dimension`, `TimeProperties` are plain value types.
+Binary subsystem: `BinaryFile` and `CSVConverter` use Pimpl (hide file I/O dependencies). `BinaryMetadata`, `Dimension`, `TimeProperties` are plain value types.
 
 Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`, `GroupMetadata`, `ScalarMetadata`, `CSVOptions`, `BinaryMetadata`, `Dimension`, `TimeProperties`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor).
 
@@ -292,13 +292,16 @@ quiver_database_free_string_array(char**, size_t)
 quiver_database_free_string(char*)
 
 // Binary entity free functions
-quiver_binary_metadata_create/free        // lifecycle
-quiver_binary_open_read/open_write/close  // lifecycle
-quiver_binary_free_string(char*)
+// Binary metadata lifecycle
+quiver_binary_metadata_create/free
 quiver_binary_metadata_free_string(char*)
 quiver_binary_metadata_free_string_array(char**, size_t)
 quiver_binary_metadata_free_dimension(quiver_dimension_t*)
-quiver_binary_free_float_array(double*)
+
+// Binary file lifecycle
+quiver_binary_file_open_read/open_write/close
+quiver_binary_file_free_string(char*)
+quiver_binary_file_free_float_array(double*)
 ```
 
 ### Metadata Types
@@ -436,7 +439,7 @@ Element().set("label", "Item 1").set("value", 42).set("tags", {"a", "b"})
 ### Binary Subsystem
 Standalone binary file I/O layer for `.qvr` files with `.toml` metadata sidecars.
 
-- `Binary` class (Pimpl): `open_file(path, mode, metadata?)`, `read(dims)`, `write(dims, data)`, `get_metadata()`, `get_file_path()`
+- `BinaryFile` class (Pimpl): `open_file(path, mode, metadata?)`, `read(dims)`, `write(dims, data)`, `get_metadata()`, `get_file_path()`
 - `CSVConverter` class (Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)`
 - `BinaryMetadata` struct: `dimensions`, `initial_datetime`, `unit`, `labels`, `version`, `number_of_time_dimensions`
   - Factories: `from_toml()`, `from_element()`
@@ -509,16 +512,16 @@ lua.run(R"(
 
 | Category | C++ | C API | Julia |
 |----------|-----|-------|-------|
-| Open read | `Binary::open_file(path, 'r')` | `quiver_binary_open_read()` | `open_file(path; mode=:read)` |
-| Open write | `Binary::open_file(path, 'w', md)` | `quiver_binary_open_write()` | `open_file(path; mode=:write, metadata=md)` |
-| Close | (destructor) | `quiver_binary_close()` | `close!(binary)` |
-| Read | `binary.read(dims)` | `quiver_binary_read()` | `read(binary; dims...)` |
-| Write | `binary.write(dims, data)` | `quiver_binary_write()` | `write!(binary; data=data, dims...)` |
-| Get metadata | `binary.get_metadata()` | `quiver_binary_get_metadata()` | `get_metadata(binary)` |
-| Get file path | `binary.get_file_path()` | `quiver_binary_get_file_path()` | `get_file_path(binary)` |
+| Open read | `BinaryFile::open_file(path, 'r')` | `quiver_binary_file_open_read()` | `open_file(path; mode=:read)` |
+| Open write | `BinaryFile::open_file(path, 'w', md)` | `quiver_binary_file_open_write()` | `open_file(path; mode=:write, metadata=md)` |
+| Close | (destructor) | `quiver_binary_file_close()` | `close!(file)` |
+| Read | `binary_file.read(dims)` | `quiver_binary_file_read()` | `read(file; dims...)` |
+| Write | `binary_file.write(dims, data)` | `quiver_binary_file_write()` | `write!(file; data=data, dims...)` |
+| Get metadata | `binary_file.get_metadata()` | `quiver_binary_file_get_metadata()` | `get_metadata(file)` |
+| Get file path | `binary_file.get_file_path()` | `quiver_binary_file_get_file_path()` | `get_file_path(file)` |
 | Bin to CSV | `CSVConverter::bin_to_csv()` | `quiver_csv_converter_bin_to_csv()` | `bin_to_csv()` |
 | CSV to bin | `CSVConverter::csv_to_bin()` | `quiver_csv_converter_csv_to_bin()` | `csv_to_bin()` |
-| Metadata builder | `BinaryMetadata{}` | `quiver_binary_metadata_create()` | `BinaryMetadata(; kwargs...)` |
+| Metadata builder | `BinaryMetadata{}` | `quiver_binary_metadata_create()` | `Metadata(; kwargs...)` |
 | Metadata from TOML | `BinaryMetadata::from_toml()` | `quiver_binary_metadata_from_toml()` | `from_toml()` |
 | Metadata from Element | `BinaryMetadata::from_element()` | `quiver_binary_metadata_from_element()` | `from_element()` |
 
