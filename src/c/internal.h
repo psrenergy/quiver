@@ -1,7 +1,7 @@
 #ifndef QUIVER_C_API_INTERNAL_H
 #define QUIVER_C_API_INTERNAL_H
 
-#include "quiver/binary/binary.h"
+#include "quiver/binary/binary_file.h"
 #include "quiver/binary/binary_metadata.h"
 #include "quiver/database.h"
 #include "quiver/element.h"
@@ -28,9 +28,9 @@ struct quiver_binary_metadata {
     quiver::BinaryMetadata metadata;
 };
 
-struct quiver_binary {
-    quiver::Binary binary;
-    quiver_binary(quiver::Binary&& b) : binary(std::move(b)) {}
+struct quiver_binary_file {
+    quiver::BinaryFile binary_file;
+    quiver_binary_file(quiver::BinaryFile&& bf) : binary_file(std::move(bf)) {}
 };
 
 // Validates pointer arguments are non-null. Sets descriptive error and returns QUIVER_ERROR.
