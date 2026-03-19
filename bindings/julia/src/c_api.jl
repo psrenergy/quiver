@@ -3,7 +3,6 @@ module C
 #! format: off
 
 using CEnum
-using Libdl
 
 function library_name()
     if Sys.iswindows()
@@ -645,6 +644,5 @@ function quiver_csv_converter_csv_to_bin(path)
 end
 
 #! format: on
-
 
 end # module
