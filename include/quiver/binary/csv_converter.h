@@ -2,7 +2,7 @@
 #define QUIVER_CSV_CONVERTER_H
 
 #include "../export.h"
-#include "binary.h"
+#include "binary_file.h"
 
 #include <cstdint>
 #include <ctime>
@@ -14,7 +14,7 @@
 
 namespace quiver {
 
-class QUIVER_API CSVConverter : public Binary {
+class QUIVER_API CSVConverter : public BinaryFile {
 public:
     explicit CSVConverter(const std::string& file_path,
                           const BinaryMetadata& metadata,

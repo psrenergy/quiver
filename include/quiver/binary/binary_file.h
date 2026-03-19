@@ -1,5 +1,5 @@
-#ifndef QUIVER_BINARY_H
-#define QUIVER_BINARY_H
+#ifndef QUIVER_BINARY_FILE_H
+#define QUIVER_BINARY_FILE_H
 
 #include "../export.h"
 #include "binary_metadata.h"
@@ -14,21 +14,23 @@
 
 namespace quiver {
 
-class QUIVER_API Binary {
+class QUIVER_API BinaryFile {
 public:
-    explicit Binary(const std::string& file_path, const BinaryMetadata& metadata, std::unique_ptr<std::iostream> io);
-    ~Binary();
+    explicit BinaryFile(const std::string& file_path,
+                        const BinaryMetadata& metadata,
+                        std::unique_ptr<std::iostream> io);
+    ~BinaryFile();
 
     // Non-copyable
-    Binary(const Binary&) = delete;
-    Binary& operator=(const Binary&) = delete;
+    BinaryFile(const BinaryFile&) = delete;
+    BinaryFile& operator=(const BinaryFile&) = delete;
 
     // Movable
-    Binary(Binary&& other) noexcept;
-    Binary& operator=(Binary&& other) noexcept;
+    BinaryFile(BinaryFile&& other) noexcept;
+    BinaryFile& operator=(BinaryFile&& other) noexcept;
 
     // File handling
-    static Binary
+    static BinaryFile
     open_file(const std::string& file_path, char mode, const std::optional<BinaryMetadata>& metadata = {});
 
     // Data handling
@@ -63,4 +65,4 @@ protected:
 
 }  // namespace quiver
 
-#endif  // QUIVER_BINARY_H
+#endif  // QUIVER_BINARY_FILE_H
