@@ -400,16 +400,16 @@ TEST_F(BinaryTempFileFixture, MoveAssignWriterUnregistersOldPath) {
     auto md = make_simple_metadata();
     auto path2 = path + "_2";
     {
-        auto writer1 = Binary::open_file(path, 'w', md);
-        auto writer2 = Binary::open_file(path2, 'w', md);
+        auto writer1 = BinaryFile::open_file(path, 'w', md);
+        auto writer2 = BinaryFile::open_file(path2, 'w', md);
         writer2 = std::move(writer1);
         // writer2's old path (path2) should be unregistered
-        EXPECT_NO_THROW(Binary::open_file(path2, 'r'));
+        EXPECT_NO_THROW(BinaryFile::open_file(path2, 'r'));
         // writer2 now owns path, still registered
-        EXPECT_THROW(Binary::open_file(path, 'r'), std::runtime_error);
+        EXPECT_THROW(BinaryFile::open_file(path, 'r'), std::runtime_error);
     }
     // After destruction, path is also unregistered
-    EXPECT_NO_THROW(Binary::open_file(path, 'r'));
+    EXPECT_NO_THROW(BinaryFile::open_file(path, 'r'));
 
     for (auto ext : {".qvr", ".toml"}) {
         auto full = path2 + ext;
@@ -443,31 +443,31 @@ TEST_F(BinaryTempFileFixture, InvalidTimeDimensionCoordinates) {
 
 TEST_F(BinaryTempFileFixture, WriterBlocksReader) {
     auto md = make_simple_metadata();
-    auto writer = Binary::open_file(path, 'w', md);
-    EXPECT_THROW(Binary::open_file(path, 'r'), std::runtime_error);
+    auto writer = BinaryFile::open_file(path, 'w', md);
+    EXPECT_THROW(BinaryFile::open_file(path, 'r'), std::runtime_error);
 }
 
 TEST_F(BinaryTempFileFixture, WriterBlocksSecondWriter) {
     auto md = make_simple_metadata();
-    auto writer = Binary::open_file(path, 'w', md);
-    EXPECT_THROW(Binary::open_file(path, 'w', md), std::runtime_error);
+    auto writer = BinaryFile::open_file(path, 'w', md);
+    EXPECT_THROW(BinaryFile::open_file(path, 'w', md), std::runtime_error);
 }
 
 TEST_F(BinaryTempFileFixture, DestroyedWriterAllowsReader) {
     auto md = make_simple_metadata();
     {
-        auto writer = Binary::open_file(path, 'w', md);
+        auto writer = BinaryFile::open_file(path, 'w', md);
     }
-    EXPECT_NO_THROW(Binary::open_file(path, 'r'));
+    EXPECT_NO_THROW(BinaryFile::open_file(path, 'r'));
 }
 
 TEST_F(BinaryTempFileFixture, MovedWriterClearsRegistryOnDestruction) {
     auto md = make_simple_metadata();
     {
-        auto writer1 = Binary::open_file(path, 'w', md);
+        auto writer1 = BinaryFile::open_file(path, 'w', md);
         auto writer2 = std::move(writer1);
     }
-    EXPECT_NO_THROW(Binary::open_file(path, 'r'));
+    EXPECT_NO_THROW(BinaryFile::open_file(path, 'r'));
 }
 
 TEST_F(BinaryTempFileFixture, SingleTimeDimensionSkipsConsistencyCheck) {

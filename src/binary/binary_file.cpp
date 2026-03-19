@@ -30,8 +30,8 @@ struct BinaryFile::Impl {
     Impl(Impl&&) noexcept = default;
     Impl& operator=(Impl&&) noexcept = default;
 
-    // Cleanup lives here, not in ~Binary(), because unique_ptr::operator= destroys the
-    // old Impl via ~Impl() without calling ~Binary(). Putting it here ensures move-assignment
+    // Cleanup lives here, not in ~BinaryFile(), because unique_ptr::operator= destroys the
+    // old Impl via ~Impl() without calling ~BinaryFile(). Putting it here ensures move-assignment
     // correctly flushes and unregisters the replaced writer.
     ~Impl() {
         if (!registered_path.empty()) {
