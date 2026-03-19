@@ -1,6 +1,6 @@
 #include <filesystem>
 #include <gtest/gtest.h>
-#include <quiver/binary/binary.h>
+#include <quiver/binary/binary_file.h>
 #include <quiver/binary/binary_comparator.h>
 #include <quiver/binary/binary_metadata.h>
 
@@ -49,12 +49,12 @@ protected:
 TEST_F(BinaryCompareFixture, IdenticalFilesReturnFileMatch) {
     auto md = make_metadata();
     {
-        auto bin = Binary::open_file(path1, 'w', md);
+        auto bin = BinaryFile::open_file(path1, 'w', md);
         bin.write({10.0, 20.0}, {{"scenario", 1}, {"block", 1}});
         bin.write({30.0, 40.0}, {{"scenario", 1}, {"block", 2}});
     }
     {
-        auto bin = Binary::open_file(path2, 'w', md);
+        auto bin = BinaryFile::open_file(path2, 'w', md);
         bin.write({10.0, 20.0}, {{"scenario", 1}, {"block", 1}});
         bin.write({30.0, 40.0}, {{"scenario", 1}, {"block", 2}});
     }
@@ -66,10 +66,10 @@ TEST_F(BinaryCompareFixture, IdenticalFilesReturnFileMatch) {
 TEST_F(BinaryCompareFixture, BothFilesUnwrittenReturnFileMatch) {
     auto md = make_metadata();
     {
-        Binary::open_file(path1, 'w', md);
+        BinaryFile::open_file(path1, 'w', md);
     }
     {
-        Binary::open_file(path2, 'w', md);
+        BinaryFile::open_file(path2, 'w', md);
     }
 
     auto result = BinaryComparator::compare(path1, path2);
@@ -79,11 +79,11 @@ TEST_F(BinaryCompareFixture, BothFilesUnwrittenReturnFileMatch) {
 TEST_F(BinaryCompareFixture, DifferentDataReturnsDataMismatch) {
     auto md = make_metadata();
     {
-        auto bin = Binary::open_file(path1, 'w', md);
+        auto bin = BinaryFile::open_file(path1, 'w', md);
         bin.write({10.0, 20.0}, {{"scenario", 1}, {"block", 1}});
     }
     {
-        auto bin = Binary::open_file(path2, 'w', md);
+        auto bin = BinaryFile::open_file(path2, 'w', md);
         bin.write({99.0, 20.0}, {{"scenario", 1}, {"block", 1}});
     }
 
@@ -94,11 +94,11 @@ TEST_F(BinaryCompareFixture, DifferentDataReturnsDataMismatch) {
 TEST_F(BinaryCompareFixture, WrittenVsUnwrittenReturnsDataMismatch) {
     auto md = make_metadata();
     {
-        auto bin = Binary::open_file(path1, 'w', md);
+        auto bin = BinaryFile::open_file(path1, 'w', md);
         bin.write({10.0, 20.0}, {{"scenario", 1}, {"block", 1}});
     }
     {
-        Binary::open_file(path2, 'w', md);
+        BinaryFile::open_file(path2, 'w', md);
     }
 
     auto result = BinaryComparator::compare(path1, path2);
@@ -110,11 +110,11 @@ TEST_F(BinaryCompareFixture, DifferentMetadataReturnsMetadataMismatch) {
     auto md2 = make_metadata();
     md2.unit = "GWh";
     {
-        auto bin = Binary::open_file(path1, 'w', md1);
+        auto bin = BinaryFile::open_file(path1, 'w', md1);
         bin.write({10.0, 20.0}, {{"scenario", 1}, {"block", 1}});
     }
     {
-        auto bin = Binary::open_file(path2, 'w', md2);
+        auto bin = BinaryFile::open_file(path2, 'w', md2);
         bin.write({10.0, 20.0}, {{"scenario", 1}, {"block", 1}});
     }
 
@@ -131,10 +131,10 @@ TEST_F(BinaryCompareFixture, DifferentDimensionSizesReturnsMetadataMismatch) {
     md2.unit = "MW";
     md2.labels = {"plant_1", "plant_2"};
     {
-        Binary::open_file(path1, 'w', md1);
+        BinaryFile::open_file(path1, 'w', md1);
     }
     {
-        Binary::open_file(path2, 'w', md2);
+        BinaryFile::open_file(path2, 'w', md2);
     }
 
     auto result = BinaryComparator::compare(path1, path2);
@@ -146,10 +146,10 @@ TEST_F(BinaryCompareFixture, DifferentLabelsReturnsMetadataMismatch) {
     auto md2 = make_metadata();
     md2.labels = {"gen_1", "gen_2"};
     {
-        Binary::open_file(path1, 'w', md1);
+        BinaryFile::open_file(path1, 'w', md1);
     }
     {
-        Binary::open_file(path2, 'w', md2);
+        BinaryFile::open_file(path2, 'w', md2);
     }
 
     auto result = BinaryComparator::compare(path1, path2);
@@ -163,10 +163,10 @@ TEST_F(BinaryCompareFixture, DifferentLabelsReturnsMetadataMismatch) {
 TEST_F(BinaryCompareFixture, FileMatchReportIsNotEmpty) {
     auto md = make_metadata();
     {
-        Binary::open_file(path1, 'w', md);
+        BinaryFile::open_file(path1, 'w', md);
     }
     {
-        Binary::open_file(path2, 'w', md);
+        BinaryFile::open_file(path2, 'w', md);
     }
 
     auto result = BinaryComparator::compare(path1, path2, {.detailed_report = true});
@@ -177,11 +177,11 @@ TEST_F(BinaryCompareFixture, FileMatchReportIsNotEmpty) {
 TEST_F(BinaryCompareFixture, DataMismatchReportContainsDimensionInfo) {
     auto md = make_metadata();
     {
-        auto bin = Binary::open_file(path1, 'w', md);
+        auto bin = BinaryFile::open_file(path1, 'w', md);
         bin.write({10.0, 20.0}, {{"scenario", 1}, {"block", 2}});
     }
     {
-        auto bin = Binary::open_file(path2, 'w', md);
+        auto bin = BinaryFile::open_file(path2, 'w', md);
         bin.write({99.0, 20.0}, {{"scenario", 1}, {"block", 2}});
     }
 
@@ -195,11 +195,11 @@ TEST_F(BinaryCompareFixture, DataMismatchReportContainsDimensionInfo) {
 TEST_F(BinaryCompareFixture, DataMismatchReportContainsValues) {
     auto md = make_metadata();
     {
-        auto bin = Binary::open_file(path1, 'w', md);
+        auto bin = BinaryFile::open_file(path1, 'w', md);
         bin.write({10.0, 20.0}, {{"scenario", 1}, {"block", 1}});
     }
     {
-        auto bin = Binary::open_file(path2, 'w', md);
+        auto bin = BinaryFile::open_file(path2, 'w', md);
         bin.write({99.0, 20.0}, {{"scenario", 1}, {"block", 1}});
     }
 
@@ -211,11 +211,11 @@ TEST_F(BinaryCompareFixture, DataMismatchReportContainsValues) {
 TEST_F(BinaryCompareFixture, DataMismatchReportShowsNaN) {
     auto md = make_metadata();
     {
-        auto bin = Binary::open_file(path1, 'w', md);
+        auto bin = BinaryFile::open_file(path1, 'w', md);
         // leave position unwritten (NaN)
     }
     {
-        auto bin = Binary::open_file(path2, 'w', md);
+        auto bin = BinaryFile::open_file(path2, 'w', md);
         bin.write({5.0, 6.0}, {{"scenario", 1}, {"block", 1}});
     }
 
@@ -227,12 +227,12 @@ TEST_F(BinaryCompareFixture, DataMismatchReportShowsNaN) {
 TEST_F(BinaryCompareFixture, DataMismatchReportOnlyShowsDifferingPositions) {
     auto md = make_metadata();
     {
-        auto bin = Binary::open_file(path1, 'w', md);
+        auto bin = BinaryFile::open_file(path1, 'w', md);
         bin.write({10.0, 20.0}, {{"scenario", 1}, {"block", 1}});
         bin.write({30.0, 40.0}, {{"scenario", 1}, {"block", 2}});
     }
     {
-        auto bin = Binary::open_file(path2, 'w', md);
+        auto bin = BinaryFile::open_file(path2, 'w', md);
         bin.write({10.0, 20.0}, {{"scenario", 1}, {"block", 1}});  // same
         bin.write({99.0, 40.0}, {{"scenario", 1}, {"block", 2}});  // different
     }
@@ -248,13 +248,13 @@ TEST_F(BinaryCompareFixture, CustomMaxReportLinesTruncatesReport) {
     // 2 scenarios x 3 blocks x 2 labels = 12 mismatch lines, truncated at 5
     auto md = make_metadata();
     {
-        auto bin = Binary::open_file(path1, 'w', md);
+        auto bin = BinaryFile::open_file(path1, 'w', md);
         for (int64_t s = 1; s <= 2; ++s)
             for (int64_t b = 1; b <= 3; ++b)
                 bin.write({1.0, 2.0}, {{"scenario", s}, {"block", b}});
     }
     {
-        auto bin = Binary::open_file(path2, 'w', md);
+        auto bin = BinaryFile::open_file(path2, 'w', md);
         for (int64_t s = 1; s <= 2; ++s)
             for (int64_t b = 1; b <= 3; ++b)
                 bin.write({99.0, 98.0}, {{"scenario", s}, {"block", b}});
@@ -270,10 +270,10 @@ TEST_F(BinaryCompareFixture, MetadataMismatchReportIsNotEmpty) {
     auto md2 = make_metadata();
     md2.unit = "GWh";
     {
-        Binary::open_file(path1, 'w', md1);
+        BinaryFile::open_file(path1, 'w', md1);
     }
     {
-        Binary::open_file(path2, 'w', md2);
+        BinaryFile::open_file(path2, 'w', md2);
     }
 
     auto result = BinaryComparator::compare(path1, path2, {.detailed_report = true});
@@ -288,10 +288,10 @@ TEST_F(BinaryCompareFixture, MetadataMismatchReportIsNotEmpty) {
 TEST_F(BinaryCompareFixture, FileMatchNoReportIsEmpty) {
     auto md = make_metadata();
     {
-        Binary::open_file(path1, 'w', md);
+        BinaryFile::open_file(path1, 'w', md);
     }
     {
-        Binary::open_file(path2, 'w', md);
+        BinaryFile::open_file(path2, 'w', md);
     }
 
     auto result = BinaryComparator::compare(path1, path2);
@@ -302,11 +302,11 @@ TEST_F(BinaryCompareFixture, FileMatchNoReportIsEmpty) {
 TEST_F(BinaryCompareFixture, DataMismatchNoReportIsEmpty) {
     auto md = make_metadata();
     {
-        auto bin = Binary::open_file(path1, 'w', md);
+        auto bin = BinaryFile::open_file(path1, 'w', md);
         bin.write({10.0, 20.0}, {{"scenario", 1}, {"block", 1}});
     }
     {
-        auto bin = Binary::open_file(path2, 'w', md);
+        auto bin = BinaryFile::open_file(path2, 'w', md);
         bin.write({99.0, 20.0}, {{"scenario", 1}, {"block", 1}});
     }
 
@@ -320,10 +320,10 @@ TEST_F(BinaryCompareFixture, MetadataMismatchNoReportIsEmpty) {
     auto md2 = make_metadata();
     md2.unit = "GWh";
     {
-        Binary::open_file(path1, 'w', md1);
+        BinaryFile::open_file(path1, 'w', md1);
     }
     {
-        Binary::open_file(path2, 'w', md2);
+        BinaryFile::open_file(path2, 'w', md2);
     }
 
     auto result = BinaryComparator::compare(path1, path2);
@@ -338,11 +338,11 @@ TEST_F(BinaryCompareFixture, MetadataMismatchNoReportIsEmpty) {
 TEST_F(BinaryCompareFixture, AbsoluteToleranceMatchesWithinThreshold) {
     auto md = make_metadata();
     {
-        auto bin = Binary::open_file(path1, 'w', md);
+        auto bin = BinaryFile::open_file(path1, 'w', md);
         bin.write({10.0, 20.0}, {{"scenario", 1}, {"block", 1}});
     }
     {
-        auto bin = Binary::open_file(path2, 'w', md);
+        auto bin = BinaryFile::open_file(path2, 'w', md);
         bin.write({10.05, 20.0}, {{"scenario", 1}, {"block", 1}});
     }
 
@@ -353,11 +353,11 @@ TEST_F(BinaryCompareFixture, AbsoluteToleranceMatchesWithinThreshold) {
 TEST_F(BinaryCompareFixture, AbsoluteToleranceFailsOutsideThreshold) {
     auto md = make_metadata();
     {
-        auto bin = Binary::open_file(path1, 'w', md);
+        auto bin = BinaryFile::open_file(path1, 'w', md);
         bin.write({10.0, 20.0}, {{"scenario", 1}, {"block", 1}});
     }
     {
-        auto bin = Binary::open_file(path2, 'w', md);
+        auto bin = BinaryFile::open_file(path2, 'w', md);
         bin.write({10.05, 20.0}, {{"scenario", 1}, {"block", 1}});
     }
 
@@ -368,11 +368,11 @@ TEST_F(BinaryCompareFixture, AbsoluteToleranceFailsOutsideThreshold) {
 TEST_F(BinaryCompareFixture, RelativeToleranceMatch) {
     auto md = make_metadata();
     {
-        auto bin = Binary::open_file(path1, 'w', md);
+        auto bin = BinaryFile::open_file(path1, 'w', md);
         bin.write({100.0, 20.0}, {{"scenario", 1}, {"block", 1}});
     }
     {
-        auto bin = Binary::open_file(path2, 'w', md);
+        auto bin = BinaryFile::open_file(path2, 'w', md);
         bin.write({100.05, 20.0}, {{"scenario", 1}, {"block", 1}});
     }
 
@@ -384,11 +384,11 @@ TEST_F(BinaryCompareFixture, RelativeToleranceMatch) {
 TEST_F(BinaryCompareFixture, RelativeToleranceFailsOutsideThreshold) {
     auto md = make_metadata();
     {
-        auto bin = Binary::open_file(path1, 'w', md);
+        auto bin = BinaryFile::open_file(path1, 'w', md);
         bin.write({100.0, 20.0}, {{"scenario", 1}, {"block", 1}});
     }
     {
-        auto bin = Binary::open_file(path2, 'w', md);
+        auto bin = BinaryFile::open_file(path2, 'w', md);
         bin.write({100.2, 20.0}, {{"scenario", 1}, {"block", 1}});
     }
 
@@ -400,11 +400,11 @@ TEST_F(BinaryCompareFixture, RelativeToleranceFailsOutsideThreshold) {
 TEST_F(BinaryCompareFixture, ToleranceReportOnlyShowsOutOfTolerance) {
     auto md = make_metadata();
     {
-        auto bin = Binary::open_file(path1, 'w', md);
+        auto bin = BinaryFile::open_file(path1, 'w', md);
         bin.write({10.0, 20.0}, {{"scenario", 1}, {"block", 1}});
     }
     {
-        auto bin = Binary::open_file(path2, 'w', md);
+        auto bin = BinaryFile::open_file(path2, 'w', md);
         // plant_1: diff = 0.01 (within atol=0.1), plant_2: diff = 5.0 (outside)
         bin.write({10.01, 25.0}, {{"scenario", 1}, {"block", 1}});
     }

@@ -1,6 +1,6 @@
 #include "quiver/binary/binary_comparator.h"
 
-#include "quiver/binary/binary.h"
+#include "quiver/binary/binary_file.h"
 
 #include <cmath>
 #include <string>
@@ -22,12 +22,12 @@ bool is_approx(double a, double b, double atol, double rtol) {
 namespace quiver {
 
 struct BinaryComparator::Impl {
-    Binary binary1;
-    Binary binary2;
+    BinaryFile binary1;
+    BinaryFile binary2;
     CompareOptions options;
 };
 
-BinaryComparator::BinaryComparator(Binary binary1, Binary binary2, const CompareOptions& options)
+BinaryComparator::BinaryComparator(BinaryFile binary1, BinaryFile binary2, const CompareOptions& options)
     : impl_(std::make_unique<Impl>(Impl{std::move(binary1), std::move(binary2), options})) {}
 
 BinaryComparator::~BinaryComparator() = default;
@@ -37,8 +37,8 @@ BinaryComparator& BinaryComparator::operator=(BinaryComparator&& other) noexcept
 
 CompareResult
 BinaryComparator::compare(const std::string& file_path1, const std::string& file_path2, const CompareOptions& options) {
-    auto binary1 = Binary::open_file(file_path1, 'r');
-    auto binary2 = Binary::open_file(file_path2, 'r');
+    auto binary1 = BinaryFile::open_file(file_path1, 'r');
+    auto binary2 = BinaryFile::open_file(file_path2, 'r');
     BinaryComparator comparator(std::move(binary1), std::move(binary2), options);
     return comparator.run();
 }

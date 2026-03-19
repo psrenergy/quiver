@@ -1,6 +1,6 @@
 #include <filesystem>
 #include <gtest/gtest.h>
-#include <quiver/c/binary/binary.h>
+#include <quiver/c/binary/binary_file.h>
 #include <quiver/c/binary/binary_comparator.h>
 #include <quiver/c/binary/binary_metadata.h>
 #include <quiver/c/common.h>
@@ -54,14 +54,14 @@ protected:
     }
 
     void write_file(const std::string& path, quiver_binary_metadata_t* md, double val1, double val2) {
-        quiver_binary_t* binary = nullptr;
-        quiver_binary_open_write(path.c_str(), md, &binary);
+        quiver_binary_file_t* binary = nullptr;
+        quiver_binary_file_open_write(path.c_str(), md, &binary);
 
         const char* dim_names[] = {"scenario", "block"};
         int64_t dim_values[] = {1, 1};
         double data[] = {val1, val2};
-        quiver_binary_write(binary, dim_names, dim_values, 2, data, 2);
-        quiver_binary_close(binary);
+        quiver_binary_file_write(binary, dim_names, dim_values, 2, data, 2);
+        quiver_binary_file_close(binary);
     }
 };
 

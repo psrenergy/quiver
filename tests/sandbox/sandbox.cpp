@@ -24,7 +24,7 @@ int main() {
 
         // Write binary file
         std::string file_path = "sandbox_output";
-        auto binary = quiver::Binary::open_file(file_path, 'w', metadata);
+        auto binary = quiver::BinaryFile::open_file(file_path, 'w', metadata);
 
         for (int64_t stage = 4; stage >= 1; --stage) {
             for (int64_t block = 1; block <= blocks_per_stage[stage - 1]; ++block) {
@@ -37,7 +37,7 @@ int main() {
         std::cout << "Wrote " << file_path << ".qvr" << std::endl;
 
         // Read it back
-        auto reader = quiver::Binary::open_file(file_path, 'r');
+        auto reader = quiver::BinaryFile::open_file(file_path, 'r');
 
         auto values = reader.read({{"block", 28}, {"stage", 4}});
         std::cout << "Read block=28, stage=4:";

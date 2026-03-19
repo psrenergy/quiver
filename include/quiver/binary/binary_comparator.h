@@ -2,7 +2,7 @@
 #define QUIVER_BINARY_COMPARATOR_H
 
 #include "../export.h"
-#include "binary.h"
+#include "binary_file.h"
 
 #include <memory>
 #include <string>
@@ -39,7 +39,7 @@ private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
 
-    BinaryComparator(Binary binary1, Binary binary2, const CompareOptions& options);
+    BinaryComparator(BinaryFile binary1, BinaryFile binary2, const CompareOptions& options);
 
     CompareResult run();
 };
