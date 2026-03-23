@@ -1,7 +1,6 @@
 function merge(
     output_filename::String,
-    filenames::Vector{String};
-    digits::Union{Int, Nothing} = nothing,
+    filenames::Vector{String},
 )
     readers = [Binary.open_file(filename; mode = :read) for filename in filenames]
     metadata = Binary.get_metadata(first(readers))
@@ -85,17 +84,66 @@ function merge(
 end
 
 function file_to_array(
-    filename::String;
-    labels_to_read::Vector{String} = String[],
+    filename::String,
 )
+    reader = Binary.open_file(filename; mode = :read)
+    metadata = Binary.get_metadata(reader)
+    number_of_labels = length(Binary.get_labels(metadata))
+    dimensions = Binary.get_dimensions(metadata)
+    dimension_names = [dim.name for dim in dimensions]
+    dimension_sizes = [dim.size for dim in dimensions]
+
+    data = zeros(Float64, number_of_labels, dimension_sizes...)
+
+    initial_dimension_values = ones(Int, length(dimensions))
+    for (idx, dimension) in enumerate(dimensions)
+        if dimension.is_time_dimension
+            initial_dimension_values[idx] = dimension.initial_value
+        end
+    end
+
+    maximum_number_of_iterations = prod([dim.size for dim in dimensions])
+    current_dimension_values = copy(initial_dimension_values)
+    for _ in 1:maximum_number_of_iterations
+        dims = dimension_names .=> current_dimension_values
+        data[:, current_dimension_values...] = Binary.read(reader; dims...)
+
+        # TODO: next_dimensions implemented in another branch
+        current_dimension_values = Binary.next_dimensions(writer, current_dimension_values)
+        if current_dimension_values === initial_dimension_values
+            break
+        end
+    end
     return nothing
 end
 
 function array_to_file(
     filename::String,
     data::Array{T, N},
-    metadata::Binary.Metadata;
-    digits::Union{Int, Nothing} = nothing,
+    metadata::Binary.Metadata,
 ) where {T, N}
+    writer = Binary.open_file(filename; mode = :write, metadata = metadata)
+    dimensions = Binary.get_dimensions(metadata)
+    dimension_names = [dim.name for dim in dimensions]
+
+    initial_dimension_values = ones(Int, length(dimensions))
+    for (idx, dimension) in enumerate(dimensions)
+        if dimension.is_time_dimension
+            initial_dimension_values[idx] = dimension.initial_value
+        end
+    end
+
+    maximum_number_of_iterations = prod([dim.size for dim in dimensions])
+    current_dimension_values = copy(initial_dimension_values)
+    for _ in 1:maximum_number_of_iterations
+        dims = dimension_names .=> current_dimension_values
+        Binary.write(writer; data = data[:, current_dimension_values...], dims...)
+
+        # TODO: next_dimensions implemented in another branch
+        current_dimension_values = Binary.next_dimensions(writer, current_dimension_values)
+        if current_dimension_values === initial_dimension_values
+            break
+        end
+    end
     return nothing
 end
