@@ -5,6 +5,7 @@ module BinaryUtils
 
 using Quiver: Binary
 
+include("utils.jl")
 include("data_operations.jl")
 include("file_operations.jl")
 

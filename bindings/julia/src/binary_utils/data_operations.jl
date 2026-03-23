@@ -9,7 +9,7 @@ function apply_expression_over_files(
     dimension_names = [dim.name for dim in dimensions]
 
     for reader in readers
-        if Binary.get_metadata(reader) != metadata
+        if !is_equal(metadata, Binary.get_metadata(reader))
             for r in readers
                 Binary.close!(r)
             end
