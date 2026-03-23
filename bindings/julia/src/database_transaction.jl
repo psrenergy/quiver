@@ -14,9 +14,9 @@ function rollback!(db::Database)
 end
 
 function in_transaction(db::Database)
-    out_active = Ref{Bool}(false)
+    out_active = Ref{Cint}(0)
     check(C.quiver_database_in_transaction(db.ptr, out_active))
-    return out_active[]
+    return out_active[] != 0
 end
 
 function transaction(fn, db::Database)

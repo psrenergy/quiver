@@ -252,7 +252,7 @@ class QuiverDatabaseBindings {
 
   int quiver_database_in_transaction(
     ffi.Pointer<quiver_database_t> db,
-    ffi.Pointer<ffi.Bool> out_active,
+    ffi.Pointer<ffi.Int32> out_active,
   ) {
     return _quiver_database_in_transaction(
       db,
@@ -261,11 +261,11 @@ class QuiverDatabaseBindings {
   }
 
   late final _quiver_database_in_transactionPtr =
-      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Bool>)>>(
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Int32>)>>(
         'quiver_database_in_transaction',
       );
   late final _quiver_database_in_transaction = _quiver_database_in_transactionPtr
-      .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Bool>)>();
+      .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Int32>)>();
 
   int quiver_database_current_version(
     ffi.Pointer<quiver_database_t> db,

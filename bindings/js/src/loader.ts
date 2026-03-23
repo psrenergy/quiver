@@ -92,6 +92,10 @@ const symbols = {
     args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
     returns: FFIType.i32,
   },
+  quiver_database_update_element: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.i64, FFIType.ptr],
+    returns: FFIType.i32,
+  },
   quiver_database_delete_element: {
     args: [FFIType.ptr, FFIType.ptr, FFIType.i64],
     returns: FFIType.i32,
@@ -125,6 +129,62 @@ const symbols = {
     returns: FFIType.i32,
   },
 
+  // Read vector bulk
+  quiver_database_read_vector_integers: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_read_vector_floats: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_read_vector_strings: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // Read set bulk
+  quiver_database_read_set_integers: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_read_set_floats: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_read_set_strings: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // Read vector by ID
+  quiver_database_read_vector_integers_by_id: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.i64, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_read_vector_floats_by_id: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.i64, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_read_vector_strings_by_id: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.i64, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // Read set by ID
+  quiver_database_read_set_integers_by_id: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.i64, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_read_set_floats_by_id: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.i64, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_read_set_strings_by_id: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.i64, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
   // Read element IDs
   quiver_database_read_element_ids: {
     args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
@@ -146,6 +206,20 @@ const symbols = {
   },
   quiver_database_free_string: {
     args: [FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // Free vector/set bulk read results
+  quiver_database_free_integer_vectors: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.u64],
+    returns: FFIType.i32,
+  },
+  quiver_database_free_float_vectors: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.u64],
+    returns: FFIType.i32,
+  },
+  quiver_database_free_string_vectors: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.u64],
     returns: FFIType.i32,
   },
 
@@ -215,6 +289,145 @@ const symbols = {
     returns: FFIType.i32,
   },
   quiver_database_in_transaction: {
+    args: [FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // Metadata get functions
+  quiver_database_get_scalar_metadata: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_get_vector_metadata: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_get_set_metadata: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_get_time_series_metadata: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // Metadata free functions
+  quiver_database_free_scalar_metadata: {
+    args: [FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_free_group_metadata: {
+    args: [FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // Metadata list functions
+  quiver_database_list_scalar_attributes: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_list_vector_groups: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_list_set_groups: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_list_time_series_groups: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // Metadata array free functions
+  quiver_database_free_scalar_metadata_array: {
+    args: [FFIType.ptr, FFIType.u64],
+    returns: FFIType.i32,
+  },
+  quiver_database_free_group_metadata_array: {
+    args: [FFIType.ptr, FFIType.u64],
+    returns: FFIType.i32,
+  },
+
+  // Time series read/update
+  quiver_database_read_time_series_group: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.i64,
+           FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_update_time_series_group: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.i64,
+           FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.u64, FFIType.u64],
+    returns: FFIType.i32,
+  },
+  quiver_database_free_time_series_data: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.u64, FFIType.u64],
+    returns: FFIType.i32,
+  },
+
+  // Time series files
+  quiver_database_has_time_series_files: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_list_time_series_files_columns: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_read_time_series_files: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_update_time_series_files: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.u64],
+    returns: FFIType.i32,
+  },
+  quiver_database_free_time_series_files: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.u64],
+    returns: FFIType.i32,
+  },
+
+  // Introspection
+  quiver_database_is_healthy: {
+    args: [FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_current_version: {
+    args: [FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_path: {
+    args: [FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_describe: {
+    args: [FFIType.ptr],
+    returns: FFIType.i32,
+  },
+
+  // CSV export/import
+  quiver_database_export_csv: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_database_import_csv: {
+    args: [FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  // LuaRunner
+  quiver_lua_runner_new: {
+    args: [FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_lua_runner_free: {
+    args: [FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_lua_runner_run: {
+    args: [FFIType.ptr, FFIType.ptr],
+    returns: FFIType.i32,
+  },
+  quiver_lua_runner_get_error: {
     args: [FFIType.ptr, FFIType.ptr],
     returns: FFIType.i32,
   },

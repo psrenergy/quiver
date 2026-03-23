@@ -519,7 +519,7 @@ The transformation rules are mechanical. Given any C++ method name, you can deri
 
 ### Binding-Only Convenience Methods
 
-Julia, Dart, and Lua provide additional convenience methods that compose core operations. These have no direct C++ or C API counterpart.
+Julia, Dart, Lua, and JS provide additional convenience methods that compose core operations. These have no direct C++ or C API counterpart.
 
 **DateTime wrappers (Julia and Dart only):**
 
@@ -530,13 +530,13 @@ Julia, Dart, and Lua provide additional convenience methods that compose core op
 | `read_set_date_time_by_id`    | `readSetDateTimesById`    | string set read + date parsing    |
 | `query_date_time`             | `queryDateTime`           | string query + date parsing       |
 
-**Composite read helpers (Julia, Dart, and Lua):**
+**Composite read helpers (Julia, Dart, Lua, and JS):**
 
-|        Julia         |       Dart        |         Lua          |                 Wraps                  |
-| -------------------- | ----------------- | -------------------- | -------------------------------------- |
-| `read_scalars_by_id` | `readScalarsById` | `read_scalars_by_id` | `list_scalar_attributes` + typed reads |
-| `read_vectors_by_id` | `readVectorsById` | `read_vectors_by_id` | `list_vector_groups` + typed reads     |
-| `read_sets_by_id`    | `readSetsById`    | `read_sets_by_id`    | `list_set_groups` + typed reads        |
+|        Julia         |       Dart        |         Lua          |        JS         |                 Wraps                  |
+| -------------------- | ----------------- | -------------------- | ----------------- | -------------------------------------- |
+| `read_scalars_by_id` | `readScalarsById` | `read_scalars_by_id` | `readScalarsById` | `list_scalar_attributes` + typed reads |
+| `read_vectors_by_id` | `readVectorsById` | `read_vectors_by_id` | `readVectorsById` | `list_vector_groups` + typed reads     |
+| `read_sets_by_id`    | `readSetsById`    | `read_sets_by_id`    | `readSetsById`    | `list_set_groups` + typed reads        |
 
 **Transaction block wrappers (Julia, Dart, and Lua):**
 

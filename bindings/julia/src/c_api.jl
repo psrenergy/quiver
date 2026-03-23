@@ -129,7 +129,7 @@ function quiver_database_rollback(db)
 end
 
 function quiver_database_in_transaction(db, out_active)
-    @ccall libquiver_c.quiver_database_in_transaction(db::Ptr{quiver_database_t}, out_active::Ptr{Bool})::quiver_error_t
+    @ccall libquiver_c.quiver_database_in_transaction(db::Ptr{quiver_database_t}, out_active::Ptr{Cint})::quiver_error_t
 end
 
 function quiver_database_current_version(db, out_version)
