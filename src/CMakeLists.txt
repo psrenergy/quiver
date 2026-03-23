@@ -20,10 +20,11 @@ set(QUIVER_SOURCES
     schema.cpp
     schema_validator.cpp
     type_validator.cpp
-    blob/blob.cpp
-    blob/blob_csv.cpp
-    blob/blob_metadata.cpp
-    blob/time_properties.cpp
+    binary/binary_file.cpp
+    binary/csv_converter.cpp
+    binary/binary_metadata.cpp
+    binary/dimension.cpp
+    binary/time_properties.cpp
 )
 
 # Build type
@@ -115,9 +116,9 @@ if(QUIVER_BUILD_C_API)
         c/database_transaction.cpp
         c/element.cpp
         c/lua_runner.cpp
-        c/blob/blob.cpp
-        c/blob/blob_csv.cpp
-        c/blob/blob_metadata.cpp
+        c/binary/binary_file.cpp
+        c/binary/csv_converter.cpp
+        c/binary/binary_metadata.cpp
     )
 
     target_compile_definitions(quiver_c PRIVATE

@@ -1,9 +1,9 @@
 #ifndef QUIVER_H
 #define QUIVER_H
 
-#include "blob/blob.h"
-#include "blob/blob_csv.h"
-#include "blob/blob_metadata.h"
+#include "binary/binary_file.h"
+#include "binary/binary_metadata.h"
+#include "binary/csv_converter.h"
 #include "database.h"
 #include "element.h"
 #include "export.h"

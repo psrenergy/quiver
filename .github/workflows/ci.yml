@@ -41,8 +41,6 @@ jobs:
         run: |
           cmake -B build \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DCMAKE_C_COMPILER=gcc-13 \
-            -DCMAKE_CXX_COMPILER=g++-13 \
             -DQUIVER_BUILD_TESTS=ON \
             -DQUIVER_BUILD_C_API=ON
 
@@ -105,12 +103,17 @@ jobs:
     name: Julia Coverage
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [1.11, 1.12]
+
     steps:
       - uses: actions/checkout@v6
 
       - uses: julia-actions/setup-julia@v2
         with:
-          version: '1.12'
+          version: ${{ matrix.version }}
 
       - name: Build C++ (for shared library)
         run: |

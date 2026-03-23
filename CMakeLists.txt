@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.26.0)
 
 project(quiver
-    VERSION 0.5.0
+    VERSION 0.6.0
     DESCRIPTION "Quiver library"
     LANGUAGES CXX C
 )
@@ -81,8 +81,8 @@ file(GLOB_RECURSE ALL_SOURCE_FILES
     ${CMAKE_SOURCE_DIR}/include/quiver/c/*.h
     ${CMAKE_SOURCE_DIR}/src/*.cpp
     ${CMAKE_SOURCE_DIR}/src/*.h
-    ${CMAKE_SOURCE_DIR}/src/blob/*.cpp
-    ${CMAKE_SOURCE_DIR}/src/blob/*.h
+    ${CMAKE_SOURCE_DIR}/src/binary/*.cpp
+    ${CMAKE_SOURCE_DIR}/src/binary/*.h
     ${CMAKE_SOURCE_DIR}/src/c/*.cpp
     ${CMAKE_SOURCE_DIR}/src/c/*.h
     ${CMAKE_SOURCE_DIR}/src/cli/*.cpp

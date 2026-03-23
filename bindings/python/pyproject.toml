@@ -1,10 +1,8 @@
 [project]
 name = "quiverdb"
-version = "0.5.0"
+version = "0.6.0"
 requires-python = ">=3.13"
-dependencies = [
-    "cffi>=2.0.0",
-]
+dependencies = ["cffi>=2.0.0"]
 
 [build-system]
 requires = ["scikit-build-core>=0.10"]
@@ -18,11 +16,7 @@ wheel.packages = ["src/quiverdb"]
 wheel.exclude = ["bin", "lib", "include", "share"]
 
 [dependency-groups]
-dev = [
-    "dotenv>=0.9.9",
-    "pytest>=8.4.1",
-    "ruff>=0.12.2",
-]
+dev = ["dotenv>=0.9.9", "pytest>=8.4.1", "ruff>=0.12.2"]
 
 [tool.cibuildwheel]
 build = ["cp313-win_amd64", "cp313-manylinux_x86_64"]
