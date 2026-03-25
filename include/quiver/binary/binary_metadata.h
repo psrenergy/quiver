@@ -21,6 +21,8 @@ struct QUIVER_API BinaryMetadata {
     //
     int64_t number_of_time_dimensions = 0;
 
+    bool operator==(const BinaryMetadata& other) const = default;
+
     BinaryMetadata();
     ~BinaryMetadata();
 

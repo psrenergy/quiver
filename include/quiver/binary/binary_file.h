@@ -41,9 +41,15 @@ public:
     const BinaryMetadata& get_metadata() const;
     const std::string& get_file_path() const;
 
+    // Dimension iteration
+    std::vector<int64_t> next_dimensions(const std::vector<int64_t>& current_dimensions);
+
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
+
+    // Dimension helpers
+    std::vector<int64_t> dimension_sizes_at_values(const std::vector<int64_t>& dimension_values) const;
 
     // File traversal
     int64_t calculate_file_position(const std::unordered_map<std::string, int64_t>& dims) const;
@@ -57,10 +63,6 @@ private:
 
 protected:
     std::iostream& get_io();
-
-    // Dimension iteration
-    std::vector<int64_t> next_dimensions(const std::vector<int64_t>& current_dimensions);
-    std::vector<int64_t> dimension_sizes_at_values(const std::vector<int64_t>& dimension_values) const;
 };
 
 }  // namespace quiver

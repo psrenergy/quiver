@@ -33,6 +33,13 @@ QUIVER_C_API quiver_error_t quiver_binary_file_write(quiver_binary_file_t* binar
                                                      const double* data,
                                                      size_t data_count);
 
+// Dimension iteration
+QUIVER_C_API quiver_error_t quiver_binary_file_next_dimensions(quiver_binary_file_t* binary_file,
+                                                               const int64_t* current_dimensions,
+                                                               size_t dim_count,
+                                                               int64_t** out_dimensions,
+                                                               size_t* out_count);
+
 // Getters
 QUIVER_C_API quiver_error_t quiver_binary_file_get_metadata(quiver_binary_file_t* binary_file,
                                                             quiver_binary_metadata_t** out);
@@ -41,6 +48,7 @@ QUIVER_C_API quiver_error_t quiver_binary_file_get_file_path(quiver_binary_file_
 // Free
 QUIVER_C_API quiver_error_t quiver_binary_file_free_string(char* str);
 QUIVER_C_API quiver_error_t quiver_binary_file_free_float_array(double* data);
+QUIVER_C_API quiver_error_t quiver_binary_file_free_int64_array(int64_t* data);
 
 #ifdef __cplusplus
 }

@@ -397,6 +397,144 @@ TEST_F(BinaryCApiFixture, FreeFloatArrayNull) {
 }
 
 // ============================================================================
+// next_dimensions
+// ============================================================================
+
+TEST_F(BinaryCApiFixture, NextDimensionsSimpleIncrement) {
+    auto* md = make_simple_metadata();
+    quiver_binary_file_t* binary_file = nullptr;
+    ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &binary_file), QUIVER_OK);
+
+    // [1, 1] -> [1, 2]
+    int64_t current[] = {1, 1};
+    int64_t* out_dims = nullptr;
+    size_t out_count = 0;
+    EXPECT_EQ(quiver_binary_file_next_dimensions(binary_file, current, 2, &out_dims, &out_count), QUIVER_OK);
+    ASSERT_EQ(out_count, 2u);
+    EXPECT_EQ(out_dims[0], 1);
+    EXPECT_EQ(out_dims[1], 2);
+    quiver_binary_file_free_int64_array(out_dims);
+
+    quiver_binary_file_close(binary_file);
+    quiver_binary_metadata_free(md);
+}
+
+TEST_F(BinaryCApiFixture, NextDimensionsColRollover) {
+    auto* md = make_simple_metadata();
+    quiver_binary_file_t* binary_file = nullptr;
+    ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &binary_file), QUIVER_OK);
+
+    // col at max (2), row increments: [1, 2] -> [2, 1]
+    int64_t current[] = {1, 2};
+    int64_t* out_dims = nullptr;
+    size_t out_count = 0;
+    EXPECT_EQ(quiver_binary_file_next_dimensions(binary_file, current, 2, &out_dims, &out_count), QUIVER_OK);
+    ASSERT_EQ(out_count, 2u);
+    EXPECT_EQ(out_dims[0], 2);
+    EXPECT_EQ(out_dims[1], 1);
+    quiver_binary_file_free_int64_array(out_dims);
+
+    quiver_binary_file_close(binary_file);
+    quiver_binary_metadata_free(md);
+}
+
+TEST_F(BinaryCApiFixture, NextDimensionsWrapAround) {
+    auto* md = make_simple_metadata();
+    quiver_binary_file_t* binary_file = nullptr;
+    ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &binary_file), QUIVER_OK);
+
+    // All at max: [3, 2] -> [1, 1] (wraps around)
+    int64_t current[] = {3, 2};
+    int64_t* out_dims = nullptr;
+    size_t out_count = 0;
+    EXPECT_EQ(quiver_binary_file_next_dimensions(binary_file, current, 2, &out_dims, &out_count), QUIVER_OK);
+    ASSERT_EQ(out_count, 2u);
+    EXPECT_EQ(out_dims[0], 1);
+    EXPECT_EQ(out_dims[1], 1);
+    quiver_binary_file_free_int64_array(out_dims);
+
+    quiver_binary_file_close(binary_file);
+    quiver_binary_metadata_free(md);
+}
+
+TEST_F(BinaryCApiFixture, NextDimensionsTimeDimensionVariableMonthLength) {
+    // Monthly + daily: starting 2025-01-01, Jan has 31 days.
+    // [1, 31] -> [2, 1] (end of Jan, move to Feb day 1)
+    quiver_element_t* el = nullptr;
+    quiver_element_create(&el);
+    quiver_element_set_string(el, "version", "1");
+    quiver_element_set_string(el, "initial_datetime", "2025-01-01T00:00:00");
+    quiver_element_set_string(el, "unit", "MW");
+    const char* dims[] = {"stage", "block"};
+    quiver_element_set_array_string(el, "dimensions", dims, 2);
+    int64_t sizes[] = {4, 31};
+    quiver_element_set_array_integer(el, "dimension_sizes", sizes, 2);
+    const char* labels[] = {"plant_1"};
+    quiver_element_set_array_string(el, "labels", labels, 1);
+    const char* time_dims[] = {"stage", "block"};
+    quiver_element_set_array_string(el, "time_dimensions", time_dims, 2);
+    const char* freqs[] = {"monthly", "daily"};
+    quiver_element_set_array_string(el, "frequencies", freqs, 2);
+
+    quiver_binary_metadata_t* md = nullptr;
+    ASSERT_EQ(quiver_binary_metadata_from_element(el, &md), QUIVER_OK);
+    quiver_element_destroy(el);
+
+    quiver_binary_file_t* binary_file = nullptr;
+    ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &binary_file), QUIVER_OK);
+
+    // Jan has 31 days: [1, 31] -> [2, 1]
+    int64_t current[] = {1, 31};
+    int64_t* out_dims = nullptr;
+    size_t out_count = 0;
+    EXPECT_EQ(quiver_binary_file_next_dimensions(binary_file, current, 2, &out_dims, &out_count), QUIVER_OK);
+    ASSERT_EQ(out_count, 2u);
+    EXPECT_EQ(out_dims[0], 2);
+    EXPECT_EQ(out_dims[1], 1);
+    quiver_binary_file_free_int64_array(out_dims);
+
+    // Feb has 28 days in 2025: [2, 28] -> [3, 1]
+    int64_t current2[] = {2, 28};
+    EXPECT_EQ(quiver_binary_file_next_dimensions(binary_file, current2, 2, &out_dims, &out_count), QUIVER_OK);
+    ASSERT_EQ(out_count, 2u);
+    EXPECT_EQ(out_dims[0], 3);
+    EXPECT_EQ(out_dims[1], 1);
+    quiver_binary_file_free_int64_array(out_dims);
+
+    quiver_binary_file_close(binary_file);
+    quiver_binary_metadata_free(md);
+}
+
+TEST_F(BinaryCApiFixture, NextDimensionsNullArgs) {
+    int64_t current[] = {1, 1};
+    int64_t* out_dims = nullptr;
+    size_t out_count = 0;
+
+    EXPECT_EQ(quiver_binary_file_next_dimensions(nullptr, current, 2, &out_dims, &out_count), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Null argument: binary_file");
+
+    auto* md = make_simple_metadata();
+    quiver_binary_file_t* binary_file = nullptr;
+    ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &binary_file), QUIVER_OK);
+
+    EXPECT_EQ(quiver_binary_file_next_dimensions(binary_file, nullptr, 2, &out_dims, &out_count), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Null argument: current_dimensions");
+
+    EXPECT_EQ(quiver_binary_file_next_dimensions(binary_file, current, 2, nullptr, &out_count), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Null argument: out_dimensions");
+
+    EXPECT_EQ(quiver_binary_file_next_dimensions(binary_file, current, 2, &out_dims, nullptr), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Null argument: out_count");
+
+    quiver_binary_file_close(binary_file);
+    quiver_binary_metadata_free(md);
+}
+
+TEST_F(BinaryCApiFixture, FreeInt64ArrayNull) {
+    EXPECT_EQ(quiver_binary_file_free_int64_array(nullptr), QUIVER_OK);
+}
+
+// ============================================================================
 // Dimension mismatch errors
 // ============================================================================
 

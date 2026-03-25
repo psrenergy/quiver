@@ -112,6 +112,28 @@ QUIVER_C_API quiver_error_t quiver_binary_file_write(quiver_binary_file_t* binar
     }
 }
 
+// Dimension iteration
+
+QUIVER_C_API quiver_error_t quiver_binary_file_next_dimensions(quiver_binary_file_t* binary_file,
+                                                               const int64_t* current_dimensions,
+                                                               size_t dim_count,
+                                                               int64_t** out_dimensions,
+                                                               size_t* out_count) {
+    QUIVER_REQUIRE(binary_file, current_dimensions, out_dimensions, out_count);
+
+    try {
+        std::vector<int64_t> current(current_dimensions, current_dimensions + dim_count);
+        auto result = binary_file->binary_file.next_dimensions(current);
+        *out_count = result.size();
+        *out_dimensions = new int64_t[result.size()];
+        std::copy(result.begin(), result.end(), *out_dimensions);
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
 // Getters
 
 QUIVER_C_API quiver_error_t quiver_binary_file_get_metadata(quiver_binary_file_t* binary_file,
@@ -142,6 +164,11 @@ QUIVER_C_API quiver_error_t quiver_binary_file_free_string(char* str) {
 }
 
 QUIVER_C_API quiver_error_t quiver_binary_file_free_float_array(double* data) {
+    delete[] data;
+    return QUIVER_OK;
+}
+
+QUIVER_C_API quiver_error_t quiver_binary_file_free_int64_array(int64_t* data) {
     delete[] data;
     return QUIVER_OK;
 }

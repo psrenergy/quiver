@@ -16,6 +16,8 @@ struct Dimension {
     int64_t size;
     std::optional<TimeProperties> time;
 
+    bool operator==(const Dimension& other) const = default;
+
     bool is_time_dimension() const { return time.has_value(); }
 };
 
