@@ -615,6 +615,10 @@ function quiver_binary_file_write(binary_file, dim_names, dim_values, dim_count,
     @ccall libquiver_c.quiver_binary_file_write(binary_file::Ptr{quiver_binary_file_t}, dim_names::Ptr{Ptr{Cchar}}, dim_values::Ptr{Int64}, dim_count::Csize_t, data::Ptr{Cdouble}, data_count::Csize_t)::quiver_error_t
 end
 
+function quiver_binary_file_next_dimensions(binary_file, current_dimensions, dim_count, out_dimensions, out_count)
+    @ccall libquiver_c.quiver_binary_file_next_dimensions(binary_file::Ptr{quiver_binary_file_t}, current_dimensions::Ptr{Int64}, dim_count::Csize_t, out_dimensions::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::quiver_error_t
+end
+
 function quiver_binary_file_get_metadata(binary_file, out)
     @ccall libquiver_c.quiver_binary_file_get_metadata(binary_file::Ptr{quiver_binary_file_t}, out::Ptr{Ptr{quiver_binary_metadata_t}})::quiver_error_t
 end
@@ -654,6 +658,10 @@ end
 
 function quiver_binary_file_free_float_array(data)
     @ccall libquiver_c.quiver_binary_file_free_float_array(data::Ptr{Cdouble})::quiver_error_t
+end
+
+function quiver_binary_file_free_int64_array(data)
+    @ccall libquiver_c.quiver_binary_file_free_int64_array(data::Ptr{Int64})::quiver_error_t
 end
 
 # ============================================================================

@@ -43,11 +43,13 @@ public:
 
     // Dimension iteration
     std::vector<int64_t> next_dimensions(const std::vector<int64_t>& current_dimensions);
-    std::vector<int64_t> dimension_sizes_at_values(const std::vector<int64_t>& dimension_values) const;
 
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
+
+    // Dimension helpers
+    std::vector<int64_t> dimension_sizes_at_values(const std::vector<int64_t>& dimension_values) const;
 
     // File traversal
     int64_t calculate_file_position(const std::unordered_map<std::string, int64_t>& dims) const;
