@@ -450,6 +450,16 @@ Standalone binary file I/O layer for `.qvr` files with `.toml` metadata sidecars
 - `TimeProperties` struct: `frequency`, `initial_value`, `parent_dimension_index`
 - `TimeFrequency` enum: `Yearly`, `Monthly`, `Weekly`, `Daily`, `Hourly`
 
+#### Write Registry
+In-process path registry prevents reading files that are currently open for writing. A `static std::unordered_set<std::string>` in `binary.cpp` tracks canonical paths of files open in write mode. Opening a reader or a second writer on a registered path throws `std::runtime_error`. The registry entry is removed in the `Binary` destructor (before flush). Move semantics work correctly: moved-from objects have null `impl_` and skip unregistration. Not thread-safe or multi-process safe.
+
+#### Binary Performance Bottlenecks
+Profiled with 480×500×31 dimensions (~7.3M read/write calls). Main bottlenecks in hot path:
+
+1. **`unordered_map<string, int64_t>` dims parameter (~40% of total time):** Every read/write constructs a hash map with string keys. Hashing, heap allocation for strings/buckets, and `find()` lookups dominate. Fix: add overloads accepting `vector<int64_t>` (values in dimension declaration order) — `calculate_file_position` becomes a simple dot-product with precomputed strides.
+2. **`validate_dimension_values` (~19% of total time):** Called on every read/write. Checks dimension count, name existence, bounds, and time-dimension consistency (date arithmetic via `add_offset_from_int`/`datetime_to_int`). Fix: make validation opt-in or skippable when callers guarantee correct values (e.g., when iterating via `next_dimensions()`).
+3. **`vector<double>` allocation per read (~3%):** Each `read()` allocates a new vector. Fix: add `read_into` overload writing into caller-provided buffer.
+
 ### LuaRunner Class
 Executes Lua scripts with database access:
 ```cpp
