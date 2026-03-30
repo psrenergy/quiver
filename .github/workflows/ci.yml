@@ -92,7 +92,7 @@ jobs:
           lcov --list coverage.info --ignore-errors mismatch
 
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           files: coverage.info
           flags: cpp
@@ -139,7 +139,7 @@ jobs:
           directories: bindings/julia/src
 
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           files: lcov.info
           flags: julia
@@ -194,7 +194,7 @@ jobs:
           lcov --list coverage/lcov.info || true
 
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           files: bindings/dart/coverage/lcov.info
           flags: dart
@@ -233,7 +233,7 @@ jobs:
             uv run pytest --cov=quiverdb --cov-report=xml
 
         - name: Upload to Codecov
-          uses: codecov/codecov-action@v5
+          uses: codecov/codecov-action@v6
           with:
             files: bindings/python/coverage.xml
             flags: python
