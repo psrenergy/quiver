@@ -468,6 +468,7 @@ TEST_F(BinaryTempFileFixture, NextDimensionsTimeDimResetToInitialValueWhenParent
     // [2, 2, 31]: d increments (2->3), t1 stays at 2 (not its initial value).
     // t2 resets to 1 normally.
     EXPECT_EQ(binary_file.next_dimensions({2, 2, 31}), (std::vector<int64_t>{2, 3, 1}));
+}
 
 // ============================================================================
 // WriteRegistry
