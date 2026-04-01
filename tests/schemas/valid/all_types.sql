@@ -31,6 +31,14 @@ CREATE TABLE AllTypes_vector_counts (
     PRIMARY KEY (id, vector_index)
 ) STRICT;
 
+-- Float vector (for readVectorFloats coverage)
+CREATE TABLE AllTypes_vector_scores (
+    id INTEGER NOT NULL REFERENCES AllTypes(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    vector_index INTEGER NOT NULL,
+    score REAL NOT NULL,
+    PRIMARY KEY (id, vector_index)
+) STRICT;
+
 -- Integer set (missing from non-FK schemas)
 CREATE TABLE AllTypes_set_codes (
     id INTEGER NOT NULL REFERENCES AllTypes(id) ON DELETE CASCADE ON UPDATE CASCADE,

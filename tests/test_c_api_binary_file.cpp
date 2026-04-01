@@ -570,6 +570,38 @@ TEST_F(BinaryCApiFixture, ReadUnwrittenPositionFails) {
     }
 }
 
+// ============================================================================
+// Write registry
+// ============================================================================
+
+TEST_F(BinaryCApiFixture, WriterBlocksReader) {
+    auto* md = make_simple_metadata();
+    quiver_binary_file_t* writer = nullptr;
+    ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &writer), QUIVER_OK);
+
+    quiver_binary_file_t* reader = nullptr;
+    EXPECT_EQ(quiver_binary_file_open_read(path.c_str(), &reader), QUIVER_ERROR);
+    std::string err = quiver_get_last_error();
+    EXPECT_NE(err.find("already open for writing"), std::string::npos);
+
+    quiver_binary_file_close(writer);
+    quiver_binary_metadata_free(md);
+}
+
+TEST_F(BinaryCApiFixture, ClosedWriterAllowsReader) {
+    auto* md = make_simple_metadata();
+    {
+        quiver_binary_file_t* writer = nullptr;
+        ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &writer), QUIVER_OK);
+        quiver_binary_file_close(writer);
+    }
+    quiver_binary_metadata_free(md);
+
+    quiver_binary_file_t* reader = nullptr;
+    EXPECT_EQ(quiver_binary_file_open_read(path.c_str(), &reader), QUIVER_OK);
+    quiver_binary_file_close(reader);
+}
+
 TEST_F(BinaryCApiFixture, ReadAllowNulls) {
     auto* md = make_simple_metadata();
     {

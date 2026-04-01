@@ -146,17 +146,17 @@ TEST(DatabaseCApi, InTransactionReflectsState) {
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    bool active = true;
+    int active = 1;
     ASSERT_EQ(quiver_database_in_transaction(db, &active), QUIVER_OK);
-    EXPECT_FALSE(active);
+    EXPECT_EQ(active, 0);
 
     ASSERT_EQ(quiver_database_begin_transaction(db), QUIVER_OK);
     ASSERT_EQ(quiver_database_in_transaction(db, &active), QUIVER_OK);
-    EXPECT_TRUE(active);
+    EXPECT_NE(active, 0);
 
     ASSERT_EQ(quiver_database_commit(db), QUIVER_OK);
     ASSERT_EQ(quiver_database_in_transaction(db, &active), QUIVER_OK);
-    EXPECT_FALSE(active);
+    EXPECT_EQ(active, 0);
 
     quiver_database_close(db);
 }

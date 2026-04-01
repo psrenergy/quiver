@@ -25,9 +25,9 @@ extension DatabaseTransaction on Database {
     _ensureNotClosed();
     final arena = Arena();
     try {
-      final outActive = arena<Bool>();
+      final outActive = arena<Int32>();
       check(bindings.quiver_database_in_transaction(_ptr, outActive));
-      return outActive.value;
+      return outActive.value != 0;
     } finally {
       arena.releaseAll();
     }

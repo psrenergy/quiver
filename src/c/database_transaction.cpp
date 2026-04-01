@@ -39,10 +39,10 @@ QUIVER_C_API quiver_error_t quiver_database_rollback(quiver_database_t* db) {
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_in_transaction(quiver_database_t* db, bool* out_active) {
+QUIVER_C_API quiver_error_t quiver_database_in_transaction(quiver_database_t* db, int* out_active) {
     QUIVER_REQUIRE(db, out_active);
 
-    *out_active = db->db.in_transaction();
+    *out_active = db->db.in_transaction() ? 1 : 0;
     return QUIVER_OK;
 }
 

@@ -11,26 +11,54 @@
 #include <iostream>
 #include <limits>
 #include <string>
+#include <unordered_set>
 
 namespace quiver {
+
+static std::unordered_set<std::string> write_registry;
 
 struct BinaryFile::Impl {
     std::unique_ptr<std::iostream> io;
     std::string file_path;
+    std::string registered_path;  // non-empty only for writers; used to unregister on destruction
     BinaryMetadata metadata;
+    int64_t current_position = -1;  // tracked file position to skip redundant seeks
+
+    Impl(std::unique_ptr<std::iostream> io, std::string file_path, BinaryMetadata metadata)
+        : io(std::move(io)), file_path(std::move(file_path)), metadata(std::move(metadata)) {}
+
+    Impl(Impl&&) noexcept = default;
+    Impl& operator=(Impl&&) noexcept = default;
+
+    // Cleanup lives here, not in ~BinaryFile(), because unique_ptr::operator= destroys the
+    // old Impl via ~Impl() without calling ~BinaryFile(). Putting it here ensures move-assignment
+    // correctly flushes and unregisters the replaced writer.
+    ~Impl() {
+        if (!registered_path.empty()) {
+            write_registry.erase(registered_path);
+        }
+        if (io) {
+            io->flush();
+        }
+    }
 };
 
 BinaryFile::BinaryFile(const std::string& file_path, const BinaryMetadata& metadata, std::unique_ptr<std::iostream> io)
-    : impl_(std::make_unique<Impl>(Impl{std::move(io), file_path, metadata})) {}
+    : impl_(std::make_unique<Impl>(std::move(io), file_path, metadata)) {}
 
 BinaryFile::~BinaryFile() = default;
-
 BinaryFile::BinaryFile(BinaryFile&& other) noexcept = default;
 BinaryFile& BinaryFile::operator=(BinaryFile&& other) noexcept = default;
 
 BinaryFile
 BinaryFile::open_file(const std::string& file_path, char mode, const std::optional<BinaryMetadata>& metadata) {
     namespace fs = std::filesystem;
+    auto canonical = fs::weakly_canonical(file_path).string();
+
+    if (write_registry.count(canonical)) {
+        throw std::runtime_error("Cannot open_file: file is already open for writing: " + canonical);
+    }
+
     switch (mode) {
     case 'r': {
         // Validate file exists
@@ -55,6 +83,8 @@ BinaryFile::open_file(const std::string& file_path, char mode, const std::option
             throw std::invalid_argument("Metadata must be provided when opening a file in write mode.");
         }
 
+        write_registry.insert(canonical);
+
         // Write metadata to TOML file
         std::ofstream toml_file(file_path + std::string(TOML_EXTENSION));
         toml_file << metadata->to_toml();
@@ -63,6 +93,7 @@ BinaryFile::open_file(const std::string& file_path, char mode, const std::option
         auto io =
             std::make_unique<std::fstream>(file_path + std::string(QVR_EXTENSION), std::ios::out | std::ios::binary);
         BinaryFile binary_file(file_path, metadata.value(), std::move(io));
+        binary_file.impl_->registered_path = canonical;
         binary_file.fill_file_with_nulls();
         return binary_file;
     }
@@ -78,7 +109,9 @@ std::vector<double> BinaryFile::read(const std::unordered_map<std::string, int64
     go_to_position(calculate_file_position(dims), 'r');
 
     std::vector<double> data(impl_->metadata.labels.size());
-    impl_->io->read(reinterpret_cast<char*>(data.data()), data.size() * sizeof(double));
+    auto bytes = static_cast<int64_t>(data.size() * sizeof(double));
+    impl_->io->read(reinterpret_cast<char*>(data.data()), bytes);
+    impl_->current_position += bytes;
 
     if (!allow_nulls) {
         for (size_t i = 0; i < data.size(); ++i) {
@@ -103,8 +136,9 @@ void BinaryFile::write(const std::vector<double>& data, const std::unordered_map
 
     go_to_position(calculate_file_position(dims), 'w');
 
-    impl_->io->write(reinterpret_cast<const char*>(data.data()), data.size() * sizeof(double));
-    impl_->io->flush();
+    auto bytes = static_cast<int64_t>(data.size() * sizeof(double));
+    impl_->io->write(reinterpret_cast<const char*>(data.data()), bytes);
+    impl_->current_position += bytes;
 }
 
 int64_t BinaryFile::calculate_file_position(const std::unordered_map<std::string, int64_t>& dims) const {
@@ -124,10 +158,9 @@ int64_t BinaryFile::calculate_file_position(const std::unordered_map<std::string
 }
 
 void BinaryFile::go_to_position(int64_t position, char mode) {
-    if (position < 0) {
-        throw std::invalid_argument("File position must be non-negative, got " + std::to_string(position));
+    if (impl_->current_position == position) {
+        return;
     }
-    validate_file_is_open();
     switch (mode) {
     case 'r':
         impl_->io->seekg(position);
@@ -139,6 +172,7 @@ void BinaryFile::go_to_position(int64_t position, char mode) {
         throw std::invalid_argument("Invalid seek mode: " + std::string(1, mode) +
                                     ". Use 'r' for read or 'w' for write.");
     }
+    impl_->current_position = position;
 }
 
 void BinaryFile::validate_file_is_open() const {
@@ -316,38 +350,30 @@ std::vector<int64_t> BinaryFile::dimension_sizes_at_values(const std::vector<int
 void BinaryFile::fill_file_with_nulls() {
     const auto& metadata = impl_->metadata;
 
-    // Get initial dimension values
-    const auto& dimensions = metadata.dimensions;
-    std::vector<int64_t> initial_dimensions;
-    for (const auto& dim : dimensions) {
-        if (dim.is_time_dimension()) {
-            initial_dimensions.push_back(dim.time->initial_value);
-        } else {
-            initial_dimensions.push_back(1);
-        }
+    // Calculate total number of cells
+    int64_t total_cells = 1;
+    for (const auto& dim : metadata.dimensions) {
+        total_cells *= dim.size;
     }
 
-    // Calculate maximum number of lines
-    int64_t max_lines = 1;
-    for (const auto& dim : dimensions) {
-        max_lines *= dim.size;
-    }
+    int64_t total_doubles = total_cells * static_cast<int64_t>(metadata.labels.size());
 
-    // Iterate CSV lines and write to binary
-    std::vector<int64_t> current_dimensions = initial_dimensions;
-    for (int64_t i = 0; i < max_lines; ++i) {
-        std::unordered_map<std::string, int64_t> dims;
-        for (size_t j = 0; j < dimensions.size(); ++j) {
-            dims[dimensions[j].name] = current_dimensions[j];
-        }
-        std::vector<double> data(metadata.labels.size(), std::numeric_limits<double>::quiet_NaN());
-        write(data, dims);
+    // Write NaN-filled buffer in chunks to avoid excessive memory usage
+    constexpr int64_t CHUNK_DOUBLES = 1024 * 1024;  // ~8 MB per chunk
+    std::vector<double> buffer(static_cast<size_t>(std::min(total_doubles, CHUNK_DOUBLES)),
+                               std::numeric_limits<double>::quiet_NaN());
 
-        current_dimensions = next_dimensions(current_dimensions);
-        if (current_dimensions == initial_dimensions) {
-            break;
-        }
+    impl_->io->seekp(0);
+    impl_->current_position = 0;
+    int64_t remaining = total_doubles;
+    while (remaining > 0) {
+        int64_t count = std::min(remaining, static_cast<int64_t>(buffer.size()));
+        auto bytes = count * static_cast<int64_t>(sizeof(double));
+        impl_->io->write(reinterpret_cast<const char*>(buffer.data()), bytes);
+        impl_->current_position += bytes;
+        remaining -= count;
     }
+    impl_->io->flush();
 }
 
 const BinaryMetadata& BinaryFile::get_metadata() const {
