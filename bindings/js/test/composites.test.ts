@@ -1,9 +1,12 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+const __dirname = dirname(fileURLToPath(import.meta.url));
 import { join } from "node:path";
 import { Database } from "../src/index";
 
 const BASIC_SCHEMA = join(
-  import.meta.dir,
+  __dirname,
   "..",
   "..",
   "..",
@@ -14,7 +17,7 @@ const BASIC_SCHEMA = join(
 );
 
 const COMPOSITE_SCHEMA = join(
-  import.meta.dir,
+  __dirname,
   "..",
   "..",
   "..",

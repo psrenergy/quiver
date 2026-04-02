@@ -1,40 +1,33 @@
-import { CString, type Pointer, ptr } from "bun:ffi";
-import { Database } from "./database";
-import { QuiverError, check } from "./errors";
-import { allocPointerOut, readPointerOut, toCString } from "./ffi-helpers";
-import { getSymbols } from "./loader";
+import { Database } from "./database.js";
+import { QuiverError, check } from "./errors.js";
+import { allocPtrOut, decodeStringFromBuf, readPtrOut } from "./ffi-helpers.js";
+import type { NativePointer } from "./loader.js";
+import { getSymbols } from "./loader.js";
 
 export class LuaRunner {
-  private _ptr: Pointer;
-  private _db: Database; // prevent GC of database
+  private _ptr: NativePointer;
+  private _db: Database;
   private _closed = false;
 
   constructor(db: Database) {
     this._db = db;
     const lib = getSymbols();
-    const outRunner = allocPointerOut();
-    check(lib.quiver_lua_runner_new(db._handle, ptr(outRunner)));
-    this._ptr = readPointerOut(outRunner);
+    const outRunner = allocPtrOut();
+    check(lib.quiver_lua_runner_new(db._handle, outRunner));
+    this._ptr = readPtrOut(outRunner);
   }
 
   run(script: string): void {
     this.ensureOpen();
     const lib = getSymbols();
-    const err = lib.quiver_lua_runner_run(this._ptr, toCString(script));
+    const err = lib.quiver_lua_runner_run(this._ptr, script);
     if (err !== 0) {
-      // Try runner-specific error first
-      const outError = allocPointerOut();
-      const getErr = lib.quiver_lua_runner_get_error(this._ptr, ptr(outError));
-      if (getErr === 0) {
-        const errPtr = readPointerOut(outError);
-        if (errPtr) {
-          const msg = new CString(errPtr).toString();
-          if (msg) {
-            throw new QuiverError(msg);
-          }
-        }
+      const outError = allocPtrOut();
+      const getErr = lib.quiver_lua_runner_get_error(this._ptr, outError);
+      if (getErr === 0 && readPtrOut(outError)) {
+        const msg = decodeStringFromBuf(outError);
+        if (msg) throw new QuiverError(msg);
       }
-      // Fall back to global error
       check(err);
     }
   }

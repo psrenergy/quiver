@@ -1,5 +1,4 @@
-import { CString } from "bun:ffi";
-import { getSymbols } from "./loader";
+import { getSymbols } from "./loader.js";
 
 export class QuiverError extends Error {
   constructor(message: string) {
@@ -11,14 +10,10 @@ export class QuiverError extends Error {
 export function check(err: number): void {
   if (err !== 0) {
     const lib = getSymbols();
-    const errPtr = lib.quiver_get_last_error();
-    if (errPtr) {
-      const detail = new CString(errPtr).toString();
-      if (detail) {
-        throw new QuiverError(detail);
-      }
+    const detail = lib.quiver_get_last_error();
+    if (detail) {
+      throw new QuiverError(detail);
     }
-    console.warn("check: C API returned error but quiver_get_last_error() is empty");
     throw new QuiverError("Unknown error");
   }
 }

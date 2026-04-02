@@ -1,6 +1,6 @@
-import { Database } from "./database";
+import { Database } from "./database.js";
 
-declare module "./database" {
+declare module "./database.js" {
   interface Database {
     readScalarsById(collection: string, id: number): Record<string, number | string | null>;
     readVectorsById(collection: string, id: number): Record<string, number[] | string[]>;

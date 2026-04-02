@@ -1,50 +1,34 @@
-import { type Pointer, ptr } from "bun:ffi";
-import { check, QuiverError } from "./errors";
-import { allocPointerOut, makeDefaultOptions, readPointerOut, toCString } from "./ffi-helpers";
-import { getSymbols } from "./loader";
+import type { NativePointer } from "./loader.js";
+import { check, QuiverError } from "./errors.js";
+import { allocPtrOut, makeDefaultOptions, readPtrOut } from "./ffi-helpers.js";
+import { getSymbols } from "./loader.js";
 
 export class Database {
-  private _ptr: Pointer;
+  private _ptr: NativePointer;
   private _closed = false;
 
-  private constructor(nativePtr: Pointer) {
+  private constructor(nativePtr: NativePointer) {
     this._ptr = nativePtr;
   }
 
   static fromSchema(dbPath: string, schemaPath: string): Database {
     const lib = getSymbols();
     const options = makeDefaultOptions();
-    const outDb = allocPointerOut();
+    const outDb = allocPtrOut();
 
-    check(
-      lib.quiver_database_from_schema(
-        toCString(dbPath),
-        toCString(schemaPath),
-        ptr(options),
-        ptr(outDb),
-      ),
-    );
+    check(lib.quiver_database_from_schema(dbPath, schemaPath, options, outDb));
 
-    const dbPtr = readPointerOut(outDb);
-    return new Database(dbPtr);
+    return new Database(readPtrOut(outDb));
   }
 
   static fromMigrations(dbPath: string, migrationsPath: string): Database {
     const lib = getSymbols();
     const options = makeDefaultOptions();
-    const outDb = allocPointerOut();
+    const outDb = allocPtrOut();
 
-    check(
-      lib.quiver_database_from_migrations(
-        toCString(dbPath),
-        toCString(migrationsPath),
-        ptr(options),
-        ptr(outDb),
-      ),
-    );
+    check(lib.quiver_database_from_migrations(dbPath, migrationsPath, options, outDb));
 
-    const dbPtr = readPointerOut(outDb);
-    return new Database(dbPtr);
+    return new Database(readPtrOut(outDb));
   }
 
   close(): void {
@@ -61,7 +45,7 @@ export class Database {
   }
 
   /** @internal */
-  get _handle(): Pointer {
+  get _handle(): NativePointer {
     this.ensureOpen();
     return this._ptr;
   }
