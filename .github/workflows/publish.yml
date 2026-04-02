@@ -128,6 +128,6 @@ jobs:
           fi
           echo "Version validated: $TAG_VERSION"
 
-      - run: npm ci
+      - run: npm install
       - run: npm run build
       - run: npm publish --provenance --access public

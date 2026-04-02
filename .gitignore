@@ -44,6 +44,10 @@ dist/
 *.jl.mem
 Manifest.toml
 
+# Node/JS
+node_modules/
+package-lock.json
+
 # Dart
 .dart_tool/
 .packages
