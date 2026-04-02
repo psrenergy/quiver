@@ -1,10 +1,13 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+const __dirname = dirname(fileURLToPath(import.meta.url));
 import { join } from "node:path";
 import { Database, QuiverError } from "../src/index";
 import type { ElementData, Value } from "../src/types";
 
 const SCHEMA_PATH = join(
-  import.meta.dir,
+  __dirname,
   "..",
   "..",
   "..",

@@ -37,6 +37,8 @@ auto values = db.read_scalar_integers("Collection", "value");
 
 ### Julia
 
+https://github.com/psrenergy/Quiver.jl
+
 ```julia
 using Quiver
 
@@ -48,6 +50,13 @@ values = Quiver.read_scalar_integers(db, "Collection", "value")
 # values == [42]
 
 Quiver.close!(db)
+```
+
+### JavaScript
+
+https://www.npmjs.com/package/quiverdb
+
+```javascript
 ```
 
 ### Dart
@@ -66,6 +75,8 @@ db.close();
 ```
 
 ### Python
+
+https://pypi.org/project/quiverdb/
 
 ```python
 from quiverdb import Database

@@ -1,4 +1,7 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "vitest";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+const __dirname = dirname(fileURLToPath(import.meta.url));
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -6,7 +9,7 @@ import { Database, QuiverError } from "../src/index";
 import { getSymbols } from "../src/loader";
 
 const SCHEMA_PATH = join(
-  import.meta.dir,
+  __dirname,
   "..",
   "..",
   "..",
@@ -15,7 +18,7 @@ const SCHEMA_PATH = join(
   "valid",
   "basic.sql",
 );
-const MIGRATIONS_PATH = join(import.meta.dir, "..", "..", "..", "tests", "schemas", "migrations");
+const MIGRATIONS_PATH = join(__dirname, "..", "..", "..", "tests", "schemas", "migrations");
 
 describe("Database lifecycle", () => {
   const tempDirs: string[] = [];
@@ -148,10 +151,7 @@ describe("Library loading", () => {
     const lib = getSymbols();
     const version = lib.quiver_version();
     expect(version).toBeTruthy();
-    // bun:ffi cstring returns a CString (extends String), so typeof is "object"
-    // Use toString() for a plain JS string
-    const versionStr = version?.toString();
-    expect(typeof versionStr).toBe("string");
-    expect(versionStr.length).toBeGreaterThan(0);
+    expect(typeof version).toBe("string");
+    expect(version.length).toBeGreaterThan(0);
   });
 });

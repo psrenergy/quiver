@@ -1,29 +1,29 @@
 # quiverdb
 
-Bun-native SQLite wrapper binding for Quiver via bun:ffi.
+SQLite wrapper binding for Quiver via koffi FFI. Works with Node.js, Deno, and Bun.
 
 ## Requirements
 
-- Bun >= 1.0.0
-- `libquiver.dll` and `libquiver_c.dll` in system PATH
+- Node.js >= 20, Deno >= 2.0, or Bun >= 1.0
+- `libquiver.dll` and `libquiver_c.dll` (or `.so`/`.dylib`) in system PATH
 
 ## Installation
 
 ```bash
-bun add quiverdb
+npm install quiverdb
 ```
 
-The native Quiver DLLs must be compiled separately and available in your system PATH. See the Quiver project build instructions for details.
+The native Quiver libraries must be compiled separately and available in your system PATH. See the Quiver project build instructions for details.
 
-## DLL Setup
+## Native Library Setup
 
-This binding loads the Quiver C API library (`libquiver_c.dll`) at runtime via `bun:ffi`. The core library (`libquiver.dll`) is a dependency that must also be loadable.
+This binding loads the Quiver C API library (`libquiver_c`) at runtime via koffi. The core library (`libquiver`) is a dependency that must also be loadable.
 
-Options for making the DLLs available:
+Options for making the libraries available:
 
 1. Add the `build/bin/` directory to your system PATH
-2. Copy both DLLs to a directory already in PATH
-3. Place both DLLs alongside your application entry point
+2. Copy both libraries to a directory already in PATH
+3. Place both libraries alongside your application entry point
 
 ## Quick Start
 

@@ -1,10 +1,20 @@
-import { CString, ptr, toArrayBuffer } from "bun:ffi";
-import { Database } from "./database";
-import { check } from "./errors";
-import { allocPointerOut, readPointerOut, readPtrAt, toCString } from "./ffi-helpers";
-import { getSymbols } from "./loader";
+import { Database } from "./database.js";
+import { check } from "./errors.js";
+import {
+  allocPtrOut,
+  allocUint64Out,
+  decodeFloat64Array,
+  decodeInt64Array,
+  decodePtrArray,
+  decodeStringArray,
+  decodeStringFromBuf,
+  decodeUint64Array,
+  readPtrOut,
+  readUint64Out,
+} from "./ffi-helpers.js";
+import { getSymbols } from "./loader.js";
 
-declare module "./database" {
+declare module "./database.js" {
   interface Database {
     readScalarIntegers(collection: string, attribute: string): number[];
     readScalarFloats(collection: string, attribute: string): number[];
@@ -28,738 +38,224 @@ declare module "./database" {
   }
 }
 
-Database.prototype.readScalarIntegers = function (
-  this: Database,
-  collection: string,
-  attribute: string,
-): number[] {
+// --- Scalar array reads ---
+
+Database.prototype.readScalarIntegers = function (this: Database, collection: string, attribute: string): number[] {
   const lib = getSymbols();
-  const handle = this._handle;
-
-  const outValues = allocPointerOut();
-  const outCount = new BigUint64Array(1);
-
-  check(
-    lib.quiver_database_read_scalar_integers(
-      handle,
-      toCString(collection),
-      toCString(attribute),
-      ptr(outValues),
-      ptr(outCount),
-    ),
-  );
-
-  const count = Number(outCount[0]);
+  const outValues = allocPtrOut();
+  const outCount = allocUint64Out();
+  check(lib.quiver_database_read_scalar_integers(this._handle, collection, attribute, outValues, outCount));
+  const count = readUint64Out(outCount);
   if (count === 0) return [];
-
-  const valuesPtr = readPointerOut(outValues);
-  const buffer = toArrayBuffer(valuesPtr, 0, count * 8);
-  const bigInts = new BigInt64Array(buffer);
-  const result: number[] = new Array(count);
-  for (let i = 0; i < count; i++) {
-    result[i] = Number(bigInts[i]);
-  }
-
-  lib.quiver_database_free_integer_array(valuesPtr);
+  const ptr = readPtrOut(outValues);
+  const result = decodeInt64Array(ptr, count);
+  lib.quiver_database_free_integer_array(ptr);
   return result;
 };
 
-Database.prototype.readScalarFloats = function (
-  this: Database,
-  collection: string,
-  attribute: string,
-): number[] {
+Database.prototype.readScalarFloats = function (this: Database, collection: string, attribute: string): number[] {
   const lib = getSymbols();
-  const handle = this._handle;
-
-  const outValues = allocPointerOut();
-  const outCount = new BigUint64Array(1);
-
-  check(
-    lib.quiver_database_read_scalar_floats(
-      handle,
-      toCString(collection),
-      toCString(attribute),
-      ptr(outValues),
-      ptr(outCount),
-    ),
-  );
-
-  const count = Number(outCount[0]);
+  const outValues = allocPtrOut();
+  const outCount = allocUint64Out();
+  check(lib.quiver_database_read_scalar_floats(this._handle, collection, attribute, outValues, outCount));
+  const count = readUint64Out(outCount);
   if (count === 0) return [];
-
-  const valuesPtr = readPointerOut(outValues);
-  const buffer = toArrayBuffer(valuesPtr, 0, count * 8);
-  const result = Array.from(new Float64Array(buffer));
-
-  lib.quiver_database_free_float_array(valuesPtr);
+  const ptr = readPtrOut(outValues);
+  const result = decodeFloat64Array(ptr, count);
+  lib.quiver_database_free_float_array(ptr);
   return result;
 };
 
-Database.prototype.readScalarStrings = function (
-  this: Database,
-  collection: string,
-  attribute: string,
-): string[] {
+Database.prototype.readScalarStrings = function (this: Database, collection: string, attribute: string): string[] {
   const lib = getSymbols();
-  const handle = this._handle;
-
-  const outValues = allocPointerOut();
-  const outCount = new BigUint64Array(1);
-
-  check(
-    lib.quiver_database_read_scalar_strings(
-      handle,
-      toCString(collection),
-      toCString(attribute),
-      ptr(outValues),
-      ptr(outCount),
-    ),
-  );
-
-  const count = Number(outCount[0]);
+  const outValues = allocPtrOut();
+  const outCount = allocUint64Out();
+  check(lib.quiver_database_read_scalar_strings(this._handle, collection, attribute, outValues, outCount));
+  const count = readUint64Out(outCount);
   if (count === 0) return [];
-
-  const arrPtr = readPointerOut(outValues);
-  const result: string[] = new Array(count);
-  for (let i = 0; i < count; i++) {
-    const strPtr = readPtrAt(arrPtr, i * 8);
-    result[i] = new CString(strPtr).toString();
-  }
-
-  lib.quiver_database_free_string_array(arrPtr, count);
+  const ptr = readPtrOut(outValues);
+  const result = decodeStringArray(ptr, count);
+  lib.quiver_database_free_string_array(ptr, count);
   return result;
 };
 
-Database.prototype.readScalarIntegerById = function (
-  this: Database,
-  collection: string,
-  attribute: string,
-  id: number,
-): number | null {
-  const lib = getSymbols();
-  const handle = this._handle;
+// --- Scalar by-ID reads ---
 
+Database.prototype.readScalarIntegerById = function (this: Database, collection: string, attribute: string, id: number): number | null {
+  const lib = getSymbols();
   const outValue = new BigInt64Array(1);
   const outHasValue = new Int32Array(1);
-
-  check(
-    lib.quiver_database_read_scalar_integer_by_id(
-      handle,
-      toCString(collection),
-      toCString(attribute),
-      id,
-      ptr(outValue),
-      ptr(outHasValue),
-    ),
-  );
-
+  check(lib.quiver_database_read_scalar_integer_by_id(this._handle, collection, attribute, id, outValue, outHasValue));
   if (outHasValue[0] === 0) return null;
   return Number(outValue[0]);
 };
 
-Database.prototype.readScalarFloatById = function (
-  this: Database,
-  collection: string,
-  attribute: string,
-  id: number,
-): number | null {
+Database.prototype.readScalarFloatById = function (this: Database, collection: string, attribute: string, id: number): number | null {
   const lib = getSymbols();
-  const handle = this._handle;
-
   const outValue = new Float64Array(1);
   const outHasValue = new Int32Array(1);
-
-  check(
-    lib.quiver_database_read_scalar_float_by_id(
-      handle,
-      toCString(collection),
-      toCString(attribute),
-      id,
-      ptr(outValue),
-      ptr(outHasValue),
-    ),
-  );
-
+  check(lib.quiver_database_read_scalar_float_by_id(this._handle, collection, attribute, id, outValue, outHasValue));
   if (outHasValue[0] === 0) return null;
   return outValue[0];
 };
 
-Database.prototype.readScalarStringById = function (
-  this: Database,
-  collection: string,
-  attribute: string,
-  id: number,
-): string | null {
+Database.prototype.readScalarStringById = function (this: Database, collection: string, attribute: string, id: number): string | null {
   const lib = getSymbols();
-  const handle = this._handle;
-
-  const outValue = allocPointerOut();
+  const outValue = allocPtrOut();
   const outHasValue = new Int32Array(1);
-
-  check(
-    lib.quiver_database_read_scalar_string_by_id(
-      handle,
-      toCString(collection),
-      toCString(attribute),
-      id,
-      ptr(outValue),
-      ptr(outHasValue),
-    ),
-  );
-
+  check(lib.quiver_database_read_scalar_string_by_id(this._handle, collection, attribute, id, outValue, outHasValue));
   if (outHasValue[0] === 0) return null;
-
-  const strPtr = readPointerOut(outValue);
-  const result = new CString(strPtr).toString();
-  lib.quiver_database_free_string(strPtr);
+  const result = decodeStringFromBuf(outValue);
+  lib.quiver_database_free_string(readPtrOut(outValue));
   return result;
 };
 
+// --- Read element IDs ---
+
 Database.prototype.readElementIds = function (this: Database, collection: string): number[] {
   const lib = getSymbols();
-  const handle = this._handle;
-
-  const outIds = allocPointerOut();
-  const outCount = new BigUint64Array(1);
-
-  check(
-    lib.quiver_database_read_element_ids(handle, toCString(collection), ptr(outIds), ptr(outCount)),
-  );
-
-  const count = Number(outCount[0]);
+  const outIds = allocPtrOut();
+  const outCount = allocUint64Out();
+  check(lib.quiver_database_read_element_ids(this._handle, collection, outIds, outCount));
+  const count = readUint64Out(outCount);
   if (count === 0) return [];
-
-  const idsPtr = readPointerOut(outIds);
-  const buffer = toArrayBuffer(idsPtr, 0, count * 8);
-  const bigInts = new BigInt64Array(buffer);
-  const result: number[] = new Array(count);
-  for (let i = 0; i < count; i++) {
-    result[i] = Number(bigInts[i]);
-  }
-
-  lib.quiver_database_free_integer_array(idsPtr);
+  const ptr = readPtrOut(outIds);
+  const result = decodeInt64Array(ptr, count);
+  lib.quiver_database_free_integer_array(ptr);
   return result;
 };
 
 // --- Vector bulk reads ---
 
-Database.prototype.readVectorIntegers = function (
-  this: Database,
-  collection: string,
-  attribute: string,
-): number[][] {
-  const lib = getSymbols();
-  const handle = this._handle;
-
-  const outVectors = allocPointerOut();
-  const outSizes = allocPointerOut();
-  const outCount = new BigUint64Array(1);
-
-  check(
-    lib.quiver_database_read_vector_integers(
-      handle,
-      toCString(collection),
-      toCString(attribute),
-      ptr(outVectors),
-      ptr(outSizes),
-      ptr(outCount),
-    ),
-  );
-
-  const count = Number(outCount[0]);
+function readBulkIntegers(lib: ReturnType<typeof getSymbols>, handle: unknown, fn: string, collection: string, attribute: string): number[][] {
+  const outVectors = allocPtrOut();
+  const outSizes = allocPtrOut();
+  const outCount = allocUint64Out();
+  check(lib[fn](handle, collection, attribute, outVectors, outSizes, outCount));
+  const count = readUint64Out(outCount);
   if (count === 0) return [];
-
-  const vectorsPtr = readPointerOut(outVectors);
-  const sizesPtr = readPointerOut(outSizes);
-  const sizesBuf = toArrayBuffer(sizesPtr, 0, count * 8);
-  const sizes = new BigUint64Array(sizesBuf);
-
+  const vectorsPtr = readPtrOut(outVectors);
+  const sizesPtr = readPtrOut(outSizes);
+  const vectorPtrs = decodePtrArray(vectorsPtr, count);
+  const sizes = decodeUint64Array(sizesPtr, count);
   const result: number[][] = new Array(count);
   for (let i = 0; i < count; i++) {
-    const size = Number(sizes[i]);
-    if (size === 0) {
-      result[i] = [];
-    } else {
-      const vecPtr = readPtrAt(vectorsPtr, i * 8);
-      const buf = toArrayBuffer(vecPtr, 0, size * 8);
-      const bigInts = new BigInt64Array(buf);
-      result[i] = new Array(size);
-      for (let j = 0; j < size; j++) {
-        result[i][j] = Number(bigInts[j]);
-      }
-    }
+    result[i] = sizes[i] === 0 ? [] : decodeInt64Array(vectorPtrs[i], sizes[i]);
   }
-
   lib.quiver_database_free_integer_vectors(vectorsPtr, sizesPtr, count);
   return result;
-};
+}
 
-Database.prototype.readVectorFloats = function (
-  this: Database,
-  collection: string,
-  attribute: string,
-): number[][] {
-  const lib = getSymbols();
-  const handle = this._handle;
-
-  const outVectors = allocPointerOut();
-  const outSizes = allocPointerOut();
-  const outCount = new BigUint64Array(1);
-
-  check(
-    lib.quiver_database_read_vector_floats(
-      handle,
-      toCString(collection),
-      toCString(attribute),
-      ptr(outVectors),
-      ptr(outSizes),
-      ptr(outCount),
-    ),
-  );
-
-  const count = Number(outCount[0]);
+function readBulkFloats(lib: ReturnType<typeof getSymbols>, handle: unknown, fn: string, collection: string, attribute: string): number[][] {
+  const outVectors = allocPtrOut();
+  const outSizes = allocPtrOut();
+  const outCount = allocUint64Out();
+  check(lib[fn](handle, collection, attribute, outVectors, outSizes, outCount));
+  const count = readUint64Out(outCount);
   if (count === 0) return [];
-
-  const vectorsPtr = readPointerOut(outVectors);
-  const sizesPtr = readPointerOut(outSizes);
-  const sizesBuf = toArrayBuffer(sizesPtr, 0, count * 8);
-  const sizes = new BigUint64Array(sizesBuf);
-
+  const vectorsPtr = readPtrOut(outVectors);
+  const sizesPtr = readPtrOut(outSizes);
+  const vectorPtrs = decodePtrArray(vectorsPtr, count);
+  const sizes = decodeUint64Array(sizesPtr, count);
   const result: number[][] = new Array(count);
   for (let i = 0; i < count; i++) {
-    const size = Number(sizes[i]);
-    if (size === 0) {
-      result[i] = [];
-    } else {
-      const vecPtr = readPtrAt(vectorsPtr, i * 8);
-      const buf = toArrayBuffer(vecPtr, 0, size * 8);
-      result[i] = Array.from(new Float64Array(buf));
-    }
+    result[i] = sizes[i] === 0 ? [] : decodeFloat64Array(vectorPtrs[i], sizes[i]);
   }
-
   lib.quiver_database_free_float_vectors(vectorsPtr, sizesPtr, count);
   return result;
-};
+}
 
-Database.prototype.readVectorStrings = function (
-  this: Database,
-  collection: string,
-  attribute: string,
-): string[][] {
-  const lib = getSymbols();
-  const handle = this._handle;
-
-  const outVectors = allocPointerOut();
-  const outSizes = allocPointerOut();
-  const outCount = new BigUint64Array(1);
-
-  check(
-    lib.quiver_database_read_vector_strings(
-      handle,
-      toCString(collection),
-      toCString(attribute),
-      ptr(outVectors),
-      ptr(outSizes),
-      ptr(outCount),
-    ),
-  );
-
-  const count = Number(outCount[0]);
+function readBulkStrings(lib: ReturnType<typeof getSymbols>, handle: unknown, fn: string, collection: string, attribute: string): string[][] {
+  const outVectors = allocPtrOut();
+  const outSizes = allocPtrOut();
+  const outCount = allocUint64Out();
+  check(lib[fn](handle, collection, attribute, outVectors, outSizes, outCount));
+  const count = readUint64Out(outCount);
   if (count === 0) return [];
-
-  const vectorsPtr = readPointerOut(outVectors);
-  const sizesPtr = readPointerOut(outSizes);
-  const sizesBuf = toArrayBuffer(sizesPtr, 0, count * 8);
-  const sizes = new BigUint64Array(sizesBuf);
-
+  const vectorsPtr = readPtrOut(outVectors);
+  const sizesPtr = readPtrOut(outSizes);
+  const vectorPtrs = decodePtrArray(vectorsPtr, count);
+  const sizes = decodeUint64Array(sizesPtr, count);
   const result: string[][] = new Array(count);
   for (let i = 0; i < count; i++) {
-    const size = Number(sizes[i]);
-    if (size === 0) {
-      result[i] = [];
-    } else {
-      const strArrPtr = readPtrAt(vectorsPtr, i * 8);
-      result[i] = new Array(size);
-      for (let j = 0; j < size; j++) {
-        const strPtr = readPtrAt(strArrPtr, j * 8);
-        result[i][j] = new CString(strPtr).toString();
-      }
-    }
+    result[i] = sizes[i] === 0 ? [] : decodeStringArray(vectorPtrs[i], sizes[i]);
   }
-
   lib.quiver_database_free_string_vectors(vectorsPtr, sizesPtr, count);
   return result;
+}
+
+Database.prototype.readVectorIntegers = function (this: Database, collection: string, attribute: string): number[][] {
+  return readBulkIntegers(getSymbols(), this._handle, "quiver_database_read_vector_integers", collection, attribute);
+};
+Database.prototype.readVectorFloats = function (this: Database, collection: string, attribute: string): number[][] {
+  return readBulkFloats(getSymbols(), this._handle, "quiver_database_read_vector_floats", collection, attribute);
+};
+Database.prototype.readVectorStrings = function (this: Database, collection: string, attribute: string): string[][] {
+  return readBulkStrings(getSymbols(), this._handle, "quiver_database_read_vector_strings", collection, attribute);
+};
+Database.prototype.readSetIntegers = function (this: Database, collection: string, attribute: string): number[][] {
+  return readBulkIntegers(getSymbols(), this._handle, "quiver_database_read_set_integers", collection, attribute);
+};
+Database.prototype.readSetFloats = function (this: Database, collection: string, attribute: string): number[][] {
+  return readBulkFloats(getSymbols(), this._handle, "quiver_database_read_set_floats", collection, attribute);
+};
+Database.prototype.readSetStrings = function (this: Database, collection: string, attribute: string): string[][] {
+  return readBulkStrings(getSymbols(), this._handle, "quiver_database_read_set_strings", collection, attribute);
 };
 
-// --- Set bulk reads ---
+// --- By-ID reads ---
 
-Database.prototype.readSetIntegers = function (
-  this: Database,
-  collection: string,
-  attribute: string,
-): number[][] {
-  const lib = getSymbols();
-  const handle = this._handle;
-
-  const outSets = allocPointerOut();
-  const outSizes = allocPointerOut();
-  const outCount = new BigUint64Array(1);
-
-  check(
-    lib.quiver_database_read_set_integers(
-      handle,
-      toCString(collection),
-      toCString(attribute),
-      ptr(outSets),
-      ptr(outSizes),
-      ptr(outCount),
-    ),
-  );
-
-  const count = Number(outCount[0]);
+function readByIdIntegers(lib: ReturnType<typeof getSymbols>, handle: unknown, fn: string, collection: string, attribute: string, id: number): number[] {
+  const outValues = allocPtrOut();
+  const outCount = allocUint64Out();
+  check(lib[fn](handle, collection, attribute, id, outValues, outCount));
+  const count = readUint64Out(outCount);
   if (count === 0) return [];
-
-  const setsPtr = readPointerOut(outSets);
-  const sizesPtr = readPointerOut(outSizes);
-  const sizesBuf = toArrayBuffer(sizesPtr, 0, count * 8);
-  const sizes = new BigUint64Array(sizesBuf);
-
-  const result: number[][] = new Array(count);
-  for (let i = 0; i < count; i++) {
-    const size = Number(sizes[i]);
-    if (size === 0) {
-      result[i] = [];
-    } else {
-      const setPtr = readPtrAt(setsPtr, i * 8);
-      const buf = toArrayBuffer(setPtr, 0, size * 8);
-      const bigInts = new BigInt64Array(buf);
-      result[i] = new Array(size);
-      for (let j = 0; j < size; j++) {
-        result[i][j] = Number(bigInts[j]);
-      }
-    }
-  }
-
-  lib.quiver_database_free_integer_vectors(setsPtr, sizesPtr, count);
+  const ptr = readPtrOut(outValues);
+  const result = decodeInt64Array(ptr, count);
+  lib.quiver_database_free_integer_array(ptr);
   return result;
+}
+
+function readByIdFloats(lib: ReturnType<typeof getSymbols>, handle: unknown, fn: string, collection: string, attribute: string, id: number): number[] {
+  const outValues = allocPtrOut();
+  const outCount = allocUint64Out();
+  check(lib[fn](handle, collection, attribute, id, outValues, outCount));
+  const count = readUint64Out(outCount);
+  if (count === 0) return [];
+  const ptr = readPtrOut(outValues);
+  const result = decodeFloat64Array(ptr, count);
+  lib.quiver_database_free_float_array(ptr);
+  return result;
+}
+
+function readByIdStrings(lib: ReturnType<typeof getSymbols>, handle: unknown, fn: string, collection: string, attribute: string, id: number): string[] {
+  const outValues = allocPtrOut();
+  const outCount = allocUint64Out();
+  check(lib[fn](handle, collection, attribute, id, outValues, outCount));
+  const count = readUint64Out(outCount);
+  if (count === 0) return [];
+  const ptr = readPtrOut(outValues);
+  const result = decodeStringArray(ptr, count);
+  lib.quiver_database_free_string_array(ptr, count);
+  return result;
+}
+
+Database.prototype.readVectorIntegersById = function (this: Database, collection: string, attribute: string, id: number): number[] {
+  return readByIdIntegers(getSymbols(), this._handle, "quiver_database_read_vector_integers_by_id", collection, attribute, id);
 };
-
-Database.prototype.readSetFloats = function (
-  this: Database,
-  collection: string,
-  attribute: string,
-): number[][] {
-  const lib = getSymbols();
-  const handle = this._handle;
-
-  const outSets = allocPointerOut();
-  const outSizes = allocPointerOut();
-  const outCount = new BigUint64Array(1);
-
-  check(
-    lib.quiver_database_read_set_floats(
-      handle,
-      toCString(collection),
-      toCString(attribute),
-      ptr(outSets),
-      ptr(outSizes),
-      ptr(outCount),
-    ),
-  );
-
-  const count = Number(outCount[0]);
-  if (count === 0) return [];
-
-  const setsPtr = readPointerOut(outSets);
-  const sizesPtr = readPointerOut(outSizes);
-  const sizesBuf = toArrayBuffer(sizesPtr, 0, count * 8);
-  const sizes = new BigUint64Array(sizesBuf);
-
-  const result: number[][] = new Array(count);
-  for (let i = 0; i < count; i++) {
-    const size = Number(sizes[i]);
-    if (size === 0) {
-      result[i] = [];
-    } else {
-      const setPtr = readPtrAt(setsPtr, i * 8);
-      const buf = toArrayBuffer(setPtr, 0, size * 8);
-      result[i] = Array.from(new Float64Array(buf));
-    }
-  }
-
-  lib.quiver_database_free_float_vectors(setsPtr, sizesPtr, count);
-  return result;
+Database.prototype.readVectorFloatsById = function (this: Database, collection: string, attribute: string, id: number): number[] {
+  return readByIdFloats(getSymbols(), this._handle, "quiver_database_read_vector_floats_by_id", collection, attribute, id);
 };
-
-Database.prototype.readSetStrings = function (
-  this: Database,
-  collection: string,
-  attribute: string,
-): string[][] {
-  const lib = getSymbols();
-  const handle = this._handle;
-
-  const outSets = allocPointerOut();
-  const outSizes = allocPointerOut();
-  const outCount = new BigUint64Array(1);
-
-  check(
-    lib.quiver_database_read_set_strings(
-      handle,
-      toCString(collection),
-      toCString(attribute),
-      ptr(outSets),
-      ptr(outSizes),
-      ptr(outCount),
-    ),
-  );
-
-  const count = Number(outCount[0]);
-  if (count === 0) return [];
-
-  const setsPtr = readPointerOut(outSets);
-  const sizesPtr = readPointerOut(outSizes);
-  const sizesBuf = toArrayBuffer(sizesPtr, 0, count * 8);
-  const sizes = new BigUint64Array(sizesBuf);
-
-  const result: string[][] = new Array(count);
-  for (let i = 0; i < count; i++) {
-    const size = Number(sizes[i]);
-    if (size === 0) {
-      result[i] = [];
-    } else {
-      const strArrPtr = readPtrAt(setsPtr, i * 8);
-      result[i] = new Array(size);
-      for (let j = 0; j < size; j++) {
-        const strPtr = readPtrAt(strArrPtr, j * 8);
-        result[i][j] = new CString(strPtr).toString();
-      }
-    }
-  }
-
-  lib.quiver_database_free_string_vectors(setsPtr, sizesPtr, count);
-  return result;
+Database.prototype.readVectorStringsById = function (this: Database, collection: string, attribute: string, id: number): string[] {
+  return readByIdStrings(getSymbols(), this._handle, "quiver_database_read_vector_strings_by_id", collection, attribute, id);
 };
-
-// --- Vector by-ID reads ---
-
-Database.prototype.readVectorIntegersById = function (
-  this: Database,
-  collection: string,
-  attribute: string,
-  id: number,
-): number[] {
-  const lib = getSymbols();
-  const handle = this._handle;
-
-  const outValues = allocPointerOut();
-  const outCount = new BigUint64Array(1);
-
-  check(
-    lib.quiver_database_read_vector_integers_by_id(
-      handle,
-      toCString(collection),
-      toCString(attribute),
-      id,
-      ptr(outValues),
-      ptr(outCount),
-    ),
-  );
-
-  const count = Number(outCount[0]);
-  if (count === 0) return [];
-
-  const valuesPtr = readPointerOut(outValues);
-  const buffer = toArrayBuffer(valuesPtr, 0, count * 8);
-  const bigInts = new BigInt64Array(buffer);
-  const result: number[] = new Array(count);
-  for (let i = 0; i < count; i++) {
-    result[i] = Number(bigInts[i]);
-  }
-
-  lib.quiver_database_free_integer_array(valuesPtr);
-  return result;
+Database.prototype.readSetIntegersById = function (this: Database, collection: string, attribute: string, id: number): number[] {
+  return readByIdIntegers(getSymbols(), this._handle, "quiver_database_read_set_integers_by_id", collection, attribute, id);
 };
-
-Database.prototype.readVectorFloatsById = function (
-  this: Database,
-  collection: string,
-  attribute: string,
-  id: number,
-): number[] {
-  const lib = getSymbols();
-  const handle = this._handle;
-
-  const outValues = allocPointerOut();
-  const outCount = new BigUint64Array(1);
-
-  check(
-    lib.quiver_database_read_vector_floats_by_id(
-      handle,
-      toCString(collection),
-      toCString(attribute),
-      id,
-      ptr(outValues),
-      ptr(outCount),
-    ),
-  );
-
-  const count = Number(outCount[0]);
-  if (count === 0) return [];
-
-  const valuesPtr = readPointerOut(outValues);
-  const buffer = toArrayBuffer(valuesPtr, 0, count * 8);
-  const result = Array.from(new Float64Array(buffer));
-
-  lib.quiver_database_free_float_array(valuesPtr);
-  return result;
+Database.prototype.readSetFloatsById = function (this: Database, collection: string, attribute: string, id: number): number[] {
+  return readByIdFloats(getSymbols(), this._handle, "quiver_database_read_set_floats_by_id", collection, attribute, id);
 };
-
-Database.prototype.readVectorStringsById = function (
-  this: Database,
-  collection: string,
-  attribute: string,
-  id: number,
-): string[] {
-  const lib = getSymbols();
-  const handle = this._handle;
-
-  const outValues = allocPointerOut();
-  const outCount = new BigUint64Array(1);
-
-  check(
-    lib.quiver_database_read_vector_strings_by_id(
-      handle,
-      toCString(collection),
-      toCString(attribute),
-      id,
-      ptr(outValues),
-      ptr(outCount),
-    ),
-  );
-
-  const count = Number(outCount[0]);
-  if (count === 0) return [];
-
-  const arrPtr = readPointerOut(outValues);
-  const result: string[] = new Array(count);
-  for (let i = 0; i < count; i++) {
-    const strPtr = readPtrAt(arrPtr, i * 8);
-    result[i] = new CString(strPtr).toString();
-  }
-
-  lib.quiver_database_free_string_array(arrPtr, count);
-  return result;
-};
-
-// --- Set by-ID reads ---
-
-Database.prototype.readSetIntegersById = function (
-  this: Database,
-  collection: string,
-  attribute: string,
-  id: number,
-): number[] {
-  const lib = getSymbols();
-  const handle = this._handle;
-
-  const outValues = allocPointerOut();
-  const outCount = new BigUint64Array(1);
-
-  check(
-    lib.quiver_database_read_set_integers_by_id(
-      handle,
-      toCString(collection),
-      toCString(attribute),
-      id,
-      ptr(outValues),
-      ptr(outCount),
-    ),
-  );
-
-  const count = Number(outCount[0]);
-  if (count === 0) return [];
-
-  const valuesPtr = readPointerOut(outValues);
-  const buffer = toArrayBuffer(valuesPtr, 0, count * 8);
-  const bigInts = new BigInt64Array(buffer);
-  const result: number[] = new Array(count);
-  for (let i = 0; i < count; i++) {
-    result[i] = Number(bigInts[i]);
-  }
-
-  lib.quiver_database_free_integer_array(valuesPtr);
-  return result;
-};
-
-Database.prototype.readSetFloatsById = function (
-  this: Database,
-  collection: string,
-  attribute: string,
-  id: number,
-): number[] {
-  const lib = getSymbols();
-  const handle = this._handle;
-
-  const outValues = allocPointerOut();
-  const outCount = new BigUint64Array(1);
-
-  check(
-    lib.quiver_database_read_set_floats_by_id(
-      handle,
-      toCString(collection),
-      toCString(attribute),
-      id,
-      ptr(outValues),
-      ptr(outCount),
-    ),
-  );
-
-  const count = Number(outCount[0]);
-  if (count === 0) return [];
-
-  const valuesPtr = readPointerOut(outValues);
-  const buffer = toArrayBuffer(valuesPtr, 0, count * 8);
-  const result = Array.from(new Float64Array(buffer));
-
-  lib.quiver_database_free_float_array(valuesPtr);
-  return result;
-};
-
-Database.prototype.readSetStringsById = function (
-  this: Database,
-  collection: string,
-  attribute: string,
-  id: number,
-): string[] {
-  const lib = getSymbols();
-  const handle = this._handle;
-
-  const outValues = allocPointerOut();
-  const outCount = new BigUint64Array(1);
-
-  check(
-    lib.quiver_database_read_set_strings_by_id(
-      handle,
-      toCString(collection),
-      toCString(attribute),
-      id,
-      ptr(outValues),
-      ptr(outCount),
-    ),
-  );
-
-  const count = Number(outCount[0]);
-  if (count === 0) return [];
-
-  const arrPtr = readPointerOut(outValues);
-  const result: string[] = new Array(count);
-  for (let i = 0; i < count; i++) {
-    const strPtr = readPtrAt(arrPtr, i * 8);
-    result[i] = new CString(strPtr).toString();
-  }
-
-  lib.quiver_database_free_string_array(arrPtr, count);
-  return result;
+Database.prototype.readSetStringsById = function (this: Database, collection: string, attribute: string, id: number): string[] {
+  return readByIdStrings(getSymbols(), this._handle, "quiver_database_read_set_strings_by_id", collection, attribute, id);
 };
