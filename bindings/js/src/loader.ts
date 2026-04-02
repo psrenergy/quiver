@@ -137,6 +137,15 @@ function bindSymbols(lib: any): Symbols {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+function getBundledLibDir(): string | null {
+  const platformKey = `${process.platform}-${process.arch}`;
+  const libDir = join(__dirname, "..", "libs", platformKey);
+  if (existsSync(join(libDir, C_API_LIB))) {
+    return libDir;
+  }
+  return null;
+}
+
 function getSearchPaths(): string[] {
   const paths: string[] = [];
   let dir = __dirname;
@@ -156,6 +165,24 @@ let _coreLib: unknown = null;
 export function loadLibrary(): Symbols {
   if (_symbols) return _symbols;
 
+  // 1. Bundled mode: libs/{platform}-{arch}/ inside the npm package
+  const bundledDir = getBundledLibDir();
+  if (bundledDir) {
+    try {
+      const corePath = join(bundledDir, CORE_LIB);
+      const cApiPath = join(bundledDir, C_API_LIB);
+      if (process.platform === "win32" && existsSync(corePath)) {
+        _coreLib = koffi.load(corePath);
+      }
+      const lib = koffi.load(cApiPath);
+      _symbols = bindSymbols(lib);
+      return _symbols;
+    } catch {
+      // Bundled libs found but failed to load -- fall through to dev paths
+    }
+  }
+
+  // 2. Dev mode: walk up directories looking for build/bin/
   const searchPaths = getSearchPaths();
 
   for (const dir of searchPaths) {
@@ -175,7 +202,7 @@ export function loadLibrary(): Symbols {
     }
   }
 
-  // Fallback: system PATH
+  // 3. Fallback: system PATH
   try {
     if (process.platform === "win32") {
       try {
@@ -191,9 +218,9 @@ export function loadLibrary(): Symbols {
     // Fall through to error
   }
 
-  const searched =
-    searchPaths.length > 0 ? `${searchPaths.join(", ")}, system PATH` : "system PATH";
-  throw new QuiverError(`Cannot load native library '${C_API_LIB}'. Searched: ${searched}`);
+  const bundledPath = join(__dirname, "..", "libs", `${process.platform}-${process.arch}`);
+  const allPaths = [bundledPath, ...searchPaths, "system PATH"].join(", ");
+  throw new QuiverError(`Cannot load native library '${C_API_LIB}'. Searched: ${allPaths}`);
 }
 
 export function getSymbols(): Symbols {

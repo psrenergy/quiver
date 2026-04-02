@@ -12,7 +12,8 @@
     }
   },
   "files": [
-    "dist/"
+    "dist/",
+    "libs/"
   ],
   "license": "MIT",
   "repository": {
