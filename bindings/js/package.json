@@ -1,6 +1,6 @@
 {
   "name": "quiverdb",
-  "version": "0.7.0",
+  "version": "0.6.1",
   "description": "SQLite wrapper binding for Quiver via koffi FFI",
   "type": "module",
   "main": "dist/index.js",
