@@ -43,23 +43,23 @@ Requirements for Deno compatibility. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ABST-01 | — | Pending |
-| ABST-02 | — | Pending |
-| ABST-03 | — | Pending |
-| ABST-04 | — | Pending |
-| ABST-05 | — | Pending |
-| RTAD-01 | — | Pending |
-| RTAD-02 | — | Pending |
-| RTAD-03 | — | Pending |
-| PACK-01 | — | Pending |
-| PACK-02 | — | Pending |
-| PACK-03 | — | Pending |
+| ABST-01 | Phase 1 | Pending |
+| ABST-02 | Phase 1 | Pending |
+| ABST-03 | Phase 2 | Pending |
+| ABST-04 | Phase 2 | Pending |
+| ABST-05 | Phase 2 | Pending |
+| RTAD-01 | Phase 3 | Pending |
+| RTAD-02 | Phase 3 | Pending |
+| RTAD-03 | Phase 3 | Pending |
+| PACK-01 | Phase 4 | Pending |
+| PACK-02 | Phase 4 | Pending |
+| PACK-03 | Phase 4 | Pending |
 
 **Coverage:**
 - v1.0 requirements: 11 total
-- Mapped to phases: 0
-- Unmapped: 11 ⚠️
+- Mapped to phases: 11
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-01*
-*Last updated: 2026-04-01 after initial definition*
+*Last updated: 2026-04-01 after roadmap creation*
