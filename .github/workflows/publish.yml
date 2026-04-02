@@ -110,7 +110,7 @@ jobs:
         include:
           - os: windows-latest
             platform_key: win32-x64
-            lib_dir: build/bin
+            lib_dir: build/bin/Release
           - os: ubuntu-latest
             platform_key: linux-x64
             lib_dir: build/lib
