@@ -52,7 +52,7 @@ protected:
 };
 
 // ============================================================================
-// BinaryOpenFile
+// BinaryOpen
 // ============================================================================
 
 TEST_F(BinaryTempFileFixture, WriteModeCreatesFiles) {

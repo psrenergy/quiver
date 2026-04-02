@@ -402,7 +402,7 @@ TEST(DatabaseCApiCSV, ImportCSV_SemicolonAutoDetect_RoundTrip) {
 // CSV Import: Cannot open file
 // ============================================================================
 
-TEST(DatabaseCApiCSV, ImportCSV_CannotOpenFile_ReturnsError) {
+TEST(DatabaseCApiCSV, ImportCSV_CannotOpen_ReturnsError) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;

@@ -543,7 +543,7 @@ TEST(DatabaseCSV, ExportCSV_OverwritesExistingFile) {
     fs::remove(csv_path);
 }
 
-TEST(DatabaseCSV, ExportCSV_CannotOpenFile_Throws) {
+TEST(DatabaseCSV, ExportCSV_CannotOpen_Throws) {
     auto db = make_db();
 
     quiver::Element e1;

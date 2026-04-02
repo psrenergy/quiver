@@ -20,7 +20,7 @@ protected:
     std::string path;
 };
 
-TEST_F(TempFileFixture, OpenFileOnDisk) {
+TEST_F(TempFileFixture, OpenOnDisk) {
     quiver::Database db(path);
     EXPECT_TRUE(db.is_healthy());
     EXPECT_EQ(db.path(), path);

@@ -884,7 +884,7 @@ TEST(DatabaseCSV, ImportCSV_SemicolonAutoDetect_RoundTrip) {
 // import_csv: Cannot open file
 // ============================================================================
 
-TEST(DatabaseCSV, ImportCSV_CannotOpenFile_Throws) {
+TEST(DatabaseCSV, ImportCSV_CannotOpen_Throws) {
     auto db = make_db();
 
     EXPECT_THROW(

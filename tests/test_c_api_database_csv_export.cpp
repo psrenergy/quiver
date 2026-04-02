@@ -813,7 +813,7 @@ TEST(DatabaseCApiCSV, ExportCSV_OverwritesExistingFile) {
     quiver_database_close(db);
 }
 
-TEST(DatabaseCApiCSV, ExportCSV_CannotOpenFile_ReturnsError) {
+TEST(DatabaseCApiCSV, ExportCSV_CannotOpen_ReturnsError) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     quiver_database_t* db = nullptr;
