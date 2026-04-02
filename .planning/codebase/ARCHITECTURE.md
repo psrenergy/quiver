@@ -111,7 +111,7 @@
 **`Blob` / `BlobCSV` (binary file I/O):**
 - Purpose: Read/write typed multi-dimensional float arrays from `.qvr` binary files with TOML metadata sidecars
 - Examples: `include/quiver/blob/blob.h`, `include/quiver/blob/blob_csv.h`
-- Pattern: Pimpl; factory static method `Blob::open_file(path, mode, metadata?)`
+- Pattern: Pimpl; factory static method `Blob::open(path, mode, metadata?)`
 
 **`LuaRunner` (scripting):**
 - Purpose: Executes Lua scripts with the database exposed as `db` userdata

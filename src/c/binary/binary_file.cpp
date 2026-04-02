@@ -16,7 +16,7 @@ QUIVER_C_API quiver_error_t quiver_binary_file_open_read(const char* path, quive
     QUIVER_REQUIRE(path, out);
 
     try {
-        auto binary_file = quiver::BinaryFile::open_file(path, 'r');
+        auto binary_file = quiver::BinaryFile::open(path, 'r');
         *out = new quiver_binary_file(std::move(binary_file));
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
@@ -34,7 +34,7 @@ QUIVER_C_API quiver_error_t quiver_binary_file_open_write(const char* path,
     QUIVER_REQUIRE(path, md, out);
 
     try {
-        auto binary_file = quiver::BinaryFile::open_file(path, 'w', md->metadata);
+        auto binary_file = quiver::BinaryFile::open(path, 'w', md->metadata);
         *out = new quiver_binary_file(std::move(binary_file));
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {

@@ -51,7 +51,7 @@ void CSVConverter::csv_to_bin(const std::string& file_path) {
     csv_reader.validate_header();
 
     // Open the binary file in write mode
-    BinaryFile bin_writer = BinaryFile::open_file(file_path, 'w', metadata);
+    BinaryFile bin_writer = BinaryFile::open(file_path, 'w', metadata);
 
     // Get initial dimension values
     const auto& dimensions = metadata.dimensions;
@@ -91,7 +91,7 @@ void CSVConverter::csv_to_bin(const std::string& file_path) {
 
 void CSVConverter::bin_to_csv(const std::string& file_path, bool aggregate_time_dimensions) {
     // Open the binary file in read mode
-    BinaryFile bin_reader = BinaryFile::open_file(file_path, 'r');
+    BinaryFile bin_reader = BinaryFile::open(file_path, 'r');
     const auto& metadata = bin_reader.get_metadata();
 
     // Open the CSV file in write mode

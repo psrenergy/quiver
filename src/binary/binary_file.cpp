@@ -51,12 +51,12 @@ BinaryFile::BinaryFile(BinaryFile&& other) noexcept = default;
 BinaryFile& BinaryFile::operator=(BinaryFile&& other) noexcept = default;
 
 BinaryFile
-BinaryFile::open_file(const std::string& file_path, char mode, const std::optional<BinaryMetadata>& metadata) {
+BinaryFile::open(const std::string& file_path, char mode, const std::optional<BinaryMetadata>& metadata) {
     namespace fs = std::filesystem;
     auto canonical = fs::weakly_canonical(file_path).string();
 
     if (write_registry.count(canonical)) {
-        throw std::runtime_error("Cannot open_file: file is already open for writing: " + canonical);
+        throw std::runtime_error("Cannot open: file is already open for writing: " + canonical);
     }
 
     switch (mode) {

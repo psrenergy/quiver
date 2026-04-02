@@ -12,7 +12,7 @@ include/quiver/           # C++ public headers
   element.h               # Element builder for create operations
   lua_runner.h            # Lua scripting support
 include/quiver/binary/      # Binary subsystem headers (binary file I/O)
-  binary_file.h               # BinaryFile class (Pimpl) - open_file, read, write, get_metadata
+  binary_file.h               # BinaryFile class (Pimpl) - open, read, write, get_metadata
   csv_converter.h              # CSVConverter class - bin_to_csv, csv_to_bin
   binary_metadata.h         # BinaryMetadata struct - dimensions, labels, serialization
   dimension.h             # Dimension struct (name, size, optional TimeProperties)
@@ -439,7 +439,7 @@ Element().set("label", "Item 1").set("value", 42).set("tags", {"a", "b"})
 ### Binary Subsystem
 Standalone binary file I/O layer for `.qvr` files with `.toml` metadata sidecars.
 
-- `BinaryFile` class (Pimpl): `open_file(path, mode, metadata?)`, `read(dims)`, `write(dims, data)`, `get_metadata()`, `get_file_path()`
+- `BinaryFile` class (Pimpl): `open(path, mode, metadata?)`, `read(dims)`, `write(dims, data)`, `get_metadata()`, `get_file_path()`
 - `CSVConverter` class (Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)`
 - `BinaryMetadata` struct: `dimensions`, `initial_datetime`, `unit`, `labels`, `version`, `number_of_time_dimensions`
   - Factories: `from_toml()`, `from_element()`
@@ -512,8 +512,8 @@ lua.run(R"(
 
 | Category | C++ | C API | Julia |
 |----------|-----|-------|-------|
-| Open read | `BinaryFile::open_file(path, 'r')` | `quiver_binary_file_open_read()` | `open_file(path; mode=:read)` |
-| Open write | `BinaryFile::open_file(path, 'w', md)` | `quiver_binary_file_open_write()` | `open_file(path; mode=:write, metadata=md)` |
+| Open read | `BinaryFile::open(path, 'r')` | `quiver_binary_file_open_read()` | `open(path; mode=:read)` |
+| Open write | `BinaryFile::open(path, 'w', md)` | `quiver_binary_file_open_write()` | `open(path; mode=:write, metadata=md)` |
 | Close | (destructor) | `quiver_binary_file_close()` | `close!(file)` |
 | Read | `binary_file.read(dims)` | `quiver_binary_file_read()` | `read(file; dims...)` |
 | Write | `binary_file.write(dims, data)` | `quiver_binary_file_write()` | `write!(file; data=data, dims...)` |

@@ -8,7 +8,7 @@ mutable struct File
     end
 end
 
-function open_file(path::String; mode::Symbol, metadata::Union{Metadata, Nothing} = nothing)
+function open(path::String; mode::Symbol, metadata::Union{Metadata, Nothing} = nothing)
     out_file = Ref{Ptr{C.quiver_binary_file}}(C_NULL)
     if mode == :read
         check(C.quiver_binary_file_open_read(path, out_file))

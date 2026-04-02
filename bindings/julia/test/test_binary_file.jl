@@ -47,7 +47,7 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             Quiver.Binary.close!(file)
 
             @test isfile(path * ".qvr")
@@ -61,10 +61,10 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             Quiver.Binary.close!(file)
 
-            file = Quiver.Binary.open_file(path; mode = :read)
+            file = Quiver.Binary.open(path; mode = :read)
             Quiver.Binary.close!(file)
             @test true
         finally
@@ -75,25 +75,25 @@ end
     @testset "Read mode on missing file" begin
         path = make_binary_file_path()
         cleanup_binary_file(path)
-        @test_throws Quiver.DatabaseException Quiver.Binary.open_file(path; mode = :read)
+        @test_throws Quiver.DatabaseException Quiver.Binary.open(path; mode = :read)
     end
 
     @testset "Write mode without metadata" begin
-        @test_throws Quiver.DatabaseException Quiver.Binary.open_file("test"; mode = :write)
+        @test_throws Quiver.DatabaseException Quiver.Binary.open("test"; mode = :write)
     end
 
     @testset "Invalid mode" begin
-        @test_throws ArgumentError Quiver.Binary.open_file("test"; mode = :invalid)
+        @test_throws ArgumentError Quiver.Binary.open("test"; mode = :invalid)
     end
 
     @testset "Read mode returns correct metadata" begin
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             Quiver.Binary.close!(file)
 
-            file = Quiver.Binary.open_file(path; mode = :read)
+            file = Quiver.Binary.open(path; mode = :read)
             read_md = Quiver.Binary.get_metadata(file)
             @test Quiver.Binary.get_unit(read_md) == "MW"
             @test Quiver.Binary.get_labels(read_md) == ["val1", "val2"]
@@ -115,7 +115,7 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             @test Quiver.Binary.get_file_path(file) == path
             Quiver.Binary.close!(file)
         finally
@@ -127,10 +127,10 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             Quiver.Binary.close!(file)
 
-            file = Quiver.Binary.open_file(path; mode = :read)
+            file = Quiver.Binary.open(path; mode = :read)
             data = Quiver.Binary.read(file; row = 1, col = 1, allow_nulls = true)
             @test length(data) == 2
             @test isnan(data[1])
@@ -149,11 +149,11 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             Quiver.Binary.write!(file; data = [1.0, 2.0], row = 1, col = 1)
             Quiver.Binary.close!(file)
 
-            file = Quiver.Binary.open_file(path; mode = :read)
+            file = Quiver.Binary.open(path; mode = :read)
             data = Quiver.Binary.read(file; row = 1, col = 1)
             @test length(data) == 2
             @test data[1] ≈ 1.0
@@ -168,13 +168,13 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             Quiver.Binary.write!(file; data = [1.0, 2.0], row = 1, col = 1)
             Quiver.Binary.write!(file; data = [3.0, 4.0], row = 2, col = 2)
             Quiver.Binary.write!(file; data = [5.0, 6.0], row = 3, col = 1)
             Quiver.Binary.close!(file)
 
-            file = Quiver.Binary.open_file(path; mode = :read)
+            file = Quiver.Binary.open(path; mode = :read)
             @test Quiver.Binary.read(file; row = 1, col = 1)[1] ≈ 1.0
             @test Quiver.Binary.read(file; row = 2, col = 2)[1] ≈ 3.0
             @test Quiver.Binary.read(file; row = 3, col = 1)[1] ≈ 5.0
@@ -188,7 +188,7 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             counter = 0
             for r in 1:3, c in 1:2
                 Quiver.Binary.write!(file; data = [Float64(counter), Float64(counter + 1)], row = r, col = c)
@@ -196,7 +196,7 @@ end
             end
             Quiver.Binary.close!(file)
 
-            file = Quiver.Binary.open_file(path; mode = :read)
+            file = Quiver.Binary.open(path; mode = :read)
             counter = 0
             for r in 1:3, c in 1:2
                 data = Quiver.Binary.read(file; row = r, col = c)
@@ -214,12 +214,12 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             Quiver.Binary.write!(file; data = [1.0, 2.0], row = 1, col = 1)
             Quiver.Binary.write!(file; data = [99.0, 100.0], row = 1, col = 1)
             Quiver.Binary.close!(file)
 
-            file = Quiver.Binary.open_file(path; mode = :read)
+            file = Quiver.Binary.open(path; mode = :read)
             data = Quiver.Binary.read(file; row = 1, col = 1)
             @test data[1] ≈ 99.0
             @test data[2] ≈ 100.0
@@ -233,12 +233,12 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             Quiver.Binary.write!(file; data = [1.0, 2.0], row = 1, col = 1)
             Quiver.Binary.write!(file; data = [3.0, 4.0], row = 2, col = 2)
             Quiver.Binary.close!(file)
 
-            file = Quiver.Binary.open_file(path; mode = :read)
+            file = Quiver.Binary.open(path; mode = :read)
             @test Quiver.Binary.read(file; row = 1, col = 1)[1] ≈ 1.0
             @test Quiver.Binary.read(file; row = 2, col = 2)[1] ≈ 3.0
             Quiver.Binary.close!(file)
@@ -251,11 +251,11 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             Quiver.Binary.write!(file; data = [-1.5, -999.99], row = 1, col = 1)
             Quiver.Binary.close!(file)
 
-            file = Quiver.Binary.open_file(path; mode = :read)
+            file = Quiver.Binary.open(path; mode = :read)
             data = Quiver.Binary.read(file; row = 1, col = 1)
             @test data[1] ≈ -1.5
             @test data[2] ≈ -999.99
@@ -269,11 +269,11 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             Quiver.Binary.write!(file; data = [0.0, 0.0], row = 1, col = 1)
             Quiver.Binary.close!(file)
 
-            file = Quiver.Binary.open_file(path; mode = :read)
+            file = Quiver.Binary.open(path; mode = :read)
             data = Quiver.Binary.read(file; row = 1, col = 1)
             @test data[1] ≈ 0.0
             @test data[2] ≈ 0.0
@@ -288,11 +288,11 @@ end
         try
             md = make_simple_metadata()
             big = 1e300
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             Quiver.Binary.write!(file; data = [big, -big], row = 1, col = 1)
             Quiver.Binary.close!(file)
 
-            file = Quiver.Binary.open_file(path; mode = :read)
+            file = Quiver.Binary.open(path; mode = :read)
             data = Quiver.Binary.read(file; row = 1, col = 1)
             @test data[1] ≈ big
             @test data[2] ≈ -big
@@ -310,10 +310,10 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             Quiver.Binary.close!(file)
 
-            file = Quiver.Binary.open_file(path; mode = :read)
+            file = Quiver.Binary.open(path; mode = :read)
             @test_throws Quiver.DatabaseException Quiver.Binary.read(file; row = 1, col = 1)
             Quiver.Binary.close!(file)
         finally
@@ -325,10 +325,10 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             Quiver.Binary.close!(file)
 
-            file = Quiver.Binary.open_file(path; mode = :read)
+            file = Quiver.Binary.open(path; mode = :read)
             data = Quiver.Binary.read(file; row = 1, col = 1, allow_nulls = true)
             @test isnan(data[1])
             @test isnan(data[2])
@@ -342,11 +342,11 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             Quiver.Binary.write!(file; data = [1.0, 2.0], row = 1, col = 1)
             Quiver.Binary.close!(file)
 
-            file = Quiver.Binary.open_file(path; mode = :read)
+            file = Quiver.Binary.open(path; mode = :read)
             data = Quiver.Binary.read(file; row = 1, col = 1)
             @test data[1] ≈ 1.0
             @test data[2] ≈ 2.0
@@ -360,11 +360,11 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             Quiver.Binary.write!(file; data = [NaN, NaN], row = 1, col = 1)
             Quiver.Binary.close!(file)
 
-            file = Quiver.Binary.open_file(path; mode = :read)
+            file = Quiver.Binary.open(path; mode = :read)
             data = Quiver.Binary.read(file; row = 1, col = 1, allow_nulls = true)
             @test isnan(data[1])
             @test isnan(data[2])
@@ -382,7 +382,7 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             @test_throws Quiver.DatabaseException Quiver.Binary.read(file; row = 1, allow_nulls = true)
             Quiver.Binary.close!(file)
         finally
@@ -394,7 +394,7 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             @test_throws Quiver.DatabaseException Quiver.Binary.read(
                 file;
                 row = 1,
@@ -412,7 +412,7 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             @test_throws Quiver.DatabaseException Quiver.Binary.read(file; row = 1, bad = 1, allow_nulls = true)
             Quiver.Binary.close!(file)
         finally
@@ -424,7 +424,7 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             @test_throws Quiver.DatabaseException Quiver.Binary.read(file; row = 0, col = 1, allow_nulls = true)
             Quiver.Binary.close!(file)
         finally
@@ -436,7 +436,7 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             @test_throws Quiver.DatabaseException Quiver.Binary.read(file; row = 4, col = 1, allow_nulls = true)
             Quiver.Binary.close!(file)
         finally
@@ -448,7 +448,7 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             data = Quiver.Binary.read(file; row = 1, col = 1, allow_nulls = true)
             @test length(data) == 2
             Quiver.Binary.close!(file)
@@ -461,7 +461,7 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             data = Quiver.Binary.read(file; row = 3, col = 2, allow_nulls = true)
             @test length(data) == 2
             Quiver.Binary.close!(file)
@@ -478,7 +478,7 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             @test_throws Quiver.DatabaseException Quiver.Binary.write!(file; data = [1.0], row = 1, col = 1)
             Quiver.Binary.close!(file)
         finally
@@ -490,7 +490,7 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             @test_throws Quiver.DatabaseException Quiver.Binary.write!(file; data = [1.0, 2.0, 3.0], row = 1, col = 1)
             Quiver.Binary.close!(file)
         finally
@@ -502,7 +502,7 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             Quiver.Binary.write!(file; data = [1.0, 2.0], row = 1, col = 1)
             Quiver.Binary.close!(file)
             @test true
@@ -519,8 +519,8 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            writer = Quiver.Binary.open_file(path; mode = :write, metadata = md)
-            @test_throws Quiver.DatabaseException Quiver.Binary.open_file(path; mode = :read)
+            writer = Quiver.Binary.open(path; mode = :write, metadata = md)
+            @test_throws Quiver.DatabaseException Quiver.Binary.open(path; mode = :read)
             Quiver.Binary.close!(writer)
         finally
             cleanup_binary_file(path)
@@ -531,10 +531,10 @@ end
         path = make_binary_file_path()
         try
             md = make_simple_metadata()
-            writer = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            writer = Quiver.Binary.open(path; mode = :write, metadata = md)
             Quiver.Binary.close!(writer)
 
-            reader = Quiver.Binary.open_file(path; mode = :read)
+            reader = Quiver.Binary.open(path; mode = :read)
             Quiver.Binary.close!(reader)
             @test true
         finally
@@ -550,7 +550,7 @@ end
         path = make_binary_file_path()
         try
             md = make_time_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             Quiver.Binary.write!(file; data = [1.0, 2.0], stage = 1, block = 1)
             Quiver.Binary.close!(file)
             @test true
@@ -563,7 +563,7 @@ end
         path = make_binary_file_path()
         try
             md = make_time_metadata()
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             # stage=2 (Feb), block=30: Feb doesn't have 30 days
             @test_throws Quiver.DatabaseException Quiver.Binary.write!(file; data = [1.0, 2.0], stage = 2, block = 30)
             Quiver.Binary.close!(file)
@@ -584,7 +584,7 @@ end
                 time_dimensions = ["month"],
                 frequencies = ["monthly"],
             )
-            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            file = Quiver.Binary.open(path; mode = :write, metadata = md)
             Quiver.Binary.write!(file; data = [1.0], month = 12, scenario = 3)
             Quiver.Binary.close!(file)
             @test true

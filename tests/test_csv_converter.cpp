@@ -101,7 +101,7 @@ protected:
 TEST_F(CSVConverterFixture, NonTimeMetadataHeader) {
     auto md = make_simple_metadata();
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
     }
     CSVConverter::bin_to_csv(path);
     auto lines = csv_lines();
@@ -112,7 +112,7 @@ TEST_F(CSVConverterFixture, NonTimeMetadataHeader) {
 TEST_F(CSVConverterFixture, AggregatedNoHourlyHeader) {
     auto md = make_time_metadata();
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
     }
     CSVConverter::bin_to_csv(path, true);
     auto lines = csv_lines();
@@ -123,7 +123,7 @@ TEST_F(CSVConverterFixture, AggregatedNoHourlyHeader) {
 TEST_F(CSVConverterFixture, AggregatedWithHourlyHeader) {
     auto md = make_hourly_metadata();
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
     }
     CSVConverter::bin_to_csv(path, true);
     auto lines = csv_lines();
@@ -134,7 +134,7 @@ TEST_F(CSVConverterFixture, AggregatedWithHourlyHeader) {
 TEST_F(CSVConverterFixture, NonAggregatedHeader) {
     auto md = make_time_metadata();
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
     }
     CSVConverter::bin_to_csv(path, false);
     auto lines = csv_lines();
@@ -149,7 +149,7 @@ TEST_F(CSVConverterFixture, NonAggregatedHeader) {
 TEST_F(CSVConverterFixture, CreatesCSVFile) {
     auto md = make_simple_metadata();
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
     }
     CSVConverter::bin_to_csv(path);
     EXPECT_TRUE(fs::exists(path + ".csv"));
@@ -158,7 +158,7 @@ TEST_F(CSVConverterFixture, CreatesCSVFile) {
 TEST_F(CSVConverterFixture, DataValuesMatch) {
     auto md = make_simple_metadata();
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
         binary_file.write({1.5, 2.5}, {{"row", 1}, {"col", 1}});
         binary_file.write({3.5, 4.5}, {{"row", 1}, {"col", 2}});
     }
@@ -173,7 +173,7 @@ TEST_F(CSVConverterFixture, DataValuesMatch) {
 TEST_F(CSVConverterFixture, NaNValuesAppearAsNull) {
     auto md = make_simple_metadata();
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
     }  // all NaN
     CSVConverter::bin_to_csv(path);
     auto lines = csv_lines();
@@ -190,7 +190,7 @@ TEST_F(CSVConverterFixture, FloatPrecision) {
                                                .set("dimension_sizes", {1})
                                                .set("labels", {"val"}));
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
         binary_file.write({1.23456789}, {{"row", 1}});
     }
     CSVConverter::bin_to_csv(path);
@@ -207,7 +207,7 @@ TEST_F(CSVConverterFixture, FloatPrecision) {
 TEST_F(CSVConverterFixture, NonTimeRowCountEqualsProduct) {
     auto md = make_simple_metadata();
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
     }
     CSVConverter::bin_to_csv(path);
     auto lines = csv_lines();
@@ -223,7 +223,7 @@ TEST_F(CSVConverterFixture, TimeMetadataRowCountLessThanProduct) {
     // Jan=31d, Feb=28d, Mar=31d, Apr=30d → 31+28+31+30=120 data rows
     auto md = make_time_metadata();
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
     }
     CSVConverter::bin_to_csv(path);
     auto lines = csv_lines();
@@ -237,7 +237,7 @@ TEST_F(CSVConverterFixture, TimeMetadataRowCountLessThanProduct) {
 TEST_F(CSVConverterFixture, HourlyMetadataRowCount) {
     auto md = make_hourly_metadata();
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
     }
     CSVConverter::bin_to_csv(path);
     auto lines = csv_lines();
@@ -273,7 +273,7 @@ TEST_F(CSVConverterFixture, CsvToBinNonTimeRoundTrip) {
     write_csv(csv);
     CSVConverter::csv_to_bin(path);
 
-    auto reader = BinaryFile::open_file(path, 'r');
+    auto reader = BinaryFile::open(path, 'r');
     auto v = reader.read({{"row", 1}, {"col", 1}});
     EXPECT_DOUBLE_EQ(v[0], 1.5);
     EXPECT_DOUBLE_EQ(v[1], 2.5);
@@ -286,7 +286,7 @@ TEST_F(CSVConverterFixture, CsvToBinAggregatedDatetimeWithHourly) {
     auto md = make_hourly_metadata();
     // First create binary, then csv, then read back
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
         binary_file.write({42.0}, {{"day", 1}, {"hour", 1}});
     }
     CSVConverter::bin_to_csv(path, true);  // creates CSV with datetime header
@@ -294,7 +294,7 @@ TEST_F(CSVConverterFixture, CsvToBinAggregatedDatetimeWithHourly) {
     fs::remove(path + ".qvr");
     CSVConverter::csv_to_bin(path);
 
-    auto reader = BinaryFile::open_file(path, 'r');
+    auto reader = BinaryFile::open(path, 'r');
     auto v = reader.read({{"day", 1}, {"hour", 1}});
     EXPECT_DOUBLE_EQ(v[0], 42.0);
 }
@@ -302,14 +302,14 @@ TEST_F(CSVConverterFixture, CsvToBinAggregatedDatetimeWithHourly) {
 TEST_F(CSVConverterFixture, CsvToBinAggregatedDateWithoutHourly) {
     auto md = make_time_metadata();
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
         binary_file.write({10.0, 20.0}, {{"stage", 1}, {"block", 1}});
     }
     CSVConverter::bin_to_csv(path, true);
     fs::remove(path + ".qvr");
     CSVConverter::csv_to_bin(path);
 
-    auto reader = BinaryFile::open_file(path, 'r');
+    auto reader = BinaryFile::open(path, 'r');
     auto v = reader.read({{"stage", 1}, {"block", 1}});
     EXPECT_DOUBLE_EQ(v[0], 10.0);
     EXPECT_DOUBLE_EQ(v[1], 20.0);
@@ -318,14 +318,14 @@ TEST_F(CSVConverterFixture, CsvToBinAggregatedDateWithoutHourly) {
 TEST_F(CSVConverterFixture, CsvToBinNonAggregatedTimeDimensions) {
     auto md = make_time_metadata();
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
         binary_file.write({5.0, 6.0}, {{"stage", 1}, {"block", 1}});
     }
     CSVConverter::bin_to_csv(path, false);  // non-aggregated
     fs::remove(path + ".qvr");
     CSVConverter::csv_to_bin(path);
 
-    auto reader = BinaryFile::open_file(path, 'r');
+    auto reader = BinaryFile::open(path, 'r');
     auto v = reader.read({{"stage", 1}, {"block", 1}});
     EXPECT_DOUBLE_EQ(v[0], 5.0);
     EXPECT_DOUBLE_EQ(v[1], 6.0);
@@ -392,7 +392,7 @@ TEST_F(CSVConverterFixture, EmptyCSVFile) {
 TEST_F(CSVConverterFixture, BinToCsvToBinWithoutHourly) {
     auto md = make_time_metadata();
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
         binary_file.write({100.0, 200.0}, {{"stage", 1}, {"block", 1}});
         binary_file.write({300.0, 400.0}, {{"stage", 2}, {"block", 15}});
     }
@@ -400,7 +400,7 @@ TEST_F(CSVConverterFixture, BinToCsvToBinWithoutHourly) {
     fs::remove(path + ".qvr");
     CSVConverter::csv_to_bin(path);
 
-    auto reader = BinaryFile::open_file(path, 'r');
+    auto reader = BinaryFile::open(path, 'r');
     auto v1 = reader.read({{"stage", 1}, {"block", 1}});
     EXPECT_DOUBLE_EQ(v1[0], 100.0);
     EXPECT_DOUBLE_EQ(v1[1], 200.0);
@@ -412,7 +412,7 @@ TEST_F(CSVConverterFixture, BinToCsvToBinWithoutHourly) {
 TEST_F(CSVConverterFixture, CsvToBinToCsvWithoutHourly) {
     auto md = make_time_metadata();
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
         binary_file.write({1.0, 2.0}, {{"stage", 1}, {"block", 1}});
     }
     CSVConverter::bin_to_csv(path, true);
@@ -430,7 +430,7 @@ TEST_F(CSVConverterFixture, CsvToBinToCsvWithoutHourly) {
 TEST_F(CSVConverterFixture, BinToCsvToBinWithHourly) {
     auto md = make_hourly_metadata();
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
         binary_file.write({77.0}, {{"day", 1}, {"hour", 12}});
         binary_file.write({88.0}, {{"day", 3}, {"hour", 24}});
     }
@@ -453,7 +453,7 @@ TEST_F(CSVConverterFixture, BinToCsvToBinWithHourly) {
     fs::remove(path + ".qvr");
     CSVConverter::csv_to_bin(path);
 
-    auto reader = BinaryFile::open_file(path, 'r');
+    auto reader = BinaryFile::open(path, 'r');
     EXPECT_DOUBLE_EQ(reader.read({{"day", 1}, {"hour", 12}})[0], 77.0);
     EXPECT_DOUBLE_EQ(reader.read({{"day", 3}, {"hour", 24}})[0], 88.0);
 }
@@ -461,7 +461,7 @@ TEST_F(CSVConverterFixture, BinToCsvToBinWithHourly) {
 TEST_F(CSVConverterFixture, CsvToBinToCsvWithHourly) {
     auto md = make_hourly_metadata();
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
         binary_file.write({1.0}, {{"day", 1}, {"hour", 1}});
     }
     CSVConverter::bin_to_csv(path, true);
@@ -479,7 +479,7 @@ TEST_F(CSVConverterFixture, CsvToBinToCsvWithHourly) {
 TEST_F(CSVConverterFixture, RoundTripWithNullValues) {
     auto md = make_simple_metadata();
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
     }  // all NaN
     CSVConverter::bin_to_csv(path);
 
@@ -491,7 +491,7 @@ TEST_F(CSVConverterFixture, RoundTripWithNullValues) {
     fs::remove(path + ".qvr");
     CSVConverter::csv_to_bin(path);
 
-    auto reader = BinaryFile::open_file(path, 'r');
+    auto reader = BinaryFile::open(path, 'r');
     auto v = reader.read({{"row", 1}, {"col", 1}}, true);
     EXPECT_TRUE(std::isnan(v[0]));
     EXPECT_TRUE(std::isnan(v[1]));
@@ -504,7 +504,7 @@ TEST_F(CSVConverterFixture, AggregatedAndNonAggregatedProduceSameBinary) {
 
     // Aggregated round-trip
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
         binary_file.write({1.0, 2.0}, {{"stage", 1}, {"block", 1}});
         binary_file.write({3.0, 4.0}, {{"stage", 1}, {"block", 5}});
     }
@@ -512,7 +512,7 @@ TEST_F(CSVConverterFixture, AggregatedAndNonAggregatedProduceSameBinary) {
     fs::remove(path + ".qvr");
     CSVConverter::csv_to_bin(path);
     {
-        auto reader = BinaryFile::open_file(path, 'r');
+        auto reader = BinaryFile::open(path, 'r');
         v1a = reader.read({{"stage", 1}, {"block", 1}});
         v1b = reader.read({{"stage", 1}, {"block", 5}});
     }
@@ -523,7 +523,7 @@ TEST_F(CSVConverterFixture, AggregatedAndNonAggregatedProduceSameBinary) {
 
     // Non-aggregated round-trip
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
         binary_file.write({1.0, 2.0}, {{"stage", 1}, {"block", 1}});
         binary_file.write({3.0, 4.0}, {{"stage", 1}, {"block", 5}});
     }
@@ -531,7 +531,7 @@ TEST_F(CSVConverterFixture, AggregatedAndNonAggregatedProduceSameBinary) {
     fs::remove(path + ".qvr");
     CSVConverter::csv_to_bin(path);
     {
-        auto reader = BinaryFile::open_file(path, 'r');
+        auto reader = BinaryFile::open(path, 'r');
         v2a = reader.read({{"stage", 1}, {"block", 1}});
         v2b = reader.read({{"stage", 1}, {"block", 5}});
     }
@@ -553,7 +553,7 @@ TEST_F(CSVConverterFixture, RoundTripMixedTimeAndNonTime) {
                                                .set("frequencies", {"monthly", "daily"})
                                                .set("labels", {"val"}));
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
         binary_file.write({99.0}, {{"month", 1}, {"scenario", 1}, {"day", 1}});
         binary_file.write({77.0}, {{"month", 2}, {"scenario", 2}, {"day", 15}});
     }
@@ -561,7 +561,7 @@ TEST_F(CSVConverterFixture, RoundTripMixedTimeAndNonTime) {
     fs::remove(path + ".qvr");
     CSVConverter::csv_to_bin(path);
 
-    auto reader = BinaryFile::open_file(path, 'r');
+    auto reader = BinaryFile::open(path, 'r');
     EXPECT_DOUBLE_EQ(reader.read({{"month", 1}, {"scenario", 1}, {"day", 1}})[0], 99.0);
     EXPECT_DOUBLE_EQ(reader.read({{"month", 2}, {"scenario", 2}, {"day", 15}})[0], 77.0);
 }
@@ -573,7 +573,7 @@ TEST_F(CSVConverterFixture, RoundTripMixedTimeAndNonTime) {
 TEST_F(CSVConverterFixture, ValidateHeaderCorrect) {
     auto md = make_simple_metadata();
     {
-        auto binary_file = BinaryFile::open_file(path, 'w', md);
+        auto binary_file = BinaryFile::open(path, 'w', md);
         binary_file.write({1.0, 2.0}, {{"row", 1}, {"col", 1}});
     }
     CSVConverter::bin_to_csv(path);
