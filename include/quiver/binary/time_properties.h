@@ -26,6 +26,8 @@ struct QUIVER_API TimeProperties {
     void set_initial_value(int64_t initial_value);
     void set_parent_dimension_index(int64_t parent_dimension_index);
 
+    bool operator==(const TimeProperties& other) const = default;
+
     int64_t datetime_to_int(std::chrono::system_clock::time_point datetime) const;
     std::chrono::system_clock::time_point add_offset_from_int(std::chrono::system_clock::time_point base_datetime,
                                                               int64_t value) const;

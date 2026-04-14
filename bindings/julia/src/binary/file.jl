@@ -71,6 +71,27 @@ function write!(file::File; data::Vector{Float64}, dims...)
     return nothing
 end
 
+function next_dimensions(file::File, current_dimensions::Vector{Int64})
+    out_dims = Ref{Ptr{Int64}}(C_NULL)
+    out_count = Ref{Csize_t}(0)
+
+    check(
+        C.quiver_binary_file_next_dimensions(
+            file.ptr, current_dimensions, length(current_dimensions),
+            out_dims, out_count,
+        ),
+    )
+
+    count = out_count[]
+    if count == 0 || out_dims[] == C_NULL
+        return Int64[]
+    end
+
+    result = [unsafe_load(out_dims[], i) for i in 1:count]
+    C.quiver_binary_file_free_int64_array(out_dims[])
+    return result
+end
+
 function get_metadata(file::File)
     out_md = Ref{Ptr{C.quiver_binary_metadata}}(C_NULL)
     check(C.quiver_binary_file_get_metadata(file.ptr, out_md))

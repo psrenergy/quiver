@@ -592,6 +592,99 @@ end
             cleanup_binary_file(path)
         end
     end
+
+    # ==========================================================================
+    # next_dimensions
+    # ==========================================================================
+
+    @testset "next_dimensions simple increment" begin
+        path = make_binary_file_path()
+        try
+            md = make_simple_metadata()
+            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            # [1, 1] -> [1, 2]
+            next = Quiver.Binary.next_dimensions(file, Int64[1, 1])
+            @test next == Int64[1, 2]
+            Quiver.Binary.close!(file)
+        finally
+            cleanup_binary_file(path)
+        end
+    end
+
+    @testset "next_dimensions col rollover" begin
+        path = make_binary_file_path()
+        try
+            md = make_simple_metadata()
+            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            # col at max (2), row increments: [1, 2] -> [2, 1]
+            next = Quiver.Binary.next_dimensions(file, Int64[1, 2])
+            @test next == Int64[2, 1]
+            Quiver.Binary.close!(file)
+        finally
+            cleanup_binary_file(path)
+        end
+    end
+
+    @testset "next_dimensions wrap around" begin
+        path = make_binary_file_path()
+        try
+            md = make_simple_metadata()
+            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            # All at max [3, 2] -> [1, 1]
+            next = Quiver.Binary.next_dimensions(file, Int64[3, 2])
+            @test next == Int64[1, 1]
+            Quiver.Binary.close!(file)
+        finally
+            cleanup_binary_file(path)
+        end
+    end
+
+    @testset "next_dimensions time dimension variable month length" begin
+        path = make_binary_file_path()
+        try
+            md = make_time_metadata()
+            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+
+            # Jan has 31 days: [1, 31] -> [2, 1]
+            next = Quiver.Binary.next_dimensions(file, Int64[1, 31])
+            @test next == Int64[2, 1]
+
+            # Feb 2025 has 28 days: [2, 28] -> [3, 1]
+            next = Quiver.Binary.next_dimensions(file, Int64[2, 28])
+            @test next == Int64[3, 1]
+
+            Quiver.Binary.close!(file)
+        finally
+            cleanup_binary_file(path)
+        end
+    end
+
+    @testset "next_dimensions full iteration covers all positions" begin
+        path = make_binary_file_path()
+        try
+            md = make_simple_metadata()
+            file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+
+            current = Int64[1, 1]
+            positions = [copy(current)]
+            # 3 rows * 2 cols = 6 positions total; iterate 5 more steps
+            for _ in 1:5
+                current = Quiver.Binary.next_dimensions(file, current)
+                push!(positions, copy(current))
+            end
+
+            @test positions[1] == Int64[1, 1]
+            @test positions[2] == Int64[1, 2]
+            @test positions[3] == Int64[2, 1]
+            @test positions[4] == Int64[2, 2]
+            @test positions[5] == Int64[3, 1]
+            @test positions[6] == Int64[3, 2]
+
+            Quiver.Binary.close!(file)
+        finally
+            cleanup_binary_file(path)
+        end
+    end
 end
 
 end

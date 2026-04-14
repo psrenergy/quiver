@@ -438,6 +438,39 @@ TEST_F(BinaryTempFileFixture, InvalidTimeDimensionCoordinates) {
 }
 
 // ============================================================================
+// BinaryNextDimensions
+// ============================================================================
+
+TEST_F(BinaryTempFileFixture, NextDimensionsTimeDimResetToInitialValueWhenParentAtInitial) {
+    // Dims: [t1=monthly(2), d=plain(3), t2=daily(31)], initial_datetime=2025-01-05
+    // t1.initial_value=1, t2.initial_value=5 (day 5 of the month)
+    // When d rolls and t1 stays at its initial value (1), t2 must reset to 5 (not 1).
+    // When d rolls and t1 is NOT at its initial value (2), t2 resets to 1 normally.
+    auto md = BinaryMetadata::from_element(Element()
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-01-05T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"month", "scenario", "day"})
+                                               .set("dimension_sizes", {2, 3, 31})
+                                               .set("time_dimensions", {"month", "day"})
+                                               .set("frequencies", {"monthly", "daily"})
+                                               .set("labels", {"val"}));
+    auto binary_file = BinaryFile::open_file(path, 'w', md);
+
+    // [1, 2, 31]: d increments (2->3), t1 stays at 1 (its initial value).
+    // t2 was reset to 1 by carry logic, but 1 < initial_value(5) and t1==initial, so t2 is corrected to 5.
+    EXPECT_EQ(binary_file.next_dimensions({1, 2, 31}), (std::vector<int64_t>{1, 3, 5}));
+
+    // [1, 3, 31]: d is at max (3), so d resets to 1 and t1 increments to 2.
+    // t1 is now 2, which is != its initial value (1), so t2 resets to 1 normally.
+    EXPECT_EQ(binary_file.next_dimensions({1, 3, 31}), (std::vector<int64_t>{2, 1, 1}));
+
+    // [2, 2, 31]: d increments (2->3), t1 stays at 2 (not its initial value).
+    // t2 resets to 1 normally.
+    EXPECT_EQ(binary_file.next_dimensions({2, 2, 31}), (std::vector<int64_t>{2, 3, 1}));
+}
+
+// ============================================================================
 // WriteRegistry
 // ============================================================================
 
