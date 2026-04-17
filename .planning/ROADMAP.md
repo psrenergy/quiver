@@ -63,7 +63,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 03-01-PLAN.md -- Implement 5 array decoders in ffi-helpers.ts and remove koffi from query.ts, csv.ts, time-series.ts
+- [x] 03-01-PLAN.md -- Implement 5 array decoders in ffi-helpers.ts and remove koffi from query.ts, csv.ts, time-series.ts
 
 ### Phase 4: Struct Marshaling & Indirect Modules
 **Goal**: Struct field reading at byte offsets works for metadata types and all remaining modules compile and function under Deno
