@@ -1,146 +1,180 @@
-import koffi from "koffi";
-import { existsSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { QuiverError } from "./errors.js";
+import { dirname, join } from "jsr:@std/path";
+import { QuiverError } from "./errors.ts";
 
-const EXT = process.platform === "win32" ? "dll" : process.platform === "darwin" ? "dylib" : "so";
+// Deno FFI type shorthand constants
+const P = "pointer" as const;
+const BUF = "buffer" as const;
+const I32 = "i32" as const;
+const I64 = "i64" as const;
+const USIZE = "usize" as const;
+const F64 = "f64" as const;
+const V = "void" as const;
+
+// Platform constants
+const EXT = Deno.build.os === "windows" ? "dll"
+  : Deno.build.os === "darwin" ? "dylib" : "so";
 const CORE_LIB = `libquiver.${EXT}`;
 const C_API_LIB = `libquiver_c.${EXT}`;
 
-const DatabaseOptionsType = koffi.struct("quiver_database_options_t", {
-  read_only: "int",
-  console_level: "int",
-});
+// Opaque pointer type for native handles
+export type NativePointer = Deno.PointerValue;
 
-type NativePointer = unknown;
-export type { NativePointer };
+// ---------------------------------------------------------------------------
+// Symbol definitions grouped by C API domain
+// ---------------------------------------------------------------------------
 
-// All koffi FFI functions accept various types at runtime (Buffer, TypedArray, string, number).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type FFIFunction = (...args: any[]) => any;
-export type Symbols = Record<string, FFIFunction>;
+const lifecycleSymbols = {
+  quiver_version: { parameters: [], result: P },
+  quiver_get_last_error: { parameters: [], result: P },
+  quiver_clear_last_error: { parameters: [], result: V },
+  quiver_database_options_default: { parameters: [], result: { struct: [I32, I32] } },
+  quiver_database_from_schema: { parameters: [BUF, BUF, BUF, P], result: I32 },
+  quiver_database_from_migrations: { parameters: [BUF, BUF, BUF, P], result: I32 },
+  quiver_database_close: { parameters: [P], result: I32 },
+  quiver_database_is_healthy: { parameters: [P, P], result: I32 },
+  quiver_database_path: { parameters: [P, P], result: I32 },
+  quiver_database_current_version: { parameters: [P, P], result: I32 },
+  quiver_database_describe: { parameters: [P], result: I32 },
+} as const;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function bindSymbols(lib: any): Symbols {
-  const P = "void *";
-  const S = "str";
-  const I64 = "int64_t";
+const elementSymbols = {
+  quiver_element_create: { parameters: [P], result: I32 },
+  quiver_element_destroy: { parameters: [P], result: I32 },
+  quiver_element_set_integer: { parameters: [P, BUF, I64], result: I32 },
+  quiver_element_set_float: { parameters: [P, BUF, F64], result: I32 },
+  quiver_element_set_string: { parameters: [P, BUF, BUF], result: I32 },
+  quiver_element_set_null: { parameters: [P, BUF], result: I32 },
+  quiver_element_set_array_integer: { parameters: [P, BUF, P, I32], result: I32 },
+  quiver_element_set_array_float: { parameters: [P, BUF, P, I32], result: I32 },
+  quiver_element_set_array_string: { parameters: [P, BUF, P, I32], result: I32 },
+} as const;
 
-  return {
-    quiver_version: lib.func("quiver_version", S, []),
-    quiver_get_last_error: lib.func("quiver_get_last_error", S, []),
-    quiver_clear_last_error: lib.func("quiver_clear_last_error", "void", []),
-    quiver_database_options_default: lib.func(
-      "quiver_database_options_default", DatabaseOptionsType, [],
-    ),
+const crudSymbols = {
+  quiver_database_create_element: { parameters: [P, BUF, P, P], result: I32 },
+  quiver_database_update_element: { parameters: [P, BUF, I64, P], result: I32 },
+  quiver_database_delete_element: { parameters: [P, BUF, I64], result: I32 },
+} as const;
 
-    quiver_database_from_schema: lib.func("quiver_database_from_schema", "int", [S, S, P, P]),
-    quiver_database_from_migrations: lib.func("quiver_database_from_migrations", "int", [S, S, P, P]),
-    quiver_database_close: lib.func("quiver_database_close", "int", [P]),
+const readSymbols = {
+  quiver_database_read_scalar_integers: { parameters: [P, BUF, BUF, P, P], result: I32 },
+  quiver_database_read_scalar_floats: { parameters: [P, BUF, BUF, P, P], result: I32 },
+  quiver_database_read_scalar_strings: { parameters: [P, BUF, BUF, P, P], result: I32 },
+  quiver_database_read_scalar_integer_by_id: { parameters: [P, BUF, BUF, I64, P, P], result: I32 },
+  quiver_database_read_scalar_float_by_id: { parameters: [P, BUF, BUF, I64, P, P], result: I32 },
+  quiver_database_read_scalar_string_by_id: { parameters: [P, BUF, BUF, I64, P, P], result: I32 },
+  quiver_database_read_vector_integers: { parameters: [P, BUF, BUF, P, P, P], result: I32 },
+  quiver_database_read_vector_floats: { parameters: [P, BUF, BUF, P, P, P], result: I32 },
+  quiver_database_read_vector_strings: { parameters: [P, BUF, BUF, P, P, P], result: I32 },
+  quiver_database_read_set_integers: { parameters: [P, BUF, BUF, P, P, P], result: I32 },
+  quiver_database_read_set_floats: { parameters: [P, BUF, BUF, P, P, P], result: I32 },
+  quiver_database_read_set_strings: { parameters: [P, BUF, BUF, P, P, P], result: I32 },
+  quiver_database_read_vector_integers_by_id: { parameters: [P, BUF, BUF, I64, P, P], result: I32 },
+  quiver_database_read_vector_floats_by_id: { parameters: [P, BUF, BUF, I64, P, P], result: I32 },
+  quiver_database_read_vector_strings_by_id: { parameters: [P, BUF, BUF, I64, P, P], result: I32 },
+  quiver_database_read_set_integers_by_id: { parameters: [P, BUF, BUF, I64, P, P], result: I32 },
+  quiver_database_read_set_floats_by_id: { parameters: [P, BUF, BUF, I64, P, P], result: I32 },
+  quiver_database_read_set_strings_by_id: { parameters: [P, BUF, BUF, I64, P, P], result: I32 },
+  quiver_database_read_element_ids: { parameters: [P, BUF, P, P], result: I32 },
+} as const;
 
-    quiver_element_create: lib.func("quiver_element_create", "int", [P]),
-    quiver_element_destroy: lib.func("quiver_element_destroy", "int", [P]),
-    quiver_element_set_integer: lib.func("quiver_element_set_integer", "int", [P, S, I64]),
-    quiver_element_set_float: lib.func("quiver_element_set_float", "int", [P, S, "double"]),
-    quiver_element_set_string: lib.func("quiver_element_set_string", "int", [P, S, S]),
-    quiver_element_set_null: lib.func("quiver_element_set_null", "int", [P, S]),
-    quiver_element_set_array_integer: lib.func("quiver_element_set_array_integer", "int", [P, S, P, "int"]),
-    quiver_element_set_array_float: lib.func("quiver_element_set_array_float", "int", [P, S, P, "int"]),
-    quiver_element_set_array_string: lib.func("quiver_element_set_array_string", "int", [P, S, "const char **", "int"]),
+const querySymbols = {
+  quiver_database_query_string: { parameters: [P, BUF, P, P], result: I32 },
+  quiver_database_query_integer: { parameters: [P, BUF, P, P], result: I32 },
+  quiver_database_query_float: { parameters: [P, BUF, P, P], result: I32 },
+  quiver_database_query_string_params: { parameters: [P, BUF, P, P, USIZE, P, P], result: I32 },
+  quiver_database_query_integer_params: { parameters: [P, BUF, P, P, USIZE, P, P], result: I32 },
+  quiver_database_query_float_params: { parameters: [P, BUF, P, P, USIZE, P, P], result: I32 },
+} as const;
 
-    quiver_database_create_element: lib.func("quiver_database_create_element", "int", [P, S, P, P]),
-    quiver_database_update_element: lib.func("quiver_database_update_element", "int", [P, S, I64, P]),
-    quiver_database_delete_element: lib.func("quiver_database_delete_element", "int", [P, S, I64]),
+const transactionSymbols = {
+  quiver_database_begin_transaction: { parameters: [P], result: I32 },
+  quiver_database_commit: { parameters: [P], result: I32 },
+  quiver_database_rollback: { parameters: [P], result: I32 },
+  quiver_database_in_transaction: { parameters: [P, P], result: I32 },
+} as const;
 
-    quiver_database_read_scalar_integers: lib.func("quiver_database_read_scalar_integers", "int", [P, S, S, P, P]),
-    quiver_database_read_scalar_floats: lib.func("quiver_database_read_scalar_floats", "int", [P, S, S, P, P]),
-    quiver_database_read_scalar_strings: lib.func("quiver_database_read_scalar_strings", "int", [P, S, S, P, P]),
-    quiver_database_read_scalar_integer_by_id: lib.func("quiver_database_read_scalar_integer_by_id", "int", [P, S, S, I64, P, P]),
-    quiver_database_read_scalar_float_by_id: lib.func("quiver_database_read_scalar_float_by_id", "int", [P, S, S, I64, P, P]),
-    quiver_database_read_scalar_string_by_id: lib.func("quiver_database_read_scalar_string_by_id", "int", [P, S, S, I64, P, P]),
+const metadataSymbols = {
+  quiver_database_get_scalar_metadata: { parameters: [P, BUF, BUF, P], result: I32 },
+  quiver_database_get_vector_metadata: { parameters: [P, BUF, BUF, P], result: I32 },
+  quiver_database_get_set_metadata: { parameters: [P, BUF, BUF, P], result: I32 },
+  quiver_database_get_time_series_metadata: { parameters: [P, BUF, BUF, P], result: I32 },
+  quiver_database_free_scalar_metadata: { parameters: [P], result: I32 },
+  quiver_database_free_group_metadata: { parameters: [P], result: I32 },
+  quiver_database_list_scalar_attributes: { parameters: [P, BUF, P, P], result: I32 },
+  quiver_database_list_vector_groups: { parameters: [P, BUF, P, P], result: I32 },
+  quiver_database_list_set_groups: { parameters: [P, BUF, P, P], result: I32 },
+  quiver_database_list_time_series_groups: { parameters: [P, BUF, P, P], result: I32 },
+} as const;
 
-    quiver_database_read_vector_integers: lib.func("quiver_database_read_vector_integers", "int", [P, S, S, P, P, P]),
-    quiver_database_read_vector_floats: lib.func("quiver_database_read_vector_floats", "int", [P, S, S, P, P, P]),
-    quiver_database_read_vector_strings: lib.func("quiver_database_read_vector_strings", "int", [P, S, S, P, P, P]),
-    quiver_database_read_set_integers: lib.func("quiver_database_read_set_integers", "int", [P, S, S, P, P, P]),
-    quiver_database_read_set_floats: lib.func("quiver_database_read_set_floats", "int", [P, S, S, P, P, P]),
-    quiver_database_read_set_strings: lib.func("quiver_database_read_set_strings", "int", [P, S, S, P, P, P]),
+const timeSeriesSymbols = {
+  quiver_database_read_time_series_group: { parameters: [P, BUF, BUF, I64, P, P, P, P, P], result: I32 },
+  quiver_database_update_time_series_group: { parameters: [P, BUF, BUF, I64, P, P, P, USIZE, USIZE], result: I32 },
+  quiver_database_free_time_series_data: { parameters: [P, P, P, USIZE, USIZE], result: I32 },
+  quiver_database_has_time_series_files: { parameters: [P, BUF, P], result: I32 },
+  quiver_database_list_time_series_files_columns: { parameters: [P, BUF, P, P], result: I32 },
+  quiver_database_read_time_series_files: { parameters: [P, BUF, P, P, P], result: I32 },
+  quiver_database_update_time_series_files: { parameters: [P, BUF, P, P, USIZE], result: I32 },
+  quiver_database_free_time_series_files: { parameters: [P, P, USIZE], result: I32 },
+} as const;
 
-    quiver_database_read_vector_integers_by_id: lib.func("quiver_database_read_vector_integers_by_id", "int", [P, S, S, I64, P, P]),
-    quiver_database_read_vector_floats_by_id: lib.func("quiver_database_read_vector_floats_by_id", "int", [P, S, S, I64, P, P]),
-    quiver_database_read_vector_strings_by_id: lib.func("quiver_database_read_vector_strings_by_id", "int", [P, S, S, I64, P, P]),
-    quiver_database_read_set_integers_by_id: lib.func("quiver_database_read_set_integers_by_id", "int", [P, S, S, I64, P, P]),
-    quiver_database_read_set_floats_by_id: lib.func("quiver_database_read_set_floats_by_id", "int", [P, S, S, I64, P, P]),
-    quiver_database_read_set_strings_by_id: lib.func("quiver_database_read_set_strings_by_id", "int", [P, S, S, I64, P, P]),
+const csvSymbols = {
+  quiver_database_export_csv: { parameters: [P, BUF, BUF, BUF, P], result: I32 },
+  quiver_database_import_csv: { parameters: [P, BUF, BUF, BUF, P], result: I32 },
+} as const;
 
-    quiver_database_read_element_ids: lib.func("quiver_database_read_element_ids", "int", [P, S, P, P]),
+const freeSymbols = {
+  quiver_database_free_integer_array: { parameters: [P], result: I32 },
+  quiver_database_free_float_array: { parameters: [P], result: I32 },
+  quiver_database_free_string_array: { parameters: [P, USIZE], result: I32 },
+  quiver_database_free_string: { parameters: [P], result: I32 },
+  quiver_database_free_integer_vectors: { parameters: [P, P, USIZE], result: I32 },
+  quiver_database_free_float_vectors: { parameters: [P, P, USIZE], result: I32 },
+  quiver_database_free_string_vectors: { parameters: [P, P, USIZE], result: I32 },
+  quiver_database_free_scalar_metadata_array: { parameters: [P, USIZE], result: I32 },
+  quiver_database_free_group_metadata_array: { parameters: [P, USIZE], result: I32 },
+} as const;
 
-    quiver_database_free_integer_array: lib.func("quiver_database_free_integer_array", "int", [P]),
-    quiver_database_free_float_array: lib.func("quiver_database_free_float_array", "int", [P]),
-    quiver_database_free_string_array: lib.func("quiver_database_free_string_array", "int", [P, "uint64_t"]),
-    quiver_database_free_string: lib.func("quiver_database_free_string", "int", [P]),
-    quiver_database_free_integer_vectors: lib.func("quiver_database_free_integer_vectors", "int", [P, P, "uint64_t"]),
-    quiver_database_free_float_vectors: lib.func("quiver_database_free_float_vectors", "int", [P, P, "uint64_t"]),
-    quiver_database_free_string_vectors: lib.func("quiver_database_free_string_vectors", "int", [P, P, "uint64_t"]),
+const luaSymbols = {
+  quiver_lua_runner_new: { parameters: [P, P], result: I32 },
+  quiver_lua_runner_free: { parameters: [P], result: I32 },
+  quiver_lua_runner_run: { parameters: [P, BUF], result: I32 },
+  quiver_lua_runner_get_error: { parameters: [P, P], result: I32 },
+} as const;
 
-    quiver_database_query_string: lib.func("quiver_database_query_string", "int", [P, S, P, P]),
-    quiver_database_query_integer: lib.func("quiver_database_query_integer", "int", [P, S, P, P]),
-    quiver_database_query_float: lib.func("quiver_database_query_float", "int", [P, S, P, P]),
-    quiver_database_query_string_params: lib.func("quiver_database_query_string_params", "int", [P, S, P, P, "uint64_t", P, P]),
-    quiver_database_query_integer_params: lib.func("quiver_database_query_integer_params", "int", [P, S, P, P, "uint64_t", P, P]),
-    quiver_database_query_float_params: lib.func("quiver_database_query_float_params", "int", [P, S, P, P, "uint64_t", P, P]),
+// Combined symbol map for Deno.dlopen
+const allSymbols = {
+  ...lifecycleSymbols,
+  ...elementSymbols,
+  ...crudSymbols,
+  ...readSymbols,
+  ...querySymbols,
+  ...transactionSymbols,
+  ...metadataSymbols,
+  ...timeSeriesSymbols,
+  ...csvSymbols,
+  ...freeSymbols,
+  ...luaSymbols,
+} as const;
 
-    quiver_database_begin_transaction: lib.func("quiver_database_begin_transaction", "int", [P]),
-    quiver_database_commit: lib.func("quiver_database_commit", "int", [P]),
-    quiver_database_rollback: lib.func("quiver_database_rollback", "int", [P]),
-    quiver_database_in_transaction: lib.func("quiver_database_in_transaction", "int", [P, P]),
+// ---------------------------------------------------------------------------
+// Library search and loading
+// ---------------------------------------------------------------------------
 
-    quiver_database_get_scalar_metadata: lib.func("quiver_database_get_scalar_metadata", "int", [P, S, S, P]),
-    quiver_database_get_vector_metadata: lib.func("quiver_database_get_vector_metadata", "int", [P, S, S, P]),
-    quiver_database_get_set_metadata: lib.func("quiver_database_get_set_metadata", "int", [P, S, S, P]),
-    quiver_database_get_time_series_metadata: lib.func("quiver_database_get_time_series_metadata", "int", [P, S, S, P]),
-    quiver_database_free_scalar_metadata: lib.func("quiver_database_free_scalar_metadata", "int", [P]),
-    quiver_database_free_group_metadata: lib.func("quiver_database_free_group_metadata", "int", [P]),
-
-    quiver_database_list_scalar_attributes: lib.func("quiver_database_list_scalar_attributes", "int", [P, S, P, P]),
-    quiver_database_list_vector_groups: lib.func("quiver_database_list_vector_groups", "int", [P, S, P, P]),
-    quiver_database_list_set_groups: lib.func("quiver_database_list_set_groups", "int", [P, S, P, P]),
-    quiver_database_list_time_series_groups: lib.func("quiver_database_list_time_series_groups", "int", [P, S, P, P]),
-    quiver_database_free_scalar_metadata_array: lib.func("quiver_database_free_scalar_metadata_array", "int", [P, "uint64_t"]),
-    quiver_database_free_group_metadata_array: lib.func("quiver_database_free_group_metadata_array", "int", [P, "uint64_t"]),
-
-    quiver_database_read_time_series_group: lib.func("quiver_database_read_time_series_group", "int", [P, S, S, I64, P, P, P, P, P]),
-    quiver_database_update_time_series_group: lib.func("quiver_database_update_time_series_group", "int", [P, S, S, I64, P, P, P, "uint64_t", "uint64_t"]),
-    quiver_database_free_time_series_data: lib.func("quiver_database_free_time_series_data", "int", [P, P, P, "uint64_t", "uint64_t"]),
-
-    quiver_database_has_time_series_files: lib.func("quiver_database_has_time_series_files", "int", [P, S, P]),
-    quiver_database_list_time_series_files_columns: lib.func("quiver_database_list_time_series_files_columns", "int", [P, S, P, P]),
-    quiver_database_read_time_series_files: lib.func("quiver_database_read_time_series_files", "int", [P, S, P, P, P]),
-    quiver_database_update_time_series_files: lib.func("quiver_database_update_time_series_files", "int", [P, S, P, P, "uint64_t"]),
-    quiver_database_free_time_series_files: lib.func("quiver_database_free_time_series_files", "int", [P, P, "uint64_t"]),
-
-    quiver_database_is_healthy: lib.func("quiver_database_is_healthy", "int", [P, P]),
-    quiver_database_current_version: lib.func("quiver_database_current_version", "int", [P, P]),
-    quiver_database_path: lib.func("quiver_database_path", "int", [P, P]),
-    quiver_database_describe: lib.func("quiver_database_describe", "int", [P]),
-
-    quiver_database_export_csv: lib.func("quiver_database_export_csv", "int", [P, S, S, S, P]),
-    quiver_database_import_csv: lib.func("quiver_database_import_csv", "int", [P, S, S, S, P]),
-
-    quiver_lua_runner_new: lib.func("quiver_lua_runner_new", "int", [P, P]),
-    quiver_lua_runner_free: lib.func("quiver_lua_runner_free", "int", [P]),
-    quiver_lua_runner_run: lib.func("quiver_lua_runner_run", "int", [P, S]),
-    quiver_lua_runner_get_error: lib.func("quiver_lua_runner_get_error", "int", [P, P]),
-  };
+function fileExists(path: string): boolean {
+  try {
+    Deno.statSync(path);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = import.meta.dirname!;
 
 function getBundledLibDir(): string | null {
-  const platformKey = `${process.platform}-${process.arch}`;
+  const platformKey = `${Deno.build.os}-${Deno.build.arch}`;
   const libDir = join(__dirname, "..", "libs", platformKey);
-  if (existsSync(join(libDir, C_API_LIB))) {
+  if (fileExists(join(libDir, C_API_LIB))) {
     return libDir;
   }
   return null;
@@ -151,7 +185,7 @@ function getSearchPaths(): string[] {
   let dir = __dirname;
   for (let i = 0; i < 5; i++) {
     const candidate = join(dir, "build", "bin");
-    if (existsSync(join(candidate, C_API_LIB))) {
+    if (fileExists(join(candidate, C_API_LIB))) {
       paths.push(candidate);
     }
     dir = dirname(dir);
@@ -159,70 +193,68 @@ function getSearchPaths(): string[] {
   return paths;
 }
 
-let _symbols: Symbols | null = null;
-let _coreLib: unknown = null;
+type DenoLib = Deno.DynamicLibrary<typeof allSymbols>;
+let _lib: DenoLib | null = null;
+let _coreLib: Deno.DynamicLibrary<Record<string, never>> | null = null;
 
-export function loadLibrary(): Symbols {
-  if (_symbols) return _symbols;
+function openLibrary(dir: string): DenoLib {
+  const corePath = join(dir, CORE_LIB);
+  const cApiPath = join(dir, C_API_LIB);
 
-  // 1. Bundled mode: libs/{platform}-{arch}/ inside the npm package
+  if (Deno.build.os === "windows" && fileExists(corePath)) {
+    _coreLib = Deno.dlopen(corePath, {});
+  }
+
+  return Deno.dlopen(cApiPath, allSymbols);
+}
+
+export function loadLibrary(): DenoLib {
+  if (_lib) return _lib;
+
+  // Tier 1: Bundled libs/{os}-{arch}/
   const bundledDir = getBundledLibDir();
   if (bundledDir) {
     try {
-      const corePath = join(bundledDir, CORE_LIB);
-      const cApiPath = join(bundledDir, C_API_LIB);
-      if (process.platform === "win32" && existsSync(corePath)) {
-        _coreLib = koffi.load(corePath);
-      }
-      const lib = koffi.load(cApiPath);
-      _symbols = bindSymbols(lib);
-      return _symbols;
+      _lib = openLibrary(bundledDir);
+      return _lib;
     } catch {
       // Bundled libs found but failed to load -- fall through to dev paths
     }
   }
 
-  // 2. Dev mode: walk up directories looking for build/bin/
+  // Tier 2: Dev mode -- walk up directories looking for build/bin/
   const searchPaths = getSearchPaths();
-
   for (const dir of searchPaths) {
-    const corePath = join(dir, CORE_LIB);
-    const cApiPath = join(dir, C_API_LIB);
-    if (!existsSync(cApiPath)) continue;
-
     try {
-      if (process.platform === "win32" && existsSync(corePath)) {
-        _coreLib = koffi.load(corePath);
-      }
-      const lib = koffi.load(cApiPath);
-      _symbols = bindSymbols(lib);
-      return _symbols;
+      _lib = openLibrary(dir);
+      return _lib;
     } catch {
       // Try next path
     }
   }
 
-  // 3. Fallback: system PATH
+  // Tier 3: System PATH fallback
   try {
-    if (process.platform === "win32") {
+    if (Deno.build.os === "windows") {
       try {
-        _coreLib = koffi.load(CORE_LIB);
+        _coreLib = Deno.dlopen(CORE_LIB, {});
       } catch {
         // Core lib may already be loaded
       }
     }
-    const lib = koffi.load(C_API_LIB);
-    _symbols = bindSymbols(lib);
-    return _symbols;
+    _lib = Deno.dlopen(C_API_LIB, allSymbols);
+    return _lib;
   } catch {
     // Fall through to error
   }
 
-  const bundledPath = join(__dirname, "..", "libs", `${process.platform}-${process.arch}`);
+  const bundledPath = join(__dirname, "..", "libs", `${Deno.build.os}-${Deno.build.arch}`);
   const allPaths = [bundledPath, ...searchPaths, "system PATH"].join(", ");
   throw new QuiverError(`Cannot load native library '${C_API_LIB}'. Searched: ${allPaths}`);
 }
 
-export function getSymbols(): Symbols {
-  return loadLibrary();
+export function getSymbols() {
+  return loadLibrary().symbols;
 }
+
+export type Symbols = ReturnType<typeof getSymbols>;
