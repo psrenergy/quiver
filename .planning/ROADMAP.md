@@ -48,7 +48,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 02-01-PLAN.md -- Rewrite ffi-helpers.ts with Deno FFI primitives, add Allocation type, fix errors.ts pointer decoding
+- [x] 02-01-PLAN.md -- Rewrite ffi-helpers.ts with Deno FFI primitives, add Allocation type, fix errors.ts pointer decoding
 
 ### Phase 3: Array Decoding & Domain Helpers
 **Goal**: Array decoding works via UnsafePointerView and all domain modules with direct koffi usage are converted
