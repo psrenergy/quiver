@@ -50,28 +50,53 @@ export function decodeStringFromBuf(alloc: Allocation): string {
 }
 
 /** Read an array of int64 values from a native pointer, returning JS numbers. */
-export function decodeInt64Array(_ptr: Deno.PointerValue, _count: number): number[] {
-  throw new Error("Not implemented: Phase 3 scope");
+export function decodeInt64Array(ptr: Deno.PointerValue, count: number): number[] {
+  if (!ptr || count === 0) return [];
+  const view = new Deno.UnsafePointerView(ptr);
+  const ab = view.getArrayBuffer(count * 8);
+  const i64 = new BigInt64Array(ab);
+  return Array.from(i64, (v) => Number(v));
 }
 
 /** Read an array of float64 values from a native pointer. */
-export function decodeFloat64Array(_ptr: Deno.PointerValue, _count: number): number[] {
-  throw new Error("Not implemented: Phase 3 scope");
+export function decodeFloat64Array(ptr: Deno.PointerValue, count: number): number[] {
+  if (!ptr || count === 0) return [];
+  const view = new Deno.UnsafePointerView(ptr);
+  const ab = view.getArrayBuffer(count * 8);
+  const f64 = new Float64Array(ab);
+  return Array.from(f64);
 }
 
 /** Read an array of uint64 values from a native pointer, returning JS numbers. */
-export function decodeUint64Array(_ptr: Deno.PointerValue, _count: number): number[] {
-  throw new Error("Not implemented: Phase 3 scope");
+export function decodeUint64Array(ptr: Deno.PointerValue, count: number): number[] {
+  if (!ptr || count === 0) return [];
+  const view = new Deno.UnsafePointerView(ptr);
+  const ab = view.getArrayBuffer(count * 8);
+  const u64 = new BigUint64Array(ab);
+  return Array.from(u64, (v) => Number(v));
 }
 
 /** Read an array of pointers from a native pointer using offset-based reading. */
-export function decodePtrArray(_ptr: Deno.PointerValue, _count: number): Deno.PointerValue[] {
-  throw new Error("Not implemented: Phase 3 scope");
+export function decodePtrArray(ptr: Deno.PointerValue, count: number): Deno.PointerValue[] {
+  if (!ptr || count === 0) return [];
+  const view = new Deno.UnsafePointerView(ptr);
+  const result: Deno.PointerValue[] = new Array(count);
+  for (let i = 0; i < count; i++) {
+    result[i] = view.getPointer(i * 8);
+  }
+  return result;
 }
 
 /** Read an array of C strings from a char** pointer. */
-export function decodeStringArray(_ptr: Deno.PointerValue, _count: number): string[] {
-  throw new Error("Not implemented: Phase 3 scope");
+export function decodeStringArray(ptr: Deno.PointerValue, count: number): string[] {
+  if (!ptr || count === 0) return [];
+  const view = new Deno.UnsafePointerView(ptr);
+  const result: string[] = new Array(count);
+  for (let i = 0; i < count; i++) {
+    const strPtr = view.getPointer(i * 8);
+    result[i] = strPtr ? new Deno.UnsafePointerView(strPtr).getCString() : "";
+  }
+  return result;
 }
 
 /** Encode a JS string as a null-terminated C string buffer. */
