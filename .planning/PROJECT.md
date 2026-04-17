@@ -24,7 +24,7 @@ Uniform, type-safe database access across multiple languages through a single C+
 
 ### Active
 
-- [ ] Replace koffi FFI with Deno.dlopen in JS binding
+- [x] Replace koffi FFI with Deno.dlopen in JS binding (Validated in Phase 1: FFI Foundation & Library Loading)
 - [ ] Rewrite pointer/buffer handling for Deno (UnsafePointer, Uint8Array)
 - [ ] Rewrite string marshaling with TextEncoder/TextDecoder
 - [ ] Update package config (deno.json, remove koffi dep)
@@ -69,7 +69,7 @@ Uniform, type-safe database access across multiple languages through a single C+
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Deno.dlopen over koffi | Path-scoped --allow-ffi permissions, native Deno support | -- Pending |
+| Deno.dlopen over koffi | Path-scoped --allow-ffi permissions, native Deno support | Validated (Phase 1) |
 | Drop multi-runtime support | Simplifies FFI layer, Deno is target runtime | -- Pending |
 | Preserve public API | Consumer code shouldn't need changes | -- Pending |
 
@@ -91,4 +91,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-17 after milestone v1.0 initialization*
+*Last updated: 2026-04-17 after Phase 1 completion*
