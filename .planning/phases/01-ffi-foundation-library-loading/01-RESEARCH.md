@@ -444,22 +444,16 @@ The public exports from loader.ts change:
 | A3 | `import.meta.dirname` returns a string (not undefined) when running from a local .ts file | Architecture Patterns | If undefined in some Deno execution modes, need fallback using `import.meta.url` with URL parsing. Low risk for local file execution. |
 | A4 | Bundled lib directory naming should change from `win32-x64` to `windows-x86_64` | Platform Name Mapping | If bundled libs already exist with old naming, need translation map instead. Since binding is WIP, renaming is acceptable. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **`quiver_database_options_default` struct return**
-   - What we know: Returns `quiver_database_options_t` by value (8 bytes: two int32). Deno FFI returns structs as `Uint8Array`.
-   - What's unclear: Whether `{ struct: ["i32", "i32"] }` correctly maps the struct layout with potential padding.
-   - Recommendation: Test empirically. The struct has two consecutive `int` fields with no padding on any platform, so `["i32", "i32"]` should be correct. Fallback: skip binding this function and construct the 8-byte buffer manually in ffi-helpers.ts (already done by `makeDefaultOptions()`).
+1. **`quiver_database_options_default` struct return** (RESOLVED)
+   - Confirmed via `include/quiver/c/options.h`: `quiver_database_options_t` is defined as `{ int read_only; quiver_log_level_t console_level; }` where `quiver_log_level_t` is a plain C enum (underlying type `int`). Two consecutive `int` fields with no intervening pointer or alignment-sensitive type. On all target platforms (x86_64 Windows/Linux/macOS), `sizeof(int) == 4` and the struct has natural alignment with zero padding between fields. Total size: 8 bytes. `{ struct: ["i32", "i32"] }` is the correct Deno FFI type descriptor. Plan 01 Task 2 smoke test verifies this empirically by calling the function and checking the returned Uint8Array is 8 bytes with sensible default values (read_only=0, console_level=QUIVER_LOG_OFF=4).
 
-2. **`quiver_csv_options_default` struct return**
-   - What we know: Returns `quiver_csv_options_t` which is a larger struct with pointers and size_t fields. Not currently bound in JS.
-   - What's unclear: Not needed for Phase 1. Will be needed if CSV options binding is added later.
-   - Recommendation: Do not bind in Phase 1. The JS binding already constructs CSV options manually.
+2. **`quiver_csv_options_default` struct return** (RESOLVED -- out of scope)
+   - Not needed for Phase 1. The JS binding does not bind `quiver_csv_options_default` (it is one of the 8 unbound functions). CSV options are constructed manually in the JS layer. If needed in a future phase, the struct layout is more complex (pointers + size_t) and will require its own analysis.
 
-3. **Whether `_coreLib` reference prevents unloading**
-   - What we know: Storing the `DynamicLibrary` object should prevent Deno from closing/unloading the DLL.
-   - What's unclear: Whether Deno's garbage collector can collect a `DynamicLibrary` that has no symbols accessed.
-   - Recommendation: Store in module-level variable. If issues arise, call a no-op method periodically or close explicitly on module unload.
+3. **Whether `_coreLib` reference prevents unloading** (RESOLVED -- by design)
+   - The plan stores the `Deno.DynamicLibrary` handle in a module-level `_coreLib` variable. Module-level variables in ES modules are never garbage collected while the module is loaded (they are part of the module's persistent binding environment). Since `loader.ts` is imported at application startup and held for the process lifetime, `_coreLib` will never be collected. This is the same pattern used by the existing koffi loader and is standard practice in Deno FFI applications.
 
 ## Environment Availability
 
