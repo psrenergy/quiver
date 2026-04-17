@@ -10,8 +10,9 @@ export class QuiverError extends Error {
 export function check(err: number): void {
   if (err !== 0) {
     const lib = getSymbols();
-    const detail = lib.quiver_get_last_error();
-    if (detail) {
+    const ptr = lib.quiver_get_last_error();
+    if (ptr) {
+      const detail = new Deno.UnsafePointerView(ptr).getCString();
       throw new QuiverError(detail);
     }
     throw new QuiverError("Unknown error");
