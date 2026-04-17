@@ -91,8 +91,11 @@ Database.prototype.exportCsv = function (
   options?: CsvOptions,
 ): void {
   const lib = getSymbols();
+  const collBuf = toCString(collection);
+  const grpBuf = toCString(group);
+  const pathBuf = toCString(filePath);
   const [optsBuf, _keepalive] = buildCsvOptionsBuffer(options);
-  check(lib.quiver_database_export_csv(this._handle, toCString(collection).buf, toCString(group).buf, toCString(filePath).buf, optsBuf.ptr));
+  check(lib.quiver_database_export_csv(this._handle, collBuf.buf, grpBuf.buf, pathBuf.buf, optsBuf.ptr));
 };
 
 Database.prototype.importCsv = function (
@@ -103,6 +106,9 @@ Database.prototype.importCsv = function (
   options?: CsvOptions,
 ): void {
   const lib = getSymbols();
+  const collBuf = toCString(collection);
+  const grpBuf = toCString(group);
+  const pathBuf = toCString(filePath);
   const [optsBuf, _keepalive] = buildCsvOptionsBuffer(options);
-  check(lib.quiver_database_import_csv(this._handle, toCString(collection).buf, toCString(group).buf, toCString(filePath).buf, optsBuf.ptr));
+  check(lib.quiver_database_import_csv(this._handle, collBuf.buf, grpBuf.buf, pathBuf.buf, optsBuf.ptr));
 };
