@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 1 plan
 
 Plans:
-- [ ] 01-01-PLAN.md -- Rewrite loader.ts with Deno.dlopen, 85 symbol definitions, and 3-tier library search
+- [x] 01-01-PLAN.md -- Rewrite loader.ts with Deno.dlopen, 85 symbol definitions, and 3-tier library search
 
 ### Phase 2: Pointer & String Marshaling
 **Goal**: All pointer out-parameter, string marshaling, and native allocation helpers work using Deno FFI primitives
