@@ -1,15 +1,15 @@
-import { Database } from "./database.ts";
-import { check } from "./errors.ts";
-import { allocNativeInt64, allocNativeString, allocNativeStringArray, nativeAddress, toCString } from "./ffi-helpers.ts";
-import { getSymbols } from "./loader.ts";
-import type { Allocation } from "./types.ts";
+import { Database } from "./database.js";
+import { check } from "./errors.js";
+import { allocNativeInt64, allocNativeString, allocNativeStringArray, nativeAddress, toCString } from "./ffi-helpers.js";
+import { getSymbols } from "./loader.js";
+import type { Allocation } from "./types.js";
 
 export interface CsvOptions {
   dateTimeFormat?: string;
   enumLabels?: Record<string, Record<string, Record<string, number>>>;
 }
 
-declare module "./database.ts" {
+declare module "./database.js" {
   interface Database {
     exportCsv(collection: string, group: string, filePath: string, options?: CsvOptions): void;
     importCsv(collection: string, group: string, filePath: string, options?: CsvOptions): void;

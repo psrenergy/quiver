@@ -1,5 +1,5 @@
 import { dirname, join } from "jsr:@std/path";
-import { QuiverError } from "./errors.ts";
+import { QuiverError } from "./errors.js";
 
 // Deno FFI type shorthand constants
 const P = "pointer" as const;

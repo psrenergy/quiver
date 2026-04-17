@@ -1,4 +1,4 @@
-import { getSymbols } from "./loader.ts";
+import { getSymbols } from "./loader.js";
 
 export class QuiverError extends Error {
   constructor(message: string) {
