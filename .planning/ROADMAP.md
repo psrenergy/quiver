@@ -45,10 +45,10 @@ Plans:
   2. String encoding uses TextEncoder to produce null-terminated C strings and TextDecoder to read them back
   3. allocNativeInt64, allocNativeFloat64, allocNativeString, allocNativeStringArray, and allocNativePtrTable produce valid native memory using Deno FFI primitives (no koffi.alloc/encode)
   4. No koffi import remains in ffi-helpers.ts
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 02-01: TBD
+- [ ] 02-01-PLAN.md -- Rewrite ffi-helpers.ts with Deno FFI primitives, add Allocation type, fix errors.ts pointer decoding
 
 ### Phase 3: Array Decoding & Domain Helpers
 **Goal**: Array decoding works via UnsafePointerView and all domain modules with direct koffi usage are converted
@@ -125,7 +125,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. FFI Foundation & Library Loading | 0/1 | Planning complete | - |
-| 2. Pointer & String Marshaling | 0/0 | Not started | - |
+| 2. Pointer & String Marshaling | 0/1 | Planning complete | - |
 | 3. Array Decoding & Domain Helpers | 0/0 | Not started | - |
 | 4. Struct Marshaling & Indirect Modules | 0/0 | Not started | - |
 | 5. Configuration & Packaging | 0/0 | Not started | - |
