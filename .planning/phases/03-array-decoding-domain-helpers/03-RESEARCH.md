@@ -490,17 +490,19 @@ Exact inventory of every koffi-related line in the three target files that must 
 | A2 | `decodeStringArray` should return empty string `""` for null char* entries, while time-series.ts `readTimeSeriesFiles` needs a separate nullable variant returning `null` | Architecture Patterns | Low -- the existing `decodeStringArray` in read.ts callers never encounters null entries (C API always provides valid strings for scalar/vector/set reads). The nullable case is specific to file path reads |
 | A3 | The CSV options struct is 56 bytes on the target platform (7 pointer-sized fields at 8 bytes each) | Code Examples | Medium -- struct padding could differ on non-64-bit platforms. However, this binding targets Deno on x86-64 only and the existing code already assumes 56 bytes |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should `decodeInt32Array` be in ffi-helpers.ts or local to time-series.ts?**
    - What we know: Only time-series.ts needs to decode an `int*` array (column types). read.ts does not decode int32 arrays.
    - What's unclear: Whether future domain modules might need int32 array decoding.
    - Recommendation: Keep it local to time-series.ts for now. It can be promoted to ffi-helpers.ts if a second consumer appears. This avoids bloating the shared helper surface.
+   - **RESOLVED:** Local to time-series.ts. Single consumer, inline decode.
 
 2. **Should `allocNativeUint64` be added to ffi-helpers.ts?**
    - What we know: csv.ts needs to allocate a `uint64_t[]` array for enum entry counts. Currently uses `koffi.alloc("uint64_t", n)`. Phase 2 added `allocNativeInt64` (signed) and `allocNativeFloat64` but not uint64.
    - What's unclear: Whether to inline the uint64 allocation in csv.ts or add a dedicated function.
    - Recommendation: Inline it in csv.ts since it is the only consumer. The pattern is identical to `allocNativeInt64` but uses `setBigUint64` instead of `setBigInt64`. If more consumers appear, extract to ffi-helpers.ts.
+   - **RESOLVED:** Inline in csv.ts. Single consumer, uses `setBigUint64` pattern.
 
 ## Environment Availability
 
