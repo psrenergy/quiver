@@ -1,5 +1,5 @@
 import { Database } from "./database.ts";
-import { check } from "./errors.ts";
+import { check, QuiverError } from "./errors.ts";
 import { allocNativeFloat64, allocNativeInt64, allocNativeString, allocPtrOut, decodeStringFromBuf, nativeAddress, readPtrOut, toCString } from "./ffi-helpers.ts";
 import { getSymbols } from "./loader.ts";
 import type { Allocation, QueryParam } from "./types.ts";
@@ -47,6 +47,8 @@ function marshalParams(params: QueryParam[]): { types: Allocation; values: Alloc
       const native = allocNativeString(p);
       keepalive.push(native);
       valuesDv.setBigInt64(i * 8, nativeAddress(native.ptr), true);
+    } else {
+      throw new QuiverError(`Unsupported query parameter type at index ${i}: ${typeof p}`);
     }
   }
 
