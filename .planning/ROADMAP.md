@@ -60,10 +60,10 @@ Plans:
   3. csv.ts CSV options struct building (buildCsvOptionsBuffer) works without koffi.alloc/encode
   4. time-series.ts columnar read/write works without koffi.decode for type arrays and data pointers
   5. No koffi import remains in query.ts, csv.ts, or time-series.ts
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 03-01: TBD
+- [ ] 03-01-PLAN.md -- Implement 5 array decoders in ffi-helpers.ts and remove koffi from query.ts, csv.ts, time-series.ts
 
 ### Phase 4: Struct Marshaling & Indirect Modules
 **Goal**: Struct field reading at byte offsets works for metadata types and all remaining modules compile and function under Deno
@@ -126,7 +126,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 |-------|----------------|--------|-----------|
 | 1. FFI Foundation & Library Loading | 0/1 | Planning complete | - |
 | 2. Pointer & String Marshaling | 0/1 | Planning complete | - |
-| 3. Array Decoding & Domain Helpers | 0/0 | Not started | - |
+| 3. Array Decoding & Domain Helpers | 0/1 | Planning complete | - |
 | 4. Struct Marshaling & Indirect Modules | 0/0 | Not started | - |
 | 5. Configuration & Packaging | 0/0 | Not started | - |
 | 6. Test Migration & Validation | 0/0 | Not started | - |
