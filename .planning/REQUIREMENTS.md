@@ -59,31 +59,29 @@ Deferred to future release. Tracked but not in current roadmap.
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FFI-01 | -- | Pending |
-| FFI-02 | -- | Pending |
-| FFI-03 | -- | Pending |
-| MARSH-01 | -- | Pending |
-| MARSH-02 | -- | Pending |
-| MARSH-03 | -- | Pending |
-| MARSH-04 | -- | Pending |
-| MARSH-05 | -- | Pending |
-| CONF-01 | -- | Pending |
-| CONF-02 | -- | Pending |
-| CONF-03 | -- | Pending |
-| TEST-01 | -- | Pending |
-| TEST-02 | -- | Pending |
-| DOCS-01 | -- | Pending |
-| DOCS-02 | -- | Pending |
+| FFI-01 | Phase 1 | Pending |
+| FFI-02 | Phase 1 | Pending |
+| FFI-03 | Phase 1 | Pending |
+| MARSH-01 | Phase 2 | Pending |
+| MARSH-02 | Phase 3 | Pending |
+| MARSH-03 | Phase 2 | Pending |
+| MARSH-04 | Phase 2 | Pending |
+| MARSH-05 | Phase 4 | Pending |
+| CONF-01 | Phase 5 | Pending |
+| CONF-02 | Phase 1 | Pending |
+| CONF-03 | Phase 5 | Pending |
+| TEST-01 | Phase 6 | Pending |
+| TEST-02 | Phase 6 | Pending |
+| DOCS-01 | Phase 7 | Pending |
+| DOCS-02 | Phase 7 | Pending |
 
 **Coverage:**
 - v1 requirements: 15 total
-- Mapped to phases: 0
-- Unmapped: 15
+- Mapped to phases: 15
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-17*
-*Last updated: 2026-04-17 after initial definition*
+*Last updated: 2026-04-17 after roadmap creation*
