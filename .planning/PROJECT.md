@@ -25,8 +25,8 @@ Uniform, type-safe database access across multiple languages through a single C+
 ### Active
 
 - [x] Replace koffi FFI with Deno.dlopen in JS binding (Validated in Phase 1: FFI Foundation & Library Loading)
-- [ ] Rewrite pointer/buffer handling for Deno (UnsafePointer, Uint8Array)
-- [ ] Rewrite string marshaling with TextEncoder/TextDecoder
+- [x] Rewrite pointer/buffer handling for Deno (UnsafePointer, Uint8Array) (Validated in Phase 2: Pointer & String Marshaling)
+- [x] Rewrite string marshaling with TextEncoder/TextDecoder (Validated in Phase 2: Pointer & String Marshaling)
 - [ ] Update package config (deno.json, remove koffi dep)
 - [ ] Create MIGRATION.md documenting the transition
 - [ ] Validate existing tests under Deno runtime
@@ -91,4 +91,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-17 after Phase 1 completion*
+*Last updated: 2026-04-17 after Phase 2 completion*
