@@ -102,7 +102,9 @@ export function decodeStringArray(ptr: Deno.PointerValue, count: number): string
 /** Encode a JS string as a null-terminated C string buffer. */
 export function toCString(str: string): Allocation {
   const encoded = encoder.encode(str + "\0");
-  return { ptr: Deno.UnsafePointer.of(encoded)!, buf: encoded };
+  const buf = new Uint8Array(encoded.length);
+  buf.set(encoded);
+  return { ptr: Deno.UnsafePointer.of(buf)!, buf };
 }
 
 /** Allocate native memory for an array of int64 values. */

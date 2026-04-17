@@ -1,12 +1,10 @@
-import koffi from "koffi";
-import { Database } from "./database.js";
-import { check } from "./errors.js";
-import { allocNativeFloat64, allocNativeInt64, allocNativeString, allocPtrOut, decodeStringFromBuf, nativeAddress, readPtrOut } from "./ffi-helpers.js";
-import type { NativePointer } from "./loader.js";
-import { getSymbols } from "./loader.js";
-import type { QueryParam } from "./types.js";
+import { Database } from "./database.ts";
+import { check } from "./errors.ts";
+import { allocNativeFloat64, allocNativeInt64, allocNativeString, allocPtrOut, decodeStringFromBuf, nativeAddress, readPtrOut, toCString } from "./ffi-helpers.ts";
+import { getSymbols } from "./loader.ts";
+import type { Allocation, QueryParam } from "./types.ts";
 
-declare module "./database.js" {
+declare module "./database.ts" {
   interface Database {
     queryString(sql: string, params?: QueryParam[]): string | null;
     queryInteger(sql: string, params?: QueryParam[]): number | null;
@@ -19,53 +17,61 @@ const DATA_TYPE_FLOAT = 1;
 const DATA_TYPE_STRING = 2;
 const DATA_TYPE_NULL = 4;
 
-function marshalParams(params: QueryParam[]): { types: Int32Array; values: BigInt64Array; _keepalive: NativePointer[] } {
+function marshalParams(params: QueryParam[]): { types: Allocation; values: Allocation; _keepalive: Allocation[] } {
   const n = params.length;
-  const types = new Int32Array(n);
-  const values = new BigInt64Array(n);
-  const keepalive: NativePointer[] = [];
+  const typesBuf = new Uint8Array(n * 4);
+  const typesDv = new DataView(typesBuf.buffer);
+  const valuesBuf = new Uint8Array(n * 8);
+  const valuesDv = new DataView(valuesBuf.buffer);
+  const keepalive: Allocation[] = [];
 
   for (let i = 0; i < n; i++) {
     const p = params[i];
     if (p === null) {
-      types[i] = DATA_TYPE_NULL;
-      values[i] = 0n;
+      typesDv.setInt32(i * 4, DATA_TYPE_NULL, true);
+      valuesDv.setBigInt64(i * 8, 0n, true);
     } else if (typeof p === "number") {
       if (Number.isInteger(p)) {
-        types[i] = DATA_TYPE_INTEGER;
+        typesDv.setInt32(i * 4, DATA_TYPE_INTEGER, true);
         const native = allocNativeInt64([p]);
         keepalive.push(native);
-        values[i] = nativeAddress(native);
+        valuesDv.setBigInt64(i * 8, nativeAddress(native.ptr), true);
       } else {
-        types[i] = DATA_TYPE_FLOAT;
+        typesDv.setInt32(i * 4, DATA_TYPE_FLOAT, true);
         const native = allocNativeFloat64([p]);
         keepalive.push(native);
-        values[i] = nativeAddress(native);
+        valuesDv.setBigInt64(i * 8, nativeAddress(native.ptr), true);
       }
     } else if (typeof p === "string") {
-      types[i] = DATA_TYPE_STRING;
+      typesDv.setInt32(i * 4, DATA_TYPE_STRING, true);
       const native = allocNativeString(p);
       keepalive.push(native);
-      values[i] = nativeAddress(native);
+      valuesDv.setBigInt64(i * 8, nativeAddress(native.ptr), true);
     }
   }
 
+  const types: Allocation = { ptr: Deno.UnsafePointer.of(typesBuf)!, buf: typesBuf };
+  const values: Allocation = { ptr: Deno.UnsafePointer.of(valuesBuf)!, buf: valuesBuf };
+  keepalive.push(types, values);
   return { types, values, _keepalive: keepalive };
 }
 
 Database.prototype.queryString = function (this: Database, sql: string, params?: QueryParam[]): string | null {
   const lib = getSymbols();
+  const sqlBuf = toCString(sql);
   const outValue = allocPtrOut();
-  const outHasValue = new Int32Array(1);
+  const outHasValue = new Uint8Array(4);
+  const outHasValuePtr = Deno.UnsafePointer.of(outHasValue)!;
+  const outHasValueDv = new DataView(outHasValue.buffer);
 
   if (params && params.length > 0) {
     const m = marshalParams(params);
-    check(lib.quiver_database_query_string_params(this._handle, sql, m.types, m.values, params.length, outValue, outHasValue));
+    check(lib.quiver_database_query_string_params(this._handle, sqlBuf.buf, m.types.ptr, m.values.ptr, BigInt(params.length), outValue.ptr, outHasValuePtr));
   } else {
-    check(lib.quiver_database_query_string(this._handle, sql, outValue, outHasValue));
+    check(lib.quiver_database_query_string(this._handle, sqlBuf.buf, outValue.ptr, outHasValuePtr));
   }
 
-  if (outHasValue[0] === 0) return null;
+  if (outHasValueDv.getInt32(0, true) === 0) return null;
   const result = decodeStringFromBuf(outValue);
   lib.quiver_database_free_string(readPtrOut(outValue));
   return result;
@@ -73,32 +79,42 @@ Database.prototype.queryString = function (this: Database, sql: string, params?:
 
 Database.prototype.queryInteger = function (this: Database, sql: string, params?: QueryParam[]): number | null {
   const lib = getSymbols();
-  const outValue = new BigInt64Array(1);
-  const outHasValue = new Int32Array(1);
+  const sqlBuf = toCString(sql);
+  const outValue = new Uint8Array(8);
+  const outValuePtr = Deno.UnsafePointer.of(outValue)!;
+  const outValueDv = new DataView(outValue.buffer);
+  const outHasValue = new Uint8Array(4);
+  const outHasValuePtr = Deno.UnsafePointer.of(outHasValue)!;
+  const outHasValueDv = new DataView(outHasValue.buffer);
 
   if (params && params.length > 0) {
     const m = marshalParams(params);
-    check(lib.quiver_database_query_integer_params(this._handle, sql, m.types, m.values, params.length, outValue, outHasValue));
+    check(lib.quiver_database_query_integer_params(this._handle, sqlBuf.buf, m.types.ptr, m.values.ptr, BigInt(params.length), outValuePtr, outHasValuePtr));
   } else {
-    check(lib.quiver_database_query_integer(this._handle, sql, outValue, outHasValue));
+    check(lib.quiver_database_query_integer(this._handle, sqlBuf.buf, outValuePtr, outHasValuePtr));
   }
 
-  if (outHasValue[0] === 0) return null;
-  return Number(outValue[0]);
+  if (outHasValueDv.getInt32(0, true) === 0) return null;
+  return Number(outValueDv.getBigInt64(0, true));
 };
 
 Database.prototype.queryFloat = function (this: Database, sql: string, params?: QueryParam[]): number | null {
   const lib = getSymbols();
-  const outValue = new Float64Array(1);
-  const outHasValue = new Int32Array(1);
+  const sqlBuf = toCString(sql);
+  const outValue = new Uint8Array(8);
+  const outValuePtr = Deno.UnsafePointer.of(outValue)!;
+  const outValueDv = new DataView(outValue.buffer);
+  const outHasValue = new Uint8Array(4);
+  const outHasValuePtr = Deno.UnsafePointer.of(outHasValue)!;
+  const outHasValueDv = new DataView(outHasValue.buffer);
 
   if (params && params.length > 0) {
     const m = marshalParams(params);
-    check(lib.quiver_database_query_float_params(this._handle, sql, m.types, m.values, params.length, outValue, outHasValue));
+    check(lib.quiver_database_query_float_params(this._handle, sqlBuf.buf, m.types.ptr, m.values.ptr, BigInt(params.length), outValuePtr, outHasValuePtr));
   } else {
-    check(lib.quiver_database_query_float(this._handle, sql, outValue, outHasValue));
+    check(lib.quiver_database_query_float(this._handle, sqlBuf.buf, outValuePtr, outHasValuePtr));
   }
 
-  if (outHasValue[0] === 0) return null;
-  return outValue[0];
+  if (outHasValueDv.getInt32(0, true) === 0) return null;
+  return outValueDv.getFloat64(0, true);
 };
