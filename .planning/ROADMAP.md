@@ -31,10 +31,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Symbol type descriptors correctly map every used C type (int, int64_t, uint64_t, double, pointer, const char**) to Deno FFI equivalents
   3. Library discovery works from bundled libs directory, dev build/bin walk-up, and system PATH without any node:fs/node:path/node:url imports
   4. No koffi import or node: protocol import remains in loader.ts
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 01-01: TBD
+- [ ] 01-01-PLAN.md -- Rewrite loader.ts with Deno.dlopen, 85 symbol definitions, and 3-tier library search
 
 ### Phase 2: Pointer & String Marshaling
 **Goal**: All pointer out-parameter, string marshaling, and native allocation helpers work using Deno FFI primitives
@@ -124,7 +124,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. FFI Foundation & Library Loading | 0/0 | Not started | - |
+| 1. FFI Foundation & Library Loading | 0/1 | Planning complete | - |
 | 2. Pointer & String Marshaling | 0/0 | Not started | - |
 | 3. Array Decoding & Domain Helpers | 0/0 | Not started | - |
 | 4. Struct Marshaling & Indirect Modules | 0/0 | Not started | - |
