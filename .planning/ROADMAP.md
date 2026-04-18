@@ -77,8 +77,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md -- Rewrite metadata.ts struct readers from koffi to UnsafePointerView at verified byte offsets
-- [ ] 04-02-PLAN.md -- Fix Deno FFI compatibility in indirect modules and .js to .ts import extensions across all files
+- [x] 04-01-PLAN.md -- Rewrite metadata.ts struct readers from koffi to UnsafePointerView at verified byte offsets
+- [x] 04-02-PLAN.md -- Fix Deno FFI compatibility in indirect modules and .js to .ts import extensions across all files
 
 ### Phase 5: Configuration & Packaging
 **Goal**: The binding is packaged as a Deno module with no Node.js tooling remnants
