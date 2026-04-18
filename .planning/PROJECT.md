@@ -30,7 +30,7 @@ Uniform, type-safe database access across multiple languages through a single C+
 - [x] Rewrite array decoders with UnsafePointerView and convert domain modules (query, csv, time-series) (Validated in Phase 3: Array Decoding & Domain Helpers)
 - [x] Update package config (deno.json, remove koffi dep) (Validated in Phase 5: Configuration & Packaging)
 - [ ] Create MIGRATION.md documenting the transition
-- [ ] Validate existing tests under Deno runtime
+- [x] Validate existing tests under Deno runtime (Validated in Phase 6: Test Migration & Validation)
 
 ### Out of Scope
 
@@ -92,4 +92,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-18 after Phase 5 completion*
+*Last updated: 2026-04-18 after Phase 6 completion*
