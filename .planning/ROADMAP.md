@@ -168,9 +168,12 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. publish.yml builds libquiver and libquiver_c for Linux x64 and Windows x64 before running `npx jsr publish`
   2. Native library builds use Release mode CMake with QUIVER_BUILD_C_API=ON
-  3. The published JSR package contains native binaries under `libs/linux-x64/` and `libs/windows-x64/`
+  3. The published JSR package contains native binaries under `libs/linux-x86_64/` and `libs/windows-x86_64/`
   4. The loader's Tier 1 search (`libs/{os}-{arch}/`) resolves the bundled libraries when the package is imported via `jsr:@psrenergy/quiver`
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 10-01-PLAN.md -- Add build-native CI job and wire publish-jsr to bundle native libraries for Linux x86_64 and Windows x86_64
 
 ## Progress
 
@@ -188,4 +191,4 @@ Phase 10
 | 7. Documentation | v1.0 | 1/1 | Complete | - |
 | 8. JSR Package Configuration | v1.1 | 1/1 | Complete | - |
 | 9. CI Pipeline | v1.1 | 1/1 | Complete | - |
-| 10. Native Library Build & Bundle | v1.2 | 0/? | Not started | - |
+| 10. Native Library Build & Bundle | v1.2 | 0/1 | Not started | - |
