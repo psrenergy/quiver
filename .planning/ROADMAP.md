@@ -88,10 +88,10 @@ Plans:
   1. deno.json exists with correct module entry point, tasks, and no koffi dependency
   2. package.json is removed or replaced by deno.json
   3. tsconfig.json is removed (Deno handles TypeScript natively) or replaced with minimal Deno-compatible config if needed
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 05-01: TBD
+- [ ] 05-01-PLAN.md -- Create deno.json, delete Node.js config files, update test.bat to deno test, regenerate deno.lock
 
 ### Phase 6: Test Migration & Validation
 **Goal**: All existing test scenarios pass under Deno runtime with Deno.test
@@ -129,6 +129,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 2. Pointer & String Marshaling | 0/1 | Planning complete | - |
 | 3. Array Decoding & Domain Helpers | 0/1 | Planning complete | - |
 | 4. Struct Marshaling & Indirect Modules | 0/2 | Planning complete | - |
-| 5. Configuration & Packaging | 0/0 | Not started | - |
+| 5. Configuration & Packaging | 0/1 | Planning complete | - |
 | 6. Test Migration & Validation | 0/0 | Not started | - |
 | 7. Documentation | 0/0 | Not started | - |
