@@ -152,7 +152,7 @@ function readBulkIntegers(lib: ReturnType<typeof getSymbols>, handle: Deno.Point
   const outVectors = allocPtrOut();
   const outSizes = allocPtrOut();
   const outCount = allocUint64Out();
-  (lib as Record<string, Function>)[fn](handle, collBuf.buf, attrBuf.buf, outVectors.ptr, outSizes.ptr, outCount.ptr);
+  check((lib as Record<string, Function>)[fn](handle, collBuf.buf, attrBuf.buf, outVectors.ptr, outSizes.ptr, outCount.ptr));
   const count = readUint64Out(outCount);
   if (count === 0) return [];
   const vectorsPtr = readPtrOut(outVectors);
@@ -173,7 +173,7 @@ function readBulkFloats(lib: ReturnType<typeof getSymbols>, handle: Deno.Pointer
   const outVectors = allocPtrOut();
   const outSizes = allocPtrOut();
   const outCount = allocUint64Out();
-  (lib as Record<string, Function>)[fn](handle, collBuf.buf, attrBuf.buf, outVectors.ptr, outSizes.ptr, outCount.ptr);
+  check((lib as Record<string, Function>)[fn](handle, collBuf.buf, attrBuf.buf, outVectors.ptr, outSizes.ptr, outCount.ptr));
   const count = readUint64Out(outCount);
   if (count === 0) return [];
   const vectorsPtr = readPtrOut(outVectors);
@@ -194,7 +194,7 @@ function readBulkStrings(lib: ReturnType<typeof getSymbols>, handle: Deno.Pointe
   const outVectors = allocPtrOut();
   const outSizes = allocPtrOut();
   const outCount = allocUint64Out();
-  (lib as Record<string, Function>)[fn](handle, collBuf.buf, attrBuf.buf, outVectors.ptr, outSizes.ptr, outCount.ptr);
+  check((lib as Record<string, Function>)[fn](handle, collBuf.buf, attrBuf.buf, outVectors.ptr, outSizes.ptr, outCount.ptr));
   const count = readUint64Out(outCount);
   if (count === 0) return [];
   const vectorsPtr = readPtrOut(outVectors);
@@ -235,7 +235,7 @@ function readByIdIntegers(lib: ReturnType<typeof getSymbols>, handle: Deno.Point
   const attrBuf = toCString(attribute);
   const outValues = allocPtrOut();
   const outCount = allocUint64Out();
-  (lib as Record<string, Function>)[fn](handle, collBuf.buf, attrBuf.buf, BigInt(id), outValues.ptr, outCount.ptr);
+  check((lib as Record<string, Function>)[fn](handle, collBuf.buf, attrBuf.buf, BigInt(id), outValues.ptr, outCount.ptr));
   const count = readUint64Out(outCount);
   if (count === 0) return [];
   const ptr = readPtrOut(outValues);
@@ -249,7 +249,7 @@ function readByIdFloats(lib: ReturnType<typeof getSymbols>, handle: Deno.Pointer
   const attrBuf = toCString(attribute);
   const outValues = allocPtrOut();
   const outCount = allocUint64Out();
-  (lib as Record<string, Function>)[fn](handle, collBuf.buf, attrBuf.buf, BigInt(id), outValues.ptr, outCount.ptr);
+  check((lib as Record<string, Function>)[fn](handle, collBuf.buf, attrBuf.buf, BigInt(id), outValues.ptr, outCount.ptr));
   const count = readUint64Out(outCount);
   if (count === 0) return [];
   const ptr = readPtrOut(outValues);
@@ -263,7 +263,7 @@ function readByIdStrings(lib: ReturnType<typeof getSymbols>, handle: Deno.Pointe
   const attrBuf = toCString(attribute);
   const outValues = allocPtrOut();
   const outCount = allocUint64Out();
-  (lib as Record<string, Function>)[fn](handle, collBuf.buf, attrBuf.buf, BigInt(id), outValues.ptr, outCount.ptr);
+  check((lib as Record<string, Function>)[fn](handle, collBuf.buf, attrBuf.buf, BigInt(id), outValues.ptr, outCount.ptr));
   const count = readUint64Out(outCount);
   if (count === 0) return [];
   const ptr = readPtrOut(outValues);
