@@ -1,5 +1,5 @@
-import { Database } from "./database.js";
-import { check } from "./errors.js";
+import { Database } from "./database.ts";
+import { check } from "./errors.ts";
 import {
   allocPtrOut,
   allocUint64Out,
@@ -11,10 +11,11 @@ import {
   decodeUint64Array,
   readPtrOut,
   readUint64Out,
-} from "./ffi-helpers.js";
-import { getSymbols } from "./loader.js";
+  toCString,
+} from "./ffi-helpers.ts";
+import { getSymbols } from "./loader.ts";
 
-declare module "./database.js" {
+declare module "./database.ts" {
   interface Database {
     readScalarIntegers(collection: string, attribute: string): number[];
     readScalarFloats(collection: string, attribute: string): number[];
@@ -42,9 +43,11 @@ declare module "./database.js" {
 
 Database.prototype.readScalarIntegers = function (this: Database, collection: string, attribute: string): number[] {
   const lib = getSymbols();
+  const collBuf = toCString(collection);
+  const attrBuf = toCString(attribute);
   const outValues = allocPtrOut();
   const outCount = allocUint64Out();
-  check(lib.quiver_database_read_scalar_integers(this._handle, collection, attribute, outValues, outCount));
+  check(lib.quiver_database_read_scalar_integers(this._handle, collBuf.buf, attrBuf.buf, outValues.ptr, outCount.ptr));
   const count = readUint64Out(outCount);
   if (count === 0) return [];
   const ptr = readPtrOut(outValues);
@@ -55,9 +58,11 @@ Database.prototype.readScalarIntegers = function (this: Database, collection: st
 
 Database.prototype.readScalarFloats = function (this: Database, collection: string, attribute: string): number[] {
   const lib = getSymbols();
+  const collBuf = toCString(collection);
+  const attrBuf = toCString(attribute);
   const outValues = allocPtrOut();
   const outCount = allocUint64Out();
-  check(lib.quiver_database_read_scalar_floats(this._handle, collection, attribute, outValues, outCount));
+  check(lib.quiver_database_read_scalar_floats(this._handle, collBuf.buf, attrBuf.buf, outValues.ptr, outCount.ptr));
   const count = readUint64Out(outCount);
   if (count === 0) return [];
   const ptr = readPtrOut(outValues);
@@ -68,14 +73,16 @@ Database.prototype.readScalarFloats = function (this: Database, collection: stri
 
 Database.prototype.readScalarStrings = function (this: Database, collection: string, attribute: string): string[] {
   const lib = getSymbols();
+  const collBuf = toCString(collection);
+  const attrBuf = toCString(attribute);
   const outValues = allocPtrOut();
   const outCount = allocUint64Out();
-  check(lib.quiver_database_read_scalar_strings(this._handle, collection, attribute, outValues, outCount));
+  check(lib.quiver_database_read_scalar_strings(this._handle, collBuf.buf, attrBuf.buf, outValues.ptr, outCount.ptr));
   const count = readUint64Out(outCount);
   if (count === 0) return [];
   const ptr = readPtrOut(outValues);
   const result = decodeStringArray(ptr, count);
-  lib.quiver_database_free_string_array(ptr, count);
+  lib.quiver_database_free_string_array(ptr, BigInt(count));
   return result;
 };
 
@@ -83,28 +90,39 @@ Database.prototype.readScalarStrings = function (this: Database, collection: str
 
 Database.prototype.readScalarIntegerById = function (this: Database, collection: string, attribute: string, id: number): number | null {
   const lib = getSymbols();
-  const outValue = new BigInt64Array(1);
-  const outHasValue = new Int32Array(1);
-  check(lib.quiver_database_read_scalar_integer_by_id(this._handle, collection, attribute, id, outValue, outHasValue));
-  if (outHasValue[0] === 0) return null;
-  return Number(outValue[0]);
+  const collBuf = toCString(collection);
+  const attrBuf = toCString(attribute);
+  const outValBuf = new Uint8Array(8);
+  const outValPtr = Deno.UnsafePointer.of(outValBuf)!;
+  const outHasBuf = new Uint8Array(4);
+  const outHasPtr = Deno.UnsafePointer.of(outHasBuf)!;
+  check(lib.quiver_database_read_scalar_integer_by_id(this._handle, collBuf.buf, attrBuf.buf, BigInt(id), outValPtr, outHasPtr));
+  if (new DataView(outHasBuf.buffer).getInt32(0, true) === 0) return null;
+  return Number(new DataView(outValBuf.buffer).getBigInt64(0, true));
 };
 
 Database.prototype.readScalarFloatById = function (this: Database, collection: string, attribute: string, id: number): number | null {
   const lib = getSymbols();
-  const outValue = new Float64Array(1);
-  const outHasValue = new Int32Array(1);
-  check(lib.quiver_database_read_scalar_float_by_id(this._handle, collection, attribute, id, outValue, outHasValue));
-  if (outHasValue[0] === 0) return null;
-  return outValue[0];
+  const collBuf = toCString(collection);
+  const attrBuf = toCString(attribute);
+  const outValBuf = new Uint8Array(8);
+  const outValPtr = Deno.UnsafePointer.of(outValBuf)!;
+  const outHasBuf = new Uint8Array(4);
+  const outHasPtr = Deno.UnsafePointer.of(outHasBuf)!;
+  check(lib.quiver_database_read_scalar_float_by_id(this._handle, collBuf.buf, attrBuf.buf, BigInt(id), outValPtr, outHasPtr));
+  if (new DataView(outHasBuf.buffer).getInt32(0, true) === 0) return null;
+  return new DataView(outValBuf.buffer).getFloat64(0, true);
 };
 
 Database.prototype.readScalarStringById = function (this: Database, collection: string, attribute: string, id: number): string | null {
   const lib = getSymbols();
+  const collBuf = toCString(collection);
+  const attrBuf = toCString(attribute);
   const outValue = allocPtrOut();
-  const outHasValue = new Int32Array(1);
-  check(lib.quiver_database_read_scalar_string_by_id(this._handle, collection, attribute, id, outValue, outHasValue));
-  if (outHasValue[0] === 0) return null;
+  const outHasBuf = new Uint8Array(4);
+  const outHasPtr = Deno.UnsafePointer.of(outHasBuf)!;
+  check(lib.quiver_database_read_scalar_string_by_id(this._handle, collBuf.buf, attrBuf.buf, BigInt(id), outValue.ptr, outHasPtr));
+  if (new DataView(outHasBuf.buffer).getInt32(0, true) === 0) return null;
   const result = decodeStringFromBuf(outValue);
   lib.quiver_database_free_string(readPtrOut(outValue));
   return result;
@@ -114,9 +132,10 @@ Database.prototype.readScalarStringById = function (this: Database, collection: 
 
 Database.prototype.readElementIds = function (this: Database, collection: string): number[] {
   const lib = getSymbols();
+  const collBuf = toCString(collection);
   const outIds = allocPtrOut();
   const outCount = allocUint64Out();
-  check(lib.quiver_database_read_element_ids(this._handle, collection, outIds, outCount));
+  check(lib.quiver_database_read_element_ids(this._handle, collBuf.buf, outIds.ptr, outCount.ptr));
   const count = readUint64Out(outCount);
   if (count === 0) return [];
   const ptr = readPtrOut(outIds);
@@ -127,11 +146,13 @@ Database.prototype.readElementIds = function (this: Database, collection: string
 
 // --- Vector bulk reads ---
 
-function readBulkIntegers(lib: ReturnType<typeof getSymbols>, handle: unknown, fn: string, collection: string, attribute: string): number[][] {
+function readBulkIntegers(lib: ReturnType<typeof getSymbols>, handle: Deno.PointerValue, fn: string, collection: string, attribute: string): number[][] {
+  const collBuf = toCString(collection);
+  const attrBuf = toCString(attribute);
   const outVectors = allocPtrOut();
   const outSizes = allocPtrOut();
   const outCount = allocUint64Out();
-  check(lib[fn](handle, collection, attribute, outVectors, outSizes, outCount));
+  (lib as Record<string, Function>)[fn](handle, collBuf.buf, attrBuf.buf, outVectors.ptr, outSizes.ptr, outCount.ptr);
   const count = readUint64Out(outCount);
   if (count === 0) return [];
   const vectorsPtr = readPtrOut(outVectors);
@@ -142,15 +163,17 @@ function readBulkIntegers(lib: ReturnType<typeof getSymbols>, handle: unknown, f
   for (let i = 0; i < count; i++) {
     result[i] = sizes[i] === 0 ? [] : decodeInt64Array(vectorPtrs[i], sizes[i]);
   }
-  lib.quiver_database_free_integer_vectors(vectorsPtr, sizesPtr, count);
+  lib.quiver_database_free_integer_vectors(vectorsPtr, sizesPtr, BigInt(count));
   return result;
 }
 
-function readBulkFloats(lib: ReturnType<typeof getSymbols>, handle: unknown, fn: string, collection: string, attribute: string): number[][] {
+function readBulkFloats(lib: ReturnType<typeof getSymbols>, handle: Deno.PointerValue, fn: string, collection: string, attribute: string): number[][] {
+  const collBuf = toCString(collection);
+  const attrBuf = toCString(attribute);
   const outVectors = allocPtrOut();
   const outSizes = allocPtrOut();
   const outCount = allocUint64Out();
-  check(lib[fn](handle, collection, attribute, outVectors, outSizes, outCount));
+  (lib as Record<string, Function>)[fn](handle, collBuf.buf, attrBuf.buf, outVectors.ptr, outSizes.ptr, outCount.ptr);
   const count = readUint64Out(outCount);
   if (count === 0) return [];
   const vectorsPtr = readPtrOut(outVectors);
@@ -161,15 +184,17 @@ function readBulkFloats(lib: ReturnType<typeof getSymbols>, handle: unknown, fn:
   for (let i = 0; i < count; i++) {
     result[i] = sizes[i] === 0 ? [] : decodeFloat64Array(vectorPtrs[i], sizes[i]);
   }
-  lib.quiver_database_free_float_vectors(vectorsPtr, sizesPtr, count);
+  lib.quiver_database_free_float_vectors(vectorsPtr, sizesPtr, BigInt(count));
   return result;
 }
 
-function readBulkStrings(lib: ReturnType<typeof getSymbols>, handle: unknown, fn: string, collection: string, attribute: string): string[][] {
+function readBulkStrings(lib: ReturnType<typeof getSymbols>, handle: Deno.PointerValue, fn: string, collection: string, attribute: string): string[][] {
+  const collBuf = toCString(collection);
+  const attrBuf = toCString(attribute);
   const outVectors = allocPtrOut();
   const outSizes = allocPtrOut();
   const outCount = allocUint64Out();
-  check(lib[fn](handle, collection, attribute, outVectors, outSizes, outCount));
+  (lib as Record<string, Function>)[fn](handle, collBuf.buf, attrBuf.buf, outVectors.ptr, outSizes.ptr, outCount.ptr);
   const count = readUint64Out(outCount);
   if (count === 0) return [];
   const vectorsPtr = readPtrOut(outVectors);
@@ -180,7 +205,7 @@ function readBulkStrings(lib: ReturnType<typeof getSymbols>, handle: unknown, fn
   for (let i = 0; i < count; i++) {
     result[i] = sizes[i] === 0 ? [] : decodeStringArray(vectorPtrs[i], sizes[i]);
   }
-  lib.quiver_database_free_string_vectors(vectorsPtr, sizesPtr, count);
+  lib.quiver_database_free_string_vectors(vectorsPtr, sizesPtr, BigInt(count));
   return result;
 }
 
@@ -205,10 +230,12 @@ Database.prototype.readSetStrings = function (this: Database, collection: string
 
 // --- By-ID reads ---
 
-function readByIdIntegers(lib: ReturnType<typeof getSymbols>, handle: unknown, fn: string, collection: string, attribute: string, id: number): number[] {
+function readByIdIntegers(lib: ReturnType<typeof getSymbols>, handle: Deno.PointerValue, fn: string, collection: string, attribute: string, id: number): number[] {
+  const collBuf = toCString(collection);
+  const attrBuf = toCString(attribute);
   const outValues = allocPtrOut();
   const outCount = allocUint64Out();
-  check(lib[fn](handle, collection, attribute, id, outValues, outCount));
+  (lib as Record<string, Function>)[fn](handle, collBuf.buf, attrBuf.buf, BigInt(id), outValues.ptr, outCount.ptr);
   const count = readUint64Out(outCount);
   if (count === 0) return [];
   const ptr = readPtrOut(outValues);
@@ -217,10 +244,12 @@ function readByIdIntegers(lib: ReturnType<typeof getSymbols>, handle: unknown, f
   return result;
 }
 
-function readByIdFloats(lib: ReturnType<typeof getSymbols>, handle: unknown, fn: string, collection: string, attribute: string, id: number): number[] {
+function readByIdFloats(lib: ReturnType<typeof getSymbols>, handle: Deno.PointerValue, fn: string, collection: string, attribute: string, id: number): number[] {
+  const collBuf = toCString(collection);
+  const attrBuf = toCString(attribute);
   const outValues = allocPtrOut();
   const outCount = allocUint64Out();
-  check(lib[fn](handle, collection, attribute, id, outValues, outCount));
+  (lib as Record<string, Function>)[fn](handle, collBuf.buf, attrBuf.buf, BigInt(id), outValues.ptr, outCount.ptr);
   const count = readUint64Out(outCount);
   if (count === 0) return [];
   const ptr = readPtrOut(outValues);
@@ -229,15 +258,17 @@ function readByIdFloats(lib: ReturnType<typeof getSymbols>, handle: unknown, fn:
   return result;
 }
 
-function readByIdStrings(lib: ReturnType<typeof getSymbols>, handle: unknown, fn: string, collection: string, attribute: string, id: number): string[] {
+function readByIdStrings(lib: ReturnType<typeof getSymbols>, handle: Deno.PointerValue, fn: string, collection: string, attribute: string, id: number): string[] {
+  const collBuf = toCString(collection);
+  const attrBuf = toCString(attribute);
   const outValues = allocPtrOut();
   const outCount = allocUint64Out();
-  check(lib[fn](handle, collection, attribute, id, outValues, outCount));
+  (lib as Record<string, Function>)[fn](handle, collBuf.buf, attrBuf.buf, BigInt(id), outValues.ptr, outCount.ptr);
   const count = readUint64Out(outCount);
   if (count === 0) return [];
   const ptr = readPtrOut(outValues);
   const result = decodeStringArray(ptr, count);
-  lib.quiver_database_free_string_array(ptr, count);
+  lib.quiver_database_free_string_array(ptr, BigInt(count));
   return result;
 }
 

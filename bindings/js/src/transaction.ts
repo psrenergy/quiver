@@ -1,8 +1,8 @@
-import { Database } from "./database.js";
-import { check } from "./errors.js";
-import { getSymbols } from "./loader.js";
+import { Database } from "./database.ts";
+import { check } from "./errors.ts";
+import { getSymbols } from "./loader.ts";
 
-declare module "./database.js" {
+declare module "./database.ts" {
   interface Database {
     beginTransaction(): void;
     commit(): void;
@@ -28,7 +28,8 @@ Database.prototype.rollback = function (this: Database): void {
 
 Database.prototype.inTransaction = function (this: Database): boolean {
   const lib = getSymbols();
-  const outActive = new Int32Array(1);
-  check(lib.quiver_database_in_transaction(this._handle, outActive));
-  return outActive[0] !== 0;
+  const outBuf = new Uint8Array(4);
+  const outPtr = Deno.UnsafePointer.of(outBuf)!;
+  check(lib.quiver_database_in_transaction(this._handle, outPtr));
+  return new DataView(outBuf.buffer).getInt32(0, true) !== 0;
 };
