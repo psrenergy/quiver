@@ -148,10 +148,10 @@ Plans:
   2. publish.yml uses npx jsr publish with OIDC authentication (no manual tokens)
   3. No package.json, npm install, npm build, or npm publish references remain in CI workflow files
   4. The ci.yml Deno test job passes in GitHub Actions
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 09-01: TBD
+- [ ] 09-01-PLAN.md -- Add Deno test job to ci.yml and replace npm publish with JSR publish in publish.yml
 
 ## Progress
 
@@ -168,4 +168,4 @@ Phases execute in numeric order: 8 -> 9
 | 6. Test Migration & Validation | v1.0 | 2/2 | Complete | - |
 | 7. Documentation | v1.0 | 1/1 | Complete | - |
 | 8. JSR Package Configuration | v1.1 | 0/1 | Not started | - |
-| 9. CI Pipeline | v1.1 | 0/? | Not started | - |
+| 9. CI Pipeline | v1.1 | 0/1 | Not started | - |
