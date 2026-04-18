@@ -151,7 +151,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 09-01-PLAN.md -- Add Deno test job to ci.yml and replace npm publish with JSR publish in publish.yml
+- [x] 09-01-PLAN.md -- Add Deno test job to ci.yml and replace npm publish with JSR publish in publish.yml
 
 ## Progress
 

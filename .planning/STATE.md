@@ -4,13 +4,13 @@ milestone: v1.1
 milestone_name: JSR Publishing & CI
 status: executing
 stopped_at: Roadmap created for v1.1 milestone (phases 8-9)
-last_updated: "2026-04-18T16:55:41.927Z"
+last_updated: "2026-04-18T17:05:30.278Z"
 last_activity: 2026-04-18
 progress:
   total_phases: 2
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
+  completed_phases: 2
+  total_plans: 2
+  completed_plans: 2
   percent: 100
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-18)
 
 **Core value:** Uniform, type-safe database access across multiple languages through a single C++ implementation with thin FFI bindings.
-**Current focus:** Phase 08 — JSR Package Configuration
+**Current focus:** Phase 09 — CI Pipeline
 
 ## Current Position
 
-Phase: 9
+Phase: 09
 Plan: Not started
-Status: Executing Phase 08
+Status: Executing Phase 09
 Last activity: 2026-04-18
 
 Progress: [----------] 0%
@@ -36,7 +36,7 @@ Progress: [----------] 0%
 
 **Velocity:**
 
-- Total plans completed: 10
+- Total plans completed: 11
 - Average duration: -
 - Total execution time: 0 hours
 
@@ -51,6 +51,7 @@ Progress: [----------] 0%
 | 05 | 1 | - | - |
 | 06 | 2 | - | - |
 | 07 | 1 | - | - |
+| 09 | 1 | - | - |
 
 **Recent Trend:**
 
