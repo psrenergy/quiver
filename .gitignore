@@ -62,6 +62,7 @@ Testing/
 *.db
 
 .cache/
+.claude/settings.local.json
 
 *.log
 *.sqlite
