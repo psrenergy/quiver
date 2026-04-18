@@ -114,10 +114,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. README includes deno run/test commands with --allow-ffi flag and explains the permission model
   2. MIGRATION.md documents what changed (koffi to Deno.dlopen), why (path-scoped permissions, native Deno support), and any breaking changes to developer workflow (not public API)
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 07-01: TBD
+- [ ] 07-01-PLAN.md -- Rewrite README.md for Deno usage and create MIGRATION.md documenting koffi-to-Deno.dlopen transition
 
 ## Progress
 
@@ -132,4 +132,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 4. Struct Marshaling & Indirect Modules | 0/2 | Planning complete | - |
 | 5. Configuration & Packaging | 0/1 | Planning complete | - |
 | 6. Test Migration & Validation | 0/2 | Planning complete | - |
-| 7. Documentation | 0/0 | Not started | - |
+| 7. Documentation | 0/1 | Planning complete | - |
