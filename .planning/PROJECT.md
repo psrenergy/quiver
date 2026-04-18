@@ -29,7 +29,7 @@ Uniform, type-safe database access across multiple languages through a single C+
 - [x] Rewrite string marshaling with TextEncoder/TextDecoder (Validated in Phase 2: Pointer & String Marshaling)
 - [x] Rewrite array decoders with UnsafePointerView and convert domain modules (query, csv, time-series) (Validated in Phase 3: Array Decoding & Domain Helpers)
 - [x] Update package config (deno.json, remove koffi dep) (Validated in Phase 5: Configuration & Packaging)
-- [ ] Create MIGRATION.md documenting the transition
+- [x] Create MIGRATION.md documenting the transition (Validated in Phase 7: Documentation)
 - [x] Validate existing tests under Deno runtime (Validated in Phase 6: Test Migration & Validation)
 
 ### Out of Scope
@@ -71,8 +71,8 @@ Uniform, type-safe database access across multiple languages through a single C+
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Deno.dlopen over koffi | Path-scoped --allow-ffi permissions, native Deno support | Validated (Phase 1) |
-| Drop multi-runtime support | Simplifies FFI layer, Deno is target runtime | -- Pending |
-| Preserve public API | Consumer code shouldn't need changes | -- Pending |
+| Drop multi-runtime support | Simplifies FFI layer, Deno is target runtime | Validated (Phase 5) |
+| Preserve public API | Consumer code shouldn't need changes | Validated (Phase 6) |
 
 ## Evolution
 
@@ -92,4 +92,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-18 after Phase 6 completion*
+*Last updated: 2026-04-18 after Phase 7 completion (final phase — milestone complete)*
