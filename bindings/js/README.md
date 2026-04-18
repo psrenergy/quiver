@@ -141,8 +141,8 @@ Parameters are passed as an array of `number | string | null`.
 
 ### CSV
 
-- `exportCSV(collection, path, options?)` -- Export collection to CSV file
-- `importCSV(collection, path, options?)` -- Import CSV file into collection
+- `exportCsv(collection, group, filePath, options?)` -- Export collection group to CSV file
+- `importCsv(collection, group, filePath, options?)` -- Import CSV file into collection group
 
 ### Composites
 
