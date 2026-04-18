@@ -1,4 +1,4 @@
-import { dirname, join } from "jsr:@std/path";
+import { dirname, join } from "jsr:@std/path@^1.1.4";
 import { QuiverError } from "./errors.ts";
 
 // Deno FFI type shorthand constants
