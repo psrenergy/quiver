@@ -101,44 +101,13 @@ jobs:
 
       - uses: pypa/gh-action-pypi-publish@release/v1
 
-  build-native-npm:
-    name: Build native libs (${{ matrix.platform_key }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - os: windows-latest
-            platform_key: win32-x64
-            lib_dir: build/bin/Release
-          - os: ubuntu-latest
-            platform_key: linux-x64
-            lib_dir: build/lib
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Configure CMake
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DQUIVER_BUILD_C_API=ON -DQUIVER_BUILD_TESTS=OFF
-
-      - name: Build
-        run: cmake --build build --config Release
-
-      - name: Set RPATH for Linux
-        if: runner.os == 'Linux'
-        run: patchelf --set-rpath '$ORIGIN' build/lib/libquiver_c.so
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: native-${{ matrix.platform_key }}
-          path: ${{ matrix.lib_dir }}/libquiver*
-
-  publish-npm:
-    name: Publish to npm
+  publish-jsr:
+    name: Publish to JSR
     runs-on: ubuntu-latest
-    needs: build-native-npm
-    environment: npm
+    needs: validate
+    environment: jsr
     permissions:
+      contents: read
       id-token: write
     defaults:
       run:
@@ -146,36 +115,19 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v6
+      - uses: denoland/setup-deno@v2
         with:
-          node-version: 24
-          registry-url: https://registry.npmjs.org
+          deno-version: v2.x
 
-      - name: Validate tag matches package.json version
+      - name: Validate tag matches deno.json version
         run: |
           TAG_VERSION="${GITHUB_REF_NAME#v}"
-          PKG_VERSION=$(node -p "require('./package.json').version")
+          PKG_VERSION=$(deno eval "const c = JSON.parse(Deno.readTextFileSync('deno.json')); console.log(c.version)")
           if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
-            echo "::error::Tag version ($TAG_VERSION) != package.json version ($PKG_VERSION)"
+            echo "::error::Tag version ($TAG_VERSION) != deno.json version ($PKG_VERSION)"
             exit 1
           fi
           echo "Version validated: $TAG_VERSION"
 
-      - uses: actions/download-artifact@v8
-        with:
-          name: native-win32-x64
-          path: bindings/js/libs/win32-x64
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: native-linux-x64
-          path: bindings/js/libs/linux-x64
-
-      - name: Verify native libs
-        run: |
-          echo "Windows libs:" && ls -la libs/win32-x64/
-          echo "Linux libs:" && ls -la libs/linux-x64/
-
-      - run: npm install
-      - run: npm run build
-      - run: npm publish --provenance --access public
+      - name: Publish to JSR
+        run: npx jsr publish --allow-slow-types
