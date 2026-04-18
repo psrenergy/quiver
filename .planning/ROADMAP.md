@@ -134,7 +134,6 @@ Plans:
   1. deno.json contains name: @psrenergy/quiver, version: 0.1.0, exports: ./mod.ts
   2. mod.ts exists and re-exports the public API from src/index.ts
   3. `npx jsr publish --dry-run` succeeds locally (package structure is valid for JSR)
-  4. Package is accessible on jsr.io/@psrenergy/quiver
 **Plans**: 1 plan
 
 Plans:

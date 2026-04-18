@@ -11,7 +11,7 @@ Requirements for JSR publishing and CI pipeline. Each maps to roadmap phases.
 
 - [ ] **JSR-01**: deno.json configured with JSR metadata (name: @psrenergy/quiver, version: 0.1.0, license: MIT, exports: ./mod.ts)
 - [ ] **JSR-02**: mod.ts entry point re-exports public API from src/index.ts
-- [ ] **JSR-03**: Package publishes successfully to jsr.io via `npx jsr publish`
+- [ ] **JSR-03**: `npx jsr publish --dry-run` validates the package structure for JSR (actual publish via CI in Phase 9)
 
 ### CI/CD
 
