@@ -1,3 +1,6 @@
+# Deno
+deno.lock
+
 # Database
 *.sqlite
 
