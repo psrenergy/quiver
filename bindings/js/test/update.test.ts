@@ -1,9 +1,7 @@
-import { describe, expect, test } from "vitest";
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-const __dirname = dirname(fileURLToPath(import.meta.url));
-import { join } from "node:path";
-import { Database, QuiverError } from "../src/index";
+import { assertEquals, assertStringIncludes, assertThrows } from "jsr:@std/assert";
+import { join } from "jsr:@std/path";
+const __dirname = import.meta.dirname!;
+import { Database, QuiverError } from "../src/index.ts";
 
 const SCHEMA_PATH = join(
   __dirname,
@@ -16,56 +14,56 @@ const SCHEMA_PATH = join(
   "all_types.sql",
 );
 
-describe("updateElement", () => {
-  test("updates integer scalar", () => {
+Deno.test({ name: "updateElement", sanitizeResources: false }, async (t) => {
+  await t.step("updates integer scalar", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", some_integer: 42 });
       db.updateElement("AllTypes", id, { some_integer: 99 });
       const value = db.readScalarIntegerById("AllTypes", "some_integer", id);
-      expect(value).toBe(99);
+      assertEquals(value, 99);
     } finally {
       db.close();
     }
   });
 
-  test("updates float scalar", () => {
+  await t.step("updates float scalar", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", some_float: 3.14 });
       db.updateElement("AllTypes", id, { some_float: 2.71 });
       const value = db.readScalarFloatById("AllTypes", "some_float", id);
-      expect(value).toBe(2.71);
+      assertEquals(value, 2.71);
     } finally {
       db.close();
     }
   });
 
-  test("updates string scalar", () => {
+  await t.step("updates string scalar", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", some_text: "hello" });
       db.updateElement("AllTypes", id, { some_text: "world" });
       const value = db.readScalarStringById("AllTypes", "some_text", id);
-      expect(value).toBe("world");
+      assertEquals(value, "world");
     } finally {
       db.close();
     }
   });
 
-  test("updates with null value", () => {
+  await t.step("updates with null value", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", some_integer: 42 });
       db.updateElement("AllTypes", id, { some_integer: null });
       const value = db.readScalarIntegerById("AllTypes", "some_integer", id);
-      expect(value).toBeNull();
+      assertEquals(value, null);
     } finally {
       db.close();
     }
   });
 
-  test("updates array field", () => {
+  await t.step("updates array field", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", code: [10, 20] });
@@ -74,33 +72,36 @@ describe("updateElement", () => {
         "SELECT COUNT(*) FROM AllTypes_set_codes WHERE id = ?",
         [id],
       );
-      expect(count).toBe(3);
+      assertEquals(count, 3);
       const minVal = db.queryInteger(
         "SELECT MIN(code) FROM AllTypes_set_codes WHERE id = ?",
         [id],
       );
-      expect(minVal).toBe(30);
+      assertEquals(minVal, 30);
       const maxVal = db.queryInteger(
         "SELECT MAX(code) FROM AllTypes_set_codes WHERE id = ?",
         [id],
       );
-      expect(maxVal).toBe(50);
+      assertEquals(maxVal, 50);
     } finally {
       db.close();
     }
   });
 
-  test("throws on closed database", () => {
+  await t.step("throws on closed database", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     db.close();
-    expect(() => {
-      db.updateElement("AllTypes", 1, { some_integer: 42 });
-    }).toThrow(QuiverError);
+    assertThrows(
+      () => {
+        db.updateElement("AllTypes", 1, { some_integer: 42 });
+      },
+      QuiverError,
+    );
 
     try {
       db.updateElement("AllTypes", 1, { some_integer: 42 });
     } catch (e) {
-      expect((e as QuiverError).message).toBe("Database is closed");
+      assertStringIncludes((e as QuiverError).message, "Database is closed");
     }
   });
 });
