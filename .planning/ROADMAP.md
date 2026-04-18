@@ -91,7 +91,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 05-01-PLAN.md -- Create deno.json, delete Node.js config files, update test.bat to deno test, regenerate deno.lock
+- [x] 05-01-PLAN.md -- Create deno.json, delete Node.js config files, update test.bat to deno test, regenerate deno.lock
 
 ### Phase 6: Test Migration & Validation
 **Goal**: All existing test scenarios pass under Deno runtime with Deno.test
