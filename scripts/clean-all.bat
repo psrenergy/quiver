@@ -9,6 +9,7 @@ REM   - C++ build output
 REM   - Dart binding caches
 REM   - Julia resolved dependencies
 REM   - Python build/dist/cache directories
+REM   - JavaScript binding lock file
 REM ============================================================
 
 SET ROOT_DIR=%~dp0..
@@ -22,7 +23,7 @@ echo.
 REM ============================================================
 REM Step 1: C++ Build
 REM ============================================================
-echo [1/4] C++ build output...
+echo [1/5] C++ build output...
 
 if exist "%ROOT_DIR%\build" (
     rmdir /s /q "%ROOT_DIR%\build"
@@ -36,7 +37,7 @@ echo.
 REM ============================================================
 REM Step 2: Dart Bindings
 REM ============================================================
-echo [2/4] Dart binding caches...
+echo [2/5] Dart binding caches...
 
 if exist "%ROOT_DIR%\bindings\dart\.dart_tool" (
     rmdir /s /q "%ROOT_DIR%\bindings\dart\.dart_tool"
@@ -57,7 +58,7 @@ echo.
 REM ============================================================
 REM Step 3: Julia Bindings
 REM ============================================================
-echo [3/4] Julia resolved dependencies...
+echo [3/5] Julia resolved dependencies...
 
 if exist "%ROOT_DIR%\bindings\julia\Manifest.toml" (
     del /q "%ROOT_DIR%\bindings\julia\Manifest.toml"
@@ -71,7 +72,7 @@ echo.
 REM ============================================================
 REM Step 4: Python Bindings
 REM ============================================================
-echo [4/4] Python build and cache directories...
+echo [4/5] Python build and cache directories...
 
 if exist "%ROOT_DIR%\bindings\python\build" (
     rmdir /s /q "%ROOT_DIR%\bindings\python\build"
@@ -108,6 +109,20 @@ for /d %%d in ("%ROOT_DIR%\bindings\python\src\*.egg-info") do (
         rmdir /s /q "%%d"
         echo       Removed %%d
     )
+)
+
+echo.
+
+REM ============================================================
+REM Step 5: JavaScript Bindings
+REM ============================================================
+echo [5/5] JavaScript binding lock file...
+
+if exist "%ROOT_DIR%\bindings\js\deno.lock" (
+    del /q "%ROOT_DIR%\bindings\js\deno.lock"
+    echo       Removed bindings/js/deno.lock
+) else (
+    echo       Skipped bindings/js/deno.lock ^(not found^)
 )
 
 echo.

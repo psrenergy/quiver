@@ -41,4 +41,14 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo.
+echo Formatting JavaScript bindings...
+pushd "%ROOT%\bindings\js"
+call format.bat
+popd
+if %ERRORLEVEL% neq 0 (
+    echo Failed to format JavaScript bindings
+    exit /b 1
+)
+
+echo.
 echo All formatting complete.

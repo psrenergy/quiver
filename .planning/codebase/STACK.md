@@ -128,7 +128,7 @@
 - `all-bindings` — Release, tests ON, C API ON, plus `QUIVER_BUILD_PYTHON_BINDING=ON` (variable not wired into CMakeLists.txt; vestigial).
 
 **Build:**
-- `CMakeLists.txt` (top-level) — Version 0.7.0 declared via `project(quiver VERSION 0.7.0 ...)`.
+- `CMakeLists.txt` (top-level) — Version 0.7.1 declared via `project(quiver VERSION 0.7.1 ...)`.
 - `CMakePresets.json` — Preset definitions for IDE/CI configuration.
 - `cmake/Dependencies.cmake` — All FetchContent declarations.
 - `cmake/Platform.cmake` — OS detection + RPATH + visibility defaults.

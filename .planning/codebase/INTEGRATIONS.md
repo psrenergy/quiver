@@ -175,7 +175,7 @@ All in `cmake/Dependencies.cmake`, pinned by tag (no commit SHAs).
 
 ## Files of Interest
 
-- `CMakeLists.txt` — project(version 0.7.0), options, SKBUILD handling
+- `CMakeLists.txt` — project(version 0.7.1), options, SKBUILD handling
 - `CMakePresets.json` — dev/release/windows-release/linux-release/all-bindings
 - `cmake/Dependencies.cmake` — all FetchContent declarations
 - `cmake/Platform.cmake` — OS/ext detection, RPATH, visibility

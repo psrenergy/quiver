@@ -3,15 +3,6 @@ import { check } from "./errors.ts";
 import { allocPtrOut, decodeStringFromBuf, toCString } from "./ffi-helpers.ts";
 import { getSymbols } from "./loader.ts";
 
-declare module "./database.ts" {
-  interface Database {
-    isHealthy(): boolean;
-    currentVersion(): number;
-    path(): string;
-    describe(): void;
-  }
-}
-
 Database.prototype.isHealthy = function (this: Database): boolean {
   const lib = getSymbols();
   const outBuf = new Uint8Array(4);

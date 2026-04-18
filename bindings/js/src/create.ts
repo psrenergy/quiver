@@ -4,14 +4,6 @@ import { allocNativeFloat64, allocNativeInt64, allocNativeStringArray, allocPtrO
 import { getSymbols } from "./loader.ts";
 import type { ElementData, Value } from "./types.ts";
 
-declare module "./database.ts" {
-  interface Database {
-    createElement(collection: string, data: ElementData): number;
-    updateElement(collection: string, id: number, data: ElementData): void;
-    deleteElement(collection: string, id: number): void;
-  }
-}
-
 type Symbols = ReturnType<typeof getSymbols>;
 
 function setElementArray(lib: Symbols, elemPtr: Deno.PointerValue, name: string, values: unknown[]): void {
