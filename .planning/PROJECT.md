@@ -20,17 +20,16 @@ Uniform, type-safe database access across multiple languages through a single C+
 - Transaction control (begin, commit, rollback)
 - Lua scripting with database access
 - Binary file I/O subsystem (.qvr files with TOML metadata)
-- Julia, Dart, Python, JS (koffi), JS-WASM bindings
+- Julia, Dart, Python, JS (Deno FFI), JS-WASM bindings
+- JS binding migrated from koffi to Deno.dlopen (v1.0 milestone)
 
 ### Active
 
-- [x] Replace koffi FFI with Deno.dlopen in JS binding (Validated in Phase 1: FFI Foundation & Library Loading)
-- [x] Rewrite pointer/buffer handling for Deno (UnsafePointer, Uint8Array) (Validated in Phase 2: Pointer & String Marshaling)
-- [x] Rewrite string marshaling with TextEncoder/TextDecoder (Validated in Phase 2: Pointer & String Marshaling)
-- [x] Rewrite array decoders with UnsafePointerView and convert domain modules (query, csv, time-series) (Validated in Phase 3: Array Decoding & Domain Helpers)
-- [x] Update package config (deno.json, remove koffi dep) (Validated in Phase 5: Configuration & Packaging)
-- [x] Create MIGRATION.md documenting the transition (Validated in Phase 7: Documentation)
-- [x] Validate existing tests under Deno runtime (Validated in Phase 6: Test Migration & Validation)
+- [ ] Configure deno.json for JSR (@psrenergy/quiver, version 0.1.0, exports: ./mod.ts)
+- [ ] Create mod.ts entry point (Deno convention)
+- [ ] Add Deno test job to CI (ci.yml)
+- [ ] Replace publish.yml with JSR publish workflow (OIDC auth)
+- [ ] Remove stale npm publishing logic
 
 ### Out of Scope
 
@@ -38,26 +37,26 @@ Uniform, type-safe database access across multiple languages through a single C+
 - New API methods -- public JS API surface stays identical
 - WASM binding changes -- separate package, not affected
 
-## Current Milestone: v1.0 Deno FFI Migration
+## Current Milestone: v1.1 JSR Publishing & CI
 
-**Goal:** Replace koffi FFI with Deno.dlopen in the JS binding while preserving the public API surface.
+**Goal:** Publish @psrenergy/quiver to JSR and fix CI pipeline for Deno
 
 **Target features:**
-- Replace all koffi.load/koffi.func calls with Deno.dlopen symbol definitions
-- Rewrite pointer/buffer handling to use Deno.UnsafePointer and Uint8Array
-- Rewrite string marshaling with TextEncoder/TextDecoder
-- Update package config (deno.json, remove koffi dep)
-- Update README with --allow-ffi permission instructions
-- Create MIGRATION.md documenting the transition
-- Validate all existing tests pass under Deno
+- Configure deno.json for JSR (name: @psrenergy/quiver, version: 0.1.0, exports: ./mod.ts)
+- Create mod.ts entry point (Deno convention, re-exports from src/index.ts)
+- Add Deno test job to ci.yml
+- Replace publish.yml with JSR publish workflow (npx jsr publish, OIDC auth)
+- Remove stale npm publishing logic entirely
 
 ## Context
 
 - C++ core compiles to shared libraries (libquiver.dll/so/dylib, libquiver_c.dll/so/dylib)
-- JS binding currently uses koffi for FFI (Node.js-specific)
-- Switching to Deno.dlopen enables path-scoped --allow-ffi permissions
+- JS binding uses Deno.dlopen for FFI (migrated from koffi in v1.0)
+- Deno.dlopen enables path-scoped --allow-ffi permissions
 - The JS binding covers: database lifecycle, CRUD, scalar/vector/set reads, queries, metadata, time series, CSV, transactions, composites, LuaRunner
-- Existing JS binding source: bindings/js/src/ (16 TypeScript files)
+- JS binding source: bindings/js/src/ (16 TypeScript files)
+- JSR package: @psrenergy/quiver (jsr.io)
+- CI currently has no Deno test job; publish.yml has broken npm logic from pre-migration
 
 ## Constraints
 
@@ -70,9 +69,10 @@ Uniform, type-safe database access across multiple languages through a single C+
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Deno.dlopen over koffi | Path-scoped --allow-ffi permissions, native Deno support | Validated (Phase 1) |
-| Drop multi-runtime support | Simplifies FFI layer, Deno is target runtime | Validated (Phase 5) |
-| Preserve public API | Consumer code shouldn't need changes | Validated (Phase 6) |
+| Deno.dlopen over koffi | Path-scoped --allow-ffi permissions, native Deno support | Validated (v1.0 Phase 1) |
+| Drop multi-runtime support | Simplifies FFI layer, Deno is target runtime | Validated (v1.0 Phase 5) |
+| Preserve public API | Consumer code shouldn't need changes | Validated (v1.0 Phase 6) |
+| JSR over npm | Deno-native registry, no build step needed, OIDC auth | Pending |
 
 ## Evolution
 
@@ -92,4 +92,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-18 after Phase 7 completion (final phase — milestone complete)*
+*Last updated: 2026-04-18 — Milestone v1.1 started*
