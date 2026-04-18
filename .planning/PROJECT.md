@@ -28,7 +28,7 @@ Uniform, type-safe database access across multiple languages through a single C+
 - [x] Rewrite pointer/buffer handling for Deno (UnsafePointer, Uint8Array) (Validated in Phase 2: Pointer & String Marshaling)
 - [x] Rewrite string marshaling with TextEncoder/TextDecoder (Validated in Phase 2: Pointer & String Marshaling)
 - [x] Rewrite array decoders with UnsafePointerView and convert domain modules (query, csv, time-series) (Validated in Phase 3: Array Decoding & Domain Helpers)
-- [ ] Update package config (deno.json, remove koffi dep)
+- [x] Update package config (deno.json, remove koffi dep) (Validated in Phase 5: Configuration & Packaging)
 - [ ] Create MIGRATION.md documenting the transition
 - [ ] Validate existing tests under Deno runtime
 
@@ -92,4 +92,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-18 after Phase 4 completion*
+*Last updated: 2026-04-18 after Phase 5 completion*
