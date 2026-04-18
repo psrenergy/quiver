@@ -1,8 +1,16 @@
 {
-  "name": "quiverdb",
-  "version": "0.6.3",
+  "name": "@psrenergy/quiver",
+  "version": "0.1.0",
+  "license": "MIT",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./mod.ts"
+  },
+  "publish": {
+    "include": [
+      "mod.ts",
+      "src/**/*.ts",
+      "LICENSE"
+    ]
   },
   "tasks": {
     "test": "deno test --allow-ffi --allow-read --allow-write --allow-env test/",
