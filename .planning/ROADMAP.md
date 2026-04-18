@@ -104,8 +104,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md -- Migrate 6 pure-database test files (create, read, update, query, transaction, introspection) from vitest to Deno.test
-- [ ] 06-02-PLAN.md -- Migrate 6 remaining test files (database, csv, metadata, time-series, composites, lua-runner) and validate full suite
+- [x] 06-01-PLAN.md -- Migrate 6 pure-database test files (create, read, update, query, transaction, introspection) from vitest to Deno.test
+- [x] 06-02-PLAN.md -- Migrate 6 remaining test files (database, csv, metadata, time-series, composites, lua-runner) and validate full suite
 
 ### Phase 7: Documentation
 **Goal**: Users know how to run the Deno binding and understand what changed from the koffi version
