@@ -164,7 +164,7 @@ jobs:
 
       - uses: denoland/setup-deno@v2
         with:
-          deno-version: "2.7.12"
+          deno-version: v2.7.x
 
       - name: Download Linux x86_64 native libraries
         uses: actions/download-artifact@v8
