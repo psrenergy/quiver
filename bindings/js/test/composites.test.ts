@@ -1,9 +1,7 @@
-import { describe, expect, test } from "vitest";
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-const __dirname = dirname(fileURLToPath(import.meta.url));
-import { join } from "node:path";
-import { Database } from "../src/index";
+import { assertAlmostEquals, assertEquals } from "jsr:@std/assert";
+const __dirname = import.meta.dirname!;
+import { join } from "jsr:@std/path";
+import { Database } from "../src/index.ts";
 
 const BASIC_SCHEMA = join(
   __dirname,
@@ -27,8 +25,8 @@ const COMPOSITE_SCHEMA = join(
   "composite_helpers.sql",
 );
 
-describe("readScalarsById", () => {
-  test("returns all scalar attributes for an element", () => {
+Deno.test({ name: "readScalarsById", sanitizeResources: false }, async (t) => {
+  await t.step("returns all scalar attributes for an element", () => {
     const db = Database.fromSchema(":memory:", BASIC_SCHEMA);
     try {
       db.createElement("Configuration", {
@@ -40,45 +38,45 @@ describe("readScalarsById", () => {
       });
 
       const scalars = db.readScalarsById("Configuration", 1);
-      expect(scalars.integer_attribute).toBe(42);
-      expect(scalars.float_attribute).toBeCloseTo(3.14);
-      expect(scalars.string_attribute).toBe("hello");
-      expect(scalars.date_attribute).toBe("2024-01-15");
+      assertEquals(scalars.integer_attribute, 42);
+      assertAlmostEquals(scalars.float_attribute as number, 3.14);
+      assertEquals(scalars.string_attribute, "hello");
+      assertEquals(scalars.date_attribute, "2024-01-15");
     } finally {
       db.close();
     }
   });
 
-  test("returns null for nullable unset attributes", () => {
+  await t.step("returns null for nullable unset attributes", () => {
     const db = Database.fromSchema(":memory:", BASIC_SCHEMA);
     try {
       db.createElement("Configuration", { label: "cfg1" });
 
       const scalars = db.readScalarsById("Configuration", 1);
-      expect(scalars.float_attribute).toBeNull();
-      expect(scalars.string_attribute).toBeNull();
-      expect(scalars.date_attribute).toBeNull();
+      assertEquals(scalars.float_attribute, null);
+      assertEquals(scalars.string_attribute, null);
+      assertEquals(scalars.date_attribute, null);
     } finally {
       db.close();
     }
   });
 
-  test("includes label and id in result", () => {
+  await t.step("includes label and id in result", () => {
     const db = Database.fromSchema(":memory:", BASIC_SCHEMA);
     try {
       db.createElement("Configuration", { label: "cfg1", integer_attribute: 10 });
 
       const scalars = db.readScalarsById("Configuration", 1);
-      expect(scalars.label).toBe("cfg1");
-      expect(scalars.id).toBe(1);
+      assertEquals(scalars.label, "cfg1");
+      assertEquals(scalars.id, 1);
     } finally {
       db.close();
     }
   });
 });
 
-describe("readVectorsById", () => {
-  test("returns all vector columns for an element", () => {
+Deno.test({ name: "readVectorsById", sanitizeResources: false }, async (t) => {
+  await t.step("returns all vector columns for an element", () => {
     const db = Database.fromSchema(":memory:", COMPOSITE_SCHEMA);
     try {
       db.createElement("Items", {
@@ -89,31 +87,31 @@ describe("readVectorsById", () => {
       });
 
       const vectors = db.readVectorsById("Items", 1);
-      expect(vectors.amount).toEqual([10, 20, 30]);
-      expect(vectors.score).toEqual([1.1, 2.2]);
-      expect(vectors.note).toEqual(["hello", "world"]);
+      assertEquals(vectors.amount, [10, 20, 30]);
+      assertEquals(vectors.score, [1.1, 2.2]);
+      assertEquals(vectors.note, ["hello", "world"]);
     } finally {
       db.close();
     }
   });
 
-  test("returns empty arrays for element with no vector data", () => {
+  await t.step("returns empty arrays for element with no vector data", () => {
     const db = Database.fromSchema(":memory:", COMPOSITE_SCHEMA);
     try {
       db.createElement("Items", { label: "empty_item" });
 
       const vectors = db.readVectorsById("Items", 1);
-      expect(vectors.amount).toEqual([]);
-      expect(vectors.score).toEqual([]);
-      expect(vectors.note).toEqual([]);
+      assertEquals(vectors.amount, []);
+      assertEquals(vectors.score, []);
+      assertEquals(vectors.note, []);
     } finally {
       db.close();
     }
   });
 });
 
-describe("readSetsById", () => {
-  test("returns all set columns for an element", () => {
+Deno.test({ name: "readSetsById", sanitizeResources: false }, async (t) => {
+  await t.step("returns all set columns for an element", () => {
     const db = Database.fromSchema(":memory:", COMPOSITE_SCHEMA);
     try {
       db.createElement("Items", {
@@ -124,23 +122,23 @@ describe("readSetsById", () => {
       });
 
       const sets = db.readSetsById("Items", 1);
-      expect(sets.code).toEqual([1, 2, 3]);
-      expect(sets.weight).toEqual([1.1, 2.2]);
-      expect(sets.tag).toEqual(["a", "b"]);
+      assertEquals(sets.code, [1, 2, 3]);
+      assertEquals(sets.weight, [1.1, 2.2]);
+      assertEquals(sets.tag, ["a", "b"]);
     } finally {
       db.close();
     }
   });
 
-  test("returns empty arrays for element with no set data", () => {
+  await t.step("returns empty arrays for element with no set data", () => {
     const db = Database.fromSchema(":memory:", COMPOSITE_SCHEMA);
     try {
       db.createElement("Items", { label: "empty_item" });
 
       const sets = db.readSetsById("Items", 1);
-      expect(sets.code).toEqual([]);
-      expect(sets.weight).toEqual([]);
-      expect(sets.tag).toEqual([]);
+      assertEquals(sets.code, []);
+      assertEquals(sets.weight, []);
+      assertEquals(sets.tag, []);
     } finally {
       db.close();
     }

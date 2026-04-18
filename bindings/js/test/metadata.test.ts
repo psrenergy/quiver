@@ -1,10 +1,8 @@
-import { describe, expect, test } from "vitest";
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-const __dirname = dirname(fileURLToPath(import.meta.url));
-import { join } from "node:path";
-import { Database } from "../src/index";
-import type { GroupMetadata, ScalarMetadata } from "../src/index";
+import { assert, assertEquals, assertNotEquals, assertThrows } from "jsr:@std/assert";
+const __dirname = import.meta.dirname!;
+import { join } from "jsr:@std/path";
+import { Database } from "../src/index.ts";
+import type { GroupMetadata, ScalarMetadata } from "../src/index.ts";
 
 const SCHEMA_PATH = join(
   __dirname,
@@ -17,159 +15,159 @@ const SCHEMA_PATH = join(
   "collections.sql",
 );
 
-describe("getScalarMetadata", () => {
-  test("returns correct metadata for an integer scalar", () => {
+Deno.test({ name: "getScalarMetadata", sanitizeResources: false }, async (t) => {
+  await t.step("returns correct metadata for an integer scalar", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const meta = db.getScalarMetadata("Collection", "some_integer");
-      expect(meta.name).toBe("some_integer");
-      expect(typeof meta.dataType).toBe("number");
-      expect(meta.notNull).toBe(false);
-      expect(meta.primaryKey).toBe(false);
-      expect(meta.defaultValue).toBeNull();
-      expect(meta.isForeignKey).toBe(false);
-      expect(meta.referencesCollection).toBeNull();
-      expect(meta.referencesColumn).toBeNull();
+      assertEquals(meta.name, "some_integer");
+      assertEquals(typeof meta.dataType, "number");
+      assertEquals(meta.notNull, false);
+      assertEquals(meta.primaryKey, false);
+      assertEquals(meta.defaultValue, null);
+      assertEquals(meta.isForeignKey, false);
+      assertEquals(meta.referencesCollection, null);
+      assertEquals(meta.referencesColumn, null);
     } finally {
       db.close();
     }
   });
 
-  test("returns correct metadata for the primary key", () => {
+  await t.step("returns correct metadata for the primary key", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const meta = db.getScalarMetadata("Collection", "id");
-      expect(meta.name).toBe("id");
-      expect(meta.primaryKey).toBe(true);
+      assertEquals(meta.name, "id");
+      assertEquals(meta.primaryKey, true);
       // SQLite INTEGER PRIMARY KEY does not set the not_null PRAGMA flag
       // even though the column is implicitly non-nullable
-      expect(typeof meta.notNull).toBe("boolean");
+      assertEquals(typeof meta.notNull, "boolean");
     } finally {
       db.close();
     }
   });
 
-  test("returns correct metadata for a foreign key", () => {
+  await t.step("returns correct metadata for a foreign key", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const meta = db.getScalarMetadata("Collection_vector_values", "id");
-      expect(meta.isForeignKey).toBe(true);
-      expect(meta.referencesCollection).toBe("Collection");
-      expect(meta.referencesColumn).toBe("id");
+      assertEquals(meta.isForeignKey, true);
+      assertEquals(meta.referencesCollection, "Collection");
+      assertEquals(meta.referencesColumn, "id");
     } finally {
       db.close();
     }
   });
 
-  test("throws on nonexistent attribute", () => {
+  await t.step("throws on nonexistent attribute", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
-      expect(() => db.getScalarMetadata("Collection", "nonexistent")).toThrow();
+      assertThrows(() => db.getScalarMetadata("Collection", "nonexistent"));
     } finally {
       db.close();
     }
   });
 });
 
-describe("getVectorMetadata / getSetMetadata / getTimeSeriesMetadata", () => {
-  test("getVectorMetadata returns correct group", () => {
+Deno.test({ name: "getVectorMetadata / getSetMetadata / getTimeSeriesMetadata", sanitizeResources: false }, async (t) => {
+  await t.step("getVectorMetadata returns correct group", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const meta = db.getVectorMetadata("Collection", "values");
-      expect(meta.groupName).toBe("values");
-      expect(meta.dimensionColumn).toBeNull();
-      expect(meta.valueColumns.length).toBeGreaterThanOrEqual(1);
+      assertEquals(meta.groupName, "values");
+      assertEquals(meta.dimensionColumn, null);
+      assert(meta.valueColumns.length >= 1);
       for (const col of meta.valueColumns) {
-        expect(typeof col.name).toBe("string");
-        expect(typeof col.dataType).toBe("number");
+        assertEquals(typeof col.name, "string");
+        assertEquals(typeof col.dataType, "number");
       }
     } finally {
       db.close();
     }
   });
 
-  test("getSetMetadata returns correct group", () => {
+  await t.step("getSetMetadata returns correct group", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const meta = db.getSetMetadata("Collection", "tags");
-      expect(meta.groupName).toBe("tags");
-      expect(meta.dimensionColumn).toBeNull();
-      expect(meta.valueColumns.length).toBeGreaterThanOrEqual(1);
+      assertEquals(meta.groupName, "tags");
+      assertEquals(meta.dimensionColumn, null);
+      assert(meta.valueColumns.length >= 1);
     } finally {
       db.close();
     }
   });
 
-  test("getTimeSeriesMetadata returns non-null dimensionColumn", () => {
+  await t.step("getTimeSeriesMetadata returns non-null dimensionColumn", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const meta = db.getTimeSeriesMetadata("Collection", "data");
-      expect(meta.groupName).toBe("data");
-      expect(meta.dimensionColumn).toBe("date_time");
-      expect(meta.valueColumns.length).toBeGreaterThanOrEqual(1);
+      assertEquals(meta.groupName, "data");
+      assertEquals(meta.dimensionColumn, "date_time");
+      assert(meta.valueColumns.length >= 1);
     } finally {
       db.close();
     }
   });
 });
 
-describe("listScalarAttributes", () => {
-  test("lists all scalar attributes", () => {
+Deno.test({ name: "listScalarAttributes", sanitizeResources: false }, async (t) => {
+  await t.step("lists all scalar attributes", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const attrs = db.listScalarAttributes("Collection");
-      expect(Array.isArray(attrs)).toBe(true);
+      assertEquals(Array.isArray(attrs), true);
       // Collection has: id, label, some_integer, some_float
-      expect(attrs.length).toBeGreaterThanOrEqual(3);
+      assert(attrs.length >= 3);
 
       const someInt = attrs.find((a: ScalarMetadata) => a.name === "some_integer");
-      expect(someInt).toBeDefined();
-      expect(typeof someInt!.dataType).toBe("number");
-      expect(someInt!.primaryKey).toBe(false);
+      assertNotEquals(someInt, undefined);
+      assertEquals(typeof someInt!.dataType, "number");
+      assertEquals(someInt!.primaryKey, false);
     } finally {
       db.close();
     }
   });
 });
 
-describe("listVectorGroups / listSetGroups / listTimeSeriesGroups", () => {
-  test("listVectorGroups returns vector groups", () => {
+Deno.test({ name: "listVectorGroups / listSetGroups / listTimeSeriesGroups", sanitizeResources: false }, async (t) => {
+  await t.step("listVectorGroups returns vector groups", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const groups = db.listVectorGroups("Collection");
-      expect(groups.length).toBeGreaterThanOrEqual(1);
+      assert(groups.length >= 1);
 
       const values = groups.find((g: GroupMetadata) => g.groupName === "values");
-      expect(values).toBeDefined();
-      expect(values!.dimensionColumn).toBeNull();
+      assertNotEquals(values, undefined);
+      assertEquals(values!.dimensionColumn, null);
     } finally {
       db.close();
     }
   });
 
-  test("listSetGroups returns set groups", () => {
+  await t.step("listSetGroups returns set groups", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const groups = db.listSetGroups("Collection");
-      expect(groups.length).toBeGreaterThanOrEqual(1);
+      assert(groups.length >= 1);
 
       const tags = groups.find((g: GroupMetadata) => g.groupName === "tags");
-      expect(tags).toBeDefined();
-      expect(tags!.dimensionColumn).toBeNull();
+      assertNotEquals(tags, undefined);
+      assertEquals(tags!.dimensionColumn, null);
     } finally {
       db.close();
     }
   });
 
-  test("listTimeSeriesGroups returns time series groups with dimensionColumn", () => {
+  await t.step("listTimeSeriesGroups returns time series groups with dimensionColumn", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const groups = db.listTimeSeriesGroups("Collection");
-      expect(groups.length).toBeGreaterThanOrEqual(1);
+      assert(groups.length >= 1);
 
       const data = groups.find((g: GroupMetadata) => g.groupName === "data");
-      expect(data).toBeDefined();
-      expect(data!.dimensionColumn).toBe("date_time");
+      assertNotEquals(data, undefined);
+      assertEquals(data!.dimensionColumn, "date_time");
     } finally {
       db.close();
     }
