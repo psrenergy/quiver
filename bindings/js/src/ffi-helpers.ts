@@ -1,4 +1,4 @@
-import type { Allocation } from "./types.js";
+import type { Allocation } from "./types.ts";
 
 const encoder = new TextEncoder();
 

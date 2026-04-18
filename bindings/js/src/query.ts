@@ -1,10 +1,10 @@
-import { Database } from "./database.js";
-import { check, QuiverError } from "./errors.js";
-import { allocNativeFloat64, allocNativeInt64, allocNativeString, allocPtrOut, decodeStringFromBuf, nativeAddress, readPtrOut, toCString } from "./ffi-helpers.js";
-import { getSymbols } from "./loader.js";
-import type { Allocation, QueryParam } from "./types.js";
+import { Database } from "./database.ts";
+import { check, QuiverError } from "./errors.ts";
+import { allocNativeFloat64, allocNativeInt64, allocNativeString, allocPtrOut, decodeStringFromBuf, nativeAddress, readPtrOut, toCString } from "./ffi-helpers.ts";
+import { getSymbols } from "./loader.ts";
+import type { Allocation, QueryParam } from "./types.ts";
 
-declare module "./database.js" {
+declare module "./database.ts" {
   interface Database {
     queryString(sql: string, params?: QueryParam[]): string | null;
     queryInteger(sql: string, params?: QueryParam[]): number | null;

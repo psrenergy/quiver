@@ -1,5 +1,5 @@
-import { Database } from "./database.js";
-import { check } from "./errors.js";
+import { Database } from "./database.ts";
+import { check } from "./errors.ts";
 import {
   allocNativeFloat64,
   allocNativeInt64,
@@ -16,13 +16,13 @@ import {
   readPtrOut,
   readUint64Out,
   toCString,
-} from "./ffi-helpers.js";
-import { getSymbols } from "./loader.js";
-import type { Allocation } from "./types.js";
+} from "./ffi-helpers.ts";
+import { getSymbols } from "./loader.ts";
+import type { Allocation } from "./types.ts";
 
 export type TimeSeriesData = Record<string, (number | string)[]>;
 
-declare module "./database.js" {
+declare module "./database.ts" {
   interface Database {
     readTimeSeriesGroup(collection: string, group: string, id: number): TimeSeriesData;
     updateTimeSeriesGroup(collection: string, group: string, id: number, data: TimeSeriesData): void;

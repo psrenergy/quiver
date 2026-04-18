@@ -1,6 +1,6 @@
-import { Database } from "./database.js";
+import { Database } from "./database.ts";
 
-declare module "./database.js" {
+declare module "./database.ts" {
   interface Database {
     readScalarsById(collection: string, id: number): Record<string, number | string | null>;
     readVectorsById(collection: string, id: number): Record<string, number[] | string[]>;
