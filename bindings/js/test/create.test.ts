@@ -1,10 +1,8 @@
-import { describe, expect, test } from "vitest";
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-const __dirname = dirname(fileURLToPath(import.meta.url));
-import { join } from "node:path";
-import { Database, QuiverError } from "../src/index";
-import type { ElementData, Value } from "../src/types";
+import { assertGreater, assertStringIncludes, assertThrows } from "jsr:@std/assert";
+import { join } from "jsr:@std/path";
+const __dirname = import.meta.dirname!;
+import { Database, QuiverError } from "../src/index.ts";
+import type { ElementData, Value } from "../src/types.ts";
 
 const SCHEMA_PATH = join(
   __dirname,
@@ -17,91 +15,94 @@ const SCHEMA_PATH = join(
   "all_types.sql",
 );
 
-describe("createElement", () => {
-  test("creates element with integer scalar and returns numeric ID", () => {
+Deno.test({ name: "createElement", sanitizeResources: false }, async (t) => {
+  await t.step("creates element with integer scalar and returns numeric ID", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const data: ElementData = { label: "Item1", some_integer: 42 };
       const id = db.createElement("AllTypes", data);
-      expect(typeof id).toBe("number");
-      expect(id).toBeGreaterThan(0);
+      assertGreater(id, 0);
     } finally {
       db.close();
     }
   });
 
-  test("creates element with float scalar", () => {
+  await t.step("creates element with float scalar", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", some_float: 3.14 });
-      expect(id).toBeGreaterThan(0);
+      assertGreater(id, 0);
     } finally {
       db.close();
     }
   });
 
-  test("creates element with string scalar", () => {
+  await t.step("creates element with string scalar", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", some_text: "hello" });
-      expect(id).toBeGreaterThan(0);
+      assertGreater(id, 0);
     } finally {
       db.close();
     }
   });
 
-  test("creates element with null value", () => {
+  await t.step("creates element with null value", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", some_integer: null });
-      expect(id).toBeGreaterThan(0);
+      assertGreater(id, 0);
     } finally {
       db.close();
     }
   });
 
-  test("skips undefined values", () => {
+  await t.step("skips undefined values", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", some_integer: undefined });
-      expect(id).toBeGreaterThan(0);
+      assertGreater(id, 0);
     } finally {
       db.close();
     }
   });
 
-  test("creates element with bigint value", () => {
+  await t.step("creates element with bigint value", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", some_integer: 42n });
-      expect(id).toBeGreaterThan(0);
+      assertGreater(id, 0);
     } finally {
       db.close();
     }
   });
 
-  test("returns incrementing IDs", () => {
+  await t.step("returns incrementing IDs", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id1 = db.createElement("AllTypes", { label: "Item1" });
       const id2 = db.createElement("AllTypes", { label: "Item2" });
-      expect(id2).toBeGreaterThan(id1);
+      assertGreater(id2, id1);
     } finally {
       db.close();
     }
   });
 
-  test("throws on unsupported type (boolean)", () => {
+  await t.step("throws on unsupported type (boolean)", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
-      expect(() => {
-        db.createElement("AllTypes", { label: "Item1", some_integer: true as unknown as Value });
-      }).toThrow(QuiverError);
+      assertThrows(
+        () => {
+          db.createElement("AllTypes", { label: "Item1", some_integer: true as unknown as Value });
+        },
+        QuiverError,
+      );
 
       try {
         db.createElement("AllTypes", { label: "Item1", some_integer: true as unknown as Value });
       } catch (e) {
-        expect((e as QuiverError).message).toContain(
+        assertStringIncludes(
+          (e as QuiverError).message,
           "Unsupported value type for 'some_integer': boolean",
         );
       }
@@ -110,95 +111,98 @@ describe("createElement", () => {
     }
   });
 
-  test("throws on closed database", () => {
+  await t.step("throws on closed database", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     db.close();
-    expect(() => {
-      db.createElement("AllTypes", { label: "Item1" });
-    }).toThrow(QuiverError);
+    assertThrows(
+      () => {
+        db.createElement("AllTypes", { label: "Item1" });
+      },
+      QuiverError,
+    );
 
     try {
       db.createElement("AllTypes", { label: "Item1" });
     } catch (e) {
-      expect((e as QuiverError).message).toBe("Database is closed");
+      assertStringIncludes((e as QuiverError).message, "Database is closed");
     }
   });
 });
 
-describe("createElement with arrays", () => {
-  test("creates element with integer array", () => {
+Deno.test({ name: "createElement with arrays", sanitizeResources: false }, async (t) => {
+  await t.step("creates element with integer array", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", code: [10, 20, 30] });
-      expect(id).toBeGreaterThan(0);
+      assertGreater(id, 0);
     } finally {
       db.close();
     }
   });
 
-  test("creates element with float array", () => {
+  await t.step("creates element with float array", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", weight: [1.5, 2.5] });
-      expect(id).toBeGreaterThan(0);
+      assertGreater(id, 0);
     } finally {
       db.close();
     }
   });
 
-  test("creates element with string array", () => {
+  await t.step("creates element with string array", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", tag: ["a", "b", "c"] });
-      expect(id).toBeGreaterThan(0);
+      assertGreater(id, 0);
     } finally {
       db.close();
     }
   });
 
-  test("creates element with empty array", () => {
+  await t.step("creates element with empty array", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", tag: [] });
-      expect(id).toBeGreaterThan(0);
+      assertGreater(id, 0);
     } finally {
       db.close();
     }
   });
 
-  test("treats number[] with all integers as integer array", () => {
+  await t.step("treats number[] with all integers as integer array", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", code: [1, 2, 3] });
-      expect(id).toBeGreaterThan(0);
+      assertGreater(id, 0);
     } finally {
       db.close();
     }
   });
 
-  test("treats number[] with any decimal as float array", () => {
+  await t.step("treats number[] with any decimal as float array", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", weight: [1, 2.5, 3] });
-      expect(id).toBeGreaterThan(0);
+      assertGreater(id, 0);
     } finally {
       db.close();
     }
   });
 
-  test("creates element with bigint array", () => {
+  await t.step("creates element with bigint array", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", code: [10n, 20n, 30n] });
-      expect(id).toBeGreaterThan(0);
+      assertGreater(id, 0);
     } finally {
       db.close();
     }
   });
 });
 
-describe("deleteElement", () => {
-  test("deletes element by ID", () => {
+Deno.test({ name: "deleteElement", sanitizeResources: false }, async (t) => {
+  await t.step("deletes element by ID", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1" });
@@ -209,17 +213,20 @@ describe("deleteElement", () => {
     }
   });
 
-  test("throws on closed database", () => {
+  await t.step("throws on closed database", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     db.close();
-    expect(() => {
-      db.deleteElement("AllTypes", 1);
-    }).toThrow(QuiverError);
+    assertThrows(
+      () => {
+        db.deleteElement("AllTypes", 1);
+      },
+      QuiverError,
+    );
 
     try {
       db.deleteElement("AllTypes", 1);
     } catch (e) {
-      expect((e as QuiverError).message).toBe("Database is closed");
+      assertStringIncludes((e as QuiverError).message, "Database is closed");
     }
   });
 });

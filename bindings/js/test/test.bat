@@ -1,5 +1,5 @@
 @echo off
 pushd %~dp0..
 set PATH=%~dp0..\..\..\build\bin;%PATH%
-npx vitest run %*
+deno test --allow-ffi --allow-read --allow-write --allow-env test/ %*
 popd

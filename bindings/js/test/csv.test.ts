@@ -1,12 +1,13 @@
-import { describe, expect, test } from "vitest";
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-const __dirname = dirname(fileURLToPath(import.meta.url));
-import { existsSync, readFileSync, unlinkSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { Database, QuiverError } from "../src/index";
-import type { CsvOptions } from "../src/index";
+import {
+  assertEquals,
+  assertFalse,
+  assertStringIncludes,
+  assertThrows,
+} from "jsr:@std/assert";
+const __dirname = import.meta.dirname!;
+import { join } from "jsr:@std/path";
+import { Database, QuiverError } from "../src/index.ts";
+import type { CsvOptions } from "../src/index.ts";
 
 const SCHEMA_PATH = join(
   __dirname,
@@ -20,13 +21,13 @@ const SCHEMA_PATH = join(
 );
 
 function tempCsv(name: string): string {
-  return join(tmpdir(), `quiver_js_csv_test_${name}_${Date.now()}.csv`);
+  return join(Deno.makeTempDirSync(), `${name}.csv`);
 }
 
 function cleanup(...paths: string[]): void {
   for (const p of paths) {
     try {
-      if (existsSync(p)) unlinkSync(p);
+      Deno.removeSync(p);
     } catch {
       // Ignore cleanup errors
     }
@@ -37,8 +38,8 @@ function cleanup(...paths: string[]): void {
 // Export tests (JSCSV-01)
 // ============================================================================
 
-describe("CSV export", () => {
-  test("exports scalar collection to CSV with header and data rows", () => {
+Deno.test({ name: "CSV export", sanitizeResources: false }, async (t) => {
+  await t.step("exports scalar collection to CSV with header and data rows", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     const csvPath = tempCsv("scalar_export");
     try {
@@ -61,22 +62,21 @@ describe("CSV export", () => {
 
       db.exportCsv("Items", "", csvPath);
 
-      expect(existsSync(csvPath)).toBe(true);
-      const content = readFileSync(csvPath, "utf-8");
+      const content = Deno.readTextFileSync(csvPath);
 
       // Header row
-      expect(content).toContain("label,name,status,price,date_created,notes\n");
+      assertStringIncludes(content, "label,name,status,price,date_created,notes\n");
 
       // Data rows
-      expect(content).toContain("Item1,Alpha,1,9.99,2024-01-15T10:30:00,first\n");
-      expect(content).toContain("Item2,Beta,2,19.5,2024-02-20T08:00:00,second\n");
+      assertStringIncludes(content, "Item1,Alpha,1,9.99,2024-01-15T10:30:00,first\n");
+      assertStringIncludes(content, "Item2,Beta,2,19.5,2024-02-20T08:00:00,second\n");
     } finally {
       db.close();
       cleanup(csvPath);
     }
   });
 
-  test("exports vector group to CSV", () => {
+  await t.step("exports vector group to CSV", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     const csvPath = tempCsv("vector_export");
     try {
@@ -85,42 +85,42 @@ describe("CSV export", () => {
 
       db.exportCsv("Items", "measurements", csvPath);
 
-      const content = readFileSync(csvPath, "utf-8");
+      const content = Deno.readTextFileSync(csvPath);
 
       // Header with sep= prefix
-      expect(content).toContain("sep=,\nid,vector_index,measurement\n");
+      assertStringIncludes(content, "sep=,\nid,vector_index,measurement\n");
 
       // Data rows
-      expect(content).toContain("Item1,1,1.1\n");
-      expect(content).toContain("Item1,2,2.2\n");
-      expect(content).toContain("Item1,3,3.3\n");
+      assertStringIncludes(content, "Item1,1,1.1\n");
+      assertStringIncludes(content, "Item1,2,2.2\n");
+      assertStringIncludes(content, "Item1,3,3.3\n");
     } finally {
       db.close();
       cleanup(csvPath);
     }
   });
 
-  test("exports empty collection as header-only CSV", () => {
+  await t.step("exports empty collection as header-only CSV", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     const csvPath = tempCsv("empty_export");
     try {
       db.exportCsv("Items", "", csvPath);
 
-      const content = readFileSync(csvPath, "utf-8");
+      const content = Deno.readTextFileSync(csvPath);
 
       // Header row with sep= prefix and columns
-      expect(content).toBe("sep=,\nlabel,name,status,price,date_created,notes\n");
+      assertEquals(content, "sep=,\nlabel,name,status,price,date_created,notes\n");
     } finally {
       db.close();
       cleanup(csvPath);
     }
   });
 
-  test("export with invalid group returns error", () => {
+  await t.step("export with invalid group returns error", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     const csvPath = tempCsv("invalid_group");
     try {
-      expect(() => db.exportCsv("Items", "nonexistent", csvPath)).toThrow(QuiverError);
+      assertThrows(() => db.exportCsv("Items", "nonexistent", csvPath), QuiverError);
     } finally {
       db.close();
       cleanup(csvPath);
@@ -132,8 +132,8 @@ describe("CSV export", () => {
 // Import tests (JSCSV-02)
 // ============================================================================
 
-describe("CSV import", () => {
-  test("import scalar CSV round-trip", () => {
+Deno.test({ name: "CSV import", sanitizeResources: false }, async (t) => {
+  await t.step("import scalar CSV round-trip", () => {
     const csvPath = tempCsv("scalar_roundtrip");
     const dbPath1 = tempCsv("scalar_rt_db1") + ".db";
     const dbPath2 = tempCsv("scalar_rt_db2") + ".db";
@@ -164,13 +164,13 @@ describe("CSV import", () => {
       db2.importCsv("Items", "", csvPath);
 
       const labels = db2.readScalarStrings("Items", "label");
-      expect(labels.sort()).toEqual(["Item1", "Item2"]);
+      assertEquals(labels.sort(), ["Item1", "Item2"]);
 
       const names = db2.readScalarStrings("Items", "name");
-      expect(names.sort()).toEqual(["Alpha", "Beta"]);
+      assertEquals(names.sort(), ["Alpha", "Beta"]);
 
       const statuses = db2.readScalarIntegers("Items", "status");
-      expect(statuses.sort()).toEqual([1, 2]);
+      assertEquals(statuses.sort(), [1, 2]);
 
       db2.close();
     } finally {
@@ -178,7 +178,7 @@ describe("CSV import", () => {
     }
   });
 
-  test("import vector CSV round-trip", () => {
+  await t.step("import vector CSV round-trip", () => {
     const csvPath = tempCsv("vector_roundtrip");
     const dbPath1 = tempCsv("vector_rt_db1") + ".db";
     const dbPath2 = tempCsv("vector_rt_db2") + ".db";
@@ -197,7 +197,7 @@ describe("CSV import", () => {
 
       // Verify vector data was imported
       const values = db2.readVectorFloatsById("Items", "measurement", 1);
-      expect(values).toEqual([1.1, 2.2, 3.3]);
+      assertEquals(values, [1.1, 2.2, 3.3]);
 
       db2.close();
     } finally {
@@ -205,7 +205,7 @@ describe("CSV import", () => {
     }
   });
 
-  test("import set CSV round-trip", () => {
+  await t.step("import set CSV round-trip", () => {
     const csvPath = tempCsv("set_roundtrip");
     const dbPath1 = tempCsv("set_rt_db1") + ".db";
     const dbPath2 = tempCsv("set_rt_db2") + ".db";
@@ -224,7 +224,7 @@ describe("CSV import", () => {
 
       // Verify set data was imported
       const tags = db2.readSetStringsById("Items", "tag", 1);
-      expect(tags.sort()).toEqual(["blue", "green", "red"]);
+      assertEquals(tags.sort(), ["blue", "green", "red"]);
 
       db2.close();
     } finally {
@@ -237,8 +237,8 @@ describe("CSV import", () => {
 // Options tests
 // ============================================================================
 
-describe("CSV options", () => {
-  test("export with enum labels replaces integers with labels", () => {
+Deno.test({ name: "CSV options", sanitizeResources: false }, async (t) => {
+  await t.step("export with enum labels replaces integers with labels", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     const csvPath = tempCsv("enum_labels");
     try {
@@ -258,22 +258,22 @@ describe("CSV options", () => {
 
       db.exportCsv("Items", "", csvPath, options);
 
-      const content = readFileSync(csvPath, "utf-8");
+      const content = Deno.readTextFileSync(csvPath);
 
       // status column should have labels instead of integers
-      expect(content).toContain("Item1,Alpha,Active,");
-      expect(content).toContain("Item2,Beta,Inactive,");
+      assertStringIncludes(content, "Item1,Alpha,Active,");
+      assertStringIncludes(content, "Item2,Beta,Inactive,");
 
       // Raw integers should NOT be present as status values
-      expect(content).not.toContain("Item1,Alpha,1,");
-      expect(content).not.toContain("Item2,Beta,2,");
+      assertFalse(content.includes("Item1,Alpha,1,"));
+      assertFalse(content.includes("Item2,Beta,2,"));
     } finally {
       db.close();
       cleanup(csvPath);
     }
   });
 
-  test("export with dateTimeFormat formats date columns", () => {
+  await t.step("export with dateTimeFormat formats date columns", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     const csvPath = tempCsv("date_format");
     try {
@@ -290,12 +290,12 @@ describe("CSV options", () => {
 
       db.exportCsv("Items", "", csvPath, options);
 
-      const content = readFileSync(csvPath, "utf-8");
+      const content = Deno.readTextFileSync(csvPath);
 
       // Formatted date should appear
-      expect(content).toContain("2024/01/15");
+      assertStringIncludes(content, "2024/01/15");
       // Raw ISO format should NOT appear
-      expect(content).not.toContain("2024-01-15T10:30:00");
+      assertFalse(content.includes("2024-01-15T10:30:00"));
     } finally {
       db.close();
       cleanup(csvPath);

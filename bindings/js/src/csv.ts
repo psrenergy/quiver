@@ -1,16 +1,15 @@
-import koffi from "koffi";
-import { Database } from "./database.js";
-import { check } from "./errors.js";
-import { allocNativeInt64, allocNativeString, allocNativeStringArray, allocNativePtrTable, nativeAddress } from "./ffi-helpers.js";
-import type { NativePointer } from "./loader.js";
-import { getSymbols } from "./loader.js";
+import { Database } from "./database.ts";
+import { check } from "./errors.ts";
+import { allocNativeInt64, allocNativeString, allocNativeStringArray, nativeAddress, toCString } from "./ffi-helpers.ts";
+import { getSymbols } from "./loader.ts";
+import type { Allocation } from "./types.ts";
 
 export interface CsvOptions {
   dateTimeFormat?: string;
   enumLabels?: Record<string, Record<string, Record<string, number>>>;
 }
 
-declare module "./database.js" {
+declare module "./database.ts" {
   interface Database {
     exportCsv(collection: string, group: string, filePath: string, options?: CsvOptions): void;
     importCsv(collection: string, group: string, filePath: string, options?: CsvOptions): void;
@@ -18,19 +17,20 @@ declare module "./database.js" {
 }
 
 /**
- * Build the 56-byte quiver_csv_options_t struct as a Buffer.
- * Returns [structBuffer, keepalive] where keepalive prevents GC of native allocations.
+ * Build the 56-byte quiver_csv_options_t struct as an Allocation.
+ * Returns [structAllocation, keepalive] where keepalive prevents GC of native allocations.
  */
-function buildCsvOptionsBuffer(options?: CsvOptions): [Buffer, NativePointer[]] {
-  const buf = Buffer.alloc(56);
-  const keepalive: NativePointer[] = [];
+function buildCsvOptionsBuffer(options?: CsvOptions): [Allocation, Allocation[]] {
+  const buf = new Uint8Array(56);
+  const dv = new DataView(buf.buffer);
+  const keepalive: Allocation[] = [];
 
   const dtfStr = allocNativeString(options?.dateTimeFormat ?? "");
   keepalive.push(dtfStr);
-  buf.writeBigUInt64LE(nativeAddress(dtfStr), 0);
+  dv.setBigUint64(0, nativeAddress(dtfStr.ptr), true);
 
   if (!options?.enumLabels || Object.keys(options.enumLabels).length === 0) {
-    return [buf, keepalive];
+    return [{ ptr: Deno.UnsafePointer.of(buf)!, buf }, keepalive];
   }
 
   const groupAttrNames: string[] = [];
@@ -59,10 +59,12 @@ function buildCsvOptionsBuffer(options?: CsvOptions): [Buffer, NativePointer[]] 
   const { table: localeTable, keepalive: localePtrs } = allocNativeStringArray(groupLocaleNames);
   keepalive.push(localeTable, ...localePtrs);
 
-  const entryCounts = koffi.alloc("uint64_t", groupCount);
+  const entryCountsBuf = new Uint8Array(groupCount * 8);
+  const entryCountsDv = new DataView(entryCountsBuf.buffer);
   for (let i = 0; i < groupCount; i++) {
-    koffi.encode(entryCounts, i * 8, "uint64_t", BigInt(groupEntryCounts[i]));
+    entryCountsDv.setBigUint64(i * 8, BigInt(groupEntryCounts[i]), true);
   }
+  const entryCounts: Allocation = { ptr: Deno.UnsafePointer.of(entryCountsBuf)!, buf: entryCountsBuf };
   keepalive.push(entryCounts);
 
   const { table: labelsTable, keepalive: labelPtrs } = allocNativeStringArray(allLabels);
@@ -71,14 +73,14 @@ function buildCsvOptionsBuffer(options?: CsvOptions): [Buffer, NativePointer[]] 
   const valuesArr = allocNativeInt64(allValues);
   keepalive.push(valuesArr);
 
-  buf.writeBigUInt64LE(nativeAddress(attrTable), 8);
-  buf.writeBigUInt64LE(nativeAddress(localeTable), 16);
-  buf.writeBigUInt64LE(nativeAddress(entryCounts), 24);
-  buf.writeBigUInt64LE(nativeAddress(labelsTable), 32);
-  buf.writeBigUInt64LE(nativeAddress(valuesArr), 40);
-  buf.writeBigUInt64LE(BigInt(groupCount), 48);
+  dv.setBigUint64(8, nativeAddress(attrTable.ptr), true);
+  dv.setBigUint64(16, nativeAddress(localeTable.ptr), true);
+  dv.setBigUint64(24, nativeAddress(entryCounts.ptr), true);
+  dv.setBigUint64(32, nativeAddress(labelsTable.ptr), true);
+  dv.setBigUint64(40, nativeAddress(valuesArr.ptr), true);
+  dv.setBigUint64(48, BigInt(groupCount), true);
 
-  return [buf, keepalive];
+  return [{ ptr: Deno.UnsafePointer.of(buf)!, buf }, keepalive];
 }
 
 Database.prototype.exportCsv = function (
@@ -89,8 +91,11 @@ Database.prototype.exportCsv = function (
   options?: CsvOptions,
 ): void {
   const lib = getSymbols();
+  const collBuf = toCString(collection);
+  const grpBuf = toCString(group);
+  const pathBuf = toCString(filePath);
   const [optsBuf, _keepalive] = buildCsvOptionsBuffer(options);
-  check(lib.quiver_database_export_csv(this._handle, collection, group, filePath, optsBuf));
+  check(lib.quiver_database_export_csv(this._handle, collBuf.buf, grpBuf.buf, pathBuf.buf, optsBuf.ptr));
 };
 
 Database.prototype.importCsv = function (
@@ -101,6 +106,9 @@ Database.prototype.importCsv = function (
   options?: CsvOptions,
 ): void {
   const lib = getSymbols();
+  const collBuf = toCString(collection);
+  const grpBuf = toCString(group);
+  const pathBuf = toCString(filePath);
   const [optsBuf, _keepalive] = buildCsvOptionsBuffer(options);
-  check(lib.quiver_database_import_csv(this._handle, collection, group, filePath, optsBuf));
+  check(lib.quiver_database_import_csv(this._handle, collBuf.buf, grpBuf.buf, pathBuf.buf, optsBuf.ptr));
 };

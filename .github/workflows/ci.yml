@@ -257,3 +257,28 @@ jobs:
       - name: Check formatting
         run: |
           find include src tests -name '*.cpp' -o -name '*.h' | xargs clang-format-21 --dry-run --Werror
+
+  deno-test:
+    name: Deno Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.7.12"
+
+      - name: Build C++ (for shared library)
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DQUIVER_BUILD_TESTS=ON \
+            -DQUIVER_BUILD_C_API=ON
+          cmake --build build
+
+      - name: Run Deno tests
+        working-directory: bindings/js
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/build/lib
+        run: deno task test

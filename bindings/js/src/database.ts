@@ -1,7 +1,7 @@
-import type { NativePointer } from "./loader.js";
-import { check, QuiverError } from "./errors.js";
-import { allocPtrOut, makeDefaultOptions, readPtrOut } from "./ffi-helpers.js";
-import { getSymbols } from "./loader.js";
+import { check, QuiverError } from "./errors.ts";
+import { allocPtrOut, makeDefaultOptions, readPtrOut, toCString } from "./ffi-helpers.ts";
+import type { NativePointer } from "./loader.ts";
+import { getSymbols } from "./loader.ts";
 
 export class Database {
   private _ptr: NativePointer;
@@ -15,8 +15,10 @@ export class Database {
     const lib = getSymbols();
     const options = makeDefaultOptions();
     const outDb = allocPtrOut();
+    const dbPathBuf = toCString(dbPath);
+    const schemaPathBuf = toCString(schemaPath);
 
-    check(lib.quiver_database_from_schema(dbPath, schemaPath, options, outDb));
+    check(lib.quiver_database_from_schema(dbPathBuf.buf, schemaPathBuf.buf, options.buf, outDb.ptr));
 
     return new Database(readPtrOut(outDb));
   }
@@ -25,8 +27,10 @@ export class Database {
     const lib = getSymbols();
     const options = makeDefaultOptions();
     const outDb = allocPtrOut();
+    const dbPathBuf = toCString(dbPath);
+    const migrPathBuf = toCString(migrationsPath);
 
-    check(lib.quiver_database_from_migrations(dbPath, migrationsPath, options, outDb));
+    check(lib.quiver_database_from_migrations(dbPathBuf.buf, migrPathBuf.buf, options.buf, outDb.ptr));
 
     return new Database(readPtrOut(outDb));
   }

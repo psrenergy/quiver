@@ -1,0 +1,28 @@
+{
+  "name": "@psrenergy/quiver",
+  "version": "0.1.0",
+  "license": "MIT",
+  "exports": {
+    ".": "./mod.ts"
+  },
+  "publish": {
+    "include": [
+      "mod.ts",
+      "src/**/*.ts",
+      "libs/**/*",
+      "LICENSE"
+    ]
+  },
+  "tasks": {
+    "test": "deno test --allow-ffi --allow-read --allow-write --allow-env test/",
+    "lint": "biome check",
+    "format": "biome format --write"
+  },
+  "fmt": {
+    "indentWidth": 2,
+    "lineWidth": 100,
+    "semiColons": true,
+    "singleQuote": false
+  },
+  "nodeModulesDir": "none"
+}

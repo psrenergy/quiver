@@ -1,9 +1,9 @@
-import { Database } from "./database.js";
-import { check } from "./errors.js";
-import { allocPtrOut, decodeStringFromBuf } from "./ffi-helpers.js";
-import { getSymbols } from "./loader.js";
+import { Database } from "./database.ts";
+import { check } from "./errors.ts";
+import { allocPtrOut, decodeStringFromBuf, toCString } from "./ffi-helpers.ts";
+import { getSymbols } from "./loader.ts";
 
-declare module "./database.js" {
+declare module "./database.ts" {
   interface Database {
     isHealthy(): boolean;
     currentVersion(): number;
@@ -14,22 +14,24 @@ declare module "./database.js" {
 
 Database.prototype.isHealthy = function (this: Database): boolean {
   const lib = getSymbols();
-  const outHealthy = new Int32Array(1);
-  check(lib.quiver_database_is_healthy(this._handle, outHealthy));
-  return outHealthy[0] !== 0;
+  const outBuf = new Uint8Array(4);
+  const outPtr = Deno.UnsafePointer.of(outBuf)!;
+  check(lib.quiver_database_is_healthy(this._handle, outPtr));
+  return new DataView(outBuf.buffer).getInt32(0, true) !== 0;
 };
 
 Database.prototype.currentVersion = function (this: Database): number {
   const lib = getSymbols();
-  const outVersion = new BigInt64Array(1);
-  check(lib.quiver_database_current_version(this._handle, outVersion));
-  return Number(outVersion[0]);
+  const outBuf = new Uint8Array(8);
+  const outPtr = Deno.UnsafePointer.of(outBuf)!;
+  check(lib.quiver_database_current_version(this._handle, outPtr));
+  return Number(new DataView(outBuf.buffer).getBigInt64(0, true));
 };
 
 Database.prototype.path = function (this: Database): string {
   const lib = getSymbols();
   const outPath = allocPtrOut();
-  check(lib.quiver_database_path(this._handle, outPath));
+  check(lib.quiver_database_path(this._handle, outPath.ptr));
   return decodeStringFromBuf(outPath);
 };
 

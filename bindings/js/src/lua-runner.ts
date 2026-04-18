@@ -1,8 +1,8 @@
-import { Database } from "./database.js";
-import { QuiverError, check } from "./errors.js";
-import { allocPtrOut, decodeStringFromBuf, readPtrOut } from "./ffi-helpers.js";
-import type { NativePointer } from "./loader.js";
-import { getSymbols } from "./loader.js";
+import { Database } from "./database.ts";
+import { QuiverError, check } from "./errors.ts";
+import { allocPtrOut, decodeStringFromBuf, readPtrOut, toCString } from "./ffi-helpers.ts";
+import type { NativePointer } from "./loader.ts";
+import { getSymbols } from "./loader.ts";
 
 export class LuaRunner {
   private _ptr: NativePointer;
@@ -13,17 +13,18 @@ export class LuaRunner {
     this._db = db;
     const lib = getSymbols();
     const outRunner = allocPtrOut();
-    check(lib.quiver_lua_runner_new(db._handle, outRunner));
+    check(lib.quiver_lua_runner_new(db._handle, outRunner.ptr));
     this._ptr = readPtrOut(outRunner);
   }
 
   run(script: string): void {
     this.ensureOpen();
     const lib = getSymbols();
-    const err = lib.quiver_lua_runner_run(this._ptr, script);
+    const scriptBuf = toCString(script);
+    const err = lib.quiver_lua_runner_run(this._ptr, scriptBuf.buf);
     if (err !== 0) {
       const outError = allocPtrOut();
-      const getErr = lib.quiver_lua_runner_get_error(this._ptr, outError);
+      const getErr = lib.quiver_lua_runner_get_error(this._ptr, outError.ptr);
       if (getErr === 0 && readPtrOut(outError)) {
         const msg = decodeStringFromBuf(outError);
         if (msg) throw new QuiverError(msg);
