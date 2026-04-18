@@ -3,7 +3,8 @@
 ## Milestones
 
 - **v1.0 Deno FFI Migration** - Phases 1-7 (shipped)
-- **v1.1 JSR Publishing & CI** - Phases 8-9 (in progress)
+- **v1.1 JSR Publishing & CI** - Phases 8-9 (shipped)
+- **v1.2 Native Library Bundling** - Phase 10 (in progress)
 
 ## Phases
 
@@ -117,14 +118,11 @@ Plans:
 
 </details>
 
-### v1.1 JSR Publishing & CI (In Progress)
+<details>
+<summary>v1.1 JSR Publishing & CI (Phases 8-9) - SHIPPED</summary>
 
-**Milestone Goal:** Publish @psrenergy/quiver to JSR and set up CI pipeline for Deno
-
-- [ ] **Phase 8: JSR Package Configuration** - Configure deno.json for JSR and create mod.ts entry point
-- [ ] **Phase 9: CI Pipeline** - Add Deno test job and JSR publish workflow to GitHub Actions
-
-## Phase Details
+- [x] **Phase 8: JSR Package Configuration** - Configure deno.json for JSR and create mod.ts entry point
+- [x] **Phase 9: CI Pipeline** - Add Deno test job and JSR publish workflow to GitHub Actions
 
 ### Phase 8: JSR Package Configuration
 **Goal**: The JS binding is published as @psrenergy/quiver on jsr.io
@@ -153,10 +151,31 @@ Plans:
 Plans:
 - [x] 09-01-PLAN.md -- Add Deno test job to ci.yml and replace npm publish with JSR publish in publish.yml
 
+</details>
+
+### v1.2 Native Library Bundling (In Progress)
+
+**Milestone Goal:** Bundle pre-built native libraries in the JSR package so consumers get working binaries without building C++
+
+- [ ] **Phase 10: Native Library Build & Bundle** - Build native libraries in CI and bundle them in the JSR package for Linux x64 and Windows x64
+
+## Phase Details
+
+### Phase 10: Native Library Build & Bundle
+**Goal**: Consumers importing @psrenergy/quiver from JSR get pre-built native libraries that load automatically
+**Depends on**: Phase 9 (publish workflow exists)
+**Requirements**: LIB-01, LIB-02, LIB-03, CI-05, CI-06
+**Success Criteria** (what must be TRUE):
+  1. publish.yml builds libquiver and libquiver_c for Linux x64 and Windows x64 before running `npx jsr publish`
+  2. Native library builds use Release mode CMake with QUIVER_BUILD_C_API=ON
+  3. The published JSR package contains native binaries under `libs/linux-x64/` and `libs/windows-x64/`
+  4. The loader's Tier 1 search (`libs/{os}-{arch}/`) resolves the bundled libraries when the package is imported via `jsr:@psrenergy/quiver`
+**Plans**: TBD
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 8 -> 9
+Phase 10
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -167,5 +186,6 @@ Phases execute in numeric order: 8 -> 9
 | 5. Configuration & Packaging | v1.0 | 1/1 | Complete | - |
 | 6. Test Migration & Validation | v1.0 | 2/2 | Complete | - |
 | 7. Documentation | v1.0 | 1/1 | Complete | - |
-| 8. JSR Package Configuration | v1.1 | 0/1 | Not started | - |
-| 9. CI Pipeline | v1.1 | 0/1 | Not started | - |
+| 8. JSR Package Configuration | v1.1 | 1/1 | Complete | - |
+| 9. CI Pipeline | v1.1 | 1/1 | Complete | - |
+| 10. Native Library Build & Bundle | v1.2 | 0/? | Not started | - |

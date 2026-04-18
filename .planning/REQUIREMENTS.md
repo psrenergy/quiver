@@ -54,11 +54,11 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LIB-01 | TBD | Pending |
-| LIB-02 | TBD | Pending |
-| LIB-03 | TBD | Pending |
-| CI-05 | TBD | Pending |
-| CI-06 | TBD | Pending |
+| LIB-01 | Phase 10 | Pending |
+| LIB-02 | Phase 10 | Pending |
+| LIB-03 | Phase 10 | Pending |
+| CI-05 | Phase 10 | Pending |
+| CI-06 | Phase 10 | Pending |
 | JSR-01 | Phase 8 | Complete |
 | JSR-02 | Phase 8 | Complete |
 | JSR-03 | Phase 8 | Complete |
@@ -68,9 +68,9 @@ Deferred to future release. Tracked but not in current roadmap.
 
 **Coverage:**
 - v1.2 requirements: 5 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 5
+- Mapped to phases: 5/5
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-18*
-*Last updated: 2026-04-18 after milestone v1.2 start*
+*Last updated: 2026-04-18 after v1.2 roadmap creation*
