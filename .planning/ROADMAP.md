@@ -117,7 +117,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 07-01-PLAN.md -- Rewrite README.md for Deno usage and create MIGRATION.md documenting koffi-to-Deno.dlopen transition
+- [x] 07-01-PLAN.md -- Rewrite README.md for Deno usage and create MIGRATION.md documenting koffi-to-Deno.dlopen transition
 
 ## Progress
 
