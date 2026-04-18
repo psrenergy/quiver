@@ -101,10 +101,11 @@ Plans:
   1. Test runner uses Deno.test (or deno test CLI) instead of vitest
   2. All existing test scenarios (database lifecycle, CRUD, reads, queries, metadata, time series, CSV, transactions, composites, introspection, Lua runner) pass
   3. Tests run with deno test --allow-ffi --allow-read --allow-write and produce clear pass/fail output
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 06-01: TBD
+- [ ] 06-01-PLAN.md -- Migrate 6 pure-database test files (create, read, update, query, transaction, introspection) from vitest to Deno.test
+- [ ] 06-02-PLAN.md -- Migrate 6 remaining test files (database, csv, metadata, time-series, composites, lua-runner) and validate full suite
 
 ### Phase 7: Documentation
 **Goal**: Users know how to run the Deno binding and understand what changed from the koffi version
@@ -130,5 +131,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 3. Array Decoding & Domain Helpers | 0/1 | Planning complete | - |
 | 4. Struct Marshaling & Indirect Modules | 0/2 | Planning complete | - |
 | 5. Configuration & Packaging | 0/1 | Planning complete | - |
-| 6. Test Migration & Validation | 0/0 | Not started | - |
+| 6. Test Migration & Validation | 0/2 | Planning complete | - |
 | 7. Documentation | 0/0 | Not started | - |
