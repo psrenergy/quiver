@@ -1,9 +1,7 @@
-import { describe, expect, test } from "vitest";
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-const __dirname = dirname(fileURLToPath(import.meta.url));
-import { join } from "node:path";
-import { Database } from "../src/index";
+import { assert, assertEquals } from "jsr:@std/assert";
+import { join } from "jsr:@std/path";
+const __dirname = import.meta.dirname!;
+import { Database } from "../src/index.ts";
 
 const SCHEMA_PATH = join(
   __dirname,
@@ -16,40 +14,40 @@ const SCHEMA_PATH = join(
   "all_types.sql",
 );
 
-describe("introspection", () => {
-  test("isHealthy returns true for valid database", () => {
+Deno.test({ name: "introspection", sanitizeResources: false }, async (t) => {
+  await t.step("isHealthy returns true for valid database", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
-      expect(db.isHealthy()).toBe(true);
+      assertEquals(db.isHealthy(), true);
     } finally {
       db.close();
     }
   });
 
-  test("currentVersion returns a number >= 0", () => {
+  await t.step("currentVersion returns a number >= 0", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const version = db.currentVersion();
-      expect(typeof version).toBe("number");
-      expect(version).toBeGreaterThanOrEqual(0);
+      assertEquals(typeof version, "number");
+      assert(version >= 0);
     } finally {
       db.close();
     }
   });
 
-  test("path returns ':memory:' for in-memory databases", () => {
+  await t.step("path returns ':memory:' for in-memory databases", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
-      expect(db.path()).toBe(":memory:");
+      assertEquals(db.path(), ":memory:");
     } finally {
       db.close();
     }
   });
 
-  test("describe runs without error", () => {
+  await t.step("describe runs without error", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
-      expect(() => db.describe()).not.toThrow();
+      db.describe();
     } finally {
       db.close();
     }
