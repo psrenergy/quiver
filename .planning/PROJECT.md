@@ -2,7 +2,7 @@
 
 ## What This Is
 
-Quiver is a SQLite wrapper library with a C++ core, C API for FFI, and language bindings (Julia, Dart, Python, JS, JS-WASM, Lua). It provides structured access to SQLite databases with typed scalars, vectors, sets, time series, metadata, queries, CSV import/export, and transactions.
+Quiver is a SQLite wrapper library with a C++ core, C API for FFI, and language bindings (Julia, Dart, Python, JS, Lua). It provides structured access to SQLite databases with typed scalars, vectors, sets, time series, metadata, queries, CSV import/export, and transactions.
 
 ## Core Value
 
