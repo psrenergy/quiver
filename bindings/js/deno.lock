@@ -14,16 +14,5 @@
         "jsr:@std/internal"
       ]
     }
-  },
-  "workspace": {
-    "packageJson": {
-      "dependencies": [
-        "npm:@biomejs/biome@^2.4.6",
-        "npm:@types/node@22",
-        "npm:koffi@^2.9.0",
-        "npm:typescript@^5.9.3",
-        "npm:vitest@^3.2.1"
-      ]
-    }
   }
 }
