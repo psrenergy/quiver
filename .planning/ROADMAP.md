@@ -135,10 +135,10 @@ Plans:
   2. mod.ts exists and re-exports the public API from src/index.ts
   3. `npx jsr publish --dry-run` succeeds locally (package structure is valid for JSR)
   4. Package is accessible on jsr.io/@psrenergy/quiver
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 08-01: TBD
+- [ ] 08-01-PLAN.md -- Update deno.json with JSR metadata, create mod.ts entry point, validate with dry-run publish
 
 ### Phase 9: CI Pipeline
 **Goal**: CI tests and publishes the Deno binding automatically
@@ -168,5 +168,5 @@ Phases execute in numeric order: 8 -> 9
 | 5. Configuration & Packaging | v1.0 | 1/1 | Complete | - |
 | 6. Test Migration & Validation | v1.0 | 2/2 | Complete | - |
 | 7. Documentation | v1.0 | 1/1 | Complete | - |
-| 8. JSR Package Configuration | v1.1 | 0/? | Not started | - |
+| 8. JSR Package Configuration | v1.1 | 0/1 | Not started | - |
 | 9. CI Pipeline | v1.1 | 0/? | Not started | - |
