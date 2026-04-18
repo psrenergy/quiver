@@ -9,6 +9,8 @@ REM   - C++ unit tests
 REM   - C API tests
 REM   - Julia binding tests
 REM   - Dart binding tests
+REM   - JavaScript binding tests
+REM   - Python binding tests
 REM ============================================================
 
 SET ROOT_DIR=%~dp0..
@@ -44,7 +46,7 @@ echo.
 REM ============================================================
 REM Step 1: Build C++ Library and C API
 REM ============================================================
-echo [1/6] Building C++ library and C API...
+echo [1/7] Building C++ library and C API...
 echo.
 
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DQUIVER_BUILD_TESTS=ON -DQUIVER_BUILD_C_API=ON
@@ -62,13 +64,13 @@ if errorlevel 1 (
 )
 
 echo.
-echo [1/6] Build completed successfully
+echo [1/7] Build completed successfully
 echo.
 
 REM ============================================================
 REM Step 2: Run C++ Tests
 REM ============================================================
-echo [2/6] Running C++ tests...
+echo [2/7] Running C++ tests...
 echo.
 
 "%ROOT_DIR%\build\bin\quiver_tests.exe"
@@ -79,13 +81,13 @@ if errorlevel 1 (
 )
 
 echo.
-echo [2/6] C++ tests passed
+echo [2/7] C++ tests passed
 echo.
 
 REM ============================================================
 REM Step 3: Run C API Tests
 REM ============================================================
-echo [3/6] Running C API tests...
+echo [3/7] Running C API tests...
 echo.
 
 "%ROOT_DIR%\build\bin\quiver_c_tests.exe"
@@ -96,13 +98,13 @@ if errorlevel 1 (
 )
 
 echo.
-echo [3/6] C API tests passed
+echo [3/7] C API tests passed
 echo.
 
 REM ============================================================
 REM Step 4: Run Julia Tests
 REM ============================================================
-echo [4/6] Running Julia tests...
+echo [4/7] Running Julia tests...
 echo.
 
 call "%ROOT_DIR%\bindings\julia\test\test.bat"
@@ -115,13 +117,13 @@ if %JULIA_EXIT% neq 0 (
 )
 
 echo.
-echo [4/6] Julia tests passed
+echo [4/7] Julia tests passed
 echo.
 
 REM ============================================================
 REM Step 5: Run Dart Tests
 REM ============================================================
-echo [5/6] Running Dart tests...
+echo [5/7] Running Dart tests...
 echo.
 
 call "%ROOT_DIR%\bindings\dart\test\test.bat"
@@ -134,14 +136,32 @@ if %DART_EXIT% neq 0 (
 )
 
 echo.
-echo [5/6] Dart tests passed
+echo [5/7] Dart tests passed
 echo.
 
+REM ============================================================
+REM Step 6: Run JavaScript Tests
+REM ============================================================
+echo [6/7] Running JavaScript tests...
+echo.
+
+call "%ROOT_DIR%\bindings\js\test\test.bat"
+set JS_EXIT=%errorlevel%
+
+if %JS_EXIT% neq 0 (
+    echo.
+    echo ERROR: JavaScript tests failed
+    exit /b 1
+)
+
+echo.
+echo [6/7] JavaScript tests passed
+echo.
 
 REM ============================================================
-REM Step 6: Run Python Tests
+REM Step 7: Run Python Tests
 REM ============================================================
-echo [6/6] Running Python tests...
+echo [7/7] Running Python tests...
 echo.
 
 call "%ROOT_DIR%\bindings\python\tests\test.bat"
@@ -154,7 +174,7 @@ if %PYTHON_EXIT% neq 0 (
 )
 
 echo.
-echo [6/6] Python tests passed
+echo [7/7] Python tests passed
 echo.
 
 REM ============================================================
@@ -164,13 +184,14 @@ echo ============================================================
 echo  All builds and tests completed successfully!
 echo ============================================================
 echo.
-echo   C++ library:  OK
-echo   C API:        OK
-echo   C++ tests:    OK
-echo   C API tests:  OK
-echo   Julia tests:  OK
-echo   Dart tests:   OK
-echo   Python tests: OK
+echo   C++ library:      OK
+echo   C API:            OK
+echo   C++ tests:        OK
+echo   C API tests:      OK
+echo   Julia tests:      OK
+echo   Dart tests:       OK
+echo   JavaScript tests: OK
+echo   Python tests:     OK
 echo.
 
 exit /b 0
