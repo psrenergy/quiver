@@ -74,10 +74,11 @@ Plans:
   2. GroupMetadata struct fields (groupName, dimensionColumn, valueColumns pointer, valueColumnCount) are read correctly including nested ScalarMetadata arrays
   3. database.ts, create.ts, read.ts, transaction.ts, introspection.ts, composites.ts, lua-runner.ts, errors.ts, types.ts, and index.ts have no Buffer references and use Deno-compatible types throughout
   4. No koffi import remains anywhere in bindings/js/src/
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 04-01: TBD
+- [ ] 04-01-PLAN.md -- Rewrite metadata.ts struct readers from koffi to UnsafePointerView at verified byte offsets
+- [ ] 04-02-PLAN.md -- Fix Deno FFI compatibility in indirect modules and .js to .ts import extensions across all files
 
 ### Phase 5: Configuration & Packaging
 **Goal**: The binding is packaged as a Deno module with no Node.js tooling remnants
@@ -127,7 +128,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 1. FFI Foundation & Library Loading | 0/1 | Planning complete | - |
 | 2. Pointer & String Marshaling | 0/1 | Planning complete | - |
 | 3. Array Decoding & Domain Helpers | 0/1 | Planning complete | - |
-| 4. Struct Marshaling & Indirect Modules | 0/0 | Not started | - |
+| 4. Struct Marshaling & Indirect Modules | 0/2 | Planning complete | - |
 | 5. Configuration & Packaging | 0/0 | Not started | - |
 | 6. Test Migration & Validation | 0/0 | Not started | - |
 | 7. Documentation | 0/0 | Not started | - |
