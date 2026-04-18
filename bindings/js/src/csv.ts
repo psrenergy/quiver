@@ -9,13 +9,6 @@ export interface CsvOptions {
   enumLabels?: Record<string, Record<string, Record<string, number>>>;
 }
 
-declare module "./database.ts" {
-  interface Database {
-    exportCsv(collection: string, group: string, filePath: string, options?: CsvOptions): void;
-    importCsv(collection: string, group: string, filePath: string, options?: CsvOptions): void;
-  }
-}
-
 /**
  * Build the 56-byte quiver_csv_options_t struct as an Allocation.
  * Returns [structAllocation, keepalive] where keepalive prevents GC of native allocations.

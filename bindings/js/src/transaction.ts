@@ -2,15 +2,6 @@ import { Database } from "./database.ts";
 import { check } from "./errors.ts";
 import { getSymbols } from "./loader.ts";
 
-declare module "./database.ts" {
-  interface Database {
-    beginTransaction(): void;
-    commit(): void;
-    rollback(): void;
-    inTransaction(): boolean;
-  }
-}
-
 Database.prototype.beginTransaction = function (this: Database): void {
   const lib = getSymbols();
   check(lib.quiver_database_begin_transaction(this._handle));

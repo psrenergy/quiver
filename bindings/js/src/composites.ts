@@ -1,13 +1,5 @@
 import { Database } from "./database.ts";
 
-declare module "./database.ts" {
-  interface Database {
-    readScalarsById(collection: string, id: number): Record<string, number | string | null>;
-    readVectorsById(collection: string, id: number): Record<string, number[] | string[]>;
-    readSetsById(collection: string, id: number): Record<string, number[] | string[]>;
-  }
-}
-
 Database.prototype.readScalarsById = function (
   this: Database,
   collection: string,

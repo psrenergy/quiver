@@ -22,17 +22,6 @@ import type { Allocation } from "./types.ts";
 
 export type TimeSeriesData = Record<string, (number | string)[]>;
 
-declare module "./database.ts" {
-  interface Database {
-    readTimeSeriesGroup(collection: string, group: string, id: number): TimeSeriesData;
-    updateTimeSeriesGroup(collection: string, group: string, id: number, data: TimeSeriesData): void;
-    hasTimeSeriesFiles(collection: string): boolean;
-    listTimeSeriesFilesColumns(collection: string): string[];
-    readTimeSeriesFiles(collection: string): Record<string, string | null>;
-    updateTimeSeriesFiles(collection: string, data: Record<string, string | null>): void;
-  }
-}
-
 const DATA_TYPE_INTEGER = 0;
 const DATA_TYPE_FLOAT = 1;
 const DATA_TYPE_STRING = 2;

@@ -15,30 +15,6 @@ import {
 } from "./ffi-helpers.ts";
 import { getSymbols } from "./loader.ts";
 
-declare module "./database.ts" {
-  interface Database {
-    readScalarIntegers(collection: string, attribute: string): number[];
-    readScalarFloats(collection: string, attribute: string): number[];
-    readScalarStrings(collection: string, attribute: string): string[];
-    readScalarIntegerById(collection: string, attribute: string, id: number): number | null;
-    readScalarFloatById(collection: string, attribute: string, id: number): number | null;
-    readScalarStringById(collection: string, attribute: string, id: number): string | null;
-    readElementIds(collection: string): number[];
-    readVectorIntegers(collection: string, attribute: string): number[][];
-    readVectorFloats(collection: string, attribute: string): number[][];
-    readVectorStrings(collection: string, attribute: string): string[][];
-    readVectorIntegersById(collection: string, attribute: string, id: number): number[];
-    readVectorFloatsById(collection: string, attribute: string, id: number): number[];
-    readVectorStringsById(collection: string, attribute: string, id: number): string[];
-    readSetIntegers(collection: string, attribute: string): number[][];
-    readSetFloats(collection: string, attribute: string): number[][];
-    readSetStrings(collection: string, attribute: string): string[][];
-    readSetIntegersById(collection: string, attribute: string, id: number): number[];
-    readSetFloatsById(collection: string, attribute: string, id: number): number[];
-    readSetStringsById(collection: string, attribute: string, id: number): string[];
-  }
-}
-
 // --- Scalar array reads ---
 
 Database.prototype.readScalarIntegers = function (this: Database, collection: string, attribute: string): number[] {

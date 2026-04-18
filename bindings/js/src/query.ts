@@ -4,14 +4,6 @@ import { allocNativeFloat64, allocNativeInt64, allocNativeString, allocPtrOut, d
 import { getSymbols } from "./loader.ts";
 import type { Allocation, QueryParam } from "./types.ts";
 
-declare module "./database.ts" {
-  interface Database {
-    queryString(sql: string, params?: QueryParam[]): string | null;
-    queryInteger(sql: string, params?: QueryParam[]): number | null;
-    queryFloat(sql: string, params?: QueryParam[]): number | null;
-  }
-}
-
 const DATA_TYPE_INTEGER = 0;
 const DATA_TYPE_FLOAT = 1;
 const DATA_TYPE_STRING = 2;

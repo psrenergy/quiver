@@ -64,19 +64,6 @@ function readGroupMetadataAt(view: Deno.UnsafePointerView, byteOffset: number): 
   };
 }
 
-declare module "./database.ts" {
-  interface Database {
-    getScalarMetadata(collection: string, attribute: string): ScalarMetadata;
-    getVectorMetadata(collection: string, groupName: string): GroupMetadata;
-    getSetMetadata(collection: string, groupName: string): GroupMetadata;
-    getTimeSeriesMetadata(collection: string, groupName: string): GroupMetadata;
-    listScalarAttributes(collection: string): ScalarMetadata[];
-    listVectorGroups(collection: string): GroupMetadata[];
-    listSetGroups(collection: string): GroupMetadata[];
-    listTimeSeriesGroups(collection: string): GroupMetadata[];
-  }
-}
-
 Database.prototype.getScalarMetadata = function (this: Database, collection: string, attribute: string): ScalarMetadata {
   const lib = getSymbols();
   const collBuf = toCString(collection);
