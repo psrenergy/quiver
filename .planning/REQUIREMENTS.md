@@ -38,18 +38,18 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| JSR-01 | - | Pending |
-| JSR-02 | - | Pending |
-| JSR-03 | - | Pending |
-| CI-01 | - | Pending |
-| CI-02 | - | Pending |
-| CI-03 | - | Pending |
+| JSR-01 | Phase 8 | Pending |
+| JSR-02 | Phase 8 | Pending |
+| JSR-03 | Phase 8 | Pending |
+| CI-01 | Phase 9 | Pending |
+| CI-02 | Phase 9 | Pending |
+| CI-03 | Phase 9 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 6 total
-- Mapped to phases: 0
-- Unmapped: 6
+- Mapped to phases: 6
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-18*
-*Last updated: 2026-04-18 after initial definition*
+*Last updated: 2026-04-18 after roadmap creation*

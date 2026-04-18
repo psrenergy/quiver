@@ -1,26 +1,22 @@
-# Roadmap: Quiver Deno FFI Migration
+# Roadmap: Quiver JS Binding
 
-## Overview
+## Milestones
 
-Migrate the JS binding from koffi (Node.js FFI) to Deno.dlopen while preserving the public API surface. The migration proceeds bottom-up: replace the library loader and symbol definitions first, then rewrite data marshaling helpers, convert domain modules that use koffi directly, update indirect modules, reconfigure packaging for Deno, validate with tests, and document the transition.
+- **v1.0 Deno FFI Migration** - Phases 1-7 (shipped)
+- **v1.1 JSR Publishing & CI** - Phases 8-9 (in progress)
 
 ## Phases
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+<details>
+<summary>v1.0 Deno FFI Migration (Phases 1-7) - SHIPPED</summary>
 
-Decimal phases appear between their surrounding integers in numeric order.
-
-- [ ] **Phase 1: FFI Foundation & Library Loading** - Replace koffi.load with Deno.dlopen and define all C API symbols using Deno FFI type descriptors
-- [ ] **Phase 2: Pointer & String Marshaling** - Rewrite pointer out-parameters, string encoding, and native memory allocation for Deno FFI
-- [ ] **Phase 3: Array Decoding & Domain Helpers** - Rewrite array decoders and convert domain modules with direct koffi usage (query, csv, time-series)
-- [ ] **Phase 4: Struct Marshaling & Indirect Modules** - Rewrite struct field reading for metadata and update all indirect domain modules
-- [ ] **Phase 5: Configuration & Packaging** - Migrate package config to deno.json and update TypeScript configuration
-- [ ] **Phase 6: Test Migration & Validation** - Migrate test runner to Deno.test and validate all existing scenarios pass
-- [ ] **Phase 7: Documentation** - Update README with Deno instructions and create MIGRATION.md
-
-## Phase Details
+- [x] **Phase 1: FFI Foundation & Library Loading** - Replace koffi.load with Deno.dlopen and define all C API symbols using Deno FFI type descriptors
+- [x] **Phase 2: Pointer & String Marshaling** - Rewrite pointer out-parameters, string encoding, and native memory allocation for Deno FFI
+- [x] **Phase 3: Array Decoding & Domain Helpers** - Rewrite array decoders and convert domain modules with direct koffi usage (query, csv, time-series)
+- [x] **Phase 4: Struct Marshaling & Indirect Modules** - Rewrite struct field reading for metadata and update all indirect domain modules
+- [x] **Phase 5: Configuration & Packaging** - Migrate package config to deno.json and update TypeScript configuration
+- [x] **Phase 6: Test Migration & Validation** - Migrate test runner to Deno.test and validate all existing scenarios pass
+- [x] **Phase 7: Documentation** - Update README with Deno instructions and create MIGRATION.md
 
 ### Phase 1: FFI Foundation & Library Loading
 **Goal**: The native library loads via Deno.dlopen with all C API symbols available and no Node.js-specific imports
@@ -119,17 +115,58 @@ Plans:
 Plans:
 - [x] 07-01-PLAN.md -- Rewrite README.md for Deno usage and create MIGRATION.md documenting koffi-to-Deno.dlopen transition
 
+</details>
+
+### v1.1 JSR Publishing & CI (In Progress)
+
+**Milestone Goal:** Publish @psrenergy/quiver to JSR and set up CI pipeline for Deno
+
+- [ ] **Phase 8: JSR Package Configuration** - Configure deno.json for JSR and create mod.ts entry point
+- [ ] **Phase 9: CI Pipeline** - Add Deno test job and JSR publish workflow to GitHub Actions
+
+## Phase Details
+
+### Phase 8: JSR Package Configuration
+**Goal**: The JS binding is published as @psrenergy/quiver on jsr.io
+**Depends on**: Nothing (builds on completed v1.0)
+**Requirements**: JSR-01, JSR-02, JSR-03
+**Success Criteria** (what must be TRUE):
+  1. deno.json contains name: @psrenergy/quiver, version: 0.1.0, exports: ./mod.ts
+  2. mod.ts exists and re-exports the public API from src/index.ts
+  3. `npx jsr publish --dry-run` succeeds locally (package structure is valid for JSR)
+  4. Package is accessible on jsr.io/@psrenergy/quiver
+**Plans**: TBD
+
+Plans:
+- [ ] 08-01: TBD
+
+### Phase 9: CI Pipeline
+**Goal**: CI tests and publishes the Deno binding automatically
+**Depends on**: Phase 8
+**Requirements**: CI-01, CI-02, CI-03
+**Success Criteria** (what must be TRUE):
+  1. Push/PR to the repo triggers a Deno test job that runs JS binding tests
+  2. publish.yml uses npx jsr publish with OIDC authentication (no manual tokens)
+  3. No package.json, npm install, npm build, or npm publish references remain in CI workflow files
+  4. The ci.yml Deno test job passes in GitHub Actions
+**Plans**: TBD
+
+Plans:
+- [ ] 09-01: TBD
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
+Phases execute in numeric order: 8 -> 9
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. FFI Foundation & Library Loading | 0/1 | Planning complete | - |
-| 2. Pointer & String Marshaling | 0/1 | Planning complete | - |
-| 3. Array Decoding & Domain Helpers | 0/1 | Planning complete | - |
-| 4. Struct Marshaling & Indirect Modules | 0/2 | Planning complete | - |
-| 5. Configuration & Packaging | 0/1 | Planning complete | - |
-| 6. Test Migration & Validation | 0/2 | Planning complete | - |
-| 7. Documentation | 0/1 | Planning complete | - |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. FFI Foundation & Library Loading | v1.0 | 1/1 | Complete | - |
+| 2. Pointer & String Marshaling | v1.0 | 1/1 | Complete | - |
+| 3. Array Decoding & Domain Helpers | v1.0 | 1/1 | Complete | - |
+| 4. Struct Marshaling & Indirect Modules | v1.0 | 2/2 | Complete | - |
+| 5. Configuration & Packaging | v1.0 | 1/1 | Complete | - |
+| 6. Test Migration & Validation | v1.0 | 2/2 | Complete | - |
+| 7. Documentation | v1.0 | 1/1 | Complete | - |
+| 8. JSR Package Configuration | v1.1 | 0/? | Not started | - |
+| 9. CI Pipeline | v1.1 | 0/? | Not started | - |
