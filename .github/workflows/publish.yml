@@ -2,12 +2,6 @@ name: Publish
 
 on:
   workflow_dispatch:
-    inputs:
-      dry_run:
-        description: "Build and validate only; skip publish, tag, and bump."
-        required: false
-        type: boolean
-        default: false
 
 concurrency:
   group: publish-${{ github.ref }}
@@ -175,7 +169,6 @@ jobs:
     name: Publish to PyPI
     runs-on: ubuntu-latest
     needs: validate-release
-    if: ${{ !inputs.dry_run }}
     environment: pypi
     permissions:
       id-token: write
@@ -191,7 +184,6 @@ jobs:
     name: Publish to JSR
     runs-on: ubuntu-latest
     needs: [validate-release, build-native]
-    if: ${{ !inputs.dry_run }}
     environment: jsr
     permissions:
       contents: read
@@ -279,7 +271,6 @@ jobs:
     name: Tag and GitHub Release
     runs-on: ubuntu-latest
     needs: [detect-version, publish-pypi, publish-jsr]
-    if: ${{ !inputs.dry_run }}
     permissions:
       contents: write
     steps:
@@ -311,7 +302,6 @@ jobs:
     name: Open version bump PR
     runs-on: ubuntu-latest
     needs: [detect-version, tag-and-release]
-    if: ${{ !inputs.dry_run }}
     permissions:
       contents: write
       pull-requests: write
