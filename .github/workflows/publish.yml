@@ -164,6 +164,7 @@ jobs:
 
       - uses: denoland/setup-deno@v2
         with:
+          cache: true
           deno-version: v2.7.12
 
       - name: Download Linux x86_64 native libraries
