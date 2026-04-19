@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [master]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build (${{ matrix.os }}, ${{ matrix.build_type }})
@@ -20,32 +24,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Configure CMake (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          cmake -B build `
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} `
-            -DQUIVER_BUILD_TESTS=ON `
-            -DQUIVER_BUILD_C_API=ON
-
-      - name: Configure CMake (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DQUIVER_BUILD_TESTS=ON \
-            -DQUIVER_BUILD_C_API=ON
-
-      - name: Configure CMake (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DQUIVER_BUILD_TESTS=ON \
-            -DQUIVER_BUILD_C_API=ON
-
-      - name: Build
-        run: cmake --build build --config ${{ matrix.build_type }}
+      - uses: ./.github/actions/build-cpp
+        with:
+          build_type: ${{ matrix.build_type }}
 
       - name: Test
         working-directory: build
@@ -55,6 +36,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: quiver-${{ matrix.os }}-${{ matrix.build_type }}
+          retention-days: 7
           path: |
             build/lib/*
             build/bin/*
@@ -69,17 +51,9 @@ jobs:
       - name: Install lcov
         run: sudo apt-get update && sudo apt-get install -y lcov
 
-      - name: Configure CMake with coverage
-        run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_CXX_FLAGS="--coverage" \
-            -DCMAKE_C_FLAGS="--coverage" \
-            -DQUIVER_BUILD_TESTS=ON \
-            -DQUIVER_BUILD_C_API=ON
-
-      - name: Build
-        run: cmake --build build
+      - uses: ./.github/actions/build-cpp
+        with:
+          coverage: "true"
 
       - name: Test
         working-directory: build
@@ -115,13 +89,7 @@ jobs:
         with:
           version: ${{ matrix.version }}
 
-      - name: Build C++ (for shared library)
-        run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=Debug \
-            -DQUIVER_BUILD_TESTS=ON \
-            -DQUIVER_BUILD_C_API=ON
-          cmake --build build
+      - uses: ./.github/actions/build-cpp
 
       - uses: julia-actions/julia-buildpkg@v1
         with:
@@ -143,7 +111,7 @@ jobs:
         with:
           files: lcov.info
           flags: julia
-          fail_ci_if_error: false
+          fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
   dart-coverage:
@@ -160,13 +128,7 @@ jobs:
       - name: Install lcov
         run: sudo apt-get update && sudo apt-get install -y lcov
 
-      - name: Build C++ (for shared library)
-        run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=Debug \
-            -DQUIVER_BUILD_TESTS=ON \
-            -DQUIVER_BUILD_C_API=ON
-          cmake --build build
+      - uses: ./.github/actions/build-cpp
 
       - name: Install Dart dependencies
         working-directory: bindings/dart
@@ -177,10 +139,6 @@ jobs:
           cp build/lib/libquiver.so bindings/dart/
           cp build/lib/libquiver_c.so bindings/dart/
 
-      - name: Run tests (verbose)
-        working-directory: bindings/dart
-        run: dart test --reporter expanded
-
       - name: Run tests with coverage
         working-directory: bindings/dart
         run: |
@@ -190,55 +148,49 @@ jobs:
       - name: Filter coverage (exclude generated FFI bindings)
         working-directory: bindings/dart
         run: |
-          lcov --remove coverage/lcov.info 'lib/src/ffi/bindings.dart' -o coverage/lcov.info || true
-          lcov --list coverage/lcov.info || true
+          lcov --remove coverage/lcov.info 'lib/src/ffi/bindings.dart' -o coverage/lcov.info
+          lcov --list coverage/lcov.info
 
       - name: Upload to Codecov
         uses: codecov/codecov-action@v6
         with:
           files: bindings/dart/coverage/lcov.info
           flags: dart
-          fail_ci_if_error: false
+          fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
   python-coverage:
-      name: Python Coverage
-      runs-on: ubuntu-latest
+    name: Python Coverage
+    runs-on: ubuntu-latest
 
-      steps:
-        - uses: actions/checkout@v6
+    steps:
+      - uses: actions/checkout@v6
 
-        - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v7
 
-        - name: Build C++ (for shared library)
-          run: |
-            cmake -B build \
-              -DCMAKE_BUILD_TYPE=Debug \
-              -DQUIVER_BUILD_TESTS=ON \
-              -DQUIVER_BUILD_C_API=ON
-            cmake --build build
+      - uses: ./.github/actions/build-cpp
 
-        - name: Install dependencies
-          working-directory: bindings/python
-          run: |
-            uv venv
-            uv pip install pytest pytest-cov
-            uv pip install -e .
+      - name: Install dependencies
+        working-directory: bindings/python
+        run: |
+          uv venv
+          uv pip install pytest pytest-cov
+          uv pip install -e .
 
-        - name: Run tests with coverage
-          working-directory: bindings/python
-          env:
-            LD_LIBRARY_PATH: ${{ github.workspace }}/build/lib
-          run: |
-            uv run pytest --cov=quiverdb --cov-report=xml
+      - name: Run tests with coverage
+        working-directory: bindings/python
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/build/lib
+        run: |
+          uv run pytest --cov=quiverdb --cov-report=xml
 
-        - name: Upload to Codecov
-          uses: codecov/codecov-action@v6
-          with:
-            files: bindings/python/coverage.xml
-            flags: python
-            fail_ci_if_error: false
-            token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v6
+        with:
+          files: bindings/python/coverage.xml
+          flags: python
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   clang-format:
     name: Code Formatting
@@ -270,13 +222,7 @@ jobs:
           cache: true
           deno-version: v2.7.12
 
-      - name: Build C++ (for shared library)
-        run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=Debug \
-            -DQUIVER_BUILD_TESTS=ON \
-            -DQUIVER_BUILD_C_API=ON
-          cmake --build build
+      - uses: ./.github/actions/build-cpp
 
       - name: Run Deno tests
         working-directory: bindings/js

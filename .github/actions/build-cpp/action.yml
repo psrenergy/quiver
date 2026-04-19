@@ -1,0 +1,52 @@
+name: Build C++
+description: Configure and build the quiver C++ core and C API libraries.
+
+inputs:
+  build_type:
+    description: CMake build type (Debug or Release).
+    default: Debug
+  build_tests:
+    description: Build C++ tests (ON or OFF).
+    default: "ON"
+  coverage:
+    description: Enable --coverage instrumentation (true or false).
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Cache CMake FetchContent sources
+      uses: actions/cache@v4
+      with:
+        path: build/_deps
+        key: cmake-deps-${{ runner.os }}-${{ hashFiles('cmake/Dependencies.cmake', 'CMakeLists.txt') }}
+        restore-keys: |
+          cmake-deps-${{ runner.os }}-
+
+    - name: Setup sccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        variant: sccache
+        key: sccache-${{ runner.os }}-${{ inputs.build_type }}-${{ inputs.coverage }}
+        restore-keys: |
+          sccache-${{ runner.os }}-${{ inputs.build_type }}-
+          sccache-${{ runner.os }}-
+
+    - name: Configure CMake
+      shell: bash
+      run: |
+        coverage_flags=""
+        if [ "${{ inputs.coverage }}" = "true" ]; then
+          coverage_flags='-DCMAKE_CXX_FLAGS=--coverage -DCMAKE_C_FLAGS=--coverage'
+        fi
+        cmake -B build \
+          -DCMAKE_BUILD_TYPE=${{ inputs.build_type }} \
+          -DQUIVER_BUILD_TESTS=${{ inputs.build_tests }} \
+          -DQUIVER_BUILD_C_API=ON \
+          -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
+          $coverage_flags
+
+    - name: Build
+      shell: bash
+      run: cmake --build build --config ${{ inputs.build_type }}
