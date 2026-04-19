@@ -13,8 +13,7 @@ include_dir = joinpath(database_dir, "include", "quiver", "c")
 Libdl.dlopen(joinpath(database_dir, "build", "bin", "libquiver_c.dll"))
 
 headers = [
-    joinpath(include_dir, header) for
-    header in readdir(include_dir) if endswith(header, ".h") && header != "platform.h"
+    joinpath(include_dir, header) for header in readdir(include_dir) if endswith(header, ".h")
 ]
 args = get_default_args()
 options = load_options(joinpath(@__DIR__, "generator.toml"))
