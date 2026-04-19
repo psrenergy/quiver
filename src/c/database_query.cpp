@@ -21,7 +21,8 @@ convert_params(const int* param_types, const void* const* param_values, size_t p
             break;
         case QUIVER_DATA_TYPE_STRING:
             if (!param_values[i]) {
-                throw std::runtime_error("Null string pointer in parameter at index " + std::to_string(i));
+                throw std::runtime_error("Cannot query: parameter at index " + std::to_string(i) +
+                                         " has null string value");
             }
             params.emplace_back(std::string(static_cast<const char*>(param_values[i])));
             break;
@@ -29,7 +30,7 @@ convert_params(const int* param_types, const void* const* param_values, size_t p
             params.emplace_back(nullptr);
             break;
         default:
-            throw std::runtime_error("Unknown parameter type: " + std::to_string(param_types[i]));
+            throw std::runtime_error("Cannot query: unknown parameter type " + std::to_string(param_types[i]));
         }
     }
     return params;
@@ -114,9 +115,8 @@ QUIVER_C_API quiver_error_t quiver_database_query_string_params(quiver_database_
                                                                 int* out_has_value) {
     QUIVER_REQUIRE(db, sql, out_value, out_has_value);
 
-    if (param_count > 0 && (!param_types || !param_values)) {
-        quiver_set_last_error("Null param_types or param_values with non-zero param_count");
-        return QUIVER_ERROR;
+    if (param_count > 0) {
+        QUIVER_REQUIRE(param_types, param_values);
     }
     try {
         auto params = convert_params(param_types, param_values, param_count);
@@ -144,9 +144,8 @@ QUIVER_C_API quiver_error_t quiver_database_query_integer_params(quiver_database
                                                                  int* out_has_value) {
     QUIVER_REQUIRE(db, sql, out_value, out_has_value);
 
-    if (param_count > 0 && (!param_types || !param_values)) {
-        quiver_set_last_error("Null param_types or param_values with non-zero param_count");
-        return QUIVER_ERROR;
+    if (param_count > 0) {
+        QUIVER_REQUIRE(param_types, param_values);
     }
 
     try {
@@ -174,9 +173,8 @@ QUIVER_C_API quiver_error_t quiver_database_query_float_params(quiver_database_t
                                                                int* out_has_value) {
     QUIVER_REQUIRE(db, sql, out_value, out_has_value);
 
-    if (param_count > 0 && (!param_types || !param_values)) {
-        quiver_set_last_error("Null param_types or param_values with non-zero param_count");
-        return QUIVER_ERROR;
+    if (param_count > 0) {
+        QUIVER_REQUIRE(param_types, param_values);
     }
     try {
         auto params = convert_params(param_types, param_values, param_count);
