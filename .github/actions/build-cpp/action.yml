@@ -1,0 +1,33 @@
+name: Build C++
+description: Configure and build the quiver C++ core and C API libraries.
+
+inputs:
+  build_type:
+    description: CMake build type (Debug or Release).
+    default: Debug
+  build_tests:
+    description: Build C++ tests (ON or OFF).
+    default: "ON"
+  coverage:
+    description: Enable --coverage instrumentation (true or false).
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Configure CMake
+      shell: bash
+      run: |
+        coverage_flags=""
+        if [ "${{ inputs.coverage }}" = "true" ]; then
+          coverage_flags='-DCMAKE_CXX_FLAGS=--coverage -DCMAKE_C_FLAGS=--coverage'
+        fi
+        cmake -B build \
+          -DCMAKE_BUILD_TYPE=${{ inputs.build_type }} \
+          -DQUIVER_BUILD_TESTS=${{ inputs.build_tests }} \
+          -DQUIVER_BUILD_C_API=ON \
+          $coverage_flags
+
+    - name: Build
+      shell: bash
+      run: cmake --build build --config ${{ inputs.build_type }}

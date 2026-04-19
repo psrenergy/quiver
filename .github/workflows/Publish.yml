@@ -118,24 +118,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Configure CMake (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DQUIVER_BUILD_C_API=ON \
-            -DQUIVER_BUILD_TESTS=OFF
-
-      - name: Configure CMake (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          cmake -B build `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DQUIVER_BUILD_C_API=ON `
-            -DQUIVER_BUILD_TESTS=OFF
-
-      - name: Build
-        run: cmake --build build --config Release
+      - uses: ./.github/actions/build-cpp
+        with:
+          build_type: Release
+          build_tests: "OFF"
 
       - name: Set RPATH for Linux
         if: runner.os == 'Linux'

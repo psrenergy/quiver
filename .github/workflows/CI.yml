@@ -24,32 +24,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Configure CMake (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          cmake -B build `
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} `
-            -DQUIVER_BUILD_TESTS=ON `
-            -DQUIVER_BUILD_C_API=ON
-
-      - name: Configure CMake (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DQUIVER_BUILD_TESTS=ON \
-            -DQUIVER_BUILD_C_API=ON
-
-      - name: Configure CMake (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DQUIVER_BUILD_TESTS=ON \
-            -DQUIVER_BUILD_C_API=ON
-
-      - name: Build
-        run: cmake --build build --config ${{ matrix.build_type }}
+      - uses: ./.github/actions/build-cpp
+        with:
+          build_type: ${{ matrix.build_type }}
 
       - name: Test
         working-directory: build
@@ -73,17 +50,9 @@ jobs:
       - name: Install lcov
         run: sudo apt-get update && sudo apt-get install -y lcov
 
-      - name: Configure CMake with coverage
-        run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_CXX_FLAGS="--coverage" \
-            -DCMAKE_C_FLAGS="--coverage" \
-            -DQUIVER_BUILD_TESTS=ON \
-            -DQUIVER_BUILD_C_API=ON
-
-      - name: Build
-        run: cmake --build build
+      - uses: ./.github/actions/build-cpp
+        with:
+          coverage: "true"
 
       - name: Test
         working-directory: build
@@ -119,13 +88,7 @@ jobs:
         with:
           version: ${{ matrix.version }}
 
-      - name: Build C++ (for shared library)
-        run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=Debug \
-            -DQUIVER_BUILD_TESTS=ON \
-            -DQUIVER_BUILD_C_API=ON
-          cmake --build build
+      - uses: ./.github/actions/build-cpp
 
       - uses: julia-actions/julia-buildpkg@v1
         with:
@@ -164,13 +127,7 @@ jobs:
       - name: Install lcov
         run: sudo apt-get update && sudo apt-get install -y lcov
 
-      - name: Build C++ (for shared library)
-        run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=Debug \
-            -DQUIVER_BUILD_TESTS=ON \
-            -DQUIVER_BUILD_C_API=ON
-          cmake --build build
+      - uses: ./.github/actions/build-cpp
 
       - name: Install Dart dependencies
         working-directory: bindings/dart
@@ -210,13 +167,7 @@ jobs:
 
       - uses: astral-sh/setup-uv@v7
 
-      - name: Build C++ (for shared library)
-        run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=Debug \
-            -DQUIVER_BUILD_TESTS=ON \
-            -DQUIVER_BUILD_C_API=ON
-          cmake --build build
+      - uses: ./.github/actions/build-cpp
 
       - name: Install dependencies
         working-directory: bindings/python
@@ -270,13 +221,7 @@ jobs:
           cache: true
           deno-version: v2.7.12
 
-      - name: Build C++ (for shared library)
-        run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=Debug \
-            -DQUIVER_BUILD_TESTS=ON \
-            -DQUIVER_BUILD_C_API=ON
-          cmake --build build
+      - uses: ./.github/actions/build-cpp
 
       - name: Run Deno tests
         working-directory: bindings/js
