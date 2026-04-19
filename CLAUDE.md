@@ -585,7 +585,7 @@ bindings/python/generator/generator.bat  # Python
 ### Python Notes
 - Uses CFFI ABI-mode (no compiler required at install time)
 - `_loader.py` pre-loads `libquiver.dll` on Windows for dependency chain resolution
-- `_c_api.py` contains hand-written CFFI cdef declarations (generator output in `_declarations.py` for reference)
+- `_c_api.py` contains hand-written CFFI cdef declarations; `generator/generator.py` prints current declarations from the headers to stdout as a diff aid when hand-updating it
 - Properties are regular methods, not `@property` (per design decision)
 - test.bat prepends `build/bin/` to PATH for DLL discovery
 - `create_element` and `update_element` accept `**kwargs` (not an Element builder). Element class is internal.
