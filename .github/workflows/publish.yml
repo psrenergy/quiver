@@ -170,19 +170,6 @@ jobs:
           name: native-windows-x86_64
           path: bindings/js/libs/windows-x86_64/
 
-      # actions/upload-artifact@v4+ preserves the workspace-relative path, so
-      # the Linux artifact lands at libs/linux-x86_64/build/lib/* and the
-      # Windows one at libs/windows-x86_64/build/bin/Release/*. The loader
-      # expects flat libs/<platform>/<libname>, so flatten here.
-      - name: Flatten native library layout
-        run: |
-          set -e
-          for p in linux-x86_64/build/lib windows-x86_64/build/bin/Release; do
-            platform="${p%%/*}"
-            mv libs/$p/* libs/$platform/
-            rm -rf libs/$platform/build
-          done
-
       - name: Verify native libraries are present
         run: |
           set -e
