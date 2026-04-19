@@ -3,6 +3,37 @@
 
 namespace quiver {
 
+namespace {
+
+bool value_matches_type(const Value& v, DataType expected) {
+    if (std::holds_alternative<std::nullptr_t>(v))
+        return true;
+    switch (expected) {
+    case DataType::Integer:
+        return std::holds_alternative<int64_t>(v);
+    case DataType::Real:
+        return std::holds_alternative<double>(v);
+    case DataType::Text:
+    case DataType::DateTime:
+        return std::holds_alternative<std::string>(v);
+    }
+    return false;
+}
+
+const char* value_type_name(const Value& v) {
+    if (std::holds_alternative<std::nullptr_t>(v))
+        return "NULL";
+    if (std::holds_alternative<int64_t>(v))
+        return "INTEGER";
+    if (std::holds_alternative<double>(v))
+        return "REAL";
+    if (std::holds_alternative<std::string>(v))
+        return "TEXT";
+    return "UNKNOWN";
+}
+
+}  // namespace
+
 std::vector<GroupMetadata> Database::list_time_series_groups(const std::string& collection) const {
     impl_->require_schema("list_time_series_groups");
 
@@ -125,6 +156,32 @@ void Database::update_time_series_group(const std::string& collection,
     }
     auto dim_col = internal::find_dimension_column(*table_def);
 
+    // Build schema type lookup (all columns except id)
+    std::map<std::string, DataType> schema_types;
+    for (const auto& [col_name, col] : table_def->columns) {
+        if (col_name == "id")
+            continue;
+        schema_types[col_name] = col.data_type;
+    }
+
+    // Validate rows against schema before any writes
+    for (const auto& row : rows) {
+        if (row.find(dim_col) == row.end()) {
+            throw std::runtime_error("Cannot update_time_series_group: row missing required '" + dim_col + "' column");
+        }
+        for (const auto& [col_name, value] : row) {
+            auto it = schema_types.find(col_name);
+            if (it == schema_types.end()) {
+                throw std::runtime_error("Cannot update_time_series_group: column '" + col_name +
+                                         "' not found in group '" + group + "' for collection '" + collection + "'");
+            }
+            if (!value_matches_type(value, it->second)) {
+                throw std::runtime_error("Cannot update_time_series_group: column '" + col_name + "' has type " +
+                                         data_type_to_string(it->second) + " but received " + value_type_name(value));
+            }
+        }
+    }
+
     Impl::TransactionGuard txn(*impl_);
 
     // Delete existing time series data for this element
@@ -159,15 +216,8 @@ void Database::update_time_series_group(const std::string& collection,
     for (const auto& row : rows) {
         std::vector<Value> params;
         params.emplace_back(id);
+        params.emplace_back(row.at(dim_col));
 
-        // Dimension column must be present
-        auto dt_it = row.find(dim_col);
-        if (dt_it == row.end()) {
-            throw std::runtime_error("Cannot update_time_series_group: row missing required '" + dim_col + "' column");
-        }
-        params.emplace_back(dt_it->second);
-
-        // Add value columns
         for (const auto& col : value_columns) {
             auto it = row.find(col);
             if (it != row.end()) {

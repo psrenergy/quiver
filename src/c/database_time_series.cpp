@@ -9,22 +9,6 @@
 #include <variant>
 #include <vector>
 
-// Helper to convert quiver_data_type_t enum value to human-readable name for error messages
-static const char* c_type_name(int type) {
-    switch (type) {
-    case QUIVER_DATA_TYPE_INTEGER:
-        return "INTEGER";
-    case QUIVER_DATA_TYPE_FLOAT:
-        return "FLOAT";
-    case QUIVER_DATA_TYPE_STRING:
-        return "STRING";
-    case QUIVER_DATA_TYPE_DATE_TIME:
-        return "DATE_TIME";
-    default:
-        return "UNKNOWN";
-    }
-}
-
 extern "C" {
 
 // Time series metadata
@@ -194,77 +178,11 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
                                                                      size_t column_count,
                                                                      size_t row_count) {
     QUIVER_REQUIRE(db, collection, group);
-
-    // Clear operation: column_count == 0 && row_count == 0
-    if (column_count == 0 && row_count == 0) {
-        try {
-            std::vector<std::map<std::string, quiver::Value>> empty_rows;
-            db->db.update_time_series_group(collection, group, id, empty_rows);
-            return QUIVER_OK;
-        } catch (const std::exception& e) {
-            quiver_set_last_error(e.what());
-            return QUIVER_ERROR;
-        }
-    }
-
-    // Validate column_count > 0 when row_count > 0
-    if (row_count > 0 && column_count == 0) {
-        quiver_set_last_error("Cannot update_time_series_group: column_count must be > 0 when row_count > 0");
-        return QUIVER_ERROR;
-    }
-
-    // Validate column arrays non-null when column_count > 0
-    if (column_count > 0 && (!column_names || !column_types || !column_data)) {
-        quiver_set_last_error("Cannot update_time_series_group: column_names, column_types, and column_data must be "
-                              "non-null when column_count > 0");
-        return QUIVER_ERROR;
+    if (column_count > 0) {
+        QUIVER_REQUIRE(column_names, column_types, column_data);
     }
 
     try {
-        auto metadata = db->db.get_time_series_metadata(collection, group);
-
-        // Build schema lookup map: column_name -> expected quiver_data_type_t
-        std::map<std::string, int> schema_columns;
-        schema_columns[metadata.dimension_column] = QUIVER_DATA_TYPE_STRING;
-        for (const auto& vc : metadata.value_columns) {
-            schema_columns[vc.name] = to_c_data_type(vc.data_type);
-        }
-
-        // Validate dimension column present in caller's column_names[]
-        bool has_dimension = false;
-        for (size_t i = 0; i < column_count; ++i) {
-            if (std::string(column_names[i]) == metadata.dimension_column) {
-                has_dimension = true;
-                break;
-            }
-        }
-        if (!has_dimension) {
-            throw std::runtime_error("Cannot update_time_series_group: dimension column '" + metadata.dimension_column +
-                                     "' missing from column_names");
-        }
-
-        // Validate each column_name exists in schema and type matches
-        for (size_t i = 0; i < column_count; ++i) {
-            std::string name(column_names[i]);
-            auto it = schema_columns.find(name);
-            if (it == schema_columns.end()) {
-                throw std::runtime_error("Cannot update_time_series_group: column '" + name + "' not found in group '" +
-                                         std::string(group) + "' for collection '" + std::string(collection) + "'");
-            }
-            // Type check: DATE_TIME and STRING are interchangeable
-            auto expected = it->second;
-            auto actual = column_types[i];
-            bool type_ok = (expected == actual) ||
-                           (expected == QUIVER_DATA_TYPE_DATE_TIME && actual == QUIVER_DATA_TYPE_STRING) ||
-                           (expected == QUIVER_DATA_TYPE_STRING && actual == QUIVER_DATA_TYPE_DATE_TIME);
-            if (!type_ok) {
-                throw std::runtime_error("Cannot update_time_series_group: column '" + name + "' has type " +
-                                         std::string(c_type_name(expected)) + " but received " +
-                                         std::string(c_type_name(actual)));
-            }
-        }
-
-        // Convert columnar to row format
         std::vector<std::map<std::string, quiver::Value>> rows;
         rows.reserve(row_count);
 
@@ -284,8 +202,8 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
                     row[col_name] = std::string(static_cast<const char* const*>(column_data[c])[r]);
                     break;
                 default:
-                    throw std::runtime_error("Cannot update_time_series_group: unknown data type " +
-                                             std::string(c_type_name(column_types[c])));
+                    throw std::runtime_error("Cannot update_time_series_group: unknown column type " +
+                                             std::to_string(column_types[c]));
                 }
             }
             rows.push_back(std::move(row));
@@ -429,10 +347,8 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_files(quiver_data
                                                                      const char* const* paths,
                                                                      size_t count) {
     QUIVER_REQUIRE(db, collection);
-
-    if (count > 0 && (!columns || !paths)) {
-        quiver_set_last_error("Null columns or paths with non-zero count");
-        return QUIVER_ERROR;
+    if (count > 0) {
+        QUIVER_REQUIRE(columns, paths);
     }
 
     try {

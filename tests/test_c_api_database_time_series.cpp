@@ -642,7 +642,7 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupMissingDimension) {
     EXPECT_EQ(err, QUIVER_ERROR);
 
     std::string error_msg = quiver_get_last_error();
-    EXPECT_NE(error_msg.find("Cannot update_time_series_group: dimension column 'date_time' missing from column_names"),
+    EXPECT_NE(error_msg.find("Cannot update_time_series_group: row missing required 'date_time' column"),
               std::string::npos)
         << "Error was: " << error_msg;
 
