@@ -111,7 +111,7 @@ jobs:
         with:
           files: lcov.info
           flags: julia
-          fail_ci_if_error: false
+          fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
   dart-coverage:
@@ -156,7 +156,7 @@ jobs:
         with:
           files: bindings/dart/coverage/lcov.info
           flags: dart
-          fail_ci_if_error: false
+          fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
   python-coverage:
@@ -189,7 +189,7 @@ jobs:
         with:
           files: bindings/python/coverage.xml
           flags: python
-          fail_ci_if_error: false
+          fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
   clang-format:

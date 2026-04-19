@@ -15,6 +15,23 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Cache CMake FetchContent sources
+      uses: actions/cache@v4
+      with:
+        path: build/_deps
+        key: cmake-deps-${{ runner.os }}-${{ hashFiles('cmake/Dependencies.cmake', 'CMakeLists.txt') }}
+        restore-keys: |
+          cmake-deps-${{ runner.os }}-
+
+    - name: Setup sccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        variant: sccache
+        key: sccache-${{ runner.os }}-${{ inputs.build_type }}-${{ inputs.coverage }}
+        restore-keys: |
+          sccache-${{ runner.os }}-${{ inputs.build_type }}-
+          sccache-${{ runner.os }}-
+
     - name: Configure CMake
       shell: bash
       run: |
@@ -26,6 +43,8 @@ runs:
           -DCMAKE_BUILD_TYPE=${{ inputs.build_type }} \
           -DQUIVER_BUILD_TESTS=${{ inputs.build_tests }} \
           -DQUIVER_BUILD_C_API=ON \
+          -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
           $coverage_flags
 
     - name: Build

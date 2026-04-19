@@ -5,6 +5,10 @@ on:
     tags:
       - "v*.*.*"
 
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     name: Build wheels (${{ matrix.os }})
@@ -60,14 +64,25 @@ jobs:
           fi
           echo "Version validated: $TAG_VERSION"
 
-      - name: Validate wheel count
+      - name: Validate wheels
         run: |
-          WHEEL_COUNT=$(ls dist/*.whl | wc -l)
-          if [ "$WHEEL_COUNT" -ne 2 ]; then
-            echo "::error::Expected 2 wheels, found $WHEEL_COUNT"
+          shopt -s nullglob
+          wheels=(dist/*.whl)
+          if [ ${#wheels[@]} -eq 0 ]; then
+            echo "::error::No wheels found in dist/"
             exit 1
           fi
-          echo "Wheel count validated: $WHEEL_COUNT"
+          pip install --quiet twine
+          twine check dist/*.whl
+          # Ensure every platform target declared in cibuildwheel config is represented.
+          required_patterns=(manylinux win_amd64)
+          for pat in "${required_patterns[@]}"; do
+            if ! ls dist/*${pat}*.whl >/dev/null 2>&1; then
+              echo "::error::No wheel matching pattern '*${pat}*' in dist/"
+              exit 1
+            fi
+          done
+          echo "Validated ${#wheels[@]} wheel(s)"
 
   release:
     name: GitHub Release
