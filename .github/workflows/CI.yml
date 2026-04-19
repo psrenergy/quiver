@@ -36,6 +36,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: quiver-${{ matrix.os }}-${{ matrix.build_type }}
+          retention-days: 7
           path: |
             build/lib/*
             build/bin/*
