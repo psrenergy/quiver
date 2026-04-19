@@ -5,6 +5,8 @@ on:
     workflows: ["Publish"]
     types: [completed]
 
+  workflow_dispatch:
+
 jobs:
   bump:
     name: Open version bump PR
