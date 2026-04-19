@@ -188,10 +188,8 @@ jobs:
           set -e
           for p in linux-x86_64/build/lib windows-x86_64/build/bin/Release; do
             platform="${p%%/*}"
-            if [ -d "libs/$p" ]; then
-              mv libs/$p/* libs/$platform/
-              rm -rf libs/$platform/build
-            fi
+            mv libs/$p/* libs/$platform/
+            rm -rf libs/$platform/build
           done
 
       - name: Verify native libraries are present
