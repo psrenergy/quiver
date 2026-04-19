@@ -161,7 +161,7 @@ void Database::update_time_series_group(const std::string& collection,
     for (const auto& [col_name, col] : table_def->columns) {
         if (col_name == "id")
             continue;
-        schema_types[col_name] = col.data_type;
+        schema_types[col_name] = col.type;
     }
 
     // Validate rows against schema before any writes
