@@ -219,10 +219,12 @@ jobs:
       # `jsr publish` respects .gitignore even when publish.include has a glob
       # (denoland/deno#22790). bindings/js/.gitignore negates *.so/*.dll rules
       # for libs/, but fail early if something still wants to exclude them.
+      # --allow-dirty is required because libs/ is populated from CI artifacts,
+      # not committed to git.
       - name: Dry-run jsr publish and assert libs are included
         run: |
           set -e
-          npx jsr publish --dry-run --allow-slow-types 2>&1 | tee /tmp/jsr-dry.log
+          npx jsr publish --dry-run --allow-slow-types --allow-dirty 2>&1 | tee /tmp/jsr-dry.log
           for f in libs/linux-x86_64/libquiver_c.so libs/windows-x86_64/libquiver_c.dll; do
             if ! grep -F -- "$f" /tmp/jsr-dry.log > /dev/null; then
               echo "::error::jsr publish dry-run would NOT include $f"
@@ -241,4 +243,4 @@ jobs:
           echo "Version validated: $TAG_VERSION"
 
       - name: Publish to JSR
-        run: npx jsr publish --allow-slow-types
+        run: npx jsr publish --allow-slow-types --allow-dirty
