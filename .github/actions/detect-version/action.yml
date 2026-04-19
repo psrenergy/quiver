@@ -1,0 +1,58 @@
+name: Detect release version
+description: Read the release version from CMakeLists.txt, verify every binding file agrees, and confirm the matching tag is not already on origin.
+
+outputs:
+  version:
+    description: The release version in MAJOR.MINOR.PATCH form (e.g. 0.7.6).
+    value: ${{ steps.extract.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Extract version from CMakeLists.txt and validate all files agree
+      id: extract
+      shell: bash
+      run: |
+        set -e
+        cmake_ver=$(python3 -c "import re; print(re.search(r'^\s+VERSION (\d+\.\d+\.\d+)$', open('CMakeLists.txt').read(), re.M).group(1))")
+        if ! [[ "$cmake_ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "::error::Invalid version '$cmake_ver' in CMakeLists.txt (expected MAJOR.MINOR.PATCH)"
+          exit 1
+        fi
+        py_ver=$(python3 -c "import tomllib; print(tomllib.load(open('bindings/python/pyproject.toml','rb'))['project']['version'])")
+        js_ver=$(python3 -c "import json; print(json.load(open('bindings/js/deno.json'))['version'])")
+        dart_ver=$(python3 -c "import re; print(re.search(r'^version:\s*(\d+\.\d+\.\d+)$', open('bindings/dart/pubspec.yaml').read(), re.M).group(1))")
+        julia_ver=$(python3 -c "import re; print(re.search(r'^version = \"(\d+\.\d+\.\d+)\"$', open('bindings/julia/Project.toml').read(), re.M).group(1))")
+        echo "CMakeLists.txt (source of truth): $cmake_ver"
+        echo "  python:  $py_ver"
+        echo "  js:      $js_ver"
+        echo "  dart:    $dart_ver"
+        echo "  julia:   $julia_ver"
+        mismatches=""
+        for pair in "python:$py_ver" "js:$js_ver" "dart:$dart_ver" "julia:$julia_ver"; do
+          val="${pair#*:}"
+          if [ "$val" != "$cmake_ver" ]; then
+            mismatches="$mismatches $pair"
+          fi
+        done
+        if [ -n "$mismatches" ]; then
+          echo "::error::CMakeLists.txt at $cmake_ver but other files disagree:$mismatches"
+          exit 1
+        fi
+        echo "All project files at $cmake_ver"
+        echo "version=$cmake_ver" >> "$GITHUB_OUTPUT"
+
+    - name: Check tag does not already exist
+      shell: bash
+      run: |
+        set -e
+        version="${{ steps.extract.outputs.version }}"
+        if git rev-parse --verify --quiet "refs/tags/v$version" >/dev/null; then
+          echo "::error::Tag v$version already exists locally"
+          exit 1
+        fi
+        if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null 2>&1; then
+          echo "::error::Tag v$version already exists on origin"
+          exit 1
+        fi
+        echo "Tag v$version is available"
