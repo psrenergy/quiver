@@ -3,10 +3,6 @@ name: Publish
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: "Version to release (e.g. 0.7.6). Must match the version in CMakeLists.txt, pyproject.toml, deno.json, pubspec.yaml, and Project.toml."
-        required: true
-        type: string
       dry_run:
         description: "Build and validate only; skip publish, tag, and bump."
         required: false
@@ -14,72 +10,70 @@ on:
         default: false
 
 concurrency:
-  group: publish-${{ inputs.version }}
+  group: publish-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  validate-inputs:
-    name: Validate inputs
+  detect-version:
+    name: Detect version
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.extract.outputs.version }}
     steps:
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.sha }}
 
-      - name: Validate version format
-        run: |
-          version="${{ inputs.version }}"
-          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::Invalid version '$version': expected MAJOR.MINOR.PATCH"
-            exit 1
-          fi
-          echo "Version format OK: $version"
-
-      - name: Validate version matches all project files
+      - name: Extract version from CMakeLists.txt and validate all files agree
+        id: extract
         run: |
           set -e
-          expected="${{ inputs.version }}"
           cmake_ver=$(python3 -c "import re; print(re.search(r'^\s+VERSION (\d+\.\d+\.\d+)$', open('CMakeLists.txt').read(), re.M).group(1))")
+          if ! [[ "$cmake_ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid version '$cmake_ver' in CMakeLists.txt (expected MAJOR.MINOR.PATCH)"
+            exit 1
+          fi
           py_ver=$(python3 -c "import tomllib; print(tomllib.load(open('bindings/python/pyproject.toml','rb'))['project']['version'])")
           js_ver=$(python3 -c "import json; print(json.load(open('bindings/js/deno.json'))['version'])")
           dart_ver=$(python3 -c "import re; print(re.search(r'^version:\s*(\d+\.\d+\.\d+)$', open('bindings/dart/pubspec.yaml').read(), re.M).group(1))")
           julia_ver=$(python3 -c "import re; print(re.search(r'^version = \"(\d+\.\d+\.\d+)\"$', open('bindings/julia/Project.toml').read(), re.M).group(1))")
-          echo "Expected:  $expected"
-          echo "  cmake:   $cmake_ver"
+          echo "CMakeLists.txt (source of truth): $cmake_ver"
           echo "  python:  $py_ver"
           echo "  js:      $js_ver"
           echo "  dart:    $dart_ver"
           echo "  julia:   $julia_ver"
           mismatches=""
-          for pair in "cmake:$cmake_ver" "python:$py_ver" "js:$js_ver" "dart:$dart_ver" "julia:$julia_ver"; do
+          for pair in "python:$py_ver" "js:$js_ver" "dart:$dart_ver" "julia:$julia_ver"; do
             val="${pair#*:}"
-            if [ "$val" != "$expected" ]; then
+            if [ "$val" != "$cmake_ver" ]; then
               mismatches="$mismatches $pair"
             fi
           done
           if [ -n "$mismatches" ]; then
-            echo "::error::Version $expected does not match files:$mismatches"
+            echo "::error::CMakeLists.txt at $cmake_ver but other files disagree:$mismatches"
             exit 1
           fi
-          echo "All project files at $expected"
+          echo "All project files at $cmake_ver"
+          echo "version=$cmake_ver" >> "$GITHUB_OUTPUT"
 
       - name: Check tag does not already exist
         run: |
           set -e
-          if git rev-parse --verify --quiet "refs/tags/v${{ inputs.version }}" >/dev/null; then
-            echo "::error::Tag v${{ inputs.version }} already exists locally"
+          version="${{ steps.extract.outputs.version }}"
+          if git rev-parse --verify --quiet "refs/tags/v$version" >/dev/null; then
+            echo "::error::Tag v$version already exists locally"
             exit 1
           fi
-          if git ls-remote --exit-code --tags origin "refs/tags/v${{ inputs.version }}" >/dev/null 2>&1; then
-            echo "::error::Tag v${{ inputs.version }} already exists on origin"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null 2>&1; then
+            echo "::error::Tag v$version already exists on origin"
             exit 1
           fi
-          echo "Tag v${{ inputs.version }} is available"
+          echo "Tag v$version is available"
 
   build:
     name: Build wheels (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    needs: validate-inputs
+    needs: detect-version
     strategy:
       fail-fast: false
       matrix:
@@ -144,7 +138,7 @@ jobs:
   build-native:
     name: Build native libs (${{ matrix.platform_key }})
     runs-on: ${{ matrix.os }}
-    needs: validate-inputs
+    needs: detect-version
     strategy:
       fail-fast: true
       matrix:
@@ -284,7 +278,7 @@ jobs:
   tag-and-release:
     name: Tag and GitHub Release
     runs-on: ubuntu-latest
-    needs: [publish-pypi, publish-jsr]
+    needs: [detect-version, publish-pypi, publish-jsr]
     if: ${{ !inputs.dry_run }}
     permissions:
       contents: write
@@ -301,21 +295,22 @@ jobs:
       - name: Create and push tag
         run: |
           set -e
+          version="${{ needs.detect-version.outputs.version }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}"
-          git push origin "v${{ inputs.version }}"
+          git tag -a "v$version" -m "Release v$version"
+          git push origin "v$version"
 
       - uses: softprops/action-gh-release@v3
         with:
-          tag_name: v${{ inputs.version }}
+          tag_name: v${{ needs.detect-version.outputs.version }}
           generate_release_notes: true
           files: dist/*.whl
 
   bump-version:
     name: Open version bump PR
     runs-on: ubuntu-latest
-    needs: tag-and-release
+    needs: [detect-version, tag-and-release]
     if: ${{ !inputs.dry_run }}
     permissions:
       contents: write
@@ -328,7 +323,7 @@ jobs:
       - name: Compute next patch version
         id: next
         run: |
-          IFS='.' read -r major minor patch <<< "${{ inputs.version }}"
+          IFS='.' read -r major minor patch <<< "${{ needs.detect-version.outputs.version }}"
           echo "version=${major}.${minor}.$((patch+1))" >> "$GITHUB_OUTPUT"
 
       - name: Bump version in all project files
@@ -342,7 +337,7 @@ jobs:
           commit-message: "bump version to ${{ steps.next.outputs.version }}"
           title: "Bump version to ${{ steps.next.outputs.version }}"
           body: |
-            Auto-generated after release `v${{ inputs.version }}`.
+            Auto-generated after release `v${{ needs.detect-version.outputs.version }}`.
 
             Bumps every project version file to the next patch:
             - `CMakeLists.txt`
