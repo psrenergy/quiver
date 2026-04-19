@@ -179,12 +179,56 @@ jobs:
           name: native-windows-x86_64
           path: bindings/js/libs/windows-x86_64/
 
-      - name: Verify native libraries
+      # actions/upload-artifact@v4+ preserves the workspace-relative path, so
+      # the Linux artifact lands at libs/linux-x86_64/build/lib/* and the
+      # Windows one at libs/windows-x86_64/build/bin/Release/*. The loader
+      # expects flat libs/<platform>/<libname>, so flatten here.
+      - name: Flatten native library layout
         run: |
-          echo "Linux x86_64:"
-          ls -la libs/linux-x86_64/
-          echo "Windows x86_64:"
-          ls -la libs/windows-x86_64/
+          set -e
+          for p in linux-x86_64/build/lib windows-x86_64/build/bin/Release; do
+            platform="${p%%/*}"
+            if [ -d "libs/$p" ]; then
+              mv libs/$p/* libs/$platform/
+              rm -rf libs/$platform/build
+            fi
+          done
+
+      - name: Verify native libraries are present
+        run: |
+          set -e
+          required=(
+            libs/linux-x86_64/libquiver.so
+            libs/linux-x86_64/libquiver_c.so
+            libs/windows-x86_64/libquiver.dll
+            libs/windows-x86_64/libquiver_c.dll
+          )
+          missing=0
+          for f in "${required[@]}"; do
+            if [ ! -f "$f" ]; then
+              echo "::error::Missing required native library: $f"
+              missing=1
+            fi
+          done
+          echo "--- libs/ tree ---"
+          find libs -type f | sort
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+      # `jsr publish` respects .gitignore even when publish.include has a glob
+      # (denoland/deno#22790). bindings/js/.gitignore negates *.so/*.dll rules
+      # for libs/, but fail early if something still wants to exclude them.
+      - name: Dry-run jsr publish and assert libs are included
+        run: |
+          set -e
+          npx jsr publish --dry-run --allow-slow-types 2>&1 | tee /tmp/jsr-dry.log
+          for f in libs/linux-x86_64/libquiver_c.so libs/windows-x86_64/libquiver_c.dll; do
+            if ! grep -F -- "$f" /tmp/jsr-dry.log > /dev/null; then
+              echo "::error::jsr publish dry-run would NOT include $f"
+              exit 1
+            fi
+          done
 
       - name: Validate tag matches deno.json version
         run: |

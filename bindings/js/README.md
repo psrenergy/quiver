@@ -25,26 +25,34 @@ This binding uses Deno FFI to load native C libraries at runtime. Deno requires 
 |------|-----|
 | `--allow-ffi` | Required to call `Deno.dlopen()` and load the native Quiver C library |
 | `--allow-read` | Required to locate the native library on disk and read schema/data files |
-| `--allow-write` | Required when creating or modifying databases |
-| `--allow-env` | Optional, used by test infrastructure |
+| `--allow-write` | Required when creating or modifying databases (and to cache the native library when imported from JSR) |
+| `--allow-env` | Required to resolve the cache directory (`XDG_CACHE_HOME`/`HOME`/`LOCALAPPDATA`) when imported from JSR |
+| `--allow-net=jsr.io` | Required on first run when imported from JSR to download the bundled native library |
 
 Unlike runtimes where any package can load native code silently, Deno requires explicit user consent for FFI access. `--allow-ffi` is a security feature -- you control exactly which programs can call into native libraries.
 
-Example:
+Example (local install, libs already on disk):
 
 ```bash
 deno run --allow-ffi --allow-read --allow-write my_script.ts
 ```
 
+Example (JSR install, first run downloads the bundled native library to a local cache):
+
+```bash
+deno run --allow-ffi --allow-read --allow-write --allow-env --allow-net=jsr.io my_script.ts
+```
+
 ## Native Library Setup
 
-The loader searches for native libraries in three tiers:
+The loader searches for native libraries in four tiers:
 
-1. **Bundled**: `libs/{os}-{arch}/` directory next to the binding source
-2. **Dev mode**: Walks up directories looking for `build/bin/` (auto-discovered during development)
-3. **System PATH**: Falls back to loading by library name from system PATH
+1. **Bundled**: `libs/{os}-{arch}/` directory next to the binding source (used for local installs and JSR installs after the first-run download completes).
+2. **Dev mode**: Walks up directories looking for `build/bin/` (auto-discovered during development).
+3. **JSR download**: When imported from `jsr:` or `https:`, fetches `libs/{os}-{arch}/libquiver(_c).{dll,so}` from the package's served URL and caches it under `$XDG_CACHE_HOME/psrenergy-quiver/` (Unix) or `$LOCALAPPDATA/psrenergy-quiver/` (Windows). Subsequent runs reuse the cache.
+4. **System PATH**: Falls back to loading by library name from system PATH.
 
-For development, the simplest approach is to have `build/bin/` in the repo tree -- the loader finds it automatically.
+Currently prebuilt binaries ship for `linux-x86_64` and `windows-x86_64`. On other platforms, build from source and point to `build/bin/` via tier 2.
 
 ## Quick Start
 

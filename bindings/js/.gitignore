@@ -14,3 +14,15 @@ deno.lock
 # OS
 .DS_Store
 Thumbs.db
+
+# Re-include JSR-bundled native libraries.
+# The root .gitignore excludes *.so / *.so.* / *.dylib / *.dll globally, and
+# Deno's publisher respects .gitignore even with publish.include globs (see
+# denoland/deno#22790). Without this override, `npx jsr publish` silently drops
+# every file under libs/ at publish time, producing a package that cannot FFI.
+!libs/
+!libs/**
+!libs/**/*.so
+!libs/**/*.so.*
+!libs/**/*.dylib
+!libs/**/*.dll

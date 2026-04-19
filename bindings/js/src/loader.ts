@@ -169,10 +169,14 @@ function fileExists(path: string): boolean {
   }
 }
 
-const __dirname = import.meta.dirname!;
+// `import.meta.dirname` is defined only for `file:` URLs. For `jsr:` / `https:`
+// imports it is `undefined`, so treat it as optional everywhere.
+const __dirname: string | undefined = import.meta.dirname;
+const moduleUrl = import.meta.url;
+const platformKey = `${Deno.build.os}-${Deno.build.arch}`;
 
 function getBundledLibDir(): string | null {
-  const platformKey = `${Deno.build.os}-${Deno.build.arch}`;
+  if (!__dirname) return null;
   const libDir = join(__dirname, "..", "libs", platformKey);
   if (fileExists(join(libDir, C_API_LIB))) {
     return libDir;
@@ -181,6 +185,7 @@ function getBundledLibDir(): string | null {
 }
 
 function getSearchPaths(): string[] {
+  if (!__dirname) return [];
   const paths: string[] = [];
   let dir = __dirname;
   for (let i = 0; i < 5; i++) {
@@ -193,8 +198,78 @@ function getSearchPaths(): string[] {
   return paths;
 }
 
+function tryEnv(name: string): string | null {
+  try {
+    return Deno.env.get(name) ?? null;
+  } catch {
+    // --allow-env not granted; cache falls back to a cwd-local directory.
+    return null;
+  }
+}
+
+function getCacheBaseDir(): string {
+  if (Deno.build.os === "windows") {
+    const local = tryEnv("LOCALAPPDATA");
+    if (local) return join(local, "psrenergy-quiver");
+    const profile = tryEnv("USERPROFILE");
+    if (profile) return join(profile, "AppData", "Local", "psrenergy-quiver");
+    return join(Deno.cwd(), ".psrenergy-quiver-cache");
+  }
+  const xdg = tryEnv("XDG_CACHE_HOME");
+  if (xdg) return join(xdg, "psrenergy-quiver");
+  const home = tryEnv("HOME");
+  if (home) return join(home, ".cache", "psrenergy-quiver");
+  return join(Deno.cwd(), ".psrenergy-quiver-cache");
+}
+
+// Version-scoped cache directory derived from the module URL so different
+// versions or origins do not collide.
+function getRemoteCacheDir(): string {
+  const url = new URL(moduleUrl);
+  // Drop ".../src/loader.ts" to get the package root pathname.
+  const pkgRootPath = url.pathname.replace(/\/[^/]*\/[^/]*$/, "");
+  const safe = (url.host + pkgRootPath).replace(/[^a-zA-Z0-9._@/-]+/g, "_");
+  return join(getCacheBaseDir(), safe, "libs", platformKey);
+}
+
+async function fetchRemoteLib(libName: string, destPath: string): Promise<boolean> {
+  try {
+    const remote = new URL(`../libs/${platformKey}/${libName}`, moduleUrl);
+    const res = await fetch(remote);
+    if (!res.ok) return false;
+    const buf = new Uint8Array(await res.arrayBuffer());
+    await Deno.writeFile(destPath, buf, { mode: 0o755 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function resolveRemoteLibDir(): Promise<string | null> {
+  if (moduleUrl.startsWith("file:")) return null;
+  const cacheDir = getRemoteCacheDir();
+  const cApiCachePath = join(cacheDir, C_API_LIB);
+  const coreCachePath = join(cacheDir, CORE_LIB);
+
+  try {
+    await Deno.mkdir(cacheDir, { recursive: true });
+  } catch {
+    return null;
+  }
+
+  if (!fileExists(cApiCachePath)) {
+    const ok = await fetchRemoteLib(C_API_LIB, cApiCachePath);
+    if (!ok) return null;
+  }
+  // Core lib is optional on Linux (resolved via RPATH=$ORIGIN from the C API
+  // lib in the same dir); on Windows it must be preloaded from the same dir.
+  if (!fileExists(coreCachePath)) {
+    await fetchRemoteLib(CORE_LIB, coreCachePath);
+  }
+  return cacheDir;
+}
+
 type DenoLib = Deno.DynamicLibrary<typeof allSymbols>;
-let _lib: DenoLib | null = null;
 let _coreLib: Deno.DynamicLibrary<Record<string, never>> | null = null;
 
 function openLibrary(dir: string): DenoLib {
@@ -208,53 +283,69 @@ function openLibrary(dir: string): DenoLib {
   return Deno.dlopen(cApiPath, allSymbols);
 }
 
-export function loadLibrary(): DenoLib {
-  if (_lib) return _lib;
-
-  // Tier 1: Bundled libs/{os}-{arch}/
+async function initLibrary(): Promise<DenoLib> {
+  // Tier 1: Bundled libs/{os}-{arch}/ next to the loader (file: URL / dev install).
   const bundledDir = getBundledLibDir();
   if (bundledDir) {
     try {
-      _lib = openLibrary(bundledDir);
-      return _lib;
+      return openLibrary(bundledDir);
     } catch {
-      // Bundled libs found but failed to load -- fall through to dev paths
+      // Bundled libs found but failed to load -- fall through.
     }
   }
 
-  // Tier 2: Dev mode -- walk up directories looking for build/bin/
-  const searchPaths = getSearchPaths();
-  for (const dir of searchPaths) {
+  // Tier 2: Dev mode -- walk up directories looking for build/bin/.
+  for (const dir of getSearchPaths()) {
     try {
-      _lib = openLibrary(dir);
-      return _lib;
+      return openLibrary(dir);
     } catch {
-      // Try next path
+      // Try next path.
     }
   }
 
-  // Tier 3: System PATH fallback
+  // Tier 3: Remote module (jsr:/https:) -- download bundled libs to local cache.
+  const remoteDir = await resolveRemoteLibDir();
+  if (remoteDir) {
+    try {
+      return openLibrary(remoteDir);
+    } catch {
+      // Fall through.
+    }
+  }
+
+  // Tier 4: System PATH fallback.
   try {
     if (Deno.build.os === "windows") {
       try {
         _coreLib = Deno.dlopen(CORE_LIB, {});
       } catch {
-        // Core lib may already be loaded
+        // Core lib may already be loaded.
       }
     }
-    _lib = Deno.dlopen(C_API_LIB, allSymbols);
-    return _lib;
+    return Deno.dlopen(C_API_LIB, allSymbols);
   } catch {
-    // Fall through to error
+    // Fall through to error.
   }
 
-  const bundledPath = join(__dirname, "..", "libs", `${Deno.build.os}-${Deno.build.arch}`);
-  const allPaths = [bundledPath, ...searchPaths, "system PATH"].join(", ");
-  throw new QuiverError(`Cannot load native library '${C_API_LIB}'. Searched: ${allPaths}`);
+  const searched = [
+    __dirname ? join(__dirname, "..", "libs", platformKey) : null,
+    ...getSearchPaths(),
+    moduleUrl.startsWith("file:") ? null : getRemoteCacheDir(),
+    "system PATH",
+  ].filter((p): p is string => p !== null).join(", ");
+  throw new QuiverError(`Cannot load native library '${C_API_LIB}'. Searched: ${searched}`);
+}
+
+// Top-level await: resolve the native library once, at module-instantiation
+// time, so downstream callers can use `getSymbols()` synchronously.
+const _lib: DenoLib = await initLibrary();
+
+export function loadLibrary(): DenoLib {
+  return _lib;
 }
 
 export function getSymbols() {
-  return loadLibrary().symbols;
+  return _lib.symbols;
 }
 
 export type Symbols = ReturnType<typeof getSymbols>;
