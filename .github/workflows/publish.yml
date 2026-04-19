@@ -1,18 +1,85 @@
 name: Publish
 
 on:
-  push:
-    tags:
-      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g. 0.7.6). Must match the version in CMakeLists.txt, pyproject.toml, deno.json, pubspec.yaml, and Project.toml."
+        required: true
+        type: string
+      dry_run:
+        description: "Build and validate only; skip publish, tag, and bump."
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
-  group: publish-${{ github.ref }}
+  group: publish-${{ inputs.version }}
   cancel-in-progress: false
 
 jobs:
+  validate-inputs:
+    name: Validate inputs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Validate version format
+        run: |
+          version="${{ inputs.version }}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid version '$version': expected MAJOR.MINOR.PATCH"
+            exit 1
+          fi
+          echo "Version format OK: $version"
+
+      - name: Validate version matches all project files
+        run: |
+          set -e
+          expected="${{ inputs.version }}"
+          cmake_ver=$(python3 -c "import re; print(re.search(r'^\s+VERSION (\d+\.\d+\.\d+)$', open('CMakeLists.txt').read(), re.M).group(1))")
+          py_ver=$(python3 -c "import tomllib; print(tomllib.load(open('bindings/python/pyproject.toml','rb'))['project']['version'])")
+          js_ver=$(python3 -c "import json; print(json.load(open('bindings/js/deno.json'))['version'])")
+          dart_ver=$(python3 -c "import re; print(re.search(r'^version:\s*(\d+\.\d+\.\d+)$', open('bindings/dart/pubspec.yaml').read(), re.M).group(1))")
+          julia_ver=$(python3 -c "import re; print(re.search(r'^version = \"(\d+\.\d+\.\d+)\"$', open('bindings/julia/Project.toml').read(), re.M).group(1))")
+          echo "Expected:  $expected"
+          echo "  cmake:   $cmake_ver"
+          echo "  python:  $py_ver"
+          echo "  js:      $js_ver"
+          echo "  dart:    $dart_ver"
+          echo "  julia:   $julia_ver"
+          mismatches=""
+          for pair in "cmake:$cmake_ver" "python:$py_ver" "js:$js_ver" "dart:$dart_ver" "julia:$julia_ver"; do
+            val="${pair#*:}"
+            if [ "$val" != "$expected" ]; then
+              mismatches="$mismatches $pair"
+            fi
+          done
+          if [ -n "$mismatches" ]; then
+            echo "::error::Version $expected does not match files:$mismatches"
+            exit 1
+          fi
+          echo "All project files at $expected"
+
+      - name: Check tag does not already exist
+        run: |
+          set -e
+          if git rev-parse --verify --quiet "refs/tags/v${{ inputs.version }}" >/dev/null; then
+            echo "::error::Tag v${{ inputs.version }} already exists locally"
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/v${{ inputs.version }}" >/dev/null 2>&1; then
+            echo "::error::Tag v${{ inputs.version }} already exists on origin"
+            exit 1
+          fi
+          echo "Tag v${{ inputs.version }} is available"
+
   build:
     name: Build wheels (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    needs: validate-inputs
     strategy:
       fail-fast: false
       matrix:
@@ -20,6 +87,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
 
       - uses: pypa/cibuildwheel@v3.4.1
         with:
@@ -42,27 +111,15 @@ jobs:
           pattern: wheels-*
           delete-merged: true
 
-  validate:
+  validate-release:
     name: Validate release
     runs-on: ubuntu-latest
     needs: merge
     steps:
-      - uses: actions/checkout@v6
-
       - uses: actions/download-artifact@v8
         with:
           name: wheels
           path: dist/
-
-      - name: Validate tag matches pyproject.toml version
-        run: |
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
-          PKG_VERSION=$(python3 -c "import tomllib; print(tomllib.load(open('bindings/python/pyproject.toml','rb'))['project']['version'])")
-          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
-            echo "::error::Tag version ($TAG_VERSION) != pyproject.toml version ($PKG_VERSION)"
-            exit 1
-          fi
-          echo "Version validated: $TAG_VERSION"
 
       - name: Validate wheels
         run: |
@@ -84,41 +141,10 @@ jobs:
           done
           echo "Validated ${#wheels[@]} wheel(s)"
 
-  release:
-    name: GitHub Release
-    runs-on: ubuntu-latest
-    needs: validate
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@v8
-        with:
-          name: wheels
-          path: dist/
-
-      - uses: softprops/action-gh-release@v3
-        with:
-          generate_release_notes: true
-          files: dist/*.whl
-
-  publish:
-    name: Publish to PyPI
-    runs-on: ubuntu-latest
-    needs: validate
-    environment: pypi
-    permissions:
-      id-token: write
-    steps:
-      - uses: actions/download-artifact@v8
-        with:
-          name: wheels
-          path: dist/
-
-      - uses: pypa/gh-action-pypi-publish@release/v1
-
   build-native:
     name: Build native libs (${{ matrix.platform_key }})
     runs-on: ${{ matrix.os }}
+    needs: validate-inputs
     strategy:
       fail-fast: true
       matrix:
@@ -132,6 +158,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
 
       - uses: ./.github/actions/build-cpp
         with:
@@ -148,12 +176,28 @@ jobs:
         with:
           name: native-${{ matrix.platform_key }}
           path: ${{ matrix.lib_glob }}
-          if-no-files-found: error
+
+  publish-pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: validate-release
+    if: ${{ !inputs.dry_run }}
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: wheels
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
 
   publish-jsr:
     name: Publish to JSR
     runs-on: ubuntu-latest
-    needs: [validate, build-native]
+    needs: [validate-release, build-native]
+    if: ${{ !inputs.dry_run }}
     environment: jsr
     permissions:
       contents: read
@@ -163,6 +207,8 @@ jobs:
         working-directory: bindings/js
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
 
       - uses: denoland/setup-deno@v2
         with:
@@ -180,6 +226,19 @@ jobs:
         with:
           name: native-windows-x86_64
           path: bindings/js/libs/windows-x86_64/
+
+      # actions/upload-artifact@v4+ preserves the workspace-relative path, so
+      # the Linux artifact lands at libs/linux-x86_64/build/lib/* and the
+      # Windows one at libs/windows-x86_64/build/bin/Release/*. The loader
+      # expects flat libs/<platform>/<libname>, so flatten here.
+      - name: Flatten native library layout
+        run: |
+          set -e
+          for p in linux-x86_64/build/lib windows-x86_64/build/bin/Release; do
+            platform="${p%%/*}"
+            mv libs/$p/* libs/$platform/
+            rm -rf libs/$platform/build
+          done
 
       - name: Verify native libraries are present
         run: |
@@ -219,15 +278,76 @@ jobs:
             fi
           done
 
-      - name: Validate tag matches deno.json version
-        run: |
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
-          PKG_VERSION=$(deno eval "const c = JSON.parse(Deno.readTextFileSync('deno.json')); console.log(c.version)")
-          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
-            echo "::error::Tag version ($TAG_VERSION) != deno.json version ($PKG_VERSION)"
-            exit 1
-          fi
-          echo "Version validated: $TAG_VERSION"
-
       - name: Publish to JSR
         run: npx jsr publish --allow-slow-types --allow-dirty
+
+  tag-and-release:
+    name: Tag and GitHub Release
+    runs-on: ubuntu-latest
+    needs: [publish-pypi, publish-jsr]
+    if: ${{ !inputs.dry_run }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: wheels
+          path: dist/
+
+      - name: Create and push tag
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ inputs.version }}" -m "Release v${{ inputs.version }}"
+          git push origin "v${{ inputs.version }}"
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v${{ inputs.version }}
+          generate_release_notes: true
+          files: dist/*.whl
+
+  bump-version:
+    name: Open version bump PR
+    runs-on: ubuntu-latest
+    needs: tag-and-release
+    if: ${{ !inputs.dry_run }}
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: master
+
+      - name: Compute next patch version
+        id: next
+        run: |
+          IFS='.' read -r major minor patch <<< "${{ inputs.version }}"
+          echo "version=${major}.${minor}.$((patch+1))" >> "$GITHUB_OUTPUT"
+
+      - name: Bump version in all project files
+        run: python3 scripts/bump_version.py "${{ steps.next.outputs.version }}"
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v8
+        with:
+          branch: bump-version/${{ steps.next.outputs.version }}
+          base: master
+          commit-message: "bump version to ${{ steps.next.outputs.version }}"
+          title: "Bump version to ${{ steps.next.outputs.version }}"
+          body: |
+            Auto-generated after release `v${{ inputs.version }}`.
+
+            Bumps every project version file to the next patch:
+            - `CMakeLists.txt`
+            - `bindings/python/pyproject.toml`
+            - `bindings/js/deno.json`
+            - `bindings/dart/pubspec.yaml`
+            - `bindings/julia/Project.toml`
+          delete-branch: true
