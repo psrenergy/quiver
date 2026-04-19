@@ -33,7 +33,7 @@ jobs:
         run: python3 scripts/bump_version.py "${{ steps.next.outputs.version }}"
 
       - name: Create pull request
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           branch: bump-version/${{ steps.next.outputs.version }}
           base: master
