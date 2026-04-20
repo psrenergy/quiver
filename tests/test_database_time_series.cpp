@@ -198,6 +198,219 @@ TEST(Database, TimeSeriesOrdering) {
 }
 
 // ============================================================================
+// Time series row read tests (read_time_series_row)
+// ============================================================================
+
+TEST(Database, ReadTimeSeriesRow) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    // Create two elements
+    quiver::Element e1;
+    e1.set("label", std::string("Item 1"));
+    auto id1 = db.create_element("Collection", e1);
+
+    quiver::Element e2;
+    e2.set("label", std::string("Item 2"));
+    auto id2 = db.create_element("Collection", e2);
+
+    // Insert time series data for both elements
+    db.update_time_series_group("Collection", "data", id1,
+                                {{{"date_time", std::string("2024-01-01")}, {"value", 1.0}},
+                                 {{"date_time", std::string("2024-01-02")}, {"value", 2.0}},
+                                 {{"date_time", std::string("2024-01-03")}, {"value", 3.0}}});
+
+    db.update_time_series_group("Collection", "data", id2,
+                                {{{"date_time", std::string("2024-01-01")}, {"value", 10.0}},
+                                 {{"date_time", std::string("2024-01-02")}, {"value", 20.0}}});
+
+    // Query at 2024-01-02: Item 1 -> 2.0, Item 2 -> 20.0
+    auto result = db.read_time_series_row("Collection", "value", "2024-01-02");
+    ASSERT_EQ(result.size(), 2);
+    EXPECT_DOUBLE_EQ(std::get<double>(result[0]), 2.0);
+    EXPECT_DOUBLE_EQ(std::get<double>(result[1]), 20.0);
+
+    // Query at 2024-01-03: Item 1 -> 3.0, Item 2 -> 20.0 (last value at or before)
+    auto result2 = db.read_time_series_row("Collection", "value", "2024-01-03");
+    ASSERT_EQ(result2.size(), 2);
+    EXPECT_DOUBLE_EQ(std::get<double>(result2[0]), 3.0);
+    EXPECT_DOUBLE_EQ(std::get<double>(result2[1]), 20.0);
+}
+
+TEST(Database, ReadTimeSeriesRowWithMissingElements) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    // Create two elements
+    quiver::Element e1;
+    e1.set("label", std::string("Item 1"));
+    auto id1 = db.create_element("Collection", e1);
+
+    quiver::Element e2;
+    e2.set("label", std::string("Item 2"));
+    auto id2 = db.create_element("Collection", e2);
+
+    // Insert time series data for both elements
+    db.update_time_series_group("Collection", "data", id1,
+                                {{{"date_time", std::string("2024-01-01")}, {"value", 1.0}},
+                                 {{"date_time", std::string("2024-01-02")}, {"value", 2.0}},
+                                 {{"date_time", std::string("2024-01-03")}, {"value", 3.0}}});
+
+    db.update_time_series_group("Collection", "data", id2,
+                                {{{"date_time", std::string("2024-01-01")}, {"value", 10.0}},
+                                 {{"date_time", std::string("2024-01-04")}, {"value", 20.0}}});
+
+    // Query at 2024-01-02: Item 1 -> 2.0, Item 2 -> 10.0
+    auto result = db.read_time_series_row("Collection", "value", "2024-01-02");
+    ASSERT_EQ(result.size(), 2);
+    EXPECT_DOUBLE_EQ(std::get<double>(result[0]), 2.0);
+    EXPECT_DOUBLE_EQ(std::get<double>(result[1]), 10.0);
+
+    // Query at 2024-01-03: Item 1 -> 3.0, Item 2 -> 10.0 (last value at or before)
+    auto result2 = db.read_time_series_row("Collection", "value", "2024-01-03");
+    ASSERT_EQ(result2.size(), 2);
+    EXPECT_DOUBLE_EQ(std::get<double>(result2[0]), 3.0);
+    EXPECT_DOUBLE_EQ(std::get<double>(result2[1]), 10.0);
+}
+
+TEST(Database, ReadTimeSeriesRowBeforeAllData) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item 1"));
+    auto id1 = db.create_element("Collection", e1);
+
+    db.update_time_series_group("Collection", "data", id1,
+                                {{{"date_time", std::string("2024-01-02")}, {"value", 1.0}}});
+
+    // Query before any data exists: should return nullptr for the element
+    auto result = db.read_time_series_row("Collection", "value", "2024-01-01");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(result[0]));
+}
+
+TEST(Database, ReadTimeSeriesRowEmptyCollection) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    // No elements in Collection -> empty result
+    auto result = db.read_time_series_row("Collection", "value", "2024-01-01");
+    EXPECT_TRUE(result.empty());
+}
+
+TEST(Database, ReadTimeSeriesRowMixedElements) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item 1"));
+    auto id1 = db.create_element("Collection", e1);
+
+    quiver::Element e2;
+    e2.set("label", std::string("Item 2"));
+    db.create_element("Collection", e2);  // no time series data
+
+    db.update_time_series_group("Collection", "data", id1,
+                                {{{"date_time", std::string("2024-01-01")}, {"value", 5.0}}});
+
+    // Item 1 has data, Item 2 doesn't
+    auto result = db.read_time_series_row("Collection", "value", "2024-01-01");
+    ASSERT_EQ(result.size(), 2);
+    EXPECT_DOUBLE_EQ(std::get<double>(result[0]), 5.0);
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(result[1]));
+}
+
+TEST(Database, ReadTimeSeriesRowAttributeNotFound) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    EXPECT_THROW(db.read_time_series_row("Collection", "nonexistent", "2024-01-01"), std::runtime_error);
+}
+
+TEST(Database, ReadTimeSeriesRowMultiColumn) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("mixed_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element sensor;
+    sensor.set("label", std::string("Sensor 1"));
+    auto id = db.create_element("Sensor", sensor);
+
+    db.update_time_series_group("Sensor", "readings", id,
+                                {{{"date_time", std::string("2024-01-01")},
+                                  {"temperature", 20.5},
+                                  {"humidity", int64_t{65}},
+                                  {"status", std::string("ok")}},
+                                 {{"date_time", std::string("2024-01-02")},
+                                  {"temperature", 21.0},
+                                  {"humidity", int64_t{70}},
+                                  {"status", std::string("warn")}}});
+
+    // Read temperature (REAL) at 2024-01-01
+    auto temps = db.read_time_series_row("Sensor", "temperature", "2024-01-01");
+    ASSERT_EQ(temps.size(), 1);
+    EXPECT_DOUBLE_EQ(std::get<double>(temps[0]), 20.5);
+
+    // Read humidity (INTEGER) at 2024-01-02
+    auto humids = db.read_time_series_row("Sensor", "humidity", "2024-01-02");
+    ASSERT_EQ(humids.size(), 1);
+    EXPECT_EQ(std::get<int64_t>(humids[0]), 70);
+
+    // Read status (TEXT) at 2024-01-02
+    auto stats = db.read_time_series_row("Sensor", "status", "2024-01-02");
+    ASSERT_EQ(stats.size(), 1);
+    EXPECT_EQ(std::get<std::string>(stats[0]), "warn");
+}
+
+TEST(Database, ReadTimeSeriesRowSkipsNullValues) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item 1"));
+    auto id1 = db.create_element("Collection", e1);
+
+    // Insert: non-null at 01-01, null at 01-02
+    db.update_time_series_group("Collection", "data", id1,
+                                {{{"date_time", std::string("2024-01-01")}, {"value", 5.0}},
+                                 {{"date_time", std::string("2024-01-02")}, {"value", nullptr}}});
+
+    // Query at 01-02: should find the non-null value at 01-01 (skips null at 01-02)
+    auto result = db.read_time_series_row("Collection", "value", "2024-01-02");
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_DOUBLE_EQ(std::get<double>(result[0]), 5.0);
+}
+
+// ============================================================================
 // Time series error handling tests
 // ============================================================================
 

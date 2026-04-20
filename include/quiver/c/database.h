@@ -299,6 +299,24 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
                                                                      size_t column_count,
                                                                      size_t row_count);
 
+// Read time series row - returns one value per element for a specific attribute at a given date_time
+// Uses "last non-null value at or before date_time" lookup semantics
+// out_data_type: attribute's data type (QUIVER_DATA_TYPE_*)
+// out_values: typed array (int64_t* for INTEGER, double* for FLOAT, char** for STRING/DATE_TIME)
+// out_count: number of elements in the collection
+// For elements with no matching data: INTEGER -> 0, FLOAT -> NaN, STRING/DATE_TIME -> NULL pointer
+QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database_t* db,
+                                                                  const char* collection,
+                                                                  const char* attribute,
+                                                                  const char* date_time,
+                                                                  int* out_data_type,
+                                                                  void** out_values,
+                                                                  size_t* out_count);
+
+// Free time series row read results
+// Uses data_type to determine deallocation strategy
+QUIVER_C_API quiver_error_t quiver_database_free_time_series_row(int data_type, void* values, size_t count);
+
 // Free multi-column time series read results
 // Uses column_types to determine deallocation strategy per column
 QUIVER_C_API quiver_error_t quiver_database_free_time_series_data(char** column_names,

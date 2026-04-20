@@ -204,6 +204,86 @@ void Database::update_time_series_group(const std::string& collection,
     impl_->logger->info("Updated time series {}.{} for id {} with {} rows", collection, group, id, rows.size());
 }
 
+std::vector<Value>
+Database::read_time_series_row(const std::string& collection, const std::string& attribute, const std::string& date_time) {
+    impl_->require_collection(collection, "read_time_series_row");
+
+    // Find which time series group contains this attribute (search value columns only)
+    auto groups = list_time_series_groups(collection);
+    std::string target_group;
+    std::string dim_col;
+
+    for (const auto& group : groups) {
+        for (const auto& vc : group.value_columns) {
+            if (vc.name == attribute) {
+                target_group = group.group_name;
+                dim_col = group.dimension_column;
+                break;
+            }
+        }
+        if (!target_group.empty())
+            break;
+    }
+
+    if (target_group.empty()) {
+        throw std::runtime_error("Time series attribute not found: '" + attribute + "' in collection '" + collection +
+                                 "'");
+    }
+
+    auto ts_table = Schema::time_series_table_name(collection, target_group);
+
+    // Get all element IDs in order
+    auto element_ids = read_element_ids(collection);
+    if (element_ids.empty()) {
+        return {};
+    }
+
+    // For each element, find the most recent non-null value where dim_col <= date_time
+    // Uses a self-join: subquery finds the max dim_col per id, outer query gets the value
+    auto sql = "SELECT t.id, t." + attribute + " FROM " + ts_table + " t " + "INNER JOIN (SELECT id, MAX(" + dim_col +
+               ") as max_dt " + "FROM " + ts_table + " WHERE " + dim_col + " <= ? AND " + attribute +
+               " IS NOT NULL " + "GROUP BY id) latest " + "ON t.id = latest.id AND t." + dim_col +
+               " = latest.max_dt " + "ORDER BY t.id";
+
+    auto query_result = execute(sql, {date_time});
+
+    // Build id -> value map from results
+    std::map<int64_t, Value> id_value_map;
+    for (size_t i = 0; i < query_result.row_count(); ++i) {
+        auto id = query_result[i].get_integer(0);
+        if (!id)
+            continue;
+
+        auto int_val = query_result[i].get_integer(1);
+        auto float_val = query_result[i].get_float(1);
+        auto str_val = query_result[i].get_string(1);
+
+        if (int_val) {
+            id_value_map[*id] = *int_val;
+        } else if (float_val) {
+            id_value_map[*id] = *float_val;
+        } else if (str_val) {
+            id_value_map[*id] = *str_val;
+        } else {
+            id_value_map[*id] = nullptr;
+        }
+    }
+
+    // Build result vector in element ID order (nullptr for missing elements)
+    std::vector<Value> result;
+    result.reserve(element_ids.size());
+    for (auto element_id : element_ids) {
+        auto it = id_value_map.find(element_id);
+        if (it != id_value_map.end()) {
+            result.push_back(it->second);
+        } else {
+            result.push_back(nullptr);
+        }
+    }
+
+    return result;
+}
+
 bool Database::has_time_series_files(const std::string& collection) const {
     impl_->require_collection(collection, "has_time_series_files");
     auto tsf = Schema::time_series_files_table_name(collection);
