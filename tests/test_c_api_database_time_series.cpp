@@ -616,7 +616,10 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupNullColumnArraysWithCount) {
               QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto err = quiver_database_update_time_series_group(db, "Sensor", "readings", 1,
+    auto err = quiver_database_update_time_series_group(db,
+                                                        "Sensor",
+                                                        "readings",
+                                                        1,
                                                         /*column_names=*/nullptr,
                                                         /*column_types=*/nullptr,
                                                         /*column_data=*/nullptr,

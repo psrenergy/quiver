@@ -501,8 +501,13 @@ TEST(DatabaseCApiQuery, QueryParamsNullArraysWithCount) {
 
     int64_t value = 0;
     int has_value = 0;
-    auto err = quiver_database_query_integer_params(db, "SELECT 1", /*param_types=*/nullptr,
-                                                    /*param_values=*/nullptr, 1, &value, &has_value);
+    auto err = quiver_database_query_integer_params(db,
+                                                    "SELECT 1",
+                                                    /*param_types=*/nullptr,
+                                                    /*param_values=*/nullptr,
+                                                    1,
+                                                    &value,
+                                                    &has_value);
     EXPECT_EQ(err, QUIVER_ERROR);
     std::string msg = quiver_get_last_error();
     EXPECT_NE(msg.find("Null argument"), std::string::npos) << "Actual: " << msg;
@@ -523,8 +528,7 @@ TEST(DatabaseCApiQuery, QueryParamsUnknownType) {
 
     int64_t value = 0;
     int has_value = 0;
-    auto err =
-        quiver_database_query_integer_params(db, "SELECT 1", param_types, param_values, 1, &value, &has_value);
+    auto err = quiver_database_query_integer_params(db, "SELECT 1", param_types, param_values, 1, &value, &has_value);
     EXPECT_EQ(err, QUIVER_ERROR);
     std::string msg = quiver_get_last_error();
     EXPECT_NE(msg.find("unknown parameter type"), std::string::npos) << "Actual: " << msg;

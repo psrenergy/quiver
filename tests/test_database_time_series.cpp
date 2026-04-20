@@ -286,8 +286,9 @@ TEST(Database, TimeSeriesTypeMismatchIntegerToReal) {
 }
 
 TEST(Database, TimeSeriesTypeMismatchRealToInteger) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("mixed_time_series.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("mixed_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));
@@ -306,8 +307,9 @@ TEST(Database, TimeSeriesTypeMismatchRealToInteger) {
 }
 
 TEST(Database, TimeSeriesTypeMismatchStringToReal) {
-    auto db = quiver::Database::from_schema(
-        ":memory:", VALID_SCHEMA("mixed_time_series.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("mixed_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
 
     quiver::Element config;
     config.set("label", std::string("Test Config"));

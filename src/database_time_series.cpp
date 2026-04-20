@@ -3,37 +3,6 @@
 
 namespace quiver {
 
-namespace {
-
-bool value_matches_type(const Value& v, DataType expected) {
-    if (std::holds_alternative<std::nullptr_t>(v))
-        return true;
-    switch (expected) {
-    case DataType::Integer:
-        return std::holds_alternative<int64_t>(v);
-    case DataType::Real:
-        return std::holds_alternative<double>(v);
-    case DataType::Text:
-    case DataType::DateTime:
-        return std::holds_alternative<std::string>(v);
-    }
-    return false;
-}
-
-const char* value_type_name(const Value& v) {
-    if (std::holds_alternative<std::nullptr_t>(v))
-        return "NULL";
-    if (std::holds_alternative<int64_t>(v))
-        return "INTEGER";
-    if (std::holds_alternative<double>(v))
-        return "REAL";
-    if (std::holds_alternative<std::string>(v))
-        return "TEXT";
-    return "UNKNOWN";
-}
-
-}  // namespace
-
 std::vector<GroupMetadata> Database::list_time_series_groups(const std::string& collection) const {
     impl_->require_schema("list_time_series_groups");
 
@@ -175,9 +144,10 @@ void Database::update_time_series_group(const std::string& collection,
                 throw std::runtime_error("Cannot update_time_series_group: column '" + col_name +
                                          "' not found in group '" + group + "' for collection '" + collection + "'");
             }
-            if (!value_matches_type(value, it->second)) {
+            if (!internal::value_matches_type(value, it->second)) {
                 throw std::runtime_error("Cannot update_time_series_group: column '" + col_name + "' has type " +
-                                         data_type_to_string(it->second) + " but received " + value_type_name(value));
+                                         data_type_to_string(it->second) + " but received " +
+                                         internal::value_type_name(value));
             }
         }
     }

@@ -4,10 +4,13 @@
 #include "quiver/attribute_metadata.h"
 #include "quiver/result.h"
 #include "quiver/schema.h"
+#include "quiver/value.h"
 
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
+#include <variant>
 #include <vector>
 
 namespace quiver::internal {
@@ -83,6 +86,42 @@ inline std::string find_dimension_column(const TableDefinition& table_def) {
         }
     }
     throw std::runtime_error("Dimension column not found: time series table '" + table_def.name + "'");
+}
+
+// True if the Value variant holds the data type expected by a schema column.
+// NULL values match any column type.
+inline bool value_matches_type(const Value& v, DataType expected) {
+    return std::visit(
+        [expected](const auto& x) {
+            using T = std::decay_t<decltype(x)>;
+            if constexpr (std::is_same_v<T, std::nullptr_t>)
+                return true;
+            else if constexpr (std::is_same_v<T, int64_t>)
+                return expected == DataType::Integer;
+            else if constexpr (std::is_same_v<T, double>)
+                return expected == DataType::Real;
+            else
+                return expected == DataType::Text || expected == DataType::DateTime;
+        },
+        v);
+}
+
+// Human-readable name of the type currently held in a Value (for error messages).
+// Precondition: only called when value_matches_type returned false, so v never holds nullptr_t.
+inline const char* value_type_name(const Value& v) {
+    return std::visit(
+        [](const auto& x) -> const char* {
+            using T = std::decay_t<decltype(x)>;
+            if constexpr (std::is_same_v<T, int64_t>)
+                return "INTEGER";
+            else if constexpr (std::is_same_v<T, double>)
+                return "REAL";
+            else if constexpr (std::is_same_v<T, std::string>)
+                return "TEXT";
+            else
+                return "NULL";
+        },
+        v);
 }
 
 // Convert a ColumnDefinition to ScalarMetadata
