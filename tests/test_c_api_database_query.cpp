@@ -491,3 +491,47 @@ TEST(DatabaseCApiQuery, QueryParamsNullStringElement) {
 
     quiver_database_close(db);
 }
+
+TEST(DatabaseCApiQuery, QueryParamsNullArraysWithCount) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    int64_t value = 0;
+    int has_value = 0;
+    auto err = quiver_database_query_integer_params(db,
+                                                    "SELECT 1",
+                                                    /*param_types=*/nullptr,
+                                                    /*param_values=*/nullptr,
+                                                    1,
+                                                    &value,
+                                                    &has_value);
+    EXPECT_EQ(err, QUIVER_ERROR);
+    std::string msg = quiver_get_last_error();
+    EXPECT_NE(msg.find("Null argument"), std::string::npos) << "Actual: " << msg;
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApiQuery, QueryParamsUnknownType) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    int param_types[] = {999};  // bogus type
+    int64_t dummy = 0;
+    const void* param_values[] = {&dummy};
+
+    int64_t value = 0;
+    int has_value = 0;
+    auto err = quiver_database_query_integer_params(db, "SELECT 1", param_types, param_values, 1, &value, &has_value);
+    EXPECT_EQ(err, QUIVER_ERROR);
+    std::string msg = quiver_get_last_error();
+    EXPECT_NE(msg.find("unknown parameter type"), std::string::npos) << "Actual: " << msg;
+
+    quiver_database_close(db);
+}

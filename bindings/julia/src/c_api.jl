@@ -470,10 +470,6 @@ function quiver_lua_runner_get_error(runner, out_error)
     @ccall libquiver_c.quiver_lua_runner_get_error(runner::Ptr{quiver_lua_runner_t}, out_error::Ptr{Ptr{Cchar}})::quiver_error_t
 end
 
-# ============================================================================
-# Binary types
-# ============================================================================
-
 @cenum quiver_time_frequency_t::UInt32 begin
     QUIVER_TIME_FREQUENCY_YEARLY = 0
     QUIVER_TIME_FREQUENCY_MONTHLY = 1
@@ -498,14 +494,6 @@ end
 mutable struct quiver_binary_metadata end
 
 const quiver_binary_metadata_t = quiver_binary_metadata
-
-mutable struct quiver_binary_file end
-
-const quiver_binary_file_t = quiver_binary_file
-
-# ============================================================================
-# Binary metadata functions
-# ============================================================================
 
 function quiver_binary_metadata_create(out)
     @ccall libquiver_c.quiver_binary_metadata_create(out::Ptr{Ptr{quiver_binary_metadata_t}})::quiver_error_t
@@ -591,9 +579,9 @@ function quiver_binary_metadata_free_dimension(dim)
     @ccall libquiver_c.quiver_binary_metadata_free_dimension(dim::Ptr{quiver_dimension_t})::quiver_error_t
 end
 
-# ============================================================================
-# Binary file functions
-# ============================================================================
+mutable struct quiver_binary_file end
+
+const quiver_binary_file_t = quiver_binary_file
 
 function quiver_binary_file_open_read(path, out)
     @ccall libquiver_c.quiver_binary_file_open_read(path::Ptr{Cchar}, out::Ptr{Ptr{quiver_binary_file_t}})::quiver_error_t
@@ -631,10 +619,6 @@ function quiver_binary_file_free_float_array(data)
     @ccall libquiver_c.quiver_binary_file_free_float_array(data::Ptr{Cdouble})::quiver_error_t
 end
 
-# ============================================================================
-# Binary CSV functions
-# ============================================================================
-
 function quiver_csv_converter_bin_to_csv(path, aggregate_time_dimensions)
     @ccall libquiver_c.quiver_csv_converter_bin_to_csv(path::Ptr{Cchar}, aggregate_time_dimensions::Cint)::quiver_error_t
 end
@@ -644,5 +628,6 @@ function quiver_csv_converter_csv_to_bin(path)
 end
 
 #! format: on
+
 
 end # module
