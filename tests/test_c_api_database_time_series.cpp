@@ -608,6 +608,63 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupColumnOrderIndependent) {
 // Multi-column validation error tests
 // ============================================================================
 
+TEST(DatabaseCApi, UpdateTimeSeriesGroupNullColumnArraysWithCount) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("mixed_time_series.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    auto err = quiver_database_update_time_series_group(db, "Sensor", "readings", 1,
+                                                        /*column_names=*/nullptr,
+                                                        /*column_types=*/nullptr,
+                                                        /*column_data=*/nullptr,
+                                                        /*column_count=*/1,
+                                                        /*row_count=*/0);
+    EXPECT_EQ(err, QUIVER_ERROR);
+    std::string msg = quiver_get_last_error();
+    EXPECT_NE(msg.find("Null argument"), std::string::npos) << "Actual: " << msg;
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, UpdateTimeSeriesGroupUnknownColumnType) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("mixed_time_series.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    quiver_element_destroy(config);
+
+    quiver_element_t* sensor = nullptr;
+    ASSERT_EQ(quiver_element_create(&sensor), QUIVER_OK);
+    quiver_element_set_string(sensor, "label", "Sensor 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "Sensor", sensor, &id);
+    quiver_element_destroy(sensor);
+
+    const char* col_names[] = {"date_time", "temperature"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING, 999};  // bogus type
+    const char* dts[] = {"2024-01-01T10:00:00"};
+    double temps[] = {20.0};
+    const void* col_data[] = {dts, temps};
+    auto err =
+        quiver_database_update_time_series_group(db, "Sensor", "readings", id, col_names, col_types, col_data, 2, 1);
+    EXPECT_EQ(err, QUIVER_ERROR);
+    std::string msg = quiver_get_last_error();
+    EXPECT_NE(msg.find("unknown column type"), std::string::npos) << "Actual: " << msg;
+
+    quiver_database_close(db);
+}
+
 TEST(DatabaseCApi, UpdateTimeSeriesGroupMissingDimension) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;

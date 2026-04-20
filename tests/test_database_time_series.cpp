@@ -219,6 +219,19 @@ TEST(Database, TimeSeriesCollectionNotFound) {
     EXPECT_TRUE(groups.empty());
 }
 
+static std::string capture_update_error(quiver::Database& db,
+                                        const std::string& collection,
+                                        const std::string& group,
+                                        int64_t id,
+                                        const std::vector<std::map<std::string, quiver::Value>>& rows) {
+    try {
+        db.update_time_series_group(collection, group, id, rows);
+    } catch (const std::runtime_error& e) {
+        return e.what();
+    }
+    return {};
+}
+
 TEST(Database, TimeSeriesMissingDateTime) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
@@ -231,17 +244,9 @@ TEST(Database, TimeSeriesMissingDateTime) {
     e1.set("label", std::string("Item 1"));
     auto id = db.create_element("Collection", e1);
 
-    std::vector<std::map<std::string, quiver::Value>> rows = {
-        {{"value", 1.0}}  // Missing date_time
-    };
-
-    try {
-        db.update_time_series_group("Collection", "data", id, rows);
-        FAIL() << "Expected std::runtime_error";
-    } catch (const std::runtime_error& e) {
-        EXPECT_NE(std::string(e.what()).find("row missing required 'date_time' column"), std::string::npos)
-            << "Actual: " << e.what();
-    }
+    std::vector<std::map<std::string, quiver::Value>> rows = {{{"value", 1.0}}};
+    auto msg = capture_update_error(db, "Collection", "data", id, rows);
+    EXPECT_NE(msg.find("row missing required 'date_time' column"), std::string::npos) << "Actual: " << msg;
 }
 
 TEST(Database, TimeSeriesUnknownColumn) {
@@ -258,17 +263,11 @@ TEST(Database, TimeSeriesUnknownColumn) {
 
     std::vector<std::map<std::string, quiver::Value>> rows = {
         {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.0}, {"pressure", 1013.25}}};
-
-    try {
-        db.update_time_series_group("Collection", "data", id, rows);
-        FAIL() << "Expected std::runtime_error";
-    } catch (const std::runtime_error& e) {
-        EXPECT_NE(std::string(e.what()).find("column 'pressure' not found in group 'data'"), std::string::npos)
-            << "Actual: " << e.what();
-    }
+    auto msg = capture_update_error(db, "Collection", "data", id, rows);
+    EXPECT_NE(msg.find("column 'pressure' not found in group 'data'"), std::string::npos) << "Actual: " << msg;
 }
 
-TEST(Database, TimeSeriesTypeMismatch) {
+TEST(Database, TimeSeriesTypeMismatchIntegerToReal) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
 
@@ -280,18 +279,72 @@ TEST(Database, TimeSeriesTypeMismatch) {
     e1.set("label", std::string("Item 1"));
     auto id = db.create_element("Collection", e1);
 
-    // 'value' column is REAL in the schema; sending an INTEGER must be rejected.
     std::vector<std::map<std::string, quiver::Value>> rows = {
         {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", int64_t{1}}}};
+    auto msg = capture_update_error(db, "Collection", "data", id, rows);
+    EXPECT_NE(msg.find("column 'value' has type REAL but received INTEGER"), std::string::npos) << "Actual: " << msg;
+}
 
-    try {
-        db.update_time_series_group("Collection", "data", id, rows);
-        FAIL() << "Expected std::runtime_error";
-    } catch (const std::runtime_error& e) {
-        std::string msg = e.what();
-        EXPECT_NE(msg.find("column 'value' has type REAL but received INTEGER"), std::string::npos)
-            << "Actual: " << msg;
-    }
+TEST(Database, TimeSeriesTypeMismatchRealToInteger) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("mixed_time_series.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element sensor;
+    sensor.set("label", std::string("Sensor 1"));
+    auto id = db.create_element("Sensor", sensor);
+
+    std::vector<std::map<std::string, quiver::Value>> rows = {{{"date_time", std::string("2024-01-01T10:00:00")},
+                                                               {"temperature", 20.5},
+                                                               {"humidity", 55.5},  // INTEGER column, sending REAL
+                                                               {"status", std::string("ok")}}};
+    auto msg = capture_update_error(db, "Sensor", "readings", id, rows);
+    EXPECT_NE(msg.find("column 'humidity' has type INTEGER but received REAL"), std::string::npos) << "Actual: " << msg;
+}
+
+TEST(Database, TimeSeriesTypeMismatchStringToReal) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("mixed_time_series.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element sensor;
+    sensor.set("label", std::string("Sensor 1"));
+    auto id = db.create_element("Sensor", sensor);
+
+    std::vector<std::map<std::string, quiver::Value>> rows = {{{"date_time", std::string("2024-01-01T10:00:00")},
+                                                               {"temperature", std::string("hot")},  // REAL, sent TEXT
+                                                               {"humidity", int64_t{55}},
+                                                               {"status", std::string("ok")}}};
+    auto msg = capture_update_error(db, "Sensor", "readings", id, rows);
+    EXPECT_NE(msg.find("column 'temperature' has type REAL but received TEXT"), std::string::npos) << "Actual: " << msg;
+}
+
+TEST(Database, TimeSeriesNullValue) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item 1"));
+    auto id = db.create_element("Collection", e1);
+
+    // NULL values must be accepted for any column regardless of declared type.
+    std::vector<std::map<std::string, quiver::Value>> rows = {
+        {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", nullptr}}};
+    db.update_time_series_group("Collection", "data", id, rows);
+
+    auto result = db.read_time_series_group("Collection", "data", id);
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(result[0]["value"]));
 }
 
 // ============================================================================
