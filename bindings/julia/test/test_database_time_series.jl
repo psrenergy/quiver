@@ -389,7 +389,7 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
-        @testset "Read Time Series Row With Missing Elements" begin
+    @testset "Read Time Series Row With Missing Elements" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)
 

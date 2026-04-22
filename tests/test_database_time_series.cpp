@@ -219,12 +219,16 @@ TEST(Database, ReadTimeSeriesRow) {
     auto id2 = db.create_element("Collection", e2);
 
     // Insert time series data for both elements
-    db.update_time_series_group("Collection", "data", id1,
+    db.update_time_series_group("Collection",
+                                "data",
+                                id1,
                                 {{{"date_time", std::string("2024-01-01")}, {"value", 1.0}},
                                  {{"date_time", std::string("2024-01-02")}, {"value", 2.0}},
                                  {{"date_time", std::string("2024-01-03")}, {"value", 3.0}}});
 
-    db.update_time_series_group("Collection", "data", id2,
+    db.update_time_series_group("Collection",
+                                "data",
+                                id2,
                                 {{{"date_time", std::string("2024-01-01")}, {"value", 10.0}},
                                  {{"date_time", std::string("2024-01-02")}, {"value", 20.0}}});
 
@@ -259,12 +263,16 @@ TEST(Database, ReadTimeSeriesRowWithMissingElements) {
     auto id2 = db.create_element("Collection", e2);
 
     // Insert time series data for both elements
-    db.update_time_series_group("Collection", "data", id1,
+    db.update_time_series_group("Collection",
+                                "data",
+                                id1,
                                 {{{"date_time", std::string("2024-01-01")}, {"value", 1.0}},
                                  {{"date_time", std::string("2024-01-02")}, {"value", 2.0}},
                                  {{"date_time", std::string("2024-01-03")}, {"value", 3.0}}});
 
-    db.update_time_series_group("Collection", "data", id2,
+    db.update_time_series_group("Collection",
+                                "data",
+                                id2,
                                 {{{"date_time", std::string("2024-01-01")}, {"value", 10.0}},
                                  {{"date_time", std::string("2024-01-04")}, {"value", 20.0}}});
 
@@ -293,8 +301,8 @@ TEST(Database, ReadTimeSeriesRowBeforeAllData) {
     e1.set("label", std::string("Item 1"));
     auto id1 = db.create_element("Collection", e1);
 
-    db.update_time_series_group("Collection", "data", id1,
-                                {{{"date_time", std::string("2024-01-02")}, {"value", 1.0}}});
+    db.update_time_series_group(
+        "Collection", "data", id1, {{{"date_time", std::string("2024-01-02")}, {"value", 1.0}}});
 
     // Query before any data exists: should return nullptr for the element
     auto result = db.read_time_series_row("Collection", "value", "2024-01-01");
@@ -331,8 +339,8 @@ TEST(Database, ReadTimeSeriesRowMixedElements) {
     e2.set("label", std::string("Item 2"));
     db.create_element("Collection", e2);  // no time series data
 
-    db.update_time_series_group("Collection", "data", id1,
-                                {{{"date_time", std::string("2024-01-01")}, {"value", 5.0}}});
+    db.update_time_series_group(
+        "Collection", "data", id1, {{{"date_time", std::string("2024-01-01")}, {"value", 5.0}}});
 
     // Item 1 has data, Item 2 doesn't
     auto result = db.read_time_series_row("Collection", "value", "2024-01-01");
@@ -361,7 +369,9 @@ TEST(Database, ReadTimeSeriesRowMultiColumn) {
     sensor.set("label", std::string("Sensor 1"));
     auto id = db.create_element("Sensor", sensor);
 
-    db.update_time_series_group("Sensor", "readings", id,
+    db.update_time_series_group("Sensor",
+                                "readings",
+                                id,
                                 {{{"date_time", std::string("2024-01-01")},
                                   {"temperature", 20.5},
                                   {"humidity", int64_t{65}},
@@ -400,7 +410,9 @@ TEST(Database, ReadTimeSeriesRowSkipsNullValues) {
     auto id1 = db.create_element("Collection", e1);
 
     // Insert: non-null at 01-01, null at 01-02
-    db.update_time_series_group("Collection", "data", id1,
+    db.update_time_series_group("Collection",
+                                "data",
+                                id1,
                                 {{{"date_time", std::string("2024-01-01")}, {"value", 5.0}},
                                  {{"date_time", std::string("2024-01-02")}, {"value", nullptr}}});
 
