@@ -57,12 +57,12 @@ QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(quiver_datab
 // Time series row read (one value per element at a specific date_time)
 
 QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database_t* db,
-                                                                  const char* collection,
-                                                                  const char* attribute,
-                                                                  const char* date_time,
-                                                                  int* out_data_type,
-                                                                  void** out_values,
-                                                                  size_t* out_count) {
+                                                                 const char* collection,
+                                                                 const char* attribute,
+                                                                 const char* date_time,
+                                                                 int* out_data_type,
+                                                                 void** out_values,
+                                                                 size_t* out_count) {
     QUIVER_REQUIRE(db, collection, attribute, date_time, out_data_type, out_values, out_count);
 
     try {

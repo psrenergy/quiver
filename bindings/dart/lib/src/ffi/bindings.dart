@@ -1619,6 +1619,72 @@ class QuiverDatabaseBindings {
         )
       >();
 
+  int quiver_database_read_time_series_row(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> attribute,
+    ffi.Pointer<ffi.Char> date_time,
+    ffi.Pointer<ffi.Int> out_data_type,
+    ffi.Pointer<ffi.Pointer<ffi.Void>> out_values,
+    ffi.Pointer<ffi.Size> out_count,
+  ) {
+    return _quiver_database_read_time_series_row(
+      db,
+      collection,
+      attribute,
+      date_time,
+      out_data_type,
+      out_values,
+      out_count,
+    );
+  }
+
+  late final _quiver_database_read_time_series_rowPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Int>,
+            ffi.Pointer<ffi.Pointer<ffi.Void>>,
+            ffi.Pointer<ffi.Size>,
+          )
+        >
+      >('quiver_database_read_time_series_row');
+  late final _quiver_database_read_time_series_row = _quiver_database_read_time_series_rowPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Int>,
+          ffi.Pointer<ffi.Pointer<ffi.Void>>,
+          ffi.Pointer<ffi.Size>,
+        )
+      >();
+
+  int quiver_database_free_time_series_row(
+    int data_type,
+    ffi.Pointer<ffi.Void> values,
+    int count,
+  ) {
+    return _quiver_database_free_time_series_row(
+      data_type,
+      values,
+      count,
+    );
+  }
+
+  late final _quiver_database_free_time_series_rowPtr =
+      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Int, ffi.Pointer<ffi.Void>, ffi.Size)>>(
+        'quiver_database_free_time_series_row',
+      );
+  late final _quiver_database_free_time_series_row = _quiver_database_free_time_series_rowPtr
+      .asFunction<int Function(int, ffi.Pointer<ffi.Void>, int)>();
+
   int quiver_database_free_time_series_data(
     ffi.Pointer<ffi.Pointer<ffi.Char>> column_names,
     ffi.Pointer<ffi.Int> column_types,

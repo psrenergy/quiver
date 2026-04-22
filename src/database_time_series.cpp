@@ -204,8 +204,9 @@ void Database::update_time_series_group(const std::string& collection,
     impl_->logger->info("Updated time series {}.{} for id {} with {} rows", collection, group, id, rows.size());
 }
 
-std::vector<Value>
-Database::read_time_series_row(const std::string& collection, const std::string& attribute, const std::string& date_time) {
+std::vector<Value> Database::read_time_series_row(const std::string& collection,
+                                                  const std::string& attribute,
+                                                  const std::string& date_time) {
     impl_->require_collection(collection, "read_time_series_row");
 
     // Find which time series group contains this attribute (search value columns only)
@@ -241,9 +242,8 @@ Database::read_time_series_row(const std::string& collection, const std::string&
     // For each element, find the most recent non-null value where dim_col <= date_time
     // Uses a self-join: subquery finds the max dim_col per id, outer query gets the value
     auto sql = "SELECT t.id, t." + attribute + " FROM " + ts_table + " t " + "INNER JOIN (SELECT id, MAX(" + dim_col +
-               ") as max_dt " + "FROM " + ts_table + " WHERE " + dim_col + " <= ? AND " + attribute +
-               " IS NOT NULL " + "GROUP BY id) latest " + "ON t.id = latest.id AND t." + dim_col +
-               " = latest.max_dt " + "ORDER BY t.id";
+               ") as max_dt " + "FROM " + ts_table + " WHERE " + dim_col + " <= ? AND " + attribute + " IS NOT NULL " +
+               "GROUP BY id) latest " + "ON t.id = latest.id AND t." + dim_col + " = latest.max_dt " + "ORDER BY t.id";
 
     auto query_result = execute(sql, {date_time});
 
