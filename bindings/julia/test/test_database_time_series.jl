@@ -375,14 +375,14 @@ include("fixture.jl")
         )
 
         # Query at 2024-01-02: Item 1 -> 2.0, Item 2 -> 20.0
-        result = Quiver.read_time_series_row(db, "Collection", "value"; date_time = DateTime(2024, 1, 2))
+        result = Quiver.read_time_series_row(db, "Collection", "data", "value"; date_time = DateTime(2024, 1, 2))
         @test result isa Vector{Float64}
         @test length(result) == 2
         @test result[1] == 2.0
         @test result[2] == 20.0
 
         # Query at 2024-01-03: Item 1 -> 3.0, Item 2 -> 20.0 (last at or before)
-        result2 = Quiver.read_time_series_row(db, "Collection", "value"; date_time = DateTime(2024, 1, 3))
+        result2 = Quiver.read_time_series_row(db, "Collection", "data", "value"; date_time = DateTime(2024, 1, 3))
         @test result2[1] == 3.0
         @test result2[2] == 20.0
 
@@ -407,14 +407,14 @@ include("fixture.jl")
         )
 
         # Query at 2024-01-02: Item 1 -> 2.0, Item 2 -> 10.0
-        result = Quiver.read_time_series_row(db, "Collection", "value"; date_time = DateTime(2024, 1, 2))
+        result = Quiver.read_time_series_row(db, "Collection", "data", "value"; date_time = DateTime(2024, 1, 2))
         @test result isa Vector{Float64}
         @test length(result) == 2
         @test result[1] == 2.0
         @test result[2] == 10.0
 
         # Query at 2024-01-03: Item 1 -> 3.0, Item 2 -> 10.0 (last at or before)
-        result2 = Quiver.read_time_series_row(db, "Collection", "value"; date_time = DateTime(2024, 1, 3))
+        result2 = Quiver.read_time_series_row(db, "Collection", "data", "value"; date_time = DateTime(2024, 1, 3))
         @test result2[1] == 3.0
         @test result2[2] == 10.0
 
@@ -434,7 +434,7 @@ include("fixture.jl")
         )
 
         # Query before any data: should return NaN for the float attribute
-        result = Quiver.read_time_series_row(db, "Collection", "value"; date_time = DateTime(2024, 1, 1))
+        result = Quiver.read_time_series_row(db, "Collection", "data", "value"; date_time = DateTime(2024, 1, 1))
         @test length(result) == 1
         @test isnan(result[1])
 
@@ -447,7 +447,7 @@ include("fixture.jl")
 
         Quiver.create_element!(db, "Configuration"; label = "Test Config")
 
-        result = Quiver.read_time_series_row(db, "Collection", "value"; date_time = DateTime(2024, 1, 1))
+        result = Quiver.read_time_series_row(db, "Collection", "data", "value"; date_time = DateTime(2024, 1, 1))
         @test isempty(result)
         @test result isa Vector{Float64}
 
@@ -468,7 +468,7 @@ include("fixture.jl")
         )
 
         # Item 1 has data, Item 2 doesn't (NaN sentinel)
-        result = Quiver.read_time_series_row(db, "Collection", "value"; date_time = DateTime(2024, 1, 1))
+        result = Quiver.read_time_series_row(db, "Collection", "data", "value"; date_time = DateTime(2024, 1, 1))
         @test length(result) == 2
         @test result[1] == 5.0
         @test isnan(result[2])
@@ -491,17 +491,17 @@ include("fixture.jl")
         )
 
         # Read humidity (INTEGER type)
-        humids = Quiver.read_time_series_row(db, "Sensor", "humidity"; date_time = DateTime(2024, 1, 2))
+        humids = Quiver.read_time_series_row(db, "Sensor", "readings", "humidity"; date_time = DateTime(2024, 1, 2))
         @test humids isa Vector{Int64}
         @test humids[1] == 70
 
         # Read status (STRING type)
-        stats = Quiver.read_time_series_row(db, "Sensor", "status"; date_time = DateTime(2024, 1, 1))
-        @test stats isa Vector{String}
+        stats = Quiver.read_time_series_row(db, "Sensor", "readings", "status"; date_time = DateTime(2024, 1, 1))
+        @test stats isa Vector{Union{String, Nothing}}
         @test stats[1] == "ok"
 
         # Read temperature (FLOAT type)
-        temps = Quiver.read_time_series_row(db, "Sensor", "temperature"; date_time = DateTime(2024, 1, 2))
+        temps = Quiver.read_time_series_row(db, "Sensor", "readings", "temperature"; date_time = DateTime(2024, 1, 2))
         @test temps isa Vector{Float64}
         @test temps[1] == 21.0
 
@@ -513,8 +513,44 @@ include("fixture.jl")
         db = Quiver.from_schema(":memory:", path_schema)
 
         @test_throws Quiver.DatabaseException Quiver.read_time_series_row(
-            db, "Collection", "nonexistent"; date_time = DateTime(2024, 1, 1),
+            db, "Collection", "data", "nonexistent"; date_time = DateTime(2024, 1, 1),
         )
+
+        Quiver.close!(db)
+    end
+
+    @testset "Read Time Series Row - Group Not Found" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        @test_throws Quiver.DatabaseException Quiver.read_time_series_row(
+            db, "Collection", "nonexistent", "value"; date_time = DateTime(2024, 1, 1),
+        )
+
+        Quiver.close!(db)
+    end
+
+    @testset "Read Time Series Row - String Null Distinguished From Empty" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "mixed_time_series.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration"; label = "Test Config")
+        id1 = Quiver.create_element!(db, "Sensor"; label = "Sensor 1")
+        Quiver.create_element!(db, "Sensor"; label = "Sensor 2")  # no data
+
+        Quiver.update_time_series_group!(db, "Sensor", "readings", id1;
+            date_time = ["2024-01-01T00:00:00"],
+            temperature = [20.0],
+            humidity = [50],
+            status = [""],  # empty string, not null
+        )
+
+        # Sensor 1 has "" (real value), Sensor 2 has no row (nothing)
+        result = Quiver.read_time_series_row(db, "Sensor", "readings", "status"; date_time = DateTime(2024, 1, 1))
+        @test result isa Vector{Union{String, Nothing}}
+        @test length(result) == 2
+        @test result[1] == ""
+        @test result[2] === nothing
 
         Quiver.close!(db)
     end

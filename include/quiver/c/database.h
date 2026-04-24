@@ -305,17 +305,18 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
 // out_values: typed array (int64_t* for INTEGER, double* for FLOAT, char** for STRING/DATE_TIME)
 // out_count: number of elements in the collection
 // For elements with no matching data: INTEGER -> 0, FLOAT -> NaN, STRING/DATE_TIME -> NULL pointer
+// Free out_values with the typed free function matching *out_data_type:
+//   INTEGER -> quiver_database_free_integer_array
+//   FLOAT -> quiver_database_free_float_array
+//   STRING/DATE_TIME -> quiver_database_free_string_array
 QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database_t* db,
                                                                  const char* collection,
+                                                                 const char* group,
                                                                  const char* attribute,
                                                                  const char* date_time,
                                                                  int* out_data_type,
                                                                  void** out_values,
                                                                  size_t* out_count);
-
-// Free time series row read results
-// Uses data_type to determine deallocation strategy
-QUIVER_C_API quiver_error_t quiver_database_free_time_series_row(int data_type, void* values, size_t count);
 
 // Free multi-column time series read results
 // Uses column_types to determine deallocation strategy per column

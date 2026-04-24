@@ -233,13 +233,13 @@ TEST(Database, ReadTimeSeriesRow) {
                                  {{"date_time", std::string("2024-01-02")}, {"value", 20.0}}});
 
     // Query at 2024-01-02: Item 1 -> 2.0, Item 2 -> 20.0
-    auto result = db.read_time_series_row("Collection", "value", "2024-01-02");
+    auto result = db.read_time_series_row("Collection", "data", "value", "2024-01-02");
     ASSERT_EQ(result.size(), 2);
     EXPECT_DOUBLE_EQ(std::get<double>(result[0]), 2.0);
     EXPECT_DOUBLE_EQ(std::get<double>(result[1]), 20.0);
 
     // Query at 2024-01-03: Item 1 -> 3.0, Item 2 -> 20.0 (last value at or before)
-    auto result2 = db.read_time_series_row("Collection", "value", "2024-01-03");
+    auto result2 = db.read_time_series_row("Collection", "data", "value", "2024-01-03");
     ASSERT_EQ(result2.size(), 2);
     EXPECT_DOUBLE_EQ(std::get<double>(result2[0]), 3.0);
     EXPECT_DOUBLE_EQ(std::get<double>(result2[1]), 20.0);
@@ -277,13 +277,13 @@ TEST(Database, ReadTimeSeriesRowWithMissingElements) {
                                  {{"date_time", std::string("2024-01-04")}, {"value", 20.0}}});
 
     // Query at 2024-01-02: Item 1 -> 2.0, Item 2 -> 10.0
-    auto result = db.read_time_series_row("Collection", "value", "2024-01-02");
+    auto result = db.read_time_series_row("Collection", "data", "value", "2024-01-02");
     ASSERT_EQ(result.size(), 2);
     EXPECT_DOUBLE_EQ(std::get<double>(result[0]), 2.0);
     EXPECT_DOUBLE_EQ(std::get<double>(result[1]), 10.0);
 
     // Query at 2024-01-03: Item 1 -> 3.0, Item 2 -> 10.0 (last value at or before)
-    auto result2 = db.read_time_series_row("Collection", "value", "2024-01-03");
+    auto result2 = db.read_time_series_row("Collection", "data", "value", "2024-01-03");
     ASSERT_EQ(result2.size(), 2);
     EXPECT_DOUBLE_EQ(std::get<double>(result2[0]), 3.0);
     EXPECT_DOUBLE_EQ(std::get<double>(result2[1]), 10.0);
@@ -305,7 +305,7 @@ TEST(Database, ReadTimeSeriesRowBeforeAllData) {
         "Collection", "data", id1, {{{"date_time", std::string("2024-01-02")}, {"value", 1.0}}});
 
     // Query before any data exists: should return nullptr for the element
-    auto result = db.read_time_series_row("Collection", "value", "2024-01-01");
+    auto result = db.read_time_series_row("Collection", "data", "value", "2024-01-01");
     ASSERT_EQ(result.size(), 1);
     EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(result[0]));
 }
@@ -319,7 +319,7 @@ TEST(Database, ReadTimeSeriesRowEmptyCollection) {
     db.create_element("Configuration", config);
 
     // No elements in Collection -> empty result
-    auto result = db.read_time_series_row("Collection", "value", "2024-01-01");
+    auto result = db.read_time_series_row("Collection", "data", "value", "2024-01-01");
     EXPECT_TRUE(result.empty());
 }
 
@@ -343,7 +343,7 @@ TEST(Database, ReadTimeSeriesRowMixedElements) {
         "Collection", "data", id1, {{{"date_time", std::string("2024-01-01")}, {"value", 5.0}}});
 
     // Item 1 has data, Item 2 doesn't
-    auto result = db.read_time_series_row("Collection", "value", "2024-01-01");
+    auto result = db.read_time_series_row("Collection", "data", "value", "2024-01-01");
     ASSERT_EQ(result.size(), 2);
     EXPECT_DOUBLE_EQ(std::get<double>(result[0]), 5.0);
     EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(result[1]));
@@ -353,7 +353,14 @@ TEST(Database, ReadTimeSeriesRowAttributeNotFound) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
 
-    EXPECT_THROW(db.read_time_series_row("Collection", "nonexistent", "2024-01-01"), std::runtime_error);
+    EXPECT_THROW(db.read_time_series_row("Collection", "data", "nonexistent", "2024-01-01"), std::runtime_error);
+}
+
+TEST(Database, ReadTimeSeriesRowGroupNotFound) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    EXPECT_THROW(db.read_time_series_row("Collection", "nonexistent", "value", "2024-01-01"), std::runtime_error);
 }
 
 TEST(Database, ReadTimeSeriesRowMultiColumn) {
@@ -382,17 +389,17 @@ TEST(Database, ReadTimeSeriesRowMultiColumn) {
                                   {"status", std::string("warn")}}});
 
     // Read temperature (REAL) at 2024-01-01
-    auto temps = db.read_time_series_row("Sensor", "temperature", "2024-01-01");
+    auto temps = db.read_time_series_row("Sensor", "readings", "temperature", "2024-01-01");
     ASSERT_EQ(temps.size(), 1);
     EXPECT_DOUBLE_EQ(std::get<double>(temps[0]), 20.5);
 
     // Read humidity (INTEGER) at 2024-01-02
-    auto humids = db.read_time_series_row("Sensor", "humidity", "2024-01-02");
+    auto humids = db.read_time_series_row("Sensor", "readings", "humidity", "2024-01-02");
     ASSERT_EQ(humids.size(), 1);
     EXPECT_EQ(std::get<int64_t>(humids[0]), 70);
 
     // Read status (TEXT) at 2024-01-02
-    auto stats = db.read_time_series_row("Sensor", "status", "2024-01-02");
+    auto stats = db.read_time_series_row("Sensor", "readings", "status", "2024-01-02");
     ASSERT_EQ(stats.size(), 1);
     EXPECT_EQ(std::get<std::string>(stats[0]), "warn");
 }
@@ -417,7 +424,7 @@ TEST(Database, ReadTimeSeriesRowSkipsNullValues) {
                                  {{"date_time", std::string("2024-01-02")}, {"value", nullptr}}});
 
     // Query at 01-02: should find the non-null value at 01-01 (skips null at 01-02)
-    auto result = db.read_time_series_row("Collection", "value", "2024-01-02");
+    auto result = db.read_time_series_row("Collection", "data", "value", "2024-01-02");
     ASSERT_EQ(result.size(), 1);
     EXPECT_DOUBLE_EQ(std::get<double>(result[0]), 5.0);
 }

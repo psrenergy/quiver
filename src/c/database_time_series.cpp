@@ -3,7 +3,6 @@
 #include "quiver/c/database.h"
 #include "quiver/data_type.h"
 
-#include <cmath>
 #include <limits>
 #include <map>
 #include <optional>
@@ -58,35 +57,31 @@ QUIVER_C_API quiver_error_t quiver_database_list_time_series_groups(quiver_datab
 
 QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database_t* db,
                                                                  const char* collection,
+                                                                 const char* group,
                                                                  const char* attribute,
                                                                  const char* date_time,
                                                                  int* out_data_type,
                                                                  void** out_values,
                                                                  size_t* out_count) {
-    QUIVER_REQUIRE(db, collection, attribute, date_time, out_data_type, out_values, out_count);
+    QUIVER_REQUIRE(db, collection, group, attribute, date_time, out_data_type, out_values, out_count);
 
     try {
-        // Look up the attribute's data type from time series metadata
-        auto groups = db->db.list_time_series_groups(collection);
+        auto metadata = db->db.get_time_series_metadata(collection, group);
         quiver::DataType attr_type{};
         bool found = false;
-        for (const auto& group : groups) {
-            for (const auto& vc : group.value_columns) {
-                if (vc.name == attribute) {
-                    attr_type = vc.data_type;
-                    found = true;
-                    break;
-                }
-            }
-            if (found)
+        for (const auto& vc : metadata.value_columns) {
+            if (vc.name == attribute) {
+                attr_type = vc.data_type;
+                found = true;
                 break;
+            }
         }
         if (!found) {
-            throw std::runtime_error("Time series attribute not found: '" + std::string(attribute) +
-                                     "' in collection '" + std::string(collection) + "'");
+            throw std::runtime_error("Time series attribute not found: '" + std::string(attribute) + "' in group '" +
+                                     std::string(group) + "' of collection '" + std::string(collection) + "'");
         }
 
-        auto values = db->db.read_time_series_row(collection, attribute, date_time);
+        auto values = db->db.read_time_series_row(collection, group, attribute, date_time);
         *out_count = values.size();
         *out_data_type = to_c_data_type(attr_type);
 
@@ -99,11 +94,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database
         case QUIVER_DATA_TYPE_INTEGER: {
             auto* arr = new int64_t[values.size()];
             for (size_t i = 0; i < values.size(); ++i) {
-                if (std::holds_alternative<int64_t>(values[i])) {
-                    arr[i] = std::get<int64_t>(values[i]);
-                } else {
-                    arr[i] = 0;  // null sentinel
-                }
+                arr[i] = std::holds_alternative<int64_t>(values[i]) ? std::get<int64_t>(values[i]) : 0;
             }
             *out_values = arr;
             break;
@@ -111,11 +102,8 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database
         case QUIVER_DATA_TYPE_FLOAT: {
             auto* arr = new double[values.size()];
             for (size_t i = 0; i < values.size(); ++i) {
-                if (std::holds_alternative<double>(values[i])) {
-                    arr[i] = std::get<double>(values[i]);
-                } else {
-                    arr[i] = std::numeric_limits<double>::quiet_NaN();  // null sentinel
-                }
+                arr[i] = std::holds_alternative<double>(values[i]) ? std::get<double>(values[i])
+                                                                   : std::numeric_limits<double>::quiet_NaN();
             }
             *out_values = arr;
             break;
@@ -124,11 +112,9 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database
         case QUIVER_DATA_TYPE_DATE_TIME: {
             auto** arr = new char*[values.size()];
             for (size_t i = 0; i < values.size(); ++i) {
-                if (std::holds_alternative<std::string>(values[i])) {
-                    arr[i] = quiver::string::new_c_str(std::get<std::string>(values[i]));
-                } else {
-                    arr[i] = nullptr;  // null sentinel
-                }
+                arr[i] = std::holds_alternative<std::string>(values[i])
+                             ? quiver::string::new_c_str(std::get<std::string>(values[i]))
+                             : nullptr;
             }
             *out_values = arr;
             break;
@@ -143,35 +129,6 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database
         quiver_set_last_error(e.what());
         return QUIVER_ERROR;
     }
-}
-
-QUIVER_C_API quiver_error_t quiver_database_free_time_series_row(int data_type, void* values, size_t count) {
-    if (!values) {
-        return QUIVER_OK;
-    }
-
-    switch (data_type) {
-    case QUIVER_DATA_TYPE_INTEGER:
-        delete[] static_cast<int64_t*>(values);
-        break;
-    case QUIVER_DATA_TYPE_FLOAT:
-        delete[] static_cast<double*>(values);
-        break;
-    case QUIVER_DATA_TYPE_STRING:
-    case QUIVER_DATA_TYPE_DATE_TIME: {
-        auto** strings = static_cast<char**>(values);
-        for (size_t i = 0; i < count; ++i) {
-            delete[] strings[i];
-        }
-        delete[] strings;
-        break;
-    }
-    default:
-        quiver_set_last_error("Cannot free_time_series_row: unknown data type " + std::to_string(data_type));
-        return QUIVER_ERROR;
-    }
-
-    return QUIVER_OK;
 }
 
 // Time series read/update
