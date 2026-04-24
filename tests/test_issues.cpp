@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/element.h>
+#include <quiver/options.h>
 
 namespace fs = std::filesystem;
 
@@ -15,4 +16,18 @@ TEST_F(IssuesFixture, Issue52) {
     auto migrations_path = issues_path + "/issue52";
 
     EXPECT_THROW(quiver::Database::from_migrations(":memory:", migrations_path), std::runtime_error);
+}
+
+TEST_F(IssuesFixture, Issue159) {
+    auto schema_path = issues_path + "/issue159/schema.sql";
+    auto db_path = (fs::temp_directory_path() / "quiver_issue159.sqlite").string();
+    fs::remove(db_path);
+
+    { quiver::Database::from_schema(db_path, schema_path); }
+
+    quiver::DatabaseOptions options;
+    options.read_only = true;
+    EXPECT_NO_THROW(quiver::Database::from_schema(db_path, schema_path, options));
+
+    fs::remove(db_path);
 }
