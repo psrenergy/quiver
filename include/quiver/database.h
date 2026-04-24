@@ -103,6 +103,14 @@ public:
     std::vector<std::map<std::string, Value>>
     read_time_series_group(const std::string& collection, const std::string& group, int64_t id);
 
+    // Read time series row - returns one value per element for a specific attribute at a given date_time
+    // Uses "last non-null value at or before date_time" lookup semantics
+    // Returns nullptr Value for elements with no matching data
+    std::vector<Value> read_time_series_row(const std::string& collection,
+                                            const std::string& group,
+                                            const std::string& attribute,
+                                            const std::string& date_time);
+
     // Update time series group - replaces all rows for element
     void update_time_series_group(const std::string& collection,
                                   const std::string& group,

@@ -579,6 +579,55 @@ function read_time_series_group(db::Database, collection::String, group::String,
     return result
 end
 
+function read_time_series_row(db::Database, collection::String, group::String, attribute::String; date_time::DateTime)
+    out_data_type = Ref{Cint}(0)
+    out_values = Ref{Ptr{Cvoid}}(C_NULL)
+    out_count = Ref{Csize_t}(0)
+
+    dt_str = date_time_to_string(date_time)
+
+    check(
+        C.quiver_database_read_time_series_row(
+            db.ptr, collection, group, attribute, dt_str,
+            out_data_type, out_values, out_count,
+        ),
+    )
+
+    count = out_count[]
+    data_type = out_data_type[]
+
+    if count == 0 || out_values[] == C_NULL
+        if data_type == Cint(C.QUIVER_DATA_TYPE_INTEGER)
+            return Int64[]
+        elseif data_type == Cint(C.QUIVER_DATA_TYPE_FLOAT)
+            return Float64[]
+        elseif data_type == Cint(C.QUIVER_DATA_TYPE_STRING) || data_type == Cint(C.QUIVER_DATA_TYPE_DATE_TIME)
+            return Union{String, Nothing}[]
+        end
+        return Any[]
+    end
+
+    if data_type == Cint(C.QUIVER_DATA_TYPE_INTEGER)
+        int_ptr = reinterpret(Ptr{Int64}, out_values[])
+        result = copy(unsafe_wrap(Array, int_ptr, count))
+        C.quiver_database_free_integer_array(int_ptr)
+        return result
+    elseif data_type == Cint(C.QUIVER_DATA_TYPE_FLOAT)
+        float_ptr = reinterpret(Ptr{Float64}, out_values[])
+        result = copy(unsafe_wrap(Array, float_ptr, count))
+        C.quiver_database_free_float_array(float_ptr)
+        return result
+    elseif data_type == Cint(C.QUIVER_DATA_TYPE_STRING) || data_type == Cint(C.QUIVER_DATA_TYPE_DATE_TIME)
+        str_ptr_ptr = reinterpret(Ptr{Ptr{Cchar}}, out_values[])
+        str_ptrs = unsafe_wrap(Array, str_ptr_ptr, count)
+        result = Union{String, Nothing}[p == C_NULL ? nothing : unsafe_string(p) for p in str_ptrs]
+        C.quiver_database_free_string_array(str_ptr_ptr, Csize_t(count))
+        return result
+    end
+
+    throw(ArgumentError("Unsupported data type $(data_type) for attribute '$attribute'"))
+end
+
 function read_time_series_files(db::Database, collection::String)
     out_columns = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
     out_paths = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
