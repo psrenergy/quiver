@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.svg" alt="Quiver logo" width="200">
+</p>
+
 # Quiver DB
 
 [![CI](https://github.com/psrenergy/quiver/actions/workflows/ci.yml/badge.svg)](https://github.com/psrenergy/quiver/actions/workflows/ci.yml)
