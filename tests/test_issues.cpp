@@ -19,15 +19,12 @@ TEST_F(IssuesFixture, Issue52) {
 }
 
 TEST_F(IssuesFixture, Issue159) {
+	auto migrations_path = issues_path + "/issue70";
     auto schema_path = issues_path + "/issue159/schema.sql";
-    auto db_path = (fs::temp_directory_path() / "quiver_issue159.sqlite").string();
-    fs::remove(db_path);
-
-    { quiver::Database::from_schema(db_path, schema_path); }
+    auto db_path = (fs::temp_directory_path() / "quiver_issue159.db").string();
 
     quiver::DatabaseOptions options;
     options.read_only = true;
-    EXPECT_NO_THROW(quiver::Database::from_schema(db_path, schema_path, options));
-
-    fs::remove(db_path);
+    EXPECT_THROW(quiver::Database::from_migrations(db_path, migrations_path, options), std::runtime_error);
+    EXPECT_THROW(quiver::Database::from_schema(db_path, schema_path, options), std::runtime_error);
 }
