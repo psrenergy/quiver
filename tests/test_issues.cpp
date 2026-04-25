@@ -8,7 +8,7 @@ namespace fs = std::filesystem;
 
 class IssuesFixture : public ::testing::Test {
 protected:
-    void SetUp() override { 
+    void SetUp() override {
         schemas_path = (fs::path(__FILE__).parent_path() / "schemas").string();
         issues_path = (fs::path(__FILE__).parent_path() / "schemas" / "issues").string();
     }
@@ -23,7 +23,7 @@ TEST_F(IssuesFixture, Issue52) {
 }
 
 TEST_F(IssuesFixture, Issue161) {
-	auto migrations_path = schemas_path + "/migrations";
+    auto migrations_path = schemas_path + "/migrations";
     auto schema_path = schemas_path + "/valid/basic.sql";
 
     quiver::DatabaseOptions options;
