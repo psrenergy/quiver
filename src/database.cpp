@@ -235,6 +235,9 @@ Database Database::from_migrations(const std::string& db_path,
                                    const std::string& migrations_path,
                                    const DatabaseOptions& options) {
     namespace fs = std::filesystem;
+    if (options.read_only) {
+        throw std::runtime_error("Cannot from_migrations: read_only mode (use Database constructor to open existing)");
+    }
     if (!fs::exists(migrations_path)) {
         throw std::runtime_error("Migrations path not found: " + migrations_path);
     }
@@ -249,6 +252,9 @@ Database Database::from_migrations(const std::string& db_path,
 Database
 Database::from_schema(const std::string& db_path, const std::string& schema_path, const DatabaseOptions& options) {
     namespace fs = std::filesystem;
+    if (options.read_only) {
+        throw std::runtime_error("Cannot from_schema: read_only mode (use Database constructor to open existing)");
+    }
     if (!fs::exists(schema_path)) {
         throw std::runtime_error("Schema file not found: " + schema_path);
     }
