@@ -18,10 +18,10 @@ TEST_F(IssuesFixture, Issue52) {
     EXPECT_THROW(quiver::Database::from_migrations(":memory:", migrations_path), std::runtime_error);
 }
 
-TEST_F(IssuesFixture, Issue159) {
-	auto migrations_path = issues_path + "/issue70";
-    auto schema_path = issues_path + "/issue159/schema.sql";
-    auto db_path = (fs::temp_directory_path() / "quiver_issue159.db").string();
+TEST_F(IssuesFixture, Issue161) {
+	auto migrations_path = issues_path + "/issue161";
+    auto schema_path = issues_path + "/issue161/schema.sql";
+    auto db_path = (fs::temp_directory_path() / "issue161.db").string();
 
     quiver::DatabaseOptions options;
     options.read_only = true;
