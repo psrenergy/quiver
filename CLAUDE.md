@@ -490,6 +490,7 @@ lua.run(R"(
 | Category | C++ | C API | Julia | Dart | Lua |
 |----------|-----|-------|-------|------|-----|
 | Factory | `Database::from_schema()` | `quiver_database_from_schema()` | `from_schema()` | `Database.fromSchema()` | N/A |
+| Open existing | `Database(path, options)` | `quiver_database_open()` | `open()` | `Database.open()` | N/A |
 | Transaction | `begin_transaction()` | `quiver_database_begin_transaction()` | `begin_transaction!()` | `beginTransaction()` | `begin_transaction()` |
 | Transaction | `commit()` | `quiver_database_commit()` | `commit!()` | `commit()` | `commit()` |
 | Transaction | `rollback()` | `quiver_database_rollback()` | `rollback!()` | `rollback()` | `rollback()` |
