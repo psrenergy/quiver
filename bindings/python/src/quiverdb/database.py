@@ -54,6 +54,22 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         )
         return Database(out_db[0])
 
+    @staticmethod
+    def open(db_path: str) -> Database:
+        """Open an existing database file."""
+        lib = get_lib()
+        options = ffi.new("quiver_database_options_t*")
+        options[0] = lib.quiver_database_options_default()
+        out_db = ffi.new("quiver_database_t**")
+        check(
+            lib.quiver_database_open(
+                db_path.encode("utf-8"),
+                options,
+                out_db,
+            )
+        )
+        return Database(out_db[0])
+
     def close(self) -> None:
         """Close the database. Idempotent -- safe to call multiple times."""
         if self._closed:

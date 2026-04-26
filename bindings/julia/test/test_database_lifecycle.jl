@@ -28,6 +28,20 @@ include("fixture.jl")
     end
 end
 
+@testset "Open Existing" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    mktempdir() do dir
+        db_path = joinpath(dir, "test.db")
+        db = Quiver.from_schema(db_path, path_schema)
+        Quiver.close!(db)
+
+        reopened = Quiver.open(db_path)
+        @test Quiver.is_healthy(reopened) == true
+        Quiver.close!(reopened)
+        return nothing
+    end
+end
+
 @testset "Describe" begin
     path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
     db = Quiver.from_schema(":memory:", path_schema)

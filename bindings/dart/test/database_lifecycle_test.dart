@@ -100,6 +100,25 @@ void main() {
     });
   });
 
+  group('Database open', () {
+    test('reopens existing database file', () {
+      final tempDir = Directory.systemTemp.createTempSync('quiver_test_');
+      final dbPath = path.join(tempDir.path, 'test.db');
+      try {
+        Database.fromSchema(dbPath, schemaPath).close();
+
+        final reopened = Database.open(dbPath);
+        try {
+          expect(reopened.isHealthy(), isTrue);
+        } finally {
+          reopened.close();
+        }
+      } finally {
+        tempDir.deleteSync(recursive: true);
+      }
+    });
+  });
+
   group('Database currentVersion', () {
     test('returns 0 for schema-based database', () {
       final db = Database.fromSchema(':memory:', schemaPath);

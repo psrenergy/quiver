@@ -28,6 +28,15 @@ def test_from_migrations_creates_database(migrations_path: Path, tmp_path: Path)
     db.close()
 
 
+def test_open_existing_database(valid_schema_path: Path, tmp_path: Path) -> None:
+    db_path = str(tmp_path / "test.db")
+    Database.from_schema(db_path, str(valid_schema_path)).close()
+
+    reopened = Database.open(db_path)
+    assert reopened.is_healthy()
+    reopened.close()
+
+
 def test_close_is_idempotent(db: Database) -> None:
     db.close()
     db.close()  # Should not raise

@@ -94,6 +94,19 @@ Deno.test({ name: "Database lifecycle", sanitizeResources: false }, async (t) =>
     }, QuiverError);
   });
 
+  await t.step("open reopens an existing database file", () => {
+    const dir = makeTempDir();
+    const dbPath = join(dir, "test.db");
+    Database.fromSchema(dbPath, SCHEMA_PATH).close();
+
+    const reopened = Database.open(dbPath);
+    try {
+      assert(reopened instanceof Database);
+    } finally {
+      reopened.close();
+    }
+  });
+
   await t.step("close is idempotent", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     db.close();
