@@ -39,6 +39,17 @@ export class Database {
     return new Database(readPtrOut(outDb));
   }
 
+  static open(dbPath: string): Database {
+    const lib = getSymbols();
+    const options = makeDefaultOptions();
+    const outDb = allocPtrOut();
+    const dbPathBuf = toCString(dbPath);
+
+    check(lib.quiver_database_open(dbPathBuf.buf, options.buf, outDb.ptr));
+
+    return new Database(readPtrOut(outDb));
+  }
+
   close(): void {
     if (this._closed) return;
     const lib = getSymbols();

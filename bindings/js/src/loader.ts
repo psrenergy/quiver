@@ -30,6 +30,7 @@ const lifecycleSymbols = {
   quiver_database_options_default: { parameters: [], result: { struct: [I32, I32] } },
   quiver_database_from_schema: { parameters: [BUF, BUF, BUF, P], result: I32 },
   quiver_database_from_migrations: { parameters: [BUF, BUF, BUF, P], result: I32 },
+  quiver_database_open: { parameters: [BUF, BUF, P], result: I32 },
   quiver_database_close: { parameters: [P], result: I32 },
   quiver_database_is_healthy: { parameters: [P, P], result: I32 },
   quiver_database_path: { parameters: [P, P], result: I32 },
