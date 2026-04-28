@@ -6,21 +6,21 @@ namespace quiver {
 std::vector<int64_t> Database::read_scalar_integers(const std::string& collection, const std::string& attribute) {
     impl_->require_collection(collection, "read_scalar_integers");
     impl_->require_column(collection, attribute, "read_scalar_integers");
-    auto sql = "SELECT " + attribute + " FROM " + collection;
+    auto sql = "SELECT " + attribute + " FROM " + collection + " ORDER BY rowid";
     return internal::read_column_values<int64_t>(execute(sql));
 }
 
 std::vector<double> Database::read_scalar_floats(const std::string& collection, const std::string& attribute) {
     impl_->require_collection(collection, "read_scalar_floats");
     impl_->require_column(collection, attribute, "read_scalar_floats");
-    auto sql = "SELECT " + attribute + " FROM " + collection;
+    auto sql = "SELECT " + attribute + " FROM " + collection + " ORDER BY rowid";
     return internal::read_column_values<double>(execute(sql));
 }
 
 std::vector<std::string> Database::read_scalar_strings(const std::string& collection, const std::string& attribute) {
     impl_->require_collection(collection, "read_scalar_strings");
     impl_->require_column(collection, attribute, "read_scalar_strings");
-    auto sql = "SELECT " + attribute + " FROM " + collection;
+    auto sql = "SELECT " + attribute + " FROM " + collection + " ORDER BY rowid";
     return internal::read_column_values<std::string>(execute(sql));
 }
 
