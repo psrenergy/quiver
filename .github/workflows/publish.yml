@@ -211,6 +211,171 @@ jobs:
       - name: Publish to JSR
         run: npx jsr publish --allow-slow-types --allow-dirty
 
+  # TODO: change PR to point to the original repo instead of the fork after testing
+  publish-yggdrasil:
+    name: Publish to Yggdrasil and update Quiver.jl
+    runs-on: ubuntu-latest
+    needs: [detect-version, validate-release]
+    steps:
+      - name: Fork Yggdrasil and open update PR
+        env:
+          GH_TOKEN: ${{ secrets.YGGDRASIL_PR_TOKEN }}
+          VERSION: ${{ needs.detect-version.outputs.version }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          set -e
+
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::YGGDRASIL_PR_TOKEN secret is not set"
+            exit 1
+          fi
+
+          fork_owner=$(gh api user --jq .login)
+
+          # Idempotent fork: gh repo fork is a no-op if the fork already exists.
+          gh repo fork JuliaPackaging/Yggdrasil --clone=false --remote=false
+
+          # Wait for fork to be ready (fresh forks may 404 briefly).
+          for _ in $(seq 1 30); do
+            if gh api "repos/${fork_owner}/Yggdrasil" >/dev/null 2>&1; then
+              break
+            fi
+            sleep 2
+          done
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git clone --depth 1 "https://x-access-token:${GH_TOKEN}@github.com/${fork_owner}/Yggdrasil.git" yggdrasil
+          cd yggdrasil
+
+          # Sync fork's master with upstream so the branch is based on latest.
+          git remote add upstream https://github.com/JuliaPackaging/Yggdrasil.git
+          git fetch upstream master
+          git reset --hard upstream/master
+
+          branch="quiver-${VERSION}"
+          git checkout -b "$branch"
+
+          file=Q/Quiver/build_tarballs.jl
+          if [ ! -f "$file" ]; then
+            echo "::error::$file not found in Yggdrasil"
+            exit 1
+          fi
+
+          # Line 4: version = v"X.Y.Z"
+          sed -i -E "4s/v\"[^\"]+\"/v\"${VERSION}\"/" "$file"
+          # Line 10: GitSource git hash (quoted SHA on its own line, inside GitSource(...))
+          sed -i -E "10s/\"[0-9a-f]{40}\"/\"${COMMIT_SHA}\"/" "$file"
+
+          echo "--- diff ---"
+          git --no-pager diff "$file"
+
+          # Verify the two target lines now contain the expected values.
+          if ! sed -n '4p' "$file" | grep -qF "v\"${VERSION}\""; then
+            echo "::error::Line 4 was not updated to version ${VERSION}"
+            exit 1
+          fi
+          if ! sed -n '10p' "$file" | grep -qF "\"${COMMIT_SHA}\""; then
+            echo "::error::Line 10 was not updated to commit ${COMMIT_SHA}"
+            exit 1
+          fi
+
+          git add "$file"
+          git commit -m "[Quiver] Update to v${VERSION}"
+          git push --force origin "$branch"
+
+          # TESTING: PR targets the fork itself, not upstream JuliaPackaging/Yggdrasil.
+          # Switch --repo back to JuliaPackaging/Yggdrasil and --head to "${fork_owner}:${branch}" when ready.
+          gh pr create \
+            --repo "${fork_owner}/Yggdrasil" \
+            --base master \
+            --head "$branch" \
+            --title "[Quiver] Update to v${VERSION}" \
+            --body "Bumps Quiver to v${VERSION} (commit ${COMMIT_SHA})."
+
+  publish-quiver-jl:
+    name: Sync sources to Quiver.jl
+    runs-on: ubuntu-latest
+    needs: [detect-version, validate-release]
+    steps:
+      - name: Checkout Quiver
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          path: quiver
+
+      - name: Sync sources and open PR on Quiver.jl
+        env:
+          GH_TOKEN: ${{ secrets.QUIVER_JL_PR_TOKEN }}
+          VERSION: ${{ needs.detect-version.outputs.version }}
+        run: |
+          set -e
+
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::QUIVER_JL_PR_TOKEN secret is not set"
+            exit 1
+          fi
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/psrenergy/Quiver.jl.git" quiver-jl
+          cd quiver-jl
+
+          branch="sync/v${VERSION}"
+          git checkout -b "$branch"
+
+          # Replace src/, test/ (preserving test/schemas semantics by removing first).
+          rm -rf src test/schemas
+          # Wipe test/*.jl and test runners but keep the dir so we can recreate it.
+          find test -maxdepth 1 -type f -delete
+          cp -R ../quiver/bindings/julia/src ./src
+          cp -R ../quiver/bindings/julia/test/. ./test/
+          cp -R ../quiver/tests/schemas ./test/schemas
+
+          # Rewrite fixture.jl and c_api.jl in one shot to avoid heredoc/YAML-indent traps.
+          python3 -c '
+          from pathlib import Path
+          Path("test/fixture.jl").write_text(
+              "function tests_path()\n    return @__DIR__\nend\n"
+          )
+          p = Path("src/c_api.jl")
+          text = p.read_text()
+          marker = "@cenum quiver_error_t"
+          idx = text.find(marker)
+          if idx == -1:
+              raise SystemExit("c_api.jl: could not find @cenum quiver_error_t marker")
+          header = (
+              "module C\n\n"
+              "#! format: off\n\n"
+              "using CEnum\n"
+              "import Quiver_jll: libquiver_c\n\n"
+          )
+          p.write_text(header + text[idx:])
+          '
+
+          # Sanity-check the rewrites.
+          grep -qF 'return @__DIR__' test/fixture.jl
+          grep -qF 'import Quiver_jll: libquiver_c' src/c_api.jl
+          ! grep -qF 'joinpath(@__DIR__, "..", "..", "..", "build"' src/c_api.jl
+
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No changes to sync — skipping PR."
+            exit 0
+          fi
+
+          git add -A
+          git commit -m "Sync sources from quiver v${VERSION}"
+          git push --force origin "$branch"
+
+          gh pr create \
+            --repo psrenergy/Quiver.jl \
+            --base master \
+            --head "$branch" \
+            --title "Sync sources from quiver v${VERSION}" \
+            --body "Syncs \`src/\`, \`test/\`, and \`test/schemas/\` from psrenergy/quiver@${{ github.sha }} (v${VERSION})."
+
   tag-and-release:
     name: Tag and GitHub Release
     runs-on: ubuntu-latest
