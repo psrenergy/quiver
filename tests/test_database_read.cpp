@@ -596,25 +596,23 @@ TEST(Database, ReadSetStringsByIdInvalidCollection) {
 
 TEST(Database, ReadScalarOrderFollowsInsertionOrder) {
     // The btree in SQLite tends to add elements in a specific order in memory.
-    // If ORDER BY is not specified in the read queries, we may get results in insertion order, but this is not guaranteed.
-    // There should always be an ORDER BY clause in the read queries to ensure consistent ordering.
+    // If ORDER BY is not specified in the read queries, we may get results in insertion order, but this is not
+    // guaranteed. There should always be an ORDER BY clause in the read queries to ensure consistent ordering.
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
 
     // Insert 10 elements with labels in reverse alphabetical order (z -> a)
     // Expected: reads return values in insertion (ID) order
-    std::vector<std::string> labels = {"zebra", "yak", "wolf", "viper", "urchin",
-                                       "tiger", "snake", "rabbit", "quail", "penguin"};
+    std::vector<std::string> labels = {
+        "zebra", "yak", "wolf", "viper", "urchin", "tiger", "snake", "rabbit", "quail", "penguin"};
     std::vector<int64_t> expected_integers;
-    std::vector<double>  expected_floats;
+    std::vector<double> expected_floats;
 
     for (int i = 0; i < 10; ++i) {
         quiver::Element e;
-        int64_t int_val  = static_cast<int64_t>((i + 1) * 10);
-        double  float_val = (i + 1) * 1.5;
-        e.set("label", labels[i])
-         .set("integer_attribute", int_val)
-         .set("float_attribute",   float_val);
+        int64_t int_val = static_cast<int64_t>((i + 1) * 10);
+        double float_val = (i + 1) * 1.5;
+        e.set("label", labels[i]).set("integer_attribute", int_val).set("float_attribute", float_val);
         db.create_element("Configuration", e);
         expected_integers.push_back(int_val);
         expected_floats.push_back(float_val);
@@ -624,10 +622,10 @@ TEST(Database, ReadScalarOrderFollowsInsertionOrder) {
     auto ids_from_scalar_integers = db.read_scalar_integers("Configuration", "id");
     auto ids_from_read_element_ids = db.read_element_ids("Configuration");
     auto integers = db.read_scalar_integers("Configuration", "integer_attribute");
-    auto floats   = db.read_scalar_floats("Configuration", "float_attribute");
+    auto floats = db.read_scalar_floats("Configuration", "float_attribute");
 
     ASSERT_EQ(integers.size(), 10);
-    ASSERT_EQ(floats.size(),   10);
+    ASSERT_EQ(floats.size(), 10);
 
     // zebra
     EXPECT_EQ(some_labels[0], "zebra");
