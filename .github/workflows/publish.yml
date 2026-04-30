@@ -216,6 +216,7 @@ jobs:
     name: Publish to Yggdrasil and update Quiver.jl
     runs-on: ubuntu-latest
     needs: [detect-version, validate-release]
+    permissions: {}
     steps:
       - name: Fork Yggdrasil and open update PR
         env:
@@ -298,6 +299,7 @@ jobs:
     name: Sync sources to Quiver.jl
     runs-on: ubuntu-latest
     needs: [detect-version, validate-release]
+    permissions: {}
     steps:
       - name: Checkout Quiver
         uses: actions/checkout@v6
