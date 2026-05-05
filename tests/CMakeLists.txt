@@ -22,6 +22,7 @@ add_executable(quiver_tests
     test_migrations.cpp
     test_row_result.cpp
     test_schema_validator.cpp
+    test_tensor_storage.cpp
 )
 
 target_link_libraries(quiver_tests
@@ -44,6 +45,11 @@ endif()
 gtest_discover_tests(quiver_tests
     WORKING_DIRECTORY $<TARGET_FILE_DIR:quiver_tests>
 )
+
+# BLD-04: include containment -- no public Quiver header outside include/quiver/tensor/
+# transitively pulls in quiver/tensor/*.h. Enforced by a CMake-script CTest target.
+add_test(NAME tensor_no_leakage
+         COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/cmake/CheckTensorIncludeContainment.cmake)
 
 # C API tests
 if(QUIVER_BUILD_C_API)
