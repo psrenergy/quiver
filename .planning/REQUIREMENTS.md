@@ -127,37 +127,43 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| STG-01 | TBD | Pending |
-| STG-02 | TBD | Pending |
-| STG-03 | TBD | Pending |
-| STG-04 | TBD | Pending |
-| STG-05 | TBD | Pending |
-| EXP-01 | TBD | Pending |
-| EXP-02 | TBD | Pending |
-| EXP-03 | TBD | Pending |
-| ARI-01 | TBD | Pending |
-| ARI-02 | TBD | Pending |
-| ARI-03 | TBD | Pending |
-| ARI-04 | TBD | Pending |
-| MAT-01 | TBD | Pending |
-| BCT-01 | TBD | Pending |
-| BCT-02 | TBD | Pending |
-| RED-01 | TBD | Pending |
-| RED-02 | TBD | Pending |
-| RED-03 | TBD | Pending |
-| ASN-01 | TBD | Pending |
-| ASN-02 | TBD | Pending |
-| DIA-01 | TBD | Pending |
-| BLD-01 | TBD | Pending |
-| BLD-02 | TBD | Pending |
-| BLD-03 | TBD | Pending |
-| BLD-04 | TBD | Pending |
+| STG-01 | Phase 1 | Pending |
+| STG-02 | Phase 1 | Pending |
+| STG-03 | Phase 1 | Pending |
+| STG-04 | Phase 1 | Pending |
+| STG-05 | Phase 1 | Pending |
+| EXP-01 | Phase 1 | Pending |
+| EXP-02 | Phase 1 | Pending |
+| EXP-03 | Phase 2 | Pending |
+| ARI-01 | Phase 2 | Pending |
+| ARI-02 | Phase 2 | Pending |
+| ARI-03 | Phase 2 | Pending |
+| ARI-04 | Phase 2 | Pending |
+| MAT-01 | Phase 2 | Pending |
+| BCT-01 | Phase 3 | Pending |
+| BCT-02 | Phase 3 | Pending |
+| RED-01 | Phase 4 | Pending |
+| RED-02 | Phase 4 | Pending |
+| RED-03 | Phase 4 | Pending |
+| ASN-01 | Phase 2 | Pending |
+| ASN-02 | Phase 2 | Pending |
+| DIA-01 | Phase 2 | Pending |
+| BLD-01 | Phase 1 | Pending |
+| BLD-02 | Phase 1 | Pending |
+| BLD-03 | Phase 1 | Pending |
+| BLD-04 | Phase 1 | Pending |
 
 **Coverage:**
 - v0.8.0 requirements: 25 total
-- Mapped to phases: 0 (filled by roadmapper)
-- Unmapped: 25 ⚠️ (will be 0 after roadmap creation)
+- Mapped to phases: 25
+- Unmapped: 0 ✓
+
+**Phase distribution:**
+- Phase 1 (Storage and CRTP Scaffold): 11 requirements (STG-01..05, EXP-01, EXP-02, BLD-01..04)
+- Phase 2 (Lazy Arithmetic and Materialization): 9 requirements (EXP-03, ARI-01..04, MAT-01, ASN-01, ASN-02, DIA-01)
+- Phase 3 (NumPy-style Broadcasting): 2 requirements (BCT-01, BCT-02)
+- Phase 4 (Reductions): 3 requirements (RED-01, RED-02, RED-03)
 
 ---
 *Requirements defined: 2026-05-05*
-*Last updated: 2026-05-05 after milestone v0.8.0 scoping*
+*Last updated: 2026-05-05 — traceability filled by roadmap creation (4 phases, 25/25 mapped)*
