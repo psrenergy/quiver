@@ -85,7 +85,11 @@ BLD-01, BLD-02, BLD-03, BLD-04
   5. **Discipline check:** `git diff --stat include/quiver/c/ bindings/` for the phase's
      PR shows zero rows changed (PITFALLS Pitfall #13).
 
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Create three foundational tensor headers (expression.h, shape.h, tensor.h) under include/quiver/tensor/ implementing CRTP base, IsTensorExpr concept, and Tensor<T> value type
+- [ ] 01-02-PLAN.md — Wire Phase 1 verification: GoogleTest unit tests covering STG-01..05 + EXP-01..02, BLD-04 CMake script for include containment, tests/CMakeLists.txt integration
 
 ---
 
@@ -245,7 +249,7 @@ These were explicitly deferred to v0.9.0+ per REQUIREMENTS.md:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Storage and CRTP Scaffold | 0/? | Not started | — |
+| 1. Storage and CRTP Scaffold | 0/2 | Not started | — |
 | 2. Lazy Arithmetic and Materialization | 0/? | Not started | — |
 | 3. NumPy-style Broadcasting | 0/? | Not started | — |
 | 4. Reductions | 0/? | Not started | — |
