@@ -58,9 +58,9 @@ Requirements for the v0.8.0 milestone. Each maps to exactly one roadmap phase.
 ### Build & Test Harness (BLD)
 
 - [x] **BLD-01**: Tensor framework lives under `include/quiver/tensor/` mirroring the existing `include/quiver/binary/` precedent (header-only, no `src/tensor/*.cpp` translation unit unless non-template helpers accumulate) *(Phase 01 Plan 01)*
-- [ ] **BLD-02**: Per-concern GoogleTest files under `tests/test_tensor_*.cpp` matching the existing `test_database_*.cpp` / `test_binary_*.cpp` naming convention (`test_tensor_storage.cpp`, `test_tensor_arithmetic.cpp`, `test_tensor_broadcast.cpp`, `test_tensor_reduce.cpp`, `test_tensor_aliasing.cpp`, `test_tensor_adl.cpp`)
-- [ ] **BLD-03**: New tensor sources/tests integrate via `tests/CMakeLists.txt` only — no edits to `src/CMakeLists.txt` (header-only); existing `quiver_compiler_options` (`/W4 /permissive-` on MSVC, `-Wall -Wextra -Wpedantic` on GCC/Clang) applies as-is
-- [ ] **BLD-04**: A CI test enforces include containment — no public Quiver header outside `include/quiver/tensor/` (i.e. `quiver/database.h`, `quiver/element.h`, `quiver/binary/*.h`, etc.) transitively pulls in `quiver/tensor/*.h` (prevents library-wide compile-time regression)
+- [x] **BLD-02**: Per-concern GoogleTest files under `tests/test_tensor_*.cpp` matching the existing `test_database_*.cpp` / `test_binary_*.cpp` naming convention (`test_tensor_storage.cpp`, `test_tensor_arithmetic.cpp`, `test_tensor_broadcast.cpp`, `test_tensor_reduce.cpp`, `test_tensor_aliasing.cpp`, `test_tensor_adl.cpp`) *(Phase 01 Plan 02 — `test_tensor_storage.cpp` shipped; remaining files added by Phases 2-4 as those features are implemented)*
+- [x] **BLD-03**: New tensor sources/tests integrate via `tests/CMakeLists.txt` only — no edits to `src/CMakeLists.txt` (header-only); existing `quiver_compiler_options` (`/W4 /permissive-` on MSVC, `-Wall -Wextra -Wpedantic` on GCC/Clang) applies as-is *(Phase 01 Plan 02)*
+- [x] **BLD-04**: A CI test enforces include containment — no public Quiver header outside `include/quiver/tensor/` (i.e. `quiver/database.h`, `quiver/element.h`, `quiver/binary/*.h`, etc.) transitively pulls in `quiver/tensor/*.h` (prevents library-wide compile-time regression) *(Phase 01 Plan 02 — CMake script + CTest target; negative-path verified one-shot)*
 
 ---
 
@@ -127,13 +127,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| STG-01 | Phase 1 | Pending |
-| STG-02 | Phase 1 | Pending |
-| STG-03 | Phase 1 | Pending |
-| STG-04 | Phase 1 | Pending |
-| STG-05 | Phase 1 | Pending |
-| EXP-01 | Phase 1 | Pending |
-| EXP-02 | Phase 1 | Pending |
+| STG-01 | Phase 1 | Complete (Plan 01) |
+| STG-02 | Phase 1 | Complete (Plan 01) |
+| STG-03 | Phase 1 | Complete (Plan 01) |
+| STG-04 | Phase 1 | Complete (Plan 01) |
+| STG-05 | Phase 1 | Complete (Plan 01) |
+| EXP-01 | Phase 1 | Complete (Plan 01) |
+| EXP-02 | Phase 1 | Complete (Plan 01) |
 | EXP-03 | Phase 2 | Pending |
 | ARI-01 | Phase 2 | Pending |
 | ARI-02 | Phase 2 | Pending |
@@ -148,10 +148,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ASN-01 | Phase 2 | Pending |
 | ASN-02 | Phase 2 | Pending |
 | DIA-01 | Phase 2 | Pending |
-| BLD-01 | Phase 1 | Pending |
-| BLD-02 | Phase 1 | Pending |
-| BLD-03 | Phase 1 | Pending |
-| BLD-04 | Phase 1 | Pending |
+| BLD-01 | Phase 1 | Complete (Plan 01) |
+| BLD-02 | Phase 1 | Complete (Plan 02) |
+| BLD-03 | Phase 1 | Complete (Plan 02) |
+| BLD-04 | Phase 1 | Complete (Plan 02) |
 
 **Coverage:**
 - v0.8.0 requirements: 25 total
@@ -166,4 +166,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-05-05*
-*Last updated: 2026-05-05 — traceability filled by roadmap creation (4 phases, 25/25 mapped)*
+*Last updated: 2026-05-05 — Phase 1 complete (Plans 01 + 02): STG-01..05, EXP-01, EXP-02, BLD-01..04 all marked Complete (11/25)*
