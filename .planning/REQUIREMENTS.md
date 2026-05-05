@@ -12,16 +12,16 @@ Requirements for the v0.8.0 milestone. Each maps to exactly one roadmap phase.
 
 ### Storage (STG)
 
-- [ ] **STG-01**: User can construct `Tensor<T>` for `T ∈ {float, double, int32_t, int64_t}` with a shape and optional fill value
-- [ ] **STG-02**: User can query a tensor's `shape()`, `size()`, and `rank()`
-- [ ] **STG-03**: User can index a tensor element by multi-dimensional coordinates (`tensor(i, j, k)`)
-- [ ] **STG-04**: User can read raw contiguous data via `data() -> const T*`
-- [ ] **STG-05**: User can iterate a tensor's elements via `begin()` / `end()` (range-for compatible)
+- [x] **STG-01**: User can construct `Tensor<T>` for `T ∈ {float, double, int32_t, int64_t}` with a shape and optional fill value *(Phase 01 Plan 01)*
+- [x] **STG-02**: User can query a tensor's `shape()`, `size()`, and `rank()` *(Phase 01 Plan 01)*
+- [x] **STG-03**: User can index a tensor element by multi-dimensional coordinates (`tensor(i, j, k)`) *(Phase 01 Plan 01)*
+- [x] **STG-04**: User can read raw contiguous data via `data() -> const T*` *(Phase 01 Plan 01)*
+- [x] **STG-05**: User can iterate a tensor's elements via `begin()` / `end()` (range-for compatible) *(Phase 01 Plan 01)*
 
 ### Expression Core (EXP)
 
-- [ ] **EXP-01**: User can derive lazy expression types from `Expression<Derived>` — CRTP base providing `shape()`, `size()`, and `eval(linear_idx)` via static dispatch
-- [ ] **EXP-02**: Generic code can constrain "is a tensor expression" via the `IsTensorExpr` concept (used by operator overloads and free functions to give readable error messages)
+- [x] **EXP-01**: User can derive lazy expression types from `Expression<Derived>` — CRTP base providing `shape()`, `size()`, and `eval(linear_idx)` via static dispatch *(Phase 01 Plan 01)*
+- [x] **EXP-02**: Generic code can constrain "is a tensor expression" via the `IsTensorExpr` concept (used by operator overloads and free functions to give readable error messages) *(Phase 01 Plan 01)*
 - [ ] **EXP-03**: Lazy expressions hold their operands per closure semantics — leaves (`Tensor<T>`) by `const&`, intermediates by value — preventing dangling references in chained-expression patterns like `auto e = a + b; auto f = e + d;`
 
 ### Arithmetic (ARI)
@@ -57,7 +57,7 @@ Requirements for the v0.8.0 milestone. Each maps to exactly one roadmap phase.
 
 ### Build & Test Harness (BLD)
 
-- [ ] **BLD-01**: Tensor framework lives under `include/quiver/tensor/` mirroring the existing `include/quiver/binary/` precedent (header-only, no `src/tensor/*.cpp` translation unit unless non-template helpers accumulate)
+- [x] **BLD-01**: Tensor framework lives under `include/quiver/tensor/` mirroring the existing `include/quiver/binary/` precedent (header-only, no `src/tensor/*.cpp` translation unit unless non-template helpers accumulate) *(Phase 01 Plan 01)*
 - [ ] **BLD-02**: Per-concern GoogleTest files under `tests/test_tensor_*.cpp` matching the existing `test_database_*.cpp` / `test_binary_*.cpp` naming convention (`test_tensor_storage.cpp`, `test_tensor_arithmetic.cpp`, `test_tensor_broadcast.cpp`, `test_tensor_reduce.cpp`, `test_tensor_aliasing.cpp`, `test_tensor_adl.cpp`)
 - [ ] **BLD-03**: New tensor sources/tests integrate via `tests/CMakeLists.txt` only — no edits to `src/CMakeLists.txt` (header-only); existing `quiver_compiler_options` (`/W4 /permissive-` on MSVC, `-Wall -Wextra -Wpedantic` on GCC/Clang) applies as-is
 - [ ] **BLD-04**: A CI test enforces include containment — no public Quiver header outside `include/quiver/tensor/` (i.e. `quiver/database.h`, `quiver/element.h`, `quiver/binary/*.h`, etc.) transitively pulls in `quiver/tensor/*.h` (prevents library-wide compile-time regression)

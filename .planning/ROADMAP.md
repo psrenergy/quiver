@@ -89,7 +89,7 @@ BLD-01, BLD-02, BLD-03, BLD-04
 
 Plans:
 **Wave 1**
-- [ ] 01-01-PLAN.md — Create three foundational tensor headers (expression.h, shape.h, tensor.h) under include/quiver/tensor/ implementing CRTP base, IsTensorExpr concept, and Tensor<T> value type
+- [x] 01-01-PLAN.md — Create three foundational tensor headers (expression.h, shape.h, tensor.h) under include/quiver/tensor/ implementing CRTP base, IsTensorExpr concept, and Tensor<T> value type
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 01-02-PLAN.md — Wire Phase 1 verification: GoogleTest unit tests covering STG-01..05 + EXP-01..02, BLD-04 CMake script for include containment, tests/CMakeLists.txt integration
@@ -252,7 +252,7 @@ These were explicitly deferred to v0.9.0+ per REQUIREMENTS.md:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Storage and CRTP Scaffold | 0/2 | Not started | — |
+| 1. Storage and CRTP Scaffold | 1/2 | In progress | — |
 | 2. Lazy Arithmetic and Materialization | 0/? | Not started | — |
 | 3. NumPy-style Broadcasting | 0/? | Not started | — |
 | 4. Reductions | 0/? | Not started | — |
