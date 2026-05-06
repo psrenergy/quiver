@@ -2,6 +2,7 @@
 
 #include "binary_utils.h"
 #include "quiver/binary/dimension.h"
+#include "quiver/binary/iteration.h"
 #include "quiver/binary/time_constants.h"
 
 #include <chrono>
@@ -243,36 +244,16 @@ void BinaryFile::validate_data_length(const std::vector<double>& data) {
 }
 
 std::vector<int64_t> BinaryFile::next_dimensions(const std::vector<int64_t>& current_dimensions) {
-    const auto& dimensions = impl_->metadata.dimensions;
-    const auto& current_sizes = dimension_sizes_at_values(current_dimensions);
-
-    std::vector<int64_t> next = current_dimensions;
-
-    for (int i = static_cast<int>(next.size()) - 1; i >= 0; --i) {
-        if (next[i] < current_sizes[i]) {
-            next[i] += 1;
-            break;
-        } else {
-            next[i] = 1;
-        }
+    // Thin delegate to quiver::binary::next_dimensions (the authoritative impl).
+    // The free function returns std::nullopt for end-of-iteration; csv_converter's
+    // bin_to_csv/csv_to_bin loops compare the result to initial_dimensions for
+    // termination (see src/binary/csv_converter.cpp:85, :130). Translating nullopt
+    // to first_dimensions(meta) preserves that comparison semantics unchanged.
+    auto next = quiver::binary::next_dimensions(impl_->metadata, current_dimensions);
+    if (!next) {
+        return quiver::binary::first_dimensions(impl_->metadata);
     }
-
-    // Adjust time dimensions which were reset to 1 before their parent dimension is incremented.
-    // Ex: [month, scenario, day] when initial date is 2025-01-02
-    // [1, 1, 31] -> [1, 2, 1] is incorrect, should be [1, 2, 2]
-    for (size_t i = 0; i < next.size(); ++i) {
-        const auto& dim = dimensions[i];
-        if (!dim.is_time_dimension())
-            continue;
-        int64_t initial_value = dim.time->initial_value;
-        int64_t parent_idx = dim.time->parent_dimension_index;  // -1 = no parent
-        if (next[i] < initial_value && parent_idx != -1 &&
-            next[parent_idx] == dimensions[parent_idx].time->initial_value) {
-            next[i] = initial_value;
-        }
-    }
-
-    return next;
+    return *next;
 }
 
 std::vector<int64_t> BinaryFile::dimension_sizes_at_values(const std::vector<int64_t>& dimension_values) const {
