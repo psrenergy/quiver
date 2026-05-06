@@ -4,7 +4,7 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 1 context gathered
-last_updated: "2026-05-06T04:18:33.755Z"
+last_updated: "2026-05-06T04:24:59.642Z"
 last_activity: 2026-05-06 -- Phase 01 execution started
 progress:
   total_phases: 1
@@ -21,11 +21,11 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** Single C++ implementation reaches every supported language with identical semantics — every public method on `Database`, `BinaryFile`, `BinaryMetadata`, etc. is mechanically translatable to each binding via the cross-layer naming rules in CLAUDE.md.
-**Current focus:** Phase 01 — C++ Core
+**Current focus:** Phase 01 — c-core
 
 ## Current Position
 
-Phase: 01 (C++ Core) — EXECUTING
+Phase: 01 (c-core) — EXECUTING
 Plan: 1 of 3
 Status: Executing Phase 01
 Last activity: 2026-05-06 -- Phase 01 execution started
