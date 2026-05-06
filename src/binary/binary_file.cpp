@@ -268,57 +268,28 @@ void BinaryFile::go_to_position(int64_t position, char mode) {
 }
 
 void BinaryFile::validate_dimension_values(const std::unordered_map<std::string, int64_t>& dims) {
-    const auto& metadata = impl_->metadata;
-    const auto& dimensions = metadata.dimensions;
+    const auto& dimensions = impl_->metadata.dimensions;
 
-    // Check count
+    // Count check first -- preserves the existing error message and order of detection.
     if (dims.size() != dimensions.size()) {
         throw std::invalid_argument("Expected " + std::to_string(dimensions.size()) + " dimensions, got " +
                                     std::to_string(dims.size()));
     }
 
-    // Check all dimension names exist and values are in bounds
-    for (size_t i = 0; i < dimensions.size(); ++i) {
-        const auto& dim = dimensions[i];
+    // Convert map -> declaration-order vector. Throws "Missing required dimension"
+    // if any declared dim name is absent from the map (preserves existing error).
+    std::vector<int64_t> indexed_dims;
+    indexed_dims.reserve(dimensions.size());
+    for (const auto& dim : dimensions) {
         auto it = dims.find(dim.name);
         if (it == dims.end()) {
             throw std::invalid_argument("Missing required dimension: '" + dim.name + "'");
         }
-        int64_t value = it->second;
-        if (value < 1 || value > dim.size) {
-            throw std::invalid_argument("Dimension '" + dim.name + "' value " + std::to_string(value) +
-                                        " is out of bounds [1, " + std::to_string(dim.size) + "]");
-        }
+        indexed_dims.push_back(it->second);
     }
 
-    if (metadata.number_of_time_dimensions > 1) {
-        // Build the datetime by accumulating offsets from each time dimension
-        auto datetime = metadata.initial_datetime;
-        for (const auto& dim : dimensions) {
-            if (dim.is_time_dimension()) {
-                datetime = dim.time->add_offset_from_int(datetime, dims.at(dim.name));
-            }
-        }
-
-        // Verify that inner time dimensions are consistent with the resulting date
-        bool first = true;
-        for (const auto& dim : dimensions) {
-            if (!dim.is_time_dimension())
-                continue;
-            if (first) {
-                first = false;
-                continue;
-            }  // skip outermost time dimension
-
-            int64_t expected_value = dims.at(dim.name);
-            int64_t resulting_value = dim.time->datetime_to_int(datetime);
-            if (expected_value != resulting_value) {
-                throw std::invalid_argument("Invalid values for time dimensions: dimension '" + dim.name +
-                                            "' has value " + std::to_string(expected_value) +
-                                            " but the resulting datetime implies " + std::to_string(resulting_value));
-            }
-        }
-    }
+    // Delegate to indexed validator (handles bounds + time-dim consistency).
+    validate_dimension_values_indexed(indexed_dims);
 }
 
 void BinaryFile::validate_dimension_values_indexed(const std::vector<int64_t>& dims) {
