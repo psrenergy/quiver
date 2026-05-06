@@ -143,9 +143,6 @@ void BinaryFile::write(const std::vector<double>& data, const std::unordered_map
 }
 
 void BinaryFile::read_into(const std::vector<int64_t>& dims, std::vector<double>& out, bool allow_nulls) {
-    // D-13: Trusted-caller fast path -- NO dimension validation. The caller must guarantee
-    // `dims` was produced by quiver::binary::first_dimensions / next_dimensions or by the
-    // validating read(...) overload's contract.
     const size_t label_count = impl_->metadata.labels.size();
     if (out.size() != label_count) {
         out.resize(label_count);
