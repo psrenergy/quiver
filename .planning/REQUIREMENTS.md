@@ -70,33 +70,31 @@
 
 ## Traceability
 
-(Filled in by roadmapper.)
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CORE-01 | — | Pending |
-| CORE-02 | — | Pending |
-| CORE-03 | — | Pending |
-| CORE-04 | — | Pending |
-| CORE-05 | — | Pending |
-| CORE-06 | — | Pending |
-| CAPI-01 | — | Pending |
-| CAPI-02 | — | Pending |
-| CAPI-03 | — | Pending |
-| BIND-01 | — | Pending |
-| BIND-02 | — | Pending |
-| BIND-03 | — | Pending |
-| BIND-04 | — | Pending |
-| BIND-05 | — | Pending |
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| TEST-03 | — | Pending |
+| CORE-01 | Phase 1 | Pending |
+| CORE-02 | Phase 1 | Pending |
+| CORE-03 | Phase 1 | Pending |
+| CORE-04 | Phase 1 | Pending |
+| CORE-05 | Phase 1 | Pending |
+| CORE-06 | Phase 1 | Pending |
+| CAPI-01 | Phase 2 | Pending |
+| CAPI-02 | Phase 2 | Pending |
+| CAPI-03 | Phase 2 | Pending |
+| BIND-01 | Phase 3 | Pending |
+| BIND-02 | Phase 4 | Pending |
+| BIND-03 | Phase 5 | Pending |
+| BIND-04 | Phase 6 | Pending |
+| BIND-05 | Phase 7 | Pending |
+| TEST-01 | Phase 1 | Pending |
+| TEST-02 | Phase 2 | Pending |
+| TEST-03 | Phases 3-7 (one slice per binding) | Pending |
 
 **Coverage:**
 - v1 requirements: 17 total
-- Mapped to phases: 0 (roadmapper next)
-- Unmapped: 17 ⚠️
+- Mapped to phases: 17 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-05*
-*Last updated: 2026-05-05 after initial definition*
+*Last updated: 2026-05-05 after roadmap creation (traceability filled by roadmapper)*
