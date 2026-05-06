@@ -470,6 +470,28 @@ TEST_F(BinaryTempFileFixture, MovedWriterClearsRegistryOnDestruction) {
     EXPECT_NO_THROW(BinaryFile::open_file(path, 'r'));
 }
 
+TEST_F(BinaryTempFileFixture, OpenFileWriteFailureDoesNotLeakRegistry) {
+    // Force to_toml() -> validate() to throw by setting an invalid version.
+    // validate() at src/binary/binary_metadata.cpp rejects version != "1".
+    auto bad_md = make_simple_metadata();
+    bad_md.version = "999";
+
+    // First call must throw because to_toml() rejects the bad version. The fix-under-test
+    // is whether the registry is left clean after this throw.
+    EXPECT_THROW(BinaryFile::open_file(path, 'w', bad_md), std::runtime_error);
+
+    // Second call on the SAME canonical path with VALID metadata must succeed
+    // -- only possible if the registry was correctly cleaned up by the late-insert fix.
+    auto good_md = make_simple_metadata();
+    EXPECT_NO_THROW({
+        auto writer = BinaryFile::open_file(path, 'w', good_md);
+        writer.write({1.0, 2.0}, {{"row", 1}, {"col", 1}});
+    });
+
+    // Third call: reopen for read confirms the writer was real.
+    EXPECT_NO_THROW(BinaryFile::open_file(path, 'r'));
+}
+
 TEST_F(BinaryTempFileFixture, SingleTimeDimensionSkipsConsistencyCheck) {
     // With only one time dimension, there's no inner time dim to validate
     auto md = BinaryMetadata::from_element(Element()

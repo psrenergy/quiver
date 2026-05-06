@@ -84,9 +84,11 @@ BinaryFile::open_file(const std::string& file_path, char mode, const std::option
             throw std::invalid_argument("Metadata must be provided when opening a file in write mode.");
         }
 
-        write_registry.insert(canonical);
+        // NOTE: write_registry.insert(canonical) intentionally deferred to AFTER all throwable
+        // operations (to_toml/validate/fill_file_with_nulls) succeed. The prologue check at
+        // function entry still rejects concurrent writers; only the population is delayed (D-19).
 
-        // Write metadata to TOML file
+        // Write metadata to TOML file (calls validate(); can throw)
         std::ofstream toml_file(file_path + std::string(TOML_EXTENSION));
         toml_file << metadata->to_toml();
 
@@ -94,8 +96,13 @@ BinaryFile::open_file(const std::string& file_path, char mode, const std::option
         auto io =
             std::make_unique<std::fstream>(file_path + std::string(QVR_EXTENSION), std::ios::out | std::ios::binary);
         BinaryFile binary_file(file_path, metadata.value(), std::move(io));
+        binary_file.fill_file_with_nulls();  // can throw on disk-full
+
+        // All risky operations succeeded -- commit to registry. The destructor in Impl
+        // will erase `registered_path` on writer destruction. Throw paths above leave both
+        // empty so the destructor is a no-op for the registry on those paths.
+        write_registry.insert(canonical);
         binary_file.impl_->registered_path = canonical;
-        binary_file.fill_file_with_nulls();
         return binary_file;
     }
     default:
