@@ -567,7 +567,7 @@ Nyquist gate enforcement: every requirement has at least one named test case in 
 **How to avoid:** Verify all existing call sites in tests/code still resolve correctly after adding the new overload. Use explicit `std::vector<int64_t>{1, 2}` in test code if needed. Adding a `static_assert` style overload-resolution test isn't required, but a quick build-clean of the existing test suite catches regressions.
 **Warning signs:** Build error in `test_binary_file.cpp` after adding the new overload.
 
-## Open Questions / Claude's Discretion
+## Open Questions / Claude's Discretion (RESOLVED)
 
 Items the planner should either address or call out as decisions during planning:
 

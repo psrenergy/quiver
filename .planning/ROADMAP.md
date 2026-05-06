@@ -32,7 +32,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can chain operators into trees of arbitrary depth (e.g. `((a + b) - c) / 2.0`, scalar on left or right) and the materialized output remains correct.
   4. `quiver_tests.exe` passes a new `test_expression.cpp` GoogleTest suite that covers AddTwoFilesAndScale, ScalarBroadcast, Chained, IdentityFile, and MismatchedShapes cases — verifying CORE-01..06 end-to-end.
   5. The `save()` loop reuses a single `vector<double>` row buffer across iterations (verifiable in code review) — no per-row heap allocation in the steady-state inner loop.
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 01-01-PLAN.md — Binary subsystem extensions (D-12 free-function iterators, D-13 fast read overloads + read_into, D-14 fast write overload)
+- [ ] 01-02-PLAN.md — quiver::expr core: Expression value type, Node hierarchy (FileNode, ScalarNode, BinaryOpNode with full broadcast validation), 12 operator overloads, save engine with D-11 self-save check, baseline tests
+- [ ] 01-03-PLAN.md — Comprehensive Expression test suite: full op matrix, 8 scalar broadcast variants, broadcast/union edge cases, large-grid smoke
 
 ### Phase 2: C API
 **Goal**: Expose the C++ Expression API through a stable `extern "C"` surface — opaque `quiver_expression_t` handle, `quiver_expression_from_file`, four binary ops + four scalar ops (with both scalar-on-left and scalar-on-right), `quiver_expression_save`, and `quiver_expression_free` — all returning `quiver_error_t` with messages retrievable via `quiver_get_last_error`.
@@ -107,7 +110,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7. Phases 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. C++ Core | 0/TBD | Not started | - |
+| 1. C++ Core | 0/3 | Not started | - |
 | 2. C API | 0/TBD | Not started | - |
 | 3. Julia Binding | 0/TBD | Not started | - |
 | 4. Dart Binding | 0/TBD | Not started | - |
