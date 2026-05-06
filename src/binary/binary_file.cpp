@@ -149,34 +149,6 @@ void BinaryFile::write(const std::vector<double>& data, const std::unordered_map
     impl_->current_position += bytes;
 }
 
-std::vector<double> BinaryFile::read(const std::vector<int64_t>& dims, bool allow_nulls) {
-    validate_dimension_values_indexed(dims);
-
-    go_to_position(calculate_file_position_indexed(dims), 'r');
-
-    std::vector<double> data(impl_->metadata.labels.size());
-    auto bytes = static_cast<int64_t>(data.size() * sizeof(double));
-    impl_->io->read(reinterpret_cast<char*>(data.data()), bytes);
-    impl_->current_position += bytes;
-
-    if (!allow_nulls) {
-        for (size_t i = 0; i < data.size(); ++i) {
-            if (std::isnan(data[i])) {
-                std::string dim_str;
-                const auto& dimensions = impl_->metadata.dimensions;
-                for (size_t k = 0; k < dimensions.size(); ++k) {
-                    if (!dim_str.empty())
-                        dim_str += ", ";
-                    dim_str += dimensions[k].name + "=" + std::to_string(dims[k]);
-                }
-                throw std::runtime_error("Cannot read: data at {" + dim_str + "} contains null values");
-            }
-        }
-    }
-
-    return data;
-}
-
 void BinaryFile::read_into(const std::vector<int64_t>& dims, std::vector<double>& out, bool allow_nulls) {
     // D-13: Trusted-caller fast path -- NO dimension validation. The caller must guarantee
     // `dims` was produced by quiver::binary::first_dimensions / next_dimensions or by the

@@ -39,12 +39,10 @@ public:
 
     // Fast overloads (D-13/D-14): positional dimension values in metadata declaration order.
     // The vector must have one entry per dimension; the i-th entry is the value for dimensions[i].
-    std::vector<double> read(const std::vector<int64_t>& dims, bool allow_nulls = false);
 
     // Trusted-caller fast path: NO dimension validation. Caller MUST guarantee `dims` is in
-    // the valid range produced by quiver::binary::first_dimensions / next_dimensions, OR by
-    // the validating read(...) overload's contract. Buffer `out` is resized only if its
-    // current size differs from labels.size().
+    // the valid range produced by quiver::binary::first_dimensions / next_dimensions. Buffer
+    // `out` is resized only if its current size differs from labels.size().
     void read_into(const std::vector<int64_t>& dims, std::vector<double>& out, bool allow_nulls = false);
 
     void write(const std::vector<double>& data, const std::vector<int64_t>& dims);
