@@ -484,3 +484,130 @@ TEST_F(BinaryTempFileFixture, SingleTimeDimensionSkipsConsistencyCheck) {
     auto binary_file = BinaryFile::open_file(path, 'w', md);
     EXPECT_NO_THROW(binary_file.write({1.0}, {{"month", 12}, {"scenario", 3}}));
 }
+
+// ============================================================================
+// Fast Overloads (D-13/D-14): vector<int64_t> dims, read_into trusted-caller path
+// ============================================================================
+
+TEST_F(BinaryTempFileFixture, FastReadOverloadRoundTrip) {
+    auto md = make_simple_metadata();
+    {
+        auto writer = BinaryFile::open_file(path, 'w', md);
+        // Write all 6 cells of a 3x2 grid using the fast vector-keyed overload.
+        writer.write({1.0, 2.0}, std::vector<int64_t>{1, 1});
+        writer.write({3.0, 4.0}, std::vector<int64_t>{1, 2});
+        writer.write({5.0, 6.0}, std::vector<int64_t>{2, 1});
+        writer.write({7.0, 8.0}, std::vector<int64_t>{2, 2});
+        writer.write({9.0, 10.0}, std::vector<int64_t>{3, 1});
+        writer.write({11.0, 12.0}, std::vector<int64_t>{3, 2});
+    }
+    auto reader = BinaryFile::open_file(path, 'r');
+    auto v11 = reader.read(std::vector<int64_t>{1, 1}, false);
+    auto v22 = reader.read(std::vector<int64_t>{2, 2}, false);
+    auto v32 = reader.read(std::vector<int64_t>{3, 2}, false);
+    ASSERT_EQ(v11.size(), 2u);
+    EXPECT_DOUBLE_EQ(v11[0], 1.0);
+    EXPECT_DOUBLE_EQ(v11[1], 2.0);
+    EXPECT_DOUBLE_EQ(v22[0], 7.0);
+    EXPECT_DOUBLE_EQ(v22[1], 8.0);
+    EXPECT_DOUBLE_EQ(v32[0], 11.0);
+    EXPECT_DOUBLE_EQ(v32[1], 12.0);
+}
+
+TEST_F(BinaryTempFileFixture, FastReadOverloadMatchesUnorderedMap) {
+    auto md = make_simple_metadata();
+    {
+        auto writer = BinaryFile::open_file(path, 'w', md);
+        writer.write({42.0, 99.0}, {{"row", 2}, {"col", 1}});
+    }
+    auto reader = BinaryFile::open_file(path, 'r');
+    auto slow = reader.read({{"row", 2}, {"col", 1}}, false);
+    auto fast = reader.read(std::vector<int64_t>{2, 1}, false);
+    ASSERT_EQ(slow.size(), fast.size());
+    for (size_t i = 0; i < slow.size(); ++i) {
+        EXPECT_DOUBLE_EQ(slow[i], fast[i]);
+    }
+}
+
+TEST_F(BinaryTempFileFixture, FastReadOverloadValidatesBounds) {
+    auto md = make_simple_metadata();
+    {
+        auto writer = BinaryFile::open_file(path, 'w', md);
+    }
+    auto reader = BinaryFile::open_file(path, 'r');
+    EXPECT_THROW(reader.read(std::vector<int64_t>{0, 1}, true), std::invalid_argument);
+    EXPECT_THROW(reader.read(std::vector<int64_t>{4, 1}, true), std::invalid_argument);
+}
+
+TEST_F(BinaryTempFileFixture, FastReadOverloadValidatesCount) {
+    auto md = make_simple_metadata();
+    {
+        auto writer = BinaryFile::open_file(path, 'w', md);
+    }
+    auto reader = BinaryFile::open_file(path, 'r');
+    EXPECT_THROW(reader.read(std::vector<int64_t>{1}, true), std::invalid_argument);
+    EXPECT_THROW(reader.read(std::vector<int64_t>{1, 1, 1}, true), std::invalid_argument);
+}
+
+TEST_F(BinaryTempFileFixture, ReadIntoSkipsValidation) {
+    auto md = make_simple_metadata();
+    {
+        auto writer = BinaryFile::open_file(path, 'w', md);
+        writer.write({100.0, 200.0}, std::vector<int64_t>{1, 1});
+    }
+    auto reader = BinaryFile::open_file(path, 'r');
+    std::vector<double> buf;
+    reader.read_into(std::vector<int64_t>{1, 1}, buf, false);
+    ASSERT_EQ(buf.size(), 2u);
+    EXPECT_DOUBLE_EQ(buf[0], 100.0);
+    EXPECT_DOUBLE_EQ(buf[1], 200.0);
+}
+
+TEST_F(BinaryTempFileFixture, ReadIntoReusesBuffer) {
+    auto md = make_simple_metadata();
+    {
+        auto writer = BinaryFile::open_file(path, 'w', md);
+        writer.write({1.5, 2.5}, std::vector<int64_t>{1, 1});
+    }
+    auto reader = BinaryFile::open_file(path, 'r');
+    std::vector<double> buf(2, -1.0);
+    auto data_ptr_before = buf.data();
+    auto cap_before = buf.capacity();
+    reader.read_into(std::vector<int64_t>{1, 1}, buf, false);
+    EXPECT_EQ(buf.size(), 2u);
+    EXPECT_DOUBLE_EQ(buf[0], 1.5);
+    EXPECT_DOUBLE_EQ(buf[1], 2.5);
+    // No reallocation expected when size already matches label_count.
+    EXPECT_EQ(buf.capacity(), cap_before);
+    EXPECT_EQ(buf.data(), data_ptr_before);
+}
+
+TEST_F(BinaryTempFileFixture, FastWriteOverloadValidatesDataLength) {
+    auto md = make_simple_metadata();
+    auto writer = BinaryFile::open_file(path, 'w', md);
+    EXPECT_THROW(writer.write(std::vector<double>{1.0, 2.0, 3.0}, std::vector<int64_t>{1, 1}),
+                 std::invalid_argument);
+}
+
+TEST_F(BinaryTempFileFixture, FastWriteOverloadValidatesBounds) {
+    auto md = make_simple_metadata();
+    auto writer = BinaryFile::open_file(path, 'w', md);
+    EXPECT_THROW(writer.write(std::vector<double>{1.0, 2.0}, std::vector<int64_t>{0, 1}),
+                 std::invalid_argument);
+    EXPECT_THROW(writer.write(std::vector<double>{1.0, 2.0}, std::vector<int64_t>{4, 1}),
+                 std::invalid_argument);
+}
+
+TEST_F(BinaryTempFileFixture, FastWriteOverloadAcceptsTimeMetadata) {
+    auto md = make_time_metadata();
+    {
+        auto writer = BinaryFile::open_file(path, 'w', md);
+        // Stage 2 = February 2025; block 5 is a valid day in February.
+        writer.write({0.5, 1.5}, std::vector<int64_t>{2, 5});
+    }
+    auto reader = BinaryFile::open_file(path, 'r');
+    auto values = reader.read(std::vector<int64_t>{2, 5}, false);
+    ASSERT_EQ(values.size(), 2u);
+    EXPECT_DOUBLE_EQ(values[0], 0.5);
+    EXPECT_DOUBLE_EQ(values[1], 1.5);
+}

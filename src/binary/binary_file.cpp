@@ -2,6 +2,7 @@
 
 #include "binary_utils.h"
 #include "quiver/binary/dimension.h"
+#include "quiver/binary/iteration.h"
 #include "quiver/binary/time_constants.h"
 
 #include <chrono>
@@ -141,6 +142,74 @@ void BinaryFile::write(const std::vector<double>& data, const std::unordered_map
     impl_->current_position += bytes;
 }
 
+std::vector<double> BinaryFile::read(const std::vector<int64_t>& dims, bool allow_nulls) {
+    validate_dimension_values_indexed(dims);
+
+    go_to_position(calculate_file_position_indexed(dims), 'r');
+
+    std::vector<double> data(impl_->metadata.labels.size());
+    auto bytes = static_cast<int64_t>(data.size() * sizeof(double));
+    impl_->io->read(reinterpret_cast<char*>(data.data()), bytes);
+    impl_->current_position += bytes;
+
+    if (!allow_nulls) {
+        for (size_t i = 0; i < data.size(); ++i) {
+            if (std::isnan(data[i])) {
+                std::string dim_str;
+                const auto& dimensions = impl_->metadata.dimensions;
+                for (size_t k = 0; k < dimensions.size(); ++k) {
+                    if (!dim_str.empty())
+                        dim_str += ", ";
+                    dim_str += dimensions[k].name + "=" + std::to_string(dims[k]);
+                }
+                throw std::runtime_error("Cannot read: data at {" + dim_str + "} contains null values");
+            }
+        }
+    }
+
+    return data;
+}
+
+void BinaryFile::read_into(const std::vector<int64_t>& dims, std::vector<double>& out, bool allow_nulls) {
+    // D-13: Trusted-caller fast path -- NO dimension validation. The caller must guarantee
+    // `dims` was produced by quiver::binary::first_dimensions / next_dimensions or by the
+    // validating read(...) overload's contract.
+    const size_t label_count = impl_->metadata.labels.size();
+    if (out.size() != label_count) {
+        out.resize(label_count);
+    }
+    go_to_position(calculate_file_position_indexed(dims), 'r');
+    auto bytes = static_cast<int64_t>(label_count * sizeof(double));
+    impl_->io->read(reinterpret_cast<char*>(out.data()), bytes);
+    impl_->current_position += bytes;
+
+    if (!allow_nulls) {
+        for (size_t i = 0; i < out.size(); ++i) {
+            if (std::isnan(out[i])) {
+                std::string dim_str;
+                const auto& dimensions = impl_->metadata.dimensions;
+                for (size_t k = 0; k < dimensions.size(); ++k) {
+                    if (!dim_str.empty())
+                        dim_str += ", ";
+                    dim_str += dimensions[k].name + "=" + std::to_string(dims[k]);
+                }
+                throw std::runtime_error("Cannot read: data at {" + dim_str + "} contains null values");
+            }
+        }
+    }
+}
+
+void BinaryFile::write(const std::vector<double>& data, const std::vector<int64_t>& dims) {
+    validate_dimension_values_indexed(dims);
+    validate_data_length(data);
+
+    go_to_position(calculate_file_position_indexed(dims), 'w');
+
+    auto bytes = static_cast<int64_t>(data.size() * sizeof(double));
+    impl_->io->write(reinterpret_cast<const char*>(data.data()), bytes);
+    impl_->current_position += bytes;
+}
+
 int64_t BinaryFile::calculate_file_position(const std::unordered_map<std::string, int64_t>& dims) const {
     const auto& metadata = impl_->metadata;
     const auto& dimensions = metadata.dimensions;
@@ -151,6 +220,22 @@ int64_t BinaryFile::calculate_file_position(const std::unordered_map<std::string
             stride *= dimensions[j].size;
         }
         position += (dims.at(dimensions[i].name) - 1) * stride;
+    }
+    position *= static_cast<int64_t>(metadata.labels.size());
+    position *= static_cast<int64_t>(sizeof(double));
+    return position;
+}
+
+int64_t BinaryFile::calculate_file_position_indexed(const std::vector<int64_t>& dims) const {
+    const auto& metadata = impl_->metadata;
+    const auto& dimensions = metadata.dimensions;
+    int64_t position = 0;
+    for (size_t i = 0; i < dimensions.size(); ++i) {
+        int64_t stride = 1;
+        for (size_t j = i + 1; j < dimensions.size(); ++j) {
+            stride *= dimensions[j].size;
+        }
+        position += (dims[i] - 1) * stride;
     }
     position *= static_cast<int64_t>(metadata.labels.size());
     position *= static_cast<int64_t>(sizeof(double));
@@ -235,6 +320,57 @@ void BinaryFile::validate_dimension_values(const std::unordered_map<std::string,
     }
 }
 
+void BinaryFile::validate_dimension_values_indexed(const std::vector<int64_t>& dims) {
+    const auto& metadata = impl_->metadata;
+    const auto& dimensions = metadata.dimensions;
+
+    // Check count
+    if (dims.size() != dimensions.size()) {
+        throw std::invalid_argument("Expected " + std::to_string(dimensions.size()) + " dimensions, got " +
+                                    std::to_string(dims.size()));
+    }
+
+    // Check values are in bounds (declaration order, no name lookup)
+    for (size_t i = 0; i < dimensions.size(); ++i) {
+        const auto& dim = dimensions[i];
+        int64_t value = dims[i];
+        if (value < 1 || value > dim.size) {
+            throw std::invalid_argument("Dimension '" + dim.name + "' value " + std::to_string(value) +
+                                        " is out of bounds [1, " + std::to_string(dim.size) + "]");
+        }
+    }
+
+    if (metadata.number_of_time_dimensions > 1) {
+        // Build the datetime by accumulating offsets from each time dimension (declaration order)
+        auto datetime = metadata.initial_datetime;
+        for (size_t i = 0; i < dimensions.size(); ++i) {
+            if (dimensions[i].is_time_dimension()) {
+                datetime = dimensions[i].time->add_offset_from_int(datetime, dims[i]);
+            }
+        }
+
+        // Verify that inner time dimensions are consistent with the resulting date
+        bool first = true;
+        for (size_t i = 0; i < dimensions.size(); ++i) {
+            const auto& dim = dimensions[i];
+            if (!dim.is_time_dimension())
+                continue;
+            if (first) {
+                first = false;
+                continue;
+            }  // skip outermost time dimension
+
+            int64_t expected_value = dims[i];
+            int64_t resulting_value = dim.time->datetime_to_int(datetime);
+            if (expected_value != resulting_value) {
+                throw std::invalid_argument("Invalid values for time dimensions: dimension '" + dim.name +
+                                            "' has value " + std::to_string(expected_value) +
+                                            " but the resulting datetime implies " + std::to_string(resulting_value));
+            }
+        }
+    }
+}
+
 void BinaryFile::validate_data_length(const std::vector<double>& data) {
     if (data.size() != impl_->metadata.labels.size()) {
         throw std::invalid_argument("Data length " + std::to_string(data.size()) + " does not match expected length " +
@@ -243,36 +379,16 @@ void BinaryFile::validate_data_length(const std::vector<double>& data) {
 }
 
 std::vector<int64_t> BinaryFile::next_dimensions(const std::vector<int64_t>& current_dimensions) {
-    const auto& dimensions = impl_->metadata.dimensions;
-    const auto& current_sizes = dimension_sizes_at_values(current_dimensions);
-
-    std::vector<int64_t> next = current_dimensions;
-
-    for (int i = static_cast<int>(next.size()) - 1; i >= 0; --i) {
-        if (next[i] < current_sizes[i]) {
-            next[i] += 1;
-            break;
-        } else {
-            next[i] = 1;
-        }
+    // Thin delegate to quiver::binary::next_dimensions (the authoritative impl).
+    // The free function returns std::nullopt for end-of-iteration; csv_converter's
+    // bin_to_csv/csv_to_bin loops compare the result to initial_dimensions for
+    // termination (see src/binary/csv_converter.cpp:85, :130). Translating nullopt
+    // to first_dimensions(meta) preserves that comparison semantics unchanged.
+    auto next = quiver::binary::next_dimensions(impl_->metadata, current_dimensions);
+    if (!next) {
+        return quiver::binary::first_dimensions(impl_->metadata);
     }
-
-    // Adjust time dimensions which were reset to 1 before their parent dimension is incremented.
-    // Ex: [month, scenario, day] when initial date is 2025-01-02
-    // [1, 1, 31] -> [1, 2, 1] is incorrect, should be [1, 2, 2]
-    for (size_t i = 0; i < next.size(); ++i) {
-        const auto& dim = dimensions[i];
-        if (!dim.is_time_dimension())
-            continue;
-        int64_t initial_value = dim.time->initial_value;
-        int64_t parent_idx = dim.time->parent_dimension_index;  // -1 = no parent
-        if (next[i] < initial_value && parent_idx != -1 &&
-            next[parent_idx] == dimensions[parent_idx].time->initial_value) {
-            next[i] = initial_value;
-        }
-    }
-
-    return next;
+    return *next;
 }
 
 std::vector<int64_t> BinaryFile::dimension_sizes_at_values(const std::vector<int64_t>& dimension_values) const {
