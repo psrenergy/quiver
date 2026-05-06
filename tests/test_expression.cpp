@@ -591,3 +591,153 @@ TEST_F(ExpressionFixture, ScalarBroadcastDivideLeft) {
     for (size_t i = 0; i < va.size(); ++i)
         EXPECT_DOUBLE_EQ(vo[i], 100.0 / va[i]);
 }
+
+// ============================================================================
+// D-01 / D-02 / D-08: broadcast and dim-union
+// ============================================================================
+
+TEST_F(ExpressionFixture, BroadcastSizeOneDim) {
+    auto md_a = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"row", "col"})
+                                                 .set("dimension_sizes", {3, 2})
+                                                 .set("labels", {"v1", "v2"}));
+    auto md_b = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"row", "col"})
+                                                 .set("dimension_sizes", {1, 2})  // size-1 broadcast on row
+                                                 .set("labels", {"v1", "v2"}));
+    // a: a[r,c,k] = r*100 + c*10 + k
+    write_qvr(path_a, md_a, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 100 + dims[1] * 10 + static_cast<int64_t>(k));
+    });
+    // b: single row r=1; b[1,c,k] = c*1000 + k
+    write_qvr(path_b, md_b, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[1] * 1000 + static_cast<int64_t>(k));
+    });
+
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    Expression e = Expression(a) + Expression(b);
+    e.save(path_out);
+
+    // Output shape: row=3 (max of 3 and 1), col=2. Each row of output =
+    // a[row, col, k] + b[1, col, k].
+    auto reopened = BinaryFile::open_file(path_out, 'r');
+    EXPECT_EQ(reopened.get_metadata().dimensions[0].size, 3);
+    EXPECT_EQ(reopened.get_metadata().dimensions[1].size, 2);
+
+    // Spot-check 3 cells: (1,1,0), (2,1,0), (3,2,1)
+    auto cell_111 = reopened.read(std::vector<int64_t>{1, 1}, true);
+    auto cell_211 = reopened.read(std::vector<int64_t>{2, 1}, true);
+    auto cell_322 = reopened.read(std::vector<int64_t>{3, 2}, true);
+    // a[r,c,k] + b[1,c,k]
+    EXPECT_DOUBLE_EQ(cell_111[0], (1.0 * 100 + 1.0 * 10 + 0) + (1.0 * 1000 + 0));
+    EXPECT_DOUBLE_EQ(cell_211[0], (2.0 * 100 + 1.0 * 10 + 0) + (1.0 * 1000 + 0));
+    EXPECT_DOUBLE_EQ(cell_322[1], (3.0 * 100 + 2.0 * 10 + 1) + (2.0 * 1000 + 1));
+}
+
+TEST_F(ExpressionFixture, BroadcastLabelsAxis) {
+    auto md_a = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"row", "col"})
+                                                 .set("dimension_sizes", {2, 2})
+                                                 .set("labels", {"single"}));  // 1 label
+    auto md_b = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"row", "col"})
+                                                 .set("dimension_sizes", {2, 2})
+                                                 .set("labels", {"l1", "l2", "l3"}));  // 3 labels
+    // a: a[r,c,0] = r*10 + c (only one label)
+    write_qvr(path_a, md_a, [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return static_cast<double>(dims[0] * 10 + dims[1]);
+    });
+    // b: b[r,c,k] = r*100 + c*10 + k (3 labels: k=0,1,2)
+    write_qvr(path_b, md_b, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 100 + dims[1] * 10 + static_cast<int64_t>(k));
+    });
+
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    Expression e = Expression(a) + Expression(b);
+    e.save(path_out);
+
+    auto reopened = BinaryFile::open_file(path_out, 'r');
+    const auto& m = reopened.get_metadata();
+    ASSERT_EQ(m.labels.size(), 3u);
+    EXPECT_EQ(m.labels[0], "l1");
+    EXPECT_EQ(m.labels[1], "l2");
+    EXPECT_EQ(m.labels[2], "l3");
+
+    // Spot-check (1,1) and (2,2)
+    auto cell_11 = reopened.read(std::vector<int64_t>{1, 1}, true);
+    auto cell_22 = reopened.read(std::vector<int64_t>{2, 2}, true);
+    // out[r,c,k] = a[r,c,0] + b[r,c,k]
+    EXPECT_DOUBLE_EQ(cell_11[0], (1.0 * 10 + 1.0) + (1.0 * 100 + 1.0 * 10 + 0));
+    EXPECT_DOUBLE_EQ(cell_11[1], (1.0 * 10 + 1.0) + (1.0 * 100 + 1.0 * 10 + 1));
+    EXPECT_DOUBLE_EQ(cell_11[2], (1.0 * 10 + 1.0) + (1.0 * 100 + 1.0 * 10 + 2));
+    EXPECT_DOUBLE_EQ(cell_22[2], (2.0 * 10 + 2.0) + (2.0 * 100 + 2.0 * 10 + 2));
+}
+
+TEST_F(ExpressionFixture, UnionDimsAcrossOperands) {
+    // lhs: [scenario=2, time=4 monthly]
+    auto md_a = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"scenario", "time"})
+                                                 .set("dimension_sizes", {2, 4})
+                                                 .set("time_dimensions", {"time"})
+                                                 .set("frequencies", {"monthly"})
+                                                 .set("labels", {"v1"}));
+    // rhs: [time=4 monthly, stage=3]
+    auto md_b = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"time", "stage"})
+                                                 .set("dimension_sizes", {4, 3})
+                                                 .set("time_dimensions", {"time"})
+                                                 .set("frequencies", {"monthly"})
+                                                 .set("labels", {"v1"}));
+    write_qvr(path_a, md_a, [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        // a[scenario, time] = scenario*10 + time
+        return static_cast<double>(dims[0] * 10 + dims[1]);
+    });
+    write_qvr(path_b, md_b, [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        // b[time, stage] = time*100 + stage
+        return static_cast<double>(dims[0] * 100 + dims[1]);
+    });
+
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    Expression e = Expression(a) + Expression(b);
+    e.save(path_out);
+
+    // Output shape per D-02: lhs.dims (in lhs order) ++ rhs-only dims:
+    //   [scenario=2, time=4, stage=3]
+    auto reopened = BinaryFile::open_file(path_out, 'r');
+    const auto& m = reopened.get_metadata();
+    ASSERT_EQ(m.dimensions.size(), 3u);
+    EXPECT_EQ(m.dimensions[0].name, "scenario");
+    EXPECT_EQ(m.dimensions[0].size, 2);
+    EXPECT_EQ(m.dimensions[1].name, "time");
+    EXPECT_EQ(m.dimensions[1].size, 4);
+    EXPECT_EQ(m.dimensions[2].name, "stage");
+    EXPECT_EQ(m.dimensions[2].size, 3);
+
+    // Verify two sample cells. Output dims are [scenario, time, stage].
+    // out[s, t, st] = a[s, t] + b[t, st] = (s*10 + t) + (t*100 + st).
+    auto cell_111 = reopened.read(std::vector<int64_t>{1, 1, 1}, true);
+    auto cell_242 = reopened.read(std::vector<int64_t>{2, 4, 2}, true);
+    EXPECT_DOUBLE_EQ(cell_111[0], (1.0 * 10 + 1.0) + (1.0 * 100 + 1.0));
+    EXPECT_DOUBLE_EQ(cell_242[0], (2.0 * 10 + 4.0) + (4.0 * 100 + 2.0));
+}
