@@ -267,12 +267,6 @@ void BinaryFile::go_to_position(int64_t position, char mode) {
     impl_->current_position = position;
 }
 
-void BinaryFile::validate_file_is_open() const {
-    if (!impl_->io || !impl_->io->good()) {
-        throw std::runtime_error("File is not open: " + impl_->file_path);
-    }
-}
-
 void BinaryFile::validate_dimension_values(const std::unordered_map<std::string, int64_t>& dims) {
     const auto& metadata = impl_->metadata;
     const auto& dimensions = metadata.dimensions;

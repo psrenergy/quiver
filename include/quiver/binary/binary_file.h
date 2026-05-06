@@ -64,7 +64,6 @@ private:
     void fill_file_with_nulls();
 
     // Validations
-    void validate_file_is_open() const;
     void validate_dimension_values(const std::unordered_map<std::string, int64_t>& dims);
     void validate_dimension_values_indexed(const std::vector<int64_t>& dims);
     void validate_data_length(const std::vector<double>& data);
