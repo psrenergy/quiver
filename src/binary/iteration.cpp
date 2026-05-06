@@ -108,14 +108,25 @@ std::optional<std::vector<int64_t>> next_dimensions(const BinaryMetadata& meta,
 
     std::vector<int64_t> next = current;
 
+    // WR-09 (D-22): track whether the increment loop broke. If it wrapped through every
+    // dim without breaking, we've exhausted the position space -- equivalent to the old
+    // post-loop "next == first_dimensions(meta)" check, but without rebuilding
+    // first_dimensions per call (~7.3M wasted vector allocations on a 480x500x31 sweep).
+    bool incremented = false;
     for (int i = static_cast<int>(next.size()) - 1; i >= 0; --i) {
         if (next[i] < current_sizes[i]) {
             next[i] += 1;
+            incremented = true;
             break;
         } else {
             next[i] = 1;
         }
     }
+
+    // End-of-iteration: if the increment loop wrapped through every dimension without
+    // breaking, we've exhausted the position space.
+    if (!incremented)
+        return std::nullopt;
 
     // Adjust time dimensions which were reset to 1 before their parent dimension is incremented.
     // Ex: [month, scenario, day] when initial date is 2025-01-02
@@ -132,10 +143,6 @@ std::optional<std::vector<int64_t>> next_dimensions(const BinaryMetadata& meta,
         }
     }
 
-    // End-of-iteration: if we wrapped back to the initial position, signal nullopt.
-    if (next == first_dimensions(meta)) {
-        return std::nullopt;
-    }
     return next;
 }
 
