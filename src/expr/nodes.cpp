@@ -129,23 +129,37 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
                                  std::to_string(r_size) + " (broadcasting requires n×n, 1×n, or n×1)");
     }
 
-    // ---- D-04: same-name time dims → TimeProperties must match exactly ----
+    // ---- D-04 (CR-01 fix): same-name dims must agree on time-ness (symmetric).
+    //      D-17 (WR-01 fix): when both are time, parent dim is compared BY NAME, not raw operand index. ----
+    auto parent_name_of = [](int64_t parent_idx, const BinaryMetadata& m) -> std::string {
+        return (parent_idx >= 0) ? m.dimensions[parent_idx].name : std::string{};
+    };
     for (const auto& l_dim : lhs_meta.dimensions) {
-        if (!l_dim.is_time_dimension())
-            continue;
         int r_idx = find_dim_index(rhs_meta.dimensions, l_dim.name);
         if (r_idx < 0)
-            continue;
+            continue;  // dim only on lhs; D-02 keeps verbatim
         const auto& r_dim = rhs_meta.dimensions[r_idx];
-        if (!r_dim.is_time_dimension()) {
-            throw std::runtime_error("Cannot apply binary operation: dimension '" + l_dim.name +
-                                     "' is a time dimension on lhs but not on rhs");
+        const bool l_time = l_dim.is_time_dimension();
+        const bool r_time = r_dim.is_time_dimension();
+        if (l_time != r_time) {
+            // D-15: symmetric reject. Mirrors the existing lhs-time/rhs-non-time direction.
+            const std::string time_side = l_time ? "lhs" : "rhs";
+            const std::string nontime_side = l_time ? "rhs" : "lhs";
+            throw std::runtime_error("Cannot apply: dimension '" + l_dim.name +
+                                     "' is a time dimension on " + time_side + " but not on " +
+                                     nontime_side);
         }
+        if (!l_time)
+            continue;  // both non-time; nothing more to validate here.
         const auto& lp = *l_dim.time;
         const auto& rp = *r_dim.time;
-        if (lp.frequency != rp.frequency || lp.initial_value != rp.initial_value ||
-            lp.parent_dimension_index != rp.parent_dimension_index) {
-            throw std::runtime_error("Cannot apply binary operation: time dimension '" + l_dim.name +
+        // D-17: resolve each side's parent_dimension_index to the parent's NAME on its own side,
+        // then compare names across operands. Two same-name time dims compatible iff parent names match
+        // (or both are -1 — `parent_name_of` returns "" for that case, equality holds).
+        const std::string l_parent = parent_name_of(lp.parent_dimension_index, lhs_meta);
+        const std::string r_parent = parent_name_of(rp.parent_dimension_index, rhs_meta);
+        if (lp.frequency != rp.frequency || lp.initial_value != rp.initial_value || l_parent != r_parent) {
+            throw std::runtime_error("Cannot apply: time dimension '" + l_dim.name +
                                      "' has incompatible TimeProperties");
         }
     }

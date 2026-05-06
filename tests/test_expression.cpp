@@ -410,6 +410,122 @@ TEST_F(ExpressionFixture, LabelMismatchThrows) {
 }
 
 // ============================================================================
+// CR-01 + WR-01 — D-23 mirror cases + parent-by-name compatibility
+// ============================================================================
+
+TEST_F(ExpressionFixture, MirrorTimeNonTimeMismatchAThrows) {
+    // md_a: block as NON-time. md_b: block as monthly time. Symmetric reject (D-15).
+    auto md_a = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"scenario", "block"})
+                                                 .set("dimension_sizes", {3, 12})
+                                                 .set("labels", {"v1", "v2"}));
+    auto md_b = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"scenario", "block"})
+                                                 .set("dimension_sizes", {3, 12})
+                                                 .set("time_dimensions", {"block"})
+                                                 .set("frequencies", {"monthly"})
+                                                 .set("labels", {"v1", "v2"}));
+    write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    EXPECT_THROW({ auto e = Expression(a) + Expression(b); }, std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, MirrorTimeNonTimeMismatchBThrows) {
+    // md_a: block as monthly time. md_b: block as NON-time. Pre-existing direction.
+    auto md_a = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"scenario", "block"})
+                                                 .set("dimension_sizes", {3, 12})
+                                                 .set("time_dimensions", {"block"})
+                                                 .set("frequencies", {"monthly"})
+                                                 .set("labels", {"v1", "v2"}));
+    auto md_b = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"scenario", "block"})
+                                                 .set("dimension_sizes", {3, 12})
+                                                 .set("labels", {"v1", "v2"}));
+    write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    EXPECT_THROW({ auto e = Expression(a) + Expression(b); }, std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, ParentDimMatchByNameAcceptsCrossPosition) {
+    // md_a: parent of `day` is `month` at index 0. md_b: parent of `day` is `month` at index 1.
+    // Same parent NAME, different operand indices. WR-01: must accept (was reject pre-fix).
+    auto md_a = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"month", "extra", "day"})
+                                                 .set("dimension_sizes", {2, 3, 31})
+                                                 .set("time_dimensions", {"month", "day"})
+                                                 .set("frequencies", {"monthly", "daily"})
+                                                 .set("labels", {"v1", "v2"}));
+    auto md_b = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"extra", "month", "day"})
+                                                 .set("dimension_sizes", {3, 2, 31})
+                                                 .set("time_dimensions", {"month", "day"})
+                                                 .set("frequencies", {"monthly", "daily"})
+                                                 .set("labels", {"v1", "v2"}));
+    write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    EXPECT_NO_THROW({
+        Expression e = Expression(a) + Expression(b);
+        e.save(path_out);
+    });
+    EXPECT_NO_THROW(BinaryFile::open_file(path_out, 'r'));
+}
+
+TEST_F(ExpressionFixture, ParentDimNameMismatchThrows) {
+    // md_a: parent of `block` is `month` (idx 0). md_b: parent of `block` is `stage` (idx 0).
+    // Different parent NAMES. WR-01: must throw because parent names differ even though
+    // `block` exists on both. Both metadata use monthly+daily so the per-row write-time
+    // validation succeeds — only the cross-operand parent-name check distinguishes them.
+    auto md_a = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"month", "block"})
+                                                 .set("dimension_sizes", {2, 31})
+                                                 .set("time_dimensions", {"month", "block"})
+                                                 .set("frequencies", {"monthly", "daily"})
+                                                 .set("labels", {"v1", "v2"}));
+    auto md_b = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"stage", "block"})
+                                                 .set("dimension_sizes", {2, 31})
+                                                 .set("time_dimensions", {"stage", "block"})
+                                                 .set("frequencies", {"monthly", "daily"})
+                                                 .set("labels", {"v1", "v2"}));
+    write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    EXPECT_THROW({ auto e = Expression(a) + Expression(b); }, std::runtime_error);
+}
+
+// ============================================================================
 // CORE-02: subtract / multiply / divide on two files
 // ============================================================================
 
