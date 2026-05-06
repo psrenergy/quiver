@@ -1,13 +1,19 @@
 ---
 phase: 01-c-core
 verified: 2026-05-06T00:00:00Z
-status: human_needed
-score: 7/7 must-haves verified (with 1 D-04 gap flagged for human decision)
+status: verified
+score: 7/7 must-haves verified (D-04 gap acknowledged and deferred per human decision)
 overrides_applied: 0
+human_verification_resolved:
+  - test: "Confirm that D-04 mirror-case gap (CR-01) is acceptable for Phase 1 sign-off"
+    decision: "accept-and-defer (option a)"
+    decided_at: 2026-05-06
+    rationale: "All 7 CORE/TEST truths VERIFIED, all 781 tests pass. CR-01 surfaces only on input configurations not exercised by current tests. Deferred to a follow-up plan in a future milestone."
 human_verification:
   - test: "Confirm that D-04 mirror-case gap (CR-01) is acceptable for Phase 1 sign-off"
     expected: "Either (a) accept the gap because every test in TEST-01 passes today and every CORE-* truth is observably met, deferring CR-01 to a follow-up plan, OR (b) treat CR-01 as a CORE-correctness gap that must be closed inside Phase 1 because it allows silent wrong outputs when an input metadata combination has a time dim on rhs but a non-time same-name dim on lhs"
     why_human: "CR-01 is a broadcast-validation correctness bug discovered by gsd-code-reviewer. It does not break any currently exercised truth (no test triggers the inverse direction; D-04 is verified by TimePropertiesMismatchThrows in the lhs-time direction). Whether it constitutes a Phase 1 gap or a Phase 2 cleanup depends on whether the project owner judges 'silent wrong output on a documented decision rule' as in-scope for the phase goal."
+    resolved: "accept-and-defer (option a) — see human_verification_resolved"
 human_verification_advisory:
   - finding: "CR-02: open_file('w', ...) leaks canonical path into write_registry on partial-construction failure"
     impact: "Quality bug, not a goal-failure. No Phase 1 must-have or test exercises this path."
