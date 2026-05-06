@@ -29,4 +29,4 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 - [x] 01-01-PLAN.md — Binary subsystem extensions (D-12 free-function iterators, D-13 fast read overloads + read_into, D-14 fast write overload)
 - [x] 01-02-PLAN.md — quiver::expr core: Expression value type, Node hierarchy (FileNode, ScalarNode, BinaryOpNode with full broadcast validation), 12 operator overloads, save engine with D-11 self-save check, baseline tests
-- [ ] 01-03-PLAN.md — Comprehensive Expression test suite: full op matrix, 8 scalar broadcast variants, broadcast/union edge cases, large-grid smoke
+- [x] 01-03-PLAN.md — Comprehensive Expression test suite: full op matrix, 8 scalar broadcast variants, broadcast/union edge cases, large-grid smoke
