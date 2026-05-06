@@ -1,0 +1,151 @@
+#include "quiver/expr/expression.h"
+
+#include "quiver/binary/binary_file.h"
+#include "quiver/binary/binary_metadata.h"
+#include "quiver/binary/iteration.h"
+#include "quiver/expr/node.h"
+
+#include <cstdint>
+#include <filesystem>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+namespace quiver::expr {
+
+// ============================================================================
+// Helpers (anonymous namespace)
+// ============================================================================
+
+namespace {
+
+// Recursively walk the node tree, collecting every FileNode's path. Used by
+// Expression::save's D-11 self-save check. dynamic_cast is used to discriminate
+// concrete node types — fine for v1 (one virtual dispatch per node, negligible
+// vs the file I/O cost of the engine).
+void collect_file_paths(const Node& node, std::vector<std::string>& out) {
+    if (auto* fn = dynamic_cast<const FileNode*>(&node)) {
+        out.push_back(fn->path());
+        return;
+    }
+    if (auto* bn = dynamic_cast<const BinaryOpNode*>(&node)) {
+        collect_file_paths(*bn->lhs(), out);
+        collect_file_paths(*bn->rhs(), out);
+        return;
+    }
+    // ScalarNode and any future leaf types: no file paths to collect.
+}
+
+}  // namespace
+
+// ============================================================================
+// Expression
+// ============================================================================
+
+Expression::Expression(const BinaryFile& file) : node_(std::make_shared<FileNode>(file)) {}
+
+Expression::Expression(std::shared_ptr<Node> node) : node_(std::move(node)) {}
+
+BinaryMetadata Expression::metadata() const {
+    return node_->metadata();
+}
+
+const std::shared_ptr<Node>& Expression::node() const {
+    return node_;
+}
+
+void Expression::save(const std::string& path) const {
+    // ---- D-11: eager self-save check, BEFORE any writer is opened. ----
+    // The writer's open_file('w', ...) calls fill_file_with_nulls() which would
+    // wipe an input file if the path happened to coincide. Catching it here
+    // — before the writer constructs — keeps inputs byte-untouched on rejection.
+    std::vector<std::string> input_paths;
+    collect_file_paths(*node_, input_paths);
+    const auto canonical_out = std::filesystem::weakly_canonical(path).string();
+    for (const auto& in : input_paths) {
+        if (std::filesystem::weakly_canonical(in).string() == canonical_out) {
+            throw std::runtime_error("Cannot save: output path collides with input file '" + in + "'");
+        }
+    }
+
+    // ---- Open writer ----
+    const auto meta = node_->metadata();
+    auto writer = BinaryFile::open_file(path, 'w', meta);
+
+    // ---- Row loop: single std::vector<double> buffer reused across iterations (CORE-06) ----
+    std::vector<int64_t> dims = quiver::binary::first_dimensions(meta);
+    std::vector<double> row;  // ONE allocation; sized on first compute_row call.
+    for (;;) {
+        node_->compute_row(dims, row);
+        writer.write(row, dims);  // D-14 fast write
+        auto nxt = quiver::binary::next_dimensions(meta, dims);
+        if (!nxt)
+            break;
+        dims = std::move(*nxt);
+    }
+}
+
+// ============================================================================
+// Free-function binary operators
+// ============================================================================
+
+namespace {
+
+Expression make_binop(BinaryOp op, const Expression& lhs, const Expression& rhs) {
+    return Expression(std::make_shared<BinaryOpNode>(op, lhs.node(), rhs.node()));
+}
+
+Expression scalar_left(BinaryOp op, double lhs, const Expression& rhs) {
+    auto scalar_node = std::make_shared<ScalarNode>(lhs, rhs.metadata());
+    return Expression(std::make_shared<BinaryOpNode>(op, scalar_node, rhs.node()));
+}
+
+Expression scalar_right(BinaryOp op, const Expression& lhs, double rhs) {
+    auto scalar_node = std::make_shared<ScalarNode>(rhs, lhs.metadata());
+    return Expression(std::make_shared<BinaryOpNode>(op, lhs.node(), scalar_node));
+}
+
+}  // namespace
+
+Expression operator+(const Expression& lhs, const Expression& rhs) {
+    return make_binop(BinaryOp::Add, lhs, rhs);
+}
+Expression operator+(const Expression& lhs, double rhs) {
+    return scalar_right(BinaryOp::Add, lhs, rhs);
+}
+Expression operator+(double lhs, const Expression& rhs) {
+    return scalar_left(BinaryOp::Add, lhs, rhs);
+}
+
+Expression operator-(const Expression& lhs, const Expression& rhs) {
+    return make_binop(BinaryOp::Subtract, lhs, rhs);
+}
+Expression operator-(const Expression& lhs, double rhs) {
+    return scalar_right(BinaryOp::Subtract, lhs, rhs);
+}
+Expression operator-(double lhs, const Expression& rhs) {
+    return scalar_left(BinaryOp::Subtract, lhs, rhs);
+}
+
+Expression operator*(const Expression& lhs, const Expression& rhs) {
+    return make_binop(BinaryOp::Multiply, lhs, rhs);
+}
+Expression operator*(const Expression& lhs, double rhs) {
+    return scalar_right(BinaryOp::Multiply, lhs, rhs);
+}
+Expression operator*(double lhs, const Expression& rhs) {
+    return scalar_left(BinaryOp::Multiply, lhs, rhs);
+}
+
+Expression operator/(const Expression& lhs, const Expression& rhs) {
+    return make_binop(BinaryOp::Divide, lhs, rhs);
+}
+Expression operator/(const Expression& lhs, double rhs) {
+    return scalar_right(BinaryOp::Divide, lhs, rhs);
+}
+Expression operator/(double lhs, const Expression& rhs) {
+    return scalar_left(BinaryOp::Divide, lhs, rhs);
+}
+
+}  // namespace quiver::expr

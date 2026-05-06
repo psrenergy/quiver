@@ -6,6 +6,7 @@ add_executable(quiver_tests
     test_binary_metadata.cpp
     test_iteration.cpp
     test_binary_time_properties.cpp
+    test_expression.cpp
     test_database_create.cpp
     test_database_csv_export.cpp
     test_database_csv_import.cpp

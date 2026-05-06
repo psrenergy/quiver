@@ -1,0 +1,410 @@
+#include <chrono>
+#include <cmath>
+#include <cstdio>
+#include <filesystem>
+#include <fstream>
+#include <functional>
+#include <gtest/gtest.h>
+#include <quiver/binary/binary_file.h>
+#include <quiver/binary/binary_metadata.h>
+#include <quiver/binary/iteration.h>
+#include <quiver/element.h>
+#include <quiver/expr/expression.h>
+#include <vector>
+
+using namespace quiver;
+using namespace quiver::expr;
+namespace fs = std::filesystem;
+
+// ============================================================================
+// Fixture
+// ============================================================================
+
+class ExpressionFixture : public ::testing::Test {
+protected:
+    void SetUp() override {
+        path_a = (fs::temp_directory_path() / "quiver_expr_a").string();
+        path_b = (fs::temp_directory_path() / "quiver_expr_b").string();
+        path_c = (fs::temp_directory_path() / "quiver_expr_c").string();
+        path_out = (fs::temp_directory_path() / "quiver_expr_out").string();
+        path_out2 = (fs::temp_directory_path() / "quiver_expr_out2").string();
+        // Clean up any leftover artifacts from a previous run before each test.
+        cleanup();
+    }
+
+    void TearDown() override { cleanup(); }
+
+    void cleanup() {
+        for (const auto& p : {path_a, path_b, path_c, path_out, path_out2}) {
+            for (auto ext : {".qvr", ".toml"}) {
+                auto full = p + ext;
+                if (fs::exists(full))
+                    fs::remove(full);
+            }
+        }
+    }
+
+    std::string path_a, path_b, path_c, path_out, path_out2;
+
+    static BinaryMetadata make_simple_metadata() {
+        return BinaryMetadata::from_element(Element()
+                                                .set("version", "1")
+                                                .set("initial_datetime", "2025-01-01T00:00:00")
+                                                .set("unit", "MW")
+                                                .set("dimensions", {"row", "col"})
+                                                .set("dimension_sizes", {3, 2})
+                                                .set("labels", {"val1", "val2"}));
+    }
+
+    // Programmatic .qvr generator: opens writer, walks all positions via
+    // quiver::binary::first/next_dimensions, calls fill(...) per cell to compute the row,
+    // writes via the fast write(vector<int64_t>) path. Closes on scope exit.
+    static void write_qvr(const std::string& path,
+                          const BinaryMetadata& meta,
+                          std::function<double(const std::vector<int64_t>& dims, size_t label_idx)> fill) {
+        auto writer = BinaryFile::open_file(path, 'w', meta);
+        std::vector<int64_t> dims = quiver::binary::first_dimensions(meta);
+        std::vector<double> row(meta.labels.size());
+        for (;;) {
+            for (size_t k = 0; k < row.size(); ++k)
+                row[k] = fill(dims, k);
+            writer.write(row, dims);
+            auto nxt = quiver::binary::next_dimensions(meta, dims);
+            if (!nxt)
+                break;
+            dims = std::move(*nxt);
+        }
+    }
+
+    // Read all cells from a written .qvr into a flat vector (column-major across all
+    // dim positions, then labels). Used by tests for byte-by-byte comparison.
+    static std::vector<double> read_all_cells(const std::string& path) {
+        auto reader = BinaryFile::open_file(path, 'r');
+        const auto& meta = reader.get_metadata();
+        std::vector<double> out;
+        std::vector<int64_t> dims = quiver::binary::first_dimensions(meta);
+        for (;;) {
+            auto cell = reader.read(dims, true);  // allow_nulls
+            out.insert(out.end(), cell.begin(), cell.end());
+            auto nxt = quiver::binary::next_dimensions(meta, dims);
+            if (!nxt)
+                break;
+            dims = std::move(*nxt);
+        }
+        return out;
+    }
+};
+
+// ============================================================================
+// CORE-01 / CORE-05: implicit conversion + save round-trip
+// ============================================================================
+
+TEST_F(ExpressionFixture, IdentityFile) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 100 + dims[1] * 10 + static_cast<int64_t>(k));
+    });
+
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression e = a;  // implicit conversion (CORE-01)
+    e.save(path_out); // engine round-trip (CORE-05)
+
+    auto orig = read_all_cells(path_a);
+    auto copy = read_all_cells(path_out);
+    ASSERT_EQ(orig.size(), copy.size());
+    for (size_t i = 0; i < orig.size(); ++i)
+        EXPECT_DOUBLE_EQ(orig[i], copy[i]);
+}
+
+TEST_F(ExpressionFixture, SaveProducesReadableFile) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression e = a;
+    e.save(path_out);
+
+    auto reopened = BinaryFile::open_file(path_out, 'r');
+    const auto& m = reopened.get_metadata();
+    EXPECT_EQ(m.unit, "MW");
+    EXPECT_EQ(m.dimensions.size(), 2u);
+    EXPECT_EQ(m.dimensions[0].name, "row");
+    EXPECT_EQ(m.dimensions[0].size, 3);
+    EXPECT_EQ(m.dimensions[1].name, "col");
+    EXPECT_EQ(m.dimensions[1].size, 2);
+    EXPECT_EQ(m.labels.size(), 2u);
+}
+
+TEST_F(ExpressionFixture, SaveOpenedTwiceProducesSameOutput) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] + dims[1] + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression e = a;
+    e.save(path_out);
+    e.save(path_out2);
+
+    auto v1 = read_all_cells(path_out);
+    auto v2 = read_all_cells(path_out2);
+    ASSERT_EQ(v1.size(), v2.size());
+    for (size_t i = 0; i < v1.size(); ++i)
+        EXPECT_DOUBLE_EQ(v1[i], v2[i]);
+}
+
+// ============================================================================
+// D-11: self-save collision
+// ============================================================================
+
+TEST_F(ExpressionFixture, SelfSaveCollisionThrows) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 1000 + dims[1] * 10 + static_cast<int64_t>(k));
+    });
+
+    // Snapshot input file size + first 64 bytes BEFORE the throw.
+    auto qvr_path = path_a + ".qvr";
+    auto size_before = fs::file_size(qvr_path);
+    std::ifstream in_before(qvr_path, std::ios::binary);
+    std::vector<char> head_before(64);
+    in_before.read(head_before.data(), 64);
+    in_before.close();
+
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression e = a;
+    EXPECT_THROW(e.save(path_a), std::runtime_error);
+
+    // After the throw: size + first 64 bytes must be unchanged (D-11 must reject
+    // BEFORE BinaryFile::open_file('w', ...) calls fill_file_with_nulls).
+    auto size_after = fs::file_size(qvr_path);
+    std::ifstream in_after(qvr_path, std::ios::binary);
+    std::vector<char> head_after(64);
+    in_after.read(head_after.data(), 64);
+
+    EXPECT_EQ(size_before, size_after);
+    EXPECT_EQ(head_before, head_after);
+}
+
+TEST_F(ExpressionFixture, SelfSaveCollisionThrowsWithCanonicalizedPath) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 42.0; });
+
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression e = a;
+
+    // Build a non-canonical reference to the same file (path with redundant "./").
+    // weakly_canonical normalizes both this and path_a to the same canonical form.
+    auto alt = (fs::temp_directory_path() / "." / "quiver_expr_a").string();
+    EXPECT_THROW(e.save(alt), std::runtime_error);
+    EXPECT_TRUE(fs::exists(path_a + ".qvr"));  // input still exists, not wiped
+}
+
+// ============================================================================
+// CORE-02 / CORE-03 / CORE-04: binary operators on two files, scalar broadcast,
+// and chained expressions
+// ============================================================================
+
+TEST_F(ExpressionFixture, AddTwoFiles) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+    });
+    write_qvr(path_b, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 100 + dims[1] * 5 + static_cast<int64_t>(k) * 2);
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    Expression e = Expression(a) + Expression(b);
+    e.save(path_out);
+
+    auto va = read_all_cells(path_a);
+    auto vb = read_all_cells(path_b);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(va.size(), vo.size());
+    for (size_t i = 0; i < va.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], va[i] + vb[i]);
+}
+
+TEST_F(ExpressionFixture, Chained) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] + dims[1] + static_cast<int64_t>(k));
+    });
+    write_qvr(path_b, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 2 + dims[1] + static_cast<int64_t>(k));
+    });
+    write_qvr(path_c, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] + dims[1] * 2 + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    auto c = BinaryFile::open_file(path_c, 'r');
+    Expression e = (Expression(a) + Expression(b) - Expression(c)) / 2.0;
+    e.save(path_out);
+
+    auto va = read_all_cells(path_a);
+    auto vb = read_all_cells(path_b);
+    auto vc = read_all_cells(path_c);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(va.size(), vo.size());
+    for (size_t i = 0; i < va.size(); ++i) {
+        EXPECT_DOUBLE_EQ(vo[i], (va[i] + vb[i] - vc[i]) / 2.0);
+    }
+}
+
+TEST_F(ExpressionFixture, ScalarBroadcastAddRight) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 100 + dims[1] * 10 + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression e = Expression(a) + 2.0;
+    e.save(path_out);
+
+    auto va = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(va.size(), vo.size());
+    for (size_t i = 0; i < va.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], va[i] + 2.0);
+}
+
+TEST_F(ExpressionFixture, SamePathTwice) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + static_cast<int64_t>(k));
+    });
+    auto a1 = BinaryFile::open_file(path_a, 'r');
+    auto a2 = BinaryFile::open_file(path_a, 'r');
+    Expression e = Expression(a1) + Expression(a2);  // D-10: each FileNode opens independently
+    e.save(path_out);
+
+    auto va = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(va.size(), vo.size());
+    for (size_t i = 0; i < va.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], 2.0 * va[i]);
+}
+
+// ============================================================================
+// Error paths: D-04 / D-06 / D-07 / D-08 / D-09
+// ============================================================================
+
+TEST_F(ExpressionFixture, MismatchedShapesThrows) {
+    auto md_a = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"row", "col"})
+                                                 .set("dimension_sizes", {3, 2})
+                                                 .set("labels", {"val1", "val2"}));
+    auto md_b = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"row", "col"})
+                                                 .set("dimension_sizes", {4, 2})
+                                                 .set("labels", {"val1", "val2"}));
+    write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    EXPECT_THROW({ auto e = Expression(a) + Expression(b); }, std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, UnitMismatchThrows) {
+    auto md_a = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"row", "col"})
+                                                 .set("dimension_sizes", {3, 2})
+                                                 .set("labels", {"val1", "val2"}));
+    auto md_b = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "GWh")
+                                                 .set("dimensions", {"row", "col"})
+                                                 .set("dimension_sizes", {3, 2})
+                                                 .set("labels", {"val1", "val2"}));
+    write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    EXPECT_THROW({ auto e = Expression(a) + Expression(b); }, std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, TimePropertiesMismatchThrows) {
+    // Same dim "block" with same size on both sides, but lhs treats it as a (monthly)
+    // time dim while rhs treats it as a regular non-time dim. D-04 fires the
+    // "is a time dimension on lhs but not on rhs" branch — a controlled mismatch
+    // we can express via from_element without running into engine constraints on
+    // mixed inner-time-dim frequencies (e.g., weekly inside monthly is unsupported).
+    auto md_a = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"scenario", "block"})
+                                                 .set("dimension_sizes", {3, 12})
+                                                 .set("time_dimensions", {"block"})
+                                                 .set("frequencies", {"monthly"})
+                                                 .set("labels", {"v1", "v2"}));
+    auto md_b = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"scenario", "block"})  // no time_dimensions
+                                                 .set("dimension_sizes", {3, 12})
+                                                 .set("labels", {"v1", "v2"}));
+    write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    EXPECT_THROW({ auto e = Expression(a) + Expression(b); }, std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, InitialDatetimeMismatchThrows) {
+    auto md_a = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"month", "block"})
+                                                 .set("dimension_sizes", {4, 31})
+                                                 .set("time_dimensions", {"month", "block"})
+                                                 .set("frequencies", {"monthly", "daily"})
+                                                 .set("labels", {"v1", "v2"}));
+    auto md_b = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-02-01T00:00:00")  // ← differs
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"month", "block"})
+                                                 .set("dimension_sizes", {4, 31})
+                                                 .set("time_dimensions", {"month", "block"})
+                                                 .set("frequencies", {"monthly", "daily"})
+                                                 .set("labels", {"v1", "v2"}));
+    write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    EXPECT_THROW({ auto e = Expression(a) + Expression(b); }, std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, LabelMismatchThrows) {
+    auto md_a = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"row", "col"})
+                                                 .set("dimension_sizes", {3, 2})
+                                                 .set("labels", {"v1", "v2"}));
+    auto md_b = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"row", "col"})
+                                                 .set("dimension_sizes", {3, 2})
+                                                 .set("labels", {"v1", "v3"}));  // ← differs
+    write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    EXPECT_THROW({ auto e = Expression(a) + Expression(b); }, std::runtime_error);
+}
