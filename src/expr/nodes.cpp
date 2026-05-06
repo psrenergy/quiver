@@ -272,6 +272,19 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
         rhs_dim_sizes_[i] = (ri >= 0) ? rhs_meta.dimensions[ri].size : 0;
     }
 
+    // WR-06: pre-compute reverse translation tables (operand-index -> output-index).
+    // The forward tables can have -1 for output dims that exist on only one side; the reverse
+    // tables have NO -1 entries because every operand dim appears in the output (Pass 1/Pass 2
+    // invariant from broadcast_meta_ construction above).
+    lhs_to_out_.assign(lhs_meta.dimensions.size(), -1);
+    rhs_to_out_.assign(rhs_meta.dimensions.size(), -1);
+    for (size_t out_i = 0; out_i < out_dims.size(); ++out_i) {
+        if (lhs_dim_translate_[out_i] >= 0)
+            lhs_to_out_[lhs_dim_translate_[out_i]] = static_cast<int>(out_i);
+        if (rhs_dim_translate_[out_i] >= 0)
+            rhs_to_out_[rhs_dim_translate_[out_i]] = static_cast<int>(out_i);
+    }
+
     lhs_label_count_ = ll;
     rhs_label_count_ = rl;
 
@@ -291,18 +304,9 @@ void BinaryOpNode::compute_row(const std::vector<int64_t>& dims, std::vector<dou
     if (out.size() != out_label_count)
         out.resize(out_label_count);
 
-    // Translate output dims → lhs operand dims (D-05). For each lhs operand dim,
-    // find its corresponding output index (search by name via the translation table),
-    // then take dims[output_idx], with size-1 broadcast clamping.
+    // Translate output dims -> lhs operand dims (D-05) using pre-computed reverse table (WR-06).
     for (size_t li = 0; li < lhs_dims_buf_.size(); ++li) {
-        int out_i = -1;
-        for (size_t k = 0; k < lhs_dim_translate_.size(); ++k) {
-            if (lhs_dim_translate_[k] == static_cast<int>(li)) {
-                out_i = static_cast<int>(k);
-                break;
-            }
-        }
-        // out_i is guaranteed >= 0: every lhs dim appears in the output (Pass 1 of dim union).
+        const int out_i = lhs_to_out_[li];
         int64_t coord = dims[out_i];
         if (lhs_dim_sizes_[out_i] == 1)
             coord = 1;  // size-1 broadcast clamp
@@ -310,13 +314,7 @@ void BinaryOpNode::compute_row(const std::vector<int64_t>& dims, std::vector<dou
     }
     // Same for rhs.
     for (size_t ri = 0; ri < rhs_dims_buf_.size(); ++ri) {
-        int out_i = -1;
-        for (size_t k = 0; k < rhs_dim_translate_.size(); ++k) {
-            if (rhs_dim_translate_[k] == static_cast<int>(ri)) {
-                out_i = static_cast<int>(k);
-                break;
-            }
-        }
+        const int out_i = rhs_to_out_[ri];
         int64_t coord = dims[out_i];
         if (rhs_dim_sizes_[out_i] == 1)
             coord = 1;

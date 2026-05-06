@@ -115,6 +115,13 @@ private:
     std::vector<int64_t> lhs_dim_sizes_;
     std::vector<int64_t> rhs_dim_sizes_;
 
+    // For each operand-dim index (lhs/rhs operand metadata.dimensions): the corresponding
+    // index in the output (broadcast_meta_) dimensions. Always >= 0 (no -1) because every
+    // operand dim appears in the output (D-02 Pass 1 / Pass 2 invariant). Built once at
+    // construction alongside the forward translation tables; used by compute_row (WR-06).
+    std::vector<int> lhs_to_out_;
+    std::vector<int> rhs_to_out_;
+
     // Label-axis broadcast (D-08).
     size_t lhs_label_count_ = 0;
     size_t rhs_label_count_ = 0;
