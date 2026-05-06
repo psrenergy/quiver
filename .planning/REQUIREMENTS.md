@@ -1,7 +1,9 @@
 # Requirements: Quiver — Lazy Expressions
 
 **Defined:** 2026-05-05
-**Core Value:** Compose arithmetic on `.qvr` binary files with one-liner ergonomics across all 5 bindings, materialized lazily row-by-row.
+**Last restructured:** 2026-05-06 — milestone scope narrowed to C++ core; CAPI / bindings / TEST-02 / TEST-03 deferred to a future milestone.
+**Core Value (v1.0):** Compose arithmetic on `.qvr` binary files in C++ with `(a + b) * 2.0`-style ergonomics, materialized lazily row-by-row via `expression.save(path)`.
+**Future-milestone goal:** Same ergonomics in Julia, Dart, Python, JS/Deno, and Lua via the C API + per-language bindings (preserved verbatim under "Deferred to Future Milestone" below).
 
 ## v1 Requirements
 
@@ -13,6 +15,14 @@
 - [ ] **CORE-04**: User can chain operators into trees of arbitrary depth (`((a + b) - c) / 2.0`) and the tree materializes correctly
 - [ ] **CORE-05**: User can call `expression.save(path)` to materialize the lazy tree to a new `.qvr` file
 - [ ] **CORE-06**: Materialization iterates row-by-row (one `vector<double>` per row) reusing per-row buffers across iterations
+
+### Verification
+
+- [ ] **TEST-01**: C++ test suite verifies arithmetic correctness end-to-end (write inputs, evaluate `(a + b) * 2.0`-style expressions, read output, golden values match)
+
+## Deferred to Future Milestone
+
+These requirements were originally part of v1 but were moved out of scope on 2026-05-06 when phases 2–7 were removed. They remain valid future-milestone targets — re-add the corresponding phases to ROADMAP.md before re-engaging.
 
 ### C API (`quiver_expression_*`)
 
@@ -28,9 +38,8 @@
 - [ ] **BIND-04**: JS/Deno binding exposes `Expression` with `add`/`sub`/`mul`/`div` methods (no JS operator overloading) and `save(path)` method
 - [ ] **BIND-05**: Lua binding exposes `expression` userdata with arithmetic metamethods (`__add`, `__sub`, `__mul`, `__div`) and `save(expr, path)` function
 
-### Verification
+### Cross-layer verification
 
-- [ ] **TEST-01**: C++ test suite verifies arithmetic correctness end-to-end (write inputs, evaluate `(a + b) * 2.0`-style expressions, read output, golden values match)
 - [ ] **TEST-02**: C API test suite verifies error paths and lifetime (free-after-save, error retrieval, mismatched-shape rejection)
 - [ ] **TEST-03**: Each of the 5 bindings has a round-trip test mirroring the showcase expression `(a + b) * 2.0`
 
@@ -78,23 +87,24 @@
 | CORE-04 | Phase 1 | Pending |
 | CORE-05 | Phase 1 | Pending |
 | CORE-06 | Phase 1 | Pending |
-| CAPI-01 | Phase 2 | Pending |
-| CAPI-02 | Phase 2 | Pending |
-| CAPI-03 | Phase 2 | Pending |
-| BIND-01 | Phase 3 | Pending |
-| BIND-02 | Phase 4 | Pending |
-| BIND-03 | Phase 5 | Pending |
-| BIND-04 | Phase 6 | Pending |
-| BIND-05 | Phase 7 | Pending |
 | TEST-01 | Phase 1 | Pending |
-| TEST-02 | Phase 2 | Pending |
-| TEST-03 | Phases 3-7 (one slice per binding) | Pending |
+| CAPI-01 | — | Deferred to future milestone |
+| CAPI-02 | — | Deferred to future milestone |
+| CAPI-03 | — | Deferred to future milestone |
+| BIND-01 | — | Deferred to future milestone |
+| BIND-02 | — | Deferred to future milestone |
+| BIND-03 | — | Deferred to future milestone |
+| BIND-04 | — | Deferred to future milestone |
+| BIND-05 | — | Deferred to future milestone |
+| TEST-02 | — | Deferred to future milestone |
+| TEST-03 | — | Deferred to future milestone |
 
 **Coverage:**
-- v1 requirements: 17 total
-- Mapped to phases: 17 ✓
+- v1.0 milestone requirements: 7 total (CORE-01..06, TEST-01)
+- Mapped to phases: 7 ✓
+- Deferred to future milestone: 10 (CAPI-01..03, BIND-01..05, TEST-02, TEST-03)
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-05*
-*Last updated: 2026-05-05 after roadmap creation (traceability filled by roadmapper)*
+*Last updated: 2026-05-06 — milestone scope narrowed to C++ core after phases 2-7 removed; CAPI / bindings / cross-layer verification deferred to future milestone.*
