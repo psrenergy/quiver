@@ -803,3 +803,52 @@ TEST_F(ExpressionFixture, OperandDimsInDifferentOrder) {
         EXPECT_DOUBLE_EQ(cell[0], expected) << "Mismatch at (s=" << sample.s << ", t=" << sample.t << ")";
     }
 }
+
+// ============================================================================
+// CORE-06: large-grid smoke test (single-buffer reuse backstop)
+// ============================================================================
+
+TEST_F(ExpressionFixture, LargeGridCompletes) {
+    // 50x20 grid with 4 labels = 16,000 doubles per file. Smaller than the
+    // research-suggested 100x100x5 to keep CI runtimes friendly; still large
+    // enough that any per-row allocation regression would manifest.
+    auto md = BinaryMetadata::from_element(Element()
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-01-01T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"row", "col"})
+                                               .set("dimension_sizes", {50, 20})
+                                               .set("labels", {"l1", "l2", "l3", "l4"}));
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 1000 + dims[1] * 10 + static_cast<int64_t>(k));
+    });
+    write_qvr(path_b, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] + dims[1] * 100 + static_cast<int64_t>(k) * 7);
+    });
+
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+
+    const auto t0 = std::chrono::steady_clock::now();
+    Expression e = (Expression(a) + Expression(b)) * 2.0;
+    e.save(path_out);
+    const auto t1 = std::chrono::steady_clock::now();
+    const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+
+    // Generous 5-second budget; the test is a backstop for severe regressions
+    // (e.g. accidental per-row heap allocations). The load-bearing CORE-06
+    // verification is the grep audit on src/expr/expression.cpp + nodes.cpp
+    // (Plan 02 Task 8 SUMMARY).
+    EXPECT_LT(elapsed, 5000) << "Save took " << elapsed << " ms (budget 5000 ms)";
+
+    // Spot-check a handful of cells for value correctness.
+    auto reopened = BinaryFile::open_file(path_out, 'r');
+    for (auto rc : {std::pair<int64_t, int64_t>{1, 1}, {25, 10}, {50, 20}}) {
+        auto cell = reopened.read(std::vector<int64_t>{rc.first, rc.second}, true);
+        for (size_t k = 0; k < cell.size(); ++k) {
+            double a_val = static_cast<double>(rc.first * 1000 + rc.second * 10 + static_cast<int64_t>(k));
+            double b_val = static_cast<double>(rc.first + rc.second * 100 + static_cast<int64_t>(k) * 7);
+            EXPECT_DOUBLE_EQ(cell[k], (a_val + b_val) * 2.0);
+        }
+    }
+}
