@@ -46,6 +46,10 @@ public:
     BinaryMetadata metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
 
+    // Accessor used by Expression::save's D-11 self-save check (collect_file_paths
+    // walks the tree and gathers every FileNode's path).
+    const std::string& path() const { return path_; }
+
 private:
     std::string path_;
     BinaryMetadata meta_;
@@ -90,6 +94,10 @@ public:
 
     BinaryMetadata metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
+
+    // Accessors used by Expression::save's D-11 self-save check to walk the tree.
+    const std::shared_ptr<Node>& lhs() const { return lhs_; }
+    const std::shared_ptr<Node>& rhs() const { return rhs_; }
 
 private:
     BinaryOp op_;
