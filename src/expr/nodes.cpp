@@ -90,7 +90,11 @@ double apply_op(BinaryOp op, double a, double b) {
     case BinaryOp::Divide:
         return a / b;
     }
-    return 0.0;  // unreachable; silences MSVC missing-return warning
+    // WR-07: runtime canary if a future BinaryOp variant is added without updating apply_op.
+    // Compilers also warn at -Wswitch-enum on missing cases, but this guard catches:
+    //   (a) a downstream caller passing a static_cast<BinaryOp>(invalid) value (UB-adjacent), and
+    //   (b) future enum additions where the switch is updated but apply_op is forgotten.
+    throw std::runtime_error("Cannot apply: unhandled BinaryOp variant");
 }
 
 }  // namespace
