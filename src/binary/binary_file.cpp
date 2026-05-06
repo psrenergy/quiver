@@ -379,19 +379,6 @@ void BinaryFile::validate_data_length(const std::vector<double>& data) {
     }
 }
 
-std::vector<int64_t> BinaryFile::next_dimensions(const std::vector<int64_t>& current_dimensions) {
-    // Thin delegate to quiver::binary::next_dimensions (the authoritative impl).
-    // The free function returns std::nullopt for end-of-iteration; csv_converter's
-    // bin_to_csv/csv_to_bin loops compare the result to initial_dimensions for
-    // termination (see src/binary/csv_converter.cpp:85, :130). Translating nullopt
-    // to first_dimensions(meta) preserves that comparison semantics unchanged.
-    auto next = quiver::binary::next_dimensions(impl_->metadata, current_dimensions);
-    if (!next) {
-        return quiver::binary::first_dimensions(impl_->metadata);
-    }
-    return *next;
-}
-
 void BinaryFile::fill_file_with_nulls() {
     const auto& metadata = impl_->metadata;
 
