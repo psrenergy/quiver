@@ -107,7 +107,7 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
 
     // ---- D-07: unit must match ----
     if (lhs_meta.unit != rhs_meta.unit) {
-        throw std::runtime_error("Cannot apply binary operation: units differ ('" + lhs_meta.unit + "' vs '" +
+        throw std::runtime_error("Cannot apply: units differ ('" + lhs_meta.unit + "' vs '" +
                                  rhs_meta.unit + "')");
     }
 
@@ -124,7 +124,7 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
             continue;
         if (l_size == 1 || r_size == 1)
             continue;
-        throw std::runtime_error("Cannot apply binary operation: dimension '" + l_dim.name +
+        throw std::runtime_error("Cannot apply: dimension '" + l_dim.name +
                                  "' has incompatible sizes " + std::to_string(l_size) + " vs " +
                                  std::to_string(r_size) + " (broadcasting requires n×n, 1×n, or n×1)");
     }
@@ -168,7 +168,7 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
     const bool lhs_has_time = any_time_dim(lhs_meta.dimensions);
     const bool rhs_has_time = any_time_dim(rhs_meta.dimensions);
     if (lhs_has_time && rhs_has_time && lhs_meta.initial_datetime != rhs_meta.initial_datetime) {
-        throw std::runtime_error("Cannot apply binary operation: initial_datetime differs");
+        throw std::runtime_error("Cannot apply: initial_datetime differs");
     }
 
     // ---- D-08: labels axis broadcast (n×n / 1×n / n×1) ----
@@ -179,7 +179,7 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
     std::vector<std::string> output_labels;
     if (ll == rl) {
         if (l_labels != r_labels) {
-            throw std::runtime_error("Cannot apply binary operation: labels have same size " + std::to_string(ll) +
+            throw std::runtime_error("Cannot apply: labels have same size " + std::to_string(ll) +
                                      " but different content");
         }
         output_labels = l_labels;
@@ -188,7 +188,7 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
     } else if (rl == 1 && ll > 1) {
         output_labels = l_labels;
     } else {
-        throw std::runtime_error("Cannot apply binary operation: labels have incompatible sizes " +
+        throw std::runtime_error("Cannot apply: labels have incompatible sizes " +
                                  std::to_string(ll) + " vs " + std::to_string(rl));
     }
 
