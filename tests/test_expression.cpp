@@ -741,3 +741,65 @@ TEST_F(ExpressionFixture, UnionDimsAcrossOperands) {
     EXPECT_DOUBLE_EQ(cell_111[0], (1.0 * 10 + 1.0) + (1.0 * 100 + 1.0));
     EXPECT_DOUBLE_EQ(cell_242[0], (2.0 * 10 + 4.0) + (4.0 * 100 + 2.0));
 }
+
+TEST_F(ExpressionFixture, OperandDimsInDifferentOrder) {
+    // D-05: operand dim ordering may differ from output ordering. The
+    // translation tables (lhs_dim_translate_ / rhs_dim_translate_ in
+    // BinaryOpNode) map each output dim index back to the corresponding
+    // operand dim index by NAME. Same dim set, swapped order: lhs has
+    // [scenario, time], rhs has [time, scenario]. A regression in the
+    // search-by-name logic would scramble values without any other test
+    // catching it (UnionDimsAcrossOperands has partially-overlapping
+    // sets, not same-set-swapped order).
+    auto md_a = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"scenario", "time"})
+                                                 .set("dimension_sizes", {2, 4})
+                                                 .set("labels", {"v1"}));
+    auto md_b = BinaryMetadata::from_element(Element()
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"time", "scenario"})  // swapped order
+                                                 .set("dimension_sizes", {4, 2})
+                                                 .set("labels", {"v1"}));
+    // a[scenario, time] = scenario*10 + time
+    write_qvr(path_a, md_a, [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return static_cast<double>(dims[0] * 10 + dims[1]);
+    });
+    // b[time, scenario] = time*100 + scenario
+    write_qvr(path_b, md_b, [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return static_cast<double>(dims[0] * 100 + dims[1]);
+    });
+
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    Expression e = Expression(a) + Expression(b);
+    e.save(path_out);
+
+    // Output dims follow lhs order per D-02 (same set ⇒ no rhs-only
+    // dims): [scenario=2, time=4].
+    auto reopened = BinaryFile::open_file(path_out, 'r');
+    const auto& m = reopened.get_metadata();
+    ASSERT_EQ(m.dimensions.size(), 2u);
+    EXPECT_EQ(m.dimensions[0].name, "scenario");
+    EXPECT_EQ(m.dimensions[0].size, 2);
+    EXPECT_EQ(m.dimensions[1].name, "time");
+    EXPECT_EQ(m.dimensions[1].size, 4);
+
+    // Verify 4 sample positions, covering corners and an interior cell:
+    // (s=1, t=1), (s=2, t=4), (s=1, t=4), (s=2, t=2).
+    // out[s, t] = a[s, t] + b[t, s] = (s*10 + t) + (t*100 + s).
+    struct Sample {
+        int64_t s;
+        int64_t t;
+    };
+    for (auto sample : {Sample{1, 1}, Sample{2, 4}, Sample{1, 4}, Sample{2, 2}}) {
+        auto cell = reopened.read(std::vector<int64_t>{sample.s, sample.t}, true);
+        double expected = static_cast<double>(sample.s * 10 + sample.t) +
+                          static_cast<double>(sample.t * 100 + sample.s);
+        EXPECT_DOUBLE_EQ(cell[0], expected) << "Mismatch at (s=" << sample.s << ", t=" << sample.t << ")";
+    }
+}
