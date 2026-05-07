@@ -811,6 +811,148 @@ end
             cleanup(path_a, path_b, path_out)
         end
     end
+
+    # ==========================================================================
+    # Operators on Binary.File directly (no explicit Expression wrap)
+    # ==========================================================================
+
+    @testset "Binary.File + Binary.File round-trip" begin
+        path_a, path_b, path_out = make_path("a"), make_path("b"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            write_fixture(path_b, (r, c, k) -> r * 100 + c * 5 + k * 2)
+            a = Quiver.Binary.open_file(path_a; mode = :read)
+            b = Quiver.Binary.open_file(path_b; mode = :read)
+            try
+                c = a + b
+                Quiver.save(c, path_out)
+                Quiver.close!(c)
+            finally
+                Quiver.Binary.close!(a)
+                Quiver.Binary.close!(b)
+            end
+            @test read_all_cells(path_out) == read_all_cells(path_a) .+ read_all_cells(path_b)
+        finally
+            cleanup(path_a, path_b, path_out)
+        end
+    end
+
+    @testset "Binary.File * Real and Real * Binary.File" begin
+        path_a, path_out, path_out2 = make_path("a"), make_path("out"), make_path("out2")
+        try
+            write_fixture(path_a, (r, c, k) -> r + c + k)
+            a = Quiver.Binary.open_file(path_a; mode = :read)
+            try
+                right = a * 2.5
+                Quiver.save(right, path_out)
+                Quiver.close!(right)
+            finally
+                Quiver.Binary.close!(a)
+            end
+
+            a2 = Quiver.Binary.open_file(path_a; mode = :read)
+            try
+                left = 2.5 * a2
+                Quiver.save(left, path_out2)
+                Quiver.close!(left)
+            finally
+                Quiver.Binary.close!(a2)
+            end
+
+            src = read_all_cells(path_a)
+            @test read_all_cells(path_out) == src .* 2.5
+            @test read_all_cells(path_out2) == 2.5 .* src
+        finally
+            cleanup(path_a, path_out, path_out2)
+        end
+    end
+
+    @testset "example2.jl pattern: c = a + b * 2" begin
+        # Mirrors example2.jl's `c = a + b * 2`. We bind the intermediate `b * 2`
+        # to a name so it can be closed explicitly — otherwise on Windows the
+        # FileNode held by the anonymous intermediate Expression keeps path_b open
+        # until Julia GC runs, blocking cleanup's rm(). Production code (example2.jl)
+        # never deletes the files, so this is purely a test-harness concern.
+        path_a, path_b, path_out = make_path("a"), make_path("b"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r + c + k)
+            write_fixture(path_b, (r, c, k) -> r * 2 + c * 3 + k)
+            a = Quiver.Binary.open_file(path_a; mode = :read)
+            b = Quiver.Binary.open_file(path_b; mode = :read)
+            b_times_2 = b * 2
+            try
+                c = a + b_times_2
+                Quiver.save(c, path_out)
+                Quiver.close!(c)
+            finally
+                Quiver.close!(b_times_2)
+                Quiver.Binary.close!(a)
+                Quiver.Binary.close!(b)
+            end
+            @test read_all_cells(path_out) == read_all_cells(path_a) .+ read_all_cells(path_b) .* 2
+        finally
+            cleanup(path_a, path_b, path_out)
+        end
+    end
+
+    @testset "Mixed Binary.File and Expression" begin
+        path_a, path_b, path_out = make_path("a"), make_path("b"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r + c + k)
+            write_fixture(path_b, (r, c, k) -> r * 10 + c + k)
+            a = Quiver.Binary.open_file(path_a; mode = :read)
+            b = Quiver.Binary.open_file(path_b; mode = :read)
+            try
+                b_expr = Quiver.Expression(b)
+                try
+                    # File + Expression
+                    c = a + b_expr
+                    Quiver.save(c, path_out)
+                    Quiver.close!(c)
+                finally
+                    Quiver.close!(b_expr)
+                end
+            finally
+                Quiver.Binary.close!(a)
+                Quiver.Binary.close!(b)
+            end
+            @test read_all_cells(path_out) == read_all_cells(path_a) .+ read_all_cells(path_b)
+        finally
+            cleanup(path_a, path_b, path_out)
+        end
+    end
+
+    @testset "Expression on write-mode Binary.File throws" begin
+        path_a = make_path("a")
+        try
+            md = make_simple_metadata()
+            w = Quiver.Binary.open_file(path_a; mode = :write, metadata = md)
+            try
+                @test_throws Quiver.DatabaseException Quiver.Expression(w)
+            finally
+                Quiver.Binary.close!(w)
+            end
+        finally
+            cleanup(path_a)
+        end
+    end
+
+    @testset "Operator on write-mode Binary.File throws" begin
+        path_a, path_b = make_path("a"), make_path("b")
+        try
+            md = make_simple_metadata()
+            wa = Quiver.Binary.open_file(path_a; mode = :write, metadata = md)
+            wb = Quiver.Binary.open_file(path_b; mode = :write, metadata = md)
+            try
+                @test_throws Quiver.DatabaseException wa + wb
+            finally
+                Quiver.Binary.close!(wa)
+                Quiver.Binary.close!(wb)
+            end
+        finally
+            cleanup(path_a, path_b)
+        end
+    end
 end
 
 end

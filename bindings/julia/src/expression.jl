@@ -56,6 +56,30 @@ Base.:/(a::Expression, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_DIVIDE, a,
 Base.:/(a::Expression, b::Real) = _binop(C.QUIVER_EXPRESSION_OP_DIVIDE, a, b)
 Base.:/(a::Real, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_DIVIDE, a, b)
 
+Base.:+(a::Binary.File, b::Binary.File) = Expression(a) + Expression(b)
+Base.:+(a::Binary.File, b::Real) = Expression(a) + b
+Base.:+(a::Real, b::Binary.File) = a + Expression(b)
+Base.:+(a::Binary.File, b::Expression) = Expression(a) + b
+Base.:+(a::Expression, b::Binary.File) = a + Expression(b)
+
+Base.:-(a::Binary.File, b::Binary.File) = Expression(a) - Expression(b)
+Base.:-(a::Binary.File, b::Real) = Expression(a) - b
+Base.:-(a::Real, b::Binary.File) = a - Expression(b)
+Base.:-(a::Binary.File, b::Expression) = Expression(a) - b
+Base.:-(a::Expression, b::Binary.File) = a - Expression(b)
+
+Base.:*(a::Binary.File, b::Binary.File) = Expression(a) * Expression(b)
+Base.:*(a::Binary.File, b::Real) = Expression(a) * b
+Base.:*(a::Real, b::Binary.File) = a * Expression(b)
+Base.:*(a::Binary.File, b::Expression) = Expression(a) * b
+Base.:*(a::Expression, b::Binary.File) = a * Expression(b)
+
+Base.:/(a::Binary.File, b::Binary.File) = Expression(a) / Expression(b)
+Base.:/(a::Binary.File, b::Real) = Expression(a) / b
+Base.:/(a::Real, b::Binary.File) = a / Expression(b)
+Base.:/(a::Binary.File, b::Expression) = Expression(a) / b
+Base.:/(a::Expression, b::Binary.File) = a / Expression(b)
+
 function save(e::Expression, path::String)
     check(C.quiver_expression_save(e.ptr, path))
     return nothing
