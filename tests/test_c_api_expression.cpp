@@ -123,6 +123,117 @@ protected:
         quiver_binary_file_close(f);
         return e;
     }
+
+    // Generic metadata builder. Pass empty time_dimensions for non-time data.
+    static quiver_binary_metadata_t* make_metadata_v(const std::vector<const char*>& dim_names,
+                                                     const std::vector<int64_t>& dim_sizes,
+                                                     const std::vector<const char*>& labels,
+                                                     const char* unit = "MW",
+                                                     const char* initial_datetime = "2025-01-01T00:00:00",
+                                                     const std::vector<const char*>& time_dimensions = {},
+                                                     const std::vector<const char*>& frequencies = {}) {
+        quiver_element_t* el = nullptr;
+        quiver_element_create(&el);
+        quiver_element_set_string(el, "version", "1");
+        quiver_element_set_string(el, "initial_datetime", initial_datetime);
+        quiver_element_set_string(el, "unit", unit);
+        quiver_element_set_array_string(el, "dimensions", dim_names.data(), static_cast<int32_t>(dim_names.size()));
+        quiver_element_set_array_integer(el,
+                                         "dimension_sizes",
+                                         dim_sizes.data(),
+                                         static_cast<int32_t>(dim_sizes.size()));
+        quiver_element_set_array_string(el, "labels", labels.data(), static_cast<int32_t>(labels.size()));
+        if (!time_dimensions.empty()) {
+            quiver_element_set_array_string(el,
+                                            "time_dimensions",
+                                            time_dimensions.data(),
+                                            static_cast<int32_t>(time_dimensions.size()));
+            quiver_element_set_array_string(el,
+                                            "frequencies",
+                                            frequencies.data(),
+                                            static_cast<int32_t>(frequencies.size()));
+        }
+
+        quiver_binary_metadata_t* md = nullptr;
+        quiver_binary_metadata_from_element(el, &md);
+        quiver_element_destroy(el);
+        return md;
+    }
+
+    // Writes a single cell at the given dim positions; rest of the file stays NaN.
+    // Sufficient for throws-tests that only need a valid file structure to exist.
+    static void write_one_cell(const std::string& path,
+                               quiver_binary_metadata_t* md,
+                               const std::vector<const char*>& dim_names,
+                               const std::vector<int64_t>& dim_values,
+                               const std::vector<double>& cell) {
+        quiver_binary_file_t* f = nullptr;
+        ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &f), QUIVER_OK);
+        ASSERT_EQ(quiver_binary_file_write(f,
+                                           dim_names.data(),
+                                           dim_values.data(),
+                                           dim_names.size(),
+                                           cell.data(),
+                                           cell.size()),
+                  QUIVER_OK);
+        ASSERT_EQ(quiver_binary_file_close(f), QUIVER_OK);
+    }
+
+    // Writes every cell with row-major iteration (rightmost dim varies fastest).
+    // Caller must ensure no nested time dimensions (sizes are constant across the grid).
+    static void write_dense(const std::string& path,
+                            quiver_binary_metadata_t* md,
+                            const std::vector<const char*>& dim_names,
+                            const std::vector<int64_t>& dim_sizes,
+                            int64_t label_count,
+                            std::function<double(const std::vector<int64_t>&, size_t)> fill) {
+        quiver_binary_file_t* f = nullptr;
+        ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &f), QUIVER_OK);
+
+        std::vector<int64_t> dims(dim_sizes.size(), 1);
+        std::vector<double> row(static_cast<size_t>(label_count));
+        while (true) {
+            for (size_t k = 0; k < row.size(); ++k)
+                row[k] = fill(dims, k);
+            ASSERT_EQ(quiver_binary_file_write(f, dim_names.data(), dims.data(), dims.size(), row.data(), row.size()),
+                      QUIVER_OK);
+
+            int i = static_cast<int>(dims.size()) - 1;
+            while (i >= 0) {
+                dims[i]++;
+                if (dims[i] <= dim_sizes[i])
+                    break;
+                dims[i] = 1;
+                i--;
+            }
+            if (i < 0)
+                break;
+        }
+
+        ASSERT_EQ(quiver_binary_file_close(f), QUIVER_OK);
+    }
+
+    // Reads one cell. Caller frees the returned vector through normal RAII.
+    static std::vector<double> read_one_cell(const std::string& path,
+                                             const std::vector<const char*>& dim_names,
+                                             const std::vector<int64_t>& dim_values) {
+        quiver_binary_file_t* f = nullptr;
+        EXPECT_EQ(quiver_binary_file_open_read(path.c_str(), &f), QUIVER_OK);
+        double* data = nullptr;
+        size_t count = 0;
+        EXPECT_EQ(quiver_binary_file_read(f,
+                                          dim_names.data(),
+                                          dim_values.data(),
+                                          dim_names.size(),
+                                          /*allow_nulls=*/1,
+                                          &data,
+                                          &count),
+                  QUIVER_OK);
+        std::vector<double> out(data, data + count);
+        quiver_binary_file_free_float_array(data);
+        quiver_binary_file_close(f);
+        return out;
+    }
 };
 
 // ============================================================================
@@ -135,7 +246,7 @@ TEST_F(ExpressionCApiFixture, IdentityFile) {
     auto* e = expr_from_file(path_a);
     ASSERT_NE(e, nullptr);
     ASSERT_EQ(quiver_expression_save(e, path_out.c_str()), QUIVER_OK);
-    quiver_expression_destroy(e);
+    quiver_expression_close(e);
 
     auto orig = read_all_cells(path_a);
     auto copy = read_all_cells(path_out);
@@ -151,7 +262,7 @@ TEST_F(ExpressionCApiFixture, SaveOpenedTwiceProducesSameOutput) {
     auto path_out2 = path_out + "_2";
     ASSERT_EQ(quiver_expression_save(e, path_out.c_str()), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(e, path_out2.c_str()), QUIVER_OK);
-    quiver_expression_destroy(e);
+    quiver_expression_close(e);
 
     auto v1 = read_all_cells(path_out);
     auto v2 = read_all_cells(path_out2);
@@ -179,9 +290,9 @@ TEST_F(ExpressionCApiFixture, AddTwoFiles) {
     quiver_expression_t* sum = nullptr;
     ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &sum), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(sum, path_out.c_str()), QUIVER_OK);
-    quiver_expression_destroy(a);
-    quiver_expression_destroy(b);
-    quiver_expression_destroy(sum);
+    quiver_expression_close(a);
+    quiver_expression_close(b);
+    quiver_expression_close(sum);
 
     auto va = read_all_cells(path_a);
     auto vb = read_all_cells(path_b);
@@ -200,9 +311,9 @@ TEST_F(ExpressionCApiFixture, SubtractTwoFiles) {
     quiver_expression_t* diff = nullptr;
     ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_SUBTRACT, a, b, &diff), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(diff, path_out.c_str()), QUIVER_OK);
-    quiver_expression_destroy(a);
-    quiver_expression_destroy(b);
-    quiver_expression_destroy(diff);
+    quiver_expression_close(a);
+    quiver_expression_close(b);
+    quiver_expression_close(diff);
 
     auto va = read_all_cells(path_a);
     auto vb = read_all_cells(path_b);
@@ -221,9 +332,9 @@ TEST_F(ExpressionCApiFixture, MultiplyTwoFiles) {
     quiver_expression_t* product = nullptr;
     ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_MULTIPLY, a, b, &product), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(product, path_out.c_str()), QUIVER_OK);
-    quiver_expression_destroy(a);
-    quiver_expression_destroy(b);
-    quiver_expression_destroy(product);
+    quiver_expression_close(a);
+    quiver_expression_close(b);
+    quiver_expression_close(product);
 
     auto va = read_all_cells(path_a);
     auto vb = read_all_cells(path_b);
@@ -243,9 +354,9 @@ TEST_F(ExpressionCApiFixture, DivideTwoFiles) {
     quiver_expression_t* quotient = nullptr;
     ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_DIVIDE, a, b, &quotient), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(quotient, path_out.c_str()), QUIVER_OK);
-    quiver_expression_destroy(a);
-    quiver_expression_destroy(b);
-    quiver_expression_destroy(quotient);
+    quiver_expression_close(a);
+    quiver_expression_close(b);
+    quiver_expression_close(quotient);
 
     auto va = read_all_cells(path_a);
     auto vb = read_all_cells(path_b);
@@ -272,12 +383,12 @@ TEST_F(ExpressionCApiFixture, Chained) {
     ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OP_DIVIDE, sub_c, 2.0, &halved), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(halved, path_out.c_str()), QUIVER_OK);
 
-    quiver_expression_destroy(a);
-    quiver_expression_destroy(b);
-    quiver_expression_destroy(c);
-    quiver_expression_destroy(a_plus_b);
-    quiver_expression_destroy(sub_c);
-    quiver_expression_destroy(halved);
+    quiver_expression_close(a);
+    quiver_expression_close(b);
+    quiver_expression_close(c);
+    quiver_expression_close(a_plus_b);
+    quiver_expression_close(sub_c);
+    quiver_expression_close(halved);
 
     auto va = read_all_cells(path_a);
     auto vb = read_all_cells(path_b);
@@ -299,8 +410,8 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastAddRight) {
     quiver_expression_t* result = nullptr;
     ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OP_ADD, a, 2.0, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
-    quiver_expression_destroy(a);
-    quiver_expression_destroy(result);
+    quiver_expression_close(a);
+    quiver_expression_close(result);
 
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
@@ -316,8 +427,8 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastSubtractRight) {
     quiver_expression_t* result = nullptr;
     ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OP_SUBTRACT, a, 5.0, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
-    quiver_expression_destroy(a);
-    quiver_expression_destroy(result);
+    quiver_expression_close(a);
+    quiver_expression_close(result);
 
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
@@ -332,8 +443,8 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastMultiplyRight) {
     quiver_expression_t* result = nullptr;
     ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OP_MULTIPLY, a, 3.0, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
-    quiver_expression_destroy(a);
-    quiver_expression_destroy(result);
+    quiver_expression_close(a);
+    quiver_expression_close(result);
 
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
@@ -348,8 +459,8 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastDivideRight) {
     quiver_expression_t* result = nullptr;
     ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OP_DIVIDE, a, 4.0, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
-    quiver_expression_destroy(a);
-    quiver_expression_destroy(result);
+    quiver_expression_close(a);
+    quiver_expression_close(result);
 
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
@@ -368,8 +479,8 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastAddLeft) {
     quiver_expression_t* result = nullptr;
     ASSERT_EQ(quiver_expression_apply_scalar_left(QUIVER_EXPRESSION_OP_ADD, 7.0, a, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
-    quiver_expression_destroy(a);
-    quiver_expression_destroy(result);
+    quiver_expression_close(a);
+    quiver_expression_close(result);
 
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
@@ -384,8 +495,8 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastSubtractLeft) {
     quiver_expression_t* result = nullptr;
     ASSERT_EQ(quiver_expression_apply_scalar_left(QUIVER_EXPRESSION_OP_SUBTRACT, 100.0, a, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
-    quiver_expression_destroy(a);
-    quiver_expression_destroy(result);
+    quiver_expression_close(a);
+    quiver_expression_close(result);
 
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
@@ -400,8 +511,8 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastMultiplyLeft) {
     quiver_expression_t* result = nullptr;
     ASSERT_EQ(quiver_expression_apply_scalar_left(QUIVER_EXPRESSION_OP_MULTIPLY, 5.0, a, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
-    quiver_expression_destroy(a);
-    quiver_expression_destroy(result);
+    quiver_expression_close(a);
+    quiver_expression_close(result);
 
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
@@ -416,8 +527,8 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastDivideLeft) {
     quiver_expression_t* result = nullptr;
     ASSERT_EQ(quiver_expression_apply_scalar_left(QUIVER_EXPRESSION_OP_DIVIDE, 60.0, a, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
-    quiver_expression_destroy(a);
-    quiver_expression_destroy(result);
+    quiver_expression_close(a);
+    quiver_expression_close(result);
 
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
@@ -457,8 +568,8 @@ TEST_F(ExpressionCApiFixture, MismatchedShapesReturnsError) {
     EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &result), QUIVER_ERROR);
     EXPECT_EQ(result, nullptr);
 
-    quiver_expression_destroy(a);
-    quiver_expression_destroy(b);
+    quiver_expression_close(a);
+    quiver_expression_close(b);
 }
 
 TEST_F(ExpressionCApiFixture, UnitMismatchReturnsError) {
@@ -475,8 +586,8 @@ TEST_F(ExpressionCApiFixture, UnitMismatchReturnsError) {
     EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &result), QUIVER_ERROR);
     EXPECT_EQ(result, nullptr);
 
-    quiver_expression_destroy(a);
-    quiver_expression_destroy(b);
+    quiver_expression_close(a);
+    quiver_expression_close(b);
 }
 
 TEST_F(ExpressionCApiFixture, LabelMismatchReturnsError) {
@@ -492,8 +603,8 @@ TEST_F(ExpressionCApiFixture, LabelMismatchReturnsError) {
     quiver_expression_t* result = nullptr;
     EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &result), QUIVER_ERROR);
 
-    quiver_expression_destroy(a);
-    quiver_expression_destroy(b);
+    quiver_expression_close(a);
+    quiver_expression_close(b);
 }
 
 // ============================================================================
@@ -512,7 +623,7 @@ TEST_F(ExpressionCApiFixture, SelfSaveCollisionReturnsError) {
 
     auto* e = expr_from_file(path_a);
     EXPECT_EQ(quiver_expression_save(e, path_a.c_str()), QUIVER_ERROR);
-    quiver_expression_destroy(e);
+    quiver_expression_close(e);
 
     auto size_after = fs::file_size(qvr_path);
     std::ifstream in_after(qvr_path, std::ios::binary);
@@ -527,8 +638,8 @@ TEST_F(ExpressionCApiFixture, SelfSaveCollisionReturnsError) {
 // Lifecycle
 // ============================================================================
 
-TEST_F(ExpressionCApiFixture, DestroyNullIsOk) {
-    EXPECT_EQ(quiver_expression_destroy(nullptr), QUIVER_OK);
+TEST_F(ExpressionCApiFixture, CloseNullIsOk) {
+    EXPECT_EQ(quiver_expression_close(nullptr), QUIVER_OK);
 }
 
 TEST_F(ExpressionCApiFixture, FromFileNullArguments) {
@@ -573,7 +684,7 @@ TEST_F(ExpressionCApiFixture, GetMetadataReturnsExpectedFields) {
     quiver_binary_metadata_free_string(unit);
 
     quiver_binary_metadata_free(md);
-    quiver_expression_destroy(a);
+    quiver_expression_close(a);
 }
 
 TEST_F(ExpressionCApiFixture, GetMetadataAfterApplyReturnsBroadcastMetadata) {
@@ -592,6 +703,6 @@ TEST_F(ExpressionCApiFixture, GetMetadataAfterApplyReturnsBroadcastMetadata) {
     quiver_binary_metadata_free_string(unit);
 
     quiver_binary_metadata_free(md);
-    quiver_expression_destroy(a);
-    quiver_expression_destroy(doubled);
+    quiver_expression_close(a);
+    quiver_expression_close(doubled);
 }

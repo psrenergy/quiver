@@ -8,7 +8,7 @@ mutable struct Expression
 
     function Expression(ptr::Ptr{C.quiver_expression})
         e = new(ptr)
-        finalizer(x -> x.ptr != C_NULL && C.quiver_expression_destroy(x.ptr), e)
+        finalizer(x -> x.ptr != C_NULL && C.quiver_expression_close(x.ptr), e)
         return e
     end
 end
@@ -19,9 +19,9 @@ function Expression(file::File)
     return Expression(out[])
 end
 
-function destroy!(e::Expression)
+function close!(e::Expression)
     if e.ptr != C_NULL
-        C.quiver_expression_destroy(e.ptr)
+        C.quiver_expression_close(e.ptr)
         e.ptr = C_NULL
     end
     return nothing
