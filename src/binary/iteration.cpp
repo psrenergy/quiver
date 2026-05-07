@@ -101,8 +101,7 @@ std::vector<int64_t> first_dimensions(const BinaryMetadata& meta) {
     return result;
 }
 
-std::optional<std::vector<int64_t>> next_dimensions(const BinaryMetadata& meta,
-                                                    const std::vector<int64_t>& current) {
+std::optional<std::vector<int64_t>> next_dimensions(const BinaryMetadata& meta, const std::vector<int64_t>& current) {
     const auto& dimensions = meta.dimensions;
     const auto current_sizes = dimension_sizes_at_values(meta, current);
 

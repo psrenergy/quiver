@@ -1,6 +1,5 @@
-#include "quiver/expr/node.h"
-
 #include "quiver/binary/binary_file.h"
+#include "quiver/expr/node.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -105,14 +104,12 @@ double apply_op(BinaryOp op, double a, double b) {
 
 BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs)
     : op_(op), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {
-
     const auto lhs_meta = lhs_->metadata();
     const auto rhs_meta = rhs_->metadata();
 
     // ---- D-07: unit must match ----
     if (lhs_meta.unit != rhs_meta.unit) {
-        throw std::runtime_error("Cannot apply: units differ ('" + lhs_meta.unit + "' vs '" +
-                                 rhs_meta.unit + "')");
+        throw std::runtime_error("Cannot apply: units differ ('" + lhs_meta.unit + "' vs '" + rhs_meta.unit + "')");
     }
 
     // ---- D-01 + D-06: shape rule (n×n / 1×n / n×1 per same-name dim) ----
@@ -128,9 +125,9 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
             continue;
         if (l_size == 1 || r_size == 1)
             continue;
-        throw std::runtime_error("Cannot apply: dimension '" + l_dim.name +
-                                 "' has incompatible sizes " + std::to_string(l_size) + " vs " +
-                                 std::to_string(r_size) + " (broadcasting requires n×n, 1×n, or n×1)");
+        throw std::runtime_error("Cannot apply: dimension '" + l_dim.name + "' has incompatible sizes " +
+                                 std::to_string(l_size) + " vs " + std::to_string(r_size) +
+                                 " (broadcasting requires n×n, 1×n, or n×1)");
     }
 
     // ---- D-04 (CR-01 fix): same-name dims must agree on time-ness (symmetric).
@@ -149,9 +146,8 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
             // D-15: symmetric reject. Mirrors the existing lhs-time/rhs-non-time direction.
             const std::string time_side = l_time ? "lhs" : "rhs";
             const std::string nontime_side = l_time ? "rhs" : "lhs";
-            throw std::runtime_error("Cannot apply: dimension '" + l_dim.name +
-                                     "' is a time dimension on " + time_side + " but not on " +
-                                     nontime_side);
+            throw std::runtime_error("Cannot apply: dimension '" + l_dim.name + "' is a time dimension on " +
+                                     time_side + " but not on " + nontime_side);
         }
         if (!l_time)
             continue;  // both non-time; nothing more to validate here.
@@ -192,8 +188,8 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
     } else if (rl == 1 && ll > 1) {
         output_labels = l_labels;
     } else {
-        throw std::runtime_error("Cannot apply: labels have incompatible sizes " +
-                                 std::to_string(ll) + " vs " + std::to_string(rl));
+        throw std::runtime_error("Cannot apply: labels have incompatible sizes " + std::to_string(ll) + " vs " +
+                                 std::to_string(rl));
     }
 
     // ---- Build broadcast_meta_ (D-02 dim order: lhs.dims ++ rhs-only) ----
@@ -213,8 +209,7 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
     // Pass 1: lhs dims in lhs order
     for (const auto& l_dim : lhs_meta.dimensions) {
         int r_idx = find_dim_index(rhs_meta.dimensions, l_dim.name);
-        int64_t out_size =
-            (r_idx >= 0) ? std::max(l_dim.size, rhs_meta.dimensions[r_idx].size) : l_dim.size;
+        int64_t out_size = (r_idx >= 0) ? std::max(l_dim.size, rhs_meta.dimensions[r_idx].size) : l_dim.size;
         Dimension d{l_dim.name, out_size, l_dim.time};  // copy time props from lhs (rhs equal per D-04)
         broadcast_meta_.dimensions.push_back(std::move(d));
         output_index_by_name[l_dim.name] = static_cast<int>(broadcast_meta_.dimensions.size()) - 1;
