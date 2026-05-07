@@ -117,7 +117,7 @@ TEST_F(ExpressionFixture, IdentityFile) {
 
     auto a = BinaryFile::open_file(path_a, 'r');
     Expression e = a;  // implicit conversion (CORE-01)
-    e.save(path_out); // engine round-trip (CORE-05)
+    e.save(path_out);  // engine round-trip (CORE-05)
 
     auto orig = read_all_cells(path_a);
     auto copy = read_all_cells(path_out);
@@ -956,8 +956,8 @@ TEST_F(ExpressionFixture, OperandDimsInDifferentOrder) {
     };
     for (auto sample : {Sample{1, 1}, Sample{2, 4}, Sample{1, 4}, Sample{2, 2}}) {
         auto cell = reopened.read({{"scenario", sample.s}, {"time", sample.t}}, true);
-        double expected = static_cast<double>(sample.s * 10 + sample.t) +
-                          static_cast<double>(sample.t * 100 + sample.s);
+        double expected =
+            static_cast<double>(sample.s * 10 + sample.t) + static_cast<double>(sample.t * 100 + sample.s);
         EXPECT_DOUBLE_EQ(cell[0], expected) << "Mismatch at (s=" << sample.s << ", t=" << sample.t << ")";
     }
 }
