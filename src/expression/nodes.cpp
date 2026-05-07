@@ -1,5 +1,5 @@
 #include "quiver/binary/binary_file.h"
-#include "quiver/expr/node.h"
+#include "quiver/expression/node.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace quiver::expr {
+namespace quiver::expression {
 
 FileNode::FileNode(const BinaryFile& file) : path_(file.get_file_path()), meta_(file.get_metadata()) {}
 
@@ -266,4 +266,4 @@ void BinaryOpNode::compute_row(const std::vector<int64_t>& dims, std::vector<dou
     }
 }
 
-}  // namespace quiver::expr
+}  // namespace quiver::expression

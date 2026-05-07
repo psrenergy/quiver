@@ -1,5 +1,5 @@
-#ifndef QUIVER_EXPR_NODE_H
-#define QUIVER_EXPR_NODE_H
+#ifndef QUIVER_EXPRESSION_NODE_H
+#define QUIVER_EXPRESSION_NODE_H
 
 #include "../binary/binary_metadata.h"
 #include "../export.h"
@@ -13,7 +13,8 @@ namespace quiver {
 class BinaryFile;
 }  // namespace quiver
 
-namespace quiver::expr {
+namespace quiver::expression {
+
 class QUIVER_API Node {
 public:
     virtual ~Node() = default;
@@ -88,6 +89,6 @@ private:
     mutable std::vector<double> rhs_buf_;
 };
 
-}  // namespace quiver::expr
+}  // namespace quiver::expression
 
-#endif  // QUIVER_EXPR_NODE_H
+#endif  // QUIVER_EXPRESSION_NODE_H

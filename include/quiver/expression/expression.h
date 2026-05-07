@@ -1,5 +1,5 @@
-#ifndef QUIVER_EXPR_EXPRESSION_H
-#define QUIVER_EXPR_EXPRESSION_H
+#ifndef QUIVER_EXPRESSION_H
+#define QUIVER_EXPRESSION_H
 
 #include "../binary/binary_file.h"
 #include "../binary/binary_metadata.h"
@@ -9,22 +9,22 @@
 #include <memory>
 #include <string>
 
-namespace quiver::expr {
+namespace quiver {
 
 class QUIVER_API Expression {
 public:
     Expression(const BinaryFile& file);
 
-    explicit Expression(std::shared_ptr<Node> node);
+    explicit Expression(std::shared_ptr<expression::Node> node);
 
     BinaryMetadata metadata() const;
 
     void save(const std::string& path) const;
 
-    const std::shared_ptr<Node>& node() const;
+    const std::shared_ptr<expression::Node>& node() const;
 
 private:
-    std::shared_ptr<Node> node_;
+    std::shared_ptr<expression::Node> node_;
 };
 
 QUIVER_API Expression operator+(const Expression& lhs, const Expression& rhs);
@@ -43,6 +43,6 @@ QUIVER_API Expression operator/(const Expression& lhs, const Expression& rhs);
 QUIVER_API Expression operator/(const Expression& lhs, double rhs);
 QUIVER_API Expression operator/(double lhs, const Expression& rhs);
 
-}  // namespace quiver::expr
+}  // namespace quiver
 
-#endif  // QUIVER_EXPR_EXPRESSION_H
+#endif  // QUIVER_EXPRESSION_H

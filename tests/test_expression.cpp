@@ -9,13 +9,13 @@
 #include <quiver/binary/binary_metadata.h>
 #include <quiver/binary/iteration.h>
 #include <quiver/element.h>
-#include <quiver/expr/expression.h>
+#include <quiver/expression/expression.h>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 using namespace quiver;
-using namespace quiver::expr;
+using namespace quiver::expression;
 namespace fs = std::filesystem;
 
 class ExpressionFixture : public ::testing::Test {
