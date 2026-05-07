@@ -706,3 +706,261 @@ TEST_F(ExpressionCApiFixture, GetMetadataAfterApplyReturnsBroadcastMetadata) {
     quiver_expression_close(a);
     quiver_expression_close(doubled);
 }
+
+// ============================================================================
+// Same path twice
+// ============================================================================
+
+TEST_F(ExpressionCApiFixture, SamePathTwice) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
+
+    // Two independent Expressions both pointing at path_a; each FileNode opens its own handle.
+    auto* a1 = expr_from_file(path_a);
+    auto* a2 = expr_from_file(path_a);
+    quiver_expression_t* sum = nullptr;
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a1, a2, &sum), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(sum, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a1);
+    quiver_expression_close(a2);
+    quiver_expression_close(sum);
+
+    auto va = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(va.size(), vo.size());
+    for (size_t i = 0; i < va.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], 2.0 * va[i]);
+}
+
+// ============================================================================
+// Broadcasting (size-1 dim, label axis, union, swapped order)
+// ============================================================================
+
+TEST_F(ExpressionCApiFixture, BroadcastSizeOneDim) {
+    auto* md_a = make_metadata_v({"row", "col"}, {3, 2}, {"v1", "v2"});
+    auto* md_b = make_metadata_v({"row", "col"}, {1, 2}, {"v1", "v2"});  // size-1 broadcast on row
+
+    write_dense(path_a, md_a, {"row", "col"}, {3, 2}, 2, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 100 + dims[1] * 10 + static_cast<int64_t>(k));
+    });
+    write_dense(path_b, md_b, {"row", "col"}, {1, 2}, 2, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[1] * 1000 + static_cast<int64_t>(k));
+    });
+    quiver_binary_metadata_free(md_a);
+    quiver_binary_metadata_free(md_b);
+
+    auto* a = expr_from_file(path_a);
+    auto* b = expr_from_file(path_b);
+    quiver_expression_t* sum = nullptr;
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &sum), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(sum, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(b);
+    quiver_expression_close(sum);
+
+    // Output: row=3 (max of 3,1), col=2. out[r,c,k] = a[r,c,k] + b[1,c,k].
+    auto cell_111 = read_one_cell(path_out, {"row", "col"}, {1, 1});
+    auto cell_211 = read_one_cell(path_out, {"row", "col"}, {2, 1});
+    auto cell_322 = read_one_cell(path_out, {"row", "col"}, {3, 2});
+    EXPECT_DOUBLE_EQ(cell_111[0], (1.0 * 100 + 1.0 * 10 + 0) + (1.0 * 1000 + 0));
+    EXPECT_DOUBLE_EQ(cell_211[0], (2.0 * 100 + 1.0 * 10 + 0) + (1.0 * 1000 + 0));
+    EXPECT_DOUBLE_EQ(cell_322[1], (3.0 * 100 + 2.0 * 10 + 1) + (2.0 * 1000 + 1));
+}
+
+TEST_F(ExpressionCApiFixture, BroadcastLabelsAxis) {
+    auto* md_a = make_metadata_v({"row", "col"}, {2, 2}, {"single"});
+    auto* md_b = make_metadata_v({"row", "col"}, {2, 2}, {"l1", "l2", "l3"});
+
+    // a[r,c,0] = r*10 + c (single label)
+    write_dense(path_a, md_a, {"row", "col"}, {2, 2}, 1, [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return static_cast<double>(dims[0] * 10 + dims[1]);
+    });
+    // b[r,c,k] = r*100 + c*10 + k (3 labels)
+    write_dense(path_b, md_b, {"row", "col"}, {2, 2}, 3, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 100 + dims[1] * 10 + static_cast<int64_t>(k));
+    });
+    quiver_binary_metadata_free(md_a);
+    quiver_binary_metadata_free(md_b);
+
+    auto* a = expr_from_file(path_a);
+    auto* b = expr_from_file(path_b);
+    quiver_expression_t* sum = nullptr;
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &sum), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(sum, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(b);
+    quiver_expression_close(sum);
+
+    // Output labels promote to {l1,l2,l3} (rhs wins). out[r,c,k] = a[r,c,0] + b[r,c,k].
+    auto cell_11 = read_one_cell(path_out, {"row", "col"}, {1, 1});
+    auto cell_22 = read_one_cell(path_out, {"row", "col"}, {2, 2});
+    EXPECT_DOUBLE_EQ(cell_11[0], (1.0 * 10 + 1.0) + (1.0 * 100 + 1.0 * 10 + 0));
+    EXPECT_DOUBLE_EQ(cell_11[1], (1.0 * 10 + 1.0) + (1.0 * 100 + 1.0 * 10 + 1));
+    EXPECT_DOUBLE_EQ(cell_11[2], (1.0 * 10 + 1.0) + (1.0 * 100 + 1.0 * 10 + 2));
+    EXPECT_DOUBLE_EQ(cell_22[2], (2.0 * 10 + 2.0) + (2.0 * 100 + 2.0 * 10 + 2));
+}
+
+TEST_F(ExpressionCApiFixture, UnionDimsAcrossOperands) {
+    // lhs: [scenario=2, time=4 monthly]; rhs: [time=4 monthly, stage=3]
+    auto* md_a = make_metadata_v({"scenario", "time"}, {2, 4}, {"v1"}, "MW", "2025-01-01T00:00:00", {"time"},
+                                 {"monthly"});
+    auto* md_b = make_metadata_v({"time", "stage"}, {4, 3}, {"v1"}, "MW", "2025-01-01T00:00:00", {"time"},
+                                 {"monthly"});
+
+    // a[scenario, time] = scenario*10 + time
+    write_dense(path_a, md_a, {"scenario", "time"}, {2, 4}, 1, [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return static_cast<double>(dims[0] * 10 + dims[1]);
+    });
+    // b[time, stage] = time*100 + stage
+    write_dense(path_b, md_b, {"time", "stage"}, {4, 3}, 1, [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return static_cast<double>(dims[0] * 100 + dims[1]);
+    });
+    quiver_binary_metadata_free(md_a);
+    quiver_binary_metadata_free(md_b);
+
+    auto* a = expr_from_file(path_a);
+    auto* b = expr_from_file(path_b);
+    quiver_expression_t* sum = nullptr;
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &sum), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(sum, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(b);
+    quiver_expression_close(sum);
+
+    // Output: [scenario=2, time=4, stage=3]. out[s,t,st] = a[s,t] + b[t,st].
+    auto cell_111 = read_one_cell(path_out, {"scenario", "time", "stage"}, {1, 1, 1});
+    auto cell_242 = read_one_cell(path_out, {"scenario", "time", "stage"}, {2, 4, 2});
+    EXPECT_DOUBLE_EQ(cell_111[0], (1.0 * 10 + 1.0) + (1.0 * 100 + 1.0));
+    EXPECT_DOUBLE_EQ(cell_242[0], (2.0 * 10 + 4.0) + (4.0 * 100 + 2.0));
+}
+
+TEST_F(ExpressionCApiFixture, OperandDimsInDifferentOrder) {
+    // Same dim set, swapped order: lhs [scenario, time], rhs [time, scenario].
+    auto* md_a = make_metadata_v({"scenario", "time"}, {2, 4}, {"v1"});
+    auto* md_b = make_metadata_v({"time", "scenario"}, {4, 2}, {"v1"});
+
+    // a[scenario, time] = scenario*10 + time
+    write_dense(path_a, md_a, {"scenario", "time"}, {2, 4}, 1, [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return static_cast<double>(dims[0] * 10 + dims[1]);
+    });
+    // b[time, scenario] = time*100 + scenario
+    write_dense(path_b, md_b, {"time", "scenario"}, {4, 2}, 1, [](const std::vector<int64_t>& dims, size_t /*k*/) {
+        return static_cast<double>(dims[0] * 100 + dims[1]);
+    });
+    quiver_binary_metadata_free(md_a);
+    quiver_binary_metadata_free(md_b);
+
+    auto* a = expr_from_file(path_a);
+    auto* b = expr_from_file(path_b);
+    quiver_expression_t* sum = nullptr;
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &sum), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(sum, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(b);
+    quiver_expression_close(sum);
+
+    // Output dims follow lhs order: [scenario=2, time=4].
+    // out[s,t] = a[s,t] + b[t,s] = (s*10+t) + (t*100+s).
+    struct Sample {
+        int64_t s;
+        int64_t t;
+    };
+    for (auto sample : {Sample{1, 1}, Sample{2, 4}, Sample{1, 4}, Sample{2, 2}}) {
+        auto cell = read_one_cell(path_out, {"scenario", "time"}, {sample.s, sample.t});
+        double expected = static_cast<double>(sample.s * 10 + sample.t)
+                          + static_cast<double>(sample.t * 100 + sample.s);
+        EXPECT_DOUBLE_EQ(cell[0], expected) << "Mismatch at (s=" << sample.s << ", t=" << sample.t << ")";
+    }
+}
+
+// ============================================================================
+// Time-property mismatches
+// ============================================================================
+
+TEST_F(ExpressionCApiFixture, TimePropertiesMismatchReturnsError) {
+    // md_a: block as monthly time. md_b: block as non-time. Same shape.
+    auto* md_a = make_metadata_v({"scenario", "block"}, {3, 12}, {"v1", "v2"}, "MW", "2025-01-01T00:00:00", {"block"},
+                                 {"monthly"});
+    auto* md_b = make_metadata_v({"scenario", "block"}, {3, 12}, {"v1", "v2"});
+
+    write_one_cell(path_a, md_a, {"scenario", "block"}, {1, 1}, {1.0, 1.0});
+    write_one_cell(path_b, md_b, {"scenario", "block"}, {1, 1}, {1.0, 1.0});
+    quiver_binary_metadata_free(md_a);
+    quiver_binary_metadata_free(md_b);
+
+    auto* a = expr_from_file(path_a);
+    auto* b = expr_from_file(path_b);
+    quiver_expression_t* result = nullptr;
+    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &result), QUIVER_ERROR);
+    EXPECT_EQ(result, nullptr);
+
+    quiver_expression_close(a);
+    quiver_expression_close(b);
+}
+
+TEST_F(ExpressionCApiFixture, InitialDatetimeMismatchReturnsError) {
+    auto* md_a = make_metadata_v({"month", "block"}, {4, 31}, {"v1", "v2"}, "MW", "2025-01-01T00:00:00",
+                                 {"month", "block"}, {"monthly", "daily"});
+    auto* md_b = make_metadata_v({"month", "block"}, {4, 31}, {"v1", "v2"}, "MW", "2025-02-01T00:00:00",
+                                 {"month", "block"}, {"monthly", "daily"});
+
+    // Single cell at (month=1, block=1) is always valid for either Jan-start or Feb-start.
+    write_one_cell(path_a, md_a, {"month", "block"}, {1, 1}, {1.0, 1.0});
+    write_one_cell(path_b, md_b, {"month", "block"}, {1, 1}, {1.0, 1.0});
+    quiver_binary_metadata_free(md_a);
+    quiver_binary_metadata_free(md_b);
+
+    auto* a = expr_from_file(path_a);
+    auto* b = expr_from_file(path_b);
+    quiver_expression_t* result = nullptr;
+    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &result), QUIVER_ERROR);
+
+    quiver_expression_close(a);
+    quiver_expression_close(b);
+}
+
+TEST_F(ExpressionCApiFixture, ParentDimNameMismatchReturnsError) {
+    // Both files have a daily `block` dim, but lhs's parent is `month` and rhs's parent is `stage`.
+    auto* md_a = make_metadata_v({"month", "block"}, {2, 31}, {"v1", "v2"}, "MW", "2025-01-01T00:00:00",
+                                 {"month", "block"}, {"monthly", "daily"});
+    auto* md_b = make_metadata_v({"stage", "block"}, {2, 31}, {"v1", "v2"}, "MW", "2025-01-01T00:00:00",
+                                 {"stage", "block"}, {"monthly", "daily"});
+
+    write_one_cell(path_a, md_a, {"month", "block"}, {1, 1}, {1.0, 1.0});
+    write_one_cell(path_b, md_b, {"stage", "block"}, {1, 1}, {1.0, 1.0});
+    quiver_binary_metadata_free(md_a);
+    quiver_binary_metadata_free(md_b);
+
+    auto* a = expr_from_file(path_a);
+    auto* b = expr_from_file(path_b);
+    quiver_expression_t* result = nullptr;
+    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &result), QUIVER_ERROR);
+
+    quiver_expression_close(a);
+    quiver_expression_close(b);
+}
+
+TEST_F(ExpressionCApiFixture, ParentDimMatchByNameAcceptsCrossPosition) {
+    // Same parent dim NAME (`month`) but at different positions: lhs index 0, rhs index 1.
+    auto* md_a = make_metadata_v({"month", "extra", "day"}, {2, 3, 31}, {"v1", "v2"}, "MW", "2025-01-01T00:00:00",
+                                 {"month", "day"}, {"monthly", "daily"});
+    auto* md_b = make_metadata_v({"extra", "month", "day"}, {3, 2, 31}, {"v1", "v2"}, "MW", "2025-01-01T00:00:00",
+                                 {"month", "day"}, {"monthly", "daily"});
+
+    write_one_cell(path_a, md_a, {"month", "extra", "day"}, {1, 1, 1}, {1.0, 1.0});
+    write_one_cell(path_b, md_b, {"extra", "month", "day"}, {1, 1, 1}, {1.0, 1.0});
+    quiver_binary_metadata_free(md_a);
+    quiver_binary_metadata_free(md_b);
+
+    auto* a = expr_from_file(path_a);
+    auto* b = expr_from_file(path_b);
+    quiver_expression_t* sum = nullptr;
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &sum), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(sum, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(b);
+    quiver_expression_close(sum);
+
+    quiver_binary_file_t* reopened = nullptr;
+    EXPECT_EQ(quiver_binary_file_open_read(path_out.c_str(), &reopened), QUIVER_OK);
+    quiver_binary_file_close(reopened);
+}
