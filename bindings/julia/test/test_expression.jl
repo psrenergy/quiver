@@ -418,14 +418,14 @@ end
     # Lifecycle
     # ==========================================================================
 
-    @testset "Explicit destroy! is idempotent" begin
+    @testset "Explicit close! is idempotent" begin
         path_a = make_path("a")
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
             fa = Quiver.Binary.open_file(path_a; mode = :read)
             e = Quiver.Expression.Expression(fa)
-            Quiver.Expression.destroy!(e)
-            Quiver.Expression.destroy!(e)  # second call is no-op
+            Quiver.Expression.close!(e)
+            Quiver.Expression.close!(e)  # second call is no-op
             @test e.ptr == C_NULL
             Quiver.Binary.close!(fa)
         finally

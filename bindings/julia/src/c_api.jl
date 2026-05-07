@@ -646,8 +646,8 @@ function quiver_expression_from_file(file, out)
     @ccall libquiver_c.quiver_expression_from_file(file::Ptr{quiver_binary_file_t}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
 end
 
-function quiver_expression_destroy(expression)
-    @ccall libquiver_c.quiver_expression_destroy(expression::Ptr{quiver_expression_t})::quiver_error_t
+function quiver_expression_close(expression)
+    @ccall libquiver_c.quiver_expression_close(expression::Ptr{quiver_expression_t})::quiver_error_t
 end
 
 function quiver_expression_apply(op, lhs, rhs, out)

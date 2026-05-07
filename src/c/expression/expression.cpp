@@ -6,11 +6,10 @@
 #include <stdexcept>
 #include <string>
 
-extern "C" {
-
 namespace {
 
-quiver::Expression apply_op(quiver_expression_op_t op, const quiver::Expression& lhs, const quiver::Expression& rhs) {
+template <typename Lhs, typename Rhs>
+quiver::Expression dispatch(quiver_expression_op_t op, const Lhs& lhs, const Rhs& rhs) {
     switch (op) {
     case QUIVER_EXPRESSION_OP_ADD:
         return lhs + rhs;
@@ -21,38 +20,12 @@ quiver::Expression apply_op(quiver_expression_op_t op, const quiver::Expression&
     case QUIVER_EXPRESSION_OP_DIVIDE:
         return lhs / rhs;
     }
-    throw std::runtime_error("Cannot apply expression operation: unknown op");
-}
-
-quiver::Expression apply_op_scalar_right(quiver_expression_op_t op, const quiver::Expression& lhs, double rhs) {
-    switch (op) {
-    case QUIVER_EXPRESSION_OP_ADD:
-        return lhs + rhs;
-    case QUIVER_EXPRESSION_OP_SUBTRACT:
-        return lhs - rhs;
-    case QUIVER_EXPRESSION_OP_MULTIPLY:
-        return lhs * rhs;
-    case QUIVER_EXPRESSION_OP_DIVIDE:
-        return lhs / rhs;
-    }
-    throw std::runtime_error("Cannot apply expression operation: unknown op");
-}
-
-quiver::Expression apply_op_scalar_left(quiver_expression_op_t op, double lhs, const quiver::Expression& rhs) {
-    switch (op) {
-    case QUIVER_EXPRESSION_OP_ADD:
-        return lhs + rhs;
-    case QUIVER_EXPRESSION_OP_SUBTRACT:
-        return lhs - rhs;
-    case QUIVER_EXPRESSION_OP_MULTIPLY:
-        return lhs * rhs;
-    case QUIVER_EXPRESSION_OP_DIVIDE:
-        return lhs / rhs;
-    }
-    throw std::runtime_error("Cannot apply expression operation: unknown op");
+    throw std::runtime_error("Cannot apply: unknown expression operation");
 }
 
 }  // namespace
+
+extern "C" {
 
 // Construction
 
@@ -71,9 +44,9 @@ QUIVER_C_API quiver_error_t quiver_expression_from_file(quiver_binary_file_t* fi
     }
 }
 
-// Destruction
+// Lifecycle
 
-QUIVER_C_API quiver_error_t quiver_expression_destroy(quiver_expression_t* expression) {
+QUIVER_C_API quiver_error_t quiver_expression_close(quiver_expression_t* expression) {
     delete expression;
     return QUIVER_OK;
 }
@@ -87,7 +60,7 @@ QUIVER_C_API quiver_error_t quiver_expression_apply(quiver_expression_op_t op,
     QUIVER_REQUIRE(lhs, rhs, out);
 
     try {
-        *out = new quiver_expression(apply_op(op, lhs->expression, rhs->expression));
+        *out = new quiver_expression(dispatch(op, lhs->expression, rhs->expression));
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
         quiver_set_last_error("Memory allocation failed");
@@ -105,7 +78,7 @@ QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_right(quiver_expressi
     QUIVER_REQUIRE(lhs, out);
 
     try {
-        *out = new quiver_expression(apply_op_scalar_right(op, lhs->expression, rhs));
+        *out = new quiver_expression(dispatch(op, lhs->expression, rhs));
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
         quiver_set_last_error("Memory allocation failed");
@@ -123,7 +96,7 @@ QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_left(quiver_expressio
     QUIVER_REQUIRE(rhs, out);
 
     try {
-        *out = new quiver_expression(apply_op_scalar_left(op, lhs, rhs->expression));
+        *out = new quiver_expression(dispatch(op, lhs, rhs->expression));
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
         quiver_set_last_error("Memory allocation failed");
