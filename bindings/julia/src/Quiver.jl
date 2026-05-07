@@ -24,11 +24,6 @@ include("lua_runner.jl")
 include("binary/Binary.jl")
 include("expression.jl")
 
-export Element, Database, LuaRunner, Expression, DatabaseException
-export ScalarMetadata, GroupMetadata
-export QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_FLOAT, QUIVER_DATA_TYPE_STRING
-
-# Re-export C enum constants for data types
 const QUIVER_DATA_TYPE_INTEGER = C.QUIVER_DATA_TYPE_INTEGER
 const QUIVER_DATA_TYPE_FLOAT = C.QUIVER_DATA_TYPE_FLOAT
 const QUIVER_DATA_TYPE_STRING = C.QUIVER_DATA_TYPE_STRING
