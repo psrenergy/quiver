@@ -13,29 +13,18 @@ extern "C" {
 
 // Open/close
 
-QUIVER_C_API quiver_error_t quiver_binary_file_open_read(const char* path, quiver_binary_file_t** out) {
+QUIVER_C_API quiver_error_t quiver_binary_file_open_file(const char* path,
+                                                         char mode,
+                                                         quiver_binary_metadata_t* md,
+                                                         quiver_binary_file_t** out) {
     QUIVER_REQUIRE(path, out);
 
     try {
-        auto binary_file = quiver::BinaryFile::open_file(path, 'r');
-        *out = new quiver_binary_file(std::move(binary_file));
-        return QUIVER_OK;
-    } catch (const std::bad_alloc&) {
-        quiver_set_last_error("Memory allocation failed");
-        return QUIVER_ERROR;
-    } catch (const std::exception& e) {
-        quiver_set_last_error(e.what());
-        return QUIVER_ERROR;
-    }
-}
-
-QUIVER_C_API quiver_error_t quiver_binary_file_open_write(const char* path,
-                                                          quiver_binary_metadata_t* md,
-                                                          quiver_binary_file_t** out) {
-    QUIVER_REQUIRE(path, md, out);
-
-    try {
-        auto binary_file = quiver::BinaryFile::open_file(path, 'w', md->metadata);
+        std::optional<quiver::BinaryMetadata> metadata;
+        if (md != nullptr) {
+            metadata = md->metadata;
+        }
+        auto binary_file = quiver::BinaryFile::open_file(path, mode, metadata);
         *out = new quiver_binary_file(std::move(binary_file));
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {

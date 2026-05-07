@@ -8,16 +8,10 @@ mutable struct File
     end
 end
 
-function open_file(path::String; mode::Symbol, metadata::Union{Metadata, Nothing} = nothing)
+function open_file(path::String; mode::Char, metadata::Union{Metadata, Nothing} = nothing)
     out_file = Ref{Ptr{C.quiver_binary_file}}(C_NULL)
-    if mode == :read
-        check(C.quiver_binary_file_open_read(path, out_file))
-    elseif mode == :write
-        md_ptr = metadata === nothing ? Ptr{C.quiver_binary_metadata}(C_NULL) : metadata.ptr
-        check(C.quiver_binary_file_open_write(path, md_ptr, out_file))
-    else
-        throw(ArgumentError("mode must be :read or :write, got :$mode"))
-    end
+    md_ptr = metadata === nothing ? Ptr{C.quiver_binary_metadata}(C_NULL) : metadata.ptr
+    check(C.quiver_binary_file_open_file(path, Cchar(mode), md_ptr, out_file))
     return File(out_file[])
 end
 
@@ -27,16 +21,9 @@ function File(path::String)
     return File(out_file[])
 end
 
-function open!(file::File; mode::Symbol, metadata::Union{Metadata, Nothing} = nothing)
-    mode_char = if mode == :read
-        Cchar('r')
-    elseif mode == :write
-        Cchar('w')
-    else
-        Cchar(0)  # Sentinel: let the C layer raise "Invalid file mode"
-    end
+function open!(file::File; mode::Char, metadata::Union{Metadata, Nothing} = nothing)
     md_ptr = metadata === nothing ? Ptr{C.quiver_binary_metadata}(C_NULL) : metadata.ptr
-    check(C.quiver_binary_file_open(file.ptr, mode_char, md_ptr))
+    check(C.quiver_binary_file_open(file.ptr, Cchar(mode), md_ptr))
     return nothing
 end
 
