@@ -854,14 +854,13 @@ TEST_F(ExpressionFixture, UnionDimsAcrossOperands) {
 }
 
 TEST_F(ExpressionFixture, OperandDimsInDifferentOrder) {
-    // Operand dim ordering may differ from output ordering. The
-    // translation tables (lhs_dim_translate_ / rhs_dim_translate_ in
-    // BinaryOpNode) map each output dim index back to the corresponding
-    // operand dim index by NAME. Same dim set, swapped order: lhs has
-    // [scenario, time], rhs has [time, scenario]. A regression in the
-    // search-by-name logic would scramble values without any other test
-    // catching it (UnionDimsAcrossOperands has partially-overlapping
-    // sets, not same-set-swapped order).
+    // Operand dim ordering may differ from output ordering. Each output
+    // dim index must map back to the corresponding operand dim by NAME.
+    // Same dim set, swapped order: lhs has [scenario, time], rhs has
+    // [time, scenario]. A regression in the search-by-name logic would
+    // scramble values without any other test catching it
+    // (UnionDimsAcrossOperands has partially-overlapping sets, not
+    // same-set-swapped order).
     auto md_a = BinaryMetadata::from_element(Element()
                                                  .set("version", "1")
                                                  .set("initial_datetime", "2025-01-01T00:00:00")

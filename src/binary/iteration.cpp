@@ -116,6 +116,10 @@ std::optional<std::vector<int64_t>> next_dimensions(const BinaryMetadata& meta, 
     if (!incremented)
         return std::nullopt;
 
+    // Restore initial_value when a child time dim wrapped to 1 but its parent
+    // is still at its own initial_value: the cascade reset above forces 1, but
+    // a non-1 initial_value means the iteration starts mid-period (e.g. day=5
+    // within a month), and that offset must persist across parent rollovers.
     for (size_t i = 0; i < next.size(); ++i) {
         const auto& dim = dimensions[i];
         if (!dim.is_time_dimension())

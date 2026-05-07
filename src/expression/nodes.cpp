@@ -210,26 +210,19 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
     broadcast_meta_.validate();
 
     const auto& out_dims = broadcast_meta_.dimensions;
-    lhs_dim_translate_.resize(out_dims.size());
-    rhs_dim_translate_.resize(out_dims.size());
     lhs_dim_sizes_.assign(out_dims.size(), 0);
     rhs_dim_sizes_.assign(out_dims.size(), 0);
-    for (size_t i = 0; i < out_dims.size(); ++i) {
-        auto li = find_dim_index(lhs_meta.dimensions, out_dims[i].name);
-        auto ri = find_dim_index(rhs_meta.dimensions, out_dims[i].name);
-        lhs_dim_translate_[i] = li;
-        rhs_dim_translate_[i] = ri;
-        lhs_dim_sizes_[i] = (li >= 0) ? lhs_meta.dimensions[li].size : 0;
-        rhs_dim_sizes_[i] = (ri >= 0) ? rhs_meta.dimensions[ri].size : 0;
-    }
-
     lhs_to_out_.assign(lhs_meta.dimensions.size(), -1);
     rhs_to_out_.assign(rhs_meta.dimensions.size(), -1);
     for (size_t out_i = 0; out_i < out_dims.size(); ++out_i) {
-        if (lhs_dim_translate_[out_i] >= 0)
-            lhs_to_out_[lhs_dim_translate_[out_i]] = static_cast<int>(out_i);
-        if (rhs_dim_translate_[out_i] >= 0)
-            rhs_to_out_[rhs_dim_translate_[out_i]] = static_cast<int>(out_i);
+        const auto li = find_dim_index(lhs_meta.dimensions, out_dims[out_i].name);
+        const auto ri = find_dim_index(rhs_meta.dimensions, out_dims[out_i].name);
+        lhs_dim_sizes_[out_i] = (li >= 0) ? lhs_meta.dimensions[li].size : 0;
+        rhs_dim_sizes_[out_i] = (ri >= 0) ? rhs_meta.dimensions[ri].size : 0;
+        if (li >= 0)
+            lhs_to_out_[li] = static_cast<int>(out_i);
+        if (ri >= 0)
+            rhs_to_out_[ri] = static_cast<int>(out_i);
     }
 
     lhs_label_count_ = lhs_meta.labels.size();

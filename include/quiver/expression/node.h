@@ -70,9 +70,6 @@ private:
     std::shared_ptr<Node> rhs_;
     BinaryMetadata broadcast_meta_;
 
-    std::vector<int> lhs_dim_translate_;
-    std::vector<int> rhs_dim_translate_;
-
     std::vector<int64_t> lhs_dim_sizes_;
     std::vector<int64_t> rhs_dim_sizes_;
 
