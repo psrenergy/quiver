@@ -53,6 +53,7 @@ if(QUIVER_BUILD_C_API)
         test_c_api_binary_file.cpp
         test_c_api_csv_converter.cpp
         test_c_api_binary_metadata.cpp
+        test_c_api_expression.cpp
         test_c_api_database_create.cpp
         test_c_api_database_csv_export.cpp
         test_c_api_database_csv_import.cpp
