@@ -8,21 +8,14 @@ function make_path(name)
 end
 
 function cleanup(paths...)
-    # Expression's internal FileNode opens its own BinaryFile that stays open until the
-    # Expression handle is finalized. Locals like `e` are still in scope inside `finally`,
-    # so we retry rm() across GC.gc() calls until handles are released.
+    # Operator chains like `(a + b - c) / 2.0` create unnamed intermediate Expression
+    # objects whose internal FileNodes hold the input files open until Julia GC runs
+    # their finalizers. One GC pass before cleanup is enough to release them.
+    GC.gc()
     for p in paths
         for ext in [".qvr", ".toml"]
             f = p * ext
-            for _ in 1:10
-                isfile(f) || break
-                try
-                    rm(f)
-                    break
-                catch
-                    GC.gc()
-                end
-            end
+            isfile(f) && rm(f)
         end
     end
 end
@@ -142,6 +135,21 @@ function read_one_cell(path::String; dims...)
     return cell
 end
 
+# Open a BinaryFile, build an Expression on it, close the file, run the body
+# with the Expression, then close the Expression. The Expression's internal
+# FileNode keeps its own handle, so the BinaryFile can close immediately.
+# Body is the first positional arg so callers can use `do` syntax.
+function with_expr(body::Function, path::String)
+    file = Quiver.Binary.open_file(path; mode = :read)
+    e = Quiver.Expression(file)
+    Quiver.Binary.close!(file)
+    try
+        body(e)
+    finally
+        Quiver.close!(e)
+    end
+end
+
 @testset "Expression" begin
     # ==========================================================================
     # Identity / save round-trip
@@ -152,14 +160,10 @@ end
         path_out = make_path("out")
         try
             write_fixture(path_a, (r, c, k) -> r * 100 + c * 10 + k)
-            file = Quiver.Binary.open_file(path_a; mode = :read)
-            e = Quiver.Expression.Expression(file)
-            Quiver.Expression.save(e, path_out)
-            Quiver.Binary.close!(file)
-
-            orig = read_all_cells(path_a)
-            copy = read_all_cells(path_out)
-            @test orig == copy
+            with_expr(path_a) do e
+                Quiver.save(e, path_out)
+            end
+            @test read_all_cells(path_a) == read_all_cells(path_out)
         finally
             cleanup(path_a, path_out)
         end
@@ -171,12 +175,10 @@ end
         path_out2 = make_path("out2")
         try
             write_fixture(path_a, (r, c, k) -> r + c + k)
-            file = Quiver.Binary.open_file(path_a; mode = :read)
-            e = Quiver.Expression.Expression(file)
-            Quiver.Expression.save(e, path_out)
-            Quiver.Expression.save(e, path_out2)
-            Quiver.Binary.close!(file)
-
+            with_expr(path_a) do e
+                Quiver.save(e, path_out)
+                Quiver.save(e, path_out2)
+            end
             @test read_all_cells(path_out) == read_all_cells(path_out2)
         finally
             cleanup(path_a, path_out, path_out2)
@@ -192,16 +194,14 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             write_fixture(path_b, (r, c, k) -> r * 100 + c * 5 + k * 2)
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            fb = Quiver.Binary.open_file(path_b; mode = :read)
-            sum_expr = Quiver.Expression.Expression(fa) + Quiver.Expression.Expression(fb)
-            Quiver.Expression.save(sum_expr, path_out)
-            Quiver.Binary.close!(fa)
-            Quiver.Binary.close!(fb)
-
-            va = read_all_cells(path_a)
-            vb = read_all_cells(path_b)
-            vo = read_all_cells(path_out)
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    sum_expr = a + b
+                    Quiver.save(sum_expr, path_out)
+                    Quiver.close!(sum_expr)
+                end
+            end
+            va, vb, vo = read_all_cells(path_a), read_all_cells(path_b), read_all_cells(path_out)
             @test vo == va .+ vb
         finally
             cleanup(path_a, path_b, path_out)
@@ -213,13 +213,13 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 100 + c * 10 + k)
             write_fixture(path_b, (r, c, k) -> r + c + k)
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            fb = Quiver.Binary.open_file(path_b; mode = :read)
-            diff = Quiver.Expression.Expression(fa) - Quiver.Expression.Expression(fb)
-            Quiver.Expression.save(diff, path_out)
-            Quiver.Binary.close!(fa)
-            Quiver.Binary.close!(fb)
-
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    diff = a - b
+                    Quiver.save(diff, path_out)
+                    Quiver.close!(diff)
+                end
+            end
             va, vb, vo = read_all_cells(path_a), read_all_cells(path_b), read_all_cells(path_out)
             @test vo == va .- vb
         finally
@@ -232,13 +232,13 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r + c + k + 1)
             write_fixture(path_b, (r, c, k) -> r * c + k + 1)
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            fb = Quiver.Binary.open_file(path_b; mode = :read)
-            product = Quiver.Expression.Expression(fa) * Quiver.Expression.Expression(fb)
-            Quiver.Expression.save(product, path_out)
-            Quiver.Binary.close!(fa)
-            Quiver.Binary.close!(fb)
-
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    product = a * b
+                    Quiver.save(product, path_out)
+                    Quiver.close!(product)
+                end
+            end
             va, vb, vo = read_all_cells(path_a), read_all_cells(path_b), read_all_cells(path_out)
             @test vo == va .* vb
         finally
@@ -251,13 +251,13 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             write_fixture(path_b, (r, c, k) -> r + c + k + 1)  # never zero
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            fb = Quiver.Binary.open_file(path_b; mode = :read)
-            quotient = Quiver.Expression.Expression(fa) / Quiver.Expression.Expression(fb)
-            Quiver.Expression.save(quotient, path_out)
-            Quiver.Binary.close!(fa)
-            Quiver.Binary.close!(fb)
-
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    quotient = a / b
+                    Quiver.save(quotient, path_out)
+                    Quiver.close!(quotient)
+                end
+            end
             va, vb, vo = read_all_cells(path_a), read_all_cells(path_b), read_all_cells(path_out)
             @test vo ≈ va ./ vb
         finally
@@ -272,19 +272,15 @@ end
             write_fixture(path_a, (r, c, k) -> r + c + k)
             write_fixture(path_b, (r, c, k) -> r * 2 + c + k)
             write_fixture(path_c, (r, c, k) -> r + c * 2 + k)
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            fb = Quiver.Binary.open_file(path_b; mode = :read)
-            fc = Quiver.Binary.open_file(path_c; mode = :read)
-            result =
-                (
-                    Quiver.Expression.Expression(fa) + Quiver.Expression.Expression(fb) -
-                    Quiver.Expression.Expression(fc)
-                ) / 2.0
-            Quiver.Expression.save(result, path_out)
-            Quiver.Binary.close!(fa)
-            Quiver.Binary.close!(fb)
-            Quiver.Binary.close!(fc)
-
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    with_expr(path_c) do c
+                        result = (a + b - c) / 2.0
+                        Quiver.save(result, path_out)
+                        Quiver.close!(result)
+                    end
+                end
+            end
             va, vb, vc, vo =
                 read_all_cells(path_a), read_all_cells(path_b), read_all_cells(path_c), read_all_cells(path_out)
             @test vo ≈ (va .+ vb .- vc) ./ 2.0
@@ -301,11 +297,11 @@ end
         path_a, path_out = make_path("a"), make_path("out")
         try
             write_fixture(path_a, (r, c, k) -> r * 100 + c * 10 + k)
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            result = Quiver.Expression.Expression(fa) + 2.0
-            Quiver.Expression.save(result, path_out)
-            Quiver.Binary.close!(fa)
-
+            with_expr(path_a) do a
+                result = a + 2.0
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            end
             @test read_all_cells(path_out) == read_all_cells(path_a) .+ 2.0
         finally
             cleanup(path_a, path_out)
@@ -316,9 +312,11 @@ end
         path_a, path_out = make_path("a"), make_path("out")
         try
             write_fixture(path_a, (r, c, k) -> r * 100 + c * 10 + k)
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            Quiver.Expression.save(Quiver.Expression.Expression(fa) - 5.0, path_out)
-            Quiver.Binary.close!(fa)
+            with_expr(path_a) do a
+                result = a - 5.0
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            end
             @test read_all_cells(path_out) == read_all_cells(path_a) .- 5.0
         finally
             cleanup(path_a, path_out)
@@ -329,9 +327,11 @@ end
         path_a, path_out = make_path("a"), make_path("out")
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            Quiver.Expression.save(Quiver.Expression.Expression(fa) * 3.0, path_out)
-            Quiver.Binary.close!(fa)
+            with_expr(path_a) do a
+                result = a * 3.0
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            end
             @test read_all_cells(path_out) == read_all_cells(path_a) .* 3.0
         finally
             cleanup(path_a, path_out)
@@ -342,9 +342,11 @@ end
         path_a, path_out = make_path("a"), make_path("out")
         try
             write_fixture(path_a, (r, c, k) -> r * 100 + c * 10 + k + 1)
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            Quiver.Expression.save(Quiver.Expression.Expression(fa) / 4.0, path_out)
-            Quiver.Binary.close!(fa)
+            with_expr(path_a) do a
+                result = a / 4.0
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            end
             @test read_all_cells(path_out) ≈ read_all_cells(path_a) ./ 4.0
         finally
             cleanup(path_a, path_out)
@@ -359,9 +361,11 @@ end
         path_a, path_out = make_path("a"), make_path("out")
         try
             write_fixture(path_a, (r, c, k) -> r * 100 + c * 10 + k)
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            Quiver.Expression.save(7.0 + Quiver.Expression.Expression(fa), path_out)
-            Quiver.Binary.close!(fa)
+            with_expr(path_a) do a
+                result = 7.0 + a
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            end
             @test read_all_cells(path_out) == 7.0 .+ read_all_cells(path_a)
         finally
             cleanup(path_a, path_out)
@@ -372,9 +376,11 @@ end
         path_a, path_out = make_path("a"), make_path("out")
         try
             write_fixture(path_a, (r, c, k) -> r + c + k)
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            Quiver.Expression.save(100.0 - Quiver.Expression.Expression(fa), path_out)
-            Quiver.Binary.close!(fa)
+            with_expr(path_a) do a
+                result = 100.0 - a
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            end
             @test read_all_cells(path_out) == 100.0 .- read_all_cells(path_a)
         finally
             cleanup(path_a, path_out)
@@ -385,9 +391,11 @@ end
         path_a, path_out = make_path("a"), make_path("out")
         try
             write_fixture(path_a, (r, c, k) -> r + c + k + 1)
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            Quiver.Expression.save(5.0 * Quiver.Expression.Expression(fa), path_out)
-            Quiver.Binary.close!(fa)
+            with_expr(path_a) do a
+                result = 5.0 * a
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            end
             @test read_all_cells(path_out) == 5.0 .* read_all_cells(path_a)
         finally
             cleanup(path_a, path_out)
@@ -398,9 +406,11 @@ end
         path_a, path_out = make_path("a"), make_path("out")
         try
             write_fixture(path_a, (r, c, k) -> r + c + k + 1)
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            Quiver.Expression.save(60.0 / Quiver.Expression.Expression(fa), path_out)
-            Quiver.Binary.close!(fa)
+            with_expr(path_a) do a
+                result = 60.0 / a
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            end
             @test read_all_cells(path_out) ≈ 60.0 ./ read_all_cells(path_a)
         finally
             cleanup(path_a, path_out)
@@ -419,12 +429,11 @@ end
             write_fixture_with_metadata(path_a, md_a, (_, _, _) -> 1.0; rows = 3)
             write_fixture_with_metadata(path_b, md_b, (_, _, _) -> 1.0; rows = 4)
 
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            fb = Quiver.Binary.open_file(path_b; mode = :read)
-            @test_throws Quiver.DatabaseException Quiver.Expression.Expression(fa) +
-                                                  Quiver.Expression.Expression(fb)
-            Quiver.Binary.close!(fa)
-            Quiver.Binary.close!(fb)
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    @test_throws Quiver.DatabaseException a + b
+                end
+            end
         finally
             cleanup(path_a, path_b)
         end
@@ -438,12 +447,11 @@ end
             write_fixture_with_metadata(path_a, md_a, (_, _, _) -> 1.0)
             write_fixture_with_metadata(path_b, md_b, (_, _, _) -> 1.0)
 
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            fb = Quiver.Binary.open_file(path_b; mode = :read)
-            @test_throws Quiver.DatabaseException Quiver.Expression.Expression(fa) +
-                                                  Quiver.Expression.Expression(fb)
-            Quiver.Binary.close!(fa)
-            Quiver.Binary.close!(fb)
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    @test_throws Quiver.DatabaseException a + b
+                end
+            end
         finally
             cleanup(path_a, path_b)
         end
@@ -457,12 +465,11 @@ end
             write_fixture_with_metadata(path_a, md_a, (_, _, _) -> 1.0)
             write_fixture_with_metadata(path_b, md_b, (_, _, _) -> 1.0)
 
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            fb = Quiver.Binary.open_file(path_b; mode = :read)
-            @test_throws Quiver.DatabaseException Quiver.Expression.Expression(fa) +
-                                                  Quiver.Expression.Expression(fb)
-            Quiver.Binary.close!(fa)
-            Quiver.Binary.close!(fb)
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    @test_throws Quiver.DatabaseException a + b
+                end
+            end
         finally
             cleanup(path_a, path_b)
         end
@@ -472,10 +479,9 @@ end
         path_a = make_path("a")
         try
             write_fixture(path_a, (_, _, _) -> 42.0)
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            e = Quiver.Expression.Expression(fa)
-            @test_throws Quiver.DatabaseException Quiver.Expression.save(e, path_a)
-            Quiver.Binary.close!(fa)
+            with_expr(path_a) do e
+                @test_throws Quiver.DatabaseException Quiver.save(e, path_a)
+            end
         finally
             cleanup(path_a)
         end
@@ -489,12 +495,12 @@ end
         path_a = make_path("a")
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            e = Quiver.Expression.Expression(fa)
-            Quiver.Expression.close!(e)
-            Quiver.Expression.close!(e)  # second call is no-op
+            file = Quiver.Binary.open_file(path_a; mode = :read)
+            e = Quiver.Expression(file)
+            Quiver.Binary.close!(file)
+            Quiver.close!(e)
+            Quiver.close!(e)  # second call is no-op
             @test e.ptr == C_NULL
-            Quiver.Binary.close!(fa)
         finally
             cleanup(path_a)
         end
@@ -508,12 +514,11 @@ end
         path_a = make_path("a")
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            e = Quiver.Expression.Expression(fa)
-            md = Quiver.Expression.get_metadata(e)
-            @test Quiver.Binary.get_unit(md) == "MW"
-            @test Quiver.Binary.get_labels(md) == ["val1", "val2"]
-            Quiver.Binary.close!(fa)
+            with_expr(path_a) do e
+                md = Quiver.get_metadata(e)
+                @test Quiver.Binary.get_unit(md) == "MW"
+                @test Quiver.Binary.get_labels(md) == ["val1", "val2"]
+            end
         finally
             cleanup(path_a)
         end
@@ -523,11 +528,15 @@ end
         path_a = make_path("a")
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            e = Quiver.Expression.Expression(fa) * 2.0
-            md = Quiver.Expression.get_metadata(e)
-            @test Quiver.Binary.get_unit(md) == "MW"  # unit preserved through scalar op
-            Quiver.Binary.close!(fa)
+            with_expr(path_a) do a
+                e = a * 2.0
+                try
+                    md = Quiver.get_metadata(e)
+                    @test Quiver.Binary.get_unit(md) == "MW"  # unit preserved through scalar op
+                finally
+                    Quiver.close!(e)
+                end
+            end
         finally
             cleanup(path_a)
         end
@@ -541,13 +550,13 @@ end
         path_a, path_out = make_path("a"), make_path("out")
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
-            f1 = Quiver.Binary.open_file(path_a; mode = :read)
-            f2 = Quiver.Binary.open_file(path_a; mode = :read)
-            sum_expr = Quiver.Expression.Expression(f1) + Quiver.Expression.Expression(f2)
-            Quiver.Expression.save(sum_expr, path_out)
-            Quiver.Binary.close!(f1)
-            Quiver.Binary.close!(f2)
-
+            with_expr(path_a) do a1
+                with_expr(path_a) do a2
+                    sum_expr = a1 + a2
+                    Quiver.save(sum_expr, path_out)
+                    Quiver.close!(sum_expr)
+                end
+            end
             @test read_all_cells(path_out) == 2.0 .* read_all_cells(path_a)
         finally
             cleanup(path_a, path_out)
@@ -568,12 +577,13 @@ end
                         (dims, k) -> dims[1] * 100 + dims[2] * 10 + (k - 1))
             write_dense(path_b, md_b, [:row, :col], [1, 2], 2, (dims, k) -> dims[2] * 1000 + (k - 1))
 
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            fb = Quiver.Binary.open_file(path_b; mode = :read)
-            sum_expr = Quiver.Expression.Expression(fa) + Quiver.Expression.Expression(fb)
-            Quiver.Expression.save(sum_expr, path_out)
-            Quiver.Binary.close!(fa)
-            Quiver.Binary.close!(fb)
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    sum_expr = a + b
+                    Quiver.save(sum_expr, path_out)
+                    Quiver.close!(sum_expr)
+                end
+            end
 
             # out[r,c,k] = a[r,c,k] + b[1,c,k]
             cell_111 = read_one_cell(path_out; row = 1, col = 1)
@@ -601,12 +611,13 @@ end
             write_dense(path_b, md_b, [:row, :col], [2, 2], 3,
                         (dims, k) -> dims[1] * 100 + dims[2] * 10 + (k - 1))
 
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            fb = Quiver.Binary.open_file(path_b; mode = :read)
-            sum_expr = Quiver.Expression.Expression(fa) + Quiver.Expression.Expression(fb)
-            Quiver.Expression.save(sum_expr, path_out)
-            Quiver.Binary.close!(fa)
-            Quiver.Binary.close!(fb)
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    sum_expr = a + b
+                    Quiver.save(sum_expr, path_out)
+                    Quiver.close!(sum_expr)
+                end
+            end
 
             cell_11 = read_one_cell(path_out; row = 1, col = 1)
             @test length(cell_11) == 3  # labels promoted from 1 to 3
@@ -639,12 +650,13 @@ end
             write_dense(path_a, md_a, [:scenario, :time], [2, 4], 1, (dims, _) -> dims[1] * 10 + dims[2])
             write_dense(path_b, md_b, [:time, :stage], [4, 3], 1, (dims, _) -> dims[1] * 100 + dims[2])
 
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            fb = Quiver.Binary.open_file(path_b; mode = :read)
-            sum_expr = Quiver.Expression.Expression(fa) + Quiver.Expression.Expression(fb)
-            Quiver.Expression.save(sum_expr, path_out)
-            Quiver.Binary.close!(fa)
-            Quiver.Binary.close!(fb)
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    sum_expr = a + b
+                    Quiver.save(sum_expr, path_out)
+                    Quiver.close!(sum_expr)
+                end
+            end
 
             # Output: [scenario=2, time=4, stage=3]. out[s,t,st] = a[s,t] + b[t,st].
             @test read_one_cell(path_out; scenario = 1, time = 1, stage = 1)[1] == (1 * 10 + 1) + (1 * 100 + 1)
@@ -663,12 +675,13 @@ end
             write_dense(path_a, md_a, [:scenario, :time], [2, 4], 1, (dims, _) -> dims[1] * 10 + dims[2])
             write_dense(path_b, md_b, [:time, :scenario], [4, 2], 1, (dims, _) -> dims[1] * 100 + dims[2])
 
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            fb = Quiver.Binary.open_file(path_b; mode = :read)
-            sum_expr = Quiver.Expression.Expression(fa) + Quiver.Expression.Expression(fb)
-            Quiver.Expression.save(sum_expr, path_out)
-            Quiver.Binary.close!(fa)
-            Quiver.Binary.close!(fb)
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    sum_expr = a + b
+                    Quiver.save(sum_expr, path_out)
+                    Quiver.close!(sum_expr)
+                end
+            end
 
             # out[s,t] = a[s,t] + b[t,s] = (s*10+t) + (t*100+s)
             for (s, t) in [(1, 1), (2, 4), (1, 4), (2, 2)]
@@ -697,12 +710,11 @@ end
             write_one_cell(path_a, md_a; data = [1.0, 1.0], scenario = 1, block = 1)
             write_one_cell(path_b, md_b; data = [1.0, 1.0], scenario = 1, block = 1)
 
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            fb = Quiver.Binary.open_file(path_b; mode = :read)
-            @test_throws Quiver.DatabaseException Quiver.Expression.Expression(fa) +
-                                                  Quiver.Expression.Expression(fb)
-            Quiver.Binary.close!(fa)
-            Quiver.Binary.close!(fb)
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    @test_throws Quiver.DatabaseException a + b
+                end
+            end
         finally
             cleanup(path_a, path_b)
         end
@@ -728,12 +740,11 @@ end
             write_one_cell(path_a, md_a; data = [1.0, 1.0], month = 1, block = 1)
             write_one_cell(path_b, md_b; data = [1.0, 1.0], month = 1, block = 1)
 
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            fb = Quiver.Binary.open_file(path_b; mode = :read)
-            @test_throws Quiver.DatabaseException Quiver.Expression.Expression(fa) +
-                                                  Quiver.Expression.Expression(fb)
-            Quiver.Binary.close!(fa)
-            Quiver.Binary.close!(fb)
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    @test_throws Quiver.DatabaseException a + b
+                end
+            end
         finally
             cleanup(path_a, path_b)
         end
@@ -757,12 +768,11 @@ end
             write_one_cell(path_a, md_a; data = [1.0, 1.0], month = 1, block = 1)
             write_one_cell(path_b, md_b; data = [1.0, 1.0], stage = 1, block = 1)
 
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            fb = Quiver.Binary.open_file(path_b; mode = :read)
-            @test_throws Quiver.DatabaseException Quiver.Expression.Expression(fa) +
-                                                  Quiver.Expression.Expression(fb)
-            Quiver.Binary.close!(fa)
-            Quiver.Binary.close!(fb)
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    @test_throws Quiver.DatabaseException a + b
+                end
+            end
         finally
             cleanup(path_a, path_b)
         end
@@ -786,12 +796,13 @@ end
             write_one_cell(path_a, md_a; data = [1.0, 1.0], month = 1, extra = 1, day = 1)
             write_one_cell(path_b, md_b; data = [1.0, 1.0], extra = 1, month = 1, day = 1)
 
-            fa = Quiver.Binary.open_file(path_a; mode = :read)
-            fb = Quiver.Binary.open_file(path_b; mode = :read)
-            sum_expr = Quiver.Expression.Expression(fa) + Quiver.Expression.Expression(fb)
-            Quiver.Expression.save(sum_expr, path_out)
-            Quiver.Binary.close!(fa)
-            Quiver.Binary.close!(fb)
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    sum_expr = a + b
+                    Quiver.save(sum_expr, path_out)
+                    Quiver.close!(sum_expr)
+                end
+            end
 
             reopened = Quiver.Binary.open_file(path_out; mode = :read)
             Quiver.Binary.close!(reopened)
