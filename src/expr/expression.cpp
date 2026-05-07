@@ -15,16 +15,8 @@
 
 namespace quiver::expr {
 
-// ============================================================================
-// Helpers (anonymous namespace)
-// ============================================================================
-
 namespace {
 
-// Recursively walk the node tree, collecting every FileNode's path. Used by
-// Expression::save's D-11 self-save check. dynamic_cast is used to discriminate
-// concrete node types — fine for v1 (one virtual dispatch per node, negligible
-// vs the file I/O cost of the engine).
 void collect_file_paths(const Node& node, std::vector<std::string>& out) {
     if (auto* fn = dynamic_cast<const FileNode*>(&node)) {
         out.push_back(fn->path());
@@ -35,14 +27,9 @@ void collect_file_paths(const Node& node, std::vector<std::string>& out) {
         collect_file_paths(*bn->rhs(), out);
         return;
     }
-    // ScalarNode and any future leaf types: no file paths to collect.
 }
 
 }  // namespace
-
-// ============================================================================
-// Expression
-// ============================================================================
 
 Expression::Expression(const BinaryFile& file) : node_(std::make_shared<FileNode>(file)) {}
 
@@ -57,10 +44,6 @@ const std::shared_ptr<Node>& Expression::node() const {
 }
 
 void Expression::save(const std::string& path) const {
-    // ---- D-11: eager self-save check, BEFORE any writer is opened. ----
-    // The writer's open_file('w', ...) calls fill_file_with_nulls() which would
-    // wipe an input file if the path happened to coincide. Catching it here
-    // — before the writer constructs — keeps inputs byte-untouched on rejection.
     std::vector<std::string> input_paths;
     collect_file_paths(*node_, input_paths);
     const auto canonical_out = std::filesystem::weakly_canonical(path).string();
@@ -70,11 +53,9 @@ void Expression::save(const std::string& path) const {
         }
     }
 
-    // ---- Open writer ----
     const auto meta = node_->metadata();
     auto writer = BinaryFile::open_file(path, 'w', meta);
 
-    // ---- Row loop: rebuild dim map per cell and dispatch through map-based primitives ----
     std::vector<int64_t> dims = quiver::binary::first_dimensions(meta);
     std::vector<double> row;
     for (;;) {
@@ -93,10 +74,6 @@ void Expression::save(const std::string& path) const {
         dims = std::move(*nxt);
     }
 }
-
-// ============================================================================
-// Free-function binary operators
-// ============================================================================
 
 namespace {
 

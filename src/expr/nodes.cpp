@@ -11,10 +11,6 @@
 
 namespace quiver::expr {
 
-// ============================================================================
-// FileNode
-// ============================================================================
-
 FileNode::FileNode(const BinaryFile& file) : path_(file.get_file_path()), meta_(file.get_metadata()) {}
 
 BinaryMetadata FileNode::metadata() const {
@@ -22,9 +18,6 @@ BinaryMetadata FileNode::metadata() const {
 }
 
 void FileNode::compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const {
-    // D-10: lazy open on first compute_row call. Each FileNode owns its own
-    // BinaryFile handle; multiple FileNodes referring to the same path open the
-    // file independently (no cache).
     if (!file_) {
         file_ = std::make_unique<BinaryFile>(BinaryFile::open_file(path_, 'r'));
     }
@@ -36,10 +29,6 @@ void FileNode::compute_row(const std::vector<int64_t>& dims, std::vector<double>
     out = file_->read(dim_map, /*allow_nulls=*/true);
 }
 
-// ============================================================================
-// ScalarNode
-// ============================================================================
-
 ScalarNode::ScalarNode(double value, BinaryMetadata broadcast_meta)
     : value_(value), broadcast_meta_(std::move(broadcast_meta)) {}
 
@@ -48,18 +37,11 @@ BinaryMetadata ScalarNode::metadata() const {
 }
 
 void ScalarNode::compute_row(const std::vector<int64_t>& /*dims*/, std::vector<double>& out) const {
-    // The scalar value broadcasts uniformly across the labels axis of the
-    // adopted (sibling) metadata. compute_row writes value_ into every label slot.
     out.assign(broadcast_meta_.labels.size(), value_);
 }
 
-// ============================================================================
-// BinaryOpNode helpers (anonymous namespace)
-// ============================================================================
-
 namespace {
 
-// Returns the index of `name` in the dimensions array, or -1 if absent.
 int find_dim_index(const std::vector<Dimension>& dims, const std::string& name) {
     for (size_t i = 0; i < dims.size(); ++i) {
         if (dims[i].name == name)
@@ -75,9 +57,6 @@ bool any_time_dim(const std::vector<Dimension>& dims) {
     return false;
 }
 
-// Apply binary op to two doubles. Division by zero produces IEEE 754 inf/NaN
-// (project policy: clean code over defensive — see T-1-203 in plan threat model;
-// downstream consumers handle NaN/inf, no defensive zero check here).
 double apply_op(BinaryOp op, double a, double b) {
     switch (op) {
     case BinaryOp::Add:
@@ -89,18 +68,10 @@ double apply_op(BinaryOp op, double a, double b) {
     case BinaryOp::Divide:
         return a / b;
     }
-    // WR-07: runtime canary if a future BinaryOp variant is added without updating apply_op.
-    // Compilers also warn at -Wswitch-enum on missing cases, but this guard catches:
-    //   (a) a downstream caller passing a static_cast<BinaryOp>(invalid) value (UB-adjacent), and
-    //   (b) future enum additions where the switch is updated but apply_op is forgotten.
     throw std::runtime_error("Cannot apply: unhandled BinaryOp variant");
 }
 
 }  // namespace
-
-// ============================================================================
-// BinaryOpNode
-// ============================================================================
 
 BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs)
     : op_(op), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {
@@ -112,9 +83,6 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
         throw std::runtime_error("Cannot apply: units differ ('" + lhs_meta.unit + "' vs '" + rhs_meta.unit + "')");
     }
 
-    // ---- D-01 + D-06: shape rule (n×n / 1×n / n×1 per same-name dim) ----
-    // For each dim shared by name: sizes must be equal, OR exactly one side is 1.
-    // Dims that exist on only one side are kept verbatim in the output (no compatibility check).
     for (const auto& l_dim : lhs_meta.dimensions) {
         int r_idx = find_dim_index(rhs_meta.dimensions, l_dim.name);
         if (r_idx < 0)
@@ -130,8 +98,6 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
                                  " (broadcasting requires n×n, 1×n, or n×1)");
     }
 
-    // ---- D-04 (CR-01 fix): same-name dims must agree on time-ness (symmetric).
-    //      D-17 (WR-01 fix): when both are time, parent dim is compared BY NAME, not raw operand index. ----
     auto parent_name_of = [](int64_t parent_idx, const BinaryMetadata& m) -> std::string {
         return (parent_idx >= 0) ? m.dimensions[parent_idx].name : std::string{};
     };
@@ -153,9 +119,6 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
             continue;  // both non-time; nothing more to validate here.
         const auto& lp = *l_dim.time;
         const auto& rp = *r_dim.time;
-        // D-17: resolve each side's parent_dimension_index to the parent's NAME on its own side,
-        // then compare names across operands. Two same-name time dims compatible iff parent names match
-        // (or both are -1 — `parent_name_of` returns "" for that case, equality holds).
         const std::string l_parent = parent_name_of(lp.parent_dimension_index, lhs_meta);
         const std::string r_parent = parent_name_of(rp.parent_dimension_index, rhs_meta);
         if (lp.frequency != rp.frequency || lp.initial_value != rp.initial_value || l_parent != r_parent) {
@@ -164,14 +127,12 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
         }
     }
 
-    // ---- D-09: initial_datetime must match when both sides have any time dim ----
     const bool lhs_has_time = any_time_dim(lhs_meta.dimensions);
     const bool rhs_has_time = any_time_dim(rhs_meta.dimensions);
     if (lhs_has_time && rhs_has_time && lhs_meta.initial_datetime != rhs_meta.initial_datetime) {
         throw std::runtime_error("Cannot apply: initial_datetime differs");
     }
 
-    // ---- D-08: labels axis broadcast (n×n / 1×n / n×1) ----
     const auto& l_labels = lhs_meta.labels;
     const auto& r_labels = rhs_meta.labels;
     const size_t ll = l_labels.size();
@@ -192,9 +153,6 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
                                  std::to_string(rl));
     }
 
-    // ---- Build broadcast_meta_ (D-02 dim order: lhs.dims ++ rhs-only) ----
-    // Sizes per same-name dim: max(lhs_size, rhs_size). Time properties carried over,
-    // with parent_dimension_index recomputed to point at the new index (Pitfall 6).
     broadcast_meta_ = BinaryMetadata{};
     broadcast_meta_.version = lhs_meta.version;
     broadcast_meta_.unit = lhs_meta.unit;  // D-07 ensured equality
@@ -203,10 +161,8 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
                                            ? lhs_meta.initial_datetime
                                            : (rhs_has_time ? rhs_meta.initial_datetime : lhs_meta.initial_datetime);
 
-    // Map from dim name → final index in output, used to recompute parent_dimension_index.
     std::unordered_map<std::string, int> output_index_by_name;
 
-    // Pass 1: lhs dims in lhs order
     for (const auto& l_dim : lhs_meta.dimensions) {
         int r_idx = find_dim_index(rhs_meta.dimensions, l_dim.name);
         int64_t out_size = (r_idx >= 0) ? std::max(l_dim.size, rhs_meta.dimensions[r_idx].size) : l_dim.size;
@@ -214,28 +170,22 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
         broadcast_meta_.dimensions.push_back(std::move(d));
         output_index_by_name[l_dim.name] = static_cast<int>(broadcast_meta_.dimensions.size()) - 1;
     }
-    // Pass 2: rhs-only dims in rhs order
     for (const auto& r_dim : rhs_meta.dimensions) {
         if (output_index_by_name.count(r_dim.name))
             continue;  // already placed
         broadcast_meta_.dimensions.push_back(r_dim);
         output_index_by_name[r_dim.name] = static_cast<int>(broadcast_meta_.dimensions.size()) - 1;
     }
-    // Recompute parent_dimension_index for time dims to point at new positions (Pitfall 6).
-    // The parent dim was identified by INDEX in the source operand's array; we need to find
-    // the parent BY NAME in the source operand and translate to the output index.
     for (size_t out_i = 0; out_i < broadcast_meta_.dimensions.size(); ++out_i) {
         auto& out_d = broadcast_meta_.dimensions[out_i];
         if (!out_d.is_time_dimension())
             continue;
-        // Determine source: prefer lhs (Pass 1) if present; else rhs.
-        int src_idx = find_dim_index(lhs_meta.dimensions, out_d.name);
+        auto src_idx = find_dim_index(lhs_meta.dimensions, out_d.name);
         const auto* src_meta = &lhs_meta;
         if (src_idx < 0) {
             src_idx = find_dim_index(rhs_meta.dimensions, out_d.name);
             src_meta = &rhs_meta;
         }
-        // src_idx is non-negative because out_d came from one of the operands.
         int64_t src_parent_idx = src_meta->dimensions[src_idx].time->parent_dimension_index;
         if (src_parent_idx < 0) {
             out_d.time->parent_dimension_index = -1;
@@ -243,20 +193,15 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
         }
         const std::string& parent_name = src_meta->dimensions[src_parent_idx].name;
         auto it = output_index_by_name.find(parent_name);
-        // Parent must exist in output (parent dim is always declared before child dim in the source).
         out_d.time->parent_dimension_index = it->second;
     }
-    // Compute number_of_time_dimensions
     for (const auto& d : broadcast_meta_.dimensions) {
         if (d.is_time_dimension())
             ++broadcast_meta_.number_of_time_dimensions;
     }
 
-    // Defense-in-depth: validate the constructed metadata against the project's
-    // existing invariants (positive sizes, consistent time-dim metadata, etc.).
     broadcast_meta_.validate();
 
-    // ---- Pre-compute translation tables (D-05) and per-dim sizes for compute_row clamp ----
     const auto& out_dims = broadcast_meta_.dimensions;
     lhs_dim_translate_.resize(out_dims.size());
     rhs_dim_translate_.resize(out_dims.size());
@@ -271,10 +216,6 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
         rhs_dim_sizes_[i] = (ri >= 0) ? rhs_meta.dimensions[ri].size : 0;
     }
 
-    // WR-06: pre-compute reverse translation tables (operand-index -> output-index).
-    // The forward tables can have -1 for output dims that exist on only one side; the reverse
-    // tables have NO -1 entries because every operand dim appears in the output (Pass 1/Pass 2
-    // invariant from broadcast_meta_ construction above).
     lhs_to_out_.assign(lhs_meta.dimensions.size(), -1);
     rhs_to_out_.assign(rhs_meta.dimensions.size(), -1);
     for (size_t out_i = 0; out_i < out_dims.size(); ++out_i) {
@@ -287,7 +228,6 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
     lhs_label_count_ = ll;
     rhs_label_count_ = rl;
 
-    // Pre-size mutable buffers (avoid per-row allocation in compute_row — CORE-06).
     lhs_dims_buf_.resize(lhs_meta.dimensions.size());
     rhs_dims_buf_.resize(rhs_meta.dimensions.size());
     lhs_buf_.resize(lhs_label_count_);
@@ -303,7 +243,6 @@ void BinaryOpNode::compute_row(const std::vector<int64_t>& dims, std::vector<dou
     if (out.size() != out_label_count)
         out.resize(out_label_count);
 
-    // Translate output dims -> lhs operand dims (D-05) using pre-computed reverse table (WR-06).
     for (size_t li = 0; li < lhs_dims_buf_.size(); ++li) {
         const int out_i = lhs_to_out_[li];
         int64_t coord = dims[out_i];
@@ -311,7 +250,6 @@ void BinaryOpNode::compute_row(const std::vector<int64_t>& dims, std::vector<dou
             coord = 1;  // size-1 broadcast clamp
         lhs_dims_buf_[li] = coord;
     }
-    // Same for rhs.
     for (size_t ri = 0; ri < rhs_dims_buf_.size(); ++ri) {
         const int out_i = rhs_to_out_[ri];
         int64_t coord = dims[out_i];
@@ -323,7 +261,6 @@ void BinaryOpNode::compute_row(const std::vector<int64_t>& dims, std::vector<dou
     lhs_->compute_row(lhs_dims_buf_, lhs_buf_);
     rhs_->compute_row(rhs_dims_buf_, rhs_buf_);
 
-    // D-08 label-axis broadcast: when one side has 1 label and the other has N, replicate.
     for (size_t k = 0; k < out_label_count; ++k) {
         const size_t li = (lhs_label_count_ == 1) ? 0 : k;
         const size_t ri = (rhs_label_count_ == 1) ? 0 : k;
