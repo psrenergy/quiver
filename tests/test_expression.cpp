@@ -15,7 +15,6 @@
 #include <vector>
 
 using namespace quiver;
-using namespace quiver::expression;
 namespace fs = std::filesystem;
 
 class ExpressionFixture : public ::testing::Test {
@@ -58,7 +57,7 @@ protected:
                           const BinaryMetadata& meta,
                           std::function<double(const std::vector<int64_t>& dims, size_t label_idx)> fill) {
         auto writer = BinaryFile::open_file(path, 'w', meta);
-        std::vector<int64_t> dims = quiver::binary::first_dimensions(meta);
+        std::vector<int64_t> dims = first_dimensions(meta);
         std::vector<double> row(meta.labels.size());
         for (;;) {
             for (size_t k = 0; k < row.size(); ++k)
@@ -68,7 +67,7 @@ protected:
                 dim_map[meta.dimensions[i].name] = dims[i];
             }
             writer.write(row, dim_map);
-            auto nxt = quiver::binary::next_dimensions(meta, dims);
+            auto nxt = next_dimensions(meta, dims);
             if (!nxt)
                 break;
             dims = std::move(*nxt);
@@ -79,7 +78,7 @@ protected:
         auto reader = BinaryFile::open_file(path, 'r');
         const auto& meta = reader.get_metadata();
         std::vector<double> out;
-        std::vector<int64_t> dims = quiver::binary::first_dimensions(meta);
+        std::vector<int64_t> dims = first_dimensions(meta);
         for (;;) {
             std::unordered_map<std::string, int64_t> dim_map;
             for (size_t i = 0; i < meta.dimensions.size(); ++i) {
@@ -87,7 +86,7 @@ protected:
             }
             auto cell = reader.read(dim_map, true);
             out.insert(out.end(), cell.begin(), cell.end());
-            auto nxt = quiver::binary::next_dimensions(meta, dims);
+            auto nxt = next_dimensions(meta, dims);
             if (!nxt)
                 break;
             dims = std::move(*nxt);

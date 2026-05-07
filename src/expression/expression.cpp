@@ -17,12 +17,12 @@ namespace quiver {
 
 namespace {
 
-void collect_file_paths(const expression::Node& node, std::vector<std::string>& out) {
-    if (auto* fn = dynamic_cast<const expression::FileNode*>(&node)) {
+void collect_file_paths(const Node& node, std::vector<std::string>& out) {
+    if (auto* fn = dynamic_cast<const FileNode*>(&node)) {
         out.push_back(fn->path());
         return;
     }
-    if (auto* bn = dynamic_cast<const expression::BinaryOpNode*>(&node)) {
+    if (auto* bn = dynamic_cast<const BinaryOpNode*>(&node)) {
         collect_file_paths(*bn->lhs(), out);
         collect_file_paths(*bn->rhs(), out);
         return;
@@ -31,15 +31,15 @@ void collect_file_paths(const expression::Node& node, std::vector<std::string>& 
 
 }  // namespace
 
-Expression::Expression(const BinaryFile& file) : node_(std::make_shared<expression::FileNode>(file)) {}
+Expression::Expression(const BinaryFile& file) : node_(std::make_shared<FileNode>(file)) {}
 
-Expression::Expression(std::shared_ptr<expression::Node> node) : node_(std::move(node)) {}
+Expression::Expression(std::shared_ptr<Node> node) : node_(std::move(node)) {}
 
 BinaryMetadata Expression::metadata() const {
     return node_->metadata();
 }
 
-const std::shared_ptr<expression::Node>& Expression::node() const {
+const std::shared_ptr<Node>& Expression::node() const {
     return node_;
 }
 
@@ -56,7 +56,7 @@ void Expression::save(const std::string& path) const {
     const auto meta = node_->metadata();
     auto writer = BinaryFile::open_file(path, 'w', meta);
 
-    std::vector<int64_t> dims = quiver::binary::first_dimensions(meta);
+    std::vector<int64_t> dims = first_dimensions(meta);
     std::vector<double> row;
     for (;;) {
         node_->compute_row(dims, row);
@@ -68,7 +68,7 @@ void Expression::save(const std::string& path) const {
         }
         writer.write(row, dim_map);
 
-        auto nxt = quiver::binary::next_dimensions(meta, dims);
+        auto nxt = next_dimensions(meta, dims);
         if (!nxt)
             break;
         dims = std::move(*nxt);
@@ -77,60 +77,60 @@ void Expression::save(const std::string& path) const {
 
 namespace {
 
-Expression make_binop(expression::BinaryOp op, const Expression& lhs, const Expression& rhs) {
-    return Expression(std::make_shared<expression::BinaryOpNode>(op, lhs.node(), rhs.node()));
+Expression make_binop(BinaryOp op, const Expression& lhs, const Expression& rhs) {
+    return Expression(std::make_shared<BinaryOpNode>(op, lhs.node(), rhs.node()));
 }
 
-Expression scalar_left(expression::BinaryOp op, double lhs, const Expression& rhs) {
-    auto scalar_node = std::make_shared<expression::ScalarNode>(lhs, rhs.metadata());
-    return Expression(std::make_shared<expression::BinaryOpNode>(op, scalar_node, rhs.node()));
+Expression scalar_left(BinaryOp op, double lhs, const Expression& rhs) {
+    auto scalar_node = std::make_shared<ScalarNode>(lhs, rhs.metadata());
+    return Expression(std::make_shared<BinaryOpNode>(op, scalar_node, rhs.node()));
 }
 
-Expression scalar_right(expression::BinaryOp op, const Expression& lhs, double rhs) {
-    auto scalar_node = std::make_shared<expression::ScalarNode>(rhs, lhs.metadata());
-    return Expression(std::make_shared<expression::BinaryOpNode>(op, lhs.node(), scalar_node));
+Expression scalar_right(BinaryOp op, const Expression& lhs, double rhs) {
+    auto scalar_node = std::make_shared<ScalarNode>(rhs, lhs.metadata());
+    return Expression(std::make_shared<BinaryOpNode>(op, lhs.node(), scalar_node));
 }
 
 }  // namespace
 
 Expression operator+(const Expression& lhs, const Expression& rhs) {
-    return make_binop(expression::BinaryOp::Add, lhs, rhs);
+    return make_binop(BinaryOp::Add, lhs, rhs);
 }
 Expression operator+(const Expression& lhs, double rhs) {
-    return scalar_right(expression::BinaryOp::Add, lhs, rhs);
+    return scalar_right(BinaryOp::Add, lhs, rhs);
 }
 Expression operator+(double lhs, const Expression& rhs) {
-    return scalar_left(expression::BinaryOp::Add, lhs, rhs);
+    return scalar_left(BinaryOp::Add, lhs, rhs);
 }
 
 Expression operator-(const Expression& lhs, const Expression& rhs) {
-    return make_binop(expression::BinaryOp::Subtract, lhs, rhs);
+    return make_binop(BinaryOp::Subtract, lhs, rhs);
 }
 Expression operator-(const Expression& lhs, double rhs) {
-    return scalar_right(expression::BinaryOp::Subtract, lhs, rhs);
+    return scalar_right(BinaryOp::Subtract, lhs, rhs);
 }
 Expression operator-(double lhs, const Expression& rhs) {
-    return scalar_left(expression::BinaryOp::Subtract, lhs, rhs);
+    return scalar_left(BinaryOp::Subtract, lhs, rhs);
 }
 
 Expression operator*(const Expression& lhs, const Expression& rhs) {
-    return make_binop(expression::BinaryOp::Multiply, lhs, rhs);
+    return make_binop(BinaryOp::Multiply, lhs, rhs);
 }
 Expression operator*(const Expression& lhs, double rhs) {
-    return scalar_right(expression::BinaryOp::Multiply, lhs, rhs);
+    return scalar_right(BinaryOp::Multiply, lhs, rhs);
 }
 Expression operator*(double lhs, const Expression& rhs) {
-    return scalar_left(expression::BinaryOp::Multiply, lhs, rhs);
+    return scalar_left(BinaryOp::Multiply, lhs, rhs);
 }
 
 Expression operator/(const Expression& lhs, const Expression& rhs) {
-    return make_binop(expression::BinaryOp::Divide, lhs, rhs);
+    return make_binop(BinaryOp::Divide, lhs, rhs);
 }
 Expression operator/(const Expression& lhs, double rhs) {
-    return scalar_right(expression::BinaryOp::Divide, lhs, rhs);
+    return scalar_right(BinaryOp::Divide, lhs, rhs);
 }
 Expression operator/(double lhs, const Expression& rhs) {
-    return scalar_left(expression::BinaryOp::Divide, lhs, rhs);
+    return scalar_left(BinaryOp::Divide, lhs, rhs);
 }
 
 }  // namespace quiver

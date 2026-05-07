@@ -10,7 +10,7 @@
 #include <optional>
 #include <vector>
 
-namespace quiver::binary {
+namespace quiver {
 
 namespace {
 
@@ -131,4 +131,4 @@ std::optional<std::vector<int64_t>> next_dimensions(const BinaryMetadata& meta, 
     return next;
 }
 
-}  // namespace quiver::binary
+}  // namespace quiver

@@ -15,16 +15,16 @@ class QUIVER_API Expression {
 public:
     Expression(const BinaryFile& file);
 
-    explicit Expression(std::shared_ptr<expression::Node> node);
+    explicit Expression(std::shared_ptr<Node> node);
 
     BinaryMetadata metadata() const;
 
     void save(const std::string& path) const;
 
-    const std::shared_ptr<expression::Node>& node() const;
+    const std::shared_ptr<Node>& node() const;
 
 private:
-    std::shared_ptr<expression::Node> node_;
+    std::shared_ptr<Node> node_;
 };
 
 QUIVER_API Expression operator+(const Expression& lhs, const Expression& rhs);

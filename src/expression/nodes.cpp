@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace quiver::expression {
+namespace quiver {
 
 FileNode::FileNode(const BinaryFile& file) : path_(file.get_file_path()), meta_(file.get_metadata()) {}
 
@@ -105,8 +105,8 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
         if (r_idx < 0)
             continue;
         const auto& r_dim = rhs_meta.dimensions[r_idx];
-        const bool l_time = l_dim.is_time_dimension();
-        const bool r_time = r_dim.is_time_dimension();
+        const auto l_time = l_dim.is_time_dimension();
+        const auto r_time = r_dim.is_time_dimension();
         if (l_time != r_time) {
             const std::string time_side = l_time ? "lhs" : "rhs";
             const std::string nontime_side = l_time ? "rhs" : "lhs";
@@ -117,8 +117,8 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
             continue;
         const auto& lp = *l_dim.time;
         const auto& rp = *r_dim.time;
-        const std::string l_parent = parent_name_of(lp.parent_dimension_index, lhs_meta);
-        const std::string r_parent = parent_name_of(rp.parent_dimension_index, rhs_meta);
+        const auto l_parent = parent_name_of(lp.parent_dimension_index, lhs_meta);
+        const auto r_parent = parent_name_of(rp.parent_dimension_index, rhs_meta);
         if (lp.frequency != rp.frequency || lp.initial_value != rp.initial_value || l_parent != r_parent) {
             throw std::runtime_error("Cannot apply: time dimension '" + l_dim.name +
                                      "' has incompatible TimeProperties");
@@ -133,8 +133,8 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
 
     const auto& l_labels = lhs_meta.labels;
     const auto& r_labels = rhs_meta.labels;
-    const size_t ll = l_labels.size();
-    const size_t rl = r_labels.size();
+    const auto ll = l_labels.size();
+    const auto rl = r_labels.size();
     std::vector<std::string> output_labels;
     if (ll == rl) {
         if (l_labels != r_labels) {
@@ -237,7 +237,7 @@ BinaryMetadata BinaryOpNode::metadata() const {
 }
 
 void BinaryOpNode::compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const {
-    const size_t out_label_count = broadcast_meta_.labels.size();
+    const auto out_label_count = broadcast_meta_.labels.size();
     if (out.size() != out_label_count)
         out.resize(out_label_count);
 
@@ -266,4 +266,4 @@ void BinaryOpNode::compute_row(const std::vector<int64_t>& dims, std::vector<dou
     }
 }
 
-}  // namespace quiver::expression
+}  // namespace quiver

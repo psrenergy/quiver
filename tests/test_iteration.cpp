@@ -4,8 +4,6 @@
 #include <quiver/element.h>
 
 using namespace quiver;
-using quiver::binary::first_dimensions;
-using quiver::binary::next_dimensions;
 
 namespace {
 

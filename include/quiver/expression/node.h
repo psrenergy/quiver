@@ -10,10 +10,8 @@
 #include <vector>
 
 namespace quiver {
-class BinaryFile;
-}  // namespace quiver
 
-namespace quiver::expression {
+class BinaryFile;
 
 class QUIVER_API Node {
 public:
@@ -89,6 +87,6 @@ private:
     mutable std::vector<double> rhs_buf_;
 };
 
-}  // namespace quiver::expression
+}  // namespace quiver
 
 #endif  // QUIVER_EXPRESSION_NODE_H
