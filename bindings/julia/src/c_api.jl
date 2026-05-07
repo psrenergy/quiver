@@ -595,6 +595,14 @@ function quiver_binary_file_open_write(path, md, out)
     @ccall libquiver_c.quiver_binary_file_open_write(path::Ptr{Cchar}, md::Ptr{quiver_binary_metadata_t}, out::Ptr{Ptr{quiver_binary_file_t}})::quiver_error_t
 end
 
+function quiver_binary_file_create(path, out)
+    @ccall libquiver_c.quiver_binary_file_create(path::Ptr{Cchar}, out::Ptr{Ptr{quiver_binary_file_t}})::quiver_error_t
+end
+
+function quiver_binary_file_open(binary_file, mode, md)
+    @ccall libquiver_c.quiver_binary_file_open(binary_file::Ptr{quiver_binary_file_t}, mode::Cchar, md::Ptr{quiver_binary_metadata_t})::quiver_error_t
+end
+
 function quiver_binary_file_close(binary_file)
     @ccall libquiver_c.quiver_binary_file_close(binary_file::Ptr{quiver_binary_file_t})::quiver_error_t
 end

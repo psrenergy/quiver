@@ -86,6 +86,37 @@ end
         @test_throws ArgumentError Quiver.Binary.open_file("test"; mode = :invalid)
     end
 
+    @testset "Two-step write with open!" begin
+        path = make_binary_file_path()
+        try
+            md = make_simple_metadata()
+            file = Quiver.Binary.File(path)
+            Quiver.Binary.open!(file; mode = :write, metadata = md)
+            Quiver.Binary.close!(file)
+
+            @test isfile(path * ".qvr")
+            @test isfile(path * ".toml")
+        finally
+            cleanup_binary_file(path)
+        end
+    end
+
+    @testset "Two-step read with open!" begin
+        path = make_binary_file_path()
+        try
+            md = make_simple_metadata()
+            writer = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+            Quiver.Binary.close!(writer)
+
+            reader = Quiver.Binary.File(path)
+            Quiver.Binary.open!(reader; mode = :read)
+            Quiver.Binary.close!(reader)
+            @test true
+        finally
+            cleanup_binary_file(path)
+        end
+    end
+
     @testset "Read mode returns correct metadata" begin
         path = make_binary_file_path()
         try

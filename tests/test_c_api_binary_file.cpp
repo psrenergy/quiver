@@ -88,6 +88,37 @@ TEST_F(BinaryCApiFixture, OpenReadNonExistent) {
     EXPECT_EQ(quiver_binary_file_open_read("nonexistent_path", &binary_file), QUIVER_ERROR);
 }
 
+TEST_F(BinaryCApiFixture, TwoStepWriteWithCreateAndOpen) {
+    auto* md = make_simple_metadata();
+    ASSERT_NE(md, nullptr);
+
+    quiver_binary_file_t* binary_file = nullptr;
+    ASSERT_EQ(quiver_binary_file_create(path.c_str(), &binary_file), QUIVER_OK);
+    ASSERT_NE(binary_file, nullptr);
+
+    ASSERT_EQ(quiver_binary_file_open(binary_file, 'w', md), QUIVER_OK);
+    EXPECT_TRUE(fs::exists(path + ".qvr"));
+    EXPECT_TRUE(fs::exists(path + ".toml"));
+
+    EXPECT_EQ(quiver_binary_file_close(binary_file), QUIVER_OK);
+    quiver_binary_metadata_free(md);
+}
+
+TEST_F(BinaryCApiFixture, TwoStepReadWithCreateAndOpen) {
+    auto* md = make_simple_metadata();
+    {
+        quiver_binary_file_t* writer = nullptr;
+        quiver_binary_file_open_write(path.c_str(), md, &writer);
+        quiver_binary_file_close(writer);
+    }
+    quiver_binary_metadata_free(md);
+
+    quiver_binary_file_t* reader = nullptr;
+    ASSERT_EQ(quiver_binary_file_create(path.c_str(), &reader), QUIVER_OK);
+    ASSERT_EQ(quiver_binary_file_open(reader, 'r', nullptr), QUIVER_OK);
+    EXPECT_EQ(quiver_binary_file_close(reader), QUIVER_OK);
+}
+
 // ============================================================================
 // Write + Read round-trip
 // ============================================================================

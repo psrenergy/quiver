@@ -51,14 +51,19 @@ BinaryFile& BinaryFile::operator=(BinaryFile&& other) noexcept = default;
 
 BinaryFile
 BinaryFile::open_file(const std::string& file_path, char mode, const std::optional<BinaryMetadata>& metadata) {
+    BinaryFile binary_file(file_path);
+    binary_file.open(mode, metadata);
+    return binary_file;
+}
+
+void BinaryFile::open(char mode, const std::optional<BinaryMetadata>& metadata) {
     namespace fs = std::filesystem;
+    const auto& file_path = impl_->file_path;
     auto canonical = fs::weakly_canonical(file_path).string();
 
     if (write_registry.count(canonical)) {
         throw std::runtime_error("Cannot open_file: file is already open for writing: " + canonical);
     }
-
-    BinaryFile binary_file(file_path);
 
     switch (mode) {
     case 'r': {
@@ -71,12 +76,12 @@ BinaryFile::open_file(const std::string& file_path, char mode, const std::option
         // Read TOML metadata
         std::ifstream toml_file(file_path + std::string(TOML_EXTENSION));
         std::string toml_content((std::istreambuf_iterator<char>(toml_file)), std::istreambuf_iterator<char>());
-        binary_file.impl_->metadata = BinaryMetadata::from_toml(toml_content);
+        impl_->metadata = BinaryMetadata::from_toml(toml_content);
 
         // Open binary data file
-        binary_file.impl_->io =
+        impl_->io =
             std::make_unique<std::fstream>(file_path + std::string(QVR_EXTENSION), std::ios::in | std::ios::binary);
-        return binary_file;
+        return;
     }
     case 'w': {
         // Validate metadata provided
@@ -88,16 +93,16 @@ BinaryFile::open_file(const std::string& file_path, char mode, const std::option
         std::ofstream toml_file(file_path + std::string(TOML_EXTENSION));
         toml_file << metadata->to_toml();
 
-        binary_file.impl_->metadata = metadata.value();
+        impl_->metadata = metadata.value();
 
         // Open binary data file
-        binary_file.impl_->io =
+        impl_->io =
             std::make_unique<std::fstream>(file_path + std::string(QVR_EXTENSION), std::ios::out | std::ios::binary);
-        binary_file.fill_file_with_nulls();  // can throw on disk-full
+        fill_file_with_nulls();  // can throw on disk-full
 
         write_registry.insert(canonical);
-        binary_file.impl_->registered_path = canonical;
-        return binary_file;
+        impl_->registered_path = canonical;
+        return;
     }
     default:
         throw std::invalid_argument("Invalid file mode: " + std::string(1, mode) +

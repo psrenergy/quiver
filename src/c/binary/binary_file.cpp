@@ -4,6 +4,7 @@
 #include "../internal.h"
 
 #include <new>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -40,6 +41,39 @@ QUIVER_C_API quiver_error_t quiver_binary_file_open_write(const char* path,
     } catch (const std::bad_alloc&) {
         quiver_set_last_error("Memory allocation failed");
         return QUIVER_ERROR;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_binary_file_create(const char* path, quiver_binary_file_t** out) {
+    QUIVER_REQUIRE(path, out);
+
+    try {
+        *out = new quiver_binary_file(quiver::BinaryFile(path));
+        return QUIVER_OK;
+    } catch (const std::bad_alloc&) {
+        quiver_set_last_error("Memory allocation failed");
+        return QUIVER_ERROR;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_binary_file_open(quiver_binary_file_t* binary_file,
+                                                    char mode,
+                                                    quiver_binary_metadata_t* md) {
+    QUIVER_REQUIRE(binary_file);
+
+    try {
+        std::optional<quiver::BinaryMetadata> metadata;
+        if (md != nullptr) {
+            metadata = md->metadata;
+        }
+        binary_file->binary_file.open(mode, metadata);
+        return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
         return QUIVER_ERROR;
