@@ -164,7 +164,7 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
     for (const auto& l_dim : lhs_meta.dimensions) {
         int r_idx = find_dim_index(rhs_meta.dimensions, l_dim.name);
         int64_t out_size = (r_idx >= 0) ? std::max(l_dim.size, rhs_meta.dimensions[r_idx].size) : l_dim.size;
-        Dimension d{l_dim.name, out_size, l_dim.time};  // copy time props from lhs (rhs equal per D-04)
+        Dimension d{l_dim.name, out_size, l_dim.time};  // copy time props from lhs (rhs equal)
         broadcast_meta_.dimensions.push_back(std::move(d));
         output_index_by_name[l_dim.name] = static_cast<int>(broadcast_meta_.dimensions.size()) - 1;
     }

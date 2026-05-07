@@ -103,8 +103,8 @@ TEST_F(ExpressionFixture, IdentityFile) {
     });
 
     auto a = BinaryFile::open_file(path_a, 'r');
-    Expression e = a;  // implicit conversion (CORE-01)
-    e.save(path_out);  // engine round-trip (CORE-05)
+    Expression e = a;
+    e.save(path_out);
 
     auto orig = read_all_cells(path_a);
     auto copy = read_all_cells(path_out);
@@ -166,8 +166,8 @@ TEST_F(ExpressionFixture, SelfSaveCollisionThrows) {
     Expression e = a;
     EXPECT_THROW(e.save(path_a), std::runtime_error);
 
-    // After the throw: size + first 64 bytes must be unchanged (D-11 must reject
-    // BEFORE BinaryFile::open_file('w', ...) calls fill_file_with_nulls).
+    // After the throw: size + first 64 bytes must be unchanged. The collision check
+    // must reject BEFORE BinaryFile::open_file('w', ...) calls fill_file_with_nulls.
     auto size_after = fs::file_size(qvr_path);
     std::ifstream in_after(qvr_path, std::ios::binary);
     std::vector<char> head_after(64);
@@ -191,11 +191,6 @@ TEST_F(ExpressionFixture, SelfSaveCollisionThrowsWithCanonicalizedPath) {
     EXPECT_TRUE(fs::exists(path_a + ".qvr"));  // input still exists, not wiped
 }
 
-// ============================================================================
-// CORE-02 / CORE-03 / CORE-04: binary operators on two files, scalar broadcast,
-// and chained expressions
-// ============================================================================
-
 TEST_F(ExpressionFixture, AddTwoFiles) {
     auto md = make_simple_metadata();
     write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
@@ -217,15 +212,11 @@ TEST_F(ExpressionFixture, AddTwoFiles) {
         EXPECT_DOUBLE_EQ(vo[i], va[i] + vb[i]);
 }
 
-// ============================================================================
-// CORE-01 / CORE-02 -- WR-08 implicit conversion in operator argument
-// ============================================================================
-
 TEST_F(ExpressionFixture, ImplicitConversionInOperatorArgument) {
     // The load-bearing line is `Expression e = a + b;` (no explicit Expression(...) wrapper
     // around either operand). Both BinaryFile& operands undergo implicit conversion via
     // expression.h's non-explicit Expression(const BinaryFile&) ctor. Adding `explicit`
-    // to that ctor would break this line (compile error); WR-08 backstops that regression.
+    // to that ctor would break this line (compile error).
     auto md = make_simple_metadata();
     write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
         return static_cast<double>(dims[0] * 100 + dims[1] * 10 + static_cast<int64_t>(k));
@@ -299,7 +290,7 @@ TEST_F(ExpressionFixture, SamePathTwice) {
     });
     auto a1 = BinaryFile::open_file(path_a, 'r');
     auto a2 = BinaryFile::open_file(path_a, 'r');
-    Expression e = Expression(a1) + Expression(a2);  // D-10: each FileNode opens independently
+    Expression e = Expression(a1) + Expression(a2);  // each FileNode opens independently
     e.save(path_out);
 
     auto va = read_all_cells(path_a);
@@ -308,10 +299,6 @@ TEST_F(ExpressionFixture, SamePathTwice) {
     for (size_t i = 0; i < va.size(); ++i)
         EXPECT_DOUBLE_EQ(vo[i], 2.0 * va[i]);
 }
-
-// ============================================================================
-// Error paths: D-04 / D-06 / D-07 / D-08 / D-09
-// ============================================================================
 
 TEST_F(ExpressionFixture, MismatchedShapesThrows) {
     auto md_a = BinaryMetadata::from_element(Element()
@@ -359,7 +346,7 @@ TEST_F(ExpressionFixture, UnitMismatchThrows) {
 
 TEST_F(ExpressionFixture, TimePropertiesMismatchThrows) {
     // Same dim "block" with same size on both sides, but lhs treats it as a (monthly)
-    // time dim while rhs treats it as a regular non-time dim. D-04 fires the
+    // time dim while rhs treats it as a regular non-time dim. The validator fires the
     // "is a time dimension on lhs but not on rhs" branch — a controlled mismatch
     // we can express via from_element without running into engine constraints on
     // mixed inner-time-dim frequencies (e.g., weekly inside monthly is unsupported).
@@ -434,12 +421,8 @@ TEST_F(ExpressionFixture, LabelMismatchThrows) {
     EXPECT_THROW({ auto e = Expression(a) + Expression(b); }, std::runtime_error);
 }
 
-// ============================================================================
-// CR-01 + WR-01 — D-23 mirror cases + parent-by-name compatibility
-// ============================================================================
-
 TEST_F(ExpressionFixture, MirrorTimeNonTimeMismatchAThrows) {
-    // md_a: block as NON-time. md_b: block as monthly time. Symmetric reject (D-15).
+    // md_a: block as NON-time. md_b: block as monthly time. Symmetric reject.
     auto md_a = BinaryMetadata::from_element(Element()
                                                  .set("version", "1")
                                                  .set("initial_datetime", "2025-01-01T00:00:00")
@@ -490,7 +473,7 @@ TEST_F(ExpressionFixture, MirrorTimeNonTimeMismatchBThrows) {
 
 TEST_F(ExpressionFixture, ParentDimMatchByNameAcceptsCrossPosition) {
     // md_a: parent of `day` is `month` at index 0. md_b: parent of `day` is `month` at index 1.
-    // Same parent NAME, different operand indices. WR-01: must accept (was reject pre-fix).
+    // Same parent NAME, different operand indices. Must accept.
     auto md_a = BinaryMetadata::from_element(Element()
                                                  .set("version", "1")
                                                  .set("initial_datetime", "2025-01-01T00:00:00")
@@ -522,7 +505,7 @@ TEST_F(ExpressionFixture, ParentDimMatchByNameAcceptsCrossPosition) {
 
 TEST_F(ExpressionFixture, ParentDimNameMismatchThrows) {
     // md_a: parent of `block` is `month` (idx 0). md_b: parent of `block` is `stage` (idx 0).
-    // Different parent NAMES. WR-01: must throw because parent names differ even though
+    // Different parent NAMES. Must throw because parent names differ even though
     // `block` exists on both. Both metadata use monthly+daily so the per-row write-time
     // validation succeeds — only the cross-operand parent-name check distinguishes them.
     auto md_a = BinaryMetadata::from_element(Element()
@@ -549,10 +532,6 @@ TEST_F(ExpressionFixture, ParentDimNameMismatchThrows) {
     auto b = BinaryFile::open_file(path_b, 'r');
     EXPECT_THROW({ auto e = Expression(a) + Expression(b); }, std::runtime_error);
 }
-
-// ============================================================================
-// CORE-02: subtract / multiply / divide on two files
-// ============================================================================
 
 TEST_F(ExpressionFixture, SubtractTwoFiles) {
     auto md = make_simple_metadata();
@@ -616,10 +595,6 @@ TEST_F(ExpressionFixture, DivideTwoFiles) {
     for (size_t i = 0; i < va.size(); ++i)
         EXPECT_DOUBLE_EQ(vo[i], va[i] / vb[i]);
 }
-
-// ============================================================================
-// CORE-03: scalar broadcast (left + right variants)
-// ============================================================================
 
 TEST_F(ExpressionFixture, ScalarBroadcastAddLeft) {
     auto md = make_simple_metadata();
@@ -732,10 +707,6 @@ TEST_F(ExpressionFixture, ScalarBroadcastDivideLeft) {
     for (size_t i = 0; i < va.size(); ++i)
         EXPECT_DOUBLE_EQ(vo[i], 100.0 / va[i]);
 }
-
-// ============================================================================
-// D-01 / D-02 / D-08: broadcast and dim-union
-// ============================================================================
 
 TEST_F(ExpressionFixture, BroadcastSizeOneDim) {
     auto md_a = BinaryMetadata::from_element(Element()
@@ -863,7 +834,7 @@ TEST_F(ExpressionFixture, UnionDimsAcrossOperands) {
     Expression e = Expression(a) + Expression(b);
     e.save(path_out);
 
-    // Output shape per D-02: lhs.dims (in lhs order) ++ rhs-only dims:
+    // Output shape: lhs.dims (in lhs order) ++ rhs-only dims:
     //   [scenario=2, time=4, stage=3]
     auto reopened = BinaryFile::open_file(path_out, 'r');
     const auto& m = reopened.get_metadata();
@@ -884,7 +855,7 @@ TEST_F(ExpressionFixture, UnionDimsAcrossOperands) {
 }
 
 TEST_F(ExpressionFixture, OperandDimsInDifferentOrder) {
-    // D-05: operand dim ordering may differ from output ordering. The
+    // Operand dim ordering may differ from output ordering. The
     // translation tables (lhs_dim_translate_ / rhs_dim_translate_ in
     // BinaryOpNode) map each output dim index back to the corresponding
     // operand dim index by NAME. Same dim set, swapped order: lhs has
@@ -920,7 +891,7 @@ TEST_F(ExpressionFixture, OperandDimsInDifferentOrder) {
     Expression e = Expression(a) + Expression(b);
     e.save(path_out);
 
-    // Output dims follow lhs order per D-02 (same set ⇒ no rhs-only
+    // Output dims follow lhs order (same set ⇒ no rhs-only
     // dims): [scenario=2, time=4].
     auto reopened = BinaryFile::open_file(path_out, 'r');
     const auto& m = reopened.get_metadata();
@@ -944,10 +915,6 @@ TEST_F(ExpressionFixture, OperandDimsInDifferentOrder) {
         EXPECT_DOUBLE_EQ(cell[0], expected) << "Mismatch at (s=" << sample.s << ", t=" << sample.t << ")";
     }
 }
-
-// ============================================================================
-// CORE-06: large-grid smoke test (single-buffer reuse backstop)
-// ============================================================================
 
 TEST_F(ExpressionFixture, LargeGridCompletes) {
     // 50x20 grid with 4 labels = 16,000 doubles per file. Smaller than the
@@ -977,9 +944,7 @@ TEST_F(ExpressionFixture, LargeGridCompletes) {
     const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
 
     // Generous 5-second budget; the test is a backstop for severe regressions
-    // (e.g. accidental per-row heap allocations). The load-bearing CORE-06
-    // verification is the grep audit on src/expr/expression.cpp + nodes.cpp
-    // (Plan 02 Task 8 SUMMARY).
+    // (e.g. accidental per-row heap allocations).
     EXPECT_LT(elapsed, 5000) << "Save took " << elapsed << " ms (budget 5000 ms)";
 
     // Spot-check a handful of cells for value correctness.
