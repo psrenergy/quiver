@@ -85,8 +85,8 @@ void validate_compatibility(const BinaryMetadata& lhs, const BinaryMetadata& rhs
         auto r_idx = find_dim_index(rhs.dimensions, l_dim.name);
         if (r_idx < 0)
             continue;
-        int64_t l_size = l_dim.size;
-        int64_t r_size = rhs.dimensions[r_idx].size;
+        auto l_size = l_dim.size;
+        auto r_size = rhs.dimensions[r_idx].size;
         if (l_size == r_size)
             continue;
         if (l_size == 1 || r_size == 1)
@@ -161,7 +161,7 @@ build_broadcast_metadata(const BinaryMetadata& lhs, const BinaryMetadata& rhs, s
 
     std::unordered_map<std::string, int> output_index_by_name;
     for (const auto& l_dim : lhs.dimensions) {
-        int r_idx = find_dim_index(rhs.dimensions, l_dim.name);
+        auto r_idx = find_dim_index(rhs.dimensions, l_dim.name);
         int64_t out_size = (r_idx >= 0) ? std::max(l_dim.size, rhs.dimensions[r_idx].size) : l_dim.size;
         Dimension d{l_dim.name, out_size, l_dim.time};  // copy time props from lhs (rhs equal)
         out.dimensions.push_back(std::move(d));
@@ -215,8 +215,8 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
     lhs_dim_sizes_.assign(out_dims.size(), 0);
     rhs_dim_sizes_.assign(out_dims.size(), 0);
     for (size_t i = 0; i < out_dims.size(); ++i) {
-        int li = find_dim_index(lhs_meta.dimensions, out_dims[i].name);
-        int ri = find_dim_index(rhs_meta.dimensions, out_dims[i].name);
+        auto li = find_dim_index(lhs_meta.dimensions, out_dims[i].name);
+        auto ri = find_dim_index(rhs_meta.dimensions, out_dims[i].name);
         lhs_dim_translate_[i] = li;
         rhs_dim_translate_[i] = ri;
         lhs_dim_sizes_[i] = (li >= 0) ? lhs_meta.dimensions[li].size : 0;
@@ -251,15 +251,15 @@ void BinaryOpNode::compute_row(const std::vector<int64_t>& dims, std::vector<dou
         out.resize(out_label_count);
 
     for (size_t li = 0; li < lhs_dims_buf_.size(); ++li) {
-        const int out_i = lhs_to_out_[li];
-        int64_t coord = dims[out_i];
+        const auto out_i = lhs_to_out_[li];
+        auto coord = dims[out_i];
         if (lhs_dim_sizes_[out_i] == 1)
             coord = 1;  // size-1 broadcast clamp
         lhs_dims_buf_[li] = coord;
     }
     for (size_t ri = 0; ri < rhs_dims_buf_.size(); ++ri) {
-        const int out_i = rhs_to_out_[ri];
-        int64_t coord = dims[out_i];
+        const auto out_i = rhs_to_out_[ri];
+        auto coord = dims[out_i];
         if (rhs_dim_sizes_[out_i] == 1)
             coord = 1;
         rhs_dims_buf_[ri] = coord;
