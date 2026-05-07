@@ -21,10 +21,13 @@ set(QUIVER_SOURCES
     schema_validator.cpp
     type_validator.cpp
     binary/binary_file.cpp
+    binary/iteration.cpp
     binary/csv_converter.cpp
     binary/binary_metadata.cpp
     binary/dimension.cpp
     binary/time_properties.cpp
+    expression/expression.cpp
+    expression/nodes.cpp
 )
 
 # Build type
