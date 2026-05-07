@@ -42,14 +42,10 @@ protected:
     std::string path_a, path_b, path_c, path_out;
 
     // Default 3 x 2 metadata, MW, labels {val1,val2}.
-    static quiver_binary_metadata_t* make_simple_metadata() {
-        return make_metadata(3, 2, "MW", {"val1", "val2"});
-    }
+    static quiver_binary_metadata_t* make_simple_metadata() { return make_metadata(3, 2, "MW", {"val1", "val2"}); }
 
-    static quiver_binary_metadata_t* make_metadata(int64_t rows,
-                                                   int64_t cols,
-                                                   const char* unit,
-                                                   const std::vector<const char*>& labels) {
+    static quiver_binary_metadata_t*
+    make_metadata(int64_t rows, int64_t cols, const char* unit, const std::vector<const char*>& labels) {
         quiver_element_t* el = nullptr;
         quiver_element_create(&el);
         quiver_element_set_string(el, "version", "1");
@@ -134,8 +130,7 @@ protected:
 // ============================================================================
 
 TEST_F(ExpressionCApiFixture, IdentityFile) {
-    write_fixture(path_a,
-                  [](int r, int c, int k) { return static_cast<double>(r * 100 + c * 10 + k); });
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 100 + c * 10 + k); });
 
     auto* e = expr_from_file(path_a);
     ASSERT_NE(e, nullptr);
@@ -176,10 +171,8 @@ TEST_F(ExpressionCApiFixture, SaveOpenedTwiceProducesSameOutput) {
 // ============================================================================
 
 TEST_F(ExpressionCApiFixture, AddTwoFiles) {
-    write_fixture(path_a,
-                  [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
-    write_fixture(path_b,
-                  [](int r, int c, int k) { return static_cast<double>(r * 100 + c * 5 + k * 2); });
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
+    write_fixture(path_b, [](int r, int c, int k) { return static_cast<double>(r * 100 + c * 5 + k * 2); });
 
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
@@ -199,8 +192,7 @@ TEST_F(ExpressionCApiFixture, AddTwoFiles) {
 }
 
 TEST_F(ExpressionCApiFixture, SubtractTwoFiles) {
-    write_fixture(path_a,
-                  [](int r, int c, int k) { return static_cast<double>(r * 100 + c * 10 + k); });
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 100 + c * 10 + k); });
     write_fixture(path_b, [](int r, int c, int k) { return static_cast<double>(r + c + k); });
 
     auto* a = expr_from_file(path_a);
