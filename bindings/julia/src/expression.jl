@@ -1,8 +1,3 @@
-module Expression
-
-using ..Quiver: C, check
-using ..Quiver.Binary: File, Metadata
-
 mutable struct Expression
     ptr::Ptr{C.quiver_expression}
 
@@ -13,7 +8,7 @@ mutable struct Expression
     end
 end
 
-function Expression(file::File)
+function Expression(file::Binary.File)
     out = Ref{Ptr{C.quiver_expression}}(C_NULL)
     check(C.quiver_expression_from_file(file.ptr, out))
     return Expression(out[])
@@ -27,19 +22,19 @@ function close!(e::Expression)
     return nothing
 end
 
-function _apply(op, lhs::Expression, rhs::Expression)
+function _binop(op, lhs::Expression, rhs::Expression)
     out = Ref{Ptr{C.quiver_expression}}(C_NULL)
     check(C.quiver_expression_apply(op, lhs.ptr, rhs.ptr, out))
     return Expression(out[])
 end
 
-function _apply_scalar_right(op, lhs::Expression, rhs::Real)
+function _binop(op, lhs::Expression, rhs::Real)
     out = Ref{Ptr{C.quiver_expression}}(C_NULL)
     check(C.quiver_expression_apply_scalar_right(op, lhs.ptr, Float64(rhs), out))
     return Expression(out[])
 end
 
-function _apply_scalar_left(op, lhs::Real, rhs::Expression)
+function _binop(op, lhs::Real, rhs::Expression)
     out = Ref{Ptr{C.quiver_expression}}(C_NULL)
     check(C.quiver_expression_apply_scalar_left(op, Float64(lhs), rhs.ptr, out))
     return Expression(out[])
@@ -48,9 +43,9 @@ end
 for (op, c_op) in [(:+, :ADD), (:-, :SUBTRACT), (:*, :MULTIPLY), (:/, :DIVIDE)]
     c_enum = Symbol("QUIVER_EXPRESSION_OP_", c_op)
     @eval begin
-        Base.$op(a::Expression, b::Expression) = _apply(C.$c_enum, a, b)
-        Base.$op(a::Expression, b::Real) = _apply_scalar_right(C.$c_enum, a, b)
-        Base.$op(a::Real, b::Expression) = _apply_scalar_left(C.$c_enum, a, b)
+        Base.$op(a::Expression, b::Expression) = _binop(C.$c_enum, a, b)
+        Base.$op(a::Expression, b::Real) = _binop(C.$c_enum, a, b)
+        Base.$op(a::Real, b::Expression) = _binop(C.$c_enum, a, b)
     end
 end
 
@@ -62,7 +57,5 @@ end
 function get_metadata(e::Expression)
     out = Ref{Ptr{C.quiver_binary_metadata}}(C_NULL)
     check(C.quiver_expression_get_metadata(e.ptr, out))
-    return Metadata(out[])
-end
-
+    return Binary.Metadata(out[])
 end

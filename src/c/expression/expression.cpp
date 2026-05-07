@@ -4,7 +4,6 @@
 
 #include <new>
 #include <stdexcept>
-#include <string>
 
 namespace {
 

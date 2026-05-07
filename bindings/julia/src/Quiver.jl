@@ -24,7 +24,7 @@ include("lua_runner.jl")
 include("binary/Binary.jl")
 include("expression.jl")
 
-export Element, Database, LuaRunner, DatabaseException
+export Element, Database, LuaRunner, Expression, DatabaseException
 export ScalarMetadata, GroupMetadata
 export QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_FLOAT, QUIVER_DATA_TYPE_STRING
 
