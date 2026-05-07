@@ -39,6 +39,7 @@ public:
     // Getters
     const BinaryMetadata& get_metadata() const;
     const std::string& get_file_path() const;
+    bool is_read_mode() const;
 
 private:
     struct Impl;

@@ -102,7 +102,7 @@ TEST_F(ExpressionFixture, IdentityFile) {
     });
 
     auto a = BinaryFile::open_file(path_a, 'r');
-    Expression e = a;
+    Expression e(a);
     e.save(path_out);
 
     auto orig = read_all_cells(path_a);
@@ -116,7 +116,7 @@ TEST_F(ExpressionFixture, SaveProducesReadableFile) {
     auto md = make_simple_metadata();
     write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
-    Expression e = a;
+    Expression e(a);
     e.save(path_out);
 
     auto reopened = BinaryFile::open_file(path_out, 'r');
@@ -136,7 +136,7 @@ TEST_F(ExpressionFixture, SaveOpenedTwiceProducesSameOutput) {
         return static_cast<double>(dims[0] + dims[1] + static_cast<int64_t>(k));
     });
     auto a = BinaryFile::open_file(path_a, 'r');
-    Expression e = a;
+    Expression e(a);
     e.save(path_out);
     e.save(path_out2);
 
@@ -162,7 +162,7 @@ TEST_F(ExpressionFixture, SelfSaveCollisionThrows) {
     in_before.close();
 
     auto a = BinaryFile::open_file(path_a, 'r');
-    Expression e = a;
+    Expression e(a);
     EXPECT_THROW(e.save(path_a), std::runtime_error);
 
     // After the throw: size + first 64 bytes must be unchanged. The collision check
@@ -181,7 +181,7 @@ TEST_F(ExpressionFixture, SelfSaveCollisionThrowsWithCanonicalizedPath) {
     write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 42.0; });
 
     auto a = BinaryFile::open_file(path_a, 'r');
-    Expression e = a;
+    Expression e(a);
 
     // Build a non-canonical reference to the same file (path with redundant "./").
     // weakly_canonical normalizes both this and path_a to the same canonical form.
@@ -207,34 +207,6 @@ TEST_F(ExpressionFixture, AddTwoFiles) {
     auto vb = read_all_cells(path_b);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(va.size(), vo.size());
-    for (size_t i = 0; i < va.size(); ++i)
-        EXPECT_DOUBLE_EQ(vo[i], va[i] + vb[i]);
-}
-
-TEST_F(ExpressionFixture, ImplicitConversionInOperatorArgument) {
-    // The load-bearing line is `Expression e = a + b;` (no explicit Expression(...) wrapper
-    // around either operand). Both BinaryFile& operands undergo implicit conversion via
-    // expression.h's non-explicit Expression(const BinaryFile&) ctor. Adding `explicit`
-    // to that ctor would break this line (compile error).
-    auto md = make_simple_metadata();
-    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
-        return static_cast<double>(dims[0] * 100 + dims[1] * 10 + static_cast<int64_t>(k));
-    });
-    write_qvr(path_b, md, [](const std::vector<int64_t>& dims, size_t k) {
-        return static_cast<double>(dims[0] + dims[1] + static_cast<int64_t>(k));
-    });
-    auto a = BinaryFile::open_file(path_a, 'r');
-    auto b = BinaryFile::open_file(path_b, 'r');
-
-    // The load-bearing line -- implicit conversion of BOTH operands inside operator+.
-    Expression e = a + b;
-
-    e.save(path_out);
-    auto va = read_all_cells(path_a);
-    auto vb = read_all_cells(path_b);
-    auto vo = read_all_cells(path_out);
-    ASSERT_EQ(va.size(), vo.size());
-    ASSERT_EQ(vb.size(), vo.size());
     for (size_t i = 0; i < va.size(); ++i)
         EXPECT_DOUBLE_EQ(vo[i], va[i] + vb[i]);
 }
@@ -955,4 +927,31 @@ TEST_F(ExpressionFixture, LargeGridCompletes) {
             EXPECT_DOUBLE_EQ(cell[k], (a_val + b_val) * 2.0);
         }
     }
+}
+
+TEST_F(ExpressionFixture, ExpressionFromWriteModeBinaryFileThrows) {
+    auto md = make_simple_metadata();
+    auto writer = BinaryFile::open_file(path_a, 'w', md);
+
+    EXPECT_THROW(
+        {
+            try {
+                Expression e(writer);
+                (void)e;
+            } catch (const std::runtime_error& err) {
+                EXPECT_STREQ(err.what(), "Cannot create_expression: BinaryFile must be opened in read mode");
+                throw;
+            }
+        },
+        std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, IsReadModeAccessor) {
+    auto md = make_simple_metadata();
+    {
+        auto writer = BinaryFile::open_file(path_a, 'w', md);
+        EXPECT_FALSE(writer.is_read_mode());
+    }
+    auto reader = BinaryFile::open_file(path_a, 'r');
+    EXPECT_TRUE(reader.is_read_mode());
 }
