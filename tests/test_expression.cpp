@@ -18,10 +18,6 @@ using namespace quiver;
 using namespace quiver::expr;
 namespace fs = std::filesystem;
 
-// ============================================================================
-// Fixture
-// ============================================================================
-
 class ExpressionFixture : public ::testing::Test {
 protected:
     void SetUp() override {
@@ -58,9 +54,6 @@ protected:
                                                 .set("labels", {"val1", "val2"}));
     }
 
-    // Programmatic .qvr generator: opens writer, walks all positions via
-    // quiver::binary::first/next_dimensions, calls fill(...) per cell to compute the row,
-    // writes via the map-based write. Closes on scope exit.
     static void write_qvr(const std::string& path,
                           const BinaryMetadata& meta,
                           std::function<double(const std::vector<int64_t>& dims, size_t label_idx)> fill) {
@@ -82,8 +75,6 @@ protected:
         }
     }
 
-    // Read all cells from a written .qvr into a flat vector (column-major across all
-    // dim positions, then labels). Used by tests for byte-by-byte comparison.
     static std::vector<double> read_all_cells(const std::string& path) {
         auto reader = BinaryFile::open_file(path, 'r');
         const auto& meta = reader.get_metadata();
@@ -104,10 +95,6 @@ protected:
         return out;
     }
 };
-
-// ============================================================================
-// CORE-01 / CORE-05: implicit conversion + save round-trip
-// ============================================================================
 
 TEST_F(ExpressionFixture, IdentityFile) {
     auto md = make_simple_metadata();
@@ -160,10 +147,6 @@ TEST_F(ExpressionFixture, SaveOpenedTwiceProducesSameOutput) {
     for (size_t i = 0; i < v1.size(); ++i)
         EXPECT_DOUBLE_EQ(v1[i], v2[i]);
 }
-
-// ============================================================================
-// D-11: self-save collision
-// ============================================================================
 
 TEST_F(ExpressionFixture, SelfSaveCollisionThrows) {
     auto md = make_simple_metadata();

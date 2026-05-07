@@ -85,7 +85,7 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
     for (const auto& l_dim : lhs_meta.dimensions) {
         int r_idx = find_dim_index(rhs_meta.dimensions, l_dim.name);
         if (r_idx < 0)
-            continue; 
+            continue;
         int64_t l_size = l_dim.size;
         int64_t r_size = rhs_meta.dimensions[r_idx].size;
         if (l_size == r_size)
@@ -114,7 +114,7 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
                                      time_side + " but not on " + nontime_side);
         }
         if (!l_time)
-            continue; 
+            continue;
         const auto& lp = *l_dim.time;
         const auto& rp = *r_dim.time;
         const std::string l_parent = parent_name_of(lp.parent_dimension_index, lhs_meta);
@@ -153,7 +153,7 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
 
     broadcast_meta_ = BinaryMetadata{};
     broadcast_meta_.version = lhs_meta.version;
-    broadcast_meta_.unit = lhs_meta.unit; 
+    broadcast_meta_.unit = lhs_meta.unit;
     broadcast_meta_.labels = output_labels;
     broadcast_meta_.initial_datetime = lhs_has_time
                                            ? lhs_meta.initial_datetime
