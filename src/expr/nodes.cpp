@@ -78,7 +78,6 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
     const auto lhs_meta = lhs_->metadata();
     const auto rhs_meta = rhs_->metadata();
 
-    // ---- D-07: unit must match ----
     if (lhs_meta.unit != rhs_meta.unit) {
         throw std::runtime_error("Cannot apply: units differ ('" + lhs_meta.unit + "' vs '" + rhs_meta.unit + "')");
     }
@@ -86,7 +85,7 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
     for (const auto& l_dim : lhs_meta.dimensions) {
         int r_idx = find_dim_index(rhs_meta.dimensions, l_dim.name);
         if (r_idx < 0)
-            continue;  // dim only on lhs; D-02 keeps verbatim
+            continue; 
         int64_t l_size = l_dim.size;
         int64_t r_size = rhs_meta.dimensions[r_idx].size;
         if (l_size == r_size)
@@ -104,19 +103,18 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
     for (const auto& l_dim : lhs_meta.dimensions) {
         int r_idx = find_dim_index(rhs_meta.dimensions, l_dim.name);
         if (r_idx < 0)
-            continue;  // dim only on lhs; D-02 keeps verbatim
+            continue;
         const auto& r_dim = rhs_meta.dimensions[r_idx];
         const bool l_time = l_dim.is_time_dimension();
         const bool r_time = r_dim.is_time_dimension();
         if (l_time != r_time) {
-            // D-15: symmetric reject. Mirrors the existing lhs-time/rhs-non-time direction.
             const std::string time_side = l_time ? "lhs" : "rhs";
             const std::string nontime_side = l_time ? "rhs" : "lhs";
             throw std::runtime_error("Cannot apply: dimension '" + l_dim.name + "' is a time dimension on " +
                                      time_side + " but not on " + nontime_side);
         }
         if (!l_time)
-            continue;  // both non-time; nothing more to validate here.
+            continue; 
         const auto& lp = *l_dim.time;
         const auto& rp = *r_dim.time;
         const std::string l_parent = parent_name_of(lp.parent_dimension_index, lhs_meta);
@@ -155,7 +153,7 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
 
     broadcast_meta_ = BinaryMetadata{};
     broadcast_meta_.version = lhs_meta.version;
-    broadcast_meta_.unit = lhs_meta.unit;  // D-07 ensured equality
+    broadcast_meta_.unit = lhs_meta.unit; 
     broadcast_meta_.labels = output_labels;
     broadcast_meta_.initial_datetime = lhs_has_time
                                            ? lhs_meta.initial_datetime

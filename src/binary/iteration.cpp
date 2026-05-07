@@ -14,10 +14,6 @@ namespace quiver::binary {
 
 namespace {
 
-// Lifted from src/binary/binary_file.cpp::dimension_sizes_at_values (the protected
-// member). The only substitution: the original impl reads `impl_->metadata.dimensions`;
-// this version takes `const BinaryMetadata& metadata` directly. Calendar-aware
-// variable-size handling for time dimensions whose parent is monthly/yearly.
 std::vector<int64_t> dimension_sizes_at_values(const BinaryMetadata& metadata,
                                                const std::vector<int64_t>& dimension_values) {
     using namespace quiver::time;
@@ -47,14 +43,13 @@ std::vector<int64_t> dimension_sizes_at_values(const BinaryMetadata& metadata,
         TimeFrequency freq = dim.time->frequency;
         TimeFrequency parent_freq = parent.time->frequency;
 
-        // Yearly and weekly frequencies must always be at index 1, so they are not considered in this loop
         switch (freq) {
         case TimeFrequency::Hourly:
             switch (parent_freq) {
             case TimeFrequency::Daily:
-                break;  // Number of hours in a day is always the same
+                break;
             case TimeFrequency::Weekly:
-                break;  // Number of hours in a week is always the same
+                break;
             case TimeFrequency::Monthly:
                 sizes[i] =
                     static_cast<unsigned>((ymd.year() / ymd.month() / std::chrono::last).day()) * MAX_HOURS_IN_DAY;
@@ -81,7 +76,7 @@ std::vector<int64_t> dimension_sizes_at_values(const BinaryMetadata& metadata,
             }
             break;
         case TimeFrequency::Monthly:
-            break;  // Number of months in a year is always the same
+            break;
         default:
             break;
         }
@@ -107,10 +102,6 @@ std::optional<std::vector<int64_t>> next_dimensions(const BinaryMetadata& meta, 
 
     std::vector<int64_t> next = current;
 
-    // WR-09 (D-22): track whether the increment loop broke. If it wrapped through every
-    // dim without breaking, we've exhausted the position space -- equivalent to the old
-    // post-loop "next == first_dimensions(meta)" check, but without rebuilding
-    // first_dimensions per call (~7.3M wasted vector allocations on a 480x500x31 sweep).
     bool incremented = false;
     for (int i = static_cast<int>(next.size()) - 1; i >= 0; --i) {
         if (next[i] < current_sizes[i]) {
@@ -122,14 +113,9 @@ std::optional<std::vector<int64_t>> next_dimensions(const BinaryMetadata& meta, 
         }
     }
 
-    // End-of-iteration: if the increment loop wrapped through every dimension without
-    // breaking, we've exhausted the position space.
     if (!incremented)
         return std::nullopt;
 
-    // Adjust time dimensions which were reset to 1 before their parent dimension is incremented.
-    // Ex: [month, scenario, day] when initial date is 2025-01-02
-    // [1, 1, 31] -> [1, 2, 1] is incorrect, should be [1, 2, 2]
     for (size_t i = 0; i < next.size(); ++i) {
         const auto& dim = dimensions[i];
         if (!dim.is_time_dimension())
