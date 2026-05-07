@@ -10,50 +10,44 @@ extern "C" {
 
 namespace {
 
-quiver::Expression apply_op(quiver_expression_op_t op,
-                            const quiver::Expression& lhs,
-                            const quiver::Expression& rhs) {
+quiver::Expression apply_op(quiver_expression_op_t op, const quiver::Expression& lhs, const quiver::Expression& rhs) {
     switch (op) {
-        case QUIVER_EXPRESSION_OP_ADD:
-            return lhs + rhs;
-        case QUIVER_EXPRESSION_OP_SUBTRACT:
-            return lhs - rhs;
-        case QUIVER_EXPRESSION_OP_MULTIPLY:
-            return lhs * rhs;
-        case QUIVER_EXPRESSION_OP_DIVIDE:
-            return lhs / rhs;
+    case QUIVER_EXPRESSION_OP_ADD:
+        return lhs + rhs;
+    case QUIVER_EXPRESSION_OP_SUBTRACT:
+        return lhs - rhs;
+    case QUIVER_EXPRESSION_OP_MULTIPLY:
+        return lhs * rhs;
+    case QUIVER_EXPRESSION_OP_DIVIDE:
+        return lhs / rhs;
     }
     throw std::runtime_error("Cannot apply expression operation: unknown op");
 }
 
-quiver::Expression apply_op_scalar_right(quiver_expression_op_t op,
-                                         const quiver::Expression& lhs,
-                                         double rhs) {
+quiver::Expression apply_op_scalar_right(quiver_expression_op_t op, const quiver::Expression& lhs, double rhs) {
     switch (op) {
-        case QUIVER_EXPRESSION_OP_ADD:
-            return lhs + rhs;
-        case QUIVER_EXPRESSION_OP_SUBTRACT:
-            return lhs - rhs;
-        case QUIVER_EXPRESSION_OP_MULTIPLY:
-            return lhs * rhs;
-        case QUIVER_EXPRESSION_OP_DIVIDE:
-            return lhs / rhs;
+    case QUIVER_EXPRESSION_OP_ADD:
+        return lhs + rhs;
+    case QUIVER_EXPRESSION_OP_SUBTRACT:
+        return lhs - rhs;
+    case QUIVER_EXPRESSION_OP_MULTIPLY:
+        return lhs * rhs;
+    case QUIVER_EXPRESSION_OP_DIVIDE:
+        return lhs / rhs;
     }
     throw std::runtime_error("Cannot apply expression operation: unknown op");
 }
 
-quiver::Expression apply_op_scalar_left(quiver_expression_op_t op,
-                                        double lhs,
-                                        const quiver::Expression& rhs) {
+quiver::Expression apply_op_scalar_left(quiver_expression_op_t op, double lhs, const quiver::Expression& rhs) {
     switch (op) {
-        case QUIVER_EXPRESSION_OP_ADD:
-            return lhs + rhs;
-        case QUIVER_EXPRESSION_OP_SUBTRACT:
-            return lhs - rhs;
-        case QUIVER_EXPRESSION_OP_MULTIPLY:
-            return lhs * rhs;
-        case QUIVER_EXPRESSION_OP_DIVIDE:
-            return lhs / rhs;
+    case QUIVER_EXPRESSION_OP_ADD:
+        return lhs + rhs;
+    case QUIVER_EXPRESSION_OP_SUBTRACT:
+        return lhs - rhs;
+    case QUIVER_EXPRESSION_OP_MULTIPLY:
+        return lhs * rhs;
+    case QUIVER_EXPRESSION_OP_DIVIDE:
+        return lhs / rhs;
     }
     throw std::runtime_error("Cannot apply expression operation: unknown op");
 }
