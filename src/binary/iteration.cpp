@@ -40,8 +40,8 @@ std::vector<int64_t> dimension_sizes_at_values(const BinaryMetadata& metadata,
             continue;
 
         const auto& parent = dimensions[dim.time->parent_dimension_index];
-        TimeFrequency freq = dim.time->frequency;
-        TimeFrequency parent_freq = parent.time->frequency;
+        auto freq = dim.time->frequency;
+        auto parent_freq = parent.time->frequency;
 
         switch (freq) {
         case TimeFrequency::Hourly:
@@ -102,7 +102,7 @@ std::optional<std::vector<int64_t>> next_dimensions(const BinaryMetadata& meta, 
 
     std::vector<int64_t> next = current;
 
-    bool incremented = false;
+    auto incremented = false;
     for (int i = static_cast<int>(next.size()) - 1; i >= 0; --i) {
         if (next[i] < current_sizes[i]) {
             next[i] += 1;
@@ -120,8 +120,8 @@ std::optional<std::vector<int64_t>> next_dimensions(const BinaryMetadata& meta, 
         const auto& dim = dimensions[i];
         if (!dim.is_time_dimension())
             continue;
-        int64_t initial_value = dim.time->initial_value;
-        int64_t parent_idx = dim.time->parent_dimension_index;  // -1 = no parent
+        auto initial_value = dim.time->initial_value;
+        auto parent_idx = dim.time->parent_dimension_index;  // -1 = no parent
         if (next[i] < initial_value && parent_idx != -1 &&
             next[parent_idx] == dimensions[parent_idx].time->initial_value) {
             next[i] = initial_value;

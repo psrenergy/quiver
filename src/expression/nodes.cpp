@@ -82,7 +82,7 @@ void validate_compatibility(const BinaryMetadata& lhs, const BinaryMetadata& rhs
     }
 
     for (const auto& l_dim : lhs.dimensions) {
-        int r_idx = find_dim_index(rhs.dimensions, l_dim.name);
+        auto r_idx = find_dim_index(rhs.dimensions, l_dim.name);
         if (r_idx < 0)
             continue;
         int64_t l_size = l_dim.size;
@@ -97,7 +97,7 @@ void validate_compatibility(const BinaryMetadata& lhs, const BinaryMetadata& rhs
     }
 
     for (const auto& l_dim : lhs.dimensions) {
-        int r_idx = find_dim_index(rhs.dimensions, l_dim.name);
+        auto r_idx = find_dim_index(rhs.dimensions, l_dim.name);
         if (r_idx < 0)
             continue;
         const auto& r_dim = rhs.dimensions[r_idx];
@@ -121,8 +121,8 @@ void validate_compatibility(const BinaryMetadata& lhs, const BinaryMetadata& rhs
         }
     }
 
-    const bool lhs_has_time = any_time_dim(lhs.dimensions);
-    const bool rhs_has_time = any_time_dim(rhs.dimensions);
+    const auto lhs_has_time = any_time_dim(lhs.dimensions);
+    const auto rhs_has_time = any_time_dim(rhs.dimensions);
     if (lhs_has_time && rhs_has_time && lhs.initial_datetime != rhs.initial_datetime) {
         throw std::runtime_error("Cannot apply: initial_datetime differs");
     }
@@ -154,8 +154,8 @@ build_broadcast_metadata(const BinaryMetadata& lhs, const BinaryMetadata& rhs, s
     out.unit = lhs.unit;
     out.labels = std::move(output_labels);
 
-    const bool lhs_has_time = any_time_dim(lhs.dimensions);
-    const bool rhs_has_time = any_time_dim(rhs.dimensions);
+    const auto lhs_has_time = any_time_dim(lhs.dimensions);
+    const auto rhs_has_time = any_time_dim(rhs.dimensions);
     out.initial_datetime =
         lhs_has_time ? lhs.initial_datetime : (rhs_has_time ? rhs.initial_datetime : lhs.initial_datetime);
 
