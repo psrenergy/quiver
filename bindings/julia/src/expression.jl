@@ -40,14 +40,21 @@ function _binop(op, lhs::Real, rhs::Expression)
     return Expression(out[])
 end
 
-for (op, c_op) in [(:+, :ADD), (:-, :SUBTRACT), (:*, :MULTIPLY), (:/, :DIVIDE)]
-    c_enum = Symbol("QUIVER_EXPRESSION_OP_", c_op)
-    @eval begin
-        Base.$op(a::Expression, b::Expression) = _binop(C.$c_enum, a, b)
-        Base.$op(a::Expression, b::Real) = _binop(C.$c_enum, a, b)
-        Base.$op(a::Real, b::Expression) = _binop(C.$c_enum, a, b)
-    end
-end
+Base.:+(a::Expression, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_ADD, a, b)
+Base.:+(a::Expression, b::Real) = _binop(C.QUIVER_EXPRESSION_OP_ADD, a, b)
+Base.:+(a::Real, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_ADD, a, b)
+
+Base.:-(a::Expression, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_SUBTRACT, a, b)
+Base.:-(a::Expression, b::Real) = _binop(C.QUIVER_EXPRESSION_OP_SUBTRACT, a, b)
+Base.:-(a::Real, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_SUBTRACT, a, b)
+
+Base.:*(a::Expression, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_MULTIPLY, a, b)
+Base.:*(a::Expression, b::Real) = _binop(C.QUIVER_EXPRESSION_OP_MULTIPLY, a, b)
+Base.:*(a::Real, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_MULTIPLY, a, b)
+
+Base.:/(a::Expression, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_DIVIDE, a, b)
+Base.:/(a::Expression, b::Real) = _binop(C.QUIVER_EXPRESSION_OP_DIVIDE, a, b)
+Base.:/(a::Real, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_DIVIDE, a, b)
 
 function save(e::Expression, path::String)
     check(C.quiver_expression_save(e.ptr, path))
