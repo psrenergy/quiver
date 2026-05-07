@@ -54,12 +54,17 @@ private:
     void fill_file_with_nulls();
 
     // Validations
+    void validate_file_is_open() const;
     void validate_dimension_values(const std::unordered_map<std::string, int64_t>& dims);
     void validate_dimension_values_indexed(const std::vector<int64_t>& dims);
     void validate_data_length(const std::vector<double>& data);
 
 protected:
     std::iostream& get_io();
+
+    // Dimension iteration
+    std::vector<int64_t> next_dimensions(const std::vector<int64_t>& current_dimensions);
+    std::vector<int64_t> dimension_sizes_at_values(const std::vector<int64_t>& dimension_values) const;
 };
 
 }  // namespace quiver

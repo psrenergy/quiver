@@ -3,7 +3,6 @@
 #include "binary_utils.h"
 #include "quiver/binary/binary_file.h"
 #include "quiver/binary/dimension.h"
-#include "quiver/binary/iteration.h"
 #include "utils/datetime.h"
 
 #include <algorithm>
@@ -83,10 +82,10 @@ void CSVConverter::csv_to_bin(const std::string& file_path) {
         }
         bin_writer.write(row.data, dims);
 
-        auto nxt = quiver::binary::next_dimensions(csv_reader.get_metadata(), current_dimensions);
-        if (!nxt)
+        current_dimensions = csv_reader.next_dimensions(current_dimensions);
+        if (current_dimensions == initial_dimensions) {
             break;
-        current_dimensions = std::move(*nxt);
+        }
     }
 }
 
@@ -128,10 +127,10 @@ void CSVConverter::bin_to_csv(const std::string& file_path, bool aggregate_time_
         std::vector<double> data = bin_reader.read(dims, true);
         csv_writer.get_io() << csv_writer.build_line(data, current_dimensions);
 
-        auto nxt = quiver::binary::next_dimensions(csv_writer.get_metadata(), current_dimensions);
-        if (!nxt)
+        current_dimensions = csv_writer.next_dimensions(current_dimensions);
+        if (current_dimensions == initial_dimensions) {
             break;
-        current_dimensions = std::move(*nxt);
+        }
     }
 }
 

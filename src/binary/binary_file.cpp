@@ -2,7 +2,6 @@
 
 #include "binary_utils.h"
 #include "quiver/binary/dimension.h"
-#include "quiver/binary/iteration.h"
 #include "quiver/binary/time_constants.h"
 
 #include <chrono>
@@ -229,29 +228,64 @@ void BinaryFile::go_to_position(int64_t position, char mode) {
     impl_->current_position = position;
 }
 
-void BinaryFile::validate_dimension_values(const std::unordered_map<std::string, int64_t>& dims) {
-    const auto& dimensions = impl_->metadata.dimensions;
+void BinaryFile::validate_file_is_open() const {
+    if (!impl_->io || !impl_->io->good()) {
+        throw std::runtime_error("File is not open: " + impl_->file_path);
+    }
+}
 
-    // Count check first -- preserves the existing error message and order of detection.
+void BinaryFile::validate_dimension_values(const std::unordered_map<std::string, int64_t>& dims) {
+    const auto& metadata = impl_->metadata;
+    const auto& dimensions = metadata.dimensions;
+
+    // Check count
     if (dims.size() != dimensions.size()) {
         throw std::invalid_argument("Expected " + std::to_string(dimensions.size()) + " dimensions, got " +
                                     std::to_string(dims.size()));
     }
 
-    // Convert map -> declaration-order vector. Throws "Missing required dimension"
-    // if any declared dim name is absent from the map (preserves existing error).
-    std::vector<int64_t> indexed_dims;
-    indexed_dims.reserve(dimensions.size());
-    for (const auto& dim : dimensions) {
+    // Check all dimension names exist and values are in bounds
+    for (size_t i = 0; i < dimensions.size(); ++i) {
+        const auto& dim = dimensions[i];
         auto it = dims.find(dim.name);
         if (it == dims.end()) {
             throw std::invalid_argument("Missing required dimension: '" + dim.name + "'");
         }
-        indexed_dims.push_back(it->second);
+        int64_t value = it->second;
+        if (value < 1 || value > dim.size) {
+            throw std::invalid_argument("Dimension '" + dim.name + "' value " + std::to_string(value) +
+                                        " is out of bounds [1, " + std::to_string(dim.size) + "]");
+        }
     }
 
-    // Delegate to indexed validator (handles bounds + time-dim consistency).
-    validate_dimension_values_indexed(indexed_dims);
+    if (metadata.number_of_time_dimensions > 1) {
+        // Build the datetime by accumulating offsets from each time dimension
+        auto datetime = metadata.initial_datetime;
+        for (const auto& dim : dimensions) {
+            if (dim.is_time_dimension()) {
+                datetime = dim.time->add_offset_from_int(datetime, dims.at(dim.name));
+            }
+        }
+
+        // Verify that inner time dimensions are consistent with the resulting date
+        bool first = true;
+        for (const auto& dim : dimensions) {
+            if (!dim.is_time_dimension())
+                continue;
+            if (first) {
+                first = false;
+                continue;
+            }  // skip outermost time dimension
+
+            int64_t expected_value = dims.at(dim.name);
+            int64_t resulting_value = dim.time->datetime_to_int(datetime);
+            if (expected_value != resulting_value) {
+                throw std::invalid_argument("Invalid values for time dimensions: dimension '" + dim.name +
+                                            "' has value " + std::to_string(expected_value) +
+                                            " but the resulting datetime implies " + std::to_string(resulting_value));
+            }
+        }
+    }
 }
 
 void BinaryFile::validate_dimension_values_indexed(const std::vector<int64_t>& dims) {
@@ -310,6 +344,111 @@ void BinaryFile::validate_data_length(const std::vector<double>& data) {
         throw std::invalid_argument("Data length " + std::to_string(data.size()) + " does not match expected length " +
                                     std::to_string(impl_->metadata.labels.size()));
     }
+}
+
+std::vector<int64_t> BinaryFile::next_dimensions(const std::vector<int64_t>& current_dimensions) {
+    const auto& dimensions = impl_->metadata.dimensions;
+    const auto& current_sizes = dimension_sizes_at_values(current_dimensions);
+
+    std::vector<int64_t> next = current_dimensions;
+
+    for (int i = static_cast<int>(next.size()) - 1; i >= 0; --i) {
+        if (next[i] < current_sizes[i]) {
+            next[i] += 1;
+            break;
+        } else {
+            next[i] = 1;
+        }
+    }
+
+    // Adjust time dimensions which were reset to 1 before their parent dimension is incremented.
+    // Ex: [month, scenario, day] when initial date is 2025-01-02
+    // [1, 1, 31] -> [1, 2, 1] is incorrect, should be [1, 2, 2]
+    for (size_t i = 0; i < next.size(); ++i) {
+        const auto& dim = dimensions[i];
+        if (!dim.is_time_dimension())
+            continue;
+        int64_t initial_value = dim.time->initial_value;
+        int64_t parent_idx = dim.time->parent_dimension_index;  // -1 = no parent
+        if (next[i] < initial_value && parent_idx != -1 &&
+            next[parent_idx] == dimensions[parent_idx].time->initial_value) {
+            next[i] = initial_value;
+        }
+    }
+
+    return next;
+}
+
+std::vector<int64_t> BinaryFile::dimension_sizes_at_values(const std::vector<int64_t>& dimension_values) const {
+    using namespace quiver::time;
+    const auto& metadata = impl_->metadata;
+    const auto& dimensions = metadata.dimensions;
+
+    std::vector<int64_t> sizes;
+    sizes.reserve(dimensions.size());
+    for (const auto& dim : dimensions) {
+        sizes.push_back(dim.size);
+    }
+
+    auto datetime = metadata.initial_datetime;
+    for (size_t i = 0; i < dimensions.size(); ++i) {
+        if (!dimensions[i].is_time_dimension())
+            continue;
+        datetime = dimensions[i].time->add_offset_from_int(datetime, dimension_values[i]);
+    }
+    const auto date = std::chrono::floor<std::chrono::days>(datetime);
+    const auto ymd = std::chrono::year_month_day{date};
+
+    for (size_t i = 0; i < dimensions.size(); ++i) {
+        const auto& dim = dimensions[i];
+        if (!dim.is_time_dimension() || dim.time->parent_dimension_index == -1)
+            continue;
+
+        const auto& parent = dimensions[dim.time->parent_dimension_index];
+        TimeFrequency freq = dim.time->frequency;
+        TimeFrequency parent_freq = parent.time->frequency;
+
+        // Yearly and weekly frequencies must always be at index 1, so they are not considered in this loop
+        switch (freq) {
+        case TimeFrequency::Hourly:
+            switch (parent_freq) {
+            case TimeFrequency::Daily:
+                break;  // Number of hours in a day is always the same
+            case TimeFrequency::Weekly:
+                break;  // Number of hours in a week is always the same
+            case TimeFrequency::Monthly:
+                sizes[i] =
+                    static_cast<unsigned>((ymd.year() / ymd.month() / std::chrono::last).day()) * MAX_HOURS_IN_DAY;
+                break;
+            case TimeFrequency::Yearly:
+                sizes[i] = (ymd.year().is_leap() ? 366 : 365) * MAX_HOURS_IN_DAY;
+                break;
+            default:
+                break;
+            }
+            break;
+        case TimeFrequency::Daily:
+            switch (parent_freq) {
+            case TimeFrequency::Weekly:
+                break;  // Number of days in a week is always the same
+            case TimeFrequency::Monthly:
+                sizes[i] = static_cast<unsigned>((ymd.year() / ymd.month() / std::chrono::last).day());
+                break;
+            case TimeFrequency::Yearly:
+                sizes[i] = ymd.year().is_leap() ? 366 : 365;
+                break;
+            default:
+                break;
+            }
+            break;
+        case TimeFrequency::Monthly:
+            break;  // Number of months in a year is always the same
+        default:
+            break;
+        }
+    }
+
+    return sizes;
 }
 
 void BinaryFile::fill_file_with_nulls() {
