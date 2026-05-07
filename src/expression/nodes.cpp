@@ -147,9 +147,8 @@ std::vector<std::string> compute_output_labels(const std::vector<std::string>& l
                              std::to_string(rl));
 }
 
-BinaryMetadata build_broadcast_metadata(const BinaryMetadata& lhs,
-                                        const BinaryMetadata& rhs,
-                                        std::vector<std::string> output_labels) {
+BinaryMetadata
+build_broadcast_metadata(const BinaryMetadata& lhs, const BinaryMetadata& rhs, std::vector<std::string> output_labels) {
     BinaryMetadata out;
     out.version = lhs.version;
     out.unit = lhs.unit;
