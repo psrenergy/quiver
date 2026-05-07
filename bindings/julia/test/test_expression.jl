@@ -161,7 +161,7 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 100 + c * 10 + k)
             with_expr(path_a) do e
-                Quiver.save(e, path_out)
+                return Quiver.save(e, path_out)
             end
             @test read_all_cells(path_a) == read_all_cells(path_out)
         finally
@@ -177,7 +177,7 @@ end
             write_fixture(path_a, (r, c, k) -> r + c + k)
             with_expr(path_a) do e
                 Quiver.save(e, path_out)
-                Quiver.save(e, path_out2)
+                return Quiver.save(e, path_out2)
             end
             @test read_all_cells(path_out) == read_all_cells(path_out2)
         finally
@@ -198,7 +198,7 @@ end
                 with_expr(path_b) do b
                     sum_expr = a + b
                     Quiver.save(sum_expr, path_out)
-                    Quiver.close!(sum_expr)
+                    return Quiver.close!(sum_expr)
                 end
             end
             va, vb, vo = read_all_cells(path_a), read_all_cells(path_b), read_all_cells(path_out)
@@ -217,7 +217,7 @@ end
                 with_expr(path_b) do b
                     diff = a - b
                     Quiver.save(diff, path_out)
-                    Quiver.close!(diff)
+                    return Quiver.close!(diff)
                 end
             end
             va, vb, vo = read_all_cells(path_a), read_all_cells(path_b), read_all_cells(path_out)
@@ -236,7 +236,7 @@ end
                 with_expr(path_b) do b
                     product = a * b
                     Quiver.save(product, path_out)
-                    Quiver.close!(product)
+                    return Quiver.close!(product)
                 end
             end
             va, vb, vo = read_all_cells(path_a), read_all_cells(path_b), read_all_cells(path_out)
@@ -255,7 +255,7 @@ end
                 with_expr(path_b) do b
                     quotient = a / b
                     Quiver.save(quotient, path_out)
-                    Quiver.close!(quotient)
+                    return Quiver.close!(quotient)
                 end
             end
             va, vb, vo = read_all_cells(path_a), read_all_cells(path_b), read_all_cells(path_out)
@@ -277,7 +277,7 @@ end
                     with_expr(path_c) do c
                         result = (a + b - c) / 2.0
                         Quiver.save(result, path_out)
-                        Quiver.close!(result)
+                        return Quiver.close!(result)
                     end
                 end
             end
@@ -300,7 +300,7 @@ end
             with_expr(path_a) do a
                 result = a + 2.0
                 Quiver.save(result, path_out)
-                Quiver.close!(result)
+                return Quiver.close!(result)
             end
             @test read_all_cells(path_out) == read_all_cells(path_a) .+ 2.0
         finally
@@ -315,7 +315,7 @@ end
             with_expr(path_a) do a
                 result = a - 5.0
                 Quiver.save(result, path_out)
-                Quiver.close!(result)
+                return Quiver.close!(result)
             end
             @test read_all_cells(path_out) == read_all_cells(path_a) .- 5.0
         finally
@@ -330,7 +330,7 @@ end
             with_expr(path_a) do a
                 result = a * 3.0
                 Quiver.save(result, path_out)
-                Quiver.close!(result)
+                return Quiver.close!(result)
             end
             @test read_all_cells(path_out) == read_all_cells(path_a) .* 3.0
         finally
@@ -345,7 +345,7 @@ end
             with_expr(path_a) do a
                 result = a / 4.0
                 Quiver.save(result, path_out)
-                Quiver.close!(result)
+                return Quiver.close!(result)
             end
             @test read_all_cells(path_out) ≈ read_all_cells(path_a) ./ 4.0
         finally
@@ -364,7 +364,7 @@ end
             with_expr(path_a) do a
                 result = 7.0 + a
                 Quiver.save(result, path_out)
-                Quiver.close!(result)
+                return Quiver.close!(result)
             end
             @test read_all_cells(path_out) == 7.0 .+ read_all_cells(path_a)
         finally
@@ -379,7 +379,7 @@ end
             with_expr(path_a) do a
                 result = 100.0 - a
                 Quiver.save(result, path_out)
-                Quiver.close!(result)
+                return Quiver.close!(result)
             end
             @test read_all_cells(path_out) == 100.0 .- read_all_cells(path_a)
         finally
@@ -394,7 +394,7 @@ end
             with_expr(path_a) do a
                 result = 5.0 * a
                 Quiver.save(result, path_out)
-                Quiver.close!(result)
+                return Quiver.close!(result)
             end
             @test read_all_cells(path_out) == 5.0 .* read_all_cells(path_a)
         finally
@@ -409,7 +409,7 @@ end
             with_expr(path_a) do a
                 result = 60.0 / a
                 Quiver.save(result, path_out)
-                Quiver.close!(result)
+                return Quiver.close!(result)
             end
             @test read_all_cells(path_out) ≈ 60.0 ./ read_all_cells(path_a)
         finally
@@ -554,7 +554,7 @@ end
                 with_expr(path_a) do a2
                     sum_expr = a1 + a2
                     Quiver.save(sum_expr, path_out)
-                    Quiver.close!(sum_expr)
+                    return Quiver.close!(sum_expr)
                 end
             end
             @test read_all_cells(path_out) == 2.0 .* read_all_cells(path_a)
@@ -574,14 +574,14 @@ end
             md_b = make_metadata_full(dimensions = ["row", "col"], dimension_sizes = [1, 2])
 
             write_dense(path_a, md_a, [:row, :col], [3, 2], 2,
-                        (dims, k) -> dims[1] * 100 + dims[2] * 10 + (k - 1))
+                (dims, k) -> dims[1] * 100 + dims[2] * 10 + (k - 1))
             write_dense(path_b, md_b, [:row, :col], [1, 2], 2, (dims, k) -> dims[2] * 1000 + (k - 1))
 
             with_expr(path_a) do a
                 with_expr(path_b) do b
                     sum_expr = a + b
                     Quiver.save(sum_expr, path_out)
-                    Quiver.close!(sum_expr)
+                    return Quiver.close!(sum_expr)
                 end
             end
 
@@ -609,13 +609,13 @@ end
 
             write_dense(path_a, md_a, [:row, :col], [2, 2], 1, (dims, _) -> dims[1] * 10 + dims[2])
             write_dense(path_b, md_b, [:row, :col], [2, 2], 3,
-                        (dims, k) -> dims[1] * 100 + dims[2] * 10 + (k - 1))
+                (dims, k) -> dims[1] * 100 + dims[2] * 10 + (k - 1))
 
             with_expr(path_a) do a
                 with_expr(path_b) do b
                     sum_expr = a + b
                     Quiver.save(sum_expr, path_out)
-                    Quiver.close!(sum_expr)
+                    return Quiver.close!(sum_expr)
                 end
             end
 
@@ -654,7 +654,7 @@ end
                 with_expr(path_b) do b
                     sum_expr = a + b
                     Quiver.save(sum_expr, path_out)
-                    Quiver.close!(sum_expr)
+                    return Quiver.close!(sum_expr)
                 end
             end
 
@@ -679,7 +679,7 @@ end
                 with_expr(path_b) do b
                     sum_expr = a + b
                     Quiver.save(sum_expr, path_out)
-                    Quiver.close!(sum_expr)
+                    return Quiver.close!(sum_expr)
                 end
             end
 
@@ -800,7 +800,7 @@ end
                 with_expr(path_b) do b
                     sum_expr = a + b
                     Quiver.save(sum_expr, path_out)
-                    Quiver.close!(sum_expr)
+                    return Quiver.close!(sum_expr)
                 end
             end
 

@@ -138,20 +138,14 @@ protected:
         quiver_element_set_string(el, "initial_datetime", initial_datetime);
         quiver_element_set_string(el, "unit", unit);
         quiver_element_set_array_string(el, "dimensions", dim_names.data(), static_cast<int32_t>(dim_names.size()));
-        quiver_element_set_array_integer(el,
-                                         "dimension_sizes",
-                                         dim_sizes.data(),
-                                         static_cast<int32_t>(dim_sizes.size()));
+        quiver_element_set_array_integer(
+            el, "dimension_sizes", dim_sizes.data(), static_cast<int32_t>(dim_sizes.size()));
         quiver_element_set_array_string(el, "labels", labels.data(), static_cast<int32_t>(labels.size()));
         if (!time_dimensions.empty()) {
-            quiver_element_set_array_string(el,
-                                            "time_dimensions",
-                                            time_dimensions.data(),
-                                            static_cast<int32_t>(time_dimensions.size()));
-            quiver_element_set_array_string(el,
-                                            "frequencies",
-                                            frequencies.data(),
-                                            static_cast<int32_t>(frequencies.size()));
+            quiver_element_set_array_string(
+                el, "time_dimensions", time_dimensions.data(), static_cast<int32_t>(time_dimensions.size()));
+            quiver_element_set_array_string(
+                el, "frequencies", frequencies.data(), static_cast<int32_t>(frequencies.size()));
         }
 
         quiver_binary_metadata_t* md = nullptr;
@@ -169,12 +163,8 @@ protected:
                                const std::vector<double>& cell) {
         quiver_binary_file_t* f = nullptr;
         ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &f), QUIVER_OK);
-        ASSERT_EQ(quiver_binary_file_write(f,
-                                           dim_names.data(),
-                                           dim_values.data(),
-                                           dim_names.size(),
-                                           cell.data(),
-                                           cell.size()),
+        ASSERT_EQ(quiver_binary_file_write(
+                      f, dim_names.data(), dim_values.data(), dim_names.size(), cell.data(), cell.size()),
                   QUIVER_OK);
         ASSERT_EQ(quiver_binary_file_close(f), QUIVER_OK);
     }
@@ -801,10 +791,9 @@ TEST_F(ExpressionCApiFixture, BroadcastLabelsAxis) {
 
 TEST_F(ExpressionCApiFixture, UnionDimsAcrossOperands) {
     // lhs: [scenario=2, time=4 monthly]; rhs: [time=4 monthly, stage=3]
-    auto* md_a = make_metadata_v({"scenario", "time"}, {2, 4}, {"v1"}, "MW", "2025-01-01T00:00:00", {"time"},
-                                 {"monthly"});
-    auto* md_b = make_metadata_v({"time", "stage"}, {4, 3}, {"v1"}, "MW", "2025-01-01T00:00:00", {"time"},
-                                 {"monthly"});
+    auto* md_a =
+        make_metadata_v({"scenario", "time"}, {2, 4}, {"v1"}, "MW", "2025-01-01T00:00:00", {"time"}, {"monthly"});
+    auto* md_b = make_metadata_v({"time", "stage"}, {4, 3}, {"v1"}, "MW", "2025-01-01T00:00:00", {"time"}, {"monthly"});
 
     // a[scenario, time] = scenario*10 + time
     write_dense(path_a, md_a, {"scenario", "time"}, {2, 4}, 1, [](const std::vector<int64_t>& dims, size_t /*k*/) {
@@ -866,8 +855,8 @@ TEST_F(ExpressionCApiFixture, OperandDimsInDifferentOrder) {
     };
     for (auto sample : {Sample{1, 1}, Sample{2, 4}, Sample{1, 4}, Sample{2, 2}}) {
         auto cell = read_one_cell(path_out, {"scenario", "time"}, {sample.s, sample.t});
-        double expected = static_cast<double>(sample.s * 10 + sample.t)
-                          + static_cast<double>(sample.t * 100 + sample.s);
+        double expected =
+            static_cast<double>(sample.s * 10 + sample.t) + static_cast<double>(sample.t * 100 + sample.s);
         EXPECT_DOUBLE_EQ(cell[0], expected) << "Mismatch at (s=" << sample.s << ", t=" << sample.t << ")";
     }
 }
@@ -878,8 +867,8 @@ TEST_F(ExpressionCApiFixture, OperandDimsInDifferentOrder) {
 
 TEST_F(ExpressionCApiFixture, TimePropertiesMismatchReturnsError) {
     // md_a: block as monthly time. md_b: block as non-time. Same shape.
-    auto* md_a = make_metadata_v({"scenario", "block"}, {3, 12}, {"v1", "v2"}, "MW", "2025-01-01T00:00:00", {"block"},
-                                 {"monthly"});
+    auto* md_a = make_metadata_v(
+        {"scenario", "block"}, {3, 12}, {"v1", "v2"}, "MW", "2025-01-01T00:00:00", {"block"}, {"monthly"});
     auto* md_b = make_metadata_v({"scenario", "block"}, {3, 12}, {"v1", "v2"});
 
     write_one_cell(path_a, md_a, {"scenario", "block"}, {1, 1}, {1.0, 1.0});
@@ -898,10 +887,20 @@ TEST_F(ExpressionCApiFixture, TimePropertiesMismatchReturnsError) {
 }
 
 TEST_F(ExpressionCApiFixture, InitialDatetimeMismatchReturnsError) {
-    auto* md_a = make_metadata_v({"month", "block"}, {4, 31}, {"v1", "v2"}, "MW", "2025-01-01T00:00:00",
-                                 {"month", "block"}, {"monthly", "daily"});
-    auto* md_b = make_metadata_v({"month", "block"}, {4, 31}, {"v1", "v2"}, "MW", "2025-02-01T00:00:00",
-                                 {"month", "block"}, {"monthly", "daily"});
+    auto* md_a = make_metadata_v({"month", "block"},
+                                 {4, 31},
+                                 {"v1", "v2"},
+                                 "MW",
+                                 "2025-01-01T00:00:00",
+                                 {"month", "block"},
+                                 {"monthly", "daily"});
+    auto* md_b = make_metadata_v({"month", "block"},
+                                 {4, 31},
+                                 {"v1", "v2"},
+                                 "MW",
+                                 "2025-02-01T00:00:00",
+                                 {"month", "block"},
+                                 {"monthly", "daily"});
 
     // Single cell at (month=1, block=1) is always valid for either Jan-start or Feb-start.
     write_one_cell(path_a, md_a, {"month", "block"}, {1, 1}, {1.0, 1.0});
@@ -920,10 +919,20 @@ TEST_F(ExpressionCApiFixture, InitialDatetimeMismatchReturnsError) {
 
 TEST_F(ExpressionCApiFixture, ParentDimNameMismatchReturnsError) {
     // Both files have a daily `block` dim, but lhs's parent is `month` and rhs's parent is `stage`.
-    auto* md_a = make_metadata_v({"month", "block"}, {2, 31}, {"v1", "v2"}, "MW", "2025-01-01T00:00:00",
-                                 {"month", "block"}, {"monthly", "daily"});
-    auto* md_b = make_metadata_v({"stage", "block"}, {2, 31}, {"v1", "v2"}, "MW", "2025-01-01T00:00:00",
-                                 {"stage", "block"}, {"monthly", "daily"});
+    auto* md_a = make_metadata_v({"month", "block"},
+                                 {2, 31},
+                                 {"v1", "v2"},
+                                 "MW",
+                                 "2025-01-01T00:00:00",
+                                 {"month", "block"},
+                                 {"monthly", "daily"});
+    auto* md_b = make_metadata_v({"stage", "block"},
+                                 {2, 31},
+                                 {"v1", "v2"},
+                                 "MW",
+                                 "2025-01-01T00:00:00",
+                                 {"stage", "block"},
+                                 {"monthly", "daily"});
 
     write_one_cell(path_a, md_a, {"month", "block"}, {1, 1}, {1.0, 1.0});
     write_one_cell(path_b, md_b, {"stage", "block"}, {1, 1}, {1.0, 1.0});
@@ -941,10 +950,20 @@ TEST_F(ExpressionCApiFixture, ParentDimNameMismatchReturnsError) {
 
 TEST_F(ExpressionCApiFixture, ParentDimMatchByNameAcceptsCrossPosition) {
     // Same parent dim NAME (`month`) but at different positions: lhs index 0, rhs index 1.
-    auto* md_a = make_metadata_v({"month", "extra", "day"}, {2, 3, 31}, {"v1", "v2"}, "MW", "2025-01-01T00:00:00",
-                                 {"month", "day"}, {"monthly", "daily"});
-    auto* md_b = make_metadata_v({"extra", "month", "day"}, {3, 2, 31}, {"v1", "v2"}, "MW", "2025-01-01T00:00:00",
-                                 {"month", "day"}, {"monthly", "daily"});
+    auto* md_a = make_metadata_v({"month", "extra", "day"},
+                                 {2, 3, 31},
+                                 {"v1", "v2"},
+                                 "MW",
+                                 "2025-01-01T00:00:00",
+                                 {"month", "day"},
+                                 {"monthly", "daily"});
+    auto* md_b = make_metadata_v({"extra", "month", "day"},
+                                 {3, 2, 31},
+                                 {"v1", "v2"},
+                                 "MW",
+                                 "2025-01-01T00:00:00",
+                                 {"month", "day"},
+                                 {"monthly", "daily"});
 
     write_one_cell(path_a, md_a, {"month", "extra", "day"}, {1, 1, 1}, {1.0, 1.0});
     write_one_cell(path_b, md_b, {"extra", "month", "day"}, {1, 1, 1}, {1.0, 1.0});
