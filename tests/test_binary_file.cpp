@@ -78,6 +78,23 @@ TEST_F(BinaryTempFileFixture, WriteModeWithoutMetadata) {
     EXPECT_THROW(BinaryFile::open_file(path, 'w'), std::invalid_argument);
 }
 
+TEST_F(BinaryTempFileFixture, TwoStepWriteWithOpenMember) {
+    auto md = make_simple_metadata();
+    BinaryFile binary_file(path);
+    binary_file.open('w', md);
+    EXPECT_TRUE(fs::exists(path + ".qvr"));
+    EXPECT_TRUE(fs::exists(path + ".toml"));
+}
+
+TEST_F(BinaryTempFileFixture, TwoStepReadWithOpenMember) {
+    auto md = make_simple_metadata();
+    {
+        auto writer = BinaryFile::open_file(path, 'w', md);
+    }
+    BinaryFile binary_file(path);
+    EXPECT_NO_THROW(binary_file.open('r'));
+}
+
 TEST_F(BinaryTempFileFixture, InvalidMode) {
     auto md = make_simple_metadata();
     EXPECT_THROW(BinaryFile::open_file(path, 'x', md), std::invalid_argument);

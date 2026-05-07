@@ -24,7 +24,10 @@ CSVConverter::CSVConverter(const std::string& file_path,
                            const BinaryMetadata& metadata,
                            std::unique_ptr<std::iostream> io,
                            bool aggregate_time_dimensions)
-    : BinaryFile(file_path, metadata, std::move(io)), impl_(std::make_unique<Impl>(Impl{aggregate_time_dimensions})) {}
+    : BinaryFile(file_path), impl_(std::make_unique<Impl>(Impl{aggregate_time_dimensions})) {
+    set_metadata(metadata);
+    set_io(std::move(io));
+}
 
 CSVConverter::~CSVConverter() = default;
 

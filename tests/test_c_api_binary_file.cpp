@@ -58,7 +58,7 @@ TEST_F(BinaryCApiFixture, OpenWriteAndClose) {
     ASSERT_NE(md, nullptr);
 
     quiver_binary_file_t* binary_file = nullptr;
-    ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &binary_file), QUIVER_OK);
+    ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'w', md, &binary_file), QUIVER_OK);
     ASSERT_NE(binary_file, nullptr);
 
     EXPECT_TRUE(fs::exists(path + ".qvr"));
@@ -72,20 +72,51 @@ TEST_F(BinaryCApiFixture, OpenReadAfterWrite) {
     auto* md = make_simple_metadata();
     {
         quiver_binary_file_t* binary_file = nullptr;
-        quiver_binary_file_open_write(path.c_str(), md, &binary_file);
+        quiver_binary_file_open_file(path.c_str(), 'w', md, &binary_file);
         quiver_binary_file_close(binary_file);
     }
     quiver_binary_metadata_free(md);
 
     quiver_binary_file_t* reader = nullptr;
-    EXPECT_EQ(quiver_binary_file_open_read(path.c_str(), &reader), QUIVER_OK);
+    EXPECT_EQ(quiver_binary_file_open_file(path.c_str(), 'r', nullptr, &reader), QUIVER_OK);
     ASSERT_NE(reader, nullptr);
     quiver_binary_file_close(reader);
 }
 
 TEST_F(BinaryCApiFixture, OpenReadNonExistent) {
     quiver_binary_file_t* binary_file = nullptr;
-    EXPECT_EQ(quiver_binary_file_open_read("nonexistent_path", &binary_file), QUIVER_ERROR);
+    EXPECT_EQ(quiver_binary_file_open_file("nonexistent_path", 'r', nullptr, &binary_file), QUIVER_ERROR);
+}
+
+TEST_F(BinaryCApiFixture, TwoStepWriteWithCreateAndOpen) {
+    auto* md = make_simple_metadata();
+    ASSERT_NE(md, nullptr);
+
+    quiver_binary_file_t* binary_file = nullptr;
+    ASSERT_EQ(quiver_binary_file_create(path.c_str(), &binary_file), QUIVER_OK);
+    ASSERT_NE(binary_file, nullptr);
+
+    ASSERT_EQ(quiver_binary_file_open(binary_file, 'w', md), QUIVER_OK);
+    EXPECT_TRUE(fs::exists(path + ".qvr"));
+    EXPECT_TRUE(fs::exists(path + ".toml"));
+
+    EXPECT_EQ(quiver_binary_file_close(binary_file), QUIVER_OK);
+    quiver_binary_metadata_free(md);
+}
+
+TEST_F(BinaryCApiFixture, TwoStepReadWithCreateAndOpen) {
+    auto* md = make_simple_metadata();
+    {
+        quiver_binary_file_t* writer = nullptr;
+        quiver_binary_file_open_file(path.c_str(), 'w', md, &writer);
+        quiver_binary_file_close(writer);
+    }
+    quiver_binary_metadata_free(md);
+
+    quiver_binary_file_t* reader = nullptr;
+    ASSERT_EQ(quiver_binary_file_create(path.c_str(), &reader), QUIVER_OK);
+    ASSERT_EQ(quiver_binary_file_open(reader, 'r', nullptr), QUIVER_OK);
+    EXPECT_EQ(quiver_binary_file_close(reader), QUIVER_OK);
 }
 
 // ============================================================================
@@ -98,7 +129,7 @@ TEST_F(BinaryCApiFixture, WriteReadRoundTrip) {
     // Write
     {
         quiver_binary_file_t* binary_file = nullptr;
-        ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &binary_file), QUIVER_OK);
+        ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'w', md, &binary_file), QUIVER_OK);
 
         const char* dim_names[] = {"row", "col"};
         int64_t dim_values[] = {1, 1};
@@ -112,7 +143,7 @@ TEST_F(BinaryCApiFixture, WriteReadRoundTrip) {
     // Read
     {
         quiver_binary_file_t* binary_file = nullptr;
-        ASSERT_EQ(quiver_binary_file_open_read(path.c_str(), &binary_file), QUIVER_OK);
+        ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'r', nullptr, &binary_file), QUIVER_OK);
 
         const char* dim_names[] = {"row", "col"};
         int64_t dim_values[] = {1, 1};
@@ -133,7 +164,7 @@ TEST_F(BinaryCApiFixture, WriteReadMultiplePositions) {
 
     {
         quiver_binary_file_t* binary_file = nullptr;
-        ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &binary_file), QUIVER_OK);
+        ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'w', md, &binary_file), QUIVER_OK);
 
         const char* dim_names[] = {"row", "col"};
 
@@ -151,7 +182,7 @@ TEST_F(BinaryCApiFixture, WriteReadMultiplePositions) {
 
     {
         quiver_binary_file_t* binary_file = nullptr;
-        ASSERT_EQ(quiver_binary_file_open_read(path.c_str(), &binary_file), QUIVER_OK);
+        ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'r', nullptr, &binary_file), QUIVER_OK);
 
         const char* dim_names[] = {"row", "col"};
         double* out_data = nullptr;
@@ -179,13 +210,13 @@ TEST_F(BinaryCApiFixture, GetMetadata) {
     auto* md = make_simple_metadata();
     {
         quiver_binary_file_t* binary_file = nullptr;
-        quiver_binary_file_open_write(path.c_str(), md, &binary_file);
+        quiver_binary_file_open_file(path.c_str(), 'w', md, &binary_file);
         quiver_binary_file_close(binary_file);
     }
     quiver_binary_metadata_free(md);
 
     quiver_binary_file_t* binary_file = nullptr;
-    ASSERT_EQ(quiver_binary_file_open_read(path.c_str(), &binary_file), QUIVER_OK);
+    ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'r', nullptr, &binary_file), QUIVER_OK);
 
     quiver_binary_metadata_t* read_md = nullptr;
     EXPECT_EQ(quiver_binary_file_get_metadata(binary_file, &read_md), QUIVER_OK);
@@ -207,7 +238,7 @@ TEST_F(BinaryCApiFixture, GetMetadata) {
 TEST_F(BinaryCApiFixture, GetFilePath) {
     auto* md = make_simple_metadata();
     quiver_binary_file_t* binary_file = nullptr;
-    ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &binary_file), QUIVER_OK);
+    ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'w', md, &binary_file), QUIVER_OK);
 
     char* file_path = nullptr;
     EXPECT_EQ(quiver_binary_file_get_file_path(binary_file, &file_path), QUIVER_OK);
@@ -223,18 +254,18 @@ TEST_F(BinaryCApiFixture, GetFilePath) {
 // ============================================================================
 
 TEST_F(BinaryCApiFixture, NullArgs) {
-    EXPECT_EQ(quiver_binary_file_open_read(nullptr, nullptr), QUIVER_ERROR);
-    EXPECT_EQ(quiver_binary_file_open_write(nullptr, nullptr, nullptr), QUIVER_ERROR);
+    EXPECT_EQ(quiver_binary_file_open_file(nullptr, 'r', nullptr, nullptr), QUIVER_ERROR);
+    EXPECT_EQ(quiver_binary_file_open_file(nullptr, 'w', nullptr, nullptr), QUIVER_ERROR);
     EXPECT_EQ(quiver_binary_file_close(nullptr), QUIVER_OK);
     EXPECT_EQ(quiver_binary_file_get_file_path(nullptr, nullptr), QUIVER_ERROR);
     EXPECT_EQ(quiver_binary_file_get_metadata(nullptr, nullptr), QUIVER_ERROR);
 }
 
 TEST_F(BinaryCApiFixture, NullArgsErrorMessages) {
-    EXPECT_EQ(quiver_binary_file_open_read(nullptr, nullptr), QUIVER_ERROR);
+    EXPECT_EQ(quiver_binary_file_open_file(nullptr, 'r', nullptr, nullptr), QUIVER_ERROR);
     EXPECT_STREQ(quiver_get_last_error(), "Null argument: path");
 
-    EXPECT_EQ(quiver_binary_file_open_write(nullptr, nullptr, nullptr), QUIVER_ERROR);
+    EXPECT_EQ(quiver_binary_file_open_file(nullptr, 'w', nullptr, nullptr), QUIVER_ERROR);
     EXPECT_STREQ(quiver_get_last_error(), "Null argument: path");
 
     EXPECT_EQ(quiver_binary_file_get_file_path(nullptr, nullptr), QUIVER_ERROR);
@@ -245,19 +276,19 @@ TEST_F(BinaryCApiFixture, NullArgsErrorMessages) {
 }
 
 TEST_F(BinaryCApiFixture, OpenReadNullOut) {
-    EXPECT_EQ(quiver_binary_file_open_read("some_path", nullptr), QUIVER_ERROR);
+    EXPECT_EQ(quiver_binary_file_open_file("some_path", 'r', nullptr, nullptr), QUIVER_ERROR);
     EXPECT_STREQ(quiver_get_last_error(), "Null argument: out");
 }
 
 TEST_F(BinaryCApiFixture, OpenWriteNullMetadata) {
     quiver_binary_file_t* binary_file = nullptr;
-    EXPECT_EQ(quiver_binary_file_open_write(path.c_str(), nullptr, &binary_file), QUIVER_ERROR);
-    EXPECT_STREQ(quiver_get_last_error(), "Null argument: md");
+    EXPECT_EQ(quiver_binary_file_open_file(path.c_str(), 'w', nullptr, &binary_file), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Metadata must be provided when opening a file in write mode.");
 }
 
 TEST_F(BinaryCApiFixture, OpenWriteNullOut) {
     auto* md = make_simple_metadata();
-    EXPECT_EQ(quiver_binary_file_open_write(path.c_str(), md, nullptr), QUIVER_ERROR);
+    EXPECT_EQ(quiver_binary_file_open_file(path.c_str(), 'w', md, nullptr), QUIVER_ERROR);
     EXPECT_STREQ(quiver_get_last_error(), "Null argument: out");
     quiver_binary_metadata_free(md);
 }
@@ -272,11 +303,11 @@ TEST_F(BinaryCApiFixture, ReadNullBinary) {
 TEST_F(BinaryCApiFixture, ReadNullOutParams) {
     auto* md = make_simple_metadata();
     quiver_binary_file_t* binary_file = nullptr;
-    ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &binary_file), QUIVER_OK);
+    ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'w', md, &binary_file), QUIVER_OK);
     quiver_binary_file_close(binary_file);
     quiver_binary_metadata_free(md);
 
-    ASSERT_EQ(quiver_binary_file_open_read(path.c_str(), &binary_file), QUIVER_OK);
+    ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'r', nullptr, &binary_file), QUIVER_OK);
 
     const char* dim_names[] = {"row", "col"};
     int64_t dim_values[] = {1, 1};
@@ -298,7 +329,7 @@ TEST_F(BinaryCApiFixture, WriteNullBinary) {
 TEST_F(BinaryCApiFixture, WriteNullData) {
     auto* md = make_simple_metadata();
     quiver_binary_file_t* binary_file = nullptr;
-    ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &binary_file), QUIVER_OK);
+    ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'w', md, &binary_file), QUIVER_OK);
 
     const char* dim_names[] = {"row", "col"};
     int64_t dim_values[] = {1, 1};
@@ -311,7 +342,7 @@ TEST_F(BinaryCApiFixture, WriteNullData) {
 
 TEST_F(BinaryCApiFixture, OpenReadNonExistentErrorMessage) {
     quiver_binary_file_t* binary_file = nullptr;
-    EXPECT_EQ(quiver_binary_file_open_read("nonexistent_path", &binary_file), QUIVER_ERROR);
+    EXPECT_EQ(quiver_binary_file_open_file("nonexistent_path", 'r', nullptr, &binary_file), QUIVER_ERROR);
     std::string err = quiver_get_last_error();
     EXPECT_FALSE(err.empty());
 }
@@ -325,7 +356,7 @@ TEST_F(BinaryCApiFixture, WriteReadSpecialFloatValues) {
 
     {
         quiver_binary_file_t* binary_file = nullptr;
-        ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &binary_file), QUIVER_OK);
+        ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'w', md, &binary_file), QUIVER_OK);
 
         const char* dim_names[] = {"row", "col"};
         int64_t dim_values[] = {1, 1};
@@ -338,7 +369,7 @@ TEST_F(BinaryCApiFixture, WriteReadSpecialFloatValues) {
 
     {
         quiver_binary_file_t* binary_file = nullptr;
-        ASSERT_EQ(quiver_binary_file_open_read(path.c_str(), &binary_file), QUIVER_OK);
+        ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'r', nullptr, &binary_file), QUIVER_OK);
 
         const char* dim_names[] = {"row", "col"};
         int64_t dim_values[] = {1, 1};
@@ -359,7 +390,7 @@ TEST_F(BinaryCApiFixture, WriteReadLargeSmallValues) {
 
     {
         quiver_binary_file_t* binary_file = nullptr;
-        ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &binary_file), QUIVER_OK);
+        ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'w', md, &binary_file), QUIVER_OK);
 
         const char* dim_names[] = {"row", "col"};
         int64_t dim_values[] = {1, 1};
@@ -372,7 +403,7 @@ TEST_F(BinaryCApiFixture, WriteReadLargeSmallValues) {
 
     {
         quiver_binary_file_t* binary_file = nullptr;
-        ASSERT_EQ(quiver_binary_file_open_read(path.c_str(), &binary_file), QUIVER_OK);
+        ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'r', nullptr, &binary_file), QUIVER_OK);
 
         const char* dim_names[] = {"row", "col"};
         int64_t dim_values[] = {1, 1};
@@ -404,7 +435,7 @@ TEST_F(BinaryCApiFixture, ReadUnwrittenPositionFails) {
     auto* md = make_simple_metadata();
     {
         quiver_binary_file_t* binary_file = nullptr;
-        ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &binary_file), QUIVER_OK);
+        ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'w', md, &binary_file), QUIVER_OK);
 
         const char* dim_names[] = {"row", "col"};
         int64_t dim_values[] = {1, 1};
@@ -416,7 +447,7 @@ TEST_F(BinaryCApiFixture, ReadUnwrittenPositionFails) {
 
     {
         quiver_binary_file_t* binary_file = nullptr;
-        ASSERT_EQ(quiver_binary_file_open_read(path.c_str(), &binary_file), QUIVER_OK);
+        ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'r', nullptr, &binary_file), QUIVER_OK);
 
         // Position (2,1) was never written
         const char* dim_names[] = {"row", "col"};
@@ -439,10 +470,10 @@ TEST_F(BinaryCApiFixture, ReadUnwrittenPositionFails) {
 TEST_F(BinaryCApiFixture, WriterBlocksReader) {
     auto* md = make_simple_metadata();
     quiver_binary_file_t* writer = nullptr;
-    ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &writer), QUIVER_OK);
+    ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'w', md, &writer), QUIVER_OK);
 
     quiver_binary_file_t* reader = nullptr;
-    EXPECT_EQ(quiver_binary_file_open_read(path.c_str(), &reader), QUIVER_ERROR);
+    EXPECT_EQ(quiver_binary_file_open_file(path.c_str(), 'r', nullptr, &reader), QUIVER_ERROR);
     std::string err = quiver_get_last_error();
     EXPECT_NE(err.find("already open for writing"), std::string::npos);
 
@@ -454,13 +485,13 @@ TEST_F(BinaryCApiFixture, ClosedWriterAllowsReader) {
     auto* md = make_simple_metadata();
     {
         quiver_binary_file_t* writer = nullptr;
-        ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &writer), QUIVER_OK);
+        ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'w', md, &writer), QUIVER_OK);
         quiver_binary_file_close(writer);
     }
     quiver_binary_metadata_free(md);
 
     quiver_binary_file_t* reader = nullptr;
-    EXPECT_EQ(quiver_binary_file_open_read(path.c_str(), &reader), QUIVER_OK);
+    EXPECT_EQ(quiver_binary_file_open_file(path.c_str(), 'r', nullptr, &reader), QUIVER_OK);
     quiver_binary_file_close(reader);
 }
 
@@ -468,13 +499,13 @@ TEST_F(BinaryCApiFixture, ReadAllowNulls) {
     auto* md = make_simple_metadata();
     {
         quiver_binary_file_t* binary_file = nullptr;
-        quiver_binary_file_open_write(path.c_str(), md, &binary_file);
+        quiver_binary_file_open_file(path.c_str(), 'w', md, &binary_file);
         quiver_binary_file_close(binary_file);
     }
     quiver_binary_metadata_free(md);
 
     quiver_binary_file_t* binary_file = nullptr;
-    ASSERT_EQ(quiver_binary_file_open_read(path.c_str(), &binary_file), QUIVER_OK);
+    ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'r', nullptr, &binary_file), QUIVER_OK);
 
     const char* dim_names[] = {"row", "col"};
     int64_t dim_values[] = {1, 1};

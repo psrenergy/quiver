@@ -309,7 +309,7 @@ quiver_binary_metadata_free_string_array(char**, size_t)
 quiver_binary_metadata_free_dimension(quiver_dimension_t*)
 
 // Binary file lifecycle
-quiver_binary_file_open_read/open_write/close
+quiver_binary_file_open_file/close
 quiver_binary_file_free_string(char*)
 quiver_binary_file_free_float_array(double*)
 ```
@@ -554,8 +554,7 @@ lua.run(R"(
 
 | Category | C++ | C API | Julia |
 |----------|-----|-------|-------|
-| Open read | `BinaryFile::open_file(path, 'r')` | `quiver_binary_file_open_read()` | `open_file(path; mode=:read)` |
-| Open write | `BinaryFile::open_file(path, 'w', md)` | `quiver_binary_file_open_write()` | `open_file(path; mode=:write, metadata=md)` |
+| Open file | `BinaryFile::open_file(path, mode, md?)` | `quiver_binary_file_open_file()` | `open_file(path; mode, metadata=nothing)` |
 | Close | (destructor) | `quiver_binary_file_close()` | `close!(file)` |
 | Read | `binary_file.read(dims)` | `quiver_binary_file_read()` | `read(file; dims...)` |
 | Write | `binary_file.write(dims, data)` | `quiver_binary_file_write()` | `write!(file; data=data, dims...)` |
@@ -794,7 +793,7 @@ Quiver is a structured-data library wrapping SQLite, plus a standalone binary-fi
 - **Group categories** are `scalar`, `vector`, `set`, `time_series`.
 - Examples: `create_element`, `read_vector_floats`, `read_vector_floats_by_id`, `update_time_series_group`, `list_set_groups`, `get_scalar_metadata`.
 ### C API Identifiers
-- All C API symbols prefixed with `quiver_`: `quiver_database_create_element`, `quiver_binary_file_open_read`, `quiver_database_options_default`.
+- All C API symbols prefixed with `quiver_`: `quiver_database_create_element`, `quiver_binary_file_open_file`, `quiver_database_options_default`.
 - Types: `quiver_{entity}_t` (`quiver_database_t`, `quiver_element_t`, `quiver_binary_file_t`, `quiver_scalar_metadata_t`, `quiver_group_metadata_t`, `quiver_error_t`, `quiver_data_type_t`).
 - Enum constants use `UPPER_SNAKE_CASE` with shared prefix: `QUIVER_OK`, `QUIVER_ERROR`, `QUIVER_LOG_DEBUG`, `QUIVER_DATA_TYPE_INTEGER`.
 - Output parameters use `out_` prefix (`out_db`, `out_values`, `out_count`, `out_healthy`).

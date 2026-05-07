@@ -58,7 +58,7 @@ TEST_F(BinaryCApiCSVFixture, BinToCsvCreatesFile) {
     auto* md = make_simple_metadata();
     {
         quiver_binary_file_t* binary_file = nullptr;
-        quiver_binary_file_open_write(path.c_str(), md, &binary_file);
+        quiver_binary_file_open_file(path.c_str(), 'w', md, &binary_file);
         quiver_binary_file_close(binary_file);
     }
     quiver_binary_metadata_free(md);
@@ -75,7 +75,7 @@ TEST_F(BinaryCApiCSVFixture, CsvToBinCreatesFile) {
     auto* md = make_simple_metadata();
     {
         quiver_binary_file_t* binary_file = nullptr;
-        quiver_binary_file_open_write(path.c_str(), md, &binary_file);
+        quiver_binary_file_open_file(path.c_str(), 'w', md, &binary_file);
 
         const char* dim_names[] = {"row", "col"};
         for (int64_t r = 1; r <= 3; ++r) {
@@ -106,7 +106,7 @@ TEST_F(BinaryCApiCSVFixture, RoundTrip) {
     // Write binary
     {
         quiver_binary_file_t* binary_file = nullptr;
-        quiver_binary_file_open_write(path.c_str(), md, &binary_file);
+        quiver_binary_file_open_file(path.c_str(), 'w', md, &binary_file);
 
         const char* dim_names[] = {"row", "col"};
         int64_t dim_values[] = {1, 1};
@@ -127,7 +127,7 @@ TEST_F(BinaryCApiCSVFixture, RoundTrip) {
     // Read back and verify
     {
         quiver_binary_file_t* binary_file = nullptr;
-        ASSERT_EQ(quiver_binary_file_open_read(path.c_str(), &binary_file), QUIVER_OK);
+        ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'r', nullptr, &binary_file), QUIVER_OK);
 
         const char* dim_names[] = {"row", "col"};
         int64_t dim_values[] = {1, 1};
@@ -151,7 +151,7 @@ TEST_F(BinaryCApiCSVFixture, BinToCsvNoAggregate) {
     auto* md = make_simple_metadata();
     {
         quiver_binary_file_t* binary_file = nullptr;
-        quiver_binary_file_open_write(path.c_str(), md, &binary_file);
+        quiver_binary_file_open_file(path.c_str(), 'w', md, &binary_file);
 
         const char* dim_names[] = {"row", "col"};
         for (int64_t r = 1; r <= 3; ++r) {
@@ -173,7 +173,7 @@ TEST_F(BinaryCApiCSVFixture, BinToCsvAggregate) {
     auto* md = make_simple_metadata();
     {
         quiver_binary_file_t* binary_file = nullptr;
-        quiver_binary_file_open_write(path.c_str(), md, &binary_file);
+        quiver_binary_file_open_file(path.c_str(), 'w', md, &binary_file);
 
         const char* dim_names[] = {"row", "col"};
         for (int64_t r = 1; r <= 3; ++r) {
@@ -201,7 +201,7 @@ TEST_F(BinaryCApiCSVFixture, RoundTripAllPositions) {
     // Write all 3x2 positions
     {
         quiver_binary_file_t* binary_file = nullptr;
-        quiver_binary_file_open_write(path.c_str(), md, &binary_file);
+        quiver_binary_file_open_file(path.c_str(), 'w', md, &binary_file);
 
         const char* dim_names[] = {"row", "col"};
         for (int64_t r = 1; r <= 3; ++r) {
@@ -222,7 +222,7 @@ TEST_F(BinaryCApiCSVFixture, RoundTripAllPositions) {
     // Verify all positions
     {
         quiver_binary_file_t* binary_file = nullptr;
-        ASSERT_EQ(quiver_binary_file_open_read(path.c_str(), &binary_file), QUIVER_OK);
+        ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'r', nullptr, &binary_file), QUIVER_OK);
 
         const char* dim_names[] = {"row", "col"};
         for (int64_t r = 1; r <= 3; ++r) {

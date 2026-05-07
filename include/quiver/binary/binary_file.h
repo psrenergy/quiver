@@ -16,9 +16,7 @@ namespace quiver {
 
 class QUIVER_API BinaryFile {
 public:
-    explicit BinaryFile(const std::string& file_path,
-                        const BinaryMetadata& metadata,
-                        std::unique_ptr<std::iostream> io);
+    explicit BinaryFile(const std::string& file_path);
     ~BinaryFile();
 
     // Non-copyable
@@ -32,6 +30,7 @@ public:
     // File handling
     static BinaryFile
     open_file(const std::string& file_path, char mode, const std::optional<BinaryMetadata>& metadata = {});
+    void open(char mode, const std::optional<BinaryMetadata>& metadata = {});
 
     // Data handling
     std::vector<double> read(const std::unordered_map<std::string, int64_t>& dims, bool allow_nulls = false);
@@ -57,6 +56,8 @@ private:
 
 protected:
     std::iostream& get_io();
+    void set_io(std::unique_ptr<std::iostream> io);
+    void set_metadata(BinaryMetadata metadata);
 };
 
 }  // namespace quiver
