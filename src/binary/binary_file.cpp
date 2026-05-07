@@ -42,8 +42,8 @@ struct BinaryFile::Impl {
     }
 };
 
-BinaryFile::BinaryFile(const std::string& file_path, const BinaryMetadata& metadata, std::unique_ptr<std::iostream> io)
-    : impl_(std::make_unique<Impl>(std::move(io), file_path, metadata)) {}
+BinaryFile::BinaryFile(const std::string& file_path)
+    : impl_(std::make_unique<Impl>(nullptr, file_path, BinaryMetadata{})) {}
 
 BinaryFile::~BinaryFile() = default;
 BinaryFile::BinaryFile(BinaryFile&& other) noexcept = default;
@@ -58,6 +58,8 @@ BinaryFile::open_file(const std::string& file_path, char mode, const std::option
         throw std::runtime_error("Cannot open_file: file is already open for writing: " + canonical);
     }
 
+    BinaryFile binary_file(file_path);
+
     switch (mode) {
     case 'r': {
         // Validate file exists
@@ -69,12 +71,12 @@ BinaryFile::open_file(const std::string& file_path, char mode, const std::option
         // Read TOML metadata
         std::ifstream toml_file(file_path + std::string(TOML_EXTENSION));
         std::string toml_content((std::istreambuf_iterator<char>(toml_file)), std::istreambuf_iterator<char>());
-        auto metadata_from_toml = BinaryMetadata::from_toml(toml_content);
+        binary_file.impl_->metadata = BinaryMetadata::from_toml(toml_content);
 
         // Open binary data file
-        auto io =
+        binary_file.impl_->io =
             std::make_unique<std::fstream>(file_path + std::string(QVR_EXTENSION), std::ios::in | std::ios::binary);
-        return BinaryFile(file_path, metadata_from_toml, std::move(io));
+        return binary_file;
     }
     case 'w': {
         // Validate metadata provided
@@ -86,10 +88,11 @@ BinaryFile::open_file(const std::string& file_path, char mode, const std::option
         std::ofstream toml_file(file_path + std::string(TOML_EXTENSION));
         toml_file << metadata->to_toml();
 
+        binary_file.impl_->metadata = metadata.value();
+
         // Open binary data file
-        auto io =
+        binary_file.impl_->io =
             std::make_unique<std::fstream>(file_path + std::string(QVR_EXTENSION), std::ios::out | std::ios::binary);
-        BinaryFile binary_file(file_path, metadata.value(), std::move(io));
         binary_file.fill_file_with_nulls();  // can throw on disk-full
 
         write_registry.insert(canonical);
@@ -103,6 +106,7 @@ BinaryFile::open_file(const std::string& file_path, char mode, const std::option
 }
 
 std::vector<double> BinaryFile::read(const std::unordered_map<std::string, int64_t>& dims, bool allow_nulls) {
+    validate_file_is_open();
     validate_dimension_values(dims);
 
     go_to_position(calculate_file_position(dims), 'r');
@@ -130,6 +134,7 @@ std::vector<double> BinaryFile::read(const std::unordered_map<std::string, int64
 }
 
 void BinaryFile::write(const std::vector<double>& data, const std::unordered_map<std::string, int64_t>& dims) {
+    validate_file_is_open();
     validate_dimension_values(dims);
     validate_data_length(data);
 
@@ -280,6 +285,14 @@ const std::string& BinaryFile::get_file_path() const {
 
 std::iostream& BinaryFile::get_io() {
     return *impl_->io;
+}
+
+void BinaryFile::set_io(std::unique_ptr<std::iostream> io) {
+    impl_->io = std::move(io);
+}
+
+void BinaryFile::set_metadata(BinaryMetadata metadata) {
+    impl_->metadata = std::move(metadata);
 }
 
 }  // namespace quiver
