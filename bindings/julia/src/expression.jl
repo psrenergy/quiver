@@ -49,8 +49,8 @@ for (op, c_op) in [(:+, :ADD), (:-, :SUBTRACT), (:*, :MULTIPLY), (:/, :DIVIDE)]
     c_enum = Symbol("QUIVER_EXPRESSION_OP_", c_op)
     @eval begin
         Base.$op(a::Expression, b::Expression) = _apply(C.$c_enum, a, b)
-        Base.$op(a::Expression, b::Real)       = _apply_scalar_right(C.$c_enum, a, b)
-        Base.$op(a::Real, b::Expression)       = _apply_scalar_left(C.$c_enum, a, b)
+        Base.$op(a::Expression, b::Real) = _apply_scalar_right(C.$c_enum, a, b)
+        Base.$op(a::Real, b::Expression) = _apply_scalar_left(C.$c_enum, a, b)
     end
 end
 

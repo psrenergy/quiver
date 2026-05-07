@@ -208,8 +208,11 @@ end
             fa = Quiver.Binary.open_file(path_a; mode = :read)
             fb = Quiver.Binary.open_file(path_b; mode = :read)
             fc = Quiver.Binary.open_file(path_c; mode = :read)
-            result = (Quiver.Expression.Expression(fa) + Quiver.Expression.Expression(fb) -
-                      Quiver.Expression.Expression(fc)) / 2.0
+            result =
+                (
+                    Quiver.Expression.Expression(fa) + Quiver.Expression.Expression(fb) -
+                    Quiver.Expression.Expression(fc)
+                ) / 2.0
             Quiver.Expression.save(result, path_out)
             Quiver.Binary.close!(fa)
             Quiver.Binary.close!(fb)

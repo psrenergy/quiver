@@ -12,7 +12,7 @@ extern "C" {
 // Opaque handle type
 typedef struct quiver_expression quiver_expression_t;
 
-// Operation enum (mirrors quiver::BinaryOp)
+// Binary operation kind
 typedef enum {
     QUIVER_EXPRESSION_OP_ADD = 0,
     QUIVER_EXPRESSION_OP_SUBTRACT = 1,
@@ -23,8 +23,8 @@ typedef enum {
 // Construction
 QUIVER_C_API quiver_error_t quiver_expression_from_file(quiver_binary_file_t* file, quiver_expression_t** out);
 
-// Destruction
-QUIVER_C_API quiver_error_t quiver_expression_destroy(quiver_expression_t* expression);
+// Lifecycle
+QUIVER_C_API quiver_error_t quiver_expression_close(quiver_expression_t* expression);
 
 // Operations
 QUIVER_C_API quiver_error_t quiver_expression_apply(quiver_expression_op_t op,
