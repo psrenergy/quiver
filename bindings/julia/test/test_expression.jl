@@ -8,10 +8,21 @@ function make_path(name)
 end
 
 function cleanup(paths...)
+    # Expression's internal FileNode opens its own BinaryFile that stays open until the
+    # Expression handle is finalized. Locals like `e` are still in scope inside `finally`,
+    # so we retry rm() across GC.gc() calls until handles are released.
     for p in paths
         for ext in [".qvr", ".toml"]
             f = p * ext
-            isfile(f) && rm(f)
+            for _ in 1:10
+                isfile(f) || break
+                try
+                    rm(f)
+                    break
+                catch
+                    GC.gc()
+                end
+            end
         end
     end
 end
