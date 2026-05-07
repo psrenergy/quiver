@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace quiver {
@@ -17,7 +18,7 @@ class QUIVER_API Node {
 public:
     virtual ~Node() = default;
 
-    virtual BinaryMetadata metadata() const = 0;
+    virtual const BinaryMetadata& metadata() const = 0;
 
     virtual void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const = 0;
 };
@@ -26,7 +27,7 @@ class QUIVER_API FileNode final : public Node {
 public:
     explicit FileNode(const BinaryFile& file);
 
-    BinaryMetadata metadata() const override;
+    const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
 
     const std::string& path() const { return path_; }
@@ -36,14 +37,14 @@ private:
     BinaryMetadata meta_;
 
     mutable std::unique_ptr<BinaryFile> file_;
-    mutable std::vector<int64_t> own_dims_buf_;
+    mutable std::unordered_map<std::string, int64_t> dim_map_;
 };
 
 class QUIVER_API ScalarNode final : public Node {
 public:
     ScalarNode(double value, BinaryMetadata broadcast_meta);
 
-    BinaryMetadata metadata() const override;
+    const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
 
 private:
@@ -57,7 +58,7 @@ class QUIVER_API BinaryOpNode final : public Node {
 public:
     BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs);
 
-    BinaryMetadata metadata() const override;
+    const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
 
     const std::shared_ptr<Node>& lhs() const { return lhs_; }

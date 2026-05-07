@@ -17,7 +17,7 @@ public:
 
     explicit Expression(std::shared_ptr<Node> node);
 
-    BinaryMetadata metadata() const;
+    const BinaryMetadata& metadata() const;
 
     void save(const std::string& path) const;
 

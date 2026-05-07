@@ -35,7 +35,7 @@ Expression::Expression(const BinaryFile& file) : node_(std::make_shared<FileNode
 
 Expression::Expression(std::shared_ptr<Node> node) : node_(std::move(node)) {}
 
-BinaryMetadata Expression::metadata() const {
+const BinaryMetadata& Expression::metadata() const {
     return node_->metadata();
 }
 
@@ -53,16 +53,18 @@ void Expression::save(const std::string& path) const {
         }
     }
 
-    const auto meta = node_->metadata();
+    const auto& meta = node_->metadata();
     auto writer = BinaryFile::open_file(path, 'w', meta);
+
+    std::unordered_map<std::string, int64_t> dim_map;
+    dim_map.reserve(meta.dimensions.size());
+    for (const auto& dim : meta.dimensions)
+        dim_map[dim.name] = 0;
 
     std::vector<int64_t> dims = first_dimensions(meta);
     std::vector<double> row;
     for (;;) {
         node_->compute_row(dims, row);
-
-        std::unordered_map<std::string, int64_t> dim_map;
-        dim_map.reserve(meta.dimensions.size());
         for (size_t i = 0; i < meta.dimensions.size(); ++i) {
             dim_map[meta.dimensions[i].name] = dims[i];
         }

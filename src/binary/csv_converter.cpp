@@ -3,6 +3,7 @@
 #include "binary_utils.h"
 #include "quiver/binary/binary_file.h"
 #include "quiver/binary/dimension.h"
+#include "quiver/binary/iteration.h"
 #include "utils/datetime.h"
 
 #include <algorithm>
@@ -64,15 +65,9 @@ void CSVConverter::csv_to_bin(const std::string& file_path) {
         }
     }
 
-    // Calculate maximum number of lines
-    int64_t max_lines = 1;
-    for (const auto& dim : dimensions) {
-        max_lines *= dim.size;
-    }
-
     // Iterate CSV lines and write to binary
     std::vector<int64_t> current_dimensions = initial_dimensions;
-    for (int64_t i = 0; i < max_lines; ++i) {
+    for (;;) {
         auto row = csv_reader.read_line();
         csv_reader.validate_dimensions(row.dimension_values, current_dimensions);
 
@@ -82,10 +77,10 @@ void CSVConverter::csv_to_bin(const std::string& file_path) {
         }
         bin_writer.write(row.data, dims);
 
-        current_dimensions = csv_reader.next_dimensions(current_dimensions);
-        if (current_dimensions == initial_dimensions) {
+        auto nxt = next_dimensions(metadata, current_dimensions);
+        if (!nxt)
             break;
-        }
+        current_dimensions = std::move(*nxt);
     }
 }
 
@@ -110,15 +105,9 @@ void CSVConverter::bin_to_csv(const std::string& file_path, bool aggregate_time_
         }
     }
 
-    // Calculate maximum number of lines
-    int64_t max_lines = 1;
-    for (const auto& dim : dimensions) {
-        max_lines *= dim.size;
-    }
-
     // Iterate files and write to CSV
     std::vector<int64_t> current_dimensions = initial_dimensions;
-    for (int64_t i = 0; i < max_lines; ++i) {
+    for (;;) {
         std::unordered_map<std::string, int64_t> dims;
         for (size_t j = 0; j < dimensions.size(); ++j) {
             dims[dimensions[j].name] = current_dimensions[j];
@@ -127,10 +116,10 @@ void CSVConverter::bin_to_csv(const std::string& file_path, bool aggregate_time_
         std::vector<double> data = bin_reader.read(dims, true);
         csv_writer.get_io() << csv_writer.build_line(data, current_dimensions);
 
-        current_dimensions = csv_writer.next_dimensions(current_dimensions);
-        if (current_dimensions == initial_dimensions) {
+        auto nxt = next_dimensions(metadata, current_dimensions);
+        if (!nxt)
             break;
-        }
+        current_dimensions = std::move(*nxt);
     }
 }
 
