@@ -75,6 +75,73 @@ function read_all_cells(path::String; rows::Int = 3, cols::Int = 2)
     return out
 end
 
+# Generic metadata builder. Pass empty time_dimensions for non-time data.
+function make_metadata_full(;
+    dimensions,
+    dimension_sizes,
+    labels = ["v1", "v2"],
+    unit::String = "MW",
+    initial_datetime::String = "2025-01-01T00:00:00",
+    time_dimensions = String[],
+    frequencies = String[],
+)
+    return Quiver.Binary.Metadata(;
+        initial_datetime = initial_datetime,
+        unit = unit,
+        labels = labels,
+        dimensions = dimensions,
+        dimension_sizes = Int64.(dimension_sizes),
+        time_dimensions = time_dimensions,
+        frequencies = frequencies,
+    )
+end
+
+# Writes a single cell at the given dim positions; rest of the file stays NaN.
+function write_one_cell(path::String, md; data, dims...)
+    file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+    Quiver.Binary.write!(file; data = data, dims...)
+    Quiver.Binary.close!(file)
+    return nothing
+end
+
+# Writes every cell with row-major iteration. Caller must ensure no nested
+# time dimensions (sizes are constant across the grid).
+# fill(dims_tuple, label_idx) returns the value (label_idx is 1-based).
+function write_dense(
+    path::String,
+    md,
+    dim_names::Vector{Symbol},
+    dim_sizes::Vector{Int},
+    label_count::Int,
+    fill::Function,
+)
+    file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+    dims = ones(Int64, length(dim_sizes))
+    while true
+        row = [Float64(fill(dims, k)) for k in 1:label_count]
+        Quiver.Binary.write!(file; data = row, NamedTuple{Tuple(dim_names)}(Tuple(dims))...)
+
+        i = length(dims)
+        while i >= 1
+            dims[i] += 1
+            dims[i] <= dim_sizes[i] && break
+            dims[i] = 1
+            i -= 1
+        end
+        i < 1 && break
+    end
+    Quiver.Binary.close!(file)
+    return nothing
+end
+
+# Reads a single cell at the given dim positions, allowing nulls.
+function read_one_cell(path::String; dims...)
+    file = Quiver.Binary.open_file(path; mode = :read)
+    cell = Quiver.Binary.read(file; allow_nulls = true, dims...)
+    Quiver.Binary.close!(file)
+    return cell
+end
+
 @testset "Expression" begin
     # ==========================================================================
     # Identity / save round-trip
@@ -463,6 +530,274 @@ end
             Quiver.Binary.close!(fa)
         finally
             cleanup(path_a)
+        end
+    end
+
+    # ==========================================================================
+    # Same path twice
+    # ==========================================================================
+
+    @testset "Same path twice (a + a, each FileNode opens independently)" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            f1 = Quiver.Binary.open_file(path_a; mode = :read)
+            f2 = Quiver.Binary.open_file(path_a; mode = :read)
+            sum_expr = Quiver.Expression.Expression(f1) + Quiver.Expression.Expression(f2)
+            Quiver.Expression.save(sum_expr, path_out)
+            Quiver.Binary.close!(f1)
+            Quiver.Binary.close!(f2)
+
+            @test read_all_cells(path_out) == 2.0 .* read_all_cells(path_a)
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    # ==========================================================================
+    # Broadcasting
+    # ==========================================================================
+
+    @testset "Broadcast size-1 dim" begin
+        path_a, path_b, path_out = make_path("a"), make_path("b"), make_path("out")
+        try
+            md_a = make_metadata_full(dimensions = ["row", "col"], dimension_sizes = [3, 2])
+            md_b = make_metadata_full(dimensions = ["row", "col"], dimension_sizes = [1, 2])
+
+            write_dense(path_a, md_a, [:row, :col], [3, 2], 2,
+                        (dims, k) -> dims[1] * 100 + dims[2] * 10 + (k - 1))
+            write_dense(path_b, md_b, [:row, :col], [1, 2], 2, (dims, k) -> dims[2] * 1000 + (k - 1))
+
+            fa = Quiver.Binary.open_file(path_a; mode = :read)
+            fb = Quiver.Binary.open_file(path_b; mode = :read)
+            sum_expr = Quiver.Expression.Expression(fa) + Quiver.Expression.Expression(fb)
+            Quiver.Expression.save(sum_expr, path_out)
+            Quiver.Binary.close!(fa)
+            Quiver.Binary.close!(fb)
+
+            # out[r,c,k] = a[r,c,k] + b[1,c,k]
+            cell_111 = read_one_cell(path_out; row = 1, col = 1)
+            cell_211 = read_one_cell(path_out; row = 2, col = 1)
+            cell_322 = read_one_cell(path_out; row = 3, col = 2)
+            @test cell_111[1] == (1 * 100 + 1 * 10 + 0) + (1 * 1000 + 0)
+            @test cell_211[1] == (2 * 100 + 1 * 10 + 0) + (1 * 1000 + 0)
+            @test cell_322[2] == (3 * 100 + 2 * 10 + 1) + (2 * 1000 + 1)
+        finally
+            cleanup(path_a, path_b, path_out)
+        end
+    end
+
+    @testset "Broadcast labels axis (1 label vs 3)" begin
+        path_a, path_b, path_out = make_path("a"), make_path("b"), make_path("out")
+        try
+            md_a = make_metadata_full(dimensions = ["row", "col"], dimension_sizes = [2, 2], labels = ["single"])
+            md_b = make_metadata_full(
+                dimensions = ["row", "col"],
+                dimension_sizes = [2, 2],
+                labels = ["l1", "l2", "l3"],
+            )
+
+            write_dense(path_a, md_a, [:row, :col], [2, 2], 1, (dims, _) -> dims[1] * 10 + dims[2])
+            write_dense(path_b, md_b, [:row, :col], [2, 2], 3,
+                        (dims, k) -> dims[1] * 100 + dims[2] * 10 + (k - 1))
+
+            fa = Quiver.Binary.open_file(path_a; mode = :read)
+            fb = Quiver.Binary.open_file(path_b; mode = :read)
+            sum_expr = Quiver.Expression.Expression(fa) + Quiver.Expression.Expression(fb)
+            Quiver.Expression.save(sum_expr, path_out)
+            Quiver.Binary.close!(fa)
+            Quiver.Binary.close!(fb)
+
+            cell_11 = read_one_cell(path_out; row = 1, col = 1)
+            @test length(cell_11) == 3  # labels promoted from 1 to 3
+            @test cell_11[1] == (1 * 10 + 1) + (1 * 100 + 1 * 10 + 0)
+            @test cell_11[2] == (1 * 10 + 1) + (1 * 100 + 1 * 10 + 1)
+            @test cell_11[3] == (1 * 10 + 1) + (1 * 100 + 1 * 10 + 2)
+        finally
+            cleanup(path_a, path_b, path_out)
+        end
+    end
+
+    @testset "Union dims across operands" begin
+        path_a, path_b, path_out = make_path("a"), make_path("b"), make_path("out")
+        try
+            md_a = make_metadata_full(
+                dimensions = ["scenario", "time"],
+                dimension_sizes = [2, 4],
+                labels = ["v1"],
+                time_dimensions = ["time"],
+                frequencies = ["monthly"],
+            )
+            md_b = make_metadata_full(
+                dimensions = ["time", "stage"],
+                dimension_sizes = [4, 3],
+                labels = ["v1"],
+                time_dimensions = ["time"],
+                frequencies = ["monthly"],
+            )
+
+            write_dense(path_a, md_a, [:scenario, :time], [2, 4], 1, (dims, _) -> dims[1] * 10 + dims[2])
+            write_dense(path_b, md_b, [:time, :stage], [4, 3], 1, (dims, _) -> dims[1] * 100 + dims[2])
+
+            fa = Quiver.Binary.open_file(path_a; mode = :read)
+            fb = Quiver.Binary.open_file(path_b; mode = :read)
+            sum_expr = Quiver.Expression.Expression(fa) + Quiver.Expression.Expression(fb)
+            Quiver.Expression.save(sum_expr, path_out)
+            Quiver.Binary.close!(fa)
+            Quiver.Binary.close!(fb)
+
+            # Output: [scenario=2, time=4, stage=3]. out[s,t,st] = a[s,t] + b[t,st].
+            @test read_one_cell(path_out; scenario = 1, time = 1, stage = 1)[1] == (1 * 10 + 1) + (1 * 100 + 1)
+            @test read_one_cell(path_out; scenario = 2, time = 4, stage = 2)[1] == (2 * 10 + 4) + (4 * 100 + 2)
+        finally
+            cleanup(path_a, path_b, path_out)
+        end
+    end
+
+    @testset "Operand dims in different order" begin
+        path_a, path_b, path_out = make_path("a"), make_path("b"), make_path("out")
+        try
+            md_a = make_metadata_full(dimensions = ["scenario", "time"], dimension_sizes = [2, 4], labels = ["v1"])
+            md_b = make_metadata_full(dimensions = ["time", "scenario"], dimension_sizes = [4, 2], labels = ["v1"])
+
+            write_dense(path_a, md_a, [:scenario, :time], [2, 4], 1, (dims, _) -> dims[1] * 10 + dims[2])
+            write_dense(path_b, md_b, [:time, :scenario], [4, 2], 1, (dims, _) -> dims[1] * 100 + dims[2])
+
+            fa = Quiver.Binary.open_file(path_a; mode = :read)
+            fb = Quiver.Binary.open_file(path_b; mode = :read)
+            sum_expr = Quiver.Expression.Expression(fa) + Quiver.Expression.Expression(fb)
+            Quiver.Expression.save(sum_expr, path_out)
+            Quiver.Binary.close!(fa)
+            Quiver.Binary.close!(fb)
+
+            # out[s,t] = a[s,t] + b[t,s] = (s*10+t) + (t*100+s)
+            for (s, t) in [(1, 1), (2, 4), (1, 4), (2, 2)]
+                expected = (s * 10 + t) + (t * 100 + s)
+                @test read_one_cell(path_out; scenario = s, time = t)[1] == expected
+            end
+        finally
+            cleanup(path_a, path_b, path_out)
+        end
+    end
+
+    # ==========================================================================
+    # Time-property mismatches
+    # ==========================================================================
+
+    @testset "Time-property mismatch throws" begin
+        path_a, path_b = make_path("a"), make_path("b")
+        try
+            md_a = make_metadata_full(
+                dimensions = ["scenario", "block"],
+                dimension_sizes = [3, 12],
+                time_dimensions = ["block"],
+                frequencies = ["monthly"],
+            )
+            md_b = make_metadata_full(dimensions = ["scenario", "block"], dimension_sizes = [3, 12])
+            write_one_cell(path_a, md_a; data = [1.0, 1.0], scenario = 1, block = 1)
+            write_one_cell(path_b, md_b; data = [1.0, 1.0], scenario = 1, block = 1)
+
+            fa = Quiver.Binary.open_file(path_a; mode = :read)
+            fb = Quiver.Binary.open_file(path_b; mode = :read)
+            @test_throws Quiver.DatabaseException Quiver.Expression.Expression(fa) +
+                                                  Quiver.Expression.Expression(fb)
+            Quiver.Binary.close!(fa)
+            Quiver.Binary.close!(fb)
+        finally
+            cleanup(path_a, path_b)
+        end
+    end
+
+    @testset "Initial datetime mismatch throws" begin
+        path_a, path_b = make_path("a"), make_path("b")
+        try
+            md_a = make_metadata_full(
+                dimensions = ["month", "block"],
+                dimension_sizes = [4, 31],
+                time_dimensions = ["month", "block"],
+                frequencies = ["monthly", "daily"],
+                initial_datetime = "2025-01-01T00:00:00",
+            )
+            md_b = make_metadata_full(
+                dimensions = ["month", "block"],
+                dimension_sizes = [4, 31],
+                time_dimensions = ["month", "block"],
+                frequencies = ["monthly", "daily"],
+                initial_datetime = "2025-02-01T00:00:00",
+            )
+            write_one_cell(path_a, md_a; data = [1.0, 1.0], month = 1, block = 1)
+            write_one_cell(path_b, md_b; data = [1.0, 1.0], month = 1, block = 1)
+
+            fa = Quiver.Binary.open_file(path_a; mode = :read)
+            fb = Quiver.Binary.open_file(path_b; mode = :read)
+            @test_throws Quiver.DatabaseException Quiver.Expression.Expression(fa) +
+                                                  Quiver.Expression.Expression(fb)
+            Quiver.Binary.close!(fa)
+            Quiver.Binary.close!(fb)
+        finally
+            cleanup(path_a, path_b)
+        end
+    end
+
+    @testset "Parent dim name mismatch throws" begin
+        path_a, path_b = make_path("a"), make_path("b")
+        try
+            md_a = make_metadata_full(
+                dimensions = ["month", "block"],
+                dimension_sizes = [2, 31],
+                time_dimensions = ["month", "block"],
+                frequencies = ["monthly", "daily"],
+            )
+            md_b = make_metadata_full(
+                dimensions = ["stage", "block"],
+                dimension_sizes = [2, 31],
+                time_dimensions = ["stage", "block"],
+                frequencies = ["monthly", "daily"],
+            )
+            write_one_cell(path_a, md_a; data = [1.0, 1.0], month = 1, block = 1)
+            write_one_cell(path_b, md_b; data = [1.0, 1.0], stage = 1, block = 1)
+
+            fa = Quiver.Binary.open_file(path_a; mode = :read)
+            fb = Quiver.Binary.open_file(path_b; mode = :read)
+            @test_throws Quiver.DatabaseException Quiver.Expression.Expression(fa) +
+                                                  Quiver.Expression.Expression(fb)
+            Quiver.Binary.close!(fa)
+            Quiver.Binary.close!(fb)
+        finally
+            cleanup(path_a, path_b)
+        end
+    end
+
+    @testset "Parent dim match by name accepts cross position" begin
+        path_a, path_b, path_out = make_path("a"), make_path("b"), make_path("out")
+        try
+            md_a = make_metadata_full(
+                dimensions = ["month", "extra", "day"],
+                dimension_sizes = [2, 3, 31],
+                time_dimensions = ["month", "day"],
+                frequencies = ["monthly", "daily"],
+            )
+            md_b = make_metadata_full(
+                dimensions = ["extra", "month", "day"],
+                dimension_sizes = [3, 2, 31],
+                time_dimensions = ["month", "day"],
+                frequencies = ["monthly", "daily"],
+            )
+            write_one_cell(path_a, md_a; data = [1.0, 1.0], month = 1, extra = 1, day = 1)
+            write_one_cell(path_b, md_b; data = [1.0, 1.0], extra = 1, month = 1, day = 1)
+
+            fa = Quiver.Binary.open_file(path_a; mode = :read)
+            fb = Quiver.Binary.open_file(path_b; mode = :read)
+            sum_expr = Quiver.Expression.Expression(fa) + Quiver.Expression.Expression(fb)
+            Quiver.Expression.save(sum_expr, path_out)
+            Quiver.Binary.close!(fa)
+            Quiver.Binary.close!(fb)
+
+            reopened = Quiver.Binary.open_file(path_out; mode = :read)
+            Quiver.Binary.close!(reopened)
+            @test isfile(path_out * ".qvr")
+        finally
+            cleanup(path_a, path_b, path_out)
         end
     end
 end
