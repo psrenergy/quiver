@@ -14,10 +14,14 @@ include/quiver/           # C++ public headers
 include/quiver/binary/      # Binary subsystem headers (binary file I/O)
   binary_file.h               # BinaryFile class (Pimpl) - open_file, read, write, get_metadata
   csv_converter.h              # CSVConverter class - bin_to_csv, csv_to_bin
+  iteration.h                 # first_dimensions, next_dimensions free functions
   binary_metadata.h         # BinaryMetadata struct - dimensions, labels, serialization
   dimension.h             # Dimension struct (name, size, optional TimeProperties)
   time_properties.h       # TimeFrequency enum, TimeProperties struct
   time_constants.h        # Time dimension size constraints
+include/quiver/expression/  # Expression subsystem headers (lazy expressions on .qvr files)
+  expression.h                # Expression value type, + - * / operator overloads, save engine
+  node.h                      # Node base + FileNode/ScalarNode/BinaryOpNode + BinaryOp enum
 include/quiver/c/         # C API headers (for FFI)
   options.h               # All option types and defaults: LogLevel, DatabaseOptions, CSVOptions
   database.h
@@ -35,8 +39,12 @@ src/                      # C++ implementation
 src/binary/                 # Binary C++ implementation
   binary_file.cpp             # BinaryFile class (Pimpl impl)
   csv_converter.cpp            # CSVConverter implementation
+  iteration.cpp               # first_dimensions/next_dimensions impls + dimension_sizes_at_values helper
   binary_metadata.cpp       # BinaryMetadata factories, serialization, validation
   time_properties.cpp     # TimeFrequency string conversion
+src/expression/             # Expression C++ implementation
+  expression.cpp              # Expression class, operator overloads, save engine
+  nodes.cpp                   # FileNode/ScalarNode/BinaryOpNode + validation/broadcast helpers
 src/c/                    # C API implementation
   internal.h              # Shared structs (quiver_database, quiver_element, quiver_binary_file, quiver_binary_metadata), QUIVER_REQUIRE macro
   database_helpers.h      # Marshaling templates, strdup_safe, metadata converters
@@ -164,7 +172,9 @@ struct Database::Impl {
 
 Binary subsystem: `BinaryFile` and `CSVConverter` use Pimpl (hide file I/O dependencies). `BinaryMetadata`, `Dimension`, `TimeProperties` are plain value types.
 
-Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`, `GroupMetadata`, `ScalarMetadata`, `CSVOptions`, `BinaryMetadata`, `Dimension`, `TimeProperties`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor).
+Expression subsystem: `Expression` is a plain value type wrapping `shared_ptr<Node>` — no Pimpl. `Node` is an abstract base with virtual `metadata()` / `compute_row()`; concrete subclasses `FileNode`, `ScalarNode`, `BinaryOpNode` are exposed via `QUIVER_API` and use Rule of Zero. Polymorphism is justified by the recursive tree shape (`BinaryOpNode` owns child `shared_ptr<Node>` operands).
+
+Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`, `GroupMetadata`, `ScalarMetadata`, `CSVOptions`, `BinaryMetadata`, `Dimension`, `TimeProperties`, `Expression`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor).
 
 ### Transactions
 Public API exposes explicit transaction control:
@@ -450,15 +460,46 @@ Standalone binary file I/O layer for `.qvr` files with `.toml` metadata sidecars
 - `TimeProperties` struct: `frequency`, `initial_value`, `parent_dimension_index`
 - `TimeFrequency` enum: `Yearly`, `Monthly`, `Weekly`, `Daily`, `Hourly`
 
+#### Iteration Helpers
+Free functions in `quiver::` for traversing the dimension space of a `BinaryMetadata` (declared in `quiver/binary/iteration.h`):
+
+- `first_dimensions(meta)` — initial position; returns `initial_value` for time dims, `1` for non-time dims
+- `next_dimensions(meta, current)` — next position via right-to-left cascade; returns `nullopt` at end. Uses an internal `dimension_sizes_at_values` helper to handle variable-length time dims (Feb=28/29, Jan=31, etc.)
+
+Used by `Expression::save()` and `CSVConverter::{bin_to_csv, csv_to_bin}` — single source of truth for `.qvr` traversal.
+
 #### Write Registry
 In-process path registry prevents reading files that are currently open for writing. A `static std::unordered_set<std::string>` in `binary.cpp` tracks canonical paths of files open in write mode. Opening a reader or a second writer on a registered path throws `std::runtime_error`. The registry entry is removed in the `Binary` destructor (before flush). Move semantics work correctly: moved-from objects have null `impl_` and skip unregistration. Not thread-safe or multi-process safe.
 
 #### Binary Performance Bottlenecks
-Profiled with 480×500×31 dimensions (~7.3M read/write calls). Main bottlenecks in hot path:
+Profiled with 480×500×31 dimensions (~7.3M read/write calls). Main hot-path costs:
 
-1. **`unordered_map<string, int64_t>` dims parameter (~40% of total time):** Every read/write constructs a hash map with string keys. Hashing, heap allocation for strings/buckets, and `find()` lookups dominate. Fix: add overloads accepting `vector<int64_t>` (values in dimension declaration order) — `calculate_file_position` becomes a simple dot-product with precomputed strides.
-2. **`validate_dimension_values` (~19% of total time):** Called on every read/write. Checks dimension count, name existence, bounds, and time-dimension consistency (date arithmetic via `add_offset_from_int`/`datetime_to_int`). Fix: make validation opt-in or skippable when callers guarantee correct values (e.g., when iterating via `next_dimensions()`).
-3. **`vector<double>` allocation per read (~3%):** Each `read()` allocates a new vector. Fix: add `read_into` overload writing into caller-provided buffer.
+1. **`unordered_map<string, int64_t>` dims parameter (~40% of total time):** Every read/write constructs a hash map with string keys. Hashing, heap allocation for strings/buckets, and `find()` lookups dominate. Indexed `vector<int64_t>` overloads were prototyped (D-13/D-14) and dropped (`b9c9ad0`) in favor of API simplicity — the map-based form is the single supported entry point. Hot-path consumers (e.g., `FileNode::compute_row`, `Expression::save`) cache the `unordered_map` across calls to amortize the allocation. Do not reintroduce indexed overloads without revisiting that decision.
+2. **`validate_dimension_values` (~19% of total time):** Called on every read/write. Checks dimension count, name existence, bounds, and time-dimension consistency (date arithmetic via `add_offset_from_int`/`datetime_to_int`). Could be made opt-in or skippable when callers guarantee correct values (e.g., when iterating via `next_dimensions()`).
+3. **`vector<double>` allocation per read (~3%):** Each `read()` allocates a new vector. A `read_into(buffer, dims)` overload writing into caller-provided storage would eliminate this.
+
+### Expression Subsystem
+Lazy expressions over `.qvr` binary files. Build a DAG using `+ - * /` operator overloads, materialize via `save()`.
+
+```cpp
+auto a = BinaryFile::open_file("a", 'r');
+auto b = BinaryFile::open_file("b", 'r');
+Expression result = (a + b) * 2.0;
+result.save("output");  // writes output.qvr + output.toml
+```
+
+- `Expression` value type (header `quiver/expression/expression.h`):
+  - Constructors: `Expression(const BinaryFile&)` (implicit, enables `bf_a + bf_b`), `Expression(shared_ptr<Node>)`
+  - Accessors: `metadata()`, `node()`
+  - Materialize: `save(path)` — iterates via `first_dimensions`/`next_dimensions`, calls `compute_row()` per cell, writes to a new `.qvr`. Throws if `path` collides (after `weakly_canonical`) with any input file in the DAG.
+- Operator overloads (12 total): `+ - * /` × {expr+expr, expr+double, double+expr}.
+- `Node` hierarchy (header `quiver/expression/node.h`):
+  - `Node` (abstract): `metadata()`, `compute_row(dims, out)`
+  - `FileNode`: lazy reads from a `.qvr`. Caches an open `BinaryFile` and a reusable `unordered_map` across calls (mutable members; not thread-safe per instance).
+  - `ScalarNode`: broadcasts a constant across the operand's label space.
+  - `BinaryOpNode`: combines two operands with `BinaryOp::{Add,Subtract,Multiply,Divide}`. Constructor pre-computes broadcast metadata (`build_broadcast_metadata`), reusable input/output buffers, and `lhs_to_out_`/`rhs_to_out_` index translation tables.
+- Validation is **eager** at `BinaryOpNode` construction (units must match, dim sizes broadcast-compatible n×n / 1×n / n×1, time-dim properties match by name not position, label sizes broadcast-compatible, initial datetimes match). Computation is **lazy**: no I/O until `save()`.
+- `BinaryOp` enum lives in `quiver/expression/node.h` alongside the node classes.
 
 ### LuaRunner Class
 Executes Lua scripts with database access:
@@ -605,7 +646,7 @@ Quiver is a structured-data library wrapping SQLite, plus a standalone binary-fi
 
 - **Language:** C++20, `CMAKE_CXX_STANDARD_REQUIRED ON`, `CMAKE_CXX_EXTENSIONS OFF` — already set in `CMakeLists.txt`. No C++23 features.
 - **ABI stability:** Every new feature must reach the C API and bindings; CRTP / template-leaking surfaces are forbidden in public headers.
-- **Naming:** New subsystem follows CLAUDE.md transformation rules — `quiver::expr` (C++), `quiver_expression_*` (C), `Expression`/`expression` per binding's casing convention.
+- **Naming:** Expression symbols live in the top-level `quiver::` namespace (no sub-namespace, same as `BinaryFile` and friends); headers are organized under `include/quiver/expression/`. C API and bindings will use `quiver_expression_*` (C) and `Expression`/`expression` per binding's casing convention when added.
 - **Errors:** Use the three CLAUDE.md error patterns (`Cannot {operation}: {reason}` / `{Entity} not found: {identifier}` / `Failed to {operation}: {reason}`); messages live in C++ core, bindings surface them unchanged.
 - **Pimpl rule:** Pimpl only when hiding private dependencies. `Expression` is a value type wrapping `shared_ptr<Node>` — no Pimpl. `Node` and its subclasses use Rule of Zero where possible.
 - **No new third-party deps** for v1 — the design only uses `BinaryFile`, `BinaryMetadata`, the standard library.
