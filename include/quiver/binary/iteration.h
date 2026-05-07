@@ -12,7 +12,8 @@ namespace quiver::binary {
 
 QUIVER_API std::vector<int64_t> first_dimensions(const BinaryMetadata& meta);
 
-QUIVER_API std::optional<std::vector<int64_t>> next_dimensions(const BinaryMetadata& meta, const std::vector<int64_t>& current);
+QUIVER_API std::optional<std::vector<int64_t>> next_dimensions(const BinaryMetadata& meta,
+                                                               const std::vector<int64_t>& current);
 
 }  // namespace quiver::binary
 
