@@ -22,6 +22,7 @@ include("database_transaction.jl")
 include("helper_maps.jl")
 include("lua_runner.jl")
 include("binary/Binary.jl")
+include("expression.jl")
 
 export Element, Database, LuaRunner, DatabaseException
 export ScalarMetadata, GroupMetadata

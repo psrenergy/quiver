@@ -122,6 +122,7 @@ if(QUIVER_BUILD_C_API)
         c/binary/binary_file.cpp
         c/binary/csv_converter.cpp
         c/binary/binary_metadata.cpp
+        c/expression/expression.cpp
     )
 
     target_compile_definitions(quiver_c PRIVATE
