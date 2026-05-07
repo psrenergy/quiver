@@ -35,9 +35,7 @@ public:
 
     // Data handling
     std::vector<double> read(const std::unordered_map<std::string, int64_t>& dims, bool allow_nulls = false);
-    void read_into(const std::vector<int64_t>& dims, std::vector<double>& out, bool allow_nulls = false);
     void write(const std::vector<double>& data, const std::unordered_map<std::string, int64_t>& dims);
-    void write(const std::vector<double>& data, const std::vector<int64_t>& dims);
 
     // Getters
     const BinaryMetadata& get_metadata() const;
@@ -49,14 +47,12 @@ private:
 
     // File traversal
     int64_t calculate_file_position(const std::unordered_map<std::string, int64_t>& dims) const;
-    int64_t calculate_file_position_indexed(const std::vector<int64_t>& dims) const;
     void go_to_position(int64_t position, char mode);
     void fill_file_with_nulls();
 
     // Validations
     void validate_file_is_open() const;
     void validate_dimension_values(const std::unordered_map<std::string, int64_t>& dims);
-    void validate_dimension_values_indexed(const std::vector<int64_t>& dims);
     void validate_data_length(const std::vector<double>& data);
 
 protected:

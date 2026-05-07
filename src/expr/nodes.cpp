@@ -29,12 +29,12 @@ void FileNode::compute_row(const std::vector<int64_t>& dims, std::vector<double>
     if (!file_) {
         file_ = std::make_unique<BinaryFile>(BinaryFile::open_file(path_, 'r'));
     }
-    // The trusted-caller fast path read_into skips dimension validation per D-13.
-    // The parent (BinaryOpNode or save engine) is responsible for delivering dims
-    // that are valid for THIS node's metadata. When FileNode is the root of the
-    // expression tree, dims come straight from quiver::binary::next_dimensions
-    // against this same metadata — bounds-correct by construction.
-    file_->read_into(dims, out, /*allow_nulls=*/true);
+    std::unordered_map<std::string, int64_t> dim_map;
+    dim_map.reserve(meta_.dimensions.size());
+    for (size_t i = 0; i < meta_.dimensions.size(); ++i) {
+        dim_map[meta_.dimensions[i].name] = dims[i];
+    }
+    out = file_->read(dim_map, /*allow_nulls=*/true);
 }
 
 // ============================================================================

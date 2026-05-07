@@ -10,6 +10,8 @@
 #include <quiver/binary/iteration.h>
 #include <quiver/element.h>
 #include <quiver/expr/expression.h>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 using namespace quiver;
@@ -58,7 +60,7 @@ protected:
 
     // Programmatic .qvr generator: opens writer, walks all positions via
     // quiver::binary::first/next_dimensions, calls fill(...) per cell to compute the row,
-    // writes via the fast write(vector<int64_t>) path. Closes on scope exit.
+    // writes via the map-based write. Closes on scope exit.
     static void write_qvr(const std::string& path,
                           const BinaryMetadata& meta,
                           std::function<double(const std::vector<int64_t>& dims, size_t label_idx)> fill) {
@@ -68,7 +70,11 @@ protected:
         for (;;) {
             for (size_t k = 0; k < row.size(); ++k)
                 row[k] = fill(dims, k);
-            writer.write(row, dims);
+            std::unordered_map<std::string, int64_t> dim_map;
+            for (size_t i = 0; i < meta.dimensions.size(); ++i) {
+                dim_map[meta.dimensions[i].name] = dims[i];
+            }
+            writer.write(row, dim_map);
             auto nxt = quiver::binary::next_dimensions(meta, dims);
             if (!nxt)
                 break;
@@ -83,9 +89,12 @@ protected:
         const auto& meta = reader.get_metadata();
         std::vector<double> out;
         std::vector<int64_t> dims = quiver::binary::first_dimensions(meta);
-        std::vector<double> cell;
         for (;;) {
-            reader.read_into(dims, cell, true);  // allow_nulls
+            std::unordered_map<std::string, int64_t> dim_map;
+            for (size_t i = 0; i < meta.dimensions.size(); ++i) {
+                dim_map[meta.dimensions[i].name] = dims[i];
+            }
+            auto cell = reader.read(dim_map, true);
             out.insert(out.end(), cell.begin(), cell.end());
             auto nxt = quiver::binary::next_dimensions(meta, dims);
             if (!nxt)
@@ -781,12 +790,9 @@ TEST_F(ExpressionFixture, BroadcastSizeOneDim) {
     EXPECT_EQ(reopened.get_metadata().dimensions[1].size, 2);
 
     // Spot-check 3 cells: (1,1,0), (2,1,0), (3,2,1)
-    std::vector<double> cell_111;
-    std::vector<double> cell_211;
-    std::vector<double> cell_322;
-    reopened.read_into(std::vector<int64_t>{1, 1}, cell_111, true);
-    reopened.read_into(std::vector<int64_t>{2, 1}, cell_211, true);
-    reopened.read_into(std::vector<int64_t>{3, 2}, cell_322, true);
+    auto cell_111 = reopened.read({{"row", 1}, {"col", 1}}, true);
+    auto cell_211 = reopened.read({{"row", 2}, {"col", 1}}, true);
+    auto cell_322 = reopened.read({{"row", 3}, {"col", 2}}, true);
     // a[r,c,k] + b[1,c,k]
     EXPECT_DOUBLE_EQ(cell_111[0], (1.0 * 100 + 1.0 * 10 + 0) + (1.0 * 1000 + 0));
     EXPECT_DOUBLE_EQ(cell_211[0], (2.0 * 100 + 1.0 * 10 + 0) + (1.0 * 1000 + 0));
@@ -830,10 +836,8 @@ TEST_F(ExpressionFixture, BroadcastLabelsAxis) {
     EXPECT_EQ(m.labels[2], "l3");
 
     // Spot-check (1,1) and (2,2)
-    std::vector<double> cell_11;
-    std::vector<double> cell_22;
-    reopened.read_into(std::vector<int64_t>{1, 1}, cell_11, true);
-    reopened.read_into(std::vector<int64_t>{2, 2}, cell_22, true);
+    auto cell_11 = reopened.read({{"row", 1}, {"col", 1}}, true);
+    auto cell_22 = reopened.read({{"row", 2}, {"col", 2}}, true);
     // out[r,c,k] = a[r,c,0] + b[r,c,k]
     EXPECT_DOUBLE_EQ(cell_11[0], (1.0 * 10 + 1.0) + (1.0 * 100 + 1.0 * 10 + 0));
     EXPECT_DOUBLE_EQ(cell_11[1], (1.0 * 10 + 1.0) + (1.0 * 100 + 1.0 * 10 + 1));
@@ -890,10 +894,8 @@ TEST_F(ExpressionFixture, UnionDimsAcrossOperands) {
 
     // Verify two sample cells. Output dims are [scenario, time, stage].
     // out[s, t, st] = a[s, t] + b[t, st] = (s*10 + t) + (t*100 + st).
-    std::vector<double> cell_111;
-    std::vector<double> cell_242;
-    reopened.read_into(std::vector<int64_t>{1, 1, 1}, cell_111, true);
-    reopened.read_into(std::vector<int64_t>{2, 4, 2}, cell_242, true);
+    auto cell_111 = reopened.read({{"scenario", 1}, {"time", 1}, {"stage", 1}}, true);
+    auto cell_242 = reopened.read({{"scenario", 2}, {"time", 4}, {"stage", 2}}, true);
     EXPECT_DOUBLE_EQ(cell_111[0], (1.0 * 10 + 1.0) + (1.0 * 100 + 1.0));
     EXPECT_DOUBLE_EQ(cell_242[0], (2.0 * 10 + 4.0) + (4.0 * 100 + 2.0));
 }
@@ -952,9 +954,8 @@ TEST_F(ExpressionFixture, OperandDimsInDifferentOrder) {
         int64_t s;
         int64_t t;
     };
-    std::vector<double> cell;
     for (auto sample : {Sample{1, 1}, Sample{2, 4}, Sample{1, 4}, Sample{2, 2}}) {
-        reopened.read_into(std::vector<int64_t>{sample.s, sample.t}, cell, true);
+        auto cell = reopened.read({{"scenario", sample.s}, {"time", sample.t}}, true);
         double expected = static_cast<double>(sample.s * 10 + sample.t) +
                           static_cast<double>(sample.t * 100 + sample.s);
         EXPECT_DOUBLE_EQ(cell[0], expected) << "Mismatch at (s=" << sample.s << ", t=" << sample.t << ")";
@@ -1000,9 +1001,8 @@ TEST_F(ExpressionFixture, LargeGridCompletes) {
 
     // Spot-check a handful of cells for value correctness.
     auto reopened = BinaryFile::open_file(path_out, 'r');
-    std::vector<double> cell;
     for (auto rc : {std::pair<int64_t, int64_t>{1, 1}, {25, 10}, {50, 20}}) {
-        reopened.read_into(std::vector<int64_t>{rc.first, rc.second}, cell, true);
+        auto cell = reopened.read({{"row", rc.first}, {"col", rc.second}}, true);
         for (size_t k = 0; k < cell.size(); ++k) {
             double a_val = static_cast<double>(rc.first * 1000 + rc.second * 10 + static_cast<int64_t>(k));
             double b_val = static_cast<double>(rc.first + rc.second * 100 + static_cast<int64_t>(k) * 7);

@@ -10,6 +10,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace quiver::expr {
@@ -73,12 +74,19 @@ void Expression::save(const std::string& path) const {
     const auto meta = node_->metadata();
     auto writer = BinaryFile::open_file(path, 'w', meta);
 
-    // ---- Row loop: single std::vector<double> buffer reused across iterations (CORE-06) ----
+    // ---- Row loop: rebuild dim map per cell and dispatch through map-based primitives ----
     std::vector<int64_t> dims = quiver::binary::first_dimensions(meta);
-    std::vector<double> row;  // ONE allocation; sized on first compute_row call.
+    std::vector<double> row;
     for (;;) {
         node_->compute_row(dims, row);
-        writer.write(row, dims);  // D-14 fast write
+
+        std::unordered_map<std::string, int64_t> dim_map;
+        dim_map.reserve(meta.dimensions.size());
+        for (size_t i = 0; i < meta.dimensions.size(); ++i) {
+            dim_map[meta.dimensions[i].name] = dims[i];
+        }
+        writer.write(row, dim_map);
+
         auto nxt = quiver::binary::next_dimensions(meta, dims);
         if (!nxt)
             break;
