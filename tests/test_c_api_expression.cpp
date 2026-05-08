@@ -77,7 +77,7 @@ protected:
                                             quiver_binary_metadata_t* md,
                                             std::function<double(int, int, int)> fill) {
         quiver_binary_file_t* f = nullptr;
-        ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &f), QUIVER_OK);
+        ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'w', md, &f), QUIVER_OK);
 
         const char* dim_names[] = {"row", "col"};
         for (int64_t r = 1; r <= 3; ++r) {
@@ -95,7 +95,7 @@ protected:
     // ordered (r=1,c=1,k=0), (r=1,c=1,k=1), (r=1,c=2,k=0), ...
     static std::vector<double> read_all_cells(const std::string& path) {
         quiver_binary_file_t* f = nullptr;
-        EXPECT_EQ(quiver_binary_file_open_read(path.c_str(), &f), QUIVER_OK);
+        EXPECT_EQ(quiver_binary_file_open_file(path.c_str(), 'r', nullptr, &f), QUIVER_OK);
         std::vector<double> out;
         const char* dim_names[] = {"row", "col"};
         for (int64_t r = 1; r <= 3; ++r) {
@@ -117,7 +117,7 @@ protected:
     // Helper: build a from-file Expression. Caller owns the returned handle.
     static quiver_expression_t* expr_from_file(const std::string& path) {
         quiver_binary_file_t* f = nullptr;
-        EXPECT_EQ(quiver_binary_file_open_read(path.c_str(), &f), QUIVER_OK);
+        EXPECT_EQ(quiver_binary_file_open_file(path.c_str(), 'r', nullptr, &f), QUIVER_OK);
         quiver_expression_t* e = nullptr;
         EXPECT_EQ(quiver_expression_from_file(f, &e), QUIVER_OK);
         quiver_binary_file_close(f);
@@ -162,7 +162,7 @@ protected:
                                const std::vector<int64_t>& dim_values,
                                const std::vector<double>& cell) {
         quiver_binary_file_t* f = nullptr;
-        ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &f), QUIVER_OK);
+        ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'w', md, &f), QUIVER_OK);
         ASSERT_EQ(quiver_binary_file_write(
                       f, dim_names.data(), dim_values.data(), dim_names.size(), cell.data(), cell.size()),
                   QUIVER_OK);
@@ -178,7 +178,7 @@ protected:
                             int64_t label_count,
                             std::function<double(const std::vector<int64_t>&, size_t)> fill) {
         quiver_binary_file_t* f = nullptr;
-        ASSERT_EQ(quiver_binary_file_open_write(path.c_str(), md, &f), QUIVER_OK);
+        ASSERT_EQ(quiver_binary_file_open_file(path.c_str(), 'w', md, &f), QUIVER_OK);
 
         std::vector<int64_t> dims(dim_sizes.size(), 1);
         std::vector<double> row(static_cast<size_t>(label_count));
@@ -208,7 +208,7 @@ protected:
                                              const std::vector<const char*>& dim_names,
                                              const std::vector<int64_t>& dim_values) {
         quiver_binary_file_t* f = nullptr;
-        EXPECT_EQ(quiver_binary_file_open_read(path.c_str(), &f), QUIVER_OK);
+        EXPECT_EQ(quiver_binary_file_open_file(path.c_str(), 'r', nullptr, &f), QUIVER_OK);
         double* data = nullptr;
         size_t count = 0;
         EXPECT_EQ(quiver_binary_file_read(f,
@@ -539,7 +539,7 @@ TEST_F(ExpressionCApiFixture, MismatchedShapesReturnsError) {
     // Custom write for path_b because its row count is 4, not the default 3.
     {
         quiver_binary_file_t* f = nullptr;
-        ASSERT_EQ(quiver_binary_file_open_write(path_b.c_str(), md_b, &f), QUIVER_OK);
+        ASSERT_EQ(quiver_binary_file_open_file(path_b.c_str(), 'w', md_b, &f), QUIVER_OK);
         const char* dim_names[] = {"row", "col"};
         for (int64_t r = 1; r <= 4; ++r) {
             for (int64_t c = 1; c <= 2; ++c) {
@@ -639,7 +639,7 @@ TEST_F(ExpressionCApiFixture, FromFileNullArguments) {
 
     write_fixture(path_a, [](int, int, int) { return 1.0; });
     quiver_binary_file_t* f = nullptr;
-    quiver_binary_file_open_read(path_a.c_str(), &f);
+    quiver_binary_file_open_file(path_a.c_str(), 'r', nullptr, &f);
     EXPECT_EQ(quiver_expression_from_file(f, nullptr), QUIVER_ERROR);
     EXPECT_STREQ(quiver_get_last_error(), "Null argument: out");
     quiver_binary_file_close(f);
@@ -980,14 +980,14 @@ TEST_F(ExpressionCApiFixture, ParentDimMatchByNameAcceptsCrossPosition) {
     quiver_expression_close(sum);
 
     quiver_binary_file_t* reopened = nullptr;
-    EXPECT_EQ(quiver_binary_file_open_read(path_out.c_str(), &reopened), QUIVER_OK);
+    EXPECT_EQ(quiver_binary_file_open_file(path_out.c_str(), 'r', nullptr, &reopened), QUIVER_OK);
     quiver_binary_file_close(reopened);
 }
 
 TEST_F(ExpressionCApiFixture, FromFileFailsForWriteModeHandle) {
     auto* md = make_simple_metadata();
     quiver_binary_file_t* writer = nullptr;
-    ASSERT_EQ(quiver_binary_file_open_write(path_a.c_str(), md, &writer), QUIVER_OK);
+    ASSERT_EQ(quiver_binary_file_open_file(path_a.c_str(), 'w', md, &writer), QUIVER_OK);
     quiver_binary_metadata_free(md);
 
     quiver_expression_t* expr = nullptr;
