@@ -81,60 +81,60 @@ void Expression::save(const std::string& path) const {
 
 namespace {
 
-Expression make_binop(ExpressionBinary::Op op, const Expression& lhs, const Expression& rhs) {
-    return Expression(std::make_shared<ExpressionBinary>(op, lhs.node(), rhs.node()));
+Expression make_binop(ExpressionBinary::Operation operation, const Expression& lhs, const Expression& rhs) {
+    return Expression(std::make_shared<ExpressionBinary>(operation, lhs.node(), rhs.node()));
 }
 
-Expression scalar_left(ExpressionBinary::Op op, double lhs, const Expression& rhs) {
+Expression scalar_left(ExpressionBinary::Operation operation, double lhs, const Expression& rhs) {
     auto scalar_node = std::make_shared<ExpressionScalar>(lhs, rhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(op, scalar_node, rhs.node()));
+    return Expression(std::make_shared<ExpressionBinary>(operation, scalar_node, rhs.node()));
 }
 
-Expression scalar_right(ExpressionBinary::Op op, const Expression& lhs, double rhs) {
+Expression scalar_right(ExpressionBinary::Operation operation, const Expression& lhs, double rhs) {
     auto scalar_node = std::make_shared<ExpressionScalar>(rhs, lhs.metadata());
-    return Expression(std::make_shared<ExpressionBinary>(op, lhs.node(), scalar_node));
+    return Expression(std::make_shared<ExpressionBinary>(operation, lhs.node(), scalar_node));
 }
 
 }  // namespace
 
 Expression operator+(const Expression& lhs, const Expression& rhs) {
-    return make_binop(ExpressionBinary::Op::Add, lhs, rhs);
+    return make_binop(ExpressionBinary::Operation::Add, lhs, rhs);
 }
 Expression operator+(const Expression& lhs, double rhs) {
-    return scalar_right(ExpressionBinary::Op::Add, lhs, rhs);
+    return scalar_right(ExpressionBinary::Operation::Add, lhs, rhs);
 }
 Expression operator+(double lhs, const Expression& rhs) {
-    return scalar_left(ExpressionBinary::Op::Add, lhs, rhs);
+    return scalar_left(ExpressionBinary::Operation::Add, lhs, rhs);
 }
 
 Expression operator-(const Expression& lhs, const Expression& rhs) {
-    return make_binop(ExpressionBinary::Op::Subtract, lhs, rhs);
+    return make_binop(ExpressionBinary::Operation::Subtract, lhs, rhs);
 }
 Expression operator-(const Expression& lhs, double rhs) {
-    return scalar_right(ExpressionBinary::Op::Subtract, lhs, rhs);
+    return scalar_right(ExpressionBinary::Operation::Subtract, lhs, rhs);
 }
 Expression operator-(double lhs, const Expression& rhs) {
-    return scalar_left(ExpressionBinary::Op::Subtract, lhs, rhs);
+    return scalar_left(ExpressionBinary::Operation::Subtract, lhs, rhs);
 }
 
 Expression operator*(const Expression& lhs, const Expression& rhs) {
-    return make_binop(ExpressionBinary::Op::Multiply, lhs, rhs);
+    return make_binop(ExpressionBinary::Operation::Multiply, lhs, rhs);
 }
 Expression operator*(const Expression& lhs, double rhs) {
-    return scalar_right(ExpressionBinary::Op::Multiply, lhs, rhs);
+    return scalar_right(ExpressionBinary::Operation::Multiply, lhs, rhs);
 }
 Expression operator*(double lhs, const Expression& rhs) {
-    return scalar_left(ExpressionBinary::Op::Multiply, lhs, rhs);
+    return scalar_left(ExpressionBinary::Operation::Multiply, lhs, rhs);
 }
 
 Expression operator/(const Expression& lhs, const Expression& rhs) {
-    return make_binop(ExpressionBinary::Op::Divide, lhs, rhs);
+    return make_binop(ExpressionBinary::Operation::Divide, lhs, rhs);
 }
 Expression operator/(const Expression& lhs, double rhs) {
-    return scalar_right(ExpressionBinary::Op::Divide, lhs, rhs);
+    return scalar_right(ExpressionBinary::Operation::Divide, lhs, rhs);
 }
 Expression operator/(double lhs, const Expression& rhs) {
-    return scalar_left(ExpressionBinary::Op::Divide, lhs, rhs);
+    return scalar_left(ExpressionBinary::Operation::Divide, lhs, rhs);
 }
 
 }  // namespace quiver

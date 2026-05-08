@@ -54,9 +54,9 @@ private:
 
 class QUIVER_API ExpressionBinary final : public ExpressionNode {
 public:
-    enum class Op { Add, Subtract, Multiply, Divide };
+    enum class Operation { Add, Subtract, Multiply, Divide };
 
-    ExpressionBinary(Op op, std::shared_ptr<ExpressionNode> lhs, std::shared_ptr<ExpressionNode> rhs);
+    ExpressionBinary(Operation operation, std::shared_ptr<ExpressionNode> lhs, std::shared_ptr<ExpressionNode> rhs);
 
     const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
@@ -65,9 +65,9 @@ public:
     const std::shared_ptr<ExpressionNode>& rhs() const { return rhs_; }
 
 private:
-    static double apply(Op op, double lhs, double rhs);
+    static double apply(Operation operation, double lhs, double rhs);
 
-    Op op_;
+    Operation operation_;
     std::shared_ptr<ExpressionNode> lhs_;
     std::shared_ptr<ExpressionNode> rhs_;
     BinaryMetadata broadcast_meta_;
@@ -89,23 +89,23 @@ private:
 
 class QUIVER_API ExpressionUnary final : public ExpressionNode {
 public:
-    enum class Op { Unspecified };
+    enum class Operation { Unspecified };
 
-    ExpressionUnary(Op op, std::shared_ptr<ExpressionNode> operand);
+    ExpressionUnary(Operation operation, std::shared_ptr<ExpressionNode> operand);
 
     const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
 
 private:
-    Op op_;
+    Operation operation_;
     std::shared_ptr<ExpressionNode> operand_;
 };
 
 class QUIVER_API ExpressionTernary final : public ExpressionNode {
 public:
-    enum class Op { Unspecified };
+    enum class Operation { Unspecified };
 
-    ExpressionTernary(Op op,
+    ExpressionTernary(Operation operation,
                       std::shared_ptr<ExpressionNode> first,
                       std::shared_ptr<ExpressionNode> second,
                       std::shared_ptr<ExpressionNode> third);
@@ -114,7 +114,7 @@ public:
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
 
 private:
-    Op op_;
+    Operation operation_;
     std::shared_ptr<ExpressionNode> first_;
     std::shared_ptr<ExpressionNode> second_;
     std::shared_ptr<ExpressionNode> third_;
@@ -122,15 +122,17 @@ private:
 
 class QUIVER_API ExpressionAggregation final : public ExpressionNode {
 public:
-    enum class Op { Unspecified };
+    enum class Operation { Unspecified };
 
-    ExpressionAggregation(Op op, std::shared_ptr<ExpressionNode> operand, std::string dimension_to_reduce);
+    ExpressionAggregation(Operation operation,
+                          std::shared_ptr<ExpressionNode> operand,
+                          std::string dimension_to_reduce);
 
     const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
 
 private:
-    Op op_;
+    Operation operation_;
     std::shared_ptr<ExpressionNode> operand_;
     std::string dimension_to_reduce_;
 };

@@ -8,8 +8,8 @@
 namespace {
 
 template <typename Lhs, typename Rhs>
-quiver::Expression dispatch(quiver_expression_op_t op, const Lhs& lhs, const Rhs& rhs) {
-    switch (op) {
+quiver::Expression dispatch(quiver_expression_op_t operation, const Lhs& lhs, const Rhs& rhs) {
+    switch (operation) {
     case QUIVER_EXPRESSION_OP_ADD:
         return lhs + rhs;
     case QUIVER_EXPRESSION_OP_SUBTRACT:
@@ -52,14 +52,14 @@ QUIVER_C_API quiver_error_t quiver_expression_close(quiver_expression_t* express
 
 // Operations
 
-QUIVER_C_API quiver_error_t quiver_expression_apply(quiver_expression_op_t op,
+QUIVER_C_API quiver_error_t quiver_expression_apply(quiver_expression_op_t operation,
                                                     quiver_expression_t* lhs,
                                                     quiver_expression_t* rhs,
                                                     quiver_expression_t** out) {
     QUIVER_REQUIRE(lhs, rhs, out);
 
     try {
-        *out = new quiver_expression(dispatch(op, lhs->expression, rhs->expression));
+        *out = new quiver_expression(dispatch(operation, lhs->expression, rhs->expression));
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
         quiver_set_last_error("Memory allocation failed");
@@ -70,14 +70,14 @@ QUIVER_C_API quiver_error_t quiver_expression_apply(quiver_expression_op_t op,
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_right(quiver_expression_op_t op,
+QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_right(quiver_expression_op_t operation,
                                                                  quiver_expression_t* lhs,
                                                                  double rhs,
                                                                  quiver_expression_t** out) {
     QUIVER_REQUIRE(lhs, out);
 
     try {
-        *out = new quiver_expression(dispatch(op, lhs->expression, rhs));
+        *out = new quiver_expression(dispatch(operation, lhs->expression, rhs));
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
         quiver_set_last_error("Memory allocation failed");
@@ -88,14 +88,14 @@ QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_right(quiver_expressi
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_left(quiver_expression_op_t op,
+QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_left(quiver_expression_op_t operation,
                                                                 double lhs,
                                                                 quiver_expression_t* rhs,
                                                                 quiver_expression_t** out) {
     QUIVER_REQUIRE(rhs, out);
 
     try {
-        *out = new quiver_expression(dispatch(op, lhs, rhs->expression));
+        *out = new quiver_expression(dispatch(operation, lhs, rhs->expression));
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
         quiver_set_last_error("Memory allocation failed");

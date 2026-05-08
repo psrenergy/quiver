@@ -27,15 +27,15 @@ QUIVER_C_API quiver_error_t quiver_expression_from_file(quiver_binary_file_t* fi
 QUIVER_C_API quiver_error_t quiver_expression_close(quiver_expression_t* expression);
 
 // Operations
-QUIVER_C_API quiver_error_t quiver_expression_apply(quiver_expression_op_t op,
+QUIVER_C_API quiver_error_t quiver_expression_apply(quiver_expression_op_t operation,
                                                     quiver_expression_t* lhs,
                                                     quiver_expression_t* rhs,
                                                     quiver_expression_t** out);
-QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_right(quiver_expression_op_t op,
+QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_right(quiver_expression_op_t operation,
                                                                  quiver_expression_t* lhs,
                                                                  double rhs,
                                                                  quiver_expression_t** out);
-QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_left(quiver_expression_op_t op,
+QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_left(quiver_expression_op_t operation,
                                                                 double lhs,
                                                                 quiver_expression_t* rhs,
                                                                 quiver_expression_t** out);

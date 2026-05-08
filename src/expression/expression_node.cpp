@@ -202,22 +202,24 @@ build_broadcast_metadata(const BinaryMetadata& lhs, const BinaryMetadata& rhs, s
 
 }  // namespace
 
-double ExpressionBinary::apply(Op op, double lhs, double rhs) {
-    switch (op) {
-    case Op::Add:
+double ExpressionBinary::apply(Operation operation, double lhs, double rhs) {
+    switch (operation) {
+    case Operation::Add:
         return lhs + rhs;
-    case Op::Subtract:
+    case Operation::Subtract:
         return lhs - rhs;
-    case Op::Multiply:
+    case Operation::Multiply:
         return lhs * rhs;
-    case Op::Divide:
+    case Operation::Divide:
         return lhs / rhs;
     }
-    throw std::runtime_error("Cannot apply: unhandled ExpressionBinary::Op variant");
+    throw std::runtime_error("Cannot apply: unhandled ExpressionBinary::Operation variant");
 }
 
-ExpressionBinary::ExpressionBinary(Op op, std::shared_ptr<ExpressionNode> lhs, std::shared_ptr<ExpressionNode> rhs)
-    : op_(op), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {
+ExpressionBinary::ExpressionBinary(Operation operation,
+                                   std::shared_ptr<ExpressionNode> lhs,
+                                   std::shared_ptr<ExpressionNode> rhs)
+    : operation_(operation), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {
     const auto& lhs_meta = lhs_->metadata();
     const auto& rhs_meta = rhs_->metadata();
 
@@ -284,12 +286,12 @@ void ExpressionBinary::compute_row(const std::vector<int64_t>& dims, std::vector
     for (size_t k = 0; k < out_label_count; ++k) {
         const size_t li = (lhs_label_count_ == 1) ? 0 : k;
         const size_t ri = (rhs_label_count_ == 1) ? 0 : k;
-        out[k] = apply(op_, lhs_buf_[li], rhs_buf_[ri]);
+        out[k] = apply(operation_, lhs_buf_[li], rhs_buf_[ri]);
     }
 }
 
-ExpressionUnary::ExpressionUnary(Op op, std::shared_ptr<ExpressionNode> operand)
-    : op_(op), operand_(std::move(operand)) {}
+ExpressionUnary::ExpressionUnary(Operation operation, std::shared_ptr<ExpressionNode> operand)
+    : operation_(operation), operand_(std::move(operand)) {}
 
 const BinaryMetadata& ExpressionUnary::metadata() const {
     throw std::runtime_error("Cannot get_metadata: ExpressionUnary is not yet implemented");
@@ -299,11 +301,11 @@ void ExpressionUnary::compute_row(const std::vector<int64_t>& /*dims*/, std::vec
     throw std::runtime_error("Cannot compute_row: ExpressionUnary is not yet implemented");
 }
 
-ExpressionTernary::ExpressionTernary(Op op,
+ExpressionTernary::ExpressionTernary(Operation operation,
                                      std::shared_ptr<ExpressionNode> first,
                                      std::shared_ptr<ExpressionNode> second,
                                      std::shared_ptr<ExpressionNode> third)
-    : op_(op), first_(std::move(first)), second_(std::move(second)), third_(std::move(third)) {}
+    : operation_(operation), first_(std::move(first)), second_(std::move(second)), third_(std::move(third)) {}
 
 const BinaryMetadata& ExpressionTernary::metadata() const {
     throw std::runtime_error("Cannot get_metadata: ExpressionTernary is not yet implemented");
@@ -313,10 +315,10 @@ void ExpressionTernary::compute_row(const std::vector<int64_t>& /*dims*/, std::v
     throw std::runtime_error("Cannot compute_row: ExpressionTernary is not yet implemented");
 }
 
-ExpressionAggregation::ExpressionAggregation(Op op,
+ExpressionAggregation::ExpressionAggregation(Operation operation,
                                              std::shared_ptr<ExpressionNode> operand,
                                              std::string dimension_to_reduce)
-    : op_(op), operand_(std::move(operand)), dimension_to_reduce_(std::move(dimension_to_reduce)) {}
+    : operation_(operation), operand_(std::move(operand)), dimension_to_reduce_(std::move(dimension_to_reduce)) {}
 
 const BinaryMetadata& ExpressionAggregation::metadata() const {
     throw std::runtime_error("Cannot get_metadata: ExpressionAggregation is not yet implemented");

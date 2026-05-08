@@ -268,7 +268,7 @@ TEST_F(ExpressionCApiFixture, SaveOpenedTwiceProducesSameOutput) {
 }
 
 // ============================================================================
-// Binary operators (file op file)
+// Binary operators (file operation file)
 // ============================================================================
 
 TEST_F(ExpressionCApiFixture, AddTwoFiles) {
@@ -689,7 +689,7 @@ TEST_F(ExpressionCApiFixture, GetMetadataAfterApplyReturnsBroadcastMetadata) {
 
     char* unit = nullptr;
     ASSERT_EQ(quiver_binary_metadata_get_unit(md, &unit), QUIVER_OK);
-    EXPECT_STREQ(unit, "MW");  // unit broadcasts unchanged through scalar op
+    EXPECT_STREQ(unit, "MW");  // unit broadcasts unchanged through scalar operation
     quiver_binary_metadata_free_string(unit);
 
     quiver_binary_metadata_free(md);
