@@ -40,21 +40,21 @@ function _binop(operation, lhs::Real, rhs::Expression)
     return Expression(out[])
 end
 
-Base.:+(a::Expression, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_ADD, a, b)
-Base.:+(a::Expression, b::Real) = _binop(C.QUIVER_EXPRESSION_OP_ADD, a, b)
-Base.:+(a::Real, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_ADD, a, b)
+Base.:+(a::Expression, b::Expression) = _binop(C.QUIVER_EXPRESSION_OPERATION_ADD, a, b)
+Base.:+(a::Expression, b::Real) = _binop(C.QUIVER_EXPRESSION_OPERATION_ADD, a, b)
+Base.:+(a::Real, b::Expression) = _binop(C.QUIVER_EXPRESSION_OPERATION_ADD, a, b)
 
-Base.:-(a::Expression, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_SUBTRACT, a, b)
-Base.:-(a::Expression, b::Real) = _binop(C.QUIVER_EXPRESSION_OP_SUBTRACT, a, b)
-Base.:-(a::Real, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_SUBTRACT, a, b)
+Base.:-(a::Expression, b::Expression) = _binop(C.QUIVER_EXPRESSION_OPERATION_SUBTRACT, a, b)
+Base.:-(a::Expression, b::Real) = _binop(C.QUIVER_EXPRESSION_OPERATION_SUBTRACT, a, b)
+Base.:-(a::Real, b::Expression) = _binop(C.QUIVER_EXPRESSION_OPERATION_SUBTRACT, a, b)
 
-Base.:*(a::Expression, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_MULTIPLY, a, b)
-Base.:*(a::Expression, b::Real) = _binop(C.QUIVER_EXPRESSION_OP_MULTIPLY, a, b)
-Base.:*(a::Real, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_MULTIPLY, a, b)
+Base.:*(a::Expression, b::Expression) = _binop(C.QUIVER_EXPRESSION_OPERATION_MULTIPLY, a, b)
+Base.:*(a::Expression, b::Real) = _binop(C.QUIVER_EXPRESSION_OPERATION_MULTIPLY, a, b)
+Base.:*(a::Real, b::Expression) = _binop(C.QUIVER_EXPRESSION_OPERATION_MULTIPLY, a, b)
 
-Base.:/(a::Expression, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_DIVIDE, a, b)
-Base.:/(a::Expression, b::Real) = _binop(C.QUIVER_EXPRESSION_OP_DIVIDE, a, b)
-Base.:/(a::Real, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_DIVIDE, a, b)
+Base.:/(a::Expression, b::Expression) = _binop(C.QUIVER_EXPRESSION_OPERATION_DIVIDE, a, b)
+Base.:/(a::Expression, b::Real) = _binop(C.QUIVER_EXPRESSION_OPERATION_DIVIDE, a, b)
+Base.:/(a::Real, b::Expression) = _binop(C.QUIVER_EXPRESSION_OPERATION_DIVIDE, a, b)
 
 Base.:+(a::Binary.File, b::Binary.File) = Expression(a) + Expression(b)
 Base.:+(a::Binary.File, b::Real) = Expression(a) + b

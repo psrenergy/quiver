@@ -278,7 +278,7 @@ TEST_F(ExpressionCApiFixture, AddTwoFiles) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* sum = nullptr;
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &sum), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &sum), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(sum, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -299,7 +299,7 @@ TEST_F(ExpressionCApiFixture, SubtractTwoFiles) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* diff = nullptr;
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_SUBTRACT, a, b, &diff), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_SUBTRACT, a, b, &diff), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(diff, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -320,7 +320,7 @@ TEST_F(ExpressionCApiFixture, MultiplyTwoFiles) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* product = nullptr;
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_MULTIPLY, a, b, &product), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_MULTIPLY, a, b, &product), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(product, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -342,7 +342,7 @@ TEST_F(ExpressionCApiFixture, DivideTwoFiles) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* quotient = nullptr;
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_DIVIDE, a, b, &quotient), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_DIVIDE, a, b, &quotient), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(quotient, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -368,9 +368,9 @@ TEST_F(ExpressionCApiFixture, Chained) {
     quiver_expression_t* a_plus_b = nullptr;
     quiver_expression_t* sub_c = nullptr;
     quiver_expression_t* halved = nullptr;
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &a_plus_b), QUIVER_OK);
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_SUBTRACT, a_plus_b, c, &sub_c), QUIVER_OK);
-    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OP_DIVIDE, sub_c, 2.0, &halved), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &a_plus_b), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_SUBTRACT, a_plus_b, c, &sub_c), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OPERATION_DIVIDE, sub_c, 2.0, &halved), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(halved, path_out.c_str()), QUIVER_OK);
 
     quiver_expression_close(a);
@@ -398,7 +398,7 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastAddRight) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* result = nullptr;
-    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OP_ADD, a, 2.0, &result), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OPERATION_ADD, a, 2.0, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(result);
@@ -415,7 +415,7 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastSubtractRight) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* result = nullptr;
-    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OP_SUBTRACT, a, 5.0, &result), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OPERATION_SUBTRACT, a, 5.0, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(result);
@@ -431,7 +431,7 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastMultiplyRight) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* result = nullptr;
-    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OP_MULTIPLY, a, 3.0, &result), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OPERATION_MULTIPLY, a, 3.0, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(result);
@@ -447,7 +447,7 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastDivideRight) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* result = nullptr;
-    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OP_DIVIDE, a, 4.0, &result), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OPERATION_DIVIDE, a, 4.0, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(result);
@@ -467,7 +467,7 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastAddLeft) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* result = nullptr;
-    ASSERT_EQ(quiver_expression_apply_scalar_left(QUIVER_EXPRESSION_OP_ADD, 7.0, a, &result), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply_scalar_left(QUIVER_EXPRESSION_OPERATION_ADD, 7.0, a, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(result);
@@ -483,7 +483,7 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastSubtractLeft) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* result = nullptr;
-    ASSERT_EQ(quiver_expression_apply_scalar_left(QUIVER_EXPRESSION_OP_SUBTRACT, 100.0, a, &result), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply_scalar_left(QUIVER_EXPRESSION_OPERATION_SUBTRACT, 100.0, a, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(result);
@@ -499,7 +499,7 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastMultiplyLeft) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* result = nullptr;
-    ASSERT_EQ(quiver_expression_apply_scalar_left(QUIVER_EXPRESSION_OP_MULTIPLY, 5.0, a, &result), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply_scalar_left(QUIVER_EXPRESSION_OPERATION_MULTIPLY, 5.0, a, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(result);
@@ -515,7 +515,7 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastDivideLeft) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* result = nullptr;
-    ASSERT_EQ(quiver_expression_apply_scalar_left(QUIVER_EXPRESSION_OP_DIVIDE, 60.0, a, &result), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply_scalar_left(QUIVER_EXPRESSION_OPERATION_DIVIDE, 60.0, a, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(result);
@@ -555,7 +555,7 @@ TEST_F(ExpressionCApiFixture, MismatchedShapesReturnsError) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* result = nullptr;
-    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &result), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &result), QUIVER_ERROR);
     EXPECT_EQ(result, nullptr);
 
     quiver_expression_close(a);
@@ -573,7 +573,7 @@ TEST_F(ExpressionCApiFixture, UnitMismatchReturnsError) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* result = nullptr;
-    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &result), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &result), QUIVER_ERROR);
     EXPECT_EQ(result, nullptr);
 
     quiver_expression_close(a);
@@ -591,7 +591,7 @@ TEST_F(ExpressionCApiFixture, LabelMismatchReturnsError) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* result = nullptr;
-    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &result), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &result), QUIVER_ERROR);
 
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -647,7 +647,7 @@ TEST_F(ExpressionCApiFixture, FromFileNullArguments) {
 
 TEST_F(ExpressionCApiFixture, ApplyNullArguments) {
     quiver_expression_t* out = nullptr;
-    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, nullptr, nullptr, &out), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, nullptr, nullptr, &out), QUIVER_ERROR);
     EXPECT_STREQ(quiver_get_last_error(), "Null argument: lhs");
 }
 
@@ -682,7 +682,7 @@ TEST_F(ExpressionCApiFixture, GetMetadataAfterApplyReturnsBroadcastMetadata) {
     auto* a = expr_from_file(path_a);
 
     quiver_expression_t* doubled = nullptr;
-    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OP_MULTIPLY, a, 2.0, &doubled), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OPERATION_MULTIPLY, a, 2.0, &doubled), QUIVER_OK);
 
     quiver_binary_metadata_t* md = nullptr;
     ASSERT_EQ(quiver_expression_get_metadata(doubled, &md), QUIVER_OK);
@@ -708,7 +708,7 @@ TEST_F(ExpressionCApiFixture, SamePathTwice) {
     auto* a1 = expr_from_file(path_a);
     auto* a2 = expr_from_file(path_a);
     quiver_expression_t* sum = nullptr;
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a1, a2, &sum), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a1, a2, &sum), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(sum, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a1);
     quiver_expression_close(a2);
@@ -741,7 +741,7 @@ TEST_F(ExpressionCApiFixture, BroadcastSizeOneDim) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* sum = nullptr;
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &sum), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &sum), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(sum, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -774,7 +774,7 @@ TEST_F(ExpressionCApiFixture, BroadcastLabelsAxis) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* sum = nullptr;
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &sum), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &sum), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(sum, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -809,7 +809,7 @@ TEST_F(ExpressionCApiFixture, UnionDimsAcrossOperands) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* sum = nullptr;
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &sum), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &sum), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(sum, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -841,7 +841,7 @@ TEST_F(ExpressionCApiFixture, OperandDimsInDifferentOrder) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* sum = nullptr;
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &sum), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &sum), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(sum, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -879,7 +879,7 @@ TEST_F(ExpressionCApiFixture, TimePropertiesMismatchReturnsError) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* result = nullptr;
-    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &result), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &result), QUIVER_ERROR);
     EXPECT_EQ(result, nullptr);
 
     quiver_expression_close(a);
@@ -911,7 +911,7 @@ TEST_F(ExpressionCApiFixture, InitialDatetimeMismatchReturnsError) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* result = nullptr;
-    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &result), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &result), QUIVER_ERROR);
 
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -942,7 +942,7 @@ TEST_F(ExpressionCApiFixture, ParentDimNameMismatchReturnsError) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* result = nullptr;
-    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &result), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &result), QUIVER_ERROR);
 
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -973,7 +973,7 @@ TEST_F(ExpressionCApiFixture, ParentDimMatchByNameAcceptsCrossPosition) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* sum = nullptr;
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &sum), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &sum), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(sum, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(b);

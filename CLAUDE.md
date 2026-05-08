@@ -502,7 +502,7 @@ result.save("output");  // writes output.qvr + output.toml
   - `ExpressionBinary`: combines two operands with `ExpressionBinary::Operation::{Add,Subtract,Multiply,Divide}` (nested enum). Constructor pre-computes broadcast metadata (`build_broadcast_metadata`), reusable input/output buffers, and `lhs_to_out_`/`rhs_to_out_` index translation tables. The `apply(Operation, double, double)` operation-dispatch is a private static member.
   - `ExpressionUnary`, `ExpressionTernary`, `ExpressionAggregation` (scaffolds): same shape, but their `metadata()` and `compute_row()` throw `Cannot {operation}: ExpressionXxx is not yet implemented`. Each carries a placeholder nested `enum class Operation { Unspecified }` until concrete operations are designed.
 - Validation is **eager** at `ExpressionBinary` construction (units must match, dim sizes broadcast-compatible n×n / 1×n / n×1, time-dim properties match by name not position, label sizes broadcast-compatible, initial datetimes match). Computation is **lazy**: no I/O until `save()`.
-- The binary-operation enum is nested as `ExpressionBinary::Operation` (no namespace-scope `BinaryOp` anymore). The C API surface keeps its own stable enum `quiver_expression_op_t`.
+- The binary-operation enum is nested as `ExpressionBinary::Operation` (no namespace-scope `BinaryOp` anymore). The C API surface keeps its own stable enum `quiver_expression_operation_t`.
 
 ### LuaRunner Class
 Executes Lua scripts with database access:

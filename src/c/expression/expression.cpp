@@ -8,15 +8,15 @@
 namespace {
 
 template <typename Lhs, typename Rhs>
-quiver::Expression dispatch(quiver_expression_op_t operation, const Lhs& lhs, const Rhs& rhs) {
+quiver::Expression dispatch(quiver_expression_operation_t operation, const Lhs& lhs, const Rhs& rhs) {
     switch (operation) {
-    case QUIVER_EXPRESSION_OP_ADD:
+    case QUIVER_EXPRESSION_OPERATION_ADD:
         return lhs + rhs;
-    case QUIVER_EXPRESSION_OP_SUBTRACT:
+    case QUIVER_EXPRESSION_OPERATION_SUBTRACT:
         return lhs - rhs;
-    case QUIVER_EXPRESSION_OP_MULTIPLY:
+    case QUIVER_EXPRESSION_OPERATION_MULTIPLY:
         return lhs * rhs;
-    case QUIVER_EXPRESSION_OP_DIVIDE:
+    case QUIVER_EXPRESSION_OPERATION_DIVIDE:
         return lhs / rhs;
     }
     throw std::runtime_error("Cannot apply: unknown expression operation");
@@ -52,7 +52,7 @@ QUIVER_C_API quiver_error_t quiver_expression_close(quiver_expression_t* express
 
 // Operations
 
-QUIVER_C_API quiver_error_t quiver_expression_apply(quiver_expression_op_t operation,
+QUIVER_C_API quiver_error_t quiver_expression_apply(quiver_expression_operation_t operation,
                                                     quiver_expression_t* lhs,
                                                     quiver_expression_t* rhs,
                                                     quiver_expression_t** out) {
@@ -70,7 +70,7 @@ QUIVER_C_API quiver_error_t quiver_expression_apply(quiver_expression_op_t opera
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_right(quiver_expression_op_t operation,
+QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_right(quiver_expression_operation_t operation,
                                                                  quiver_expression_t* lhs,
                                                                  double rhs,
                                                                  quiver_expression_t** out) {
@@ -88,7 +88,7 @@ QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_right(quiver_expressi
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_left(quiver_expression_op_t operation,
+QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_left(quiver_expression_operation_t operation,
                                                                 double lhs,
                                                                 quiver_expression_t* rhs,
                                                                 quiver_expression_t** out) {
