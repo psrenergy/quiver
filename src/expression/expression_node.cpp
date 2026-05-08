@@ -81,17 +81,21 @@ void validate_compatibility(const BinaryMetadata& lhs, const BinaryMetadata& rhs
         if (r_idx < 0) {
             continue;
         }
+
         auto l_size = l_dim.size;
         auto r_size = rhs.dimensions[r_idx].size;
+
         if (l_size == r_size) {
             continue;
         }
+
         if (l_size == 1 || r_size == 1) {
             continue;
         }
+
         throw std::runtime_error("Cannot apply: dimension '" + l_dim.name + "' has incompatible sizes " +
                                  std::to_string(l_size) + " vs " + std::to_string(r_size) +
-                                 " (broadcasting requires n×n, 1×n, or n×1)");
+                                 " (broadcasting requires n x n, 1 x n, or n x 1)");
     }
 
     for (const auto& l_dim : lhs.dimensions) {
