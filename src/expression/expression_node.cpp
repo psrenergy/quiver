@@ -103,6 +103,7 @@ void validate_compatibility(const BinaryMetadata& lhs, const BinaryMetadata& rhs
         if (r_idx < 0) {
             continue;
         }
+
         const auto& r_dim = rhs.dimensions[r_idx];
         const auto l_time = l_dim.is_time_dimension();
         const auto r_time = r_dim.is_time_dimension();
