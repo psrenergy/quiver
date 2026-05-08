@@ -21,7 +21,7 @@ include/quiver/binary/      # Binary subsystem headers (binary file I/O)
   time_constants.h        # Time dimension size constraints
 include/quiver/expression/  # Expression subsystem headers (lazy expressions on .qvr files)
   expression.h                # Expression value type, + - * / operator overloads, save engine
-  node.h                      # ExpressionNode base + ExpressionFile/Scalar/Binary + Unary/Ternary/Aggregation scaffolds
+  expression_node.h           # ExpressionNode base + ExpressionFile/Scalar/Binary + Unary/Ternary/Aggregation scaffolds
 include/quiver/c/         # C API headers (for FFI)
   options.h               # All option types and defaults: LogLevel, DatabaseOptions, CSVOptions
   database.h
@@ -44,7 +44,7 @@ src/binary/                 # Binary C++ implementation
   time_properties.cpp     # TimeFrequency string conversion
 src/expression/             # Expression C++ implementation
   expression.cpp              # Expression class, operator overloads, save engine
-  nodes.cpp                   # ExpressionFile/Scalar/Binary impls + Unary/Ternary/Aggregation scaffold impls + validation/broadcast helpers
+  expression_node.cpp         # ExpressionFile/Scalar/Binary impls + Unary/Ternary/Aggregation scaffold impls + validation/broadcast helpers
 src/c/                    # C API implementation
   internal.h              # Shared structs (quiver_database, quiver_element, quiver_binary_file, quiver_binary_metadata), QUIVER_REQUIRE macro
   database_helpers.h      # Marshaling templates, strdup_safe, metadata converters
@@ -495,7 +495,7 @@ result.save("output");  // writes output.qvr + output.toml
   - Accessors: `metadata()`, `node()`
   - Materialize: `save(path)` — iterates via `first_dimensions`/`next_dimensions`, calls `compute_row()` per cell, writes to a new `.qvr`. Throws if `path` collides (after `weakly_canonical`) with any input file in the DAG.
 - Operator overloads (12 total): `+ - * /` × {expr+expr, expr+double, double+expr}.
-- `ExpressionNode` hierarchy (header `quiver/expression/node.h`):
+- `ExpressionNode` hierarchy (header `quiver/expression/expression_node.h`):
   - `ExpressionNode` (abstract): `metadata()`, `compute_row(dims, out)`
   - `ExpressionFile`: lazy reads from a `.qvr`. Caches an open `BinaryFile` and a reusable `unordered_map` across calls (mutable members; not thread-safe per instance).
   - `ExpressionScalar`: broadcasts a constant across the operand's label space.

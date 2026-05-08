@@ -1,5 +1,5 @@
 #include "quiver/binary/binary_file.h"
-#include "quiver/expression/node.h"
+#include "quiver/expression/expression_node.h"
 
 #include <algorithm>
 #include <cstdint>

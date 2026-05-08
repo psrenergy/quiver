@@ -150,17 +150,17 @@ Be direct. The user wants to know what's wrong, not be coddled. If the code is g
 >
 > ## Findings
 >
-> ### Finding 1: Redundant null check in `BinaryOpNode::compute_row`
-> - File: `src/expression/nodes.cpp:142-146`
+> ### Finding 1: Redundant null check in `ExpressionBinary::compute_row`
+> - File: `src/expression/expression_node.cpp:142-146`
 > - Principle: P2 (clean over defensive)
-> - Issue: The function checks `lhs_ == nullptr` after the constructor has already validated both operands and stored them as `shared_ptr<Node>`. The check can never fire under any code path.
+> - Issue: The function checks `lhs_ == nullptr` after the constructor has already validated both operands and stored them as `shared_ptr<ExpressionNode>`. The check can never fire under any code path.
 > - Fix: Delete lines 142–146.
 > - Size: trivial
 >
 > ### Finding 2: `Expression::path()` accessor never called
 > - File: `include/quiver/expression/expression.h:34`, `src/expression/expression.cpp:78-80`
 > - Principle: P4 (delete unused)
-> - Issue: No call sites in `src/`, `tests/`, or any binding. The constructor stores the path on `FileNode`, where it's already accessible.
+> - Issue: No call sites in `src/`, `tests/`, or any binding. The constructor stores the path on `ExpressionFile`, where it's already accessible.
 > - Fix: Delete the declaration and definition.
 > - Size: trivial
 >

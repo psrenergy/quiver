@@ -4,7 +4,7 @@
 #include "../binary/binary_file.h"
 #include "../binary/binary_metadata.h"
 #include "../export.h"
-#include "node.h"
+#include "expression_node.h"
 
 #include <memory>
 #include <string>

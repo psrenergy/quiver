@@ -27,7 +27,7 @@ set(QUIVER_SOURCES
     binary/dimension.cpp
     binary/time_properties.cpp
     expression/expression.cpp
-    expression/nodes.cpp
+    expression/expression_node.cpp
 )
 
 # Build type
