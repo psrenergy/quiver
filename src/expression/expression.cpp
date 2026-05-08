@@ -58,8 +58,9 @@ void Expression::save(const std::string& path) const {
 
     std::unordered_map<std::string, int64_t> dim_map;
     dim_map.reserve(meta.dimensions.size());
-    for (const auto& dim : meta.dimensions)
+    for (const auto& dim : meta.dimensions) {
         dim_map[dim.name] = 0;
+    }
 
     std::vector<int64_t> dims = first_dimensions(meta);
     std::vector<double> row;
@@ -71,8 +72,9 @@ void Expression::save(const std::string& path) const {
         writer.write(row, dim_map);
 
         auto nxt = next_dimensions(meta, dims);
-        if (!nxt)
+        if (!nxt) {
             break;
+        }
         dims = std::move(*nxt);
     }
 }

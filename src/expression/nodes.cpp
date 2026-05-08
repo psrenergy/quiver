@@ -25,8 +25,9 @@ void FileNode::compute_row(const std::vector<int64_t>& dims, std::vector<double>
     if (!file_) {
         file_ = std::make_unique<BinaryFile>(BinaryFile::open_file(path_, 'r'));
         dim_map_.reserve(meta_.dimensions.size());
-        for (const auto& dim : meta_.dimensions)
+        for (const auto& dim : meta_.dimensions) {
             dim_map_[dim.name] = 0;
+        }
     }
     for (size_t i = 0; i < meta_.dimensions.size(); ++i) {
         dim_map_[meta_.dimensions[i].name] = dims[i];
@@ -49,16 +50,19 @@ namespace {
 
 int find_dim_index(const std::vector<Dimension>& dims, const std::string& name) {
     for (size_t i = 0; i < dims.size(); ++i) {
-        if (dims[i].name == name)
+        if (dims[i].name == name) {
             return static_cast<int>(i);
+        }
     }
     return -1;
 }
 
 bool any_time_dim(const std::vector<Dimension>& dims) {
-    for (const auto& d : dims)
-        if (d.is_time_dimension())
+    for (const auto& d : dims) {
+        if (d.is_time_dimension()) {
             return true;
+        }
+    }
     return false;
 }
 
@@ -87,14 +91,17 @@ void validate_compatibility(const BinaryMetadata& lhs, const BinaryMetadata& rhs
 
     for (const auto& l_dim : lhs.dimensions) {
         auto r_idx = find_dim_index(rhs.dimensions, l_dim.name);
-        if (r_idx < 0)
+        if (r_idx < 0) {
             continue;
+        }
         auto l_size = l_dim.size;
         auto r_size = rhs.dimensions[r_idx].size;
-        if (l_size == r_size)
+        if (l_size == r_size) {
             continue;
-        if (l_size == 1 || r_size == 1)
+        }
+        if (l_size == 1 || r_size == 1) {
             continue;
+        }
         throw std::runtime_error("Cannot apply: dimension '" + l_dim.name + "' has incompatible sizes " +
                                  std::to_string(l_size) + " vs " + std::to_string(r_size) +
                                  " (broadcasting requires n×n, 1×n, or n×1)");
@@ -102,8 +109,9 @@ void validate_compatibility(const BinaryMetadata& lhs, const BinaryMetadata& rhs
 
     for (const auto& l_dim : lhs.dimensions) {
         auto r_idx = find_dim_index(rhs.dimensions, l_dim.name);
-        if (r_idx < 0)
+        if (r_idx < 0) {
             continue;
+        }
         const auto& r_dim = rhs.dimensions[r_idx];
         const auto l_time = l_dim.is_time_dimension();
         const auto r_time = r_dim.is_time_dimension();
@@ -113,8 +121,9 @@ void validate_compatibility(const BinaryMetadata& lhs, const BinaryMetadata& rhs
             throw std::runtime_error("Cannot apply: dimension '" + l_dim.name + "' is a time dimension on " +
                                      time_side + " but not on " + nontime_side);
         }
-        if (!l_time)
+        if (!l_time) {
             continue;
+        }
         const auto& lp = *l_dim.time;
         const auto& rp = *r_dim.time;
         const auto l_parent = parent_name_of(lp.parent_dimension_index, lhs);
@@ -143,10 +152,12 @@ std::vector<std::string> compute_output_labels(const std::vector<std::string>& l
         }
         return l_labels;
     }
-    if (ll == 1 && rl > 1)
+    if (ll == 1 && rl > 1) {
         return r_labels;
-    if (rl == 1 && ll > 1)
+    }
+    if (rl == 1 && ll > 1) {
         return l_labels;
+    }
     throw std::runtime_error("Cannot apply: labels have incompatible sizes " + std::to_string(ll) + " vs " +
                              std::to_string(rl));
 }
@@ -195,8 +206,9 @@ build_broadcast_metadata(const BinaryMetadata& lhs, const BinaryMetadata& rhs, s
         out_d.time->parent_dimension_index = output_index_by_name.find(parent_name)->second;
     }
     for (const auto& d : out.dimensions) {
-        if (d.is_time_dimension())
+        if (d.is_time_dimension()) {
             ++out.number_of_time_dimensions;
+        }
     }
     return out;
 }
@@ -244,21 +256,24 @@ const BinaryMetadata& BinaryOpNode::metadata() const {
 
 void BinaryOpNode::compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const {
     const auto out_label_count = broadcast_meta_.labels.size();
-    if (out.size() != out_label_count)
+    if (out.size() != out_label_count) {
         out.resize(out_label_count);
+    }
 
     for (size_t li = 0; li < lhs_dims_buf_.size(); ++li) {
         const auto out_i = lhs_to_out_[li];
         auto coord = dims[out_i];
-        if (lhs_dim_sizes_[out_i] == 1)
+        if (lhs_dim_sizes_[out_i] == 1) {
             coord = 1;  // size-1 broadcast clamp
+        }
         lhs_dims_buf_[li] = coord;
     }
     for (size_t ri = 0; ri < rhs_dims_buf_.size(); ++ri) {
         const auto out_i = rhs_to_out_[ri];
         auto coord = dims[out_i];
-        if (rhs_dim_sizes_[out_i] == 1)
+        if (rhs_dim_sizes_[out_i] == 1) {
             coord = 1;
+        }
         rhs_dims_buf_[ri] = coord;
     }
 
