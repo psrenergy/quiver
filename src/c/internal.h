@@ -5,6 +5,7 @@
 #include "quiver/binary/binary_metadata.h"
 #include "quiver/database.h"
 #include "quiver/element.h"
+#include "quiver/expression/expression.h"
 
 #include <string>
 
@@ -31,6 +32,11 @@ struct quiver_binary_metadata {
 struct quiver_binary_file {
     quiver::BinaryFile binary_file;
     quiver_binary_file(quiver::BinaryFile&& bf) : binary_file(std::move(bf)) {}
+};
+
+struct quiver_expression {
+    quiver::Expression expression;
+    quiver_expression(quiver::Expression&& expr) : expression(std::move(expr)) {}
 };
 
 // Validates pointer arguments are non-null. Sets descriptive error and returns QUIVER_ERROR.

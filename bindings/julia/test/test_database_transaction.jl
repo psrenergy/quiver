@@ -43,7 +43,7 @@ include("fixture.jl")
 
         Quiver.create_element!(db, "Configuration"; label = "Config")
         Quiver.begin_transaction!(db)
-        @test_throws DatabaseException Quiver.begin_transaction!(db)
+        @test_throws Quiver.DatabaseException Quiver.begin_transaction!(db)
 
         # Clean up: rollback the first transaction
         Quiver.rollback!(db)
@@ -55,7 +55,7 @@ include("fixture.jl")
         db = Quiver.from_schema(":memory:", path_schema)
 
         Quiver.create_element!(db, "Configuration"; label = "Config")
-        @test_throws DatabaseException Quiver.commit!(db)
+        @test_throws Quiver.DatabaseException Quiver.commit!(db)
 
         Quiver.close!(db)
     end
@@ -65,7 +65,7 @@ include("fixture.jl")
         db = Quiver.from_schema(":memory:", path_schema)
 
         Quiver.create_element!(db, "Configuration"; label = "Config")
-        @test_throws DatabaseException Quiver.rollback!(db)
+        @test_throws Quiver.DatabaseException Quiver.rollback!(db)
 
         Quiver.close!(db)
     end

@@ -11,7 +11,11 @@
 
 namespace quiver {
 
-FileNode::FileNode(const BinaryFile& file) : path_(file.get_file_path()), meta_(file.get_metadata()) {}
+FileNode::FileNode(const BinaryFile& file) : path_(file.get_file_path()), meta_(file.get_metadata()) {
+    if (!file.is_read_mode()) {
+        throw std::runtime_error("Cannot create_expression: BinaryFile must be opened in read mode");
+    }
+}
 
 const BinaryMetadata& FileNode::metadata() const {
     return meta_;
