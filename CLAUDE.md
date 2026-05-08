@@ -21,7 +21,7 @@ include/quiver/binary/      # Binary subsystem headers (binary file I/O)
   time_constants.h        # Time dimension size constraints
 include/quiver/expression/  # Expression subsystem headers (lazy expressions on .qvr files)
   expression.h                # Expression value type, + - * / operator overloads, save engine
-  node.h                      # Node base + FileNode/ScalarNode/BinaryOpNode + BinaryOp enum
+  node.h                      # ExpressionNode base + ExpressionFile/Scalar/Binary + Unary/Ternary/Aggregation scaffolds
 include/quiver/c/         # C API headers (for FFI)
   options.h               # All option types and defaults: LogLevel, DatabaseOptions, CSVOptions
   database.h
@@ -44,7 +44,7 @@ src/binary/                 # Binary C++ implementation
   time_properties.cpp     # TimeFrequency string conversion
 src/expression/             # Expression C++ implementation
   expression.cpp              # Expression class, operator overloads, save engine
-  nodes.cpp                   # FileNode/ScalarNode/BinaryOpNode + validation/broadcast helpers
+  nodes.cpp                   # ExpressionFile/Scalar/Binary impls + Unary/Ternary/Aggregation scaffold impls + validation/broadcast helpers
 src/c/                    # C API implementation
   internal.h              # Shared structs (quiver_database, quiver_element, quiver_binary_file, quiver_binary_metadata), QUIVER_REQUIRE macro
   database_helpers.h      # Marshaling templates, strdup_safe, metadata converters
@@ -172,7 +172,7 @@ struct Database::Impl {
 
 Binary subsystem: `BinaryFile` and `CSVConverter` use Pimpl (hide file I/O dependencies). `BinaryMetadata`, `Dimension`, `TimeProperties` are plain value types.
 
-Expression subsystem: `Expression` is a plain value type wrapping `shared_ptr<Node>` — no Pimpl. `Node` is an abstract base with virtual `metadata()` / `compute_row()`; concrete subclasses `FileNode`, `ScalarNode`, `BinaryOpNode` are exposed via `QUIVER_API` and use Rule of Zero. Polymorphism is justified by the recursive tree shape (`BinaryOpNode` owns child `shared_ptr<Node>` operands).
+Expression subsystem: `Expression` is a plain value type wrapping `shared_ptr<ExpressionNode>` — no Pimpl. `ExpressionNode` is an abstract base with virtual `metadata()` / `compute_row()`; concrete subclasses `ExpressionFile`, `ExpressionScalar`, `ExpressionBinary` are exposed via `QUIVER_API` and use Rule of Zero. Polymorphism is justified by the recursive tree shape (`ExpressionBinary` owns child `shared_ptr<ExpressionNode>` operands). Scaffold subclasses `ExpressionUnary`, `ExpressionTernary`, `ExpressionAggregation` exist with the same shape but throw `"not yet implemented"` from their virtuals — operations land in follow-up work.
 
 Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`, `GroupMetadata`, `ScalarMetadata`, `CSVOptions`, `BinaryMetadata`, `Dimension`, `TimeProperties`, `Expression`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor).
 
@@ -478,6 +478,8 @@ Profiled with 480×500×31 dimensions (~7.3M read/write calls). Main hot-path co
 2. **`validate_dimension_values` (~19% of total time):** Called on every read/write. Checks dimension count, name existence, bounds, and time-dimension consistency (date arithmetic via `add_offset_from_int`/`datetime_to_int`). Could be made opt-in or skippable when callers guarantee correct values (e.g., when iterating via `next_dimensions()`).
 3. **`vector<double>` allocation per read (~3%):** Each `read()` allocates a new vector. A `read_into(buffer, dims)` overload writing into caller-provided storage would eliminate this.
 
+(Note: `FileNode::compute_row` was renamed to `ExpressionFile::compute_row`; the cache-amortization point still applies.)
+
 ### Expression Subsystem
 Lazy expressions over `.qvr` binary files. Build a DAG using `+ - * /` operator overloads, materialize via `save()`.
 
@@ -489,17 +491,18 @@ result.save("output");  // writes output.qvr + output.toml
 ```
 
 - `Expression` value type (header `quiver/expression/expression.h`):
-  - Constructors: `Expression(const BinaryFile&)` (implicit, enables `bf_a + bf_b`), `Expression(shared_ptr<Node>)`
+  - Constructors: `Expression(const BinaryFile&)` (implicit, enables `bf_a + bf_b`), `Expression(shared_ptr<ExpressionNode>)`
   - Accessors: `metadata()`, `node()`
   - Materialize: `save(path)` — iterates via `first_dimensions`/`next_dimensions`, calls `compute_row()` per cell, writes to a new `.qvr`. Throws if `path` collides (after `weakly_canonical`) with any input file in the DAG.
 - Operator overloads (12 total): `+ - * /` × {expr+expr, expr+double, double+expr}.
-- `Node` hierarchy (header `quiver/expression/node.h`):
-  - `Node` (abstract): `metadata()`, `compute_row(dims, out)`
-  - `FileNode`: lazy reads from a `.qvr`. Caches an open `BinaryFile` and a reusable `unordered_map` across calls (mutable members; not thread-safe per instance).
-  - `ScalarNode`: broadcasts a constant across the operand's label space.
-  - `BinaryOpNode`: combines two operands with `BinaryOp::{Add,Subtract,Multiply,Divide}`. Constructor pre-computes broadcast metadata (`build_broadcast_metadata`), reusable input/output buffers, and `lhs_to_out_`/`rhs_to_out_` index translation tables.
-- Validation is **eager** at `BinaryOpNode` construction (units must match, dim sizes broadcast-compatible n×n / 1×n / n×1, time-dim properties match by name not position, label sizes broadcast-compatible, initial datetimes match). Computation is **lazy**: no I/O until `save()`.
-- `BinaryOp` enum lives in `quiver/expression/node.h` alongside the node classes.
+- `ExpressionNode` hierarchy (header `quiver/expression/node.h`):
+  - `ExpressionNode` (abstract): `metadata()`, `compute_row(dims, out)`
+  - `ExpressionFile`: lazy reads from a `.qvr`. Caches an open `BinaryFile` and a reusable `unordered_map` across calls (mutable members; not thread-safe per instance).
+  - `ExpressionScalar`: broadcasts a constant across the operand's label space.
+  - `ExpressionBinary`: combines two operands with `ExpressionBinary::Op::{Add,Subtract,Multiply,Divide}` (nested enum). Constructor pre-computes broadcast metadata (`build_broadcast_metadata`), reusable input/output buffers, and `lhs_to_out_`/`rhs_to_out_` index translation tables. The `apply(Op, double, double)` op-dispatch is a private static member.
+  - `ExpressionUnary`, `ExpressionTernary`, `ExpressionAggregation` (scaffolds): same shape, but their `metadata()` and `compute_row()` throw `Cannot {operation}: ExpressionXxx is not yet implemented`. Each carries a placeholder nested `enum class Op { Unspecified }` until concrete operations are designed.
+- Validation is **eager** at `ExpressionBinary` construction (units must match, dim sizes broadcast-compatible n×n / 1×n / n×1, time-dim properties match by name not position, label sizes broadcast-compatible, initial datetimes match). Computation is **lazy**: no I/O until `save()`.
+- The binary-op enum is nested as `ExpressionBinary::Op` (no namespace-scope `BinaryOp` anymore). The C API surface keeps its own stable enum `quiver_expression_op_t`.
 
 ### LuaRunner Class
 Executes Lua scripts with database access:
@@ -647,7 +650,7 @@ Quiver is a structured-data library wrapping SQLite, plus a standalone binary-fi
 - **ABI stability:** Every new feature must reach the C API and bindings; CRTP / template-leaking surfaces are forbidden in public headers.
 - **Naming:** Expression symbols live in the top-level `quiver::` namespace (no sub-namespace, same as `BinaryFile` and friends); headers are organized under `include/quiver/expression/`. C API and bindings will use `quiver_expression_*` (C) and `Expression`/`expression` per binding's casing convention when added.
 - **Errors:** Use the three CLAUDE.md error patterns (`Cannot {operation}: {reason}` / `{Entity} not found: {identifier}` / `Failed to {operation}: {reason}`); messages live in C++ core, bindings surface them unchanged.
-- **Pimpl rule:** Pimpl only when hiding private dependencies. `Expression` is a value type wrapping `shared_ptr<Node>` — no Pimpl. `Node` and its subclasses use Rule of Zero where possible.
+- **Pimpl rule:** Pimpl only when hiding private dependencies. `Expression` is a value type wrapping `shared_ptr<ExpressionNode>` — no Pimpl. `ExpressionNode` and its subclasses use Rule of Zero where possible.
 - **No new third-party deps** for v1 — the design only uses `BinaryFile`, `BinaryMetadata`, the standard library.
 <!-- GSD:project-end -->
 

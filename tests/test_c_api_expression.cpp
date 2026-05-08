@@ -704,7 +704,7 @@ TEST_F(ExpressionCApiFixture, GetMetadataAfterApplyReturnsBroadcastMetadata) {
 TEST_F(ExpressionCApiFixture, SamePathTwice) {
     write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
 
-    // Two independent Expressions both pointing at path_a; each FileNode opens its own handle.
+    // Two independent Expressions both pointing at path_a; each ExpressionFile opens its own handle.
     auto* a1 = expr_from_file(path_a);
     auto* a2 = expr_from_file(path_a);
     quiver_expression_t* sum = nullptr;

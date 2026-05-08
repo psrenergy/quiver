@@ -14,18 +14,18 @@ namespace quiver {
 
 class BinaryFile;
 
-class QUIVER_API Node {
+class QUIVER_API ExpressionNode {
 public:
-    virtual ~Node() = default;
+    virtual ~ExpressionNode() = default;
 
     virtual const BinaryMetadata& metadata() const = 0;
 
     virtual void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const = 0;
 };
 
-class QUIVER_API FileNode final : public Node {
+class QUIVER_API ExpressionFile final : public ExpressionNode {
 public:
-    explicit FileNode(const BinaryFile& file);
+    explicit ExpressionFile(const BinaryFile& file);
 
     const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
@@ -40,9 +40,9 @@ private:
     mutable std::unordered_map<std::string, int64_t> dim_map_;
 };
 
-class QUIVER_API ScalarNode final : public Node {
+class QUIVER_API ExpressionScalar final : public ExpressionNode {
 public:
-    ScalarNode(double value, BinaryMetadata broadcast_meta);
+    ExpressionScalar(double value, BinaryMetadata broadcast_meta);
 
     const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
@@ -52,22 +52,24 @@ private:
     BinaryMetadata broadcast_meta_;
 };
 
-enum class BinaryOp { Add, Subtract, Multiply, Divide };
-
-class QUIVER_API BinaryOpNode final : public Node {
+class QUIVER_API ExpressionBinary final : public ExpressionNode {
 public:
-    BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs);
+    enum class Op { Add, Subtract, Multiply, Divide };
+
+    ExpressionBinary(Op op, std::shared_ptr<ExpressionNode> lhs, std::shared_ptr<ExpressionNode> rhs);
 
     const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
 
-    const std::shared_ptr<Node>& lhs() const { return lhs_; }
-    const std::shared_ptr<Node>& rhs() const { return rhs_; }
+    const std::shared_ptr<ExpressionNode>& lhs() const { return lhs_; }
+    const std::shared_ptr<ExpressionNode>& rhs() const { return rhs_; }
 
 private:
-    BinaryOp op_;
-    std::shared_ptr<Node> lhs_;
-    std::shared_ptr<Node> rhs_;
+    static double apply(Op op, double lhs, double rhs);
+
+    Op op_;
+    std::shared_ptr<ExpressionNode> lhs_;
+    std::shared_ptr<ExpressionNode> rhs_;
     BinaryMetadata broadcast_meta_;
 
     std::vector<int64_t> lhs_dim_sizes_;
@@ -83,6 +85,54 @@ private:
     mutable std::vector<int64_t> rhs_dims_buf_;
     mutable std::vector<double> lhs_buf_;
     mutable std::vector<double> rhs_buf_;
+};
+
+class QUIVER_API ExpressionUnary final : public ExpressionNode {
+public:
+    enum class Op { Unspecified };
+
+    ExpressionUnary(Op op, std::shared_ptr<ExpressionNode> operand);
+
+    const BinaryMetadata& metadata() const override;
+    void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
+
+private:
+    Op op_;
+    std::shared_ptr<ExpressionNode> operand_;
+};
+
+class QUIVER_API ExpressionTernary final : public ExpressionNode {
+public:
+    enum class Op { Unspecified };
+
+    ExpressionTernary(Op op,
+                      std::shared_ptr<ExpressionNode> first,
+                      std::shared_ptr<ExpressionNode> second,
+                      std::shared_ptr<ExpressionNode> third);
+
+    const BinaryMetadata& metadata() const override;
+    void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
+
+private:
+    Op op_;
+    std::shared_ptr<ExpressionNode> first_;
+    std::shared_ptr<ExpressionNode> second_;
+    std::shared_ptr<ExpressionNode> third_;
+};
+
+class QUIVER_API ExpressionAggregation final : public ExpressionNode {
+public:
+    enum class Op { Unspecified };
+
+    ExpressionAggregation(Op op, std::shared_ptr<ExpressionNode> operand, std::string dimension_to_reduce);
+
+    const BinaryMetadata& metadata() const override;
+    void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
+
+private:
+    Op op_;
+    std::shared_ptr<ExpressionNode> operand_;
+    std::string dimension_to_reduce_;
 };
 
 }  // namespace quiver

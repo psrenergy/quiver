@@ -261,7 +261,7 @@ TEST_F(ExpressionFixture, SamePathTwice) {
     });
     auto a1 = BinaryFile::open_file(path_a, 'r');
     auto a2 = BinaryFile::open_file(path_a, 'r');
-    Expression e = Expression(a1) + Expression(a2);  // each FileNode opens independently
+    Expression e = Expression(a1) + Expression(a2);  // each ExpressionFile opens independently
     e.save(path_out);
 
     auto va = read_all_cells(path_a);

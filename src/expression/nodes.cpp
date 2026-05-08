@@ -11,17 +11,17 @@
 
 namespace quiver {
 
-FileNode::FileNode(const BinaryFile& file) : path_(file.get_file_path()), meta_(file.get_metadata()) {
+ExpressionFile::ExpressionFile(const BinaryFile& file) : path_(file.get_file_path()), meta_(file.get_metadata()) {
     if (!file.is_read_mode()) {
         throw std::runtime_error("Cannot create_expression: BinaryFile must be opened in read mode");
     }
 }
 
-const BinaryMetadata& FileNode::metadata() const {
+const BinaryMetadata& ExpressionFile::metadata() const {
     return meta_;
 }
 
-void FileNode::compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const {
+void ExpressionFile::compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const {
     if (!file_) {
         file_ = std::make_unique<BinaryFile>(BinaryFile::open_file(path_, 'r'));
         dim_map_.reserve(meta_.dimensions.size());
@@ -35,14 +35,14 @@ void FileNode::compute_row(const std::vector<int64_t>& dims, std::vector<double>
     out = file_->read(dim_map_, /*allow_nulls=*/true);
 }
 
-ScalarNode::ScalarNode(double value, BinaryMetadata broadcast_meta)
+ExpressionScalar::ExpressionScalar(double value, BinaryMetadata broadcast_meta)
     : value_(value), broadcast_meta_(std::move(broadcast_meta)) {}
 
-const BinaryMetadata& ScalarNode::metadata() const {
+const BinaryMetadata& ExpressionScalar::metadata() const {
     return broadcast_meta_;
 }
 
-void ScalarNode::compute_row(const std::vector<int64_t>& /*dims*/, std::vector<double>& out) const {
+void ExpressionScalar::compute_row(const std::vector<int64_t>& /*dims*/, std::vector<double>& out) const {
     out.assign(broadcast_meta_.labels.size(), value_);
 }
 
@@ -64,20 +64,6 @@ bool any_time_dim(const std::vector<Dimension>& dims) {
         }
     }
     return false;
-}
-
-double apply_op(BinaryOp op, double a, double b) {
-    switch (op) {
-    case BinaryOp::Add:
-        return a + b;
-    case BinaryOp::Subtract:
-        return a - b;
-    case BinaryOp::Multiply:
-        return a * b;
-    case BinaryOp::Divide:
-        return a / b;
-    }
-    throw std::runtime_error("Cannot apply: unhandled BinaryOp variant");
 }
 
 std::string parent_name_of(int64_t parent_idx, const BinaryMetadata& m) {
@@ -215,7 +201,21 @@ build_broadcast_metadata(const BinaryMetadata& lhs, const BinaryMetadata& rhs, s
 
 }  // namespace
 
-BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs)
+double ExpressionBinary::apply(Op op, double lhs, double rhs) {
+    switch (op) {
+    case Op::Add:
+        return lhs + rhs;
+    case Op::Subtract:
+        return lhs - rhs;
+    case Op::Multiply:
+        return lhs * rhs;
+    case Op::Divide:
+        return lhs / rhs;
+    }
+    throw std::runtime_error("Cannot apply: unhandled ExpressionBinary::Op variant");
+}
+
+ExpressionBinary::ExpressionBinary(Op op, std::shared_ptr<ExpressionNode> lhs, std::shared_ptr<ExpressionNode> rhs)
     : op_(op), lhs_(std::move(lhs)), rhs_(std::move(rhs)) {
     const auto& lhs_meta = lhs_->metadata();
     const auto& rhs_meta = rhs_->metadata();
@@ -250,11 +250,11 @@ BinaryOpNode::BinaryOpNode(BinaryOp op, std::shared_ptr<Node> lhs, std::shared_p
     rhs_buf_.resize(rhs_label_count_);
 }
 
-const BinaryMetadata& BinaryOpNode::metadata() const {
+const BinaryMetadata& ExpressionBinary::metadata() const {
     return broadcast_meta_;
 }
 
-void BinaryOpNode::compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const {
+void ExpressionBinary::compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const {
     const auto out_label_count = broadcast_meta_.labels.size();
     if (out.size() != out_label_count) {
         out.resize(out_label_count);
@@ -283,8 +283,46 @@ void BinaryOpNode::compute_row(const std::vector<int64_t>& dims, std::vector<dou
     for (size_t k = 0; k < out_label_count; ++k) {
         const size_t li = (lhs_label_count_ == 1) ? 0 : k;
         const size_t ri = (rhs_label_count_ == 1) ? 0 : k;
-        out[k] = apply_op(op_, lhs_buf_[li], rhs_buf_[ri]);
+        out[k] = apply(op_, lhs_buf_[li], rhs_buf_[ri]);
     }
+}
+
+ExpressionUnary::ExpressionUnary(Op op, std::shared_ptr<ExpressionNode> operand)
+    : op_(op), operand_(std::move(operand)) {}
+
+const BinaryMetadata& ExpressionUnary::metadata() const {
+    throw std::runtime_error("Cannot get_metadata: ExpressionUnary is not yet implemented");
+}
+
+void ExpressionUnary::compute_row(const std::vector<int64_t>& /*dims*/, std::vector<double>& /*out*/) const {
+    throw std::runtime_error("Cannot compute_row: ExpressionUnary is not yet implemented");
+}
+
+ExpressionTernary::ExpressionTernary(Op op,
+                                     std::shared_ptr<ExpressionNode> first,
+                                     std::shared_ptr<ExpressionNode> second,
+                                     std::shared_ptr<ExpressionNode> third)
+    : op_(op), first_(std::move(first)), second_(std::move(second)), third_(std::move(third)) {}
+
+const BinaryMetadata& ExpressionTernary::metadata() const {
+    throw std::runtime_error("Cannot get_metadata: ExpressionTernary is not yet implemented");
+}
+
+void ExpressionTernary::compute_row(const std::vector<int64_t>& /*dims*/, std::vector<double>& /*out*/) const {
+    throw std::runtime_error("Cannot compute_row: ExpressionTernary is not yet implemented");
+}
+
+ExpressionAggregation::ExpressionAggregation(Op op,
+                                             std::shared_ptr<ExpressionNode> operand,
+                                             std::string dimension_to_reduce)
+    : op_(op), operand_(std::move(operand)), dimension_to_reduce_(std::move(dimension_to_reduce)) {}
+
+const BinaryMetadata& ExpressionAggregation::metadata() const {
+    throw std::runtime_error("Cannot get_metadata: ExpressionAggregation is not yet implemented");
+}
+
+void ExpressionAggregation::compute_row(const std::vector<int64_t>& /*dims*/, std::vector<double>& /*out*/) const {
+    throw std::runtime_error("Cannot compute_row: ExpressionAggregation is not yet implemented");
 }
 
 }  // namespace quiver

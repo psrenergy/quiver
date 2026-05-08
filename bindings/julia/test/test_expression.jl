@@ -137,7 +137,7 @@ end
 
 # Open a BinaryFile, build an Expression on it, close the file, run the body
 # with the Expression, then close the Expression. The Expression's internal
-# FileNode keeps its own handle, so the BinaryFile can close immediately.
+# ExpressionFile keeps its own handle, so the BinaryFile can close immediately.
 # Body is the first positional arg so callers can use `do` syntax.
 function with_expr(body::Function, path::String)
     file = Quiver.Binary.open_file(path; mode = 'r')
@@ -546,7 +546,7 @@ end
     # Same path twice
     # ==========================================================================
 
-    @testset "Same path twice (a + a, each FileNode opens independently)" begin
+    @testset "Same path twice (a + a, each ExpressionFile opens independently)" begin
         path_a, path_out = make_path("a"), make_path("out")
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
@@ -870,7 +870,7 @@ end
     @testset "example2.jl pattern: c = a + b * 2" begin
         # Mirrors example2.jl's `c = a + b * 2`. We bind the intermediate `b * 2`
         # to a name so it can be closed explicitly — otherwise on Windows the
-        # FileNode held by the anonymous intermediate Expression keeps path_b open
+        # ExpressionFile held by the anonymous intermediate Expression keeps path_b open
         # until Julia GC runs, blocking cleanup's rm(). Production code (example2.jl)
         # never deletes the files, so this is purely a test-harness concern.
         path_a, path_b, path_out = make_path("a"), make_path("b"), make_path("out")
