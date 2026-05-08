@@ -22,21 +22,21 @@ function close!(e::Expression)
     return nothing
 end
 
-function _binop(op, lhs::Expression, rhs::Expression)
+function _binop(operation, lhs::Expression, rhs::Expression)
     out = Ref{Ptr{C.quiver_expression}}(C_NULL)
-    check(C.quiver_expression_apply(op, lhs.ptr, rhs.ptr, out))
+    check(C.quiver_expression_apply(operation, lhs.ptr, rhs.ptr, out))
     return Expression(out[])
 end
 
-function _binop(op, lhs::Expression, rhs::Real)
+function _binop(operation, lhs::Expression, rhs::Real)
     out = Ref{Ptr{C.quiver_expression}}(C_NULL)
-    check(C.quiver_expression_apply_scalar_right(op, lhs.ptr, Float64(rhs), out))
+    check(C.quiver_expression_apply_scalar_right(operation, lhs.ptr, Float64(rhs), out))
     return Expression(out[])
 end
 
-function _binop(op, lhs::Real, rhs::Expression)
+function _binop(operation, lhs::Real, rhs::Expression)
     out = Ref{Ptr{C.quiver_expression}}(C_NULL)
-    check(C.quiver_expression_apply_scalar_left(op, Float64(lhs), rhs.ptr, out))
+    check(C.quiver_expression_apply_scalar_left(operation, Float64(lhs), rhs.ptr, out))
     return Expression(out[])
 end
 

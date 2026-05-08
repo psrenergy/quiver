@@ -707,7 +707,7 @@ TEST(DatabaseCApi, CreateElementNoFkColumnsUnchanged) {
     quiver_database_t* db = nullptr;
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
 
-    // basic.sql has no FK columns -- pre-resolve pass is a no-operation
+    // basic.sql has no FK columns -- pre-resolve pass is a no-op
     quiver_element_t* element = nullptr;
     ASSERT_EQ(quiver_element_create(&element), QUIVER_OK);
     quiver_element_set_string(element, "label", "Config 1");

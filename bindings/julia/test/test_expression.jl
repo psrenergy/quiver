@@ -186,7 +186,7 @@ end
     end
 
     # ==========================================================================
-    # Binary operators (file op file)
+    # Binary operators (file operation file)
     # ==========================================================================
 
     @testset "Add two files" begin
@@ -524,7 +524,7 @@ end
         end
     end
 
-    @testset "get_metadata after scalar op returns broadcast metadata" begin
+    @testset "get_metadata after scalar operation returns broadcast metadata" begin
         path_a = make_path("a")
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
@@ -532,7 +532,7 @@ end
                 e = a * 2.0
                 try
                     md = Quiver.get_metadata(e)
-                    @test Quiver.Binary.get_unit(md) == "MW"  # unit preserved through scalar op
+                    @test Quiver.Binary.get_unit(md) == "MW"  # unit preserved through scalar operation
                 finally
                     Quiver.close!(e)
                 end

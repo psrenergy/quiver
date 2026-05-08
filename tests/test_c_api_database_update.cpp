@@ -1376,7 +1376,7 @@ TEST(DatabaseCApi, UpdateElementNoFkColumnsUnchanged) {
     ASSERT_EQ(quiver_database_create_element(db, "Configuration", e, &id), QUIVER_OK);
     EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
-    // Update via update_element (FK pre-resolve pass should be a no-operation for non-FK schemas)
+    // Update via update_element (FK pre-resolve pass should be a no-op for non-FK schemas)
     quiver_element_t* update = nullptr;
     ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
     quiver_element_set_integer(update, "integer_attribute", 100);
