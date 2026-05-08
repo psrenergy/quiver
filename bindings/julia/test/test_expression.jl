@@ -49,7 +49,7 @@ end
 
 # Writes a fixture with caller-provided metadata (rows × 2). fill(r, c, k) returns the cell value.
 function write_fixture_with_metadata(path::String, md, fill::Function; rows::Int = 3, cols::Int = 2)
-    file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+    file = Quiver.Binary.open_file(path; mode = 'w', metadata = md)
     for r in 1:rows, c in 1:cols
         Quiver.Binary.write!(file; data = [Float64(fill(r, c, 1)), Float64(fill(r, c, 2))], row = r, col = c)
     end
@@ -59,7 +59,7 @@ end
 
 # Reads all 3 × 2 × 2 cells in (r, c, k) order.
 function read_all_cells(path::String; rows::Int = 3, cols::Int = 2)
-    file = Quiver.Binary.open_file(path; mode = :read)
+    file = Quiver.Binary.open_file(path; mode = 'r')
     out = Float64[]
     for r in 1:rows, c in 1:cols
         append!(out, Quiver.Binary.read(file; row = r, col = c))
@@ -91,7 +91,7 @@ end
 
 # Writes a single cell at the given dim positions; rest of the file stays NaN.
 function write_one_cell(path::String, md; data, dims...)
-    file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+    file = Quiver.Binary.open_file(path; mode = 'w', metadata = md)
     Quiver.Binary.write!(file; data = data, dims...)
     Quiver.Binary.close!(file)
     return nothing
@@ -108,7 +108,7 @@ function write_dense(
     label_count::Int,
     fill::Function,
 )
-    file = Quiver.Binary.open_file(path; mode = :write, metadata = md)
+    file = Quiver.Binary.open_file(path; mode = 'w', metadata = md)
     dims = ones(Int64, length(dim_sizes))
     while true
         row = [Float64(fill(dims, k)) for k in 1:label_count]
@@ -129,7 +129,7 @@ end
 
 # Reads a single cell at the given dim positions, allowing nulls.
 function read_one_cell(path::String; dims...)
-    file = Quiver.Binary.open_file(path; mode = :read)
+    file = Quiver.Binary.open_file(path; mode = 'r')
     cell = Quiver.Binary.read(file; allow_nulls = true, dims...)
     Quiver.Binary.close!(file)
     return cell
@@ -140,7 +140,7 @@ end
 # FileNode keeps its own handle, so the BinaryFile can close immediately.
 # Body is the first positional arg so callers can use `do` syntax.
 function with_expr(body::Function, path::String)
-    file = Quiver.Binary.open_file(path; mode = :read)
+    file = Quiver.Binary.open_file(path; mode = 'r')
     e = Quiver.Expression(file)
     Quiver.Binary.close!(file)
     try
@@ -495,7 +495,7 @@ end
         path_a = make_path("a")
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
-            file = Quiver.Binary.open_file(path_a; mode = :read)
+            file = Quiver.Binary.open_file(path_a; mode = 'r')
             e = Quiver.Expression(file)
             Quiver.Binary.close!(file)
             Quiver.close!(e)
@@ -804,7 +804,7 @@ end
                 end
             end
 
-            reopened = Quiver.Binary.open_file(path_out; mode = :read)
+            reopened = Quiver.Binary.open_file(path_out; mode = 'r')
             Quiver.Binary.close!(reopened)
             @test isfile(path_out * ".qvr")
         finally
@@ -821,8 +821,8 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             write_fixture(path_b, (r, c, k) -> r * 100 + c * 5 + k * 2)
-            a = Quiver.Binary.open_file(path_a; mode = :read)
-            b = Quiver.Binary.open_file(path_b; mode = :read)
+            a = Quiver.Binary.open_file(path_a; mode = 'r')
+            b = Quiver.Binary.open_file(path_b; mode = 'r')
             try
                 c = a + b
                 Quiver.save(c, path_out)
@@ -841,7 +841,7 @@ end
         path_a, path_out, path_out2 = make_path("a"), make_path("out"), make_path("out2")
         try
             write_fixture(path_a, (r, c, k) -> r + c + k)
-            a = Quiver.Binary.open_file(path_a; mode = :read)
+            a = Quiver.Binary.open_file(path_a; mode = 'r')
             try
                 right = a * 2.5
                 Quiver.save(right, path_out)
@@ -850,7 +850,7 @@ end
                 Quiver.Binary.close!(a)
             end
 
-            a2 = Quiver.Binary.open_file(path_a; mode = :read)
+            a2 = Quiver.Binary.open_file(path_a; mode = 'r')
             try
                 left = 2.5 * a2
                 Quiver.save(left, path_out2)
@@ -877,8 +877,8 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r + c + k)
             write_fixture(path_b, (r, c, k) -> r * 2 + c * 3 + k)
-            a = Quiver.Binary.open_file(path_a; mode = :read)
-            b = Quiver.Binary.open_file(path_b; mode = :read)
+            a = Quiver.Binary.open_file(path_a; mode = 'r')
+            b = Quiver.Binary.open_file(path_b; mode = 'r')
             b_times_2 = b * 2
             try
                 c = a + b_times_2
@@ -900,8 +900,8 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r + c + k)
             write_fixture(path_b, (r, c, k) -> r * 10 + c + k)
-            a = Quiver.Binary.open_file(path_a; mode = :read)
-            b = Quiver.Binary.open_file(path_b; mode = :read)
+            a = Quiver.Binary.open_file(path_a; mode = 'r')
+            b = Quiver.Binary.open_file(path_b; mode = 'r')
             try
                 b_expr = Quiver.Expression(b)
                 try
@@ -926,7 +926,7 @@ end
         path_a = make_path("a")
         try
             md = make_simple_metadata()
-            w = Quiver.Binary.open_file(path_a; mode = :write, metadata = md)
+            w = Quiver.Binary.open_file(path_a; mode = 'w', metadata = md)
             try
                 @test_throws Quiver.DatabaseException Quiver.Expression(w)
             finally
@@ -941,8 +941,8 @@ end
         path_a, path_b = make_path("a"), make_path("b")
         try
             md = make_simple_metadata()
-            wa = Quiver.Binary.open_file(path_a; mode = :write, metadata = md)
-            wb = Quiver.Binary.open_file(path_b; mode = :write, metadata = md)
+            wa = Quiver.Binary.open_file(path_a; mode = 'w', metadata = md)
+            wb = Quiver.Binary.open_file(path_b; mode = 'w', metadata = md)
             try
                 @test_throws Quiver.DatabaseException wa + wb
             finally
