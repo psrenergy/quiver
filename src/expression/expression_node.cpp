@@ -113,9 +113,11 @@ void validate_compatibility(const BinaryMetadata& lhs, const BinaryMetadata& rhs
             throw std::runtime_error("Cannot apply: dimension '" + l_dim.name + "' is a time dimension on " +
                                      time_side + " but not on " + nontime_side);
         }
+
         if (!l_time) {
             continue;
         }
+
         const auto& lp = *l_dim.time;
         const auto& rp = *r_dim.time;
         const auto l_parent = parent_name_of(lp.parent_dimension_index, lhs);
