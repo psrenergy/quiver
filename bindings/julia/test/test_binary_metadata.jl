@@ -20,11 +20,11 @@ end
 
 @testset "Binary Metadata" begin
     # ==========================================================================
-    # from_toml
+    # from_toml_content
     # ==========================================================================
 
-    @testset "from_toml all fields populated" begin
-        md = Quiver.Binary.from_toml(make_valid_toml())
+    @testset "from_toml_content all fields populated" begin
+        md = Quiver.Binary.from_toml_content(make_valid_toml())
         @test Quiver.Binary.get_version(md) == "1"
         @test Quiver.Binary.get_unit(md) == "MW"
         @test Quiver.Binary.get_labels(md) == ["plant_1", "plant_2"]
@@ -38,35 +38,35 @@ end
         @test Quiver.Binary.get_number_of_time_dimensions(md) == 2
     end
 
-    @testset "from_toml time dimensions marked" begin
-        md = Quiver.Binary.from_toml(make_valid_toml())
+    @testset "from_toml_content time dimensions marked" begin
+        md = Quiver.Binary.from_toml_content(make_valid_toml())
         dims = Quiver.Binary.get_dimensions(md)
         @test dims[1].is_time_dimension == true
         @test dims[2].is_time_dimension == true
     end
 
-    @testset "from_toml frequencies assigned" begin
-        md = Quiver.Binary.from_toml(make_valid_toml())
+    @testset "from_toml_content frequencies assigned" begin
+        md = Quiver.Binary.from_toml_content(make_valid_toml())
         dims = Quiver.Binary.get_dimensions(md)
         @test dims[1].frequency == "monthly"
         @test dims[2].frequency == "daily"
     end
 
-    @testset "from_toml parent indices set" begin
-        md = Quiver.Binary.from_toml(make_valid_toml())
+    @testset "from_toml_content parent indices set" begin
+        md = Quiver.Binary.from_toml_content(make_valid_toml())
         dims = Quiver.Binary.get_dimensions(md)
         @test dims[1].parent_dimension_index == -1
         @test dims[2].parent_dimension_index == 0
     end
 
-    @testset "from_toml initial values Jan 1st" begin
-        md = Quiver.Binary.from_toml(make_valid_toml())
+    @testset "from_toml_content initial values Jan 1st" begin
+        md = Quiver.Binary.from_toml_content(make_valid_toml())
         dims = Quiver.Binary.get_dimensions(md)
         @test dims[1].initial_value == 1
         @test dims[2].initial_value == 1
     end
 
-    @testset "from_toml initial values non-Jan 1st" begin
+    @testset "from_toml_content initial values non-Jan 1st" begin
         toml = """
             version = "1"
             dimensions = ["stage", "block"]
@@ -77,13 +77,13 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        md = Quiver.Binary.from_toml(toml)
+        md = Quiver.Binary.from_toml_content(toml)
         dims = Quiver.Binary.get_dimensions(md)
         @test dims[1].initial_value == 1
         @test dims[2].initial_value == 15
     end
 
-    @testset "from_toml initial values hourly offset" begin
+    @testset "from_toml_content initial values hourly offset" begin
         toml = """
             version = "1"
             dimensions = ["month", "day", "hour"]
@@ -94,14 +94,14 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        md = Quiver.Binary.from_toml(toml)
+        md = Quiver.Binary.from_toml_content(toml)
         dims = Quiver.Binary.get_dimensions(md)
         @test dims[1].initial_value == 1
         @test dims[2].initial_value == 1
         @test dims[3].initial_value == 11  # hour 10 -> 10+1=11
     end
 
-    @testset "from_toml mixed time and non-time" begin
+    @testset "from_toml_content mixed time and non-time" begin
         toml = """
             version = "1"
             dimensions = ["stage", "scenario", "block"]
@@ -112,7 +112,7 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        md = Quiver.Binary.from_toml(toml)
+        md = Quiver.Binary.from_toml_content(toml)
         dims = Quiver.Binary.get_dimensions(md)
         @test length(dims) == 3
         @test dims[1].is_time_dimension == true
@@ -121,7 +121,7 @@ end
         @test Quiver.Binary.get_number_of_time_dimensions(md) == 2
     end
 
-    @testset "from_toml error time dimension not in dimensions" begin
+    @testset "from_toml_content error time dimension not in dimensions" begin
         toml = """
             version = "1"
             dimensions = ["stage", "block"]
@@ -132,10 +132,10 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml_content(toml)
     end
 
-    @testset "from_toml error time dimensions out of order" begin
+    @testset "from_toml_content error time dimensions out of order" begin
         toml = """
             version = "1"
             dimensions = ["stage", "block"]
@@ -146,10 +146,10 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml_content(toml)
     end
 
-    @testset "from_toml no time dimensions" begin
+    @testset "from_toml_content no time dimensions" begin
         toml = """
             version = "1"
             dimensions = ["row", "col"]
@@ -160,7 +160,7 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        md = Quiver.Binary.from_toml(toml)
+        md = Quiver.Binary.from_toml_content(toml)
         @test Quiver.Binary.get_number_of_time_dimensions(md) == 0
         dims = Quiver.Binary.get_dimensions(md)
         @test dims[1].is_time_dimension == false
@@ -303,7 +303,7 @@ end
         el["labels"] = ["plant_1", "plant_2"]
 
         md_element = Quiver.Binary.from_element(el)
-        md_toml = Quiver.Binary.from_toml(make_valid_toml())
+        md_toml = Quiver.Binary.from_toml_content(make_valid_toml())
 
         @test Quiver.Binary.get_version(md_element) == Quiver.Binary.get_version(md_toml)
         @test Quiver.Binary.get_unit(md_element) == Quiver.Binary.get_unit(md_toml)
@@ -406,9 +406,9 @@ end
     # ==========================================================================
 
     @testset "to_toml round-trip" begin
-        md1 = Quiver.Binary.from_toml(make_valid_toml())
+        md1 = Quiver.Binary.from_toml_content(make_valid_toml())
         toml_str = Quiver.Binary.to_toml(md1)
-        md2 = Quiver.Binary.from_toml(toml_str)
+        md2 = Quiver.Binary.from_toml_content(toml_str)
 
         @test Quiver.Binary.get_version(md1) == Quiver.Binary.get_version(md2)
         @test Quiver.Binary.get_unit(md1) == Quiver.Binary.get_unit(md2)
@@ -424,7 +424,7 @@ end
     end
 
     @testset "to_toml output contains all keys" begin
-        md = Quiver.Binary.from_toml(make_valid_toml())
+        md = Quiver.Binary.from_toml_content(make_valid_toml())
         toml_str = Quiver.Binary.to_toml(md)
 
         @test occursin("version", toml_str)
@@ -438,7 +438,7 @@ end
     end
 
     @testset "to_toml ISO8601 datetime format" begin
-        md = Quiver.Binary.from_toml(make_valid_toml())
+        md = Quiver.Binary.from_toml_content(make_valid_toml())
         toml_str = Quiver.Binary.to_toml(md)
         @test occursin("2025-01-01T00:00:00", toml_str)
     end
@@ -457,7 +457,7 @@ end
     end
 
     # ==========================================================================
-    # Validation errors (via from_toml / constructor)
+    # Validation errors (via from_toml_content / constructor)
     # ==========================================================================
 
     @testset "Validation: wrong version" begin
@@ -471,7 +471,7 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml_content(toml)
     end
 
     @testset "Validation: empty version" begin
@@ -485,7 +485,7 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml_content(toml)
     end
 
     @testset "Validation: empty dimensions" begin
@@ -499,7 +499,7 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml_content(toml)
     end
 
     @testset "Validation: empty labels" begin
@@ -513,7 +513,7 @@ end
             unit = "MW"
             labels = []
             """
-        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml_content(toml)
     end
 
     @testset "Validation: zero dimension size" begin
@@ -527,7 +527,7 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml_content(toml)
     end
 
     @testset "Validation: negative dimension size" begin
@@ -541,7 +541,7 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml_content(toml)
     end
 
     @testset "Validation: duplicate dimension names" begin
@@ -555,7 +555,7 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml_content(toml)
     end
 
     @testset "Validation: duplicate labels" begin
@@ -569,11 +569,11 @@ end
             unit = "MW"
             labels = ["val", "val"]
             """
-        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml_content(toml)
     end
 
     # ==========================================================================
-    # Time dimension validation (via from_toml)
+    # Time dimension validation (via from_toml_content)
     # ==========================================================================
 
     @testset "Time validation: duplicate frequencies" begin
@@ -587,7 +587,7 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml_content(toml)
     end
 
     @testset "Time validation: wrong frequency order" begin
@@ -601,11 +601,11 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml(toml)
+        @test_throws Quiver.DatabaseException Quiver.Binary.from_toml_content(toml)
     end
 
     @testset "Time validation: valid monthly daily" begin
-        md = Quiver.Binary.from_toml(make_valid_toml())
+        md = Quiver.Binary.from_toml_content(make_valid_toml())
         @test Quiver.Binary.get_number_of_time_dimensions(md) == 2
     end
 
@@ -620,12 +620,12 @@ end
             unit = "MW"
             labels = ["val"]
             """
-        md = Quiver.Binary.from_toml(toml)
+        md = Quiver.Binary.from_toml_content(toml)
         @test Quiver.Binary.get_number_of_time_dimensions(md) == 4
     end
 
     # ==========================================================================
-    # Time dimension size validation (via from_toml)
+    # Time dimension size validation (via from_toml_content)
     # ==========================================================================
 
     # --- Hourly under Daily ---

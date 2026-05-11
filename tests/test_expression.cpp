@@ -1532,7 +1532,7 @@ TEST_F(ExpressionFixture, SaveDoesNotMutatePreOpenedInputs) {
     write_qvr(path_b, md, [](const std::vector<int64_t>&, size_t) { return 7.0; });
 
     auto a = BinaryFile::open_file(path_a, 'r');  // pre-opened by caller
-    BinaryFile b(path_b);                          // closed
+    BinaryFile b(path_b);                         // closed
     EXPECT_TRUE(a.is_open());
     EXPECT_FALSE(b.is_open());
 
@@ -1566,4 +1566,3 @@ TEST_F(ExpressionFixture, SaveReleasesInternalHandlesOnDestruction) {
     auto reopened_writer = BinaryFile::open_file(path_a, 'w', md);  // must not throw
     EXPECT_TRUE(reopened_writer.is_open());
 }
-

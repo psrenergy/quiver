@@ -452,7 +452,7 @@ Standalone binary file I/O layer for `.qvr` files with `.toml` metadata sidecars
 - `BinaryFile` class (Pimpl): `open_file(path, mode, metadata?)`, `read(dims)`, `write(dims, data)`, `get_metadata()`, `get_file_path()`
 - `CSVConverter` class (Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)`
 - `BinaryMetadata` struct: `dimensions`, `initial_datetime`, `unit`, `labels`, `version`, `number_of_time_dimensions`
-  - Factories: `from_toml()`, `from_element()`
+  - Factories: `from_toml_content()`, `from_element()`
   - Serialization: `to_toml()`
   - Builders: `add_dimension()`, `add_time_dimension()`
   - Validation: `validate()`, `validate_time_dimension_metadata()`, `validate_time_dimension_sizes()`
@@ -570,7 +570,7 @@ lua.run(R"(
 | Bin to CSV | `CSVConverter::bin_to_csv()` | `quiver_csv_converter_bin_to_csv()` | `bin_to_csv()` |
 | CSV to bin | `CSVConverter::csv_to_bin()` | `quiver_csv_converter_csv_to_bin()` | `csv_to_bin()` |
 | Metadata builder | `BinaryMetadata{}` | `quiver_binary_metadata_create()` | `Metadata(; kwargs...)` |
-| Metadata from TOML | `BinaryMetadata::from_toml()` | `quiver_binary_metadata_from_toml()` | `from_toml()` |
+| Metadata from TOML | `BinaryMetadata::from_toml_content()` | `quiver_binary_metadata_from_toml()` | `from_toml_content()` |
 | Metadata from Element | `BinaryMetadata::from_element()` | `quiver_binary_metadata_from_element()` | `from_element()` |
 
 The transformation rules are mechanical. Given any C++ method name, you can derive the equivalent in any layer without consulting a lookup table.

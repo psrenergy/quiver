@@ -15,8 +15,7 @@
 
 namespace quiver {
 
-ExpressionFile::ExpressionFile(const std::string& path)
-    : meta_(BinaryMetadata::from_toml_file(path)), file_(path) {
+ExpressionFile::ExpressionFile(const std::string& path) : meta_(BinaryMetadata::from_toml_file(path)), file_(path) {
     dim_map_.reserve(meta_.dimensions.size());
 }
 

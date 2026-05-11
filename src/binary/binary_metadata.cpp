@@ -204,7 +204,7 @@ BinaryMetadata BinaryMetadata::from_element(const Element& element) {
 
     std::ostringstream oss;
     oss << tbl;
-    return from_toml(oss.str());
+    return from_toml_content(oss.str());
 }
 
 BinaryMetadata BinaryMetadata::from_toml_file(const std::string& file_path) {
@@ -214,12 +214,12 @@ BinaryMetadata BinaryMetadata::from_toml_file(const std::string& file_path) {
     }
     std::ifstream toml_file(toml_path);
     std::string toml_content((std::istreambuf_iterator<char>(toml_file)), std::istreambuf_iterator<char>());
-    return from_toml(toml_content);
+    return from_toml_content(toml_content);
 }
 
-BinaryMetadata BinaryMetadata::from_toml(const std::string& toml_content) {
+BinaryMetadata BinaryMetadata::from_toml_content(const std::string& content) {
     // Parse toml content
-    toml::table tbl = toml::parse(toml_content);
+    toml::table tbl = toml::parse(content);
 
     std::vector<std::string> dimensions;
     if (auto* arr = tbl["dimensions"].as_array()) {
