@@ -7,6 +7,8 @@
 #include "utils/datetime.h"
 
 #include <algorithm>
+#include <filesystem>
+#include <fstream>
 #include <sstream>
 #include <stdexcept>
 #include <toml++/toml.hpp>
@@ -203,6 +205,16 @@ BinaryMetadata BinaryMetadata::from_element(const Element& element) {
     std::ostringstream oss;
     oss << tbl;
     return from_toml(oss.str());
+}
+
+BinaryMetadata BinaryMetadata::from_toml_file(const std::string& file_path) {
+    const auto toml_path = file_path + std::string(quiver::TOML_EXTENSION);
+    if (!std::filesystem::exists(toml_path)) {
+        throw std::runtime_error("Metadata file not found: " + toml_path);
+    }
+    std::ifstream toml_file(toml_path);
+    std::string toml_content((std::istreambuf_iterator<char>(toml_file)), std::istreambuf_iterator<char>());
+    return from_toml(toml_content);
 }
 
 BinaryMetadata BinaryMetadata::from_toml(const std::string& toml_content) {

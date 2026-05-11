@@ -29,6 +29,7 @@ struct QUIVER_API BinaryMetadata {
 
     // TOML Serialization
     static BinaryMetadata from_toml(const std::string& toml_content);
+    static BinaryMetadata from_toml_file(const std::string& file_path);
     std::string to_toml() const;
 
     // Validation
