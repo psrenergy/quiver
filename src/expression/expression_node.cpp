@@ -36,6 +36,10 @@ void ExpressionFile::compute_row(const std::vector<int64_t>& dims, std::vector<d
     out = file_->read(dim_map_, /*allow_nulls=*/true);
 }
 
+void ExpressionFile::collect_input_paths(std::vector<std::string>& out) const {
+    out.push_back(path_);
+}
+
 ExpressionScalar::ExpressionScalar(double value, BinaryMetadata broadcast_meta)
     : value_(value), broadcast_meta_(std::move(broadcast_meta)) {}
 
@@ -46,6 +50,8 @@ const BinaryMetadata& ExpressionScalar::metadata() const {
 void ExpressionScalar::compute_row(const std::vector<int64_t>& /*dims*/, std::vector<double>& out) const {
     out.assign(broadcast_meta_.labels.size(), value_);
 }
+
+void ExpressionScalar::collect_input_paths(std::vector<std::string>& /*out*/) const {}
 
 namespace {
 
@@ -368,6 +374,11 @@ void ExpressionBinary::compute_row(const std::vector<int64_t>& dims, std::vector
     }
 }
 
+void ExpressionBinary::collect_input_paths(std::vector<std::string>& out) const {
+    lhs_->collect_input_paths(out);
+    rhs_->collect_input_paths(out);
+}
+
 ExpressionUnary::ExpressionUnary(Operation operation, std::shared_ptr<ExpressionNode> operand)
     : operation_(operation), operand_(std::move(operand)) {}
 
@@ -377,6 +388,10 @@ const BinaryMetadata& ExpressionUnary::metadata() const {
 
 void ExpressionUnary::compute_row(const std::vector<int64_t>& /*dims*/, std::vector<double>& /*out*/) const {
     throw std::runtime_error("Cannot compute_row: ExpressionUnary is not yet implemented");
+}
+
+void ExpressionUnary::collect_input_paths(std::vector<std::string>& out) const {
+    operand_->collect_input_paths(out);
 }
 
 ExpressionTernary::ExpressionTernary(Operation operation,
@@ -391,6 +406,12 @@ const BinaryMetadata& ExpressionTernary::metadata() const {
 
 void ExpressionTernary::compute_row(const std::vector<int64_t>& /*dims*/, std::vector<double>& /*out*/) const {
     throw std::runtime_error("Cannot compute_row: ExpressionTernary is not yet implemented");
+}
+
+void ExpressionTernary::collect_input_paths(std::vector<std::string>& out) const {
+    first_->collect_input_paths(out);
+    second_->collect_input_paths(out);
+    third_->collect_input_paths(out);
 }
 
 ExpressionAggregate::Operation ExpressionAggregate::parse_operation(const std::string& name) {
@@ -566,6 +587,10 @@ void ExpressionAggregate::compute_row(const std::vector<int64_t>& dims, std::vec
     }
 }
 
+void ExpressionAggregate::collect_input_paths(std::vector<std::string>& out) const {
+    operand_->collect_input_paths(out);
+}
+
 ExpressionAggregateAgents::Operation ExpressionAggregateAgents::parse_operation(const std::string& name) {
     return parse_aggregation_operation_name<Operation>(name, "aggregate_agents");
 }
@@ -666,6 +691,10 @@ void ExpressionAggregateAgents::compute_row(const std::vector<int64_t>& dims, st
         break;
     }
     }
+}
+
+void ExpressionAggregateAgents::collect_input_paths(std::vector<std::string>& out) const {
+    operand_->collect_input_paths(out);
 }
 
 }  // namespace quiver
