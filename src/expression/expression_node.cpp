@@ -26,9 +26,6 @@ void ExpressionFile::compute_row(const std::vector<int64_t>& dims, std::vector<d
     if (!file_) {
         file_ = std::make_unique<BinaryFile>(BinaryFile::open_file(path_, 'r'));
         dim_map_.reserve(meta_.dimensions.size());
-        for (const auto& dim : meta_.dimensions) {
-            dim_map_[dim.name] = 0;
-        }
     }
     for (size_t i = 0; i < meta_.dimensions.size(); ++i) {
         dim_map_[meta_.dimensions[i].name] = dims[i];

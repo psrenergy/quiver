@@ -59,9 +59,6 @@ void Expression::save(const std::string& path) const {
 
     std::unordered_map<std::string, int64_t> dim_map;
     dim_map.reserve(meta.dimensions.size());
-    for (const auto& dim : meta.dimensions) {
-        dim_map[dim.name] = 0;
-    }
 
     std::vector<int64_t> dims = first_dimensions(meta);
     std::vector<double> row;

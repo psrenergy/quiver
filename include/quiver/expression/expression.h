@@ -13,7 +13,7 @@ namespace quiver {
 
 class QUIVER_API Expression {
 public:
-    explicit Expression(const BinaryFile& file);
+    Expression(const BinaryFile& file);
 
     explicit Expression(std::shared_ptr<ExpressionNode> node);
 
