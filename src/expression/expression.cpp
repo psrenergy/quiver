@@ -15,33 +15,6 @@
 
 namespace quiver {
 
-namespace {
-
-void collect_file_paths(const ExpressionNode& node, std::vector<std::string>& out) {
-    if (auto* fn = dynamic_cast<const ExpressionFile*>(&node)) {
-        out.push_back(fn->path());
-        return;
-    }
-
-    if (auto* bn = dynamic_cast<const ExpressionBinary*>(&node)) {
-        collect_file_paths(*bn->lhs(), out);
-        collect_file_paths(*bn->rhs(), out);
-        return;
-    }
-
-    if (auto* an = dynamic_cast<const ExpressionAggregate*>(&node)) {
-        collect_file_paths(*an->operand(), out);
-        return;
-    }
-
-    if (auto* an = dynamic_cast<const ExpressionAggregateAgents*>(&node)) {
-        collect_file_paths(*an->operand(), out);
-        return;
-    }
-}
-
-}  // namespace
-
 Expression::Expression(const BinaryFile& file) : node_(std::make_shared<ExpressionFile>(file)) {}
 
 Expression::Expression(std::shared_ptr<ExpressionNode> node) : node_(std::move(node)) {}
@@ -64,7 +37,7 @@ Expression Expression::aggregate_agents(const std::string& operation, std::optio
 
 void Expression::save(const std::string& path) const {
     std::vector<std::string> input_paths;
-    collect_file_paths(*node_, input_paths);
+    node_->collect_input_paths(input_paths);
     const auto canonical_out = std::filesystem::weakly_canonical(path).string();
     for (const auto& in : input_paths) {
         if (std::filesystem::weakly_canonical(in).string() == canonical_out) {
