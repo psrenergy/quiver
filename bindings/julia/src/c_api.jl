@@ -646,6 +646,14 @@ const quiver_expression_t = quiver_expression
     QUIVER_EXPRESSION_OPERATION_DIVIDE = 3
 end
 
+@cenum quiver_expression_unary_operation_t::UInt32 begin
+    QUIVER_EXPRESSION_UNARY_OPERATION_NEGATE = 0
+    QUIVER_EXPRESSION_UNARY_OPERATION_ABS = 1
+    QUIVER_EXPRESSION_UNARY_OPERATION_SQRT = 2
+    QUIVER_EXPRESSION_UNARY_OPERATION_LOG = 3
+    QUIVER_EXPRESSION_UNARY_OPERATION_EXP = 4
+end
+
 function quiver_expression_from_file(file, out)
     @ccall libquiver_c.quiver_expression_from_file(file::Ptr{quiver_binary_file_t}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
 end
@@ -664,6 +672,10 @@ end
 
 function quiver_expression_apply_scalar_left(operation, lhs, rhs, out)
     @ccall libquiver_c.quiver_expression_apply_scalar_left(operation::quiver_expression_operation_t, lhs::Cdouble, rhs::Ptr{quiver_expression_t}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
+end
+
+function quiver_expression_apply_unary(operation, operand, out)
+    @ccall libquiver_c.quiver_expression_apply_unary(operation::quiver_expression_unary_operation_t, operand::Ptr{quiver_expression_t}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
 end
 
 function quiver_expression_save(expression, path)

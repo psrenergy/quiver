@@ -40,6 +40,18 @@ function _binop(operation, lhs::Real, rhs::Expression)
     return Expression(out[])
 end
 
+function _unop(operation, e::Expression)
+    out = Ref{Ptr{C.quiver_expression}}(C_NULL)
+    check(C.quiver_expression_apply_unary(operation, e.ptr, out))
+    return Expression(out[])
+end
+
+Base.:-(a::Expression) = _unop(C.QUIVER_EXPRESSION_UNARY_OPERATION_NEGATE, a)
+Base.abs(a::Expression) = _unop(C.QUIVER_EXPRESSION_UNARY_OPERATION_ABS, a)
+Base.sqrt(a::Expression) = _unop(C.QUIVER_EXPRESSION_UNARY_OPERATION_SQRT, a)
+Base.log(a::Expression) = _unop(C.QUIVER_EXPRESSION_UNARY_OPERATION_LOG, a)
+Base.exp(a::Expression) = _unop(C.QUIVER_EXPRESSION_UNARY_OPERATION_EXP, a)
+
 Base.:+(a::Expression, b::Expression) = _binop(C.QUIVER_EXPRESSION_OPERATION_ADD, a, b)
 Base.:+(a::Expression, b::Real) = _binop(C.QUIVER_EXPRESSION_OPERATION_ADD, a, b)
 Base.:+(a::Real, b::Expression) = _binop(C.QUIVER_EXPRESSION_OPERATION_ADD, a, b)
@@ -79,6 +91,12 @@ Base.:/(a::Binary.File, b::Real) = Expression(a) / b
 Base.:/(a::Real, b::Binary.File) = a / Expression(b)
 Base.:/(a::Binary.File, b::Expression) = Expression(a) / b
 Base.:/(a::Expression, b::Binary.File) = a / Expression(b)
+
+Base.:-(a::Binary.File) = -Expression(a)
+Base.abs(a::Binary.File) = abs(Expression(a))
+Base.sqrt(a::Binary.File) = sqrt(Expression(a))
+Base.log(a::Binary.File) = log(Expression(a))
+Base.exp(a::Binary.File) = exp(Expression(a))
 
 function save(e::Expression, path::String)
     check(C.quiver_expression_save(e.ptr, path))

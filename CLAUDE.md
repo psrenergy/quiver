@@ -172,7 +172,7 @@ struct Database::Impl {
 
 Binary subsystem: `BinaryFile` and `CSVConverter` use Pimpl (hide file I/O dependencies). `BinaryMetadata`, `Dimension`, `TimeProperties` are plain value types.
 
-Expression subsystem: `Expression` is a plain value type wrapping `shared_ptr<ExpressionNode>` — no Pimpl. `ExpressionNode` is an abstract base with virtual `metadata()` / `compute_row()`; concrete subclasses `ExpressionFile`, `ExpressionScalar`, `ExpressionBinary`, `ExpressionAggregate`, `ExpressionAggregateAgents` are exposed via `QUIVER_API` and use Rule of Zero. Polymorphism is justified by the recursive tree shape (`ExpressionBinary` and the aggregation nodes own child `shared_ptr<ExpressionNode>` operands). Scaffold subclasses `ExpressionUnary`, `ExpressionTernary` exist with the same shape but throw `"not yet implemented"` from their virtuals — operations land in follow-up work.
+Expression subsystem: `Expression` is a plain value type wrapping `shared_ptr<ExpressionNode>` — no Pimpl. `ExpressionNode` is an abstract base with virtual `metadata()` / `compute_row()`; concrete subclasses `ExpressionFile`, `ExpressionScalar`, `ExpressionBinary`, `ExpressionUnary`, `ExpressionAggregate`, `ExpressionAggregateAgents` are exposed via `QUIVER_API` and use Rule of Zero. Polymorphism is justified by the recursive tree shape (`ExpressionBinary`, `ExpressionUnary`, and the aggregation nodes own child `shared_ptr<ExpressionNode>` operands). Scaffold subclass `ExpressionTernary` exists with the same shape but throws `"not yet implemented"` from its virtuals — operations land in follow-up work.
 
 Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`, `GroupMetadata`, `ScalarMetadata`, `CSVOptions`, `BinaryMetadata`, `Dimension`, `TimeProperties`, `Expression`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor).
 
@@ -482,31 +482,33 @@ Profiled with 480×500×31 dimensions (~7.3M read/write calls). Main hot-path co
 (Note: `FileNode::compute_row` was renamed to `ExpressionFile::compute_row`; the cache-amortization point still applies.)
 
 ### Expression Subsystem
-Lazy expressions over `.qvr` binary files. Build a DAG using `+ - * /` operator overloads, materialize via `save()`.
+Lazy expressions over `.qvr` binary files. Build a DAG using `+ - * /` operator overloads (binary and unary minus) and unary math free functions, materialize via `save()`.
 
 ```cpp
 auto a = BinaryFile::open_file("a", 'r');
 auto b = BinaryFile::open_file("b", 'r');
-Expression result = (a + b) * 2.0;
+Expression result = abs((a + b) * 2.0 - sqrt(Expression(a)));
 result.save("output");  // writes output.qvr + output.toml
 ```
 
 - `Expression` value type (header `quiver/expression/expression.h`):
   - Constructors: `Expression(const BinaryFile&)` (implicit, enables `bf_a + bf_b`), `Expression(shared_ptr<ExpressionNode>)`
-  - Accessors: `metadata()`, `node()`
+  - Accessors: `metadata()`
   - Materialize: `save(path)` — iterates via `first_dimensions`/`next_dimensions`, calls `compute_row()` per cell, writes to a new `.qvr`. Throws if `path` collides (after `weakly_canonical`) with any input file in the DAG.
   - Aggregation: `aggregate(dimension, op, [parameter])` collapses a dimension; `aggregate_agents(op, [parameter])` collapses the label axis. `op` is one of `"sum" | "mean" | "min" | "max" | "percentile"` (string tags, validated in C++). `percentile` requires a `parameter` fraction in `[0, 1]`; nullary ops reject `parameter`.
-- Operator overloads (12 total): `+ - * /` × {expr+expr, expr+double, double+expr}.
+- Operator overloads (12 binary + 1 unary): `+ - * /` × {expr+expr, expr+double, double+expr}, plus unary `-expr`.
+- Free functions in `quiver::` for unary math: `abs(expr)`, `sqrt(expr)`, `log(expr)`, `exp(expr)`.
 - `ExpressionNode` hierarchy (header `quiver/expression/expression_node.h`):
   - `ExpressionNode` (abstract): `metadata()`, `compute_row(dims, out)`
   - `ExpressionFile`: lazy reads from a `.qvr`. Caches an open `BinaryFile` and a reusable `unordered_map` across calls (mutable members; not thread-safe per instance).
   - `ExpressionScalar`: broadcasts a constant across the operand's label space.
   - `ExpressionBinary`: combines two operands with `ExpressionBinary::Operation::{Add,Subtract,Multiply,Divide}` (nested enum). Constructor pre-computes broadcast metadata (`build_broadcast_metadata`), reusable input/output buffers, and `lhs_to_out_`/`rhs_to_out_` index translation tables. The `apply(Operation, double, double)` operation-dispatch is a private static member.
+  - `ExpressionUnary`: applies a single-operand math function with `ExpressionUnary::Operation::{Negate,Abs,Sqrt,Log,Exp}` (nested enum). `metadata()` returns the operand's metadata unchanged (no dimensional analysis — `sqrt(MW)` stays as `MW`). Constructor pre-allocates a reusable `operand_row_buf_`. Lets IEEE-754 NaN/inf propagate naturally (`sqrt(-1) → NaN`, `log(0) → -inf`); no NaN special-casing. The `apply(Operation, double)` operation-dispatch is a private static member.
   - `ExpressionAggregate`: collapses a named dimension. `Operation::{Sum,Mean,Min,Max,Percentile}` (nested enum). Constructor eagerly removes the dim from output metadata, rewires child time-dim `parent_dimension_index` transitively (a time dim whose parent was removed re-points to the removed dim's grandparent, or `-1`), and pre-allocates index translation + reusable buffers. Skips NaN inputs during accumulation; all-NaN range yields NaN.
   - `ExpressionAggregateAgents`: collapses the label axis to a single entry named after the operation (e.g., `"sum"`, `"mean"`, `"percentile"`). Dimensions, `initial_datetime`, `unit` unchanged. Same NaN policy as `ExpressionAggregate`.
-  - `ExpressionUnary`, `ExpressionTernary` (scaffolds): same shape, but their `metadata()` and `compute_row()` throw `Cannot {operation}: ExpressionXxx is not yet implemented`. Each carries a placeholder nested `enum class Operation { Unspecified }` until concrete operations are designed.
-- Validation is **eager** at construction for `ExpressionBinary`, `ExpressionAggregate`, `ExpressionAggregateAgents` (units/dim sizes/time-dim properties/label sizes/initial datetimes for binary; dim existence + op/parameter consistency + output metadata validity for aggregations). Computation is **lazy**: no I/O until `save()`.
-- The binary-operation enum is nested as `ExpressionBinary::Operation`. Aggregation operations are parsed via static `parse_operation(string)` methods on each aggregation class. The C API surface keeps its own stable enum `quiver_expression_operation_t`.
+  - `ExpressionTernary` (scaffold): same shape as the real nodes, but its `metadata()` and `compute_row()` throw `Cannot {operation}: ExpressionTernary is not yet implemented`. Carries a placeholder nested `enum class Operation { Unspecified }` until concrete operations are designed.
+- Validation is **eager** at construction for `ExpressionBinary`, `ExpressionAggregate`, `ExpressionAggregateAgents` (units/dim sizes/time-dim properties/label sizes/initial datetimes for binary; dim existence + op/parameter consistency + output metadata validity for aggregations). `ExpressionUnary` has no inputs to cross-validate so its constructor just sizes the row buffer. Computation is **lazy**: no I/O until `save()`.
+- The binary-operation enum is nested as `ExpressionBinary::Operation`; the unary-operation enum is nested as `ExpressionUnary::Operation`. Aggregation operations are parsed via static `parse_operation(string)` methods on each aggregation class. The C API surface keeps its own stable enums `quiver_expression_operation_t` and `quiver_expression_unary_operation_t`.
 
 ### LuaRunner Class
 Executes Lua scripts with database access:

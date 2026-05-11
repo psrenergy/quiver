@@ -1305,6 +1305,203 @@ end
             cleanup(path_a, path_out)
         end
     end
+
+    # ==========================================================================
+    # Unary operators (Negate, Abs, Sqrt, Log, Exp)
+    # ==========================================================================
+
+    @testset "Unary negate on Expression" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 100 + c * 10 + k)
+            with_expr(path_a) do a
+                result = -a
+                Quiver.save(result, path_out)
+                return Quiver.close!(result)
+            end
+            @test read_all_cells(path_out) == .-read_all_cells(path_a)
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Unary abs on Expression" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            # Alternate sign so abs has work to do.
+            write_fixture(path_a, (r, c, k) -> (r % 2 == 0 ? -1 : 1) * (r * 10 + c + k))
+            with_expr(path_a) do a
+                result = abs(a)
+                Quiver.save(result, path_out)
+                return Quiver.close!(result)
+            end
+            @test read_all_cells(path_out) == abs.(read_all_cells(path_a))
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Unary sqrt on Expression" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 100 + c * 10 + k + 1)  # > 0
+            with_expr(path_a) do a
+                result = sqrt(a)
+                Quiver.save(result, path_out)
+                return Quiver.close!(result)
+            end
+            @test read_all_cells(path_out) ≈ sqrt.(read_all_cells(path_a))
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Unary sqrt propagates NaN on negative" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (_, _, _) -> -1.0)
+            with_expr(path_a) do a
+                result = sqrt(a)
+                Quiver.save(result, path_out)
+                return Quiver.close!(result)
+            end
+            # Read with allow_nulls = true since sqrt(-1) produces NaN cells.
+            file = Quiver.Binary.open_file(path_out; mode = 'r')
+            try
+                for r in 1:3, c in 1:2
+                    cell = Quiver.Binary.read(file; allow_nulls = true, row = r, col = c)
+                    @test all(isnan, cell)
+                end
+            finally
+                Quiver.Binary.close!(file)
+            end
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Unary log on Expression" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k + 1)  # > 0
+            with_expr(path_a) do a
+                result = log(a)
+                Quiver.save(result, path_out)
+                return Quiver.close!(result)
+            end
+            @test read_all_cells(path_out) ≈ log.(read_all_cells(path_a))
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Unary exp on Expression" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            # Small magnitudes to keep exp() comfortable numerically.
+            write_fixture(path_a, (r, c, k) -> (r + c + k) * 0.1)
+            with_expr(path_a) do a
+                result = exp(a)
+                Quiver.save(result, path_out)
+                return Quiver.close!(result)
+            end
+            @test read_all_cells(path_out) ≈ exp.(read_all_cells(path_a))
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Unary metadata preserved" begin
+        path_a = make_path("a")
+        try
+            write_fixture(path_a, (_, _, _) -> 1.0)
+            with_expr(path_a) do a
+                neg = -a
+                try
+                    md = Quiver.get_metadata(neg)
+                    @test Quiver.Binary.get_unit(md) == "MW"
+                    @test Quiver.Binary.get_labels(md) == ["val1", "val2"]
+                    dims = Quiver.Binary.get_dimensions(md)
+                    @test length(dims) == 2
+                    @test dims[1].name == "row"
+                    @test dims[2].name == "col"
+                finally
+                    Quiver.close!(neg)
+                end
+            end
+        finally
+            cleanup(path_a)
+        end
+    end
+
+    @testset "Unary composes (abs of negate)" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            with_expr(path_a) do a
+                result = abs(-a)
+                Quiver.save(result, path_out)
+                return Quiver.close!(result)
+            end
+            @test read_all_cells(path_out) == abs.(read_all_cells(path_a))
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Unary composes with binary: -(a + b)" begin
+        path_a, path_b, path_out = make_path("a"), make_path("b"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r + c + k)
+            write_fixture(path_b, (r, c, k) -> r * 2 + c + k)
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    result = -(a + b)
+                    Quiver.save(result, path_out)
+                    return Quiver.close!(result)
+                end
+            end
+            @test read_all_cells(path_out) == .-(read_all_cells(path_a) .+ read_all_cells(path_b))
+        finally
+            cleanup(path_a, path_b, path_out)
+        end
+    end
+
+    @testset "Unary on Binary.File shortcut" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 100 + c * 10 + k + 1)
+            file = Quiver.Binary.open_file(path_a; mode = 'r')
+            try
+                result = sqrt(file)
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            finally
+                Quiver.Binary.close!(file)
+            end
+            @test read_all_cells(path_out) ≈ sqrt.(read_all_cells(path_a))
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Unary negate on Binary.File shortcut" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 100 + c * 10 + k)
+            file = Quiver.Binary.open_file(path_a; mode = 'r')
+            try
+                result = -file
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            finally
+                Quiver.Binary.close!(file)
+            end
+            @test read_all_cells(path_out) == .-read_all_cells(path_a)
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
 end
 
 end
