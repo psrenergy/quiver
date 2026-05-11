@@ -497,7 +497,7 @@ include("fixture.jl")
 
         # Read status (STRING type)
         stats = Quiver.read_time_series_row(db, "Sensor", "readings", "status"; date_time = DateTime(2024, 1, 1))
-        @test stats isa Vector{Optional{String}}
+        @test stats isa Vector{Quiver.Optional{String}}
         @test stats[1] == "ok"
 
         # Read temperature (FLOAT type)
@@ -547,7 +547,7 @@ include("fixture.jl")
 
         # Sensor 1 has "" (real value), Sensor 2 has no row (nothing)
         result = Quiver.read_time_series_row(db, "Sensor", "readings", "status"; date_time = DateTime(2024, 1, 1))
-        @test result isa Vector{Optional{String}}
+        @test result isa Vector{Quiver.Optional{String}}
         @test length(result) == 2
         @test result[1] == ""
         @test result[2] === nothing
@@ -596,7 +596,7 @@ include("fixture.jl")
         Quiver.update_time_series_files!(
             db,
             "Collection",
-            Dict{String, Optional{String}}(
+            Dict{String, Quiver.Optional{String}}(
                 "data_file" => "/path/to/data.csv",
                 "metadata_file" => "/path/to/meta.json",
             ),
@@ -616,7 +616,7 @@ include("fixture.jl")
         Quiver.update_time_series_files!(
             db,
             "Collection",
-            Dict{String, Optional{String}}(
+            Dict{String, Quiver.Optional{String}}(
                 "data_file" => "/path/to/data.csv",
                 "metadata_file" => nothing,
             ),
@@ -637,7 +637,7 @@ include("fixture.jl")
         Quiver.update_time_series_files!(
             db,
             "Collection",
-            Dict{String, Optional{String}}(
+            Dict{String, Quiver.Optional{String}}(
                 "data_file" => "/old/data.csv",
                 "metadata_file" => "/old/meta.json",
             ),
@@ -647,7 +647,7 @@ include("fixture.jl")
         Quiver.update_time_series_files!(
             db,
             "Collection",
-            Dict{String, Optional{String}}(
+            Dict{String, Quiver.Optional{String}}(
                 "data_file" => "/new/data.csv",
                 "metadata_file" => "/new/meta.json",
             ),

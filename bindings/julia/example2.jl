@@ -24,7 +24,7 @@ Quiver.Binary.close!(a)
 
 b = Quiver.Binary.open_file("b"; mode = 'w', metadata = md)
 for row in 1:rows
-    Quiver.Binary.write!(b; data = ones(2), row = 1)
+    Quiver.Binary.write!(b; data = ones(2), row = row)
 end
 Quiver.Binary.close!(b)
 
@@ -35,9 +35,6 @@ b = Quiver.Binary.File("b")
 
 Quiver.Binary.open!(a; mode = 'r')
 Quiver.Binary.open!(b; mode = 'r')
-
-@show Quiver.Binary.get_metadata(a)
-@show Quiver.Binary.get_metadata(b)
 
 @show c = a + b * 2
 Quiver.save(c, "c")

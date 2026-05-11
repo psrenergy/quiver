@@ -38,11 +38,11 @@ static Element make_valid_element() {
 }
 
 // ============================================================================
-// BinaryMetadataFromToml
+// BinaryMetadataFromTomlContent
 // ============================================================================
 
-TEST(BinaryMetadataFromToml, AllFieldsPopulated) {
-    auto md = BinaryMetadata::from_toml(make_valid_toml());
+TEST(BinaryMetadataFromTomlContent, AllFieldsPopulated) {
+    auto md = BinaryMetadata::from_toml_content(make_valid_toml());
     EXPECT_EQ(md.version, "1");
     EXPECT_EQ(md.unit, "MW");
     EXPECT_EQ(md.labels.size(), 2u);
@@ -56,33 +56,33 @@ TEST(BinaryMetadataFromToml, AllFieldsPopulated) {
     EXPECT_EQ(md.number_of_time_dimensions, 2);
 }
 
-TEST(BinaryMetadataFromToml, TimeDimensionsMarked) {
-    auto md = BinaryMetadata::from_toml(make_valid_toml());
+TEST(BinaryMetadataFromTomlContent, TimeDimensionsMarked) {
+    auto md = BinaryMetadata::from_toml_content(make_valid_toml());
     EXPECT_TRUE(md.dimensions[0].is_time_dimension());
     EXPECT_TRUE(md.dimensions[1].is_time_dimension());
 }
 
-TEST(BinaryMetadataFromToml, FrequenciesAssigned) {
-    auto md = BinaryMetadata::from_toml(make_valid_toml());
+TEST(BinaryMetadataFromTomlContent, FrequenciesAssigned) {
+    auto md = BinaryMetadata::from_toml_content(make_valid_toml());
     EXPECT_EQ(md.dimensions[0].time->frequency, TimeFrequency::Monthly);
     EXPECT_EQ(md.dimensions[1].time->frequency, TimeFrequency::Daily);
 }
 
-TEST(BinaryMetadataFromToml, ParentIndicesSet) {
-    auto md = BinaryMetadata::from_toml(make_valid_toml());
+TEST(BinaryMetadataFromTomlContent, ParentIndicesSet) {
+    auto md = BinaryMetadata::from_toml_content(make_valid_toml());
     EXPECT_EQ(md.dimensions[0].time->parent_dimension_index, -1);
     EXPECT_EQ(md.dimensions[1].time->parent_dimension_index, 0);
 }
 
-TEST(BinaryMetadataFromToml, InitialValuesJan1st) {
-    auto md = BinaryMetadata::from_toml(make_valid_toml());
+TEST(BinaryMetadataFromTomlContent, InitialValuesJan1st) {
+    auto md = BinaryMetadata::from_toml_content(make_valid_toml());
     // Outermost time dim always starts at 1
     EXPECT_EQ(md.dimensions[0].time->initial_value, 1);
     // Daily under monthly, Jan 1st → day 1
     EXPECT_EQ(md.dimensions[1].time->initial_value, 1);
 }
 
-TEST(BinaryMetadataFromToml, InitialValuesNonJan1st) {
+TEST(BinaryMetadataFromTomlContent, InitialValuesNonJan1st) {
     std::string toml = R"(
 version = "1"
 dimensions = ["stage", "block"]
@@ -93,12 +93,12 @@ initial_datetime = "2025-03-15T00:00:00"
 unit = "MW"
 labels = ["val"]
 )";
-    auto md = BinaryMetadata::from_toml(toml);
+    auto md = BinaryMetadata::from_toml_content(toml);
     EXPECT_EQ(md.dimensions[0].time->initial_value, 1);
     EXPECT_EQ(md.dimensions[1].time->initial_value, 15);
 }
 
-TEST(BinaryMetadataFromToml, InitialValuesHourlyOffset) {
+TEST(BinaryMetadataFromTomlContent, InitialValuesHourlyOffset) {
     std::string toml = R"(
 version = "1"
 dimensions = ["month", "day", "hour"]
@@ -109,13 +109,13 @@ initial_datetime = "2025-01-01T10:00:00"
 unit = "MW"
 labels = ["val"]
 )";
-    auto md = BinaryMetadata::from_toml(toml);
+    auto md = BinaryMetadata::from_toml_content(toml);
     EXPECT_EQ(md.dimensions[0].time->initial_value, 1);
     EXPECT_EQ(md.dimensions[1].time->initial_value, 1);
     EXPECT_EQ(md.dimensions[2].time->initial_value, 11);  // hour 10 → 10+1=11
 }
 
-TEST(BinaryMetadataFromToml, MixedTimeAndNonTime) {
+TEST(BinaryMetadataFromTomlContent, MixedTimeAndNonTime) {
     std::string toml = R"(
 version = "1"
 dimensions = ["stage", "scenario", "block"]
@@ -126,7 +126,7 @@ initial_datetime = "2025-01-01T00:00:00"
 unit = "MW"
 labels = ["val"]
 )";
-    auto md = BinaryMetadata::from_toml(toml);
+    auto md = BinaryMetadata::from_toml_content(toml);
     EXPECT_EQ(md.dimensions.size(), 3u);
     EXPECT_TRUE(md.dimensions[0].is_time_dimension());
     EXPECT_FALSE(md.dimensions[1].is_time_dimension());
@@ -134,7 +134,7 @@ labels = ["val"]
     EXPECT_EQ(md.number_of_time_dimensions, 2);
 }
 
-TEST(BinaryMetadataFromToml, ErrorTimeDimensionNotInDimensions) {
+TEST(BinaryMetadataFromTomlContent, ErrorTimeDimensionNotInDimensions) {
     std::string toml = R"(
 version = "1"
 dimensions = ["stage", "block"]
@@ -145,10 +145,10 @@ initial_datetime = "2025-01-01T00:00:00"
 unit = "MW"
 labels = ["val"]
 )";
-    EXPECT_THROW(BinaryMetadata::from_toml(toml), std::runtime_error);
+    EXPECT_THROW(BinaryMetadata::from_toml_content(toml), std::runtime_error);
 }
 
-TEST(BinaryMetadataFromToml, ErrorTimeDimensionsOutOfOrder) {
+TEST(BinaryMetadataFromTomlContent, ErrorTimeDimensionsOutOfOrder) {
     std::string toml = R"(
 version = "1"
 dimensions = ["stage", "block"]
@@ -159,10 +159,10 @@ initial_datetime = "2025-01-01T00:00:00"
 unit = "MW"
 labels = ["val"]
 )";
-    EXPECT_THROW(BinaryMetadata::from_toml(toml), std::runtime_error);
+    EXPECT_THROW(BinaryMetadata::from_toml_content(toml), std::runtime_error);
 }
 
-TEST(BinaryMetadataFromToml, NoTimeDimensions) {
+TEST(BinaryMetadataFromTomlContent, NoTimeDimensions) {
     std::string toml = R"(
 version = "1"
 dimensions = ["row", "col"]
@@ -173,7 +173,7 @@ initial_datetime = "2025-01-01T00:00:00"
 unit = "MW"
 labels = ["val"]
 )";
-    auto md = BinaryMetadata::from_toml(toml);
+    auto md = BinaryMetadata::from_toml_content(toml);
     EXPECT_EQ(md.number_of_time_dimensions, 0);
     EXPECT_FALSE(md.dimensions[0].is_time_dimension());
     EXPECT_FALSE(md.dimensions[1].is_time_dimension());
@@ -233,7 +233,7 @@ TEST(BinaryMetadataFromElement, MixedTimeAndNonTime) {
 
 TEST(BinaryMetadataFromElement, RoundTripEquivalenceWithToml) {
     auto md_element = BinaryMetadata::from_element(make_valid_element());
-    auto md_toml = BinaryMetadata::from_toml(make_valid_toml());
+    auto md_toml = BinaryMetadata::from_toml_content(make_valid_toml());
 
     EXPECT_EQ(md_element.version, md_toml.version);
     EXPECT_EQ(md_element.unit, md_toml.unit);
@@ -362,9 +362,9 @@ TEST(BinaryMetadataFromElement, InvalidVersionPropagatesValidation) {
 // ============================================================================
 
 TEST(BinaryMetadataToToml, RoundTrip) {
-    auto md1 = BinaryMetadata::from_toml(make_valid_toml());
+    auto md1 = BinaryMetadata::from_toml_content(make_valid_toml());
     auto toml_str = md1.to_toml();
-    auto md2 = BinaryMetadata::from_toml(toml_str);
+    auto md2 = BinaryMetadata::from_toml_content(toml_str);
 
     EXPECT_EQ(md1.version, md2.version);
     EXPECT_EQ(md1.unit, md2.unit);
@@ -377,7 +377,7 @@ TEST(BinaryMetadataToToml, RoundTrip) {
 }
 
 TEST(BinaryMetadataToToml, OutputContainsAllKeys) {
-    auto md = BinaryMetadata::from_toml(make_valid_toml());
+    auto md = BinaryMetadata::from_toml_content(make_valid_toml());
     auto toml_str = md.to_toml();
 
     EXPECT_NE(toml_str.find("version"), std::string::npos);
@@ -401,7 +401,7 @@ TEST(BinaryMetadataToToml, ValidationCalledOnSerialize) {
 }
 
 TEST(BinaryMetadataToToml, ISO8601DatetimeFormat) {
-    auto md = BinaryMetadata::from_toml(make_valid_toml());
+    auto md = BinaryMetadata::from_toml_content(make_valid_toml());
     auto toml_str = md.to_toml();
     EXPECT_NE(toml_str.find("2025-01-01T00:00:00"), std::string::npos);
 }
@@ -411,7 +411,7 @@ TEST(BinaryMetadataToToml, ISO8601DatetimeFormat) {
 // ============================================================================
 
 TEST(BinaryMetadataValidate, ValidMetadataPasses) {
-    auto md = BinaryMetadata::from_toml(make_valid_toml());
+    auto md = BinaryMetadata::from_toml_content(make_valid_toml());
     EXPECT_NO_THROW(md.validate());
 }
 
@@ -566,7 +566,7 @@ TEST(BinaryMetadataValidateTimeDimensions, WeeklyNotFirst) {
 }
 
 TEST(BinaryMetadataValidateTimeDimensions, ValidMonthlyDaily) {
-    auto md = BinaryMetadata::from_toml(make_valid_toml());
+    auto md = BinaryMetadata::from_toml_content(make_valid_toml());
     EXPECT_NO_THROW(md.validate_time_dimension_metadata());
 }
 
@@ -581,7 +581,7 @@ initial_datetime = "2025-01-01T00:00:00"
 unit = "MW"
 labels = ["val"]
 )";
-    auto md = BinaryMetadata::from_toml(toml);
+    auto md = BinaryMetadata::from_toml_content(toml);
     EXPECT_NO_THROW(md.validate_time_dimension_metadata());
 }
 
@@ -596,7 +596,7 @@ initial_datetime = "2025-01-01T00:00:00"
 unit = "MW"
 labels = ["val"]
 )";
-    auto md = BinaryMetadata::from_toml(toml);
+    auto md = BinaryMetadata::from_toml_content(toml);
     EXPECT_NO_THROW(md.validate_time_dimension_metadata());
 }
 

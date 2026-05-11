@@ -22,8 +22,6 @@ public:
 
     void save(const std::string& path) const;
 
-    const std::shared_ptr<ExpressionNode>& node() const;
-
     Expression aggregate(const std::string& dimension,
                          const std::string& operation,
                          std::optional<double> parameter = std::nullopt) const;
@@ -31,6 +29,19 @@ public:
     Expression aggregate_agents(const std::string& operation, std::optional<double> parameter = std::nullopt) const;
 
 private:
+    friend Expression operator+(const Expression&, const Expression&);
+    friend Expression operator+(const Expression&, double);
+    friend Expression operator+(double, const Expression&);
+    friend Expression operator-(const Expression&, const Expression&);
+    friend Expression operator-(const Expression&, double);
+    friend Expression operator-(double, const Expression&);
+    friend Expression operator*(const Expression&, const Expression&);
+    friend Expression operator*(const Expression&, double);
+    friend Expression operator*(double, const Expression&);
+    friend Expression operator/(const Expression&, const Expression&);
+    friend Expression operator/(const Expression&, double);
+    friend Expression operator/(double, const Expression&);
+
     std::shared_ptr<ExpressionNode> node_;
 };
 

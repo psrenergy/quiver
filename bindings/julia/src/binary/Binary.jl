@@ -1,6 +1,6 @@
 module Binary
 
-using ..Quiver: C, check, Element
+using ..Quiver: C, check, Element, Optional
 
 include("metadata.jl")
 include("file.jl")

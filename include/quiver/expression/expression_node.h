@@ -1,6 +1,7 @@
 #ifndef QUIVER_EXPRESSION_NODE_H
 #define QUIVER_EXPRESSION_NODE_H
 
+#include "../binary/binary_file.h"
 #include "../binary/binary_metadata.h"
 #include "../export.h"
 
@@ -13,8 +14,6 @@
 
 namespace quiver {
 
-class BinaryFile;
-
 class QUIVER_API ExpressionNode {
 public:
     virtual ~ExpressionNode() = default;
@@ -22,22 +21,23 @@ public:
     virtual const BinaryMetadata& metadata() const = 0;
 
     virtual void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const = 0;
+
+    virtual void collect_input_files(std::vector<BinaryFile*>& out) const = 0;
 };
 
 class QUIVER_API ExpressionFile final : public ExpressionNode {
 public:
-    explicit ExpressionFile(const BinaryFile& file);
+    explicit ExpressionFile(const std::string& path);
 
     const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
+    void collect_input_files(std::vector<BinaryFile*>& out) const override;
 
-    const std::string& path() const { return path_; }
+    const std::string& path() const { return file_.get_file_path(); }
 
 private:
-    std::string path_;
     BinaryMetadata meta_;
-
-    mutable std::unique_ptr<BinaryFile> file_;
+    mutable BinaryFile file_;
     mutable std::unordered_map<std::string, int64_t> dim_map_;
 };
 
@@ -47,6 +47,7 @@ public:
 
     const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
+    void collect_input_files(std::vector<BinaryFile*>& out) const override;
 
 private:
     double value_;
@@ -61,9 +62,7 @@ public:
 
     const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
-
-    const std::shared_ptr<ExpressionNode>& lhs() const { return lhs_; }
-    const std::shared_ptr<ExpressionNode>& rhs() const { return rhs_; }
+    void collect_input_files(std::vector<BinaryFile*>& out) const override;
 
 private:
     static double apply(Operation operation, double lhs, double rhs);
@@ -96,6 +95,7 @@ public:
 
     const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
+    void collect_input_files(std::vector<BinaryFile*>& out) const override;
 
 private:
     Operation operation_;
@@ -113,6 +113,7 @@ public:
 
     const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
+    void collect_input_files(std::vector<BinaryFile*>& out) const override;
 
 private:
     Operation operation_;
@@ -134,8 +135,7 @@ public:
 
     const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
-
-    const std::shared_ptr<ExpressionNode>& operand() const { return operand_; }
+    void collect_input_files(std::vector<BinaryFile*>& out) const override;
 
 private:
     Operation operation_;
@@ -163,8 +163,7 @@ public:
 
     const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
-
-    const std::shared_ptr<ExpressionNode>& operand() const { return operand_; }
+    void collect_input_files(std::vector<BinaryFile*>& out) const override;
 
 private:
     Operation operation_;

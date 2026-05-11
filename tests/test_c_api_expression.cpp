@@ -984,17 +984,22 @@ TEST_F(ExpressionCApiFixture, ParentDimMatchByNameAcceptsCrossPosition) {
     quiver_binary_file_close(reopened);
 }
 
-TEST_F(ExpressionCApiFixture, FromFileFailsForWriteModeHandle) {
+TEST_F(ExpressionCApiFixture, SaveFailsWhenInputIsOpenForWriting) {
     auto* md = make_simple_metadata();
     quiver_binary_file_t* writer = nullptr;
     ASSERT_EQ(quiver_binary_file_open_file(path_a.c_str(), 'w', md, &writer), QUIVER_OK);
     quiver_binary_metadata_free(md);
 
+    // Expression construction only loads metadata; the read-handle open is deferred to save().
     quiver_expression_t* expr = nullptr;
-    EXPECT_EQ(quiver_expression_from_file(writer, &expr), QUIVER_ERROR);
-    EXPECT_STREQ(quiver_get_last_error(), "Cannot create_expression: BinaryFile must be opened in read mode");
-    EXPECT_EQ(expr, nullptr);
+    ASSERT_EQ(quiver_expression_from_file(writer, &expr), QUIVER_OK);
+    ASSERT_NE(expr, nullptr);
 
+    EXPECT_EQ(quiver_expression_save(expr, path_out.c_str()), QUIVER_ERROR);
+    EXPECT_NE(std::string(quiver_get_last_error()).find("Cannot open_file: file is already open for writing"),
+              std::string::npos);
+
+    quiver_expression_close(expr);
     quiver_binary_file_close(writer);
 }
 
@@ -1174,4 +1179,25 @@ TEST_F(ExpressionCApiFixture, AggregateChainedWithBinary) {
     auto cell1 = read_one_cell(path_out, {"col"}, {1});
     EXPECT_DOUBLE_EQ(cell1[0], 72.0);  // c=1, k=0: 66 + 6 + 0
     EXPECT_DOUBLE_EQ(cell1[1], 78.0);  // c=1, k=1: 66 + 6 + 6
+}
+
+TEST_F(ExpressionCApiFixture, FromUnopenedBinaryFile) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 100 + c * 10 + k); });
+
+    // Create the handle without opening — Expression must still build and save.
+    quiver_binary_file_t* f = nullptr;
+    ASSERT_EQ(quiver_binary_file_create(path_a.c_str(), &f), QUIVER_OK);
+
+    quiver_expression_t* e = nullptr;
+    ASSERT_EQ(quiver_expression_from_file(f, &e), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(e, path_out.c_str()), QUIVER_OK);
+
+    quiver_expression_close(e);
+    quiver_binary_file_close(f);
+
+    auto orig = read_all_cells(path_a);
+    auto copy = read_all_cells(path_out);
+    ASSERT_EQ(orig.size(), copy.size());
+    for (size_t i = 0; i < orig.size(); ++i)
+        EXPECT_DOUBLE_EQ(orig[i], copy[i]);
 }

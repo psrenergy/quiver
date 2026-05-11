@@ -929,17 +929,21 @@ TEST_F(ExpressionFixture, LargeGridCompletes) {
     }
 }
 
-TEST_F(ExpressionFixture, ExpressionFromWriteModeBinaryFileThrows) {
+TEST_F(ExpressionFixture, SaveFailsWhenInputIsOpenForWriting) {
     auto md = make_simple_metadata();
     auto writer = BinaryFile::open_file(path_a, 'w', md);
 
+    // Expression construction is fine — it only loads metadata from the .toml.
+    // save() is where input files get opened for reading, which collides with the
+    // active writer through BinaryFile's write_registry.
+    Expression e(writer);
     EXPECT_THROW(
         {
             try {
-                Expression e(writer);
-                (void)e;
+                e.save(path_out);
             } catch (const std::runtime_error& err) {
-                EXPECT_STREQ(err.what(), "Cannot create_expression: BinaryFile must be opened in read mode");
+                EXPECT_NE(std::string(err.what()).find("Cannot open_file: file is already open for writing"),
+                          std::string::npos);
                 throw;
             }
         },
@@ -1490,4 +1494,75 @@ TEST_F(ExpressionFixture, AgentSaveProducesReadableFile) {
     EXPECT_EQ(m.labels[0], "sum");
     EXPECT_EQ(m.dimensions.size(), 2u);
     EXPECT_EQ(m.unit, "MW");
+}
+
+TEST_F(ExpressionFixture, SaveAcceptsClosedInputs) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+    });
+    write_qvr(path_b, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+
+    BinaryFile a(path_a);  // unopened; metadata loaded from disk at Expression construction
+    BinaryFile b(path_b);
+    EXPECT_FALSE(a.is_open());
+    EXPECT_FALSE(b.is_open());
+
+    Expression e = Expression(a) + Expression(b) * 2.0;
+    e.save(path_out);
+
+    // User-supplied BinaryFiles are untouched.
+    EXPECT_FALSE(a.is_open());
+    EXPECT_FALSE(b.is_open());
+
+    auto va = read_all_cells(path_a);
+    auto vb = read_all_cells(path_b);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(va.size(), vo.size());
+    for (size_t i = 0; i < va.size(); ++i) {
+        EXPECT_DOUBLE_EQ(vo[i], va[i] + vb[i] * 2.0);
+    }
+}
+
+TEST_F(ExpressionFixture, SaveDoesNotMutatePreOpenedInputs) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] + dims[1] + static_cast<int64_t>(k));
+    });
+    write_qvr(path_b, md, [](const std::vector<int64_t>&, size_t) { return 7.0; });
+
+    auto a = BinaryFile::open_file(path_a, 'r');  // pre-opened by caller
+    BinaryFile b(path_b);                         // closed
+    EXPECT_TRUE(a.is_open());
+    EXPECT_FALSE(b.is_open());
+
+    Expression e = Expression(a) + Expression(b);
+    e.save(path_out);
+
+    // save() reads from its own internal handles; it never touches the caller's BinaryFiles.
+    EXPECT_TRUE(a.is_open());
+    EXPECT_FALSE(b.is_open());
+
+    auto va = read_all_cells(path_a);
+    auto vb = read_all_cells(path_b);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(va.size(), vo.size());
+    for (size_t i = 0; i < va.size(); ++i) {
+        EXPECT_DOUBLE_EQ(vo[i], va[i] + vb[i]);
+    }
+}
+
+TEST_F(ExpressionFixture, SaveReleasesInternalHandlesOnDestruction) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+
+    {
+        BinaryFile a(path_a);
+        Expression e = Expression(a) + 1.0;
+        e.save(path_out);
+    }  // Expression goes out of scope here -> ExpressionFile destroyed -> internal BinaryFile closed.
+
+    // path_a is now free to be re-opened in write mode.
+    auto reopened_writer = BinaryFile::open_file(path_a, 'w', md);  // must not throw
+    EXPECT_TRUE(reopened_writer.is_open());
 }

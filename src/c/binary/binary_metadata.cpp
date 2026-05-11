@@ -69,7 +69,7 @@ QUIVER_C_API quiver_error_t quiver_binary_metadata_from_toml(const char* toml, q
     QUIVER_REQUIRE(toml, out);
 
     try {
-        auto metadata = quiver::BinaryMetadata::from_toml(toml);
+        auto metadata = quiver::BinaryMetadata::from_toml_content(toml);
         *out = new quiver_binary_metadata{std::move(metadata)};
         return QUIVER_OK;
     } catch (const std::exception& e) {

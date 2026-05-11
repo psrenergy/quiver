@@ -47,7 +47,7 @@ function Metadata(;
     return from_element(el)
 end
 
-function from_toml(toml::String)
+function from_toml_content(toml::String)
     out_md = Ref{Ptr{C.quiver_binary_metadata}}(C_NULL)
     check(C.quiver_binary_metadata_from_toml(toml, out_md))
     return Metadata(out_md[])
