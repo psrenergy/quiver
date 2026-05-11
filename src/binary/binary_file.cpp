@@ -73,10 +73,7 @@ void BinaryFile::open(char mode, const std::optional<BinaryMetadata>& metadata) 
             throw std::invalid_argument("File not found: " + file_path);
         }
 
-        // Read TOML metadata
-        std::ifstream toml_file(file_path + std::string(TOML_EXTENSION));
-        std::string toml_content((std::istreambuf_iterator<char>(toml_file)), std::istreambuf_iterator<char>());
-        impl_->metadata = BinaryMetadata::from_toml(toml_content);
+        impl_->metadata = BinaryMetadata::from_toml_file(file_path);
 
         // Open binary data file
         impl_->io =
@@ -108,6 +105,23 @@ void BinaryFile::open(char mode, const std::optional<BinaryMetadata>& metadata) 
         throw std::invalid_argument("Invalid file mode: " + std::string(1, mode) +
                                     ". Use 'r' for read or 'w' for write.");
     }
+}
+
+void BinaryFile::close() {
+    if (!impl_->io) {
+        return;
+    }
+    impl_->io->flush();
+    impl_->io.reset();
+    if (!impl_->registered_path.empty()) {
+        write_registry.erase(impl_->registered_path);
+        impl_->registered_path.clear();
+    }
+    impl_->current_position = -1;
+}
+
+bool BinaryFile::is_open() const {
+    return impl_->io && impl_->io->good();
 }
 
 std::vector<double> BinaryFile::read(const std::unordered_map<std::string, int64_t>& dims, bool allow_nulls) {

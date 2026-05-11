@@ -31,6 +31,8 @@ public:
     static BinaryFile
     open_file(const std::string& file_path, char mode, const std::optional<BinaryMetadata>& metadata = {});
     void open(char mode, const std::optional<BinaryMetadata>& metadata = {});
+    void close();
+    bool is_open() const;
 
     // Data handling
     std::vector<double> read(const std::unordered_map<std::string, int64_t>& dims, bool allow_nulls = false);
