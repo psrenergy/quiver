@@ -240,15 +240,18 @@ ExpressionBinary::ExpressionBinary(Operation operation,
     rhs_dim_sizes_.assign(out_dims.size(), 0);
     lhs_to_out_.assign(lhs_meta.dimensions.size(), -1);
     rhs_to_out_.assign(rhs_meta.dimensions.size(), -1);
+
     for (size_t out_i = 0; out_i < out_dims.size(); ++out_i) {
         const auto li = find_dim_index(lhs_meta.dimensions, out_dims[out_i].name);
         const auto ri = find_dim_index(rhs_meta.dimensions, out_dims[out_i].name);
         lhs_dim_sizes_[out_i] = (li >= 0) ? lhs_meta.dimensions[li].size : 0;
         rhs_dim_sizes_[out_i] = (ri >= 0) ? rhs_meta.dimensions[ri].size : 0;
-        if (li >= 0)
+        if (li >= 0) {
             lhs_to_out_[li] = static_cast<int>(out_i);
-        if (ri >= 0)
+        }
+        if (ri >= 0) {
             rhs_to_out_[ri] = static_cast<int>(out_i);
+        }
     }
 
     lhs_label_count_ = lhs_meta.labels.size();

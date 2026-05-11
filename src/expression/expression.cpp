@@ -22,6 +22,7 @@ void collect_file_paths(const ExpressionNode& node, std::vector<std::string>& ou
         out.push_back(fn->path());
         return;
     }
+    
     if (auto* bn = dynamic_cast<const ExpressionBinary*>(&node)) {
         collect_file_paths(*bn->lhs(), out);
         collect_file_paths(*bn->rhs(), out);
