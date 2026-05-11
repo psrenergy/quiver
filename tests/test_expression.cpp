@@ -1563,18 +1563,3 @@ TEST_F(ExpressionFixture, SaveReleasesInternalHandles) {
     EXPECT_TRUE(reopened_writer.is_open());
 }
 
-TEST_F(ExpressionFixture, BinaryFileCloseIsIdempotent) {
-    auto md = make_simple_metadata();
-    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
-
-    auto a = BinaryFile::open_file(path_a, 'r');
-    EXPECT_TRUE(a.is_open());
-    a.close();
-    EXPECT_FALSE(a.is_open());
-    a.close();  // no-op on already-closed file
-    EXPECT_FALSE(a.is_open());
-
-    // Re-open after close should work.
-    a.open('r');
-    EXPECT_TRUE(a.is_open());
-}

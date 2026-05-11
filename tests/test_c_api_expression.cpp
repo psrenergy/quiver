@@ -1175,3 +1175,24 @@ TEST_F(ExpressionCApiFixture, AggregateChainedWithBinary) {
     EXPECT_DOUBLE_EQ(cell1[0], 72.0);  // c=1, k=0: 66 + 6 + 0
     EXPECT_DOUBLE_EQ(cell1[1], 78.0);  // c=1, k=1: 66 + 6 + 6
 }
+
+TEST_F(ExpressionCApiFixture, FromUnopenedBinaryFile) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 100 + c * 10 + k); });
+
+    // Create the handle without opening — Expression must still build and save.
+    quiver_binary_file_t* f = nullptr;
+    ASSERT_EQ(quiver_binary_file_create(path_a.c_str(), &f), QUIVER_OK);
+
+    quiver_expression_t* e = nullptr;
+    ASSERT_EQ(quiver_expression_from_file(f, &e), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(e, path_out.c_str()), QUIVER_OK);
+
+    quiver_expression_close(e);
+    quiver_binary_file_close(f);
+
+    auto orig = read_all_cells(path_a);
+    auto copy = read_all_cells(path_out);
+    ASSERT_EQ(orig.size(), copy.size());
+    for (size_t i = 0; i < orig.size(); ++i)
+        EXPECT_DOUBLE_EQ(orig[i], copy[i]);
+}

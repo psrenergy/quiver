@@ -45,33 +45,32 @@ void Expression::save(const std::string& path) const {
         }
     }
 
-    try {
-        const auto& meta = node_->metadata();
-        auto writer = BinaryFile::open_file(path, 'w', meta);
+    struct ReleaseOnExit {
+        const ExpressionNode* node;
+        ~ReleaseOnExit() { node->release_input_files(); }
+    } guard{node_.get()};
 
-        std::unordered_map<std::string, int64_t> dim_map;
-        dim_map.reserve(meta.dimensions.size());
+    const auto& meta = node_->metadata();
+    auto writer = BinaryFile::open_file(path, 'w', meta);
 
-        std::vector<int64_t> dims = first_dimensions(meta);
-        std::vector<double> row;
-        for (;;) {
-            node_->compute_row(dims, row);
-            for (size_t i = 0; i < meta.dimensions.size(); ++i) {
-                dim_map[meta.dimensions[i].name] = dims[i];
-            }
-            writer.write(row, dim_map);
+    std::unordered_map<std::string, int64_t> dim_map;
+    dim_map.reserve(meta.dimensions.size());
 
-            auto nxt = next_dimensions(meta, dims);
-            if (!nxt) {
-                break;
-            }
-            dims = std::move(*nxt);
+    std::vector<int64_t> dims = first_dimensions(meta);
+    std::vector<double> row;
+    for (;;) {
+        node_->compute_row(dims, row);
+        for (size_t i = 0; i < meta.dimensions.size(); ++i) {
+            dim_map[meta.dimensions[i].name] = dims[i];
         }
-    } catch (...) {
-        node_->release_input_files();
-        throw;
+        writer.write(row, dim_map);
+
+        auto nxt = next_dimensions(meta, dims);
+        if (!nxt) {
+            break;
+        }
+        dims = std::move(*nxt);
     }
-    node_->release_input_files();
 }
 
 Expression operator+(const Expression& lhs, const Expression& rhs) {
