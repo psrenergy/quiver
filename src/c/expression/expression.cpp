@@ -23,6 +23,22 @@ quiver::Expression dispatch(quiver_expression_operation_t operation, const Lhs& 
     throw std::runtime_error("Cannot apply: unknown expression operation");
 }
 
+quiver::Expression dispatch_unary(quiver_expression_unary_operation_t operation, const quiver::Expression& operand) {
+    switch (operation) {
+    case QUIVER_EXPRESSION_UNARY_OPERATION_NEGATE:
+        return -operand;
+    case QUIVER_EXPRESSION_UNARY_OPERATION_ABS:
+        return quiver::abs(operand);
+    case QUIVER_EXPRESSION_UNARY_OPERATION_SQRT:
+        return quiver::sqrt(operand);
+    case QUIVER_EXPRESSION_UNARY_OPERATION_LOG:
+        return quiver::log(operand);
+    case QUIVER_EXPRESSION_UNARY_OPERATION_EXP:
+        return quiver::exp(operand);
+    }
+    throw std::runtime_error("Cannot apply: unknown expression unary operation");
+}
+
 }  // namespace
 
 extern "C" {
@@ -97,6 +113,23 @@ QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_left(quiver_expressio
 
     try {
         *out = new quiver_expression(dispatch(operation, lhs, rhs->expression));
+        return QUIVER_OK;
+    } catch (const std::bad_alloc&) {
+        quiver_set_last_error("Memory allocation failed");
+        return QUIVER_ERROR;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_expression_apply_unary(quiver_expression_unary_operation_t operation,
+                                                          quiver_expression_t* operand,
+                                                          quiver_expression_t** out) {
+    QUIVER_REQUIRE(operand, out);
+
+    try {
+        *out = new quiver_expression(dispatch_unary(operation, operand->expression));
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
         quiver_set_last_error("Memory allocation failed");

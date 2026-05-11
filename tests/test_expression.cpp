@@ -1566,3 +1566,154 @@ TEST_F(ExpressionFixture, SaveReleasesInternalHandlesOnDestruction) {
     auto reopened_writer = BinaryFile::open_file(path_a, 'w', md);  // must not throw
     EXPECT_TRUE(reopened_writer.is_open());
 }
+
+TEST_F(ExpressionFixture, UnaryNegate) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 100 + dims[1] * 10 + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression e = -Expression(a);
+    e.save(path_out);
+
+    auto va = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(va.size(), vo.size());
+    for (size_t i = 0; i < va.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], -va[i]);
+}
+
+TEST_F(ExpressionFixture, UnaryAbs) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        // Alternate sign so abs has work to do.
+        const double v = static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+        return (dims[0] % 2 == 0) ? -v : v;
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression e = abs(Expression(a));
+    e.save(path_out);
+
+    auto va = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(va.size(), vo.size());
+    for (size_t i = 0; i < va.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], std::abs(va[i]));
+}
+
+TEST_F(ExpressionFixture, UnarySqrt) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 100 + dims[1] * 10 + static_cast<int64_t>(k) + 1);  // > 0
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression e = sqrt(Expression(a));
+    e.save(path_out);
+
+    auto va = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(va.size(), vo.size());
+    for (size_t i = 0; i < va.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], std::sqrt(va[i]));
+}
+
+TEST_F(ExpressionFixture, UnarySqrtPropagatesNaNOnNegative) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return -1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression e = sqrt(Expression(a));
+    e.save(path_out);
+
+    auto vo = read_all_cells(path_out);
+    for (size_t i = 0; i < vo.size(); ++i)
+        EXPECT_TRUE(std::isnan(vo[i]));
+}
+
+TEST_F(ExpressionFixture, UnaryLog) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k) + 1);  // > 0
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression e = log(Expression(a));
+    e.save(path_out);
+
+    auto va = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(va.size(), vo.size());
+    for (size_t i = 0; i < va.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], std::log(va[i]));
+}
+
+TEST_F(ExpressionFixture, UnaryExp) {
+    auto md = make_simple_metadata();
+    // Small magnitudes keep exp() in a comfortable numerical range.
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] + dims[1] + static_cast<int64_t>(k)) * 0.1;
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression e = exp(Expression(a));
+    e.save(path_out);
+
+    auto va = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(va.size(), vo.size());
+    for (size_t i = 0; i < va.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], std::exp(va[i]));
+}
+
+TEST_F(ExpressionFixture, UnaryMetadataPreserved) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression neg = -Expression(a);
+
+    const auto& m = neg.metadata();
+    EXPECT_EQ(m.unit, "MW");
+    ASSERT_EQ(m.dimensions.size(), 2u);
+    EXPECT_EQ(m.dimensions[0].name, "row");
+    EXPECT_EQ(m.dimensions[0].size, 3);
+    EXPECT_EQ(m.dimensions[1].name, "col");
+    EXPECT_EQ(m.dimensions[1].size, 2);
+    ASSERT_EQ(m.labels.size(), 2u);
+    EXPECT_EQ(m.labels[0], "val1");
+    EXPECT_EQ(m.labels[1], "val2");
+}
+
+TEST_F(ExpressionFixture, UnaryComposes) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression e = abs(-Expression(a));
+    e.save(path_out);
+
+    auto va = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(va.size(), vo.size());
+    for (size_t i = 0; i < va.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], std::abs(va[i]));
+}
+
+TEST_F(ExpressionFixture, UnaryComposesWithBinary) {
+    // Spot-check that -(a + b) parses cleanly and produces the expected result.
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] + dims[1] + static_cast<int64_t>(k));
+    });
+    write_qvr(path_b, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 2 + dims[1] + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    Expression e = -(Expression(a) + Expression(b));
+    e.save(path_out);
+
+    auto va = read_all_cells(path_a);
+    auto vb = read_all_cells(path_b);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(va.size(), vo.size());
+    for (size_t i = 0; i < va.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], -(va[i] + vb[i]));
+}

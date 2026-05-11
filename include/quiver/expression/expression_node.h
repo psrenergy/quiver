@@ -89,7 +89,7 @@ private:
 
 class QUIVER_API ExpressionUnary final : public ExpressionNode {
 public:
-    enum class Operation { Unspecified };
+    enum class Operation { Negate, Abs, Sqrt, Log, Exp };
 
     ExpressionUnary(Operation operation, std::shared_ptr<ExpressionNode> operand);
 
@@ -98,8 +98,11 @@ public:
     void collect_input_files(std::vector<BinaryFile*>& out) const override;
 
 private:
+    static double apply(Operation operation, double x);
+
     Operation operation_;
     std::shared_ptr<ExpressionNode> operand_;
+    mutable std::vector<double> operand_row_buf_;
 };
 
 class QUIVER_API ExpressionTernary final : public ExpressionNode {

@@ -42,6 +42,12 @@ private:
     friend Expression operator/(const Expression&, double);
     friend Expression operator/(double, const Expression&);
 
+    friend Expression operator-(const Expression&);
+    friend Expression abs(const Expression&);
+    friend Expression sqrt(const Expression&);
+    friend Expression log(const Expression&);
+    friend Expression exp(const Expression&);
+
     std::shared_ptr<ExpressionNode> node_;
 };
 
@@ -60,6 +66,12 @@ QUIVER_API Expression operator*(double lhs, const Expression& rhs);
 QUIVER_API Expression operator/(const Expression& lhs, const Expression& rhs);
 QUIVER_API Expression operator/(const Expression& lhs, double rhs);
 QUIVER_API Expression operator/(double lhs, const Expression& rhs);
+
+QUIVER_API Expression operator-(const Expression& operand);
+QUIVER_API Expression abs(const Expression& operand);
+QUIVER_API Expression sqrt(const Expression& operand);
+QUIVER_API Expression log(const Expression& operand);
+QUIVER_API Expression exp(const Expression& operand);
 
 }  // namespace quiver
 

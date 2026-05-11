@@ -132,4 +132,20 @@ Expression operator/(double lhs, const Expression& rhs) {
     return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Divide, scalar, rhs.node_));
 }
 
+Expression operator-(const Expression& operand) {
+    return Expression(std::make_shared<ExpressionUnary>(ExpressionUnary::Operation::Negate, operand.node_));
+}
+Expression abs(const Expression& operand) {
+    return Expression(std::make_shared<ExpressionUnary>(ExpressionUnary::Operation::Abs, operand.node_));
+}
+Expression sqrt(const Expression& operand) {
+    return Expression(std::make_shared<ExpressionUnary>(ExpressionUnary::Operation::Sqrt, operand.node_));
+}
+Expression log(const Expression& operand) {
+    return Expression(std::make_shared<ExpressionUnary>(ExpressionUnary::Operation::Log, operand.node_));
+}
+Expression exp(const Expression& operand) {
+    return Expression(std::make_shared<ExpressionUnary>(ExpressionUnary::Operation::Exp, operand.node_));
+}
+
 }  // namespace quiver
