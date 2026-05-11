@@ -22,39 +22,39 @@ function close!(e::Expression)
     return nothing
 end
 
-function _binop(op, lhs::Expression, rhs::Expression)
+function _binop(operation, lhs::Expression, rhs::Expression)
     out = Ref{Ptr{C.quiver_expression}}(C_NULL)
-    check(C.quiver_expression_apply(op, lhs.ptr, rhs.ptr, out))
+    check(C.quiver_expression_apply(operation, lhs.ptr, rhs.ptr, out))
     return Expression(out[])
 end
 
-function _binop(op, lhs::Expression, rhs::Real)
+function _binop(operation, lhs::Expression, rhs::Real)
     out = Ref{Ptr{C.quiver_expression}}(C_NULL)
-    check(C.quiver_expression_apply_scalar_right(op, lhs.ptr, Float64(rhs), out))
+    check(C.quiver_expression_apply_scalar_right(operation, lhs.ptr, Float64(rhs), out))
     return Expression(out[])
 end
 
-function _binop(op, lhs::Real, rhs::Expression)
+function _binop(operation, lhs::Real, rhs::Expression)
     out = Ref{Ptr{C.quiver_expression}}(C_NULL)
-    check(C.quiver_expression_apply_scalar_left(op, Float64(lhs), rhs.ptr, out))
+    check(C.quiver_expression_apply_scalar_left(operation, Float64(lhs), rhs.ptr, out))
     return Expression(out[])
 end
 
-Base.:+(a::Expression, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_ADD, a, b)
-Base.:+(a::Expression, b::Real) = _binop(C.QUIVER_EXPRESSION_OP_ADD, a, b)
-Base.:+(a::Real, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_ADD, a, b)
+Base.:+(a::Expression, b::Expression) = _binop(C.QUIVER_EXPRESSION_OPERATION_ADD, a, b)
+Base.:+(a::Expression, b::Real) = _binop(C.QUIVER_EXPRESSION_OPERATION_ADD, a, b)
+Base.:+(a::Real, b::Expression) = _binop(C.QUIVER_EXPRESSION_OPERATION_ADD, a, b)
 
-Base.:-(a::Expression, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_SUBTRACT, a, b)
-Base.:-(a::Expression, b::Real) = _binop(C.QUIVER_EXPRESSION_OP_SUBTRACT, a, b)
-Base.:-(a::Real, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_SUBTRACT, a, b)
+Base.:-(a::Expression, b::Expression) = _binop(C.QUIVER_EXPRESSION_OPERATION_SUBTRACT, a, b)
+Base.:-(a::Expression, b::Real) = _binop(C.QUIVER_EXPRESSION_OPERATION_SUBTRACT, a, b)
+Base.:-(a::Real, b::Expression) = _binop(C.QUIVER_EXPRESSION_OPERATION_SUBTRACT, a, b)
 
-Base.:*(a::Expression, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_MULTIPLY, a, b)
-Base.:*(a::Expression, b::Real) = _binop(C.QUIVER_EXPRESSION_OP_MULTIPLY, a, b)
-Base.:*(a::Real, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_MULTIPLY, a, b)
+Base.:*(a::Expression, b::Expression) = _binop(C.QUIVER_EXPRESSION_OPERATION_MULTIPLY, a, b)
+Base.:*(a::Expression, b::Real) = _binop(C.QUIVER_EXPRESSION_OPERATION_MULTIPLY, a, b)
+Base.:*(a::Real, b::Expression) = _binop(C.QUIVER_EXPRESSION_OPERATION_MULTIPLY, a, b)
 
-Base.:/(a::Expression, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_DIVIDE, a, b)
-Base.:/(a::Expression, b::Real) = _binop(C.QUIVER_EXPRESSION_OP_DIVIDE, a, b)
-Base.:/(a::Real, b::Expression) = _binop(C.QUIVER_EXPRESSION_OP_DIVIDE, a, b)
+Base.:/(a::Expression, b::Expression) = _binop(C.QUIVER_EXPRESSION_OPERATION_DIVIDE, a, b)
+Base.:/(a::Expression, b::Real) = _binop(C.QUIVER_EXPRESSION_OPERATION_DIVIDE, a, b)
+Base.:/(a::Real, b::Expression) = _binop(C.QUIVER_EXPRESSION_OPERATION_DIVIDE, a, b)
 
 Base.:+(a::Binary.File, b::Binary.File) = Expression(a) + Expression(b)
 Base.:+(a::Binary.File, b::Real) = Expression(a) + b
@@ -89,4 +89,38 @@ function get_metadata(e::Expression)
     out = Ref{Ptr{C.quiver_binary_metadata}}(C_NULL)
     check(C.quiver_expression_get_metadata(e.ptr, out))
     return Binary.Metadata(out[])
+end
+
+function aggregate(e::Expression, dimension::String, operation::String, parameter::Optional{Real} = nothing)
+    out = Ref{Ptr{C.quiver_expression}}(C_NULL)
+    if parameter === nothing
+        check(C.quiver_expression_aggregate(e.ptr, dimension, operation, C_NULL, out))
+    else
+        param_ref = Ref(Cdouble(parameter))
+        GC.@preserve param_ref begin
+            check(C.quiver_expression_aggregate(e.ptr, dimension, operation, param_ref, out))
+        end
+    end
+    return Expression(out[])
+end
+
+function aggregate_agents(e::Expression, operation::String, parameter::Optional{Real} = nothing)
+    out = Ref{Ptr{C.quiver_expression}}(C_NULL)
+    if parameter === nothing
+        check(C.quiver_expression_aggregate_agents(e.ptr, operation, C_NULL, out))
+    else
+        param_ref = Ref(Cdouble(parameter))
+        GC.@preserve param_ref begin
+            check(C.quiver_expression_aggregate_agents(e.ptr, operation, param_ref, out))
+        end
+    end
+    return Expression(out[])
+end
+
+function aggregate(f::Binary.File, dimension::String, operation::String, parameter::Optional{Real} = nothing)
+    return aggregate(Expression(f), dimension, operation, parameter)
+end
+
+function aggregate_agents(f::Binary.File, operation::String, parameter::Optional{Real} = nothing)
+    return aggregate_agents(Expression(f), operation, parameter)
 end

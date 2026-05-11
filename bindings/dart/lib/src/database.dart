@@ -111,13 +111,13 @@ class Database {
 
   ({Pointer<Int> types, Pointer<Pointer<Void>> values}) _marshalParams(
     Arena arena,
-    List<Object?> params,
+    List<Object?> parameters,
   ) {
-    final types = arena<Int>(params.length);
-    final values = arena<Pointer<Void>>(params.length);
+    final types = arena<Int>(parameters.length);
+    final values = arena<Pointer<Void>>(parameters.length);
 
-    for (var i = 0; i < params.length; i++) {
-      final p = params[i];
+    for (var i = 0; i < parameters.length; i++) {
+      final p = parameters[i];
       if (p == null) {
         types[i] = quiver_data_type_t.QUIVER_DATA_TYPE_NULL;
         values[i] = nullptr;

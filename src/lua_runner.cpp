@@ -22,7 +22,7 @@ struct LuaRunner::Impl {
     }
 
     void bind_database() {
-        // NOLINTBEGIN(performance-unnecessary-value-param) sol2 lambda bindings require pass-by-value for type
+        // NOLINTBEGIN(performance-unnecessary-value-parameter) sol2 lambda bindings require pass-by-value for type
         // deduction
         auto bind = lua.new_usertype<Database>(
             "Database",
@@ -125,7 +125,7 @@ struct LuaRunner::Impl {
                 }
                 self.import_csv(collection, group, path, options);
             });
-        // NOLINTEND(performance-unnecessary-value-param)
+        // NOLINTEND(performance-unnecessary-value-parameter)
 
         bind.set_function("create_element", &create_element_lua);
 
@@ -512,10 +512,10 @@ struct LuaRunner::Impl {
         return t;
     }
 
-    static std::vector<Value> lua_table_to_values(const sol::table& params) {
+    static std::vector<Value> lua_table_to_values(const sol::table& parameters) {
         std::vector<Value> values;
-        for (size_t i = 1; i <= params.size(); ++i) {
-            sol::object val = params[i];
+        for (size_t i = 1; i <= parameters.size(); ++i) {
+            sol::object val = parameters[i];
             if (val.is<sol::lua_nil_t>()) {
                 values.emplace_back(nullptr);
             } else if (val.is<int64_t>()) {
@@ -530,9 +530,9 @@ struct LuaRunner::Impl {
     }
 
     static sol::object
-    query_string_lua(Database& db, const std::string& sql, sol::optional<sol::table> params, sol::this_state s) {
+    query_string_lua(Database& db, const std::string& sql, sol::optional<sol::table> parameters, sol::this_state s) {
         sol::state_view lua(s);
-        auto values = params ? lua_table_to_values(*params) : std::vector<Value>{};
+        auto values = parameters ? lua_table_to_values(*parameters) : std::vector<Value>{};
         auto result = db.query_string(sql, values);
         if (result.has_value()) {
             return sol::make_object(lua, *result);
@@ -541,9 +541,9 @@ struct LuaRunner::Impl {
     }
 
     static sol::object
-    query_integer_lua(Database& db, const std::string& sql, sol::optional<sol::table> params, sol::this_state s) {
+    query_integer_lua(Database& db, const std::string& sql, sol::optional<sol::table> parameters, sol::this_state s) {
         sol::state_view lua(s);
-        auto values = params ? lua_table_to_values(*params) : std::vector<Value>{};
+        auto values = parameters ? lua_table_to_values(*parameters) : std::vector<Value>{};
         auto result = db.query_integer(sql, values);
         if (result.has_value()) {
             return sol::make_object(lua, *result);
@@ -552,9 +552,9 @@ struct LuaRunner::Impl {
     }
 
     static sol::object
-    query_float_lua(Database& db, const std::string& sql, sol::optional<sol::table> params, sol::this_state s) {
+    query_float_lua(Database& db, const std::string& sql, sol::optional<sol::table> parameters, sol::this_state s) {
         sol::state_view lua(s);
-        auto values = params ? lua_table_to_values(*params) : std::vector<Value>{};
+        auto values = parameters ? lua_table_to_values(*parameters) : std::vector<Value>{};
         auto result = db.query_float(sql, values);
         if (result.has_value()) {
             return sol::make_object(lua, *result);

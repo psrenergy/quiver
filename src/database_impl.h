@@ -193,16 +193,16 @@ struct Database::Impl {
                 auto vector_index = static_cast<int64_t>(row_idx + 1);
                 auto sql = "INSERT INTO " + vector_table + " (id, vector_index";
                 std::string placeholders = "?, ?";
-                std::vector<Value> params = {element_id, vector_index};
+                std::vector<Value> parameters = {element_id, vector_index};
 
                 for (const auto& [col_name, values_ptr] : columns) {
                     sql += ", " + col_name;
                     placeholders += ", ?";
-                    params.push_back((*values_ptr)[row_idx]);
+                    parameters.push_back((*values_ptr)[row_idx]);
                 }
 
                 sql += ") VALUES (" + placeholders + ")";
-                db.execute(sql, params);
+                db.execute(sql, parameters);
             }
             logger->debug("Inserted {} vector rows into {}", num_rows, vector_table);
         }
@@ -231,15 +231,15 @@ struct Database::Impl {
             for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
                 auto sql = "INSERT INTO " + set_table + " (id";
                 std::string placeholders = "?";
-                std::vector<Value> params = {element_id};
+                std::vector<Value> parameters = {element_id};
 
                 for (const auto& [col_name, values_ptr] : columns) {
                     sql += ", " + col_name;
                     placeholders += ", ?";
-                    params.push_back((*values_ptr)[row_idx]);
+                    parameters.push_back((*values_ptr)[row_idx]);
                 }
                 sql += ") VALUES (" + placeholders + ")";
-                db.execute(sql, params);
+                db.execute(sql, parameters);
             }
             logger->debug("Inserted {} set rows for table {}", num_rows, set_table);
         }
@@ -268,16 +268,16 @@ struct Database::Impl {
             for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
                 auto sql = "INSERT INTO " + ts_table + " (id";
                 std::string placeholders = "?";
-                std::vector<Value> params = {element_id};
+                std::vector<Value> parameters = {element_id};
 
                 for (const auto& [col_name, values_ptr] : columns) {
                     sql += ", " + col_name;
                     placeholders += ", ?";
-                    params.push_back((*values_ptr)[row_idx]);
+                    parameters.push_back((*values_ptr)[row_idx]);
                 }
 
                 sql += ") VALUES (" + placeholders + ")";
-                db.execute(sql, params);
+                db.execute(sql, parameters);
             }
             logger->debug("Inserted {} time series rows into {}", num_rows, ts_table);
         }

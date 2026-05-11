@@ -128,7 +128,7 @@ bool Database::is_healthy() const {
     return impl_ && impl_->db != nullptr;
 }
 
-Result Database::execute(const std::string& sql, const std::vector<Value>& params) {
+Result Database::execute(const std::string& sql, const std::vector<Value>& parameters) {
     sqlite3_stmt* raw_stmt = nullptr;
     auto rc = sqlite3_prepare_v2(impl_->db, sql.c_str(), -1, &raw_stmt, nullptr);
     if (rc != SQLITE_OK) {
@@ -137,9 +137,9 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
     StmtPtr stmt(raw_stmt, sqlite3_finalize);
 
     // Bind parameters
-    for (size_t i = 0; i < params.size(); ++i) {
+    for (size_t i = 0; i < parameters.size(); ++i) {
         const auto idx = static_cast<int>(i + 1);
-        const auto& param = params[i];
+        const auto& parameter = parameters[i];
 
         std::visit(
             [&](auto&& arg) {
@@ -159,7 +159,7 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
                                       SQLITE_TRANSIENT);  // NOLINT(performance-no-int-to-ptr) SQLite macro
                 }
             },
-            param);
+            parameter);
     }
 
     // Get column info

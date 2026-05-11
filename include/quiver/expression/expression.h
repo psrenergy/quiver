@@ -4,27 +4,34 @@
 #include "../binary/binary_file.h"
 #include "../binary/binary_metadata.h"
 #include "../export.h"
-#include "node.h"
+#include "expression_node.h"
 
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace quiver {
 
 class QUIVER_API Expression {
 public:
-    explicit Expression(const BinaryFile& file);
+    Expression(const BinaryFile& file);
 
-    explicit Expression(std::shared_ptr<Node> node);
+    explicit Expression(std::shared_ptr<ExpressionNode> node);
 
     const BinaryMetadata& metadata() const;
 
     void save(const std::string& path) const;
 
-    const std::shared_ptr<Node>& node() const;
+    const std::shared_ptr<ExpressionNode>& node() const;
+
+    Expression aggregate(const std::string& dimension,
+                         const std::string& operation,
+                         std::optional<double> parameter = std::nullopt) const;
+
+    Expression aggregate_agents(const std::string& operation, std::optional<double> parameter = std::nullopt) const;
 
 private:
-    std::shared_ptr<Node> node_;
+    std::shared_ptr<ExpressionNode> node_;
 };
 
 QUIVER_API Expression operator+(const Expression& lhs, const Expression& rhs);

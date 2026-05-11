@@ -27,7 +27,7 @@ void Database::update_element(const std::string& collection, int64_t id, const E
 
         // Build UPDATE SQL
         auto sql = "UPDATE " + collection + " SET ";
-        std::vector<Value> params;
+        std::vector<Value> parameters;
 
         auto first = true;
         for (const auto& [name, value] : resolved.scalars) {
@@ -35,13 +35,13 @@ void Database::update_element(const std::string& collection, int64_t id, const E
                 sql += ", ";
             }
             sql += name + " = ?";
-            params.push_back(value);
+            parameters.push_back(value);
             first = false;
         }
         sql += " WHERE id = ?";
-        params.emplace_back(id);
+        parameters.emplace_back(id);
 
-        execute(sql, params);
+        execute(sql, parameters);
     }
 
     // Delegate group insertion to shared helper (delete_existing=true for updates)

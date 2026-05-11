@@ -261,7 +261,7 @@ TEST_F(ExpressionFixture, SamePathTwice) {
     });
     auto a1 = BinaryFile::open_file(path_a, 'r');
     auto a2 = BinaryFile::open_file(path_a, 'r');
-    Expression e = Expression(a1) + Expression(a2);  // each FileNode opens independently
+    Expression e = Expression(a1) + Expression(a2);  // each ExpressionFile opens independently
     e.save(path_out);
 
     auto va = read_all_cells(path_a);
@@ -954,4 +954,540 @@ TEST_F(ExpressionFixture, IsReadModeAccessor) {
     }
     auto reader = BinaryFile::open_file(path_a, 'r');
     EXPECT_TRUE(reader.is_read_mode());
+}
+
+TEST_F(ExpressionFixture, ImplicitConversionFromBinaryFile) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+    });
+    write_qvr(path_b, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 100 + dims[1] * 5 + static_cast<int64_t>(k) * 2);
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+
+    Expression e = a + b;
+    e.save(path_out);
+
+    auto va = read_all_cells(path_a);
+    auto vb = read_all_cells(path_b);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(va.size(), vo.size());
+    for (size_t i = 0; i < va.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], va[i] + vb[i]);
+}
+
+// =============================================================================
+// ExpressionAggregate — dimension aggregation
+// =============================================================================
+
+TEST_F(ExpressionFixture, AggregateSumOverNonTimeDim) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression e = Expression(a).aggregate("row", "sum");
+    e.save(path_out);
+
+    // Output has only "col" dim (size 2) and labels [val1, val2] = 4 cells.
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), 4u);
+
+    // For each (col, k): sum over row=1..3 of (row*10 + col + k).
+    auto expected = [](int64_t col, size_t k) {
+        double s = 0.0;
+        for (int64_t r = 1; r <= 3; ++r) {
+            s += static_cast<double>(r * 10 + col + static_cast<int64_t>(k));
+        }
+        return s;
+    };
+    EXPECT_DOUBLE_EQ(vo[0], expected(1, 0));
+    EXPECT_DOUBLE_EQ(vo[1], expected(1, 1));
+    EXPECT_DOUBLE_EQ(vo[2], expected(2, 0));
+    EXPECT_DOUBLE_EQ(vo[3], expected(2, 1));
+}
+
+TEST_F(ExpressionFixture, AggregateMeanOverNonTimeDim) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression(a).aggregate("row", "mean").save(path_out);
+
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), 4u);
+
+    // Mean over row=1..3 of (10r + col + k) = (60 + 3*col + 3*k) / 3 = 20 + col + k.
+    EXPECT_DOUBLE_EQ(vo[0], 21.0);  // col=1, k=0
+    EXPECT_DOUBLE_EQ(vo[1], 22.0);  // col=1, k=1
+    EXPECT_DOUBLE_EQ(vo[2], 22.0);  // col=2, k=0
+    EXPECT_DOUBLE_EQ(vo[3], 23.0);  // col=2, k=1
+}
+
+TEST_F(ExpressionFixture, AggregateMinOverNonTimeDim) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression(a).aggregate("row", "min").save(path_out);
+
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), 4u);
+    // Min over row=1..3: row=1 wins. Value = 10 + col + k.
+    EXPECT_DOUBLE_EQ(vo[0], 11.0);  // col=1, k=0
+    EXPECT_DOUBLE_EQ(vo[1], 12.0);
+    EXPECT_DOUBLE_EQ(vo[2], 12.0);
+    EXPECT_DOUBLE_EQ(vo[3], 13.0);
+}
+
+TEST_F(ExpressionFixture, AggregateMaxOverNonTimeDim) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression(a).aggregate("row", "max").save(path_out);
+
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), 4u);
+    // Max over row=1..3: row=3 wins. Value = 30 + col + k.
+    EXPECT_DOUBLE_EQ(vo[0], 31.0);
+    EXPECT_DOUBLE_EQ(vo[1], 32.0);
+    EXPECT_DOUBLE_EQ(vo[2], 32.0);
+    EXPECT_DOUBLE_EQ(vo[3], 33.0);
+}
+
+TEST_F(ExpressionFixture, AggregatePercentileOverNonTimeDim) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression(a).aggregate("row", "percentile", 0.5).save(path_out);
+
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), 4u);
+    // Median over row=1..3 of (10r + col + k). Sorted = {col+k+10, col+k+20, col+k+30}.
+    // (n-1)*0.5 = 1.0 → middle element = col + k + 20.
+    EXPECT_DOUBLE_EQ(vo[0], 21.0);
+    EXPECT_DOUBLE_EQ(vo[1], 22.0);
+    EXPECT_DOUBLE_EQ(vo[2], 22.0);
+    EXPECT_DOUBLE_EQ(vo[3], 23.0);
+}
+
+TEST_F(ExpressionFixture, AggregateSumOverTimeDimSimple) {
+    auto md = BinaryMetadata::from_element(Element()
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-01-01T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"year", "scenario"})
+                                               .set("dimension_sizes", {3, 2})
+                                               .set("time_dimensions", {"year"})
+                                               .set("frequencies", {"yearly"})
+                                               .set("labels", {"v1"}));
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t) { return static_cast<double>(dims[0]); });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression(a).aggregate("year", "sum").save(path_out);
+
+    auto vo = read_all_cells(path_out);
+    // Output: [scenario(2)] × [v1] = 2 cells. Sum over year=1..3 = 6.
+    ASSERT_EQ(vo.size(), 2u);
+    EXPECT_DOUBLE_EQ(vo[0], 6.0);
+    EXPECT_DOUBLE_EQ(vo[1], 6.0);
+}
+
+TEST_F(ExpressionFixture, AggregateSumOverTimeDimVariable) {
+    // Reduce "block" (day, parent=month) so the iteration must respect 28-day Feb,
+    // 31-day Jan/Mar, 30-day Apr.
+    auto md = BinaryMetadata::from_element(Element()
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-01-01T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"month", "block"})
+                                               .set("dimension_sizes", {4, 31})
+                                               .set("time_dimensions", {"month", "block"})
+                                               .set("frequencies", {"monthly", "daily"})
+                                               .set("labels", {"v1"}));
+    // Fill every cell with 1.0 → sum over block at each month equals the number of days.
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression(a).aggregate("block", "sum").save(path_out);
+
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), 4u);       // 4 months × 1 label
+    EXPECT_DOUBLE_EQ(vo[0], 31.0);  // Jan
+    EXPECT_DOUBLE_EQ(vo[1], 28.0);  // Feb 2025 (non-leap)
+    EXPECT_DOUBLE_EQ(vo[2], 31.0);  // Mar
+    EXPECT_DOUBLE_EQ(vo[3], 30.0);  // Apr
+}
+
+TEST_F(ExpressionFixture, AggregateSumSkipsNaNs) {
+    auto md = make_simple_metadata();
+    const double kNan = std::numeric_limits<double>::quiet_NaN();
+    write_qvr(path_a, md, [kNan](const std::vector<int64_t>& dims, size_t k) {
+        // Mark row=2 as NaN. Sum across row should skip it.
+        if (dims[0] == 2)
+            return kNan;
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression(a).aggregate("row", "sum").save(path_out);
+
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), 4u);
+    // sum = row1 + row3 (row2 skipped) = (10+col+k) + (30+col+k) = 40 + 2*col + 2*k
+    EXPECT_DOUBLE_EQ(vo[0], 42.0);
+    EXPECT_DOUBLE_EQ(vo[1], 44.0);
+    EXPECT_DOUBLE_EQ(vo[2], 44.0);
+    EXPECT_DOUBLE_EQ(vo[3], 46.0);
+}
+
+TEST_F(ExpressionFixture, AggregateAllNaNRangeProducesNaN) {
+    auto md = make_simple_metadata();
+    const double kNan = std::numeric_limits<double>::quiet_NaN();
+    write_qvr(path_a, md, [kNan](const std::vector<int64_t>&, size_t) { return kNan; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression(a).aggregate("row", "sum").save(path_out);
+
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), 4u);
+    for (double v : vo) {
+        EXPECT_TRUE(std::isnan(v));
+    }
+}
+
+TEST_F(ExpressionFixture, AggregateTimeDimRewireParents) {
+    // dims=[scenario(3), month(12), block(28)] — reducing scenario (non-time, index 0)
+    // shifts month → output index 0, block → output index 1. block's parent in input
+    // is 1 (month), should remap to 0 in output.
+    auto md = BinaryMetadata::from_element(Element()
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-02-01T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"scenario", "month", "block"})
+                                               .set("dimension_sizes", {3, 1, 28})
+                                               .set("time_dimensions", {"month", "block"})
+                                               .set("frequencies", {"monthly", "daily"})
+                                               .set("labels", {"v1"}));
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto out = Expression(a).aggregate("scenario", "sum");
+    const auto& m = out.metadata();
+
+    ASSERT_EQ(m.dimensions.size(), 2u);
+    EXPECT_EQ(m.dimensions[0].name, "month");
+    EXPECT_EQ(m.dimensions[1].name, "block");
+    ASSERT_TRUE(m.dimensions[1].is_time_dimension());
+    EXPECT_EQ(m.dimensions[1].time->parent_dimension_index, 0);  // block points at month
+}
+
+TEST_F(ExpressionFixture, AggregateReduceOutermostTimeDimWithChildren) {
+    // dims=[year(2), month(12)] both time. Reduce year (outermost). Month's parent
+    // was 0 (year). After reduction, month becomes orphan (parent=-1).
+    auto md = BinaryMetadata::from_element(Element()
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-01-01T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"year", "month"})
+                                               .set("dimension_sizes", {2, 12})
+                                               .set("time_dimensions", {"year", "month"})
+                                               .set("frequencies", {"yearly", "monthly"})
+                                               .set("labels", {"v1"}));
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto out = Expression(a).aggregate("year", "sum");
+    const auto& m = out.metadata();
+
+    ASSERT_EQ(m.dimensions.size(), 1u);
+    EXPECT_EQ(m.dimensions[0].name, "month");
+    ASSERT_TRUE(m.dimensions[0].is_time_dimension());
+    EXPECT_EQ(m.dimensions[0].time->parent_dimension_index, -1);
+    EXPECT_EQ(m.number_of_time_dimensions, 1);
+}
+
+TEST_F(ExpressionFixture, AggregateDimensionNotFoundThrows) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    EXPECT_THROW(Expression(a).aggregate("nonexistent", "sum"), std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, AggregateUnknownOperationThrows) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    EXPECT_THROW(Expression(a).aggregate("row", "average"), std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, AggregatePercentileMissingParamThrows) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    EXPECT_THROW(Expression(a).aggregate("row", "percentile"), std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, AggregateSumExtraParamThrows) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    EXPECT_THROW(Expression(a).aggregate("row", "sum", 0.5), std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, AggregatePercentileOutOfRangeThrows) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    EXPECT_THROW(Expression(a).aggregate("row", "percentile", 1.5), std::runtime_error);
+    EXPECT_THROW(Expression(a).aggregate("row", "percentile", -0.1), std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, AggregateChained) {
+    // Start with 3 dims so chaining two reductions still leaves at least one dim
+    // (BinaryMetadata::validate() requires dimensions.size() >= 1).
+    auto md = BinaryMetadata::from_element(Element()
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-01-01T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"row", "col", "depth"})
+                                               .set("dimension_sizes", {3, 2, 2})
+                                               .set("labels", {"v1"}));
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 2.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression(a).aggregate("row", "sum").aggregate("col", "sum").save(path_out);
+
+    // Output dims = [depth(2)] × 1 label = 2 cells. Each cell sums 3 rows × 2 cols of 2.0 = 12.0.
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), 2u);
+    EXPECT_DOUBLE_EQ(vo[0], 12.0);
+    EXPECT_DOUBLE_EQ(vo[1], 12.0);
+}
+
+TEST_F(ExpressionFixture, AggregateComposedWithBinary) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+    });
+    write_qvr(path_b, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] + dims[1] + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    (Expression(a) + Expression(b)).aggregate("row", "sum").save(path_out);
+
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), 4u);
+    // (a+b) at (r, c, k) = (r*10 + c + k) + (r + c + k) = 11r + 2c + 2k.
+    // Sum over r=1..3 = 11*(1+2+3) + 3*(2c + 2k) = 66 + 6c + 6k.
+    EXPECT_DOUBLE_EQ(vo[0], 66.0 + 6.0 * 1 + 0.0);  // c=1, k=0
+    EXPECT_DOUBLE_EQ(vo[1], 66.0 + 6.0 * 1 + 6.0);  // c=1, k=1
+    EXPECT_DOUBLE_EQ(vo[2], 66.0 + 6.0 * 2 + 0.0);  // c=2, k=0
+    EXPECT_DOUBLE_EQ(vo[3], 66.0 + 6.0 * 2 + 6.0);  // c=2, k=1
+}
+
+// =============================================================================
+// ExpressionAggregateAgents — label-axis (column) aggregation
+// =============================================================================
+
+TEST_F(ExpressionFixture, AgentSumReducesLabels) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto out = Expression(a).aggregate_agents("sum");
+    out.save(path_out);
+
+    const auto& m = out.metadata();
+    ASSERT_EQ(m.labels.size(), 1u);
+    EXPECT_EQ(m.labels[0], "sum");
+    ASSERT_EQ(m.dimensions.size(), 2u);
+
+    auto vo = read_all_cells(path_out);
+    // 3 rows × 2 cols × 1 label = 6 cells. Each = (10r + c) + (10r + c + 1) = 20r + 2c + 1.
+    ASSERT_EQ(vo.size(), 6u);
+    auto expected = [](int64_t r, int64_t c) { return static_cast<double>(20 * r + 2 * c + 1); };
+    EXPECT_DOUBLE_EQ(vo[0], expected(1, 1));
+    EXPECT_DOUBLE_EQ(vo[1], expected(1, 2));
+    EXPECT_DOUBLE_EQ(vo[2], expected(2, 1));
+    EXPECT_DOUBLE_EQ(vo[3], expected(2, 2));
+    EXPECT_DOUBLE_EQ(vo[4], expected(3, 1));
+    EXPECT_DOUBLE_EQ(vo[5], expected(3, 2));
+}
+
+TEST_F(ExpressionFixture, AgentMeanReducesLabels) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto out = Expression(a).aggregate_agents("mean");
+    out.save(path_out);
+
+    const auto& m = out.metadata();
+    EXPECT_EQ(m.labels[0], "mean");
+
+    auto vo = read_all_cells(path_out);
+    // mean = ((10r + c) + (10r + c + 1)) / 2 = 10r + c + 0.5
+    EXPECT_DOUBLE_EQ(vo[0], 11.5);  // r=1, c=1
+    EXPECT_DOUBLE_EQ(vo[1], 12.5);  // r=1, c=2
+}
+
+TEST_F(ExpressionFixture, AgentMinReducesLabels) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto out = Expression(a).aggregate_agents("min");
+    out.save(path_out);
+
+    EXPECT_EQ(out.metadata().labels[0], "min");
+    auto vo = read_all_cells(path_out);
+    // Min between (10r + c) and (10r + c + 1) = (10r + c).
+    EXPECT_DOUBLE_EQ(vo[0], 11.0);
+    EXPECT_DOUBLE_EQ(vo[1], 12.0);
+}
+
+TEST_F(ExpressionFixture, AgentMaxReducesLabels) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto out = Expression(a).aggregate_agents("max");
+    out.save(path_out);
+
+    EXPECT_EQ(out.metadata().labels[0], "max");
+    auto vo = read_all_cells(path_out);
+    // Max between (10r + c) and (10r + c + 1) = (10r + c + 1).
+    EXPECT_DOUBLE_EQ(vo[0], 12.0);
+    EXPECT_DOUBLE_EQ(vo[1], 13.0);
+}
+
+TEST_F(ExpressionFixture, AgentPercentileReducesLabels) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto out = Expression(a).aggregate_agents("percentile", 0.5);
+    out.save(path_out);
+
+    EXPECT_EQ(out.metadata().labels[0], "percentile");
+    auto vo = read_all_cells(path_out);
+    // Median of two values (a, a+1) = a + 0.5 = 10r + c + 0.5
+    EXPECT_DOUBLE_EQ(vo[0], 11.5);
+}
+
+TEST_F(ExpressionFixture, AgentSkipsNaNs) {
+    auto md = make_simple_metadata();
+    const double kNan = std::numeric_limits<double>::quiet_NaN();
+    write_qvr(path_a, md, [kNan](const std::vector<int64_t>& dims, size_t k) {
+        if (k == 0)
+            return kNan;
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression(a).aggregate_agents("sum").save(path_out);
+
+    auto vo = read_all_cells(path_out);
+    // Only label k=1 contributes; sum = single value = 10r + c + 1.
+    EXPECT_DOUBLE_EQ(vo[0], 12.0);  // r=1, c=1
+    EXPECT_DOUBLE_EQ(vo[1], 13.0);  // r=1, c=2
+}
+
+TEST_F(ExpressionFixture, AgentAllNaNProducesNaN) {
+    auto md = make_simple_metadata();
+    const double kNan = std::numeric_limits<double>::quiet_NaN();
+    write_qvr(path_a, md, [kNan](const std::vector<int64_t>&, size_t) { return kNan; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression(a).aggregate_agents("sum").save(path_out);
+
+    auto vo = read_all_cells(path_out);
+    for (double v : vo) {
+        EXPECT_TRUE(std::isnan(v));
+    }
+}
+
+TEST_F(ExpressionFixture, AgentPreservesDimensions) {
+    auto md = BinaryMetadata::from_element(Element()
+                                               .set("version", "1")
+                                               .set("initial_datetime", "2025-01-01T00:00:00")
+                                               .set("unit", "MW")
+                                               .set("dimensions", {"year", "scenario"})
+                                               .set("dimension_sizes", {2, 3})
+                                               .set("time_dimensions", {"year"})
+                                               .set("frequencies", {"yearly"})
+                                               .set("labels", {"v1", "v2", "v3"}));
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto out = Expression(a).aggregate_agents("mean");
+    const auto& m = out.metadata();
+
+    EXPECT_EQ(m.unit, "MW");
+    ASSERT_EQ(m.dimensions.size(), 2u);
+    EXPECT_EQ(m.dimensions[0].name, "year");
+    EXPECT_EQ(m.dimensions[0].size, 2);
+    EXPECT_TRUE(m.dimensions[0].is_time_dimension());
+    EXPECT_EQ(m.dimensions[1].name, "scenario");
+    EXPECT_EQ(m.dimensions[1].size, 3);
+    EXPECT_EQ(m.number_of_time_dimensions, 1);
+    EXPECT_EQ(m.labels.size(), 1u);
+    EXPECT_EQ(m.labels[0], "mean");
+}
+
+TEST_F(ExpressionFixture, AgentUnknownOperationThrows) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    EXPECT_THROW(Expression(a).aggregate_agents("average"), std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, AgentPercentileMissingParamThrows) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    EXPECT_THROW(Expression(a).aggregate_agents("percentile"), std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, AgentPercentileOutOfRangeThrows) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    EXPECT_THROW(Expression(a).aggregate_agents("percentile", 1.5), std::runtime_error);
+    EXPECT_THROW(Expression(a).aggregate_agents("percentile", -0.1), std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, AgentChainedAfterAggregate) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 3.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression(a).aggregate("row", "sum").aggregate_agents("mean").save(path_out);
+
+    // After reducing row(3) and agents(2): output dims=[col(2)], labels=["mean"] = 2 cells.
+    // First sum over 3 rows of 3.0 → 9.0 in each (col, k). Then mean across 2 labels → 9.0.
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), 2u);
+    EXPECT_DOUBLE_EQ(vo[0], 9.0);
+    EXPECT_DOUBLE_EQ(vo[1], 9.0);
+}
+
+TEST_F(ExpressionFixture, AgentSaveProducesReadableFile) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] + dims[1] + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression(a).aggregate_agents("sum").save(path_out);
+
+    auto reopened = BinaryFile::open_file(path_out, 'r');
+    const auto& m = reopened.get_metadata();
+    EXPECT_EQ(m.labels.size(), 1u);
+    EXPECT_EQ(m.labels[0], "sum");
+    EXPECT_EQ(m.dimensions.size(), 2u);
+    EXPECT_EQ(m.unit, "MW");
 }

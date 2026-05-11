@@ -268,7 +268,7 @@ TEST_F(ExpressionCApiFixture, SaveOpenedTwiceProducesSameOutput) {
 }
 
 // ============================================================================
-// Binary operators (file op file)
+// Binary operators (file operation file)
 // ============================================================================
 
 TEST_F(ExpressionCApiFixture, AddTwoFiles) {
@@ -278,7 +278,7 @@ TEST_F(ExpressionCApiFixture, AddTwoFiles) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* sum = nullptr;
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &sum), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &sum), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(sum, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -299,7 +299,7 @@ TEST_F(ExpressionCApiFixture, SubtractTwoFiles) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* diff = nullptr;
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_SUBTRACT, a, b, &diff), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_SUBTRACT, a, b, &diff), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(diff, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -320,7 +320,7 @@ TEST_F(ExpressionCApiFixture, MultiplyTwoFiles) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* product = nullptr;
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_MULTIPLY, a, b, &product), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_MULTIPLY, a, b, &product), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(product, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -342,7 +342,7 @@ TEST_F(ExpressionCApiFixture, DivideTwoFiles) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* quotient = nullptr;
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_DIVIDE, a, b, &quotient), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_DIVIDE, a, b, &quotient), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(quotient, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -368,9 +368,9 @@ TEST_F(ExpressionCApiFixture, Chained) {
     quiver_expression_t* a_plus_b = nullptr;
     quiver_expression_t* sub_c = nullptr;
     quiver_expression_t* halved = nullptr;
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &a_plus_b), QUIVER_OK);
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_SUBTRACT, a_plus_b, c, &sub_c), QUIVER_OK);
-    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OP_DIVIDE, sub_c, 2.0, &halved), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &a_plus_b), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_SUBTRACT, a_plus_b, c, &sub_c), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OPERATION_DIVIDE, sub_c, 2.0, &halved), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(halved, path_out.c_str()), QUIVER_OK);
 
     quiver_expression_close(a);
@@ -398,7 +398,7 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastAddRight) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* result = nullptr;
-    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OP_ADD, a, 2.0, &result), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OPERATION_ADD, a, 2.0, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(result);
@@ -415,7 +415,7 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastSubtractRight) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* result = nullptr;
-    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OP_SUBTRACT, a, 5.0, &result), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OPERATION_SUBTRACT, a, 5.0, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(result);
@@ -431,7 +431,7 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastMultiplyRight) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* result = nullptr;
-    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OP_MULTIPLY, a, 3.0, &result), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OPERATION_MULTIPLY, a, 3.0, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(result);
@@ -447,7 +447,7 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastDivideRight) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* result = nullptr;
-    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OP_DIVIDE, a, 4.0, &result), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OPERATION_DIVIDE, a, 4.0, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(result);
@@ -467,7 +467,7 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastAddLeft) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* result = nullptr;
-    ASSERT_EQ(quiver_expression_apply_scalar_left(QUIVER_EXPRESSION_OP_ADD, 7.0, a, &result), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply_scalar_left(QUIVER_EXPRESSION_OPERATION_ADD, 7.0, a, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(result);
@@ -483,7 +483,7 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastSubtractLeft) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* result = nullptr;
-    ASSERT_EQ(quiver_expression_apply_scalar_left(QUIVER_EXPRESSION_OP_SUBTRACT, 100.0, a, &result), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply_scalar_left(QUIVER_EXPRESSION_OPERATION_SUBTRACT, 100.0, a, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(result);
@@ -499,7 +499,7 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastMultiplyLeft) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* result = nullptr;
-    ASSERT_EQ(quiver_expression_apply_scalar_left(QUIVER_EXPRESSION_OP_MULTIPLY, 5.0, a, &result), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply_scalar_left(QUIVER_EXPRESSION_OPERATION_MULTIPLY, 5.0, a, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(result);
@@ -515,7 +515,7 @@ TEST_F(ExpressionCApiFixture, ScalarBroadcastDivideLeft) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* result = nullptr;
-    ASSERT_EQ(quiver_expression_apply_scalar_left(QUIVER_EXPRESSION_OP_DIVIDE, 60.0, a, &result), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply_scalar_left(QUIVER_EXPRESSION_OPERATION_DIVIDE, 60.0, a, &result), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(result);
@@ -555,7 +555,7 @@ TEST_F(ExpressionCApiFixture, MismatchedShapesReturnsError) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* result = nullptr;
-    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &result), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &result), QUIVER_ERROR);
     EXPECT_EQ(result, nullptr);
 
     quiver_expression_close(a);
@@ -573,7 +573,7 @@ TEST_F(ExpressionCApiFixture, UnitMismatchReturnsError) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* result = nullptr;
-    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &result), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &result), QUIVER_ERROR);
     EXPECT_EQ(result, nullptr);
 
     quiver_expression_close(a);
@@ -591,7 +591,7 @@ TEST_F(ExpressionCApiFixture, LabelMismatchReturnsError) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* result = nullptr;
-    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &result), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &result), QUIVER_ERROR);
 
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -647,7 +647,7 @@ TEST_F(ExpressionCApiFixture, FromFileNullArguments) {
 
 TEST_F(ExpressionCApiFixture, ApplyNullArguments) {
     quiver_expression_t* out = nullptr;
-    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, nullptr, nullptr, &out), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, nullptr, nullptr, &out), QUIVER_ERROR);
     EXPECT_STREQ(quiver_get_last_error(), "Null argument: lhs");
 }
 
@@ -682,14 +682,14 @@ TEST_F(ExpressionCApiFixture, GetMetadataAfterApplyReturnsBroadcastMetadata) {
     auto* a = expr_from_file(path_a);
 
     quiver_expression_t* doubled = nullptr;
-    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OP_MULTIPLY, a, 2.0, &doubled), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OPERATION_MULTIPLY, a, 2.0, &doubled), QUIVER_OK);
 
     quiver_binary_metadata_t* md = nullptr;
     ASSERT_EQ(quiver_expression_get_metadata(doubled, &md), QUIVER_OK);
 
     char* unit = nullptr;
     ASSERT_EQ(quiver_binary_metadata_get_unit(md, &unit), QUIVER_OK);
-    EXPECT_STREQ(unit, "MW");  // unit broadcasts unchanged through scalar op
+    EXPECT_STREQ(unit, "MW");  // unit broadcasts unchanged through scalar operation
     quiver_binary_metadata_free_string(unit);
 
     quiver_binary_metadata_free(md);
@@ -704,11 +704,11 @@ TEST_F(ExpressionCApiFixture, GetMetadataAfterApplyReturnsBroadcastMetadata) {
 TEST_F(ExpressionCApiFixture, SamePathTwice) {
     write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
 
-    // Two independent Expressions both pointing at path_a; each FileNode opens its own handle.
+    // Two independent Expressions both pointing at path_a; each ExpressionFile opens its own handle.
     auto* a1 = expr_from_file(path_a);
     auto* a2 = expr_from_file(path_a);
     quiver_expression_t* sum = nullptr;
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a1, a2, &sum), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a1, a2, &sum), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(sum, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a1);
     quiver_expression_close(a2);
@@ -741,7 +741,7 @@ TEST_F(ExpressionCApiFixture, BroadcastSizeOneDim) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* sum = nullptr;
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &sum), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &sum), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(sum, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -774,7 +774,7 @@ TEST_F(ExpressionCApiFixture, BroadcastLabelsAxis) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* sum = nullptr;
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &sum), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &sum), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(sum, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -809,7 +809,7 @@ TEST_F(ExpressionCApiFixture, UnionDimsAcrossOperands) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* sum = nullptr;
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &sum), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &sum), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(sum, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -841,7 +841,7 @@ TEST_F(ExpressionCApiFixture, OperandDimsInDifferentOrder) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* sum = nullptr;
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &sum), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &sum), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(sum, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -879,7 +879,7 @@ TEST_F(ExpressionCApiFixture, TimePropertiesMismatchReturnsError) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* result = nullptr;
-    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &result), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &result), QUIVER_ERROR);
     EXPECT_EQ(result, nullptr);
 
     quiver_expression_close(a);
@@ -911,7 +911,7 @@ TEST_F(ExpressionCApiFixture, InitialDatetimeMismatchReturnsError) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* result = nullptr;
-    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &result), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &result), QUIVER_ERROR);
 
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -942,7 +942,7 @@ TEST_F(ExpressionCApiFixture, ParentDimNameMismatchReturnsError) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* result = nullptr;
-    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &result), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &result), QUIVER_ERROR);
 
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -973,7 +973,7 @@ TEST_F(ExpressionCApiFixture, ParentDimMatchByNameAcceptsCrossPosition) {
     auto* a = expr_from_file(path_a);
     auto* b = expr_from_file(path_b);
     quiver_expression_t* sum = nullptr;
-    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OP_ADD, a, b, &sum), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &sum), QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(sum, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -996,4 +996,182 @@ TEST_F(ExpressionCApiFixture, FromFileFailsForWriteModeHandle) {
     EXPECT_EQ(expr, nullptr);
 
     quiver_binary_file_close(writer);
+}
+
+// ============================================================================
+// Aggregation (dim reduction + label-axis reduction)
+// ============================================================================
+
+TEST_F(ExpressionCApiFixture, AggregateSumOverDim) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
+
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* agg = nullptr;
+    ASSERT_EQ(quiver_expression_aggregate(a, "row", "sum", nullptr, &agg), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(agg);
+
+    // Output has only "col" dim (size 2) and 2 labels = 4 cells.
+    // For (col, k): sum over row=1..3 of (10r + col + k) = 60 + 3*col + 3*k.
+    auto cell1 = read_one_cell(path_out, {"col"}, {1});
+    auto cell2 = read_one_cell(path_out, {"col"}, {2});
+    ASSERT_EQ(cell1.size(), 2u);
+    ASSERT_EQ(cell2.size(), 2u);
+    EXPECT_DOUBLE_EQ(cell1[0], 63.0);  // col=1, k=0
+    EXPECT_DOUBLE_EQ(cell1[1], 66.0);  // col=1, k=1
+    EXPECT_DOUBLE_EQ(cell2[0], 66.0);  // col=2, k=0
+    EXPECT_DOUBLE_EQ(cell2[1], 69.0);  // col=2, k=1
+}
+
+TEST_F(ExpressionCApiFixture, AggregatePercentileWithParam) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
+
+    auto* a = expr_from_file(path_a);
+    const double p = 0.5;
+    quiver_expression_t* agg = nullptr;
+    ASSERT_EQ(quiver_expression_aggregate(a, "row", "percentile", &p, &agg), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(agg);
+
+    // Median over row=1..3 of (10r + col + k). Sorted = {col+k+10, col+k+20, col+k+30}.
+    // (n-1)*0.5 = 1 → middle = col + k + 20.
+    auto cell1 = read_one_cell(path_out, {"col"}, {1});
+    EXPECT_DOUBLE_EQ(cell1[0], 21.0);
+    EXPECT_DOUBLE_EQ(cell1[1], 22.0);
+}
+
+TEST_F(ExpressionCApiFixture, AggregateSumWithExtraParamReturnsError) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    const double p = 0.5;
+    quiver_expression_t* agg = nullptr;
+    EXPECT_EQ(quiver_expression_aggregate(a, "row", "sum", &p, &agg), QUIVER_ERROR);
+    EXPECT_EQ(agg, nullptr);
+    EXPECT_NE(std::string(quiver_get_last_error()).find("does not accept a parameter"), std::string::npos);
+    quiver_expression_close(a);
+}
+
+TEST_F(ExpressionCApiFixture, AggregatePercentileMissingParamReturnsError) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* agg = nullptr;
+    EXPECT_EQ(quiver_expression_aggregate(a, "row", "percentile", nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(agg, nullptr);
+    EXPECT_NE(std::string(quiver_get_last_error()).find("requires a parameter"), std::string::npos);
+    quiver_expression_close(a);
+}
+
+TEST_F(ExpressionCApiFixture, AggregateDimensionNotFoundReturnsError) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* agg = nullptr;
+    EXPECT_EQ(quiver_expression_aggregate(a, "nonexistent", "sum", nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(agg, nullptr);
+    EXPECT_NE(std::string(quiver_get_last_error()).find("Dimension not found"), std::string::npos);
+    quiver_expression_close(a);
+}
+
+TEST_F(ExpressionCApiFixture, AggregateUnknownOperationReturnsError) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* agg = nullptr;
+    EXPECT_EQ(quiver_expression_aggregate(a, "row", "average", nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(agg, nullptr);
+    quiver_expression_close(a);
+}
+
+TEST_F(ExpressionCApiFixture, AggregateAgentsSumReducesLabels) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
+
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* agg = nullptr;
+    ASSERT_EQ(quiver_expression_aggregate_agents(a, "sum", nullptr, &agg), QUIVER_OK);
+
+    // Verify output metadata: single label "sum", dims unchanged.
+    quiver_binary_metadata_t* out_md = nullptr;
+    ASSERT_EQ(quiver_expression_get_metadata(agg, &out_md), QUIVER_OK);
+    char** labels = nullptr;
+    size_t label_count = 0;
+    ASSERT_EQ(quiver_binary_metadata_get_labels(out_md, &labels, &label_count), QUIVER_OK);
+    ASSERT_EQ(label_count, 1u);
+    EXPECT_STREQ(labels[0], "sum");
+    quiver_binary_metadata_free_string_array(labels, label_count);
+    quiver_binary_metadata_free(out_md);
+
+    ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(agg);
+
+    // Each cell = (10r + c) + (10r + c + 1) = 20r + 2c + 1.
+    auto cell = read_one_cell(path_out, {"row", "col"}, {1, 1});
+    ASSERT_EQ(cell.size(), 1u);
+    EXPECT_DOUBLE_EQ(cell[0], 23.0);
+    auto cell2 = read_one_cell(path_out, {"row", "col"}, {3, 2});
+    EXPECT_DOUBLE_EQ(cell2[0], 65.0);
+}
+
+TEST_F(ExpressionCApiFixture, AggregateAgentsPercentileWithParam) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
+
+    auto* a = expr_from_file(path_a);
+    const double p = 0.5;
+    quiver_expression_t* agg = nullptr;
+    ASSERT_EQ(quiver_expression_aggregate_agents(a, "percentile", &p, &agg), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(agg);
+
+    // Median of two values (10r + c, 10r + c + 1) = 10r + c + 0.5.
+    auto cell = read_one_cell(path_out, {"row", "col"}, {1, 1});
+    EXPECT_DOUBLE_EQ(cell[0], 11.5);
+}
+
+TEST_F(ExpressionCApiFixture, AggregateNullArguments) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* agg = nullptr;
+
+    EXPECT_EQ(quiver_expression_aggregate(nullptr, "row", "sum", nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_aggregate(a, nullptr, "sum", nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_aggregate(a, "row", nullptr, nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_aggregate(a, "row", "sum", nullptr, nullptr), QUIVER_ERROR);
+
+    quiver_expression_close(a);
+}
+
+TEST_F(ExpressionCApiFixture, AggregateAgentsNullArguments) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* agg = nullptr;
+
+    EXPECT_EQ(quiver_expression_aggregate_agents(nullptr, "sum", nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_aggregate_agents(a, nullptr, nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_aggregate_agents(a, "sum", nullptr, nullptr), QUIVER_ERROR);
+
+    quiver_expression_close(a);
+}
+
+TEST_F(ExpressionCApiFixture, AggregateChainedWithBinary) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
+    write_fixture(path_b, [](int r, int c, int k) { return static_cast<double>(r + c + k); });
+
+    auto* a = expr_from_file(path_a);
+    auto* b = expr_from_file(path_b);
+    quiver_expression_t* sum = nullptr;
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &sum), QUIVER_OK);
+    quiver_expression_t* agg = nullptr;
+    ASSERT_EQ(quiver_expression_aggregate(sum, "row", "sum", nullptr, &agg), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(b);
+    quiver_expression_close(sum);
+    quiver_expression_close(agg);
+
+    // (a + b) at (r, c, k) = (10r + c + k) + (r + c + k) = 11r + 2c + 2k.
+    // Sum over r=1..3 = 11*6 + 3*(2c + 2k) = 66 + 6c + 6k.
+    auto cell1 = read_one_cell(path_out, {"col"}, {1});
+    EXPECT_DOUBLE_EQ(cell1[0], 72.0);  // c=1, k=0: 66 + 6 + 0
+    EXPECT_DOUBLE_EQ(cell1[1], 78.0);  // c=1, k=1: 66 + 6 + 6
 }

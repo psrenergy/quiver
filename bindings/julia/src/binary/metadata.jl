@@ -2,9 +2,9 @@ struct Dimension
     name::String
     size::Int64
     is_time_dimension::Bool
-    frequency::Union{String, Nothing}
-    initial_value::Union{Int64, Nothing}
-    parent_dimension_index::Union{Int64, Nothing}
+    frequency::Optional{String}
+    initial_value::Optional{Int64}
+    parent_dimension_index::Optional{Int64}
 end
 
 mutable struct Metadata

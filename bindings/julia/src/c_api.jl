@@ -639,11 +639,11 @@ mutable struct quiver_expression end
 
 const quiver_expression_t = quiver_expression
 
-@cenum quiver_expression_op_t::UInt32 begin
-    QUIVER_EXPRESSION_OP_ADD = 0
-    QUIVER_EXPRESSION_OP_SUBTRACT = 1
-    QUIVER_EXPRESSION_OP_MULTIPLY = 2
-    QUIVER_EXPRESSION_OP_DIVIDE = 3
+@cenum quiver_expression_operation_t::UInt32 begin
+    QUIVER_EXPRESSION_OPERATION_ADD = 0
+    QUIVER_EXPRESSION_OPERATION_SUBTRACT = 1
+    QUIVER_EXPRESSION_OPERATION_MULTIPLY = 2
+    QUIVER_EXPRESSION_OPERATION_DIVIDE = 3
 end
 
 function quiver_expression_from_file(file, out)
@@ -654,16 +654,16 @@ function quiver_expression_close(expression)
     @ccall libquiver_c.quiver_expression_close(expression::Ptr{quiver_expression_t})::quiver_error_t
 end
 
-function quiver_expression_apply(op, lhs, rhs, out)
-    @ccall libquiver_c.quiver_expression_apply(op::quiver_expression_op_t, lhs::Ptr{quiver_expression_t}, rhs::Ptr{quiver_expression_t}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
+function quiver_expression_apply(operation, lhs, rhs, out)
+    @ccall libquiver_c.quiver_expression_apply(operation::quiver_expression_operation_t, lhs::Ptr{quiver_expression_t}, rhs::Ptr{quiver_expression_t}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
 end
 
-function quiver_expression_apply_scalar_right(op, lhs, rhs, out)
-    @ccall libquiver_c.quiver_expression_apply_scalar_right(op::quiver_expression_op_t, lhs::Ptr{quiver_expression_t}, rhs::Cdouble, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
+function quiver_expression_apply_scalar_right(operation, lhs, rhs, out)
+    @ccall libquiver_c.quiver_expression_apply_scalar_right(operation::quiver_expression_operation_t, lhs::Ptr{quiver_expression_t}, rhs::Cdouble, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
 end
 
-function quiver_expression_apply_scalar_left(op, lhs, rhs, out)
-    @ccall libquiver_c.quiver_expression_apply_scalar_left(op::quiver_expression_op_t, lhs::Cdouble, rhs::Ptr{quiver_expression_t}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
+function quiver_expression_apply_scalar_left(operation, lhs, rhs, out)
+    @ccall libquiver_c.quiver_expression_apply_scalar_left(operation::quiver_expression_operation_t, lhs::Cdouble, rhs::Ptr{quiver_expression_t}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
 end
 
 function quiver_expression_save(expression, path)
@@ -672,6 +672,14 @@ end
 
 function quiver_expression_get_metadata(expression, out)
     @ccall libquiver_c.quiver_expression_get_metadata(expression::Ptr{quiver_expression_t}, out::Ptr{Ptr{quiver_binary_metadata_t}})::quiver_error_t
+end
+
+function quiver_expression_aggregate(expression, dimension, operation, parameter, out)
+    @ccall libquiver_c.quiver_expression_aggregate(expression::Ptr{quiver_expression_t}, dimension::Ptr{Cchar}, operation::Ptr{Cchar}, parameter::Ptr{Cdouble}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
+end
+
+function quiver_expression_aggregate_agents(expression, operation, parameter, out)
+    @ccall libquiver_c.quiver_expression_aggregate_agents(expression::Ptr{quiver_expression_t}, operation::Ptr{Cchar}, parameter::Ptr{Cdouble}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
 end
 
 #! format: on

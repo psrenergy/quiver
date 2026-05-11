@@ -96,9 +96,9 @@ export class Database {
   declare readSetStringsById: (collection: string, attribute: string, id: number) => string[];
 
   // --- Queries (implemented in query.ts) ---
-  declare queryString: (sql: string, params?: QueryParam[]) => string | null;
-  declare queryInteger: (sql: string, params?: QueryParam[]) => number | null;
-  declare queryFloat: (sql: string, params?: QueryParam[]) => number | null;
+  declare queryString: (sql: string, parameters?: QueryParam[]) => string | null;
+  declare queryInteger: (sql: string, parameters?: QueryParam[]) => number | null;
+  declare queryFloat: (sql: string, parameters?: QueryParam[]) => number | null;
 
   // --- Transactions (implemented in transaction.ts) ---
   declare beginTransaction: () => void;

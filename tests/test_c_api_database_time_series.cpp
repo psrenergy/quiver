@@ -364,7 +364,7 @@ TEST(DatabaseCApi, TimeSeriesNullArguments) {
                   db, "Collection", nullptr, 1, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count),
               QUIVER_ERROR);
 
-    // Read null out-params
+    // Read null out-parameters
     EXPECT_EQ(quiver_database_read_time_series_group(
                   db, "Collection", "data", 1, nullptr, &out_col_types, &out_col_data, &col_count, &row_count),
               QUIVER_ERROR);

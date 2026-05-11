@@ -12,8 +12,6 @@
 
 namespace quiver {
 
-namespace {
-
 std::vector<int64_t> dimension_sizes_at_values(const BinaryMetadata& metadata,
                                                const std::vector<int64_t>& dimension_values) {
     using namespace quiver::time;
@@ -84,8 +82,6 @@ std::vector<int64_t> dimension_sizes_at_values(const BinaryMetadata& metadata,
 
     return sizes;
 }
-
-}  // namespace
 
 std::vector<int64_t> first_dimensions(const BinaryMetadata& meta) {
     std::vector<int64_t> result;

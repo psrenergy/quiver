@@ -24,7 +24,7 @@ int64_t Database::create_element(const std::string& collection, const Element& e
     // Build INSERT SQL for main collection table
     auto sql = "INSERT INTO " + collection + " (";
     std::string placeholders;
-    std::vector<Value> params;
+    std::vector<Value> parameters;
 
     auto first = true;
     for (const auto& [name, value] : resolved.scalars) {
@@ -34,12 +34,12 @@ int64_t Database::create_element(const std::string& collection, const Element& e
         }
         sql += name;
         placeholders += "?";
-        params.push_back(value);
+        parameters.push_back(value);
         first = false;
     }
     sql += ") VALUES (" + placeholders + ")";
 
-    execute(sql, params);
+    execute(sql, parameters);
     const auto element_id = sqlite3_last_insert_rowid(impl_->db);
     impl_->logger->debug("Inserted element with id: {}", element_id);
 
