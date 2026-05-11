@@ -241,18 +241,18 @@ std::string aggregation_operation_label(Op op) {
 }
 
 template <typename Op>
-void validate_aggregation_param(Op op, std::optional<double> param, const std::string& fn_label) {
+void validate_aggregation_param(Op op, std::optional<double> parameter, const std::string& fn_label) {
     const bool needs_param = (op == Op::Percentile);
-    if (needs_param && !param.has_value()) {
+    if (needs_param && !parameter.has_value()) {
         throw std::runtime_error("Cannot " + fn_label + ": operation 'percentile' requires a parameter");
     }
-    if (!needs_param && param.has_value()) {
+    if (!needs_param && parameter.has_value()) {
         throw std::runtime_error("Cannot " + fn_label + ": operation '" + aggregation_operation_label(op) +
                                  "' does not accept a parameter");
     }
-    if (needs_param && (*param < 0.0 || *param > 1.0)) {
+    if (needs_param && (*parameter < 0.0 || *parameter > 1.0)) {
         throw std::runtime_error("Cannot " + fn_label + ": percentile must be in [0, 1], got " +
-                                 std::to_string(*param));
+                                 std::to_string(*parameter));
     }
 }
 
@@ -400,8 +400,8 @@ ExpressionAggregate::Operation ExpressionAggregate::parse_operation(const std::s
 ExpressionAggregate::ExpressionAggregate(Operation operation,
                                          std::shared_ptr<ExpressionNode> operand,
                                          std::string dimension_name,
-                                         std::optional<double> param)
-    : operation_(operation), operand_(std::move(operand)), dimension_name_(std::move(dimension_name)), param_(param) {
+                                         std::optional<double> parameter)
+    : operation_(operation), operand_(std::move(operand)), dimension_name_(std::move(dimension_name)), param_(parameter) {
     validate_aggregation_param(operation_, param_, "aggregate");
 
     const auto& operand_meta = operand_->metadata();
@@ -571,8 +571,8 @@ ExpressionAggregateAgents::Operation ExpressionAggregateAgents::parse_operation(
 
 ExpressionAggregateAgents::ExpressionAggregateAgents(Operation operation,
                                                      std::shared_ptr<ExpressionNode> operand,
-                                                     std::optional<double> param)
-    : operation_(operation), operand_(std::move(operand)), param_(param) {
+                                                     std::optional<double> parameter)
+    : operation_(operation), operand_(std::move(operand)), param_(parameter) {
     validate_aggregation_param(operation_, param_, "aggregate_agents");
 
     const auto& operand_meta = operand_->metadata();

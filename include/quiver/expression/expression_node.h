@@ -130,7 +130,7 @@ public:
     ExpressionAggregate(Operation operation,
                         std::shared_ptr<ExpressionNode> operand,
                         std::string dimension_name,
-                        std::optional<double> param = std::nullopt);
+                        std::optional<double> parameter = std::nullopt);
 
     const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
@@ -159,7 +159,7 @@ public:
 
     ExpressionAggregateAgents(Operation operation,
                               std::shared_ptr<ExpressionNode> operand,
-                              std::optional<double> param = std::nullopt);
+                              std::optional<double> parameter = std::nullopt);
 
     const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;

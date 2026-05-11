@@ -91,12 +91,12 @@ function get_metadata(e::Expression)
     return Binary.Metadata(out[])
 end
 
-function aggregate(e::Expression, dimension::String, operation::String, param::Optional{Real} = nothing)
+function aggregate(e::Expression, dimension::String, operation::String, parameter::Optional{Real} = nothing)
     out = Ref{Ptr{C.quiver_expression}}(C_NULL)
-    if param === nothing
+    if parameter === nothing
         check(C.quiver_expression_aggregate(e.ptr, dimension, operation, C_NULL, out))
     else
-        param_ref = Ref(Cdouble(param))
+        param_ref = Ref(Cdouble(parameter))
         GC.@preserve param_ref begin
             check(C.quiver_expression_aggregate(e.ptr, dimension, operation, param_ref, out))
         end
@@ -104,12 +104,12 @@ function aggregate(e::Expression, dimension::String, operation::String, param::O
     return Expression(out[])
 end
 
-function aggregate_agents(e::Expression, operation::String, param::Optional{Real} = nothing)
+function aggregate_agents(e::Expression, operation::String, parameter::Optional{Real} = nothing)
     out = Ref{Ptr{C.quiver_expression}}(C_NULL)
-    if param === nothing
+    if parameter === nothing
         check(C.quiver_expression_aggregate_agents(e.ptr, operation, C_NULL, out))
     else
-        param_ref = Ref(Cdouble(param))
+        param_ref = Ref(Cdouble(parameter))
         GC.@preserve param_ref begin
             check(C.quiver_expression_aggregate_agents(e.ptr, operation, param_ref, out))
         end
@@ -117,10 +117,10 @@ function aggregate_agents(e::Expression, operation::String, param::Optional{Real
     return Expression(out[])
 end
 
-function aggregate(f::Binary.File, dimension::String, operation::String, param::Optional{Real} = nothing)
-    return aggregate(Expression(f), dimension, operation, param)
+function aggregate(f::Binary.File, dimension::String, operation::String, parameter::Optional{Real} = nothing)
+    return aggregate(Expression(f), dimension, operation, parameter)
 end
 
-function aggregate_agents(f::Binary.File, operation::String, param::Optional{Real} = nothing)
-    return aggregate_agents(Expression(f), operation, param)
+function aggregate_agents(f::Binary.File, operation::String, parameter::Optional{Real} = nothing)
+    return aggregate_agents(Expression(f), operation, parameter)
 end

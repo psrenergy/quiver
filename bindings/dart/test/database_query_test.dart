@@ -183,7 +183,7 @@ void main() {
   });
 
   group('Query String with Params', () {
-    test('returns value with string param', () {
+    test('returns value with string parameter', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
@@ -227,7 +227,7 @@ void main() {
   });
 
   group('Query Integer with Params', () {
-    test('returns value with string param', () {
+    test('returns value with string parameter', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
@@ -248,7 +248,7 @@ void main() {
       }
     });
 
-    test('returns value with integer param', () {
+    test('returns value with integer parameter', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
@@ -275,7 +275,7 @@ void main() {
   });
 
   group('Query Float with Params', () {
-    test('returns value with string param', () {
+    test('returns value with string parameter', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
@@ -325,7 +325,7 @@ void main() {
   });
 
   group('Query DateTime with Params', () {
-    test('returns value with string param', () {
+    test('returns value with string parameter', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),

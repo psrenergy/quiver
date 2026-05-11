@@ -141,12 +141,12 @@ QUIVER_C_API quiver_error_t quiver_expression_get_metadata(quiver_expression_t* 
 QUIVER_C_API quiver_error_t quiver_expression_aggregate(quiver_expression_t* expression,
                                                         const char* dimension,
                                                         const char* operation,
-                                                        const double* param,
+                                                        const double* parameter,
                                                         quiver_expression_t** out) {
     QUIVER_REQUIRE(expression, dimension, operation, out);
 
     try {
-        std::optional<double> p = param ? std::optional<double>(*param) : std::nullopt;
+        std::optional<double> p = parameter ? std::optional<double>(*parameter) : std::nullopt;
         *out = new quiver_expression(expression->expression.aggregate(dimension, operation, p));
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
@@ -160,12 +160,12 @@ QUIVER_C_API quiver_error_t quiver_expression_aggregate(quiver_expression_t* exp
 
 QUIVER_C_API quiver_error_t quiver_expression_aggregate_agents(quiver_expression_t* expression,
                                                                const char* operation,
-                                                               const double* param,
+                                                               const double* parameter,
                                                                quiver_expression_t** out) {
     QUIVER_REQUIRE(expression, operation, out);
 
     try {
-        std::optional<double> p = param ? std::optional<double>(*param) : std::nullopt;
+        std::optional<double> p = parameter ? std::optional<double>(*parameter) : std::nullopt;
         *out = new quiver_expression(expression->expression.aggregate_agents(operation, p));
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {

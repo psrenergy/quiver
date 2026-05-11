@@ -36,7 +36,7 @@ Deno.test({ name: "queryString", sanitizeResources: false }, async (t) => {
     }
   });
 
-  await t.step("returns string with parameterized SQL (string param)", () => {
+  await t.step("returns string with parameterized SQL (string parameter)", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1" });
@@ -81,7 +81,7 @@ Deno.test({ name: "queryInteger", sanitizeResources: false }, async (t) => {
     }
   });
 
-  await t.step("returns integer with parameterized SQL (integer param)", () => {
+  await t.step("returns integer with parameterized SQL (integer parameter)", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1", some_integer: 42 });
@@ -122,7 +122,7 @@ Deno.test({ name: "queryFloat", sanitizeResources: false }, async (t) => {
     }
   });
 
-  await t.step("returns float with parameterized SQL (float param)", () => {
+  await t.step("returns float with parameterized SQL (float parameter)", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1", some_float: 3.14 });

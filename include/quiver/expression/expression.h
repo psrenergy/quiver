@@ -26,9 +26,9 @@ public:
 
     Expression aggregate(const std::string& dimension,
                          const std::string& operation,
-                         std::optional<double> param = std::nullopt) const;
+                         std::optional<double> parameter = std::nullopt) const;
 
-    Expression aggregate_agents(const std::string& operation, std::optional<double> param = std::nullopt) const;
+    Expression aggregate_agents(const std::string& operation, std::optional<double> parameter = std::nullopt) const;
 
 private:
     std::shared_ptr<ExpressionNode> node_;

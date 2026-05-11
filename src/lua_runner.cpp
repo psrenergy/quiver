@@ -22,7 +22,7 @@ struct LuaRunner::Impl {
     }
 
     void bind_database() {
-        // NOLINTBEGIN(performance-unnecessary-value-param) sol2 lambda bindings require pass-by-value for type
+        // NOLINTBEGIN(performance-unnecessary-value-parameter) sol2 lambda bindings require pass-by-value for type
         // deduction
         auto bind = lua.new_usertype<Database>(
             "Database",
@@ -125,7 +125,7 @@ struct LuaRunner::Impl {
                 }
                 self.import_csv(collection, group, path, options);
             });
-        // NOLINTEND(performance-unnecessary-value-param)
+        // NOLINTEND(performance-unnecessary-value-parameter)
 
         bind.set_function("create_element", &create_element_lua);
 

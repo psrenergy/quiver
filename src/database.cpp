@@ -139,7 +139,7 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
     // Bind parameters
     for (size_t i = 0; i < parameters.size(); ++i) {
         const auto idx = static_cast<int>(i + 1);
-        const auto& param = parameters[i];
+        const auto& parameter = parameters[i];
 
         std::visit(
             [&](auto&& arg) {
@@ -159,7 +159,7 @@ Result Database::execute(const std::string& sql, const std::vector<Value>& param
                                       SQLITE_TRANSIENT);  // NOLINT(performance-no-int-to-ptr) SQLite macro
                 }
             },
-            param);
+            parameter);
     }
 
     // Get column info

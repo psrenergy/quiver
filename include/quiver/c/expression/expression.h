@@ -47,17 +47,17 @@ QUIVER_C_API quiver_error_t quiver_expression_save(quiver_expression_t* expressi
 QUIVER_C_API quiver_error_t quiver_expression_get_metadata(quiver_expression_t* expression,
                                                            quiver_binary_metadata_t** out);
 
-// Aggregation. param == NULL means "no parameter" (required for sum/mean/min/max).
+// Aggregation. parameter == NULL means "no parameter" (required for sum/mean/min/max).
 // Non-null pointer supplies the value (required for percentile, in [0, 1]).
 QUIVER_C_API quiver_error_t quiver_expression_aggregate(quiver_expression_t* expression,
                                                         const char* dimension,
                                                         const char* operation,
-                                                        const double* param,
+                                                        const double* parameter,
                                                         quiver_expression_t** out);
 
 QUIVER_C_API quiver_error_t quiver_expression_aggregate_agents(quiver_expression_t* expression,
                                                                const char* operation,
-                                                               const double* param,
+                                                               const double* parameter,
                                                                quiver_expression_t** out);
 
 #ifdef __cplusplus

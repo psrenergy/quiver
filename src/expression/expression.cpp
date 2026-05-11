@@ -55,14 +55,14 @@ const std::shared_ptr<ExpressionNode>& Expression::node() const {
 }
 
 Expression
-Expression::aggregate(const std::string& dimension, const std::string& operation, std::optional<double> param) const {
+Expression::aggregate(const std::string& dimension, const std::string& operation, std::optional<double> parameter) const {
     auto op = ExpressionAggregate::parse_operation(operation);
-    return Expression(std::make_shared<ExpressionAggregate>(op, node_, dimension, param));
+    return Expression(std::make_shared<ExpressionAggregate>(op, node_, dimension, parameter));
 }
 
-Expression Expression::aggregate_agents(const std::string& operation, std::optional<double> param) const {
+Expression Expression::aggregate_agents(const std::string& operation, std::optional<double> parameter) const {
     auto op = ExpressionAggregateAgents::parse_operation(operation);
-    return Expression(std::make_shared<ExpressionAggregateAgents>(op, node_, param));
+    return Expression(std::make_shared<ExpressionAggregateAgents>(op, node_, parameter));
 }
 
 void Expression::save(const std::string& path) const {

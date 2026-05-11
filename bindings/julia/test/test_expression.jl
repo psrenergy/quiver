@@ -1015,7 +1015,7 @@ end
         end
     end
 
-    @testset "Aggregate percentile with param 0.5" begin
+    @testset "Aggregate percentile with parameter 0.5" begin
         path_a, path_out = make_path("a"), make_path("out")
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
@@ -1116,7 +1116,7 @@ end
         end
     end
 
-    @testset "Aggregate percentile missing param throws" begin
+    @testset "Aggregate percentile missing parameter throws" begin
         path_a = make_path("a")
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
@@ -1128,7 +1128,7 @@ end
         end
     end
 
-    @testset "Aggregate sum with extra param throws" begin
+    @testset "Aggregate sum with extra parameter throws" begin
         path_a = make_path("a")
         try
             write_fixture(path_a, (_, _, _) -> 1.0)

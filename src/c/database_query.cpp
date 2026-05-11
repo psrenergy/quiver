@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-// Helper to convert C param arrays to std::vector<Value>
+// Helper to convert C parameter arrays to std::vector<Value>
 static std::vector<quiver::Value>
 convert_params(const int* param_types, const void* const* param_values, size_t param_count) {
     std::vector<quiver::Value> parameters;
