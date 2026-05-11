@@ -120,7 +120,7 @@ function update_time_series_group!(db::Database, collection::String, group::Stri
     return nothing
 end
 
-function update_time_series_files!(db::Database, collection::String, paths::Dict{String, Union{String, Nothing}})
+function update_time_series_files!(db::Database, collection::String, paths::Dict{String, Optional{String}})
     if isempty(paths)
         return nothing
     end

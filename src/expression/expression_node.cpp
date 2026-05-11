@@ -427,8 +427,7 @@ ExpressionAggregate::ExpressionAggregate(Operation operation,
         if (static_cast<int>(i) == reduced_idx) {
             continue;
         }
-        operand_to_out_[i] =
-            (static_cast<int>(i) < reduced_idx) ? static_cast<int>(i) : static_cast<int>(i) - 1;
+        operand_to_out_[i] = (static_cast<int>(i) < reduced_idx) ? static_cast<int>(i) : static_cast<int>(i) - 1;
     }
 
     for (size_t out_i = 0; out_i < output_meta_.dimensions.size(); ++out_i) {
@@ -449,8 +448,7 @@ ExpressionAggregate::ExpressionAggregate(Operation operation,
                     (grandparent_orig_idx < reduced_idx) ? grandparent_orig_idx : grandparent_orig_idx - 1;
             }
         } else {
-            out_dim.time->parent_dimension_index =
-                (orig_parent < reduced_idx) ? orig_parent : orig_parent - 1;
+            out_dim.time->parent_dimension_index = (orig_parent < reduced_idx) ? orig_parent : orig_parent - 1;
         }
     }
 
@@ -495,8 +493,7 @@ void ExpressionAggregate::compute_row(const std::vector<int64_t>& dims, std::vec
             start = tp.initial_value;
         } else {
             const auto& parent_dim = operand_meta.dimensions[parent_idx];
-            const int64_t parent_initial =
-                parent_dim.is_time_dimension() ? parent_dim.time->initial_value : 1;
+            const int64_t parent_initial = parent_dim.is_time_dimension() ? parent_dim.time->initial_value : 1;
             start = (operand_dims_buf_[parent_idx] == parent_initial) ? tp.initial_value : 1;
         }
     }

@@ -1089,9 +1089,7 @@ TEST_F(ExpressionFixture, AggregateSumOverTimeDimSimple) {
                                                .set("time_dimensions", {"year"})
                                                .set("frequencies", {"yearly"})
                                                .set("labels", {"v1"}));
-    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t) {
-        return static_cast<double>(dims[0]);
-    });
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t) { return static_cast<double>(dims[0]); });
     auto a = BinaryFile::open_file(path_a, 'r');
     Expression(a).aggregate("year", "sum").save(path_out);
 
@@ -1120,7 +1118,7 @@ TEST_F(ExpressionFixture, AggregateSumOverTimeDimVariable) {
     Expression(a).aggregate("block", "sum").save(path_out);
 
     auto vo = read_all_cells(path_out);
-    ASSERT_EQ(vo.size(), 4u);  // 4 months × 1 label
+    ASSERT_EQ(vo.size(), 4u);       // 4 months × 1 label
     EXPECT_DOUBLE_EQ(vo[0], 31.0);  // Jan
     EXPECT_DOUBLE_EQ(vo[1], 28.0);  // Feb 2025 (non-leap)
     EXPECT_DOUBLE_EQ(vo[2], 31.0);  // Mar
@@ -1284,10 +1282,10 @@ TEST_F(ExpressionFixture, AggregateComposedWithBinary) {
     ASSERT_EQ(vo.size(), 4u);
     // (a+b) at (r, c, k) = (r*10 + c + k) + (r + c + k) = 11r + 2c + 2k.
     // Sum over r=1..3 = 11*(1+2+3) + 3*(2c + 2k) = 66 + 6c + 6k.
-    EXPECT_DOUBLE_EQ(vo[0], 66.0 + 6.0 * 1 + 0.0);   // c=1, k=0
-    EXPECT_DOUBLE_EQ(vo[1], 66.0 + 6.0 * 1 + 6.0);   // c=1, k=1
-    EXPECT_DOUBLE_EQ(vo[2], 66.0 + 6.0 * 2 + 0.0);   // c=2, k=0
-    EXPECT_DOUBLE_EQ(vo[3], 66.0 + 6.0 * 2 + 6.0);   // c=2, k=1
+    EXPECT_DOUBLE_EQ(vo[0], 66.0 + 6.0 * 1 + 0.0);  // c=1, k=0
+    EXPECT_DOUBLE_EQ(vo[1], 66.0 + 6.0 * 1 + 6.0);  // c=1, k=1
+    EXPECT_DOUBLE_EQ(vo[2], 66.0 + 6.0 * 2 + 0.0);  // c=2, k=0
+    EXPECT_DOUBLE_EQ(vo[3], 66.0 + 6.0 * 2 + 6.0);  // c=2, k=1
 }
 
 // =============================================================================

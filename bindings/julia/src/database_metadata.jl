@@ -3,10 +3,10 @@ struct ScalarMetadata
     data_type::C.quiver_data_type_t
     not_null::Bool
     primary_key::Bool
-    default_value::Union{String, Nothing}
+    default_value::Optional{String}
     is_foreign_key::Bool
-    references_collection::Union{String, Nothing}
-    references_column::Union{String, Nothing}
+    references_collection::Optional{String}
+    references_column::Optional{String}
 end
 
 struct GroupMetadata

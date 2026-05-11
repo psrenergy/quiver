@@ -44,7 +44,7 @@ function marshal_params(params::Vector)
 end
 
 """
-    query_string(db::Database, sql::String) -> Union{String, Nothing}
+    query_string(db::Database, sql::String) -> Optional{String}
 
 Execute a SQL query and return the first column of the first row as a String.
 Returns `nothing` if the query returns no rows.
@@ -64,7 +64,7 @@ function query_string(db::Database, sql::String)
 end
 
 """
-    query_integer(db::Database, sql::String) -> Union{Int64, Nothing}
+    query_integer(db::Database, sql::String) -> Optional{Int64}
 
 Execute a SQL query and return the first column of the first row as an Int64.
 Returns `nothing` if the query returns no rows.
@@ -82,7 +82,7 @@ function query_integer(db::Database, sql::String)
 end
 
 """
-    query_float(db::Database, sql::String) -> Union{Float64, Nothing}
+    query_float(db::Database, sql::String) -> Optional{Float64}
 
 Execute a SQL query and return the first column of the first row as a Float64.
 Returns `nothing` if the query returns no rows.
@@ -100,7 +100,7 @@ function query_float(db::Database, sql::String)
 end
 
 """
-    query_string(db::Database, sql::String, params::Vector) -> Union{String, Nothing}
+    query_string(db::Database, sql::String, params::Vector) -> Optional{String}
 
 Execute a parameterized SQL query and return the first column of the first row as a String.
 Returns `nothing` if the query returns no rows.
@@ -131,7 +131,7 @@ function query_string(db::Database, sql::String, params::Vector)
 end
 
 """
-    query_integer(db::Database, sql::String, params::Vector) -> Union{Int64, Nothing}
+    query_integer(db::Database, sql::String, params::Vector) -> Optional{Int64}
 
 Execute a parameterized SQL query and return the first column of the first row as an Int64.
 Returns `nothing` if the query returns no rows.
@@ -160,7 +160,7 @@ function query_integer(db::Database, sql::String, params::Vector)
 end
 
 """
-    query_float(db::Database, sql::String, params::Vector) -> Union{Float64, Nothing}
+    query_float(db::Database, sql::String, params::Vector) -> Optional{Float64}
 
 Execute a parameterized SQL query and return the first column of the first row as a Float64.
 Returns `nothing` if the query returns no rows.
@@ -189,7 +189,7 @@ function query_float(db::Database, sql::String, params::Vector)
 end
 
 """
-    query_date_time(db::Database, sql::String) -> Union{DateTime, Nothing}
+    query_date_time(db::Database, sql::String) -> Optional{DateTime}
 
 Execute a SQL query and return the first column of the first row as a DateTime.
 Returns `nothing` if the query returns no rows.
@@ -203,7 +203,7 @@ function query_date_time(db::Database, sql::String)
 end
 
 """
-    query_date_time(db::Database, sql::String, params::Vector) -> Union{DateTime, Nothing}
+    query_date_time(db::Database, sql::String, params::Vector) -> Optional{DateTime}
 
 Execute a parameterized SQL query and return the first column of the first row as a DateTime.
 Returns `nothing` if the query returns no rows.

@@ -602,7 +602,7 @@ function read_time_series_row(db::Database, collection::String, group::String, a
         elseif data_type == Cint(C.QUIVER_DATA_TYPE_FLOAT)
             return Float64[]
         elseif data_type == Cint(C.QUIVER_DATA_TYPE_STRING) || data_type == Cint(C.QUIVER_DATA_TYPE_DATE_TIME)
-            return Union{String, Nothing}[]
+            return Optional{String}[]
         end
         return Any[]
     end
@@ -620,7 +620,7 @@ function read_time_series_row(db::Database, collection::String, group::String, a
     elseif data_type == Cint(C.QUIVER_DATA_TYPE_STRING) || data_type == Cint(C.QUIVER_DATA_TYPE_DATE_TIME)
         str_ptr_ptr = reinterpret(Ptr{Ptr{Cchar}}, out_values[])
         str_ptrs = unsafe_wrap(Array, str_ptr_ptr, count)
-        result = Union{String, Nothing}[p == C_NULL ? nothing : unsafe_string(p) for p in str_ptrs]
+        result = Optional{String}[p == C_NULL ? nothing : unsafe_string(p) for p in str_ptrs]
         C.quiver_database_free_string_array(str_ptr_ptr, Csize_t(count))
         return result
     end
@@ -637,13 +637,13 @@ function read_time_series_files(db::Database, collection::String)
 
     count = out_count[]
     if count == 0 || out_columns[] == C_NULL
-        return Dict{String, Union{String, Nothing}}()
+        return Dict{String, Optional{String}}()
     end
 
     column_ptrs = unsafe_wrap(Array, out_columns[], count)
     path_ptrs = unsafe_wrap(Array, out_paths[], count)
 
-    result = Dict{String, Union{String, Nothing}}()
+    result = Dict{String, Optional{String}}()
     for i in 1:count
         col_name = unsafe_string(column_ptrs[i])
         if path_ptrs[i] == C_NULL

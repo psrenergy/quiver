@@ -91,8 +91,7 @@ function get_metadata(e::Expression)
     return Binary.Metadata(out[])
 end
 
-function aggregate(e::Expression, dimension::String, operation::String,
-                   param::Union{Real,Nothing} = nothing)
+function aggregate(e::Expression, dimension::String, operation::String, param::Optional{Real} = nothing)
     out = Ref{Ptr{C.quiver_expression}}(C_NULL)
     if param === nothing
         check(C.quiver_expression_aggregate(e.ptr, dimension, operation, C_NULL, out))
@@ -105,8 +104,7 @@ function aggregate(e::Expression, dimension::String, operation::String,
     return Expression(out[])
 end
 
-function aggregate_agents(e::Expression, operation::String,
-                          param::Union{Real,Nothing} = nothing)
+function aggregate_agents(e::Expression, operation::String, param::Optional{Real} = nothing)
     out = Ref{Ptr{C.quiver_expression}}(C_NULL)
     if param === nothing
         check(C.quiver_expression_aggregate_agents(e.ptr, operation, C_NULL, out))
@@ -119,10 +117,10 @@ function aggregate_agents(e::Expression, operation::String,
     return Expression(out[])
 end
 
-aggregate(f::Binary.File, dimension::String, operation::String,
-          param::Union{Real,Nothing} = nothing) =
-    aggregate(Expression(f), dimension, operation, param)
+function aggregate(f::Binary.File, dimension::String, operation::String, param::Optional{Real} = nothing)
+    return aggregate(Expression(f), dimension, operation, param)
+end
 
-aggregate_agents(f::Binary.File, operation::String,
-                 param::Union{Real,Nothing} = nothing) =
-    aggregate_agents(Expression(f), operation, param)
+function aggregate_agents(f::Binary.File, operation::String, param::Optional{Real} = nothing)
+    return aggregate_agents(Expression(f), operation, param)
+end
