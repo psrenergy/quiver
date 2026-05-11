@@ -984,18 +984,22 @@ TEST_F(ExpressionCApiFixture, ParentDimMatchByNameAcceptsCrossPosition) {
     quiver_binary_file_close(reopened);
 }
 
-TEST_F(ExpressionCApiFixture, FromFileFailsForWriteModeHandle) {
+TEST_F(ExpressionCApiFixture, SaveFailsWhenInputIsOpenForWriting) {
     auto* md = make_simple_metadata();
     quiver_binary_file_t* writer = nullptr;
     ASSERT_EQ(quiver_binary_file_open_file(path_a.c_str(), 'w', md, &writer), QUIVER_OK);
     quiver_binary_metadata_free(md);
 
+    // Expression construction only loads metadata; the read-handle open is deferred to save().
     quiver_expression_t* expr = nullptr;
-    EXPECT_EQ(quiver_expression_from_file(writer, &expr), QUIVER_ERROR);
+    ASSERT_EQ(quiver_expression_from_file(writer, &expr), QUIVER_OK);
+    ASSERT_NE(expr, nullptr);
+
+    EXPECT_EQ(quiver_expression_save(expr, path_out.c_str()), QUIVER_ERROR);
     EXPECT_NE(std::string(quiver_get_last_error()).find("Cannot open_file: file is already open for writing"),
               std::string::npos);
-    EXPECT_EQ(expr, nullptr);
 
+    quiver_expression_close(expr);
     quiver_binary_file_close(writer);
 }
 

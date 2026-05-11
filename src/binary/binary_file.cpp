@@ -107,6 +107,19 @@ void BinaryFile::open(char mode, const std::optional<BinaryMetadata>& metadata) 
     }
 }
 
+void BinaryFile::close() {
+    if (!impl_->io) {
+        return;
+    }
+    impl_->io->flush();
+    impl_->io.reset();
+    if (!impl_->registered_path.empty()) {
+        write_registry.erase(impl_->registered_path);
+        impl_->registered_path.clear();
+    }
+    impl_->current_position = -1;
+}
+
 bool BinaryFile::is_open() const {
     return impl_->io && impl_->io->good();
 }

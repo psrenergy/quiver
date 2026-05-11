@@ -922,35 +922,39 @@ end
         end
     end
 
-    @testset "Expression on write-mode Binary.File throws" begin
-        path_a = make_path("a")
+    @testset "save on Expression rooted in write-mode Binary.File throws" begin
+        # Expression construction only loads metadata; the read-handle open is deferred
+        # to save(), which is where the write_registry collision surfaces.
+        path_a, path_out = make_path("a"), make_path("out")
         try
             md = make_simple_metadata()
             w = Quiver.Binary.open_file(path_a; mode = 'w', metadata = md)
             try
-                @test_throws Quiver.DatabaseException Quiver.Expression(w)
+                e = Quiver.Expression(w)
+                @test_throws Quiver.DatabaseException Quiver.save(e, path_out)
             finally
                 Quiver.Binary.close!(w)
             end
         finally
-            cleanup(path_a)
+            cleanup(path_a, path_out)
         end
     end
 
-    @testset "Operator on write-mode Binary.File throws" begin
-        path_a, path_b = make_path("a"), make_path("b")
+    @testset "save on Operator over write-mode Binary.Files throws" begin
+        path_a, path_b, path_out = make_path("a"), make_path("b"), make_path("out")
         try
             md = make_simple_metadata()
             wa = Quiver.Binary.open_file(path_a; mode = 'w', metadata = md)
             wb = Quiver.Binary.open_file(path_b; mode = 'w', metadata = md)
             try
-                @test_throws Quiver.DatabaseException wa + wb
+                e = wa + wb
+                @test_throws Quiver.DatabaseException Quiver.save(e, path_out)
             finally
                 Quiver.Binary.close!(wa)
                 Quiver.Binary.close!(wb)
             end
         finally
-            cleanup(path_a, path_b)
+            cleanup(path_a, path_b, path_out)
         end
     end
 

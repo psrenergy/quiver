@@ -36,13 +36,29 @@ Expression Expression::aggregate_agents(const std::string& operation, std::optio
 }
 
 void Expression::save(const std::string& path) const {
-    std::vector<std::string> input_paths;
-    node_->collect_input_paths(input_paths);
+    std::vector<BinaryFile*> input_files;
+    node_->collect_input_files(input_files);
+
     const auto canonical_out = std::filesystem::weakly_canonical(path).string();
-    for (const auto& in : input_paths) {
-        if (std::filesystem::weakly_canonical(in).string() == canonical_out) {
-            throw std::runtime_error("Cannot save: output path collides with input file '" + in + "'");
+    for (const auto* f : input_files) {
+        const auto& in_path = f->get_file_path();
+        if (std::filesystem::weakly_canonical(in_path).string() == canonical_out) {
+            throw std::runtime_error("Cannot save: output path collides with input file '" + in_path + "'");
         }
+    }
+
+    // Guard is in place before any open() so a mid-loop failure still closes whatever did open.
+    struct CloseOnExit {
+        const std::vector<BinaryFile*>& files;
+        ~CloseOnExit() {
+            for (auto* f : files) {
+                f->close();
+            }
+        }
+    } guard{input_files};
+
+    for (auto* f : input_files) {
+        f->open('r');
     }
 
     const auto& meta = node_->metadata();

@@ -35,10 +35,7 @@ CSVConverter::CSVConverter(CSVConverter&& other) noexcept = default;
 CSVConverter& CSVConverter::operator=(CSVConverter&& other) noexcept = default;
 
 void CSVConverter::csv_to_bin(const std::string& file_path) {
-    // Read TOML metadata
-    std::ifstream toml_file(file_path + std::string(TOML_EXTENSION));
-    std::string toml_content((std::istreambuf_iterator<char>(toml_file)), std::istreambuf_iterator<char>());
-    auto metadata = BinaryMetadata::from_toml(toml_content);
+    auto metadata = BinaryMetadata::from_toml_file(file_path);
 
     // Open the CSV file and detect whether time dimensions are aggregated
     auto csv_io = std::make_unique<std::fstream>(file_path + std::string(CSV_EXTENSION), std::ios::in);

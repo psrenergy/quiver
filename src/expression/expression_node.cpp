@@ -16,24 +16,23 @@
 namespace quiver {
 
 ExpressionFile::ExpressionFile(const std::string& path)
-    : path_(path), file_(BinaryFile::open_file(path, 'r')) {
-    dim_map_.reserve(file_.get_metadata().dimensions.size());
+    : meta_(BinaryMetadata::from_toml_file(path)), file_(path) {
+    dim_map_.reserve(meta_.dimensions.size());
 }
 
 const BinaryMetadata& ExpressionFile::metadata() const {
-    return file_.get_metadata();
+    return meta_;
 }
 
 void ExpressionFile::compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const {
-    const auto& meta = file_.get_metadata();
-    for (size_t i = 0; i < meta.dimensions.size(); ++i) {
-        dim_map_[meta.dimensions[i].name] = dims[i];
+    for (size_t i = 0; i < meta_.dimensions.size(); ++i) {
+        dim_map_[meta_.dimensions[i].name] = dims[i];
     }
     out = file_.read(dim_map_, /*allow_nulls=*/true);
 }
 
-void ExpressionFile::collect_input_paths(std::vector<std::string>& out) const {
-    out.push_back(path_);
+void ExpressionFile::collect_input_files(std::vector<BinaryFile*>& out) const {
+    out.push_back(&file_);
 }
 
 ExpressionScalar::ExpressionScalar(double value, BinaryMetadata broadcast_meta)
@@ -47,7 +46,7 @@ void ExpressionScalar::compute_row(const std::vector<int64_t>& /*dims*/, std::ve
     out.assign(broadcast_meta_.labels.size(), value_);
 }
 
-void ExpressionScalar::collect_input_paths(std::vector<std::string>& /*out*/) const {}
+void ExpressionScalar::collect_input_files(std::vector<BinaryFile*>& /*out*/) const {}
 
 namespace {
 
@@ -370,9 +369,9 @@ void ExpressionBinary::compute_row(const std::vector<int64_t>& dims, std::vector
     }
 }
 
-void ExpressionBinary::collect_input_paths(std::vector<std::string>& out) const {
-    lhs_->collect_input_paths(out);
-    rhs_->collect_input_paths(out);
+void ExpressionBinary::collect_input_files(std::vector<BinaryFile*>& out) const {
+    lhs_->collect_input_files(out);
+    rhs_->collect_input_files(out);
 }
 
 ExpressionUnary::ExpressionUnary(Operation operation, std::shared_ptr<ExpressionNode> operand)
@@ -386,8 +385,8 @@ void ExpressionUnary::compute_row(const std::vector<int64_t>& /*dims*/, std::vec
     throw std::runtime_error("Cannot compute_row: ExpressionUnary is not yet implemented");
 }
 
-void ExpressionUnary::collect_input_paths(std::vector<std::string>& out) const {
-    operand_->collect_input_paths(out);
+void ExpressionUnary::collect_input_files(std::vector<BinaryFile*>& out) const {
+    operand_->collect_input_files(out);
 }
 
 ExpressionTernary::ExpressionTernary(Operation operation,
@@ -404,10 +403,10 @@ void ExpressionTernary::compute_row(const std::vector<int64_t>& /*dims*/, std::v
     throw std::runtime_error("Cannot compute_row: ExpressionTernary is not yet implemented");
 }
 
-void ExpressionTernary::collect_input_paths(std::vector<std::string>& out) const {
-    first_->collect_input_paths(out);
-    second_->collect_input_paths(out);
-    third_->collect_input_paths(out);
+void ExpressionTernary::collect_input_files(std::vector<BinaryFile*>& out) const {
+    first_->collect_input_files(out);
+    second_->collect_input_files(out);
+    third_->collect_input_files(out);
 }
 
 ExpressionAggregate::Operation ExpressionAggregate::parse_operation(const std::string& name) {
@@ -583,8 +582,8 @@ void ExpressionAggregate::compute_row(const std::vector<int64_t>& dims, std::vec
     }
 }
 
-void ExpressionAggregate::collect_input_paths(std::vector<std::string>& out) const {
-    operand_->collect_input_paths(out);
+void ExpressionAggregate::collect_input_files(std::vector<BinaryFile*>& out) const {
+    operand_->collect_input_files(out);
 }
 
 ExpressionAggregateAgents::Operation ExpressionAggregateAgents::parse_operation(const std::string& name) {
@@ -689,8 +688,8 @@ void ExpressionAggregateAgents::compute_row(const std::vector<int64_t>& dims, st
     }
 }
 
-void ExpressionAggregateAgents::collect_input_paths(std::vector<std::string>& out) const {
-    operand_->collect_input_paths(out);
+void ExpressionAggregateAgents::collect_input_files(std::vector<BinaryFile*>& out) const {
+    operand_->collect_input_files(out);
 }
 
 }  // namespace quiver

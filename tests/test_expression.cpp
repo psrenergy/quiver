@@ -929,17 +929,18 @@ TEST_F(ExpressionFixture, LargeGridCompletes) {
     }
 }
 
-TEST_F(ExpressionFixture, ExpressionFromWriteModeBinaryFileThrows) {
+TEST_F(ExpressionFixture, SaveFailsWhenInputIsOpenForWriting) {
     auto md = make_simple_metadata();
     auto writer = BinaryFile::open_file(path_a, 'w', md);
 
-    // ExpressionFile eagerly opens its own read handle on the path; BinaryFile's
-    // write_registry rejects the second open since path_a is already open for writing.
+    // Expression construction is fine — it only loads metadata from the .toml.
+    // save() is where input files get opened for reading, which collides with the
+    // active writer through BinaryFile's write_registry.
+    Expression e(writer);
     EXPECT_THROW(
         {
             try {
-                Expression e(writer);
-                (void)e;
+                e.save(path_out);
             } catch (const std::runtime_error& err) {
                 EXPECT_NE(std::string(err.what()).find("Cannot open_file: file is already open for writing"),
                           std::string::npos);
