@@ -36,9 +36,6 @@ b = Quiver.Binary.File("b")
 Quiver.Binary.open!(a; mode = 'r')
 Quiver.Binary.open!(b; mode = 'r')
 
-@show Quiver.Binary.get_metadata(a)
-@show Quiver.Binary.get_metadata(b)
-
 @show c = a + b * 2
 Quiver.save(c, "c")
 
