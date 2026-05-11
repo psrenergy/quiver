@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -120,21 +121,58 @@ private:
     std::shared_ptr<ExpressionNode> third_;
 };
 
-class QUIVER_API ExpressionAggregation final : public ExpressionNode {
+class QUIVER_API ExpressionAggregate final : public ExpressionNode {
 public:
-    enum class Operation { Unspecified };
+    enum class Operation { Sum, Mean, Min, Max, Percentile };
 
-    ExpressionAggregation(Operation operation,
-                          std::shared_ptr<ExpressionNode> operand,
-                          std::string dimension_to_reduce);
+    static Operation parse_operation(const std::string& name);
+
+    ExpressionAggregate(Operation operation,
+                        std::shared_ptr<ExpressionNode> operand,
+                        std::string dimension_name,
+                        std::optional<double> param = std::nullopt);
 
     const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
 
+    const std::shared_ptr<ExpressionNode>& operand() const { return operand_; }
+
 private:
     Operation operation_;
     std::shared_ptr<ExpressionNode> operand_;
-    std::string dimension_to_reduce_;
+    std::string dimension_name_;
+    std::optional<double> param_;
+
+    BinaryMetadata output_meta_;
+    int reduced_operand_index_ = -1;
+    std::vector<int> operand_to_out_;
+    mutable std::vector<int64_t> operand_dims_buf_;
+    mutable std::vector<double> operand_row_buf_;
+    mutable std::vector<std::vector<double>> percentile_scratch_;
+};
+
+class QUIVER_API ExpressionAggregateAgents final : public ExpressionNode {
+public:
+    enum class Operation { Sum, Mean, Min, Max, Percentile };
+
+    static Operation parse_operation(const std::string& name);
+
+    ExpressionAggregateAgents(Operation operation,
+                              std::shared_ptr<ExpressionNode> operand,
+                              std::optional<double> param = std::nullopt);
+
+    const BinaryMetadata& metadata() const override;
+    void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
+
+    const std::shared_ptr<ExpressionNode>& operand() const { return operand_; }
+
+private:
+    Operation operation_;
+    std::shared_ptr<ExpressionNode> operand_;
+    std::optional<double> param_;
+
+    BinaryMetadata output_meta_;
+    mutable std::vector<double> operand_row_buf_;
 };
 
 }  // namespace quiver

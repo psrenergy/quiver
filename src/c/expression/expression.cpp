@@ -3,6 +3,7 @@
 #include "../internal.h"
 
 #include <new>
+#include <optional>
 #include <stdexcept>
 
 namespace {
@@ -131,6 +132,47 @@ QUIVER_C_API quiver_error_t quiver_expression_get_metadata(quiver_expression_t* 
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
         quiver_set_last_error("Memory allocation failed");
+        return QUIVER_ERROR;
+    }
+}
+
+// Aggregation
+
+QUIVER_C_API quiver_error_t quiver_expression_aggregate(quiver_expression_t* expression,
+                                                        const char* dimension,
+                                                        const char* operation,
+                                                        const double* param,
+                                                        quiver_expression_t** out) {
+    QUIVER_REQUIRE(expression, dimension, operation, out);
+
+    try {
+        std::optional<double> p = param ? std::optional<double>(*param) : std::nullopt;
+        *out = new quiver_expression(expression->expression.aggregate(dimension, operation, p));
+        return QUIVER_OK;
+    } catch (const std::bad_alloc&) {
+        quiver_set_last_error("Memory allocation failed");
+        return QUIVER_ERROR;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_expression_aggregate_agents(quiver_expression_t* expression,
+                                                               const char* operation,
+                                                               const double* param,
+                                                               quiver_expression_t** out) {
+    QUIVER_REQUIRE(expression, operation, out);
+
+    try {
+        std::optional<double> p = param ? std::optional<double>(*param) : std::nullopt;
+        *out = new quiver_expression(expression->expression.aggregate_agents(operation, p));
+        return QUIVER_OK;
+    } catch (const std::bad_alloc&) {
+        quiver_set_last_error("Memory allocation failed");
+        return QUIVER_ERROR;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
         return QUIVER_ERROR;
     }
 }

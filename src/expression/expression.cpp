@@ -22,10 +22,20 @@ void collect_file_paths(const ExpressionNode& node, std::vector<std::string>& ou
         out.push_back(fn->path());
         return;
     }
-    
+
     if (auto* bn = dynamic_cast<const ExpressionBinary*>(&node)) {
         collect_file_paths(*bn->lhs(), out);
         collect_file_paths(*bn->rhs(), out);
+        return;
+    }
+
+    if (auto* an = dynamic_cast<const ExpressionAggregate*>(&node)) {
+        collect_file_paths(*an->operand(), out);
+        return;
+    }
+
+    if (auto* an = dynamic_cast<const ExpressionAggregateAgents*>(&node)) {
+        collect_file_paths(*an->operand(), out);
         return;
     }
 }
@@ -42,6 +52,18 @@ const BinaryMetadata& Expression::metadata() const {
 
 const std::shared_ptr<ExpressionNode>& Expression::node() const {
     return node_;
+}
+
+Expression Expression::aggregate(const std::string& dimension,
+                                 const std::string& operation,
+                                 std::optional<double> param) const {
+    auto op = ExpressionAggregate::parse_operation(operation);
+    return Expression(std::make_shared<ExpressionAggregate>(op, node_, dimension, param));
+}
+
+Expression Expression::aggregate_agents(const std::string& operation, std::optional<double> param) const {
+    auto op = ExpressionAggregateAgents::parse_operation(operation);
+    return Expression(std::make_shared<ExpressionAggregateAgents>(op, node_, param));
 }
 
 void Expression::save(const std::string& path) const {

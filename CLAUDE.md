@@ -14,7 +14,7 @@ include/quiver/           # C++ public headers
 include/quiver/binary/      # Binary subsystem headers (binary file I/O)
   binary_file.h               # BinaryFile class (Pimpl) - open_file, read, write, get_metadata
   csv_converter.h              # CSVConverter class - bin_to_csv, csv_to_bin
-  iteration.h                 # first_dimensions, next_dimensions free functions
+  iteration.h                 # first_dimensions, next_dimensions, dimension_sizes_at_values free functions
   binary_metadata.h         # BinaryMetadata struct - dimensions, labels, serialization
   dimension.h             # Dimension struct (name, size, optional TimeProperties)
   time_properties.h       # TimeFrequency enum, TimeProperties struct
@@ -172,7 +172,7 @@ struct Database::Impl {
 
 Binary subsystem: `BinaryFile` and `CSVConverter` use Pimpl (hide file I/O dependencies). `BinaryMetadata`, `Dimension`, `TimeProperties` are plain value types.
 
-Expression subsystem: `Expression` is a plain value type wrapping `shared_ptr<ExpressionNode>` — no Pimpl. `ExpressionNode` is an abstract base with virtual `metadata()` / `compute_row()`; concrete subclasses `ExpressionFile`, `ExpressionScalar`, `ExpressionBinary` are exposed via `QUIVER_API` and use Rule of Zero. Polymorphism is justified by the recursive tree shape (`ExpressionBinary` owns child `shared_ptr<ExpressionNode>` operands). Scaffold subclasses `ExpressionUnary`, `ExpressionTernary`, `ExpressionAggregation` exist with the same shape but throw `"not yet implemented"` from their virtuals — operations land in follow-up work.
+Expression subsystem: `Expression` is a plain value type wrapping `shared_ptr<ExpressionNode>` — no Pimpl. `ExpressionNode` is an abstract base with virtual `metadata()` / `compute_row()`; concrete subclasses `ExpressionFile`, `ExpressionScalar`, `ExpressionBinary`, `ExpressionAggregate`, `ExpressionAggregateAgents` are exposed via `QUIVER_API` and use Rule of Zero. Polymorphism is justified by the recursive tree shape (`ExpressionBinary` and the aggregation nodes own child `shared_ptr<ExpressionNode>` operands). Scaffold subclasses `ExpressionUnary`, `ExpressionTernary` exist with the same shape but throw `"not yet implemented"` from their virtuals — operations land in follow-up work.
 
 Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`, `GroupMetadata`, `ScalarMetadata`, `CSVOptions`, `BinaryMetadata`, `Dimension`, `TimeProperties`, `Expression`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor).
 
@@ -464,7 +464,8 @@ Standalone binary file I/O layer for `.qvr` files with `.toml` metadata sidecars
 Free functions in `quiver::` for traversing the dimension space of a `BinaryMetadata` (declared in `quiver/binary/iteration.h`):
 
 - `first_dimensions(meta)` — initial position; returns `initial_value` for time dims, `1` for non-time dims
-- `next_dimensions(meta, current)` — next position via right-to-left cascade; returns `nullopt` at end. Uses an internal `dimension_sizes_at_values` helper to handle variable-length time dims (Feb=28/29, Jan=31, etc.)
+- `next_dimensions(meta, current)` — next position via right-to-left cascade; returns `nullopt` at end. Uses `dimension_sizes_at_values` to handle variable-length time dims (Feb=28/29, Jan=31, etc.)
+- `dimension_sizes_at_values(meta, values)` — per-dim actual sizes at a coordinate vector. Used by `next_dimensions()` and `ExpressionAggregate` to size variable-length time-dim iteration windows.
 
 Used by `Expression::save()` and `CSVConverter::{bin_to_csv, csv_to_bin}` — single source of truth for `.qvr` traversal.
 
@@ -494,15 +495,18 @@ result.save("output");  // writes output.qvr + output.toml
   - Constructors: `Expression(const BinaryFile&)` (implicit, enables `bf_a + bf_b`), `Expression(shared_ptr<ExpressionNode>)`
   - Accessors: `metadata()`, `node()`
   - Materialize: `save(path)` — iterates via `first_dimensions`/`next_dimensions`, calls `compute_row()` per cell, writes to a new `.qvr`. Throws if `path` collides (after `weakly_canonical`) with any input file in the DAG.
+  - Aggregation: `aggregate(dimension, op, [param])` collapses a dimension; `aggregate_agents(op, [param])` collapses the label axis. `op` is one of `"sum" | "mean" | "min" | "max" | "percentile"` (string tags, validated in C++). `percentile` requires a `param` fraction in `[0, 1]`; nullary ops reject `param`.
 - Operator overloads (12 total): `+ - * /` × {expr+expr, expr+double, double+expr}.
 - `ExpressionNode` hierarchy (header `quiver/expression/expression_node.h`):
   - `ExpressionNode` (abstract): `metadata()`, `compute_row(dims, out)`
   - `ExpressionFile`: lazy reads from a `.qvr`. Caches an open `BinaryFile` and a reusable `unordered_map` across calls (mutable members; not thread-safe per instance).
   - `ExpressionScalar`: broadcasts a constant across the operand's label space.
   - `ExpressionBinary`: combines two operands with `ExpressionBinary::Operation::{Add,Subtract,Multiply,Divide}` (nested enum). Constructor pre-computes broadcast metadata (`build_broadcast_metadata`), reusable input/output buffers, and `lhs_to_out_`/`rhs_to_out_` index translation tables. The `apply(Operation, double, double)` operation-dispatch is a private static member.
-  - `ExpressionUnary`, `ExpressionTernary`, `ExpressionAggregation` (scaffolds): same shape, but their `metadata()` and `compute_row()` throw `Cannot {operation}: ExpressionXxx is not yet implemented`. Each carries a placeholder nested `enum class Operation { Unspecified }` until concrete operations are designed.
-- Validation is **eager** at `ExpressionBinary` construction (units must match, dim sizes broadcast-compatible n×n / 1×n / n×1, time-dim properties match by name not position, label sizes broadcast-compatible, initial datetimes match). Computation is **lazy**: no I/O until `save()`.
-- The binary-operation enum is nested as `ExpressionBinary::Operation` (no namespace-scope `BinaryOp` anymore). The C API surface keeps its own stable enum `quiver_expression_operation_t`.
+  - `ExpressionAggregate`: collapses a named dimension. `Operation::{Sum,Mean,Min,Max,Percentile}` (nested enum). Constructor eagerly removes the dim from output metadata, rewires child time-dim `parent_dimension_index` transitively (a time dim whose parent was removed re-points to the removed dim's grandparent, or `-1`), and pre-allocates index translation + reusable buffers. Skips NaN inputs during accumulation; all-NaN range yields NaN.
+  - `ExpressionAggregateAgents`: collapses the label axis to a single entry named after the operation (e.g., `"sum"`, `"mean"`, `"percentile"`). Dimensions, `initial_datetime`, `unit` unchanged. Same NaN policy as `ExpressionAggregate`.
+  - `ExpressionUnary`, `ExpressionTernary` (scaffolds): same shape, but their `metadata()` and `compute_row()` throw `Cannot {operation}: ExpressionXxx is not yet implemented`. Each carries a placeholder nested `enum class Operation { Unspecified }` until concrete operations are designed.
+- Validation is **eager** at construction for `ExpressionBinary`, `ExpressionAggregate`, `ExpressionAggregateAgents` (units/dim sizes/time-dim properties/label sizes/initial datetimes for binary; dim existence + op/param consistency + output metadata validity for aggregations). Computation is **lazy**: no I/O until `save()`.
+- The binary-operation enum is nested as `ExpressionBinary::Operation`. Aggregation operations are parsed via static `parse_operation(string)` methods on each aggregation class. The C API surface keeps its own stable enum `quiver_expression_operation_t`.
 
 ### LuaRunner Class
 Executes Lua scripts with database access:

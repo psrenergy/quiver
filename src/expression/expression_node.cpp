@@ -1,9 +1,12 @@
 #include "quiver/expression/expression_node.h"
 
 #include "quiver/binary/binary_file.h"
+#include "quiver/binary/iteration.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -204,6 +207,74 @@ build_broadcast_metadata(const BinaryMetadata& lhs, const BinaryMetadata& rhs, s
     return out;
 }
 
+template <typename Op>
+Op parse_aggregation_operation_name(const std::string& name, const std::string& fn_label) {
+    if (name == "sum")
+        return Op::Sum;
+    if (name == "mean")
+        return Op::Mean;
+    if (name == "min")
+        return Op::Min;
+    if (name == "max")
+        return Op::Max;
+    if (name == "percentile")
+        return Op::Percentile;
+    throw std::runtime_error("Cannot " + fn_label + ": unknown operation '" + name +
+                             "' (expected one of: sum, mean, min, max, percentile)");
+}
+
+template <typename Op>
+std::string aggregation_operation_label(Op op) {
+    switch (op) {
+    case Op::Sum:
+        return "sum";
+    case Op::Mean:
+        return "mean";
+    case Op::Min:
+        return "min";
+    case Op::Max:
+        return "max";
+    case Op::Percentile:
+        return "percentile";
+    }
+    return "";
+}
+
+template <typename Op>
+void validate_aggregation_param(Op op, std::optional<double> param, const std::string& fn_label) {
+    const bool needs_param = (op == Op::Percentile);
+    if (needs_param && !param.has_value()) {
+        throw std::runtime_error("Cannot " + fn_label + ": operation 'percentile' requires a parameter");
+    }
+    if (!needs_param && param.has_value()) {
+        throw std::runtime_error("Cannot " + fn_label + ": operation '" + aggregation_operation_label(op) +
+                                 "' does not accept a parameter");
+    }
+    if (needs_param && (*param < 0.0 || *param > 1.0)) {
+        throw std::runtime_error("Cannot " + fn_label + ": percentile must be in [0, 1], got " +
+                                 std::to_string(*param));
+    }
+}
+
+double compute_percentile(std::vector<double>& values, double fraction) {
+    if (values.empty()) {
+        return std::numeric_limits<double>::quiet_NaN();
+    }
+    std::sort(values.begin(), values.end());
+    const auto n = values.size();
+    if (n == 1) {
+        return values[0];
+    }
+    const auto pos = static_cast<double>(n - 1) * fraction;
+    const auto lo = static_cast<size_t>(std::floor(pos));
+    const auto hi = static_cast<size_t>(std::ceil(pos));
+    if (lo == hi) {
+        return values[lo];
+    }
+    const double frac = pos - static_cast<double>(lo);
+    return values[lo] * (1.0 - frac) + values[hi] * frac;
+}
+
 }  // namespace
 
 double ExpressionBinary::apply(Operation operation, double lhs, double rhs) {
@@ -322,17 +393,281 @@ void ExpressionTernary::compute_row(const std::vector<int64_t>& /*dims*/, std::v
     throw std::runtime_error("Cannot compute_row: ExpressionTernary is not yet implemented");
 }
 
-ExpressionAggregation::ExpressionAggregation(Operation operation,
-                                             std::shared_ptr<ExpressionNode> operand,
-                                             std::string dimension_to_reduce)
-    : operation_(operation), operand_(std::move(operand)), dimension_to_reduce_(std::move(dimension_to_reduce)) {}
-
-const BinaryMetadata& ExpressionAggregation::metadata() const {
-    throw std::runtime_error("Cannot get_metadata: ExpressionAggregation is not yet implemented");
+ExpressionAggregate::Operation ExpressionAggregate::parse_operation(const std::string& name) {
+    return parse_aggregation_operation_name<Operation>(name, "aggregate");
 }
 
-void ExpressionAggregation::compute_row(const std::vector<int64_t>& /*dims*/, std::vector<double>& /*out*/) const {
-    throw std::runtime_error("Cannot compute_row: ExpressionAggregation is not yet implemented");
+ExpressionAggregate::ExpressionAggregate(Operation operation,
+                                         std::shared_ptr<ExpressionNode> operand,
+                                         std::string dimension_name,
+                                         std::optional<double> param)
+    : operation_(operation), operand_(std::move(operand)), dimension_name_(std::move(dimension_name)), param_(param) {
+    validate_aggregation_param(operation_, param_, "aggregate");
+
+    const auto& operand_meta = operand_->metadata();
+
+    const int reduced_idx = find_dim_index(operand_meta.dimensions, dimension_name_);
+    if (reduced_idx < 0) {
+        throw std::runtime_error("Dimension not found: '" + dimension_name_ + "' in operand metadata");
+    }
+    reduced_operand_index_ = reduced_idx;
+
+    const auto& reduced_dim = operand_meta.dimensions[reduced_idx];
+    const int64_t grandparent_orig_idx =
+        reduced_dim.is_time_dimension() ? reduced_dim.time->parent_dimension_index : -1;
+
+    output_meta_ = operand_meta;
+    output_meta_.dimensions.erase(output_meta_.dimensions.begin() + reduced_idx);
+    if (reduced_dim.is_time_dimension()) {
+        --output_meta_.number_of_time_dimensions;
+    }
+
+    operand_to_out_.assign(operand_meta.dimensions.size(), -1);
+    for (size_t i = 0; i < operand_meta.dimensions.size(); ++i) {
+        if (static_cast<int>(i) == reduced_idx) {
+            continue;
+        }
+        operand_to_out_[i] =
+            (static_cast<int>(i) < reduced_idx) ? static_cast<int>(i) : static_cast<int>(i) - 1;
+    }
+
+    for (size_t out_i = 0; out_i < output_meta_.dimensions.size(); ++out_i) {
+        auto& out_dim = output_meta_.dimensions[out_i];
+        if (!out_dim.is_time_dimension()) {
+            continue;
+        }
+        const int operand_idx =
+            (static_cast<int>(out_i) < reduced_idx) ? static_cast<int>(out_i) : static_cast<int>(out_i) + 1;
+        const int64_t orig_parent = operand_meta.dimensions[operand_idx].time->parent_dimension_index;
+        if (orig_parent < 0) {
+            out_dim.time->parent_dimension_index = -1;
+        } else if (orig_parent == reduced_idx) {
+            if (grandparent_orig_idx < 0) {
+                out_dim.time->parent_dimension_index = -1;
+            } else {
+                out_dim.time->parent_dimension_index =
+                    (grandparent_orig_idx < reduced_idx) ? grandparent_orig_idx : grandparent_orig_idx - 1;
+            }
+        } else {
+            out_dim.time->parent_dimension_index =
+                (orig_parent < reduced_idx) ? orig_parent : orig_parent - 1;
+        }
+    }
+
+    output_meta_.validate();
+
+    operand_dims_buf_.resize(operand_meta.dimensions.size());
+    operand_row_buf_.resize(operand_meta.labels.size());
+    if (operation_ == Operation::Percentile) {
+        percentile_scratch_.resize(operand_meta.labels.size());
+    }
+}
+
+const BinaryMetadata& ExpressionAggregate::metadata() const {
+    return output_meta_;
+}
+
+void ExpressionAggregate::compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const {
+    const auto label_count = operand_row_buf_.size();
+    if (out.size() != label_count) {
+        out.resize(label_count);
+    }
+
+    const auto& operand_meta = operand_->metadata();
+
+    for (size_t i = 0; i < operand_meta.dimensions.size(); ++i) {
+        if (static_cast<int>(i) == reduced_operand_index_) {
+            continue;
+        }
+        operand_dims_buf_[i] = dims[operand_to_out_[i]];
+    }
+    operand_dims_buf_[reduced_operand_index_] = 1;
+
+    const auto& reduced_dim = operand_meta.dimensions[reduced_operand_index_];
+    int64_t start = 1;
+    int64_t end = reduced_dim.size;
+    if (reduced_dim.is_time_dimension()) {
+        const auto& tp = *reduced_dim.time;
+        const int64_t parent_idx = tp.parent_dimension_index;
+        const auto sizes = dimension_sizes_at_values(operand_meta, operand_dims_buf_);
+        end = sizes[reduced_operand_index_];
+        if (parent_idx < 0) {
+            start = tp.initial_value;
+        } else {
+            const auto& parent_dim = operand_meta.dimensions[parent_idx];
+            const int64_t parent_initial =
+                parent_dim.is_time_dimension() ? parent_dim.time->initial_value : 1;
+            start = (operand_dims_buf_[parent_idx] == parent_initial) ? tp.initial_value : 1;
+        }
+    }
+
+    std::vector<double> sum_buf(label_count, 0.0);
+    std::vector<int64_t> count_buf(label_count, 0);
+    std::vector<double> min_buf(label_count, std::numeric_limits<double>::infinity());
+    std::vector<double> max_buf(label_count, -std::numeric_limits<double>::infinity());
+
+    if (operation_ == Operation::Percentile) {
+        for (auto& scratch : percentile_scratch_) {
+            scratch.clear();
+        }
+    }
+
+    for (int64_t v = start; v <= end; ++v) {
+        operand_dims_buf_[reduced_operand_index_] = v;
+        operand_->compute_row(operand_dims_buf_, operand_row_buf_);
+
+        for (size_t k = 0; k < label_count; ++k) {
+            const double value = operand_row_buf_[k];
+            if (std::isnan(value)) {
+                continue;
+            }
+            switch (operation_) {
+            case Operation::Sum:
+            case Operation::Mean:
+                sum_buf[k] += value;
+                ++count_buf[k];
+                break;
+            case Operation::Min:
+                if (value < min_buf[k]) {
+                    min_buf[k] = value;
+                }
+                ++count_buf[k];
+                break;
+            case Operation::Max:
+                if (value > max_buf[k]) {
+                    max_buf[k] = value;
+                }
+                ++count_buf[k];
+                break;
+            case Operation::Percentile:
+                percentile_scratch_[k].push_back(value);
+                break;
+            }
+        }
+    }
+
+    const double nan_value = std::numeric_limits<double>::quiet_NaN();
+    for (size_t k = 0; k < label_count; ++k) {
+        switch (operation_) {
+        case Operation::Sum:
+            out[k] = (count_buf[k] > 0) ? sum_buf[k] : nan_value;
+            break;
+        case Operation::Mean:
+            out[k] = (count_buf[k] > 0) ? sum_buf[k] / static_cast<double>(count_buf[k]) : nan_value;
+            break;
+        case Operation::Min:
+            out[k] = (count_buf[k] > 0) ? min_buf[k] : nan_value;
+            break;
+        case Operation::Max:
+            out[k] = (count_buf[k] > 0) ? max_buf[k] : nan_value;
+            break;
+        case Operation::Percentile:
+            out[k] = compute_percentile(percentile_scratch_[k], *param_);
+            break;
+        }
+    }
+}
+
+ExpressionAggregateAgents::Operation ExpressionAggregateAgents::parse_operation(const std::string& name) {
+    return parse_aggregation_operation_name<Operation>(name, "aggregate_agents");
+}
+
+ExpressionAggregateAgents::ExpressionAggregateAgents(Operation operation,
+                                                     std::shared_ptr<ExpressionNode> operand,
+                                                     std::optional<double> param)
+    : operation_(operation), operand_(std::move(operand)), param_(param) {
+    validate_aggregation_param(operation_, param_, "aggregate_agents");
+
+    const auto& operand_meta = operand_->metadata();
+    output_meta_ = operand_meta;
+    output_meta_.labels = {aggregation_operation_label(operation_)};
+    output_meta_.validate();
+
+    operand_row_buf_.resize(operand_meta.labels.size());
+}
+
+const BinaryMetadata& ExpressionAggregateAgents::metadata() const {
+    return output_meta_;
+}
+
+void ExpressionAggregateAgents::compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const {
+    if (out.size() != 1) {
+        out.resize(1);
+    }
+
+    operand_->compute_row(dims, operand_row_buf_);
+
+    const double nan_value = std::numeric_limits<double>::quiet_NaN();
+
+    switch (operation_) {
+    case Operation::Sum: {
+        double sum = 0.0;
+        int64_t count = 0;
+        for (double v : operand_row_buf_) {
+            if (std::isnan(v)) {
+                continue;
+            }
+            sum += v;
+            ++count;
+        }
+        out[0] = (count > 0) ? sum : nan_value;
+        break;
+    }
+    case Operation::Mean: {
+        double sum = 0.0;
+        int64_t count = 0;
+        for (double v : operand_row_buf_) {
+            if (std::isnan(v)) {
+                continue;
+            }
+            sum += v;
+            ++count;
+        }
+        out[0] = (count > 0) ? sum / static_cast<double>(count) : nan_value;
+        break;
+    }
+    case Operation::Min: {
+        double m = std::numeric_limits<double>::infinity();
+        int64_t count = 0;
+        for (double v : operand_row_buf_) {
+            if (std::isnan(v)) {
+                continue;
+            }
+            if (v < m) {
+                m = v;
+            }
+            ++count;
+        }
+        out[0] = (count > 0) ? m : nan_value;
+        break;
+    }
+    case Operation::Max: {
+        double m = -std::numeric_limits<double>::infinity();
+        int64_t count = 0;
+        for (double v : operand_row_buf_) {
+            if (std::isnan(v)) {
+                continue;
+            }
+            if (v > m) {
+                m = v;
+            }
+            ++count;
+        }
+        out[0] = (count > 0) ? m : nan_value;
+        break;
+    }
+    case Operation::Percentile: {
+        std::vector<double> scratch;
+        scratch.reserve(operand_row_buf_.size());
+        for (double v : operand_row_buf_) {
+            if (!std::isnan(v)) {
+                scratch.push_back(v);
+            }
+        }
+        out[0] = compute_percentile(scratch, *param_);
+        break;
+    }
+    }
 }
 
 }  // namespace quiver

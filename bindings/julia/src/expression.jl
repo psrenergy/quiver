@@ -90,3 +90,39 @@ function get_metadata(e::Expression)
     check(C.quiver_expression_get_metadata(e.ptr, out))
     return Binary.Metadata(out[])
 end
+
+function aggregate(e::Expression, dimension::String, operation::String,
+                   param::Union{Real,Nothing} = nothing)
+    out = Ref{Ptr{C.quiver_expression}}(C_NULL)
+    if param === nothing
+        check(C.quiver_expression_aggregate(e.ptr, dimension, operation, C_NULL, out))
+    else
+        param_ref = Ref(Cdouble(param))
+        GC.@preserve param_ref begin
+            check(C.quiver_expression_aggregate(e.ptr, dimension, operation, param_ref, out))
+        end
+    end
+    return Expression(out[])
+end
+
+function aggregate_agents(e::Expression, operation::String,
+                          param::Union{Real,Nothing} = nothing)
+    out = Ref{Ptr{C.quiver_expression}}(C_NULL)
+    if param === nothing
+        check(C.quiver_expression_aggregate_agents(e.ptr, operation, C_NULL, out))
+    else
+        param_ref = Ref(Cdouble(param))
+        GC.@preserve param_ref begin
+            check(C.quiver_expression_aggregate_agents(e.ptr, operation, param_ref, out))
+        end
+    end
+    return Expression(out[])
+end
+
+aggregate(f::Binary.File, dimension::String, operation::String,
+          param::Union{Real,Nothing} = nothing) =
+    aggregate(Expression(f), dimension, operation, param)
+
+aggregate_agents(f::Binary.File, operation::String,
+                 param::Union{Real,Nothing} = nothing) =
+    aggregate_agents(Expression(f), operation, param)

@@ -7,6 +7,7 @@
 #include "expression_node.h"
 
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace quiver {
@@ -22,6 +23,13 @@ public:
     void save(const std::string& path) const;
 
     const std::shared_ptr<ExpressionNode>& node() const;
+
+    Expression aggregate(const std::string& dimension,
+                         const std::string& operation,
+                         std::optional<double> param = std::nullopt) const;
+
+    Expression aggregate_agents(const std::string& operation,
+                                std::optional<double> param = std::nullopt) const;
 
 private:
     std::shared_ptr<ExpressionNode> node_;

@@ -997,3 +997,181 @@ TEST_F(ExpressionCApiFixture, FromFileFailsForWriteModeHandle) {
 
     quiver_binary_file_close(writer);
 }
+
+// ============================================================================
+// Aggregation (dim reduction + label-axis reduction)
+// ============================================================================
+
+TEST_F(ExpressionCApiFixture, AggregateSumOverDim) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
+
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* agg = nullptr;
+    ASSERT_EQ(quiver_expression_aggregate(a, "row", "sum", nullptr, &agg), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(agg);
+
+    // Output has only "col" dim (size 2) and 2 labels = 4 cells.
+    // For (col, k): sum over row=1..3 of (10r + col + k) = 60 + 3*col + 3*k.
+    auto cell1 = read_one_cell(path_out, {"col"}, {1});
+    auto cell2 = read_one_cell(path_out, {"col"}, {2});
+    ASSERT_EQ(cell1.size(), 2u);
+    ASSERT_EQ(cell2.size(), 2u);
+    EXPECT_DOUBLE_EQ(cell1[0], 63.0);  // col=1, k=0
+    EXPECT_DOUBLE_EQ(cell1[1], 66.0);  // col=1, k=1
+    EXPECT_DOUBLE_EQ(cell2[0], 66.0);  // col=2, k=0
+    EXPECT_DOUBLE_EQ(cell2[1], 69.0);  // col=2, k=1
+}
+
+TEST_F(ExpressionCApiFixture, AggregatePercentileWithParam) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
+
+    auto* a = expr_from_file(path_a);
+    const double p = 0.5;
+    quiver_expression_t* agg = nullptr;
+    ASSERT_EQ(quiver_expression_aggregate(a, "row", "percentile", &p, &agg), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(agg);
+
+    // Median over row=1..3 of (10r + col + k). Sorted = {col+k+10, col+k+20, col+k+30}.
+    // (n-1)*0.5 = 1 → middle = col + k + 20.
+    auto cell1 = read_one_cell(path_out, {"col"}, {1});
+    EXPECT_DOUBLE_EQ(cell1[0], 21.0);
+    EXPECT_DOUBLE_EQ(cell1[1], 22.0);
+}
+
+TEST_F(ExpressionCApiFixture, AggregateSumWithExtraParamReturnsError) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    const double p = 0.5;
+    quiver_expression_t* agg = nullptr;
+    EXPECT_EQ(quiver_expression_aggregate(a, "row", "sum", &p, &agg), QUIVER_ERROR);
+    EXPECT_EQ(agg, nullptr);
+    EXPECT_NE(std::string(quiver_get_last_error()).find("does not accept a parameter"), std::string::npos);
+    quiver_expression_close(a);
+}
+
+TEST_F(ExpressionCApiFixture, AggregatePercentileMissingParamReturnsError) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* agg = nullptr;
+    EXPECT_EQ(quiver_expression_aggregate(a, "row", "percentile", nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(agg, nullptr);
+    EXPECT_NE(std::string(quiver_get_last_error()).find("requires a parameter"), std::string::npos);
+    quiver_expression_close(a);
+}
+
+TEST_F(ExpressionCApiFixture, AggregateDimensionNotFoundReturnsError) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* agg = nullptr;
+    EXPECT_EQ(quiver_expression_aggregate(a, "nonexistent", "sum", nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(agg, nullptr);
+    EXPECT_NE(std::string(quiver_get_last_error()).find("Dimension not found"), std::string::npos);
+    quiver_expression_close(a);
+}
+
+TEST_F(ExpressionCApiFixture, AggregateUnknownOperationReturnsError) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* agg = nullptr;
+    EXPECT_EQ(quiver_expression_aggregate(a, "row", "average", nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(agg, nullptr);
+    quiver_expression_close(a);
+}
+
+TEST_F(ExpressionCApiFixture, AggregateAgentsSumReducesLabels) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
+
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* agg = nullptr;
+    ASSERT_EQ(quiver_expression_aggregate_agents(a, "sum", nullptr, &agg), QUIVER_OK);
+
+    // Verify output metadata: single label "sum", dims unchanged.
+    quiver_binary_metadata_t* out_md = nullptr;
+    ASSERT_EQ(quiver_expression_get_metadata(agg, &out_md), QUIVER_OK);
+    char** labels = nullptr;
+    size_t label_count = 0;
+    ASSERT_EQ(quiver_binary_metadata_get_labels(out_md, &labels, &label_count), QUIVER_OK);
+    ASSERT_EQ(label_count, 1u);
+    EXPECT_STREQ(labels[0], "sum");
+    quiver_binary_metadata_free_string_array(labels, label_count);
+    quiver_binary_metadata_free(out_md);
+
+    ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(agg);
+
+    // Each cell = (10r + c) + (10r + c + 1) = 20r + 2c + 1.
+    auto cell = read_one_cell(path_out, {"row", "col"}, {1, 1});
+    ASSERT_EQ(cell.size(), 1u);
+    EXPECT_DOUBLE_EQ(cell[0], 23.0);
+    auto cell2 = read_one_cell(path_out, {"row", "col"}, {3, 2});
+    EXPECT_DOUBLE_EQ(cell2[0], 65.0);
+}
+
+TEST_F(ExpressionCApiFixture, AggregateAgentsPercentileWithParam) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
+
+    auto* a = expr_from_file(path_a);
+    const double p = 0.5;
+    quiver_expression_t* agg = nullptr;
+    ASSERT_EQ(quiver_expression_aggregate_agents(a, "percentile", &p, &agg), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(agg);
+
+    // Median of two values (10r + c, 10r + c + 1) = 10r + c + 0.5.
+    auto cell = read_one_cell(path_out, {"row", "col"}, {1, 1});
+    EXPECT_DOUBLE_EQ(cell[0], 11.5);
+}
+
+TEST_F(ExpressionCApiFixture, AggregateNullArguments) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* agg = nullptr;
+
+    EXPECT_EQ(quiver_expression_aggregate(nullptr, "row", "sum", nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_aggregate(a, nullptr, "sum", nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_aggregate(a, "row", nullptr, nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_aggregate(a, "row", "sum", nullptr, nullptr), QUIVER_ERROR);
+
+    quiver_expression_close(a);
+}
+
+TEST_F(ExpressionCApiFixture, AggregateAgentsNullArguments) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* agg = nullptr;
+
+    EXPECT_EQ(quiver_expression_aggregate_agents(nullptr, "sum", nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_aggregate_agents(a, nullptr, nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_aggregate_agents(a, "sum", nullptr, nullptr), QUIVER_ERROR);
+
+    quiver_expression_close(a);
+}
+
+TEST_F(ExpressionCApiFixture, AggregateChainedWithBinary) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
+    write_fixture(path_b, [](int r, int c, int k) { return static_cast<double>(r + c + k); });
+
+    auto* a = expr_from_file(path_a);
+    auto* b = expr_from_file(path_b);
+    quiver_expression_t* sum = nullptr;
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &sum), QUIVER_OK);
+    quiver_expression_t* agg = nullptr;
+    ASSERT_EQ(quiver_expression_aggregate(sum, "row", "sum", nullptr, &agg), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(b);
+    quiver_expression_close(sum);
+    quiver_expression_close(agg);
+
+    // (a + b) at (r, c, k) = (10r + c + k) + (r + c + k) = 11r + 2c + 2k.
+    // Sum over r=1..3 = 11*6 + 3*(2c + 2k) = 66 + 6c + 6k.
+    auto cell1 = read_one_cell(path_out, {"col"}, {1});
+    EXPECT_DOUBLE_EQ(cell1[0], 72.0);  // c=1, k=0: 66 + 6 + 0
+    EXPECT_DOUBLE_EQ(cell1[1], 78.0);  // c=1, k=1: 66 + 6 + 6
+}

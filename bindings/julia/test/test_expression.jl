@@ -953,6 +953,354 @@ end
             cleanup(path_a, path_b)
         end
     end
+
+    # ==========================================================================
+    # Aggregation: dimension reduction (Quiver.aggregate)
+    # ==========================================================================
+
+    @testset "Aggregate sum over non-time dim" begin
+        # Note: write_fixture indexes labels as k=1,2 (Julia convention).
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            with_expr(path_a) do e
+                out = Quiver.aggregate(e, "row", "sum")
+                Quiver.save(out, path_out)
+                return Quiver.close!(out)
+            end
+            # Sum over r=1..3 of (10r + col + k) = 60 + 3*col + 3*k.
+            @test read_one_cell(path_out; col = 1)[1] == 66.0  # col=1, k=1
+            @test read_one_cell(path_out; col = 1)[2] == 69.0  # col=1, k=2
+            @test read_one_cell(path_out; col = 2)[1] == 69.0  # col=2, k=1
+            @test read_one_cell(path_out; col = 2)[2] == 72.0  # col=2, k=2
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Aggregate mean over non-time dim" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            with_expr(path_a) do e
+                out = Quiver.aggregate(e, "row", "mean")
+                Quiver.save(out, path_out)
+                return Quiver.close!(out)
+            end
+            # Mean over r=1..3 of (10r + c + k) = 20 + c + k.
+            @test read_one_cell(path_out; col = 1)[1] == 22.0  # k=1
+            @test read_one_cell(path_out; col = 2)[2] == 24.0  # k=2
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Aggregate min and max" begin
+        path_a, path_out, path_out2 = make_path("a"), make_path("out"), make_path("out2")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            with_expr(path_a) do e
+                out_min = Quiver.aggregate(e, "row", "min")
+                out_max = Quiver.aggregate(e, "row", "max")
+                Quiver.save(out_min, path_out)
+                Quiver.save(out_max, path_out2)
+                Quiver.close!(out_min)
+                return Quiver.close!(out_max)
+            end
+            # Min at r=1: 10 + c + k. Max at r=3: 30 + c + k.
+            @test read_one_cell(path_out; col = 1)[1] == 12.0   # min, c=1, k=1
+            @test read_one_cell(path_out2; col = 2)[2] == 34.0  # max, c=2, k=2
+        finally
+            cleanup(path_a, path_out, path_out2)
+        end
+    end
+
+    @testset "Aggregate percentile with param 0.5" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            with_expr(path_a) do e
+                out = Quiver.aggregate(e, "row", "percentile", 0.5)
+                Quiver.save(out, path_out)
+                return Quiver.close!(out)
+            end
+            # Median = middle row (r=2): 20 + c + k.
+            @test read_one_cell(path_out; col = 1)[1] == 22.0
+            @test read_one_cell(path_out; col = 2)[2] == 24.0
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Aggregate skips NaN inputs" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r == 2 ? NaN : Float64(r * 10 + c + k))
+            with_expr(path_a) do e
+                out = Quiver.aggregate(e, "row", "sum")
+                Quiver.save(out, path_out)
+                return Quiver.close!(out)
+            end
+            # Sum = row1 + row3 = (10 + c + k) + (30 + c + k) = 40 + 2c + 2k.
+            @test read_one_cell(path_out; col = 1)[1] == 44.0  # c=1, k=1
+            @test read_one_cell(path_out; col = 2)[2] == 48.0  # c=2, k=2
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Aggregate chained" begin
+        # 3-dim fixture so chaining still leaves >= 1 dim (metadata validation requires it).
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            md = make_metadata_full(
+                dimensions = ["row", "col", "depth"],
+                dimension_sizes = [3, 2, 2],
+                labels = ["v1"],
+            )
+            write_dense(path_a, md, [:row, :col, :depth], [3, 2, 2], 1, (_, _) -> 2.0)
+            with_expr(path_a) do e
+                out = Quiver.aggregate(Quiver.aggregate(e, "row", "sum"), "col", "sum")
+                Quiver.save(out, path_out)
+                return Quiver.close!(out)
+            end
+            # Each depth cell = 3 rows × 2 cols × 2.0 = 12.0.
+            @test read_one_cell(path_out; depth = 1)[1] == 12.0
+            @test read_one_cell(path_out; depth = 2)[1] == 12.0
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Aggregate composed with binary" begin
+        path_a, path_b, path_out = make_path("a"), make_path("b"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            write_fixture(path_b, (r, c, k) -> r + c + k)
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    out = Quiver.aggregate(a + b, "row", "sum")
+                    Quiver.save(out, path_out)
+                    return Quiver.close!(out)
+                end
+            end
+            # (a+b) = 11r + 2c + 2k. Sum over r=1..3 = 66 + 6c + 6k.
+            @test read_one_cell(path_out; col = 1)[1] == 78.0  # c=1, k=1: 66+6+6
+            @test read_one_cell(path_out; col = 2)[2] == 90.0  # c=2, k=2: 66+12+12
+        finally
+            cleanup(path_a, path_b, path_out)
+        end
+    end
+
+    @testset "Aggregate dimension not found throws" begin
+        path_a = make_path("a")
+        try
+            write_fixture(path_a, (_, _, _) -> 1.0)
+            with_expr(path_a) do e
+                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "nonexistent", "sum")
+            end
+        finally
+            cleanup(path_a)
+        end
+    end
+
+    @testset "Aggregate unknown operation throws" begin
+        path_a = make_path("a")
+        try
+            write_fixture(path_a, (_, _, _) -> 1.0)
+            with_expr(path_a) do e
+                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", "average")
+            end
+        finally
+            cleanup(path_a)
+        end
+    end
+
+    @testset "Aggregate percentile missing param throws" begin
+        path_a = make_path("a")
+        try
+            write_fixture(path_a, (_, _, _) -> 1.0)
+            with_expr(path_a) do e
+                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", "percentile")
+            end
+        finally
+            cleanup(path_a)
+        end
+    end
+
+    @testset "Aggregate sum with extra param throws" begin
+        path_a = make_path("a")
+        try
+            write_fixture(path_a, (_, _, _) -> 1.0)
+            with_expr(path_a) do e
+                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", "sum", 0.5)
+            end
+        finally
+            cleanup(path_a)
+        end
+    end
+
+    @testset "Aggregate percentile out of range throws" begin
+        path_a = make_path("a")
+        try
+            write_fixture(path_a, (_, _, _) -> 1.0)
+            with_expr(path_a) do e
+                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", "percentile", 1.5)
+                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", "percentile", -0.1)
+            end
+        finally
+            cleanup(path_a)
+        end
+    end
+
+    # ==========================================================================
+    # Aggregation: label-axis reduction (Quiver.aggregate_agents)
+    # ==========================================================================
+
+    @testset "Aggregate_agents sum reduces labels" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            with_expr(path_a) do e
+                out = Quiver.aggregate_agents(e, "sum")
+                md = Quiver.get_metadata(out)
+                @test Quiver.Binary.get_labels(md) == ["sum"]
+                Quiver.save(out, path_out)
+                return Quiver.close!(out)
+            end
+            # Each cell = (10r + c + 1) + (10r + c + 2) = 20r + 2c + 3.
+            @test read_one_cell(path_out; row = 1, col = 1) == [25.0]  # 20+2+3
+            @test read_one_cell(path_out; row = 3, col = 2) == [67.0]  # 60+4+3
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Aggregate_agents mean" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            with_expr(path_a) do e
+                out = Quiver.aggregate_agents(e, "mean")
+                Quiver.save(out, path_out)
+                return Quiver.close!(out)
+            end
+            # Mean of (10r + c + 1, 10r + c + 2) = 10r + c + 1.5.
+            @test read_one_cell(path_out; row = 1, col = 1)[1] == 12.5
+            @test read_one_cell(path_out; row = 3, col = 2)[1] == 33.5
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Aggregate_agents percentile 0.5" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            with_expr(path_a) do e
+                out = Quiver.aggregate_agents(e, "percentile", 0.5)
+                Quiver.save(out, path_out)
+                return Quiver.close!(out)
+            end
+            # Median of two values (a, a+1) = a + 0.5 = 10r + c + 1.5.
+            @test read_one_cell(path_out; row = 1, col = 1)[1] == 12.5
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Aggregate_agents skips NaN" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            # Mark label k=1 as NaN; sum should fall back to the other label.
+            write_fixture(path_a, (r, c, k) -> k == 1 ? NaN : Float64(r * 10 + c + k))
+            with_expr(path_a) do e
+                out = Quiver.aggregate_agents(e, "sum")
+                Quiver.save(out, path_out)
+                return Quiver.close!(out)
+            end
+            # Only label k=2 contributes: sum = 10r + c + 2.
+            @test read_one_cell(path_out; row = 1, col = 1)[1] == 13.0
+            @test read_one_cell(path_out; row = 3, col = 2)[1] == 34.0
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Aggregate_agents preserves dimensions" begin
+        path_a = make_path("a")
+        try
+            write_fixture(path_a, (_, _, _) -> 1.0)
+            with_expr(path_a) do e
+                out = Quiver.aggregate_agents(e, "mean")
+                md = Quiver.get_metadata(out)
+                @test Quiver.Binary.get_labels(md) == ["mean"]
+                @test Quiver.Binary.get_unit(md) == "MW"
+                dims = Quiver.Binary.get_dimensions(md)
+                @test length(dims) == 2
+                @test dims[1].name == "row"
+                @test dims[2].name == "col"
+                return Quiver.close!(out)
+            end
+        finally
+            cleanup(path_a)
+        end
+    end
+
+    @testset "Aggregate_agents chained after aggregate" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (_, _, _) -> 3.0)
+            with_expr(path_a) do e
+                out = Quiver.aggregate_agents(Quiver.aggregate(e, "row", "sum"), "mean")
+                Quiver.save(out, path_out)
+                return Quiver.close!(out)
+            end
+            # After reducing row(3) and agents(2): each (col) cell = sum 3 rows × 3.0 = 9.0; mean of 2 same labels = 9.0.
+            @test read_one_cell(path_out; col = 1)[1] == 9.0
+            @test read_one_cell(path_out; col = 2)[1] == 9.0
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Aggregate on Binary.File shortcut" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            file = Quiver.Binary.open_file(path_a; mode = 'r')
+            try
+                out = Quiver.aggregate(file, "row", "sum")
+                Quiver.save(out, path_out)
+                Quiver.close!(out)
+            finally
+                Quiver.Binary.close!(file)
+            end
+            # col=1, k=1: 60 + 3 + 3 = 66.
+            @test read_one_cell(path_out; col = 1)[1] == 66.0
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Aggregate_agents on Binary.File shortcut" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            file = Quiver.Binary.open_file(path_a; mode = 'r')
+            try
+                out = Quiver.aggregate_agents(file, "mean")
+                Quiver.save(out, path_out)
+                Quiver.close!(out)
+            finally
+                Quiver.Binary.close!(file)
+            end
+            # Mean of (10*1 + 1 + 1, 10*1 + 1 + 2) = 12.5.
+            @test read_one_cell(path_out; row = 1, col = 1)[1] == 12.5
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
 end
 
 end

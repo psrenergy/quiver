@@ -674,6 +674,14 @@ function quiver_expression_get_metadata(expression, out)
     @ccall libquiver_c.quiver_expression_get_metadata(expression::Ptr{quiver_expression_t}, out::Ptr{Ptr{quiver_binary_metadata_t}})::quiver_error_t
 end
 
+function quiver_expression_aggregate(expression, dimension, operation, param, out)
+    @ccall libquiver_c.quiver_expression_aggregate(expression::Ptr{quiver_expression_t}, dimension::Ptr{Cchar}, operation::Ptr{Cchar}, param::Ptr{Cdouble}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
+end
+
+function quiver_expression_aggregate_agents(expression, operation, param, out)
+    @ccall libquiver_c.quiver_expression_aggregate_agents(expression::Ptr{quiver_expression_t}, operation::Ptr{Cchar}, param::Ptr{Cdouble}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
+end
+
 #! format: on
 
 
