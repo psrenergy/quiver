@@ -141,7 +141,7 @@ private:
     Operation operation_;
     std::shared_ptr<ExpressionNode> operand_;
     std::string dimension_name_;
-    std::optional<double> param_;
+    std::optional<double> parameter_;
 
     BinaryMetadata output_meta_;
     int reduced_operand_index_ = -1;
@@ -169,7 +169,7 @@ public:
 private:
     Operation operation_;
     std::shared_ptr<ExpressionNode> operand_;
-    std::optional<double> param_;
+    std::optional<double> parameter_;
 
     BinaryMetadata output_meta_;
     mutable std::vector<double> operand_row_buf_;

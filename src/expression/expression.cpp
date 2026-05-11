@@ -54,8 +54,9 @@ const std::shared_ptr<ExpressionNode>& Expression::node() const {
     return node_;
 }
 
-Expression
-Expression::aggregate(const std::string& dimension, const std::string& operation, std::optional<double> parameter) const {
+Expression Expression::aggregate(const std::string& dimension,
+                                 const std::string& operation,
+                                 std::optional<double> parameter) const {
     auto op = ExpressionAggregate::parse_operation(operation);
     return Expression(std::make_shared<ExpressionAggregate>(op, node_, dimension, parameter));
 }

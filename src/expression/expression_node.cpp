@@ -401,8 +401,9 @@ ExpressionAggregate::ExpressionAggregate(Operation operation,
                                          std::shared_ptr<ExpressionNode> operand,
                                          std::string dimension_name,
                                          std::optional<double> parameter)
-    : operation_(operation), operand_(std::move(operand)), dimension_name_(std::move(dimension_name)), param_(parameter) {
-    validate_aggregation_param(operation_, param_, "aggregate");
+    : operation_(operation), operand_(std::move(operand)), dimension_name_(std::move(dimension_name)),
+      parameter_(parameter) {
+    validate_aggregation_param(operation_, parameter_, "aggregate");
 
     const auto& operand_meta = operand_->metadata();
 
@@ -559,7 +560,7 @@ void ExpressionAggregate::compute_row(const std::vector<int64_t>& dims, std::vec
             out[k] = (count_buf[k] > 0) ? max_buf[k] : nan_value;
             break;
         case Operation::Percentile:
-            out[k] = compute_percentile(percentile_scratch_[k], *param_);
+            out[k] = compute_percentile(percentile_scratch_[k], *parameter_);
             break;
         }
     }
@@ -572,8 +573,8 @@ ExpressionAggregateAgents::Operation ExpressionAggregateAgents::parse_operation(
 ExpressionAggregateAgents::ExpressionAggregateAgents(Operation operation,
                                                      std::shared_ptr<ExpressionNode> operand,
                                                      std::optional<double> parameter)
-    : operation_(operation), operand_(std::move(operand)), param_(parameter) {
-    validate_aggregation_param(operation_, param_, "aggregate_agents");
+    : operation_(operation), operand_(std::move(operand)), parameter_(parameter) {
+    validate_aggregation_param(operation_, parameter_, "aggregate_agents");
 
     const auto& operand_meta = operand_->metadata();
     output_meta_ = operand_meta;
@@ -661,7 +662,7 @@ void ExpressionAggregateAgents::compute_row(const std::vector<int64_t>& dims, st
                 scratch.push_back(v);
             }
         }
-        out[0] = compute_percentile(scratch, *param_);
+        out[0] = compute_percentile(scratch, *parameter_);
         break;
     }
     }
