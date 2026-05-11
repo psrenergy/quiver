@@ -15,7 +15,7 @@
 
 namespace quiver {
 
-Expression::Expression(const BinaryFile& file) : node_(std::make_shared<ExpressionFile>(file)) {}
+Expression::Expression(const BinaryFile& file) : node_(std::make_shared<ExpressionFile>(file.get_file_path())) {}
 
 Expression::Expression(std::shared_ptr<ExpressionNode> node) : node_(std::move(node)) {}
 
@@ -44,11 +44,6 @@ void Expression::save(const std::string& path) const {
             throw std::runtime_error("Cannot save: output path collides with input file '" + in + "'");
         }
     }
-
-    struct ReleaseOnExit {
-        const ExpressionNode* node;
-        ~ReleaseOnExit() { node->release_input_files(); }
-    } guard{node_.get()};
 
     const auto& meta = node_->metadata();
     auto writer = BinaryFile::open_file(path, 'w', meta);

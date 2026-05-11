@@ -992,7 +992,8 @@ TEST_F(ExpressionCApiFixture, FromFileFailsForWriteModeHandle) {
 
     quiver_expression_t* expr = nullptr;
     EXPECT_EQ(quiver_expression_from_file(writer, &expr), QUIVER_ERROR);
-    EXPECT_STREQ(quiver_get_last_error(), "Cannot create_expression: BinaryFile must be opened in read mode");
+    EXPECT_NE(std::string(quiver_get_last_error()).find("Cannot open_file: file is already open for writing"),
+              std::string::npos);
     EXPECT_EQ(expr, nullptr);
 
     quiver_binary_file_close(writer);

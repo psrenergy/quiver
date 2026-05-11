@@ -933,13 +933,16 @@ TEST_F(ExpressionFixture, ExpressionFromWriteModeBinaryFileThrows) {
     auto md = make_simple_metadata();
     auto writer = BinaryFile::open_file(path_a, 'w', md);
 
+    // ExpressionFile eagerly opens its own read handle on the path; BinaryFile's
+    // write_registry rejects the second open since path_a is already open for writing.
     EXPECT_THROW(
         {
             try {
                 Expression e(writer);
                 (void)e;
             } catch (const std::runtime_error& err) {
-                EXPECT_STREQ(err.what(), "Cannot create_expression: BinaryFile must be opened in read mode");
+                EXPECT_NE(std::string(err.what()).find("Cannot open_file: file is already open for writing"),
+                          std::string::npos);
                 throw;
             }
         },
@@ -1548,17 +1551,17 @@ TEST_F(ExpressionFixture, SaveDoesNotMutatePreOpenedInputs) {
     }
 }
 
-TEST_F(ExpressionFixture, SaveReleasesInternalHandles) {
+TEST_F(ExpressionFixture, SaveReleasesInternalHandlesOnDestruction) {
     auto md = make_simple_metadata();
     write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
 
-    BinaryFile a(path_a);
-    Expression e = Expression(a) + 1.0;
-    e.save(path_out);
+    {
+        BinaryFile a(path_a);
+        Expression e = Expression(a) + 1.0;
+        e.save(path_out);
+    }  // Expression goes out of scope here -> ExpressionFile destroyed -> internal BinaryFile closed.
 
-    // After save(), the internal handle has been released, so path_a can be re-opened in write mode
-    // (would fail if save() had left a handle in the write registry, but also indicates the read
-    // handle is no longer pinning the file on Windows).
+    // path_a is now free to be re-opened in write mode.
     auto reopened_writer = BinaryFile::open_file(path_a, 'w', md);  // must not throw
     EXPECT_TRUE(reopened_writer.is_open());
 }

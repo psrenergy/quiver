@@ -15,34 +15,25 @@
 
 namespace quiver {
 
-ExpressionFile::ExpressionFile(const BinaryFile& file) : path_(file.get_file_path()) {
-    if (file.is_open() && !file.is_read_mode()) {
-        throw std::runtime_error("Cannot create_expression: BinaryFile must be opened in read mode");
-    }
-    meta_ = file.is_open() ? file.get_metadata() : BinaryMetadata::from_toml_file(path_);
-    dim_map_.reserve(meta_.dimensions.size());
+ExpressionFile::ExpressionFile(const std::string& path)
+    : path_(path), file_(BinaryFile::open_file(path, 'r')) {
+    dim_map_.reserve(file_.get_metadata().dimensions.size());
 }
 
 const BinaryMetadata& ExpressionFile::metadata() const {
-    return meta_;
+    return file_.get_metadata();
 }
 
 void ExpressionFile::compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const {
-    if (!owned_file_) {
-        owned_file_ = std::make_unique<BinaryFile>(BinaryFile::open_file(path_, 'r'));
+    const auto& meta = file_.get_metadata();
+    for (size_t i = 0; i < meta.dimensions.size(); ++i) {
+        dim_map_[meta.dimensions[i].name] = dims[i];
     }
-    for (size_t i = 0; i < meta_.dimensions.size(); ++i) {
-        dim_map_[meta_.dimensions[i].name] = dims[i];
-    }
-    out = owned_file_->read(dim_map_, /*allow_nulls=*/true);
+    out = file_.read(dim_map_, /*allow_nulls=*/true);
 }
 
 void ExpressionFile::collect_input_paths(std::vector<std::string>& out) const {
     out.push_back(path_);
-}
-
-void ExpressionFile::release_input_files() const {
-    owned_file_.reset();
 }
 
 ExpressionScalar::ExpressionScalar(double value, BinaryMetadata broadcast_meta)
@@ -57,8 +48,6 @@ void ExpressionScalar::compute_row(const std::vector<int64_t>& /*dims*/, std::ve
 }
 
 void ExpressionScalar::collect_input_paths(std::vector<std::string>& /*out*/) const {}
-
-void ExpressionScalar::release_input_files() const {}
 
 namespace {
 
@@ -386,11 +375,6 @@ void ExpressionBinary::collect_input_paths(std::vector<std::string>& out) const 
     rhs_->collect_input_paths(out);
 }
 
-void ExpressionBinary::release_input_files() const {
-    lhs_->release_input_files();
-    rhs_->release_input_files();
-}
-
 ExpressionUnary::ExpressionUnary(Operation operation, std::shared_ptr<ExpressionNode> operand)
     : operation_(operation), operand_(std::move(operand)) {}
 
@@ -404,10 +388,6 @@ void ExpressionUnary::compute_row(const std::vector<int64_t>& /*dims*/, std::vec
 
 void ExpressionUnary::collect_input_paths(std::vector<std::string>& out) const {
     operand_->collect_input_paths(out);
-}
-
-void ExpressionUnary::release_input_files() const {
-    operand_->release_input_files();
 }
 
 ExpressionTernary::ExpressionTernary(Operation operation,
@@ -428,12 +408,6 @@ void ExpressionTernary::collect_input_paths(std::vector<std::string>& out) const
     first_->collect_input_paths(out);
     second_->collect_input_paths(out);
     third_->collect_input_paths(out);
-}
-
-void ExpressionTernary::release_input_files() const {
-    first_->release_input_files();
-    second_->release_input_files();
-    third_->release_input_files();
 }
 
 ExpressionAggregate::Operation ExpressionAggregate::parse_operation(const std::string& name) {
@@ -613,10 +587,6 @@ void ExpressionAggregate::collect_input_paths(std::vector<std::string>& out) con
     operand_->collect_input_paths(out);
 }
 
-void ExpressionAggregate::release_input_files() const {
-    operand_->release_input_files();
-}
-
 ExpressionAggregateAgents::Operation ExpressionAggregateAgents::parse_operation(const std::string& name) {
     return parse_aggregation_operation_name<Operation>(name, "aggregate_agents");
 }
@@ -721,10 +691,6 @@ void ExpressionAggregateAgents::compute_row(const std::vector<int64_t>& dims, st
 
 void ExpressionAggregateAgents::collect_input_paths(std::vector<std::string>& out) const {
     operand_->collect_input_paths(out);
-}
-
-void ExpressionAggregateAgents::release_input_files() const {
-    operand_->release_input_files();
 }
 
 }  // namespace quiver
