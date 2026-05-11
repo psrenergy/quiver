@@ -102,12 +102,12 @@ extension DatabaseQuery on Database {
   /// Executes a parameterized SQL query and returns the first column of the first row as a String.
   /// Returns null if the query returns no rows.
   /// Parameters can be int, double, String, or null.
-  String? queryStringParams(String sql, List<Object?> params) {
+  String? queryStringParams(String sql, List<Object?> parameters) {
     _ensureNotClosed();
 
     final arena = Arena();
     try {
-      final nativeParams = _marshalParams(arena, params);
+      final nativeParams = _marshalParams(arena, parameters);
       final outValue = arena<Pointer<Char>>();
       final outHasValue = arena<Int>();
 
@@ -117,7 +117,7 @@ extension DatabaseQuery on Database {
           sql.toNativeUtf8(allocator: arena).cast(),
           nativeParams.types,
           nativeParams.values,
-          params.length,
+          parameters.length,
           outValue,
           outHasValue,
         ),
@@ -137,12 +137,12 @@ extension DatabaseQuery on Database {
 
   /// Executes a parameterized SQL query and returns the first column of the first row as an int.
   /// Returns null if the query returns no rows.
-  int? queryIntegerParams(String sql, List<Object?> params) {
+  int? queryIntegerParams(String sql, List<Object?> parameters) {
     _ensureNotClosed();
 
     final arena = Arena();
     try {
-      final nativeParams = _marshalParams(arena, params);
+      final nativeParams = _marshalParams(arena, parameters);
       final outValue = arena<Int64>();
       final outHasValue = arena<Int>();
 
@@ -152,7 +152,7 @@ extension DatabaseQuery on Database {
           sql.toNativeUtf8(allocator: arena).cast(),
           nativeParams.types,
           nativeParams.values,
-          params.length,
+          parameters.length,
           outValue,
           outHasValue,
         ),
@@ -170,12 +170,12 @@ extension DatabaseQuery on Database {
 
   /// Executes a parameterized SQL query and returns the first column of the first row as a double.
   /// Returns null if the query returns no rows.
-  double? queryFloatParams(String sql, List<Object?> params) {
+  double? queryFloatParams(String sql, List<Object?> parameters) {
     _ensureNotClosed();
 
     final arena = Arena();
     try {
-      final nativeParams = _marshalParams(arena, params);
+      final nativeParams = _marshalParams(arena, parameters);
       final outValue = arena<Double>();
       final outHasValue = arena<Int>();
 
@@ -185,7 +185,7 @@ extension DatabaseQuery on Database {
           sql.toNativeUtf8(allocator: arena).cast(),
           nativeParams.types,
           nativeParams.values,
-          params.length,
+          parameters.length,
           outValue,
           outHasValue,
         ),
@@ -203,8 +203,8 @@ extension DatabaseQuery on Database {
 
   /// Executes a parameterized SQL query and returns the first column of the first row as a DateTime.
   /// Returns null if the query returns no rows.
-  DateTime? queryDateTimeParams(String sql, List<Object?> params) {
-    final result = queryStringParams(sql, params);
+  DateTime? queryDateTimeParams(String sql, List<Object?> parameters) {
+    final result = queryStringParams(sql, parameters);
     if (result == null) return null;
     return stringToDateTime(result);
   }

@@ -298,7 +298,7 @@ void main() {
   });
 
   group('Query with Multiple Params', () {
-    test('returns value with mixed params', () {
+    test('returns value with mixed parameters', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),

@@ -140,9 +140,9 @@ public:
                     const CSVOptions& options = default_csv_options());
 
     // Query methods - execute SQL and return first row's first column
-    std::optional<std::string> query_string(const std::string& sql, const std::vector<Value>& params = {});
-    std::optional<int64_t> query_integer(const std::string& sql, const std::vector<Value>& params = {});
-    std::optional<double> query_float(const std::string& sql, const std::vector<Value>& params = {});
+    std::optional<std::string> query_string(const std::string& sql, const std::vector<Value>& parameters = {});
+    std::optional<int64_t> query_integer(const std::string& sql, const std::vector<Value>& parameters = {});
+    std::optional<double> query_float(const std::string& sql, const std::vector<Value>& parameters = {});
 
     // Transaction control
     void begin_transaction();
@@ -158,7 +158,7 @@ private:
     void execute_raw(const std::string& sql);
 
     // Internal method for parameterized queries
-    Result execute(const std::string& sql, const std::vector<Value>& params = {});
+    Result execute(const std::string& sql, const std::vector<Value>& parameters = {});
 
     // Internal methods
     void set_version(int64_t version);

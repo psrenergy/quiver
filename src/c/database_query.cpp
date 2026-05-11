@@ -9,31 +9,31 @@
 // Helper to convert C param arrays to std::vector<Value>
 static std::vector<quiver::Value>
 convert_params(const int* param_types, const void* const* param_values, size_t param_count) {
-    std::vector<quiver::Value> params;
-    params.reserve(param_count);
+    std::vector<quiver::Value> parameters;
+    parameters.reserve(param_count);
     for (size_t i = 0; i < param_count; ++i) {
         switch (param_types[i]) {
         case QUIVER_DATA_TYPE_INTEGER:
-            params.emplace_back(*static_cast<const int64_t*>(param_values[i]));
+            parameters.emplace_back(*static_cast<const int64_t*>(param_values[i]));
             break;
         case QUIVER_DATA_TYPE_FLOAT:
-            params.emplace_back(*static_cast<const double*>(param_values[i]));
+            parameters.emplace_back(*static_cast<const double*>(param_values[i]));
             break;
         case QUIVER_DATA_TYPE_STRING:
             if (!param_values[i]) {
                 throw std::runtime_error("Cannot query: parameter at index " + std::to_string(i) +
                                          " has null string value");
             }
-            params.emplace_back(std::string(static_cast<const char*>(param_values[i])));
+            parameters.emplace_back(std::string(static_cast<const char*>(param_values[i])));
             break;
         case QUIVER_DATA_TYPE_NULL:
-            params.emplace_back(nullptr);
+            parameters.emplace_back(nullptr);
             break;
         default:
             throw std::runtime_error("Cannot query: unknown parameter type " + std::to_string(param_types[i]));
         }
     }
-    return params;
+    return parameters;
 }
 
 extern "C" {
@@ -119,8 +119,8 @@ QUIVER_C_API quiver_error_t quiver_database_query_string_params(quiver_database_
         QUIVER_REQUIRE(param_types, param_values);
     }
     try {
-        auto params = convert_params(param_types, param_values, param_count);
-        auto result = db->db.query_string(sql, params);
+        auto parameters = convert_params(param_types, param_values, param_count);
+        auto result = db->db.query_string(sql, parameters);
         if (result.has_value()) {
             *out_value = quiver::string::new_c_str(*result);
             *out_has_value = 1;
@@ -149,8 +149,8 @@ QUIVER_C_API quiver_error_t quiver_database_query_integer_params(quiver_database
     }
 
     try {
-        auto params = convert_params(param_types, param_values, param_count);
-        auto result = db->db.query_integer(sql, params);
+        auto parameters = convert_params(param_types, param_values, param_count);
+        auto result = db->db.query_integer(sql, parameters);
         if (result.has_value()) {
             *out_value = *result;
             *out_has_value = 1;
@@ -177,8 +177,8 @@ QUIVER_C_API quiver_error_t quiver_database_query_float_params(quiver_database_t
         QUIVER_REQUIRE(param_types, param_values);
     }
     try {
-        auto params = convert_params(param_types, param_values, param_count);
-        auto result = db->db.query_float(sql, params);
+        auto parameters = convert_params(param_types, param_values, param_count);
+        auto result = db->db.query_float(sql, parameters);
         if (result.has_value()) {
             *out_value = *result;
             *out_has_value = 1;

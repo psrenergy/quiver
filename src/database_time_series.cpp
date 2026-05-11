@@ -184,20 +184,20 @@ void Database::update_time_series_group(const std::string& collection,
 
     // Insert each row
     for (const auto& row : rows) {
-        std::vector<Value> params;
-        params.emplace_back(id);
-        params.emplace_back(row.at(dim_col));
+        std::vector<Value> parameters;
+        parameters.emplace_back(id);
+        parameters.emplace_back(row.at(dim_col));
 
         for (const auto& col : value_columns) {
             auto it = row.find(col);
             if (it != row.end()) {
-                params.emplace_back(it->second);
+                parameters.emplace_back(it->second);
             } else {
-                params.emplace_back(nullptr);
+                parameters.emplace_back(nullptr);
             }
         }
 
-        execute(insert_sql, params);
+        execute(insert_sql, parameters);
     }
 
     txn.commit();
@@ -378,7 +378,7 @@ void Database::update_time_series_files(const std::string& collection,
     // Build INSERT SQL
     std::string insert_sql = "INSERT INTO " + tsf + " (";
     std::string placeholders;
-    std::vector<Value> params;
+    std::vector<Value> parameters;
 
     bool first = true;
     for (const auto& [col_name, path] : paths) {
@@ -389,15 +389,15 @@ void Database::update_time_series_files(const std::string& collection,
         insert_sql += col_name;
         placeholders += "?";
         if (path) {
-            params.emplace_back(*path);
+            parameters.emplace_back(*path);
         } else {
-            params.emplace_back(nullptr);
+            parameters.emplace_back(nullptr);
         }
         first = false;
     }
     insert_sql += ") VALUES (" + placeholders + ")";
 
-    execute(insert_sql, params);
+    execute(insert_sql, parameters);
 
     txn.commit();
     impl_->logger->info("Updated time series files for collection: {}", collection);

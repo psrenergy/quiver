@@ -134,9 +134,9 @@ deno run --allow-ffi --allow-read --allow-write example.ts
 
 ### Query
 
-- `queryString(sql, params?)` -- Query returning string or null
-- `queryInteger(sql, params?)` -- Query returning integer or null
-- `queryFloat(sql, params?)` -- Query returning float or null
+- `queryString(sql, parameters?)` -- Query returning string or null
+- `queryInteger(sql, parameters?)` -- Query returning integer or null
+- `queryFloat(sql, parameters?)` -- Query returning float or null
 
 Parameters are passed as an array of `number | string | null`.
 

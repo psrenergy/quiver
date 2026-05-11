@@ -388,7 +388,7 @@ void Database::import_csv(const std::string& collection,
                 "INSERT INTO " + collection + " (" + insert_cols + ") VALUES (" + insert_placeholders + ")";
 
             for (size_t row = 0; row < row_count; ++row) {
-                std::vector<Value> params;
+                std::vector<Value> parameters;
                 for (const auto& col_name : db_cols) {
                     std::string cell = read_cell(doc, csv_col_index[col_name], row);
                     const auto* col_def = table_def->get_column(col_name);
@@ -397,45 +397,45 @@ void Database::import_csv(const std::string& collection,
                     auto is_self_fk = is_fk && fk_it->second.to_table == collection;
 
                     if (cell.empty()) {
-                        params.emplace_back(nullptr);
+                        parameters.emplace_back(nullptr);
                         continue;
                     }
 
                     if (is_self_fk) {
-                        params.emplace_back(nullptr);
+                        parameters.emplace_back(nullptr);
                         continue;
                     }
 
                     if (is_fk) {
-                        params.emplace_back(fk_label_maps[col_name].at(cell));
+                        parameters.emplace_back(fk_label_maps[col_name].at(cell));
                         continue;
                     }
 
                     auto type = col_def ? col_def->type : DataType::Text;
 
                     if (type == DataType::DateTime || is_date_time_column(col_name)) {
-                        params.emplace_back(parse_datetime_import(cell, options.date_time_format));
+                        parameters.emplace_back(parse_datetime_import(cell, options.date_time_format));
                         continue;
                     }
 
                     if (type == DataType::Integer) {
                         try {
-                            params.emplace_back(std::stoll(cell));
+                            parameters.emplace_back(std::stoll(cell));
                         } catch (...) {
-                            params.emplace_back(resolve_enum_value(cell, col_name, options));
+                            parameters.emplace_back(resolve_enum_value(cell, col_name, options));
                         }
                         continue;
                     }
 
                     if (type == DataType::Real) {
-                        params.emplace_back(std::stod(cell));
+                        parameters.emplace_back(std::stod(cell));
                         continue;
                     }
 
-                    params.emplace_back(cell);
+                    parameters.emplace_back(cell);
                 }
 
-                execute(insert_sql, params);
+                execute(insert_sql, parameters);
             }
 
             // Second pass: resolve self-referencing FKs
@@ -620,27 +620,27 @@ void Database::import_csv(const std::string& collection,
                 "INSERT INTO " + table_name + " (" + insert_cols + ") VALUES (" + insert_placeholders + ")";
 
             for (size_t row = 0; row < row_count; ++row) {
-                std::vector<Value> params;
+                std::vector<Value> parameters;
                 for (const auto& col_name : db_cols) {
                     auto cell = read_cell(doc, csv_col_index[col_name], row);
 
                     if (col_name == "id") {
-                        params.emplace_back(label_to_id.at(cell));
+                        parameters.emplace_back(label_to_id.at(cell));
                         continue;
                     }
 
                     if (cell.empty()) {
-                        params.emplace_back(nullptr);
+                        parameters.emplace_back(nullptr);
                         continue;
                     }
 
                     if (col_name == "vector_index") {
-                        params.emplace_back(std::stoll(cell));
+                        parameters.emplace_back(std::stoll(cell));
                         continue;
                     }
 
                     if (fk_map.count(col_name) > 0) {
-                        params.emplace_back(fk_label_maps[col_name].at(cell));
+                        parameters.emplace_back(fk_label_maps[col_name].at(cell));
                         continue;
                     }
 
@@ -648,28 +648,28 @@ void Database::import_csv(const std::string& collection,
                     auto is_datetime = (type == DataType::DateTime || is_date_time_column(col_name));
 
                     if (is_datetime) {
-                        params.emplace_back(parse_datetime_import(cell, options.date_time_format));
+                        parameters.emplace_back(parse_datetime_import(cell, options.date_time_format));
                         continue;
                     }
 
                     if (type == DataType::Integer) {
                         try {
-                            params.emplace_back(std::stoll(cell));
+                            parameters.emplace_back(std::stoll(cell));
                         } catch (...) {
-                            params.emplace_back(resolve_enum_value(cell, col_name, options));
+                            parameters.emplace_back(resolve_enum_value(cell, col_name, options));
                         }
                         continue;
                     }
 
                     if (type == DataType::Real) {
-                        params.emplace_back(std::stod(cell));
+                        parameters.emplace_back(std::stod(cell));
                         continue;
                     }
 
-                    params.emplace_back(cell);
+                    parameters.emplace_back(cell);
                 }
 
-                execute(insert_sql, params);
+                execute(insert_sql, parameters);
             }
 
             impl_->commit();
