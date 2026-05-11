@@ -237,7 +237,7 @@ std::string aggregation_operation_label(Op op) {
     case Op::Percentile:
         return "percentile";
     }
-    return "";
+    throw std::runtime_error("Cannot label aggregation: unhandled Operation variant");
 }
 
 template <typename Op>
