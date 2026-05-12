@@ -100,8 +100,10 @@ Base.exp(a::Binary.File) = exp(Expression(a))
 
 function Base.ifelse(condition::Expression, then_value::Expression, else_value::Expression)
     out = Ref{Ptr{C.quiver_expression}}(C_NULL)
-    check(C.quiver_expression_apply_ternary(C.QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE,
-                                            condition.ptr, then_value.ptr, else_value.ptr, out))
+    check(
+        C.quiver_expression_apply_ternary(C.QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE,
+            condition.ptr, then_value.ptr, else_value.ptr, out),
+    )
     return Expression(out[])
 end
 

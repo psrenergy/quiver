@@ -1683,7 +1683,8 @@ end
             else_v = Quiver.Binary.open_file(path_else; mode = 'r')
             try
                 # 2 * ifelse(cond, then, else) + 1
-                result = 2.0 * ifelse(Quiver.Expression(cond), Quiver.Expression(then_v), Quiver.Expression(else_v)) + 1.0
+                result =
+                    2.0 * ifelse(Quiver.Expression(cond), Quiver.Expression(then_v), Quiver.Expression(else_v)) + 1.0
                 Quiver.save(result, path_out)
                 Quiver.close!(result)
             finally
