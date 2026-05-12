@@ -1803,9 +1803,8 @@ TEST_F(ExpressionFixture, IfElseBroadcastsConditionSizeOneDim) {
                                                     .set("labels", {"val1", "val2"}));
     auto md_full = make_simple_metadata();
     // cond at row=1 is [1, 0] for col=1, col=2 respectively (per-column mask)
-    write_qvr(path_a, md_cond, [](const std::vector<int64_t>& dims, size_t /*k*/) {
-        return (dims[1] == 1) ? 1.0 : 0.0;
-    });
+    write_qvr(
+        path_a, md_cond, [](const std::vector<int64_t>& dims, size_t /*k*/) { return (dims[1] == 1) ? 1.0 : 0.0; });
     write_qvr(path_b, md_full, [](const std::vector<int64_t>&, size_t) { return 100.0; });
     write_qvr(path_c, md_full, [](const std::vector<int64_t>&, size_t) { return -100.0; });
 
@@ -1835,10 +1834,9 @@ TEST_F(ExpressionFixture, IfElseBroadcastsLabels) {
                                                       .set("dimensions", {"row", "col"})
                                                       .set("dimension_sizes", {3, 2})
                                                       .set("labels", {"only"}));  // 1 label
-    auto md_full = make_simple_metadata();  // 2 labels
-    write_qvr(path_a, md_single, [](const std::vector<int64_t>& dims, size_t /*k*/) {
-        return (dims[0] == 1) ? 1.0 : 0.0;
-    });
+    auto md_full = make_simple_metadata();                                        // 2 labels
+    write_qvr(
+        path_a, md_single, [](const std::vector<int64_t>& dims, size_t /*k*/) { return (dims[0] == 1) ? 1.0 : 0.0; });
     write_qvr(path_b, md_full, [](const std::vector<int64_t>& dims, size_t k) {
         return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
     });
@@ -1879,8 +1877,7 @@ TEST_F(ExpressionFixture, IfElseUnitMismatchThenElseThrows) {
     auto cond = BinaryFile::open_file(path_a, 'r');
     auto then_v = BinaryFile::open_file(path_b, 'r');
     auto else_v = BinaryFile::open_file(path_c, 'r');
-    EXPECT_THROW({ auto e = ifelse(Expression(cond), Expression(then_v), Expression(else_v)); },
-                 std::runtime_error);
+    EXPECT_THROW({ auto e = ifelse(Expression(cond), Expression(then_v), Expression(else_v)); }, std::runtime_error);
 }
 
 TEST_F(ExpressionFixture, IfElseConditionUnitIgnored) {
@@ -1927,16 +1924,13 @@ TEST_F(ExpressionFixture, IfElseShapeMismatchThrows) {
     auto cond = BinaryFile::open_file(path_a, 'r');
     auto then_v = BinaryFile::open_file(path_b, 'r');
     auto else_v = BinaryFile::open_file(path_c, 'r');
-    EXPECT_THROW({ auto e = ifelse(Expression(cond), Expression(then_v), Expression(else_v)); },
-                 std::runtime_error);
+    EXPECT_THROW({ auto e = ifelse(Expression(cond), Expression(then_v), Expression(else_v)); }, std::runtime_error);
 }
 
 TEST_F(ExpressionFixture, IfElseChainsWithBinary) {
     // Verify ifelse composes with binary ops: 2 * ifelse(cond, a, b) + 1
     auto md = make_simple_metadata();
-    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t /*k*/) {
-        return (dims[0] == 1) ? 1.0 : 0.0;
-    });
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t /*k*/) { return (dims[0] == 1) ? 1.0 : 0.0; });
     write_qvr(path_b, md, [](const std::vector<int64_t>&, size_t) { return 10.0; });
     write_qvr(path_c, md, [](const std::vector<int64_t>&, size_t) { return 20.0; });
 

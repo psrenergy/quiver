@@ -1343,9 +1343,9 @@ TEST_F(ExpressionCApiFixture, ApplyTernaryIfElse) {
     auto* then_v = expr_from_file(path_b);
     auto* else_v = expr_from_file(path_c);
     quiver_expression_t* result = nullptr;
-    ASSERT_EQ(quiver_expression_apply_ternary(
-                  QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, &result),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, &result),
+        QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(cond);
     quiver_expression_close(then_v);
@@ -1371,9 +1371,9 @@ TEST_F(ExpressionCApiFixture, ApplyTernaryIfElsePropagatesNaN) {
     auto* then_v = expr_from_file(path_b);
     auto* else_v = expr_from_file(path_c);
     quiver_expression_t* result = nullptr;
-    ASSERT_EQ(quiver_expression_apply_ternary(
-                  QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, &result),
-              QUIVER_OK);
+    ASSERT_EQ(
+        quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, &result),
+        QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(cond);
     quiver_expression_close(then_v);
@@ -1409,14 +1409,12 @@ TEST_F(ExpressionCApiFixture, ApplyTernaryNullArguments) {
     auto* else_v = expr_from_file(path_c);
 
     quiver_expression_t* out = nullptr;
-    EXPECT_EQ(quiver_expression_apply_ternary(
-                  QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, nullptr, then_v, else_v, &out),
+    EXPECT_EQ(
+        quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, nullptr, then_v, else_v, &out),
+        QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, nullptr, else_v, &out),
               QUIVER_ERROR);
-    EXPECT_EQ(quiver_expression_apply_ternary(
-                  QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, nullptr, else_v, &out),
-              QUIVER_ERROR);
-    EXPECT_EQ(quiver_expression_apply_ternary(
-                  QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, nullptr, &out),
+    EXPECT_EQ(quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, nullptr, &out),
               QUIVER_ERROR);
     EXPECT_EQ(
         quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, nullptr),
@@ -1440,9 +1438,8 @@ TEST_F(ExpressionCApiFixture, ApplyTernaryUnitMismatch) {
     auto* then_v = expr_from_file(path_b);
     auto* else_v = expr_from_file(path_c);
     quiver_expression_t* out = nullptr;
-    EXPECT_EQ(
-        quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, &out),
-        QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, &out),
+              QUIVER_ERROR);
     const char* msg = quiver_get_last_error();
     ASSERT_NE(msg, nullptr);
     EXPECT_NE(std::string(msg).find("units differ"), std::string::npos);
@@ -1476,9 +1473,8 @@ TEST_F(ExpressionCApiFixture, ApplyTernaryShapeMismatch) {
     auto* then_v = expr_from_file(path_b);
     auto* else_v = expr_from_file(path_c);
     quiver_expression_t* out = nullptr;
-    EXPECT_EQ(
-        quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, &out),
-        QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, &out),
+              QUIVER_ERROR);
 
     quiver_expression_close(cond);
     quiver_expression_close(then_v);

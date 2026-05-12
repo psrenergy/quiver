@@ -75,8 +75,7 @@ QUIVER_API Expression sqrt(const Expression& operand);
 QUIVER_API Expression log(const Expression& operand);
 QUIVER_API Expression exp(const Expression& operand);
 
-QUIVER_API Expression
-ifelse(const Expression& condition, const Expression& then_value, const Expression& else_value);
+QUIVER_API Expression ifelse(const Expression& condition, const Expression& then_value, const Expression& else_value);
 
 }  // namespace quiver
 

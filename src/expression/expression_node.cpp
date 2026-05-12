@@ -546,8 +546,7 @@ ExpressionTernary::ExpressionTernary(Operation operation,
     validate_shape_compatibility(condition_meta, else_meta);
 
     auto output_labels = compute_ternary_output_labels(condition_meta.labels, then_meta.labels, else_meta.labels);
-    broadcast_meta_ =
-        build_ternary_broadcast_metadata(condition_meta, then_meta, else_meta, std::move(output_labels));
+    broadcast_meta_ = build_ternary_broadcast_metadata(condition_meta, then_meta, else_meta, std::move(output_labels));
     broadcast_meta_.validate();
 
     const auto& out_dims = broadcast_meta_.dimensions;
