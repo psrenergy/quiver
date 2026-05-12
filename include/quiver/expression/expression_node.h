@@ -107,22 +107,44 @@ private:
 
 class QUIVER_API ExpressionTernary final : public ExpressionNode {
 public:
-    enum class Operation { Unspecified };
+    enum class Operation { IfElse };
 
     ExpressionTernary(Operation operation,
-                      std::shared_ptr<ExpressionNode> first,
-                      std::shared_ptr<ExpressionNode> second,
-                      std::shared_ptr<ExpressionNode> third);
+                      std::shared_ptr<ExpressionNode> condition,
+                      std::shared_ptr<ExpressionNode> then_value,
+                      std::shared_ptr<ExpressionNode> else_value);
 
     const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
     void collect_input_files(std::vector<BinaryFile*>& out) const override;
 
 private:
+    static double apply(Operation operation, double condition, double then_value, double else_value);
+
     Operation operation_;
-    std::shared_ptr<ExpressionNode> first_;
-    std::shared_ptr<ExpressionNode> second_;
-    std::shared_ptr<ExpressionNode> third_;
+    std::shared_ptr<ExpressionNode> condition_;
+    std::shared_ptr<ExpressionNode> then_value_;
+    std::shared_ptr<ExpressionNode> else_value_;
+    BinaryMetadata broadcast_meta_;
+
+    std::vector<int64_t> condition_dim_sizes_;
+    std::vector<int64_t> then_dim_sizes_;
+    std::vector<int64_t> else_dim_sizes_;
+
+    std::vector<int> condition_to_out_;
+    std::vector<int> then_to_out_;
+    std::vector<int> else_to_out_;
+
+    size_t condition_label_count_ = 0;
+    size_t then_label_count_ = 0;
+    size_t else_label_count_ = 0;
+
+    mutable std::vector<int64_t> condition_dims_buf_;
+    mutable std::vector<int64_t> then_dims_buf_;
+    mutable std::vector<int64_t> else_dims_buf_;
+    mutable std::vector<double> condition_buf_;
+    mutable std::vector<double> then_buf_;
+    mutable std::vector<double> else_buf_;
 };
 
 class QUIVER_API ExpressionAggregate final : public ExpressionNode {

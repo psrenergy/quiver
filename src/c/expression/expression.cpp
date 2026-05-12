@@ -39,6 +39,17 @@ quiver::Expression dispatch_unary(quiver_expression_unary_operation_t operation,
     throw std::runtime_error("Cannot apply: unknown expression unary operation");
 }
 
+quiver::Expression dispatch_ternary(quiver_expression_ternary_operation_t operation,
+                                    const quiver::Expression& condition,
+                                    const quiver::Expression& then_value,
+                                    const quiver::Expression& else_value) {
+    switch (operation) {
+    case QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE:
+        return quiver::ifelse(condition, then_value, else_value);
+    }
+    throw std::runtime_error("Cannot apply: unknown expression ternary operation");
+}
+
 }  // namespace
 
 extern "C" {
@@ -130,6 +141,26 @@ QUIVER_C_API quiver_error_t quiver_expression_apply_unary(quiver_expression_unar
 
     try {
         *out = new quiver_expression(dispatch_unary(operation, operand->expression));
+        return QUIVER_OK;
+    } catch (const std::bad_alloc&) {
+        quiver_set_last_error("Memory allocation failed");
+        return QUIVER_ERROR;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_expression_apply_ternary(quiver_expression_ternary_operation_t operation,
+                                                            quiver_expression_t* condition,
+                                                            quiver_expression_t* then_value,
+                                                            quiver_expression_t* else_value,
+                                                            quiver_expression_t** out) {
+    QUIVER_REQUIRE(condition, then_value, else_value, out);
+
+    try {
+        *out = new quiver_expression(
+            dispatch_ternary(operation, condition->expression, then_value->expression, else_value->expression));
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
         quiver_set_last_error("Memory allocation failed");

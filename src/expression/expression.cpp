@@ -148,4 +148,11 @@ Expression exp(const Expression& operand) {
     return Expression(std::make_shared<ExpressionUnary>(ExpressionUnary::Operation::Exp, operand.node_));
 }
 
+Expression ifelse(const Expression& condition, const Expression& then_value, const Expression& else_value) {
+    return Expression(std::make_shared<ExpressionTernary>(ExpressionTernary::Operation::IfElse,
+                                                          condition.node_,
+                                                          then_value.node_,
+                                                          else_value.node_));
+}
+
 }  // namespace quiver

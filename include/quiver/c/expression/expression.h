@@ -29,6 +29,11 @@ typedef enum {
     QUIVER_EXPRESSION_UNARY_OPERATION_EXP = 4,
 } quiver_expression_unary_operation_t;
 
+// Ternary operation kind
+typedef enum {
+    QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE = 0,
+} quiver_expression_ternary_operation_t;
+
 // Construction
 QUIVER_C_API quiver_error_t quiver_expression_from_file(quiver_binary_file_t* file, quiver_expression_t** out);
 
@@ -51,6 +56,11 @@ QUIVER_C_API quiver_error_t quiver_expression_apply_scalar_left(quiver_expressio
 QUIVER_C_API quiver_error_t quiver_expression_apply_unary(quiver_expression_unary_operation_t operation,
                                                           quiver_expression_t* operand,
                                                           quiver_expression_t** out);
+QUIVER_C_API quiver_error_t quiver_expression_apply_ternary(quiver_expression_ternary_operation_t operation,
+                                                            quiver_expression_t* condition,
+                                                            quiver_expression_t* then_value,
+                                                            quiver_expression_t* else_value,
+                                                            quiver_expression_t** out);
 
 // Materialization
 QUIVER_C_API quiver_error_t quiver_expression_save(quiver_expression_t* expression, const char* path);

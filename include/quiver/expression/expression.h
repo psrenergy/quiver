@@ -48,6 +48,8 @@ private:
     friend Expression log(const Expression&);
     friend Expression exp(const Expression&);
 
+    friend Expression ifelse(const Expression&, const Expression&, const Expression&);
+
     std::shared_ptr<ExpressionNode> node_;
 };
 
@@ -72,6 +74,9 @@ QUIVER_API Expression abs(const Expression& operand);
 QUIVER_API Expression sqrt(const Expression& operand);
 QUIVER_API Expression log(const Expression& operand);
 QUIVER_API Expression exp(const Expression& operand);
+
+QUIVER_API Expression
+ifelse(const Expression& condition, const Expression& then_value, const Expression& else_value);
 
 }  // namespace quiver
 
