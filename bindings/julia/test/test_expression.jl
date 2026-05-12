@@ -1502,6 +1502,205 @@ end
             cleanup(path_a, path_out)
         end
     end
+
+    @testset "ifelse selects by condition" begin
+        path_cond, path_then, path_else, path_out =
+            make_path("cond"), make_path("then"), make_path("else"), make_path("out")
+        try
+            write_fixture(path_cond, (r, _c, _k) -> r == 1 ? 1.0 : 0.0)
+            write_fixture(path_then, (_r, _c, _k) -> 10.0)
+            write_fixture(path_else, (_r, _c, _k) -> 20.0)
+            cond = Quiver.Binary.open_file(path_cond; mode = 'r')
+            then_v = Quiver.Binary.open_file(path_then; mode = 'r')
+            else_v = Quiver.Binary.open_file(path_else; mode = 'r')
+            try
+                result = ifelse(Quiver.Expression(cond), Quiver.Expression(then_v), Quiver.Expression(else_v))
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            finally
+                Quiver.Binary.close!(cond)
+                Quiver.Binary.close!(then_v)
+                Quiver.Binary.close!(else_v)
+            end
+            vc = read_all_cells(path_cond)
+            vo = read_all_cells(path_out)
+            for i in eachindex(vo)
+                @test vo[i] == (vc[i] != 0.0 ? 10.0 : 20.0)
+            end
+        finally
+            cleanup(path_cond, path_then, path_else, path_out)
+        end
+    end
+
+    @testset "ifelse propagates NaN in condition" begin
+        path_cond, path_then, path_else, path_out =
+            make_path("cond"), make_path("then"), make_path("else"), make_path("out")
+        try
+            write_fixture(path_cond, (r, c, _k) -> (r == 1 && c == 1) ? NaN : 1.0)
+            write_fixture(path_then, (_r, _c, _k) -> 7.0)
+            write_fixture(path_else, (_r, _c, _k) -> -7.0)
+            cond = Quiver.Binary.open_file(path_cond; mode = 'r')
+            then_v = Quiver.Binary.open_file(path_then; mode = 'r')
+            else_v = Quiver.Binary.open_file(path_else; mode = 'r')
+            try
+                result = ifelse(Quiver.Expression(cond), Quiver.Expression(then_v), Quiver.Expression(else_v))
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            finally
+                Quiver.Binary.close!(cond)
+                Quiver.Binary.close!(then_v)
+                Quiver.Binary.close!(else_v)
+            end
+            file = Quiver.Binary.open_file(path_out; mode = 'r')
+            cell_11 = Quiver.Binary.read(file; allow_nulls = true, row = 1, col = 1)
+            cell_22 = Quiver.Binary.read(file; row = 2, col = 2)
+            Quiver.Binary.close!(file)
+            @test all(isnan, cell_11)
+            @test cell_22 == [7.0, 7.0]
+        finally
+            cleanup(path_cond, path_then, path_else, path_out)
+        end
+    end
+
+    @testset "ifelse unselected-branch NaN does not propagate" begin
+        path_cond, path_then, path_else, path_out =
+            make_path("cond"), make_path("then"), make_path("else"), make_path("out")
+        try
+            write_fixture(path_cond, (_r, _c, _k) -> 1.0)
+            write_fixture(path_then, (_r, _c, _k) -> 42.0)
+            write_fixture(path_else, (_r, _c, _k) -> NaN)
+            cond = Quiver.Binary.open_file(path_cond; mode = 'r')
+            then_v = Quiver.Binary.open_file(path_then; mode = 'r')
+            else_v = Quiver.Binary.open_file(path_else; mode = 'r')
+            try
+                result = ifelse(Quiver.Expression(cond), Quiver.Expression(then_v), Quiver.Expression(else_v))
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            finally
+                Quiver.Binary.close!(cond)
+                Quiver.Binary.close!(then_v)
+                Quiver.Binary.close!(else_v)
+            end
+            @test all(v -> v == 42.0, read_all_cells(path_out))
+        finally
+            cleanup(path_cond, path_then, path_else, path_out)
+        end
+    end
+
+    @testset "ifelse condition unit ignored" begin
+        path_cond, path_then, path_else, path_out =
+            make_path("cond"), make_path("then"), make_path("else"), make_path("out")
+        try
+            md_cond = make_metadata(; unit = "flag")  # cond.unit = flag
+            md_branch = make_metadata(; unit = "MW")  # then/else MW
+            write_fixture_with_metadata(path_cond, md_cond, (_r, _c, _k) -> 1.0)
+            write_fixture_with_metadata(path_then, md_branch, (_r, _c, _k) -> 10.0)
+            write_fixture_with_metadata(path_else, md_branch, (_r, _c, _k) -> 20.0)
+            cond = Quiver.Binary.open_file(path_cond; mode = 'r')
+            then_v = Quiver.Binary.open_file(path_then; mode = 'r')
+            else_v = Quiver.Binary.open_file(path_else; mode = 'r')
+            try
+                result = ifelse(Quiver.Expression(cond), Quiver.Expression(then_v), Quiver.Expression(else_v))
+                meta = Quiver.get_metadata(result)
+                @test Quiver.Binary.get_unit(meta) == "MW"
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            finally
+                Quiver.Binary.close!(cond)
+                Quiver.Binary.close!(then_v)
+                Quiver.Binary.close!(else_v)
+            end
+            @test all(v -> v == 10.0, read_all_cells(path_out))
+        finally
+            cleanup(path_cond, path_then, path_else, path_out)
+        end
+    end
+
+    @testset "ifelse unit mismatch between then and else throws" begin
+        path_cond, path_then, path_else = make_path("cond"), make_path("then"), make_path("else")
+        try
+            md = make_metadata(; unit = "MW")
+            md_other = make_metadata(; unit = "kWh")
+            write_fixture_with_metadata(path_cond, md, (_r, _c, _k) -> 1.0)
+            write_fixture_with_metadata(path_then, md, (_r, _c, _k) -> 1.0)
+            write_fixture_with_metadata(path_else, md_other, (_r, _c, _k) -> 1.0)
+            cond = Quiver.Binary.open_file(path_cond; mode = 'r')
+            then_v = Quiver.Binary.open_file(path_then; mode = 'r')
+            else_v = Quiver.Binary.open_file(path_else; mode = 'r')
+            try
+                @test_throws Quiver.DatabaseException ifelse(
+                    Quiver.Expression(cond), Quiver.Expression(then_v), Quiver.Expression(else_v),
+                )
+            finally
+                Quiver.Binary.close!(cond)
+                Quiver.Binary.close!(then_v)
+                Quiver.Binary.close!(else_v)
+            end
+        finally
+            cleanup(path_cond, path_then, path_else)
+        end
+    end
+
+    @testset "ifelse on Binary.File shortcuts" begin
+        path_cond, path_then, path_else, path_out =
+            make_path("cond"), make_path("then"), make_path("else"), make_path("out")
+        try
+            write_fixture(path_cond, (r, _c, _k) -> r == 1 ? 1.0 : 0.0)
+            write_fixture(path_then, (_r, _c, _k) -> 100.0)
+            write_fixture(path_else, (_r, _c, _k) -> 200.0)
+            cond = Quiver.Binary.open_file(path_cond; mode = 'r')
+            then_v = Quiver.Binary.open_file(path_then; mode = 'r')
+            else_v = Quiver.Binary.open_file(path_else; mode = 'r')
+            try
+                # All three as Binary.File
+                result = ifelse(cond, then_v, else_v)
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            finally
+                Quiver.Binary.close!(cond)
+                Quiver.Binary.close!(then_v)
+                Quiver.Binary.close!(else_v)
+            end
+            vc = read_all_cells(path_cond)
+            vo = read_all_cells(path_out)
+            for i in eachindex(vo)
+                @test vo[i] == (vc[i] != 0.0 ? 100.0 : 200.0)
+            end
+        finally
+            cleanup(path_cond, path_then, path_else, path_out)
+        end
+    end
+
+    @testset "ifelse chains with binary ops" begin
+        path_cond, path_then, path_else, path_out =
+            make_path("cond"), make_path("then"), make_path("else"), make_path("out")
+        try
+            write_fixture(path_cond, (r, _c, _k) -> r == 1 ? 1.0 : 0.0)
+            write_fixture(path_then, (_r, _c, _k) -> 10.0)
+            write_fixture(path_else, (_r, _c, _k) -> 20.0)
+            cond = Quiver.Binary.open_file(path_cond; mode = 'r')
+            then_v = Quiver.Binary.open_file(path_then; mode = 'r')
+            else_v = Quiver.Binary.open_file(path_else; mode = 'r')
+            try
+                # 2 * ifelse(cond, then, else) + 1
+                result = 2.0 * ifelse(Quiver.Expression(cond), Quiver.Expression(then_v), Quiver.Expression(else_v)) + 1.0
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            finally
+                Quiver.Binary.close!(cond)
+                Quiver.Binary.close!(then_v)
+                Quiver.Binary.close!(else_v)
+            end
+            vc = read_all_cells(path_cond)
+            vo = read_all_cells(path_out)
+            for i in eachindex(vo)
+                base = vc[i] != 0.0 ? 10.0 : 20.0
+                @test vo[i] == 2.0 * base + 1.0
+            end
+        finally
+            cleanup(path_cond, path_then, path_else, path_out)
+        end
+    end
 end
 
 end

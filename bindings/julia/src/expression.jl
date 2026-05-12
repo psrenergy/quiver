@@ -98,6 +98,28 @@ Base.sqrt(a::Binary.File) = sqrt(Expression(a))
 Base.log(a::Binary.File) = log(Expression(a))
 Base.exp(a::Binary.File) = exp(Expression(a))
 
+function Base.ifelse(condition::Expression, then_value::Expression, else_value::Expression)
+    out = Ref{Ptr{C.quiver_expression}}(C_NULL)
+    check(C.quiver_expression_apply_ternary(C.QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE,
+                                            condition.ptr, then_value.ptr, else_value.ptr, out))
+    return Expression(out[])
+end
+
+Base.ifelse(condition::Binary.File, then_value::Binary.File, else_value::Binary.File) =
+    ifelse(Expression(condition), Expression(then_value), Expression(else_value))
+Base.ifelse(condition::Binary.File, then_value::Expression, else_value::Expression) =
+    ifelse(Expression(condition), then_value, else_value)
+Base.ifelse(condition::Expression, then_value::Binary.File, else_value::Expression) =
+    ifelse(condition, Expression(then_value), else_value)
+Base.ifelse(condition::Expression, then_value::Expression, else_value::Binary.File) =
+    ifelse(condition, then_value, Expression(else_value))
+Base.ifelse(condition::Binary.File, then_value::Binary.File, else_value::Expression) =
+    ifelse(Expression(condition), Expression(then_value), else_value)
+Base.ifelse(condition::Binary.File, then_value::Expression, else_value::Binary.File) =
+    ifelse(Expression(condition), then_value, Expression(else_value))
+Base.ifelse(condition::Expression, then_value::Binary.File, else_value::Binary.File) =
+    ifelse(condition, Expression(then_value), Expression(else_value))
+
 function save(e::Expression, path::String)
     check(C.quiver_expression_save(e.ptr, path))
     return nothing

@@ -1329,3 +1329,158 @@ TEST_F(ExpressionCApiFixture, UnaryNullArguments) {
 
     quiver_expression_close(a);
 }
+
+// ============================================================================
+// Ternary operations (ifelse)
+// ============================================================================
+
+TEST_F(ExpressionCApiFixture, ApplyTernaryIfElse) {
+    write_fixture(path_a, [](int r, int /*c*/, int /*k*/) { return (r == 1) ? 1.0 : 0.0; });
+    write_fixture(path_b, [](int /*r*/, int /*c*/, int /*k*/) { return 10.0; });
+    write_fixture(path_c, [](int /*r*/, int /*c*/, int /*k*/) { return 20.0; });
+
+    auto* cond = expr_from_file(path_a);
+    auto* then_v = expr_from_file(path_b);
+    auto* else_v = expr_from_file(path_c);
+    quiver_expression_t* result = nullptr;
+    ASSERT_EQ(quiver_expression_apply_ternary(
+                  QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, &result),
+              QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(cond);
+    quiver_expression_close(then_v);
+    quiver_expression_close(else_v);
+    quiver_expression_close(result);
+
+    auto vc = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vc.size(), vo.size());
+    for (size_t i = 0; i < vo.size(); ++i) {
+        const double expected = (vc[i] != 0.0) ? 10.0 : 20.0;
+        EXPECT_DOUBLE_EQ(vo[i], expected);
+    }
+}
+
+TEST_F(ExpressionCApiFixture, ApplyTernaryIfElsePropagatesNaN) {
+    const double nan_v = std::numeric_limits<double>::quiet_NaN();
+    write_fixture(path_a, [&](int r, int c, int /*k*/) { return (r == 1 && c == 1) ? nan_v : 1.0; });
+    write_fixture(path_b, [](int, int, int) { return 7.0; });
+    write_fixture(path_c, [](int, int, int) { return -7.0; });
+
+    auto* cond = expr_from_file(path_a);
+    auto* then_v = expr_from_file(path_b);
+    auto* else_v = expr_from_file(path_c);
+    quiver_expression_t* result = nullptr;
+    ASSERT_EQ(quiver_expression_apply_ternary(
+                  QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, &result),
+              QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(cond);
+    quiver_expression_close(then_v);
+    quiver_expression_close(else_v);
+    quiver_expression_close(result);
+
+    // Re-read output allowing nulls so NaN cells don't trip the reader.
+    quiver_binary_file_t* f = nullptr;
+    ASSERT_EQ(quiver_binary_file_open_file(path_out.c_str(), 'r', nullptr, &f), QUIVER_OK);
+    const char* dim_names[] = {"row", "col"};
+    int64_t cell_11[] = {1, 1};
+    int64_t cell_22[] = {2, 2};
+    double* data = nullptr;
+    size_t count = 0;
+    ASSERT_EQ(quiver_binary_file_read(f, dim_names, cell_11, 2, /*allow_nulls=*/1, &data, &count), QUIVER_OK);
+    EXPECT_TRUE(std::isnan(data[0]));
+    EXPECT_TRUE(std::isnan(data[1]));
+    quiver_binary_file_free_float_array(data);
+
+    ASSERT_EQ(quiver_binary_file_read(f, dim_names, cell_22, 2, /*allow_nulls=*/0, &data, &count), QUIVER_OK);
+    EXPECT_DOUBLE_EQ(data[0], 7.0);
+    EXPECT_DOUBLE_EQ(data[1], 7.0);
+    quiver_binary_file_free_float_array(data);
+    quiver_binary_file_close(f);
+}
+
+TEST_F(ExpressionCApiFixture, ApplyTernaryNullArguments) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    write_fixture(path_b, [](int, int, int) { return 2.0; });
+    write_fixture(path_c, [](int, int, int) { return 3.0; });
+    auto* cond = expr_from_file(path_a);
+    auto* then_v = expr_from_file(path_b);
+    auto* else_v = expr_from_file(path_c);
+
+    quiver_expression_t* out = nullptr;
+    EXPECT_EQ(quiver_expression_apply_ternary(
+                  QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, nullptr, then_v, else_v, &out),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_apply_ternary(
+                  QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, nullptr, else_v, &out),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_apply_ternary(
+                  QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, nullptr, &out),
+              QUIVER_ERROR);
+    EXPECT_EQ(
+        quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, nullptr),
+        QUIVER_ERROR);
+
+    quiver_expression_close(cond);
+    quiver_expression_close(then_v);
+    quiver_expression_close(else_v);
+}
+
+TEST_F(ExpressionCApiFixture, ApplyTernaryUnitMismatch) {
+    auto* md_mw = make_metadata(3, 2, "MW", {"val1", "val2"});
+    auto* md_kwh = make_metadata(3, 2, "kWh", {"val1", "val2"});
+    write_fixture_with_metadata(path_a, md_mw, [](int, int, int) { return 1.0; });
+    write_fixture_with_metadata(path_b, md_mw, [](int, int, int) { return 2.0; });
+    write_fixture_with_metadata(path_c, md_kwh, [](int, int, int) { return 3.0; });
+    quiver_binary_metadata_free(md_mw);
+    quiver_binary_metadata_free(md_kwh);
+
+    auto* cond = expr_from_file(path_a);
+    auto* then_v = expr_from_file(path_b);
+    auto* else_v = expr_from_file(path_c);
+    quiver_expression_t* out = nullptr;
+    EXPECT_EQ(
+        quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, &out),
+        QUIVER_ERROR);
+    const char* msg = quiver_get_last_error();
+    ASSERT_NE(msg, nullptr);
+    EXPECT_NE(std::string(msg).find("units differ"), std::string::npos);
+
+    quiver_expression_close(cond);
+    quiver_expression_close(then_v);
+    quiver_expression_close(else_v);
+}
+
+TEST_F(ExpressionCApiFixture, ApplyTernaryShapeMismatch) {
+    auto* md_3x2 = make_metadata(3, 2, "MW", {"val1", "val2"});
+    auto* md_4x2 = make_metadata(4, 2, "MW", {"val1", "val2"});
+    write_fixture_with_metadata(path_a, md_3x2, [](int, int, int) { return 1.0; });
+    write_fixture_with_metadata(path_b, md_3x2, [](int, int, int) { return 2.0; });
+    // path_c uses 4x2 (incompatible with 3x2)
+    quiver_binary_file_t* f = nullptr;
+    ASSERT_EQ(quiver_binary_file_open_file(path_c.c_str(), 'w', md_4x2, &f), QUIVER_OK);
+    const char* dim_names[] = {"row", "col"};
+    for (int64_t r = 1; r <= 4; ++r) {
+        for (int64_t c = 1; c <= 2; ++c) {
+            int64_t dvs[] = {r, c};
+            double data[] = {3.0, 3.0};
+            ASSERT_EQ(quiver_binary_file_write(f, dim_names, dvs, 2, data, 2), QUIVER_OK);
+        }
+    }
+    ASSERT_EQ(quiver_binary_file_close(f), QUIVER_OK);
+    quiver_binary_metadata_free(md_3x2);
+    quiver_binary_metadata_free(md_4x2);
+
+    auto* cond = expr_from_file(path_a);
+    auto* then_v = expr_from_file(path_b);
+    auto* else_v = expr_from_file(path_c);
+    quiver_expression_t* out = nullptr;
+    EXPECT_EQ(
+        quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, &out),
+        QUIVER_ERROR);
+
+    quiver_expression_close(cond);
+    quiver_expression_close(then_v);
+    quiver_expression_close(else_v);
+}

@@ -654,6 +654,10 @@ end
     QUIVER_EXPRESSION_UNARY_OPERATION_EXP = 4
 end
 
+@cenum quiver_expression_ternary_operation_t::UInt32 begin
+    QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE = 0
+end
+
 function quiver_expression_from_file(file, out)
     @ccall libquiver_c.quiver_expression_from_file(file::Ptr{quiver_binary_file_t}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
 end
@@ -676,6 +680,10 @@ end
 
 function quiver_expression_apply_unary(operation, operand, out)
     @ccall libquiver_c.quiver_expression_apply_unary(operation::quiver_expression_unary_operation_t, operand::Ptr{quiver_expression_t}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
+end
+
+function quiver_expression_apply_ternary(operation, condition, then_value, else_value, out)
+    @ccall libquiver_c.quiver_expression_apply_ternary(operation::quiver_expression_ternary_operation_t, condition::Ptr{quiver_expression_t}, then_value::Ptr{quiver_expression_t}, else_value::Ptr{quiver_expression_t}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
 end
 
 function quiver_expression_save(expression, path)
