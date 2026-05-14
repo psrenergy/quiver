@@ -53,6 +53,38 @@ quiver::Expression dispatch_ternary(quiver_expression_ternary_operation_t operat
     throw std::runtime_error("Cannot apply: unknown expression ternary operation");
 }
 
+quiver::ExpressionAggregate::Operation from_c(quiver_expression_aggregate_operation_t op) {
+    switch (op) {
+    case QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM:
+        return quiver::ExpressionAggregate::Operation::Sum;
+    case QUIVER_EXPRESSION_AGGREGATE_OPERATION_MEAN:
+        return quiver::ExpressionAggregate::Operation::Mean;
+    case QUIVER_EXPRESSION_AGGREGATE_OPERATION_MIN:
+        return quiver::ExpressionAggregate::Operation::Min;
+    case QUIVER_EXPRESSION_AGGREGATE_OPERATION_MAX:
+        return quiver::ExpressionAggregate::Operation::Max;
+    case QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE:
+        return quiver::ExpressionAggregate::Operation::Percentile;
+    }
+    throw std::runtime_error("Cannot aggregate: unknown operation enum value");
+}
+
+quiver::ExpressionAggregateAgents::Operation from_c(quiver_expression_aggregate_agents_operation_t op) {
+    switch (op) {
+    case QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM:
+        return quiver::ExpressionAggregateAgents::Operation::Sum;
+    case QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MEAN:
+        return quiver::ExpressionAggregateAgents::Operation::Mean;
+    case QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MIN:
+        return quiver::ExpressionAggregateAgents::Operation::Min;
+    case QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MAX:
+        return quiver::ExpressionAggregateAgents::Operation::Max;
+    case QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_PERCENTILE:
+        return quiver::ExpressionAggregateAgents::Operation::Percentile;
+    }
+    throw std::runtime_error("Cannot aggregate_agents: unknown operation enum value");
+}
+
 }  // namespace
 
 extern "C" {
@@ -207,14 +239,14 @@ QUIVER_C_API quiver_error_t quiver_expression_get_metadata(quiver_expression_t* 
 
 QUIVER_C_API quiver_error_t quiver_expression_aggregate(quiver_expression_t* expression,
                                                         const char* dimension,
-                                                        const char* operation,
+                                                        quiver_expression_aggregate_operation_t operation,
                                                         const double* parameter,
                                                         quiver_expression_t** out) {
-    QUIVER_REQUIRE(expression, dimension, operation, out);
+    QUIVER_REQUIRE(expression, dimension, out);
 
     try {
         std::optional<double> p = parameter ? std::optional<double>(*parameter) : std::nullopt;
-        *out = new quiver_expression(expression->expression.aggregate(dimension, operation, p));
+        *out = new quiver_expression(expression->expression.aggregate(dimension, from_c(operation), p));
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
         quiver_set_last_error("Memory allocation failed");
@@ -226,14 +258,14 @@ QUIVER_C_API quiver_error_t quiver_expression_aggregate(quiver_expression_t* exp
 }
 
 QUIVER_C_API quiver_error_t quiver_expression_aggregate_agents(quiver_expression_t* expression,
-                                                               const char* operation,
+                                                               quiver_expression_aggregate_agents_operation_t operation,
                                                                const double* parameter,
                                                                quiver_expression_t** out) {
-    QUIVER_REQUIRE(expression, operation, out);
+    QUIVER_REQUIRE(expression, out);
 
     try {
         std::optional<double> p = parameter ? std::optional<double>(*parameter) : std::nullopt;
-        *out = new quiver_expression(expression->expression.aggregate_agents(operation, p));
+        *out = new quiver_expression(expression->expression.aggregate_agents(from_c(operation), p));
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
         quiver_set_last_error("Memory allocation failed");

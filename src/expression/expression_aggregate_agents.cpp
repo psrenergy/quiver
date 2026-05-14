@@ -13,10 +13,6 @@
 
 namespace quiver {
 
-ExpressionAggregateAgents::Operation ExpressionAggregateAgents::parse_operation(const std::string& name) {
-    return parse_aggregation_operation_name<Operation>(name, "aggregate_agents");
-}
-
 ExpressionAggregateAgents::ExpressionAggregateAgents(Operation operation,
                                                      std::shared_ptr<ExpressionNode> operand,
                                                      std::optional<double> parameter)

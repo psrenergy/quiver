@@ -24,15 +24,14 @@ const BinaryMetadata& Expression::metadata() const {
 }
 
 Expression Expression::aggregate(const std::string& dimension,
-                                 const std::string& operation,
+                                 ExpressionAggregate::Operation operation,
                                  std::optional<double> parameter) const {
-    auto op = ExpressionAggregate::parse_operation(operation);
-    return Expression(std::make_shared<ExpressionAggregate>(op, node_, dimension, parameter));
+    return Expression(std::make_shared<ExpressionAggregate>(operation, node_, dimension, parameter));
 }
 
-Expression Expression::aggregate_agents(const std::string& operation, std::optional<double> parameter) const {
-    auto op = ExpressionAggregateAgents::parse_operation(operation);
-    return Expression(std::make_shared<ExpressionAggregateAgents>(op, node_, parameter));
+Expression Expression::aggregate_agents(ExpressionAggregateAgents::Operation operation,
+                                        std::optional<double> parameter) const {
+    return Expression(std::make_shared<ExpressionAggregateAgents>(operation, node_, parameter));
 }
 
 Expression Expression::select_agents(const std::vector<std::string>& labels) const {

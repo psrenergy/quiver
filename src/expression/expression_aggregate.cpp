@@ -15,10 +15,6 @@
 
 namespace quiver {
 
-ExpressionAggregate::Operation ExpressionAggregate::parse_operation(const std::string& name) {
-    return parse_aggregation_operation_name<Operation>(name, "aggregate");
-}
-
 ExpressionAggregate::ExpressionAggregate(Operation operation,
                                          std::shared_ptr<ExpressionNode> operand,
                                          std::string dimension_name,

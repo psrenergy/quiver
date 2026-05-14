@@ -281,22 +281,6 @@ inline BinaryMetadata build_ternary_broadcast_metadata(const BinaryMetadata& con
 }
 
 template <typename Op>
-Op parse_aggregation_operation_name(const std::string& name, const std::string& fn_label) {
-    if (name == "sum")
-        return Op::Sum;
-    if (name == "mean")
-        return Op::Mean;
-    if (name == "min")
-        return Op::Min;
-    if (name == "max")
-        return Op::Max;
-    if (name == "percentile")
-        return Op::Percentile;
-    throw std::runtime_error("Cannot " + fn_label + ": unknown operation '" + name +
-                             "' (expected one of: sum, mean, min, max, percentile)");
-}
-
-template <typename Op>
 std::string aggregation_operation_label(Op op) {
     switch (op) {
     case Op::Sum:

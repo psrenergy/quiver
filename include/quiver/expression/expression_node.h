@@ -152,8 +152,6 @@ class QUIVER_API ExpressionAggregate final : public ExpressionNode {
 public:
     enum class Operation { Sum, Mean, Min, Max, Percentile };
 
-    static Operation parse_operation(const std::string& name);
-
     ExpressionAggregate(Operation operation,
                         std::shared_ptr<ExpressionNode> operand,
                         std::string dimension_name,
@@ -180,8 +178,6 @@ private:
 class QUIVER_API ExpressionAggregateAgents final : public ExpressionNode {
 public:
     enum class Operation { Sum, Mean, Min, Max, Percentile };
-
-    static Operation parse_operation(const std::string& name);
 
     ExpressionAggregateAgents(Operation operation,
                               std::shared_ptr<ExpressionNode> operand,

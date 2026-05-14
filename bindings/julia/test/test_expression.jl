@@ -968,7 +968,7 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             with_expr(path_a) do e
-                out = Quiver.aggregate(e, "row", "sum")
+                out = Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM)
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -987,7 +987,7 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             with_expr(path_a) do e
-                out = Quiver.aggregate(e, "row", "mean")
+                out = Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_MEAN)
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1004,8 +1004,8 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             with_expr(path_a) do e
-                out_min = Quiver.aggregate(e, "row", "min")
-                out_max = Quiver.aggregate(e, "row", "max")
+                out_min = Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_MIN)
+                out_max = Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_MAX)
                 Quiver.save(out_min, path_out)
                 Quiver.save(out_max, path_out2)
                 Quiver.close!(out_min)
@@ -1024,7 +1024,7 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             with_expr(path_a) do e
-                out = Quiver.aggregate(e, "row", "percentile", 0.5)
+                out = Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, 0.5)
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1041,7 +1041,7 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r == 2 ? NaN : Float64(r * 10 + c + k))
             with_expr(path_a) do e
-                out = Quiver.aggregate(e, "row", "sum")
+                out = Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM)
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1064,7 +1064,7 @@ end
             )
             write_dense(path_a, md, [:row, :col, :depth], [3, 2, 2], 1, (_, _) -> 2.0)
             with_expr(path_a) do e
-                out = Quiver.aggregate(Quiver.aggregate(e, "row", "sum"), "col", "sum")
+                out = Quiver.aggregate(Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM), "col", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM)
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1083,7 +1083,7 @@ end
             write_fixture(path_b, (r, c, k) -> r + c + k)
             with_expr(path_a) do a
                 with_expr(path_b) do b
-                    out = Quiver.aggregate(a + b, "row", "sum")
+                    out = Quiver.aggregate(a + b, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM)
                     Quiver.save(out, path_out)
                     return Quiver.close!(out)
                 end
@@ -1101,19 +1101,7 @@ end
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
             with_expr(path_a) do e
-                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "nonexistent", "sum")
-            end
-        finally
-            cleanup(path_a)
-        end
-    end
-
-    @testset "Aggregate unknown operation throws" begin
-        path_a = make_path("a")
-        try
-            write_fixture(path_a, (_, _, _) -> 1.0)
-            with_expr(path_a) do e
-                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", "average")
+                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "nonexistent", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM)
             end
         finally
             cleanup(path_a)
@@ -1125,7 +1113,7 @@ end
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
             with_expr(path_a) do e
-                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", "percentile")
+                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE)
             end
         finally
             cleanup(path_a)
@@ -1137,7 +1125,7 @@ end
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
             with_expr(path_a) do e
-                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", "sum", 0.5)
+                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, 0.5)
             end
         finally
             cleanup(path_a)
@@ -1149,8 +1137,8 @@ end
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
             with_expr(path_a) do e
-                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", "percentile", 1.5)
-                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", "percentile", -0.1)
+                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, 1.5)
+                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, -0.1)
             end
         finally
             cleanup(path_a)
@@ -1166,7 +1154,7 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(e, "sum")
+                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM)
                 md = Quiver.get_metadata(out)
                 @test Quiver.Binary.get_labels(md) == ["sum"]
                 Quiver.save(out, path_out)
@@ -1185,7 +1173,7 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(e, "mean")
+                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MEAN)
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1202,7 +1190,7 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(e, "percentile", 0.5)
+                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_PERCENTILE, 0.5)
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1219,7 +1207,7 @@ end
             # Mark label k=1 as NaN; sum should fall back to the other label.
             write_fixture(path_a, (r, c, k) -> k == 1 ? NaN : Float64(r * 10 + c + k))
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(e, "sum")
+                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM)
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1236,7 +1224,7 @@ end
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(e, "mean")
+                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MEAN)
                 md = Quiver.get_metadata(out)
                 @test Quiver.Binary.get_labels(md) == ["mean"]
                 @test Quiver.Binary.get_unit(md) == "MW"
@@ -1256,7 +1244,7 @@ end
         try
             write_fixture(path_a, (_, _, _) -> 3.0)
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(Quiver.aggregate(e, "row", "sum"), "mean")
+                out = Quiver.aggregate_agents(Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM), Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MEAN)
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1274,7 +1262,7 @@ end
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             file = Quiver.Binary.open_file(path_a; mode = 'r')
             try
-                out = Quiver.aggregate(file, "row", "sum")
+                out = Quiver.aggregate(file, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM)
                 Quiver.save(out, path_out)
                 Quiver.close!(out)
             finally
@@ -1293,7 +1281,7 @@ end
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             file = Quiver.Binary.open_file(path_a; mode = 'r')
             try
-                out = Quiver.aggregate_agents(file, "mean")
+                out = Quiver.aggregate_agents(file, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MEAN)
                 Quiver.save(out, path_out)
                 Quiver.close!(out)
             finally
