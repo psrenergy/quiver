@@ -44,7 +44,16 @@ src/binary/                 # Binary C++ implementation
   time_properties.cpp     # TimeFrequency string conversion
 src/expression/             # Expression C++ implementation
   expression.cpp              # Expression class, operator overloads, save engine
-  expression_node.cpp         # ExpressionFile/Scalar/Binary impls + Unary/Ternary/Aggregation scaffold impls + validation/broadcast helpers
+  expression_helpers.h        # Shared inline helpers (validation, broadcast metadata, aggregation templates, percentile)
+  expression_file.cpp         # ExpressionFile (leaf reading from .qvr)
+  expression_scalar.cpp       # ExpressionScalar (constant broadcast)
+  expression_binary.cpp       # ExpressionBinary (Add/Sub/Mul/Div)
+  expression_unary.cpp        # ExpressionUnary (Negate/Abs/Sqrt/Log/Exp)
+  expression_ternary.cpp      # ExpressionTernary (IfElse)
+  expression_aggregate.cpp    # ExpressionAggregate (dimension-axis Sum/Mean/Min/Max/Percentile)
+  expression_aggregate_agents.cpp  # ExpressionAggregateAgents (label-axis reduction)
+  expression_select_agents.cpp     # ExpressionSelectAgents (label-axis projection)
+  expression_rename_agents.cpp     # ExpressionRenameAgents (label-axis rename)
 src/c/                    # C API implementation
   internal.h              # Shared structs (quiver_database, quiver_element, quiver_binary_file, quiver_binary_metadata), QUIVER_REQUIRE macro
   database_helpers.h      # Marshaling templates, strdup_safe, metadata converters

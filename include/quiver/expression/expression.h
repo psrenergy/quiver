@@ -35,26 +35,26 @@ public:
     Expression rename_agents(const std::vector<std::pair<std::string, std::string>>& mapping) const;
 
 private:
-    friend Expression operator+(const Expression&, const Expression&);
-    friend Expression operator+(const Expression&, double);
-    friend Expression operator+(double, const Expression&);
-    friend Expression operator-(const Expression&, const Expression&);
-    friend Expression operator-(const Expression&, double);
-    friend Expression operator-(double, const Expression&);
-    friend Expression operator*(const Expression&, const Expression&);
-    friend Expression operator*(const Expression&, double);
-    friend Expression operator*(double, const Expression&);
-    friend Expression operator/(const Expression&, const Expression&);
-    friend Expression operator/(const Expression&, double);
-    friend Expression operator/(double, const Expression&);
+    friend QUIVER_API Expression operator+(const Expression&, const Expression&);
+    friend QUIVER_API Expression operator+(const Expression&, double);
+    friend QUIVER_API Expression operator+(double, const Expression&);
+    friend QUIVER_API Expression operator-(const Expression&, const Expression&);
+    friend QUIVER_API Expression operator-(const Expression&, double);
+    friend QUIVER_API Expression operator-(double, const Expression&);
+    friend QUIVER_API Expression operator*(const Expression&, const Expression&);
+    friend QUIVER_API Expression operator*(const Expression&, double);
+    friend QUIVER_API Expression operator*(double, const Expression&);
+    friend QUIVER_API Expression operator/(const Expression&, const Expression&);
+    friend QUIVER_API Expression operator/(const Expression&, double);
+    friend QUIVER_API Expression operator/(double, const Expression&);
 
-    friend Expression operator-(const Expression&);
-    friend Expression abs(const Expression&);
-    friend Expression sqrt(const Expression&);
-    friend Expression log(const Expression&);
-    friend Expression exp(const Expression&);
+    friend QUIVER_API Expression operator-(const Expression&);
+    friend QUIVER_API Expression abs(const Expression&);
+    friend QUIVER_API Expression sqrt(const Expression&);
+    friend QUIVER_API Expression log(const Expression&);
+    friend QUIVER_API Expression exp(const Expression&);
 
-    friend Expression ifelse(const Expression&, const Expression&, const Expression&);
+    friend QUIVER_API Expression ifelse(const Expression&, const Expression&, const Expression&);
 
     std::shared_ptr<ExpressionNode> node_;
 };
