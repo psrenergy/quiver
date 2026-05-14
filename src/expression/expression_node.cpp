@@ -920,4 +920,94 @@ void ExpressionAggregateAgents::collect_input_files(std::vector<BinaryFile*>& ou
     operand_->collect_input_files(out);
 }
 
+ExpressionSelectAgents::ExpressionSelectAgents(std::shared_ptr<ExpressionNode> operand, std::vector<std::string> labels)
+    : operand_(std::move(operand)) {
+    const auto& operand_meta = operand_->metadata();
+
+    std::unordered_map<std::string, size_t> label_to_index;
+    label_to_index.reserve(operand_meta.labels.size());
+    for (size_t i = 0; i < operand_meta.labels.size(); ++i) {
+        label_to_index.emplace(operand_meta.labels[i], i);
+    }
+
+    selected_indices_.reserve(labels.size());
+    for (const auto& label : labels) {
+        auto it = label_to_index.find(label);
+        if (it == label_to_index.end()) {
+            throw std::runtime_error("Cannot select_agents: label not found: '" + label + "'");
+        }
+        selected_indices_.push_back(it->second);
+    }
+
+    output_meta_ = operand_meta;
+    output_meta_.labels = std::move(labels);
+    output_meta_.validate();
+
+    operand_row_buf_.resize(operand_meta.labels.size());
+}
+
+const BinaryMetadata& ExpressionSelectAgents::metadata() const {
+    return output_meta_;
+}
+
+void ExpressionSelectAgents::compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const {
+    operand_->compute_row(dims, operand_row_buf_);
+    if (out.size() != selected_indices_.size()) {
+        out.resize(selected_indices_.size());
+    }
+    for (size_t i = 0; i < selected_indices_.size(); ++i) {
+        out[i] = operand_row_buf_[selected_indices_[i]];
+    }
+}
+
+void ExpressionSelectAgents::collect_input_files(std::vector<BinaryFile*>& out) const {
+    operand_->collect_input_files(out);
+}
+
+ExpressionRenameAgents::ExpressionRenameAgents(std::shared_ptr<ExpressionNode> operand,
+                                               std::vector<std::pair<std::string, std::string>> mapping)
+    : operand_(std::move(operand)) {
+    const auto& operand_meta = operand_->metadata();
+
+    std::unordered_map<std::string, std::string> rename_map;
+    std::unordered_map<std::string, bool> used;
+    rename_map.reserve(mapping.size());
+    used.reserve(mapping.size());
+    for (auto& entry : mapping) {
+        if (!rename_map.emplace(entry.first, std::move(entry.second)).second) {
+            throw std::runtime_error("Cannot rename_agents: duplicate key '" + entry.first + "'");
+        }
+        used.emplace(entry.first, false);
+    }
+
+    output_meta_ = operand_meta;
+    for (auto& label : output_meta_.labels) {
+        auto it = rename_map.find(label);
+        if (it != rename_map.end()) {
+            label = it->second;
+            used[it->first] = true;
+        }
+    }
+
+    for (const auto& entry : used) {
+        if (!entry.second) {
+            throw std::runtime_error("Cannot rename_agents: label not found: '" + entry.first + "'");
+        }
+    }
+
+    output_meta_.validate();
+}
+
+const BinaryMetadata& ExpressionRenameAgents::metadata() const {
+    return output_meta_;
+}
+
+void ExpressionRenameAgents::compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const {
+    operand_->compute_row(dims, out);
+}
+
+void ExpressionRenameAgents::collect_input_files(std::vector<BinaryFile*>& out) const {
+    operand_->collect_input_files(out);
+}
+
 }  // namespace quiver

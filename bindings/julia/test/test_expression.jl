@@ -1702,6 +1702,163 @@ end
             cleanup(path_cond, path_then, path_else, path_out)
         end
     end
+
+    # =========================================================================
+    # select_agents — label-axis projection
+    # =========================================================================
+
+    @testset "select_agents subset" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            with_expr(path_a) do e
+                out = Quiver.select_agents(e, ["val2"])
+                md = Quiver.get_metadata(out)
+                @test Quiver.Binary.get_labels(md) == ["val2"]
+                Quiver.save(out, path_out)
+                return Quiver.close!(out)
+            end
+            # val2 is k=2 → cell = 10r + c + 2.
+            @test read_one_cell(path_out; row = 1, col = 1) == [13.0]
+            @test read_one_cell(path_out; row = 3, col = 2) == [34.0]
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "select_agents reorder" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            with_expr(path_a) do e
+                out = Quiver.select_agents(e, ["val2", "val1"])
+                md = Quiver.get_metadata(out)
+                @test Quiver.Binary.get_labels(md) == ["val2", "val1"]
+                Quiver.save(out, path_out)
+                return Quiver.close!(out)
+            end
+            # First entry is val2 (k=2 → 10r+c+2), second is val1 (k=1 → 10r+c+1).
+            @test read_one_cell(path_out; row = 1, col = 1) == [13.0, 12.0]
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "select_agents missing label throws" begin
+        path_a = make_path("a")
+        try
+            write_fixture(path_a, (r, c, k) -> 1.0)
+            with_expr(path_a) do e
+                @test_throws Quiver.DatabaseException Quiver.select_agents(e, ["nope"])
+            end
+        finally
+            cleanup(path_a)
+        end
+    end
+
+    @testset "select_agents on Binary.File shortcut" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            file = Quiver.Binary.open_file(path_a; mode = 'r')
+            try
+                out = Quiver.select_agents(file, ["val1"])
+                Quiver.save(out, path_out)
+                Quiver.close!(out)
+            finally
+                Quiver.Binary.close!(file)
+            end
+            @test read_one_cell(path_out; row = 1, col = 1) == [12.0]
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    # =========================================================================
+    # rename_agents — label-axis rename
+    # =========================================================================
+
+    @testset "rename_agents partial mapping" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            with_expr(path_a) do e
+                out = Quiver.rename_agents(e, Dict("val1" => "alpha"))
+                md = Quiver.get_metadata(out)
+                @test Quiver.Binary.get_labels(md) == ["alpha", "val2"]
+                Quiver.save(out, path_out)
+                return Quiver.close!(out)
+            end
+            # Values unchanged; both labels still present in (val1->alpha, val2) order.
+            @test read_one_cell(path_out; row = 1, col = 1) == [12.0, 13.0]
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "rename_agents all labels" begin
+        path_a = make_path("a")
+        try
+            write_fixture(path_a, (r, c, k) -> 1.0)
+            with_expr(path_a) do e
+                out = Quiver.rename_agents(e, Dict("val1" => "alpha", "val2" => "beta"))
+                md = Quiver.get_metadata(out)
+                labels = Quiver.Binary.get_labels(md)
+                @test sort(labels) == ["alpha", "beta"]
+                return Quiver.close!(out)
+            end
+        finally
+            cleanup(path_a)
+        end
+    end
+
+    @testset "rename_agents missing key throws" begin
+        path_a = make_path("a")
+        try
+            write_fixture(path_a, (r, c, k) -> 1.0)
+            with_expr(path_a) do e
+                @test_throws Quiver.DatabaseException Quiver.rename_agents(e, Dict("nope" => "x"))
+            end
+        finally
+            cleanup(path_a)
+        end
+    end
+
+    @testset "rename_agents collision throws" begin
+        path_a = make_path("a")
+        try
+            write_fixture(path_a, (r, c, k) -> 1.0)
+            with_expr(path_a) do e
+                @test_throws Quiver.DatabaseException Quiver.rename_agents(e, Dict("val1" => "val2"))
+            end
+        finally
+            cleanup(path_a)
+        end
+    end
+
+    @testset "rename_agents on Binary.File shortcut" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> 1.0)
+            file = Quiver.Binary.open_file(path_a; mode = 'r')
+            try
+                out = Quiver.rename_agents(file, Dict("val1" => "alpha"))
+                Quiver.save(out, path_out)
+                Quiver.close!(out)
+            finally
+                Quiver.Binary.close!(file)
+            end
+            reopened = Quiver.Binary.open_file(path_out; mode = 'r')
+            try
+                md = Quiver.Binary.get_metadata(reopened)
+                @test Quiver.Binary.get_labels(md) == ["alpha", "val2"]
+            finally
+                Quiver.Binary.close!(reopened)
+            end
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
 end
 
 end

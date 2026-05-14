@@ -166,3 +166,30 @@ end
 function aggregate_agents(f::Binary.File, operation::String, parameter::Optional{Real} = nothing)
     return aggregate_agents(Expression(f), operation, parameter)
 end
+
+function select_agents(e::Expression, labels::Vector{<:AbstractString})
+    cstrings = [Base.cconvert(Cstring, s) for s in labels]
+    ptrs = [Base.unsafe_convert(Cstring, cs) for cs in cstrings]
+    out = Ref{Ptr{C.quiver_expression}}(C_NULL)
+    GC.@preserve cstrings begin
+        check(C.quiver_expression_select_agents(e.ptr, ptrs, length(labels), out))
+    end
+    return Expression(out[])
+end
+
+function rename_agents(e::Expression, mapping::AbstractDict{<:AbstractString, <:AbstractString})
+    old_labels = String[String(k) for k in keys(mapping)]
+    new_labels = String[String(mapping[k]) for k in old_labels]
+    old_cstrings = [Base.cconvert(Cstring, s) for s in old_labels]
+    new_cstrings = [Base.cconvert(Cstring, s) for s in new_labels]
+    old_ptrs = [Base.unsafe_convert(Cstring, cs) for cs in old_cstrings]
+    new_ptrs = [Base.unsafe_convert(Cstring, cs) for cs in new_cstrings]
+    out = Ref{Ptr{C.quiver_expression}}(C_NULL)
+    GC.@preserve old_cstrings new_cstrings begin
+        check(C.quiver_expression_rename_agents(e.ptr, old_ptrs, new_ptrs, length(old_labels), out))
+    end
+    return Expression(out[])
+end
+
+select_agents(f::Binary.File, labels::Vector{<:AbstractString}) = select_agents(Expression(f), labels)
+rename_agents(f::Binary.File, mapping::AbstractDict) = rename_agents(Expression(f), mapping)

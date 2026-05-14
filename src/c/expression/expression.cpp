@@ -5,6 +5,9 @@
 #include <new>
 #include <optional>
 #include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace {
 
@@ -231,6 +234,53 @@ QUIVER_C_API quiver_error_t quiver_expression_aggregate_agents(quiver_expression
     try {
         std::optional<double> p = parameter ? std::optional<double>(*parameter) : std::nullopt;
         *out = new quiver_expression(expression->expression.aggregate_agents(operation, p));
+        return QUIVER_OK;
+    } catch (const std::bad_alloc&) {
+        quiver_set_last_error("Memory allocation failed");
+        return QUIVER_ERROR;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_expression_select_agents(quiver_expression_t* expression,
+                                                            const char* const* labels,
+                                                            size_t label_count,
+                                                            quiver_expression_t** out) {
+    QUIVER_REQUIRE(expression, labels, out);
+
+    try {
+        std::vector<std::string> selected;
+        selected.reserve(label_count);
+        for (size_t i = 0; i < label_count; ++i) {
+            selected.emplace_back(labels[i]);
+        }
+        *out = new quiver_expression(expression->expression.select_agents(selected));
+        return QUIVER_OK;
+    } catch (const std::bad_alloc&) {
+        quiver_set_last_error("Memory allocation failed");
+        return QUIVER_ERROR;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
+QUIVER_C_API quiver_error_t quiver_expression_rename_agents(quiver_expression_t* expression,
+                                                            const char* const* old_labels,
+                                                            const char* const* new_labels,
+                                                            size_t mapping_count,
+                                                            quiver_expression_t** out) {
+    QUIVER_REQUIRE(expression, old_labels, new_labels, out);
+
+    try {
+        std::vector<std::pair<std::string, std::string>> mapping;
+        mapping.reserve(mapping_count);
+        for (size_t i = 0; i < mapping_count; ++i) {
+            mapping.emplace_back(old_labels[i], new_labels[i]);
+        }
+        *out = new quiver_expression(expression->expression.rename_agents(mapping));
         return QUIVER_OK;
     } catch (const std::bad_alloc&) {
         quiver_set_last_error("Memory allocation failed");

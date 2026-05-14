@@ -9,6 +9,8 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace quiver {
 
@@ -27,6 +29,10 @@ public:
                          std::optional<double> parameter = std::nullopt) const;
 
     Expression aggregate_agents(const std::string& operation, std::optional<double> parameter = std::nullopt) const;
+
+    Expression select_agents(const std::vector<std::string>& labels) const;
+
+    Expression rename_agents(const std::vector<std::pair<std::string, std::string>>& mapping) const;
 
 private:
     friend Expression operator+(const Expression&, const Expression&);

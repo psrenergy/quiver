@@ -702,6 +702,14 @@ function quiver_expression_aggregate_agents(expression, operation, parameter, ou
     @ccall libquiver_c.quiver_expression_aggregate_agents(expression::Ptr{quiver_expression_t}, operation::Ptr{Cchar}, parameter::Ptr{Cdouble}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
 end
 
+function quiver_expression_select_agents(expression, labels, label_count, out)
+    @ccall libquiver_c.quiver_expression_select_agents(expression::Ptr{quiver_expression_t}, labels::Ptr{Ptr{Cchar}}, label_count::Csize_t, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
+end
+
+function quiver_expression_rename_agents(expression, old_labels, new_labels, mapping_count, out)
+    @ccall libquiver_c.quiver_expression_rename_agents(expression::Ptr{quiver_expression_t}, old_labels::Ptr{Ptr{Cchar}}, new_labels::Ptr{Ptr{Cchar}}, mapping_count::Csize_t, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
+end
+
 #! format: on
 
 

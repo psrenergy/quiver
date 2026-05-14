@@ -1947,3 +1947,172 @@ TEST_F(ExpressionFixture, IfElseChainsWithBinary) {
         EXPECT_DOUBLE_EQ(vo[i], 2.0 * base + 1.0);
     }
 }
+
+// =============================================================================
+// ExpressionSelectAgents — label-axis projection
+// =============================================================================
+
+TEST_F(ExpressionFixture, SelectAgentsSubset) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto out = Expression(a).select_agents({"val2"});
+    out.save(path_out);
+
+    const auto& m = out.metadata();
+    ASSERT_EQ(m.labels.size(), 1u);
+    EXPECT_EQ(m.labels[0], "val2");
+
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), 6u);
+    // val2 is k=1: cells = 10r + c + 1
+    EXPECT_DOUBLE_EQ(vo[0], 12.0);  // r=1, c=1
+    EXPECT_DOUBLE_EQ(vo[1], 13.0);  // r=1, c=2
+    EXPECT_DOUBLE_EQ(vo[2], 22.0);  // r=2, c=1
+    EXPECT_DOUBLE_EQ(vo[3], 23.0);
+    EXPECT_DOUBLE_EQ(vo[4], 32.0);
+    EXPECT_DOUBLE_EQ(vo[5], 33.0);
+}
+
+TEST_F(ExpressionFixture, SelectAgentsReorder) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto out = Expression(a).select_agents({"val2", "val1"});
+    out.save(path_out);
+
+    const auto& m = out.metadata();
+    ASSERT_EQ(m.labels.size(), 2u);
+    EXPECT_EQ(m.labels[0], "val2");
+    EXPECT_EQ(m.labels[1], "val1");
+
+    auto vo = read_all_cells(path_out);
+    // Per cell pair: [val2 first (= 10r+c+1), val1 second (= 10r+c)]
+    EXPECT_DOUBLE_EQ(vo[0], 12.0);  // r=1, c=1, val2
+    EXPECT_DOUBLE_EQ(vo[1], 11.0);  // r=1, c=1, val1
+}
+
+TEST_F(ExpressionFixture, SelectAgentsDuplicateThrows) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t k) { return static_cast<double>(k); });
+    auto a = BinaryFile::open_file(path_a, 'r');
+
+    // BinaryMetadata::validate requires unique labels, so duplicates are rejected at construction.
+    EXPECT_THROW(Expression(a).select_agents({"val1", "val1"}), std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, SelectAgentsMissingThrows) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    EXPECT_THROW(Expression(a).select_agents({"nope"}), std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, SelectAgentsAfterBinary) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t k) { return 10.0 + static_cast<double>(k); });
+    write_qvr(path_b, md, [](const std::vector<int64_t>&, size_t k) { return 20.0 + static_cast<double>(k); });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto b = BinaryFile::open_file(path_b, 'r');
+    auto sum = Expression(a) + Expression(b);
+    sum.select_agents({"val1"}).save(path_out);
+
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vo.size(), 6u);
+    // val1 (k=0): 10 + 20 = 30 in every cell.
+    for (double v : vo) EXPECT_DOUBLE_EQ(v, 30.0);
+}
+
+// =============================================================================
+// ExpressionRenameAgents — label-axis rename
+// =============================================================================
+
+TEST_F(ExpressionFixture, RenameAgentsPartial) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto out = Expression(a).rename_agents({{"val1", "alpha"}});
+    out.save(path_out);
+
+    const auto& m = out.metadata();
+    ASSERT_EQ(m.labels.size(), 2u);
+    EXPECT_EQ(m.labels[0], "alpha");
+    EXPECT_EQ(m.labels[1], "val2");
+
+    auto orig = read_all_cells(path_a);
+    auto renamed = read_all_cells(path_out);
+    ASSERT_EQ(orig.size(), renamed.size());
+    for (size_t i = 0; i < orig.size(); ++i) EXPECT_DOUBLE_EQ(orig[i], renamed[i]);
+}
+
+TEST_F(ExpressionFixture, RenameAgentsAll) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    auto out = Expression(a).rename_agents({{"val1", "alpha"}, {"val2", "beta"}});
+
+    const auto& m = out.metadata();
+    ASSERT_EQ(m.labels.size(), 2u);
+    EXPECT_EQ(m.labels[0], "alpha");
+    EXPECT_EQ(m.labels[1], "beta");
+}
+
+TEST_F(ExpressionFixture, RenameAgentsMissingThrows) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    EXPECT_THROW(Expression(a).rename_agents({{"nope", "x"}}), std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, RenameAgentsCollisionThrows) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    // Rename val1 -> val2 leaves output labels = {"val2", "val2"} which validate() rejects.
+    EXPECT_THROW(Expression(a).rename_agents({{"val1", "val2"}}), std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, RenameAgentsDuplicateKeyThrows) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    EXPECT_THROW(Expression(a).rename_agents({{"val1", "alpha"}, {"val1", "beta"}}), std::runtime_error);
+}
+
+TEST_F(ExpressionFixture, ChainSelectThenRename) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
+        return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
+    });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression(a).select_agents({"val2"}).rename_agents({{"val2", "renamed"}}).save(path_out);
+
+    auto reopened = BinaryFile::open_file(path_out, 'r');
+    const auto& m = reopened.get_metadata();
+    ASSERT_EQ(m.labels.size(), 1u);
+    EXPECT_EQ(m.labels[0], "renamed");
+
+    auto vo = read_all_cells(path_out);
+    // Same values as val2 column from the original (10r + c + 1).
+    EXPECT_DOUBLE_EQ(vo[0], 12.0);
+    EXPECT_DOUBLE_EQ(vo[1], 13.0);
+}
+
+TEST_F(ExpressionFixture, RenameAgentsSaveProducesReadableFile) {
+    auto md = make_simple_metadata();
+    write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 7.0; });
+    auto a = BinaryFile::open_file(path_a, 'r');
+    Expression(a).rename_agents({{"val1", "alpha"}}).save(path_out);
+
+    auto reopened = BinaryFile::open_file(path_out, 'r');
+    const auto& m = reopened.get_metadata();
+    ASSERT_EQ(m.labels.size(), 2u);
+    EXPECT_EQ(m.labels[0], "alpha");
+    EXPECT_EQ(m.labels[1], "val2");
+}

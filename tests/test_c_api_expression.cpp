@@ -1480,3 +1480,147 @@ TEST_F(ExpressionCApiFixture, ApplyTernaryShapeMismatch) {
     quiver_expression_close(then_v);
     quiver_expression_close(else_v);
 }
+
+// ============================================================================
+// quiver_expression_select_agents
+// ============================================================================
+
+TEST_F(ExpressionCApiFixture, SelectAgentsSubset) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
+
+    auto* a = expr_from_file(path_a);
+    const char* labels[] = {"val2"};
+    quiver_expression_t* sel = nullptr;
+    ASSERT_EQ(quiver_expression_select_agents(a, labels, 1, &sel), QUIVER_OK);
+
+    quiver_binary_metadata_t* out_md = nullptr;
+    ASSERT_EQ(quiver_expression_get_metadata(sel, &out_md), QUIVER_OK);
+    char** out_labels = nullptr;
+    size_t out_count = 0;
+    ASSERT_EQ(quiver_binary_metadata_get_labels(out_md, &out_labels, &out_count), QUIVER_OK);
+    ASSERT_EQ(out_count, 1u);
+    EXPECT_STREQ(out_labels[0], "val2");
+    quiver_binary_metadata_free_string_array(out_labels, out_count);
+    quiver_binary_metadata_free(out_md);
+
+    ASSERT_EQ(quiver_expression_save(sel, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(sel);
+
+    // val2 is k=1, so cell value = 10r + c + 1.
+    auto cell = read_one_cell(path_out, {"row", "col"}, {1, 1});
+    ASSERT_EQ(cell.size(), 1u);
+    EXPECT_DOUBLE_EQ(cell[0], 12.0);
+    auto cell2 = read_one_cell(path_out, {"row", "col"}, {3, 2});
+    EXPECT_DOUBLE_EQ(cell2[0], 33.0);
+}
+
+TEST_F(ExpressionCApiFixture, SelectAgentsReorder) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
+
+    auto* a = expr_from_file(path_a);
+    const char* labels[] = {"val2", "val1"};
+    quiver_expression_t* sel = nullptr;
+    ASSERT_EQ(quiver_expression_select_agents(a, labels, 2, &sel), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(sel, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(sel);
+
+    auto cell = read_one_cell(path_out, {"row", "col"}, {1, 1});
+    ASSERT_EQ(cell.size(), 2u);
+    EXPECT_DOUBLE_EQ(cell[0], 12.0);  // val2
+    EXPECT_DOUBLE_EQ(cell[1], 11.0);  // val1
+}
+
+TEST_F(ExpressionCApiFixture, SelectAgentsMissingReturnsError) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    const char* labels[] = {"nope"};
+    quiver_expression_t* sel = nullptr;
+    EXPECT_EQ(quiver_expression_select_agents(a, labels, 1, &sel), QUIVER_ERROR);
+    EXPECT_EQ(sel, nullptr);
+    quiver_expression_close(a);
+}
+
+TEST_F(ExpressionCApiFixture, SelectAgentsNullArguments) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    const char* labels[] = {"val1"};
+    quiver_expression_t* sel = nullptr;
+
+    EXPECT_EQ(quiver_expression_select_agents(nullptr, labels, 1, &sel), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_select_agents(a, nullptr, 1, &sel), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_select_agents(a, labels, 1, nullptr), QUIVER_ERROR);
+
+    quiver_expression_close(a);
+}
+
+// ============================================================================
+// quiver_expression_rename_agents
+// ============================================================================
+
+TEST_F(ExpressionCApiFixture, RenameAgentsPartial) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
+
+    auto* a = expr_from_file(path_a);
+    const char* old_labels[] = {"val1"};
+    const char* new_labels[] = {"alpha"};
+    quiver_expression_t* ren = nullptr;
+    ASSERT_EQ(quiver_expression_rename_agents(a, old_labels, new_labels, 1, &ren), QUIVER_OK);
+
+    quiver_binary_metadata_t* out_md = nullptr;
+    ASSERT_EQ(quiver_expression_get_metadata(ren, &out_md), QUIVER_OK);
+    char** out_labels = nullptr;
+    size_t out_count = 0;
+    ASSERT_EQ(quiver_binary_metadata_get_labels(out_md, &out_labels, &out_count), QUIVER_OK);
+    ASSERT_EQ(out_count, 2u);
+    EXPECT_STREQ(out_labels[0], "alpha");
+    EXPECT_STREQ(out_labels[1], "val2");
+    quiver_binary_metadata_free_string_array(out_labels, out_count);
+    quiver_binary_metadata_free(out_md);
+
+    ASSERT_EQ(quiver_expression_save(ren, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(ren);
+
+    auto cell = read_one_cell(path_out, {"row", "col"}, {1, 1});
+    ASSERT_EQ(cell.size(), 2u);
+    EXPECT_DOUBLE_EQ(cell[0], 11.0);  // unchanged (was val1)
+    EXPECT_DOUBLE_EQ(cell[1], 12.0);  // unchanged (val2)
+}
+
+TEST_F(ExpressionCApiFixture, RenameAgentsMissingReturnsError) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    const char* old_labels[] = {"nope"};
+    const char* new_labels[] = {"x"};
+    quiver_expression_t* ren = nullptr;
+    EXPECT_EQ(quiver_expression_rename_agents(a, old_labels, new_labels, 1, &ren), QUIVER_ERROR);
+    EXPECT_EQ(ren, nullptr);
+    quiver_expression_close(a);
+}
+
+TEST_F(ExpressionCApiFixture, RenameAgentsCollisionReturnsError) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    const char* old_labels[] = {"val1"};
+    const char* new_labels[] = {"val2"};
+    quiver_expression_t* ren = nullptr;
+    EXPECT_EQ(quiver_expression_rename_agents(a, old_labels, new_labels, 1, &ren), QUIVER_ERROR);
+    quiver_expression_close(a);
+}
+
+TEST_F(ExpressionCApiFixture, RenameAgentsNullArguments) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    const char* old_labels[] = {"val1"};
+    const char* new_labels[] = {"alpha"};
+    quiver_expression_t* ren = nullptr;
+
+    EXPECT_EQ(quiver_expression_rename_agents(nullptr, old_labels, new_labels, 1, &ren), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_rename_agents(a, nullptr, new_labels, 1, &ren), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_rename_agents(a, old_labels, nullptr, 1, &ren), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_rename_agents(a, old_labels, new_labels, 1, nullptr), QUIVER_ERROR);
+
+    quiver_expression_close(a);
+}

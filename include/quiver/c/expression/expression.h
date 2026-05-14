@@ -82,6 +82,19 @@ QUIVER_C_API quiver_error_t quiver_expression_aggregate_agents(quiver_expression
                                                                const double* parameter,
                                                                quiver_expression_t** out);
 
+// Label-axis projection. Selects (and may reorder / duplicate) labels from the operand.
+QUIVER_C_API quiver_error_t quiver_expression_select_agents(quiver_expression_t* expression,
+                                                            const char* const* labels,
+                                                            size_t label_count,
+                                                            quiver_expression_t** out);
+
+// Label-axis rename via partial mapping (parallel arrays). Unmapped labels keep their original name.
+QUIVER_C_API quiver_error_t quiver_expression_rename_agents(quiver_expression_t* expression,
+                                                            const char* const* old_labels,
+                                                            const char* const* new_labels,
+                                                            size_t mapping_count,
+                                                            quiver_expression_t** out);
+
 #ifdef __cplusplus
 }
 #endif

@@ -35,6 +35,14 @@ Expression Expression::aggregate_agents(const std::string& operation, std::optio
     return Expression(std::make_shared<ExpressionAggregateAgents>(op, node_, parameter));
 }
 
+Expression Expression::select_agents(const std::vector<std::string>& labels) const {
+    return Expression(std::make_shared<ExpressionSelectAgents>(node_, labels));
+}
+
+Expression Expression::rename_agents(const std::vector<std::pair<std::string, std::string>>& mapping) const {
+    return Expression(std::make_shared<ExpressionRenameAgents>(node_, mapping));
+}
+
 void Expression::save(const std::string& path) const {
     std::vector<BinaryFile*> input_files;
     node_->collect_input_files(input_files);

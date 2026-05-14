@@ -10,6 +10,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace quiver {
@@ -197,6 +198,35 @@ private:
 
     BinaryMetadata output_meta_;
     mutable std::vector<double> operand_row_buf_;
+};
+
+class QUIVER_API ExpressionSelectAgents final : public ExpressionNode {
+public:
+    ExpressionSelectAgents(std::shared_ptr<ExpressionNode> operand, std::vector<std::string> labels);
+
+    const BinaryMetadata& metadata() const override;
+    void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
+    void collect_input_files(std::vector<BinaryFile*>& out) const override;
+
+private:
+    std::shared_ptr<ExpressionNode> operand_;
+    BinaryMetadata output_meta_;
+    std::vector<size_t> selected_indices_;
+    mutable std::vector<double> operand_row_buf_;
+};
+
+class QUIVER_API ExpressionRenameAgents final : public ExpressionNode {
+public:
+    ExpressionRenameAgents(std::shared_ptr<ExpressionNode> operand,
+                           std::vector<std::pair<std::string, std::string>> mapping);
+
+    const BinaryMetadata& metadata() const override;
+    void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
+    void collect_input_files(std::vector<BinaryFile*>& out) const override;
+
+private:
+    std::shared_ptr<ExpressionNode> operand_;
+    BinaryMetadata output_meta_;
 };
 
 }  // namespace quiver
