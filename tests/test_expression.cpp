@@ -2024,7 +2024,8 @@ TEST_F(ExpressionFixture, SelectAgentsAfterBinary) {
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(vo.size(), 6u);
     // val1 (k=0): 10 + 20 = 30 in every cell.
-    for (double v : vo) EXPECT_DOUBLE_EQ(v, 30.0);
+    for (double v : vo)
+        EXPECT_DOUBLE_EQ(v, 30.0);
 }
 
 // =============================================================================
@@ -2048,7 +2049,8 @@ TEST_F(ExpressionFixture, RenameAgentsPartial) {
     auto orig = read_all_cells(path_a);
     auto renamed = read_all_cells(path_out);
     ASSERT_EQ(orig.size(), renamed.size());
-    for (size_t i = 0; i < orig.size(); ++i) EXPECT_DOUBLE_EQ(orig[i], renamed[i]);
+    for (size_t i = 0; i < orig.size(); ++i)
+        EXPECT_DOUBLE_EQ(orig[i], renamed[i]);
 }
 
 TEST_F(ExpressionFixture, RenameAgentsAll) {
