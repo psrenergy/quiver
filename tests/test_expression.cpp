@@ -1254,7 +1254,10 @@ TEST_F(ExpressionFixture, AggregateChained) {
                                                .set("labels", {"v1"}));
     write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 2.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
-    Expression(a).aggregate("row", ExpressionAggregate::Operation::Sum).aggregate("col", ExpressionAggregate::Operation::Sum).save(path_out);
+    Expression(a)
+        .aggregate("row", ExpressionAggregate::Operation::Sum)
+        .aggregate("col", ExpressionAggregate::Operation::Sum)
+        .save(path_out);
 
     // Output dims = [depth(2)] × 1 label = 2 cells. Each cell sums 3 rows × 2 cols of 2.0 = 12.0.
     auto vo = read_all_cells(path_out);
@@ -1448,15 +1451,20 @@ TEST_F(ExpressionFixture, AgentPercentileOutOfRangeThrows) {
     auto md = make_simple_metadata();
     write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
-    EXPECT_THROW(Expression(a).aggregate_agents(ExpressionAggregateAgents::Operation::Percentile, 1.5), std::runtime_error);
-    EXPECT_THROW(Expression(a).aggregate_agents(ExpressionAggregateAgents::Operation::Percentile, -0.1), std::runtime_error);
+    EXPECT_THROW(Expression(a).aggregate_agents(ExpressionAggregateAgents::Operation::Percentile, 1.5),
+                 std::runtime_error);
+    EXPECT_THROW(Expression(a).aggregate_agents(ExpressionAggregateAgents::Operation::Percentile, -0.1),
+                 std::runtime_error);
 }
 
 TEST_F(ExpressionFixture, AgentChainedAfterAggregate) {
     auto md = make_simple_metadata();
     write_qvr(path_a, md, [](const std::vector<int64_t>&, size_t) { return 3.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
-    Expression(a).aggregate("row", ExpressionAggregate::Operation::Sum).aggregate_agents(ExpressionAggregateAgents::Operation::Mean).save(path_out);
+    Expression(a)
+        .aggregate("row", ExpressionAggregate::Operation::Sum)
+        .aggregate_agents(ExpressionAggregateAgents::Operation::Mean)
+        .save(path_out);
 
     // After reducing row(3) and agents(2): output dims=[col(2)], labels=["mean"] = 2 cells.
     // First sum over 3 rows of 3.0 → 9.0 in each (col, k). Then mean across 2 labels → 9.0.

@@ -1,7 +1,6 @@
-#include "quiver/expression/expression_node.h"
-
 #include "expression_helpers.h"
 #include "quiver/binary/iteration.h"
+#include "quiver/expression/expression_node.h"
 
 #include <cmath>
 #include <cstdint>

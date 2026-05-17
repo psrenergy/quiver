@@ -1012,7 +1012,8 @@ TEST_F(ExpressionCApiFixture, AggregateSumOverDim) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* agg = nullptr;
-    ASSERT_EQ(quiver_expression_aggregate(a, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_aggregate(a, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
+              QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(agg);
@@ -1035,7 +1036,8 @@ TEST_F(ExpressionCApiFixture, AggregatePercentileWithParam) {
     auto* a = expr_from_file(path_a);
     const double p = 0.5;
     quiver_expression_t* agg = nullptr;
-    ASSERT_EQ(quiver_expression_aggregate(a, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, &p, &agg), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_aggregate(a, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, &p, &agg),
+              QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(agg);
@@ -1062,7 +1064,8 @@ TEST_F(ExpressionCApiFixture, AggregatePercentileMissingParamReturnsError) {
     write_fixture(path_a, [](int, int, int) { return 1.0; });
     auto* a = expr_from_file(path_a);
     quiver_expression_t* agg = nullptr;
-    EXPECT_EQ(quiver_expression_aggregate(a, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_aggregate(a, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, nullptr, &agg),
+              QUIVER_ERROR);
     EXPECT_EQ(agg, nullptr);
     EXPECT_NE(std::string(quiver_get_last_error()).find("requires a parameter"), std::string::npos);
     quiver_expression_close(a);
@@ -1072,7 +1075,8 @@ TEST_F(ExpressionCApiFixture, AggregateDimensionNotFoundReturnsError) {
     write_fixture(path_a, [](int, int, int) { return 1.0; });
     auto* a = expr_from_file(path_a);
     quiver_expression_t* agg = nullptr;
-    EXPECT_EQ(quiver_expression_aggregate(a, "nonexistent", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_aggregate(a, "nonexistent", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
+              QUIVER_ERROR);
     EXPECT_EQ(agg, nullptr);
     EXPECT_NE(std::string(quiver_get_last_error()).find("Dimension not found"), std::string::npos);
     quiver_expression_close(a);
@@ -1083,7 +1087,8 @@ TEST_F(ExpressionCApiFixture, AggregateAgentsSumReducesLabels) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* agg = nullptr;
-    ASSERT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM, nullptr, &agg), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM, nullptr, &agg),
+              QUIVER_OK);
 
     // Verify output metadata: single label "sum", dims unchanged.
     quiver_binary_metadata_t* out_md = nullptr;
@@ -1114,7 +1119,8 @@ TEST_F(ExpressionCApiFixture, AggregateAgentsPercentileWithParam) {
     auto* a = expr_from_file(path_a);
     const double p = 0.5;
     quiver_expression_t* agg = nullptr;
-    ASSERT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_PERCENTILE, &p, &agg), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_PERCENTILE, &p, &agg),
+              QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(agg);
@@ -1144,9 +1150,9 @@ TEST_F(ExpressionCApiFixture, AggregateAgentsNullArguments) {
     auto* a = expr_from_file(path_a);
     quiver_expression_t* agg = nullptr;
 
-    EXPECT_EQ(quiver_expression_aggregate_agents(nullptr, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM, nullptr,
-                                                 &agg),
-              QUIVER_ERROR);
+    EXPECT_EQ(
+        quiver_expression_aggregate_agents(nullptr, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM, nullptr, &agg),
+        QUIVER_ERROR);
     EXPECT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM, nullptr, nullptr),
               QUIVER_ERROR);
 
@@ -1162,7 +1168,8 @@ TEST_F(ExpressionCApiFixture, AggregateChainedWithBinary) {
     quiver_expression_t* sum = nullptr;
     ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &sum), QUIVER_OK);
     quiver_expression_t* agg = nullptr;
-    ASSERT_EQ(quiver_expression_aggregate(sum, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_aggregate(sum, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
+              QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(b);
