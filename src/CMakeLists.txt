@@ -27,7 +27,15 @@ set(QUIVER_SOURCES
     binary/dimension.cpp
     binary/time_properties.cpp
     expression/expression.cpp
-    expression/expression_node.cpp
+    expression/expression_file.cpp
+    expression/expression_scalar.cpp
+    expression/expression_binary.cpp
+    expression/expression_unary.cpp
+    expression/expression_ternary.cpp
+    expression/expression_aggregate.cpp
+    expression/expression_aggregate_agents.cpp
+    expression/expression_select_agents.cpp
+    expression/expression_rename_agents.cpp
 )
 
 # Build type

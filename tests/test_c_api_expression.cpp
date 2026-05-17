@@ -1012,7 +1012,8 @@ TEST_F(ExpressionCApiFixture, AggregateSumOverDim) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* agg = nullptr;
-    ASSERT_EQ(quiver_expression_aggregate(a, "row", "sum", nullptr, &agg), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_aggregate(a, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
+              QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(agg);
@@ -1035,7 +1036,8 @@ TEST_F(ExpressionCApiFixture, AggregatePercentileWithParam) {
     auto* a = expr_from_file(path_a);
     const double p = 0.5;
     quiver_expression_t* agg = nullptr;
-    ASSERT_EQ(quiver_expression_aggregate(a, "row", "percentile", &p, &agg), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_aggregate(a, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, &p, &agg),
+              QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(agg);
@@ -1052,7 +1054,7 @@ TEST_F(ExpressionCApiFixture, AggregateSumWithExtraParamReturnsError) {
     auto* a = expr_from_file(path_a);
     const double p = 0.5;
     quiver_expression_t* agg = nullptr;
-    EXPECT_EQ(quiver_expression_aggregate(a, "row", "sum", &p, &agg), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_aggregate(a, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, &p, &agg), QUIVER_ERROR);
     EXPECT_EQ(agg, nullptr);
     EXPECT_NE(std::string(quiver_get_last_error()).find("does not accept a parameter"), std::string::npos);
     quiver_expression_close(a);
@@ -1062,7 +1064,8 @@ TEST_F(ExpressionCApiFixture, AggregatePercentileMissingParamReturnsError) {
     write_fixture(path_a, [](int, int, int) { return 1.0; });
     auto* a = expr_from_file(path_a);
     quiver_expression_t* agg = nullptr;
-    EXPECT_EQ(quiver_expression_aggregate(a, "row", "percentile", nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_aggregate(a, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, nullptr, &agg),
+              QUIVER_ERROR);
     EXPECT_EQ(agg, nullptr);
     EXPECT_NE(std::string(quiver_get_last_error()).find("requires a parameter"), std::string::npos);
     quiver_expression_close(a);
@@ -1072,18 +1075,10 @@ TEST_F(ExpressionCApiFixture, AggregateDimensionNotFoundReturnsError) {
     write_fixture(path_a, [](int, int, int) { return 1.0; });
     auto* a = expr_from_file(path_a);
     quiver_expression_t* agg = nullptr;
-    EXPECT_EQ(quiver_expression_aggregate(a, "nonexistent", "sum", nullptr, &agg), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_aggregate(a, "nonexistent", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
+              QUIVER_ERROR);
     EXPECT_EQ(agg, nullptr);
     EXPECT_NE(std::string(quiver_get_last_error()).find("Dimension not found"), std::string::npos);
-    quiver_expression_close(a);
-}
-
-TEST_F(ExpressionCApiFixture, AggregateUnknownOperationReturnsError) {
-    write_fixture(path_a, [](int, int, int) { return 1.0; });
-    auto* a = expr_from_file(path_a);
-    quiver_expression_t* agg = nullptr;
-    EXPECT_EQ(quiver_expression_aggregate(a, "row", "average", nullptr, &agg), QUIVER_ERROR);
-    EXPECT_EQ(agg, nullptr);
     quiver_expression_close(a);
 }
 
@@ -1092,7 +1087,8 @@ TEST_F(ExpressionCApiFixture, AggregateAgentsSumReducesLabels) {
 
     auto* a = expr_from_file(path_a);
     quiver_expression_t* agg = nullptr;
-    ASSERT_EQ(quiver_expression_aggregate_agents(a, "sum", nullptr, &agg), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM, nullptr, &agg),
+              QUIVER_OK);
 
     // Verify output metadata: single label "sum", dims unchanged.
     quiver_binary_metadata_t* out_md = nullptr;
@@ -1123,7 +1119,8 @@ TEST_F(ExpressionCApiFixture, AggregateAgentsPercentileWithParam) {
     auto* a = expr_from_file(path_a);
     const double p = 0.5;
     quiver_expression_t* agg = nullptr;
-    ASSERT_EQ(quiver_expression_aggregate_agents(a, "percentile", &p, &agg), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_PERCENTILE, &p, &agg),
+              QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(agg);
@@ -1138,10 +1135,12 @@ TEST_F(ExpressionCApiFixture, AggregateNullArguments) {
     auto* a = expr_from_file(path_a);
     quiver_expression_t* agg = nullptr;
 
-    EXPECT_EQ(quiver_expression_aggregate(nullptr, "row", "sum", nullptr, &agg), QUIVER_ERROR);
-    EXPECT_EQ(quiver_expression_aggregate(a, nullptr, "sum", nullptr, &agg), QUIVER_ERROR);
-    EXPECT_EQ(quiver_expression_aggregate(a, "row", nullptr, nullptr, &agg), QUIVER_ERROR);
-    EXPECT_EQ(quiver_expression_aggregate(a, "row", "sum", nullptr, nullptr), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_aggregate(nullptr, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_aggregate(a, nullptr, QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_aggregate(a, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, nullptr),
+              QUIVER_ERROR);
 
     quiver_expression_close(a);
 }
@@ -1151,9 +1150,11 @@ TEST_F(ExpressionCApiFixture, AggregateAgentsNullArguments) {
     auto* a = expr_from_file(path_a);
     quiver_expression_t* agg = nullptr;
 
-    EXPECT_EQ(quiver_expression_aggregate_agents(nullptr, "sum", nullptr, &agg), QUIVER_ERROR);
-    EXPECT_EQ(quiver_expression_aggregate_agents(a, nullptr, nullptr, &agg), QUIVER_ERROR);
-    EXPECT_EQ(quiver_expression_aggregate_agents(a, "sum", nullptr, nullptr), QUIVER_ERROR);
+    EXPECT_EQ(
+        quiver_expression_aggregate_agents(nullptr, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM, nullptr, &agg),
+        QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_aggregate_agents(a, QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM, nullptr, nullptr),
+              QUIVER_ERROR);
 
     quiver_expression_close(a);
 }
@@ -1167,7 +1168,8 @@ TEST_F(ExpressionCApiFixture, AggregateChainedWithBinary) {
     quiver_expression_t* sum = nullptr;
     ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_ADD, a, b, &sum), QUIVER_OK);
     quiver_expression_t* agg = nullptr;
-    ASSERT_EQ(quiver_expression_aggregate(sum, "row", "sum", nullptr, &agg), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_aggregate(sum, "row", QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, nullptr, &agg),
+              QUIVER_OK);
     ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
     quiver_expression_close(a);
     quiver_expression_close(b);
@@ -1200,4 +1202,427 @@ TEST_F(ExpressionCApiFixture, FromUnopenedBinaryFile) {
     ASSERT_EQ(orig.size(), copy.size());
     for (size_t i = 0; i < orig.size(); ++i)
         EXPECT_DOUBLE_EQ(orig[i], copy[i]);
+}
+
+TEST_F(ExpressionCApiFixture, UnaryNegate) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 100 + c * 10 + k); });
+
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* neg = nullptr;
+    ASSERT_EQ(quiver_expression_apply_unary(QUIVER_EXPRESSION_UNARY_OPERATION_NEGATE, a, &neg), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(neg, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(neg);
+
+    auto va = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(va.size(), vo.size());
+    for (size_t i = 0; i < va.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], -va[i]);
+}
+
+TEST_F(ExpressionCApiFixture, UnaryAbs) {
+    write_fixture(path_a, [](int r, int c, int k) {
+        const double v = static_cast<double>(r * 10 + c + k);
+        return (r % 2 == 0) ? -v : v;
+    });
+
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* abs_e = nullptr;
+    ASSERT_EQ(quiver_expression_apply_unary(QUIVER_EXPRESSION_UNARY_OPERATION_ABS, a, &abs_e), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(abs_e, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(abs_e);
+
+    auto va = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(va.size(), vo.size());
+    for (size_t i = 0; i < va.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], std::abs(va[i]));
+}
+
+TEST_F(ExpressionCApiFixture, UnarySqrt) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 100 + c * 10 + k + 1); });
+
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* sqrt_e = nullptr;
+    ASSERT_EQ(quiver_expression_apply_unary(QUIVER_EXPRESSION_UNARY_OPERATION_SQRT, a, &sqrt_e), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(sqrt_e, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(sqrt_e);
+
+    auto va = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(va.size(), vo.size());
+    for (size_t i = 0; i < va.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], std::sqrt(va[i]));
+}
+
+TEST_F(ExpressionCApiFixture, UnarySqrtPropagatesNaNOnNegative) {
+    write_fixture(path_a, [](int, int, int) { return -1.0; });
+
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* sqrt_e = nullptr;
+    ASSERT_EQ(quiver_expression_apply_unary(QUIVER_EXPRESSION_UNARY_OPERATION_SQRT, a, &sqrt_e), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(sqrt_e, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(sqrt_e);
+
+    // Read with allow_nulls=1 since sqrt(-1) produces NaN cells.
+    quiver_binary_file_t* f = nullptr;
+    ASSERT_EQ(quiver_binary_file_open_file(path_out.c_str(), 'r', nullptr, &f), QUIVER_OK);
+    const char* dim_names[] = {"row", "col"};
+    for (int64_t r = 1; r <= 3; ++r) {
+        for (int64_t c = 1; c <= 2; ++c) {
+            int64_t dim_values[] = {r, c};
+            double* data = nullptr;
+            size_t count = 0;
+            ASSERT_EQ(quiver_binary_file_read(f, dim_names, dim_values, 2, /*allow_nulls=*/1, &data, &count),
+                      QUIVER_OK);
+            for (size_t i = 0; i < count; ++i)
+                EXPECT_TRUE(std::isnan(data[i]));
+            quiver_binary_file_free_float_array(data);
+        }
+    }
+    quiver_binary_file_close(f);
+}
+
+TEST_F(ExpressionCApiFixture, UnaryLog) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k + 1); });
+
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* log_e = nullptr;
+    ASSERT_EQ(quiver_expression_apply_unary(QUIVER_EXPRESSION_UNARY_OPERATION_LOG, a, &log_e), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(log_e, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(log_e);
+
+    auto va = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(va.size(), vo.size());
+    for (size_t i = 0; i < va.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], std::log(va[i]));
+}
+
+TEST_F(ExpressionCApiFixture, UnaryExp) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r + c + k) * 0.1; });
+
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* exp_e = nullptr;
+    ASSERT_EQ(quiver_expression_apply_unary(QUIVER_EXPRESSION_UNARY_OPERATION_EXP, a, &exp_e), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(exp_e, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(exp_e);
+
+    auto va = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(va.size(), vo.size());
+    for (size_t i = 0; i < va.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], std::exp(va[i]));
+}
+
+TEST_F(ExpressionCApiFixture, UnaryNullArguments) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+
+    quiver_expression_t* out = nullptr;
+    EXPECT_EQ(quiver_expression_apply_unary(QUIVER_EXPRESSION_UNARY_OPERATION_NEGATE, nullptr, &out), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_apply_unary(QUIVER_EXPRESSION_UNARY_OPERATION_NEGATE, a, nullptr), QUIVER_ERROR);
+
+    quiver_expression_close(a);
+}
+
+// ============================================================================
+// Ternary operations (ifelse)
+// ============================================================================
+
+TEST_F(ExpressionCApiFixture, ApplyTernaryIfElse) {
+    write_fixture(path_a, [](int r, int /*c*/, int /*k*/) { return (r == 1) ? 1.0 : 0.0; });
+    write_fixture(path_b, [](int /*r*/, int /*c*/, int /*k*/) { return 10.0; });
+    write_fixture(path_c, [](int /*r*/, int /*c*/, int /*k*/) { return 20.0; });
+
+    auto* cond = expr_from_file(path_a);
+    auto* then_v = expr_from_file(path_b);
+    auto* else_v = expr_from_file(path_c);
+    quiver_expression_t* result = nullptr;
+    ASSERT_EQ(
+        quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, &result),
+        QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(cond);
+    quiver_expression_close(then_v);
+    quiver_expression_close(else_v);
+    quiver_expression_close(result);
+
+    auto vc = read_all_cells(path_a);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(vc.size(), vo.size());
+    for (size_t i = 0; i < vo.size(); ++i) {
+        const double expected = (vc[i] != 0.0) ? 10.0 : 20.0;
+        EXPECT_DOUBLE_EQ(vo[i], expected);
+    }
+}
+
+TEST_F(ExpressionCApiFixture, ApplyTernaryIfElsePropagatesNaN) {
+    const double nan_v = std::numeric_limits<double>::quiet_NaN();
+    write_fixture(path_a, [&](int r, int c, int /*k*/) { return (r == 1 && c == 1) ? nan_v : 1.0; });
+    write_fixture(path_b, [](int, int, int) { return 7.0; });
+    write_fixture(path_c, [](int, int, int) { return -7.0; });
+
+    auto* cond = expr_from_file(path_a);
+    auto* then_v = expr_from_file(path_b);
+    auto* else_v = expr_from_file(path_c);
+    quiver_expression_t* result = nullptr;
+    ASSERT_EQ(
+        quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, &result),
+        QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(result, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(cond);
+    quiver_expression_close(then_v);
+    quiver_expression_close(else_v);
+    quiver_expression_close(result);
+
+    // Re-read output allowing nulls so NaN cells don't trip the reader.
+    quiver_binary_file_t* f = nullptr;
+    ASSERT_EQ(quiver_binary_file_open_file(path_out.c_str(), 'r', nullptr, &f), QUIVER_OK);
+    const char* dim_names[] = {"row", "col"};
+    int64_t cell_11[] = {1, 1};
+    int64_t cell_22[] = {2, 2};
+    double* data = nullptr;
+    size_t count = 0;
+    ASSERT_EQ(quiver_binary_file_read(f, dim_names, cell_11, 2, /*allow_nulls=*/1, &data, &count), QUIVER_OK);
+    EXPECT_TRUE(std::isnan(data[0]));
+    EXPECT_TRUE(std::isnan(data[1]));
+    quiver_binary_file_free_float_array(data);
+
+    ASSERT_EQ(quiver_binary_file_read(f, dim_names, cell_22, 2, /*allow_nulls=*/0, &data, &count), QUIVER_OK);
+    EXPECT_DOUBLE_EQ(data[0], 7.0);
+    EXPECT_DOUBLE_EQ(data[1], 7.0);
+    quiver_binary_file_free_float_array(data);
+    quiver_binary_file_close(f);
+}
+
+TEST_F(ExpressionCApiFixture, ApplyTernaryNullArguments) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    write_fixture(path_b, [](int, int, int) { return 2.0; });
+    write_fixture(path_c, [](int, int, int) { return 3.0; });
+    auto* cond = expr_from_file(path_a);
+    auto* then_v = expr_from_file(path_b);
+    auto* else_v = expr_from_file(path_c);
+
+    quiver_expression_t* out = nullptr;
+    EXPECT_EQ(
+        quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, nullptr, then_v, else_v, &out),
+        QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, nullptr, else_v, &out),
+              QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, nullptr, &out),
+              QUIVER_ERROR);
+    EXPECT_EQ(
+        quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, nullptr),
+        QUIVER_ERROR);
+
+    quiver_expression_close(cond);
+    quiver_expression_close(then_v);
+    quiver_expression_close(else_v);
+}
+
+TEST_F(ExpressionCApiFixture, ApplyTernaryUnitMismatch) {
+    auto* md_mw = make_metadata(3, 2, "MW", {"val1", "val2"});
+    auto* md_kwh = make_metadata(3, 2, "kWh", {"val1", "val2"});
+    write_fixture_with_metadata(path_a, md_mw, [](int, int, int) { return 1.0; });
+    write_fixture_with_metadata(path_b, md_mw, [](int, int, int) { return 2.0; });
+    write_fixture_with_metadata(path_c, md_kwh, [](int, int, int) { return 3.0; });
+    quiver_binary_metadata_free(md_mw);
+    quiver_binary_metadata_free(md_kwh);
+
+    auto* cond = expr_from_file(path_a);
+    auto* then_v = expr_from_file(path_b);
+    auto* else_v = expr_from_file(path_c);
+    quiver_expression_t* out = nullptr;
+    EXPECT_EQ(quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, &out),
+              QUIVER_ERROR);
+    const char* msg = quiver_get_last_error();
+    ASSERT_NE(msg, nullptr);
+    EXPECT_NE(std::string(msg).find("units differ"), std::string::npos);
+
+    quiver_expression_close(cond);
+    quiver_expression_close(then_v);
+    quiver_expression_close(else_v);
+}
+
+TEST_F(ExpressionCApiFixture, ApplyTernaryShapeMismatch) {
+    auto* md_3x2 = make_metadata(3, 2, "MW", {"val1", "val2"});
+    auto* md_4x2 = make_metadata(4, 2, "MW", {"val1", "val2"});
+    write_fixture_with_metadata(path_a, md_3x2, [](int, int, int) { return 1.0; });
+    write_fixture_with_metadata(path_b, md_3x2, [](int, int, int) { return 2.0; });
+    // path_c uses 4x2 (incompatible with 3x2)
+    quiver_binary_file_t* f = nullptr;
+    ASSERT_EQ(quiver_binary_file_open_file(path_c.c_str(), 'w', md_4x2, &f), QUIVER_OK);
+    const char* dim_names[] = {"row", "col"};
+    for (int64_t r = 1; r <= 4; ++r) {
+        for (int64_t c = 1; c <= 2; ++c) {
+            int64_t dvs[] = {r, c};
+            double data[] = {3.0, 3.0};
+            ASSERT_EQ(quiver_binary_file_write(f, dim_names, dvs, 2, data, 2), QUIVER_OK);
+        }
+    }
+    ASSERT_EQ(quiver_binary_file_close(f), QUIVER_OK);
+    quiver_binary_metadata_free(md_3x2);
+    quiver_binary_metadata_free(md_4x2);
+
+    auto* cond = expr_from_file(path_a);
+    auto* then_v = expr_from_file(path_b);
+    auto* else_v = expr_from_file(path_c);
+    quiver_expression_t* out = nullptr;
+    EXPECT_EQ(quiver_expression_apply_ternary(QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE, cond, then_v, else_v, &out),
+              QUIVER_ERROR);
+
+    quiver_expression_close(cond);
+    quiver_expression_close(then_v);
+    quiver_expression_close(else_v);
+}
+
+// ============================================================================
+// quiver_expression_select_agents
+// ============================================================================
+
+TEST_F(ExpressionCApiFixture, SelectAgentsSubset) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
+
+    auto* a = expr_from_file(path_a);
+    const char* labels[] = {"val2"};
+    quiver_expression_t* sel = nullptr;
+    ASSERT_EQ(quiver_expression_select_agents(a, labels, 1, &sel), QUIVER_OK);
+
+    quiver_binary_metadata_t* out_md = nullptr;
+    ASSERT_EQ(quiver_expression_get_metadata(sel, &out_md), QUIVER_OK);
+    char** out_labels = nullptr;
+    size_t out_count = 0;
+    ASSERT_EQ(quiver_binary_metadata_get_labels(out_md, &out_labels, &out_count), QUIVER_OK);
+    ASSERT_EQ(out_count, 1u);
+    EXPECT_STREQ(out_labels[0], "val2");
+    quiver_binary_metadata_free_string_array(out_labels, out_count);
+    quiver_binary_metadata_free(out_md);
+
+    ASSERT_EQ(quiver_expression_save(sel, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(sel);
+
+    // val2 is k=1, so cell value = 10r + c + 1.
+    auto cell = read_one_cell(path_out, {"row", "col"}, {1, 1});
+    ASSERT_EQ(cell.size(), 1u);
+    EXPECT_DOUBLE_EQ(cell[0], 12.0);
+    auto cell2 = read_one_cell(path_out, {"row", "col"}, {3, 2});
+    EXPECT_DOUBLE_EQ(cell2[0], 33.0);
+}
+
+TEST_F(ExpressionCApiFixture, SelectAgentsReorder) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
+
+    auto* a = expr_from_file(path_a);
+    const char* labels[] = {"val2", "val1"};
+    quiver_expression_t* sel = nullptr;
+    ASSERT_EQ(quiver_expression_select_agents(a, labels, 2, &sel), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(sel, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(sel);
+
+    auto cell = read_one_cell(path_out, {"row", "col"}, {1, 1});
+    ASSERT_EQ(cell.size(), 2u);
+    EXPECT_DOUBLE_EQ(cell[0], 12.0);  // val2
+    EXPECT_DOUBLE_EQ(cell[1], 11.0);  // val1
+}
+
+TEST_F(ExpressionCApiFixture, SelectAgentsMissingReturnsError) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    const char* labels[] = {"nope"};
+    quiver_expression_t* sel = nullptr;
+    EXPECT_EQ(quiver_expression_select_agents(a, labels, 1, &sel), QUIVER_ERROR);
+    EXPECT_EQ(sel, nullptr);
+    quiver_expression_close(a);
+}
+
+TEST_F(ExpressionCApiFixture, SelectAgentsNullArguments) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    const char* labels[] = {"val1"};
+    quiver_expression_t* sel = nullptr;
+
+    EXPECT_EQ(quiver_expression_select_agents(nullptr, labels, 1, &sel), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_select_agents(a, nullptr, 1, &sel), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_select_agents(a, labels, 1, nullptr), QUIVER_ERROR);
+
+    quiver_expression_close(a);
+}
+
+// ============================================================================
+// quiver_expression_rename_agents
+// ============================================================================
+
+TEST_F(ExpressionCApiFixture, RenameAgentsPartial) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
+
+    auto* a = expr_from_file(path_a);
+    const char* old_labels[] = {"val1"};
+    const char* new_labels[] = {"alpha"};
+    quiver_expression_t* ren = nullptr;
+    ASSERT_EQ(quiver_expression_rename_agents(a, old_labels, new_labels, 1, &ren), QUIVER_OK);
+
+    quiver_binary_metadata_t* out_md = nullptr;
+    ASSERT_EQ(quiver_expression_get_metadata(ren, &out_md), QUIVER_OK);
+    char** out_labels = nullptr;
+    size_t out_count = 0;
+    ASSERT_EQ(quiver_binary_metadata_get_labels(out_md, &out_labels, &out_count), QUIVER_OK);
+    ASSERT_EQ(out_count, 2u);
+    EXPECT_STREQ(out_labels[0], "alpha");
+    EXPECT_STREQ(out_labels[1], "val2");
+    quiver_binary_metadata_free_string_array(out_labels, out_count);
+    quiver_binary_metadata_free(out_md);
+
+    ASSERT_EQ(quiver_expression_save(ren, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(ren);
+
+    auto cell = read_one_cell(path_out, {"row", "col"}, {1, 1});
+    ASSERT_EQ(cell.size(), 2u);
+    EXPECT_DOUBLE_EQ(cell[0], 11.0);  // unchanged (was val1)
+    EXPECT_DOUBLE_EQ(cell[1], 12.0);  // unchanged (val2)
+}
+
+TEST_F(ExpressionCApiFixture, RenameAgentsMissingReturnsError) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    const char* old_labels[] = {"nope"};
+    const char* new_labels[] = {"x"};
+    quiver_expression_t* ren = nullptr;
+    EXPECT_EQ(quiver_expression_rename_agents(a, old_labels, new_labels, 1, &ren), QUIVER_ERROR);
+    EXPECT_EQ(ren, nullptr);
+    quiver_expression_close(a);
+}
+
+TEST_F(ExpressionCApiFixture, RenameAgentsCollisionReturnsError) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    const char* old_labels[] = {"val1"};
+    const char* new_labels[] = {"val2"};
+    quiver_expression_t* ren = nullptr;
+    EXPECT_EQ(quiver_expression_rename_agents(a, old_labels, new_labels, 1, &ren), QUIVER_ERROR);
+    quiver_expression_close(a);
+}
+
+TEST_F(ExpressionCApiFixture, RenameAgentsNullArguments) {
+    write_fixture(path_a, [](int, int, int) { return 1.0; });
+    auto* a = expr_from_file(path_a);
+    const char* old_labels[] = {"val1"};
+    const char* new_labels[] = {"alpha"};
+    quiver_expression_t* ren = nullptr;
+
+    EXPECT_EQ(quiver_expression_rename_agents(nullptr, old_labels, new_labels, 1, &ren), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_rename_agents(a, nullptr, new_labels, 1, &ren), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_rename_agents(a, old_labels, nullptr, 1, &ren), QUIVER_ERROR);
+    EXPECT_EQ(quiver_expression_rename_agents(a, old_labels, new_labels, 1, nullptr), QUIVER_ERROR);
+
+    quiver_expression_close(a);
 }

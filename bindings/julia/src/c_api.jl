@@ -646,6 +646,34 @@ const quiver_expression_t = quiver_expression
     QUIVER_EXPRESSION_OPERATION_DIVIDE = 3
 end
 
+@cenum quiver_expression_unary_operation_t::UInt32 begin
+    QUIVER_EXPRESSION_UNARY_OPERATION_NEGATE = 0
+    QUIVER_EXPRESSION_UNARY_OPERATION_ABS = 1
+    QUIVER_EXPRESSION_UNARY_OPERATION_SQRT = 2
+    QUIVER_EXPRESSION_UNARY_OPERATION_LOG = 3
+    QUIVER_EXPRESSION_UNARY_OPERATION_EXP = 4
+end
+
+@cenum quiver_expression_ternary_operation_t::UInt32 begin
+    QUIVER_EXPRESSION_TERNARY_OPERATION_IFELSE = 0
+end
+
+@cenum quiver_expression_aggregate_operation_t::UInt32 begin
+    QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM = 0
+    QUIVER_EXPRESSION_AGGREGATE_OPERATION_MEAN = 1
+    QUIVER_EXPRESSION_AGGREGATE_OPERATION_MIN = 2
+    QUIVER_EXPRESSION_AGGREGATE_OPERATION_MAX = 3
+    QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE = 4
+end
+
+@cenum quiver_expression_aggregate_agents_operation_t::UInt32 begin
+    QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM = 0
+    QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MEAN = 1
+    QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MIN = 2
+    QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MAX = 3
+    QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_PERCENTILE = 4
+end
+
 function quiver_expression_from_file(file, out)
     @ccall libquiver_c.quiver_expression_from_file(file::Ptr{quiver_binary_file_t}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
 end
@@ -666,6 +694,14 @@ function quiver_expression_apply_scalar_left(operation, lhs, rhs, out)
     @ccall libquiver_c.quiver_expression_apply_scalar_left(operation::quiver_expression_operation_t, lhs::Cdouble, rhs::Ptr{quiver_expression_t}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
 end
 
+function quiver_expression_apply_unary(operation, operand, out)
+    @ccall libquiver_c.quiver_expression_apply_unary(operation::quiver_expression_unary_operation_t, operand::Ptr{quiver_expression_t}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
+end
+
+function quiver_expression_apply_ternary(operation, condition, then_value, else_value, out)
+    @ccall libquiver_c.quiver_expression_apply_ternary(operation::quiver_expression_ternary_operation_t, condition::Ptr{quiver_expression_t}, then_value::Ptr{quiver_expression_t}, else_value::Ptr{quiver_expression_t}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
+end
+
 function quiver_expression_save(expression, path)
     @ccall libquiver_c.quiver_expression_save(expression::Ptr{quiver_expression_t}, path::Ptr{Cchar})::quiver_error_t
 end
@@ -675,11 +711,19 @@ function quiver_expression_get_metadata(expression, out)
 end
 
 function quiver_expression_aggregate(expression, dimension, operation, parameter, out)
-    @ccall libquiver_c.quiver_expression_aggregate(expression::Ptr{quiver_expression_t}, dimension::Ptr{Cchar}, operation::Ptr{Cchar}, parameter::Ptr{Cdouble}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
+    @ccall libquiver_c.quiver_expression_aggregate(expression::Ptr{quiver_expression_t}, dimension::Ptr{Cchar}, operation::quiver_expression_aggregate_operation_t, parameter::Ptr{Cdouble}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
 end
 
 function quiver_expression_aggregate_agents(expression, operation, parameter, out)
-    @ccall libquiver_c.quiver_expression_aggregate_agents(expression::Ptr{quiver_expression_t}, operation::Ptr{Cchar}, parameter::Ptr{Cdouble}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
+    @ccall libquiver_c.quiver_expression_aggregate_agents(expression::Ptr{quiver_expression_t}, operation::quiver_expression_aggregate_agents_operation_t, parameter::Ptr{Cdouble}, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
+end
+
+function quiver_expression_select_agents(expression, labels, label_count, out)
+    @ccall libquiver_c.quiver_expression_select_agents(expression::Ptr{quiver_expression_t}, labels::Ptr{Ptr{Cchar}}, label_count::Csize_t, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
+end
+
+function quiver_expression_rename_agents(expression, old_labels, new_labels, mapping_count, out)
+    @ccall libquiver_c.quiver_expression_rename_agents(expression::Ptr{quiver_expression_t}, old_labels::Ptr{Ptr{Cchar}}, new_labels::Ptr{Ptr{Cchar}}, mapping_count::Csize_t, out::Ptr{Ptr{quiver_expression_t}})::quiver_error_t
 end
 
 #! format: on

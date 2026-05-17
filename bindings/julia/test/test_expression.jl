@@ -968,7 +968,7 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             with_expr(path_a) do e
-                out = Quiver.aggregate(e, "row", "sum")
+                out = Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM)
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -987,7 +987,7 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             with_expr(path_a) do e
-                out = Quiver.aggregate(e, "row", "mean")
+                out = Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_MEAN)
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1004,8 +1004,8 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             with_expr(path_a) do e
-                out_min = Quiver.aggregate(e, "row", "min")
-                out_max = Quiver.aggregate(e, "row", "max")
+                out_min = Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_MIN)
+                out_max = Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_MAX)
                 Quiver.save(out_min, path_out)
                 Quiver.save(out_max, path_out2)
                 Quiver.close!(out_min)
@@ -1024,7 +1024,7 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             with_expr(path_a) do e
-                out = Quiver.aggregate(e, "row", "percentile", 0.5)
+                out = Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, 0.5)
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1041,7 +1041,7 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r == 2 ? NaN : Float64(r * 10 + c + k))
             with_expr(path_a) do e
-                out = Quiver.aggregate(e, "row", "sum")
+                out = Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM)
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1064,7 +1064,11 @@ end
             )
             write_dense(path_a, md, [:row, :col, :depth], [3, 2, 2], 1, (_, _) -> 2.0)
             with_expr(path_a) do e
-                out = Quiver.aggregate(Quiver.aggregate(e, "row", "sum"), "col", "sum")
+                out = Quiver.aggregate(
+                    Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM),
+                    "col",
+                    Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM,
+                )
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1083,7 +1087,7 @@ end
             write_fixture(path_b, (r, c, k) -> r + c + k)
             with_expr(path_a) do a
                 with_expr(path_b) do b
-                    out = Quiver.aggregate(a + b, "row", "sum")
+                    out = Quiver.aggregate(a + b, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM)
                     Quiver.save(out, path_out)
                     return Quiver.close!(out)
                 end
@@ -1101,19 +1105,11 @@ end
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
             with_expr(path_a) do e
-                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "nonexistent", "sum")
-            end
-        finally
-            cleanup(path_a)
-        end
-    end
-
-    @testset "Aggregate unknown operation throws" begin
-        path_a = make_path("a")
-        try
-            write_fixture(path_a, (_, _, _) -> 1.0)
-            with_expr(path_a) do e
-                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", "average")
+                @test_throws Quiver.DatabaseException Quiver.aggregate(
+                    e,
+                    "nonexistent",
+                    Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM,
+                )
             end
         finally
             cleanup(path_a)
@@ -1125,7 +1121,11 @@ end
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
             with_expr(path_a) do e
-                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", "percentile")
+                @test_throws Quiver.DatabaseException Quiver.aggregate(
+                    e,
+                    "row",
+                    Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE,
+                )
             end
         finally
             cleanup(path_a)
@@ -1137,7 +1137,12 @@ end
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
             with_expr(path_a) do e
-                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", "sum", 0.5)
+                @test_throws Quiver.DatabaseException Quiver.aggregate(
+                    e,
+                    "row",
+                    Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM,
+                    0.5,
+                )
             end
         finally
             cleanup(path_a)
@@ -1149,8 +1154,18 @@ end
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
             with_expr(path_a) do e
-                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", "percentile", 1.5)
-                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", "percentile", -0.1)
+                @test_throws Quiver.DatabaseException Quiver.aggregate(
+                    e,
+                    "row",
+                    Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE,
+                    1.5,
+                )
+                @test_throws Quiver.DatabaseException Quiver.aggregate(
+                    e,
+                    "row",
+                    Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE,
+                    -0.1,
+                )
             end
         finally
             cleanup(path_a)
@@ -1166,7 +1181,7 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(e, "sum")
+                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM)
                 md = Quiver.get_metadata(out)
                 @test Quiver.Binary.get_labels(md) == ["sum"]
                 Quiver.save(out, path_out)
@@ -1185,7 +1200,7 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(e, "mean")
+                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MEAN)
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1202,7 +1217,7 @@ end
         try
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(e, "percentile", 0.5)
+                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_PERCENTILE, 0.5)
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1219,7 +1234,7 @@ end
             # Mark label k=1 as NaN; sum should fall back to the other label.
             write_fixture(path_a, (r, c, k) -> k == 1 ? NaN : Float64(r * 10 + c + k))
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(e, "sum")
+                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_SUM)
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1236,7 +1251,7 @@ end
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(e, "mean")
+                out = Quiver.aggregate_agents(e, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MEAN)
                 md = Quiver.get_metadata(out)
                 @test Quiver.Binary.get_labels(md) == ["mean"]
                 @test Quiver.Binary.get_unit(md) == "MW"
@@ -1256,7 +1271,10 @@ end
         try
             write_fixture(path_a, (_, _, _) -> 3.0)
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(Quiver.aggregate(e, "row", "sum"), "mean")
+                out = Quiver.aggregate_agents(
+                    Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM),
+                    Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MEAN,
+                )
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1274,7 +1292,7 @@ end
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             file = Quiver.Binary.open_file(path_a; mode = 'r')
             try
-                out = Quiver.aggregate(file, "row", "sum")
+                out = Quiver.aggregate(file, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM)
                 Quiver.save(out, path_out)
                 Quiver.close!(out)
             finally
@@ -1293,7 +1311,7 @@ end
             write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
             file = Quiver.Binary.open_file(path_a; mode = 'r')
             try
-                out = Quiver.aggregate_agents(file, "mean")
+                out = Quiver.aggregate_agents(file, Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MEAN)
                 Quiver.save(out, path_out)
                 Quiver.close!(out)
             finally
@@ -1301,6 +1319,560 @@ end
             end
             # Mean of (10*1 + 1 + 1, 10*1 + 1 + 2) = 12.5.
             @test read_one_cell(path_out; row = 1, col = 1)[1] == 12.5
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    # ==========================================================================
+    # Unary operators (Negate, Abs, Sqrt, Log, Exp)
+    # ==========================================================================
+
+    @testset "Unary negate on Expression" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 100 + c * 10 + k)
+            with_expr(path_a) do a
+                result = -a
+                Quiver.save(result, path_out)
+                return Quiver.close!(result)
+            end
+            @test read_all_cells(path_out) == .-read_all_cells(path_a)
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Unary abs on Expression" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            # Alternate sign so abs has work to do.
+            write_fixture(path_a, (r, c, k) -> (r % 2 == 0 ? -1 : 1) * (r * 10 + c + k))
+            with_expr(path_a) do a
+                result = abs(a)
+                Quiver.save(result, path_out)
+                return Quiver.close!(result)
+            end
+            @test read_all_cells(path_out) == abs.(read_all_cells(path_a))
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Unary sqrt on Expression" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 100 + c * 10 + k + 1)  # > 0
+            with_expr(path_a) do a
+                result = sqrt(a)
+                Quiver.save(result, path_out)
+                return Quiver.close!(result)
+            end
+            @test read_all_cells(path_out) ≈ sqrt.(read_all_cells(path_a))
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Unary sqrt propagates NaN on negative" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (_, _, _) -> -1.0)
+            with_expr(path_a) do a
+                result = sqrt(a)
+                Quiver.save(result, path_out)
+                return Quiver.close!(result)
+            end
+            # Read with allow_nulls = true since sqrt(-1) produces NaN cells.
+            file = Quiver.Binary.open_file(path_out; mode = 'r')
+            try
+                for r in 1:3, c in 1:2
+                    cell = Quiver.Binary.read(file; allow_nulls = true, row = r, col = c)
+                    @test all(isnan, cell)
+                end
+            finally
+                Quiver.Binary.close!(file)
+            end
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Unary log on Expression" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k + 1)  # > 0
+            with_expr(path_a) do a
+                result = log(a)
+                Quiver.save(result, path_out)
+                return Quiver.close!(result)
+            end
+            @test read_all_cells(path_out) ≈ log.(read_all_cells(path_a))
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Unary exp on Expression" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            # Small magnitudes to keep exp() comfortable numerically.
+            write_fixture(path_a, (r, c, k) -> (r + c + k) * 0.1)
+            with_expr(path_a) do a
+                result = exp(a)
+                Quiver.save(result, path_out)
+                return Quiver.close!(result)
+            end
+            @test read_all_cells(path_out) ≈ exp.(read_all_cells(path_a))
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Unary metadata preserved" begin
+        path_a = make_path("a")
+        try
+            write_fixture(path_a, (_, _, _) -> 1.0)
+            with_expr(path_a) do a
+                neg = -a
+                try
+                    md = Quiver.get_metadata(neg)
+                    @test Quiver.Binary.get_unit(md) == "MW"
+                    @test Quiver.Binary.get_labels(md) == ["val1", "val2"]
+                    dims = Quiver.Binary.get_dimensions(md)
+                    @test length(dims) == 2
+                    @test dims[1].name == "row"
+                    @test dims[2].name == "col"
+                finally
+                    Quiver.close!(neg)
+                end
+            end
+        finally
+            cleanup(path_a)
+        end
+    end
+
+    @testset "Unary composes (abs of negate)" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            with_expr(path_a) do a
+                result = abs(-a)
+                Quiver.save(result, path_out)
+                return Quiver.close!(result)
+            end
+            @test read_all_cells(path_out) == abs.(read_all_cells(path_a))
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Unary composes with binary: -(a + b)" begin
+        path_a, path_b, path_out = make_path("a"), make_path("b"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r + c + k)
+            write_fixture(path_b, (r, c, k) -> r * 2 + c + k)
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    result = -(a + b)
+                    Quiver.save(result, path_out)
+                    return Quiver.close!(result)
+                end
+            end
+            @test read_all_cells(path_out) == .-(read_all_cells(path_a) .+ read_all_cells(path_b))
+        finally
+            cleanup(path_a, path_b, path_out)
+        end
+    end
+
+    @testset "Unary on Binary.File shortcut" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 100 + c * 10 + k + 1)
+            file = Quiver.Binary.open_file(path_a; mode = 'r')
+            try
+                result = sqrt(file)
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            finally
+                Quiver.Binary.close!(file)
+            end
+            @test read_all_cells(path_out) ≈ sqrt.(read_all_cells(path_a))
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "Unary negate on Binary.File shortcut" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 100 + c * 10 + k)
+            file = Quiver.Binary.open_file(path_a; mode = 'r')
+            try
+                result = -file
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            finally
+                Quiver.Binary.close!(file)
+            end
+            @test read_all_cells(path_out) == .-read_all_cells(path_a)
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "ifelse selects by condition" begin
+        path_cond, path_then, path_else, path_out =
+            make_path("cond"), make_path("then"), make_path("else"), make_path("out")
+        try
+            write_fixture(path_cond, (r, _c, _k) -> r == 1 ? 1.0 : 0.0)
+            write_fixture(path_then, (_r, _c, _k) -> 10.0)
+            write_fixture(path_else, (_r, _c, _k) -> 20.0)
+            cond = Quiver.Binary.open_file(path_cond; mode = 'r')
+            then_v = Quiver.Binary.open_file(path_then; mode = 'r')
+            else_v = Quiver.Binary.open_file(path_else; mode = 'r')
+            try
+                result = ifelse(Quiver.Expression(cond), Quiver.Expression(then_v), Quiver.Expression(else_v))
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            finally
+                Quiver.Binary.close!(cond)
+                Quiver.Binary.close!(then_v)
+                Quiver.Binary.close!(else_v)
+            end
+            vc = read_all_cells(path_cond)
+            vo = read_all_cells(path_out)
+            for i in eachindex(vo)
+                @test vo[i] == (vc[i] != 0.0 ? 10.0 : 20.0)
+            end
+        finally
+            cleanup(path_cond, path_then, path_else, path_out)
+        end
+    end
+
+    @testset "ifelse propagates NaN in condition" begin
+        path_cond, path_then, path_else, path_out =
+            make_path("cond"), make_path("then"), make_path("else"), make_path("out")
+        try
+            write_fixture(path_cond, (r, c, _k) -> (r == 1 && c == 1) ? NaN : 1.0)
+            write_fixture(path_then, (_r, _c, _k) -> 7.0)
+            write_fixture(path_else, (_r, _c, _k) -> -7.0)
+            cond = Quiver.Binary.open_file(path_cond; mode = 'r')
+            then_v = Quiver.Binary.open_file(path_then; mode = 'r')
+            else_v = Quiver.Binary.open_file(path_else; mode = 'r')
+            try
+                result = ifelse(Quiver.Expression(cond), Quiver.Expression(then_v), Quiver.Expression(else_v))
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            finally
+                Quiver.Binary.close!(cond)
+                Quiver.Binary.close!(then_v)
+                Quiver.Binary.close!(else_v)
+            end
+            file = Quiver.Binary.open_file(path_out; mode = 'r')
+            cell_11 = Quiver.Binary.read(file; allow_nulls = true, row = 1, col = 1)
+            cell_22 = Quiver.Binary.read(file; row = 2, col = 2)
+            Quiver.Binary.close!(file)
+            @test all(isnan, cell_11)
+            @test cell_22 == [7.0, 7.0]
+        finally
+            cleanup(path_cond, path_then, path_else, path_out)
+        end
+    end
+
+    @testset "ifelse unselected-branch NaN does not propagate" begin
+        path_cond, path_then, path_else, path_out =
+            make_path("cond"), make_path("then"), make_path("else"), make_path("out")
+        try
+            write_fixture(path_cond, (_r, _c, _k) -> 1.0)
+            write_fixture(path_then, (_r, _c, _k) -> 42.0)
+            write_fixture(path_else, (_r, _c, _k) -> NaN)
+            cond = Quiver.Binary.open_file(path_cond; mode = 'r')
+            then_v = Quiver.Binary.open_file(path_then; mode = 'r')
+            else_v = Quiver.Binary.open_file(path_else; mode = 'r')
+            try
+                result = ifelse(Quiver.Expression(cond), Quiver.Expression(then_v), Quiver.Expression(else_v))
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            finally
+                Quiver.Binary.close!(cond)
+                Quiver.Binary.close!(then_v)
+                Quiver.Binary.close!(else_v)
+            end
+            @test all(v -> v == 42.0, read_all_cells(path_out))
+        finally
+            cleanup(path_cond, path_then, path_else, path_out)
+        end
+    end
+
+    @testset "ifelse condition unit ignored" begin
+        path_cond, path_then, path_else, path_out =
+            make_path("cond"), make_path("then"), make_path("else"), make_path("out")
+        try
+            md_cond = make_metadata(; unit = "flag")  # cond.unit = flag
+            md_branch = make_metadata(; unit = "MW")  # then/else MW
+            write_fixture_with_metadata(path_cond, md_cond, (_r, _c, _k) -> 1.0)
+            write_fixture_with_metadata(path_then, md_branch, (_r, _c, _k) -> 10.0)
+            write_fixture_with_metadata(path_else, md_branch, (_r, _c, _k) -> 20.0)
+            cond = Quiver.Binary.open_file(path_cond; mode = 'r')
+            then_v = Quiver.Binary.open_file(path_then; mode = 'r')
+            else_v = Quiver.Binary.open_file(path_else; mode = 'r')
+            try
+                result = ifelse(Quiver.Expression(cond), Quiver.Expression(then_v), Quiver.Expression(else_v))
+                meta = Quiver.get_metadata(result)
+                @test Quiver.Binary.get_unit(meta) == "MW"
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            finally
+                Quiver.Binary.close!(cond)
+                Quiver.Binary.close!(then_v)
+                Quiver.Binary.close!(else_v)
+            end
+            @test all(v -> v == 10.0, read_all_cells(path_out))
+        finally
+            cleanup(path_cond, path_then, path_else, path_out)
+        end
+    end
+
+    @testset "ifelse unit mismatch between then and else throws" begin
+        path_cond, path_then, path_else = make_path("cond"), make_path("then"), make_path("else")
+        try
+            md = make_metadata(; unit = "MW")
+            md_other = make_metadata(; unit = "kWh")
+            write_fixture_with_metadata(path_cond, md, (_r, _c, _k) -> 1.0)
+            write_fixture_with_metadata(path_then, md, (_r, _c, _k) -> 1.0)
+            write_fixture_with_metadata(path_else, md_other, (_r, _c, _k) -> 1.0)
+            cond = Quiver.Binary.open_file(path_cond; mode = 'r')
+            then_v = Quiver.Binary.open_file(path_then; mode = 'r')
+            else_v = Quiver.Binary.open_file(path_else; mode = 'r')
+            try
+                @test_throws Quiver.DatabaseException ifelse(
+                    Quiver.Expression(cond), Quiver.Expression(then_v), Quiver.Expression(else_v),
+                )
+            finally
+                Quiver.Binary.close!(cond)
+                Quiver.Binary.close!(then_v)
+                Quiver.Binary.close!(else_v)
+            end
+        finally
+            cleanup(path_cond, path_then, path_else)
+        end
+    end
+
+    @testset "ifelse on Binary.File shortcuts" begin
+        path_cond, path_then, path_else, path_out =
+            make_path("cond"), make_path("then"), make_path("else"), make_path("out")
+        try
+            write_fixture(path_cond, (r, _c, _k) -> r == 1 ? 1.0 : 0.0)
+            write_fixture(path_then, (_r, _c, _k) -> 100.0)
+            write_fixture(path_else, (_r, _c, _k) -> 200.0)
+            cond = Quiver.Binary.open_file(path_cond; mode = 'r')
+            then_v = Quiver.Binary.open_file(path_then; mode = 'r')
+            else_v = Quiver.Binary.open_file(path_else; mode = 'r')
+            try
+                # All three as Binary.File
+                result = ifelse(cond, then_v, else_v)
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            finally
+                Quiver.Binary.close!(cond)
+                Quiver.Binary.close!(then_v)
+                Quiver.Binary.close!(else_v)
+            end
+            vc = read_all_cells(path_cond)
+            vo = read_all_cells(path_out)
+            for i in eachindex(vo)
+                @test vo[i] == (vc[i] != 0.0 ? 100.0 : 200.0)
+            end
+        finally
+            cleanup(path_cond, path_then, path_else, path_out)
+        end
+    end
+
+    @testset "ifelse chains with binary ops" begin
+        path_cond, path_then, path_else, path_out =
+            make_path("cond"), make_path("then"), make_path("else"), make_path("out")
+        try
+            write_fixture(path_cond, (r, _c, _k) -> r == 1 ? 1.0 : 0.0)
+            write_fixture(path_then, (_r, _c, _k) -> 10.0)
+            write_fixture(path_else, (_r, _c, _k) -> 20.0)
+            cond = Quiver.Binary.open_file(path_cond; mode = 'r')
+            then_v = Quiver.Binary.open_file(path_then; mode = 'r')
+            else_v = Quiver.Binary.open_file(path_else; mode = 'r')
+            try
+                # 2 * ifelse(cond, then, else) + 1
+                result =
+                    2.0 * ifelse(Quiver.Expression(cond), Quiver.Expression(then_v), Quiver.Expression(else_v)) + 1.0
+                Quiver.save(result, path_out)
+                Quiver.close!(result)
+            finally
+                Quiver.Binary.close!(cond)
+                Quiver.Binary.close!(then_v)
+                Quiver.Binary.close!(else_v)
+            end
+            vc = read_all_cells(path_cond)
+            vo = read_all_cells(path_out)
+            for i in eachindex(vo)
+                base = vc[i] != 0.0 ? 10.0 : 20.0
+                @test vo[i] == 2.0 * base + 1.0
+            end
+        finally
+            cleanup(path_cond, path_then, path_else, path_out)
+        end
+    end
+
+    # =========================================================================
+    # select_agents — label-axis projection
+    # =========================================================================
+
+    @testset "select_agents subset" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            with_expr(path_a) do e
+                out = Quiver.select_agents(e, ["val2"])
+                md = Quiver.get_metadata(out)
+                @test Quiver.Binary.get_labels(md) == ["val2"]
+                Quiver.save(out, path_out)
+                return Quiver.close!(out)
+            end
+            # val2 is k=2 → cell = 10r + c + 2.
+            @test read_one_cell(path_out; row = 1, col = 1) == [13.0]
+            @test read_one_cell(path_out; row = 3, col = 2) == [34.0]
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "select_agents reorder" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            with_expr(path_a) do e
+                out = Quiver.select_agents(e, ["val2", "val1"])
+                md = Quiver.get_metadata(out)
+                @test Quiver.Binary.get_labels(md) == ["val2", "val1"]
+                Quiver.save(out, path_out)
+                return Quiver.close!(out)
+            end
+            # First entry is val2 (k=2 → 10r+c+2), second is val1 (k=1 → 10r+c+1).
+            @test read_one_cell(path_out; row = 1, col = 1) == [13.0, 12.0]
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "select_agents missing label throws" begin
+        path_a = make_path("a")
+        try
+            write_fixture(path_a, (r, c, k) -> 1.0)
+            with_expr(path_a) do e
+                @test_throws Quiver.DatabaseException Quiver.select_agents(e, ["nope"])
+            end
+        finally
+            cleanup(path_a)
+        end
+    end
+
+    @testset "select_agents on Binary.File shortcut" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            file = Quiver.Binary.open_file(path_a; mode = 'r')
+            try
+                out = Quiver.select_agents(file, ["val1"])
+                Quiver.save(out, path_out)
+                Quiver.close!(out)
+            finally
+                Quiver.Binary.close!(file)
+            end
+            @test read_one_cell(path_out; row = 1, col = 1) == [12.0]
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    # =========================================================================
+    # rename_agents — label-axis rename
+    # =========================================================================
+
+    @testset "rename_agents partial mapping" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r * 10 + c + k)
+            with_expr(path_a) do e
+                out = Quiver.rename_agents(e, Dict("val1" => "alpha"))
+                md = Quiver.get_metadata(out)
+                @test Quiver.Binary.get_labels(md) == ["alpha", "val2"]
+                Quiver.save(out, path_out)
+                return Quiver.close!(out)
+            end
+            # Values unchanged; both labels still present in (val1->alpha, val2) order.
+            @test read_one_cell(path_out; row = 1, col = 1) == [12.0, 13.0]
+        finally
+            cleanup(path_a, path_out)
+        end
+    end
+
+    @testset "rename_agents all labels" begin
+        path_a = make_path("a")
+        try
+            write_fixture(path_a, (r, c, k) -> 1.0)
+            with_expr(path_a) do e
+                out = Quiver.rename_agents(e, Dict("val1" => "alpha", "val2" => "beta"))
+                md = Quiver.get_metadata(out)
+                labels = Quiver.Binary.get_labels(md)
+                @test sort(labels) == ["alpha", "beta"]
+                return Quiver.close!(out)
+            end
+        finally
+            cleanup(path_a)
+        end
+    end
+
+    @testset "rename_agents missing key throws" begin
+        path_a = make_path("a")
+        try
+            write_fixture(path_a, (r, c, k) -> 1.0)
+            with_expr(path_a) do e
+                @test_throws Quiver.DatabaseException Quiver.rename_agents(e, Dict("nope" => "x"))
+            end
+        finally
+            cleanup(path_a)
+        end
+    end
+
+    @testset "rename_agents collision throws" begin
+        path_a = make_path("a")
+        try
+            write_fixture(path_a, (r, c, k) -> 1.0)
+            with_expr(path_a) do e
+                @test_throws Quiver.DatabaseException Quiver.rename_agents(e, Dict("val1" => "val2"))
+            end
+        finally
+            cleanup(path_a)
+        end
+    end
+
+    @testset "rename_agents on Binary.File shortcut" begin
+        path_a, path_out = make_path("a"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> 1.0)
+            file = Quiver.Binary.open_file(path_a; mode = 'r')
+            try
+                out = Quiver.rename_agents(file, Dict("val1" => "alpha"))
+                Quiver.save(out, path_out)
+                Quiver.close!(out)
+            finally
+                Quiver.Binary.close!(file)
+            end
+            reopened = Quiver.Binary.open_file(path_out; mode = 'r')
+            try
+                md = Quiver.Binary.get_metadata(reopened)
+                @test Quiver.Binary.get_labels(md) == ["alpha", "val2"]
+            finally
+                Quiver.Binary.close!(reopened)
+            end
         finally
             cleanup(path_a, path_out)
         end

@@ -10,6 +10,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace quiver {
@@ -89,7 +90,7 @@ private:
 
 class QUIVER_API ExpressionUnary final : public ExpressionNode {
 public:
-    enum class Operation { Unspecified };
+    enum class Operation { Negate, Abs, Sqrt, Log, Exp };
 
     ExpressionUnary(Operation operation, std::shared_ptr<ExpressionNode> operand);
 
@@ -98,35 +99,58 @@ public:
     void collect_input_files(std::vector<BinaryFile*>& out) const override;
 
 private:
+    static double apply(Operation operation, double x);
+
     Operation operation_;
     std::shared_ptr<ExpressionNode> operand_;
+    mutable std::vector<double> operand_row_buf_;
 };
 
 class QUIVER_API ExpressionTernary final : public ExpressionNode {
 public:
-    enum class Operation { Unspecified };
+    enum class Operation { IfElse };
 
     ExpressionTernary(Operation operation,
-                      std::shared_ptr<ExpressionNode> first,
-                      std::shared_ptr<ExpressionNode> second,
-                      std::shared_ptr<ExpressionNode> third);
+                      std::shared_ptr<ExpressionNode> condition,
+                      std::shared_ptr<ExpressionNode> then_value,
+                      std::shared_ptr<ExpressionNode> else_value);
 
     const BinaryMetadata& metadata() const override;
     void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
     void collect_input_files(std::vector<BinaryFile*>& out) const override;
 
 private:
+    static double apply(Operation operation, double condition, double then_value, double else_value);
+
     Operation operation_;
-    std::shared_ptr<ExpressionNode> first_;
-    std::shared_ptr<ExpressionNode> second_;
-    std::shared_ptr<ExpressionNode> third_;
+    std::shared_ptr<ExpressionNode> condition_;
+    std::shared_ptr<ExpressionNode> then_value_;
+    std::shared_ptr<ExpressionNode> else_value_;
+    BinaryMetadata broadcast_meta_;
+
+    std::vector<int64_t> condition_dim_sizes_;
+    std::vector<int64_t> then_dim_sizes_;
+    std::vector<int64_t> else_dim_sizes_;
+
+    std::vector<int> condition_to_out_;
+    std::vector<int> then_to_out_;
+    std::vector<int> else_to_out_;
+
+    size_t condition_label_count_ = 0;
+    size_t then_label_count_ = 0;
+    size_t else_label_count_ = 0;
+
+    mutable std::vector<int64_t> condition_dims_buf_;
+    mutable std::vector<int64_t> then_dims_buf_;
+    mutable std::vector<int64_t> else_dims_buf_;
+    mutable std::vector<double> condition_buf_;
+    mutable std::vector<double> then_buf_;
+    mutable std::vector<double> else_buf_;
 };
 
 class QUIVER_API ExpressionAggregate final : public ExpressionNode {
 public:
     enum class Operation { Sum, Mean, Min, Max, Percentile };
-
-    static Operation parse_operation(const std::string& name);
 
     ExpressionAggregate(Operation operation,
                         std::shared_ptr<ExpressionNode> operand,
@@ -155,8 +179,6 @@ class QUIVER_API ExpressionAggregateAgents final : public ExpressionNode {
 public:
     enum class Operation { Sum, Mean, Min, Max, Percentile };
 
-    static Operation parse_operation(const std::string& name);
-
     ExpressionAggregateAgents(Operation operation,
                               std::shared_ptr<ExpressionNode> operand,
                               std::optional<double> parameter = std::nullopt);
@@ -172,6 +194,35 @@ private:
 
     BinaryMetadata output_meta_;
     mutable std::vector<double> operand_row_buf_;
+};
+
+class QUIVER_API ExpressionSelectAgents final : public ExpressionNode {
+public:
+    ExpressionSelectAgents(std::shared_ptr<ExpressionNode> operand, std::vector<std::string> labels);
+
+    const BinaryMetadata& metadata() const override;
+    void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
+    void collect_input_files(std::vector<BinaryFile*>& out) const override;
+
+private:
+    std::shared_ptr<ExpressionNode> operand_;
+    BinaryMetadata output_meta_;
+    std::vector<size_t> selected_indices_;
+    mutable std::vector<double> operand_row_buf_;
+};
+
+class QUIVER_API ExpressionRenameAgents final : public ExpressionNode {
+public:
+    ExpressionRenameAgents(std::shared_ptr<ExpressionNode> operand,
+                           std::vector<std::pair<std::string, std::string>> mapping);
+
+    const BinaryMetadata& metadata() const override;
+    void compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const override;
+    void collect_input_files(std::vector<BinaryFile*>& out) const override;
+
+private:
+    std::shared_ptr<ExpressionNode> operand_;
+    BinaryMetadata output_meta_;
 };
 
 }  // namespace quiver

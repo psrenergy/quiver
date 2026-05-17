@@ -24,15 +24,22 @@ const BinaryMetadata& Expression::metadata() const {
 }
 
 Expression Expression::aggregate(const std::string& dimension,
-                                 const std::string& operation,
+                                 ExpressionAggregate::Operation operation,
                                  std::optional<double> parameter) const {
-    auto op = ExpressionAggregate::parse_operation(operation);
-    return Expression(std::make_shared<ExpressionAggregate>(op, node_, dimension, parameter));
+    return Expression(std::make_shared<ExpressionAggregate>(operation, node_, dimension, parameter));
 }
 
-Expression Expression::aggregate_agents(const std::string& operation, std::optional<double> parameter) const {
-    auto op = ExpressionAggregateAgents::parse_operation(operation);
-    return Expression(std::make_shared<ExpressionAggregateAgents>(op, node_, parameter));
+Expression Expression::aggregate_agents(ExpressionAggregateAgents::Operation operation,
+                                        std::optional<double> parameter) const {
+    return Expression(std::make_shared<ExpressionAggregateAgents>(operation, node_, parameter));
+}
+
+Expression Expression::select_agents(const std::vector<std::string>& labels) const {
+    return Expression(std::make_shared<ExpressionSelectAgents>(node_, labels));
+}
+
+Expression Expression::rename_agents(const std::vector<std::pair<std::string, std::string>>& mapping) const {
+    return Expression(std::make_shared<ExpressionRenameAgents>(node_, mapping));
 }
 
 void Expression::save(const std::string& path) const {
@@ -130,6 +137,27 @@ Expression operator/(const Expression& lhs, double rhs) {
 Expression operator/(double lhs, const Expression& rhs) {
     auto scalar = std::make_shared<ExpressionScalar>(lhs, rhs.metadata());
     return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Divide, scalar, rhs.node_));
+}
+
+Expression operator-(const Expression& operand) {
+    return Expression(std::make_shared<ExpressionUnary>(ExpressionUnary::Operation::Negate, operand.node_));
+}
+Expression abs(const Expression& operand) {
+    return Expression(std::make_shared<ExpressionUnary>(ExpressionUnary::Operation::Abs, operand.node_));
+}
+Expression sqrt(const Expression& operand) {
+    return Expression(std::make_shared<ExpressionUnary>(ExpressionUnary::Operation::Sqrt, operand.node_));
+}
+Expression log(const Expression& operand) {
+    return Expression(std::make_shared<ExpressionUnary>(ExpressionUnary::Operation::Log, operand.node_));
+}
+Expression exp(const Expression& operand) {
+    return Expression(std::make_shared<ExpressionUnary>(ExpressionUnary::Operation::Exp, operand.node_));
+}
+
+Expression ifelse(const Expression& condition, const Expression& then_value, const Expression& else_value) {
+    return Expression(std::make_shared<ExpressionTernary>(
+        ExpressionTernary::Operation::IfElse, condition.node_, then_value.node_, else_value.node_));
 }
 
 }  // namespace quiver
