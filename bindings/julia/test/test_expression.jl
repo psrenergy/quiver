@@ -1064,7 +1064,11 @@ end
             )
             write_dense(path_a, md, [:row, :col, :depth], [3, 2, 2], 1, (_, _) -> 2.0)
             with_expr(path_a) do e
-                out = Quiver.aggregate(Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM), "col", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM)
+                out = Quiver.aggregate(
+                    Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM),
+                    "col",
+                    Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM,
+                )
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
@@ -1101,7 +1105,11 @@ end
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
             with_expr(path_a) do e
-                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "nonexistent", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM)
+                @test_throws Quiver.DatabaseException Quiver.aggregate(
+                    e,
+                    "nonexistent",
+                    Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM,
+                )
             end
         finally
             cleanup(path_a)
@@ -1113,7 +1121,11 @@ end
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
             with_expr(path_a) do e
-                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE)
+                @test_throws Quiver.DatabaseException Quiver.aggregate(
+                    e,
+                    "row",
+                    Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE,
+                )
             end
         finally
             cleanup(path_a)
@@ -1125,7 +1137,12 @@ end
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
             with_expr(path_a) do e
-                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM, 0.5)
+                @test_throws Quiver.DatabaseException Quiver.aggregate(
+                    e,
+                    "row",
+                    Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM,
+                    0.5,
+                )
             end
         finally
             cleanup(path_a)
@@ -1137,8 +1154,18 @@ end
         try
             write_fixture(path_a, (_, _, _) -> 1.0)
             with_expr(path_a) do e
-                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, 1.5)
-                @test_throws Quiver.DatabaseException Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE, -0.1)
+                @test_throws Quiver.DatabaseException Quiver.aggregate(
+                    e,
+                    "row",
+                    Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE,
+                    1.5,
+                )
+                @test_throws Quiver.DatabaseException Quiver.aggregate(
+                    e,
+                    "row",
+                    Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_PERCENTILE,
+                    -0.1,
+                )
             end
         finally
             cleanup(path_a)
@@ -1244,7 +1271,10 @@ end
         try
             write_fixture(path_a, (_, _, _) -> 3.0)
             with_expr(path_a) do e
-                out = Quiver.aggregate_agents(Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM), Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MEAN)
+                out = Quiver.aggregate_agents(
+                    Quiver.aggregate(e, "row", Quiver.C.QUIVER_EXPRESSION_AGGREGATE_OPERATION_SUM),
+                    Quiver.C.QUIVER_EXPRESSION_AGGREGATE_AGENTS_OPERATION_MEAN,
+                )
                 Quiver.save(out, path_out)
                 return Quiver.close!(out)
             end
