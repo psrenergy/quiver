@@ -20,7 +20,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 ### v1.1 add_time_series_row
 
 - [x] **Phase 1: C++ Core add_time_series_row** - Implement `Database::add_time_series_row` with upsert semantics, transaction-nest awareness, and full C++ test coverage (completed 2026-05-19)
-- [ ] **Phase 2: C API quiver_database_add_time_series_row** - Mirror the C++ method through the FFI boundary using the columnar typed-arrays pattern, with C API tests
+- [x] **Phase 2: C API quiver_database_add_time_series_row** - Mirror the C++ method through the FFI boundary using the columnar typed-arrays pattern, with C API tests (completed 2026-05-19)
 - [ ] **Phase 3: Language bindings + documentation** - Regenerate Julia / Dart / Python / Lua wrappers, add per-binding tests, and sync `docs/time_series.md` + CLAUDE.md with the shipped API
 
 ## Phase Details
@@ -68,5 +68,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. C++ Core add_time_series_row | 2/2 | Complete    | 2026-05-19 |
-| 2. C API quiver_database_add_time_series_row | 1/2 | In Progress|  |
+| 2. C API quiver_database_add_time_series_row | 2/2 | Complete   | 2026-05-19 |
 | 3. Language bindings + documentation | 0/TBD | Not started | - |
