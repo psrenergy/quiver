@@ -67,6 +67,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. C++ Core add_time_series_row | 2/2 | Complete   | 2026-05-19 |
+| 1. C++ Core add_time_series_row | 2/2 | Complete    | 2026-05-19 |
 | 2. C API quiver_database_add_time_series_row | 0/TBD | Not started | - |
 | 3. Language bindings + documentation | 0/TBD | Not started | - |

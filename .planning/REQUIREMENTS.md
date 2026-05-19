@@ -9,10 +9,10 @@ Vertical slice for `add_time_series_row`: a single-row upsert that complements t
 
 ### Core (C++)
 
-- [ ] **CORE-11**: `Database::add_time_series_row(collection, group, id, row)` inserts a single time series row (PK columns from schema + value columns from `row`), upserting on the time-series primary key (`id` + dimension columns) so calling it twice with the same key replaces the value columns.
-- [ ] **CORE-12**: Row validation matches `update_time_series_group` semantics — every dimension column in the schema must be present in `row`; unknown columns and type mismatches throw with the canonical `"Cannot add_time_series_row: ..."` error message.
-- [ ] **CORE-13**: The operation participates in the existing nest-aware `TransactionGuard` — works standalone (own transaction) and inside an explicit `begin_transaction` block without double-beginning.
-- [ ] **CORE-14**: C++ tests in `tests/test_database_time_series.cpp` cover: simple insert, upsert (same key overwrites), multi-dimension schemas (e.g. `date_time + block`), partial value columns (omitted columns become NULL), missing-dimension error path, unknown-column error path, type-mismatch error path, transaction nesting.
+- [x] **CORE-11**: `Database::add_time_series_row(collection, group, id, row)` inserts a single time series row (PK columns from schema + value columns from `row`), upserting on the time-series primary key (`id` + dimension columns) so calling it twice with the same key replaces the value columns.
+- [x] **CORE-12**: Row validation matches `update_time_series_group` semantics — every dimension column in the schema must be present in `row`; unknown columns and type mismatches throw with the canonical `"Cannot add_time_series_row: ..."` error message.
+- [x] **CORE-13**: The operation participates in the existing nest-aware `TransactionGuard` — works standalone (own transaction) and inside an explicit `begin_transaction` block without double-beginning.
+- [x] **CORE-14**: C++ tests in `tests/test_database_time_series.cpp` cover: simple insert, upsert (same key overwrites), multi-dimension schemas (e.g. `date_time + block`), partial value columns (omitted columns become NULL), missing-dimension error path, unknown-column error path, type-mismatch error path, transaction nesting.
 
 ### C API
 
@@ -54,10 +54,10 @@ Deferred to future milestones. Not in v1.1 scope.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CORE-11 | Phase 1 | Pending |
-| CORE-12 | Phase 1 | Pending |
-| CORE-13 | Phase 1 | Pending |
-| CORE-14 | Phase 1 | Pending |
+| CORE-11 | Phase 1 | Complete |
+| CORE-12 | Phase 1 | Complete |
+| CORE-13 | Phase 1 | Complete |
+| CORE-14 | Phase 1 | Complete |
 | CAPI-11 | Phase 2 | Pending |
 | CAPI-12 | Phase 2 | Pending |
 | CAPI-13 | Phase 2 | Pending |
