@@ -464,6 +464,19 @@ static std::string capture_update_error(quiver::Database& db,
     return {};
 }
 
+static std::string capture_add_row_error(quiver::Database& db,
+                                         const std::string& collection,
+                                         const std::string& group,
+                                         int64_t id,
+                                         const std::map<std::string, quiver::Value>& row) {
+    try {
+        db.add_time_series_row(collection, group, id, row);
+    } catch (const std::runtime_error& e) {
+        return e.what();
+    }
+    return {};
+}
+
 TEST(Database, TimeSeriesMissingDateTime) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
@@ -944,4 +957,138 @@ TEST(Database, AddTimeSeriesRowPartialValueColumns) {
     EXPECT_EQ(std::get<int64_t>(rows[1]["block"]), 2);
     EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[1]["load"]));
     EXPECT_EQ(std::get<int64_t>(rows[1]["flag"]), 5);
+}
+
+TEST(Database, AddTimeSeriesRowErrors) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("multi_dim_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element resource;
+    resource.set("label", std::string("Resource 1"));
+    auto id = db.create_element("Resource", resource);
+
+    // a. Missing dimension column ('block' omitted, date_time present).
+    {
+        auto msg = capture_add_row_error(
+            db, "Resource", "load", id, {{"date_time", std::string("2024-01-01")}, {"load", 1.0}});
+        EXPECT_NE(msg.find("Cannot add_time_series_row: row missing required 'block' column"),
+                  std::string::npos)
+            << "Actual: " << msg;
+    }
+
+    // b. Missing OTHER dimension column ('date_time' omitted, block present).
+    {
+        auto msg = capture_add_row_error(
+            db, "Resource", "load", id, {{"block", int64_t{1}}, {"load", 1.0}});
+        EXPECT_NE(msg.find("Cannot add_time_series_row: row missing required 'date_time' column"),
+                  std::string::npos)
+            << "Actual: " << msg;
+    }
+
+    // c. Unknown column.
+    {
+        auto msg = capture_add_row_error(db,
+                                         "Resource",
+                                         "load",
+                                         id,
+                                         {{"date_time", std::string("2024-01-01")},
+                                          {"block", int64_t{1}},
+                                          {"load", 1.0},
+                                          {"pressure", 1013.25}});
+        EXPECT_NE(msg.find("Cannot add_time_series_row: column 'pressure' not found in group 'load'"),
+                  std::string::npos)
+            << "Actual: " << msg;
+    }
+
+    // d. Type mismatch: INTEGER passed for REAL column 'load'.
+    {
+        auto msg = capture_add_row_error(db,
+                                         "Resource",
+                                         "load",
+                                         id,
+                                         {{"date_time", std::string("2024-01-01")},
+                                          {"block", int64_t{1}},
+                                          {"load", int64_t{42}}});
+        EXPECT_NE(msg.find("Cannot add_time_series_row: column 'load' has type REAL but received INTEGER"),
+                  std::string::npos)
+            << "Actual: " << msg;
+    }
+
+    // e. Type mismatch: REAL passed for INTEGER column 'block'.
+    {
+        auto msg = capture_add_row_error(db,
+                                         "Resource",
+                                         "load",
+                                         id,
+                                         {{"date_time", std::string("2024-01-01")},
+                                          {"block", 1.5},
+                                          {"load", 1.0}});
+        EXPECT_NE(msg.find("Cannot add_time_series_row: column 'block' has type INTEGER but received REAL"),
+                  std::string::npos)
+            << "Actual: " << msg;
+    }
+}
+
+TEST(Database, AddTimeSeriesRowTransactionRollback) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element item;
+    item.set("label", std::string("Item 1"));
+    auto id = db.create_element("Collection", item);
+
+    db.begin_transaction();
+    EXPECT_TRUE(db.in_transaction());
+    db.add_time_series_row(
+        "Collection", "data", id, {{"date_time", std::string("2024-01-01")}, {"value", 1.0}});
+    EXPECT_TRUE(db.in_transaction());  // nest-aware: still inside the outer txn
+    db.rollback();
+    EXPECT_FALSE(db.in_transaction());
+
+    auto rows = db.read_time_series_group("Collection", "data", id);
+    EXPECT_TRUE(rows.empty());  // rolled back — nothing persisted
+}
+
+TEST(Database, AddTimeSeriesRowTransactionCommitAndStandalone) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element item;
+    item.set("label", std::string("Item 1"));
+    auto id = db.create_element("Collection", item);
+
+    // Phase A: explicit transaction, two writes batched together.
+    db.begin_transaction();
+    db.add_time_series_row(
+        "Collection", "data", id, {{"date_time", std::string("2024-01-01")}, {"value", 1.0}});
+    db.add_time_series_row(
+        "Collection", "data", id, {{"date_time", std::string("2024-01-02")}, {"value", 2.0}});
+    EXPECT_TRUE(db.in_transaction());
+    db.commit();
+    EXPECT_FALSE(db.in_transaction());
+
+    auto rows1 = db.read_time_series_group("Collection", "data", id);
+    EXPECT_EQ(rows1.size(), 2);
+
+    // Phase B: standalone (no explicit txn) — TransactionGuard commits automatically.
+    EXPECT_FALSE(db.in_transaction());
+    db.add_time_series_row(
+        "Collection", "data", id, {{"date_time", std::string("2024-01-03")}, {"value", 3.0}});
+    EXPECT_FALSE(db.in_transaction());  // returned to autocommit
+
+    auto rows2 = db.read_time_series_group("Collection", "data", id);
+    EXPECT_EQ(rows2.size(), 3);  // prior 2 (from Phase A) + 1 (Phase B)
 }
