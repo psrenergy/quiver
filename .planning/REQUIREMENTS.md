@@ -52,28 +52,26 @@ Deferred to future milestones. Not in v1.1 scope.
 
 ## Traceability
 
-Empty initially. Populated by the roadmapper in the next step.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CORE-11 | TBD | Pending |
-| CORE-12 | TBD | Pending |
-| CORE-13 | TBD | Pending |
-| CORE-14 | TBD | Pending |
-| CAPI-11 | TBD | Pending |
-| CAPI-12 | TBD | Pending |
-| CAPI-13 | TBD | Pending |
-| JULIA-11 | TBD | Pending |
-| DART-11 | TBD | Pending |
-| PY-11 | TBD | Pending |
-| LUA-11 | TBD | Pending |
-| DOC-11 | TBD | Pending |
+| CORE-11 | Phase 1 | Pending |
+| CORE-12 | Phase 1 | Pending |
+| CORE-13 | Phase 1 | Pending |
+| CORE-14 | Phase 1 | Pending |
+| CAPI-11 | Phase 2 | Pending |
+| CAPI-12 | Phase 2 | Pending |
+| CAPI-13 | Phase 2 | Pending |
+| JULIA-11 | Phase 3 | Pending |
+| DART-11 | Phase 3 | Pending |
+| PY-11 | Phase 3 | Pending |
+| LUA-11 | Phase 3 | Pending |
+| DOC-11 | Phase 3 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 12 total
-- Mapped to phases: 0
-- Unmapped: 12 ⚠️ (roadmap step will close this)
+- Mapped to phases: 12
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-05-19*
-*Last updated: 2026-05-19 after milestone v1.1 start*
+*Last updated: 2026-05-19 — roadmap mapped all 12 requirements to 3 phases*
