@@ -35,7 +35,9 @@ Give power-users one consistent, intuitive API surface for structured + time ser
 
 <!-- Current milestone scope. -->
 
-(Populated by the active milestone — see below.)
+- ✓ **CORE-11..14**: `Database::add_time_series_row` C++ core — validated in Phase 1 (single-row upsert via `INSERT OR REPLACE`, nest-aware `TransactionGuard`, Pattern-1 errors, 9 GTest cases including multi-dim PK schema)
+- **CAPI-11..13**: C API wrapper `quiver_database_add_time_series_row` — Phase 2
+- **JULIA-11 / DART-11 / PY-11 / LUA-11 / DOC-11**: Binding regeneration + docs sync — Phase 3
 
 ### Out of Scope
 
@@ -69,7 +71,8 @@ Give power-users one consistent, intuitive API surface for structured + time ser
 | Three canonical error message patterns (`Cannot {op}: ...`, `{Entity} not found: ...`, `Failed to {op}: ...`) | Downstream layers can rely on structured prefixes | ✓ Good |
 | `update_time_series_group` replaces all rows | Simpler semantics, batch friendly | ⚠️ Revisit — no single-row append/upsert; v1.1 closes this |
 | Drop indexed `vector<int64_t>` dims overloads (`b9c9ad0`) | API simplicity over micro-perf; map-based form is canonical | ✓ Good |
-| Plan a vertical-slice milestone for `add_time_series_row` across all layers | Symmetric with `read_time_series_row`; closes docs/impl gap | — Pending |
+| Plan a vertical-slice milestone for `add_time_series_row` across all layers | Symmetric with `read_time_series_row`; closes docs/impl gap | — In progress (Phase 1 ✓) |
+| `INSERT OR REPLACE INTO` over `INSERT ... ON CONFLICT DO UPDATE` for `add_time_series_row` (Phase 1) | Matches CORE-11's upsert semantic (omitted value columns reset to NULL/DEFAULT on the replaced row); shorter and mirrors existing time-series SQL style | ✓ Good |
 
 ## Evolution
 
@@ -100,4 +103,4 @@ This document evolves at phase transitions and milestone boundaries.
 - `docs/time_series.md` brought back into sync with shipped API
 
 ---
-*Last updated: 2026-05-19 after GSD bootstrap and v1.1 milestone start*
+*Last updated: 2026-05-19 — Phase 1 (C++ core add_time_series_row) complete*
