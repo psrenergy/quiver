@@ -46,7 +46,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. The wrapper returns `quiver_error_t` (`QUIVER_OK` / `QUIVER_ERROR`) and propagates every C++ exception through `quiver_set_last_error` so callers can retrieve the canonical message via `quiver_get_last_error`.
   3. `quiver_c_tests.exe` exercises the new entry point at the FFI boundary: happy path, upsert, multi-dimension schema, NULL value columns, missing-dimension error, unknown-column error, type-mismatch error.
   4. The C API header changes pass through the FFI generator inputs (function signature, return code, parameter order) so downstream binding generators can pick the symbol up mechanically in Phase 3.
-**Plans**: TBD
+**Plans**: 02-01 (declaration + impl), 02-02 (FFI tests)
 
 ### Phase 3: Language bindings + documentation
 **Goal**: Julia, Dart, Python, and Lua users can each call `add_time_series_row` in the idiomatic shape of their language, with tests proving the round-trip, and the existing time series documentation reflects the shipped API surface.
@@ -68,5 +68,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. C++ Core add_time_series_row | 2/2 | Complete    | 2026-05-19 |
-| 2. C API quiver_database_add_time_series_row | 0/TBD | Not started | - |
+| 2. C API quiver_database_add_time_series_row | 0/2 | Planned | - |
 | 3. Language bindings + documentation | 0/TBD | Not started | - |
