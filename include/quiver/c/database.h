@@ -299,6 +299,21 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
                                                                      size_t column_count,
                                                                      size_t row_count);
 
+// Add (or upsert) a single time series row with multi-column typed data
+// column_names[]: column names (must include every dimension column from the schema PK)
+// column_types[]: quiver_data_type_t per column
+// column_data[c]: pointer to one typed value (int64_t* for INTEGER, double* for FLOAT, const char** for STRING/DATE_TIME)
+// Upserts on the time-series PK (id + every dimension column); calling twice with the same PK overwrites value columns
+// Errors surface canonical "Cannot add_time_series_row: ..." messages via quiver_get_last_error
+QUIVER_C_API quiver_error_t quiver_database_add_time_series_row(quiver_database_t* db,
+                                                                const char* collection,
+                                                                const char* group,
+                                                                int64_t id,
+                                                                const char* const* column_names,
+                                                                const int* column_types,
+                                                                const void* const* column_data,
+                                                                size_t column_count);
+
 // Read time series row - returns one value per element for a specific attribute at a given date_time
 // Uses "last non-null value at or before date_time" lookup semantics
 // out_data_type: attribute's data type (QUIVER_DATA_TYPE_*)
