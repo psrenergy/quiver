@@ -36,7 +36,7 @@ Give power-users one consistent, intuitive API surface for structured + time ser
 <!-- Current milestone scope. -->
 
 - ✓ **CORE-11..14**: `Database::add_time_series_row` C++ core — validated in Phase 1 (single-row upsert via `INSERT OR REPLACE`, nest-aware `TransactionGuard`, Pattern-1 errors, 9 GTest cases including multi-dim PK schema)
-- **CAPI-11..13**: C API wrapper `quiver_database_add_time_series_row` — Phase 2
+- ✓ **CAPI-11..13**: C API wrapper `quiver_database_add_time_series_row` — validated in Phase 2 (columnar typed-arrays marshaling mirroring `quiver_database_update_time_series_group`, D-07 wrapper-owned unknown-column-type error, 12 GTest cases at the FFI boundary)
 - **JULIA-11 / DART-11 / PY-11 / LUA-11 / DOC-11**: Binding regeneration + docs sync — Phase 3
 
 ### Out of Scope
@@ -103,4 +103,4 @@ This document evolves at phase transitions and milestone boundaries.
 - `docs/time_series.md` brought back into sync with shipped API
 
 ---
-*Last updated: 2026-05-19 — Phase 1 (C++ core add_time_series_row) complete*
+*Last updated: 2026-05-19 — Phase 2 (C API quiver_database_add_time_series_row) complete*
