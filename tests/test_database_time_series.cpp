@@ -464,6 +464,19 @@ static std::string capture_update_error(quiver::Database& db,
     return {};
 }
 
+static std::string capture_add_row_error(quiver::Database& db,
+                                         const std::string& collection,
+                                         const std::string& group,
+                                         int64_t id,
+                                         const std::map<std::string, quiver::Value>& row) {
+    try {
+        db.add_time_series_row(collection, group, id, row);
+    } catch (const std::runtime_error& e) {
+        return e.what();
+    }
+    return {};
+}
+
 TEST(Database, TimeSeriesMissingDateTime) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
@@ -674,4 +687,408 @@ TEST(Database, TimeSeriesFilesNotFound) {
 
     EXPECT_THROW(db.read_time_series_files("Configuration"), std::runtime_error);
     EXPECT_THROW(db.list_time_series_files_columns("Configuration"), std::runtime_error);
+}
+
+// ============================================================================
+// add_time_series_row tests (CORE-11..14)
+// ============================================================================
+
+TEST(Database, AddTimeSeriesRowInsert) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element item;
+    item.set("label", std::string("Item 1"));
+    auto id = db.create_element("Collection", item);
+
+    db.add_time_series_row("Collection",
+                           "data",
+                           id,
+                           {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.5}});
+
+    auto rows = db.read_time_series_group("Collection", "data", id);
+    ASSERT_EQ(rows.size(), 1);
+    EXPECT_EQ(std::get<std::string>(rows[0]["date_time"]), "2024-01-01T10:00:00");
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0]["value"]), 1.5);
+
+    auto single = db.read_time_series_row("Collection", "data", "value", "2024-01-01T10:00:00");
+    ASSERT_EQ(single.size(), 1);
+    EXPECT_DOUBLE_EQ(std::get<double>(single[0]), 1.5);
+}
+
+TEST(Database, AddTimeSeriesRowUpsertSamePK) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element item;
+    item.set("label", std::string("Item 1"));
+    auto id = db.create_element("Collection", item);
+
+    db.add_time_series_row("Collection",
+                           "data",
+                           id,
+                           {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.0}});
+    db.add_time_series_row("Collection",
+                           "data",
+                           id,
+                           {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 99.0}});
+
+    auto rows = db.read_time_series_group("Collection", "data", id);
+    ASSERT_EQ(rows.size(), 1);  // upsert: NOT 2 rows
+    EXPECT_EQ(std::get<std::string>(rows[0]["date_time"]), "2024-01-01T10:00:00");
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0]["value"]), 99.0);
+}
+
+TEST(Database, AddTimeSeriesRowMixedInsertAndUpsert) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element item;
+    item.set("label", std::string("Item 1"));
+    auto id = db.create_element("Collection", item);
+
+    db.add_time_series_row("Collection",
+                           "data",
+                           id,
+                           {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 1.0}});
+    db.add_time_series_row("Collection",
+                           "data",
+                           id,
+                           {{"date_time", std::string("2024-01-02T10:00:00")}, {"value", 2.0}});
+    // Upsert on t1 — must replace only the t1 row, leaving t2 untouched.
+    db.add_time_series_row("Collection",
+                           "data",
+                           id,
+                           {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", 10.0}});
+
+    auto rows = db.read_time_series_group("Collection", "data", id);
+    ASSERT_EQ(rows.size(), 2);
+    // read_time_series_group sorts by dim_col ascending.
+    EXPECT_EQ(std::get<std::string>(rows[0]["date_time"]), "2024-01-01T10:00:00");
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0]["value"]), 10.0);
+    EXPECT_EQ(std::get<std::string>(rows[1]["date_time"]), "2024-01-02T10:00:00");
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[1]["value"]), 2.0);
+}
+
+TEST(Database, AddTimeSeriesRowMultiDimSchemaInsert) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("multi_dim_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element resource;
+    resource.set("label", std::string("Resource 1"));
+    auto id = db.create_element("Resource", resource);
+
+    db.add_time_series_row("Resource",
+                           "load",
+                           id,
+                           {{"date_time", std::string("2024-01-01")},
+                            {"block", int64_t{1}},
+                            {"load", 10.0},
+                            {"flag", int64_t{1}}});
+    db.add_time_series_row("Resource",
+                           "load",
+                           id,
+                           {{"date_time", std::string("2024-01-01")},
+                            {"block", int64_t{2}},
+                            {"load", 20.0},
+                            {"flag", int64_t{1}}});
+    db.add_time_series_row("Resource",
+                           "load",
+                           id,
+                           {{"date_time", std::string("2024-01-02")},
+                            {"block", int64_t{1}},
+                            {"load", 30.0},
+                            {"flag", int64_t{0}}});
+    db.add_time_series_row("Resource",
+                           "load",
+                           id,
+                           {{"date_time", std::string("2024-01-02")},
+                            {"block", int64_t{2}},
+                            {"load", 40.0},
+                            {"flag", int64_t{0}}});
+
+    auto rows = db.read_time_series_group("Resource", "load", id);
+    ASSERT_EQ(rows.size(), 4);
+
+    // read_time_series_group sorts only by dim_col (date_time) — block order within
+    // a date_time is undefined. Sort by (date_time, block) for stable assertions.
+    std::sort(rows.begin(), rows.end(), [](const auto& a, const auto& b) {
+        const auto& da = std::get<std::string>(a.at("date_time"));
+        const auto& db_ = std::get<std::string>(b.at("date_time"));
+        if (da != db_)
+            return da < db_;
+        return std::get<int64_t>(a.at("block")) < std::get<int64_t>(b.at("block"));
+    });
+
+    EXPECT_EQ(std::get<std::string>(rows[0]["date_time"]), "2024-01-01");
+    EXPECT_EQ(std::get<int64_t>(rows[0]["block"]), 1);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0]["load"]), 10.0);
+    EXPECT_EQ(std::get<int64_t>(rows[0]["flag"]), 1);
+
+    EXPECT_EQ(std::get<std::string>(rows[1]["date_time"]), "2024-01-01");
+    EXPECT_EQ(std::get<int64_t>(rows[1]["block"]), 2);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[1]["load"]), 20.0);
+    EXPECT_EQ(std::get<int64_t>(rows[1]["flag"]), 1);
+
+    EXPECT_EQ(std::get<std::string>(rows[2]["date_time"]), "2024-01-02");
+    EXPECT_EQ(std::get<int64_t>(rows[2]["block"]), 1);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[2]["load"]), 30.0);
+    EXPECT_EQ(std::get<int64_t>(rows[2]["flag"]), 0);
+
+    EXPECT_EQ(std::get<std::string>(rows[3]["date_time"]), "2024-01-02");
+    EXPECT_EQ(std::get<int64_t>(rows[3]["block"]), 2);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[3]["load"]), 40.0);
+    EXPECT_EQ(std::get<int64_t>(rows[3]["flag"]), 0);
+}
+
+TEST(Database, AddTimeSeriesRowMultiDimSchemaUpsert) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("multi_dim_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element resource;
+    resource.set("label", std::string("Resource 1"));
+    auto id = db.create_element("Resource", resource);
+
+    // Initial insert at (2024-01-01, 1).
+    db.add_time_series_row("Resource",
+                           "load",
+                           id,
+                           {{"date_time", std::string("2024-01-01")},
+                            {"block", int64_t{1}},
+                            {"load", 10.0},
+                            {"flag", int64_t{1}}});
+    // Upsert same (date_time, block) — must overwrite.
+    db.add_time_series_row("Resource",
+                           "load",
+                           id,
+                           {{"date_time", std::string("2024-01-01")},
+                            {"block", int64_t{1}},
+                            {"load", 99.0},
+                            {"flag", int64_t{0}}});
+    // Different block, same date_time — must be a new row.
+    db.add_time_series_row("Resource",
+                           "load",
+                           id,
+                           {{"date_time", std::string("2024-01-01")},
+                            {"block", int64_t{2}},
+                            {"load", 20.0},
+                            {"flag", int64_t{1}}});
+
+    auto rows = db.read_time_series_group("Resource", "load", id);
+    ASSERT_EQ(rows.size(), 2);
+
+    std::sort(rows.begin(), rows.end(), [](const auto& a, const auto& b) {
+        return std::get<int64_t>(a.at("block")) < std::get<int64_t>(b.at("block"));
+    });
+
+    // (date_time=2024-01-01, block=1) — overwritten by the second insert.
+    EXPECT_EQ(std::get<int64_t>(rows[0]["block"]), 1);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0]["load"]), 99.0);
+    EXPECT_EQ(std::get<int64_t>(rows[0]["flag"]), 0);
+
+    // (date_time=2024-01-01, block=2) — independent new row.
+    EXPECT_EQ(std::get<int64_t>(rows[1]["block"]), 2);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[1]["load"]), 20.0);
+    EXPECT_EQ(std::get<int64_t>(rows[1]["flag"]), 1);
+}
+
+TEST(Database, AddTimeSeriesRowPartialValueColumns) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("multi_dim_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element resource;
+    resource.set("label", std::string("Resource 1"));
+    auto id = db.create_element("Resource", resource);
+
+    // Row 1: supply (date_time, block, load) — omit `flag`.
+    db.add_time_series_row(
+        "Resource",
+        "load",
+        id,
+        {{"date_time", std::string("2024-01-01")}, {"block", int64_t{1}}, {"load", 10.0}});
+
+    // Row 2: supply (date_time, block, flag) — omit `load`.
+    db.add_time_series_row(
+        "Resource",
+        "load",
+        id,
+        {{"date_time", std::string("2024-01-01")}, {"block", int64_t{2}}, {"flag", int64_t{5}}});
+
+    auto rows = db.read_time_series_group("Resource", "load", id);
+    ASSERT_EQ(rows.size(), 2);
+
+    std::sort(rows.begin(), rows.end(), [](const auto& a, const auto& b) {
+        return std::get<int64_t>(a.at("block")) < std::get<int64_t>(b.at("block"));
+    });
+
+    // Row 1 (block=1): load=10.0, flag omitted → NULL.
+    EXPECT_EQ(std::get<int64_t>(rows[0]["block"]), 1);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0]["load"]), 10.0);
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[0]["flag"]));
+
+    // Row 2 (block=2): load omitted → NULL, flag=5.
+    EXPECT_EQ(std::get<int64_t>(rows[1]["block"]), 2);
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[1]["load"]));
+    EXPECT_EQ(std::get<int64_t>(rows[1]["flag"]), 5);
+}
+
+TEST(Database, AddTimeSeriesRowErrors) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("multi_dim_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element resource;
+    resource.set("label", std::string("Resource 1"));
+    auto id = db.create_element("Resource", resource);
+
+    // a. Missing dimension column ('block' omitted, date_time present).
+    {
+        auto msg = capture_add_row_error(
+            db, "Resource", "load", id, {{"date_time", std::string("2024-01-01")}, {"load", 1.0}});
+        EXPECT_NE(msg.find("Cannot add_time_series_row: row missing required 'block' column"),
+                  std::string::npos)
+            << "Actual: " << msg;
+    }
+
+    // b. Missing OTHER dimension column ('date_time' omitted, block present).
+    {
+        auto msg = capture_add_row_error(
+            db, "Resource", "load", id, {{"block", int64_t{1}}, {"load", 1.0}});
+        EXPECT_NE(msg.find("Cannot add_time_series_row: row missing required 'date_time' column"),
+                  std::string::npos)
+            << "Actual: " << msg;
+    }
+
+    // c. Unknown column.
+    {
+        auto msg = capture_add_row_error(db,
+                                         "Resource",
+                                         "load",
+                                         id,
+                                         {{"date_time", std::string("2024-01-01")},
+                                          {"block", int64_t{1}},
+                                          {"load", 1.0},
+                                          {"pressure", 1013.25}});
+        EXPECT_NE(msg.find("Cannot add_time_series_row: column 'pressure' not found in group 'load'"),
+                  std::string::npos)
+            << "Actual: " << msg;
+    }
+
+    // d. Type mismatch: INTEGER passed for REAL column 'load'.
+    {
+        auto msg = capture_add_row_error(db,
+                                         "Resource",
+                                         "load",
+                                         id,
+                                         {{"date_time", std::string("2024-01-01")},
+                                          {"block", int64_t{1}},
+                                          {"load", int64_t{42}}});
+        EXPECT_NE(msg.find("Cannot add_time_series_row: column 'load' has type REAL but received INTEGER"),
+                  std::string::npos)
+            << "Actual: " << msg;
+    }
+
+    // e. Type mismatch: REAL passed for INTEGER column 'block'.
+    {
+        auto msg = capture_add_row_error(db,
+                                         "Resource",
+                                         "load",
+                                         id,
+                                         {{"date_time", std::string("2024-01-01")},
+                                          {"block", 1.5},
+                                          {"load", 1.0}});
+        EXPECT_NE(msg.find("Cannot add_time_series_row: column 'block' has type INTEGER but received REAL"),
+                  std::string::npos)
+            << "Actual: " << msg;
+    }
+}
+
+TEST(Database, AddTimeSeriesRowTransactionRollback) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element item;
+    item.set("label", std::string("Item 1"));
+    auto id = db.create_element("Collection", item);
+
+    db.begin_transaction();
+    EXPECT_TRUE(db.in_transaction());
+    db.add_time_series_row(
+        "Collection", "data", id, {{"date_time", std::string("2024-01-01")}, {"value", 1.0}});
+    EXPECT_TRUE(db.in_transaction());  // nest-aware: still inside the outer txn
+    db.rollback();
+    EXPECT_FALSE(db.in_transaction());
+
+    auto rows = db.read_time_series_group("Collection", "data", id);
+    EXPECT_TRUE(rows.empty());  // rolled back — nothing persisted
+}
+
+TEST(Database, AddTimeSeriesRowTransactionCommitAndStandalone) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element item;
+    item.set("label", std::string("Item 1"));
+    auto id = db.create_element("Collection", item);
+
+    // Phase A: explicit transaction, two writes batched together.
+    db.begin_transaction();
+    db.add_time_series_row(
+        "Collection", "data", id, {{"date_time", std::string("2024-01-01")}, {"value", 1.0}});
+    db.add_time_series_row(
+        "Collection", "data", id, {{"date_time", std::string("2024-01-02")}, {"value", 2.0}});
+    EXPECT_TRUE(db.in_transaction());
+    db.commit();
+    EXPECT_FALSE(db.in_transaction());
+
+    auto rows1 = db.read_time_series_group("Collection", "data", id);
+    EXPECT_EQ(rows1.size(), 2);
+
+    // Phase B: standalone (no explicit txn) — TransactionGuard commits automatically.
+    EXPECT_FALSE(db.in_transaction());
+    db.add_time_series_row(
+        "Collection", "data", id, {{"date_time", std::string("2024-01-03")}, {"value", 3.0}});
+    EXPECT_FALSE(db.in_transaction());  // returned to autocommit
+
+    auto rows2 = db.read_time_series_group("Collection", "data", id);
+    EXPECT_EQ(rows2.size(), 3);  // prior 2 (from Phase A) + 1 (Phase B)
 }
