@@ -1270,6 +1270,381 @@ TEST(DatabaseCApi, AddTimeSeriesRowPartialValueColumns) {
     quiver_database_close(db);
 }
 
+TEST(DatabaseCApi, AddTimeSeriesRowMissingDimension) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* resource = nullptr;
+    ASSERT_EQ(quiver_element_create(&resource), QUIVER_OK);
+    quiver_element_set_string(resource, "label", "Resource 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "Resource", resource, &id);
+    EXPECT_EQ(quiver_element_destroy(resource), QUIVER_OK);
+
+    // a. Omit `block` — only date_time + load supplied.
+    {
+        const char* col_names[] = {"date_time", "load"};
+        int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT};
+        const char* dt_buf[] = {"2024-01-01"};
+        double load_buf[] = {1.0};
+        const void* col_data[] = {dt_buf, load_buf};
+        auto err =
+            quiver_database_add_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 2);
+        EXPECT_EQ(err, QUIVER_ERROR);
+        std::string msg = quiver_get_last_error();
+        EXPECT_NE(msg.find("Cannot add_time_series_row: row missing required 'block' column"), std::string::npos)
+            << "Actual: " << msg;
+    }
+
+    // b. Omit `date_time` — only block + load supplied.
+    {
+        const char* col_names[] = {"block", "load"};
+        int col_types[] = {QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_FLOAT};
+        int64_t block_buf[] = {1};
+        double load_buf[] = {1.0};
+        const void* col_data[] = {block_buf, load_buf};
+        auto err =
+            quiver_database_add_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 2);
+        EXPECT_EQ(err, QUIVER_ERROR);
+        std::string msg = quiver_get_last_error();
+        EXPECT_NE(msg.find("Cannot add_time_series_row: row missing required 'date_time' column"), std::string::npos)
+            << "Actual: " << msg;
+    }
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, AddTimeSeriesRowUnknownColumn) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* resource = nullptr;
+    ASSERT_EQ(quiver_element_create(&resource), QUIVER_OK);
+    quiver_element_set_string(resource, "label", "Resource 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "Resource", resource, &id);
+    EXPECT_EQ(quiver_element_destroy(resource), QUIVER_OK);
+
+    // Include an unknown column 'pressure' alongside the required dimensions.
+    const char* col_names[] = {"date_time", "block", "load", "pressure"};
+    int col_types[] = {
+        QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_FLOAT, QUIVER_DATA_TYPE_FLOAT};
+    const char* dt_buf[] = {"2024-01-01"};
+    int64_t block_buf[] = {1};
+    double load_buf[] = {1.0};
+    double pressure_buf[] = {1013.25};
+    const void* col_data[] = {dt_buf, block_buf, load_buf, pressure_buf};
+    auto err = quiver_database_add_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 4);
+    EXPECT_EQ(err, QUIVER_ERROR);
+    std::string msg = quiver_get_last_error();
+    EXPECT_NE(msg.find("Cannot add_time_series_row: column 'pressure' not found in group 'load'"), std::string::npos)
+        << "Actual: " << msg;
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, AddTimeSeriesRowTypeMismatch) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* resource = nullptr;
+    ASSERT_EQ(quiver_element_create(&resource), QUIVER_OK);
+    quiver_element_set_string(resource, "label", "Resource 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "Resource", resource, &id);
+    EXPECT_EQ(quiver_element_destroy(resource), QUIVER_OK);
+
+    // a. INTEGER passed for REAL column 'load'.
+    {
+        const char* col_names[] = {"date_time", "block", "load"};
+        int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_INTEGER};
+        const char* dt_buf[] = {"2024-01-01"};
+        int64_t block_buf[] = {1};
+        int64_t load_buf[] = {42};
+        const void* col_data[] = {dt_buf, block_buf, load_buf};
+        auto err =
+            quiver_database_add_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 3);
+        EXPECT_EQ(err, QUIVER_ERROR);
+        std::string msg = quiver_get_last_error();
+        EXPECT_NE(msg.find("Cannot add_time_series_row: column"), std::string::npos) << "Actual: " << msg;
+        EXPECT_NE(msg.find("has type"), std::string::npos) << "Actual: " << msg;
+        EXPECT_NE(msg.find("but received"), std::string::npos) << "Actual: " << msg;
+    }
+
+    // b. FLOAT passed for INTEGER column 'block'.
+    {
+        const char* col_names[] = {"date_time", "block", "load"};
+        int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT, QUIVER_DATA_TYPE_FLOAT};
+        const char* dt_buf[] = {"2024-01-01"};
+        double block_buf[] = {1.5};
+        double load_buf[] = {1.0};
+        const void* col_data[] = {dt_buf, block_buf, load_buf};
+        auto err =
+            quiver_database_add_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 3);
+        EXPECT_EQ(err, QUIVER_ERROR);
+        std::string msg = quiver_get_last_error();
+        EXPECT_NE(msg.find("Cannot add_time_series_row: column"), std::string::npos) << "Actual: " << msg;
+        EXPECT_NE(msg.find("has type"), std::string::npos) << "Actual: " << msg;
+        EXPECT_NE(msg.find("but received"), std::string::npos) << "Actual: " << msg;
+    }
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, AddTimeSeriesRowTransactionMatrix) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* e1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
+    quiver_element_set_string(e1, "label", "Item 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "Collection", e1, &id);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
+
+    const char* col_names[] = {"date_time", "value"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT};
+
+    // ----- Phase A: rollback discards work -----
+    EXPECT_EQ(quiver_database_begin_transaction(db), QUIVER_OK);
+    int in_txn = 0;
+    EXPECT_EQ(quiver_database_in_transaction(db, &in_txn), QUIVER_OK);
+    EXPECT_NE(in_txn, 0);
+
+    {
+        const char* dt_buf[] = {"2024-01-01T10:00:00"};
+        double val_buf[] = {1.0};
+        const void* col_data[] = {dt_buf, val_buf};
+        auto err =
+            quiver_database_add_time_series_row(db, "Collection", "data", id, col_names, col_types, col_data, 2);
+        EXPECT_EQ(err, QUIVER_OK);
+    }
+
+    EXPECT_EQ(quiver_database_in_transaction(db, &in_txn), QUIVER_OK);
+    EXPECT_NE(in_txn, 0);  // nest-aware: still inside the outer txn
+
+    EXPECT_EQ(quiver_database_rollback(db), QUIVER_OK);
+    EXPECT_EQ(quiver_database_in_transaction(db, &in_txn), QUIVER_OK);
+    EXPECT_EQ(in_txn, 0);
+
+    {
+        char** out_col_names = nullptr;
+        int* out_col_types = nullptr;
+        void** out_col_data = nullptr;
+        size_t col_count = 0;
+        size_t row_count = 0;
+        EXPECT_EQ(quiver_database_read_time_series_group(
+                      db, "Collection", "data", id, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count),
+                  QUIVER_OK);
+        EXPECT_EQ(row_count, 0u);  // rolled back — nothing persisted
+        quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, col_count, row_count);
+    }
+
+    // ----- Phase B: explicit commit persists batched writes -----
+    EXPECT_EQ(quiver_database_begin_transaction(db), QUIVER_OK);
+    {
+        const char* dt_buf[] = {"2024-01-01T10:00:00"};
+        double val_buf[] = {1.0};
+        const void* col_data[] = {dt_buf, val_buf};
+        EXPECT_EQ(quiver_database_add_time_series_row(db, "Collection", "data", id, col_names, col_types, col_data, 2),
+                  QUIVER_OK);
+    }
+    {
+        const char* dt_buf[] = {"2024-01-02T10:00:00"};
+        double val_buf[] = {2.0};
+        const void* col_data[] = {dt_buf, val_buf};
+        EXPECT_EQ(quiver_database_add_time_series_row(db, "Collection", "data", id, col_names, col_types, col_data, 2),
+                  QUIVER_OK);
+    }
+    EXPECT_EQ(quiver_database_commit(db), QUIVER_OK);
+
+    {
+        char** out_col_names = nullptr;
+        int* out_col_types = nullptr;
+        void** out_col_data = nullptr;
+        size_t col_count = 0;
+        size_t row_count = 0;
+        EXPECT_EQ(quiver_database_read_time_series_group(
+                      db, "Collection", "data", id, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count),
+                  QUIVER_OK);
+        EXPECT_EQ(row_count, 2u);  // both committed
+        quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, col_count, row_count);
+    }
+
+    // ----- Phase C: standalone autocommit -----
+    EXPECT_EQ(quiver_database_in_transaction(db, &in_txn), QUIVER_OK);
+    EXPECT_EQ(in_txn, 0);
+    {
+        const char* dt_buf[] = {"2024-01-03T10:00:00"};
+        double val_buf[] = {3.0};
+        const void* col_data[] = {dt_buf, val_buf};
+        EXPECT_EQ(quiver_database_add_time_series_row(db, "Collection", "data", id, col_names, col_types, col_data, 2),
+                  QUIVER_OK);
+    }
+    EXPECT_EQ(quiver_database_in_transaction(db, &in_txn), QUIVER_OK);
+    EXPECT_EQ(in_txn, 0);  // returned to autocommit
+
+    {
+        char** out_col_names = nullptr;
+        int* out_col_types = nullptr;
+        void** out_col_data = nullptr;
+        size_t col_count = 0;
+        size_t row_count = 0;
+        EXPECT_EQ(quiver_database_read_time_series_group(
+                      db, "Collection", "data", id, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count),
+                  QUIVER_OK);
+        EXPECT_EQ(row_count, 3u);  // Phase B's 2 + Phase C's 1
+        quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, col_count, row_count);
+    }
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, AddTimeSeriesRowNullArguments) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    const char* col_names[] = {"date_time", "value"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT};
+    const char* dt_buf[] = {"2024-01-01T10:00:00"};
+    double val_buf[] = {1.0};
+    const void* col_data[] = {dt_buf, val_buf};
+
+    // a. Null db.
+    EXPECT_EQ(quiver_database_add_time_series_row(nullptr, "Collection", "data", 1, col_names, col_types, col_data, 2),
+              QUIVER_ERROR);
+    {
+        std::string msg = quiver_get_last_error();
+        EXPECT_NE(msg.find("Null argument"), std::string::npos) << "Actual: " << msg;
+    }
+
+    // b. Null collection.
+    EXPECT_EQ(quiver_database_add_time_series_row(db, nullptr, "data", 1, col_names, col_types, col_data, 2),
+              QUIVER_ERROR);
+    {
+        std::string msg = quiver_get_last_error();
+        EXPECT_NE(msg.find("Null argument"), std::string::npos) << "Actual: " << msg;
+    }
+
+    // c. Null group.
+    EXPECT_EQ(quiver_database_add_time_series_row(db, "Collection", nullptr, 1, col_names, col_types, col_data, 2),
+              QUIVER_ERROR);
+    {
+        std::string msg = quiver_get_last_error();
+        EXPECT_NE(msg.find("Null argument"), std::string::npos) << "Actual: " << msg;
+    }
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, AddTimeSeriesRowUnknownColumnType) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* resource = nullptr;
+    ASSERT_EQ(quiver_element_create(&resource), QUIVER_OK);
+    quiver_element_set_string(resource, "label", "Resource 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "Resource", resource, &id);
+    EXPECT_EQ(quiver_element_destroy(resource), QUIVER_OK);
+
+    const char* col_names[] = {"date_time", "block", "load"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_INTEGER, 999};  // 999 is bogus
+    const char* dt_buf[] = {"2024-01-01"};
+    int64_t block_buf[] = {1};
+    double load_buf[] = {10.0};
+    const void* col_data[] = {dt_buf, block_buf, load_buf};
+    auto err = quiver_database_add_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 3);
+    EXPECT_EQ(err, QUIVER_ERROR);
+    std::string msg = quiver_get_last_error();
+    EXPECT_NE(msg.find("Cannot add_time_series_row: unknown column type"), std::string::npos) << "Actual: " << msg;
+    EXPECT_NE(msg.find("999"), std::string::npos) << "Actual: " << msg;
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, AddTimeSeriesRowNullColumnArraysWithCount) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    auto err = quiver_database_add_time_series_row(db,
+                                                   "Resource",
+                                                   "load",
+                                                   1,
+                                                   /*column_names=*/nullptr,
+                                                   /*column_types=*/nullptr,
+                                                   /*column_data=*/nullptr,
+                                                   /*column_count=*/3);
+    EXPECT_EQ(err, QUIVER_ERROR);
+    std::string msg = quiver_get_last_error();
+    EXPECT_NE(msg.find("Null argument"), std::string::npos) << "Actual: " << msg;
+
+    quiver_database_close(db);
+}
+
 // ============================================================================
 // Multi-column edge case tests
 // ============================================================================
