@@ -204,6 +204,86 @@ void Database::update_time_series_group(const std::string& collection,
     impl_->logger->info("Updated time series {}.{} for id {} with {} rows", collection, group, id, rows.size());
 }
 
+void Database::add_time_series_row(const std::string& collection,
+                                   const std::string& group,
+                                   int64_t id,
+                                   const std::map<std::string, Value>& row) {
+    impl_->logger->debug(
+        "Adding time series row {}.{} for id {} ({} columns)", collection, group, id, row.size());
+    impl_->require_collection(collection, "add_time_series_row");
+
+    auto ts_table = impl_->schema->find_time_series_table(collection, group);
+    const auto* table_def = impl_->schema->get_table(ts_table);
+    if (!table_def) {
+        throw std::runtime_error("Time series table not found: " + ts_table);
+    }
+
+    // Derive the full dimension column set: every PK column except "id", in
+    // declared column order (column_order is populated from PRAGMA table_info,
+    // which reports columns in declaration order).
+    std::vector<std::string> dim_cols;
+    for (const auto& col_name : table_def->column_order) {
+        if (col_name == "id") {
+            continue;
+        }
+        const auto* col = table_def->get_column(col_name);
+        if (col && col->primary_key) {
+            dim_cols.push_back(col_name);
+        }
+    }
+
+    // Build schema type lookup (all columns except id)
+    std::map<std::string, DataType> schema_types;
+    for (const auto& [col_name, col] : table_def->columns) {
+        if (col_name == "id")
+            continue;
+        schema_types[col_name] = col.type;
+    }
+
+    // Validate the row: every dimension column must be present, all caller
+    // columns must exist in the schema, and values must match column types.
+    for (const auto& dim_col : dim_cols) {
+        if (row.find(dim_col) == row.end()) {
+            throw std::runtime_error("Cannot add_time_series_row: row missing required '" + dim_col + "' column");
+        }
+    }
+    for (const auto& [col_name, value] : row) {
+        auto it = schema_types.find(col_name);
+        if (it == schema_types.end()) {
+            throw std::runtime_error("Cannot add_time_series_row: column '" + col_name + "' not found in group '" +
+                                     group + "' for collection '" + collection + "'");
+        }
+        if (!internal::value_matches_type(value, it->second)) {
+            throw std::runtime_error("Cannot add_time_series_row: column '" + col_name + "' has type " +
+                                     data_type_to_string(it->second) + " but received " +
+                                     internal::value_type_name(value));
+        }
+    }
+
+    Impl::TransactionGuard txn(*impl_);
+
+    // INSERT OR REPLACE: if the PK already matches an existing row, REPLACE
+    // deletes it and inserts the new one (upsert semantic). Any value column
+    // omitted from the caller's row is not listed in the INSERT, so SQLite
+    // leaves it as the column DEFAULT (NULL for nullable value columns).
+    std::string insert_sql = "INSERT OR REPLACE INTO " + ts_table + " (id";
+    std::string placeholders = "?";
+    std::vector<Value> parameters;
+    parameters.emplace_back(id);
+
+    for (const auto& [col_name, value] : row) {
+        insert_sql += ", " + col_name;
+        placeholders += ", ?";
+        parameters.emplace_back(value);
+    }
+    insert_sql += ") VALUES (" + placeholders + ")";
+
+    execute(insert_sql, parameters);
+
+    txn.commit();
+    impl_->logger->info("Added time series row {}.{} for id {}", collection, group, id);
+}
+
 std::vector<Value> Database::read_time_series_row(const std::string& collection,
                                                   const std::string& group,
                                                   const std::string& attribute,
