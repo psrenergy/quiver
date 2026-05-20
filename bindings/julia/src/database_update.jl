@@ -120,6 +120,89 @@ function update_time_series_group!(db::Database, collection::String, group::Stri
     return nothing
 end
 
+function add_time_series_row!(db::Database, collection::String, group::String, id::Int64; kwargs...)
+    # Fetch metadata for auto-coercion (Int -> Float when schema expects REAL)
+    metadata = get_time_series_metadata(db, collection, group)
+    schema_types = Dict{String, C.quiver_data_type_t}()
+    schema_types[metadata.dimension_column] = C.QUIVER_DATA_TYPE_STRING
+    for vc in metadata.value_columns
+        schema_types[vc.name] = vc.data_type
+    end
+
+    column_count = length(kwargs)
+    col_names_strs = String[]
+    col_types = Cint[]
+    col_data_ptrs = Ptr{Cvoid}[]
+    refs = Any[]  # Keep references alive for GC.@preserve
+
+    for (k, v) in kwargs
+        col_name = String(k)
+        push!(col_names_strs, col_name)
+        schema_type = get(schema_types, col_name, nothing)
+
+        if v isa DateTime
+            # DateTime scalar -> format to string, build 1-element Cstring array
+            str_val = date_time_to_string(v)
+            cstr = Base.cconvert(Cstring, str_val)
+            ptrs = Ptr{Cchar}[Base.unsafe_convert(Cstring, cstr)]
+            push!(refs, cstr)
+            push!(refs, ptrs)
+            push!(col_types, Cint(C.QUIVER_DATA_TYPE_STRING))
+            push!(col_data_ptrs, pointer(ptrs))
+        elseif v isa AbstractString
+            cstr = Base.cconvert(Cstring, v)
+            ptrs = Ptr{Cchar}[Base.unsafe_convert(Cstring, cstr)]
+            push!(refs, cstr)
+            push!(refs, ptrs)
+            push!(col_types, Cint(C.QUIVER_DATA_TYPE_STRING))
+            push!(col_data_ptrs, pointer(ptrs))
+        elseif v isa Integer
+            # Check if schema expects FLOAT -> auto-coerce
+            if schema_type == C.QUIVER_DATA_TYPE_FLOAT
+                float_arr = Float64[Float64(v)]
+                push!(refs, float_arr)
+                push!(col_types, Cint(C.QUIVER_DATA_TYPE_FLOAT))
+                push!(col_data_ptrs, pointer(float_arr))
+            else
+                int_arr = Int64[Int64(v)]
+                push!(refs, int_arr)
+                push!(col_types, Cint(C.QUIVER_DATA_TYPE_INTEGER))
+                push!(col_data_ptrs, pointer(int_arr))
+            end
+        elseif v isa Real
+            float_arr = Float64[Float64(v)]
+            push!(refs, float_arr)
+            push!(col_types, Cint(C.QUIVER_DATA_TYPE_FLOAT))
+            push!(col_data_ptrs, pointer(float_arr))
+        else
+            throw(ArgumentError("Unsupported column type: $(typeof(v)) for column '$col_name'"))
+        end
+    end
+
+    # Build column_names as Cstring array
+    name_cstrs = [Base.cconvert(Cstring, n) for n in col_names_strs]
+    name_ptrs = Ptr{Cchar}[Base.unsafe_convert(Cstring, cs) for cs in name_cstrs]
+    push!(refs, name_cstrs)
+    push!(refs, name_ptrs)
+
+    # Build column_types and column_data arrays
+    col_types_arr = Cint[t for t in col_types]
+    col_data_arr = Ptr{Cvoid}[p for p in col_data_ptrs]
+    push!(refs, col_types_arr)
+    push!(refs, col_data_arr)
+
+    GC.@preserve refs begin
+        check(
+            C.quiver_database_add_time_series_row(
+                db.ptr, collection, group, id,
+                name_ptrs, col_types_arr, col_data_arr,
+                Csize_t(column_count),
+            ),
+        )
+    end
+    return nothing
+end
+
 function update_time_series_files!(db::Database, collection::String, paths::Dict{String, Optional{String}})
     if isempty(paths)
         return nothing
