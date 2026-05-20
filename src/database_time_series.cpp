@@ -208,8 +208,7 @@ void Database::add_time_series_row(const std::string& collection,
                                    const std::string& group,
                                    int64_t id,
                                    const std::map<std::string, Value>& row) {
-    impl_->logger->debug(
-        "Adding time series row {}.{} for id {} ({} columns)", collection, group, id, row.size());
+    impl_->logger->debug("Adding time series row {}.{} for id {} ({} columns)", collection, group, id, row.size());
     impl_->require_collection(collection, "add_time_series_row");
 
     auto ts_table = impl_->schema->find_time_series_table(collection, group);

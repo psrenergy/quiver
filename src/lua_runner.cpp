@@ -233,8 +233,8 @@ struct LuaRunner::Impl {
                 // Surface typos / nested tables / unsupported Lua types loudly
                 // instead of silently dropping the column (would cause confusing
                 // downstream "column missing" or NULL-stored errors).
-                throw std::runtime_error("Cannot lua_table_to_value_map: column '" +
-                                         key + "' has unsupported Lua type");
+                throw std::runtime_error("Cannot lua_table_to_value_map: column '" + key +
+                                         "' has unsupported Lua type");
             }
         }
         return result;

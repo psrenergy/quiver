@@ -1239,7 +1239,7 @@ TEST_F(LuaRunnerTest, AddTimeSeriesRowUpsert) {
 
     std::string script_first = R"(
         db:add_time_series_row("Collection", "data", )" +
-                                std::to_string(id) + R"(, { date_time = "2024-06-01", value = 10.0 })
+                               std::to_string(id) + R"(, { date_time = "2024-06-01", value = 10.0 })
     )";
     lua.run(script_first);
 

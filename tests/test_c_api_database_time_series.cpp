@@ -880,8 +880,7 @@ TEST(DatabaseCApi, AddTimeSeriesRowInsert) {
     const char* dt_buf[] = {"2024-01-01T10:00:00"};
     double val_buf[] = {1.5};
     const void* col_data[] = {dt_buf, val_buf};
-    auto err =
-        quiver_database_add_time_series_row(db, "Collection", "data", id, col_names, col_types, col_data, 2);
+    auto err = quiver_database_add_time_series_row(db, "Collection", "data", id, col_names, col_types, col_data, 2);
     EXPECT_EQ(err, QUIVER_OK);
 
     char** out_col_names = nullptr;
@@ -1008,8 +1007,7 @@ TEST(DatabaseCApi, AddTimeSeriesRowMultiDimInsert) {
         double load_buf[] = {r.load};
         int64_t flag_buf[] = {r.flag};
         const void* col_data[] = {dt_buf, block_buf, load_buf, flag_buf};
-        auto err =
-            quiver_database_add_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 4);
+        auto err = quiver_database_add_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 4);
         EXPECT_EQ(err, QUIVER_OK);
     }
 
@@ -1299,8 +1297,7 @@ TEST(DatabaseCApi, AddTimeSeriesRowMissingDimension) {
         const char* dt_buf[] = {"2024-01-01"};
         double load_buf[] = {1.0};
         const void* col_data[] = {dt_buf, load_buf};
-        auto err =
-            quiver_database_add_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 2);
+        auto err = quiver_database_add_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 2);
         EXPECT_EQ(err, QUIVER_ERROR);
         std::string msg = quiver_get_last_error();
         EXPECT_NE(msg.find("Cannot add_time_series_row: row missing required 'block' column"), std::string::npos)
@@ -1314,8 +1311,7 @@ TEST(DatabaseCApi, AddTimeSeriesRowMissingDimension) {
         int64_t block_buf[] = {1};
         double load_buf[] = {1.0};
         const void* col_data[] = {block_buf, load_buf};
-        auto err =
-            quiver_database_add_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 2);
+        auto err = quiver_database_add_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 2);
         EXPECT_EQ(err, QUIVER_ERROR);
         std::string msg = quiver_get_last_error();
         EXPECT_NE(msg.find("Cannot add_time_series_row: row missing required 'date_time' column"), std::string::npos)
@@ -1395,8 +1391,7 @@ TEST(DatabaseCApi, AddTimeSeriesRowTypeMismatch) {
         int64_t block_buf[] = {1};
         int64_t load_buf[] = {42};
         const void* col_data[] = {dt_buf, block_buf, load_buf};
-        auto err =
-            quiver_database_add_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 3);
+        auto err = quiver_database_add_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 3);
         EXPECT_EQ(err, QUIVER_ERROR);
         std::string msg = quiver_get_last_error();
         EXPECT_NE(msg.find("Cannot add_time_series_row: column"), std::string::npos) << "Actual: " << msg;
@@ -1412,8 +1407,7 @@ TEST(DatabaseCApi, AddTimeSeriesRowTypeMismatch) {
         double block_buf[] = {1.5};
         double load_buf[] = {1.0};
         const void* col_data[] = {dt_buf, block_buf, load_buf};
-        auto err =
-            quiver_database_add_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 3);
+        auto err = quiver_database_add_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 3);
         EXPECT_EQ(err, QUIVER_ERROR);
         std::string msg = quiver_get_last_error();
         EXPECT_NE(msg.find("Cannot add_time_series_row: column"), std::string::npos) << "Actual: " << msg;
@@ -1459,8 +1453,7 @@ TEST(DatabaseCApi, AddTimeSeriesRowTransactionMatrix) {
         const char* dt_buf[] = {"2024-01-01T10:00:00"};
         double val_buf[] = {1.0};
         const void* col_data[] = {dt_buf, val_buf};
-        auto err =
-            quiver_database_add_time_series_row(db, "Collection", "data", id, col_names, col_types, col_data, 2);
+        auto err = quiver_database_add_time_series_row(db, "Collection", "data", id, col_names, col_types, col_data, 2);
         EXPECT_EQ(err, QUIVER_OK);
     }
 
@@ -1477,9 +1470,10 @@ TEST(DatabaseCApi, AddTimeSeriesRowTransactionMatrix) {
         void** out_col_data = nullptr;
         size_t col_count = 0;
         size_t row_count = 0;
-        EXPECT_EQ(quiver_database_read_time_series_group(
-                      db, "Collection", "data", id, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count),
-                  QUIVER_OK);
+        EXPECT_EQ(
+            quiver_database_read_time_series_group(
+                db, "Collection", "data", id, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count),
+            QUIVER_OK);
         EXPECT_EQ(row_count, 0u);  // rolled back — nothing persisted
         quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, col_count, row_count);
     }
@@ -1508,9 +1502,10 @@ TEST(DatabaseCApi, AddTimeSeriesRowTransactionMatrix) {
         void** out_col_data = nullptr;
         size_t col_count = 0;
         size_t row_count = 0;
-        EXPECT_EQ(quiver_database_read_time_series_group(
-                      db, "Collection", "data", id, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count),
-                  QUIVER_OK);
+        EXPECT_EQ(
+            quiver_database_read_time_series_group(
+                db, "Collection", "data", id, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count),
+            QUIVER_OK);
         EXPECT_EQ(row_count, 2u);  // both committed
         quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, col_count, row_count);
     }
@@ -1534,9 +1529,10 @@ TEST(DatabaseCApi, AddTimeSeriesRowTransactionMatrix) {
         void** out_col_data = nullptr;
         size_t col_count = 0;
         size_t row_count = 0;
-        EXPECT_EQ(quiver_database_read_time_series_group(
-                      db, "Collection", "data", id, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count),
-                  QUIVER_OK);
+        EXPECT_EQ(
+            quiver_database_read_time_series_group(
+                db, "Collection", "data", id, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count),
+            QUIVER_OK);
         EXPECT_EQ(row_count, 3u);  // Phase B's 2 + Phase C's 1
         quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, col_count, row_count);
     }

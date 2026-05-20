@@ -302,9 +302,10 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
 // Add (or upsert) a single time series row with multi-column typed data
 // column_names[]: column names (must include every dimension column from the schema PK)
 // column_types[]: quiver_data_type_t per column
-// column_data[c]: pointer to one typed value (int64_t* for INTEGER, double* for FLOAT, const char** for STRING/DATE_TIME)
-// Upserts on the time-series PK (id + every dimension column); calling twice with the same PK overwrites value columns
-// Errors surface canonical "Cannot add_time_series_row: ..." messages via quiver_get_last_error
+// column_data[c]: pointer to one typed value (int64_t* for INTEGER, double* for FLOAT, const char** for
+// STRING/DATE_TIME) Upserts on the time-series PK (id + every dimension column); calling twice with the same PK
+// overwrites value columns Errors surface canonical "Cannot add_time_series_row: ..." messages via
+// quiver_get_last_error
 QUIVER_C_API quiver_error_t quiver_database_add_time_series_row(quiver_database_t* db,
                                                                 const char* collection,
                                                                 const char* group,
