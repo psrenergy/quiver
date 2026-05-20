@@ -1276,6 +1276,24 @@ TEST_F(LuaRunnerTest, AddTimeSeriesRowMultiDim) {
     EXPECT_EQ(std::get<int64_t>(rows[0].at("flag")), 1);
 }
 
+TEST_F(LuaRunnerTest, AddTimeSeriesRowMissingDimErrors) {
+    // Negative path: omitting the required date_time dimension column must
+    // surface the C++ "Cannot add_time_series_row: row missing required ..."
+    // error through sol2 -> LuaRunner::run -> std::runtime_error. Mirrors the
+    // Julia / Dart / Python suites which all cover this case.
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        db:add_time_series_row("Collection", "data", )" +
+                         std::to_string(id) + R"(, { value = 10.0 })
+    )";
+    EXPECT_THROW({ lua.run(script); }, std::runtime_error);
+}
+
 // ============================================================================
 // Time series files tests
 // ============================================================================
