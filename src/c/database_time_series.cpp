@@ -296,6 +296,48 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
     }
 }
 
+QUIVER_C_API quiver_error_t quiver_database_add_time_series_row(quiver_database_t* db,
+                                                                const char* collection,
+                                                                const char* group,
+                                                                int64_t id,
+                                                                const char* const* column_names,
+                                                                const int* column_types,
+                                                                const void* const* column_data,
+                                                                size_t column_count) {
+    QUIVER_REQUIRE(db, collection, group);
+    if (column_count > 0) {
+        QUIVER_REQUIRE(column_names, column_types, column_data);
+    }
+
+    try {
+        std::map<std::string, quiver::Value> row;
+        for (size_t c = 0; c < column_count; ++c) {
+            std::string col_name(column_names[c]);
+            switch (column_types[c]) {
+            case QUIVER_DATA_TYPE_INTEGER:
+                row[col_name] = static_cast<const int64_t*>(column_data[c])[0];
+                break;
+            case QUIVER_DATA_TYPE_FLOAT:
+                row[col_name] = static_cast<const double*>(column_data[c])[0];
+                break;
+            case QUIVER_DATA_TYPE_STRING:
+            case QUIVER_DATA_TYPE_DATE_TIME:
+                row[col_name] = std::string(static_cast<const char* const*>(column_data[c])[0]);
+                break;
+            default:
+                throw std::runtime_error("Cannot add_time_series_row: unknown column type " +
+                                         std::to_string(column_types[c]));
+            }
+        }
+
+        db->db.add_time_series_row(collection, group, id, row);
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
+    }
+}
+
 // Time series free functions (co-located with read)
 
 QUIVER_C_API quiver_error_t quiver_database_free_time_series_data(char** column_names,

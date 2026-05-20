@@ -137,6 +137,101 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    @testset "Add Row" begin
+        # Test 1 — insert: create one element, add a row, read back and assert presence
+        @testset "Insert" begin
+            path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+            db = Quiver.from_schema(":memory:", path_schema)
+
+            Quiver.create_element!(db, "Configuration"; label = "Test Config")
+            id = Quiver.create_element!(db, "Collection"; label = "Item 1")
+
+            Quiver.add_time_series_row!(db, "Collection", "data", id;
+                date_time = DateTime(2024, 1, 1),
+                value = 10.0,
+            )
+
+            result = Quiver.read_time_series_group(db, "Collection", "data", id)
+            @test length(result["date_time"]) == 1
+            @test result["date_time"][1] == DateTime(2024, 1, 1)
+            @test result["value"][1] == 10.0
+
+            Quiver.close!(db)
+        end
+
+        # Test 2 — upsert: same key overwrites value
+        @testset "Upsert" begin
+            path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+            db = Quiver.from_schema(":memory:", path_schema)
+
+            Quiver.create_element!(db, "Configuration"; label = "Test Config")
+            id = Quiver.create_element!(db, "Collection"; label = "Item 1")
+
+            Quiver.add_time_series_row!(db, "Collection", "data", id;
+                date_time = DateTime(2024, 1, 1),
+                value = 10.0,
+            )
+
+            # Same date_time PK → should overwrite value
+            Quiver.add_time_series_row!(db, "Collection", "data", id;
+                date_time = DateTime(2024, 1, 1),
+                value = 99.0,
+            )
+
+            result = Quiver.read_time_series_group(db, "Collection", "data", id)
+            @test length(result["date_time"]) == 1  # still one row, not two
+            @test result["value"][1] == 99.0
+
+            Quiver.close!(db)
+        end
+
+        # Test 3 — multi-dim happy path: date_time + block composite PK
+        @testset "Multi-Dim" begin
+            path_schema = joinpath(tests_path(), "schemas", "valid", "multi_dim_time_series.sql")
+            db = Quiver.from_schema(":memory:", path_schema)
+
+            Quiver.create_element!(db, "Configuration"; label = "Test Config")
+            id = Quiver.create_element!(db, "Resource"; label = "Resource 1")
+
+            # Insert row with both dimension columns (date_time + block) and
+            # all value columns (load REAL, flag INTEGER) — mirrors the Dart
+            # suite which also passes `flag` so both bindings exercise the
+            # multi-value-column path.
+            Quiver.add_time_series_row!(db, "Resource", "load", id;
+                date_time = DateTime(2024, 1, 1),
+                block = 1,
+                load = 100.0,
+                flag = 0,
+            )
+
+            result = Quiver.read_time_series_group(db, "Resource", "load", id)
+            @test length(result["date_time"]) == 1
+            @test result["date_time"][1] == DateTime(2024, 1, 1)
+            @test result["load"][1] == 100.0
+            @test result["flag"][1] == 0
+
+            Quiver.close!(db)
+        end
+
+        # Test 4 — missing-dim error: omitting required date_time kwarg
+        @testset "Missing Dim Error" begin
+            path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+            db = Quiver.from_schema(":memory:", path_schema)
+
+            Quiver.create_element!(db, "Configuration"; label = "Test Config")
+            id = Quiver.create_element!(db, "Collection"; label = "Item 1")
+
+            # Omit date_time — C++ layer should surface "Cannot add_time_series_row: ..."
+            exc = @test_throws Quiver.DatabaseException Quiver.add_time_series_row!(
+                db, "Collection", "data", id;
+                value = 10.0,
+            )
+            @test occursin("Cannot add_time_series_row", exc.value.msg)
+
+            Quiver.close!(db)
+        end
+    end
+
     @testset "Ordering" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)

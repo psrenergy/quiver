@@ -117,6 +117,17 @@ public:
                                   int64_t id,
                                   const std::vector<std::map<std::string, Value>>& rows);
 
+    // Add (or upsert) a single time series row. Inserts a new row identified by id +
+    // every dimension column from the schema PK; if a row with the same PK already
+    // exists, value columns are overwritten. Validation matches update_time_series_group:
+    // every dimension column must be present, unknown columns or type mismatches throw
+    // "Cannot add_time_series_row: ..." (canonical Pattern 1). Participates in the
+    // existing nest-aware TransactionGuard.
+    void add_time_series_row(const std::string& collection,
+                             const std::string& group,
+                             int64_t id,
+                             const std::map<std::string, Value>& row);
+
     // Time series files - singleton table storing file paths for external time series data
     bool has_time_series_files(const std::string& collection) const;
     std::vector<std::string> list_time_series_files_columns(const std::string& collection) const;

@@ -153,6 +153,7 @@ struct LuaRunner::Impl {
 
         bind.set_function("update_element", &update_element_lua);
         bind.set_function("update_time_series_group", &update_time_series_group_lua);
+        bind.set_function("add_time_series_row", &add_time_series_row_lua);
         bind.set_function("update_time_series_files", &update_time_series_files_lua);
 
         bind.set_function("get_scalar_metadata", &get_scalar_metadata_lua);
@@ -213,6 +214,9 @@ struct LuaRunner::Impl {
     }
 
     static std::map<std::string, Value> lua_table_to_value_map(const sol::table& t) {
+        // Column order in the resulting map is alphabetical (std::map invariant),
+        // which is fine because the C++ layer indexes by column name rather than
+        // relying on positional order. Callers should not depend on insertion order.
         std::map<std::string, Value> result;
         for (auto& pair : t) {
             auto key = pair.first.as<std::string>();
@@ -225,6 +229,12 @@ struct LuaRunner::Impl {
                 result[key] = val.as<double>();
             } else if (val.is<std::string>()) {
                 result[key] = val.as<std::string>();
+            } else {
+                // Surface typos / nested tables / unsupported Lua types loudly
+                // instead of silently dropping the column (would cause confusing
+                // downstream "column missing" or NULL-stored errors).
+                throw std::runtime_error("Cannot lua_table_to_value_map: column '" + key +
+                                         "' has unsupported Lua type");
             }
         }
         return result;
@@ -803,6 +813,14 @@ struct LuaRunner::Impl {
             cpp_rows.push_back(lua_table_to_value_map(row));
         }
         db.update_time_series_group(collection, group, id, cpp_rows);
+    }
+
+    static void add_time_series_row_lua(Database& db,
+                                        const std::string& collection,
+                                        const std::string& group,
+                                        int64_t id,
+                                        sol::table row) {
+        db.add_time_series_row(collection, group, id, lua_table_to_value_map(row));
     }
 
     // ========================================================================
