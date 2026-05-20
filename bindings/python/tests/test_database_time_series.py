@@ -265,8 +265,7 @@ class TestAddTimeSeriesRow:
         """Multi-dimension PK (date_time + block) round-trips through the Python wrapper."""
         eid = multi_dim_ts_db.create_element("Resource", label="R1")
         multi_dim_ts_db.add_time_series_row(
-            "Resource", "load", eid,
-            date_time="2024-01-01", block=1, load=500.0, flag=0
+            "Resource", "load", eid, date_time="2024-01-01", block=1, load=500.0, flag=0
         )
 
         result = multi_dim_ts_db.read_time_series_group("Resource", "load", eid)

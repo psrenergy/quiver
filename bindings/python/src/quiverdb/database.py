@@ -1238,7 +1238,9 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 c_col_types[i] = DataType.STRING
                 c_col_data[i] = ffi.cast("void*", c_str_arr)
             else:
-                raise TypeError(f"Column '{name}' value has unsupported type {type(v).__name__}; expected int, float, or str")
+                raise TypeError(
+                    f"Column '{name}' value has unsupported type {type(v).__name__}; expected int, float, or str"
+                )
 
         check(
             lib.quiver_database_add_time_series_row(
