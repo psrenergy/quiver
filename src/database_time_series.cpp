@@ -124,9 +124,6 @@ void Database::update_time_series_group(const std::string& collection,
         throw std::runtime_error("Time series table not found: " + ts_table);
     }
     auto dim_cols = internal::find_dimension_columns(*table_def);
-    if (dim_cols.empty()) {
-        throw std::runtime_error("Dimension column not found: time series table '" + table_def->name + "'");
-    }
     const auto& dim_col = dim_cols.front();
 
     // Build schema type lookup (all columns except id)
@@ -275,7 +272,7 @@ void Database::add_time_series_row(const std::string& collection,
     execute(insert_sql, parameters);
 
     txn.commit();
-    impl_->logger->info("Added time series row {}.{} for id {}", collection, group, id);
+    impl_->logger->debug("Added time series row {}.{} for id {}", collection, group, id);
 }
 
 std::vector<Value> Database::read_time_series_row(const std::string& collection,

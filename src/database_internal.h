@@ -90,9 +90,9 @@ inline std::string find_dimension_column(const TableDefinition& table_def) {
 
 // Find all dimension columns for a time series table: every PK column except
 // "id", returned in declaration order (column_order is populated from
-// PRAGMA table_info, which reports columns in declaration order).
-// For single-dim schemas this returns a one-element vector containing the
-// same column find_dimension_column would return.
+// PRAGMA table_info, which reports columns in declaration order). Throws if
+// the table has no dimension columns — mirrors find_dimension_column's
+// contract so callers don't repeat the empty check.
 inline std::vector<std::string> find_dimension_columns(const TableDefinition& table_def) {
     std::vector<std::string> dim_cols;
     for (const auto& col_name : table_def.column_order) {
@@ -103,6 +103,9 @@ inline std::vector<std::string> find_dimension_columns(const TableDefinition& ta
         if (col && col->primary_key) {
             dim_cols.push_back(col_name);
         }
+    }
+    if (dim_cols.empty()) {
+        throw std::runtime_error("Dimension column not found: time series table '" + table_def.name + "'");
     }
     return dim_cols;
 }
