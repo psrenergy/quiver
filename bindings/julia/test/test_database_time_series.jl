@@ -193,17 +193,22 @@ include("fixture.jl")
             Quiver.create_element!(db, "Configuration"; label = "Test Config")
             id = Quiver.create_element!(db, "Resource"; label = "Resource 1")
 
-            # Insert row with both dimension columns (date_time + block)
+            # Insert row with both dimension columns (date_time + block) and
+            # all value columns (load REAL, flag INTEGER) — mirrors the Dart
+            # suite which also passes `flag` so both bindings exercise the
+            # multi-value-column path.
             Quiver.add_time_series_row!(db, "Resource", "load", id;
                 date_time = DateTime(2024, 1, 1),
                 block = 1,
                 load = 100.0,
+                flag = 0,
             )
 
             result = Quiver.read_time_series_group(db, "Resource", "load", id)
             @test length(result["date_time"]) == 1
             @test result["date_time"][1] == DateTime(2024, 1, 1)
             @test result["load"][1] == 100.0
+            @test result["flag"][1] == 0
 
             Quiver.close!(db)
         end
