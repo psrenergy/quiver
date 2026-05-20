@@ -9,7 +9,8 @@
   "workflow": {
     "research": false,
     "text_mode": false,
-    "commit_docs": true
+    "commit_docs": true,
+    "_auto_chain_active": false
   },
   "models": {
     "researcher": "sonnet",
