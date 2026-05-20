@@ -128,7 +128,7 @@ db = Quiver.from_schema(db_path, path_schema)
 
 Quiver.create_element!(db, "Configuration"; label = "Toy Case", value1 = 1.0)
 
-Quiver.create_element!(
+id = Quiver.create_element!(
     db,
     "Resource";
     label = "Resource 1"
@@ -137,19 +137,19 @@ Quiver.create_element!(
 Quiver.add_time_series_row!(
     db,
     "Resource",
-    "some_vector1",
-    "Resource 1",
-    10.0; # new value
-    date_time = DateTime(2000)
+    "group1",
+    id;
+    date_time = DateTime(2000),
+    some_vector1 = 10.0
 )
 
 Quiver.add_time_series_row!(
     db,
     "Resource",
-    "some_vector1",
-    "Resource 1",
-    11.0; # new value
-    date_time = DateTime(2001)
+    "group1",
+    id;
+    date_time = DateTime(2001),
+    some_vector1 = 11.0
 )
 ```
 
