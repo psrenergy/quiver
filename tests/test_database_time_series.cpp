@@ -709,8 +709,7 @@ TEST(Database, UpdateTimeSeriesGroupMissingMultiDimColumn) {
     std::vector<std::map<std::string, quiver::Value>> rows = {
         {{"date_time", std::string("2024-01-01")}, {"load", 10.0}}};
     auto msg = capture_update_error(db, "Resource", "load", id, rows);
-    EXPECT_NE(msg.find("Cannot update_time_series_group: row missing required 'block' column"),
-              std::string::npos)
+    EXPECT_NE(msg.find("Cannot update_time_series_group: row missing required 'block' column"), std::string::npos)
         << "Actual: " << msg;
 }
 
@@ -727,11 +726,9 @@ TEST(Database, UpdateTimeSeriesGroupMissingDateTimeOnMultiDim) {
     resource.set("label", std::string("Resource 1"));
     auto id = db.create_element("Resource", resource);
 
-    std::vector<std::map<std::string, quiver::Value>> rows = {
-        {{"block", int64_t{1}}, {"load", 10.0}}};
+    std::vector<std::map<std::string, quiver::Value>> rows = {{{"block", int64_t{1}}, {"load", 10.0}}};
     auto msg = capture_update_error(db, "Resource", "load", id, rows);
-    EXPECT_NE(msg.find("Cannot update_time_series_group: row missing required 'date_time' column"),
-              std::string::npos)
+    EXPECT_NE(msg.find("Cannot update_time_series_group: row missing required 'date_time' column"), std::string::npos)
         << "Actual: " << msg;
 }
 
@@ -776,8 +773,7 @@ TEST(Database, UpdateTimeSeriesGroupMissingBlockInLaterRow) {
         {{"date_time", std::string("2024-01-01")}, {"block", int64_t{1}}, {"load", 10.0}},
         {{"date_time", std::string("2024-01-02")}, {"load", 20.0}}};
     auto msg = capture_update_error(db, "Resource", "load", id, rows);
-    EXPECT_NE(msg.find("Cannot update_time_series_group: row missing required 'block' column"),
-              std::string::npos)
+    EXPECT_NE(msg.find("Cannot update_time_series_group: row missing required 'block' column"), std::string::npos)
         << "Actual: " << msg;
 
     auto result = db.read_time_series_group("Resource", "load", id);

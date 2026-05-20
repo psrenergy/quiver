@@ -703,8 +703,7 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupMissingMultiDimColumn) {
     EXPECT_EQ(err, QUIVER_ERROR);
 
     std::string error_msg = quiver_get_last_error();
-    EXPECT_NE(error_msg.find("Cannot update_time_series_group: row missing required 'block' column"),
-              std::string::npos)
+    EXPECT_NE(error_msg.find("Cannot update_time_series_group: row missing required 'block' column"), std::string::npos)
         << "Error was: " << error_msg;
 
     quiver_database_close(db);
