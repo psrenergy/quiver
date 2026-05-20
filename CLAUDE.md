@@ -439,7 +439,7 @@ Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references.
 - Scalar readers: `read_scalar_integers/floats/strings(collection, attribute)`
 - Vector readers: `read_vector_integers/floats/strings(collection, attribute)`
 - Set readers: `read_set_integers/floats/strings(collection, attribute)`
-- Time series: `read_time_series_group()`, `update_time_series_group()` — both use multi-column `vector<map<string, Value>>` rows with N typed value columns per time series group
+- Time series: `read_time_series_group()`, `update_time_series_group()`, `add_time_series_row()` — both `read_time_series_group` and `update_time_series_group` use multi-column `vector<map<string, Value>>` rows with N typed value columns per time series group; `add_time_series_row` appends/upserts a single row using a `map<string, Value>` (one value per column)
 - Time series files: `has_time_series_files()`, `list_time_series_files_columns()`, `read_time_series_files()`, `update_time_series_files()`
 - Metadata: `get_scalar_metadata()`, `get_vector_metadata()`, `get_set_metadata()`, `get_time_series_metadata()` — all group metadata returns unified `GroupMetadata` with `dimension_column` (populated for time series, empty for vectors/sets)
 - List groups: `list_scalar_attributes()`, `list_vector_groups()`, `list_set_groups()`, `list_time_series_groups()`
@@ -567,6 +567,7 @@ lua.run(R"(
 | Metadata | `get_scalar_metadata()` | `quiver_database_get_scalar_metadata()` | `get_scalar_metadata()` | `getScalarMetadata()` | `get_scalar_metadata()` |
 | List groups | `list_vector_groups()` | `quiver_database_list_vector_groups()` | `list_vector_groups()` | `listVectorGroups()` | `list_vector_groups()` |
 | Time series read | `read_time_series_group()` | `quiver_database_read_time_series_group()` | `read_time_series_group()` | `readTimeSeriesGroup()` | `read_time_series_group()` |
+| Time series add row | `add_time_series_row()` | `quiver_database_add_time_series_row()` | `add_time_series_row!()` | `addTimeSeriesRow()` | `add_time_series_row()` |
 | Time series update | `update_time_series_group()` | `quiver_database_update_time_series_group()` | `update_time_series_group!()` | `updateTimeSeriesGroup()` | `update_time_series_group()` |
 | Query | `query_string()` | `quiver_database_query_string()` | `query_string()` | `queryString()` | `query_string()` |
 | CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | `export_csv()` |
