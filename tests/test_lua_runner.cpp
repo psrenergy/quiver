@@ -1211,6 +1211,71 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroup) {
     EXPECT_DOUBLE_EQ(std::get<double>(rows[2].at("value")), 30.0);
 }
 
+TEST_F(LuaRunnerTest, AddTimeSeriesRowInsert) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        db:add_time_series_row("Collection", "data", )" +
+                         std::to_string(id) + R"(, { date_time = "2024-06-01", value = 10.0 })
+    )";
+    lua.run(script);
+
+    auto rows = db.read_time_series_group("Collection", "data", id);
+    EXPECT_EQ(rows.size(), 1);
+    EXPECT_EQ(std::get<std::string>(rows[0].at("date_time")), "2024-06-01");
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("value")), 10.0);
+}
+
+TEST_F(LuaRunnerTest, AddTimeSeriesRowUpsert) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script_first = R"(
+        db:add_time_series_row("Collection", "data", )" +
+                                std::to_string(id) + R"(, { date_time = "2024-06-01", value = 10.0 })
+    )";
+    lua.run(script_first);
+
+    std::string script_second = R"(
+        db:add_time_series_row("Collection", "data", )" +
+                                std::to_string(id) + R"(, { date_time = "2024-06-01", value = 99.0 })
+    )";
+    lua.run(script_second);
+
+    auto rows = db.read_time_series_group("Collection", "data", id);
+    EXPECT_EQ(rows.size(), 1);
+    EXPECT_EQ(std::get<std::string>(rows[0].at("date_time")), "2024-06-01");
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("value")), 99.0);
+}
+
+TEST_F(LuaRunnerTest, AddTimeSeriesRowMultiDim) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql"));
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Resource", quiver::Element().set("label", "Resource 1"));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        db:add_time_series_row("Resource", "load", )" +
+                         std::to_string(id) + R"(, { date_time = "2024-06-01", block = 1, load = 42.5, flag = 1 })
+    )";
+    lua.run(script);
+
+    auto rows = db.read_time_series_group("Resource", "load", id);
+    EXPECT_EQ(rows.size(), 1);
+    EXPECT_EQ(std::get<std::string>(rows[0].at("date_time")), "2024-06-01");
+    EXPECT_EQ(std::get<int64_t>(rows[0].at("block")), 1);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("load")), 42.5);
+    EXPECT_EQ(std::get<int64_t>(rows[0].at("flag")), 1);
+}
+
 // ============================================================================
 // Time series files tests
 // ============================================================================
