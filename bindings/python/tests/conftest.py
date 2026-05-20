@@ -134,3 +134,17 @@ def mixed_time_series_db(mixed_time_series_schema_path: Path, tmp_path: Path) ->
     database = Database.from_schema(str(tmp_path / "mixed_ts.db"), str(mixed_time_series_schema_path))
     yield database
     database.close()
+
+
+@pytest.fixture
+def multi_dim_ts_schema_path(schemas_path: Path) -> Path:
+    """Return the path to the multi-dim time series test schema."""
+    return schemas_path / "valid" / "multi_dim_time_series.sql"
+
+
+@pytest.fixture
+def multi_dim_ts_db(multi_dim_ts_schema_path: Path, tmp_path: Path) -> Generator[Database, None, None]:
+    """Create a test database with the multi-dim time series schema (composite PK: date_time + block)."""
+    database = Database.from_schema(str(tmp_path / "multi_dim_ts.db"), str(multi_dim_ts_schema_path))
+    yield database
+    database.close()
