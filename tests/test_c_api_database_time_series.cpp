@@ -670,6 +670,46 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupUnknownColumnType) {
     quiver_database_close(db);
 }
 
+TEST(DatabaseCApi, UpdateTimeSeriesGroupMissingMultiDimColumn) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* resource = nullptr;
+    ASSERT_EQ(quiver_element_create(&resource), QUIVER_OK);
+    quiver_element_set_string(resource, "label", "Resource 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "Resource", resource, &id);
+    EXPECT_EQ(quiver_element_destroy(resource), QUIVER_OK);
+
+    // Single row omitting the `block` PK dim — must be rejected before any DELETE.
+    const char* col_names[] = {"date_time", "load"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT};
+    const char* dt_buf[] = {"2024-01-01"};
+    double load_buf[] = {1.0};
+    const void* col_data[] = {dt_buf, load_buf};
+    auto err =
+        quiver_database_update_time_series_group(db, "Resource", "load", id, col_names, col_types, col_data, 2, 1);
+    EXPECT_EQ(err, QUIVER_ERROR);
+
+    std::string error_msg = quiver_get_last_error();
+    EXPECT_NE(error_msg.find("Cannot update_time_series_group: row missing required 'block' column"),
+              std::string::npos)
+        << "Error was: " << error_msg;
+
+    quiver_database_close(db);
+}
+
 TEST(DatabaseCApi, UpdateTimeSeriesGroupMissingDimension) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;

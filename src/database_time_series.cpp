@@ -123,7 +123,11 @@ void Database::update_time_series_group(const std::string& collection,
     if (!table_def) {
         throw std::runtime_error("Time series table not found: " + ts_table);
     }
-    auto dim_col = internal::find_dimension_column(*table_def);
+    auto dim_cols = internal::find_dimension_columns(*table_def);
+    if (dim_cols.empty()) {
+        throw std::runtime_error("Dimension column not found: time series table '" + table_def->name + "'");
+    }
+    const auto& dim_col = dim_cols.front();
 
     // Build schema type lookup (all columns except id)
     std::map<std::string, DataType> schema_types;
@@ -135,8 +139,10 @@ void Database::update_time_series_group(const std::string& collection,
 
     // Validate rows against schema before any writes
     for (const auto& row : rows) {
-        if (row.find(dim_col) == row.end()) {
-            throw std::runtime_error("Cannot update_time_series_group: row missing required '" + dim_col + "' column");
+        for (const auto& dc : dim_cols) {
+            if (row.find(dc) == row.end()) {
+                throw std::runtime_error("Cannot update_time_series_group: row missing required '" + dc + "' column");
+            }
         }
         for (const auto& [col_name, value] : row) {
             auto it = schema_types.find(col_name);
@@ -217,19 +223,8 @@ void Database::add_time_series_row(const std::string& collection,
         throw std::runtime_error("Time series table not found: " + ts_table);
     }
 
-    // Derive the full dimension column set: every PK column except "id", in
-    // declared column order (column_order is populated from PRAGMA table_info,
-    // which reports columns in declaration order).
-    std::vector<std::string> dim_cols;
-    for (const auto& col_name : table_def->column_order) {
-        if (col_name == "id") {
-            continue;
-        }
-        const auto* col = table_def->get_column(col_name);
-        if (col && col->primary_key) {
-            dim_cols.push_back(col_name);
-        }
-    }
+    // Every PK column except "id" is a dimension that must be supplied by the caller.
+    auto dim_cols = internal::find_dimension_columns(*table_def);
 
     // Build schema type lookup (all columns except id)
     std::map<std::string, DataType> schema_types;

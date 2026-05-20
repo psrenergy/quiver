@@ -690,6 +690,101 @@ TEST(Database, TimeSeriesFilesNotFound) {
 }
 
 // ============================================================================
+// update_time_series_group multi-dim PK validation
+// ============================================================================
+
+TEST(Database, UpdateTimeSeriesGroupMissingMultiDimColumn) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("multi_dim_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element resource;
+    resource.set("label", std::string("Resource 1"));
+    auto id = db.create_element("Resource", resource);
+
+    std::vector<std::map<std::string, quiver::Value>> rows = {
+        {{"date_time", std::string("2024-01-01")}, {"load", 10.0}}};
+    auto msg = capture_update_error(db, "Resource", "load", id, rows);
+    EXPECT_NE(msg.find("Cannot update_time_series_group: row missing required 'block' column"),
+              std::string::npos)
+        << "Actual: " << msg;
+}
+
+TEST(Database, UpdateTimeSeriesGroupMissingDateTimeOnMultiDim) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("multi_dim_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element resource;
+    resource.set("label", std::string("Resource 1"));
+    auto id = db.create_element("Resource", resource);
+
+    std::vector<std::map<std::string, quiver::Value>> rows = {
+        {{"block", int64_t{1}}, {"load", 10.0}}};
+    auto msg = capture_update_error(db, "Resource", "load", id, rows);
+    EXPECT_NE(msg.find("Cannot update_time_series_group: row missing required 'date_time' column"),
+              std::string::npos)
+        << "Actual: " << msg;
+}
+
+TEST(Database, UpdateTimeSeriesGroupMultiDimHappyPath) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("multi_dim_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element resource;
+    resource.set("label", std::string("Resource 1"));
+    auto id = db.create_element("Resource", resource);
+
+    std::vector<std::map<std::string, quiver::Value>> rows = {
+        {{"date_time", std::string("2024-01-01")}, {"block", int64_t{1}}, {"load", 10.0}, {"flag", int64_t{1}}},
+        {{"date_time", std::string("2024-01-01")}, {"block", int64_t{2}}, {"load", 20.0}, {"flag", int64_t{1}}}};
+    db.update_time_series_group("Resource", "load", id, rows);
+
+    auto result = db.read_time_series_group("Resource", "load", id);
+    EXPECT_EQ(result.size(), 2);
+}
+
+TEST(Database, UpdateTimeSeriesGroupMissingBlockInLaterRow) {
+    auto db = quiver::Database::from_schema(":memory:",
+                                            VALID_SCHEMA("multi_dim_time_series.sql"),
+                                            {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    quiver::Element config;
+    config.set("label", std::string("Test Config"));
+    db.create_element("Configuration", config);
+
+    quiver::Element resource;
+    resource.set("label", std::string("Resource 1"));
+    auto id = db.create_element("Resource", resource);
+
+    // First row complete, second row missing block. Validation must reject the
+    // whole batch before any DELETE runs — no partial writes.
+    std::vector<std::map<std::string, quiver::Value>> rows = {
+        {{"date_time", std::string("2024-01-01")}, {"block", int64_t{1}}, {"load", 10.0}},
+        {{"date_time", std::string("2024-01-02")}, {"load", 20.0}}};
+    auto msg = capture_update_error(db, "Resource", "load", id, rows);
+    EXPECT_NE(msg.find("Cannot update_time_series_group: row missing required 'block' column"),
+              std::string::npos)
+        << "Actual: " << msg;
+
+    auto result = db.read_time_series_group("Resource", "load", id);
+    EXPECT_TRUE(result.empty());
+}
+
+// ============================================================================
 // add_time_series_row tests (CORE-11..14)
 // ============================================================================
 
