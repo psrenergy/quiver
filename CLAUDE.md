@@ -89,7 +89,7 @@ tests/schemas/            # Shared SQL schemas for all tests
 - **Target Standard**: C++20 - use modern language features where they simplify logic
 - **Philosophy**: Clean code over defensive code (assume callers obey contracts, avoid excessive null checks). Simple solutions over complex abstractions. Delete unused code, do not deprecate.
 - **Intelligence**: Logic resides in C++ layer. Bindings/wrappers remain thin.
-- **Error Messages**: All error messages are defined in the C++/C API layer. Bindings retrieve and surface them — they never craft their own.
+- **Error Messages**: All error messages are defined in the C++/C API layer. Bindings retrieve and surface them — they never craft their own. The only exception is pre-FFI type-marshalling errors (e.g., Python/Dart rejecting an unsupported value type before the FFI call), which the C API cannot diagnose because the value never reaches it; those messages are crafted locally and should name the offending column and type.
 - **Homogeneity**: Binding interfaces must be consistent and intuitive. API surface should feel uniform across wrappers.
 - **Ownership**: RAII used strictly. Ownership of pointers/resources must be explicit and unambiguous.
 - **Constraint**: Be critical. If code is already optimal, state that clearly. Do not invent useless suggestions just to provide output.
