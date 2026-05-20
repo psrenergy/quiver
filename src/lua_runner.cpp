@@ -214,6 +214,9 @@ struct LuaRunner::Impl {
     }
 
     static std::map<std::string, Value> lua_table_to_value_map(const sol::table& t) {
+        // Column order in the resulting map is alphabetical (std::map invariant),
+        // which is fine because the C++ layer indexes by column name rather than
+        // relying on positional order. Callers should not depend on insertion order.
         std::map<std::string, Value> result;
         for (auto& pair : t) {
             auto key = pair.first.as<std::string>();
@@ -226,6 +229,12 @@ struct LuaRunner::Impl {
                 result[key] = val.as<double>();
             } else if (val.is<std::string>()) {
                 result[key] = val.as<std::string>();
+            } else {
+                // Surface typos / nested tables / unsupported Lua types loudly
+                // instead of silently dropping the column (would cause confusing
+                // downstream "column missing" or NULL-stored errors).
+                throw std::runtime_error("Cannot lua_table_to_value_map: column '" +
+                                         key + "' has unsupported Lua type");
             }
         }
         return result;
