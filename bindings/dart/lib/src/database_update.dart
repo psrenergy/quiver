@@ -149,6 +149,80 @@ extension DatabaseUpdate on Database {
   }
 
   // ==========================================================================
+  // Add time series row
+  // ==========================================================================
+
+  /// Adds or updates a single time series row by element ID.
+  /// Takes a Map of column names to scalar values.
+  /// Supported value types: int, double, String, DateTime.
+  /// Calling with the same dimension PK upserts (value columns overwritten).
+  void addTimeSeriesRow(
+    String collection,
+    String group,
+    int id,
+    Map<String, Object> row,
+  ) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final columnCount = row.length;
+      final columnNames = arena<Pointer<Char>>(columnCount);
+      final columnTypes = arena<Int>(columnCount);
+      final columnData = arena<Pointer<Void>>(columnCount);
+
+      var i = 0;
+      for (final entry in row.entries) {
+        columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
+
+        if (entry.value is int) {
+          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER;
+          final arr = arena<Int64>(1);
+          arr[0] = entry.value as int;
+          columnData[i] = arr.cast();
+        } else if (entry.value is double) {
+          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT;
+          final arr = arena<Double>(1);
+          arr[0] = entry.value as double;
+          columnData[i] = arr.cast();
+        } else if (entry.value is String) {
+          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_STRING;
+          final arr = arena<Pointer<Char>>(1);
+          arr[0] = (entry.value as String).toNativeUtf8(allocator: arena).cast();
+          columnData[i] = arr.cast();
+        } else if (entry.value is DateTime) {
+          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_STRING;
+          final arr = arena<Pointer<Char>>(1);
+          arr[0] = dateTimeToString(
+            entry.value as DateTime,
+          ).toNativeUtf8(allocator: arena).cast();
+          columnData[i] = arr.cast();
+        } else {
+          throw ArgumentError(
+            'Unsupported value type: ${entry.value.runtimeType}',
+          );
+        }
+        i++;
+      }
+
+      check(
+        bindings.quiver_database_add_time_series_row(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          group.toNativeUtf8(allocator: arena).cast(),
+          id,
+          columnNames,
+          columnTypes,
+          columnData,
+          columnCount,
+        ),
+      );
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  // ==========================================================================
   // Update time series files
   // ==========================================================================
 

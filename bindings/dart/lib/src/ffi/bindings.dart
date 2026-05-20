@@ -1619,6 +1619,57 @@ class QuiverDatabaseBindings {
         )
       >();
 
+  int quiver_database_add_time_series_row(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Char> group,
+    int id,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> column_names,
+    ffi.Pointer<ffi.Int> column_types,
+    ffi.Pointer<ffi.Pointer<ffi.Void>> column_data,
+    int column_count,
+  ) {
+    return _quiver_database_add_time_series_row(
+      db,
+      collection,
+      group,
+      id,
+      column_names,
+      column_types,
+      column_data,
+      column_count,
+    );
+  }
+
+  late final _quiver_database_add_time_series_rowPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Pointer<quiver_database_t>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int64,
+            ffi.Pointer<ffi.Pointer<ffi.Char>>,
+            ffi.Pointer<ffi.Int>,
+            ffi.Pointer<ffi.Pointer<ffi.Void>>,
+            ffi.Size,
+          )
+        >
+      >('quiver_database_add_time_series_row');
+  late final _quiver_database_add_time_series_row = _quiver_database_add_time_series_rowPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<quiver_database_t>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          int,
+          ffi.Pointer<ffi.Pointer<ffi.Char>>,
+          ffi.Pointer<ffi.Int>,
+          ffi.Pointer<ffi.Pointer<ffi.Void>>,
+          int,
+        )
+      >();
+
   int quiver_database_read_time_series_row(
     ffi.Pointer<quiver_database_t> db,
     ffi.Pointer<ffi.Char> collection,
