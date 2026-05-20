@@ -37,7 +37,7 @@ Give power-users one consistent, intuitive API surface for structured + time ser
 
 - ✓ **CORE-11..14**: `Database::add_time_series_row` C++ core — validated in Phase 1 (single-row upsert via `INSERT OR REPLACE`, nest-aware `TransactionGuard`, Pattern-1 errors, 9 GTest cases including multi-dim PK schema)
 - ✓ **CAPI-11..13**: C API wrapper `quiver_database_add_time_series_row` — validated in Phase 2 (columnar typed-arrays marshaling mirroring `quiver_database_update_time_series_group`, D-07 wrapper-owned unknown-column-type error, 12 GTest cases at the FFI boundary)
-- **JULIA-11 / DART-11 / PY-11 / LUA-11 / DOC-11**: Binding regeneration + docs sync — Phase 3
+- ✓ **JULIA-11 / DART-11 / PY-11 / LUA-11 / DOC-11**: Language bindings + documentation — validated in Phase 3 (Julia `add_time_series_row!`, Dart `addTimeSeriesRow`, Python `add_time_series_row(**kwargs)`, Lua `db:add_time_series_row`, plus `docs/time_series.md` + `CLAUDE.md` sync; per-binding insert/upsert/multi-dim test coverage)
 
 ### Out of Scope
 
@@ -103,4 +103,4 @@ This document evolves at phase transitions and milestone boundaries.
 - `docs/time_series.md` brought back into sync with shipped API
 
 ---
-*Last updated: 2026-05-19 — Phase 2 (C API quiver_database_add_time_series_row) complete*
+*Last updated: 2026-05-20 — Phase 3 (Language bindings + documentation) complete; v1.1 milestone delivered across all layers*
