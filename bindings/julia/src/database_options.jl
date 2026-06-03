@@ -1,5 +1,5 @@
 """
-    build_quiver_csv_options(kwargs...) -> (Ref{quiver_csv_options_t}, Vector{Any})
+    build_quiver_csv_options(; date_time_format=nothing, enum_labels=nothing) -> (Ref{quiver_csv_options_t}, Vector{Any})
 
 Build a C API `quiver_csv_options_t` from keyword arguments.
 Returns `(options_ref, temps)` where `temps` holds all temporary objects that must
@@ -10,14 +10,14 @@ Supported kwargs:
   - `date_time_format::String` — strftime format for DateTime columns
   - `enum_labels::Dict{String, Dict{String, Dict{String, Int}}}` — attribute → locale → (label → value)
 """
-function build_quiver_csv_options(; kwargs...)
+function build_quiver_csv_options(; date_time_format = nothing, enum_labels = nothing)
     options = C.quiver_csv_options_default()
     temps = Any[]
 
     # Date-time format
     dtf_ptr = options.date_time_format
-    if haskey(kwargs, :date_time_format)
-        dtf_str = kwargs[:date_time_format]::String
+    if !isnothing(date_time_format)
+        dtf_str = date_time_format::String
         dtf_buf = Vector{UInt8}([codeunits(dtf_str)..., 0x00])
         push!(temps, dtf_buf)
         dtf_ptr = pointer(dtf_buf)
@@ -31,8 +31,8 @@ function build_quiver_csv_options(; kwargs...)
     values_ptr = options.enum_values
     group_count = options.enum_group_count
 
-    if haskey(kwargs, :enum_labels)
-        enum_map = kwargs[:enum_labels]::Dict{String, Dict{String, Dict{String, Int}}}
+    if !isnothing(enum_labels)
+        enum_map = enum_labels::Dict{String, Dict{String, Dict{String, Int}}}
         if !isempty(enum_map)
             # Flatten attribute -> locale -> entries into groups
             c_attr_name_bufs = Vector{UInt8}[]
