@@ -645,8 +645,8 @@ bindings/python/generator/generator.bat  # Python
   It is a plain S3-artifact package in General (no `Quiver_jll`, no Yggdrasil). The `publish-julia`
   job in `publish.yml` reuses the `build-native` binaries, runs `scripts/julia/generate_artifacts.jl`
   (tar → S3 upload → `Artifacts.toml`) and `scripts/julia/assemble_mirror_project.jl`, then opens a
-  PR to `Quiver.jl`. Requires repo secrets `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` and
-  `QUIVER_JL_TOKEN`.
+  PR to `Quiver.jl`. Runs on a `[self-hosted, linux]` runner whose ambient IAM role grants S3 write
+  (no AWS key secrets); requires the `QUIVER_JL_TOKEN` secret for the cross-repo PR.
 - **Library loader** (`src/c_api.jl`, emitted from `generator/prologue.jl`) resolves `libquiver_c`
   in three tiers: `QUIVER_LIB_DIR` env → S3 artifact (when an `Artifacts.toml` is present, i.e. the
   published mirror) → in-tree `build/` (monorepo dev, the default here). Uses the runtime Artifacts

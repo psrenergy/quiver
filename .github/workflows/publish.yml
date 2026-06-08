@@ -283,15 +283,10 @@ jobs:
 
   publish-julia:
     name: Publish Julia (PR to Quiver.jl)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     needs: [detect-version, build-native, tag-and-release]
     permissions:
       contents: read
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      # The julia-artifacts bucket is us-east-1; override here if it ever moves.
-      AWS_DEFAULT_REGION: us-east-1
     steps:
       - name: Checkout quiver
         uses: actions/checkout@v6

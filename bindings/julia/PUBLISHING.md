@@ -36,10 +36,13 @@ TagBot tags the release. Users `]add Quiver` from General; the S3 artifact downl
 
 ## Prerequisites (one-time setup — outside this repo)
 
-**Secrets on the `quiver` repo:**
-- `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` — write access to the `julia-artifacts` bucket
-  (same creds PSR uses for PSRIO). The job uses region `us-east-1`; change `AWS_DEFAULT_REGION`
-  in `publish.yml` if the bucket moves.
+**Runner & AWS credentials:** the `publish-julia` job runs on a **self-hosted `[self-hosted, linux]`
+runner** whose IAM instance-profile role already grants write to the `julia-artifacts` bucket, so the
+`aws` CLI picks up credentials from the default chain — **no AWS access-key secrets required**. Ensure
+the `aws` CLI is installed on that runner. The job sets region `us-east-1`; change `AWS_DEFAULT_REGION`
+in `publish.yml` if the bucket moves.
+
+**Secret on the `quiver` repo:**
 - `QUIVER_JL_TOKEN` — a fine-grained PAT or GitHub App token with **contents + pull-requests
   write on `psrenergy/Quiver.jl`** (the default `GITHUB_TOKEN` cannot push to another repo).
 
