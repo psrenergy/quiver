@@ -1,6 +1,6 @@
 name = "Quiver"
 uuid = "3bd9c58c-5d43-42f3-8ca0-6ca814cf6d36"
-version = "0.8.1"
+version = "0.8.2"
 
 [deps]
 Artifacts = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
