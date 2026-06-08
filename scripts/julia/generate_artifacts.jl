@@ -109,7 +109,9 @@ function main(argv)
         filename = basename(tb.tgz_path)
         url = "https://$S3_BUCKET.s3.amazonaws.com/$S3_PREFIX/$(args.version)/$filename"
         if args.upload
-            run(`aws s3 cp $(tb.tgz_path) s3://$S3_BUCKET/$S3_PREFIX/$(args.version)/$filename`)
+            # public-read ACL so Pkg can fetch the artifact anonymously
+            # (matches ArtifactsGenerator.jl's `x-amz-acl: public-read` on PSRIO uploads).
+            run(`aws s3 cp $(tb.tgz_path) s3://$S3_BUCKET/$S3_PREFIX/$(args.version)/$filename --acl public-read`)
         end
         entry = Dict{String,Any}(PLATFORMS[tag].tags)
         entry["git-tree-sha1"] = tb.tree_sha1
