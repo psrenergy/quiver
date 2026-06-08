@@ -10,7 +10,19 @@ cd(@__DIR__)
 database_dir = joinpath(@__DIR__, "..", "..", "..")
 include_dir = joinpath(database_dir, "include", "quiver", "c")
 
-Libdl.dlopen(joinpath(database_dir, "build", "bin", "libquiver_c.dll"))
+function libquiver_c_path()
+    dir = if haskey(ENV, "QUIVER_LIB_DIR")
+        ENV["QUIVER_LIB_DIR"]
+    elseif Sys.iswindows()
+        joinpath(database_dir, "build", "bin")
+    else
+        joinpath(database_dir, "build", "lib")
+    end
+    name = Sys.iswindows() ? "libquiver_c.dll" : Sys.isapple() ? "libquiver_c.dylib" : "libquiver_c.so"
+    return joinpath(dir, name)
+end
+
+Libdl.dlopen(libquiver_c_path())
 
 headers = [
     joinpath(root, file)

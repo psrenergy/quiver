@@ -3,12 +3,16 @@ uuid = "3bd9c58c-5d43-42f3-8ca0-6ca814cf6d36"
 version = "0.8.0"
 
 [deps]
+Artifacts = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
 CEnum = "fa961155-64e5-5f13-b03f-caf6b980ea82"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 
 [compat]
+Artifacts = "1"
 CEnum = "0.5"
 Dates = "1"
+Libdl = "1"
 Test = "1"
 julia = "1.11"
 
