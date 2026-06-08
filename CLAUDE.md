@@ -640,6 +640,18 @@ bindings/python/generator/generator.bat  # Python
   ```bash
   julia --project=bindings/julia -e "using Pkg; Pkg.instantiate()"
   ```
+- **Publishing** (see `bindings/julia/PUBLISHING.md`): `bindings/julia/` is the **canonical**
+  Julia package; the published `psrenergy/Quiver.jl` is a **generated mirror** (do not hand-edit).
+  It is a plain S3-artifact package in General (no `Quiver_jll`, no Yggdrasil). The `publish-julia`
+  job in `publish.yml` reuses the `build-native` binaries, runs `scripts/julia/generate_artifacts.jl`
+  (tar → S3 upload → `Artifacts.toml`) and `scripts/julia/assemble_mirror_project.jl`, then opens a
+  PR to `Quiver.jl`. Runs on a `[self-hosted, linux]` runner whose ambient IAM role grants S3 write
+  (no AWS key secrets); requires the `QUIVER_JL_TOKEN` secret for the cross-repo PR.
+- **Library loader** (`src/c_api.jl`, emitted from `generator/prologue.jl`) resolves `libquiver_c`
+  in three tiers: `QUIVER_LIB_DIR` env → S3 artifact (when an `Artifacts.toml` is present, i.e. the
+  published mirror) → in-tree `build/` (monorepo dev, the default here). Uses the runtime Artifacts
+  functional API (`find_artifacts_toml`/`artifact_hash`/`artifact_path`), NOT `@artifact_str`, so the
+  monorepo (which has no `Artifacts.toml`) still precompiles. Deps now include `Artifacts` + `Libdl`.
 
 ### Dart Notes
 - `libquiver_c.dll` depends on `libquiver.dll` - both must be in PATH
