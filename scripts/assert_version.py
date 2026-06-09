@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
-"""Verify the project version is consistent across every version-bearing file.
+"""Assert the project version is consistent across every version-bearing file, and print it.
 
-Usage:
-    python scripts/bump_version.py --check   # assert every file agrees, print the version
-
-`--check` treats CMakeLists.txt (the first TARGETS entry) as the source of truth and fails
-unless every other file matches it; on success it prints the version to stdout so callers
-(the detect-version action and the publish workflows' version jobs) can capture it. TARGETS is
-the single source of truth for which files carry the version and how each is parsed.
+Run with no arguments. Treats CMakeLists.txt (the first TARGETS entry) as the source of truth
+and exits non-zero unless every other file matches it; on success it prints the version to stdout
+so callers (the detect-version action and the publish workflows' version jobs) can capture it.
+TARGETS is the single source of truth for which files carry the version and how each is parsed.
 
 Each regex must match exactly once; a zero- or multi-match outcome is fatal so that silent
 drift (e.g. a file format change) fails loudly in CI.
@@ -69,12 +66,5 @@ def check() -> int:
     return 0
 
 
-def main() -> int:
-    if sys.argv[1:] == ["--check"]:
-        return check()
-    print(f"Usage: {sys.argv[0]} --check", file=sys.stderr)
-    return 2
-
-
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(check())
