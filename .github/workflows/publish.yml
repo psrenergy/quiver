@@ -71,13 +71,18 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          # Exact names, not a glob: the Linux build sets SOVERSION, so build/lib also holds the
-          # libquiver.so.0 / libquiver.so.0.8.3 symlinks. upload-artifact dereferences symlinks,
-          # which would ship 3 copies of each lib into the public JSR package.
+          # Ship the unversioned name AND the SONAME. The Linux build sets SOVERSION on both
+          # quiver and quiver_c (src/CMakeLists.txt), so libquiver_c.so's DT_NEEDED is the
+          # SONAME "libquiver.so.0" — that exact name must be present for the bundled JSR
+          # loader to resolve it via RPATH=$ORIGIN (the Deno loader does no core preload on
+          # Linux). Exact names, not a glob, so upload-artifact (which dereferences symlinks)
+          # doesn't also ship the redundant patch-level libquiver.so.0.8.3 / libquiver_c.so.0
+          # / libquiver_c.so.0.8.3 copies.
           - os: ubuntu-latest
             platform_key: linux-x86_64
             lib_paths: |
               build/lib/libquiver.so
+              build/lib/libquiver.so.0
               build/lib/libquiver_c.so
           # DLLs have no SOVERSION chain and the import .lib lives in build/lib, so the glob is exact.
           - os: windows-latest
@@ -184,6 +189,8 @@ jobs:
         run: |
           required=(
             libs/linux-x86_64/libquiver.so
+            # SONAME libquiver_c.so's DT_NEEDED resolves at load time (no Linux preload).
+            libs/linux-x86_64/libquiver.so.0
             libs/linux-x86_64/libquiver_c.so
             libs/windows-x86_64/libquiver.dll
             libs/windows-x86_64/libquiver_c.dll
@@ -210,7 +217,7 @@ jobs:
         run: |
           npx jsr publish --dry-run --allow-slow-types --allow-dirty 2>&1 | tee /tmp/jsr-dry.log
           for f in \
-            libs/linux-x86_64/libquiver.so libs/linux-x86_64/libquiver_c.so \
+            libs/linux-x86_64/libquiver.so libs/linux-x86_64/libquiver.so.0 libs/linux-x86_64/libquiver_c.so \
             libs/windows-x86_64/libquiver.dll libs/windows-x86_64/libquiver_c.dll; do
             if ! grep -F -- "$f" /tmp/jsr-dry.log > /dev/null; then
               echo "::error::jsr publish dry-run would NOT include $f"
