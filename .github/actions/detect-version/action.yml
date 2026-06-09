@@ -23,10 +23,6 @@ runs:
       shell: bash
       run: |
         version="${{ steps.extract.outputs.version }}"
-        if git rev-parse --verify --quiet "refs/tags/v$version" >/dev/null; then
-          echo "::error::Tag v$version already exists locally"
-          exit 1
-        fi
         if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null 2>&1; then
           echo "::error::Tag v$version already exists on origin"
           exit 1
