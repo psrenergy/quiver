@@ -36,7 +36,12 @@ jobs:
 
       - name: Resolve version
         id: ver
-        run: echo "version=$(python3 scripts/assert_version.py)" >> "$GITHUB_OUTPUT"
+        run: |
+          v="${{ inputs.version }}"
+          if [ -z "$v" ]; then
+            v="$(python3 scripts/assert_version.py)"
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
 
       # Download the native libs into bindings/js/libs/{linux,windows}-x86_64/ — the same layout
       # the package.json "files" allowlist ships. native_s3.sh owns the per-platform file list.
