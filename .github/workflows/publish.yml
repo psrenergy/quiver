@@ -7,6 +7,11 @@ concurrency:
   group: publish-${{ github.ref }}
   cancel-in-progress: false
 
+# Deny-by-default: jobs that need more (publish-pypi, create-tag, github-release,
+# bump-version, publish-jsr, publish-julia) opt up in their own permissions block.
+permissions:
+  contents: read
+
 jobs:
   detect-version:
     name: Detect version
@@ -21,45 +26,17 @@ jobs:
       - id: detect
         uses: ./.github/actions/detect-version
 
-  build:
-    name: Build wheels (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+  # Reuse the same build+merge jobs CI runs on every push, so the release can never
+  # drift from what was validated on master. (build-wheels.yml exposes workflow_call.)
+  build-wheels:
+    name: Build wheels
     needs: detect-version
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.sha }}
-
-      - uses: pypa/cibuildwheel@v4.0.0
-        with:
-          package-dir: bindings/python
-          output-dir: wheelhouse
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: wheels-${{ matrix.os }}
-          path: ./wheelhouse/*.whl
-
-  merge:
-    name: Merge wheel artifacts
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - uses: actions/upload-artifact/merge@v7
-        with:
-          name: wheels
-          pattern: wheels-*
-          delete-merged: true
+    uses: ./.github/workflows/build-wheels.yml
 
   validate-release:
     name: Validate release
     runs-on: ubuntu-latest
-    needs: merge
+    needs: build-wheels
     steps:
       - uses: actions/download-artifact@v8
         with:
@@ -94,12 +71,18 @@ jobs:
       fail-fast: true
       matrix:
         include:
+          # Exact names, not a glob: the Linux build sets SOVERSION, so build/lib also holds the
+          # libquiver.so.0 / libquiver.so.0.8.3 symlinks. upload-artifact dereferences symlinks,
+          # which would ship 3 copies of each lib into the public JSR package.
           - os: ubuntu-latest
             platform_key: linux-x86_64
-            lib_glob: build/lib/libquiver*
+            lib_paths: |
+              build/lib/libquiver.so
+              build/lib/libquiver_c.so
+          # DLLs have no SOVERSION chain and the import .lib lives in build/lib, so the glob is exact.
           - os: windows-latest
             platform_key: windows-x86_64
-            lib_glob: build/bin/Release/libquiver*
+            lib_paths: build/bin/Release/libquiver*
 
     steps:
       - uses: actions/checkout@v6
@@ -120,12 +103,34 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: native-${{ matrix.platform_key }}
-          path: ${{ matrix.lib_glob }}
+          path: ${{ matrix.lib_paths }}
+
+  # Push the tag once the build is proven good, BEFORE any irreversible publish. A tag is the one
+  # fully reversible artifact (just delete it), so a push failure here aborts the run while nothing
+  # is live yet — instead of stranding published packages with no tag and no GitHub Release.
+  create-tag:
+    name: Create and push tag
+    runs-on: ubuntu-latest
+    needs: [detect-version, validate-release, build-native]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Create and push tag
+        run: |
+          version="${{ needs.detect-version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$version" -m "Release v$version"
+          git push origin "v$version"
 
   publish-pypi:
     name: Publish to PyPI
     runs-on: ubuntu-latest
-    needs: validate-release
+    needs: [validate-release, create-tag]
     environment: pypi
     permissions:
       id-token: write
@@ -135,12 +140,14 @@ jobs:
           name: wheels
           path: dist/
 
-      - uses: pypa/gh-action-pypi-publish@release/v1
+      # SHA-pinned (not @release/v1): this is the one step holding trusted-publishing
+      # credentials for an irreversible PyPI upload. Dependabot still bumps the SHA.
+      - uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # v1.14.0
 
   publish-jsr:
     name: Publish to JSR
     runs-on: ubuntu-latest
-    needs: [validate-release, build-native]
+    needs: [validate-release, build-native, create-tag]
     environment: jsr
     permissions:
       contents: read
@@ -158,6 +165,9 @@ jobs:
           cache: true
           deno-version: v2.7.12
 
+      # download-artifact `path` is workspace-relative (working-directory does not apply to
+      # `uses:` steps), so these write to <workspace>/bindings/js/libs/... — the same place the
+      # `libs/...` paths in the run: steps below resolve to from the bindings/js working dir.
       - name: Download Linux x86_64 native libraries
         uses: actions/download-artifact@v8
         with:
@@ -172,7 +182,6 @@ jobs:
 
       - name: Verify native libraries are present
         run: |
-          set -e
           required=(
             libs/linux-x86_64/libquiver.so
             libs/linux-x86_64/libquiver_c.so
@@ -199,9 +208,10 @@ jobs:
       # not committed to git.
       - name: Dry-run jsr publish and assert libs are included
         run: |
-          set -e
           npx jsr publish --dry-run --allow-slow-types --allow-dirty 2>&1 | tee /tmp/jsr-dry.log
-          for f in libs/linux-x86_64/libquiver_c.so libs/windows-x86_64/libquiver_c.dll; do
+          for f in \
+            libs/linux-x86_64/libquiver.so libs/linux-x86_64/libquiver_c.so \
+            libs/windows-x86_64/libquiver.dll libs/windows-x86_64/libquiver_c.dll; do
             if ! grep -F -- "$f" /tmp/jsr-dry.log > /dev/null; then
               echo "::error::jsr publish dry-run would NOT include $f"
               exit 1
@@ -211,30 +221,18 @@ jobs:
       - name: Publish to JSR
         run: npx jsr publish --allow-slow-types --allow-dirty
 
-  tag-and-release:
-    name: Tag and GitHub Release
+  # The tag already exists (create-tag); this only attaches the wheels and release notes to it.
+  github-release:
+    name: GitHub Release
     runs-on: ubuntu-latest
     needs: [detect-version, publish-pypi, publish-jsr]
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.sha }}
-
       - uses: actions/download-artifact@v8
         with:
           name: wheels
           path: dist/
-
-      - name: Create and push tag
-        run: |
-          set -e
-          version="${{ needs.detect-version.outputs.version }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "v$version" -m "Release v$version"
-          git push origin "v$version"
 
       - uses: softprops/action-gh-release@v3
         with:
@@ -245,14 +243,15 @@ jobs:
   bump-version:
     name: Open version bump PR
     runs-on: ubuntu-latest
-    needs: [detect-version, tag-and-release]
+    needs: [detect-version, github-release]
     permissions:
       contents: write
       pull-requests: write
     steps:
+      # Bump from the released commit (every other job pins github.sha); the PR still targets master.
       - uses: actions/checkout@v6
         with:
-          ref: master
+          ref: ${{ github.sha }}
 
       - name: Compute next patch version
         id: next
@@ -284,7 +283,7 @@ jobs:
   publish-julia:
     name: Publish Julia (PR to Quiver.jl)
     runs-on: [self-hosted, linux]
-    needs: [detect-version, build-native, tag-and-release]
+    needs: [detect-version, build-native, github-release]
     permissions:
       contents: read
     steps:
@@ -327,7 +326,6 @@ jobs:
 
       - name: Assemble generated mirror
         run: |
-          set -e
           # Faithful recursive copy of the bindings/julia package. Excludes dev-only files
           # (generator/, Manifest.toml, PUBLISHING.md, example2.jl). Quiver.jl's own
           # .git/.github/README/.gitignore are preserved (we only wipe src/ and test/).
