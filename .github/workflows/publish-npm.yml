@@ -16,10 +16,11 @@ jobs:
         with:
           ref: ${{ github.sha }}
 
-      - uses: actions/setup-node@v4
+      # Publish with `bun publish` — the binding, tests, and now the publish are 100% Bun, so no
+      # Node toolchain is installed. bun-version: latest matches ci.yml's test job.
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20
-          registry-url: "https://registry.npmjs.org"
+          bun-version: latest
 
       - name: Resolve version
         id: ver
@@ -54,26 +55,50 @@ jobs:
             exit 1
           fi
 
-      - name: Dry-run publish and assert libs are included
+      # Build the EXACT tarball that will be published, then assert each native lib is inside it by
+      # reading the tar table of contents — format-independent, not dependent on any tool's
+      # human-readable dry-run wording. `bun pm pack` honors the package.json "files" allowlist,
+      # publishConfig, and the empty .npmignore (no .gitignore fallback), so the tarball is ground
+      # truth — and we publish this exact tarball below. (Verified: bun roots entries under
+      # "package/"; the sed strip + exact-line grep distinguishes libquiver.so from libquiver.so.0.)
+      - name: Pack and assert native libs are in the tarball
+        id: pack
         working-directory: bindings/js
         run: |
-          npm publish --dry-run 2>&1 | tee /tmp/pub-dry.log
+          bun pm pack
+          tarball="$(ls -t quiverdb-*.tgz | head -n1)"
+          if [ -z "$tarball" ] || [ ! -f "$tarball" ]; then
+            echo "::error::bun pm pack did not produce a quiverdb-*.tgz tarball"
+            exit 1
+          fi
+          entries="$(tar -tzf "$tarball" | sed 's#^\./##; s#^[^/]*/##' | sort)"
+          echo "--- tarball contents ($tarball) ---"
+          echo "$entries"
           for f in \
             libs/linux-x86_64/libquiver.so libs/linux-x86_64/libquiver.so.0 libs/linux-x86_64/libquiver_c.so \
             libs/windows-x86_64/libquiver.dll libs/windows-x86_64/libquiver_c.dll; do
-            if ! grep -F -- "$f" /tmp/pub-dry.log > /dev/null; then
-              echo "::error::publish dry-run would NOT include $f"
+            if ! printf '%s\n' "$entries" | grep -Fxq "$f"; then
+              echo "::error::tarball $tarball is MISSING $f"
               exit 1
             fi
           done
+          echo "tarball=$tarball" >> "$GITHUB_OUTPUT"
 
+      # Belt-and-suspenders auth (oven-sh/bun#24124 still open): set NPM_CONFIG_TOKEN (bun's env var;
+      # it does NOT read NODE_AUTH_TOKEN) AND write .npmrc _authToken as a hedge. Written here, AFTER
+      # pack, so the token file can never reach the tarball (it is also not in the "files" allowlist).
+      # Publishing the prebuilt, verified tarball ships precisely what we asserted above.
+      # --tolerate-republish lets a standalone re-dispatch of an already-published version exit 0;
+      # --access public is redundant with publishConfig.access but stated so publish never depends on
+      # manifest precedence.
       - name: Publish to npm
         working-directory: bindings/js
+        env:
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          if [ -z "$NODE_AUTH_TOKEN" ]; then
+          if [ -z "$NPM_CONFIG_TOKEN" ]; then
             echo "::error::NPM_TOKEN secret is empty or unavailable to this job"
             exit 1
           fi
-          npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          printf '//registry.npmjs.org/:_authToken=%s\n' "$NPM_CONFIG_TOKEN" > .npmrc
+          bun publish "${{ steps.pack.outputs.tarball }}" --access public --tolerate-republish
