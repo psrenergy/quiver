@@ -1,90 +1,83 @@
-import { assertEquals, assertThrows } from "jsr:@std/assert";
-import { join } from "jsr:@std/path";
-const __dirname = import.meta.dirname!;
+import { describe, expect, test } from "bun:test";
+import { join } from "node:path";
+
+const __dirname = import.meta.dir;
+
 import { Database, QuiverError } from "../src/index.ts";
 
-const SCHEMA_PATH = join(
-  __dirname,
-  "..",
-  "..",
-  "..",
-  "tests",
-  "schemas",
-  "valid",
-  "all_types.sql",
-);
+const SCHEMA_PATH = join(__dirname, "..", "..", "..", "tests", "schemas", "valid", "all_types.sql");
 
-Deno.test({ name: "transaction control", sanitizeResources: false }, async (t) => {
-  await t.step("commit persists data", () => {
+describe("transaction control", () => {
+  test("commit persists data", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.beginTransaction();
       db.createElement("AllTypes", { label: "TxnItem" });
       db.commit();
       const ids = db.readElementIds("AllTypes");
-      assertEquals(ids.length, 1);
+      expect(ids.length).toEqual(1);
     } finally {
       db.close();
     }
   });
 
-  await t.step("rollback discards data", () => {
+  test("rollback discards data", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.beginTransaction();
       db.createElement("AllTypes", { label: "TxnItem" });
       db.rollback();
       const ids = db.readElementIds("AllTypes");
-      assertEquals(ids.length, 0);
+      expect(ids.length).toEqual(0);
     } finally {
       db.close();
     }
   });
 
-  await t.step("commit without begin throws", () => {
+  test("commit without begin throws", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
-      assertThrows(() => db.commit(), QuiverError);
+      expect(() => db.commit()).toThrow(QuiverError);
     } finally {
       db.close();
     }
   });
 
-  await t.step("rollback without begin throws", () => {
+  test("rollback without begin throws", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
-      assertThrows(() => db.rollback(), QuiverError);
+      expect(() => db.rollback()).toThrow(QuiverError);
     } finally {
       db.close();
     }
   });
 
-  await t.step("inTransaction returns false initially", () => {
+  test("inTransaction returns false initially", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
-      assertEquals(db.inTransaction(), false);
+      expect(db.inTransaction()).toEqual(false);
     } finally {
       db.close();
     }
   });
 
-  await t.step("inTransaction returns true after begin", () => {
+  test("inTransaction returns true after begin", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.beginTransaction();
-      assertEquals(db.inTransaction(), true);
+      expect(db.inTransaction()).toEqual(true);
       db.rollback(); // cleanup
     } finally {
       db.close();
     }
   });
 
-  await t.step("inTransaction returns false after commit", () => {
+  test("inTransaction returns false after commit", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.beginTransaction();
       db.commit();
-      assertEquals(db.inTransaction(), false);
+      expect(db.inTransaction()).toEqual(false);
     } finally {
       db.close();
     }

@@ -1,67 +1,60 @@
-import { assert, assertEquals } from "jsr:@std/assert";
-import { join } from "jsr:@std/path";
-const __dirname = import.meta.dirname!;
+import { describe, expect, test } from "bun:test";
+import { join } from "node:path";
+
+const __dirname = import.meta.dir;
+
 import { Database, QuiverError } from "../src/index.ts";
 
-const SCHEMA_PATH = join(
-  __dirname,
-  "..",
-  "..",
-  "..",
-  "tests",
-  "schemas",
-  "valid",
-  "all_types.sql",
-);
+const SCHEMA_PATH = join(__dirname, "..", "..", "..", "tests", "schemas", "valid", "all_types.sql");
 
-Deno.test({ name: "readScalarIntegers / readScalarFloats / readScalarStrings", sanitizeResources: false }, async (t) => {
-  await t.step("reads integer scalars from collection", () => {
+describe("readScalarIntegers / readScalarFloats / readScalarStrings", () => {
+  test("reads integer scalars from collection", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1", some_integer: 42 });
       db.createElement("AllTypes", { label: "Item2", some_integer: 99 });
       const values = db.readScalarIntegers("AllTypes", "some_integer");
-      assertEquals(values, [42, 99]);
+      expect(values).toEqual([42, 99]);
     } finally {
       db.close();
     }
   });
 
-  await t.step("reads float scalars from collection", () => {
+  test("reads float scalars from collection", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1", some_float: 3.14 });
       db.createElement("AllTypes", { label: "Item2", some_float: 2.71 });
       const values = db.readScalarFloats("AllTypes", "some_float");
-      assertEquals(values, [3.14, 2.71]);
+      expect(values).toEqual([3.14, 2.71]);
     } finally {
       db.close();
     }
   });
 
-  await t.step("reads string scalars from collection", () => {
+  test("reads string scalars from collection", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1", some_text: "hello" });
       db.createElement("AllTypes", { label: "Item2", some_text: "world" });
       const values = db.readScalarStrings("AllTypes", "some_text");
-      assertEquals(values, ["hello", "world"]);
+      expect(values).toEqual(["hello", "world"]);
     } finally {
       db.close();
     }
   });
 
-  await t.step("returns empty array for empty collection", () => {
+  test("returns empty array for empty collection", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const values = db.readScalarIntegers("AllTypes", "some_integer");
-      assertEquals(values, []);
+      expect(values).toEqual([]);
     } finally {
       db.close();
     }
   });
 
-  await t.step("throws on closed database", () => {
+  test("throws on closed database", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     db.close();
     let threw = false;
@@ -69,303 +62,306 @@ Deno.test({ name: "readScalarIntegers / readScalarFloats / readScalarStrings", s
       db.readScalarIntegers("AllTypes", "some_integer");
     } catch (e) {
       threw = true;
-      assert(e instanceof QuiverError);
-      assertEquals((e as QuiverError).message, "Database is closed");
+      expect(e instanceof QuiverError).toBeTruthy();
+      expect((e as QuiverError).message).toEqual("Database is closed");
     }
-    assert(threw, "Expected QuiverError to be thrown");
+    expect(threw).toBeTruthy();
   });
 });
 
-Deno.test({ name: "readScalarIntegerById / readScalarFloatById / readScalarStringById", sanitizeResources: false }, async (t) => {
-  await t.step("reads integer by id", () => {
+describe("readScalarIntegerById / readScalarFloatById / readScalarStringById", () => {
+  test("reads integer by id", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", some_integer: 42 });
       const value = db.readScalarIntegerById("AllTypes", "some_integer", id);
-      assertEquals(value, 42);
+      expect(value).toEqual(42);
     } finally {
       db.close();
     }
   });
 
-  await t.step("returns null for non-existent id", () => {
+  test("returns null for non-existent id", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const value = db.readScalarIntegerById("AllTypes", "some_integer", 9999);
-      assertEquals(value, null);
+      expect(value).toEqual(null);
     } finally {
       db.close();
     }
   });
 
-  await t.step("returns null for null value", () => {
+  test("returns null for null value", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1" });
       const value = db.readScalarIntegerById("AllTypes", "some_integer", id);
-      assertEquals(value, null);
+      expect(value).toEqual(null);
     } finally {
       db.close();
     }
   });
 
-  await t.step("reads float by id", () => {
+  test("reads float by id", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", some_float: 3.14 });
       const value = db.readScalarFloatById("AllTypes", "some_float", id);
-      assertEquals(value, 3.14);
+      expect(value).toEqual(3.14);
     } finally {
       db.close();
     }
   });
 
-  await t.step("reads string by id", () => {
+  test("reads string by id", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", some_text: "hello" });
       const value = db.readScalarStringById("AllTypes", "some_text", id);
-      assertEquals(value, "hello");
+      expect(value).toEqual("hello");
     } finally {
       db.close();
     }
   });
 
-  await t.step("returns null for non-existent string id", () => {
+  test("returns null for non-existent string id", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const value = db.readScalarStringById("AllTypes", "some_text", 9999);
-      assertEquals(value, null);
+      expect(value).toEqual(null);
     } finally {
       db.close();
     }
   });
 });
 
-Deno.test({ name: "readElementIds", sanitizeResources: false }, async (t) => {
-  await t.step("reads all element ids", () => {
+describe("readElementIds", () => {
+  test("reads all element ids", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id1 = db.createElement("AllTypes", { label: "Item1" });
       const id2 = db.createElement("AllTypes", { label: "Item2" });
       const ids = db.readElementIds("AllTypes");
-      assertEquals(ids.length, 2);
-      assert(ids.includes(id1));
-      assert(ids.includes(id2));
+      expect(ids.length).toEqual(2);
+      expect(ids.includes(id1)).toBeTruthy();
+      expect(ids.includes(id2)).toBeTruthy();
     } finally {
       db.close();
     }
   });
 
-  await t.step("returns empty array for empty collection", () => {
+  test("returns empty array for empty collection", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const ids = db.readElementIds("AllTypes");
-      assertEquals(ids, []);
+      expect(ids).toEqual([]);
     } finally {
       db.close();
     }
   });
 });
 
-Deno.test({ name: "readVectorIntegers / readVectorFloats / readVectorStrings", sanitizeResources: false }, async (t) => {
-  await t.step("reads integer vectors bulk", () => {
+describe("readVectorIntegers / readVectorFloats / readVectorStrings", () => {
+  test("reads integer vectors bulk", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1", count_value: [10, 20] });
       db.createElement("AllTypes", { label: "Item2", count_value: [30, 40, 50] });
       const values = db.readVectorIntegers("AllTypes", "count_value");
-      assertEquals(values, [[10, 20], [30, 40, 50]]);
+      expect(values).toEqual([
+        [10, 20],
+        [30, 40, 50],
+      ]);
     } finally {
       db.close();
     }
   });
 
-  await t.step("reads float vectors bulk", () => {
+  test("reads float vectors bulk", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1", score: [1.5, 2.5] });
       db.createElement("AllTypes", { label: "Item2", score: [3.5] });
       const values = db.readVectorFloats("AllTypes", "score");
-      assertEquals(values, [[1.5, 2.5], [3.5]]);
+      expect(values).toEqual([[1.5, 2.5], [3.5]]);
     } finally {
       db.close();
     }
   });
 
-  await t.step("reads string vectors bulk", () => {
+  test("reads string vectors bulk", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1", label_value: ["a", "b"] });
       db.createElement("AllTypes", { label: "Item2", label_value: ["c"] });
       const values = db.readVectorStrings("AllTypes", "label_value");
-      assertEquals(values, [["a", "b"], ["c"]]);
+      expect(values).toEqual([["a", "b"], ["c"]]);
     } finally {
       db.close();
     }
   });
 
-  await t.step("returns empty array for empty collection", () => {
+  test("returns empty array for empty collection", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const values = db.readVectorIntegers("AllTypes", "count_value");
-      assertEquals(values, []);
+      expect(values).toEqual([]);
     } finally {
       db.close();
     }
   });
 });
 
-Deno.test({ name: "readVectorIntegersById / readVectorFloatsById / readVectorStringsById", sanitizeResources: false }, async (t) => {
-  await t.step("reads integer vector by id", () => {
+describe("readVectorIntegersById / readVectorFloatsById / readVectorStringsById", () => {
+  test("reads integer vector by id", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", count_value: [10, 20, 30] });
       const values = db.readVectorIntegersById("AllTypes", "count_value", id);
-      assertEquals(values, [10, 20, 30]);
+      expect(values).toEqual([10, 20, 30]);
     } finally {
       db.close();
     }
   });
 
-  await t.step("reads float vector by id", () => {
+  test("reads float vector by id", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", score: [1.5, 2.5] });
       const values = db.readVectorFloatsById("AllTypes", "score", id);
-      assertEquals(values, [1.5, 2.5]);
+      expect(values).toEqual([1.5, 2.5]);
     } finally {
       db.close();
     }
   });
 
-  await t.step("reads string vector by id", () => {
+  test("reads string vector by id", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", label_value: ["x", "y"] });
       const values = db.readVectorStringsById("AllTypes", "label_value", id);
-      assertEquals(values, ["x", "y"]);
+      expect(values).toEqual(["x", "y"]);
     } finally {
       db.close();
     }
   });
 
-  await t.step("returns empty array for element with no vector data", () => {
+  test("returns empty array for element with no vector data", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1" });
       const values = db.readVectorIntegersById("AllTypes", "count_value", id);
-      assertEquals(values, []);
+      expect(values).toEqual([]);
     } finally {
       db.close();
     }
   });
 
-  await t.step("returns empty array for non-existent id", () => {
+  test("returns empty array for non-existent id", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const values = db.readVectorIntegersById("AllTypes", "count_value", 9999);
-      assertEquals(values, []);
+      expect(values).toEqual([]);
     } finally {
       db.close();
     }
   });
 });
 
-Deno.test({ name: "readSetIntegers / readSetFloats / readSetStrings", sanitizeResources: false }, async (t) => {
-  await t.step("reads integer sets bulk", () => {
+describe("readSetIntegers / readSetFloats / readSetStrings", () => {
+  test("reads integer sets bulk", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1", code: [10, 20] });
       db.createElement("AllTypes", { label: "Item2", code: [30, 40] });
       const values = db.readSetIntegers("AllTypes", "code");
-      assertEquals(values.length, 2);
-      assertEquals(values[0].sort(), [10, 20]);
-      assertEquals(values[1].sort(), [30, 40]);
+      expect(values.length).toEqual(2);
+      expect(values[0].sort()).toEqual([10, 20]);
+      expect(values[1].sort()).toEqual([30, 40]);
     } finally {
       db.close();
     }
   });
 
-  await t.step("reads float sets bulk", () => {
+  test("reads float sets bulk", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1", weight: [1.5, 2.5] });
       db.createElement("AllTypes", { label: "Item2", weight: [3.5] });
       const values = db.readSetFloats("AllTypes", "weight");
-      assertEquals(values.length, 2);
-      assertEquals(values[0].sort(), [1.5, 2.5]);
-      assertEquals(values[1], [3.5]);
+      expect(values.length).toEqual(2);
+      expect(values[0].sort()).toEqual([1.5, 2.5]);
+      expect(values[1]).toEqual([3.5]);
     } finally {
       db.close();
     }
   });
 
-  await t.step("reads string sets bulk", () => {
+  test("reads string sets bulk", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1", tag: ["a", "b"] });
       db.createElement("AllTypes", { label: "Item2", tag: ["c"] });
       const values = db.readSetStrings("AllTypes", "tag");
-      assertEquals(values.length, 2);
-      assertEquals(values[0].sort(), ["a", "b"]);
-      assertEquals(values[1], ["c"]);
+      expect(values.length).toEqual(2);
+      expect(values[0].sort()).toEqual(["a", "b"]);
+      expect(values[1]).toEqual(["c"]);
     } finally {
       db.close();
     }
   });
 
-  await t.step("returns empty array for empty collection", () => {
+  test("returns empty array for empty collection", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const values = db.readSetIntegers("AllTypes", "code");
-      assertEquals(values, []);
+      expect(values).toEqual([]);
     } finally {
       db.close();
     }
   });
 });
 
-Deno.test({ name: "readSetIntegersById / readSetFloatsById / readSetStringsById", sanitizeResources: false }, async (t) => {
-  await t.step("reads integer set by id", () => {
+describe("readSetIntegersById / readSetFloatsById / readSetStringsById", () => {
+  test("reads integer set by id", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", code: [10, 20, 30] });
       const values = db.readSetIntegersById("AllTypes", "code", id);
-      assertEquals(values.sort(), [10, 20, 30]);
+      expect(values.sort()).toEqual([10, 20, 30]);
     } finally {
       db.close();
     }
   });
 
-  await t.step("reads float set by id", () => {
+  test("reads float set by id", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", weight: [1.5, 2.5] });
       const values = db.readSetFloatsById("AllTypes", "weight", id);
-      assertEquals(values.sort(), [1.5, 2.5]);
+      expect(values.sort()).toEqual([1.5, 2.5]);
     } finally {
       db.close();
     }
   });
 
-  await t.step("reads string set by id", () => {
+  test("reads string set by id", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1", tag: ["x", "y"] });
       const values = db.readSetStringsById("AllTypes", "tag", id);
-      assertEquals(values.sort(), ["x", "y"]);
+      expect(values.sort()).toEqual(["x", "y"]);
     } finally {
       db.close();
     }
   });
 
-  await t.step("returns empty array for element with no set data", () => {
+  test("returns empty array for element with no set data", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const id = db.createElement("AllTypes", { label: "Item1" });
       const values = db.readSetIntegersById("AllTypes", "code", id);
-      assertEquals(values, []);
+      expect(values).toEqual([]);
     } finally {
       db.close();
     }

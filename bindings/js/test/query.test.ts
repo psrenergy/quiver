@@ -1,87 +1,80 @@
-import { assertEquals } from "jsr:@std/assert";
-import { join } from "jsr:@std/path";
-const __dirname = import.meta.dirname!;
+import { describe, expect, test } from "bun:test";
+import { join } from "node:path";
+
+const __dirname = import.meta.dir;
+
 import { Database } from "../src/index.ts";
 
-const SCHEMA_PATH = join(
-  __dirname,
-  "..",
-  "..",
-  "..",
-  "tests",
-  "schemas",
-  "valid",
-  "all_types.sql",
-);
+const SCHEMA_PATH = join(__dirname, "..", "..", "..", "tests", "schemas", "valid", "all_types.sql");
 
-Deno.test({ name: "queryString", sanitizeResources: false }, async (t) => {
-  await t.step("returns string from plain SQL", () => {
+describe("queryString", () => {
+  test("returns string from plain SQL", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1" });
       const result = db.queryString("SELECT label FROM AllTypes WHERE id = 1");
-      assertEquals(result, "Item1");
+      expect(result).toEqual("Item1");
     } finally {
       db.close();
     }
   });
 
-  await t.step("returns null when no rows match", () => {
+  test("returns null when no rows match", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const result = db.queryString("SELECT label FROM AllTypes WHERE id = 9999");
-      assertEquals(result, null);
+      expect(result).toEqual(null);
     } finally {
       db.close();
     }
   });
 
-  await t.step("returns string with parameterized SQL (string parameter)", () => {
+  test("returns string with parameterized SQL (string parameter)", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1" });
       const result = db.queryString("SELECT label FROM AllTypes WHERE label = ?", ["Item1"]);
-      assertEquals(result, "Item1");
+      expect(result).toEqual("Item1");
     } finally {
       db.close();
     }
   });
 
-  await t.step("returns null with null parameter", () => {
+  test("returns null with null parameter", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1" });
       const result = db.queryString("SELECT label FROM AllTypes WHERE label = ?", [null]);
-      assertEquals(result, null);
+      expect(result).toEqual(null);
     } finally {
       db.close();
     }
   });
 });
 
-Deno.test({ name: "queryInteger", sanitizeResources: false }, async (t) => {
-  await t.step("returns integer from plain SQL", () => {
+describe("queryInteger", () => {
+  test("returns integer from plain SQL", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1", some_integer: 42 });
       const result = db.queryInteger("SELECT some_integer FROM AllTypes WHERE id = 1");
-      assertEquals(result, 42);
+      expect(result).toEqual(42);
     } finally {
       db.close();
     }
   });
 
-  await t.step("returns null when no rows match", () => {
+  test("returns null when no rows match", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       const result = db.queryInteger("SELECT some_integer FROM AllTypes WHERE id = 9999");
-      assertEquals(result, null);
+      expect(result).toEqual(null);
     } finally {
       db.close();
     }
   });
 
-  await t.step("returns integer with parameterized SQL (integer parameter)", () => {
+  test("returns integer with parameterized SQL (integer parameter)", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1", some_integer: 42 });
@@ -89,13 +82,13 @@ Deno.test({ name: "queryInteger", sanitizeResources: false }, async (t) => {
         "SELECT some_integer FROM AllTypes WHERE some_integer > ?",
         [10],
       );
-      assertEquals(result, 42);
+      expect(result).toEqual(42);
     } finally {
       db.close();
     }
   });
 
-  await t.step("returns integer with multiple mixed-type parameters", () => {
+  test("returns integer with multiple mixed-type parameters", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1", some_integer: 42 });
@@ -103,31 +96,31 @@ Deno.test({ name: "queryInteger", sanitizeResources: false }, async (t) => {
         "SELECT some_integer FROM AllTypes WHERE id = ? AND some_integer > ?",
         [1, 0],
       );
-      assertEquals(result, 42);
+      expect(result).toEqual(42);
     } finally {
       db.close();
     }
   });
 });
 
-Deno.test({ name: "queryFloat", sanitizeResources: false }, async (t) => {
-  await t.step("returns float from plain SQL", () => {
+describe("queryFloat", () => {
+  test("returns float from plain SQL", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1", some_float: 3.14 });
       const result = db.queryFloat("SELECT some_float FROM AllTypes WHERE id = 1");
-      assertEquals(result, 3.14);
+      expect(result).toEqual(3.14);
     } finally {
       db.close();
     }
   });
 
-  await t.step("returns float with parameterized SQL (float parameter)", () => {
+  test("returns float with parameterized SQL (float parameter)", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
       db.createElement("AllTypes", { label: "Item1", some_float: 3.14 });
       const result = db.queryFloat("SELECT some_float FROM AllTypes WHERE some_float > ?", [1.0]);
-      assertEquals(result, 3.14);
+      expect(result).toEqual(3.14);
     } finally {
       db.close();
     }

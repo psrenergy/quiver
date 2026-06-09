@@ -1,63 +1,46 @@
 # quiverdb
 
-SQLite wrapper binding for Quiver via Deno FFI (`Deno.dlopen`).
+SQLite wrapper binding for Quiver via Bun FFI (`bun:ffi`).
 
 ## Requirements
 
-- Deno >= 2.0
+- [Bun](https://bun.sh) >= 1.1
 - `libquiver.dll` and `libquiver_c.dll` (or `.so`/`.dylib`) accessible (see [Native Library Setup](#native-library-setup))
 
 ## Installation
 
-This is a Deno module imported from a local path:
+```bash
+bun add quiverdb
+```
+
+The bundled native libraries ship inside the package, so no separate download
+step is required on supported platforms. To build the native libraries from
+source, see the Quiver project build instructions.
 
 ```typescript
-import { Database } from "./src/index.ts";
+import { Database } from "quiverdb";
 ```
 
-The native Quiver libraries must be compiled separately. See the Quiver project build instructions.
-
-## Deno Permissions
-
-This binding uses Deno FFI to load native C libraries at runtime. Deno requires explicit permission flags:
-
-| Flag | Why |
-|------|-----|
-| `--allow-ffi` | Required to call `Deno.dlopen()` and load the native Quiver C library |
-| `--allow-read` | Required to locate the native library on disk and read schema/data files |
-| `--allow-write` | Required when creating or modifying databases (and to cache the native library when imported from JSR) |
-| `--allow-env` | Required to resolve the cache directory (`XDG_CACHE_HOME`/`HOME`/`LOCALAPPDATA`) when imported from JSR |
-| `--allow-net=jsr.io` | Required on first run when imported from JSR to download the bundled native library |
-
-Unlike runtimes where any package can load native code silently, Deno requires explicit user consent for FFI access. `--allow-ffi` is a security feature -- you control exactly which programs can call into native libraries.
-
-Example (local install, libs already on disk):
-
-```bash
-deno run --allow-ffi --allow-read --allow-write my_script.ts
-```
-
-Example (JSR install, first run downloads the bundled native library to a local cache):
-
-```bash
-deno run --allow-ffi --allow-read --allow-write --allow-env --allow-net=jsr.io my_script.ts
-```
+Bun loads native code via FFI without any permission flags — unlike Deno, there
+is no `--allow-ffi`/`--allow-read`/`--allow-write` to pass.
 
 ## Native Library Setup
 
-The loader searches for native libraries in four tiers:
+The loader searches for native libraries in three tiers:
 
-1. **Bundled**: `libs/{os}-{arch}/` directory next to the binding source (used for local installs and JSR installs after the first-run download completes).
-2. **Dev mode**: Walks up directories looking for `build/bin/` (auto-discovered during development).
-3. **JSR download**: When imported from `jsr:` or `https:`, fetches `libs/{os}-{arch}/libquiver(_c).{dll,so}` from the package's served URL and caches it under `$XDG_CACHE_HOME/psrenergy-quiver/` (Unix) or `$LOCALAPPDATA/psrenergy-quiver/` (Windows). Subsequent runs reuse the cache.
-4. **System PATH**: Falls back to loading by library name from system PATH.
+1. **Bundled**: `libs/{os}-{arch}/` directory next to the binding source (shipped
+   inside the published package).
+2. **Dev mode**: Walks up directories looking for `build/bin/` (auto-discovered
+   during in-tree development against a local C++ build).
+3. **System PATH**: Falls back to loading by library name.
 
-Currently prebuilt binaries ship for `linux-x86_64` and `windows-x86_64`. On other platforms, build from source and point to `build/bin/` via tier 2.
+Currently prebuilt binaries ship for `linux-x86_64` and `windows-x86_64`. On other
+platforms, build from source and point to `build/bin/` via tier 2.
 
 ## Quick Start
 
 ```typescript
-import { Database } from "./src/index.ts";
+import { Database } from "quiverdb";
 
 const db = Database.fromSchema("my.db", "schema.sql");
 db.createElement("Items", { label: "Item 1", value: 42 });
@@ -71,7 +54,7 @@ db.close();
 Run with:
 
 ```bash
-deno run --allow-ffi --allow-read --allow-write example.ts
+bun run example.ts
 ```
 
 ## API Methods
@@ -189,16 +172,14 @@ Exported types available for TypeScript consumers:
 ## Development
 
 ```bash
-deno task test       # Run all tests (includes --allow-ffi --allow-read --allow-write --allow-env)
-deno task lint       # Biome linting
-deno task format     # Biome formatting (auto-fix)
+bun install          # Install dev dependencies (@types/bun, biome)
+bun test test        # Run all tests
+bun run lint         # Biome linting
+bun run format       # Biome formatting (auto-fix)
 ```
 
-Or run tests directly:
-
-```bash
-deno test --allow-ffi --allow-read --allow-write --allow-env test/
-```
+Tests discover the native library from a local `build/bin/` (tier 2). On Windows,
+prepend `build/bin` to `PATH` first (the `test/test.bat` helper does this for you).
 
 ## License
 

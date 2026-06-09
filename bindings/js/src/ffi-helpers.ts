@@ -1,3 +1,4 @@
+import { CString, type Pointer, ptr, read, toArrayBuffer } from "bun:ffi";
 import type { Allocation } from "./types.ts";
 
 const encoder = new TextEncoder();
@@ -11,26 +12,26 @@ export function makeDefaultOptions(): Allocation {
   const dv = new DataView(buf.buffer);
   dv.setInt32(0, 0, true); // read_only = false
   dv.setInt32(4, 1, true); // console_level = QUIVER_LOG_INFO
-  return { ptr: Deno.UnsafePointer.of(buf)!, buf };
+  return { ptr: ptr(buf), buf };
 }
 
 /** Allocate an 8-byte buffer for a pointer out-parameter. */
 export function allocPtrOut(): Allocation {
   const buf = new Uint8Array(8);
-  return { ptr: Deno.UnsafePointer.of(buf)!, buf };
+  return { ptr: ptr(buf), buf };
 }
 
 /** Read a pointer from an out-parameter buffer. */
-export function readPtrOut(alloc: Allocation): Deno.PointerValue {
+export function readPtrOut(alloc: Allocation): Pointer | null {
   const dv = new DataView(alloc.buf.buffer);
   const raw = dv.getBigUint64(0, true);
-  return raw === 0n ? null : Deno.UnsafePointer.create(raw);
+  return raw === 0n ? null : (Number(raw) as Pointer);
 }
 
 /** Allocate an 8-byte buffer for a uint64 out-parameter. */
 export function allocUint64Out(): Allocation {
   const buf = new Uint8Array(8);
-  return { ptr: Deno.UnsafePointer.of(buf)!, buf };
+  return { ptr: ptr(buf), buf };
 }
 
 /** Read a uint64 value from an out-parameter buffer. */
@@ -41,60 +42,53 @@ export function readUint64Out(alloc: Allocation): number {
 
 /**
  * Read a null-terminated C string from a pointer stored in an out-parameter buffer.
- * Decodes the char* pointer via readPtrOut, then reads the C string with getCString().
+ * Decodes the char* pointer via readPtrOut, then reads the C string with CString.
  */
 export function decodeStringFromBuf(alloc: Allocation): string {
-  const ptr = readPtrOut(alloc);
-  if (!ptr) return "";
-  return new Deno.UnsafePointerView(ptr).getCString();
+  const p = readPtrOut(alloc);
+  if (!p) return "";
+  return new CString(p).toString();
 }
 
 /** Read an array of int64 values from a native pointer, returning JS numbers. */
-export function decodeInt64Array(ptr: Deno.PointerValue, count: number): number[] {
-  if (!ptr || count === 0) return [];
-  const view = new Deno.UnsafePointerView(ptr);
-  const ab = view.getArrayBuffer(count * 8);
-  const i64 = new BigInt64Array(ab);
+export function decodeInt64Array(p: Pointer | null, count: number): number[] {
+  if (!p || count === 0) return [];
+  const i64 = new BigInt64Array(toArrayBuffer(p, 0, count * 8));
   return Array.from(i64, (v) => Number(v));
 }
 
 /** Read an array of float64 values from a native pointer. */
-export function decodeFloat64Array(ptr: Deno.PointerValue, count: number): number[] {
-  if (!ptr || count === 0) return [];
-  const view = new Deno.UnsafePointerView(ptr);
-  const ab = view.getArrayBuffer(count * 8);
-  const f64 = new Float64Array(ab);
+export function decodeFloat64Array(p: Pointer | null, count: number): number[] {
+  if (!p || count === 0) return [];
+  const f64 = new Float64Array(toArrayBuffer(p, 0, count * 8));
   return Array.from(f64);
 }
 
 /** Read an array of uint64 values from a native pointer, returning JS numbers. */
-export function decodeUint64Array(ptr: Deno.PointerValue, count: number): number[] {
-  if (!ptr || count === 0) return [];
-  const view = new Deno.UnsafePointerView(ptr);
-  const ab = view.getArrayBuffer(count * 8);
-  const u64 = new BigUint64Array(ab);
+export function decodeUint64Array(p: Pointer | null, count: number): number[] {
+  if (!p || count === 0) return [];
+  const u64 = new BigUint64Array(toArrayBuffer(p, 0, count * 8));
   return Array.from(u64, (v) => Number(v));
 }
 
 /** Read an array of pointers from a native pointer using offset-based reading. */
-export function decodePtrArray(ptr: Deno.PointerValue, count: number): Deno.PointerValue[] {
-  if (!ptr || count === 0) return [];
-  const view = new Deno.UnsafePointerView(ptr);
-  const result: Deno.PointerValue[] = new Array(count);
+export function decodePtrArray(p: Pointer | null, count: number): (Pointer | null)[] {
+  if (!p || count === 0) return [];
+  const result: (Pointer | null)[] = new Array(count);
   for (let i = 0; i < count; i++) {
-    result[i] = view.getPointer(i * 8);
+    const v = read.ptr(p, i * 8);
+    result[i] = v === 0 ? null : (v as Pointer);
   }
   return result;
 }
 
 /** Read an array of C strings from a char** pointer. */
-export function decodeStringArray(ptr: Deno.PointerValue, count: number): string[] {
-  if (!ptr || count === 0) return [];
-  const view = new Deno.UnsafePointerView(ptr);
+export function decodeStringArray(p: Pointer | null, count: number): string[] {
+  if (!p || count === 0) return [];
   const result: string[] = new Array(count);
   for (let i = 0; i < count; i++) {
-    const strPtr = view.getPointer(i * 8);
-    result[i] = strPtr ? new Deno.UnsafePointerView(strPtr).getCString() : "";
+    const strPtr = read.ptr(p, i * 8);
+    result[i] = strPtr === 0 ? "" : new CString(strPtr as Pointer).toString();
   }
   return result;
 }
@@ -104,7 +98,7 @@ export function toCString(str: string): Allocation {
   const encoded = encoder.encode(str + "\0");
   const buf = new Uint8Array(encoded.length);
   buf.set(encoded);
-  return { ptr: Deno.UnsafePointer.of(buf)!, buf };
+  return { ptr: ptr(buf), buf };
 }
 
 /** Allocate native memory for an array of int64 values. */
@@ -114,7 +108,7 @@ export function allocNativeInt64(values: number[]): Allocation {
   for (let i = 0; i < values.length; i++) {
     dv.setBigInt64(i * 8, BigInt(values[i]), true);
   }
-  return { ptr: Deno.UnsafePointer.of(buf)!, buf };
+  return { ptr: ptr(buf), buf };
 }
 
 /** Allocate native memory for an array of float64 values. */
@@ -124,37 +118,40 @@ export function allocNativeFloat64(values: number[]): Allocation {
   for (let i = 0; i < values.length; i++) {
     dv.setFloat64(i * 8, values[i], true);
   }
-  return { ptr: Deno.UnsafePointer.of(buf)!, buf };
+  return { ptr: ptr(buf), buf };
 }
 
 /**
  * Build a native pointer table from an array of native pointers.
  * The returned allocation contains an array of void* addresses.
  */
-export function allocNativePtrTable(ptrs: Deno.PointerValue[]): Allocation {
+export function allocNativePtrTable(ptrs: (Pointer | null)[]): Allocation {
   const buf = new Uint8Array(ptrs.length * 8);
   const dv = new DataView(buf.buffer);
   for (let i = 0; i < ptrs.length; i++) {
-    const addr = ptrs[i] ? Deno.UnsafePointer.value(ptrs[i]!) : 0n;
+    const addr = ptrs[i] ? BigInt(ptrs[i] as number) : 0n;
     dv.setBigUint64(i * 8, addr, true);
   }
-  return { ptr: Deno.UnsafePointer.of(buf)!, buf };
+  return { ptr: ptr(buf), buf };
 }
 
 /** Allocate a native string (null-terminated) and return its allocation. */
 export function allocNativeString(str: string): Allocation {
   const buf = encoder.encode(str + "\0");
-  return { ptr: Deno.UnsafePointer.of(buf)!, buf };
+  return { ptr: ptr(buf), buf };
 }
 
 /** Build a native string pointer table (const char* const*) from an array of strings. */
-export function allocNativeStringArray(strings: string[]): { table: Allocation; keepalive: Allocation[] } {
+export function allocNativeStringArray(strings: string[]): {
+  table: Allocation;
+  keepalive: Allocation[];
+} {
   const strAllocs = strings.map((s) => allocNativeString(s));
   const table = allocNativePtrTable(strAllocs.map((a) => a.ptr));
   return { table, keepalive: strAllocs };
 }
 
 /** Get the native address of a pointer as BigInt. */
-export function nativeAddress(ptr: Deno.PointerValue): bigint {
-  return ptr ? Deno.UnsafePointer.value(ptr) : 0n;
+export function nativeAddress(p: Pointer | null): bigint {
+  return p ? BigInt(p as number) : 0n;
 }

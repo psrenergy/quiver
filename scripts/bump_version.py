@@ -34,7 +34,7 @@ TARGETS: list[tuple[str, str, str]] = [
         r'version = "{v}"',
     ),
     (
-        "bindings/js/deno.json",
+        "bindings/js/package.json",
         r'"version":\s*"\d+\.\d+\.\d+"',
         r'"version": "{v}"',
     ),

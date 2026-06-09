@@ -1,6 +1,8 @@
-import { assertEquals } from "jsr:@std/assert";
-const __dirname = import.meta.dirname!;
-import { join } from "jsr:@std/path";
+import { describe, expect, test } from "bun:test";
+
+const __dirname = import.meta.dir;
+
+import { join } from "node:path";
 import { Database } from "../src/index.ts";
 
 const COLLECTIONS_SCHEMA = join(
@@ -25,8 +27,8 @@ const MIXED_TS_SCHEMA = join(
   "mixed_time_series.sql",
 );
 
-Deno.test({ name: "readTimeSeriesGroup / updateTimeSeriesGroup (single-column)", sanitizeResources: false }, async (t) => {
-  await t.step("write and read back single-column time series data", () => {
+describe("readTimeSeriesGroup / updateTimeSeriesGroup (single-column)", () => {
+  test("write and read back single-column time series data", () => {
     const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
     try {
       const id = db.createElement("Collection", { label: "Item1" });
@@ -38,26 +40,26 @@ Deno.test({ name: "readTimeSeriesGroup / updateTimeSeriesGroup (single-column)",
 
       const result = db.readTimeSeriesGroup("Collection", "data", id);
 
-      assertEquals(result.date_time, ["2024-01-01", "2024-01-02"]);
-      assertEquals(result.value, [1.5, 2.5]);
+      expect(result.date_time).toEqual(["2024-01-01", "2024-01-02"]);
+      expect(result.value).toEqual([1.5, 2.5]);
     } finally {
       db.close();
     }
   });
 
-  await t.step("returns empty object when element has no time series data", () => {
+  test("returns empty object when element has no time series data", () => {
     const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
     try {
       const id = db.createElement("Collection", { label: "Item1" });
 
       const result = db.readTimeSeriesGroup("Collection", "data", id);
-      assertEquals(result, {});
+      expect(result).toEqual({});
     } finally {
       db.close();
     }
   });
 
-  await t.step("overwrite replaces existing rows", () => {
+  test("overwrite replaces existing rows", () => {
     const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
     try {
       const id = db.createElement("Collection", { label: "Item1" });
@@ -73,14 +75,14 @@ Deno.test({ name: "readTimeSeriesGroup / updateTimeSeriesGroup (single-column)",
       });
 
       const result = db.readTimeSeriesGroup("Collection", "data", id);
-      assertEquals(result.date_time, ["2024-06-01", "2024-06-02"]);
-      assertEquals(result.value, [10.5, 20.5]);
+      expect(result.date_time).toEqual(["2024-06-01", "2024-06-02"]);
+      expect(result.value).toEqual([10.5, 20.5]);
     } finally {
       db.close();
     }
   });
 
-  await t.step("clear rows with empty object", () => {
+  test("clear rows with empty object", () => {
     const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
     try {
       const id = db.createElement("Collection", { label: "Item1" });
@@ -93,15 +95,15 @@ Deno.test({ name: "readTimeSeriesGroup / updateTimeSeriesGroup (single-column)",
       db.updateTimeSeriesGroup("Collection", "data", id, {});
 
       const result = db.readTimeSeriesGroup("Collection", "data", id);
-      assertEquals(result, {});
+      expect(result).toEqual({});
     } finally {
       db.close();
     }
   });
 });
 
-Deno.test({ name: "readTimeSeriesGroup / updateTimeSeriesGroup (multi-column)", sanitizeResources: false }, async (t) => {
-  await t.step("write and read back multi-column time series with mixed types", () => {
+describe("readTimeSeriesGroup / updateTimeSeriesGroup (multi-column)", () => {
+  test("write and read back multi-column time series with mixed types", () => {
     const db = Database.fromSchema(":memory:", MIXED_TS_SCHEMA);
     try {
       const id = db.createElement("Sensor", { label: "Sensor1" });
@@ -115,48 +117,48 @@ Deno.test({ name: "readTimeSeriesGroup / updateTimeSeriesGroup (multi-column)", 
 
       const result = db.readTimeSeriesGroup("Sensor", "readings", id);
 
-      assertEquals(result.date_time, ["2024-01-01T00:00:00", "2024-01-01T01:00:00"]);
-      assertEquals(result.temperature, [22.5, 23.1]);
-      assertEquals(result.humidity, [60, 65]);
-      assertEquals(result.status, ["ok", "warning"]);
+      expect(result.date_time).toEqual(["2024-01-01T00:00:00", "2024-01-01T01:00:00"]);
+      expect(result.temperature).toEqual([22.5, 23.1]);
+      expect(result.humidity).toEqual([60, 65]);
+      expect(result.status).toEqual(["ok", "warning"]);
     } finally {
       db.close();
     }
   });
 });
 
-Deno.test({ name: "time series files", sanitizeResources: false }, async (t) => {
-  await t.step("hasTimeSeriesFiles returns true for collection with files table", () => {
+describe("time series files", () => {
+  test("hasTimeSeriesFiles returns true for collection with files table", () => {
     const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
     try {
-      assertEquals(db.hasTimeSeriesFiles("Collection"), true);
+      expect(db.hasTimeSeriesFiles("Collection")).toEqual(true);
     } finally {
       db.close();
     }
   });
 
-  await t.step("listTimeSeriesFilesColumns returns column names", () => {
+  test("listTimeSeriesFilesColumns returns column names", () => {
     const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
     try {
       const columns = db.listTimeSeriesFilesColumns("Collection");
-      assertEquals(columns, ["data_file", "metadata_file"]);
+      expect(columns).toEqual(["data_file", "metadata_file"]);
     } finally {
       db.close();
     }
   });
 
-  await t.step("readTimeSeriesFiles returns null values when no paths set", () => {
+  test("readTimeSeriesFiles returns null values when no paths set", () => {
     const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
     try {
       const result = db.readTimeSeriesFiles("Collection");
-      assertEquals(result.data_file, null);
-      assertEquals(result.metadata_file, null);
+      expect(result.data_file).toEqual(null);
+      expect(result.metadata_file).toEqual(null);
     } finally {
       db.close();
     }
   });
 
-  await t.step("updateTimeSeriesFiles and readTimeSeriesFiles round-trip", () => {
+  test("updateTimeSeriesFiles and readTimeSeriesFiles round-trip", () => {
     const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
     try {
       db.updateTimeSeriesFiles("Collection", {
@@ -165,8 +167,8 @@ Deno.test({ name: "time series files", sanitizeResources: false }, async (t) => 
       });
 
       const result = db.readTimeSeriesFiles("Collection");
-      assertEquals(result.data_file, "/path/to/data.qvr");
-      assertEquals(result.metadata_file, "/path/to/metadata.toml");
+      expect(result.data_file).toEqual("/path/to/data.qvr");
+      expect(result.metadata_file).toEqual("/path/to/metadata.toml");
     } finally {
       db.close();
     }

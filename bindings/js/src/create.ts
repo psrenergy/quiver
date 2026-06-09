@@ -1,12 +1,25 @@
+import { ptr } from "bun:ffi";
 import { Database } from "./database.ts";
 import { check, QuiverError } from "./errors.ts";
-import { allocNativeFloat64, allocNativeInt64, allocNativeStringArray, allocPtrOut, readPtrOut, toCString } from "./ffi-helpers.ts";
-import { getSymbols } from "./loader.ts";
+import {
+  allocNativeFloat64,
+  allocNativeInt64,
+  allocNativeStringArray,
+  allocPtrOut,
+  readPtrOut,
+  toCString,
+} from "./ffi-helpers.ts";
+import { getSymbols, type NativePointer } from "./loader.ts";
 import type { ElementData, Value } from "./types.ts";
 
 type Symbols = ReturnType<typeof getSymbols>;
 
-function setElementArray(lib: Symbols, elemPtr: Deno.PointerValue, name: string, values: unknown[]): void {
+function setElementArray(
+  lib: Symbols,
+  elemPtr: NativePointer,
+  name: string,
+  values: unknown[],
+): void {
   const nameBuf = toCString(name);
 
   if (values.length === 0) {
@@ -43,7 +56,7 @@ function setElementArray(lib: Symbols, elemPtr: Deno.PointerValue, name: string,
   throw new QuiverError(`Unsupported array element type for '${name}': ${typeof first}`);
 }
 
-function setElementField(lib: Symbols, elemPtr: Deno.PointerValue, name: string, value: Value): void {
+function setElementField(lib: Symbols, elemPtr: NativePointer, name: string, value: Value): void {
   const nameBuf = toCString(name);
 
   if (value === null) {
@@ -79,7 +92,11 @@ function setElementField(lib: Symbols, elemPtr: Deno.PointerValue, name: string,
   throw new QuiverError(`Unsupported value type for '${name}': ${typeof value}`);
 }
 
-Database.prototype.createElement = function (this: Database, collection: string, data: ElementData): number {
+Database.prototype.createElement = function (
+  this: Database,
+  collection: string,
+  data: ElementData,
+): number {
   const lib = getSymbols();
   const handle = this._handle;
 
@@ -94,7 +111,7 @@ Database.prototype.createElement = function (this: Database, collection: string,
     }
 
     const outIdBuf = new Uint8Array(8);
-    const outIdPtr = Deno.UnsafePointer.of(outIdBuf)!;
+    const outIdPtr = ptr(outIdBuf);
     const collBuf = toCString(collection);
     check(lib.quiver_database_create_element(handle, collBuf.buf, elemPtr, outIdPtr));
     return Number(new DataView(outIdBuf.buffer).getBigInt64(0, true));
@@ -103,7 +120,12 @@ Database.prototype.createElement = function (this: Database, collection: string,
   }
 };
 
-Database.prototype.updateElement = function (this: Database, collection: string, id: number, data: ElementData): void {
+Database.prototype.updateElement = function (
+  this: Database,
+  collection: string,
+  id: number,
+  data: ElementData,
+): void {
   const lib = getSymbols();
   const handle = this._handle;
 

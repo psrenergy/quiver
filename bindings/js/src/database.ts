@@ -1,8 +1,8 @@
+import type { CsvOptions } from "./csv.ts";
 import { check, QuiverError } from "./errors.ts";
 import { allocPtrOut, makeDefaultOptions, readPtrOut, toCString } from "./ffi-helpers.ts";
 import type { NativePointer } from "./loader.ts";
 import { getSymbols } from "./loader.ts";
-import type { CsvOptions } from "./csv.ts";
 import type { GroupMetadata, ScalarMetadata } from "./metadata.ts";
 import type { TimeSeriesData } from "./time-series.ts";
 import type { ElementData, QueryParam } from "./types.ts";
@@ -22,7 +22,9 @@ export class Database {
     const dbPathBuf = toCString(dbPath);
     const schemaPathBuf = toCString(schemaPath);
 
-    check(lib.quiver_database_from_schema(dbPathBuf.buf, schemaPathBuf.buf, options.buf, outDb.ptr));
+    check(
+      lib.quiver_database_from_schema(dbPathBuf.buf, schemaPathBuf.buf, options.buf, outDb.ptr),
+    );
 
     return new Database(readPtrOut(outDb));
   }
@@ -34,7 +36,9 @@ export class Database {
     const dbPathBuf = toCString(dbPath);
     const migrPathBuf = toCString(migrationsPath);
 
-    check(lib.quiver_database_from_migrations(dbPathBuf.buf, migrPathBuf.buf, options.buf, outDb.ptr));
+    check(
+      lib.quiver_database_from_migrations(dbPathBuf.buf, migrPathBuf.buf, options.buf, outDb.ptr),
+    );
 
     return new Database(readPtrOut(outDb));
   }
@@ -78,9 +82,17 @@ export class Database {
   declare readScalarIntegers: (collection: string, attribute: string) => number[];
   declare readScalarFloats: (collection: string, attribute: string) => number[];
   declare readScalarStrings: (collection: string, attribute: string) => string[];
-  declare readScalarIntegerById: (collection: string, attribute: string, id: number) => number | null;
+  declare readScalarIntegerById: (
+    collection: string,
+    attribute: string,
+    id: number,
+  ) => number | null;
   declare readScalarFloatById: (collection: string, attribute: string, id: number) => number | null;
-  declare readScalarStringById: (collection: string, attribute: string, id: number) => string | null;
+  declare readScalarStringById: (
+    collection: string,
+    attribute: string,
+    id: number,
+  ) => string | null;
   declare readElementIds: (collection: string) => number[];
   declare readVectorIntegers: (collection: string, attribute: string) => number[][];
   declare readVectorFloats: (collection: string, attribute: string) => number[][];
@@ -118,15 +130,30 @@ export class Database {
 
   // --- Time series (implemented in time-series.ts) ---
   declare readTimeSeriesGroup: (collection: string, group: string, id: number) => TimeSeriesData;
-  declare updateTimeSeriesGroup: (collection: string, group: string, id: number, data: TimeSeriesData) => void;
+  declare updateTimeSeriesGroup: (
+    collection: string,
+    group: string,
+    id: number,
+    data: TimeSeriesData,
+  ) => void;
   declare hasTimeSeriesFiles: (collection: string) => boolean;
   declare listTimeSeriesFilesColumns: (collection: string) => string[];
   declare readTimeSeriesFiles: (collection: string) => Record<string, string | null>;
   declare updateTimeSeriesFiles: (collection: string, data: Record<string, string | null>) => void;
 
   // --- CSV (implemented in csv.ts) ---
-  declare exportCsv: (collection: string, group: string, filePath: string, options?: CsvOptions) => void;
-  declare importCsv: (collection: string, group: string, filePath: string, options?: CsvOptions) => void;
+  declare exportCsv: (
+    collection: string,
+    group: string,
+    filePath: string,
+    options?: CsvOptions,
+  ) => void;
+  declare importCsv: (
+    collection: string,
+    group: string,
+    filePath: string,
+    options?: CsvOptions,
+  ) => void;
 
   // --- Introspection (implemented in introspection.ts) ---
   declare isHealthy: () => boolean;
@@ -135,7 +162,10 @@ export class Database {
   declare describe: () => void;
 
   // --- Composite helpers (implemented in composites.ts) ---
-  declare readScalarsById: (collection: string, id: number) => Record<string, number | string | null>;
+  declare readScalarsById: (
+    collection: string,
+    id: number,
+  ) => Record<string, number | string | null>;
   declare readVectorsById: (collection: string, id: number) => Record<string, number[] | string[]>;
   declare readSetsById: (collection: string, id: number) => Record<string, number[] | string[]>;
 }

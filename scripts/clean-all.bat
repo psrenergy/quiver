@@ -116,13 +116,20 @@ echo.
 REM ============================================================
 REM Step 5: JavaScript Bindings
 REM ============================================================
-echo [5/5] JavaScript binding lock file...
+echo [5/5] JavaScript binding artifacts...
 
-if exist "%ROOT_DIR%\bindings\js\deno.lock" (
-    del /q "%ROOT_DIR%\bindings\js\deno.lock"
-    echo       Removed bindings/js/deno.lock
+if exist "%ROOT_DIR%\bindings\js\bun.lock" (
+    del /q "%ROOT_DIR%\bindings\js\bun.lock"
+    echo       Removed bindings/js/bun.lock
 ) else (
-    echo       Skipped bindings/js/deno.lock ^(not found^)
+    echo       Skipped bindings/js/bun.lock ^(not found^)
+)
+
+if exist "%ROOT_DIR%\bindings\js\node_modules" (
+    rmdir /s /q "%ROOT_DIR%\bindings\js\node_modules"
+    echo       Removed bindings/js/node_modules
+) else (
+    echo       Skipped bindings/js/node_modules ^(not found^)
 )
 
 echo.

@@ -1,70 +1,63 @@
-import { assert, assertEquals, assertThrows } from "jsr:@std/assert";
-const __dirname = import.meta.dirname!;
-import { join } from "jsr:@std/path";
+import { describe, expect, test } from "bun:test";
+
+const __dirname = import.meta.dir;
+
+import { join } from "node:path";
 import { Database, LuaRunner, QuiverError } from "../src/index.ts";
 
-const SCHEMA_PATH = join(
-  __dirname,
-  "..",
-  "..",
-  "..",
-  "tests",
-  "schemas",
-  "valid",
-  "all_types.sql",
-);
+const SCHEMA_PATH = join(__dirname, "..", "..", "..", "tests", "schemas", "valid", "all_types.sql");
 
-Deno.test({ name: "LuaRunner", sanitizeResources: false }, async (t) => {
-  await t.step("create element from Lua and verify via JS", () => {
+describe("LuaRunner", () => {
+  test("create element from Lua and verify via JS", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     const runner = new LuaRunner(db);
     try {
       runner.run('db:create_element("AllTypes", { label = "FromLua" })');
       const labels = db.readScalarStrings("AllTypes", "label");
-      assert(labels.includes("FromLua"));
+      expect(labels.includes("FromLua")).toBeTruthy();
     } finally {
       runner.close();
       db.close();
     }
   });
 
-  await t.step("Lua syntax error throws QuiverError", () => {
+  test("Lua syntax error throws QuiverError", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     const runner = new LuaRunner(db);
     try {
-      assertThrows(() => runner.run("if then"), QuiverError);
+      expect(() => runner.run("if then")).toThrow(QuiverError);
     } finally {
       runner.close();
       db.close();
     }
   });
 
-  await t.step("Lua runtime error throws QuiverError", () => {
+  test("Lua runtime error throws QuiverError", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     const runner = new LuaRunner(db);
     try {
-      assertThrows(() => runner.run("local x = nil; x.field = 1"), QuiverError);
+      expect(() => runner.run("local x = nil; x.field = 1")).toThrow(QuiverError);
     } finally {
       runner.close();
       db.close();
     }
   });
 
-  await t.step("multiple run calls on same runner succeed", () => {
+  test("multiple run calls on same runner succeed", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     const runner = new LuaRunner(db);
     try {
       runner.run('db:create_element("AllTypes", { label = "First" })');
       runner.run('db:create_element("AllTypes", { label = "Second" })');
       const labels = db.readScalarStrings("AllTypes", "label");
-      assertEquals(labels.length, 2);
+      expect(labels.length).toEqual(2);
     } finally {
       runner.close();
       db.close();
     }
   });
 
-  await t.step("empty script succeeds", () => {
+  test("empty script succeeds", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     const runner = new LuaRunner(db);
     try {
@@ -76,7 +69,7 @@ Deno.test({ name: "LuaRunner", sanitizeResources: false }, async (t) => {
     }
   });
 
-  await t.step("close is idempotent", () => {
+  test("close is idempotent", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     const runner = new LuaRunner(db);
     try {
@@ -88,12 +81,12 @@ Deno.test({ name: "LuaRunner", sanitizeResources: false }, async (t) => {
     }
   });
 
-  await t.step("run after close throws QuiverError", () => {
+  test("run after close throws QuiverError", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     const runner = new LuaRunner(db);
     try {
       runner.close();
-      assertThrows(() => runner.run("print('hello')"), QuiverError);
+      expect(() => runner.run("print('hello')")).toThrow(QuiverError);
     } finally {
       db.close();
     }

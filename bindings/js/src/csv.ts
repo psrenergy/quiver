@@ -1,6 +1,13 @@
+import { ptr } from "bun:ffi";
 import { Database } from "./database.ts";
 import { check } from "./errors.ts";
-import { allocNativeInt64, allocNativeString, allocNativeStringArray, nativeAddress, toCString } from "./ffi-helpers.ts";
+import {
+  allocNativeInt64,
+  allocNativeString,
+  allocNativeStringArray,
+  nativeAddress,
+  toCString,
+} from "./ffi-helpers.ts";
 import { getSymbols } from "./loader.ts";
 import type { Allocation } from "./types.ts";
 
@@ -23,7 +30,7 @@ function buildCsvOptionsBuffer(options?: CsvOptions): [Allocation, Allocation[]]
   dv.setBigUint64(0, nativeAddress(dtfStr.ptr), true);
 
   if (!options?.enumLabels || Object.keys(options.enumLabels).length === 0) {
-    return [{ ptr: Deno.UnsafePointer.of(buf)!, buf }, keepalive];
+    return [{ ptr: ptr(buf), buf }, keepalive];
   }
 
   const groupAttrNames: string[] = [];
@@ -57,7 +64,7 @@ function buildCsvOptionsBuffer(options?: CsvOptions): [Allocation, Allocation[]]
   for (let i = 0; i < groupCount; i++) {
     entryCountsDv.setBigUint64(i * 8, BigInt(groupEntryCounts[i]), true);
   }
-  const entryCounts: Allocation = { ptr: Deno.UnsafePointer.of(entryCountsBuf)!, buf: entryCountsBuf };
+  const entryCounts: Allocation = { ptr: ptr(entryCountsBuf), buf: entryCountsBuf };
   keepalive.push(entryCounts);
 
   const { table: labelsTable, keepalive: labelPtrs } = allocNativeStringArray(allLabels);
@@ -73,7 +80,7 @@ function buildCsvOptionsBuffer(options?: CsvOptions): [Allocation, Allocation[]]
   dv.setBigUint64(40, nativeAddress(valuesArr.ptr), true);
   dv.setBigUint64(48, BigInt(groupCount), true);
 
-  return [{ ptr: Deno.UnsafePointer.of(buf)!, buf }, keepalive];
+  return [{ ptr: ptr(buf), buf }, keepalive];
 }
 
 Database.prototype.exportCsv = function (
@@ -88,7 +95,9 @@ Database.prototype.exportCsv = function (
   const grpBuf = toCString(group);
   const pathBuf = toCString(filePath);
   const [optsBuf, _keepalive] = buildCsvOptionsBuffer(options);
-  check(lib.quiver_database_export_csv(this._handle, collBuf.buf, grpBuf.buf, pathBuf.buf, optsBuf.ptr));
+  check(
+    lib.quiver_database_export_csv(this._handle, collBuf.buf, grpBuf.buf, pathBuf.buf, optsBuf.ptr),
+  );
 };
 
 Database.prototype.importCsv = function (
@@ -103,5 +112,7 @@ Database.prototype.importCsv = function (
   const grpBuf = toCString(group);
   const pathBuf = toCString(filePath);
   const [optsBuf, _keepalive] = buildCsvOptionsBuffer(options);
-  check(lib.quiver_database_import_csv(this._handle, collBuf.buf, grpBuf.buf, pathBuf.buf, optsBuf.ptr));
+  check(
+    lib.quiver_database_import_csv(this._handle, collBuf.buf, grpBuf.buf, pathBuf.buf, optsBuf.ptr),
+  );
 };

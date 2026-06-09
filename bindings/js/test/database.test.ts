@@ -1,182 +1,165 @@
-import {
-  assert,
-  assertEquals,
-  assertGreater,
-  assertInstanceOf,
-  assertThrows,
-} from "jsr:@std/assert";
-const __dirname = import.meta.dirname!;
-import { join } from "jsr:@std/path";
+import { CString, type Pointer } from "bun:ffi";
+import { afterAll, describe, expect, test } from "bun:test";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+
+const __dirname = import.meta.dir;
+
+import { join } from "node:path";
 import { Database, QuiverError } from "../src/index.ts";
 import { getSymbols } from "../src/loader.ts";
 
-function existsSync(path: string): boolean {
-  try {
-    Deno.statSync(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-const SCHEMA_PATH = join(
-  __dirname,
-  "..",
-  "..",
-  "..",
-  "tests",
-  "schemas",
-  "valid",
-  "basic.sql",
-);
+const SCHEMA_PATH = join(__dirname, "..", "..", "..", "tests", "schemas", "valid", "basic.sql");
 const MIGRATIONS_PATH = join(__dirname, "..", "..", "..", "tests", "schemas", "migrations");
 
-Deno.test({ name: "Database lifecycle", sanitizeResources: false }, async (t) => {
+describe("Database lifecycle", () => {
   const tempDirs: string[] = [];
 
+  // Cleanup after all steps
+  afterAll(() => {
+    for (const dir of tempDirs) {
+      try {
+        rmSync(dir, { recursive: true, force: true });
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+  });
+
   function makeTempDir(): string {
-    const dir = Deno.makeTempDirSync({ prefix: "quiver_js_test_" });
+    const dir = mkdtempSync(join(tmpdir(), "quiver_js_test_"));
     tempDirs.push(dir);
     return dir;
   }
 
-  await t.step("fromSchema opens database and returns Database instance", () => {
+  test("fromSchema opens database and returns Database instance", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
-      assert(db !== undefined);
-      assert(db instanceof Database);
+      expect(db !== undefined).toBeTruthy();
+      expect(db instanceof Database).toBeTruthy();
     } finally {
       db.close();
     }
   });
 
-  await t.step("fromSchema creates database file on disk", () => {
+  test("fromSchema creates database file on disk", () => {
     const dir = makeTempDir();
     const dbPath = join(dir, "test.db");
     const db = Database.fromSchema(dbPath, SCHEMA_PATH);
     try {
-      assertEquals(existsSync(dbPath), true);
+      expect(existsSync(dbPath)).toEqual(true);
     } finally {
       db.close();
     }
   });
 
-  await t.step("fromSchema with invalid schema throws QuiverError", () => {
-    assertThrows(() => {
+  test("fromSchema with invalid schema throws QuiverError", () => {
+    expect(() => {
       Database.fromSchema(":memory:", "nonexistent/path/schema.sql");
-    }, QuiverError);
+    }).toThrow(QuiverError);
   });
 
-  await t.step("fromMigrations opens database and returns Database instance", () => {
+  test("fromMigrations opens database and returns Database instance", () => {
     const db = Database.fromMigrations(":memory:", MIGRATIONS_PATH);
     try {
-      assert(db !== undefined);
-      assert(db instanceof Database);
+      expect(db !== undefined).toBeTruthy();
+      expect(db instanceof Database).toBeTruthy();
     } finally {
       db.close();
     }
   });
 
-  await t.step("fromMigrations creates database file on disk", () => {
+  test("fromMigrations creates database file on disk", () => {
     const dir = makeTempDir();
     const dbPath = join(dir, "test.db");
     const db = Database.fromMigrations(dbPath, MIGRATIONS_PATH);
     try {
-      assertEquals(existsSync(dbPath), true);
+      expect(existsSync(dbPath)).toEqual(true);
     } finally {
       db.close();
     }
   });
 
-  await t.step("fromMigrations with invalid path throws QuiverError", () => {
-    assertThrows(() => {
+  test("fromMigrations with invalid path throws QuiverError", () => {
+    expect(() => {
       Database.fromMigrations(":memory:", "nonexistent/path");
-    }, QuiverError);
+    }).toThrow(QuiverError);
   });
 
-  await t.step("open reopens an existing database file", () => {
+  test("open reopens an existing database file", () => {
     const dir = makeTempDir();
     const dbPath = join(dir, "test.db");
     Database.fromSchema(dbPath, SCHEMA_PATH).close();
 
     const reopened = Database.open(dbPath);
     try {
-      assert(reopened instanceof Database);
+      expect(reopened instanceof Database).toBeTruthy();
     } finally {
       reopened.close();
     }
   });
 
-  await t.step("close is idempotent", () => {
+  test("close is idempotent", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     db.close();
     // Second close should not throw
     db.close();
   });
 
-  await t.step("ensureOpen throws QuiverError after close", () => {
+  test("ensureOpen throws QuiverError after close", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     db.close();
     // Access the internal _handle to trigger ensureOpen
     // Since _handle calls ensureOpen, this tests the guard
-    assertThrows(() => {
+    expect(() => {
       void db._handle;
-    }, QuiverError);
+    }).toThrow(QuiverError);
   });
 
-  await t.step("ensureOpen error message is 'Database is closed'", () => {
+  test("ensureOpen error message is 'Database is closed'", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     db.close();
     try {
       void db._handle;
       throw new Error("Should have thrown");
     } catch (e) {
-      assertInstanceOf(e, QuiverError);
-      assertEquals((e as QuiverError).message, "Database is closed");
+      expect(e).toBeInstanceOf(QuiverError);
+      expect((e as QuiverError).message).toEqual("Database is closed");
     }
   });
-
-  // Cleanup after all steps
-  for (const dir of tempDirs) {
-    try {
-      Deno.removeSync(dir, { recursive: true });
-    } catch {
-      // Ignore cleanup errors
-    }
-  }
 });
 
-Deno.test({ name: "Error handling", sanitizeResources: false }, async (t) => {
-  await t.step("QuiverError has correct name property", () => {
+describe("Error handling", () => {
+  test("QuiverError has correct name property", () => {
     const err = new QuiverError("test message");
-    assertEquals(err.name, "QuiverError");
+    expect(err.name).toEqual("QuiverError");
   });
 
-  await t.step("QuiverError is an instance of Error", () => {
+  test("QuiverError is an instance of Error", () => {
     const err = new QuiverError("test message");
-    assertInstanceOf(err, Error);
+    expect(err).toBeInstanceOf(Error);
   });
 
-  await t.step("QuiverError contains C-layer message", () => {
+  test("QuiverError contains C-layer message", () => {
     try {
       Database.fromSchema(":memory:", "nonexistent/schema.sql");
       throw new Error("Should have thrown");
     } catch (e) {
-      assertInstanceOf(e, QuiverError);
+      expect(e).toBeInstanceOf(QuiverError);
       // C layer returns "Schema file not found: ..." or similar
-      assert((e as QuiverError).message);
-      assertGreater((e as QuiverError).message.length, 0);
+      expect((e as QuiverError).message).toBeTruthy();
+      expect((e as QuiverError).message.length).toBeGreaterThan(0);
     }
   });
 });
 
-Deno.test({ name: "Library loading", sanitizeResources: false }, async (t) => {
-  await t.step("quiver_version returns non-empty string", () => {
+describe("Library loading", () => {
+  test("quiver_version returns non-empty string", () => {
     const lib = getSymbols();
     const ptr = lib.quiver_version();
-    assert(ptr, "quiver_version returned null pointer");
-    const version = new Deno.UnsafePointerView(ptr as NonNullable<Deno.PointerValue>).getCString();
-    assertEquals(typeof version, "string");
-    assertGreater(version.length, 0);
+    expect(ptr).toBeTruthy();
+    const version = new CString(ptr as Pointer).toString();
+    expect(typeof version).toEqual("string");
+    expect(version.length).toBeGreaterThan(0);
   });
 });

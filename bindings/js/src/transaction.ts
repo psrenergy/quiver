@@ -1,3 +1,4 @@
+import { ptr } from "bun:ffi";
 import { Database } from "./database.ts";
 import { check } from "./errors.ts";
 import { getSymbols } from "./loader.ts";
@@ -20,7 +21,7 @@ Database.prototype.rollback = function (this: Database): void {
 Database.prototype.inTransaction = function (this: Database): boolean {
   const lib = getSymbols();
   const outBuf = new Uint8Array(4);
-  const outPtr = Deno.UnsafePointer.of(outBuf)!;
+  const outPtr = ptr(outBuf);
   check(lib.quiver_database_in_transaction(this._handle, outPtr));
   return new DataView(outBuf.buffer).getInt32(0, true) !== 0;
 };

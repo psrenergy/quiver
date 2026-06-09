@@ -1,3 +1,4 @@
+import { CString } from "bun:ffi";
 import { getSymbols } from "./loader.ts";
 
 export class QuiverError extends Error {
@@ -12,7 +13,7 @@ export function check(err: number): void {
     const lib = getSymbols();
     const ptr = lib.quiver_get_last_error();
     if (ptr) {
-      const detail = new Deno.UnsafePointerView(ptr).getCString();
+      const detail = new CString(ptr).toString();
       throw new QuiverError(detail);
     }
     throw new QuiverError("Unknown error");

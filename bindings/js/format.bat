@@ -1,1 +1,1 @@
-deno task format
+bun run format

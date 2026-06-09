@@ -1,5 +1,5 @@
-import { Database } from "./database.ts";
-import { QuiverError, check } from "./errors.ts";
+import type { Database } from "./database.ts";
+import { check, QuiverError } from "./errors.ts";
 import { allocPtrOut, decodeStringFromBuf, readPtrOut, toCString } from "./ffi-helpers.ts";
 import type { NativePointer } from "./loader.ts";
 import { getSymbols } from "./loader.ts";
