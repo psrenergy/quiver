@@ -7,18 +7,6 @@ concurrency:
   group: publish-${{ github.ref }}
   cancel-in-progress: false
 
-# Thin orchestrator for a full release. The heavy lifting lives in independently-runnable workflows:
-#   build-native.yml  -> builds native libs once, uploads them to S3 by version
-#   publish-pypi.yml  -> builds wheels + publishes to PyPI       (also a push/PR wheel-build check)
-#   publish-npm.yml   -> downloads native libs from S3, publishes to npm
-#   publish-julia.yml -> downloads native libs from S3, opens the Quiver.jl PR
-# Flow: prove the native build -> cut the release (tag + GitHub Release) -> dispatch the three
-# publish workflows (each independently re-runnable) -> open the version-bump PR.
-#
-# Why dispatch instead of `on: release`? A release created with the default GITHUB_TOKEN does NOT
-# fire the `release` event for other workflows (GitHub's anti-recursion rule), but GITHUB_TOKEN CAN
-# trigger workflow_dispatch. So the release job dispatches the publishes explicitly — no PAT needed.
-# (PyPI must also be dispatched, not `uses:`-called, because OIDC rejects reusable workflows.)
 permissions:
   contents: read
 
@@ -36,28 +24,18 @@ jobs:
       - id: detect
         uses: ./.github/actions/detect-version
 
-  # Build native libs once and stage them in S3. npm and Julia download from there, so they
-  # never rebuild and have no in-run artifact dependency on this job.
   build-native:
     name: Build native libs
     needs: detect-version
     uses: ./.github/workflows/build-native.yml
 
-  # Cut the release once the native build is proven good, BEFORE any irreversible registry publish,
-  # then dispatch the publishes. The tag/release is the reversible "cut" (PyPI/npm reject
-  # re-publishing a version, so they are not). build-native completing (incl. its S3 upload) is part
-  # of that proof — the libs are in S3 before the publishes run.
-  # RECOVERY: if a publish fails, re-run that target's workflow (publish-pypi.yml / publish-npm.yml /
-  # publish-julia.yml) — NOT this whole workflow, which would abort at detect-version's "tag already
-  # exists on origin" check. Delete the tag only to redo the entire release:
-  #   git push --delete origin v<version>
   release:
     name: Release (tag + GitHub Release)
     runs-on: ubuntu-latest
     needs: [detect-version, build-native]
     permissions:
-      contents: write   # create the tag + GitHub Release
-      actions: write    # dispatch the publish workflows
+      contents: write
+      actions: write
     steps:
       - uses: actions/checkout@v6
         with:
@@ -69,9 +47,6 @@ jobs:
           commit: ${{ github.sha }}
           generateReleaseNotes: true
 
-      # GITHUB_TOKEN can trigger workflow_dispatch (the documented exception to the anti-recursion
-      # rule), so we dispatch the publishes explicitly. --ref runs each at the freshly-created tag,
-      # so they checkout the released commit (correct version) and find the matching libs in S3.
       - name: Dispatch publish workflows
         env:
           GH_TOKEN: ${{ github.token }}
