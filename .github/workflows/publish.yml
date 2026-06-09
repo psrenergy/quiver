@@ -7,8 +7,6 @@ concurrency:
   group: publish-${{ github.ref }}
   cancel-in-progress: false
 
-# Deny-by-default: jobs that need more (publish-pypi, create-tag, github-release,
-# bump-version, publish-jsr, publish-julia) opt up in their own permissions block.
 permissions:
   contents: read
 
@@ -154,7 +152,7 @@ jobs:
 
       # SHA-pinned (not @release/v1): this is the one step holding trusted-publishing
       # credentials for an irreversible PyPI upload. Dependabot still bumps the SHA.
-      - uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # v1.14.0
+      - uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
 
   publish-npm:
     name: Publish to npm

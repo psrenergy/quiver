@@ -5,7 +5,6 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
-  # Reused by publish.yml so the release builds wheels through the exact same job.
   workflow_call:
 
 concurrency:
