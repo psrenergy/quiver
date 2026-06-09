@@ -649,14 +649,21 @@ bindings/python/generator/generator.bat  # Python
   ```bash
   julia --project=bindings/julia -e "using Pkg; Pkg.instantiate()"
   ```
-- **Publishing** (see `bindings/julia/PUBLISHING.md`): `bindings/julia/` is the **canonical**
-  Julia package; the published `psrenergy/Quiver.jl` is a **generated mirror** (do not hand-edit).
-  It is a plain S3-artifact package in General (no `Quiver_jll`, no Yggdrasil). The `publish-julia`
-  job in `publish.yml` reuses the `build-native` binaries, runs `scripts/julia/generate_artifacts.jl`
-  (tar → S3 upload → `Artifacts.toml`), then faithfully copies the `bindings/julia` package into the
-  mirror (verbatim `Project.toml` — the binding shares Quiver.jl's UUID) and opens a PR to `Quiver.jl`.
-  The job runs on a `[self-hosted, linux]` runner whose ambient IAM role grants S3 write (no AWS key
-  secrets); it requires the `QUIVER_JL_TOKEN` secret for the cross-repo PR.
+- **Publishing**: `bindings/julia/` is the **canonical** Julia package and the *single source of
+  truth*; the published `psrenergy/Quiver.jl` is a **full generated mirror** (never hand-edit it —
+  develop only in `bindings/julia`). It is a plain S3-artifact package in General (no `Quiver_jll`,
+  no Yggdrasil). The `publish-julia` job in `publish.yml` reuses the `build-native` binaries, runs
+  `scripts/julia/generate_artifacts.jl` (tar → S3 upload → `Artifacts.toml`), then **wipes the mirror
+  (keeping only its `.git/`) and copies the entire `bindings/julia` tree into it** — `src/`, `test/`,
+  `.github/` (the mirror's `CI.yml`/`TagBot.yml` live here, dormant in the monorepo since nested
+  workflows don't run), `README.md`, `.gitignore`, `.gitattributes`, `.JuliaFormatter.toml`, `LICENSE`,
+  and the verbatim `Project.toml` (the binding shares Quiver.jl's UUID). It then overlays the real test
+  schemas from repo-root `tests/schemas/` (the in-tree `bindings/julia/test/schemas` is an empty stub)
+  and the generated `Artifacts.toml`, and opens a PR to `Quiver.jl`. Only `Manifest.toml` is excluded
+  (gitignored). Because it's a full mirror, the PR surfaces a **delete** for anything in Quiver.jl not
+  present in `bindings/julia`, so any file the mirror needs (extra workflows, docs) must live in
+  `bindings/julia`. The job runs on a `[self-hosted, linux]` runner whose ambient IAM role grants S3
+  write (no AWS key secrets); it requires the `QUIVER_JL_TOKEN` secret for the cross-repo PR.
 - **Windows artifact gotcha:** `generate_artifacts.jl` `chmod 0o755`s the staged libs before tarring —
   Windows DLLs **must be executable in the artifact**, or Pkg's Windows extraction yields an NTFS ACL
   without execute and `LoadLibrary` fails with "Access is denied" (Linux `.so` load ignores the bit, so
