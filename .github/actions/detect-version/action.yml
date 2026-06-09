@@ -13,7 +13,7 @@ runs:
       id: extract
       shell: bash
       # scripts/bump_version.py owns the version-file inventory (its TARGETS list) and is the
-      # single source of truth for both reading and writing. --check treats CMakeLists.txt as
+      # single source of truth for reading the version. --check treats CMakeLists.txt as
       # canonical, fails if any binding disagrees, and prints the version on success.
       run: |
         version=$(python3 scripts/bump_version.py --check)
