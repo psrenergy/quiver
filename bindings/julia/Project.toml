@@ -1,5 +1,5 @@
 name = "Quiver"
-uuid = "3bd9c58c-5d43-42f3-8ca0-6ca814cf6d36"
+uuid = "cdbb3f72-2527-4dbd-9d0e-93533a5519ac"
 version = "0.8.2"
 
 [deps]
