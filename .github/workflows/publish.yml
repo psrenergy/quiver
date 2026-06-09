@@ -30,7 +30,7 @@ jobs:
     uses: ./.github/workflows/build-native.yml
 
   release:
-    name: Release (tag + GitHub Release)
+    name: Tag and GitHub Release
     runs-on: ubuntu-latest
     needs: [detect-version, build-native]
     permissions:
