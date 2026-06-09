@@ -17,7 +17,7 @@ jobs:
         with:
           ref: ${{ github.sha }}
       - id: v
-        run: echo "version=$(python3 scripts/bump_version.py --check)" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(python3 scripts/assert_version.py)" >> "$GITHUB_OUTPUT"
 
   publish:
     name: Publish Julia (PR to Quiver.jl)
