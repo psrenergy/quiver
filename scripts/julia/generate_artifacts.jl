@@ -80,7 +80,15 @@ function stage_platform(tag, srcdir)
         name = stem * info.ext
         src = joinpath(srcdir, name)
         isfile(src) || error("Missing $name in $srcdir for platform $tag")
-        cp(src, joinpath(libdir, name))
+        dst = joinpath(libdir, name)
+        cp(src, dst)
+        # Mark the library executable so Tar.create records mode 0755. The publish-julia
+        # job runs on Linux, where the downloaded artifacts are 0644 (non-executable). Pkg's
+        # Windows extraction turns a non-executable tar entry into an NTFS ACL *without*
+        # execute, and then LoadLibrary fails with "Access is denied" (the Linux .so load
+        # ignores the bit, which is why only Windows broke). BinaryBuilder marks Windows
+        # DLLs 0755 for the same reason.
+        chmod(dst, 0o755)
     end
     return staging
 end
