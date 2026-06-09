@@ -2,6 +2,15 @@ name: Publish Julia (PR to Quiver.jl)
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Override version (which S3 build to download and publish). Default: detect from CMakeLists.txt."
+        required: false
+        default: ""
+      ref:
+        description: "Git ref or sha to publish. Default: the triggering commit."
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -15,9 +24,14 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.ref || github.sha }}
       - id: v
-        run: echo "version=$(python3 scripts/assert_version.py)" >> "$GITHUB_OUTPUT"
+        run: |
+          v="${{ inputs.version }}"
+          if [ -z "$v" ]; then
+            v="$(python3 scripts/assert_version.py)"
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
 
   publish:
     name: Publish Julia (PR to Quiver.jl)
@@ -27,7 +41,7 @@ jobs:
       - name: Checkout quiver
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.ref || github.sha }}
 
       - uses: julia-actions/setup-julia@v3
         with:
