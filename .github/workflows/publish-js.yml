@@ -1,0 +1,105 @@
+name: Publish JS
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Override version (which S3 build to download and publish). Default: detect from CMakeLists.txt."
+        required: false
+        default: ""
+      ref:
+        description: "Git ref or sha to publish. Default: the triggering commit."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Ensure npm supports Trusted Publishing
+        run: npm install -g npm@latest
+
+      - name: Resolve version
+        id: ver
+        run: |
+          v="${{ inputs.version }}"
+          if [ -z "$v" ]; then
+            v="$(python3 scripts/assert_version.py)"
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      # Download the native libs into bindings/js/libs/{linux,windows}-x86_64/ — the same layout
+      # the package.json "files" allowlist ships. native_s3.sh owns the per-platform file list.
+      - name: Download native libraries from S3
+        run: bash scripts/ci/native_s3.sh download "${{ steps.ver.outputs.version }}" bindings/js/libs
+
+      - name: Verify native libraries are present
+        working-directory: bindings/js
+        run: |
+          required=(
+            libs/linux-x86_64/libquiver.so
+            # SONAME libquiver_c.so's DT_NEEDED resolves at load time (no Linux preload).
+            libs/linux-x86_64/libquiver.so.0
+            libs/linux-x86_64/libquiver_c.so
+            libs/windows-x86_64/libquiver.dll
+            libs/windows-x86_64/libquiver_c.dll
+          )
+          missing=0
+          for f in "${required[@]}"; do
+            if [ ! -f "$f" ]; then
+              echo "::error::Missing required native library: $f"
+              missing=1
+            fi
+          done
+          echo "--- libs/ tree ---"
+          find libs -type f | sort
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Pack and assert native libs are in the tarball
+        working-directory: bindings/js
+        run: |
+          npm pack
+          tarball="$(ls -t quiverdb-*.tgz | head -n1)"
+          if [ -z "$tarball" ] || [ ! -f "$tarball" ]; then
+            echo "::error::npm pack did not produce a quiverdb-*.tgz tarball"
+            exit 1
+          fi
+          entries="$(tar -tzf "$tarball" | sed 's#^\./##; s#^[^/]*/##' | sort)"
+          echo "--- tarball contents ($tarball) ---"
+          echo "$entries"
+          for f in \
+            libs/linux-x86_64/libquiver.so libs/linux-x86_64/libquiver.so.0 libs/linux-x86_64/libquiver_c.so \
+            libs/windows-x86_64/libquiver.dll libs/windows-x86_64/libquiver_c.dll; do
+            if ! printf '%s\n' "$entries" | grep -Fxq "$f"; then
+              echo "::error::tarball $tarball is MISSING $f"
+              exit 1
+            fi
+          done
+          rm -f "$tarball"
+
+      - name: Publish to npm (Trusted Publishing / OIDC)
+        working-directory: bindings/js
+        run: |
+          ver="${{ steps.ver.outputs.version }}"
+          if npm view "quiverdb@$ver" version >/dev/null 2>&1; then
+            echo "quiverdb@$ver already published; skipping"
+          else
+            npm publish
+          fi

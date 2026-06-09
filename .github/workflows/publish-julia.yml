@@ -1,0 +1,92 @@
+name: Publish Julia (PR to Quiver.jl)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Override version (which S3 build to download and publish). Default: detect from CMakeLists.txt."
+        required: false
+        default: ""
+      ref:
+        description: "Git ref or sha to publish. Default: the triggering commit."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - id: v
+        run: |
+          v="${{ inputs.version }}"
+          if [ -z "$v" ]; then
+            v="$(python3 scripts/assert_version.py)"
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+  publish:
+    name: Publish Julia (PR to Quiver.jl)
+    runs-on: [self-hosted, linux]
+    needs: version
+    steps:
+      - name: Checkout quiver
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: "1.11"
+
+      - name: Download native libraries from S3
+        run: bash scripts/ci/native_s3.sh download "${{ needs.version.outputs.version }}" native
+
+      - name: Build tarballs, upload to S3, generate Artifacts.toml
+        run: |
+          julia scripts/julia/generate_artifacts.jl \
+            --version "${{ needs.version.outputs.version }}" \
+            --output "$RUNNER_TEMP/Artifacts.toml" \
+            --platform linux-x86_64 native/linux-x86_64 \
+            --platform windows-x86_64 native/windows-x86_64
+
+      - name: Checkout Quiver.jl
+        uses: actions/checkout@v6
+        with:
+          repository: psrenergy/Quiver.jl
+          ref: master
+          token: ${{ secrets.QUIVER_JL_TOKEN }}
+          path: quiver-jl
+
+      - name: Assemble generated mirror
+        run: |
+          set -euo pipefail
+          find quiver-jl -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+          cp -a bindings/julia/. quiver-jl/
+          rm -f quiver-jl/Manifest.toml
+          rm -rf quiver-jl/test/schemas
+          cp -a tests/schemas quiver-jl/test/schemas
+          cp "$RUNNER_TEMP/Artifacts.toml" quiver-jl/Artifacts.toml
+
+      - name: Open pull request to Quiver.jl
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.QUIVER_JL_TOKEN }}
+          path: quiver-jl
+          branch: release/v${{ needs.version.outputs.version }}
+          base: master
+          commit-message: "Release v${{ needs.version.outputs.version }}"
+          title: "Release v${{ needs.version.outputs.version }}"
+          body: |
+            Auto-generated mirror from `psrenergy/quiver@v${{ needs.version.outputs.version }}`.
+
+            > Do not hand-edit this repository, it is generated from `psrenergy/quiver/bindings/julia`.
+          delete-branch: true

@@ -652,7 +652,10 @@ bindings/python/generator/generator.bat  # Python
 - **Publishing**: `bindings/julia/` is the **canonical** Julia package and the *single source of
   truth*; the published `psrenergy/Quiver.jl` is a **full generated mirror** (never hand-edit it —
   develop only in `bindings/julia`). It is a plain S3-artifact package in General (no `Quiver_jll`,
-  no Yggdrasil). The `publish-julia` job in `publish.yml` reuses the `build-native` binaries, runs
+  no Yggdrasil). The `publish-julia.yml` workflow (standalone via `workflow_dispatch`; the release
+  orchestration that once auto-dispatched it was dropped when the pipeline was split into four
+  independent workflows) downloads the native libs from S3 (staged there by the `publish.yml`
+  native build), runs
   `scripts/julia/generate_artifacts.jl` (tar → S3 upload → `Artifacts.toml`), then **wipes the mirror
   (keeping only its `.git/`) and copies the entire `bindings/julia` tree into it** — `src/`, `test/`,
   `.github/` (the mirror's `CI.yml`/`TagBot.yml` live here, dormant in the monorepo since nested
@@ -708,12 +711,20 @@ bindings/python/generator/generator.bat  # Python
     silent corruption — C writes land in abandoned memory).
   - No struct-by-value FFI return (oven-sh/bun#6139) → `quiver_database_options_default` is omitted;
     `ffi-helpers.makeDefaultOptions()` builds the options struct in JS.
-- **Publishing:** `package.json` `files` allowlist ships `libs/**`; an empty `.npmignore` stops npm
-  from falling back to `.gitignore` (which excludes `*.dll`/`*.so`). The `publish-npm` job downloads the
-  `build-native` artifacts into `libs/{linux,windows}-x86_64/`, dry-run-asserts they're packed, then
-  publishes with **`npm publish` via `actions/setup-node`** (`NODE_AUTH_TOKEN` ← secret `NPM_TOKEN`) —
-  NOT `bun publish`, whose token auth is unreliable in Bun 1.3.x and falls back to interactive login in
-  CI (oven-sh/bun#24124). Only this publish step uses npm; everything else is Bun.
+- **Publishing:** `package.json` `files` allowlist ships `libs/**`; an empty `.npmignore` stops
+  `npm pack` falling back to `.gitignore` (which excludes `*.dll`/`*.so`). The `publish-js.yml`
+  workflow (standalone via `workflow_dispatch`; release auto-dispatch was dropped in the four-way
+  pipeline split) downloads native libs from S3 (staged by the `publish.yml` native build) into
+  `libs/{linux,windows}-x86_64/`, asserts every lib is in a throwaway `npm pack` tarball via
+  `tar -tzf` (format-independent; npm roots entries under `package/`), then publishes with
+  **`npm publish` via `actions/setup-node`** using **npm Trusted Publishing (OIDC)** —
+  `permissions: id-token: write`, no stored token; npm packs inline so the published artifact
+  carries the deterministic, asserted file set. `publishConfig.provenance: true` emits a signed
+  provenance attestation (repo is public). Requires a trusted publisher configured on npmjs.com
+  (GitHub Actions · `psrenergy/quiver` · workflow `publish-js.yml` · environment `npm`) and
+  npm ≥ 11.5.1 (ensured via `npm install -g npm@latest` on Node 24). Bun can't do OIDC trusted
+  publishing yet (bun#24855→#15601), so the publish job uses npm; the binding + tests remain 100%
+  Bun. A standalone re-dispatch of an already-published version is skipped via an `npm view` guard.
 
 <!-- GSD:skills-start source:skills/ -->
 ## Project Skills

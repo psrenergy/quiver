@@ -213,6 +213,25 @@ jobs:
         run: |
           find include src tests -name '*.cpp' -o -name '*.h' | xargs clang-format-21 --dry-run --Werror
 
+  actionlint:
+    name: Lint Workflows
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install actionlint
+        run: |
+          curl -sSfL https://github.com/rhysd/actionlint/releases/download/v1.7.9/actionlint_1.7.9_linux_amd64.tar.gz \
+            | tar -xz actionlint
+
+      # Validate workflow structure: needs/uses references, ${{ }} expressions, runner labels,
+      # reusable-workflow wiring. shellcheck integration is disabled (-shellcheck=) to keep this
+      # gate focused on workflow wiring and avoid failing on pre-existing bash style in run:
+      # blocks; a dedicated shell-lint pass can be added later.
+      - name: Lint workflows
+        run: ./actionlint -color -shellcheck=
+
   bun-test:
     name: Bun Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -235,8 +254,6 @@ jobs:
         working-directory: bindings/js
         run: bun install
 
-      # Linux: shared libs live in build/lib; the loader resolves libquiver_c.so
-      # by soname via LD_LIBRARY_PATH (libquiver.so is found via RPATH=$ORIGIN).
       - name: Run Bun tests (Linux)
         if: runner.os == 'Linux'
         working-directory: bindings/js
@@ -244,9 +261,6 @@ jobs:
           LD_LIBRARY_PATH: ${{ github.workspace }}/build/lib
         run: bun test test
 
-      # Windows: the Visual Studio generator emits DLLs under build/bin/<config>;
-      # putting that dir on PATH lets the loader find libquiver_c.dll and its
-      # libquiver.dll dependency.
       - name: Run Bun tests (Windows)
         if: runner.os == 'Windows'
         working-directory: bindings/js
