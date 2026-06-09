@@ -353,11 +353,9 @@ jobs:
           body: |
             Auto-generated mirror from `psrenergy/quiver@v${{ needs.detect-version.outputs.version }}`.
 
-            - Synced `src/` + `test/` (incl. generated `c_api.jl`) and vendored `test/schemas/` from `bindings/julia/`
+            - Synced `src/` and `test/` from `bindings/julia/`
             - Regenerated `Artifacts.toml` (binaries uploaded to S3)
             - Bumped version to `${{ needs.detect-version.outputs.version }}`
 
-            After merge, comment `@JuliaRegistrator register` to register in General; TagBot tags the release.
-
-            > Do not hand-edit this repository — it is generated from `psrenergy/quiver/bindings/julia`.
+            > Do not hand-edit this repository, it is generated from `psrenergy/quiver/bindings/julia`.
           delete-branch: true
