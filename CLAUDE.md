@@ -99,6 +99,15 @@ tests/schemas/            # Shared SQL schemas for all tests
 
 ## Build & Test
 
+### Running Python locally
+Plain `python` / `python3` / `py` are not on PATH in this environment. Run Python through
+`uv` instead — it provisions the interpreter and dependencies on the fly:
+```bash
+uv run python -c "..."                 # ad-hoc script
+uv run --with pyyaml python -c "..."   # with a one-off dependency (e.g. validate a workflow YAML)
+```
+(CI runners invoke `python3` directly; this `uv` note is for local/agent use only.)
+
 ### Build
 ```bash
 cmake --build build --config Debug
@@ -645,8 +654,13 @@ bindings/python/generator/generator.bat  # Python
   It is a plain S3-artifact package in General (no `Quiver_jll`, no Yggdrasil). The `publish-julia`
   job in `publish.yml` reuses the `build-native` binaries, runs `scripts/julia/generate_artifacts.jl`
   (tar → S3 upload → `Artifacts.toml`), then faithfully copies the `bindings/julia` package into the
-  mirror (verbatim `Project.toml` — the binding shares Quiver.jl's UUID) and opens a PR to `Quiver.jl`. Runs on a `[self-hosted, linux]` runner whose ambient IAM role grants S3 write
-  (no AWS key secrets); requires the `QUIVER_JL_TOKEN` secret for the cross-repo PR.
+  mirror (verbatim `Project.toml` — the binding shares Quiver.jl's UUID) and opens a PR to `Quiver.jl`.
+  The job runs on a `[self-hosted, linux]` runner whose ambient IAM role grants S3 write (no AWS key
+  secrets); it requires the `QUIVER_JL_TOKEN` secret for the cross-repo PR.
+- **Windows artifact gotcha:** `generate_artifacts.jl` `chmod 0o755`s the staged libs before tarring —
+  Windows DLLs **must be executable in the artifact**, or Pkg's Windows extraction yields an NTFS ACL
+  without execute and `LoadLibrary` fails with "Access is denied" (Linux `.so` load ignores the bit, so
+  the symptom is Windows-only).
 - **Library loader** (`src/c_api.jl`, emitted from `generator/prologue.jl`) resolves `libquiver_c`
   in three tiers: `QUIVER_LIB_DIR` env → S3 artifact (when an `Artifacts.toml` is present, i.e. the
   published mirror) → in-tree `build/` (monorepo dev, the default here). Uses the runtime Artifacts
