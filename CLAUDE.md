@@ -652,7 +652,9 @@ bindings/python/generator/generator.bat  # Python
 - **Publishing**: `bindings/julia/` is the **canonical** Julia package and the *single source of
   truth*; the published `psrenergy/Quiver.jl` is a **full generated mirror** (never hand-edit it —
   develop only in `bindings/julia`). It is a plain S3-artifact package in General (no `Quiver_jll`,
-  no Yggdrasil). The `publish-julia` job in `publish.yml` reuses the `build-native` binaries, runs
+  no Yggdrasil). The `publish-julia.yml` workflow (reusable, called by `publish.yml` and runnable
+  standalone via `workflow_dispatch`) downloads the native libs from S3 (staged there by
+  `build-native.yml`), runs
   `scripts/julia/generate_artifacts.jl` (tar → S3 upload → `Artifacts.toml`), then **wipes the mirror
   (keeping only its `.git/`) and copies the entire `bindings/julia` tree into it** — `src/`, `test/`,
   `.github/` (the mirror's `CI.yml`/`TagBot.yml` live here, dormant in the monorepo since nested
@@ -709,8 +711,10 @@ bindings/python/generator/generator.bat  # Python
   - No struct-by-value FFI return (oven-sh/bun#6139) → `quiver_database_options_default` is omitted;
     `ffi-helpers.makeDefaultOptions()` builds the options struct in JS.
 - **Publishing:** `package.json` `files` allowlist ships `libs/**`; an empty `.npmignore` stops npm
-  from falling back to `.gitignore` (which excludes `*.dll`/`*.so`). The `publish-npm` job downloads the
-  `build-native` artifacts into `libs/{linux,windows}-x86_64/`, dry-run-asserts they're packed, then
+  from falling back to `.gitignore` (which excludes `*.dll`/`*.so`). The `publish-npm.yml` workflow
+  (reusable, called by `publish.yml` and runnable standalone via `workflow_dispatch`) downloads the
+  native libs from S3 (staged by `build-native.yml`) into `libs/{linux,windows}-x86_64/`,
+  dry-run-asserts they're packed, then
   publishes with **`npm publish` via `actions/setup-node`** (`NODE_AUTH_TOKEN` ← secret `NPM_TOKEN`) —
   NOT `bun publish`, whose token auth is unreliable in Bun 1.3.x and falls back to interactive login in
   CI (oven-sh/bun#24124). Only this publish step uses npm; everything else is Bun.
