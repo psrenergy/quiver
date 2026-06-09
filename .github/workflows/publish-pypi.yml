@@ -34,7 +34,22 @@ jobs:
 
       - name: Validate wheels
         run: |
+          shopt -s nullglob
+          wheels=(dist/*.whl)
+          if [ ${#wheels[@]} -eq 0 ]; then
+            echo "::error::No wheels found in dist/"
+            exit 1
+          fi
           pip install --quiet twine
           twine check dist/*.whl
+          # Ensure every platform target declared in cibuildwheel config is represented.
+          required_patterns=(manylinux win_amd64)
+          for pat in "${required_patterns[@]}"; do
+            if ! ls dist/*${pat}*.whl >/dev/null 2>&1; then
+              echo "::error::No wheel matching pattern '*${pat}*' in dist/"
+              exit 1
+            fi
+          done
+          echo "Validated ${#wheels[@]} wheel(s)"
       # Publishing is wired but disabled until PyPI release is enabled (mirrors publish.yml).
       # - uses: pypa/gh-action-pypi-publish@v1.14.0
