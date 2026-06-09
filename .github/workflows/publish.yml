@@ -84,10 +84,14 @@ jobs:
               build/lib/libquiver.so
               build/lib/libquiver.so.0
               build/lib/libquiver_c.so
-          # DLLs have no SOVERSION chain and the import .lib lives in build/lib, so the glob is exact.
+          # DLLs have no SOVERSION chain and the import .lib lives in build/lib, so only the two
+          # runtime DLLs live here. List them exactly (not a libquiver* glob) so a Release build's
+          # libquiver*.pdb debug symbols aren't swept into the artifact and the JSR/Julia packages.
           - os: windows-latest
             platform_key: windows-x86_64
-            lib_paths: build/bin/Release/libquiver*
+            lib_paths: |
+              build/bin/Release/libquiver.dll
+              build/bin/Release/libquiver_c.dll
 
     steps:
       - uses: actions/checkout@v6
@@ -113,6 +117,9 @@ jobs:
   # Push the tag once the build is proven good, BEFORE any irreversible publish. A tag is the one
   # fully reversible artifact (just delete it), so a push failure here aborts the run while nothing
   # is live yet — instead of stranding published packages with no tag and no GitHub Release.
+  # RECOVERY: if a later publish step fails AFTER this tag is pushed, a re-run aborts at
+  # detect-version's "tag already exists on origin" check. Delete the tag before re-running:
+  #   git push --delete origin v<version>
   create-tag:
     name: Create and push tag
     runs-on: ubuntu-latest
