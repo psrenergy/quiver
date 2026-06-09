@@ -714,10 +714,12 @@ bindings/python/generator/generator.bat  # Python
     silent corruption — C writes land in abandoned memory).
   - No struct-by-value FFI return (oven-sh/bun#6139) → `quiver_database_options_default` is omitted;
     `ffi-helpers.makeDefaultOptions()` builds the options struct in JS.
-- **Publishing:** `package.json` `files` allowlist ships `libs/**`; an empty `.npmignore` stops bun/npm
+- **Publishing:** `package.json` `files` allowlist ships `libs/**`; an empty `.npmignore` stops npm
   from falling back to `.gitignore` (which excludes `*.dll`/`*.so`). The `publish-npm` job downloads the
   `build-native` artifacts into `libs/{linux,windows}-x86_64/`, dry-run-asserts they're packed, then
-  `bun publish` with `NPM_CONFIG_TOKEN` (repo/environment secret `NPM_TOKEN`).
+  publishes with **`npm publish` via `actions/setup-node`** (`NODE_AUTH_TOKEN` ← secret `NPM_TOKEN`) —
+  NOT `bun publish`, whose token auth is unreliable in Bun 1.3.x and falls back to interactive login in
+  CI (oven-sh/bun#24124). Only this publish step uses npm; everything else is Bun.
 
 <!-- GSD:skills-start source:skills/ -->
 ## Project Skills
