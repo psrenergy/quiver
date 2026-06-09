@@ -15,6 +15,7 @@ part 'database_csv_export.dart';
 part 'database_csv_import.dart';
 part 'database_delete.dart';
 part 'database_transaction.dart';
+part 'database_run_model.dart';
 part 'database_metadata.dart';
 part 'database_query.dart';
 part 'database_read.dart';

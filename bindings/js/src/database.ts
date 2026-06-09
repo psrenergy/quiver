@@ -118,6 +118,9 @@ export class Database {
   declare rollback: () => void;
   declare inTransaction: () => boolean;
 
+  // --- Run model (implemented in run-model.ts) ---
+  declare runModel: () => number;
+
   // --- Metadata (implemented in metadata.ts) ---
   declare getScalarMetadata: (collection: string, attribute: string) => ScalarMetadata;
   declare getVectorMetadata: (collection: string, groupName: string) => GroupMetadata;

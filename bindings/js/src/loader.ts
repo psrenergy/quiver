@@ -99,6 +99,7 @@ const transactionSymbols = {
   quiver_database_commit: { args: [P], returns: I32 },
   quiver_database_rollback: { args: [P], returns: I32 },
   quiver_database_in_transaction: { args: [P, P], returns: I32 },
+  quiver_database_run_model: { args: [P, P], returns: I32 },
 } as const;
 
 const metadataSymbols = {

@@ -15,6 +15,7 @@ add_executable(quiver_tests
     test_database_lifecycle.cpp
     test_database_query.cpp
     test_database_read.cpp
+    test_database_run_model.cpp
     test_database_time_series.cpp
     test_database_transaction.cpp
     test_database_update.cpp
@@ -62,6 +63,7 @@ if(QUIVER_BUILD_C_API)
         test_c_api_database_metadata.cpp
         test_c_api_database_query.cpp
         test_c_api_database_read.cpp
+        test_c_api_database_run_model.cpp
         test_c_api_database_time_series.cpp
         test_c_api_database_transaction.cpp
         test_c_api_database_update.cpp

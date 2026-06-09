@@ -2,6 +2,7 @@ import "./create.ts";
 import "./read.ts";
 import "./query.ts";
 import "./transaction.ts";
+import "./run-model.ts";
 import "./metadata.ts";
 import "./time-series.ts";
 import "./csv.ts";

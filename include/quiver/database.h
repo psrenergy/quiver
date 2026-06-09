@@ -161,6 +161,13 @@ public:
     void rollback();
     bool in_transaction() const;
 
+    // Model execution
+    // Launches the fixed external model ("CarbSteeler" + platform extension) from a
+    // hardcoded directory, passing this database's absolute path as the single argument.
+    // Returns the model's process exit code. Throws on an in-memory database, on an active
+    // transaction, or if the model script is missing / cannot be launched.
+    int run_model();
+
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;

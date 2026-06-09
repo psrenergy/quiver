@@ -59,6 +59,19 @@ TEST_F(LuaRunnerTest, LuaScriptError) {
     EXPECT_THROW({ lua.run("invalid lua syntax !!!"); }, std::runtime_error);
 }
 
+TEST_F(LuaRunnerTest, RunModelThrowsOnMemoryDatabase) {
+    // run_model is bound; calling it on an in-memory database raises the C++ precondition
+    // error, which sol2 surfaces as a Lua error catchable with pcall. This is deterministic
+    // because the in-memory check fires before the (hardcoded) model directory is consulted.
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        local ok = pcall(function() return db:run_model() end)
+        assert(not ok, "Expected run_model to raise on an in-memory database")
+    )");
+}
+
 TEST_F(LuaRunnerTest, CreateElementWithArrays) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::LuaRunner lua(db);

@@ -49,6 +49,9 @@ struct LuaRunner::Impl {
             [](Database& self) { self.rollback(); },
             "in_transaction",
             [](Database& self) { return self.in_transaction(); },
+            // Group 11: Model execution
+            "run_model",
+            [](Database& self) { return self.run_model(); },
             "transaction",
             [](Database& self, sol::protected_function fn) -> sol::object {
                 self.begin_transaction();

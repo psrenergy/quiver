@@ -34,6 +34,7 @@ include/quiver/c/binary/    # Binary C API headers
 src/                      # C++ implementation
   database_csv_export.cpp # CSV export implementation
   database_csv_import.cpp # CSV import implementation
+  database_run_model.cpp  # run_model() - launches the fixed external model with the db's absolute path
   cli/main.cpp            # quiver_cli CLI entry point
   utils/string.h          # String utilities: new_c_str, trim
 src/binary/                 # Binary C++ implementation
@@ -69,6 +70,7 @@ src/c/                    # C API implementation
   database_query.cpp      # Query operations (plain and parameterized)
   database_time_series.cpp # Time series operations + co-located free functions
   database_transaction.cpp # Transaction control (begin, commit, rollback, in_transaction)
+  database_model.cpp      # quiver_database_run_model wrapper
 src/c/binary/               # Binary C API implementation
   binary_file.cpp             # BinaryFile lifecycle, read/write, getters
   csv_converter.cpp            # CSV conversion wrappers
@@ -152,8 +154,10 @@ Test files organized by functionality:
 - `test_database_query.cpp` - parameterized and non-parameterized query operations
 - `test_database_time_series.cpp` - time series read/update/metadata operations
 - `test_database_transaction.cpp` - explicit transaction control (begin/commit/rollback)
+- `test_database_run_model.cpp` - run_model precondition coverage (:memory:, active transaction)
 
 C API tests follow same pattern with `test_c_api_database_*.cpp` prefix:
+- `test_c_api_database_run_model.cpp` - run_model preconditions + null-arg rejection
 - `test_c_api_database_csv_export.cpp` - CSV export: scalar/group, RFC 4180, enum labels, date formatting, options
 - `test_c_api_database_csv_import.cpp` - CSV import: round-trip, semicolons, FK resolution, enum, trailing columns
 - `test_c_api_database_metadata.cpp` - Metadata get/list operations (vector, set, time series, scalar)
@@ -455,6 +459,7 @@ Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references.
 - Query: `query_string/integer/float(sql, parameters = {})` - parameterized SQL with positional `?` placeholders
 - Schema inspection: `describe()` - prints schema info to stdout
 - CSV: `export_csv()`, `import_csv()` -- CSV export/import with optional enum/date formatting via `CSVOptions`
+- Model execution: `run_model()` -- launches the fixed external model ("CarbSteeler" + platform extension `.bat`/`.sh`) from a hardcoded directory constant, passing the database's absolute path as the single argument; returns the model's process exit code. Throws on `:memory:`, on an active transaction, or if the model script is missing/unlaunchable (canonical error patterns). Uses `std::system` (cross-platform shell), with POSIX wait-status decoding
 
 ### Element Class
 Builder for element creation with fluent API:
@@ -581,6 +586,7 @@ lua.run(R"(
 | Query | `query_string()` | `quiver_database_query_string()` | `query_string()` | `queryString()` | `query_string()` |
 | CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | `export_csv()` |
 | Describe | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |
+| Model | `run_model()` | `quiver_database_run_model()` | `run_model!()` | `runModel()` | `run_model()` |
 
 **Binary cross-layer examples:**
 

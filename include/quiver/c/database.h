@@ -51,6 +51,13 @@ QUIVER_C_API quiver_error_t quiver_database_commit(quiver_database_t* db);
 QUIVER_C_API quiver_error_t quiver_database_rollback(quiver_database_t* db);
 QUIVER_C_API quiver_error_t quiver_database_in_transaction(quiver_database_t* db, int* out_active);
 
+// Model execution
+// Launches the fixed external model on this database's file; writes the model's exit code
+// to *out_exit_code. Returns QUIVER_ERROR (and sets the last error) on precondition failure
+// or if the model cannot be launched. A non-zero model exit code is reported via
+// *out_exit_code with QUIVER_OK (the model ran but failed).
+QUIVER_C_API quiver_error_t quiver_database_run_model(quiver_database_t* db, int* out_exit_code);
+
 // Version
 QUIVER_C_API quiver_error_t quiver_database_current_version(quiver_database_t* db, int64_t* out_version);
 

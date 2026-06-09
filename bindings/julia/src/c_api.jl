@@ -155,6 +155,10 @@ function quiver_database_in_transaction(db, out_active)
     @ccall libquiver_c.quiver_database_in_transaction(db::Ptr{quiver_database_t}, out_active::Ptr{Cint})::quiver_error_t
 end
 
+function quiver_database_run_model(db, out_exit_code)
+    @ccall libquiver_c.quiver_database_run_model(db::Ptr{quiver_database_t}, out_exit_code::Ptr{Cint})::quiver_error_t
+end
+
 function quiver_database_current_version(db, out_version)
     @ccall libquiver_c.quiver_database_current_version(db::Ptr{quiver_database_t}, out_version::Ptr{Int64})::quiver_error_t
 end

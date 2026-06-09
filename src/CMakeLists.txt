@@ -11,6 +11,7 @@ set(QUIVER_SOURCES
     database_csv_export.cpp
     database_csv_import.cpp
     database_describe.cpp
+    database_run_model.cpp
     element.cpp
     lua_runner.cpp
     migration.cpp
@@ -125,6 +126,7 @@ if(QUIVER_BUILD_C_API)
         c/database_query.cpp
         c/database_time_series.cpp
         c/database_transaction.cpp
+        c/database_model.cpp
         c/element.cpp
         c/lua_runner.cpp
         c/binary/binary_file.cpp

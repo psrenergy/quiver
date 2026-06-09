@@ -204,6 +204,14 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         check(lib.quiver_database_in_transaction(self._ptr, out))
         return out[0] != 0
 
+    def run_model(self) -> int:
+        """Run the configured external model on the database file. Returns the process exit code."""
+        self._ensure_open()
+        lib = get_lib()
+        out = ffi.new("int*")
+        check(lib.quiver_database_run_model(self._ptr, out))
+        return out[0]
+
     @contextmanager
     def transaction(self):
         """Execute operations within a transaction. Auto-commits on success, rolls back on exception."""

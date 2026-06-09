@@ -245,6 +245,9 @@ ffi.cdef("""
     quiver_error_t quiver_database_rollback(quiver_database_t* db);
     quiver_error_t quiver_database_in_transaction(quiver_database_t* db, int* out_active);
 
+    // Model execution
+    quiver_error_t quiver_database_run_model(quiver_database_t* db, int* out_exit_code);
+
     // Query methods - simple
     quiver_error_t quiver_database_query_string(quiver_database_t* db,
         const char* sql, char** out_value, int* out_has_value);
