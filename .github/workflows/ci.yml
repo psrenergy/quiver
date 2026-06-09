@@ -254,8 +254,6 @@ jobs:
         working-directory: bindings/js
         run: bun install
 
-      # Linux: shared libs live in build/lib; the loader resolves libquiver_c.so
-      # by soname via LD_LIBRARY_PATH (libquiver.so is found via RPATH=$ORIGIN).
       - name: Run Bun tests (Linux)
         if: runner.os == 'Linux'
         working-directory: bindings/js
@@ -263,9 +261,6 @@ jobs:
           LD_LIBRARY_PATH: ${{ github.workspace }}/build/lib
         run: bun test test
 
-      # Windows: the Visual Studio generator emits DLLs under build/bin/<config>;
-      # putting that dir on PATH lets the loader find libquiver_c.dll and its
-      # libquiver.dll dependency.
       - name: Run Bun tests (Windows)
         if: runner.os == 'Windows'
         working-directory: bindings/js
