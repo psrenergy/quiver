@@ -12,6 +12,21 @@ permissions:
   contents: read
 
 jobs:
+  # Resolve the version on a GitHub-hosted runner (which has python3) so the self-hosted
+  # upload-s3 job below needs no python3 of its own. bump_version.py is the single source of
+  # truth for the version; --check prints only the version and has no tag-absence gate.
+  version:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+      - id: v
+        run: echo "version=$(python3 scripts/bump_version.py --check)" >> "$GITHUB_OUTPUT"
+
   build:
     name: Build native libs (${{ matrix.platform_key }})
     runs-on: ${{ matrix.os }}
@@ -69,15 +84,11 @@ jobs:
   upload-s3:
     name: Upload native libs to S3
     runs-on: [self-hosted, linux]
-    needs: build
+    needs: [build, version]
     steps:
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.sha }}
-
-      - name: Resolve version
-        id: ver
-        run: echo "version=$(python3 scripts/bump_version.py --check)" >> "$GITHUB_OUTPUT"
 
       - name: Download Linux x86_64 native libraries
         uses: actions/download-artifact@v8
@@ -92,4 +103,4 @@ jobs:
           path: native/windows-x86_64
 
       - name: Upload native libs to S3
-        run: bash scripts/ci/native_s3.sh upload "${{ steps.ver.outputs.version }}"
+        run: bash scripts/ci/native_s3.sh upload "${{ needs.version.outputs.version }}"

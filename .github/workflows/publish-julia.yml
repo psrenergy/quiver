@@ -14,9 +14,26 @@ permissions:
   contents: read
 
 jobs:
+  # Resolve the version on a GitHub-hosted runner (which has python3) so the self-hosted publish
+  # job needs no python3 of its own. bump_version.py is the single source of truth; --check prints
+  # only the version and has no tag-absence gate, so a standalone re-run for an already-tagged
+  # version is not blocked (that gate lives in publish.yml).
+  version:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+      - id: v
+        run: echo "version=$(python3 scripts/bump_version.py --check)" >> "$GITHUB_OUTPUT"
+
   publish:
     name: Publish Julia (PR to Quiver.jl)
     runs-on: [self-hosted, linux]
+    needs: version
     steps:
       - name: Checkout quiver
         uses: actions/checkout@v6
@@ -27,19 +44,13 @@ jobs:
         with:
           version: "1.11"
 
-      # --check prints only the version and has no tag-absence gate, so a standalone re-run for
-      # an already-tagged version is not blocked (that gate lives in publish.yml).
-      - name: Resolve version
-        id: ver
-        run: echo "version=$(python3 scripts/bump_version.py --check)" >> "$GITHUB_OUTPUT"
-
       - name: Download native libraries from S3
-        run: bash scripts/ci/native_s3.sh download "${{ steps.ver.outputs.version }}" native
+        run: bash scripts/ci/native_s3.sh download "${{ needs.version.outputs.version }}" native
 
       - name: Build tarballs, upload to S3, generate Artifacts.toml
         run: |
           julia scripts/julia/generate_artifacts.jl \
-            --version "${{ steps.ver.outputs.version }}" \
+            --version "${{ needs.version.outputs.version }}" \
             --output "$RUNNER_TEMP/Artifacts.toml" \
             --platform linux-x86_64 native/linux-x86_64 \
             --platform windows-x86_64 native/windows-x86_64
@@ -67,12 +78,12 @@ jobs:
         with:
           token: ${{ secrets.QUIVER_JL_TOKEN }}
           path: quiver-jl
-          branch: release/v${{ steps.ver.outputs.version }}
+          branch: release/v${{ needs.version.outputs.version }}
           base: master
-          commit-message: "Release v${{ steps.ver.outputs.version }}"
-          title: "Release v${{ steps.ver.outputs.version }}"
+          commit-message: "Release v${{ needs.version.outputs.version }}"
+          title: "Release v${{ needs.version.outputs.version }}"
           body: |
-            Auto-generated mirror from `psrenergy/quiver@v${{ steps.ver.outputs.version }}`.
+            Auto-generated mirror from `psrenergy/quiver@v${{ needs.version.outputs.version }}`.
 
             > Do not hand-edit this repository, it is generated from `psrenergy/quiver/bindings/julia`.
           delete-branch: true
