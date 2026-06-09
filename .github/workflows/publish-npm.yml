@@ -1,9 +1,5 @@
 name: Publish to npm
 
-# Publishes the quiverdb npm package. Runnable standalone (workflow_dispatch) — e.g. to debug
-# the publish in isolation — or dispatched by publish.yml's release job during a full release
-# (via `gh workflow run`). Native libs come from S3 (uploaded by build-native), so this never
-# depends on an in-run native build. A dispatched run reads secrets.NPM_TOKEN directly.
 on:
   workflow_dispatch:
 
@@ -20,18 +16,11 @@ jobs:
         with:
           ref: ${{ github.sha }}
 
-      # Publish with the npm CLI (preinstalled on runners) rather than `bun publish`:
-      # bun publish's token auth is unreliable in 1.3.x and falls back to interactive
-      # browser login in CI (oven-sh/bun#24124). The binding/tests stay 100% Bun; only
-      # this publish step uses npm. setup-node writes an .npmrc wiring NODE_AUTH_TOKEN.
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           registry-url: "https://registry.npmjs.org"
 
-      # Locate the S3 native libs by version. bump_version.py self-locates the repo and prints
-      # only the version to stdout; --check has no tag-absence gate, so a standalone re-publish
-      # of an already-tagged version is not blocked (that gate lives in publish.yml).
       - name: Resolve version
         id: ver
         run: echo "version=$(python3 scripts/bump_version.py --check)" >> "$GITHUB_OUTPUT"
@@ -65,9 +54,6 @@ jobs:
             exit 1
           fi
 
-      # The package.json "files" allowlist ships libs/**; an empty .npmignore stops
-      # bun/npm from falling back to .gitignore (which excludes *.so/*.dll). Assert the
-      # dry-run packs every native lib before the irreversible publish.
       - name: Dry-run publish and assert libs are included
         working-directory: bindings/js
         run: |

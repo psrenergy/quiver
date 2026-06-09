@@ -1,11 +1,5 @@
 name: Publish Julia (PR to Quiver.jl)
 
-# Builds the Julia artifacts (tarballs + Artifacts.toml) from the native libs and opens a PR
-# to the psrenergy/Quiver.jl mirror. Runnable standalone (workflow_dispatch) — or dispatched by
-# publish.yml's release job during a full release (via `gh workflow run`). Native libs come from
-# S3 (uploaded by build-native); this runs on the self-hosted runner whose ambient IAM role is
-# needed by generate_artifacts.jl's own S3 upload. A dispatched run reads secrets.QUIVER_JL_TOKEN
-# directly.
 on:
   workflow_dispatch:
 
@@ -13,10 +7,6 @@ permissions:
   contents: read
 
 jobs:
-  # Resolve the version on a GitHub-hosted runner (which has python3) so the self-hosted publish
-  # job needs no python3 of its own. bump_version.py is the single source of truth; --check prints
-  # only the version and has no tag-absence gate, so a standalone re-run for an already-tagged
-  # version is not blocked (that gate lives in publish.yml).
   version:
     name: Resolve version
     runs-on: ubuntu-latest

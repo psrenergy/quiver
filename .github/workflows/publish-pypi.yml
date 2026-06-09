@@ -1,16 +1,5 @@
 name: Publish to PyPI
 
-# Self-contained PyPI workflow: builds the wheels AND publishes them. Runnable standalone
-# (workflow_dispatch) — and dispatched by publish.yml's release job during a full release (via
-# `gh workflow run`). Also runs on push/PR to master as a wheel-build check (the publish job is
-# skipped there).
-#
-# IMPORTANT — this is intentionally NOT a reusable (workflow_call) workflow, and must stay that way.
-# PyPI Trusted Publishing (OIDC) matches the OIDC token's `job_workflow_ref` against the registered
-# *workflow filename*; a reusable workflow reports its own ref and PyPI rejects it with
-# `invalid-publisher` (pypa/gh-action-pypi-publish#166, pypi/warehouse#11096). So the publish step
-# must live in a top-level workflow file. Register THIS filename (publish-pypi.yml) as the PyPI
-# Trusted Publisher. Do not "refactor" this into a reusable workflow.
 on:
   push:
     branches: [master]
@@ -61,10 +50,6 @@ jobs:
           delete-merged: true
           retention-days: 7
 
-  # Publish only when this workflow is invoked to publish — a manual run or the orchestrator's
-  # `gh workflow run` dispatch (both are workflow_dispatch). On push/PR the build + merge jobs
-  # above run as a wheel-build check and this job is skipped (so the pypi environment / OIDC are
-  # never touched on a PR).
   publish:
     name: Publish to PyPI
     runs-on: ubuntu-latest
@@ -98,4 +83,4 @@ jobs:
             fi
           done
           echo "Validated ${#wheels[@]} wheel(s)"
-      # - uses: pypa/gh-action-pypi-publish@v1.14.0
+      - uses: pypa/gh-action-pypi-publish@v1.14.0
