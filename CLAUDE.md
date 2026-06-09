@@ -99,6 +99,15 @@ tests/schemas/            # Shared SQL schemas for all tests
 
 ## Build & Test
 
+### Running Python locally
+Plain `python` / `python3` / `py` are not on PATH in this environment. Run Python through
+`uv` instead — it provisions the interpreter and dependencies on the fly:
+```bash
+uv run python -c "..."                 # ad-hoc script
+uv run --with pyyaml python -c "..."   # with a one-off dependency (e.g. validate a workflow YAML)
+```
+(CI runners invoke `python3` directly; this `uv` note is for local/agent use only.)
+
 ### Build
 ```bash
 cmake --build build --config Debug
