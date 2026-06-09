@@ -14,8 +14,15 @@ from `bindings/julia/` and opens a PR. **Never hand-edit `Quiver.jl`.**
 | Lives in `quiver` (canonical) | Pushed to `Quiver.jl` (generated) |
 |---|---|
 | `bindings/julia/src/` (incl. generated `c_api.jl`) | `src/` (verbatim mirror) |
+| `bindings/julia/test/*.jl` (incl. portable `fixture.jl`) | `test/` (verbatim mirror) |
+| repo-root `tests/schemas/` (shared SQL fixtures) | `test/schemas/` (vendored copy) |
 | `scripts/julia/generate_artifacts.jl` → `Artifacts.toml` | `Artifacts.toml` |
-| `bindings/julia/Project.toml` (deps/compat) | `Project.toml` (deps mirrored; **its own** name/UUID/version) |
+| `bindings/julia/Project.toml` (UUID aligned to `cdbb3f72`) | `Project.toml` (verbatim copy) |
+| `bindings/julia/LICENSE`, `.JuliaFormatter.toml` | same (verbatim) |
+
+The full test suite runs in `Quiver.jl` CI against the **published artifact** on Ubuntu + Windows.
+`fixture.jl`'s `tests_path()` resolves the repo-root `tests/` in the monorepo and the vendored
+`test/schemas/` in the mirror, so the same test files work in both repos.
 
 ## Release flow (automated)
 
@@ -26,9 +33,11 @@ wheels, JSR, tag, and GitHub release succeed, the **`publish-julia`** job:
 2. Runs `scripts/julia/generate_artifacts.jl`: tars each platform's libs into the loader
    layout (`lib/` on Linux, `bin/` on Windows), uploads to
    `s3://julia-artifacts/quiver/<version>/`, computes `git-tree-sha1` + `sha256`, and writes `Artifacts.toml`.
-3. Checks out `Quiver.jl`, mirrors `bindings/julia/src/` + the new `Artifacts.toml`, and
-   regenerates `Quiver.jl/Project.toml` via `scripts/julia/assemble_mirror_project.jl`
-   (keeps deps/compat in sync, stamps the synced version, **preserves the registered UUID**).
+3. Checks out `Quiver.jl` and **faithfully mirrors the package**: `cp -r bindings/julia/{src,test}`,
+   `cp bindings/julia/{Project.toml,LICENSE,.JuliaFormatter.toml}`, vendors `tests/schemas/` →
+   `test/schemas/`, and drops in the new `Artifacts.toml`. Excludes `generator/`, `Manifest.toml`,
+   `PUBLISHING.md`, `example2.jl`; preserves Quiver.jl's `.git`/`.github/`/`README`. `Project.toml`
+   is copied verbatim (its UUID already matches the registered package).
 4. Opens a PR to `Quiver.jl`.
 
 Then a maintainer **reviews & merges** the PR, comments `@JuliaRegistrator register`, and

@@ -328,14 +328,18 @@ jobs:
       - name: Assemble generated mirror
         run: |
           set -e
-          rm -rf quiver-jl/src
+          # Faithful recursive copy of the bindings/julia package. Excludes dev-only files
+          # (generator/, Manifest.toml, PUBLISHING.md, example2.jl). Quiver.jl's own
+          # .git/.github/README/.gitignore are preserved (we only wipe src/ and test/).
+          # Project.toml copies verbatim because bindings/julia shares Quiver.jl's UUID.
+          rm -rf quiver-jl/src quiver-jl/test
           cp -r bindings/julia/src quiver-jl/src
+          cp -r bindings/julia/test quiver-jl/test
+          cp -r tests/schemas quiver-jl/test/schemas
+          cp bindings/julia/Project.toml quiver-jl/Project.toml
+          cp bindings/julia/LICENSE quiver-jl/LICENSE
+          cp bindings/julia/.JuliaFormatter.toml quiver-jl/.JuliaFormatter.toml
           cp "$RUNNER_TEMP/Artifacts.toml" quiver-jl/Artifacts.toml
-          julia scripts/julia/assemble_mirror_project.jl \
-            bindings/julia/Project.toml \
-            quiver-jl/Project.toml \
-            "${{ needs.detect-version.outputs.version }}" \
-            "cdbb3f72-2527-4dbd-9d0e-93533a5519ac"
 
       - name: Open pull request to Quiver.jl
         uses: peter-evans/create-pull-request@v8
@@ -349,7 +353,7 @@ jobs:
           body: |
             Auto-generated mirror from `psrenergy/quiver@v${{ needs.detect-version.outputs.version }}`.
 
-            - Synced `src/` (incl. generated `c_api.jl`) from `bindings/julia/`
+            - Synced `src/` + `test/` (incl. generated `c_api.jl`) and vendored `test/schemas/` from `bindings/julia/`
             - Regenerated `Artifacts.toml` (binaries uploaded to S3)
             - Bumped version to `${{ needs.detect-version.outputs.version }}`
 
