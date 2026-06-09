@@ -340,14 +340,6 @@ jobs:
       - name: Assemble generated mirror
         run: |
           set -euo pipefail
-          # Faithful FULL mirror of the bindings/julia package — bindings/julia is the single
-          # source of truth; Quiver.jl is generated, never hand-edited. Wipe the mirror (keep only
-          # its .git/), copy the ENTIRE tree (incl. dotfiles: .github/ with the mirror's CI.yml +
-          # TagBot.yml, README.md, .gitignore, .gitattributes, .JuliaFormatter.toml, Project.toml —
-          # verbatim, the binding shares Quiver.jl's UUID), then overlay the real test schemas
-          # (repo-root tests/schemas; bindings/julia/test/schemas is an empty stub) and the generated
-          # Artifacts.toml. The PR deletes anything in Quiver.jl not present here. Manifest.toml is
-          # dropped defensively (gitignored, normally absent from a clean checkout).
           find quiver-jl -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
           cp -a bindings/julia/. quiver-jl/
           rm -f quiver-jl/Manifest.toml
