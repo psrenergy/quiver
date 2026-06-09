@@ -64,20 +64,10 @@ jobs:
         with:
           ref: ${{ github.sha }}
 
-      - name: Create and push tag
-        run: |
-          version="${{ needs.detect-version.outputs.version }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "v$version" -m "Release v$version"
-          git push origin "v$version"
-
-      # Notes only — the wheels live on PyPI, so they are not attached here.
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
+      - uses: ncipollo/release-action@v1
         with:
-          tag_name: v${{ needs.detect-version.outputs.version }}
-          generate_release_notes: true
+          tag: v${{ needs.detect-version.outputs.version }}
+          generateReleaseNotes: true
 
   # PyPI owns its wheels end-to-end: build (the same reusable job CI runs on every push) then
   # validate + publish below. Built after the release cut.
