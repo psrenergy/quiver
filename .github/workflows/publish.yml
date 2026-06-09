@@ -7,20 +7,18 @@ concurrency:
   group: publish-${{ github.ref }}
   cancel-in-progress: false
 
-# Thin orchestrator. The heavy lifting lives in independently-runnable workflows:
+# Thin orchestrator for a full release. The heavy lifting lives in independently-runnable workflows:
 #   build-native.yml  -> builds native libs once, uploads them to S3 by version
-#   build-wheels.yml  -> builds the Python wheels (also runs on every push/PR)
+#   publish-pypi.yml  -> builds wheels + publishes to PyPI       (also a push/PR wheel-build check)
 #   publish-npm.yml   -> downloads native libs from S3, publishes to npm
 #   publish-julia.yml -> downloads native libs from S3, opens the Quiver.jl PR
-# This file sequences them: prove the native build, cut the release (tag + GitHub Release), then
-# run the registry publishes (each independently re-runnable), then open the version-bump PR.
+# Flow: prove the native build -> cut the release (tag + GitHub Release) -> dispatch the three
+# publish workflows (each independently re-runnable) -> open the version-bump PR.
 #
-# PyPI is published INLINE here (not via a reusable workflow) because OIDC Trusted Publishing
-# matches the workflow filename; a reusable workflow would be rejected with `invalid-publisher`
-# (see publish-pypi.yml for the standalone debug twin and the full rationale).
-#
-# Deny-by-default: jobs that need more (release, publish-pypi, bump-version) opt up in their own
-# permissions block; the called workflows declare their own.
+# Why dispatch instead of `on: release`? A release created with the default GITHUB_TOKEN does NOT
+# fire the `release` event for other workflows (GitHub's anti-recursion rule), but GITHUB_TOKEN CAN
+# trigger workflow_dispatch. So the release job dispatches the publishes explicitly — no PAT needed.
+# (PyPI must also be dispatched, not `uses:`-called, because OIDC rejects reusable workflows.)
 permissions:
   contents: read
 
@@ -45,20 +43,21 @@ jobs:
     needs: detect-version
     uses: ./.github/workflows/build-native.yml
 
-  # Cut the release once the native build is proven good, BEFORE any irreversible registry publish:
-  # push the tag and create the GitHub Release. The tag/release is the reversible "cut" (PyPI/npm
-  # reject re-publishing a version, so they are not). build-native completing (incl. its S3 upload)
-  # is part of that proof — the libs are in S3 before the tag exists, so the publish jobs find them.
-  # RECOVERY: if a publish fails AFTER this point, re-run that target's standalone workflow
-  # (publish-pypi.yml / publish-npm.yml / publish-julia.yml) — NOT this whole workflow, which would
-  # abort at detect-version's "tag already exists on origin" check. Delete the tag only to redo the
-  # entire release:  git push --delete origin v<version>
+  # Cut the release once the native build is proven good, BEFORE any irreversible registry publish,
+  # then dispatch the publishes. The tag/release is the reversible "cut" (PyPI/npm reject
+  # re-publishing a version, so they are not). build-native completing (incl. its S3 upload) is part
+  # of that proof — the libs are in S3 before the publishes run.
+  # RECOVERY: if a publish fails, re-run that target's workflow (publish-pypi.yml / publish-npm.yml /
+  # publish-julia.yml) — NOT this whole workflow, which would abort at detect-version's "tag already
+  # exists on origin" check. Delete the tag only to redo the entire release:
+  #   git push --delete origin v<version>
   release:
     name: Release (tag + GitHub Release)
     runs-on: ubuntu-latest
     needs: [detect-version, build-native]
     permissions:
-      contents: write
+      contents: write   # create the tag + GitHub Release
+      actions: write    # dispatch the publish workflows
     steps:
       - uses: actions/checkout@v6
         with:
@@ -67,65 +66,25 @@ jobs:
       - uses: ncipollo/release-action@v1
         with:
           tag: v${{ needs.detect-version.outputs.version }}
+          commit: ${{ github.sha }}
           generateReleaseNotes: true
 
-  # PyPI owns its wheels end-to-end: build (the same reusable job CI runs on every push) then
-  # validate + publish below. Built after the release cut.
-  build-wheels:
-    name: Build wheels
-    needs: release
-    uses: ./.github/workflows/build-wheels.yml
-
-  publish-pypi:
-    name: Publish to PyPI
-    runs-on: ubuntu-latest
-    needs: build-wheels
-    environment: pypi
-    permissions:
-      id-token: write
-    steps:
-      - uses: actions/download-artifact@v8
-        with:
-          name: wheels
-          path: dist/
-
-      - name: Validate wheels
+      # GITHUB_TOKEN can trigger workflow_dispatch (the documented exception to the anti-recursion
+      # rule), so we dispatch the publishes explicitly. --ref runs each at the freshly-created tag,
+      # so they checkout the released commit (correct version) and find the matching libs in S3.
+      - name: Dispatch publish workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VER: ${{ needs.detect-version.outputs.version }}
         run: |
-          shopt -s nullglob
-          wheels=(dist/*.whl)
-          if [ ${#wheels[@]} -eq 0 ]; then
-            echo "::error::No wheels found in dist/"
-            exit 1
-          fi
-          pip install --quiet twine
-          twine check dist/*.whl
-          # Ensure every platform target declared in cibuildwheel config is represented.
-          required_patterns=(manylinux win_amd64)
-          for pat in "${required_patterns[@]}"; do
-            if ! ls dist/*${pat}*.whl >/dev/null 2>&1; then
-              echo "::error::No wheel matching pattern '*${pat}*' in dist/"
-              exit 1
-            fi
-          done
-          echo "Validated ${#wheels[@]} wheel(s)"
-      # - uses: pypa/gh-action-pypi-publish@v1.14.0
-
-  publish-npm:
-    name: Publish to npm
-    needs: release
-    uses: ./.github/workflows/publish-npm.yml
-    secrets: inherit
-
-  publish-julia:
-    name: Publish Julia (PR to Quiver.jl)
-    needs: release
-    uses: ./.github/workflows/publish-julia.yml
-    secrets: inherit
+          gh workflow run publish-pypi.yml  --ref "v$VER"
+          gh workflow run publish-npm.yml   --ref "v$VER"
+          gh workflow run publish-julia.yml --ref "v$VER"
 
   bump-version:
     name: Open version bump PR
     runs-on: ubuntu-latest
-    needs: [detect-version, publish-pypi, publish-npm]
+    needs: [detect-version, release]
     permissions:
       contents: write
       pull-requests: write

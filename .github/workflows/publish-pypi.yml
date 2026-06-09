@@ -1,28 +1,75 @@
-name: Publish to PyPI (standalone)
+name: Publish to PyPI
 
-# Standalone twin of publish.yml's PyPI job, for debugging the wheel build + publish in isolation.
+# Self-contained PyPI workflow: builds the wheels AND publishes them. Runnable standalone
+# (workflow_dispatch) — and dispatched by publish.yml's release job during a full release (via
+# `gh workflow run`). Also runs on push/PR to master as a wheel-build check (the publish job is
+# skipped there).
 #
 # IMPORTANT — this is intentionally NOT a reusable (workflow_call) workflow, and must stay that way.
 # PyPI Trusted Publishing (OIDC) matches the OIDC token's `job_workflow_ref` against the registered
 # *workflow filename*; a reusable workflow reports its own ref and PyPI rejects it with
 # `invalid-publisher` (pypa/gh-action-pypi-publish#166, pypi/warehouse#11096). So the publish step
-# must live in a top-level workflow file. Register THIS filename (publish-pypi.yml) as a second
-# PyPI Trusted Publisher alongside publish.yml. Do not "refactor" this into a reusable workflow.
+# must live in a top-level workflow file. Register THIS filename (publish-pypi.yml) as the PyPI
+# Trusted Publisher. Do not "refactor" this into a reusable workflow.
 on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
   build:
-    name: Build wheels
-    uses: ./.github/workflows/build-wheels.yml
+    name: Build wheels (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
 
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: pypa/cibuildwheel@v4.0.0
+        with:
+          package-dir: bindings/python
+          output-dir: wheelhouse
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheels-${{ matrix.os }}
+          path: ./wheelhouse/*.whl
+
+  merge:
+    name: Merge wheel artifacts
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/upload-artifact/merge@v7
+        with:
+          name: wheels
+          pattern: wheels-*
+          delete-merged: true
+          retention-days: 7
+
+  # Publish only when this workflow is invoked to publish — a manual run or the orchestrator's
+  # `gh workflow run` dispatch (both are workflow_dispatch). On push/PR the build + merge jobs
+  # above run as a wheel-build check and this job is skipped (so the pypi environment / OIDC are
+  # never touched on a PR).
   publish:
     name: Publish to PyPI
     runs-on: ubuntu-latest
-    needs: build
+    needs: merge
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     environment: pypi
     permissions:
       id-token: write
@@ -51,5 +98,4 @@ jobs:
             fi
           done
           echo "Validated ${#wheels[@]} wheel(s)"
-      # Publishing is wired but disabled until PyPI release is enabled (mirrors publish.yml).
       # - uses: pypa/gh-action-pypi-publish@v1.14.0

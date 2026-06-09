@@ -1,12 +1,10 @@
 name: Publish to npm
 
 # Publishes the quiverdb npm package. Runnable standalone (workflow_dispatch) — e.g. to debug
-# the publish in isolation — and reused by publish.yml (workflow_call). Native libs come from
-# S3 (uploaded by build-native), so this is self-sufficient on any run: it never depends on an
-# in-run native build. The orchestrator reaches NPM_TOKEN via `secrets: inherit`; a standalone
-# dispatch reads it directly.
+# the publish in isolation — or dispatched by publish.yml's release job during a full release
+# (via `gh workflow run`). Native libs come from S3 (uploaded by build-native), so this never
+# depends on an in-run native build. A dispatched run reads secrets.NPM_TOKEN directly.
 on:
-  workflow_call:
   workflow_dispatch:
 
 permissions:
