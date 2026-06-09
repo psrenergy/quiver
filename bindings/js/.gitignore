@@ -13,6 +13,9 @@ bun.lock
 .env
 .env.test
 
+# npm auth (written at publish time in CI; never commit a token)
+.npmrc
+
 # OS
 .DS_Store
 Thumbs.db

@@ -711,15 +711,20 @@ bindings/python/generator/generator.bat  # Python
     silent corruption — C writes land in abandoned memory).
   - No struct-by-value FFI return (oven-sh/bun#6139) → `quiver_database_options_default` is omitted;
     `ffi-helpers.makeDefaultOptions()` builds the options struct in JS.
-- **Publishing:** `package.json` `files` allowlist ships `libs/**`; an empty `.npmignore` stops npm
+- **Publishing:** `package.json` `files` allowlist ships `libs/**`; an empty `.npmignore` stops bun
   from falling back to `.gitignore` (which excludes `*.dll`/`*.so`). The `publish-npm.yml` workflow
   (runnable standalone via `workflow_dispatch`, and dispatched by `publish.yml`'s release job during
-  a full release via `gh workflow run`) downloads the
-  native libs from S3 (staged by `build-native.yml`) into `libs/{linux,windows}-x86_64/`,
-  dry-run-asserts they're packed, then
-  publishes with **`npm publish` via `actions/setup-node`** (`NODE_AUTH_TOKEN` ← secret `NPM_TOKEN`) —
-  NOT `bun publish`, whose token auth is unreliable in Bun 1.3.x and falls back to interactive login in
-  CI (oven-sh/bun#24124). Only this publish step uses npm; everything else is Bun.
+  a full release via `gh workflow run`) downloads the native libs from S3 (staged by
+  `build-native.yml`) into `libs/{linux,windows}-x86_64/`, then **packs the exact publish tarball
+  with `bun pm pack` and asserts every native lib is inside it via `tar -tzf`** (format-independent,
+  not dry-run-text-dependent — bun roots tarball entries under `package/`), and publishes that
+  verified tarball with **`bun publish` via `oven-sh/setup-bun@v2`** (`bun-version: latest`). The
+  publish is now 100% Bun — no Node toolchain. Auth is **`NPM_CONFIG_TOKEN` ← secret `NPM_TOKEN`**
+  (bun reads `NPM_CONFIG_TOKEN`, not `NODE_AUTH_TOKEN`), belt-and-suspenders with a post-pack
+  `.npmrc` `_authToken` hedge for the still-open oven-sh/bun#24124 token-auth regression
+  (OIDC/trusted publishing is unsupported by bun). `--tolerate-republish` lets a standalone
+  re-dispatch of an already-published version exit cleanly; `--access public` is redundant with
+  `publishConfig` but stated explicitly.
 
 <!-- GSD:skills-start source:skills/ -->
 ## Project Skills
