@@ -711,20 +711,20 @@ bindings/python/generator/generator.bat  # Python
     silent corruption — C writes land in abandoned memory).
   - No struct-by-value FFI return (oven-sh/bun#6139) → `quiver_database_options_default` is omitted;
     `ffi-helpers.makeDefaultOptions()` builds the options struct in JS.
-- **Publishing:** `package.json` `files` allowlist ships `libs/**`; an empty `.npmignore` stops bun
-  from falling back to `.gitignore` (which excludes `*.dll`/`*.so`). The `publish-npm.yml` workflow
-  (runnable standalone via `workflow_dispatch`, and dispatched by `publish.yml`'s release job during
-  a full release via `gh workflow run`) downloads the native libs from S3 (staged by
-  `build-native.yml`) into `libs/{linux,windows}-x86_64/`, then **packs the exact publish tarball
-  with `bun pm pack` and asserts every native lib is inside it via `tar -tzf`** (format-independent,
-  not dry-run-text-dependent — bun roots tarball entries under `package/`), and publishes that
-  verified tarball with **`bun publish` via `oven-sh/setup-bun@v2`** (`bun-version: latest`). The
-  publish is now 100% Bun — no Node toolchain. Auth is **`NPM_CONFIG_TOKEN` ← secret `NPM_TOKEN`**
-  (bun reads `NPM_CONFIG_TOKEN`, not `NODE_AUTH_TOKEN`), belt-and-suspenders with a post-pack
-  `.npmrc` `_authToken` hedge for the still-open oven-sh/bun#24124 token-auth regression
-  (OIDC/trusted publishing is unsupported by bun). `--tolerate-republish` lets a standalone
-  re-dispatch of an already-published version exit cleanly; `--access public` is redundant with
-  `publishConfig` but stated explicitly.
+- **Publishing:** `package.json` `files` allowlist ships `libs/**`; an empty `.npmignore` stops
+  `npm pack` falling back to `.gitignore` (which excludes `*.dll`/`*.so`). The `publish-npm.yml`
+  workflow (standalone via `workflow_dispatch`, and dispatched by `publish.yml`'s release job via
+  `gh workflow run`) downloads native libs from S3 (staged by `build-native.yml`) into
+  `libs/{linux,windows}-x86_64/`, asserts every lib is in a throwaway `npm pack` tarball via
+  `tar -tzf` (format-independent; npm roots entries under `package/`), then publishes with
+  **`npm publish` via `actions/setup-node`** using **npm Trusted Publishing (OIDC)** —
+  `permissions: id-token: write`, no stored token; npm packs inline so the published artifact
+  carries the deterministic, asserted file set. `publishConfig.provenance: true` emits a signed
+  provenance attestation (repo is public). Requires a trusted publisher configured on npmjs.com
+  (GitHub Actions · `psrenergy/quiver` · workflow `publish-npm.yml` · environment `npm`) and
+  npm ≥ 11.5.1 (ensured via `npm install -g npm@latest` on Node 24). Bun can't do OIDC trusted
+  publishing yet (bun#24855→#15601), so the publish job uses npm; the binding + tests remain 100%
+  Bun. A standalone re-dispatch of an already-published version is skipped via an `npm view` guard.
 
 <!-- GSD:skills-start source:skills/ -->
 ## Project Skills
