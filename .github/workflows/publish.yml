@@ -151,10 +151,7 @@ jobs:
         with:
           name: wheels
           path: dist/
-
-      # SHA-pinned (not @release/v1): this is the one step holding trusted-publishing
-      # credentials for an irreversible PyPI upload. Dependabot still bumps the SHA.
-      - uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # v1.14.0
+      # - uses: pypa/gh-action-pypi-publish@v1.14.0
 
   publish-npm:
     name: Publish to npm
@@ -243,7 +240,6 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  # The tag already exists (create-tag); this only attaches the wheels and release notes to it.
   github-release:
     name: GitHub Release
     runs-on: ubuntu-latest
@@ -270,7 +266,6 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      # Bump from the released commit (every other job pins github.sha); the PR still targets master.
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.sha }}
@@ -291,15 +286,7 @@ jobs:
           base: master
           commit-message: "bump version to ${{ steps.next.outputs.version }}"
           title: "Bump version to ${{ steps.next.outputs.version }}"
-          body: |
-            Auto-generated after release `v${{ needs.detect-version.outputs.version }}`.
-
-            Bumps every project version file to the next patch:
-            - `CMakeLists.txt`
-            - `bindings/python/pyproject.toml`
-            - `bindings/js/package.json`
-            - `bindings/dart/pubspec.yaml`
-            - `bindings/julia/Project.toml`
+          body: Auto-generated after release `v${{ needs.detect-version.outputs.version }}`.
           delete-branch: true
 
   publish-julia:
@@ -349,14 +336,6 @@ jobs:
       - name: Assemble generated mirror
         run: |
           set -euo pipefail
-          # Faithful FULL mirror of the bindings/julia package — bindings/julia is the single
-          # source of truth; Quiver.jl is generated, never hand-edited. Wipe the mirror (keep only
-          # its .git/), copy the ENTIRE tree (incl. dotfiles: .github/ with the mirror's CI.yml +
-          # TagBot.yml, README.md, .gitignore, .gitattributes, .JuliaFormatter.toml, Project.toml —
-          # verbatim, the binding shares Quiver.jl's UUID), then overlay the real test schemas
-          # (repo-root tests/schemas; bindings/julia/test/schemas is an empty stub) and the generated
-          # Artifacts.toml. The PR deletes anything in Quiver.jl not present here. Manifest.toml is
-          # dropped defensively (gitignored, normally absent from a clean checkout).
           find quiver-jl -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
           cp -a bindings/julia/. quiver-jl/
           rm -f quiver-jl/Manifest.toml
@@ -375,11 +354,6 @@ jobs:
           title: "Release v${{ needs.detect-version.outputs.version }}"
           body: |
             Auto-generated mirror from `psrenergy/quiver@v${{ needs.detect-version.outputs.version }}`.
-
-            - Mirrored the full `bindings/julia/` package (src, test, `.github/`, README, configs)
-            - Overlaid test schemas from `tests/schemas/`
-            - Regenerated `Artifacts.toml` (binaries uploaded to S3)
-            - Version `${{ needs.detect-version.outputs.version }}` (from `bindings/julia/Project.toml`)
 
             > Do not hand-edit this repository, it is generated from `psrenergy/quiver/bindings/julia`.
           delete-branch: true
