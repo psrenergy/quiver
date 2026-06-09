@@ -33,6 +33,8 @@ wheels, JSR, tag, and GitHub release succeed, the **`publish-julia`** job:
 2. Runs `scripts/julia/generate_artifacts.jl`: tars each platform's libs into the loader
    layout (`lib/` on Linux, `bin/` on Windows), uploads to
    `s3://julia-artifacts/quiver/<version>/`, computes `git-tree-sha1` + `sha256`, and writes `Artifacts.toml`.
+   The libs are `chmod 0o755` before tarring — **Windows DLLs must be executable in the artifact** or
+   Pkg's extraction yields an ACL without execute and `LoadLibrary` fails with "Access is denied".
 3. Checks out `Quiver.jl` and **faithfully mirrors the package**: `cp -r bindings/julia/{src,test}`,
    `cp bindings/julia/{Project.toml,LICENSE,.JuliaFormatter.toml}`, vendors `tests/schemas/` →
    `test/schemas/`, and drops in the new `Artifacts.toml`. Excludes `generator/`, `Manifest.toml`,
