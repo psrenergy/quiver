@@ -8,10 +8,10 @@ import "./csv.ts";
 import "./introspection.ts";
 import "./composites.ts";
 
+export type { CsvOptions } from "./csv.ts";
 export { Database } from "./database.ts";
 export { QuiverError } from "./errors.ts";
 export { LuaRunner } from "./lua-runner.ts";
-export type { ArrayValue, ElementData, QueryParam, ScalarValue, Value } from "./types.ts";
-export type { ScalarMetadata, GroupMetadata } from "./metadata.ts";
+export type { GroupMetadata, ScalarMetadata } from "./metadata.ts";
 export type { TimeSeriesData } from "./time-series.ts";
-export type { CsvOptions } from "./csv.ts";
+export type { ArrayValue, ElementData, QueryParam, ScalarValue, Value } from "./types.ts";

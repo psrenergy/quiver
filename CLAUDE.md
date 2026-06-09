@@ -688,6 +688,31 @@ bindings/python/generator/generator.bat  # Python
 - `create_element` and `update_element` accept `**kwargs` (not an Element builder). Element class is internal.
 - Dict unpacking supported: `db.create_element("Collection", **my_dict)`
 
+### JavaScript / Bun Notes
+- Runs on **Bun** (`bun:ffi`), not Deno. Published to **npm** as `quiverdb` (unscoped); package
+  manifest is `bindings/js/package.json` (no `deno.json`). `bun test test`, `bun run lint/format`
+  (biome). No permission flags (Bun has none).
+- **No generator** — FFI symbols are hand-written in `src/loader.ts` as `{ name: { args, returns } }`.
+  Add new C API functions there manually.
+- **Library loader** (`src/loader.ts`): lazy `getSymbols()` (init on first use — eager init would hit
+  a `QuiverError` TDZ during the loader↔errors import cycle). Three tiers: bundled `libs/{os}-{arch}/`
+  (shipped in the npm package) → dev `build/bin` walk-up → system PATH. On Windows, `ensureCoreOnPath`
+  prepends the lib dir to `process.env.PATH` so the OS loader finds the sibling `libquiver.dll`
+  (Bun's `dlopen` cannot preload the core lib — it rejects an empty symbol map).
+- **Bun FFI gotchas (load-bearing):**
+  - `FFIType.buffer` is rejected as an argument ABI type → buffer/string params use `"pointer"` and the
+    call sites pass the `Uint8Array` (`alloc.buf`) directly; Bun pins a TypedArray for the call.
+  - For out-params, **pass the TypedArray to the FFI call**, never a precomputed `ptr()` number, and read
+    the `DataView` *after* the call. Creating a `DataView`/accessing `.buffer` between `ptr(buf)` and the
+    call materializes/relocates a small JSC typed array, leaving the stored pointer stale (deterministic
+    silent corruption — C writes land in abandoned memory).
+  - No struct-by-value FFI return (oven-sh/bun#6139) → `quiver_database_options_default` is omitted;
+    `ffi-helpers.makeDefaultOptions()` builds the options struct in JS.
+- **Publishing:** `package.json` `files` allowlist ships `libs/**`; an empty `.npmignore` stops bun/npm
+  from falling back to `.gitignore` (which excludes `*.dll`/`*.so`). The `publish-npm` job downloads the
+  `build-native` artifacts into `libs/{linux,windows}-x86_64/`, dry-run-asserts they're packed, then
+  `bun publish` with `NPM_CONFIG_TOKEN` (repo/environment secret `NPM_TOKEN`).
+
 <!-- GSD:skills-start source:skills/ -->
 ## Project Skills
 

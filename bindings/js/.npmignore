@@ -1,0 +1,4 @@
+# Intentionally minimal. The "files" allowlist in package.json governs what gets
+# published. This file exists so npm/bun do NOT fall back to .gitignore (which
+# excludes *.dll / *.so / *.dylib) and silently drop the bundled native
+# libraries under libs/ from the published tarball.

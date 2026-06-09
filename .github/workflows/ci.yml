@@ -10,6 +10,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build (${{ matrix.os }}, ${{ matrix.build_type }})
@@ -210,22 +213,44 @@ jobs:
         run: |
           find include src tests -name '*.cpp' -o -name '*.h' | xargs clang-format-21 --dry-run --Werror
 
-  deno-test:
-    name: Deno Test
-    runs-on: ubuntu-latest
+  bun-test:
+    name: Bun Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v6
 
-      - uses: denoland/setup-deno@v2
+      - uses: oven-sh/setup-bun@v2
         with:
-          cache: true
-          deno-version: v2.7.12
+          bun-version: latest
 
       - uses: ./.github/actions/build-cpp
 
-      - name: Run Deno tests
+      - name: Install JS dependencies
+        working-directory: bindings/js
+        run: bun install
+
+      # Linux: shared libs live in build/lib; the loader resolves libquiver_c.so
+      # by soname via LD_LIBRARY_PATH (libquiver.so is found via RPATH=$ORIGIN).
+      - name: Run Bun tests (Linux)
+        if: runner.os == 'Linux'
         working-directory: bindings/js
         env:
           LD_LIBRARY_PATH: ${{ github.workspace }}/build/lib
-        run: deno task test
+        run: bun test test
+
+      # Windows: the Visual Studio generator emits DLLs under build/bin/<config>;
+      # putting that dir on PATH lets the loader find libquiver_c.dll and its
+      # libquiver.dll dependency.
+      - name: Run Bun tests (Windows)
+        if: runner.os == 'Windows'
+        working-directory: bindings/js
+        shell: pwsh
+        run: |
+          $env:PATH = "${{ github.workspace }}\build\bin\Debug;$env:PATH"
+          bun test test

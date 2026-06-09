@@ -1,0 +1,28 @@
+{
+  "name": "quiverdb",
+  "version": "0.8.4",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./mod.ts"
+  },
+  "types": "./mod.ts",
+  "files": [
+    "mod.ts",
+    "src/**/*.ts",
+    "libs/**",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "bun test test",
+    "lint": "biome check",
+    "format": "biome format --write"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.6",
+    "@types/bun": "latest"
+  }
+}

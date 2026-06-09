@@ -15,7 +15,7 @@ Schema-first SQLite wrapper for decision support models. Define tables in plain 
 | ---------- | ---------------------------------------------------------------------- |
 | Julia      | [Quiver.jl](https://github.com/psrenergy/Quiver.jl)                    |
 | Python     | [`quiverdb`](https://pypi.org/project/quiverdb/) on PyPI               |
-| JavaScript | [`@psrenergy/quiver`](https://jsr.io/@psrenergy/quiver) on JSR         |
+| JavaScript | [`quiverdb`](https://www.npmjs.com/package/quiverdb) on npm (Bun)      |
 | Dart       | `quiverdb` (pub)                                                       |
 | C++ / Lua  | build from source                                                      |
 
