@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
 # Single source of truth for moving Quiver's *raw* native libraries through S3, keyed by
-# version. The release pipeline builds the libs once (build-native.yml), uploads them here,
-# and every consumer (publish-npm.yml, publish-julia.yml) downloads them here. Because S3
+# version. The release pipeline builds the libs once (publish.yml), uploads them here,
+# and every consumer (publish-js.yml, publish-julia.yml) downloads them here. Because S3
 # persists across workflow runs, each publish workflow is independently runnable: a standalone
-# `publish-npm` just downloads the libs for its version, no rebuild and no in-run artifact.
+# `publish-js` just downloads the libs for its version, no rebuild and no in-run artifact.
 #
 # This is DISTINCT from the Julia shipping tarballs that scripts/julia/generate_artifacts.jl
 # uploads (quiver-<tag>.tgz, 2 stems only). Those omit the libquiver.so.0 SONAME that the npm
@@ -31,8 +31,8 @@ readonly PLATFORMS=("linux-x86_64" "windows-x86_64")
 
 # Canonical per-platform native-lib file set. linux ships the unversioned name AND the SONAME
 # libquiver.so.0 (libquiver_c.so's DT_NEEDED resolves it via RPATH=$ORIGIN); windows ships the
-# two runtime DLLs. This list is the contract between producer (build-native) and consumers
-# (npm/julia) — keep it in lockstep with build-native.yml's matrix lib_paths.
+# two runtime DLLs. This list is the contract between producer (publish.yml) and consumers
+# (js/julia) — keep it in lockstep with publish.yml's matrix lib_paths.
 files_for() {
   case "$1" in
     linux-x86_64)   echo "libquiver.so libquiver.so.0 libquiver_c.so" ;;
@@ -68,7 +68,7 @@ cmd_download() {
       url="https://${S3_BUCKET}.s3.amazonaws.com/$(s3_object "$version" "$platform" "$file")"
       if ! curl -fSL "$url" -o "${dest}/${platform}/${file}"; then
         echo "::error::native lib not found in S3: ${url}" >&2
-        echo "::error::no native libs for v${version} — run build-native for this version first" >&2
+        echo "::error::no native libs for v${version} — run the publish workflow for this version first" >&2
         exit 1
       fi
     done
