@@ -1,7 +1,16 @@
-name: Publish to npm
+name: Publish JS
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Override version (which S3 build to download and publish). Default: detect from CMakeLists.txt."
+        required: false
+        default: ""
+      ref:
+        description: "Git ref or sha to publish. Default: the triggering commit."
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -15,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.ref || github.sha }}
 
       - uses: actions/setup-node@v4
         with:
@@ -27,7 +36,7 @@ jobs:
 
       - name: Resolve version
         id: ver
-        run: echo "version=$(python3 scripts/bump_version.py --check)" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(python3 scripts/assert_version.py)" >> "$GITHUB_OUTPUT"
 
       # Download the native libs into bindings/js/libs/{linux,windows}-x86_64/ — the same layout
       # the package.json "files" allowlist ships. native_s3.sh owns the per-platform file list.

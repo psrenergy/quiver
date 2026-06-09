@@ -33,7 +33,7 @@ jobs:
         run: |
           v="${{ inputs.version }}"
           if [ -z "$v" ]; then
-            v="$(python3 scripts/bump_version.py --check)"
+            v="$(python3 scripts/assert_version.py)"
           fi
           echo "version=$v" >> "$GITHUB_OUTPUT"
 
