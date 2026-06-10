@@ -1,4 +1,3 @@
-import { ptr } from "bun:ffi";
 import { Database } from "./database.ts";
 import { check } from "./errors.ts";
 import {
@@ -111,17 +110,15 @@ Database.prototype.readScalarIntegerById = function (
   const collBuf = toCString(collection);
   const attrBuf = toCString(attribute);
   const outValBuf = new Uint8Array(8);
-  const outValPtr = ptr(outValBuf);
   const outHasBuf = new Uint8Array(4);
-  const outHasPtr = ptr(outHasBuf);
   check(
     lib.quiver_database_read_scalar_integer_by_id(
       this._handle,
       collBuf.buf,
       attrBuf.buf,
       BigInt(id),
-      outValPtr,
-      outHasPtr,
+      outValBuf,
+      outHasBuf,
     ),
   );
   if (new DataView(outHasBuf.buffer).getInt32(0, true) === 0) return null;
@@ -138,17 +135,15 @@ Database.prototype.readScalarFloatById = function (
   const collBuf = toCString(collection);
   const attrBuf = toCString(attribute);
   const outValBuf = new Uint8Array(8);
-  const outValPtr = ptr(outValBuf);
   const outHasBuf = new Uint8Array(4);
-  const outHasPtr = ptr(outHasBuf);
   check(
     lib.quiver_database_read_scalar_float_by_id(
       this._handle,
       collBuf.buf,
       attrBuf.buf,
       BigInt(id),
-      outValPtr,
-      outHasPtr,
+      outValBuf,
+      outHasBuf,
     ),
   );
   if (new DataView(outHasBuf.buffer).getInt32(0, true) === 0) return null;
@@ -166,7 +161,6 @@ Database.prototype.readScalarStringById = function (
   const attrBuf = toCString(attribute);
   const outValue = allocPtrOut();
   const outHasBuf = new Uint8Array(4);
-  const outHasPtr = ptr(outHasBuf);
   check(
     lib.quiver_database_read_scalar_string_by_id(
       this._handle,
@@ -174,7 +168,7 @@ Database.prototype.readScalarStringById = function (
       attrBuf.buf,
       BigInt(id),
       outValue.buf,
-      outHasPtr,
+      outHasBuf,
     ),
   );
   if (new DataView(outHasBuf.buffer).getInt32(0, true) === 0) return null;

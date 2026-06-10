@@ -1,4 +1,3 @@
-import { ptr } from "bun:ffi";
 import { Database } from "./database.ts";
 import { check, QuiverError } from "./errors.ts";
 import {
@@ -111,9 +110,8 @@ Database.prototype.createElement = function (
     }
 
     const outIdBuf = new Uint8Array(8);
-    const outIdPtr = ptr(outIdBuf);
     const collBuf = toCString(collection);
-    check(lib.quiver_database_create_element(handle, collBuf.buf, elemPtr, outIdPtr));
+    check(lib.quiver_database_create_element(handle, collBuf.buf, elemPtr, outIdBuf));
     return Number(new DataView(outIdBuf.buffer).getBigInt64(0, true));
   } finally {
     lib.quiver_element_destroy(elemPtr);

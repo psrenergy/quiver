@@ -1,22 +1,19 @@
-import { ptr } from "bun:ffi";
 import { Database } from "./database.ts";
 import { check } from "./errors.ts";
-import { allocPtrOut, decodeStringFromBuf, toCString } from "./ffi-helpers.ts";
+import { allocPtrOut, decodeStringFromBuf } from "./ffi-helpers.ts";
 import { getSymbols } from "./loader.ts";
 
 Database.prototype.isHealthy = function (this: Database): boolean {
   const lib = getSymbols();
   const outBuf = new Uint8Array(4);
-  const outPtr = ptr(outBuf);
-  check(lib.quiver_database_is_healthy(this._handle, outPtr));
+  check(lib.quiver_database_is_healthy(this._handle, outBuf));
   return new DataView(outBuf.buffer).getInt32(0, true) !== 0;
 };
 
 Database.prototype.currentVersion = function (this: Database): number {
   const lib = getSymbols();
   const outBuf = new Uint8Array(8);
-  const outPtr = ptr(outBuf);
-  check(lib.quiver_database_current_version(this._handle, outPtr));
+  check(lib.quiver_database_current_version(this._handle, outBuf));
   return Number(new DataView(outBuf.buffer).getBigInt64(0, true));
 };
 

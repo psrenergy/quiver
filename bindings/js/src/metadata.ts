@@ -79,10 +79,9 @@ Database.prototype.getScalarMetadata = function (
   const collBuf = toCString(collection);
   const attrBuf = toCString(attribute);
   const outBuf = new Uint8Array(SCALAR_METADATA_SIZE);
-  const outPtr = ptr(outBuf);
-  check(lib.quiver_database_get_scalar_metadata(this._handle, collBuf.buf, attrBuf.buf, outPtr));
-  const result = readScalarMetadataAt(outPtr, 0);
-  lib.quiver_database_free_scalar_metadata(outPtr);
+  check(lib.quiver_database_get_scalar_metadata(this._handle, collBuf.buf, attrBuf.buf, outBuf));
+  const result = readScalarMetadataAt(ptr(outBuf), 0);
+  lib.quiver_database_free_scalar_metadata(outBuf);
   return result;
 };
 
@@ -95,10 +94,9 @@ Database.prototype.getVectorMetadata = function (
   const collBuf = toCString(collection);
   const groupBuf = toCString(groupName);
   const outBuf = new Uint8Array(GROUP_METADATA_SIZE);
-  const outPtr = ptr(outBuf);
-  check(lib.quiver_database_get_vector_metadata(this._handle, collBuf.buf, groupBuf.buf, outPtr));
-  const result = readGroupMetadataAt(outPtr, 0);
-  lib.quiver_database_free_group_metadata(outPtr);
+  check(lib.quiver_database_get_vector_metadata(this._handle, collBuf.buf, groupBuf.buf, outBuf));
+  const result = readGroupMetadataAt(ptr(outBuf), 0);
+  lib.quiver_database_free_group_metadata(outBuf);
   return result;
 };
 
@@ -111,10 +109,9 @@ Database.prototype.getSetMetadata = function (
   const collBuf = toCString(collection);
   const groupBuf = toCString(groupName);
   const outBuf = new Uint8Array(GROUP_METADATA_SIZE);
-  const outPtr = ptr(outBuf);
-  check(lib.quiver_database_get_set_metadata(this._handle, collBuf.buf, groupBuf.buf, outPtr));
-  const result = readGroupMetadataAt(outPtr, 0);
-  lib.quiver_database_free_group_metadata(outPtr);
+  check(lib.quiver_database_get_set_metadata(this._handle, collBuf.buf, groupBuf.buf, outBuf));
+  const result = readGroupMetadataAt(ptr(outBuf), 0);
+  lib.quiver_database_free_group_metadata(outBuf);
   return result;
 };
 
@@ -127,12 +124,11 @@ Database.prototype.getTimeSeriesMetadata = function (
   const collBuf = toCString(collection);
   const groupBuf = toCString(groupName);
   const outBuf = new Uint8Array(GROUP_METADATA_SIZE);
-  const outPtr = ptr(outBuf);
   check(
-    lib.quiver_database_get_time_series_metadata(this._handle, collBuf.buf, groupBuf.buf, outPtr),
+    lib.quiver_database_get_time_series_metadata(this._handle, collBuf.buf, groupBuf.buf, outBuf),
   );
-  const result = readGroupMetadataAt(outPtr, 0);
-  lib.quiver_database_free_group_metadata(outPtr);
+  const result = readGroupMetadataAt(ptr(outBuf), 0);
+  lib.quiver_database_free_group_metadata(outBuf);
   return result;
 };
 
