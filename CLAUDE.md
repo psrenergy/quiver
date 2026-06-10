@@ -455,6 +455,7 @@ Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references.
 - Query: `query_string/integer/float(sql, parameters = {})` - parameterized SQL with positional `?` placeholders
 - Schema inspection: `describe()` - prints schema info to stdout
 - CSV: `export_csv()`, `import_csv()` -- CSV export/import with optional enum/date formatting via `CSVOptions`
+  - **Label-identifier import preserves ids**: a scalar import omits the `id` column, so existing elements are matched by `label` and re-inserted with their original id (new labels get a fresh AUTOINCREMENT id above the preserved range). This keeps foreign keys in other tables pointing at the same element across a re-import.
 
 ### Element Class
 Builder for element creation with fluent API:
