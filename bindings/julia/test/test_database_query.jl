@@ -244,6 +244,32 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "Parameterized query GC stress" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration";
+            label = "GC Config",
+            integer_attribute = 42,
+            float_attribute = 3.14,
+            string_attribute = "hello",
+        )
+
+        # Marshaled parameter refs must stay rooted across the ccall (GC.@preserve)
+        for i in 1:50
+            GC.gc(i % 10 == 0)
+            @test Quiver.query_integer(db,
+                "SELECT integer_attribute FROM Configuration WHERE label = ? AND integer_attribute = ?",
+                Any["GC Config", 42]) == 42
+            @test Quiver.query_float(db,
+                "SELECT float_attribute FROM Configuration WHERE label = ?", Any["GC Config"]) == 3.14
+            @test Quiver.query_string(db,
+                "SELECT string_attribute FROM Configuration WHERE label = ?", Any["GC Config"]) == "hello"
+        end
+
+        Quiver.close!(db)
+    end
 end
 
 end

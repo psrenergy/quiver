@@ -465,3 +465,26 @@ TEST_F(LuaRunnerCApiTest, ReadVectorIntegers) {
     quiver_lua_runner_free(lua);
     quiver_database_close(db);
 }
+
+TEST_F(LuaRunnerCApiTest, RunScriptUnsupportedAttributeTypeFails) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_lua_runner_t* lua = nullptr;
+    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    ASSERT_NE(lua, nullptr);
+
+    auto result = quiver_lua_runner_run(lua, R"(db:create_element("Configuration", { label = "X", enabled = true }))");
+    EXPECT_EQ(result, QUIVER_ERROR);
+
+    const char* error = nullptr;
+    ASSERT_EQ(quiver_lua_runner_get_error(lua, &error), QUIVER_OK);
+    ASSERT_NE(error, nullptr);
+    EXPECT_NE(std::string(error).find("Cannot table_to_element: attribute 'enabled'"), std::string::npos) << error;
+
+    quiver_lua_runner_free(lua);
+    quiver_database_close(db);
+}

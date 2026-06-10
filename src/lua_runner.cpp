@@ -269,6 +269,11 @@ struct LuaRunner::Impl {
                             vec.push_back(arr.get<std::string>(i));
                         }
                         element.set(k, vec);
+                    } else {
+                        // Surface unsupported element types loudly instead of silently
+                        // dropping the attribute (same policy as lua_table_to_value_map)
+                        throw std::runtime_error("Cannot table_to_element: array '" + k +
+                                                 "' has unsupported element type");
                     }
                 }
             } else if (val.is<int64_t>()) {
@@ -277,6 +282,10 @@ struct LuaRunner::Impl {
                 element.set(k, val.as<double>());
             } else if (val.is<std::string>()) {
                 element.set(k, val.as<std::string>());
+            } else {
+                // Surface typos / booleans / nested structures loudly instead of
+                // silently dropping the attribute (same policy as lua_table_to_value_map)
+                throw std::runtime_error("Cannot table_to_element: attribute '" + k + "' has unsupported Lua type");
             }
         }
         return element;
@@ -534,6 +543,11 @@ struct LuaRunner::Impl {
                 values.emplace_back(val.as<double>());
             } else if (val.is<std::string>()) {
                 values.emplace_back(val.as<std::string>());
+            } else {
+                // A silently skipped parameter would shift every later positional
+                // parameter left and bind NULL to the trailing placeholder.
+                throw std::runtime_error("Cannot lua_table_to_values: parameter #" + std::to_string(i) +
+                                         " has unsupported Lua type");
             }
         }
         return values;

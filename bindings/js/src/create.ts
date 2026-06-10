@@ -30,7 +30,7 @@ function setElementArray(
   const first = values[0];
 
   if (typeof first === "bigint") {
-    const arr = allocNativeInt64((values as bigint[]).map(Number));
+    const arr = allocNativeInt64(values as bigint[]);
     check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.ptr, values.length));
     return;
   }

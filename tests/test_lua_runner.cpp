@@ -2871,3 +2871,46 @@ TEST(LuaRunner_ImportCSV, InsideTransactionThrows) {
 
     std::filesystem::remove(csv_path);
 }
+
+TEST_F(LuaRunnerTest, QueryParameterUnsupportedTypeThrows) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+
+    quiver::LuaRunner lua(db);
+
+    // A silently dropped parameter would shift the remaining ones and return wrong results
+    try {
+        lua.run(R"(db:query_integer("SELECT id FROM Configuration WHERE label = ?", { true }))");
+        FAIL() << "expected unsupported query parameter type to throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_NE(std::string(e.what()).find("Cannot lua_table_to_values: parameter #1"), std::string::npos)
+            << e.what();
+    }
+}
+
+TEST_F(LuaRunnerTest, CreateElementUnsupportedAttributeTypeThrows) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    quiver::LuaRunner lua(db);
+
+    try {
+        lua.run(R"(db:create_element("Configuration", { label = "Item", enabled = true }))");
+        FAIL() << "expected unsupported attribute type to throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_NE(std::string(e.what()).find("Cannot table_to_element: attribute 'enabled'"), std::string::npos)
+            << e.what();
+    }
+}
+
+TEST_F(LuaRunnerTest, CreateElementUnsupportedArrayElementTypeThrows) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    quiver::LuaRunner lua(db);
+
+    try {
+        lua.run(R"(db:create_element("Configuration", { label = "Item", tags = { true, false } }))");
+        FAIL() << "expected unsupported array element type to throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_NE(std::string(e.what()).find("Cannot table_to_element: array 'tags'"), std::string::npos) << e.what();
+    }
+}
