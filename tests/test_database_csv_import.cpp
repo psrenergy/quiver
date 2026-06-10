@@ -1300,6 +1300,117 @@ TEST(DatabaseCSV, ImportCSV_Vector_TrailingEmptyColumns) {
     fs::remove(csv_path);
 }
 
+// ============================================================================
+// import_csv: label-identifier mode must preserve element ids
+// ============================================================================
+
+// Regression: a scalar export omits the id column, so re-importing runs in
+// label-identifier mode. The import must keep each existing element's id so
+// foreign keys living in other tables (Child.parent_id) keep pointing at the
+// same element, even when the surviving ids are sparse (after a deletion).
+TEST(DatabaseCSV, ImportCSV_Scalar_PreservesIdsForForeignKeys) {
+    auto db = make_relations_db();
+
+    // Create four parents (ids 1..4).
+    for (const auto* label : {"Parent A", "Parent B", "Parent C", "Parent D"}) {
+        quiver::Element p;
+        p.set("label", std::string(label));
+        db.create_element("Parent", p);
+    }
+
+    // Delete one so the surviving ids are sparse (2, 3, 4), not a dense 1..N.
+    // This is what makes a naive re-import reassign ids.
+    db.delete_element("Parent", 1);
+
+    auto parent_id = [&](const std::string& label) {
+        return db.query_integer("SELECT id FROM Parent WHERE label = ?", {label}).value();
+    };
+    auto id_b = parent_id("Parent B");
+    auto id_c = parent_id("Parent C");
+    auto id_d = parent_id("Parent D");
+
+    // Children referencing the surviving parents by their current id.
+    for (const auto& [label, pid] : {std::pair{"Child B", id_b}, {"Child C", id_c}, {"Child D", id_d}}) {
+        quiver::Element c;
+        c.set("label", std::string(label)).set("parent_id", pid);
+        db.create_element("Child", c);
+    }
+
+    auto child_parent = [&](const std::string& label) {
+        auto cid = db.query_integer("SELECT id FROM Child WHERE label = ?", {label}).value();
+        return db.read_scalar_integer_by_id("Child", "parent_id", cid).value();
+    };
+
+    // Sanity check before the round-trip.
+    EXPECT_EQ(child_parent("Child B"), id_b);
+    EXPECT_EQ(child_parent("Child C"), id_c);
+    EXPECT_EQ(child_parent("Child D"), id_d);
+
+    // Export Parent (label-based, no id column) and re-import it.
+    auto csv_path = temp_csv("ImportScalarPreserveIds");
+    db.export_csv("Parent", "", csv_path.string());
+    db.import_csv("Parent", "", csv_path.string());
+
+    // Each child must STILL reference the same parent (matched by label),
+    // regardless of any id reassignment.
+    EXPECT_EQ(child_parent("Child B"), parent_id("Parent B"));
+    EXPECT_EQ(child_parent("Child C"), parent_id("Parent C"));
+    EXPECT_EQ(child_parent("Child D"), parent_id("Parent D"));
+
+    // And the ids themselves must be unchanged (proves preservation, not luck).
+    EXPECT_EQ(parent_id("Parent B"), id_b);
+    EXPECT_EQ(parent_id("Parent C"), id_c);
+    EXPECT_EQ(parent_id("Parent D"), id_d);
+
+    fs::remove(csv_path);
+}
+
+// A CSV mixing new and existing labels: existing labels keep their ids and the
+// new label gets a fresh id above the preserved range, even when the new row
+// comes first in the CSV (the order most likely to provoke an id collision).
+TEST(DatabaseCSV, ImportCSV_Scalar_MixedNewAndExistingLabels) {
+    auto db = make_relations_db();
+
+    for (const auto* label : {"Parent A", "Parent B", "Parent C"}) {
+        quiver::Element p;
+        p.set("label", std::string(label));
+        db.create_element("Parent", p);
+    }
+
+    // Sparse surviving ids (2, 3).
+    db.delete_element("Parent", 1);
+
+    auto parent_id = [&](const std::string& label) {
+        return db.query_integer("SELECT id FROM Parent WHERE label = ?", {label}).value();
+    };
+    auto id_b = parent_id("Parent B");
+    auto id_c = parent_id("Parent C");
+
+    quiver::Element c;
+    c.set("label", std::string("Child B")).set("parent_id", id_b);
+    db.create_element("Child", c);
+
+    // New label listed BEFORE the existing ones.
+    auto csv_path = temp_csv("ImportScalarMixedLabels");
+    write_csv_file(csv_path.string(),
+                   "sep=,\nlabel\n"
+                   "Parent New\n"
+                   "Parent B\n"
+                   "Parent C\n");
+    db.import_csv("Parent", "", csv_path.string());
+
+    // Existing labels keep their ids; the new label's id is above them all.
+    EXPECT_EQ(parent_id("Parent B"), id_b);
+    EXPECT_EQ(parent_id("Parent C"), id_c);
+    EXPECT_GT(parent_id("Parent New"), id_c);
+
+    // The child still references the same parent.
+    auto cid = db.query_integer("SELECT id FROM Child WHERE label = ?", {std::string("Child B")}).value();
+    EXPECT_EQ(db.read_scalar_integer_by_id("Child", "parent_id", cid).value(), id_b);
+
+    fs::remove(csv_path);
+}
+
 TEST(DatabaseCSV, ImportCSV_InsideTransactionThrows) {
     auto db = make_db();
 
