@@ -6,15 +6,17 @@ extern "C" {
 
 // Read scalar attributes
 
+// [?] Essa é a melhor forma de fazer isso? Usando essa null mask?
 QUIVER_C_API quiver_error_t quiver_database_read_scalar_integers(quiver_database_t* db,
                                                                  const char* collection,
                                                                  const char* attribute,
                                                                  int64_t** out_values,
+                                                                 int** out_is_null,
                                                                  size_t* out_count) {
-    QUIVER_REQUIRE(db, collection, attribute, out_values, out_count);
+    QUIVER_REQUIRE(db, collection, attribute, out_values, out_is_null, out_count);
 
     try {
-        return read_scalars_impl(db->db.read_scalar_integers(collection, attribute), out_values, out_count);
+        return read_scalars_nullable_impl(db->db.read_scalar_integers(collection, attribute), out_values, out_is_null, out_count);
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
         return QUIVER_ERROR;
@@ -25,11 +27,12 @@ QUIVER_C_API quiver_error_t quiver_database_read_scalar_floats(quiver_database_t
                                                                const char* collection,
                                                                const char* attribute,
                                                                double** out_values,
+                                                               int** out_is_null,
                                                                size_t* out_count) {
-    QUIVER_REQUIRE(db, collection, attribute, out_values, out_count);
+    QUIVER_REQUIRE(db, collection, attribute, out_values, out_is_null, out_count);
 
     try {
-        return read_scalars_impl(db->db.read_scalar_floats(collection, attribute), out_values, out_count);
+        return read_scalars_nullable_impl(db->db.read_scalar_floats(collection, attribute), out_values, out_is_null, out_count);
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
         return QUIVER_ERROR;
@@ -44,7 +47,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_scalar_strings(quiver_database_
     QUIVER_REQUIRE(db, collection, attribute, out_values, out_count);
 
     try {
-        return copy_strings_to_c(db->db.read_scalar_strings(collection, attribute), out_values, out_count);
+        return copy_strings_nullable_to_c(db->db.read_scalar_strings(collection, attribute), out_values, out_count);
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
         return QUIVER_ERROR;
@@ -79,6 +82,11 @@ QUIVER_C_API quiver_error_t quiver_database_free_string_array(char** values, siz
 
 QUIVER_C_API quiver_error_t quiver_database_free_string(char* str) {
     delete[] str;
+    return QUIVER_OK;
+}
+
+QUIVER_C_API quiver_error_t quiver_database_free_null_mask(int* mask) {
+    delete[] mask;
     return QUIVER_OK;
 }
 

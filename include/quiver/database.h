@@ -44,9 +44,9 @@ public:
     void delete_element(const std::string& collection, int64_t id);
 
     // Read scalar attributes (all elements)
-    std::vector<int64_t> read_scalar_integers(const std::string& collection, const std::string& attribute);
-    std::vector<double> read_scalar_floats(const std::string& collection, const std::string& attribute);
-    std::vector<std::string> read_scalar_strings(const std::string& collection, const std::string& attribute);
+    std::vector<std::optional<int64_t>> read_scalar_integers(const std::string& collection, const std::string& attribute);
+    std::vector<std::optional<double>> read_scalar_floats(const std::string& collection, const std::string& attribute);
+    std::vector<std::optional<std::string>> read_scalar_strings(const std::string& collection, const std::string& attribute);
 
     // Read scalar attributes (by element ID)
     std::optional<int64_t>

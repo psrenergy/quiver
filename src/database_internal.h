@@ -67,6 +67,16 @@ std::vector<T> read_column_values(const Result& result) {
     return values;
 }
 
+template <typename T>
+std::vector<std::optional<T>> read_column_values_nullable(const Result& result) {
+    std::vector<std::optional<T>> values;
+    values.reserve(result.row_count());
+    for (size_t i = 0; i < result.row_count(); ++i) {
+        values.push_back(get_row_value(result[i], 0, static_cast<T*>(nullptr)));
+    }
+    return values;
+}
+
 // Template for reading a single optional value (column 0, row 0) from query results
 template <typename T>
 std::optional<T> read_single_value(const Result& result) {

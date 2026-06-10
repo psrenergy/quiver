@@ -23,6 +23,26 @@ quiver_error_t read_scalars_impl(const std::vector<T>& values, T** out_values, s
     return QUIVER_OK;
 }
 
+template <typename T>
+quiver_error_t read_scalars_nullable_impl(const std::vector<std::optional<T>>& values,
+                                          T** out_values,
+                                          int** out_is_null,
+                                          size_t* out_count) {
+    *out_count = values.size();
+    if (values.empty()) {
+        *out_values = nullptr;
+        *out_is_null = nullptr;
+        return QUIVER_OK;
+    }
+    *out_values  = new T[values.size()];
+    *out_is_null = new int[values.size()];
+    for (size_t i = 0; i < values.size(); ++i) {
+        (*out_is_null)[i] = values[i].has_value() ? 0 : 1;
+        (*out_values)[i]  = values[i].value_or(T{});
+    }
+    return QUIVER_OK;
+}
+
 // Helper template for reading numeric vectors
 template <typename T>
 quiver_error_t
@@ -71,6 +91,23 @@ inline quiver_error_t copy_strings_to_c(const std::vector<std::string>& values, 
     *out_values = new char*[values.size()];
     for (size_t i = 0; i < values.size(); ++i) {
         (*out_values)[i] = quiver::string::new_c_str(values[i]);
+    }
+    return QUIVER_OK;
+}
+
+inline quiver_error_t copy_strings_nullable_to_c(const std::vector<std::optional<std::string>>& values,
+                                                  char*** out_values,
+                                                  size_t* out_count) {
+    *out_count = values.size();
+    if (values.empty()) {
+        *out_values = nullptr;
+        return QUIVER_OK;
+    }
+    *out_values = new char*[values.size()];
+    for (size_t i = 0; i < values.size(); ++i) {
+        (*out_values)[i] = values[i].has_value()
+                               ? quiver::string::new_c_str(*values[i])
+                               : nullptr;
     }
     return QUIVER_OK;
 }

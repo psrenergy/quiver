@@ -152,12 +152,12 @@ function quiver_database_delete_element(db, collection, id)
     @ccall libquiver_c.quiver_database_delete_element(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, id::Int64)::quiver_error_t
 end
 
-function quiver_database_read_scalar_integers(db, collection, attribute, out_values, out_count)
-    @ccall libquiver_c.quiver_database_read_scalar_integers(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Int64}}, out_count::Ptr{Csize_t})::quiver_error_t
+function quiver_database_read_scalar_integers(db, collection, attribute, out_values, out_is_null, out_count)
+    @ccall libquiver_c.quiver_database_read_scalar_integers(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Int64}}, out_is_null::Ptr{Ptr{Cint}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
-function quiver_database_read_scalar_floats(db, collection, attribute, out_values, out_count)
-    @ccall libquiver_c.quiver_database_read_scalar_floats(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Cdouble}}, out_count::Ptr{Csize_t})::quiver_error_t
+function quiver_database_read_scalar_floats(db, collection, attribute, out_values, out_is_null, out_count)
+    @ccall libquiver_c.quiver_database_read_scalar_floats(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_values::Ptr{Ptr{Cdouble}}, out_is_null::Ptr{Ptr{Cint}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
 function quiver_database_read_scalar_strings(db, collection, attribute, out_values, out_count)
@@ -348,6 +348,10 @@ end
 
 function quiver_database_free_string(str)
     @ccall libquiver_c.quiver_database_free_string(str::Ptr{Cchar})::quiver_error_t
+end
+
+function quiver_database_free_null_mask(mask)
+    @ccall libquiver_c.quiver_database_free_null_mask(mask::Ptr{Cint})::quiver_error_t
 end
 
 function quiver_database_free_integer_vectors(vectors, sizes, count)

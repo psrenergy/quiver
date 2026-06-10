@@ -71,12 +71,14 @@ QUIVER_C_API quiver_error_t quiver_database_read_scalar_integers(quiver_database
                                                                  const char* collection,
                                                                  const char* attribute,
                                                                  int64_t** out_values,
+                                                                 int** out_is_null,
                                                                  size_t* out_count);
 
 QUIVER_C_API quiver_error_t quiver_database_read_scalar_floats(quiver_database_t* db,
                                                                const char* collection,
                                                                const char* attribute,
                                                                double** out_values,
+                                                               int** out_is_null,
                                                                size_t* out_count);
 
 QUIVER_C_API quiver_error_t quiver_database_read_scalar_strings(quiver_database_t* db,
@@ -377,6 +379,7 @@ QUIVER_C_API quiver_error_t quiver_database_free_float_array(double* values);
 QUIVER_C_API quiver_error_t quiver_database_free_string_array(char** values, size_t count);
 // Memory cleanup for single string returned by query/read-by-id operations
 QUIVER_C_API quiver_error_t quiver_database_free_string(char* str);
+QUIVER_C_API quiver_error_t quiver_database_free_null_mask(int* mask);
 
 // Memory cleanup for vector read results
 QUIVER_C_API quiver_error_t quiver_database_free_integer_vectors(int64_t** vectors, size_t* sizes, size_t count);
