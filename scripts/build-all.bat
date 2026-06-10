@@ -49,14 +49,14 @@ REM ============================================================
 echo [1/7] Building C++ library and C API...
 echo.
 
-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DQUIVER_BUILD_TESTS=ON -DQUIVER_BUILD_C_API=ON
+cmake -S "%ROOT_DIR%" -B "%ROOT_DIR%\build" -G Ninja -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -DQUIVER_BUILD_TESTS=ON -DQUIVER_BUILD_C_API=ON
 if errorlevel 1 (
     echo.
     echo ERROR: CMake configuration failed
     exit /b 1
 )
 
-cmake --build build --config %BUILD_TYPE%
+cmake --build "%ROOT_DIR%\build" --config %BUILD_TYPE%
 if errorlevel 1 (
     echo.
     echo ERROR: Build failed

@@ -28,11 +28,12 @@ SET JULIA_RESULT=SKIP
 SET DART_RESULT=SKIP
 SET JS_RESULT=SKIP
 SET PYTHON_RESULT=SKIP
+SET CLI_RESULT=SKIP
 
 REM ============================================================
 REM Step 1: Run C++ Tests
 REM ============================================================
-echo [1/6] Running C++ tests...
+echo [1/7] Running C++ tests...
 
 if exist "%ROOT_DIR%\build\bin\quiver_tests.exe" (
     "%ROOT_DIR%\build\bin\quiver_tests.exe"
@@ -51,7 +52,7 @@ echo.
 REM ============================================================
 REM Step 2: Run C API Tests
 REM ============================================================
-echo [2/6] Running C API tests...
+echo [2/7] Running C API tests...
 
 if exist "%ROOT_DIR%\build\bin\quiver_c_tests.exe" (
     "%ROOT_DIR%\build\bin\quiver_c_tests.exe"
@@ -70,7 +71,7 @@ echo.
 REM ============================================================
 REM Step 3: Run Julia Tests
 REM ============================================================
-echo [3/6] Running Julia tests...
+echo [3/7] Running Julia tests...
 
 call "%ROOT_DIR%\bindings\julia\test\test.bat"
 if errorlevel 1 (
@@ -84,7 +85,7 @@ echo.
 REM ============================================================
 REM Step 4: Run Dart Tests
 REM ============================================================
-echo [4/6] Running Dart tests...
+echo [4/7] Running Dart tests...
 
 call "%ROOT_DIR%\bindings\dart\test\test.bat"
 if errorlevel 1 (
@@ -98,7 +99,7 @@ echo.
 REM ============================================================
 REM Step 5: Run JavaScript Tests
 REM ============================================================
-echo [5/6] Running JavaScript tests...
+echo [5/7] Running JavaScript tests...
 
 call "%ROOT_DIR%\bindings\js\test\test.bat"
 if errorlevel 1 (
@@ -112,7 +113,7 @@ echo.
 REM ============================================================
 REM Step 6: Run Python Tests
 REM ============================================================
-echo [6/6] Running Python tests...
+echo [6/7] Running Python tests...
 
 call "%ROOT_DIR%\bindings\python\tests\test.bat"
 if errorlevel 1 (
@@ -120,6 +121,32 @@ if errorlevel 1 (
     SET FAILED=1
 ) else (
     SET PYTHON_RESULT=PASS
+)
+echo.
+
+REM ============================================================
+REM Step 7: CLI smoke test
+REM ============================================================
+echo [7/7] Running CLI smoke test...
+
+if exist "%ROOT_DIR%\build\bin\quiver_cli.exe" (
+    SET CLI_RESULT=PASS
+    "%ROOT_DIR%\build\bin\quiver_cli.exe" --schema "%ROOT_DIR%\tests\schemas\valid\collections.sql" :memory: "%ROOT_DIR%\example\example1.lua"
+    if errorlevel 1 (
+        echo ERROR: CLI run with valid schema and script failed
+        SET CLI_RESULT=FAIL
+        SET FAILED=1
+    )
+    REM --schema and --migrations are mutually exclusive: must exit with code 2
+    "%ROOT_DIR%\build\bin\quiver_cli.exe" --schema a.sql --migrations m :memory: "%ROOT_DIR%\example\example1.lua" >nul 2>&1
+    if !errorlevel! neq 2 (
+        echo ERROR: CLI accepted --schema and --migrations together
+        SET CLI_RESULT=FAIL
+        SET FAILED=1
+    )
+) else (
+    echo WARNING: quiver_cli not found. Run scripts\build-all.bat first.
+    SET CLI_RESULT=SKIP
 )
 echo.
 
@@ -136,6 +163,7 @@ echo   Julia tests:      %JULIA_RESULT%
 echo   Dart tests:       %DART_RESULT%
 echo   JavaScript tests: %JS_RESULT%
 echo   Python tests:     %PYTHON_RESULT%
+echo   CLI smoke test:   %CLI_RESULT%
 echo.
 
 if %FAILED%==1 (

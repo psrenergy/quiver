@@ -4,11 +4,9 @@
 #include "quiver/lua_runner.h"
 
 #include <new>
-#include <string>
 
 struct quiver_lua_runner {
     quiver::LuaRunner runner;
-    std::string last_error;
 
     explicit quiver_lua_runner(quiver::Database& db) : runner(db) {}
 };
@@ -39,23 +37,15 @@ QUIVER_C_API quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, c
     QUIVER_REQUIRE(runner, script);
 
     try {
-        runner->last_error.clear();
         runner->runner.run(script);
         return QUIVER_OK;
     } catch (const std::exception& e) {
-        runner->last_error = e.what();
+        quiver_set_last_error(e.what());
         return QUIVER_ERROR;
     } catch (...) {
-        runner->last_error = "Unknown error";
+        quiver_set_last_error("Unknown error running Lua script");
         return QUIVER_ERROR;
     }
-}
-
-QUIVER_C_API quiver_error_t quiver_lua_runner_get_error(quiver_lua_runner_t* runner, const char** out_error) {
-    QUIVER_REQUIRE(runner, out_error);
-
-    *out_error = runner->last_error.empty() ? nullptr : runner->last_error.c_str();
-    return QUIVER_OK;
 }
 
 }  // extern "C"

@@ -96,7 +96,7 @@ Database.prototype.exportCsv = function (
   const pathBuf = toCString(filePath);
   const [optsBuf, _keepalive] = buildCsvOptionsBuffer(options);
   check(
-    lib.quiver_database_export_csv(this._handle, collBuf.buf, grpBuf.buf, pathBuf.buf, optsBuf.ptr),
+    lib.quiver_database_export_csv(this._handle, collBuf.buf, grpBuf.buf, pathBuf.buf, optsBuf.buf),
   );
 };
 
@@ -113,6 +113,6 @@ Database.prototype.importCsv = function (
   const pathBuf = toCString(filePath);
   const [optsBuf, _keepalive] = buildCsvOptionsBuffer(options);
   check(
-    lib.quiver_database_import_csv(this._handle, collBuf.buf, grpBuf.buf, pathBuf.buf, optsBuf.ptr),
+    lib.quiver_database_import_csv(this._handle, collBuf.buf, grpBuf.buf, pathBuf.buf, optsBuf.buf),
   );
 };

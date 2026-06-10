@@ -10,13 +10,6 @@
 extern "C" {
 #endif
 
-// Attribute data structure
-typedef enum {
-    QUIVER_DATA_STRUCTURE_SCALAR = 0,
-    QUIVER_DATA_STRUCTURE_VECTOR = 1,
-    QUIVER_DATA_STRUCTURE_SET = 2
-} quiver_data_structure_t;
-
 // Attribute data types
 typedef enum {
     QUIVER_DATA_TYPE_INTEGER = 0,

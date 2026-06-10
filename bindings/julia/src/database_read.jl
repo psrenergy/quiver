@@ -244,7 +244,11 @@ function read_scalar_string_by_id(db::Database, collection::String, attribute::S
 end
 
 function read_scalar_date_time_by_id(db::Database, collection::String, attribute::String, id::Int64)
-    return string_to_date_time(read_scalar_string_by_id(db, collection, attribute, id))
+    result = read_scalar_string_by_id(db, collection, attribute, id)
+    if result === nothing
+        return nothing
+    end
+    return string_to_date_time(result)
 end
 
 function read_vector_integers_by_id(db::Database, collection::String, attribute::String, id::Int64)

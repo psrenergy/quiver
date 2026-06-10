@@ -53,7 +53,7 @@ TEST(BinaryMetadataFromTomlContent, AllFieldsPopulated) {
     EXPECT_EQ(md.dimensions[0].size, 4);
     EXPECT_EQ(md.dimensions[1].name, "block");
     EXPECT_EQ(md.dimensions[1].size, 31);
-    EXPECT_EQ(md.number_of_time_dimensions, 2);
+    EXPECT_EQ(md.number_of_time_dimensions(), 2);
 }
 
 TEST(BinaryMetadataFromTomlContent, TimeDimensionsMarked) {
@@ -131,7 +131,7 @@ labels = ["val"]
     EXPECT_TRUE(md.dimensions[0].is_time_dimension());
     EXPECT_FALSE(md.dimensions[1].is_time_dimension());
     EXPECT_TRUE(md.dimensions[2].is_time_dimension());
-    EXPECT_EQ(md.number_of_time_dimensions, 2);
+    EXPECT_EQ(md.number_of_time_dimensions(), 2);
 }
 
 TEST(BinaryMetadataFromTomlContent, ErrorTimeDimensionNotInDimensions) {
@@ -174,7 +174,7 @@ unit = "MW"
 labels = ["val"]
 )";
     auto md = BinaryMetadata::from_toml_content(toml);
-    EXPECT_EQ(md.number_of_time_dimensions, 0);
+    EXPECT_EQ(md.number_of_time_dimensions(), 0);
     EXPECT_FALSE(md.dimensions[0].is_time_dimension());
     EXPECT_FALSE(md.dimensions[1].is_time_dimension());
 }
@@ -199,7 +199,7 @@ TEST(BinaryMetadataFromElement, ValidWithTimeDimensions) {
     EXPECT_EQ(md.dimensions[1].time->frequency, TimeFrequency::Daily);
     EXPECT_EQ(md.dimensions[0].time->parent_dimension_index, -1);
     EXPECT_EQ(md.dimensions[1].time->parent_dimension_index, 0);
-    EXPECT_EQ(md.number_of_time_dimensions, 2);
+    EXPECT_EQ(md.number_of_time_dimensions(), 2);
 }
 
 TEST(BinaryMetadataFromElement, ValidWithoutTimeDimensions) {
@@ -210,7 +210,7 @@ TEST(BinaryMetadataFromElement, ValidWithoutTimeDimensions) {
                                                .set("dimensions", {"row", "col"})
                                                .set("dimension_sizes", {3, 2})
                                                .set("labels", {"val"}));
-    EXPECT_EQ(md.number_of_time_dimensions, 0);
+    EXPECT_EQ(md.number_of_time_dimensions(), 0);
     EXPECT_FALSE(md.dimensions[0].is_time_dimension());
     EXPECT_FALSE(md.dimensions[1].is_time_dimension());
 }
@@ -239,7 +239,7 @@ TEST(BinaryMetadataFromElement, RoundTripEquivalenceWithToml) {
     EXPECT_EQ(md_element.unit, md_toml.unit);
     EXPECT_EQ(md_element.labels, md_toml.labels);
     EXPECT_EQ(md_element.dimensions.size(), md_toml.dimensions.size());
-    EXPECT_EQ(md_element.number_of_time_dimensions, md_toml.number_of_time_dimensions);
+    EXPECT_EQ(md_element.number_of_time_dimensions(), md_toml.number_of_time_dimensions());
     for (size_t i = 0; i < md_element.dimensions.size(); ++i) {
         EXPECT_EQ(md_element.dimensions[i].name, md_toml.dimensions[i].name);
         EXPECT_EQ(md_element.dimensions[i].size, md_toml.dimensions[i].size);
@@ -396,7 +396,6 @@ TEST(BinaryMetadataToToml, ValidationCalledOnSerialize) {
     md.unit = "MW";
     md.labels = {"val"};
     md.dimensions = {{"row", 3, std::nullopt}};
-    md.number_of_time_dimensions = 0;
     EXPECT_THROW(md.to_toml(), std::runtime_error);
 }
 
@@ -421,7 +420,6 @@ TEST(BinaryMetadataValidate, WrongVersion) {
     md.unit = "MW";
     md.labels = {"val"};
     md.dimensions = {{"row", 3, std::nullopt}};
-    md.number_of_time_dimensions = 0;
     EXPECT_THROW(md.validate(), std::runtime_error);
 }
 
@@ -431,7 +429,6 @@ TEST(BinaryMetadataValidate, EmptyVersion) {
     md.unit = "MW";
     md.labels = {"val"};
     md.dimensions = {{"row", 3, std::nullopt}};
-    md.number_of_time_dimensions = 0;
     EXPECT_THROW(md.validate(), std::runtime_error);
 }
 
@@ -441,7 +438,6 @@ TEST(BinaryMetadataValidate, EmptyDimensions) {
     md.unit = "MW";
     md.labels = {"val"};
     md.dimensions = {};
-    md.number_of_time_dimensions = 0;
     EXPECT_THROW(md.validate(), std::runtime_error);
 }
 
@@ -451,27 +447,6 @@ TEST(BinaryMetadataValidate, EmptyLabels) {
     md.unit = "MW";
     md.labels = {};
     md.dimensions = {{"row", 3, std::nullopt}};
-    md.number_of_time_dimensions = 0;
-    EXPECT_THROW(md.validate(), std::runtime_error);
-}
-
-TEST(BinaryMetadataValidate, NegativeTimeDimCount) {
-    BinaryMetadata md;
-    md.version = "1";
-    md.unit = "MW";
-    md.labels = {"val"};
-    md.dimensions = {{"row", 3, std::nullopt}};
-    md.number_of_time_dimensions = -1;
-    EXPECT_THROW(md.validate(), std::runtime_error);
-}
-
-TEST(BinaryMetadataValidate, ExcessTimeDimCount) {
-    BinaryMetadata md;
-    md.version = "1";
-    md.unit = "MW";
-    md.labels = {"val"};
-    md.dimensions = {{"row", 3, std::nullopt}};
-    md.number_of_time_dimensions = 5;
     EXPECT_THROW(md.validate(), std::runtime_error);
 }
 
@@ -481,7 +456,6 @@ TEST(BinaryMetadataValidate, ZeroDimensionSize) {
     md.unit = "MW";
     md.labels = {"val"};
     md.dimensions = {{"row", 0, std::nullopt}};
-    md.number_of_time_dimensions = 0;
     EXPECT_THROW(md.validate(), std::runtime_error);
 }
 
@@ -491,7 +465,6 @@ TEST(BinaryMetadataValidate, NegativeDimensionSize) {
     md.unit = "MW";
     md.labels = {"val"};
     md.dimensions = {{"row", -1, std::nullopt}};
-    md.number_of_time_dimensions = 0;
     EXPECT_THROW(md.validate(), std::runtime_error);
 }
 
@@ -501,7 +474,6 @@ TEST(BinaryMetadataValidate, DuplicateDimensionNames) {
     md.unit = "MW";
     md.labels = {"val"};
     md.dimensions = {{"row", 3, std::nullopt}, {"row", 2, std::nullopt}};
-    md.number_of_time_dimensions = 0;
     EXPECT_THROW(md.validate(), std::runtime_error);
 }
 
@@ -511,7 +483,6 @@ TEST(BinaryMetadataValidate, DuplicateLabels) {
     md.unit = "MW";
     md.labels = {"val", "val"};
     md.dimensions = {{"row", 3, std::nullopt}};
-    md.number_of_time_dimensions = 0;
     EXPECT_THROW(md.validate(), std::runtime_error);
 }
 
@@ -525,7 +496,6 @@ TEST(BinaryMetadataValidateTimeDimensions, ZeroTimeDimsSkipsValidation) {
     md.unit = "MW";
     md.labels = {"val"};
     md.dimensions = {{"row", 3, std::nullopt}};
-    md.number_of_time_dimensions = 0;
     EXPECT_NO_THROW(md.validate_time_dimension_metadata());
 }
 
@@ -537,7 +507,6 @@ TEST(BinaryMetadataValidateTimeDimensions, DuplicateFrequencies) {
     TimeProperties t1{TimeFrequency::Monthly, 1, -1};
     TimeProperties t2{TimeFrequency::Monthly, 1, 0};
     md.dimensions = {{"stage", 12, t1}, {"block", 31, t2}};
-    md.number_of_time_dimensions = 2;
     EXPECT_THROW(md.validate_time_dimension_metadata(), std::runtime_error);
 }
 
@@ -549,7 +518,6 @@ TEST(BinaryMetadataValidateTimeDimensions, WrongFrequencyOrder) {
     TimeProperties t1{TimeFrequency::Daily, 1, -1};
     TimeProperties t2{TimeFrequency::Monthly, 1, 0};
     md.dimensions = {{"block", 31, t1}, {"stage", 12, t2}};
-    md.number_of_time_dimensions = 2;
     EXPECT_THROW(md.validate_time_dimension_metadata(), std::runtime_error);
 }
 
@@ -561,7 +529,6 @@ TEST(BinaryMetadataValidateTimeDimensions, WeeklyNotFirst) {
     TimeProperties t1{TimeFrequency::Monthly, 1, -1};
     TimeProperties t2{TimeFrequency::Weekly, 1, 0};
     md.dimensions = {{"month", 12, t1}, {"week", 52, t2}};
-    md.number_of_time_dimensions = 2;
     EXPECT_THROW(md.validate_time_dimension_metadata(), std::runtime_error);
 }
 
@@ -615,7 +582,6 @@ make_time_pair(TimeFrequency parent_freq, int64_t parent_size, TimeFrequency chi
     TimeProperties tc{child_freq, 1, 0};
     md.dimensions = {{frequency_to_string(parent_freq), parent_size, tp},
                      {frequency_to_string(child_freq), child_size, tc}};
-    md.number_of_time_dimensions = 2;
     return md;
 }
 
@@ -775,7 +741,6 @@ TEST(BinaryMetadataValidateTimeDimensionSizes, OutermostHasNoSizeConstraint) {
     md.labels = {"val"};
     TimeProperties tp{TimeFrequency::Yearly, 1, -1};
     md.dimensions = {{"year", 999, tp}};
-    md.number_of_time_dimensions = 1;
     EXPECT_NO_THROW(md.validate_time_dimension_sizes());
 }
 
@@ -826,4 +791,29 @@ TEST(BinaryMetadataAddDimension, TimeDimensionParentIndexMinusOne) {
     BinaryMetadata md;
     md.add_time_dimension("year", 5, "yearly");
     EXPECT_EQ(md.dimensions[0].time->parent_dimension_index, -1);
+}
+
+TEST(BinaryMetadataAddDimension, TimeDimensionsCountedAndChained) {
+    BinaryMetadata md;
+    md.version = "1";
+    md.unit = "MW";
+    md.labels = {"val"};
+    md.add_time_dimension("month", 12, "monthly");
+    md.add_dimension("scenario", 3);
+    md.add_time_dimension("day", 31, "daily");
+    EXPECT_EQ(md.number_of_time_dimensions(), 2);
+    EXPECT_EQ(md.dimensions[0].time->parent_dimension_index, -1);
+    EXPECT_EQ(md.dimensions[2].time->parent_dimension_index, 0);
+    EXPECT_NO_THROW(md.validate());
+}
+
+TEST(BinaryMetadataAddDimension, ValidationFiresOnBuilderMetadata) {
+    BinaryMetadata md;
+    md.version = "1";
+    md.unit = "MW";
+    md.labels = {"val"};
+    md.add_time_dimension("a", 12, "monthly");
+    md.add_time_dimension("b", 12, "monthly");  // duplicate frequency must be rejected
+    EXPECT_EQ(md.number_of_time_dimensions(), 2);
+    EXPECT_THROW(md.validate(), std::runtime_error);
 }

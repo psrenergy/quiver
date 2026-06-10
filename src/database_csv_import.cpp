@@ -223,6 +223,12 @@ void Database::import_csv(const std::string& collection,
                           const CSVOptions& options) {
     impl_->require_collection(collection, "import_csv");
 
+    // Import toggles PRAGMA foreign_keys, which is a no-op inside a transaction,
+    // and manages its own transaction — so it cannot run inside an explicit one.
+    if (in_transaction()) {
+        throw std::runtime_error("Cannot import_csv: transaction already active");
+    }
+
     // Resolve target table name
     auto table_name = collection;
     GroupTableType group_type;

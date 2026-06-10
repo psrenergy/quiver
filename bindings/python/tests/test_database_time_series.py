@@ -274,3 +274,48 @@ class TestAddTimeSeriesRow:
         assert result[0]["block"] == 1
         assert result[0]["load"] == 500.0
         assert result[0]["flag"] == 0
+
+
+class TestReadTimeSeriesRow:
+    def test_read_time_series_row_returns_one_value_per_element(self, collections_db: Database) -> None:
+        """Last non-null value at or before the given date, one entry per element."""
+        from datetime import datetime
+
+        id1 = _create_collection_element(collections_db, "Item 1")
+        id2 = _create_collection_element(collections_db, "Item 2")
+
+        collections_db.update_time_series_group(
+            "Collection",
+            "data",
+            id1,
+            [
+                {"date_time": "2024-01-01T00:00:00", "value": 10.5},
+                {"date_time": "2024-02-01T00:00:00", "value": 20.5},
+            ],
+        )
+        collections_db.update_time_series_group(
+            "Collection",
+            "data",
+            id2,
+            [{"date_time": "2024-01-01T00:00:00", "value": 30.5}],
+        )
+
+        row = collections_db.read_time_series_row("Collection", "data", "value", datetime(2024, 1, 15))
+        assert row == [10.5, 30.5]
+
+    def test_read_time_series_row_no_elements(self, collections_db: Database) -> None:
+        from datetime import datetime
+
+        row = collections_db.read_time_series_row("Collection", "data", "value", datetime(2024, 1, 15))
+        assert row == []
+
+    def test_read_time_series_row_unknown_attribute_raises(self, collections_db: Database) -> None:
+        from datetime import datetime
+
+        import pytest
+
+        from quiverdb import QuiverError
+
+        _create_collection_element(collections_db, "Item 1")
+        with pytest.raises(QuiverError, match="Time series attribute not found"):
+            collections_db.read_time_series_row("Collection", "data", "nonexistent", datetime(2024, 1, 15))

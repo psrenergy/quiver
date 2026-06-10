@@ -693,6 +693,25 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "Read DateTime By Id" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+
+        Quiver.create_element!(db, "Configuration";
+            label = "With Date",
+            date_attribute = DateTime(2024, 6, 15, 10, 30, 0),
+        )
+        Quiver.create_element!(db, "Configuration"; label = "Without Date")
+
+        @test Quiver.read_scalar_date_time_by_id(db, "Configuration", "date_attribute", 1) ==
+              DateTime(2024, 6, 15, 10, 30, 0)
+
+        # NULL must come back as nothing, not crash
+        @test Quiver.read_scalar_date_time_by_id(db, "Configuration", "date_attribute", 2) === nothing
+
+        Quiver.close!(db)
+    end
 end
 
 end

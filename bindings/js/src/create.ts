@@ -1,4 +1,3 @@
-import { ptr } from "bun:ffi";
 import { Database } from "./database.ts";
 import { check, QuiverError } from "./errors.ts";
 import {
@@ -30,8 +29,8 @@ function setElementArray(
   const first = values[0];
 
   if (typeof first === "bigint") {
-    const arr = allocNativeInt64((values as bigint[]).map(Number));
-    check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.ptr, values.length));
+    const arr = allocNativeInt64(values as bigint[]);
+    check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.buf, values.length));
     return;
   }
 
@@ -39,17 +38,17 @@ function setElementArray(
     const allIntegers = (values as number[]).every((v) => Number.isInteger(v));
     if (allIntegers) {
       const arr = allocNativeInt64(values as number[]);
-      check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.ptr, values.length));
+      check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.buf, values.length));
     } else {
       const arr = allocNativeFloat64(values as number[]);
-      check(lib.quiver_element_set_array_float(elemPtr, nameBuf.buf, arr.ptr, values.length));
+      check(lib.quiver_element_set_array_float(elemPtr, nameBuf.buf, arr.buf, values.length));
     }
     return;
   }
 
   if (typeof first === "string") {
     const { table, keepalive: _keepalive } = allocNativeStringArray(values as string[]);
-    check(lib.quiver_element_set_array_string(elemPtr, nameBuf.buf, table.ptr, values.length));
+    check(lib.quiver_element_set_array_string(elemPtr, nameBuf.buf, table.buf, values.length));
     return;
   }
 
@@ -101,7 +100,7 @@ Database.prototype.createElement = function (
   const handle = this._handle;
 
   const outElem = allocPtrOut();
-  check(lib.quiver_element_create(outElem.ptr));
+  check(lib.quiver_element_create(outElem.buf));
   const elemPtr = readPtrOut(outElem);
 
   try {
@@ -111,9 +110,8 @@ Database.prototype.createElement = function (
     }
 
     const outIdBuf = new Uint8Array(8);
-    const outIdPtr = ptr(outIdBuf);
     const collBuf = toCString(collection);
-    check(lib.quiver_database_create_element(handle, collBuf.buf, elemPtr, outIdPtr));
+    check(lib.quiver_database_create_element(handle, collBuf.buf, elemPtr, outIdBuf));
     return Number(new DataView(outIdBuf.buffer).getBigInt64(0, true));
   } finally {
     lib.quiver_element_destroy(elemPtr);
@@ -130,7 +128,7 @@ Database.prototype.updateElement = function (
   const handle = this._handle;
 
   const outElem = allocPtrOut();
-  check(lib.quiver_element_create(outElem.ptr));
+  check(lib.quiver_element_create(outElem.buf));
   const elemPtr = readPtrOut(outElem);
 
   try {

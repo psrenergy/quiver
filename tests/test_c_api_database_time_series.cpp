@@ -192,6 +192,56 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupByIdEmpty) {
     quiver_database_close(db);
 }
 
+TEST(DatabaseCApi, ReadTimeSeriesGroupNullStringFailsCleanly) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("nullable_time_series.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* e1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
+    quiver_element_set_string(e1, "label", "Sensor 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "Sensor", e1, &id);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
+
+    // Insert a row whose nullable TEXT value column stays NULL (only the dimension column is provided)
+    const char* col_names[] = {"date_time"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING};
+    const char* date_times[] = {"2024-01-01T10:00:00"};
+    const void* col_data[] = {date_times};
+    ASSERT_EQ(quiver_database_add_time_series_row(db, "Sensor", "readings", id, col_names, col_types, col_data, 1),
+              QUIVER_OK);
+
+    // Marshaling NULL into a STRING column throws mid-copy; the cleanup path must
+    // free the partial result and zero the out-params instead of crashing.
+    char** out_col_names = nullptr;
+    int* out_col_types = nullptr;
+    void** out_col_data = nullptr;
+    size_t col_count = 0;
+    size_t row_count = 0;
+    auto err = quiver_database_read_time_series_group(
+        db, "Sensor", "readings", id, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count);
+
+    EXPECT_EQ(err, QUIVER_ERROR);
+    EXPECT_EQ(out_col_names, nullptr);
+    EXPECT_EQ(out_col_types, nullptr);
+    EXPECT_EQ(out_col_data, nullptr);
+    EXPECT_EQ(col_count, 0);
+    EXPECT_EQ(row_count, 0);
+
+    quiver_database_close(db);
+}
+
 // ============================================================================
 // Time series update tests
 // ============================================================================
@@ -454,37 +504,37 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupMultiColumn) {
     ASSERT_EQ(col_count, 4);
     ASSERT_EQ(row_count, 2);
 
-    // Verify columns: dimension first, then value columns in metadata order (alphabetical)
+    // Verify columns: dimension first, then value columns in schema declaration order
     EXPECT_STREQ(out_col_names[0], "date_time");
-    EXPECT_STREQ(out_col_names[1], "humidity");
-    EXPECT_STREQ(out_col_names[2], "status");
-    EXPECT_STREQ(out_col_names[3], "temperature");
+    EXPECT_STREQ(out_col_names[1], "temperature");
+    EXPECT_STREQ(out_col_names[2], "humidity");
+    EXPECT_STREQ(out_col_names[3], "status");
 
     // Verify types match column order
     EXPECT_EQ(out_col_types[0], QUIVER_DATA_TYPE_STRING);   // date_time
-    EXPECT_EQ(out_col_types[1], QUIVER_DATA_TYPE_INTEGER);  // humidity
-    EXPECT_EQ(out_col_types[2], QUIVER_DATA_TYPE_STRING);   // status
-    EXPECT_EQ(out_col_types[3], QUIVER_DATA_TYPE_FLOAT);    // temperature
+    EXPECT_EQ(out_col_types[1], QUIVER_DATA_TYPE_FLOAT);    // temperature
+    EXPECT_EQ(out_col_types[2], QUIVER_DATA_TYPE_INTEGER);  // humidity
+    EXPECT_EQ(out_col_types[3], QUIVER_DATA_TYPE_STRING);   // status
 
     // Verify data: column 0 (date_time - STRING)
     auto** out_dts = static_cast<char**>(out_col_data[0]);
     EXPECT_STREQ(out_dts[0], "2024-01-01T10:00:00");
     EXPECT_STREQ(out_dts[1], "2024-01-01T11:00:00");
 
-    // Column 1 (humidity - INTEGER)
-    auto* out_humids = static_cast<int64_t*>(out_col_data[1]);
+    // Column 1 (temperature - FLOAT)
+    auto* out_temps = static_cast<double*>(out_col_data[1]);
+    EXPECT_DOUBLE_EQ(out_temps[0], 20.5);
+    EXPECT_DOUBLE_EQ(out_temps[1], 21.0);
+
+    // Column 2 (humidity - INTEGER)
+    auto* out_humids = static_cast<int64_t*>(out_col_data[2]);
     EXPECT_EQ(out_humids[0], 65);
     EXPECT_EQ(out_humids[1], 70);
 
-    // Column 2 (status - STRING)
-    auto** out_stats = static_cast<char**>(out_col_data[2]);
+    // Column 3 (status - STRING)
+    auto** out_stats = static_cast<char**>(out_col_data[3]);
     EXPECT_STREQ(out_stats[0], "ok");
     EXPECT_STREQ(out_stats[1], "warn");
-
-    // Column 3 (temperature - FLOAT)
-    auto* out_temps = static_cast<double*>(out_col_data[3]);
-    EXPECT_DOUBLE_EQ(out_temps[0], 20.5);
-    EXPECT_DOUBLE_EQ(out_temps[1], 21.0);
 
     quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, col_count, row_count);
     quiver_database_close(db);
@@ -579,28 +629,28 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupColumnOrderIndependent) {
     ASSERT_EQ(col_count, 4);
     ASSERT_EQ(row_count, 2);
 
-    // Metadata order: dimension first, then value columns alphabetically
+    // Metadata order: dimension first, then value columns in schema declaration order
     EXPECT_STREQ(out_col_names[0], "date_time");
-    EXPECT_STREQ(out_col_names[1], "humidity");
-    EXPECT_STREQ(out_col_names[2], "status");
-    EXPECT_STREQ(out_col_names[3], "temperature");
+    EXPECT_STREQ(out_col_names[1], "temperature");
+    EXPECT_STREQ(out_col_names[2], "humidity");
+    EXPECT_STREQ(out_col_names[3], "status");
 
     // Verify data is correctly mapped despite out-of-order update
     auto** out_dts = static_cast<char**>(out_col_data[0]);
     EXPECT_STREQ(out_dts[0], "2024-01-01T10:00:00");
     EXPECT_STREQ(out_dts[1], "2024-01-01T11:00:00");
 
-    auto* out_humids = static_cast<int64_t*>(out_col_data[1]);
+    auto* out_temps = static_cast<double*>(out_col_data[1]);
+    EXPECT_DOUBLE_EQ(out_temps[0], 20.5);
+    EXPECT_DOUBLE_EQ(out_temps[1], 21.0);
+
+    auto* out_humids = static_cast<int64_t*>(out_col_data[2]);
     EXPECT_EQ(out_humids[0], 65);
     EXPECT_EQ(out_humids[1], 70);
 
-    auto** out_stats = static_cast<char**>(out_col_data[2]);
+    auto** out_stats = static_cast<char**>(out_col_data[3]);
     EXPECT_STREQ(out_stats[0], "ok");
     EXPECT_STREQ(out_stats[1], "warn");
-
-    auto* out_temps = static_cast<double*>(out_col_data[3]);
-    EXPECT_DOUBLE_EQ(out_temps[0], 20.5);
-    EXPECT_DOUBLE_EQ(out_temps[1], 21.0);
 
     quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, col_count, row_count);
     quiver_database_close(db);
@@ -1061,7 +1111,7 @@ TEST(DatabaseCApi, AddTimeSeriesRowMultiDimInsert) {
     ASSERT_EQ(row_count, 4u);
 
     // Locate each column index (read order is dim_col first, then value columns
-    // alphabetically — block, date_time, flag, load).
+    // in schema declaration order).
     int dt_idx = -1, block_idx = -1, load_idx = -1, flag_idx = -1;
     for (size_t c = 0; c < col_count; ++c) {
         std::string n = out_col_names[c];

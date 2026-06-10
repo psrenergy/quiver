@@ -66,22 +66,19 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database
     QUIVER_REQUIRE(db, collection, group, attribute, date_time, out_data_type, out_values, out_count);
 
     try {
+        // The C++ layer validates collection/group/attribute and throws the
+        // canonical errors; afterwards the metadata lookup below cannot miss.
+        auto values = db->db.read_time_series_row(collection, group, attribute, date_time);
+
         auto metadata = db->db.get_time_series_metadata(collection, group);
         quiver::DataType attr_type{};
-        bool found = false;
         for (const auto& vc : metadata.value_columns) {
             if (vc.name == attribute) {
                 attr_type = vc.data_type;
-                found = true;
                 break;
             }
         }
-        if (!found) {
-            throw std::runtime_error("Time series attribute not found: '" + std::string(attribute) + "' in group '" +
-                                     std::string(group) + "' of collection '" + std::string(collection) + "'");
-        }
 
-        auto values = db->db.read_time_series_row(collection, group, attribute, date_time);
         *out_count = values.size();
         *out_data_type = to_c_data_type(attr_type);
 
@@ -168,15 +165,11 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_databa
         size_t col_count = columns.size();
         size_t row_count = rows.size();
 
-        // Allocate outer arrays
-        *out_column_names = new char*[col_count];
-        *out_column_types = new int[col_count];
-        *out_column_data = new void*[col_count];
-
-        // Initialize column_data to nullptr for leak-safe cleanup on exception
-        for (size_t c = 0; c < col_count; ++c) {
-            (*out_column_data)[c] = nullptr;
-        }
+        // Allocate outer arrays, value-initialized to nullptr so the cleanup
+        // path below can safely free a partially-marshaled result
+        *out_column_names = new char*[col_count]();
+        *out_column_types = new int[col_count]();
+        *out_column_data = new void*[col_count]();
 
         try {
             for (size_t c = 0; c < col_count; ++c) {
@@ -186,6 +179,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_databa
                 switch (columns[c].second) {
                 case QUIVER_DATA_TYPE_INTEGER: {
                     auto* arr = new int64_t[row_count];
+                    (*out_column_data)[c] = arr;
                     for (size_t r = 0; r < row_count; ++r) {
                         auto& val = rows[r].at(columns[c].first);
                         if (std::holds_alternative<int64_t>(val))
@@ -195,11 +189,11 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_databa
                         else
                             arr[r] = 0;
                     }
-                    (*out_column_data)[c] = arr;
                     break;
                 }
                 case QUIVER_DATA_TYPE_FLOAT: {
                     auto* arr = new double[row_count];
+                    (*out_column_data)[c] = arr;
                     for (size_t r = 0; r < row_count; ++r) {
                         auto& val = rows[r].at(columns[c].first);
                         if (std::holds_alternative<double>(val))
@@ -209,16 +203,15 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_databa
                         else
                             arr[r] = 0.0;
                     }
-                    (*out_column_data)[c] = arr;
                     break;
                 }
                 case QUIVER_DATA_TYPE_STRING:
                 case QUIVER_DATA_TYPE_DATE_TIME: {
-                    auto** arr = new char*[row_count];
+                    auto** arr = new char*[row_count]();
+                    (*out_column_data)[c] = arr;
                     for (size_t r = 0; r < row_count; ++r) {
                         arr[r] = quiver::string::new_c_str(std::get<std::string>(rows[r].at(columns[c].first)));
                     }
-                    (*out_column_data)[c] = arr;
                     break;
                 }
                 default:
@@ -345,52 +338,57 @@ QUIVER_C_API quiver_error_t quiver_database_free_time_series_data(char** column_
                                                                   void** column_data,
                                                                   size_t column_count,
                                                                   size_t row_count) {
-    // Empty result: NULL pointers are valid (nothing to free)
-    if (!column_names && !column_data) {
-        return QUIVER_OK;
-    }
-
-    // Free column names
-    if (column_names) {
-        for (size_t i = 0; i < column_count; ++i) {
-            delete[] column_names[i];
+    try {
+        // Empty result: NULL pointers are valid (nothing to free)
+        if (!column_names && !column_data) {
+            return QUIVER_OK;
         }
-        delete[] column_names;
-    }
 
-    // Free column data based on column_types
-    if (column_data && column_types) {
-        for (size_t i = 0; i < column_count; ++i) {
-            if (!column_data[i])
-                continue;
-            switch (column_types[i]) {
-            case QUIVER_DATA_TYPE_INTEGER:
-                delete[] static_cast<int64_t*>(column_data[i]);
-                break;
-            case QUIVER_DATA_TYPE_FLOAT:
-                delete[] static_cast<double*>(column_data[i]);
-                break;
-            case QUIVER_DATA_TYPE_STRING:
-            case QUIVER_DATA_TYPE_DATE_TIME: {
-                auto** strings = static_cast<char**>(column_data[i]);
-                for (size_t j = 0; j < row_count; ++j) {
-                    delete[] strings[j];
+        // Free column names
+        if (column_names) {
+            for (size_t i = 0; i < column_count; ++i) {
+                delete[] column_names[i];
+            }
+            delete[] column_names;
+        }
+
+        // Free column data based on column_types
+        if (column_data && column_types) {
+            for (size_t i = 0; i < column_count; ++i) {
+                if (!column_data[i])
+                    continue;
+                switch (column_types[i]) {
+                case QUIVER_DATA_TYPE_INTEGER:
+                    delete[] static_cast<int64_t*>(column_data[i]);
+                    break;
+                case QUIVER_DATA_TYPE_FLOAT:
+                    delete[] static_cast<double*>(column_data[i]);
+                    break;
+                case QUIVER_DATA_TYPE_STRING:
+                case QUIVER_DATA_TYPE_DATE_TIME: {
+                    auto** strings = static_cast<char**>(column_data[i]);
+                    for (size_t j = 0; j < row_count; ++j) {
+                        delete[] strings[j];
+                    }
+                    delete[] strings;
+                    break;
                 }
-                delete[] strings;
-                break;
+                default:
+                    throw std::runtime_error("Cannot free_time_series_data: unknown data type " +
+                                             std::to_string(column_types[i]));
+                }
             }
-            default:
-                throw std::runtime_error("Cannot free_time_series_data: unknown data type " +
-                                         std::to_string(column_types[i]));
-            }
+            delete[] column_data;
         }
-        delete[] column_data;
+
+        // Free types array
+        delete[] column_types;
+
+        return QUIVER_OK;
+    } catch (const std::exception& e) {
+        quiver_set_last_error(e.what());
+        return QUIVER_ERROR;
     }
-
-    // Free types array
-    delete[] column_types;
-
-    return QUIVER_OK;
 }
 
 // Time series files operations

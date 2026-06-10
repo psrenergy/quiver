@@ -242,7 +242,7 @@ Database Database::from_migrations(const std::string& db_path,
         throw std::runtime_error("Migrations path not found: " + migrations_path);
     }
     if (!fs::is_directory(migrations_path)) {
-        throw std::runtime_error("Cannot migrate_up: path is not a directory: " + migrations_path);
+        throw std::runtime_error("Cannot from_migrations: path is not a directory: " + migrations_path);
     }
     auto db = Database(db_path, options);
     db.migrate_up(migrations_path);

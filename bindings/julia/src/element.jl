@@ -44,13 +44,6 @@ function Base.setindex!(el::Element, value::Vector{DateTime}, name::String)
     return nothing
 end
 
-function Base.setindex!(el::Element, value::Dict{String, <:Any}, name::String)
-    for (k, v) in value
-        el[k] = v
-    end
-    return nothing
-end
-
 function Base.setindex!(el::Element, value::Vector{<:Integer}, name::String)
     cname = Base.cconvert(Cstring, name)
     integer_values = Int64[Int64(v) for v in value]
