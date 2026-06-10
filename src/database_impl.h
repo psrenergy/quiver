@@ -225,8 +225,8 @@ struct Database::Impl {
         }
 
         for (const auto& [table_name, entry] : table_columns) {
-            insert_rows_into_group_table(caller, table_name, entry.type, entry.columns, element_id, delete_existing,
-                                         db);
+            insert_rows_into_group_table(
+                caller, table_name, entry.type, entry.columns, element_id, delete_existing, db);
         }
     }
 

@@ -13,7 +13,7 @@ if %ERRORLEVEL% neq 0 (
 echo.
 echo Formatting Julia bindings...
 pushd "%ROOT%\bindings\julia\format"
-call format.bat
+call .\format.bat
 popd
 if %ERRORLEVEL% neq 0 (
     echo Failed to format Julia bindings
@@ -23,7 +23,7 @@ if %ERRORLEVEL% neq 0 (
 echo.
 echo Formatting Dart bindings...
 pushd "%ROOT%\bindings\dart"
-call format.bat
+call .\format.bat
 popd
 if %ERRORLEVEL% neq 0 (
     echo Failed to format Dart bindings
@@ -33,7 +33,7 @@ if %ERRORLEVEL% neq 0 (
 echo.
 echo Formatting Python bindings...
 pushd "%ROOT%\bindings\python"
-call format.bat
+call .\format.bat
 popd
 if %ERRORLEVEL% neq 0 (
     echo Failed to format Python bindings
@@ -43,7 +43,7 @@ if %ERRORLEVEL% neq 0 (
 echo.
 echo Formatting JavaScript bindings...
 pushd "%ROOT%\bindings\js"
-call format.bat
+call .\format.bat
 popd
 if %ERRORLEVEL% neq 0 (
     echo Failed to format JavaScript bindings

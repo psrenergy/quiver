@@ -300,17 +300,13 @@ class TestReadTimeSeriesRow:
             [{"date_time": "2024-01-01T00:00:00", "value": 30.5}],
         )
 
-        row = collections_db.read_time_series_row(
-            "Collection", "data", "value", datetime(2024, 1, 15)
-        )
+        row = collections_db.read_time_series_row("Collection", "data", "value", datetime(2024, 1, 15))
         assert row == [10.5, 30.5]
 
     def test_read_time_series_row_no_elements(self, collections_db: Database) -> None:
         from datetime import datetime
 
-        row = collections_db.read_time_series_row(
-            "Collection", "data", "value", datetime(2024, 1, 15)
-        )
+        row = collections_db.read_time_series_row("Collection", "data", "value", datetime(2024, 1, 15))
         assert row == []
 
     def test_read_time_series_row_unknown_attribute_raises(self, collections_db: Database) -> None:

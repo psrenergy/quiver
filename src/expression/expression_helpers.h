@@ -346,8 +346,9 @@ inline BroadcastOperand make_broadcast_operand(const BinaryMetadata& operand_met
 // Translate output coordinates into the operand's dimension space (size-1
 // dimensions broadcast by pinning their coordinate to 1) and compute the
 // operand's row into its reusable row_buf.
-inline void
-compute_broadcast_operand_row(const BroadcastOperand& op, const ExpressionNode& node, const std::vector<int64_t>& dims) {
+inline void compute_broadcast_operand_row(const BroadcastOperand& op,
+                                          const ExpressionNode& node,
+                                          const std::vector<int64_t>& dims) {
     for (size_t i = 0; i < op.dims_buf.size(); ++i) {
         const auto out_i = op.to_out[i];
         auto coord = dims[out_i];

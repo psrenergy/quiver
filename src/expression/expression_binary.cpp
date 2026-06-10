@@ -53,7 +53,8 @@ void ExpressionBinary::compute_row(const std::vector<int64_t>& dims, std::vector
     compute_broadcast_operand_row(rhs_op_, *rhs_, dims);
 
     for (size_t k = 0; k < out_label_count; ++k) {
-        out[k] = apply(operation_, lhs_op_.row_buf[broadcast_label_index(lhs_op_, k)],
+        out[k] = apply(operation_,
+                       lhs_op_.row_buf[broadcast_label_index(lhs_op_, k)],
                        rhs_op_.row_buf[broadcast_label_index(rhs_op_, k)]);
     }
 }

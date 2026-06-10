@@ -2862,8 +2862,7 @@ TEST(LuaRunner_ImportCSV, InsideTransactionThrows) {
     }
 
     lua.run("db:begin_transaction()");
-    EXPECT_THROW(
-        { lua.run(R"(db:import_csv("Items", "", ")" + lua_safe_path(csv_path) + "\")"); }, std::runtime_error);
+    EXPECT_THROW({ lua.run(R"(db:import_csv("Items", "", ")" + lua_safe_path(csv_path) + "\")"); }, std::runtime_error);
 
     // The caller's transaction must survive intact
     lua.run(R"(assert(db:in_transaction(), "expected transaction to survive import_csv failure"))");

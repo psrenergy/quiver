@@ -217,8 +217,8 @@ void Database::add_time_series_row(const std::string& collection,
     // Every PK column except "id" is a dimension that must be supplied by the caller.
     auto dim_cols = internal::find_dimension_columns(*table_def);
 
-    validate_time_series_row("add_time_series_row", time_series_schema_types(*table_def), dim_cols, collection, group,
-                             row);
+    validate_time_series_row(
+        "add_time_series_row", time_series_schema_types(*table_def), dim_cols, collection, group, row);
 
     Impl::TransactionGuard txn(*impl_);
 

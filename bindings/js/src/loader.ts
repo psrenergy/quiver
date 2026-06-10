@@ -280,4 +280,3 @@ export function loadLibrary(): QuiverLib {
 export function getSymbols() {
   return loadLibrary().symbols;
 }
-

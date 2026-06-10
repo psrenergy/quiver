@@ -311,7 +311,10 @@ describe("CSV import inside transaction", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     const csvPath = tempCsv("import_in_tx");
     try {
-      writeFileSync(csvPath, "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,,\n");
+      writeFileSync(
+        csvPath,
+        "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,,\n",
+      );
 
       db.beginTransaction();
       expect(() => db.importCsv("Items", "", csvPath)).toThrow(

@@ -61,7 +61,8 @@ void ExpressionTernary::compute_row(const std::vector<int64_t>& dims, std::vecto
     compute_broadcast_operand_row(else_op_, *else_value_, dims);
 
     for (size_t k = 0; k < out_label_count; ++k) {
-        out[k] = apply(operation_, condition_op_.row_buf[broadcast_label_index(condition_op_, k)],
+        out[k] = apply(operation_,
+                       condition_op_.row_buf[broadcast_label_index(condition_op_, k)],
                        then_op_.row_buf[broadcast_label_index(then_op_, k)],
                        else_op_.row_buf[broadcast_label_index(else_op_, k)]);
     }

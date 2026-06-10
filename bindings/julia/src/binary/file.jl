@@ -70,10 +70,12 @@ function write!(file::File; data::AbstractVector{<:Real}, dims...)
     float_data = Float64[Float64(v) for v in data]
 
     GC.@preserve dim_names_str begin
-        check(C.quiver_binary_file_write(
-            file.ptr, c_dim_names, dim_values,
-            length(dims), float_data, length(float_data),
-        ))
+        check(
+            C.quiver_binary_file_write(
+                file.ptr, c_dim_names, dim_values,
+                length(dims), float_data, length(float_data),
+            ),
+        )
     end
     return nothing
 end
