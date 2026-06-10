@@ -1076,6 +1076,69 @@ extension DatabaseRead on Database {
     }
   }
 
+  /// Reads one value per element for a time series attribute at [dateTime].
+  ///
+  /// Uses "last non-null value at or before [dateTime]" lookup semantics.
+  /// Entries are typed by the column (`int`, `double`, or `String`); elements
+  /// with no matching data yield `null`.
+  List<Object?> readTimeSeriesRow(
+    String collection,
+    String group,
+    String attribute,
+    DateTime dateTime,
+  ) {
+    _ensureNotClosed();
+
+    final arena = Arena();
+    try {
+      final outDataType = arena<Int>();
+      final outValues = arena<Pointer<Void>>();
+      final outCount = arena<Size>();
+
+      check(
+        bindings.quiver_database_read_time_series_row(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          group.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          dateTimeToString(dateTime).toNativeUtf8(allocator: arena).cast(),
+          outDataType,
+          outValues,
+          outCount,
+        ),
+      );
+
+      final count = outCount.value;
+      if (count == 0 || outValues.value == nullptr) {
+        return [];
+      }
+
+      switch (outDataType.value) {
+        case quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER:
+          final ptr = outValues.value.cast<Int64>();
+          final result = List<Object?>.generate(count, (i) => ptr[i]);
+          bindings.quiver_database_free_integer_array(ptr);
+          return result;
+        case quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT:
+          final ptr = outValues.value.cast<Double>();
+          final result = List<Object?>.generate(count, (i) => ptr[i]);
+          bindings.quiver_database_free_float_array(ptr);
+          return result;
+        default:
+          // STRING or DATE_TIME; NULL entries mark elements with no data
+          final ptr = outValues.value.cast<Pointer<Char>>();
+          final result = List<Object?>.generate(
+            count,
+            (i) => ptr[i] == nullptr ? null : ptr[i].cast<Utf8>().toDartString(),
+          );
+          bindings.quiver_database_free_string_array(ptr, count);
+          return result;
+      }
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
   // ==========================================================================
   // Read time series files
   // ==========================================================================

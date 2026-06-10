@@ -23,7 +23,7 @@ Database.prototype.currentVersion = function (this: Database): number {
 Database.prototype.path = function (this: Database): string {
   const lib = getSymbols();
   const outPath = allocPtrOut();
-  check(lib.quiver_database_path(this._handle, outPath.ptr));
+  check(lib.quiver_database_path(this._handle, outPath.buf));
   return decodeStringFromBuf(outPath);
 };
 

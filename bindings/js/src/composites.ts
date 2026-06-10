@@ -1,4 +1,11 @@
 import { Database } from "./database.ts";
+import { QuiverError } from "./errors.ts";
+import {
+  DATA_TYPE_DATE_TIME,
+  DATA_TYPE_FLOAT,
+  DATA_TYPE_INTEGER,
+  DATA_TYPE_STRING,
+} from "./types.ts";
 
 Database.prototype.readScalarsById = function (
   this: Database,
@@ -10,18 +17,18 @@ Database.prototype.readScalarsById = function (
 
   for (const attr of attributes) {
     switch (attr.dataType) {
-      case 0: // INTEGER
+      case DATA_TYPE_INTEGER:
         result[attr.name] = this.readScalarIntegerById(collection, attr.name, id);
         break;
-      case 1: // FLOAT
+      case DATA_TYPE_FLOAT:
         result[attr.name] = this.readScalarFloatById(collection, attr.name, id);
         break;
-      case 2: // STRING
-      case 3: // DATE_TIME
+      case DATA_TYPE_STRING:
+      case DATA_TYPE_DATE_TIME:
         result[attr.name] = this.readScalarStringById(collection, attr.name, id);
         break;
       default:
-        throw new Error(`Unknown data type ${attr.dataType} for attribute '${attr.name}'`);
+        throw new QuiverError(`Unknown data type ${attr.dataType} for attribute '${attr.name}'`);
     }
   }
 
@@ -39,18 +46,18 @@ Database.prototype.readVectorsById = function (
   for (const group of groups) {
     for (const col of group.valueColumns) {
       switch (col.dataType) {
-        case 0: // INTEGER
+        case DATA_TYPE_INTEGER:
           result[col.name] = this.readVectorIntegersById(collection, col.name, id);
           break;
-        case 1: // FLOAT
+        case DATA_TYPE_FLOAT:
           result[col.name] = this.readVectorFloatsById(collection, col.name, id);
           break;
-        case 2: // STRING
-        case 3: // DATE_TIME
+        case DATA_TYPE_STRING:
+        case DATA_TYPE_DATE_TIME:
           result[col.name] = this.readVectorStringsById(collection, col.name, id);
           break;
         default:
-          throw new Error(`Unknown data type ${col.dataType} for column '${col.name}'`);
+          throw new QuiverError(`Unknown data type ${col.dataType} for column '${col.name}'`);
       }
     }
   }
@@ -69,18 +76,18 @@ Database.prototype.readSetsById = function (
   for (const group of groups) {
     for (const col of group.valueColumns) {
       switch (col.dataType) {
-        case 0: // INTEGER
+        case DATA_TYPE_INTEGER:
           result[col.name] = this.readSetIntegersById(collection, col.name, id);
           break;
-        case 1: // FLOAT
+        case DATA_TYPE_FLOAT:
           result[col.name] = this.readSetFloatsById(collection, col.name, id);
           break;
-        case 2: // STRING
-        case 3: // DATE_TIME
+        case DATA_TYPE_STRING:
+        case DATA_TYPE_DATE_TIME:
           result[col.name] = this.readSetStringsById(collection, col.name, id);
           break;
         default:
-          throw new Error(`Unknown data type ${col.dataType} for column '${col.name}'`);
+          throw new QuiverError(`Unknown data type ${col.dataType} for column '${col.name}'`);
       }
     }
   }

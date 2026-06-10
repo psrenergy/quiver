@@ -31,7 +31,7 @@ function setElementArray(
 
   if (typeof first === "bigint") {
     const arr = allocNativeInt64(values as bigint[]);
-    check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.ptr, values.length));
+    check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.buf, values.length));
     return;
   }
 
@@ -39,17 +39,17 @@ function setElementArray(
     const allIntegers = (values as number[]).every((v) => Number.isInteger(v));
     if (allIntegers) {
       const arr = allocNativeInt64(values as number[]);
-      check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.ptr, values.length));
+      check(lib.quiver_element_set_array_integer(elemPtr, nameBuf.buf, arr.buf, values.length));
     } else {
       const arr = allocNativeFloat64(values as number[]);
-      check(lib.quiver_element_set_array_float(elemPtr, nameBuf.buf, arr.ptr, values.length));
+      check(lib.quiver_element_set_array_float(elemPtr, nameBuf.buf, arr.buf, values.length));
     }
     return;
   }
 
   if (typeof first === "string") {
     const { table, keepalive: _keepalive } = allocNativeStringArray(values as string[]);
-    check(lib.quiver_element_set_array_string(elemPtr, nameBuf.buf, table.ptr, values.length));
+    check(lib.quiver_element_set_array_string(elemPtr, nameBuf.buf, table.buf, values.length));
     return;
   }
 
@@ -101,7 +101,7 @@ Database.prototype.createElement = function (
   const handle = this._handle;
 
   const outElem = allocPtrOut();
-  check(lib.quiver_element_create(outElem.ptr));
+  check(lib.quiver_element_create(outElem.buf));
   const elemPtr = readPtrOut(outElem);
 
   try {
@@ -130,7 +130,7 @@ Database.prototype.updateElement = function (
   const handle = this._handle;
 
   const outElem = allocPtrOut();
-  check(lib.quiver_element_create(outElem.ptr));
+  check(lib.quiver_element_create(outElem.buf));
   const elemPtr = readPtrOut(outElem);
 
   try {

@@ -104,6 +104,7 @@ struct LuaRunner::Impl {
         bind.set_function("read_set_strings", &read_set_strings_lua);
 
         bind.set_function("read_time_series_group", &read_time_series_group_lua);
+        bind.set_function("read_time_series_row", &read_time_series_row_lua);
         bind.set_function("read_time_series_files", &read_time_series_files_lua);
 
         bind.set_function("read_scalars_by_id", &read_scalars_by_id_lua);
@@ -728,6 +729,21 @@ struct LuaRunner::Impl {
                 row[key] = value_to_lua_object(lua, val);
             }
             t[i + 1] = row;
+        }
+        return t;
+    }
+
+    static sol::table read_time_series_row_lua(Database& db,
+                                               const std::string& collection,
+                                               const std::string& group,
+                                               const std::string& attribute,
+                                               const std::string& date_time,
+                                               sol::this_state s) {
+        sol::state_view lua(s);
+        auto values = db.read_time_series_row(collection, group, attribute, date_time);
+        auto t = lua.create_table();
+        for (size_t i = 0; i < values.size(); ++i) {
+            t[i + 1] = value_to_lua_object(lua, values[i]);
         }
         return t;
     }

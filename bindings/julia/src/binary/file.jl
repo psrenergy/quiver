@@ -63,15 +63,16 @@ function read(file::File; allow_nulls::Bool = false, dims...)
     return result
 end
 
-function write!(file::File; data::Vector{Float64}, dims...)
+function write!(file::File; data::AbstractVector{<:Real}, dims...)
     dim_names_str = [String(k) for (k, _) in dims]
     dim_values = Int64[Int64(v) for (_, v) in dims]
     c_dim_names = [pointer(s) for s in dim_names_str]
+    float_data = Float64[Float64(v) for v in data]
 
     GC.@preserve dim_names_str begin
         check(C.quiver_binary_file_write(
             file.ptr, c_dim_names, dim_values,
-            length(dims), data, length(data),
+            length(dims), float_data, length(float_data),
         ))
     end
     return nothing

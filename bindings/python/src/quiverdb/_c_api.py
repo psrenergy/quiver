@@ -270,6 +270,10 @@ ffi.cdef("""
         char*** out_column_names, int** out_column_types,
         void*** out_column_data, size_t* out_column_count, size_t* out_row_count);
 
+    quiver_error_t quiver_database_read_time_series_row(quiver_database_t* db,
+        const char* collection, const char* group, const char* attribute,
+        const char* date_time, int* out_data_type, void** out_values, size_t* out_count);
+
     quiver_error_t quiver_database_update_time_series_group(quiver_database_t* db,
         const char* collection, const char* group, int64_t id,
         const char* const* column_names, const int* column_types,

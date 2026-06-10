@@ -2914,3 +2914,26 @@ TEST_F(LuaRunnerTest, CreateElementUnsupportedArrayElementTypeThrows) {
         EXPECT_NE(std::string(e.what()).find("Cannot table_to_element: array 'tags'"), std::string::npos) << e.what();
     }
 }
+
+TEST_F(LuaRunnerTest, ReadTimeSeriesRow) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:create_element("Configuration", { label = "Config" })
+        db:create_element("Collection", { label = "Item 1" })
+        db:create_element("Collection", { label = "Item 2" })
+        db:update_time_series_group("Collection", "data", 1, {
+            { date_time = "2024-01-01T00:00:00", value = 10.5 },
+            { date_time = "2024-02-01T00:00:00", value = 20.5 },
+        })
+        db:update_time_series_group("Collection", "data", 2, {
+            { date_time = "2024-01-01T00:00:00", value = 30.5 },
+        })
+
+        local row = db:read_time_series_row("Collection", "data", "value", "2024-01-15T00:00:00")
+        assert(#row == 2, "expected 2 values, got " .. #row)
+        assert(row[1] == 10.5, "expected 10.5, got " .. tostring(row[1]))
+        assert(row[2] == 30.5, "expected 30.5, got " .. tostring(row[2]))
+    )");
+}

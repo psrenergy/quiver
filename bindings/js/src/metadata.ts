@@ -148,7 +148,7 @@ function listMetadata<T>(
   const collBuf = toCString(collection);
   const outArray = allocPtrOut();
   const outCount = allocUint64Out();
-  check((lib as Record<string, Function>)[fn](handle, collBuf.buf, outArray.ptr, outCount.ptr));
+  check((lib as Record<string, Function>)[fn](handle, collBuf.buf, outArray.buf, outCount.buf));
   const count = readUint64Out(outCount);
   if (count === 0) return [];
   const arrPtr = readPtrOut(outArray);

@@ -13,7 +13,7 @@ export class LuaRunner {
     this._db = db;
     const lib = getSymbols();
     const outRunner = allocPtrOut();
-    check(lib.quiver_lua_runner_new(db._handle, outRunner.ptr));
+    check(lib.quiver_lua_runner_new(db._handle, outRunner.buf));
     this._ptr = readPtrOut(outRunner);
   }
 
