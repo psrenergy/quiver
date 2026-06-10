@@ -880,7 +880,7 @@ void LuaRunner::run(const std::string& script) {
     auto result = impl_->lua.safe_script(script, sol::script_pass_on_error);
     if (!result.valid()) {
         sol::error err = result;
-        throw std::runtime_error(std::string("Lua error: ") + err.what());
+        throw std::runtime_error(std::string("Failed to run Lua script: ") + err.what());
     }
 }
 

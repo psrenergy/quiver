@@ -89,6 +89,10 @@ public:
     };
     std::vector<TableMatch> find_all_tables_for_column(const std::string& collection, const std::string& column) const;
 
+    // Group names of a given type belonging to a collection (e.g. "values" for "Items_vector_values")
+    bool is_group_table(const std::string& table, GroupTableType type) const;
+    std::vector<std::string> group_names(const std::string& collection, GroupTableType type) const;
+
     // All tables/collections
     std::vector<std::string> table_names() const;
     std::vector<std::string> collection_names() const;

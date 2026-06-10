@@ -9,7 +9,7 @@ namespace quiver {
 SchemaValidator::SchemaValidator(const Schema& schema) : schema_(schema) {}
 
 void SchemaValidator::validation_error(const std::string& message) {
-    throw std::runtime_error("Schema validation error: " + message);
+    throw std::runtime_error("Failed to validate schema: " + message);
 }
 
 void SchemaValidator::validate() {

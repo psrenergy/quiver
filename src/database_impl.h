@@ -126,6 +126,71 @@ struct Database::Impl {
         return resolved;
     }
 
+    static const char* group_table_noun(GroupTableType type) {
+        switch (type) {
+        case GroupTableType::Vector:
+            return "vector";
+        case GroupTableType::Set:
+            return "set";
+        case GroupTableType::TimeSeries:
+            return "time series";
+        default:
+            throw std::runtime_error("Cannot group_table_noun: unknown group table type " +
+                                     std::to_string(static_cast<int>(type)));
+        }
+    }
+
+    void insert_rows_into_group_table(const char* caller,
+                                      const std::string& table_name,
+                                      GroupTableType type,
+                                      const std::map<std::string, const std::vector<Value>*>& columns,
+                                      int64_t element_id,
+                                      bool delete_existing,
+                                      Database& db) {
+        const char* noun = group_table_noun(type);
+
+        if (delete_existing) {
+            db.execute("DELETE FROM " + table_name + " WHERE id = ?", {element_id});
+        }
+
+        // Validate types and verify same-length arrays
+        size_t num_rows = 0;
+        for (const auto& [col_name, values_ptr] : columns) {
+            if (!values_ptr->empty()) {
+                type_validator->validate_array(caller, table_name, col_name, *values_ptr);
+            }
+            if (num_rows == 0) {
+                num_rows = values_ptr->size();
+            } else if (values_ptr->size() != num_rows) {
+                throw std::runtime_error(std::string("Cannot ") + caller + ": " + noun + " columns in table '" +
+                                         table_name + "' must have the same length");
+            }
+        }
+
+        // Insert rows (vector tables get a 1-based vector_index column)
+        for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
+            auto sql = "INSERT INTO " + table_name + " (id";
+            std::string placeholders = "?";
+            std::vector<Value> parameters = {element_id};
+
+            if (type == GroupTableType::Vector) {
+                sql += ", vector_index";
+                placeholders += ", ?";
+                parameters.emplace_back(static_cast<int64_t>(row_idx + 1));
+            }
+
+            for (const auto& [col_name, values_ptr] : columns) {
+                sql += ", " + col_name;
+                placeholders += ", ?";
+                parameters.push_back((*values_ptr)[row_idx]);
+            }
+
+            sql += ") VALUES (" + placeholders + ")";
+            db.execute(sql, parameters);
+        }
+        logger->debug("Inserted {} {} rows into {}", num_rows, noun, table_name);
+    }
+
     void insert_group_data(const char* caller,
                            const std::string& collection,
                            int64_t element_id,
@@ -133,9 +198,11 @@ struct Database::Impl {
                            bool delete_existing,
                            Database& db) {
         // Route arrays to their target tables
-        std::map<std::string, std::map<std::string, const std::vector<Value>*>> vector_table_columns;
-        std::map<std::string, std::map<std::string, const std::vector<Value>*>> set_table_columns;
-        std::map<std::string, std::map<std::string, const std::vector<Value>*>> time_series_table_columns;
+        struct TableColumns {
+            GroupTableType type;
+            std::map<std::string, const std::vector<Value>*> columns;
+        };
+        std::map<std::string, TableColumns> table_columns;
 
         for (const auto& [array_name, values] : arrays) {
             // Empty array handling: create skips silently, update still routes (for DELETE)
@@ -151,135 +218,15 @@ struct Database::Impl {
             }
 
             for (const auto& match : matches) {
-                switch (match.type) {
-                case GroupTableType::Vector:
-                    vector_table_columns[match.table_name][array_name] = &values;
-                    break;
-                case GroupTableType::Set:
-                    set_table_columns[match.table_name][array_name] = &values;
-                    break;
-                case GroupTableType::TimeSeries:
-                    time_series_table_columns[match.table_name][array_name] = &values;
-                    break;
-                default:
-                    throw std::runtime_error(std::string("Cannot ") + caller + ": unknown group table type " +
-                                             std::to_string(static_cast<int>(match.type)));
-                }
+                auto& entry = table_columns[match.table_name];
+                entry.type = match.type;
+                entry.columns[array_name] = &values;
             }
         }
 
-        // Process vector tables
-        for (const auto& [vector_table, columns] : vector_table_columns) {
-            if (delete_existing) {
-                db.execute("DELETE FROM " + vector_table + " WHERE id = ?", {element_id});
-            }
-
-            // Validate types and verify same-length arrays
-            size_t num_rows = 0;
-            for (const auto& [col_name, values_ptr] : columns) {
-                if (!values_ptr->empty()) {
-                    type_validator->validate_array(vector_table, col_name, *values_ptr);
-                }
-                if (num_rows == 0) {
-                    num_rows = values_ptr->size();
-                } else if (values_ptr->size() != num_rows) {
-                    throw std::runtime_error(std::string("Cannot ") + caller + ": vector columns in table '" +
-                                             vector_table + "' must have the same length");
-                }
-            }
-
-            // Insert rows with vector_index
-            for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
-                auto vector_index = static_cast<int64_t>(row_idx + 1);
-                auto sql = "INSERT INTO " + vector_table + " (id, vector_index";
-                std::string placeholders = "?, ?";
-                std::vector<Value> parameters = {element_id, vector_index};
-
-                for (const auto& [col_name, values_ptr] : columns) {
-                    sql += ", " + col_name;
-                    placeholders += ", ?";
-                    parameters.push_back((*values_ptr)[row_idx]);
-                }
-
-                sql += ") VALUES (" + placeholders + ")";
-                db.execute(sql, parameters);
-            }
-            logger->debug("Inserted {} vector rows into {}", num_rows, vector_table);
-        }
-
-        // Process set tables
-        for (const auto& [set_table, columns] : set_table_columns) {
-            if (delete_existing) {
-                db.execute("DELETE FROM " + set_table + " WHERE id = ?", {element_id});
-            }
-
-            // Validate types and verify same-length arrays
-            size_t num_rows = 0;
-            for (const auto& [col_name, values_ptr] : columns) {
-                if (!values_ptr->empty()) {
-                    type_validator->validate_array(set_table, col_name, *values_ptr);
-                }
-                if (num_rows == 0) {
-                    num_rows = values_ptr->size();
-                } else if (values_ptr->size() != num_rows) {
-                    throw std::runtime_error(std::string("Cannot ") + caller + ": set columns in table '" + set_table +
-                                             "' must have the same length");
-                }
-            }
-
-            // Insert rows
-            for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
-                auto sql = "INSERT INTO " + set_table + " (id";
-                std::string placeholders = "?";
-                std::vector<Value> parameters = {element_id};
-
-                for (const auto& [col_name, values_ptr] : columns) {
-                    sql += ", " + col_name;
-                    placeholders += ", ?";
-                    parameters.push_back((*values_ptr)[row_idx]);
-                }
-                sql += ") VALUES (" + placeholders + ")";
-                db.execute(sql, parameters);
-            }
-            logger->debug("Inserted {} set rows for table {}", num_rows, set_table);
-        }
-
-        // Process time series tables
-        for (const auto& [ts_table, columns] : time_series_table_columns) {
-            if (delete_existing) {
-                db.execute("DELETE FROM " + ts_table + " WHERE id = ?", {element_id});
-            }
-
-            // Validate types and verify same-length arrays
-            size_t num_rows = 0;
-            for (const auto& [col_name, values_ptr] : columns) {
-                if (!values_ptr->empty()) {
-                    type_validator->validate_array(ts_table, col_name, *values_ptr);
-                }
-                if (num_rows == 0) {
-                    num_rows = values_ptr->size();
-                } else if (values_ptr->size() != num_rows) {
-                    throw std::runtime_error(std::string("Cannot ") + caller + ": time series columns in table '" +
-                                             ts_table + "' must have the same length");
-                }
-            }
-
-            // Insert rows
-            for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
-                auto sql = "INSERT INTO " + ts_table + " (id";
-                std::string placeholders = "?";
-                std::vector<Value> parameters = {element_id};
-
-                for (const auto& [col_name, values_ptr] : columns) {
-                    sql += ", " + col_name;
-                    placeholders += ", ?";
-                    parameters.push_back((*values_ptr)[row_idx]);
-                }
-
-                sql += ") VALUES (" + placeholders + ")";
-                db.execute(sql, parameters);
-            }
-            logger->debug("Inserted {} time series rows into {}", num_rows, ts_table);
+        for (const auto& [table_name, entry] : table_columns) {
+            insert_rows_into_group_table(caller, table_name, entry.type, entry.columns, element_id, delete_existing,
+                                         db);
         }
     }
 

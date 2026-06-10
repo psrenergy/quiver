@@ -41,13 +41,13 @@ GroupMetadata Database::get_vector_metadata(const std::string& collection, const
     GroupMetadata metadata;
     metadata.group_name = group_name;
 
-    // Add all data columns (skip id and vector_index)
-    for (const auto& [col_name, col] : table_def->columns) {
+    // Add all data columns in declaration order (skip id and vector_index)
+    for (const auto& col_name : table_def->column_order) {
         if (col_name == "id" || col_name == "vector_index") {
             continue;
         }
 
-        metadata.value_columns.push_back(internal::scalar_metadata_from_column(col));
+        metadata.value_columns.push_back(internal::scalar_metadata_from_column(table_def->columns.at(col_name)));
     }
 
     return metadata;
@@ -67,13 +67,13 @@ GroupMetadata Database::get_set_metadata(const std::string& collection, const st
     GroupMetadata metadata;
     metadata.group_name = group_name;
 
-    // Add all data columns (skip id)
-    for (const auto& [col_name, col] : table_def->columns) {
+    // Add all data columns in declaration order (skip id)
+    for (const auto& col_name : table_def->column_order) {
         if (col_name == "id") {
             continue;
         }
 
-        metadata.value_columns.push_back(internal::scalar_metadata_from_column(col));
+        metadata.value_columns.push_back(internal::scalar_metadata_from_column(table_def->columns.at(col_name)));
     }
 
     return metadata;
@@ -85,8 +85,8 @@ std::vector<ScalarMetadata> Database::list_scalar_attributes(const std::string& 
     const auto* table_def = impl_->schema->get_table(collection);
 
     std::vector<ScalarMetadata> result;
-    for (const auto& [col_name, col] : table_def->columns) {
-        auto metadata = internal::scalar_metadata_from_column(col);
+    for (const auto& col_name : table_def->column_order) {
+        auto metadata = internal::scalar_metadata_from_column(table_def->columns.at(col_name));
 
         for (const auto& fk : table_def->foreign_keys) {
             if (fk.from_column == col_name) {
@@ -106,19 +106,8 @@ std::vector<GroupMetadata> Database::list_vector_groups(const std::string& colle
     impl_->require_schema("list_vector_groups");
 
     std::vector<GroupMetadata> result;
-    auto prefix = collection + "_vector_";
-
-    for (const auto& table_name : impl_->schema->table_names()) {
-        if (!impl_->schema->is_vector_table(table_name))
-            continue;
-        if (impl_->schema->get_parent_collection(table_name) != collection)
-            continue;
-
-        // Extract group name from table name
-        if (table_name.starts_with(prefix)) {
-            auto group_name = table_name.substr(prefix.size());
-            result.push_back(get_vector_metadata(collection, group_name));
-        }
+    for (const auto& group_name : impl_->schema->group_names(collection, GroupTableType::Vector)) {
+        result.push_back(get_vector_metadata(collection, group_name));
     }
     return result;
 }
@@ -127,19 +116,8 @@ std::vector<GroupMetadata> Database::list_set_groups(const std::string& collecti
     impl_->require_schema("list_set_groups");
 
     std::vector<GroupMetadata> result;
-    auto prefix = collection + "_set_";
-
-    for (const auto& table_name : impl_->schema->table_names()) {
-        if (!impl_->schema->is_set_table(table_name))
-            continue;
-        if (impl_->schema->get_parent_collection(table_name) != collection)
-            continue;
-
-        // Extract group name from table name
-        if (table_name.starts_with(prefix)) {
-            auto group_name = table_name.substr(prefix.size());
-            result.push_back(get_set_metadata(collection, group_name));
-        }
+    for (const auto& group_name : impl_->schema->group_names(collection, GroupTableType::Set)) {
+        result.push_back(get_set_metadata(collection, group_name));
     }
     return result;
 }
