@@ -1,5 +1,5 @@
 """
-    build_quiver_csv_options(; date_time_format=nothing, enum_labels=nothing) -> (Ref{quiver_csv_options_t}, Vector{Any})
+    build_quiver_csv_options(; date_time_format::Optional{String}=nothing, enum_labels::Optional{Dict{String, Dict{String, Dict{String, Int}}}}=nothing) -> (Ref{quiver_csv_options_t}, Vector{Any})
 
 Build a C API `quiver_csv_options_t` from keyword arguments.
 Returns `(options_ref, temps)` where `temps` holds all temporary objects that must
@@ -10,7 +10,10 @@ Supported kwargs:
   - `date_time_format::String` — strftime format for DateTime columns
   - `enum_labels::Dict{String, Dict{String, Dict{String, Int}}}` — attribute → locale → (label → value)
 """
-function build_quiver_csv_options(; date_time_format = nothing, enum_labels = nothing)
+function build_quiver_csv_options(;
+    date_time_format::Optional{String} = nothing,
+    enum_labels::Optional{Dict{String, Dict{String, Dict{String, Int}}}} = nothing,
+)
     options = C.quiver_csv_options_default()
     temps = Any[]
 
