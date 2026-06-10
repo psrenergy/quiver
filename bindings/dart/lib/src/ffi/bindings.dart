@@ -2752,12 +2752,6 @@ final class quiver_csv_options_t extends ffi.Struct {
   external int enum_group_count;
 }
 
-abstract class quiver_data_structure_t {
-  static const int QUIVER_DATA_STRUCTURE_SCALAR = 0;
-  static const int QUIVER_DATA_STRUCTURE_VECTOR = 1;
-  static const int QUIVER_DATA_STRUCTURE_SET = 2;
-}
-
 abstract class quiver_data_type_t {
   static const int QUIVER_DATA_TYPE_INTEGER = 0;
   static const int QUIVER_DATA_TYPE_FLOAT = 1;

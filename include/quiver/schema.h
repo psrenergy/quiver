@@ -82,12 +82,11 @@ public:
     std::string find_time_series_table(const std::string& collection, const std::string& group) const;
     std::string find_time_series_files_table(const std::string& collection) const;
 
-    // Find which group table contains a given column (for routing in create_element/update_element)
+    // Find which group tables contain a given column (for routing in create_element/update_element)
     struct TableMatch {
         std::string table_name;
         GroupTableType type;
     };
-    std::optional<TableMatch> find_table_for_column(const std::string& collection, const std::string& column) const;
     std::vector<TableMatch> find_all_tables_for_column(const std::string& collection, const std::string& column) const;
 
     // All tables/collections

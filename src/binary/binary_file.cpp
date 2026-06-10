@@ -302,10 +302,6 @@ const std::string& BinaryFile::get_file_path() const {
     return impl_->file_path;
 }
 
-bool BinaryFile::is_read_mode() const {
-    return impl_->registered_path.empty();
-}
-
 std::iostream& BinaryFile::get_io() {
     return *impl_->io;
 }

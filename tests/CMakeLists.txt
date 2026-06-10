@@ -34,15 +34,6 @@ target_link_libraries(quiver_tests
         GTest::gmock
 )
 
-# Copy DLLs to output directory for test discovery
-if(WIN32 AND BUILD_SHARED_LIBS)
-    add_custom_command(TARGET quiver_tests POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_FILE:quiver>
-            $<TARGET_FILE_DIR:quiver_tests>
-    )
-endif()
-
 gtest_discover_tests(quiver_tests
     WORKING_DIRECTORY $<TARGET_FILE_DIR:quiver_tests>
 )
@@ -77,17 +68,6 @@ if(QUIVER_BUILD_C_API)
             GTest::gtest_main
     )
 
-    if(WIN32 AND BUILD_SHARED_LIBS)
-        add_custom_command(TARGET quiver_c_tests POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                $<TARGET_FILE:quiver_c>
-                $<TARGET_FILE_DIR:quiver_c_tests>
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                $<TARGET_FILE:quiver>
-                $<TARGET_FILE_DIR:quiver_c_tests>
-        )
-    endif()
-
     gtest_discover_tests(quiver_c_tests
         WORKING_DIRECTORY $<TARGET_FILE_DIR:quiver_c_tests>
     )
@@ -114,12 +94,3 @@ target_link_libraries(quiver_benchmark
         quiver
         quiver_compiler_options
 )
-
-# Copy DLLs for benchmark
-if(WIN32 AND BUILD_SHARED_LIBS)
-    add_custom_command(TARGET quiver_benchmark POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_FILE:quiver>
-            $<TARGET_FILE_DIR:quiver_benchmark>
-    )
-endif()

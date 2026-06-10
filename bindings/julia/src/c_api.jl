@@ -97,12 +97,6 @@ function quiver_csv_options_default()
     @ccall libquiver_c.quiver_csv_options_default()::quiver_csv_options_t
 end
 
-@cenum quiver_data_structure_t::UInt32 begin
-    QUIVER_DATA_STRUCTURE_SCALAR = 0
-    QUIVER_DATA_STRUCTURE_VECTOR = 1
-    QUIVER_DATA_STRUCTURE_SET = 2
-end
-
 @cenum quiver_data_type_t::UInt32 begin
     QUIVER_DATA_TYPE_INTEGER = 0
     QUIVER_DATA_TYPE_FLOAT = 1

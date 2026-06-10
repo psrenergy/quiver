@@ -13,7 +13,6 @@ const I32 = "i32" as const;
 const I64 = "i64" as const;
 const USIZE = "usize" as const;
 const F64 = "f64" as const;
-const V = "void" as const;
 
 // Platform constants. `suffix` from bun:ffi is the platform-correct shared
 // library extension ("dll" | "dylib" | "so").
@@ -30,7 +29,6 @@ export type NativePointer = Pointer | null;
 const lifecycleSymbols = {
   quiver_version: { args: [], returns: P },
   quiver_get_last_error: { args: [], returns: P },
-  quiver_clear_last_error: { args: [], returns: V },
   // quiver_database_options_default is intentionally omitted: it returns a
   // struct by value, which Bun FFI does not support (oven-sh/bun#6139). It was
   // never called -- makeDefaultOptions() in ffi-helpers.ts builds the options
@@ -282,4 +280,3 @@ export function getSymbols() {
   return loadLibrary().symbols;
 }
 
-export type Symbols = ReturnType<typeof getSymbols>;

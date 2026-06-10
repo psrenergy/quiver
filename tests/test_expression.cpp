@@ -950,16 +950,6 @@ TEST_F(ExpressionFixture, SaveFailsWhenInputIsOpenForWriting) {
         std::runtime_error);
 }
 
-TEST_F(ExpressionFixture, IsReadModeAccessor) {
-    auto md = make_simple_metadata();
-    {
-        auto writer = BinaryFile::open_file(path_a, 'w', md);
-        EXPECT_FALSE(writer.is_read_mode());
-    }
-    auto reader = BinaryFile::open_file(path_a, 'r');
-    EXPECT_TRUE(reader.is_read_mode());
-}
-
 TEST_F(ExpressionFixture, ImplicitConversionFromBinaryFile) {
     auto md = make_simple_metadata();
     write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {

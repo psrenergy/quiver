@@ -252,23 +252,11 @@ struct LuaRunner::Impl {
                 if (arr.size() > 0) {
                     sol::object first = arr[1];
                     if (first.is<int64_t>()) {
-                        std::vector<int64_t> vec;
-                        for (size_t i = 1; i <= arr.size(); ++i) {
-                            vec.push_back(arr.get<int64_t>(i));
-                        }
-                        element.set(k, vec);
+                        element.set(k, lua_table_to_int64_vector(arr));
                     } else if (first.is<double>()) {
-                        std::vector<double> vec;
-                        for (size_t i = 1; i <= arr.size(); ++i) {
-                            vec.push_back(arr.get<double>(i));
-                        }
-                        element.set(k, vec);
+                        element.set(k, lua_table_to_double_vector(arr));
                     } else if (first.is<std::string>()) {
-                        std::vector<std::string> vec;
-                        for (size_t i = 1; i <= arr.size(); ++i) {
-                            vec.push_back(arr.get<std::string>(i));
-                        }
-                        element.set(k, vec);
+                        element.set(k, lua_table_to_string_vector(arr));
                     } else {
                         // Surface unsupported element types loudly instead of silently
                         // dropping the attribute (same policy as lua_table_to_value_map)
@@ -291,8 +279,7 @@ struct LuaRunner::Impl {
         return element;
     }
 
-    static int64_t
-    create_element_lua(Database& db, const std::string& collection, const sol::table& values, sol::this_state) {
+    static int64_t create_element_lua(Database& db, const std::string& collection, const sol::table& values) {
         auto element = table_to_element(values);
         return db.create_element(collection, element);
     }
