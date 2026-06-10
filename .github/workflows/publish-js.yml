@@ -55,10 +55,10 @@ jobs:
             libs/linux-x86_64/libquiver.so
             libs/linux-x86_64/libquiver.so.0
             libs/linux-x86_64/libquiver_c.so
-            libs/windows-x86_64/libquiver.dll
-            libs/windows-x86_64/libquiver_c.dll
             libs/macos-x86_64/libquiver.dylib
-            libs/macos-x86_64/libquiver_c.dylib            
+            libs/macos-x86_64/libquiver_c.dylib
+            libs/windows-x86_64/libquiver.dll
+            libs/windows-x86_64/libquiver_c.dll            
           )
           missing=0
           for f in "${required[@]}"; do
