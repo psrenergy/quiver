@@ -24,7 +24,6 @@ set(QUIVER_SOURCES
     binary/iteration.cpp
     binary/csv_converter.cpp
     binary/binary_metadata.cpp
-    binary/dimension.cpp
     binary/time_properties.cpp
     expression/expression.cpp
     expression/expression_file.cpp

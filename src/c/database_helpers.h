@@ -49,16 +49,40 @@ read_vectors_impl(const std::vector<std::vector<T>>& vectors, T*** out_vectors, 
 
 // Helper template for freeing numeric vectors
 template <typename T>
-quiver_error_t free_vectors_impl(T** vectors, size_t* sizes, size_t count) {
-    (void)sizes;  // unused for numeric types
-    if (!vectors)
-        return QUIVER_OK;
-    for (size_t i = 0; i < count; ++i) {
-        delete[] vectors[i];
+void free_vectors_impl(T** vectors, size_t* sizes, size_t count) {
+    if (vectors) {
+        for (size_t i = 0; i < count; ++i) {
+            delete[] vectors[i];
+        }
+        delete[] vectors;
     }
-    delete[] vectors;
     delete[] sizes;
-    return QUIVER_OK;
+}
+
+// Helper to copy nested string vectors (vector/set reads) to C arrays
+inline void copy_string_vectors_to_c(const std::vector<std::vector<std::string>>& vectors,
+                                     char**** out_vectors,
+                                     size_t** out_sizes,
+                                     size_t* out_count) {
+    *out_count = vectors.size();
+    if (vectors.empty()) {
+        *out_vectors = nullptr;
+        *out_sizes = nullptr;
+        return;
+    }
+    *out_vectors = new char**[vectors.size()];
+    *out_sizes = new size_t[vectors.size()];
+    for (size_t i = 0; i < vectors.size(); ++i) {
+        (*out_sizes)[i] = vectors[i].size();
+        if (vectors[i].empty()) {
+            (*out_vectors)[i] = nullptr;
+        } else {
+            (*out_vectors)[i] = new char*[vectors[i].size()];
+            for (size_t j = 0; j < vectors[i].size(); ++j) {
+                (*out_vectors)[i][j] = quiver::string::new_c_str(vectors[i][j]);
+            }
+        }
+    }
 }
 
 // Helper to copy a vector of strings to C-style array

@@ -13,10 +13,11 @@ QUIVER_C_API quiver_error_t quiver_database_export_csv(quiver_database_t* db,
                                                        const char* group,
                                                        const char* path,
                                                        const quiver_csv_options_t* options) {
-    QUIVER_REQUIRE(db, collection, group, path, options);
+    QUIVER_REQUIRE(db, collection, group, path);
 
     try {
-        auto cpp_options = convert_csv_options(options);
+        // NULL options means defaults, same convention as the lifecycle functions
+        auto cpp_options = options ? convert_csv_options(options) : quiver::default_csv_options();
         db->db.export_csv(collection, group, path, cpp_options);
         return QUIVER_OK;
     } catch (const std::exception& e) {

@@ -3,23 +3,54 @@
 
 namespace quiver {
 
+namespace {
+
+std::map<std::string, DataType> time_series_schema_types(const TableDefinition& table_def) {
+    std::map<std::string, DataType> types;
+    for (const auto& [col_name, col] : table_def.columns) {
+        if (col_name == "id")
+            continue;
+        types[col_name] = col.type;
+    }
+    return types;
+}
+
+// Shared validation for update_time_series_group / add_time_series_row: every
+// dimension column must be present, all caller columns must exist in the
+// schema, and values must match column types.
+void validate_time_series_row(const std::string& caller,
+                              const std::map<std::string, DataType>& schema_types,
+                              const std::vector<std::string>& dim_cols,
+                              const std::string& collection,
+                              const std::string& group,
+                              const std::map<std::string, Value>& row) {
+    for (const auto& dim_col : dim_cols) {
+        if (row.find(dim_col) == row.end()) {
+            throw std::runtime_error("Cannot " + caller + ": row missing required '" + dim_col + "' column");
+        }
+    }
+    for (const auto& [col_name, value] : row) {
+        auto it = schema_types.find(col_name);
+        if (it == schema_types.end()) {
+            throw std::runtime_error("Cannot " + caller + ": column '" + col_name + "' not found in group '" + group +
+                                     "' for collection '" + collection + "'");
+        }
+        if (!internal::value_matches_type(value, it->second)) {
+            throw std::runtime_error("Cannot " + caller + ": column '" + col_name + "' has type " +
+                                     data_type_to_string(it->second) + " but received " +
+                                     internal::value_type_name(value));
+        }
+    }
+}
+
+}  // namespace
+
 std::vector<GroupMetadata> Database::list_time_series_groups(const std::string& collection) const {
     impl_->require_schema("list_time_series_groups");
 
     std::vector<GroupMetadata> result;
-    auto prefix = collection + "_time_series_";
-
-    for (const auto& table_name : impl_->schema->table_names()) {
-        if (!impl_->schema->is_time_series_table(table_name))
-            continue;
-        if (impl_->schema->get_parent_collection(table_name) != collection)
-            continue;
-
-        // Extract group name from table name
-        if (table_name.starts_with(prefix)) {
-            auto group_name = table_name.substr(prefix.size());
-            result.push_back(get_time_series_metadata(collection, group_name));
-        }
+    for (const auto& group_name : impl_->schema->group_names(collection, GroupTableType::TimeSeries)) {
+        result.push_back(get_time_series_metadata(collection, group_name));
     }
     return result;
 }
@@ -40,13 +71,13 @@ GroupMetadata Database::get_time_series_metadata(const std::string& collection, 
     metadata.group_name = group_name;
     metadata.dimension_column = internal::find_dimension_column(*table_def);
 
-    // Add value columns (skip id and dimension)
-    for (const auto& [col_name, col] : table_def->columns) {
+    // Add value columns in declaration order (skip id and dimension)
+    for (const auto& col_name : table_def->column_order) {
         if (col_name == "id" || col_name == metadata.dimension_column) {
             continue;
         }
 
-        metadata.value_columns.push_back(internal::scalar_metadata_from_column(col));
+        metadata.value_columns.push_back(internal::scalar_metadata_from_column(table_def->columns.at(col_name)));
     }
 
     return metadata;
@@ -89,21 +120,7 @@ Database::read_time_series_group(const std::string& collection, const std::strin
     for (size_t row_idx = 0; row_idx < result.row_count(); ++row_idx) {
         std::map<std::string, Value> row;
         for (size_t col_idx = 0; col_idx < columns.size(); ++col_idx) {
-            const auto& col_name = columns[col_idx];
-            // Get the value from the result row
-            auto int_val = result[row_idx].get_integer(col_idx);
-            auto float_val = result[row_idx].get_float(col_idx);
-            auto str_val = result[row_idx].get_string(col_idx);
-
-            if (int_val) {
-                row[col_name] = *int_val;
-            } else if (float_val) {
-                row[col_name] = *float_val;
-            } else if (str_val) {
-                row[col_name] = *str_val;
-            } else {
-                row[col_name] = nullptr;
-            }
+            row[columns[col_idx]] = result[row_idx][col_idx];
         }
         rows.push_back(std::move(row));
     }
@@ -126,33 +143,10 @@ void Database::update_time_series_group(const std::string& collection,
     auto dim_cols = internal::find_dimension_columns(*table_def);
     const auto& dim_col = dim_cols.front();
 
-    // Build schema type lookup (all columns except id)
-    std::map<std::string, DataType> schema_types;
-    for (const auto& [col_name, col] : table_def->columns) {
-        if (col_name == "id")
-            continue;
-        schema_types[col_name] = col.type;
-    }
-
     // Validate rows against schema before any writes
+    const auto schema_types = time_series_schema_types(*table_def);
     for (const auto& row : rows) {
-        for (const auto& dc : dim_cols) {
-            if (row.find(dc) == row.end()) {
-                throw std::runtime_error("Cannot update_time_series_group: row missing required '" + dc + "' column");
-            }
-        }
-        for (const auto& [col_name, value] : row) {
-            auto it = schema_types.find(col_name);
-            if (it == schema_types.end()) {
-                throw std::runtime_error("Cannot update_time_series_group: column '" + col_name +
-                                         "' not found in group '" + group + "' for collection '" + collection + "'");
-            }
-            if (!internal::value_matches_type(value, it->second)) {
-                throw std::runtime_error("Cannot update_time_series_group: column '" + col_name + "' has type " +
-                                         data_type_to_string(it->second) + " but received " +
-                                         internal::value_type_name(value));
-            }
-        }
+        validate_time_series_row("update_time_series_group", schema_types, dim_cols, collection, group, row);
     }
 
     Impl::TransactionGuard txn(*impl_);
@@ -223,33 +217,8 @@ void Database::add_time_series_row(const std::string& collection,
     // Every PK column except "id" is a dimension that must be supplied by the caller.
     auto dim_cols = internal::find_dimension_columns(*table_def);
 
-    // Build schema type lookup (all columns except id)
-    std::map<std::string, DataType> schema_types;
-    for (const auto& [col_name, col] : table_def->columns) {
-        if (col_name == "id")
-            continue;
-        schema_types[col_name] = col.type;
-    }
-
-    // Validate the row: every dimension column must be present, all caller
-    // columns must exist in the schema, and values must match column types.
-    for (const auto& dim_col : dim_cols) {
-        if (row.find(dim_col) == row.end()) {
-            throw std::runtime_error("Cannot add_time_series_row: row missing required '" + dim_col + "' column");
-        }
-    }
-    for (const auto& [col_name, value] : row) {
-        auto it = schema_types.find(col_name);
-        if (it == schema_types.end()) {
-            throw std::runtime_error("Cannot add_time_series_row: column '" + col_name + "' not found in group '" +
-                                     group + "' for collection '" + collection + "'");
-        }
-        if (!internal::value_matches_type(value, it->second)) {
-            throw std::runtime_error("Cannot add_time_series_row: column '" + col_name + "' has type " +
-                                     data_type_to_string(it->second) + " but received " +
-                                     internal::value_type_name(value));
-        }
-    }
+    validate_time_series_row(
+        "add_time_series_row", time_series_schema_types(*table_def), dim_cols, collection, group, row);
 
     Impl::TransactionGuard txn(*impl_);
 
@@ -293,7 +262,6 @@ std::vector<Value> Database::read_time_series_row(const std::string& collection,
         throw std::runtime_error("Time series attribute not found: '" + attribute + "' in group '" + group +
                                  "' of collection '" + collection + "'");
     }
-    auto attr_type = attr_col->type;
 
     auto element_ids = read_element_ids(collection);
     if (element_ids.empty()) {
@@ -313,28 +281,7 @@ std::vector<Value> Database::read_time_series_row(const std::string& collection,
         auto id = query_result[i].get_integer(0);
         if (!id)
             continue;
-
-        switch (attr_type) {
-        case DataType::Integer:
-            if (auto v = query_result[i].get_integer(1))
-                id_value_map[*id] = *v;
-            else
-                id_value_map[*id] = nullptr;
-            break;
-        case DataType::Real:
-            if (auto v = query_result[i].get_float(1))
-                id_value_map[*id] = *v;
-            else
-                id_value_map[*id] = nullptr;
-            break;
-        case DataType::Text:
-        case DataType::DateTime:
-            if (auto v = query_result[i].get_string(1))
-                id_value_map[*id] = *v;
-            else
-                id_value_map[*id] = nullptr;
-            break;
-        }
+        id_value_map[*id] = query_result[i][1];
     }
 
     std::vector<Value> result;

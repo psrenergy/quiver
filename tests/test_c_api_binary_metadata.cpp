@@ -695,3 +695,22 @@ TEST(BinaryCApiMetadata, ZeroTimeDimensions) {
 
     quiver_binary_metadata_free(md);
 }
+
+TEST(BinaryCApiMetadata, BuilderTimeDimensionsCounted) {
+    quiver_binary_metadata_t* md = nullptr;
+    ASSERT_EQ(quiver_binary_metadata_create(&md), QUIVER_OK);
+
+    EXPECT_EQ(quiver_binary_metadata_add_time_dimension(md, "month", 12, "monthly"), QUIVER_OK);
+    EXPECT_EQ(quiver_binary_metadata_add_time_dimension(md, "day", 31, "daily"), QUIVER_OK);
+
+    int64_t num_time = 0;
+    EXPECT_EQ(quiver_binary_metadata_get_number_of_time_dimensions(md, &num_time), QUIVER_OK);
+    EXPECT_EQ(num_time, 2);
+
+    quiver_dimension_t dim = {};
+    EXPECT_EQ(quiver_binary_metadata_get_dimension(md, 1, &dim), QUIVER_OK);
+    EXPECT_EQ(dim.time_properties.parent_dimension_index, 0);
+    quiver_binary_metadata_free_dimension(&dim);
+
+    quiver_binary_metadata_free(md);
+}

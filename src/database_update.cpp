@@ -22,7 +22,7 @@ void Database::update_element(const std::string& collection, int64_t id, const E
     if (!resolved.scalars.empty()) {
         // Validate scalar types
         for (const auto& [name, value] : resolved.scalars) {
-            impl_->type_validator->validate_scalar(collection, name, value);
+            impl_->type_validator->validate_scalar("update_element", collection, name, value);
         }
 
         // Build UPDATE SQL

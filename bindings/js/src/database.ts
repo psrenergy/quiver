@@ -23,7 +23,7 @@ export class Database {
     const schemaPathBuf = toCString(schemaPath);
 
     check(
-      lib.quiver_database_from_schema(dbPathBuf.buf, schemaPathBuf.buf, options.buf, outDb.ptr),
+      lib.quiver_database_from_schema(dbPathBuf.buf, schemaPathBuf.buf, options.buf, outDb.buf),
     );
 
     return new Database(readPtrOut(outDb));
@@ -37,7 +37,7 @@ export class Database {
     const migrPathBuf = toCString(migrationsPath);
 
     check(
-      lib.quiver_database_from_migrations(dbPathBuf.buf, migrPathBuf.buf, options.buf, outDb.ptr),
+      lib.quiver_database_from_migrations(dbPathBuf.buf, migrPathBuf.buf, options.buf, outDb.buf),
     );
 
     return new Database(readPtrOut(outDb));
@@ -49,7 +49,7 @@ export class Database {
     const outDb = allocPtrOut();
     const dbPathBuf = toCString(dbPath);
 
-    check(lib.quiver_database_open(dbPathBuf.buf, options.buf, outDb.ptr));
+    check(lib.quiver_database_open(dbPathBuf.buf, options.buf, outDb.buf));
 
     return new Database(readPtrOut(outDb));
   }
@@ -130,11 +130,23 @@ export class Database {
 
   // --- Time series (implemented in time-series.ts) ---
   declare readTimeSeriesGroup: (collection: string, group: string, id: number) => TimeSeriesData;
+  declare readTimeSeriesRow: (
+    collection: string,
+    group: string,
+    attribute: string,
+    dateTime: string,
+  ) => (number | string | null)[];
   declare updateTimeSeriesGroup: (
     collection: string,
     group: string,
     id: number,
     data: TimeSeriesData,
+  ) => void;
+  declare addTimeSeriesRow: (
+    collection: string,
+    group: string,
+    id: number,
+    row: Record<string, number | bigint | string>,
   ) => void;
   declare hasTimeSeriesFiles: (collection: string) => boolean;
   declare listTimeSeriesFilesColumns: (collection: string) => string[];

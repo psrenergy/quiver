@@ -18,14 +18,15 @@ import {
   toCString,
 } from "./ffi-helpers.ts";
 import { getSymbols } from "./loader.ts";
-import type { Allocation } from "./types.ts";
+import {
+  type Allocation,
+  DATA_TYPE_DATE_TIME,
+  DATA_TYPE_FLOAT,
+  DATA_TYPE_INTEGER,
+  DATA_TYPE_STRING,
+} from "./types.ts";
 
 export type TimeSeriesData = Record<string, (number | string)[]>;
-
-const DATA_TYPE_INTEGER = 0;
-const DATA_TYPE_FLOAT = 1;
-const DATA_TYPE_STRING = 2;
-const DATA_TYPE_DATE_TIME = 3;
 
 Database.prototype.readTimeSeriesGroup = function (
   this: Database,
@@ -48,11 +49,11 @@ Database.prototype.readTimeSeriesGroup = function (
       collBuf.buf,
       grpBuf.buf,
       BigInt(id),
-      outNames.ptr,
-      outTypes.ptr,
-      outData.ptr,
-      outColCount.ptr,
-      outRowCount.ptr,
+      outNames.buf,
+      outTypes.buf,
+      outData.buf,
+      outColCount.buf,
+      outRowCount.buf,
     ),
   );
 
@@ -94,6 +95,64 @@ Database.prototype.readTimeSeriesGroup = function (
     BigInt(rowCount),
   );
   return result;
+};
+
+Database.prototype.readTimeSeriesRow = function (
+  this: Database,
+  collection: string,
+  group: string,
+  attribute: string,
+  dateTime: string,
+): (number | string | null)[] {
+  const lib = getSymbols();
+  const collBuf = toCString(collection);
+  const grpBuf = toCString(group);
+  const attrBuf = toCString(attribute);
+  const dtBuf = toCString(dateTime);
+  const outDataType = new Uint8Array(4);
+  const outValues = allocPtrOut();
+  const outCount = allocUint64Out();
+
+  check(
+    lib.quiver_database_read_time_series_row(
+      this._handle,
+      collBuf.buf,
+      grpBuf.buf,
+      attrBuf.buf,
+      dtBuf.buf,
+      outDataType,
+      outValues.buf,
+      outCount.buf,
+    ),
+  );
+
+  const count = readUint64Out(outCount);
+  const valuesPtr = readPtrOut(outValues);
+  if (count === 0 || !valuesPtr) return [];
+
+  const dataType = new DataView(outDataType.buffer).getInt32(0, true);
+  switch (dataType) {
+    case DATA_TYPE_INTEGER: {
+      const result = decodeInt64Array(valuesPtr, count);
+      lib.quiver_database_free_integer_array(valuesPtr);
+      return result;
+    }
+    case DATA_TYPE_FLOAT: {
+      const result = decodeFloat64Array(valuesPtr, count);
+      lib.quiver_database_free_float_array(valuesPtr);
+      return result;
+    }
+    default: {
+      // STRING or DATE_TIME; NULL entries mark elements with no data
+      const result: (string | null)[] = new Array(count);
+      for (let i = 0; i < count; i++) {
+        const strPtr = read.ptr(valuesPtr as Pointer, i * 8);
+        result[i] = strPtr === 0 ? null : new CString(strPtr as Pointer).toString();
+      }
+      lib.quiver_database_free_string_array(valuesPtr, BigInt(count));
+      return result;
+    }
+  }
 };
 
 Database.prototype.updateTimeSeriesGroup = function (
@@ -177,11 +236,72 @@ Database.prototype.updateTimeSeriesGroup = function (
       collBuf.buf,
       grpBuf.buf,
       BigInt(id),
-      namesTable.ptr,
-      typesAlloc.ptr,
-      dataTable.ptr,
+      namesTable.buf,
+      typesAlloc.buf,
+      dataTable.buf,
       BigInt(columnCount),
       BigInt(rowCount),
+    ),
+  );
+};
+
+Database.prototype.addTimeSeriesRow = function (
+  this: Database,
+  collection: string,
+  group: string,
+  id: number,
+  row: Record<string, number | bigint | string>,
+): void {
+  const lib = getSymbols();
+  const collBuf = toCString(collection);
+  const grpBuf = toCString(group);
+  const entries = Object.entries(row);
+  const columnCount = entries.length;
+  const keepalive: Allocation[] = [];
+
+  const colNames = entries.map(([name]) => name);
+  const { table: namesTable, keepalive: namesPtrs } = allocNativeStringArray(colNames);
+  keepalive.push(namesTable, ...namesPtrs);
+
+  const typesBuf = new Uint8Array(columnCount * 4);
+  const typesDv = new DataView(typesBuf.buffer);
+  const dataPtrs: (Pointer | null)[] = [];
+
+  for (let c = 0; c < columnCount; c++) {
+    const value = entries[c][1];
+    if (typeof value === "string") {
+      typesDv.setInt32(c * 4, DATA_TYPE_STRING, true);
+      const { table, keepalive: strPtrs } = allocNativeStringArray([value]);
+      keepalive.push(table, ...strPtrs);
+      dataPtrs.push(table.ptr);
+    } else if (typeof value === "bigint" || Number.isInteger(value)) {
+      typesDv.setInt32(c * 4, DATA_TYPE_INTEGER, true);
+      const p = allocNativeInt64([value]);
+      keepalive.push(p);
+      dataPtrs.push(p.ptr);
+    } else {
+      typesDv.setInt32(c * 4, DATA_TYPE_FLOAT, true);
+      const p = allocNativeFloat64([value as number]);
+      keepalive.push(p);
+      dataPtrs.push(p.ptr);
+    }
+  }
+
+  const typesAlloc: Allocation = { ptr: ptr(typesBuf), buf: typesBuf };
+  keepalive.push(typesAlloc);
+  const dataTable = allocNativePtrTable(dataPtrs);
+  keepalive.push(dataTable);
+
+  check(
+    lib.quiver_database_add_time_series_row(
+      this._handle,
+      collBuf.buf,
+      grpBuf.buf,
+      BigInt(id),
+      namesTable.buf,
+      typesAlloc.buf,
+      dataTable.buf,
+      BigInt(columnCount),
     ),
   );
 };
@@ -206,8 +326,8 @@ Database.prototype.listTimeSeriesFilesColumns = function (
     lib.quiver_database_list_time_series_files_columns(
       this._handle,
       collBuf.buf,
-      outColumns.ptr,
-      outCount.ptr,
+      outColumns.buf,
+      outCount.buf,
     ),
   );
   const count = readUint64Out(outCount);
@@ -231,9 +351,9 @@ Database.prototype.readTimeSeriesFiles = function (
     lib.quiver_database_read_time_series_files(
       this._handle,
       collBuf.buf,
-      outColumns.ptr,
-      outPaths.ptr,
-      outCount.ptr,
+      outColumns.buf,
+      outPaths.buf,
+      outCount.buf,
     ),
   );
   const count = readUint64Out(outCount);
@@ -283,8 +403,8 @@ Database.prototype.updateTimeSeriesFiles = function (
     lib.quiver_database_update_time_series_files(
       this._handle,
       collBuf.buf,
-      colsTable.ptr,
-      pathsTable.ptr,
+      colsTable.buf,
+      pathsTable.buf,
       BigInt(entries.length),
     ),
   );

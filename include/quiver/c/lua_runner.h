@@ -19,13 +19,8 @@ QUIVER_C_API quiver_error_t quiver_lua_runner_free(quiver_lua_runner_t* runner);
 
 // Run a Lua script
 // Returns QUIVER_OK on success, or an error code on failure.
-// If an error occurs, call quiver_lua_runner_get_error() to get the error message.
+// On failure the error message is available via quiver_get_last_error().
 QUIVER_C_API quiver_error_t quiver_lua_runner_run(quiver_lua_runner_t* runner, const char* script);
-
-// Get the last error message (or NULL if no error).
-// The returned pointer is valid until the next call to quiver_lua_runner_run().
-// Callers should copy the string if they need to retain it beyond that.
-QUIVER_C_API quiver_error_t quiver_lua_runner_get_error(quiver_lua_runner_t* runner, const char** out_error);
 
 #ifdef __cplusplus
 }

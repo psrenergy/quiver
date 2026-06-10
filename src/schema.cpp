@@ -212,33 +212,45 @@ std::string Schema::find_time_series_files_table(const std::string& collection) 
     throw std::runtime_error("Time series files table not found for collection '" + collection + "'");
 }
 
-std::optional<Schema::TableMatch> Schema::find_table_for_column(const std::string& collection,
-                                                                const std::string& column) const {
-    // Check vector: direct name match first, then scan
-    auto vt = vector_table_name(collection, column);
-    if (has_table(vt)) {
-        return TableMatch{.table_name = vt, .type = GroupTableType::Vector};
+bool Schema::is_group_table(const std::string& table, GroupTableType type) const {
+    switch (type) {
+    case GroupTableType::Vector:
+        return is_vector_table(table);
+    case GroupTableType::Set:
+        return is_set_table(table);
+    case GroupTableType::TimeSeries:
+        return is_time_series_table(table);
+    default:
+        return false;
     }
+}
 
-    for (const auto& [name, table] : tables_) {
-        if (get_parent_collection(name) != collection)
+std::vector<std::string> Schema::group_names(const std::string& collection, GroupTableType type) const {
+    std::string infix;
+    switch (type) {
+    case GroupTableType::Vector:
+        infix = "_vector_";
+        break;
+    case GroupTableType::Set:
+        infix = "_set_";
+        break;
+    case GroupTableType::TimeSeries:
+        infix = "_time_series_";
+        break;
+    }
+    const auto prefix = collection + infix;
+
+    std::vector<std::string> result;
+    for (const auto& table_name : table_names()) {
+        if (!is_group_table(table_name, type))
             continue;
-
-        if (!table.has_column(column))
+        if (get_parent_collection(table_name) != collection)
             continue;
-
-        if (is_vector_table(name)) {
-            return TableMatch{.table_name = name, .type = GroupTableType::Vector};
-        }
-        if (is_set_table(name)) {
-            return TableMatch{.table_name = name, .type = GroupTableType::Set};
-        }
-        if (is_time_series_table(name)) {
-            return TableMatch{.table_name = name, .type = GroupTableType::TimeSeries};
+        if (table_name.starts_with(prefix)) {
+            result.push_back(table_name.substr(prefix.size()));
         }
     }
-
-    return std::nullopt;
+    return result;
 }
 
 std::vector<Schema::TableMatch> Schema::find_all_tables_for_column(const std::string& collection,

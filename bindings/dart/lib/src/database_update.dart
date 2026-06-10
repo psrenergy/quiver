@@ -87,46 +87,9 @@ extension DatabaseUpdate on Database {
       var i = 0;
       for (final entry in data.entries) {
         columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
-        final values = entry.value;
-
-        if (values.isEmpty) {
-          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_STRING;
-          columnData[i] = nullptr;
-        } else if (values.first is int) {
-          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER;
-          final arr = arena<Int64>(rowCount);
-          for (var r = 0; r < rowCount; r++) {
-            arr[r] = values[r] as int;
-          }
-          columnData[i] = arr.cast();
-        } else if (values.first is double) {
-          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT;
-          final arr = arena<Double>(rowCount);
-          for (var r = 0; r < rowCount; r++) {
-            arr[r] = values[r] as double;
-          }
-          columnData[i] = arr.cast();
-        } else if (values.first is String) {
-          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_STRING;
-          final arr = arena<Pointer<Char>>(rowCount);
-          for (var r = 0; r < rowCount; r++) {
-            arr[r] = (values[r] as String).toNativeUtf8(allocator: arena).cast();
-          }
-          columnData[i] = arr.cast();
-        } else if (values.first is DateTime) {
-          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_STRING;
-          final arr = arena<Pointer<Char>>(rowCount);
-          for (var r = 0; r < rowCount; r++) {
-            arr[r] = dateTimeToString(
-              values[r] as DateTime,
-            ).toNativeUtf8(allocator: arena).cast();
-          }
-          columnData[i] = arr.cast();
-        } else {
-          throw ArgumentError(
-            'Unsupported value type: ${values.first.runtimeType}',
-          );
-        }
+        final column = _marshalTimeSeriesColumn(arena, entry.value);
+        columnTypes[i] = column.type;
+        columnData[i] = column.data;
         i++;
       }
 
@@ -174,34 +137,9 @@ extension DatabaseUpdate on Database {
       var i = 0;
       for (final entry in row.entries) {
         columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
-
-        if (entry.value is int) {
-          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER;
-          final arr = arena<Int64>(1);
-          arr[0] = entry.value as int;
-          columnData[i] = arr.cast();
-        } else if (entry.value is double) {
-          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT;
-          final arr = arena<Double>(1);
-          arr[0] = entry.value as double;
-          columnData[i] = arr.cast();
-        } else if (entry.value is String) {
-          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_STRING;
-          final arr = arena<Pointer<Char>>(1);
-          arr[0] = (entry.value as String).toNativeUtf8(allocator: arena).cast();
-          columnData[i] = arr.cast();
-        } else if (entry.value is DateTime) {
-          columnTypes[i] = quiver_data_type_t.QUIVER_DATA_TYPE_STRING;
-          final arr = arena<Pointer<Char>>(1);
-          arr[0] = dateTimeToString(
-            entry.value as DateTime,
-          ).toNativeUtf8(allocator: arena).cast();
-          columnData[i] = arr.cast();
-        } else {
-          throw ArgumentError(
-            'Unsupported value type: ${entry.value.runtimeType}',
-          );
-        }
+        final column = _marshalTimeSeriesColumn(arena, [entry.value]);
+        columnTypes[i] = column.type;
+        columnData[i] = column.data;
         i++;
       }
 
@@ -265,5 +203,61 @@ extension DatabaseUpdate on Database {
     } finally {
       arena.releaseAll();
     }
+  }
+
+  /// Marshals one time series column into an arena-allocated typed array,
+  /// returning its quiver_data_type_t tag and data pointer.
+  /// Supported value types: int, double, String, DateTime.
+  ({int type, Pointer<Void> data}) _marshalTimeSeriesColumn(
+    Arena arena,
+    List<Object> values,
+  ) {
+    if (values.isEmpty) {
+      return (type: quiver_data_type_t.QUIVER_DATA_TYPE_STRING, data: nullptr);
+    }
+    final first = values.first;
+    if (first is int) {
+      final arr = arena<Int64>(values.length);
+      for (var r = 0; r < values.length; r++) {
+        arr[r] = values[r] as int;
+      }
+      return (
+        type: quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER,
+        data: arr.cast(),
+      );
+    }
+    if (first is double) {
+      final arr = arena<Double>(values.length);
+      for (var r = 0; r < values.length; r++) {
+        arr[r] = values[r] as double;
+      }
+      return (
+        type: quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT,
+        data: arr.cast(),
+      );
+    }
+    if (first is String) {
+      final arr = arena<Pointer<Char>>(values.length);
+      for (var r = 0; r < values.length; r++) {
+        arr[r] = (values[r] as String).toNativeUtf8(allocator: arena).cast();
+      }
+      return (
+        type: quiver_data_type_t.QUIVER_DATA_TYPE_STRING,
+        data: arr.cast(),
+      );
+    }
+    if (first is DateTime) {
+      final arr = arena<Pointer<Char>>(values.length);
+      for (var r = 0; r < values.length; r++) {
+        arr[r] = dateTimeToString(
+          values[r] as DateTime,
+        ).toNativeUtf8(allocator: arena).cast();
+      }
+      return (
+        type: quiver_data_type_t.QUIVER_DATA_TYPE_STRING,
+        data: arr.cast(),
+      );
+    }
+    throw ArgumentError('Unsupported value type: ${first.runtimeType}');
   }
 }

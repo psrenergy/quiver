@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 
 const __dirname = import.meta.dir;
@@ -295,6 +295,35 @@ describe("CSV options", () => {
       expect(content).toContain("2024/01/15");
       // Raw ISO format should NOT appear
       expect(content.includes("2024-01-15T10:30:00")).toBeFalsy();
+    } finally {
+      db.close();
+      cleanup(csvPath);
+    }
+  });
+});
+
+// ============================================================================
+// Import inside an explicit transaction
+// ============================================================================
+
+describe("CSV import inside transaction", () => {
+  test("importCsv throws and preserves the caller's transaction", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    const csvPath = tempCsv("import_in_tx");
+    try {
+      writeFileSync(
+        csvPath,
+        "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,,\n",
+      );
+
+      db.beginTransaction();
+      expect(() => db.importCsv("Items", "", csvPath)).toThrow(
+        "Cannot import_csv: transaction already active",
+      );
+
+      // The caller's transaction must survive intact
+      expect(db.inTransaction()).toBe(true);
+      db.rollback();
     } finally {
       db.close();
       cleanup(csvPath);

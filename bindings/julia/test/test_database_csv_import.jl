@@ -366,6 +366,26 @@ include("fixture.jl")
             Quiver.close!(db)
         end
     end
+
+    @testset "Import inside transaction throws" begin
+        db = Quiver.from_schema(":memory:", path_schema)
+        csv_path = tempname() * ".csv"
+        try
+            open(csv_path, "w") do f
+                return write(f, "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,,\n")
+            end
+
+            Quiver.begin_transaction!(db)
+            @test_throws Exception Quiver.import_csv(db, "Items", "", csv_path)
+
+            # The caller's transaction must survive intact
+            @test Quiver.in_transaction(db)
+            Quiver.rollback!(db)
+        finally
+            isfile(csv_path) && rm(csv_path)
+            Quiver.close!(db)
+        end
+    end
 end
 
 end # module TestDatabaseCSVImport

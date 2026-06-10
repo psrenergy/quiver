@@ -12,12 +12,14 @@ import {
   toCString,
 } from "./ffi-helpers.ts";
 import { getSymbols } from "./loader.ts";
-import type { Allocation, QueryParam } from "./types.ts";
-
-const DATA_TYPE_INTEGER = 0;
-const DATA_TYPE_FLOAT = 1;
-const DATA_TYPE_STRING = 2;
-const DATA_TYPE_NULL = 4;
+import {
+  type Allocation,
+  DATA_TYPE_FLOAT,
+  DATA_TYPE_INTEGER,
+  DATA_TYPE_NULL,
+  DATA_TYPE_STRING,
+  type QueryParam,
+} from "./types.ts";
 
 function marshalParams(parameters: QueryParam[]): {
   types: Allocation;

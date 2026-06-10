@@ -185,6 +185,18 @@ describe("createElement with arrays", () => {
       db.close();
     }
   });
+
+  test("bigint array stores values beyond Number.MAX_SAFE_INTEGER without precision loss", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      const big = 9007199254740993n; // 2^53 + 1 — not representable as a JS number
+      db.createElement("AllTypes", { label: "Item1", count_value: [big] });
+      const stored = db.queryString("SELECT CAST(count_value AS TEXT) FROM AllTypes_vector_counts");
+      expect(stored).toBe("9007199254740993");
+    } finally {
+      db.close();
+    }
+  });
 });
 
 describe("deleteElement", () => {

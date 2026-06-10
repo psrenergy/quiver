@@ -54,26 +54,22 @@ QUIVER_C_API quiver_error_t quiver_database_read_scalar_strings(quiver_database_
 // Free scalar arrays
 
 QUIVER_C_API quiver_error_t quiver_database_free_integer_array(int64_t* values) {
-    QUIVER_REQUIRE(values);
-
     delete[] values;
     return QUIVER_OK;
 }
 
 QUIVER_C_API quiver_error_t quiver_database_free_float_array(double* values) {
-    QUIVER_REQUIRE(values);
-
     delete[] values;
     return QUIVER_OK;
 }
 
 QUIVER_C_API quiver_error_t quiver_database_free_string_array(char** values, size_t count) {
-    QUIVER_REQUIRE(values);
-
-    for (size_t i = 0; i < count; ++i) {
-        delete[] values[i];
+    if (values) {
+        for (size_t i = 0; i < count; ++i) {
+            delete[] values[i];
+        }
+        delete[] values;
     }
-    delete[] values;
     return QUIVER_OK;
 }
 
@@ -125,26 +121,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_vector_strings(quiver_database_
     QUIVER_REQUIRE(db, collection, attribute, out_vectors, out_sizes, out_count);
 
     try {
-        auto vectors = db->db.read_vector_strings(collection, attribute);
-        *out_count = vectors.size();
-        if (vectors.empty()) {
-            *out_vectors = nullptr;
-            *out_sizes = nullptr;
-            return QUIVER_OK;
-        }
-        *out_vectors = new char**[vectors.size()];
-        *out_sizes = new size_t[vectors.size()];
-        for (size_t i = 0; i < vectors.size(); ++i) {
-            (*out_sizes)[i] = vectors[i].size();
-            if (vectors[i].empty()) {
-                (*out_vectors)[i] = nullptr;
-            } else {
-                (*out_vectors)[i] = new char*[vectors[i].size()];
-                for (size_t j = 0; j < vectors[i].size(); ++j) {
-                    (*out_vectors)[i][j] = quiver::string::new_c_str(vectors[i][j]);
-                }
-            }
-        }
+        copy_string_vectors_to_c(db->db.read_vector_strings(collection, attribute), out_vectors, out_sizes, out_count);
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
@@ -155,29 +132,27 @@ QUIVER_C_API quiver_error_t quiver_database_read_vector_strings(quiver_database_
 // Free vector arrays
 
 QUIVER_C_API quiver_error_t quiver_database_free_integer_vectors(int64_t** vectors, size_t* sizes, size_t count) {
-    QUIVER_REQUIRE(vectors, sizes);
-
-    return free_vectors_impl(vectors, sizes, count);
+    free_vectors_impl(vectors, sizes, count);
+    return QUIVER_OK;
 }
 
 QUIVER_C_API quiver_error_t quiver_database_free_float_vectors(double** vectors, size_t* sizes, size_t count) {
-    QUIVER_REQUIRE(vectors, sizes);
-
-    return free_vectors_impl(vectors, sizes, count);
+    free_vectors_impl(vectors, sizes, count);
+    return QUIVER_OK;
 }
 
 QUIVER_C_API quiver_error_t quiver_database_free_string_vectors(char*** vectors, size_t* sizes, size_t count) {
-    QUIVER_REQUIRE(vectors, sizes);
-
-    for (size_t i = 0; i < count; ++i) {
-        if (vectors[i]) {
-            for (size_t j = 0; j < sizes[i]; ++j) {
-                delete[] vectors[i][j];
+    if (vectors) {
+        for (size_t i = 0; i < count; ++i) {
+            if (vectors[i]) {
+                for (size_t j = 0; j < sizes[i]; ++j) {
+                    delete[] vectors[i][j];
+                }
+                delete[] vectors[i];
             }
-            delete[] vectors[i];
         }
+        delete[] vectors;
     }
-    delete[] vectors;
     delete[] sizes;
     return QUIVER_OK;
 }
@@ -225,26 +200,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_set_strings(quiver_database_t* 
     QUIVER_REQUIRE(db, collection, attribute, out_sets, out_sizes, out_count);
 
     try {
-        auto sets = db->db.read_set_strings(collection, attribute);
-        *out_count = sets.size();
-        if (sets.empty()) {
-            *out_sets = nullptr;
-            *out_sizes = nullptr;
-            return QUIVER_OK;
-        }
-        *out_sets = new char**[sets.size()];
-        *out_sizes = new size_t[sets.size()];
-        for (size_t i = 0; i < sets.size(); ++i) {
-            (*out_sizes)[i] = sets[i].size();
-            if (sets[i].empty()) {
-                (*out_sets)[i] = nullptr;
-            } else {
-                (*out_sets)[i] = new char*[sets[i].size()];
-                for (size_t j = 0; j < sets[i].size(); ++j) {
-                    (*out_sets)[i][j] = quiver::string::new_c_str(sets[i][j]);
-                }
-            }
-        }
+        copy_string_vectors_to_c(db->db.read_set_strings(collection, attribute), out_sets, out_sizes, out_count);
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());

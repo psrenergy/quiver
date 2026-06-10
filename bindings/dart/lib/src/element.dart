@@ -253,4 +253,19 @@ class Element {
     check(bindings.quiver_element_destroy(_ptr));
     _isDisposed = true;
   }
+
+  @override
+  String toString() {
+    if (_isDisposed) return 'Element(disposed)';
+    final arena = Arena();
+    try {
+      final outString = arena<Pointer<Char>>();
+      check(bindings.quiver_element_to_string(_ptr, outString));
+      final result = outString.value.cast<Utf8>().toDartString();
+      bindings.quiver_database_free_string(outString.value);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
 }
