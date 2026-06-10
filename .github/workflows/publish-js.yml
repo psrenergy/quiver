@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Override version (which S3 build to download and publish). Default: detect from CMakeLists.txt."
+        description: "Override version"
         required: false
         default: ""
       ref:
-        description: "Git ref or sha to publish. Default: the triggering commit."
+        description: "Override ref or sha"
         required: false
         default: ""
 
