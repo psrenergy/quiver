@@ -1,6 +1,7 @@
 #include "database_impl.h"
 #include "quiver/options.h"
 #include "quiver/schema.h"
+#include "utils/csv_format.h"
 #include "utils/datetime.h"
 #include "utils/string.h"
 
@@ -30,46 +31,77 @@ static std::string to_lower(const std::string& s) {
     return out;
 }
 
-// Read a CSV file, handling sep= header and semicolon-delimited files.
-// Returns a rapidcsv Document with column headers (LabelParams row 0).
-static rapidcsv::Document read_csv_file(const std::string& path) {
+// Result of reading a CSV file: the parsed document plus the field delimiter that
+// was used, so numbers can be parsed back with the matching decimal separator.
+struct CsvDocument {
+    rapidcsv::Document doc;
+    char field_delimiter;
+};
+
+// Normalize all line endings (CRLF / bare CR / LF) to LF, so the sep= line strips
+// and rows split regardless of the platform that wrote the file: Excel for Windows
+// writes CRLF, Excel for Mac and hand-edited files may use LF or legacy bare CR.
+static void normalize_line_endings(std::string& content) {
+    std::string out;
+    out.reserve(content.size());
+    for (size_t i = 0; i < content.size(); ++i) {
+        if (content[i] == '\r') {
+            out += '\n';
+            if (i + 1 < content.size() && content[i + 1] == '\n') {
+                ++i;  // collapse a CRLF pair into a single LF
+            }
+        } else {
+            out += content[i];
+        }
+    }
+    content = std::move(out);
+}
+
+// Read a CSV file, honoring the sep= header and the locale field delimiter.
+//
+// Delimiter resolution:
+//   * "sep=," header -> ','      * "sep=;" header -> ';'
+//   * no header      -> inferred from the header line (';' if present, else ',')
+//
+// The file is parsed with the detected delimiter directly (rather than swapping
+// ';' -> ',', which corrupted ',' decimals across multiple numeric columns).
+static CsvDocument read_csv_file(const std::string& path) {
     std::ifstream file(path, std::ios::binary);
     if (!file.is_open()) {
         throw std::runtime_error("Cannot import_csv: could not open file: " + path);
     }
 
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    normalize_line_endings(content);
 
-    // Detect and strip sep= header line
-    char separator = ',';
+    char delimiter = ',';
     if (content.starts_with("sep=")) {
+        if (content.size() >= 5) {
+            delimiter = content[4];
+        }
         auto nl = content.find('\n');
-        if (nl != std::string::npos) {
-            // Extract the separator character (e.g., "sep=," -> ',', "sep=;" -> ';')
-            if (nl >= 5) {
-                separator = content[4];
-            }
-            content = content.substr(nl + 1);
+        content = (nl == std::string::npos) ? "" : content.substr(nl + 1);
+    } else {
+        auto nl = content.find('\n');
+        std::string_view header(content.data(), nl != std::string::npos ? nl : content.size());
+        if (header.find(';') != std::string_view::npos) {
+            delimiter = ';';
         }
     }
-
-    // If semicolon separator, replace all ; with , for rapidcsv parsing
-    if (separator == ';') {
-        std::replace(content.begin(), content.end(), ';', ',');
-    } else if (separator == ',' && content.find(';') != std::string::npos && content.find(',') == std::string::npos) {
-        // No sep= header but semicolons present and no commas -> semicolon-delimited
-        std::replace(content.begin(), content.end(), ';', ',');
+    if (delimiter != ';') {
+        delimiter = ',';
     }
 
-    // Strip trailing empty columns — common Excel artifact when editing CSVs with sep=,
-    // Count trailing commas on the header line, then strip that many from every line.
+    // Strip trailing empty columns — a common Excel artifact when editing CSVs.
+    // Count trailing delimiters on the header line, then strip that many per line.
     {
         auto first_nl = content.find('\n');
         std::string_view header(content.data(), first_nl != std::string::npos ? first_nl : content.size());
         size_t trailing = 0;
-        for (auto it = header.rbegin(); it != header.rend() && (*it == ',' || *it == ' ' || *it == '\t' || *it == '\r');
+        for (auto it = header.rbegin();
+             it != header.rend() && (*it == delimiter || *it == ' ' || *it == '\t' || *it == '\r');
              ++it) {
-            if (*it == ',')
+            if (*it == delimiter)
                 ++trailing;
         }
         if (trailing > 0) {
@@ -82,7 +114,7 @@ static rapidcsv::Document read_csv_file(const std::string& path) {
                 if (!first)
                     stripped += '\n';
                 first = false;
-                // Remove exactly `trailing` trailing commas (and surrounding whitespace)
+                // Remove exactly `trailing` trailing delimiters (and surrounding whitespace)
                 size_t to_remove = trailing;
                 auto end = line.size();
                 while (to_remove > 0 && end > 0) {
@@ -91,7 +123,7 @@ static rapidcsv::Document read_csv_file(const std::string& path) {
                         --end;
                         continue;
                     }
-                    if (ch == ',') {
+                    if (ch == delimiter) {
                         --end;
                         --to_remove;
                         continue;
@@ -106,13 +138,13 @@ static rapidcsv::Document read_csv_file(const std::string& path) {
 
     std::istringstream ss(content);
     auto doc = rapidcsv::Document(
-        ss, rapidcsv::LabelParams(0, -1), rapidcsv::SeparatorParams(',', false, false, true, true, '"'));
+        ss, rapidcsv::LabelParams(0, -1), rapidcsv::SeparatorParams(delimiter, false, false, true, true, '"'));
 
     if (doc.GetColumnCount() == 0) {
         throw std::runtime_error("Cannot import_csv: CSV file is empty.");
     }
 
-    return doc;
+    return {std::move(doc), delimiter};
 }
 
 // Parse a datetime string from CSV back to ISO 8601 storage format.
@@ -248,7 +280,19 @@ void Database::import_csv(const std::string& collection,
     }
 
     // Read CSV, validate columns against DB schema, handle empty CSV
-    auto doc = read_csv_file(path);
+    auto csv = read_csv_file(path);
+    auto& doc = csv.doc;
+
+    // Decimal/grouping separators are tied to the field delimiter: ';' files use
+    // ',' decimals and '.' grouping, ',' files use '.' decimals and ',' grouping.
+    // numeric() rewrites a locale-formatted number to a std::stod/stoll-parseable
+    // form (and leaves non-numbers untouched for the enum / text / datetime paths).
+    const char decimal_sep = csv_format::decimal_separator_for_delimiter(csv.field_delimiter);
+    const char grouping_sep = csv_format::grouping_separator_for_delimiter(csv.field_delimiter);
+    auto numeric = [&](const std::string& cell) {
+        return csv_format::normalize_number(cell, decimal_sep, grouping_sep);
+    };
+
     auto csv_cols = get_csv_columns(doc);
     auto db_cols = get_db_columns(execute("SELECT * FROM " + table_name + " LIMIT 0"), group.empty() ? "id" : "");
 
@@ -344,7 +388,7 @@ void Database::import_csv(const std::string& collection,
 
                 if (type == DataType::Integer && !is_fk) {
                     try {
-                        (void)std::stoll(cell);
+                        (void)std::stoll(numeric(cell));
                     } catch (...) {
                         if (options.enum_labels.count(col_name) > 0) {
                             resolve_enum_value(cell, col_name, options);
@@ -357,7 +401,7 @@ void Database::import_csv(const std::string& collection,
 
                 if (type == DataType::Real) {
                     try {
-                        (void)std::stod(cell);
+                        (void)std::stod(numeric(cell));
                     } catch (...) {
                         throw std::runtime_error("Cannot import_csv: Invalid float value '" + cell + "' for column '" +
                                                  col_name + "'.");
@@ -420,7 +464,7 @@ void Database::import_csv(const std::string& collection,
 
                     if (type == DataType::Integer) {
                         try {
-                            parameters.emplace_back(std::stoll(cell));
+                            parameters.emplace_back(std::stoll(numeric(cell)));
                         } catch (...) {
                             parameters.emplace_back(resolve_enum_value(cell, col_name, options));
                         }
@@ -428,7 +472,7 @@ void Database::import_csv(const std::string& collection,
                     }
 
                     if (type == DataType::Real) {
-                        parameters.emplace_back(std::stod(cell));
+                        parameters.emplace_back(std::stod(numeric(cell)));
                         continue;
                     }
 
@@ -654,7 +698,7 @@ void Database::import_csv(const std::string& collection,
 
                     if (type == DataType::Integer) {
                         try {
-                            parameters.emplace_back(std::stoll(cell));
+                            parameters.emplace_back(std::stoll(numeric(cell)));
                         } catch (...) {
                             parameters.emplace_back(resolve_enum_value(cell, col_name, options));
                         }
@@ -662,7 +706,7 @@ void Database::import_csv(const std::string& collection,
                     }
 
                     if (type == DataType::Real) {
-                        parameters.emplace_back(std::stod(cell));
+                        parameters.emplace_back(std::stod(numeric(cell)));
                         continue;
                     }
 

@@ -1,5 +1,6 @@
 #include "test_utils.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
@@ -16,6 +17,19 @@ static std::string read_file(const std::string& path) {
     std::ostringstream ss;
     ss << f.rdbuf();
     return ss.str();
+}
+
+// Read an exported CSV and canonicalize it to comma-delimited, '.'-decimal form so
+// byte-level assertions stay independent of the host locale (a comma-locale machine
+// exports ';'-delimited, ','-decimal files to match Excel). Safe only for values
+// free of spaces and embedded commas — true of every test that uses it.
+static std::string read_file_canonical(const std::string& path) {
+    std::string content = read_file(path);
+    if (content.rfind("sep=;", 0) == 0) {
+        std::replace(content.begin(), content.end(), ',', '.');  // ',' decimals -> '.'
+        std::replace(content.begin(), content.end(), ';', ',');  // ';' delimiters -> ','
+    }
+    return content;
 }
 
 // Helper: get a unique temp path for a test
@@ -65,7 +79,7 @@ TEST(DatabaseCApiCSV, ExportCSV_ScalarExport_HeaderAndData) {
     auto csv_options = quiver_csv_options_default();
     ASSERT_EQ(quiver_database_export_csv(db, "Items", "", csv_path.string().c_str(), &csv_options), QUIVER_OK);
 
-    auto content = read_file(csv_path.string());
+    auto content = read_file_canonical(csv_path.string());
 
     // Header: schema order columns minus id
     EXPECT_NE(content.find("label,name,status,price,date_created,notes\n"), std::string::npos);
@@ -121,7 +135,7 @@ TEST(DatabaseCApiCSV, ExportCSV_VectorGroupExport) {
     ASSERT_EQ(quiver_database_export_csv(db, "Items", "measurements", csv_path.string().c_str(), &csv_options),
               QUIVER_OK);
 
-    auto content = read_file(csv_path.string());
+    auto content = read_file_canonical(csv_path.string());
 
     // Header: id + vector_index + value columns
     EXPECT_NE(content.find("sep=,\nid,vector_index,measurement\n"), std::string::npos);
@@ -164,7 +178,7 @@ TEST(DatabaseCApiCSV, ExportCSV_SetGroupExport) {
     auto csv_options = quiver_csv_options_default();
     ASSERT_EQ(quiver_database_export_csv(db, "Items", "tags", csv_path.string().c_str(), &csv_options), QUIVER_OK);
 
-    auto content = read_file(csv_path.string());
+    auto content = read_file_canonical(csv_path.string());
 
     // Header: id + tag
     EXPECT_NE(content.find("sep=,\nid,tag\n"), std::string::npos);
@@ -209,7 +223,7 @@ TEST(DatabaseCApiCSV, ExportCSV_TimeSeriesGroupExport) {
     auto csv_options = quiver_csv_options_default();
     ASSERT_EQ(quiver_database_export_csv(db, "Items", "readings", csv_path.string().c_str(), &csv_options), QUIVER_OK);
 
-    auto content = read_file(csv_path.string());
+    auto content = read_file_canonical(csv_path.string());
 
     // Header: id + dimension + value columns
     EXPECT_NE(content.find("sep=,\nid,date_time,temperature,humidity\n"), std::string::npos);
@@ -384,7 +398,7 @@ TEST(DatabaseCApiCSV, ExportCSV_EmptyCollection_HeaderOnly) {
     auto csv_options = quiver_csv_options_default();
     ASSERT_EQ(quiver_database_export_csv(db, "Items", "", csv_path.string().c_str(), &csv_options), QUIVER_OK);
 
-    auto content = read_file(csv_path.string());
+    auto content = read_file_canonical(csv_path.string());
 
     // Header row only, followed by LF
     EXPECT_EQ(content, "sep=,\nlabel,name,status,price,date_created,notes\n");
@@ -418,7 +432,7 @@ TEST(DatabaseCApiCSV, ExportCSV_NullValues_EmptyFields) {
     auto csv_options = quiver_csv_options_default();
     ASSERT_EQ(quiver_database_export_csv(db, "Items", "", csv_path.string().c_str(), &csv_options), QUIVER_OK);
 
-    auto content = read_file(csv_path.string());
+    auto content = read_file_canonical(csv_path.string());
 
     // NULL fields appear as empty (just commas)
     // Expected: Item1,Alpha,,,,
@@ -456,7 +470,7 @@ TEST(DatabaseCApiCSV, ExportCSV_DefaultOptions_RawValues) {
     auto csv_options = quiver_csv_options_default();
     ASSERT_EQ(quiver_database_export_csv(db, "Items", "", csv_path.string().c_str(), &csv_options), QUIVER_OK);
 
-    auto content = read_file(csv_path.string());
+    auto content = read_file_canonical(csv_path.string());
 
     // With default options, integer enum columns have raw integers
     EXPECT_NE(content.find(",1,"), std::string::npos);
@@ -516,7 +530,7 @@ TEST(DatabaseCApiCSV, ExportCSV_EnumLabels_ReplacesIntegers) {
     auto csv_path = temp_csv("EnumReplace");
     ASSERT_EQ(quiver_database_export_csv(db, "Items", "", csv_path.string().c_str(), &csv_options), QUIVER_OK);
 
-    auto content = read_file(csv_path.string());
+    auto content = read_file_canonical(csv_path.string());
 
     // status column should have labels instead of integers
     EXPECT_NE(content.find("Item1,Alpha,Active,"), std::string::npos);
@@ -575,7 +589,7 @@ TEST(DatabaseCApiCSV, ExportCSV_EnumLabels_UnmappedFallback) {
     auto csv_path = temp_csv("EnumFallback");
     ASSERT_EQ(quiver_database_export_csv(db, "Items", "", csv_path.string().c_str(), &csv_options), QUIVER_OK);
 
-    auto content = read_file(csv_path.string());
+    auto content = read_file_canonical(csv_path.string());
 
     // Mapped value replaced
     EXPECT_NE(content.find("Item1,Alpha,Active,"), std::string::npos);
@@ -802,7 +816,7 @@ TEST(DatabaseCApiCSV, ExportCSV_OverwritesExistingFile) {
     auto csv_options = quiver_csv_options_default();
     ASSERT_EQ(quiver_database_export_csv(db, "Items", "", csv_path.string().c_str(), &csv_options), QUIVER_OK);
 
-    auto content = read_file(csv_path.string());
+    auto content = read_file_canonical(csv_path.string());
 
     // Old content gone
     EXPECT_EQ(content.find("old content"), std::string::npos);

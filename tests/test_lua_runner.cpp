@@ -2063,7 +2063,17 @@ static std::string read_csv_file(const std::string& path) {
     std::ifstream f(path, std::ios::binary);
     std::ostringstream ss;
     ss << f.rdbuf();
-    return ss.str();
+    std::string content = ss.str();
+
+    // Canonicalize to comma-delimited, '.'-decimal form so byte-level assertions
+    // stay independent of the host locale: export_csv emits a ';'-delimited,
+    // ','-decimal file on a comma-locale machine (matching Excel). Safe only for
+    // values free of spaces and embedded commas — true of every test that uses it.
+    if (content.rfind("sep=;", 0) == 0) {
+        std::replace(content.begin(), content.end(), ',', '.');  // ',' decimals -> '.'
+        std::replace(content.begin(), content.end(), ';', ',');  // ';' delimiters -> ','
+    }
+    return content;
 }
 
 static std::filesystem::path lua_csv_temp(const std::string& test_name) {

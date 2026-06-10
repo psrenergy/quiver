@@ -35,6 +35,7 @@ src/                      # C++ implementation
   database_csv_export.cpp # CSV export implementation
   database_csv_import.cpp # CSV import implementation
   cli/main.cpp            # quiver_cli CLI entry point
+  utils/csv_format.h      # locale-aware CSV number formatting (decimal/field separator, number normalization)
   utils/string.h          # String utilities: new_c_str, trim
 src/binary/                 # Binary C++ implementation
   binary_file.cpp             # BinaryFile class (Pimpl impl)
@@ -455,6 +456,7 @@ Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references.
 - Query: `query_string/integer/float(sql, parameters = {})` - parameterized SQL with positional `?` placeholders
 - Schema inspection: `describe()` - prints schema info to stdout
 - CSV: `export_csv()`, `import_csv()` -- CSV export/import with optional enum/date formatting via `CSVOptions`
+  - **Locale-aware separators** (`utils/csv_format.h`): export matches the OS locale decimal separator — a `,` locale emits `,` decimals paired with a `;` field delimiter and a `sep=;` header (so Excel reads numbers correctly); a `.` locale emits the usual `,`-delimited `sep=,` file. Import resolves the delimiter from the `sep=` header (or infers it from the header line), parses with that delimiter directly (no `;`→`,` swap), auto-detects CRLF/LF/CR line endings, and normalizes locale numbers (thousands separators stripped, decimal comma → `.`) before parsing. Because export output is locale-dependent, byte-level CSV test assertions read through a `read_file_canonical`/`read_csv_canonical` helper that maps a `sep=;` file back to canonical comma/dot form.
 
 ### Element Class
 Builder for element creation with fluent API:
