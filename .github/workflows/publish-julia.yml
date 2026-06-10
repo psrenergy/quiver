@@ -34,7 +34,7 @@ jobs:
           echo "version=$v" >> "$GITHUB_OUTPUT"
 
   publish:
-    name: Publish Julia (PR to Quiver.jl)
+    name: Publish Julia
     runs-on: [self-hosted, linux]
     needs: version
     steps:
