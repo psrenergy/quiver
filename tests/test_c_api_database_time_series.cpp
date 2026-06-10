@@ -192,6 +192,56 @@ TEST(DatabaseCApi, ReadTimeSeriesGroupByIdEmpty) {
     quiver_database_close(db);
 }
 
+TEST(DatabaseCApi, ReadTimeSeriesGroupNullStringFailsCleanly) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("nullable_time_series.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Test Config");
+    int64_t tmp_id = 0;
+    quiver_database_create_element(db, "Configuration", config, &tmp_id);
+    EXPECT_EQ(quiver_element_destroy(config), QUIVER_OK);
+
+    quiver_element_t* e1 = nullptr;
+    ASSERT_EQ(quiver_element_create(&e1), QUIVER_OK);
+    quiver_element_set_string(e1, "label", "Sensor 1");
+    int64_t id = 0;
+    quiver_database_create_element(db, "Sensor", e1, &id);
+    EXPECT_EQ(quiver_element_destroy(e1), QUIVER_OK);
+
+    // Insert a row whose nullable TEXT value column stays NULL (only the dimension column is provided)
+    const char* col_names[] = {"date_time"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING};
+    const char* date_times[] = {"2024-01-01T10:00:00"};
+    const void* col_data[] = {date_times};
+    ASSERT_EQ(quiver_database_add_time_series_row(db, "Sensor", "readings", id, col_names, col_types, col_data, 1),
+              QUIVER_OK);
+
+    // Marshaling NULL into a STRING column throws mid-copy; the cleanup path must
+    // free the partial result and zero the out-params instead of crashing.
+    char** out_col_names = nullptr;
+    int* out_col_types = nullptr;
+    void** out_col_data = nullptr;
+    size_t col_count = 0;
+    size_t row_count = 0;
+    auto err = quiver_database_read_time_series_group(
+        db, "Sensor", "readings", id, &out_col_names, &out_col_types, &out_col_data, &col_count, &row_count);
+
+    EXPECT_EQ(err, QUIVER_ERROR);
+    EXPECT_EQ(out_col_names, nullptr);
+    EXPECT_EQ(out_col_types, nullptr);
+    EXPECT_EQ(out_col_data, nullptr);
+    EXPECT_EQ(col_count, 0);
+    EXPECT_EQ(row_count, 0);
+
+    quiver_database_close(db);
+}
+
 // ============================================================================
 // Time series update tests
 // ============================================================================

@@ -106,7 +106,6 @@ add_executable(quiver_sandbox
 target_link_libraries(quiver_sandbox
     PRIVATE
         quiver
-        quiver_c
         quiver_compiler_options
 )
 

@@ -173,11 +173,6 @@ build_broadcast_metadata(const BinaryMetadata& lhs, const BinaryMetadata& rhs, s
         const std::string& parent_name = src_meta->dimensions[src_parent_idx].name;
         out_d.time->parent_dimension_index = output_index_by_name.find(parent_name)->second;
     }
-    for (const auto& d : out.dimensions) {
-        if (d.is_time_dimension()) {
-            ++out.number_of_time_dimensions;
-        }
-    }
     return out;
 }
 
@@ -270,12 +265,6 @@ inline BinaryMetadata build_ternary_broadcast_metadata(const BinaryMetadata& con
         }
         const std::string& parent_name = src_meta->dimensions[src_parent_idx].name;
         out_d.time->parent_dimension_index = output_index_by_name.find(parent_name)->second;
-    }
-
-    for (const auto& d : out.dimensions) {
-        if (d.is_time_dimension()) {
-            ++out.number_of_time_dimensions;
-        }
     }
     return out;
 }

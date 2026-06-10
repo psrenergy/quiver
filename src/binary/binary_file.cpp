@@ -228,7 +228,7 @@ void BinaryFile::validate_dimension_values(const std::unordered_map<std::string,
         }
     }
 
-    if (metadata.number_of_time_dimensions > 1) {
+    if (metadata.number_of_time_dimensions() > 1) {
         // Build the datetime by accumulating offsets from each time dimension
         auto datetime = metadata.initial_datetime;
         for (const auto& dim : dimensions) {

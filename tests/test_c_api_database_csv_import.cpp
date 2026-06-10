@@ -979,3 +979,28 @@ TEST(DatabaseCApiCSV, ImportCSV_Vector_TrailingEmptyColumns) {
     fs::remove(csv_path);
     quiver_database_close(db);
 }
+
+TEST(DatabaseCApiCSV, ImportCSV_InsideTransactionFails) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("csv_export.sql").c_str(), &options, &db),
+              QUIVER_OK);
+
+    auto csv_path = temp_csv("ImportInTransaction");
+    write_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,,\n");
+
+    auto csv_options = quiver_csv_options_default();
+    ASSERT_EQ(quiver_database_begin_transaction(db), QUIVER_OK);
+    EXPECT_EQ(quiver_database_import_csv(db, "Items", "", csv_path.string().c_str(), &csv_options), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Cannot import_csv: transaction already active");
+
+    // The caller's transaction must survive intact
+    int in_transaction = 0;
+    EXPECT_EQ(quiver_database_in_transaction(db, &in_transaction), QUIVER_OK);
+    EXPECT_EQ(in_transaction, 1);
+    EXPECT_EQ(quiver_database_rollback(db), QUIVER_OK);
+
+    quiver_database_close(db);
+    fs::remove(csv_path);
+}

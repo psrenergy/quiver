@@ -36,9 +36,6 @@ ExpressionAggregate::ExpressionAggregate(Operation operation,
 
     output_meta_ = operand_meta;
     output_meta_.dimensions.erase(output_meta_.dimensions.begin() + reduced_idx);
-    if (reduced_dim.is_time_dimension()) {
-        --output_meta_.number_of_time_dimensions;
-    }
 
     operand_to_out_.assign(operand_meta.dimensions.size(), -1);
     for (size_t i = 0; i < operand_meta.dimensions.size(); ++i) {

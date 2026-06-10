@@ -2849,3 +2849,25 @@ TEST_F(LuaRunnerFkTest, UpdateTimeSeriesFkViaTypedMethod) {
     EXPECT_EQ(std::get<int64_t>(ts_data[0].at("sponsor_id")), 2);
     EXPECT_EQ(std::get<int64_t>(ts_data[1].at("sponsor_id")), 1);
 }
+
+TEST(LuaRunner_ImportCSV, InsideTransactionThrows) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(":memory:", csv_schema);
+    quiver::LuaRunner lua(db);
+
+    auto csv_path = lua_csv_temp("ImportInTransaction");
+    {
+        std::ofstream f(csv_path, std::ios::binary);
+        f << "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,,\n";
+    }
+
+    lua.run("db:begin_transaction()");
+    EXPECT_THROW(
+        { lua.run(R"(db:import_csv("Items", "", ")" + lua_safe_path(csv_path) + "\")"); }, std::runtime_error);
+
+    // The caller's transaction must survive intact
+    lua.run(R"(assert(db:in_transaction(), "expected transaction to survive import_csv failure"))");
+    lua.run("db:rollback()");
+
+    std::filesystem::remove(csv_path);
+}

@@ -469,10 +469,10 @@ Standalone binary file I/O layer for `.qvr` files with `.toml` metadata sidecars
 
 - `BinaryFile` class (Pimpl): `open_file(path, mode, metadata?)`, `read(dims)`, `write(dims, data)`, `get_metadata()`, `get_file_path()`
 - `CSVConverter` class (Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)`
-- `BinaryMetadata` struct: `dimensions`, `initial_datetime`, `unit`, `labels`, `version`, `number_of_time_dimensions`
+- `BinaryMetadata` struct: `dimensions`, `initial_datetime`, `unit`, `labels`, `version`; `number_of_time_dimensions()` is derived from `dimensions` (not stored)
   - Factories: `from_toml_content()`, `from_element()`
   - Serialization: `to_toml()`
-  - Builders: `add_dimension()`, `add_time_dimension()`
+  - Builders: `add_dimension()`, `add_time_dimension()` (chains `parent_dimension_index` to the previous time dimension)
   - Validation: `validate()`, `validate_time_dimension_metadata()`, `validate_time_dimension_sizes()`
 - `Dimension` struct: `name`, `size`, optional `TimeProperties`
 - `TimeProperties` struct: `frequency`, `initial_value`, `parent_dimension_index`

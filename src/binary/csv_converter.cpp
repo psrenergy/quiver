@@ -42,7 +42,7 @@ void CSVConverter::csv_to_bin(const std::string& file_path) {
     std::string header_line;
     std::getline(*csv_io, header_line);
     bool aggregate_time_dimensions = false;
-    if (metadata.number_of_time_dimensions > 0) {
+    if (metadata.number_of_time_dimensions() > 0) {
         std::string first_field = header_line.substr(0, header_line.find(','));
         aggregate_time_dimensions = (first_field == "datetime" || first_field == "date");
     }

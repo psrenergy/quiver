@@ -1299,3 +1299,24 @@ TEST(DatabaseCSV, ImportCSV_Vector_TrailingEmptyColumns) {
 
     fs::remove(csv_path);
 }
+
+TEST(DatabaseCSV, ImportCSV_InsideTransactionThrows) {
+    auto db = make_db();
+
+    auto csv_path = temp_csv("ImportInTransaction");
+    write_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,,\n");
+
+    db.begin_transaction();
+    try {
+        db.import_csv("Items", "", csv_path.string());
+        FAIL() << "expected import_csv to throw inside a transaction";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(e.what(), "Cannot import_csv: transaction already active");
+    }
+
+    // The caller's transaction must survive intact
+    EXPECT_TRUE(db.in_transaction());
+    db.rollback();
+
+    fs::remove(csv_path);
+}

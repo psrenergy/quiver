@@ -105,6 +105,16 @@ namespace quiver {
 BinaryMetadata::BinaryMetadata() = default;
 BinaryMetadata::~BinaryMetadata() = default;
 
+int64_t BinaryMetadata::number_of_time_dimensions() const {
+    int64_t count = 0;
+    for (const auto& dim : dimensions) {
+        if (dim.is_time_dimension()) {
+            ++count;
+        }
+    }
+    return count;
+}
+
 BinaryMetadata BinaryMetadata::from_element(const Element& element) {
     const auto& scalars = element.scalars();
     const auto& arrays = element.arrays();
@@ -319,7 +329,6 @@ BinaryMetadata BinaryMetadata::from_toml_content(const std::string& content) {
             metadata.dimensions.push_back({dimensions[i], dimension_sizes[i], std::nullopt});
         }
     }
-    metadata.number_of_time_dimensions = time_dim_index;
     time_dim_index = 0;
 
     // Compute and set initial values for time dimensions
@@ -393,14 +402,6 @@ void BinaryMetadata::validate() const {
         throw std::runtime_error("Number of labels must be positive, got 0");
     }
 
-    // Time dimension count must not exceed total dimensions
-    if (number_of_time_dimensions < 0 || number_of_time_dimensions > static_cast<int64_t>(dimensions.size())) {
-        throw std::runtime_error("Number of time dimensions must be non-negative and <= number of dimensions. "
-                                 "Got number_of_time_dimensions=" +
-                                 std::to_string(number_of_time_dimensions) +
-                                 ", number_of_dimensions=" + std::to_string(dimensions.size()));
-    }
-
     // Dimension sizes must be positive
     for (size_t i = 0; i < dimensions.size(); ++i) {
         if (dimensions[i].size <= 0) {
@@ -431,7 +432,7 @@ void BinaryMetadata::validate() const {
 }
 
 void BinaryMetadata::validate_time_dimension_metadata() const {
-    if (number_of_time_dimensions == 0)
+    if (number_of_time_dimensions() == 0)
         return;
 
     // Collect time dimensions in order
@@ -573,7 +574,14 @@ void BinaryMetadata::add_dimension(const std::string& name, int64_t size) {
 
 void BinaryMetadata::add_time_dimension(const std::string& name, int64_t size, const std::string& frequency) {
     TimeFrequency freq_enum = frequency_from_string(frequency);
-    TimeProperties time_props{freq_enum, 0, -1};
+    // Chain to the previous time dimension, matching from_toml_content/from_element
+    int64_t parent_index = -1;
+    for (size_t i = 0; i < dimensions.size(); ++i) {
+        if (dimensions[i].is_time_dimension()) {
+            parent_index = static_cast<int64_t>(i);
+        }
+    }
+    TimeProperties time_props{freq_enum, 0, parent_index};
     dimensions.push_back({name, size, std::move(time_props)});
 }
 
