@@ -2,11 +2,9 @@
 #define QUIVER_CSV_CONVERTER_H
 
 #include "../export.h"
-#include "binary_file.h"
+#include "binary_metadata.h"
 
 #include <cstdint>
-#include <ctime>
-#include <initializer_list>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -14,29 +12,14 @@
 
 namespace quiver {
 
-class QUIVER_API CSVConverter : public BinaryFile {
+class QUIVER_API CSVConverter {
 public:
-    explicit CSVConverter(const std::string& file_path,
-                          const BinaryMetadata& metadata,
-                          std::unique_ptr<std::iostream> io,
-                          bool aggregate_time_dimensions);
-    ~CSVConverter();
-
-    // Non-copyable
-    CSVConverter(const CSVConverter&) = delete;
-    CSVConverter& operator=(const CSVConverter&) = delete;
-
-    // Movable
-    CSVConverter(CSVConverter&& other) noexcept;
-    CSVConverter& operator=(CSVConverter&& other) noexcept;
+    CSVConverter(const BinaryMetadata& metadata, std::unique_ptr<std::iostream> io, bool aggregate_time_dimensions);
 
     static void csv_to_bin(const std::string& file_path);
     static void bin_to_csv(const std::string& file_path, bool aggregate_time_dimensions = true);
 
 private:
-    struct Impl;
-    std::unique_ptr<Impl> impl_;
-
     struct CSVRow {
         std::vector<std::string> dimension_values;
         std::vector<double> data;
@@ -56,6 +39,14 @@ private:
     void validate_dimensions(const std::vector<std::string>& dimension_values,
                              const std::vector<int64_t>& current_dimensions);
     void validate_header();
+
+    // Time-dimension predicates
+    bool aggregates_time_dimensions() const;
+    bool has_hourly_dimension() const;
+
+    BinaryMetadata metadata_;
+    std::unique_ptr<std::iostream> io_;
+    bool aggregate_time_dimensions_ = false;
 };
 
 }  // namespace quiver

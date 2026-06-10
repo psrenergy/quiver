@@ -950,16 +950,6 @@ TEST_F(ExpressionFixture, SaveFailsWhenInputIsOpenForWriting) {
         std::runtime_error);
 }
 
-TEST_F(ExpressionFixture, IsReadModeAccessor) {
-    auto md = make_simple_metadata();
-    {
-        auto writer = BinaryFile::open_file(path_a, 'w', md);
-        EXPECT_FALSE(writer.is_read_mode());
-    }
-    auto reader = BinaryFile::open_file(path_a, 'r');
-    EXPECT_TRUE(reader.is_read_mode());
-}
-
 TEST_F(ExpressionFixture, ImplicitConversionFromBinaryFile) {
     auto md = make_simple_metadata();
     write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
@@ -1210,7 +1200,7 @@ TEST_F(ExpressionFixture, AggregateReduceOutermostTimeDimWithChildren) {
     EXPECT_EQ(m.dimensions[0].name, "month");
     ASSERT_TRUE(m.dimensions[0].is_time_dimension());
     EXPECT_EQ(m.dimensions[0].time->parent_dimension_index, -1);
-    EXPECT_EQ(m.number_of_time_dimensions, 1);
+    EXPECT_EQ(m.number_of_time_dimensions(), 1);
 }
 
 TEST_F(ExpressionFixture, AggregateDimensionNotFoundThrows) {
@@ -1435,7 +1425,7 @@ TEST_F(ExpressionFixture, AgentPreservesDimensions) {
     EXPECT_TRUE(m.dimensions[0].is_time_dimension());
     EXPECT_EQ(m.dimensions[1].name, "scenario");
     EXPECT_EQ(m.dimensions[1].size, 3);
-    EXPECT_EQ(m.number_of_time_dimensions, 1);
+    EXPECT_EQ(m.number_of_time_dimensions(), 1);
     EXPECT_EQ(m.labels.size(), 1u);
     EXPECT_EQ(m.labels[0], "mean");
 }

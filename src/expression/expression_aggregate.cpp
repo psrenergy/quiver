@@ -36,9 +36,6 @@ ExpressionAggregate::ExpressionAggregate(Operation operation,
 
     output_meta_ = operand_meta;
     output_meta_.dimensions.erase(output_meta_.dimensions.begin() + reduced_idx);
-    if (reduced_dim.is_time_dimension()) {
-        --output_meta_.number_of_time_dimensions;
-    }
 
     operand_to_out_.assign(operand_meta.dimensions.size(), -1);
     for (size_t i = 0; i < operand_meta.dimensions.size(); ++i) {
@@ -74,9 +71,7 @@ ExpressionAggregate::ExpressionAggregate(Operation operation,
 
     operand_dims_buf_.resize(operand_meta.dimensions.size());
     operand_row_buf_.resize(operand_meta.labels.size());
-    if (operation_ == Operation::Percentile) {
-        percentile_scratch_.resize(operand_meta.labels.size());
-    }
+    percentile_scratch_.resize(operand_meta.labels.size());
 }
 
 const BinaryMetadata& ExpressionAggregate::metadata() const {
@@ -116,15 +111,9 @@ void ExpressionAggregate::compute_row(const std::vector<int64_t>& dims, std::vec
         }
     }
 
-    std::vector<double> sum_buf(label_count, 0.0);
-    std::vector<int64_t> count_buf(label_count, 0);
-    std::vector<double> min_buf(label_count, std::numeric_limits<double>::infinity());
-    std::vector<double> max_buf(label_count, -std::numeric_limits<double>::infinity());
-
-    if (operation_ == Operation::Percentile) {
-        for (auto& scratch : percentile_scratch_) {
-            scratch.clear();
-        }
+    std::vector<AggregationState> states(label_count);
+    for (auto& scratch : percentile_scratch_) {
+        scratch.clear();
     }
 
     for (int64_t v = start; v <= end; ++v) {
@@ -132,54 +121,12 @@ void ExpressionAggregate::compute_row(const std::vector<int64_t>& dims, std::vec
         operand_->compute_row(operand_dims_buf_, operand_row_buf_);
 
         for (size_t k = 0; k < label_count; ++k) {
-            const double value = operand_row_buf_[k];
-            if (std::isnan(value)) {
-                continue;
-            }
-            switch (operation_) {
-            case Operation::Sum:
-            case Operation::Mean:
-                sum_buf[k] += value;
-                ++count_buf[k];
-                break;
-            case Operation::Min:
-                if (value < min_buf[k]) {
-                    min_buf[k] = value;
-                }
-                ++count_buf[k];
-                break;
-            case Operation::Max:
-                if (value > max_buf[k]) {
-                    max_buf[k] = value;
-                }
-                ++count_buf[k];
-                break;
-            case Operation::Percentile:
-                percentile_scratch_[k].push_back(value);
-                break;
-            }
+            aggregation_accumulate(operation_, states[k], percentile_scratch_[k], operand_row_buf_[k]);
         }
     }
 
-    const double nan_value = std::numeric_limits<double>::quiet_NaN();
     for (size_t k = 0; k < label_count; ++k) {
-        switch (operation_) {
-        case Operation::Sum:
-            out[k] = (count_buf[k] > 0) ? sum_buf[k] : nan_value;
-            break;
-        case Operation::Mean:
-            out[k] = (count_buf[k] > 0) ? sum_buf[k] / static_cast<double>(count_buf[k]) : nan_value;
-            break;
-        case Operation::Min:
-            out[k] = (count_buf[k] > 0) ? min_buf[k] : nan_value;
-            break;
-        case Operation::Max:
-            out[k] = (count_buf[k] > 0) ? max_buf[k] : nan_value;
-            break;
-        case Operation::Percentile:
-            out[k] = compute_percentile(percentile_scratch_[k], *parameter_);
-            break;
-        }
+        out[k] = aggregation_finalize(operation_, states[k], percentile_scratch_[k], parameter_);
     }
 }
 

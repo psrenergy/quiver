@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:quiverdb/src/database.dart';
+import 'package:quiverdb/src/exceptions.dart';
 import 'package:test/test.dart';
 import 'package:path/path.dart' as path;
 
@@ -387,6 +388,28 @@ void main() {
         expect(vals.length, 2);
         expect(vals[0], closeTo(1.1, 0.001));
         expect(vals[1], closeTo(2.2, 0.001));
+      } finally {
+        final f = File(csvPath);
+        if (f.existsSync()) f.deleteSync();
+        db.close();
+      }
+    });
+
+    test('import inside transaction throws', () {
+      final db = Database.fromSchema(':memory:', schemaPath);
+      final csvPath = '${Directory.systemTemp.path}/quiver_dart_csv_import_in_tx.csv';
+      try {
+        File(csvPath).writeAsStringSync('sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,,\n');
+
+        db.beginTransaction();
+        expect(
+          () => db.importCSV('Items', '', csvPath),
+          throwsA(isA<DatabaseException>()),
+        );
+
+        // The caller's transaction must survive intact
+        expect(db.inTransaction(), isTrue);
+        db.rollback();
       } finally {
         final f = File(csvPath);
         if (f.existsSync()) f.deleteSync();

@@ -16,23 +16,23 @@
 
 namespace quiver {
 
-struct CSVConverter::Impl {
-    bool aggregate_time_dimensions;
-};
-
-CSVConverter::CSVConverter(const std::string& file_path,
-                           const BinaryMetadata& metadata,
+CSVConverter::CSVConverter(const BinaryMetadata& metadata,
                            std::unique_ptr<std::iostream> io,
                            bool aggregate_time_dimensions)
-    : BinaryFile(file_path), impl_(std::make_unique<Impl>(Impl{aggregate_time_dimensions})) {
-    set_metadata(metadata);
-    set_io(std::move(io));
+    : metadata_(metadata), io_(std::move(io)), aggregate_time_dimensions_(aggregate_time_dimensions) {}
+
+bool CSVConverter::aggregates_time_dimensions() const {
+    const auto& dimensions = metadata_.dimensions;
+    return aggregate_time_dimensions_ &&
+           std::any_of(dimensions.begin(), dimensions.end(), [](const auto& d) { return d.is_time_dimension(); });
 }
 
-CSVConverter::~CSVConverter() = default;
-
-CSVConverter::CSVConverter(CSVConverter&& other) noexcept = default;
-CSVConverter& CSVConverter::operator=(CSVConverter&& other) noexcept = default;
+bool CSVConverter::has_hourly_dimension() const {
+    const auto& dimensions = metadata_.dimensions;
+    return std::any_of(dimensions.begin(), dimensions.end(), [](const auto& d) {
+        return d.is_time_dimension() && d.time->frequency == TimeFrequency::Hourly;
+    });
+}
 
 void CSVConverter::csv_to_bin(const std::string& file_path) {
     auto metadata = BinaryMetadata::from_toml_file(file_path);
@@ -42,31 +42,21 @@ void CSVConverter::csv_to_bin(const std::string& file_path) {
     std::string header_line;
     std::getline(*csv_io, header_line);
     bool aggregate_time_dimensions = false;
-    if (metadata.number_of_time_dimensions > 0) {
+    if (metadata.number_of_time_dimensions() > 0) {
         std::string first_field = header_line.substr(0, header_line.find(','));
         aggregate_time_dimensions = (first_field == "datetime" || first_field == "date");
     }
     csv_io->seekg(0);  // Rewind so validate_header can re-read
 
-    CSVConverter csv_reader(file_path, metadata, std::move(csv_io), aggregate_time_dimensions);
+    CSVConverter csv_reader(metadata, std::move(csv_io), aggregate_time_dimensions);
     csv_reader.validate_header();
 
     // Open the binary file in write mode
     BinaryFile bin_writer = BinaryFile::open_file(file_path, 'w', metadata);
 
-    // Get initial dimension values
-    const auto& dimensions = metadata.dimensions;
-    std::vector<int64_t> initial_dimensions;
-    for (const auto& dim : dimensions) {
-        if (dim.is_time_dimension()) {
-            initial_dimensions.push_back(dim.time->initial_value);
-        } else {
-            initial_dimensions.push_back(1);
-        }
-    }
-
     // Iterate CSV lines and write to binary
-    std::vector<int64_t> current_dimensions = initial_dimensions;
+    const auto& dimensions = metadata.dimensions;
+    std::vector<int64_t> current_dimensions = first_dimensions(metadata);
     for (;;) {
         auto row = csv_reader.read_line();
         csv_reader.validate_dimensions(row.dimension_values, current_dimensions);
@@ -91,22 +81,12 @@ void CSVConverter::bin_to_csv(const std::string& file_path, bool aggregate_time_
 
     // Open the CSV file in write mode
     auto csv_io = std::make_unique<std::fstream>(file_path + std::string(CSV_EXTENSION), std::ios::out);
-    CSVConverter csv_writer(file_path, metadata, std::move(csv_io), aggregate_time_dimensions);
+    CSVConverter csv_writer(metadata, std::move(csv_io), aggregate_time_dimensions);
     csv_writer.write_header();
 
-    // Get initial dimension values
-    const auto& dimensions = metadata.dimensions;
-    std::vector<int64_t> initial_dimensions;
-    for (const auto& dim : dimensions) {
-        if (dim.is_time_dimension()) {
-            initial_dimensions.push_back(dim.time->initial_value);
-        } else {
-            initial_dimensions.push_back(1);
-        }
-    }
-
     // Iterate files and write to CSV
-    std::vector<int64_t> current_dimensions = initial_dimensions;
+    const auto& dimensions = metadata.dimensions;
+    std::vector<int64_t> current_dimensions = first_dimensions(metadata);
     for (;;) {
         std::unordered_map<std::string, int64_t> dims;
         for (size_t j = 0; j < dimensions.size(); ++j) {
@@ -114,7 +94,7 @@ void CSVConverter::bin_to_csv(const std::string& file_path, bool aggregate_time_
         }
 
         std::vector<double> data = bin_reader.read(dims, true);
-        csv_writer.get_io() << csv_writer.build_line(data, current_dimensions);
+        *csv_writer.io_ << csv_writer.build_line(data, current_dimensions);
 
         auto nxt = next_dimensions(metadata, current_dimensions);
         if (!nxt)
@@ -125,7 +105,7 @@ void CSVConverter::bin_to_csv(const std::string& file_path, bool aggregate_time_
 
 CSVConverter::CSVRow CSVConverter::read_line() {
     std::string line;
-    std::getline(get_io(), line);
+    std::getline(*io_, line);
 
     // The first N fields are dimension labels (strings), the rest are data values (doubles).
     // N depends on whether time dimensions are aggregated into a single datetime column.
@@ -166,12 +146,10 @@ CSVConverter::CSVRow CSVConverter::read_line() {
 }
 
 std::string CSVConverter::build_line(const std::vector<double>& data, const std::vector<int64_t>& current_dimensions) {
-    const auto& dimensions = get_metadata().dimensions;
+    const auto& dimensions = metadata_.dimensions;
     std::vector<std::string> elements;
 
-    bool aggregate_time =
-        impl_->aggregate_time_dimensions &&
-        std::any_of(dimensions.begin(), dimensions.end(), [](const auto& d) { return d.is_time_dimension(); });
+    const bool aggregate_time = aggregates_time_dimensions();
 
     if (aggregate_time) {
         elements.push_back(build_datetime_string_from_time_dimension_values(current_dimensions));
@@ -203,10 +181,9 @@ std::string CSVConverter::build_line(const std::vector<double>& data, const std:
 
 std::string CSVConverter::build_datetime_string_from_time_dimension_values(
     const std::vector<int64_t>& time_dimension_values) const {
-    const auto& metadata = get_metadata();
-    const auto& dimensions = metadata.dimensions;
+    const auto& dimensions = metadata_.dimensions;
 
-    auto datetime = metadata.initial_datetime;
+    auto datetime = metadata_.initial_datetime;
     bool has_hourly = false;
     for (size_t i = 0; i < dimensions.size(); ++i) {
         if (!dimensions[i].is_time_dimension())
@@ -224,28 +201,14 @@ std::string CSVConverter::build_datetime_string_from_time_dimension_values(
 }
 
 void CSVConverter::write_header() {
-    const auto& metadata = get_metadata();
-    const auto& dimensions = metadata.dimensions;
+    const auto& dimensions = metadata_.dimensions;
 
     std::vector<std::string> header;
 
-    bool aggregate_time =
-        impl_->aggregate_time_dimensions &&
-        std::any_of(dimensions.begin(), dimensions.end(), [](const auto& d) { return d.is_time_dimension(); });
+    const bool aggregate_time = aggregates_time_dimensions();
 
     if (aggregate_time) {
-        bool has_hourly = false;
-        for (const auto& d : dimensions) {
-            if (d.is_time_dimension() && d.time->frequency == TimeFrequency::Hourly) {
-                has_hourly = true;
-                break;
-            }
-        }
-        if (has_hourly) {
-            header.push_back("datetime");
-        } else {
-            header.push_back("date");
-        }
+        header.push_back(has_hourly_dimension() ? "datetime" : "date");
     }
 
     for (const auto& dim : dimensions) {
@@ -254,11 +217,11 @@ void CSVConverter::write_header() {
         header.push_back(dim.name);
     }
 
-    for (const auto& label : metadata.labels) {
+    for (const auto& label : metadata_.labels) {
         header.push_back(label);
     }
 
-    auto& io = get_io();
+    auto& io = *io_;
     for (size_t i = 0; i < header.size(); ++i) {
         if (i > 0)
             io << ',';
@@ -268,27 +231,11 @@ void CSVConverter::write_header() {
 }
 
 std::vector<std::string> CSVConverter::expected_dimension_names() const {
-    const auto& metadata = get_metadata();
-    const auto& dimensions = metadata.dimensions;
+    const auto& dimensions = metadata_.dimensions;
 
     std::vector<std::string> names;
-    bool aggregate_time =
-        impl_->aggregate_time_dimensions &&
-        std::any_of(dimensions.begin(), dimensions.end(), [](const auto& d) { return d.is_time_dimension(); });
-
-    if (aggregate_time) {
-        bool has_hourly = false;
-        for (const auto& dim : dimensions) {
-            if (dim.is_time_dimension() && dim.time->frequency == TimeFrequency::Hourly) {
-                has_hourly = true;
-                break;
-            }
-        }
-        if (has_hourly) {
-            names.push_back("datetime");
-        } else {
-            names.push_back("date");
-        }
+    if (aggregates_time_dimensions()) {
+        names.push_back(has_hourly_dimension() ? "datetime" : "date");
         for (const auto& dim : dimensions) {
             if (!dim.is_time_dimension()) {
                 names.push_back(dim.name);
@@ -303,13 +250,12 @@ std::vector<std::string> CSVConverter::expected_dimension_names() const {
 }
 
 void CSVConverter::validate_header() {
-    const auto& metadata = get_metadata();
     std::string header_line;
-    std::getline(get_io(), header_line);
+    std::getline(*io_, header_line);
 
     // Build the expected header: dimension names (or aggregated date/datetime) followed by labels.
     std::vector<std::string> expected = expected_dimension_names();
-    for (const auto& label : metadata.labels) {
+    for (const auto& label : metadata_.labels) {
         expected.push_back(label);
     }
 
@@ -354,18 +300,13 @@ void CSVConverter::validate_header() {
 
 void CSVConverter::validate_dimensions(const std::vector<std::string>& csv_dimension_values,
                                        const std::vector<int64_t>& current_bin_dimension_values) {
-    const auto& metadata = get_metadata();
-    const auto& dimensions = metadata.dimensions;
+    const auto& dimensions = metadata_.dimensions;
 
     std::vector<std::string> expected_names = expected_dimension_names();
     std::vector<std::string> expected_values;
 
-    bool aggregate_time =
-        impl_->aggregate_time_dimensions &&
-        std::any_of(dimensions.begin(), dimensions.end(), [](const auto& d) { return d.is_time_dimension(); });
-
     // Build expected values
-    if (aggregate_time) {
+    if (aggregates_time_dimensions()) {
         // First expected value is the aggregated datetime string.
         expected_values.push_back(build_datetime_string_from_time_dimension_values(current_bin_dimension_values));
         // Remaining expected values are the non-time dimension integers.

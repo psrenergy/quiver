@@ -16,7 +16,7 @@ int64_t Database::create_element(const std::string& collection, const Element& e
 
     // Validate resolved scalar types
     for (const auto& [name, value] : resolved.scalars) {
-        impl_->type_validator->validate_scalar(collection, name, value);
+        impl_->type_validator->validate_scalar("create_element", collection, name, value);
     }
 
     Impl::TransactionGuard txn(*impl_);

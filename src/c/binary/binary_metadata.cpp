@@ -222,7 +222,7 @@ QUIVER_C_API quiver_error_t quiver_binary_metadata_get_number_of_time_dimensions
                                                                                  int64_t* out) {
     QUIVER_REQUIRE(md, out);
 
-    *out = md->metadata.number_of_time_dimensions;
+    *out = md->metadata.number_of_time_dimensions();
     return QUIVER_OK;
 }
 

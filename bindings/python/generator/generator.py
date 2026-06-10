@@ -1,17 +1,15 @@
 """CFFI declaration generator for the Quiver C API.
 
-Reads C API headers and produces CFFI-compatible declarations by stripping
-preprocessor directives and QUIVER_C_API macros.
+Reads C API headers and prints CFFI-compatible declarations to stdout by
+stripping preprocessor directives and QUIVER_C_API macros. Used as a diff
+aid when hand-updating src/quiverdb/_c_api.py.
 
 Usage:
-    python generator/generator.py                              # Print to stdout
-    python generator/generator.py --output src/quiverdb/_declarations.py  # Write file
+    python generator/generator.py
 """
 
 from __future__ import annotations
 
-import argparse
-import re
 import sys
 from pathlib import Path
 
@@ -21,6 +19,7 @@ HEADERS = [
     "include/quiver/c/options.h",
     "include/quiver/c/database.h",
     "include/quiver/c/element.h",
+    "include/quiver/c/lua_runner.h",
 ]
 
 
@@ -65,17 +64,6 @@ def strip_header(content: str) -> str:
     return "\n".join(lines)
 
 
-def replace_bool_types(declarations: str) -> str:
-    """Replace bool/bool* with _Bool/_Bool* for CFFI compatibility.
-
-    CFFI's cdef parser recognizes _Bool as C99's boolean type.
-    The C API uses bool* for out-parameters (e.g., quiver_database_in_transaction).
-    """
-    # Replace bool* but not _Bool*
-    declarations = re.sub(r"\bbool\b", "_Bool", declarations)
-    return declarations
-
-
 def generate(headers: list[Path]) -> str:
     """Parse headers and produce combined CFFI declarations."""
     sections: list[str] = []
@@ -90,21 +78,10 @@ def generate(headers: list[Path]) -> str:
             sections.append(stripped)
             sections.append("")
 
-    declarations = "\n".join(sections)
-    declarations = replace_bool_types(declarations)
-    return declarations
+    return "\n".join(sections)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate CFFI declarations from C API headers")
-    parser.add_argument(
-        "--output",
-        type=str,
-        default=None,
-        help="Output file path (writes DECLARATIONS constant). If omitted, prints to stdout.",
-    )
-    args = parser.parse_args()
-
     root = find_project_root()
     header_paths = [root / h for h in HEADERS]
 
@@ -113,24 +90,7 @@ def main() -> None:
             print(f"Error: Header not found: {hp}", file=sys.stderr)
             sys.exit(1)
 
-    declarations = generate(header_paths)
-
-    if args.output:
-        output_path = Path(args.output)
-        if not output_path.is_absolute():
-            # Resolve relative to the bindings/python directory
-            output_path = root / "bindings" / "python" / args.output
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(
-            f'"""Auto-generated CFFI declarations. Do not edit manually.\n\n'
-            f"Regenerate with: python generator/generator.py --output {args.output}\n"
-            f'"""\n\n'
-            f'DECLARATIONS = """\n{declarations}\n"""\n',
-            encoding="utf-8",
-        )
-        print(f"Written to {output_path}")
-    else:
-        print(declarations)
+    print(generate(header_paths))
 
 
 if __name__ == "__main__":

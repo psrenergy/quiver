@@ -81,8 +81,6 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           install_name_tool -add_rpath '@loader_path' build/lib/libquiver_c.dylib
-          # install_name_tool invalidates the ad-hoc linker signature; arm64 macOS SIGKILLs
-          # dlopen of an unsigned dylib, so re-sign after all modifications.
           codesign --force --sign - build/lib/libquiver_c.dylib
 
       - uses: actions/upload-artifact@v7

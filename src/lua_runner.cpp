@@ -74,27 +74,7 @@ struct LuaRunner::Impl {
                const std::string& group,
                const std::string& path,
                sol::optional<sol::table> options_table) {
-                CSVOptions options;
-                if (options_table) {
-                    auto& t = *options_table;
-                    if (auto fmt = t.get<sol::optional<std::string>>("date_time_format")) {
-                        options.date_time_format = *fmt;
-                    }
-                    if (auto enums = t.get<sol::optional<sol::table>>("enum_labels")) {
-                        enums->for_each([&](sol::object attr_key, sol::object attr_value) {
-                            auto attr_name = attr_key.as<std::string>();
-                            auto& attr_locale_map = options.enum_labels[attr_name];
-                            attr_value.as<sol::table>().for_each([&](sol::object locale_key, sol::object locale_value) {
-                                auto locale_name = locale_key.as<std::string>();
-                                auto& label_map = attr_locale_map[locale_name];
-                                locale_value.as<sol::table>().for_each([&](sol::object k, sol::object v) {
-                                    label_map[k.as<std::string>()] = v.as<int64_t>();
-                                });
-                            });
-                        });
-                    }
-                }
-                self.export_csv(collection, group, path, options);
+                self.export_csv(collection, group, path, parse_csv_options(std::move(options_table)));
             },
             // Group 12: CSV import
             "import_csv",
@@ -103,27 +83,7 @@ struct LuaRunner::Impl {
                const std::string& group,
                const std::string& path,
                sol::optional<sol::table> options_table) {
-                CSVOptions options;
-                if (options_table) {
-                    auto& t = *options_table;
-                    if (auto fmt = t.get<sol::optional<std::string>>("date_time_format")) {
-                        options.date_time_format = *fmt;
-                    }
-                    if (auto enums = t.get<sol::optional<sol::table>>("enum_labels")) {
-                        enums->for_each([&](sol::object attr_key, sol::object attr_value) {
-                            auto attr_name = attr_key.as<std::string>();
-                            auto& attr_locale_map = options.enum_labels[attr_name];
-                            attr_value.as<sol::table>().for_each([&](sol::object locale_key, sol::object locale_value) {
-                                auto locale_name = locale_key.as<std::string>();
-                                auto& label_map = attr_locale_map[locale_name];
-                                locale_value.as<sol::table>().for_each([&](sol::object k, sol::object v) {
-                                    label_map[k.as<std::string>()] = v.as<int64_t>();
-                                });
-                            });
-                        });
-                    }
-                }
-                self.import_csv(collection, group, path, options);
+                self.import_csv(collection, group, path, parse_csv_options(std::move(options_table)));
             });
         // NOLINTEND(performance-unnecessary-value-parameter)
 
@@ -144,6 +104,7 @@ struct LuaRunner::Impl {
         bind.set_function("read_set_strings", &read_set_strings_lua);
 
         bind.set_function("read_time_series_group", &read_time_series_group_lua);
+        bind.set_function("read_time_series_row", &read_time_series_row_lua);
         bind.set_function("read_time_series_files", &read_time_series_files_lua);
 
         bind.set_function("read_scalars_by_id", &read_scalars_by_id_lua);
@@ -175,6 +136,48 @@ struct LuaRunner::Impl {
     // ========================================================================
     // Conversion helpers
     // ========================================================================
+
+    static CSVOptions parse_csv_options(sol::optional<sol::table> options_table) {
+        CSVOptions options;
+        if (!options_table) {
+            return options;
+        }
+        auto& t = *options_table;
+        if (auto fmt = t.get<sol::optional<std::string>>("date_time_format")) {
+            options.date_time_format = *fmt;
+        }
+        if (auto enums = t.get<sol::optional<sol::table>>("enum_labels")) {
+            enums->for_each([&](sol::object attr_key, sol::object attr_value) {
+                auto attr_name = attr_key.as<std::string>();
+                auto& attr_locale_map = options.enum_labels[attr_name];
+                attr_value.as<sol::table>().for_each([&](sol::object locale_key, sol::object locale_value) {
+                    auto locale_name = locale_key.as<std::string>();
+                    auto& label_map = attr_locale_map[locale_name];
+                    locale_value.as<sol::table>().for_each(
+                        [&](sol::object k, sol::object v) { label_map[k.as<std::string>()] = v.as<int64_t>(); });
+                });
+            });
+        }
+        return options;
+    }
+
+    template <typename T>
+    static sol::table to_lua_table(sol::state_view& lua, const std::vector<T>& values) {
+        auto t = lua.create_table();
+        for (size_t i = 0; i < values.size(); ++i) {
+            t[i + 1] = values[i];
+        }
+        return t;
+    }
+
+    template <typename T>
+    static sol::table to_lua_table(sol::state_view& lua, const std::vector<std::vector<T>>& values) {
+        auto outer = lua.create_table();
+        for (size_t i = 0; i < values.size(); ++i) {
+            outer[i + 1] = to_lua_table(lua, values[i]);
+        }
+        return outer;
+    }
 
     static std::vector<int64_t> lua_table_to_int64_vector(const sol::table& t) {
         std::vector<int64_t> result;
@@ -252,23 +255,16 @@ struct LuaRunner::Impl {
                 if (arr.size() > 0) {
                     sol::object first = arr[1];
                     if (first.is<int64_t>()) {
-                        std::vector<int64_t> vec;
-                        for (size_t i = 1; i <= arr.size(); ++i) {
-                            vec.push_back(arr.get<int64_t>(i));
-                        }
-                        element.set(k, vec);
+                        element.set(k, lua_table_to_int64_vector(arr));
                     } else if (first.is<double>()) {
-                        std::vector<double> vec;
-                        for (size_t i = 1; i <= arr.size(); ++i) {
-                            vec.push_back(arr.get<double>(i));
-                        }
-                        element.set(k, vec);
+                        element.set(k, lua_table_to_double_vector(arr));
                     } else if (first.is<std::string>()) {
-                        std::vector<std::string> vec;
-                        for (size_t i = 1; i <= arr.size(); ++i) {
-                            vec.push_back(arr.get<std::string>(i));
-                        }
-                        element.set(k, vec);
+                        element.set(k, lua_table_to_string_vector(arr));
+                    } else {
+                        // Surface unsupported element types loudly instead of silently
+                        // dropping the attribute (same policy as lua_table_to_value_map)
+                        throw std::runtime_error("Cannot table_to_element: array '" + k +
+                                                 "' has unsupported element type");
                     }
                 }
             } else if (val.is<int64_t>()) {
@@ -277,13 +273,16 @@ struct LuaRunner::Impl {
                 element.set(k, val.as<double>());
             } else if (val.is<std::string>()) {
                 element.set(k, val.as<std::string>());
+            } else {
+                // Surface typos / booleans / nested structures loudly instead of
+                // silently dropping the attribute (same policy as lua_table_to_value_map)
+                throw std::runtime_error("Cannot table_to_element: attribute '" + k + "' has unsupported Lua type");
             }
         }
         return element;
     }
 
-    static int64_t
-    create_element_lua(Database& db, const std::string& collection, const sol::table& values, sol::this_state) {
+    static int64_t create_element_lua(Database& db, const std::string& collection, const sol::table& values) {
         auto element = table_to_element(values);
         return db.create_element(collection, element);
     }
@@ -298,12 +297,7 @@ struct LuaRunner::Impl {
                                               const std::string& attribute,
                                               sol::this_state s) {
         sol::state_view lua(s);
-        auto result = db.read_scalar_strings(collection, attribute);
-        auto t = lua.create_table();
-        for (size_t i = 0; i < result.size(); ++i) {
-            t[i + 1] = result[i];
-        }
-        return t;
+        return to_lua_table(lua, db.read_scalar_strings(collection, attribute));
     }
 
     static sol::table read_scalar_integers_lua(Database& db,
@@ -311,12 +305,7 @@ struct LuaRunner::Impl {
                                                const std::string& attribute,
                                                sol::this_state s) {
         sol::state_view lua(s);
-        auto result = db.read_scalar_integers(collection, attribute);
-        auto t = lua.create_table();
-        for (size_t i = 0; i < result.size(); ++i) {
-            t[i + 1] = result[i];
-        }
-        return t;
+        return to_lua_table(lua, db.read_scalar_integers(collection, attribute));
     }
 
     static sol::table read_scalar_floats_lua(Database& db,
@@ -324,12 +313,7 @@ struct LuaRunner::Impl {
                                              const std::string& attribute,
                                              sol::this_state s) {
         sol::state_view lua(s);
-        auto result = db.read_scalar_floats(collection, attribute);
-        auto t = lua.create_table();
-        for (size_t i = 0; i < result.size(); ++i) {
-            t[i + 1] = result[i];
-        }
-        return t;
+        return to_lua_table(lua, db.read_scalar_floats(collection, attribute));
     }
 
     static sol::table read_vector_integers_lua(Database& db,
@@ -337,16 +321,7 @@ struct LuaRunner::Impl {
                                                const std::string& attribute,
                                                sol::this_state s) {
         sol::state_view lua(s);
-        auto result = db.read_vector_integers(collection, attribute);
-        auto outer = lua.create_table();
-        for (size_t i = 0; i < result.size(); ++i) {
-            auto inner = lua.create_table();
-            for (size_t j = 0; j < result[i].size(); ++j) {
-                inner[j + 1] = result[i][j];
-            }
-            outer[i + 1] = inner;
-        }
-        return outer;
+        return to_lua_table(lua, db.read_vector_integers(collection, attribute));
     }
 
     static sol::table read_vector_floats_lua(Database& db,
@@ -354,16 +329,7 @@ struct LuaRunner::Impl {
                                              const std::string& attribute,
                                              sol::this_state s) {
         sol::state_view lua(s);
-        auto result = db.read_vector_floats(collection, attribute);
-        auto outer = lua.create_table();
-        for (size_t i = 0; i < result.size(); ++i) {
-            auto inner = lua.create_table();
-            for (size_t j = 0; j < result[i].size(); ++j) {
-                inner[j + 1] = result[i][j];
-            }
-            outer[i + 1] = inner;
-        }
-        return outer;
+        return to_lua_table(lua, db.read_vector_floats(collection, attribute));
     }
 
     static sol::table read_vector_strings_lua(Database& db,
@@ -371,26 +337,12 @@ struct LuaRunner::Impl {
                                               const std::string& attribute,
                                               sol::this_state s) {
         sol::state_view lua(s);
-        auto result = db.read_vector_strings(collection, attribute);
-        auto outer = lua.create_table();
-        for (size_t i = 0; i < result.size(); ++i) {
-            auto inner = lua.create_table();
-            for (size_t j = 0; j < result[i].size(); ++j) {
-                inner[j + 1] = result[i][j];
-            }
-            outer[i + 1] = inner;
-        }
-        return outer;
+        return to_lua_table(lua, db.read_vector_strings(collection, attribute));
     }
 
     static sol::table read_element_ids_lua(Database& db, const std::string& collection, sol::this_state s) {
         sol::state_view lua(s);
-        auto result = db.read_element_ids(collection);
-        auto t = lua.create_table();
-        for (size_t i = 0; i < result.size(); ++i) {
-            t[i + 1] = result[i];
-        }
-        return t;
+        return to_lua_table(lua, db.read_element_ids(collection));
     }
 
     static sol::table list_scalar_metadata_lua(Database& db, const std::string& collection, sol::this_state s) {
@@ -459,17 +411,7 @@ struct LuaRunner::Impl {
                                               sol::this_state s) {
         sol::state_view lua(s);
         auto metadata = db.get_scalar_metadata(collection, attribute);
-        auto t = lua.create_table();
-        t["name"] = metadata.name;
-        t["data_type"] = data_type_to_string(metadata.data_type);
-        t["not_null"] = metadata.not_null;
-        t["primary_key"] = metadata.primary_key;
-        if (metadata.default_value.has_value()) {
-            t["default_value"] = *metadata.default_value;
-        } else {
-            t["default_value"] = sol::lua_nil;
-        }
-        return t;
+        return scalar_metadata_lua(lua, metadata);
     }
 
     static sol::table scalar_metadata_lua(sol::state_view& lua, const ScalarMetadata& attribute) {
@@ -482,6 +424,17 @@ struct LuaRunner::Impl {
             t["default_value"] = *attribute.default_value;
         } else {
             t["default_value"] = sol::lua_nil;
+        }
+        t["is_foreign_key"] = attribute.is_foreign_key;
+        if (attribute.references_collection.has_value()) {
+            t["references_collection"] = *attribute.references_collection;
+        } else {
+            t["references_collection"] = sol::lua_nil;
+        }
+        if (attribute.references_column.has_value()) {
+            t["references_column"] = *attribute.references_column;
+        } else {
+            t["references_column"] = sol::lua_nil;
         }
         return t;
     }
@@ -534,6 +487,11 @@ struct LuaRunner::Impl {
                 values.emplace_back(val.as<double>());
             } else if (val.is<std::string>()) {
                 values.emplace_back(val.as<std::string>());
+            } else {
+                // A silently skipped parameter would shift every later positional
+                // parameter left and bind NULL to the trailing placeholder.
+                throw std::runtime_error("Cannot lua_table_to_values: parameter #" + std::to_string(i) +
+                                         " has unsupported Lua type");
             }
         }
         return values;
@@ -703,46 +661,19 @@ struct LuaRunner::Impl {
                                             const std::string& attribute,
                                             sol::this_state s) {
         sol::state_view lua(s);
-        auto result = db.read_set_integers(collection, attribute);
-        auto outer = lua.create_table();
-        for (size_t i = 0; i < result.size(); ++i) {
-            auto inner = lua.create_table();
-            for (size_t j = 0; j < result[i].size(); ++j) {
-                inner[j + 1] = result[i][j];
-            }
-            outer[i + 1] = inner;
-        }
-        return outer;
+        return to_lua_table(lua, db.read_set_integers(collection, attribute));
     }
 
     static sol::table
     read_set_floats_lua(Database& db, const std::string& collection, const std::string& attribute, sol::this_state s) {
         sol::state_view lua(s);
-        auto result = db.read_set_floats(collection, attribute);
-        auto outer = lua.create_table();
-        for (size_t i = 0; i < result.size(); ++i) {
-            auto inner = lua.create_table();
-            for (size_t j = 0; j < result[i].size(); ++j) {
-                inner[j + 1] = result[i][j];
-            }
-            outer[i + 1] = inner;
-        }
-        return outer;
+        return to_lua_table(lua, db.read_set_floats(collection, attribute));
     }
 
     static sol::table
     read_set_strings_lua(Database& db, const std::string& collection, const std::string& attribute, sol::this_state s) {
         sol::state_view lua(s);
-        auto result = db.read_set_strings(collection, attribute);
-        auto outer = lua.create_table();
-        for (size_t i = 0; i < result.size(); ++i) {
-            auto inner = lua.create_table();
-            for (size_t j = 0; j < result[i].size(); ++j) {
-                inner[j + 1] = result[i][j];
-            }
-            outer[i + 1] = inner;
-        }
-        return outer;
+        return to_lua_table(lua, db.read_set_strings(collection, attribute));
     }
 
     // ========================================================================
@@ -802,6 +733,21 @@ struct LuaRunner::Impl {
         return t;
     }
 
+    static sol::table read_time_series_row_lua(Database& db,
+                                               const std::string& collection,
+                                               const std::string& group,
+                                               const std::string& attribute,
+                                               const std::string& date_time,
+                                               sol::this_state s) {
+        sol::state_view lua(s);
+        auto values = db.read_time_series_row(collection, group, attribute, date_time);
+        auto t = lua.create_table();
+        for (size_t i = 0; i < values.size(); ++i) {
+            t[i + 1] = value_to_lua_object(lua, values[i]);
+        }
+        return t;
+    }
+
     static void update_time_series_group_lua(Database& db,
                                              const std::string& collection,
                                              const std::string& group,
@@ -830,12 +776,7 @@ struct LuaRunner::Impl {
     static sol::table
     list_time_series_files_columns_lua(Database& db, const std::string& collection, sol::this_state s) {
         sol::state_view lua(s);
-        auto columns = db.list_time_series_files_columns(collection);
-        auto t = lua.create_table();
-        for (size_t i = 0; i < columns.size(); ++i) {
-            t[i + 1] = columns[i];
-        }
-        return t;
+        return to_lua_table(lua, db.list_time_series_files_columns(collection));
     }
 
     static sol::table read_time_series_files_lua(Database& db, const std::string& collection, sol::this_state s) {
@@ -879,7 +820,7 @@ void LuaRunner::run(const std::string& script) {
     auto result = impl_->lua.safe_script(script, sol::script_pass_on_error);
     if (!result.valid()) {
         sol::error err = result;
-        throw std::runtime_error(std::string("Lua error: ") + err.what());
+        throw std::runtime_error(std::string("Failed to run Lua script: ") + err.what());
     }
 }
 

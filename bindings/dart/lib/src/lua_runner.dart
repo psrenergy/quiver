@@ -63,16 +63,8 @@ class LuaRunner {
       );
 
       if (err != quiver_error_t.QUIVER_OK) {
-        final outErrorPtr = arena<Pointer<Char>>();
-        final getErr = bindings.quiver_lua_runner_get_error(_ptr, outErrorPtr);
-        if (getErr == quiver_error_t.QUIVER_OK && outErrorPtr.value != nullptr) {
-          final errorMsg = outErrorPtr.value.cast<Utf8>().toDartString();
-          if (errorMsg.isNotEmpty) {
-            throw LuaException(errorMsg);
-          }
-        }
-        // Fallback: try global error (for QUIVER_REQUIRE failures)
-        check(err);
+        final detail = bindings.quiver_get_last_error().cast<Utf8>().toDartString();
+        throw LuaException(detail);
       }
     } finally {
       arena.releaseAll();

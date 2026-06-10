@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from quiverdb import CSVOptions, Database
+from quiverdb import CSVOptions, Database, QuiverError
 
 
 class TestImportCSVScalarRoundTrip:
@@ -175,3 +175,21 @@ class TestImportCSVEnumResolution:
 
         status = csv_db.read_scalar_integer_by_id("Items", "status", 1)
         assert status == 1
+
+
+class TestImportCSVInsideTransaction:
+    """import_csv must refuse to run inside an explicit transaction."""
+
+    def test_import_inside_transaction_raises(self, csv_db: Database, tmp_path):
+        csv_path = tmp_path / "in_tx.csv"
+        csv_path.write_text("sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,,\n")
+
+        csv_db.begin_transaction()
+        try:
+            with pytest.raises(QuiverError, match="Cannot import_csv: transaction already active"):
+                csv_db.import_csv("Items", "", str(csv_path))
+
+            # The caller's transaction must survive intact
+            assert csv_db.in_transaction()
+        finally:
+            csv_db.rollback()

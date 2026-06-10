@@ -1,4 +1,3 @@
-import { ptr } from "bun:ffi";
 import { Database } from "./database.ts";
 import { check } from "./errors.ts";
 import {
@@ -33,8 +32,8 @@ Database.prototype.readScalarIntegers = function (
       this._handle,
       collBuf.buf,
       attrBuf.buf,
-      outValues.ptr,
-      outCount.ptr,
+      outValues.buf,
+      outCount.buf,
     ),
   );
   const count = readUint64Out(outCount);
@@ -60,8 +59,8 @@ Database.prototype.readScalarFloats = function (
       this._handle,
       collBuf.buf,
       attrBuf.buf,
-      outValues.ptr,
-      outCount.ptr,
+      outValues.buf,
+      outCount.buf,
     ),
   );
   const count = readUint64Out(outCount);
@@ -87,8 +86,8 @@ Database.prototype.readScalarStrings = function (
       this._handle,
       collBuf.buf,
       attrBuf.buf,
-      outValues.ptr,
-      outCount.ptr,
+      outValues.buf,
+      outCount.buf,
     ),
   );
   const count = readUint64Out(outCount);
@@ -111,17 +110,15 @@ Database.prototype.readScalarIntegerById = function (
   const collBuf = toCString(collection);
   const attrBuf = toCString(attribute);
   const outValBuf = new Uint8Array(8);
-  const outValPtr = ptr(outValBuf);
   const outHasBuf = new Uint8Array(4);
-  const outHasPtr = ptr(outHasBuf);
   check(
     lib.quiver_database_read_scalar_integer_by_id(
       this._handle,
       collBuf.buf,
       attrBuf.buf,
       BigInt(id),
-      outValPtr,
-      outHasPtr,
+      outValBuf,
+      outHasBuf,
     ),
   );
   if (new DataView(outHasBuf.buffer).getInt32(0, true) === 0) return null;
@@ -138,17 +135,15 @@ Database.prototype.readScalarFloatById = function (
   const collBuf = toCString(collection);
   const attrBuf = toCString(attribute);
   const outValBuf = new Uint8Array(8);
-  const outValPtr = ptr(outValBuf);
   const outHasBuf = new Uint8Array(4);
-  const outHasPtr = ptr(outHasBuf);
   check(
     lib.quiver_database_read_scalar_float_by_id(
       this._handle,
       collBuf.buf,
       attrBuf.buf,
       BigInt(id),
-      outValPtr,
-      outHasPtr,
+      outValBuf,
+      outHasBuf,
     ),
   );
   if (new DataView(outHasBuf.buffer).getInt32(0, true) === 0) return null;
@@ -166,15 +161,14 @@ Database.prototype.readScalarStringById = function (
   const attrBuf = toCString(attribute);
   const outValue = allocPtrOut();
   const outHasBuf = new Uint8Array(4);
-  const outHasPtr = ptr(outHasBuf);
   check(
     lib.quiver_database_read_scalar_string_by_id(
       this._handle,
       collBuf.buf,
       attrBuf.buf,
       BigInt(id),
-      outValue.ptr,
-      outHasPtr,
+      outValue.buf,
+      outHasBuf,
     ),
   );
   if (new DataView(outHasBuf.buffer).getInt32(0, true) === 0) return null;
@@ -190,7 +184,7 @@ Database.prototype.readElementIds = function (this: Database, collection: string
   const collBuf = toCString(collection);
   const outIds = allocPtrOut();
   const outCount = allocUint64Out();
-  check(lib.quiver_database_read_element_ids(this._handle, collBuf.buf, outIds.ptr, outCount.ptr));
+  check(lib.quiver_database_read_element_ids(this._handle, collBuf.buf, outIds.buf, outCount.buf));
   const count = readUint64Out(outCount);
   if (count === 0) return [];
   const arrPtr = readPtrOut(outIds);
@@ -218,9 +212,9 @@ function readBulkIntegers(
       handle,
       collBuf.buf,
       attrBuf.buf,
-      outVectors.ptr,
-      outSizes.ptr,
-      outCount.ptr,
+      outVectors.buf,
+      outSizes.buf,
+      outCount.buf,
     ),
   );
   const count = readUint64Out(outCount);
@@ -254,9 +248,9 @@ function readBulkFloats(
       handle,
       collBuf.buf,
       attrBuf.buf,
-      outVectors.ptr,
-      outSizes.ptr,
-      outCount.ptr,
+      outVectors.buf,
+      outSizes.buf,
+      outCount.buf,
     ),
   );
   const count = readUint64Out(outCount);
@@ -290,9 +284,9 @@ function readBulkStrings(
       handle,
       collBuf.buf,
       attrBuf.buf,
-      outVectors.ptr,
-      outSizes.ptr,
-      outCount.ptr,
+      outVectors.buf,
+      outSizes.buf,
+      outCount.buf,
     ),
   );
   const count = readUint64Out(outCount);
@@ -408,8 +402,8 @@ function readByIdIntegers(
       collBuf.buf,
       attrBuf.buf,
       BigInt(id),
-      outValues.ptr,
-      outCount.ptr,
+      outValues.buf,
+      outCount.buf,
     ),
   );
   const count = readUint64Out(outCount);
@@ -438,8 +432,8 @@ function readByIdFloats(
       collBuf.buf,
       attrBuf.buf,
       BigInt(id),
-      outValues.ptr,
-      outCount.ptr,
+      outValues.buf,
+      outCount.buf,
     ),
   );
   const count = readUint64Out(outCount);
@@ -468,8 +462,8 @@ function readByIdStrings(
       collBuf.buf,
       attrBuf.buf,
       BigInt(id),
-      outValues.ptr,
-      outCount.ptr,
+      outValues.buf,
+      outCount.buf,
     ),
   );
   const count = readUint64Out(outCount);

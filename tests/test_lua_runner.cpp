@@ -2859,3 +2859,90 @@ TEST_F(LuaRunnerFkTest, UpdateTimeSeriesFkViaTypedMethod) {
     EXPECT_EQ(std::get<int64_t>(ts_data[0].at("sponsor_id")), 2);
     EXPECT_EQ(std::get<int64_t>(ts_data[1].at("sponsor_id")), 1);
 }
+
+TEST(LuaRunner_ImportCSV, InsideTransactionThrows) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(":memory:", csv_schema);
+    quiver::LuaRunner lua(db);
+
+    auto csv_path = lua_csv_temp("ImportInTransaction");
+    {
+        std::ofstream f(csv_path, std::ios::binary);
+        f << "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,,\n";
+    }
+
+    lua.run("db:begin_transaction()");
+    EXPECT_THROW({ lua.run(R"(db:import_csv("Items", "", ")" + lua_safe_path(csv_path) + "\")"); }, std::runtime_error);
+
+    // The caller's transaction must survive intact
+    lua.run(R"(assert(db:in_transaction(), "expected transaction to survive import_csv failure"))");
+    lua.run("db:rollback()");
+
+    std::filesystem::remove(csv_path);
+}
+
+TEST_F(LuaRunnerTest, QueryParameterUnsupportedTypeThrows) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+
+    quiver::LuaRunner lua(db);
+
+    // A silently dropped parameter would shift the remaining ones and return wrong results
+    try {
+        lua.run(R"(db:query_integer("SELECT id FROM Configuration WHERE label = ?", { true }))");
+        FAIL() << "expected unsupported query parameter type to throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_NE(std::string(e.what()).find("Cannot lua_table_to_values: parameter #1"), std::string::npos)
+            << e.what();
+    }
+}
+
+TEST_F(LuaRunnerTest, CreateElementUnsupportedAttributeTypeThrows) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    quiver::LuaRunner lua(db);
+
+    try {
+        lua.run(R"(db:create_element("Configuration", { label = "Item", enabled = true }))");
+        FAIL() << "expected unsupported attribute type to throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_NE(std::string(e.what()).find("Cannot table_to_element: attribute 'enabled'"), std::string::npos)
+            << e.what();
+    }
+}
+
+TEST_F(LuaRunnerTest, CreateElementUnsupportedArrayElementTypeThrows) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    quiver::LuaRunner lua(db);
+
+    try {
+        lua.run(R"(db:create_element("Configuration", { label = "Item", tags = { true, false } }))");
+        FAIL() << "expected unsupported array element type to throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_NE(std::string(e.what()).find("Cannot table_to_element: array 'tags'"), std::string::npos) << e.what();
+    }
+}
+
+TEST_F(LuaRunnerTest, ReadTimeSeriesRow) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(
+        db:create_element("Configuration", { label = "Config" })
+        db:create_element("Collection", { label = "Item 1" })
+        db:create_element("Collection", { label = "Item 2" })
+        db:update_time_series_group("Collection", "data", 1, {
+            { date_time = "2024-01-01T00:00:00", value = 10.5 },
+            { date_time = "2024-02-01T00:00:00", value = 20.5 },
+        })
+        db:update_time_series_group("Collection", "data", 2, {
+            { date_time = "2024-01-01T00:00:00", value = 30.5 },
+        })
+
+        local row = db:read_time_series_row("Collection", "data", "value", "2024-01-15T00:00:00")
+        assert(#row == 2, "expected 2 values, got " .. #row)
+        assert(row[1] == 10.5, "expected 10.5, got " .. tostring(row[1]))
+        assert(row[2] == 30.5, "expected 30.5, got " .. tostring(row[2]))
+    )");
+}

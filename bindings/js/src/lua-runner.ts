@@ -1,6 +1,6 @@
 import type { Database } from "./database.ts";
 import { check, QuiverError } from "./errors.ts";
-import { allocPtrOut, decodeStringFromBuf, readPtrOut, toCString } from "./ffi-helpers.ts";
+import { allocPtrOut, readPtrOut, toCString } from "./ffi-helpers.ts";
 import type { NativePointer } from "./loader.ts";
 import { getSymbols } from "./loader.ts";
 
@@ -13,7 +13,7 @@ export class LuaRunner {
     this._db = db;
     const lib = getSymbols();
     const outRunner = allocPtrOut();
-    check(lib.quiver_lua_runner_new(db._handle, outRunner.ptr));
+    check(lib.quiver_lua_runner_new(db._handle, outRunner.buf));
     this._ptr = readPtrOut(outRunner);
   }
 
@@ -21,16 +21,7 @@ export class LuaRunner {
     this.ensureOpen();
     const lib = getSymbols();
     const scriptBuf = toCString(script);
-    const err = lib.quiver_lua_runner_run(this._ptr, scriptBuf.buf);
-    if (err !== 0) {
-      const outError = allocPtrOut();
-      const getErr = lib.quiver_lua_runner_get_error(this._ptr, outError.ptr);
-      if (getErr === 0 && readPtrOut(outError)) {
-        const msg = decodeStringFromBuf(outError);
-        if (msg) throw new QuiverError(msg);
-      }
-      check(err);
-    }
+    check(lib.quiver_lua_runner_run(this._ptr, scriptBuf.buf));
   }
 
   close(): void {

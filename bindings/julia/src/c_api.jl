@@ -99,12 +99,6 @@ function quiver_csv_options_default()
     @ccall libquiver_c.quiver_csv_options_default()::quiver_csv_options_t
 end
 
-@cenum quiver_data_structure_t::UInt32 begin
-    QUIVER_DATA_STRUCTURE_SCALAR = 0
-    QUIVER_DATA_STRUCTURE_VECTOR = 1
-    QUIVER_DATA_STRUCTURE_SET = 2
-end
-
 @cenum quiver_data_type_t::UInt32 begin
     QUIVER_DATA_TYPE_INTEGER = 0
     QUIVER_DATA_TYPE_FLOAT = 1
@@ -497,10 +491,6 @@ end
 
 function quiver_lua_runner_run(runner, script)
     @ccall libquiver_c.quiver_lua_runner_run(runner::Ptr{quiver_lua_runner_t}, script::Ptr{Cchar})::quiver_error_t
-end
-
-function quiver_lua_runner_get_error(runner, out_error)
-    @ccall libquiver_c.quiver_lua_runner_get_error(runner::Ptr{quiver_lua_runner_t}, out_error::Ptr{Ptr{Cchar}})::quiver_error_t
 end
 
 @cenum quiver_time_frequency_t::UInt32 begin

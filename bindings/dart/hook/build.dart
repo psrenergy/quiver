@@ -44,6 +44,8 @@ void main(List<String> args) async {
 
     // Register built libraries as code assets
     // CMake target names (not file names) — CMake always produces lib-prefixed DLLs (libquiver.dll, libquiver_c.dll)
+    // The asset-ID values are placeholders required by findAndAddCodeAssets;
+    // actual library resolution happens manually in lib/src/ffi/library_loader.dart.
     await output.findAndAddCodeAssets(
       input,
       names: {

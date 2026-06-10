@@ -102,7 +102,7 @@ export function toCString(str: string): Allocation {
 }
 
 /** Allocate native memory for an array of int64 values. */
-export function allocNativeInt64(values: number[]): Allocation {
+export function allocNativeInt64(values: (number | bigint)[]): Allocation {
   const buf = new Uint8Array(values.length * 8);
   const dv = new DataView(buf.buffer);
   for (let i = 0; i < values.length; i++) {

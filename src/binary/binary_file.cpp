@@ -228,7 +228,7 @@ void BinaryFile::validate_dimension_values(const std::unordered_map<std::string,
         }
     }
 
-    if (metadata.number_of_time_dimensions > 1) {
+    if (metadata.number_of_time_dimensions() > 1) {
         // Build the datetime by accumulating offsets from each time dimension
         auto datetime = metadata.initial_datetime;
         for (const auto& dim : dimensions) {
@@ -300,22 +300,6 @@ const BinaryMetadata& BinaryFile::get_metadata() const {
 
 const std::string& BinaryFile::get_file_path() const {
     return impl_->file_path;
-}
-
-bool BinaryFile::is_read_mode() const {
-    return impl_->registered_path.empty();
-}
-
-std::iostream& BinaryFile::get_io() {
-    return *impl_->io;
-}
-
-void BinaryFile::set_io(std::unique_ptr<std::iostream> io) {
-    impl_->io = std::move(io);
-}
-
-void BinaryFile::set_metadata(BinaryMetadata metadata) {
-    impl_->metadata = std::move(metadata);
 }
 
 }  // namespace quiver

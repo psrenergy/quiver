@@ -189,7 +189,7 @@ struct Database::Impl {
 };
 ```
 
-Binary subsystem: `BinaryFile` and `CSVConverter` use Pimpl (hide file I/O dependencies). `BinaryMetadata`, `Dimension`, `TimeProperties` are plain value types.
+Binary subsystem: `BinaryFile` uses Pimpl (hides file I/O dependencies). `CSVConverter` is a plain class composing a `BinaryMetadata` and the CSV `iostream` (no Pimpl, no inheritance). `BinaryMetadata`, `Dimension`, `TimeProperties` are plain value types.
 
 Expression subsystem: `Expression` is a plain value type wrapping `shared_ptr<ExpressionNode>` — no Pimpl. `ExpressionNode` is an abstract base with virtual `metadata()` / `compute_row()`; concrete subclasses `ExpressionFile`, `ExpressionScalar`, `ExpressionBinary`, `ExpressionUnary`, `ExpressionTernary`, `ExpressionAggregate`, `ExpressionAggregateAgents`, `ExpressionSelectAgents`, `ExpressionRenameAgents` are exposed via `QUIVER_API` and use Rule of Zero. Polymorphism is justified by the recursive tree shape (`ExpressionBinary`, `ExpressionUnary`, `ExpressionTernary`, and the aggregation / label-projection nodes own child `shared_ptr<ExpressionNode>` operands).
 
@@ -457,6 +457,7 @@ Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references.
 - Schema inspection: `describe()` - prints schema info to stdout
 - CSV: `export_csv()`, `import_csv()` -- CSV export/import with optional enum/date formatting via `CSVOptions`
   - **Locale-aware separators** (`utils/csv_format.h`): export matches the OS locale decimal separator — a `,` locale emits `,` decimals paired with a `;` field delimiter and a `sep=;` header (so Excel reads numbers correctly); a `.` locale emits the usual `,`-delimited `sep=,` file. Import resolves the delimiter from the `sep=` header (or infers it from the header line), parses with that delimiter directly (no `;`→`,` swap), auto-detects CRLF/LF/CR line endings, and normalizes locale numbers (thousands separators stripped, decimal comma → `.`) before parsing. Because export output is locale-dependent, byte-level CSV test assertions read through a `read_file_canonical`/`read_csv_canonical` helper that maps a `sep=;` file back to canonical comma/dot form.
+  - **Label-identifier import preserves ids**: a scalar import omits the `id` column, so existing elements are matched by `label` and re-inserted with their original id (new labels get a fresh AUTOINCREMENT id above the preserved range). This keeps foreign keys in other tables pointing at the same element across a re-import.
 
 ### Element Class
 Builder for element creation with fluent API:
@@ -470,11 +471,11 @@ Element().set("label", "Item 1").set("value", 42).set("tags", {"a", "b"})
 Standalone binary file I/O layer for `.qvr` files with `.toml` metadata sidecars.
 
 - `BinaryFile` class (Pimpl): `open_file(path, mode, metadata?)`, `read(dims)`, `write(dims, data)`, `get_metadata()`, `get_file_path()`
-- `CSVConverter` class (Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)`
-- `BinaryMetadata` struct: `dimensions`, `initial_datetime`, `unit`, `labels`, `version`, `number_of_time_dimensions`
+- `CSVConverter` class (composition, no Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)`
+- `BinaryMetadata` struct: `dimensions`, `initial_datetime`, `unit`, `labels`, `version`; `number_of_time_dimensions()` is derived from `dimensions` (not stored)
   - Factories: `from_toml_content()`, `from_element()`
   - Serialization: `to_toml()`
-  - Builders: `add_dimension()`, `add_time_dimension()`
+  - Builders: `add_dimension()`, `add_time_dimension()` (chains `parent_dimension_index` to the previous time dimension)
   - Validation: `validate()`, `validate_time_dimension_metadata()`, `validate_time_dimension_sizes()`
 - `Dimension` struct: `name`, `size`, optional `TimeProperties`
 - `TimeProperties` struct: `frequency`, `initial_value`, `parent_dimension_index`

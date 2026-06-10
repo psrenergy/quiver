@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 class LuaRunner:
     """Execute Lua scripts against a Quiver database.
 
-    Wraps the C API quiver_lua_runner_new/run/get_error/free functions.
+    Wraps the C API quiver_lua_runner_new/run/free functions.
     Holds a reference to the Database to prevent GC while the runner is alive.
     """
 
@@ -46,26 +46,7 @@ class LuaRunner:
         """
         self._ensure_open()
         lib = get_lib()
-        err = lib.quiver_lua_runner_run(self._ptr, script.encode("utf-8"))
-        if err != 0:
-            # Two-source error resolution:
-            # 1. Try runner-specific error (Lua errors)
-            out_error = ffi.new("const char**")
-            get_err = lib.quiver_lua_runner_get_error(self._ptr, out_error)
-            if get_err == 0 and out_error[0] != ffi.NULL:
-                msg = ffi.string(out_error[0]).decode("utf-8")
-                if msg:
-                    raise QuiverError(msg)
-
-            # 2. Fall back to global error
-            ptr = lib.quiver_get_last_error()
-            if ptr != ffi.NULL:
-                detail = ffi.string(ptr).decode("utf-8")
-                if detail:
-                    raise QuiverError(detail)
-
-            # 3. Generic fallback
-            raise QuiverError("Lua script execution failed")
+        check(lib.quiver_lua_runner_run(self._ptr, script.encode("utf-8")))
 
     def __enter__(self) -> LuaRunner:
         return self

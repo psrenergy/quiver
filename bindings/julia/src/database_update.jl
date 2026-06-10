@@ -186,7 +186,7 @@ function add_time_series_row!(db::Database, collection::String, group::String, i
     return nothing
 end
 
-function update_time_series_files!(db::Database, collection::String, paths::Dict{String, Optional{String}})
+function update_time_series_files!(db::Database, collection::String, paths::AbstractDict{String, <:Optional{String}})
     if isempty(paths)
         return nothing
     end

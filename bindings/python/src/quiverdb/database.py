@@ -1153,6 +1153,56 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         finally:
             lib.quiver_database_free_time_series_data(out_names[0], out_types[0], out_data[0], col_count, row_count)
 
+    def read_time_series_row(
+        self,
+        collection: str,
+        group: str,
+        attribute: str,
+        date_time: datetime,
+    ) -> list:
+        """Read one value per element for a time series attribute at a given date.
+
+        Uses "last non-null value at or before date_time" lookup semantics.
+        Entries are typed by the column (int, float, or str); elements with no
+        matching data yield None.
+        """
+        self._ensure_open()
+        lib = get_lib()
+        out_data_type = ffi.new("int*")
+        out_values = ffi.new("void**")
+        out_count = ffi.new("size_t*")
+        check(
+            lib.quiver_database_read_time_series_row(
+                self._ptr,
+                collection.encode("utf-8"),
+                group.encode("utf-8"),
+                attribute.encode("utf-8"),
+                date_time.strftime("%Y-%m-%dT%H:%M:%S").encode("utf-8"),
+                out_data_type,
+                out_values,
+                out_count,
+            )
+        )
+        count = out_count[0]
+        if count == 0 or out_values[0] == ffi.NULL:
+            return []
+        data_type = out_data_type[0]
+        if data_type == DataType.INTEGER:
+            int_ptr = ffi.cast("int64_t*", out_values[0])
+            result: list = [int_ptr[i] for i in range(count)]
+            lib.quiver_database_free_integer_array(int_ptr)
+            return result
+        if data_type == DataType.FLOAT:
+            float_ptr = ffi.cast("double*", out_values[0])
+            result = [float_ptr[i] for i in range(count)]
+            lib.quiver_database_free_float_array(float_ptr)
+            return result
+        # STRING or DATE_TIME; NULL entries mark elements with no data
+        str_ptr = ffi.cast("char**", out_values[0])
+        result = [None if str_ptr[i] == ffi.NULL else ffi.string(str_ptr[i]).decode("utf-8") for i in range(count)]
+        lib.quiver_database_free_string_array(str_ptr, count)
+        return result
+
     def update_time_series_group(
         self,
         collection: str,

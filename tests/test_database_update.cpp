@@ -965,7 +965,8 @@ TEST(Database, UpdateElementTypeMismatchTextSetWithIntegers) {
         FAIL() << "Expected std::runtime_error for type mismatch in update_element";
     } catch (const std::runtime_error& e) {
         std::string msg = e.what();
-        EXPECT_TRUE(msg.find("Type mismatch") != std::string::npos) << "Expected Type mismatch error, got: " << msg;
+        EXPECT_TRUE(msg.find("Cannot update_element: type mismatch") != std::string::npos)
+            << "Expected type mismatch error, got: " << msg;
     }
 }
 

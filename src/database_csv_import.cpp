@@ -255,6 +255,12 @@ void Database::import_csv(const std::string& collection,
                           const CSVOptions& options) {
     impl_->require_collection(collection, "import_csv");
 
+    // Import toggles PRAGMA foreign_keys, which is a no-op inside a transaction,
+    // and manages its own transaction — so it cannot run inside an explicit one.
+    if (in_transaction()) {
+        throw std::runtime_error("Cannot import_csv: transaction already active");
+    }
+
     // Resolve target table name
     auto table_name = collection;
     GroupTableType group_type;
@@ -341,6 +347,10 @@ void Database::import_csv(const std::string& collection,
 
         const auto* table_def = impl_->schema->get_table(collection);
 
+        // Capture label -> id before the delete so re-inserted elements keep their
+        // ids; otherwise foreign keys in other tables would silently re-point.
+        auto existing_label_to_id = build_label_to_id_map(*this, collection);
+
         // Build FK map: column_name -> ForeignKey
         std::unordered_map<std::string, ForeignKey> fk_map;
         for (const auto& fk : table_def->foreign_keys) {
@@ -417,22 +427,27 @@ void Database::import_csv(const std::string& collection,
 
             execute_raw("DELETE FROM " + collection);
 
-            // Build INSERT statement
-            std::string insert_cols;
-            std::string insert_placeholders;
-            for (size_t i = 0; i < db_cols.size(); ++i) {
-                if (i > 0) {
-                    insert_cols += ", ";
-                    insert_placeholders += ", ";
-                }
-                insert_cols += db_cols[i];
-                insert_placeholders += "?";
+            // Build INSERT statement; id is inserted explicitly (it is not one of db_cols).
+            std::string insert_cols = "id";
+            std::string insert_placeholders = "?";
+            for (const auto& col : db_cols) {
+                insert_cols += ", " + col;
+                insert_placeholders += ", ?";
             }
             auto insert_sql =
                 "INSERT INTO " + collection + " (" + insert_cols + ") VALUES (" + insert_placeholders + ")";
 
             for (size_t row = 0; row < row_count; ++row) {
                 std::vector<Value> parameters;
+
+                // Existing label -> preserved id; new label -> NULL -> fresh id.
+                auto label = read_cell(doc, csv_col_index.at("label"), row);
+                if (auto it = existing_label_to_id.find(label); it != existing_label_to_id.end()) {
+                    parameters.emplace_back(it->second);
+                } else {
+                    parameters.emplace_back(nullptr);
+                }
+
                 for (const auto& col_name : db_cols) {
                     std::string cell = read_cell(doc, csv_col_index[col_name], row);
                     const auto* col_def = table_def->get_column(col_name);

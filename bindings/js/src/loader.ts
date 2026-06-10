@@ -13,7 +13,6 @@ const I32 = "i32" as const;
 const I64 = "i64" as const;
 const USIZE = "usize" as const;
 const F64 = "f64" as const;
-const V = "void" as const;
 
 // Platform constants. `suffix` from bun:ffi is the platform-correct shared
 // library extension ("dll" | "dylib" | "so").
@@ -30,7 +29,6 @@ export type NativePointer = Pointer | null;
 const lifecycleSymbols = {
   quiver_version: { args: [], returns: P },
   quiver_get_last_error: { args: [], returns: P },
-  quiver_clear_last_error: { args: [], returns: V },
   // quiver_database_options_default is intentionally omitted: it returns a
   // struct by value, which Bun FFI does not support (oven-sh/bun#6139). It was
   // never called -- makeDefaultOptions() in ffi-helpers.ts builds the options
@@ -116,6 +114,8 @@ const metadataSymbols = {
 
 const timeSeriesSymbols = {
   quiver_database_read_time_series_group: { args: [P, BUF, BUF, I64, P, P, P, P, P], returns: I32 },
+  quiver_database_read_time_series_row: { args: [P, BUF, BUF, BUF, BUF, P, P, P], returns: I32 },
+  quiver_database_add_time_series_row: { args: [P, BUF, BUF, I64, P, P, P, USIZE], returns: I32 },
   quiver_database_update_time_series_group: {
     args: [P, BUF, BUF, I64, P, P, P, USIZE, USIZE],
     returns: I32,
@@ -149,7 +149,6 @@ const luaSymbols = {
   quiver_lua_runner_new: { args: [P, P], returns: I32 },
   quiver_lua_runner_free: { args: [P], returns: I32 },
   quiver_lua_runner_run: { args: [P, BUF], returns: I32 },
-  quiver_lua_runner_get_error: { args: [P, P], returns: I32 },
 } as const;
 
 // Combined symbol map for dlopen.
@@ -281,5 +280,3 @@ export function loadLibrary(): QuiverLib {
 export function getSymbols() {
   return loadLibrary().symbols;
 }
-
-export type Symbols = ReturnType<typeof getSymbols>;
