@@ -51,7 +51,7 @@ jobs:
               build/lib/libquiver.so.0
               build/lib/libquiver_c.so
           - os: macos-latest
-            platform_key: macos-x86_64
+            platform_key: macos-arm64
             lib_paths: |
               build/lib/libquiver.dylib
               build/lib/libquiver_c.dylib
@@ -105,8 +105,8 @@ jobs:
       - name: Download macOS x86_64 native libraries
         uses: actions/download-artifact@v8
         with:
-          name: native-macos-x86_64
-          path: native/macos-x86_64
+          name: native-macos-arm64
+          path: native/macos-arm64
 
       - name: Download Windows x86_64 native libraries
         uses: actions/download-artifact@v8

@@ -9,7 +9,7 @@ const S3_PREFIX = get(ENV, "QUIVER_S3_PREFIX", "quiver")
 
 const PLATFORMS = Dict(
     "linux-x86_64"   => (subdir = "lib", ext = ".so",    tags = Dict("os" => "linux",   "arch" => "x86_64", "libc" => "glibc")),
-    "macos-x86_64"   => (subdir = "lib", ext = ".dylib", tags = Dict("os" => "macos",   "arch" => "x86_64")),
+    "macos-arm64"    => (subdir = "lib", ext = ".dylib", tags = Dict("os" => "macos",   "arch" => "aarch64")),
     "windows-x86_64" => (subdir = "bin", ext = ".dll",   tags = Dict("os" => "windows", "arch" => "x86_64")),    
 )
 
