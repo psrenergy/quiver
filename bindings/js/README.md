@@ -34,8 +34,9 @@ The loader searches for native libraries in three tiers:
    during in-tree development against a local C++ build).
 3. **System PATH**: Falls back to loading by library name.
 
-Currently prebuilt binaries ship for `linux-x86_64` and `windows-x86_64`. On other
-platforms, build from source and point to `build/bin/` via tier 2.
+Currently prebuilt binaries ship for `linux-x86_64`, `macos-aarch64`, and
+`windows-x86_64`. On other platforms, build from source and point to `build/bin/`
+via tier 2.
 
 ## Quick Start
 

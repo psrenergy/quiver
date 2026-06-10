@@ -7,13 +7,16 @@ using TOML
 const S3_BUCKET = get(ENV, "QUIVER_S3_BUCKET", "julia-artifacts")
 const S3_PREFIX = get(ENV, "QUIVER_S3_PREFIX", "quiver")
 
+# macOS ships libquiver under its install name (libquiver.0.dylib, SOVERSION 0): dyld
+# resolves libquiver_c's @rpath/libquiver.0.dylib dependency filesystem-first, and a second
+# libquiver.dylib copy in the same directory could be loaded as a duplicate image. Linux
+# instead relies on ld.so SONAME matching of the preloaded libquiver.so, so the artifact
+# omits libquiver.so.0.
 const PLATFORMS = Dict(
-    "linux-x86_64"   => (subdir = "lib", ext = ".so",    tags = Dict("os" => "linux",   "arch" => "x86_64", "libc" => "glibc")),
-    "macos-arm64"    => (subdir = "lib", ext = ".dylib", tags = Dict("os" => "macos",   "arch" => "aarch64")),
-    "windows-x86_64" => (subdir = "bin", ext = ".dll",   tags = Dict("os" => "windows", "arch" => "x86_64")),    
+    "linux-x86_64"   => (subdir = "lib", files = ("libquiver.so", "libquiver_c.so"),         tags = Dict("os" => "linux",   "arch" => "x86_64", "libc" => "glibc")),
+    "macos-aarch64"  => (subdir = "lib", files = ("libquiver.0.dylib", "libquiver_c.dylib"), tags = Dict("os" => "macos",   "arch" => "aarch64")),
+    "windows-x86_64" => (subdir = "bin", files = ("libquiver.dll", "libquiver_c.dll"),       tags = Dict("os" => "windows", "arch" => "x86_64")),
 )
-
-const LIB_STEMS = ("libquiver", "libquiver_c")
 
 function parse_args(argv)
     version = nothing
@@ -46,12 +49,13 @@ function stage_platform(tag, srcdir)
     staging = mktempdir()
     libdir = joinpath(staging, info.subdir)
     mkpath(libdir)
-    for stem in LIB_STEMS
-        name = stem * info.ext
+    for name in info.files
         src = joinpath(srcdir, name)
         isfile(src) || error("Missing $name in $srcdir for platform $tag")
         dst = joinpath(libdir, name)
-        cp(src, dst)
+        # realpath: in CI srcdir holds real files, but a local run against build/lib would
+        # otherwise copy CMake's symlinks as symlinks and tar dangling links.
+        cp(realpath(src), dst)
         chmod(dst, 0o755)
     end
     return staging

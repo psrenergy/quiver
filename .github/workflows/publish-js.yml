@@ -55,10 +55,10 @@ jobs:
             libs/linux-x86_64/libquiver.so
             libs/linux-x86_64/libquiver.so.0
             libs/linux-x86_64/libquiver_c.so
-            libs/macos-arm64/libquiver.dylib
-            libs/macos-arm64/libquiver_c.dylib
+            libs/macos-aarch64/libquiver.0.dylib
+            libs/macos-aarch64/libquiver_c.dylib
             libs/windows-x86_64/libquiver.dll
-            libs/windows-x86_64/libquiver_c.dll            
+            libs/windows-x86_64/libquiver_c.dll
           )
           missing=0
           for f in "${required[@]}"; do
@@ -87,8 +87,8 @@ jobs:
           echo "$entries"
           for f in \
             libs/linux-x86_64/libquiver.so libs/linux-x86_64/libquiver.so.0 libs/linux-x86_64/libquiver_c.so \
-            libs/macos-arm64/libquiver.dylib libs/macos-arm64/libquiver_c.dylib \
-            libs/windows-x86_64/libquiver.dll libs/windows-x86_64/libquiver_c.dll ; do
+            libs/macos-aarch64/libquiver.0.dylib libs/macos-aarch64/libquiver_c.dylib \
+            libs/windows-x86_64/libquiver.dll libs/windows-x86_64/libquiver_c.dll; do
             if ! printf '%s\n' "$entries" | grep -Fxq "$f"; then
               echo "::error::tarball $tarball is MISSING $f"
               exit 1

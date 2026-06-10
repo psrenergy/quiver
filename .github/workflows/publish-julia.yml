@@ -56,7 +56,7 @@ jobs:
             --version "${{ needs.version.outputs.version }}" \
             --output "$RUNNER_TEMP/Artifacts.toml" \
             --platform linux-x86_64 native/linux-x86_64 \
-            --platform macos-arm64 native/macos-arm64 \
+            --platform macos-aarch64 native/macos-aarch64 \
             --platform windows-x86_64 native/windows-x86_64
 
       - name: Checkout Quiver.jl
