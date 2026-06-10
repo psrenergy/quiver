@@ -866,7 +866,9 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupTypeMismatch) {
 
     // Pass FLOAT type for humidity (should be INTEGER)
     const char* col_names[] = {"date_time", "temperature", "humidity", "status"};
-    int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT, QUIVER_DATA_TYPE_FLOAT,
+    int col_types[] = {QUIVER_DATA_TYPE_STRING,
+                       QUIVER_DATA_TYPE_FLOAT,
+                       QUIVER_DATA_TYPE_FLOAT,
                        QUIVER_DATA_TYPE_STRING};  // humidity type is wrong
     const char* dts[] = {"2024-01-01T10:00:00"};
     double temps[] = {20.5};
