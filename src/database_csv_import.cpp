@@ -303,11 +303,8 @@ void Database::import_csv(const std::string& collection,
 
         const auto* table_def = impl_->schema->get_table(collection);
 
-        // Capture the current label -> id mapping BEFORE deleting, so existing
-        // elements keep their ids when re-inserted. The scalar CSV omits the id
-        // column (label-identifier mode), so without this every row would get a
-        // fresh AUTOINCREMENT id and any foreign key in another table (e.g.
-        // Child.parent_id) would silently end up pointing at a different element.
+        // Capture label -> id before the delete so re-inserted elements keep their
+        // ids; otherwise foreign keys in other tables would silently re-point.
         auto existing_label_to_id = build_label_to_id_map(*this, collection);
 
         // Build FK map: column_name -> ForeignKey
