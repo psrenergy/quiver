@@ -219,10 +219,8 @@ class TestFKResolutionUpdate:
             date_time=["2024-06-01", "2024-06-02"],
             sponsor_id=["Parent 2", "Parent 1"],
         )
-        rows = relations_db.read_time_series_group("Child", "events", 1)
-        sponsor_ids = [row["sponsor_id"] for row in rows]
-        assert sponsor_ids == [2, 1]
-        assert len(rows) == 2
+        data = relations_db.read_time_series_group("Child", "events", 1)
+        assert data["sponsor_id"] == [2, 1]
 
     def test_all_fk_types_in_one_call(self, relations_db: Database) -> None:
         """Update all FK types in a single update_element call."""
@@ -256,8 +254,8 @@ class TestFKResolutionUpdate:
         # Verify vector FK
         assert relations_db.read_vector_integers_by_id("Child", "parent_ref", 1) == [2]
         # Verify time series FK
-        rows = relations_db.read_time_series_group("Child", "events", 1)
-        assert [row["sponsor_id"] for row in rows] == [2]
+        data = relations_db.read_time_series_group("Child", "events", 1)
+        assert data["sponsor_id"] == [2]
 
     def test_no_fk_columns_unchanged(self, db: Database) -> None:
         """No FK columns: update_element works normally for non-FK schemas."""

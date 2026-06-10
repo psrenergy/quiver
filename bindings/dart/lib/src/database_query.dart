@@ -4,7 +4,8 @@ part of 'database.dart';
 extension DatabaseQuery on Database {
   /// Executes a SQL query and returns the first column of the first row as a String.
   /// Returns null if the query returns no rows.
-  String? queryString(String sql) {
+  /// Optional positional [parameters] bind to `?` placeholders (int, double, String, or null).
+  String? queryString(String sql, [List<Object?>? parameters]) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -12,14 +13,29 @@ extension DatabaseQuery on Database {
       final outValue = arena<Pointer<Char>>();
       final outHasValue = arena<Int>();
 
-      check(
-        bindings.quiver_database_query_string(
-          _ptr,
-          sql.toNativeUtf8(allocator: arena).cast(),
-          outValue,
-          outHasValue,
-        ),
-      );
+      if (parameters == null) {
+        check(
+          bindings.quiver_database_query_string(
+            _ptr,
+            sql.toNativeUtf8(allocator: arena).cast(),
+            outValue,
+            outHasValue,
+          ),
+        );
+      } else {
+        final nativeParams = _marshalParams(arena, parameters);
+        check(
+          bindings.quiver_database_query_string_params(
+            _ptr,
+            sql.toNativeUtf8(allocator: arena).cast(),
+            nativeParams.types,
+            nativeParams.values,
+            parameters.length,
+            outValue,
+            outHasValue,
+          ),
+        );
+      }
 
       if (outHasValue.value == 0 || outValue.value == nullptr) {
         return null;
@@ -35,7 +51,8 @@ extension DatabaseQuery on Database {
 
   /// Executes a SQL query and returns the first column of the first row as an int.
   /// Returns null if the query returns no rows.
-  int? queryInteger(String sql) {
+  /// Optional positional [parameters] bind to `?` placeholders (int, double, String, or null).
+  int? queryInteger(String sql, [List<Object?>? parameters]) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -43,14 +60,29 @@ extension DatabaseQuery on Database {
       final outValue = arena<Int64>();
       final outHasValue = arena<Int>();
 
-      check(
-        bindings.quiver_database_query_integer(
-          _ptr,
-          sql.toNativeUtf8(allocator: arena).cast(),
-          outValue,
-          outHasValue,
-        ),
-      );
+      if (parameters == null) {
+        check(
+          bindings.quiver_database_query_integer(
+            _ptr,
+            sql.toNativeUtf8(allocator: arena).cast(),
+            outValue,
+            outHasValue,
+          ),
+        );
+      } else {
+        final nativeParams = _marshalParams(arena, parameters);
+        check(
+          bindings.quiver_database_query_integer_params(
+            _ptr,
+            sql.toNativeUtf8(allocator: arena).cast(),
+            nativeParams.types,
+            nativeParams.values,
+            parameters.length,
+            outValue,
+            outHasValue,
+          ),
+        );
+      }
 
       if (outHasValue.value == 0) {
         return null;
@@ -64,7 +96,8 @@ extension DatabaseQuery on Database {
 
   /// Executes a SQL query and returns the first column of the first row as a double.
   /// Returns null if the query returns no rows.
-  double? queryFloat(String sql) {
+  /// Optional positional [parameters] bind to `?` placeholders (int, double, String, or null).
+  double? queryFloat(String sql, [List<Object?>? parameters]) {
     _ensureNotClosed();
 
     final arena = Arena();
@@ -72,14 +105,29 @@ extension DatabaseQuery on Database {
       final outValue = arena<Double>();
       final outHasValue = arena<Int>();
 
-      check(
-        bindings.quiver_database_query_float(
-          _ptr,
-          sql.toNativeUtf8(allocator: arena).cast(),
-          outValue,
-          outHasValue,
-        ),
-      );
+      if (parameters == null) {
+        check(
+          bindings.quiver_database_query_float(
+            _ptr,
+            sql.toNativeUtf8(allocator: arena).cast(),
+            outValue,
+            outHasValue,
+          ),
+        );
+      } else {
+        final nativeParams = _marshalParams(arena, parameters);
+        check(
+          bindings.quiver_database_query_float_params(
+            _ptr,
+            sql.toNativeUtf8(allocator: arena).cast(),
+            nativeParams.types,
+            nativeParams.values,
+            parameters.length,
+            outValue,
+            outHasValue,
+          ),
+        );
+      }
 
       if (outHasValue.value == 0) {
         return null;
@@ -93,118 +141,9 @@ extension DatabaseQuery on Database {
 
   /// Executes a SQL query and returns the first column of the first row as a DateTime.
   /// Returns null if the query returns no rows.
-  DateTime? queryDateTime(String sql) {
-    final result = queryString(sql);
-    if (result == null) return null;
-    return stringToDateTime(result);
-  }
-
-  /// Executes a parameterized SQL query and returns the first column of the first row as a String.
-  /// Returns null if the query returns no rows.
-  /// Parameters can be int, double, String, or null.
-  String? queryStringParams(String sql, List<Object?> parameters) {
-    _ensureNotClosed();
-
-    final arena = Arena();
-    try {
-      final nativeParams = _marshalParams(arena, parameters);
-      final outValue = arena<Pointer<Char>>();
-      final outHasValue = arena<Int>();
-
-      check(
-        bindings.quiver_database_query_string_params(
-          _ptr,
-          sql.toNativeUtf8(allocator: arena).cast(),
-          nativeParams.types,
-          nativeParams.values,
-          parameters.length,
-          outValue,
-          outHasValue,
-        ),
-      );
-
-      if (outHasValue.value == 0 || outValue.value == nullptr) {
-        return null;
-      }
-
-      final result = outValue.value.cast<Utf8>().toDartString();
-      bindings.quiver_database_free_string(outValue.value);
-      return result;
-    } finally {
-      arena.releaseAll();
-    }
-  }
-
-  /// Executes a parameterized SQL query and returns the first column of the first row as an int.
-  /// Returns null if the query returns no rows.
-  int? queryIntegerParams(String sql, List<Object?> parameters) {
-    _ensureNotClosed();
-
-    final arena = Arena();
-    try {
-      final nativeParams = _marshalParams(arena, parameters);
-      final outValue = arena<Int64>();
-      final outHasValue = arena<Int>();
-
-      check(
-        bindings.quiver_database_query_integer_params(
-          _ptr,
-          sql.toNativeUtf8(allocator: arena).cast(),
-          nativeParams.types,
-          nativeParams.values,
-          parameters.length,
-          outValue,
-          outHasValue,
-        ),
-      );
-
-      if (outHasValue.value == 0) {
-        return null;
-      }
-
-      return outValue.value;
-    } finally {
-      arena.releaseAll();
-    }
-  }
-
-  /// Executes a parameterized SQL query and returns the first column of the first row as a double.
-  /// Returns null if the query returns no rows.
-  double? queryFloatParams(String sql, List<Object?> parameters) {
-    _ensureNotClosed();
-
-    final arena = Arena();
-    try {
-      final nativeParams = _marshalParams(arena, parameters);
-      final outValue = arena<Double>();
-      final outHasValue = arena<Int>();
-
-      check(
-        bindings.quiver_database_query_float_params(
-          _ptr,
-          sql.toNativeUtf8(allocator: arena).cast(),
-          nativeParams.types,
-          nativeParams.values,
-          parameters.length,
-          outValue,
-          outHasValue,
-        ),
-      );
-
-      if (outHasValue.value == 0) {
-        return null;
-      }
-
-      return outValue.value;
-    } finally {
-      arena.releaseAll();
-    }
-  }
-
-  /// Executes a parameterized SQL query and returns the first column of the first row as a DateTime.
-  /// Returns null if the query returns no rows.
-  DateTime? queryDateTimeParams(String sql, List<Object?> parameters) {
-    final result = queryStringParams(sql, parameters);
+  /// Optional positional [parameters] bind to `?` placeholders (int, double, String, or null).
+  DateTime? queryDateTime(String sql, [List<Object?>? parameters]) {
+    final result = queryString(sql, parameters);
     if (result == null) return null;
     return stringToDateTime(result);
   }

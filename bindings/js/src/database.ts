@@ -5,7 +5,7 @@ import type { NativePointer } from "./loader.ts";
 import { getSymbols } from "./loader.ts";
 import type { GroupMetadata, ScalarMetadata } from "./metadata.ts";
 import type { TimeSeriesData } from "./time-series.ts";
-import type { ElementData, QueryParam } from "./types.ts";
+import type { DatabaseOptions, ElementData, QueryParam } from "./types.ts";
 
 export class Database {
   private _ptr: NativePointer;
@@ -15,41 +15,50 @@ export class Database {
     this._ptr = nativePtr;
   }
 
-  static fromSchema(dbPath: string, schemaPath: string): Database {
+  static fromSchema(dbPath: string, schemaPath: string, options?: DatabaseOptions): Database {
     const lib = getSymbols();
-    const options = makeDefaultOptions();
+    const optionsBuf = makeDefaultOptions(options);
     const outDb = allocPtrOut();
     const dbPathBuf = toCString(dbPath);
     const schemaPathBuf = toCString(schemaPath);
 
     check(
-      lib.quiver_database_from_schema(dbPathBuf.buf, schemaPathBuf.buf, options.buf, outDb.buf),
+      lib.quiver_database_from_schema(dbPathBuf.buf, schemaPathBuf.buf, optionsBuf.buf, outDb.buf),
     );
 
     return new Database(readPtrOut(outDb));
   }
 
-  static fromMigrations(dbPath: string, migrationsPath: string): Database {
+  static fromMigrations(
+    dbPath: string,
+    migrationsPath: string,
+    options?: DatabaseOptions,
+  ): Database {
     const lib = getSymbols();
-    const options = makeDefaultOptions();
+    const optionsBuf = makeDefaultOptions(options);
     const outDb = allocPtrOut();
     const dbPathBuf = toCString(dbPath);
     const migrPathBuf = toCString(migrationsPath);
 
     check(
-      lib.quiver_database_from_migrations(dbPathBuf.buf, migrPathBuf.buf, options.buf, outDb.buf),
+      lib.quiver_database_from_migrations(
+        dbPathBuf.buf,
+        migrPathBuf.buf,
+        optionsBuf.buf,
+        outDb.buf,
+      ),
     );
 
     return new Database(readPtrOut(outDb));
   }
 
-  static open(dbPath: string): Database {
+  static open(dbPath: string, options?: DatabaseOptions): Database {
     const lib = getSymbols();
-    const options = makeDefaultOptions();
+    const optionsBuf = makeDefaultOptions(options);
     const outDb = allocPtrOut();
     const dbPathBuf = toCString(dbPath);
 
-    check(lib.quiver_database_open(dbPathBuf.buf, options.buf, outDb.buf));
+    check(lib.quiver_database_open(dbPathBuf.buf, optionsBuf.buf, outDb.buf));
 
     return new Database(readPtrOut(outDb));
   }

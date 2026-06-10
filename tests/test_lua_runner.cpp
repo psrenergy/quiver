@@ -1140,13 +1140,13 @@ TEST_F(LuaRunnerTest, ReadTimeSeriesGroupById) {
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        local rows = db:read_time_series_group("Collection", "data", )" +
+        local data = db:read_time_series_group("Collection", "data", )" +
                          std::to_string(id) + R"()
-        assert(#rows == 2, "Expected 2 rows, got " .. #rows)
-        assert(rows[1].date_time == "2024-01-01", "Expected date_time '2024-01-01'")
-        assert(rows[1].value == 1.5, "Expected value 1.5")
-        assert(rows[2].date_time == "2024-01-02", "Expected date_time '2024-01-02'")
-        assert(rows[2].value == 2.5, "Expected value 2.5")
+        assert(#data.date_time == 2, "Expected 2 rows, got " .. #data.date_time)
+        assert(data.date_time[1] == "2024-01-01", "Expected date_time '2024-01-01'")
+        assert(data.value[1] == 1.5, "Expected value 1.5")
+        assert(data.date_time[2] == "2024-01-02", "Expected date_time '2024-01-02'")
+        assert(data.value[2] == 2.5, "Expected value 2.5")
     )";
     lua.run(script);
 }
@@ -1196,9 +1196,8 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroup) {
     std::string script = R"(
         db:update_time_series_group("Collection", "data", )" +
                          std::to_string(id) + R"(, {
-            { date_time = "2024-06-01", value = 10.0 },
-            { date_time = "2024-06-02", value = 20.0 },
-            { date_time = "2024-06-03", value = 30.0 },
+            date_time = { "2024-06-01", "2024-06-02", "2024-06-03" },
+            value = { 10.0, 20.0, 30.0 },
         })
     )";
     lua.run(script);
@@ -1383,31 +1382,32 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesUpdateAndRead) {
     std::string script = R"(
         db:update_time_series_group("Sensor", "readings", )" +
                          std::to_string(id) + R"(, {
-            { date_time = "2024-01-01T10:00:00", temperature = 20.5, humidity = 45, status = "normal" },
-            { date_time = "2024-01-02T10:00:00", temperature = 22.3, humidity = 50, status = "warning" },
+            date_time = { "2024-01-01T10:00:00", "2024-01-02T10:00:00" },
+            temperature = { 20.5, 22.3 },
+            humidity = { 45, 50 },
+            status = { "normal", "warning" },
         })
 
-        local rows = db:read_time_series_group("Sensor", "readings", )" +
+        local data = db:read_time_series_group("Sensor", "readings", )" +
                          std::to_string(id) + R"()
-        assert(#rows == 2, "Expected 2 rows, got " .. #rows)
+        assert(#data.date_time == 2, "Expected 2 rows, got " .. #data.date_time)
 
-        -- Verify first row
-        assert(rows[1].date_time == "2024-01-01T10:00:00", "Row 1 date_time mismatch: " .. tostring(rows[1].date_time))
-        assert(rows[1].temperature == 20.5, "Row 1 temperature mismatch: " .. tostring(rows[1].temperature))
-        assert(rows[1].humidity == 45, "Row 1 humidity mismatch: " .. tostring(rows[1].humidity))
-        assert(rows[1].status == "normal", "Row 1 status mismatch: " .. tostring(rows[1].status))
+        -- Verify columns
+        assert(data.date_time[1] == "2024-01-01T10:00:00", "Row 1 date_time mismatch: " .. tostring(data.date_time[1]))
+        assert(data.temperature[1] == 20.5, "Row 1 temperature mismatch: " .. tostring(data.temperature[1]))
+        assert(data.humidity[1] == 45, "Row 1 humidity mismatch: " .. tostring(data.humidity[1]))
+        assert(data.status[1] == "normal", "Row 1 status mismatch: " .. tostring(data.status[1]))
 
-        -- Verify second row
-        assert(rows[2].date_time == "2024-01-02T10:00:00", "Row 2 date_time mismatch: " .. tostring(rows[2].date_time))
-        assert(rows[2].temperature == 22.3, "Row 2 temperature mismatch: " .. tostring(rows[2].temperature))
-        assert(rows[2].humidity == 50, "Row 2 humidity mismatch: " .. tostring(rows[2].humidity))
-        assert(rows[2].status == "warning", "Row 2 status mismatch: " .. tostring(rows[2].status))
+        assert(data.date_time[2] == "2024-01-02T10:00:00", "Row 2 date_time mismatch: " .. tostring(data.date_time[2]))
+        assert(data.temperature[2] == 22.3, "Row 2 temperature mismatch: " .. tostring(data.temperature[2]))
+        assert(data.humidity[2] == 50, "Row 2 humidity mismatch: " .. tostring(data.humidity[2]))
+        assert(data.status[2] == "warning", "Row 2 status mismatch: " .. tostring(data.status[2]))
 
         -- Verify types
-        assert(type(rows[1].date_time) == "string", "date_time should be string")
-        assert(type(rows[1].temperature) == "number", "temperature should be number")
-        assert(type(rows[1].humidity) == "number", "humidity should be number")
-        assert(type(rows[1].status) == "string", "status should be string")
+        assert(type(data.date_time[1]) == "string", "date_time should be string")
+        assert(type(data.temperature[1]) == "number", "temperature should be number")
+        assert(type(data.humidity[1]) == "number", "humidity should be number")
+        assert(type(data.status[1]) == "string", "status should be string")
     )";
     lua.run(script);
 }
@@ -1422,9 +1422,9 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesReadEmpty) {
     quiver::LuaRunner lua(db);
 
     std::string script = R"(
-        local rows = db:read_time_series_group("Sensor", "readings", )" +
+        local data = db:read_time_series_group("Sensor", "readings", )" +
                          std::to_string(id) + R"()
-        assert(#rows == 0, "Expected 0 rows for empty time series, got " .. #rows)
+        assert(next(data) == nil, "Expected empty table for empty time series")
     )";
     lua.run(script);
 }
@@ -1442,28 +1442,31 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesReplace) {
         -- First update: 2 rows
         db:update_time_series_group("Sensor", "readings", )" +
                          std::to_string(id) + R"(, {
-            { date_time = "2024-01-01", temperature = 10.0, humidity = 30, status = "low" },
-            { date_time = "2024-01-02", temperature = 15.0, humidity = 40, status = "mid" },
+            date_time = { "2024-01-01", "2024-01-02" },
+            temperature = { 10.0, 15.0 },
+            humidity = { 30, 40 },
+            status = { "low", "mid" },
         })
 
-        local rows = db:read_time_series_group("Sensor", "readings", )" +
+        local data = db:read_time_series_group("Sensor", "readings", )" +
                          std::to_string(id) + R"()
-        assert(#rows == 2, "Expected 2 rows after first update, got " .. #rows)
+        assert(#data.date_time == 2, "Expected 2 rows after first update, got " .. #data.date_time)
 
         -- Second update: 3 different rows (replaces previous)
         db:update_time_series_group("Sensor", "readings", )" +
                          std::to_string(id) + R"(, {
-            { date_time = "2024-06-01", temperature = 25.0, humidity = 60, status = "high" },
-            { date_time = "2024-06-02", temperature = 26.5, humidity = 65, status = "high" },
-            { date_time = "2024-06-03", temperature = 28.0, humidity = 70, status = "critical" },
+            date_time = { "2024-06-01", "2024-06-02", "2024-06-03" },
+            temperature = { 25.0, 26.5, 28.0 },
+            humidity = { 60, 65, 70 },
+            status = { "high", "high", "critical" },
         })
 
-        rows = db:read_time_series_group("Sensor", "readings", )" +
+        data = db:read_time_series_group("Sensor", "readings", )" +
                          std::to_string(id) + R"()
-        assert(#rows == 3, "Expected 3 rows after replace, got " .. #rows)
-        assert(rows[1].date_time == "2024-06-01", "First row should be 2024-06-01")
-        assert(rows[1].temperature == 25.0, "First row temperature should be 25.0")
-        assert(rows[3].status == "critical", "Third row status should be 'critical'")
+        assert(#data.date_time == 3, "Expected 3 rows after replace, got " .. #data.date_time)
+        assert(data.date_time[1] == "2024-06-01", "First row should be 2024-06-01")
+        assert(data.temperature[1] == 25.0, "First row temperature should be 25.0")
+        assert(data.status[3] == "critical", "Third row status should be 'critical'")
     )";
     lua.run(script);
 }
@@ -1481,21 +1484,23 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesClear) {
         -- Insert 2 rows
         db:update_time_series_group("Sensor", "readings", )" +
                          std::to_string(id) + R"(, {
-            { date_time = "2024-01-01", temperature = 10.0, humidity = 30, status = "ok" },
-            { date_time = "2024-01-02", temperature = 15.0, humidity = 40, status = "ok" },
+            date_time = { "2024-01-01", "2024-01-02" },
+            temperature = { 10.0, 15.0 },
+            humidity = { 30, 40 },
+            status = { "ok", "ok" },
         })
 
-        local rows = db:read_time_series_group("Sensor", "readings", )" +
+        local data = db:read_time_series_group("Sensor", "readings", )" +
                          std::to_string(id) + R"()
-        assert(#rows == 2, "Expected 2 rows before clear, got " .. #rows)
+        assert(#data.date_time == 2, "Expected 2 rows before clear, got " .. #data.date_time)
 
         -- Clear by updating with empty table
         db:update_time_series_group("Sensor", "readings", )" +
                          std::to_string(id) + R"(, {})
 
-        rows = db:read_time_series_group("Sensor", "readings", )" +
+        data = db:read_time_series_group("Sensor", "readings", )" +
                          std::to_string(id) + R"()
-        assert(#rows == 0, "Expected 0 rows after clear, got " .. #rows)
+        assert(next(data) == nil, "Expected empty table after clear")
     )";
     lua.run(script);
 }
@@ -1513,27 +1518,28 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesOrdering) {
         -- Insert rows out of order
         db:update_time_series_group("Sensor", "readings", )" +
                          std::to_string(id) + R"(, {
-            { date_time = "2024-01-03", temperature = 30.0, humidity = 70, status = "high" },
-            { date_time = "2024-01-01", temperature = 10.0, humidity = 30, status = "low" },
-            { date_time = "2024-01-02", temperature = 20.0, humidity = 50, status = "mid" },
+            date_time = { "2024-01-03", "2024-01-01", "2024-01-02" },
+            temperature = { 30.0, 10.0, 20.0 },
+            humidity = { 70, 30, 50 },
+            status = { "high", "low", "mid" },
         })
 
-        local rows = db:read_time_series_group("Sensor", "readings", )" +
+        local data = db:read_time_series_group("Sensor", "readings", )" +
                          std::to_string(id) + R"()
-        assert(#rows == 3, "Expected 3 rows, got " .. #rows)
+        assert(#data.date_time == 3, "Expected 3 rows, got " .. #data.date_time)
 
         -- Verify rows are returned sorted by date_time (dimension column)
-        assert(rows[1].date_time == "2024-01-01", "First row should be 2024-01-01, got " .. rows[1].date_time)
-        assert(rows[2].date_time == "2024-01-02", "Second row should be 2024-01-02, got " .. rows[2].date_time)
-        assert(rows[3].date_time == "2024-01-03", "Third row should be 2024-01-03, got " .. rows[3].date_time)
+        assert(data.date_time[1] == "2024-01-01", "First row should be 2024-01-01, got " .. data.date_time[1])
+        assert(data.date_time[2] == "2024-01-02", "Second row should be 2024-01-02, got " .. data.date_time[2])
+        assert(data.date_time[3] == "2024-01-03", "Third row should be 2024-01-03, got " .. data.date_time[3])
 
         -- Verify corresponding values match the correct rows
-        assert(rows[1].temperature == 10.0, "Row 1 temperature should be 10.0")
-        assert(rows[2].temperature == 20.0, "Row 2 temperature should be 20.0")
-        assert(rows[3].temperature == 30.0, "Row 3 temperature should be 30.0")
-        assert(rows[1].status == "low", "Row 1 status should be 'low'")
-        assert(rows[2].status == "mid", "Row 2 status should be 'mid'")
-        assert(rows[3].status == "high", "Row 3 status should be 'high'")
+        assert(data.temperature[1] == 10.0, "Row 1 temperature should be 10.0")
+        assert(data.temperature[2] == 20.0, "Row 2 temperature should be 20.0")
+        assert(data.temperature[3] == 30.0, "Row 3 temperature should be 30.0")
+        assert(data.status[1] == "low", "Row 1 status should be 'low'")
+        assert(data.status[2] == "mid", "Row 2 status should be 'mid'")
+        assert(data.status[3] == "high", "Row 3 status should be 'high'")
     )";
     lua.run(script);
 }
@@ -1550,16 +1556,16 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesMultiRow) {
     std::string script = R"(
         db:update_time_series_group("Sensor", "readings", )" +
                          std::to_string(id) + R"(, {
-            { date_time = "2024-01-01T00:00:00", temperature = 10.1, humidity = 30, status = "cold" },
-            { date_time = "2024-01-02T00:00:00", temperature = 15.2, humidity = 40, status = "cool" },
-            { date_time = "2024-01-03T00:00:00", temperature = 20.3, humidity = 50, status = "mild" },
-            { date_time = "2024-01-04T00:00:00", temperature = 25.4, humidity = 60, status = "warm" },
-            { date_time = "2024-01-05T00:00:00", temperature = 30.5, humidity = 70, status = "hot" },
+            date_time = { "2024-01-01T00:00:00", "2024-01-02T00:00:00", "2024-01-03T00:00:00",
+                          "2024-01-04T00:00:00", "2024-01-05T00:00:00" },
+            temperature = { 10.1, 15.2, 20.3, 25.4, 30.5 },
+            humidity = { 30, 40, 50, 60, 70 },
+            status = { "cold", "cool", "mild", "warm", "hot" },
         })
 
-        local rows = db:read_time_series_group("Sensor", "readings", )" +
+        local data = db:read_time_series_group("Sensor", "readings", )" +
                          std::to_string(id) + R"()
-        assert(#rows == 5, "Expected 5 rows, got " .. #rows)
+        assert(#data.date_time == 5, "Expected 5 rows, got " .. #data.date_time)
 
         -- Verify all 5 rows with correct types and values
         local expected_temps = {10.1, 15.2, 20.3, 25.4, 30.5}
@@ -1568,17 +1574,17 @@ TEST_F(LuaRunnerTest, MultiColumnTimeSeriesMultiRow) {
 
         for i = 1, 5 do
             local expected_date = "2024-01-0" .. i .. "T00:00:00"
-            assert(rows[i].date_time == expected_date, "Row " .. i .. " date_time mismatch: " .. tostring(rows[i].date_time))
-            assert(rows[i].temperature == expected_temps[i], "Row " .. i .. " temperature mismatch: " .. tostring(rows[i].temperature))
-            assert(rows[i].humidity == expected_humidity[i], "Row " .. i .. " humidity mismatch: " .. tostring(rows[i].humidity))
-            assert(rows[i].status == expected_status[i], "Row " .. i .. " status mismatch: " .. tostring(rows[i].status))
+            assert(data.date_time[i] == expected_date, "Row " .. i .. " date_time mismatch: " .. tostring(data.date_time[i]))
+            assert(data.temperature[i] == expected_temps[i], "Row " .. i .. " temperature mismatch: " .. tostring(data.temperature[i]))
+            assert(data.humidity[i] == expected_humidity[i], "Row " .. i .. " humidity mismatch: " .. tostring(data.humidity[i]))
+            assert(data.status[i] == expected_status[i], "Row " .. i .. " status mismatch: " .. tostring(data.status[i]))
         end
 
         -- Verify types on last row
-        assert(type(rows[5].date_time) == "string", "date_time should be string type")
-        assert(type(rows[5].temperature) == "number", "temperature should be number type")
-        assert(type(rows[5].humidity) == "number", "humidity should be number type")
-        assert(type(rows[5].status) == "string", "status should be string type")
+        assert(type(data.date_time[5]) == "string", "date_time should be string type")
+        assert(type(data.temperature[5]) == "number", "temperature should be number type")
+        assert(type(data.humidity[5]) == "number", "humidity should be number type")
+        assert(type(data.status[5]) == "string", "status should be string type")
     )";
     lua.run(script);
 }
@@ -2839,8 +2845,8 @@ TEST_F(LuaRunnerFkTest, UpdateTimeSeriesFkViaTypedMethod) {
         sponsor_id = {"Parent 1"}
     })
     db:update_time_series_group("Child", "events", 1, {
-        {date_time = "2025-01-01", sponsor_id = 2},
-        {date_time = "2025-01-02", sponsor_id = 1}
+        date_time = {"2025-01-01", "2025-01-02"},
+        sponsor_id = {2, 1}
     })
 )");
 
@@ -2923,11 +2929,12 @@ TEST_F(LuaRunnerTest, ReadTimeSeriesRow) {
         db:create_element("Collection", { label = "Item 1" })
         db:create_element("Collection", { label = "Item 2" })
         db:update_time_series_group("Collection", "data", 1, {
-            { date_time = "2024-01-01T00:00:00", value = 10.5 },
-            { date_time = "2024-02-01T00:00:00", value = 20.5 },
+            date_time = { "2024-01-01T00:00:00", "2024-02-01T00:00:00" },
+            value = { 10.5, 20.5 },
         })
         db:update_time_series_group("Collection", "data", 2, {
-            { date_time = "2024-01-01T00:00:00", value = 30.5 },
+            date_time = { "2024-01-01T00:00:00" },
+            value = { 30.5 },
         })
 
         local row = db:read_time_series_row("Collection", "data", "value", "2024-01-15T00:00:00")

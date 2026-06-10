@@ -448,7 +448,7 @@ Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references.
 - Scalar readers: `read_scalar_integers/floats/strings(collection, attribute)`
 - Vector readers: `read_vector_integers/floats/strings(collection, attribute)`
 - Set readers: `read_set_integers/floats/strings(collection, attribute)`
-- Time series: `read_time_series_group()`, `update_time_series_group()`, `add_time_series_row()` — both `read_time_series_group` and `update_time_series_group` use multi-column `vector<map<string, Value>>` rows with N typed value columns per time series group; `add_time_series_row` appends/upserts a single row using a `map<string, Value>` (one value per column)
+- Time series: `read_time_series_group()`, `update_time_series_group()`, `add_time_series_row()` — both `read_time_series_group` and `update_time_series_group` use multi-column `vector<map<string, Value>>` rows with N typed value columns per time series group; `add_time_series_row` appends/upserts a single row using a `map<string, Value>` (one value per column). All bindings expose the group read/update as **column-oriented** data (`{column: [values]}`), the canonical cross-binding shape. Integer values are accepted for REAL columns in time series writes (converted on insert).
 - Time series files: `has_time_series_files()`, `list_time_series_files_columns()`, `read_time_series_files()`, `update_time_series_files()`
 - Metadata: `get_scalar_metadata()`, `get_vector_metadata()`, `get_set_metadata()`, `get_time_series_metadata()` — all group metadata returns unified `GroupMetadata` with `dimension_column` (populated for time series, empty for vectors/sets)
 - List groups: `list_scalar_attributes()`, `list_vector_groups()`, `list_set_groups()`, `list_time_series_groups()`
@@ -466,6 +466,10 @@ Element().set("label", "Item 1").set("value", 42).set("tags", {"a", "b"})
 
 ### Binary Subsystem
 Standalone binary file I/O layer for `.qvr` files with `.toml` metadata sidecars.
+
+> **Scope decision:** the binary and expression subsystems are bound in **Julia only**.
+> Dart, Python, and JS deliberately do not expose them (no current consumer); the
+> tests-at-every-layer rule has this one documented exception.
 
 - `BinaryFile` class (Pimpl): `open_file(path, mode, metadata?)`, `read(dims)`, `write(dims, data)`, `get_metadata()`, `get_file_path()`
 - `CSVConverter` class (composition, no Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)`
@@ -620,6 +624,12 @@ Julia, Dart, Lua, and JS provide additional convenience methods that compose cor
 | `read_scalars_by_id` | `readScalarsById` | `read_scalars_by_id` | `readScalarsById` | `list_scalar_attributes` + typed reads |
 | `read_vectors_by_id` | `readVectorsById` | `read_vectors_by_id` | `readVectorsById` | `list_vector_groups` + typed reads     |
 | `read_sets_by_id`    | `readSetsById`    | `read_sets_by_id`    | `readSetsById`    | `list_set_groups` + typed reads        |
+
+**Relation map helpers (Julia only):** `bindings/julia/src/helper_maps.jl` builds
+relation maps (FK column discovery + label/id joins) on top of the core read API.
+It is a documented Julia-only convenience for PSR's modeling tooling — a deliberate
+exception to the thin-bindings rule, kept in the binding because only Julia consumers
+use it.
 
 **Transaction block wrappers (Julia, Dart, and Lua):**
 

@@ -1,5 +1,5 @@
 import { CString, type Pointer, ptr, read, toArrayBuffer } from "bun:ffi";
-import type { Allocation } from "./types.ts";
+import { type Allocation, type DatabaseOptions, LOG_LEVEL_INFO } from "./types.ts";
 
 const encoder = new TextEncoder();
 
@@ -7,11 +7,11 @@ const encoder = new TextEncoder();
  * Construct the 8-byte quiver_database_options_t struct as an Allocation.
  * Layout: offset 0 = int32 read_only (default 0), offset 4 = int32 console_level (default 1 = QUIVER_LOG_INFO).
  */
-export function makeDefaultOptions(): Allocation {
+export function makeDefaultOptions(options?: DatabaseOptions): Allocation {
   const buf = new Uint8Array(8);
   const dv = new DataView(buf.buffer);
-  dv.setInt32(0, 0, true); // read_only = false
-  dv.setInt32(4, 1, true); // console_level = QUIVER_LOG_INFO
+  dv.setInt32(0, options?.readOnly ? 1 : 0, true);
+  dv.setInt32(4, options?.consoleLevel ?? LOG_LEVEL_INFO, true);
   return { ptr: ptr(buf), buf };
 }
 
