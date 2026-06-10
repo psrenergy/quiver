@@ -50,16 +50,16 @@ jobs:
               build/lib/libquiver.so
               build/lib/libquiver.so.0
               build/lib/libquiver_c.so
+          - os: macos-13
+            platform_key: macos-x86_64
+            lib_paths: |
+              build/lib/libquiver.dylib
+              build/lib/libquiver_c.dylib              
           - os: windows-latest
             platform_key: windows-x86_64
             lib_paths: |
               build/bin/Release/libquiver.dll
               build/bin/Release/libquiver_c.dll
-          - os: macos-13
-            platform_key: macos-x86_64
-            lib_paths: |
-              build/lib/libquiver.dylib
-              build/lib/libquiver_c.dylib
 
     steps:
       - uses: actions/checkout@v6
@@ -102,17 +102,17 @@ jobs:
           name: native-linux-x86_64
           path: native/linux-x86_64
 
-      - name: Download Windows x86_64 native libraries
-        uses: actions/download-artifact@v8
-        with:
-          name: native-windows-x86_64
-          path: native/windows-x86_64
-
       - name: Download macOS x86_64 native libraries
         uses: actions/download-artifact@v8
         with:
           name: native-macos-x86_64
           path: native/macos-x86_64
+
+      - name: Download Windows x86_64 native libraries
+        uses: actions/download-artifact@v8
+        with:
+          name: native-windows-x86_64
+          path: native/windows-x86_64
 
       - name: Upload native libs to S3
         run: bash scripts/ci/native_s3.sh upload "${{ needs.version.outputs.version }}"

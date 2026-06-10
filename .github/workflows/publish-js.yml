@@ -45,8 +45,6 @@ jobs:
           fi
           echo "version=$v" >> "$GITHUB_OUTPUT"
 
-      # Download the native libs into bindings/js/libs/{linux,windows}-x86_64/ — the same layout
-      # the package.json "files" allowlist ships. native_s3.sh owns the per-platform file list.
       - name: Download native libraries from S3
         run: bash scripts/ci/native_s3.sh download "${{ steps.ver.outputs.version }}" bindings/js/libs
 
@@ -55,11 +53,12 @@ jobs:
         run: |
           required=(
             libs/linux-x86_64/libquiver.so
-            # SONAME libquiver_c.so's DT_NEEDED resolves at load time (no Linux preload).
             libs/linux-x86_64/libquiver.so.0
             libs/linux-x86_64/libquiver_c.so
             libs/windows-x86_64/libquiver.dll
             libs/windows-x86_64/libquiver_c.dll
+            libs/macos-x86_64/libquiver.dylib
+            libs/macos-x86_64/libquiver_c.dylib            
           )
           missing=0
           for f in "${required[@]}"; do
@@ -88,7 +87,8 @@ jobs:
           echo "$entries"
           for f in \
             libs/linux-x86_64/libquiver.so libs/linux-x86_64/libquiver.so.0 libs/linux-x86_64/libquiver_c.so \
-            libs/windows-x86_64/libquiver.dll libs/windows-x86_64/libquiver_c.dll; do
+            libs/macos-x86_64/libquiver.dylib libs/macos-x86_64/libquiver_c.dylib \
+            libs/windows-x86_64/libquiver.dll libs/windows-x86_64/libquiver_c.dll ; do
             if ! printf '%s\n' "$entries" | grep -Fxq "$f"; then
               echo "::error::tarball $tarball is MISSING $f"
               exit 1

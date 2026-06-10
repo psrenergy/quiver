@@ -1,42 +1,17 @@
 #!/usr/bin/env bash
-#
-# Single source of truth for moving Quiver's *raw* native libraries through S3, keyed by
-# version. The release pipeline builds the libs once (publish-s3.yml), uploads them here,
-# and every consumer (publish-js.yml, publish-julia.yml) downloads them here. Because S3
-# persists across workflow runs, each publish workflow is independently runnable: a standalone
-# `publish-js` just downloads the libs for its version, no rebuild and no in-run artifact.
-#
-# This is DISTINCT from the Julia shipping tarballs that scripts/julia/generate_artifacts.jl
-# uploads (quiver-<tag>.tgz, 2 stems only). Those omit the libquiver.so.0 SONAME that the npm
-# loader resolves at load time, so npm cannot reuse them — hence this raw-lib key space.
-#
-# Layout (mirrors generate_artifacts.jl's bucket/prefix/version scheme):
-#   s3://<bucket>/<prefix>/<version>/native/<platform>/<file>
-# Objects are uploaded --acl public-read, so downloads are anonymous HTTPS (no AWS creds).
-# Uploads need S3 write — run them on the self-hosted runner with the ambient IAM role.
-#
-# Env overrides (same defaults as generate_artifacts.jl):
-#   QUIVER_S3_BUCKET (default "julia-artifacts"), QUIVER_S3_PREFIX (default "quiver").
-#
-# Usage:
-#   scripts/ci/native_s3.sh upload   <version>          # reads native/<platform>/<file>
-#   scripts/ci/native_s3.sh download <version> <dest>   # writes <dest>/<platform>/<file>
 
 set -euo pipefail
 
 S3_BUCKET="${QUIVER_S3_BUCKET:-julia-artifacts}"
 S3_PREFIX="${QUIVER_S3_PREFIX:-quiver}"
 
-readonly PLATFORMS=("linux-x86_64" "windows-x86_64")
+readonly PLATFORMS=("linux-x86_64" "macos-x86_64" "windows-x86_64")
 
-# Canonical per-platform native-lib file set. linux ships the unversioned name AND the SONAME
-# libquiver.so.0 (libquiver_c.so's DT_NEEDED resolves it via RPATH=$ORIGIN); windows ships the
-# two runtime DLLs. This list is the contract between producer (publish-s3.yml) and consumers
-# (js/julia) — keep it in lockstep with publish-s3.yml's matrix lib_paths.
 files_for() {
   case "$1" in
     linux-x86_64)   echo "libquiver.so libquiver.so.0 libquiver_c.so" ;;
-    windows-x86_64) echo "libquiver.dll libquiver_c.dll" ;;
+    macos-x86_64)   echo "libquiver.dylib libquiver_c.dylib" ;;
+    windows-x86_64) echo "libquiver.dll libquiver_c.dll" ;;    
     *) echo "::error::native_s3.sh: unknown platform '$1'" >&2; return 1 ;;
   esac
 }
