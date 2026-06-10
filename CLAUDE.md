@@ -122,7 +122,7 @@ tests/schemas/            # Shared SQL schemas for all tests
 - **Homogeneity**: Binding interfaces must be consistent and intuitive. API surface should feel uniform across wrappers.
 - **Ownership**: RAII used strictly. Ownership of pointers/resources must be explicit and unambiguous.
 - **Constraint**: Be critical. If code is already optimal, state that clearly. Do not invent useless suggestions just to provide output.
-- All public C++ methods should be bound to C API, then to Julia/Dart/Lua
+- All public C++ methods should be bound to C API, then to Julia/Dart/Python/JS/Lua (exception: the binary/expression subsystems are Julia-only by decision)
 - All *.sql test schemas in `tests/schemas/`, bindings reference from there
 - **Self-Updating**: Always keep CLAUDE.md up to date with codebase changes
 
@@ -687,6 +687,7 @@ bindings/julia/generator/generator.bat   # Julia
 bindings/dart/generator/generator.bat    # Dart
 bindings/python/generator/generator.bat  # Python
 ```
+JS has no generator — update the hand-written symbol table in `bindings/js/src/loader.ts`.
 
 ### Julia Notes
 - Delete `bindings/julia/Manifest.toml` if version conflicts, then:
