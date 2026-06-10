@@ -50,7 +50,7 @@ jobs:
               build/lib/libquiver.so
               build/lib/libquiver.so.0
               build/lib/libquiver_c.so
-          - os: macos-13
+          - os: macos-latest
             platform_key: macos-x86_64
             lib_paths: |
               build/lib/libquiver.dylib
