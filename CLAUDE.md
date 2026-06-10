@@ -652,10 +652,9 @@ bindings/python/generator/generator.bat  # Python
 - **Publishing**: `bindings/julia/` is the **canonical** Julia package and the *single source of
   truth*; the published `psrenergy/Quiver.jl` is a **full generated mirror** (never hand-edit it —
   develop only in `bindings/julia`). It is a plain S3-artifact package in General (no `Quiver_jll`,
-  no Yggdrasil). The `publish-julia.yml` workflow (standalone via `workflow_dispatch`; the release
-  orchestration that once auto-dispatched it was dropped when the pipeline was split into four
-  independent workflows) downloads the native libs from S3 (staged there by the `publish.yml`
-  native build), runs
+  no Yggdrasil). The `publish-julia.yml` workflow (`workflow_dispatch`; runs standalone or
+  dispatched by the `release.yml` orchestrator) downloads the native libs from S3 (staged there
+  by the `publish-s3.yml` native build), runs
   `scripts/julia/generate_artifacts.jl` (tar → S3 upload → `Artifacts.toml`), then **wipes the mirror
   (keeping only its `.git/`) and copies the entire `bindings/julia` tree into it** — `src/`, `test/`,
   `.github/` (the mirror's `CI.yml`/`TagBot.yml` live here, dormant in the monorepo since nested
@@ -713,8 +712,8 @@ bindings/python/generator/generator.bat  # Python
     `ffi-helpers.makeDefaultOptions()` builds the options struct in JS.
 - **Publishing:** `package.json` `files` allowlist ships `libs/**`; an empty `.npmignore` stops
   `npm pack` falling back to `.gitignore` (which excludes `*.dll`/`*.so`). The `publish-js.yml`
-  workflow (standalone via `workflow_dispatch`; release auto-dispatch was dropped in the four-way
-  pipeline split) downloads native libs from S3 (staged by the `publish.yml` native build) into
+  workflow (`workflow_dispatch`; runs standalone or dispatched by the `release.yml` orchestrator)
+  downloads native libs from S3 (staged by the `publish-s3.yml` native build) into
   `libs/{linux,windows}-x86_64/`, asserts every lib is in a throwaway `npm pack` tarball via
   `tar -tzf` (format-independent; npm roots entries under `package/`), then publishes with
   **`npm publish --loglevel verbose` via `actions/setup-node@v6`** using **npm Trusted Publishing
@@ -729,6 +728,27 @@ bindings/python/generator/generator.bat  # Python
   npm ≥ 11.5.1 (ensured via `npm install -g npm@latest` on Node 24). Bun can't do OIDC trusted
   publishing yet (bun#24855→#15601), so the publish job uses npm; the binding + tests remain 100%
   Bun. A standalone re-dispatch of an already-published version is skipped via an `npm view` guard.
+
+### Release Pipeline
+- `release.yml` (`workflow_dispatch`, optional `ref` input, no version input — the tag must equal
+  what the source declares) orchestrates a full release: resolve version via
+  `scripts/assert_version.py` + assert tag `v<version>` is absent or already at the release sha →
+  dispatch `publish-s3.yml` and wait → create tag + GitHub release (`ncipollo/release-action`,
+  `skipIfReleaseExists`) → dispatch `publish-julia.yml` / `publish-python.yml` / `publish-js.yml`
+  **in parallel on the new tag** and wait for all three.
+- Children are dispatched as top-level `workflow_dispatch` runs via `scripts/ci/dispatch_workflow.sh`
+  (dispatch → correlate run id by workflow+ref+created-after → poll to completion), NOT as
+  `workflow_call` reusable workflows: npm and PyPI trusted publishing validate the **top-level
+  workflow filename** from the OIDC claims, so `publish-js.yml`/`publish-python.yml` must stay
+  top-level. `gh workflow run` with `GITHUB_TOKEN` works (`workflow_dispatch` is an explicit
+  exception to "GITHUB_TOKEN events don't trigger workflows"; needs `actions: write`).
+- Dispatching the bindings on the tag pins them to the release commit and gives `publish-python`
+  a per-release concurrency group (its `cancel-in-progress: true` can't be tripped by a master
+  push mid-publish). The `npm`/`pypi` environments must keep deployment branch policy
+  "No restriction" (or allow `v*` tags) or tag-dispatched publishes get rejected.
+- A full re-run of a partially failed release is idempotent end-to-end: tag assert passes (same
+  sha), S3 overwrites the same keys, release creation is skipped, the Julia PR branch is
+  force-updated, PyPI uses `skip-existing: true`, npm hits the `npm view` guard.
 
 <!-- GSD:skills-start source:skills/ -->
 ## Project Skills

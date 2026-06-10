@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Single source of truth for moving Quiver's *raw* native libraries through S3, keyed by
-# version. The release pipeline builds the libs once (publish.yml), uploads them here,
+# version. The release pipeline builds the libs once (publish-s3.yml), uploads them here,
 # and every consumer (publish-js.yml, publish-julia.yml) downloads them here. Because S3
 # persists across workflow runs, each publish workflow is independently runnable: a standalone
 # `publish-js` just downloads the libs for its version, no rebuild and no in-run artifact.
@@ -31,8 +31,8 @@ readonly PLATFORMS=("linux-x86_64" "windows-x86_64")
 
 # Canonical per-platform native-lib file set. linux ships the unversioned name AND the SONAME
 # libquiver.so.0 (libquiver_c.so's DT_NEEDED resolves it via RPATH=$ORIGIN); windows ships the
-# two runtime DLLs. This list is the contract between producer (publish.yml) and consumers
-# (js/julia) — keep it in lockstep with publish.yml's matrix lib_paths.
+# two runtime DLLs. This list is the contract between producer (publish-s3.yml) and consumers
+# (js/julia) — keep it in lockstep with publish-s3.yml's matrix lib_paths.
 files_for() {
   case "$1" in
     linux-x86_64)   echo "libquiver.so libquiver.so.0 libquiver_c.so" ;;
