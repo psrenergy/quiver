@@ -1,4 +1,4 @@
-name: Publish Julia (PR to Quiver.jl)
+name: Publish Julia
 
 on:
   workflow_dispatch:
@@ -88,5 +88,5 @@ jobs:
           body: |
             Auto-generated mirror from `psrenergy/quiver@v${{ needs.version.outputs.version }}`.
 
-            > Do not hand-edit this repository, it is generated from `psrenergy/quiver/bindings/julia`.
+            Do not hand-edit this repository, it is generated from `psrenergy/quiver/bindings/julia`.
           delete-branch: true

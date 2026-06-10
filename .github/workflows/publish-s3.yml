@@ -1,0 +1,102 @@
+name: Publish S3
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Override the version used as the S3 key. Default: detect from CMakeLists.txt."
+        required: false
+        default: ""
+      ref:
+        description: "Git ref or sha to build. Default: the triggering commit."
+        required: false
+        default: ""
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - id: v
+        run: |
+          v="${{ inputs.version }}"
+          if [ -z "$v" ]; then
+            v="$(python3 scripts/assert_version.py)"
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build native libs (${{ matrix.platform_key }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform_key: linux-x86_64
+            lib_paths: |
+              build/lib/libquiver.so
+              build/lib/libquiver.so.0
+              build/lib/libquiver_c.so
+          - os: windows-latest
+            platform_key: windows-x86_64
+            lib_paths: |
+              build/bin/Release/libquiver.dll
+              build/bin/Release/libquiver_c.dll
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - uses: ./.github/actions/build-cpp
+        with:
+          build_type: Release
+          build_tests: "OFF"
+
+      - name: Set RPATH for Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update && sudo apt-get install -y patchelf
+          patchelf --set-rpath '$ORIGIN' build/lib/libquiver_c.so
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: native-${{ matrix.platform_key }}
+          path: ${{ matrix.lib_paths }}
+
+  upload-s3:
+    name: Upload native libs to S3
+    runs-on: [self-hosted, linux]
+    needs: [build, version]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Download Linux x86_64 native libraries
+        uses: actions/download-artifact@v8
+        with:
+          name: native-linux-x86_64
+          path: native/linux-x86_64
+
+      - name: Download Windows x86_64 native libraries
+        uses: actions/download-artifact@v8
+        with:
+          name: native-windows-x86_64
+          path: native/windows-x86_64
+
+      - name: Upload native libs to S3
+        run: bash scripts/ci/native_s3.sh upload "${{ needs.version.outputs.version }}"

@@ -88,4 +88,8 @@ jobs:
             fi
           done
           echo "Validated ${#wheels[@]} wheel(s)"
+      # skip-existing makes a release.yml re-run idempotent: already-uploaded wheels are
+      # tolerated instead of failing the whole publish.
       - uses: pypa/gh-action-pypi-publish@v1.14.0
+        with:
+          skip-existing: true

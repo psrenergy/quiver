@@ -26,10 +26,12 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           registry-url: "https://registry.npmjs.org"
+          # No package-lock.json in bindings/js (Bun project) — v6 caching would fail.
+          package-manager-cache: false
 
       - name: Ensure npm supports Trusted Publishing
         run: npm install -g npm@latest
@@ -101,5 +103,8 @@ jobs:
           if npm view "quiverdb@$ver" version >/dev/null 2>&1; then
             echo "quiverdb@$ver already published; skipping"
           else
-            npm publish
+            # Verbose: the OIDC token exchange result is only logged at this level.
+            # Without it, a failed exchange silently falls back to token auth and
+            # dies with a misleading E404 on the PUT.
+            npm publish --loglevel verbose
           fi

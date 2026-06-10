@@ -1,19 +1,10 @@
-name: Publish (native libs -> S3)
+name: Publish
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: "Override the version used as the S3 key. Default: detect from CMakeLists.txt."
-        required: false
-        default: ""
-      ref:
-        description: "Git ref or sha to build. Default: the triggering commit."
-        required: false
-        default: ""
 
 concurrency:
-  group: publish-${{ github.ref }}
+  group: release
   cancel-in-progress: false
 
 permissions:
@@ -23,80 +14,130 @@ jobs:
   version:
     name: Resolve version
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       version: ${{ steps.v.outputs.version }}
+      sha: ${{ steps.v.outputs.sha }}
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ github.sha }}
       - id: v
         run: |
-          v="${{ inputs.version }}"
-          if [ -z "$v" ]; then
-            v="$(python3 scripts/assert_version.py)"
+          sha="$(git rev-parse HEAD)"
+          v="$(python3 scripts/assert_version.py)"
+          if ! [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::resolved version '$v' is not X.Y.Z"
+            exit 1
+          fi
+          # ncipollo/release-action creates the tag iff missing and never moves an existing
+          # one, so a stale tag would silently release the wrong commit. Fail here instead.
+          # Tags are annotated: compare the peeled (^{}) commit when present.
+          existing="$(git ls-remote origin "refs/tags/v$v" "refs/tags/v$v^{}" | tail -n1 | cut -f1)"
+          if [ -n "$existing" ] && [ "$existing" != "$sha" ]; then
+            echo "::error::tag v$v already exists at ${existing}; bump the version in CMakeLists.txt (and binding manifests) or delete the tag"
+            exit 1
+          fi
+          if [ -n "$existing" ]; then
+            echo "tag v$v already points at ${sha} — re-running the release for it"
           fi
           echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
-  build:
-    name: Build native libs (${{ matrix.platform_key }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - os: ubuntu-latest
-            platform_key: linux-x86_64
-            lib_paths: |
-              build/lib/libquiver.so
-              build/lib/libquiver.so.0
-              build/lib/libquiver_c.so
-          - os: windows-latest
-            platform_key: windows-x86_64
-            lib_paths: |
-              build/bin/Release/libquiver.dll
-              build/bin/Release/libquiver_c.dll
-
+  publish-s3:
+    name: Publish S3
+    runs-on: ubuntu-latest
+    needs: version
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: write
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ github.sha }}
+      # The tag does not exist yet, so dispatch on the orchestrator's branch and pin the
+      # child's checkout to the release sha explicitly.
+      - name: Dispatch and watch publish-s3.yml
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          DISPATCH_REF: ${{ github.ref_name }}
+          VERSION: ${{ needs.version.outputs.version }}
+          SHA: ${{ needs.version.outputs.sha }}
+        run: bash scripts/ci/dispatch_workflow.sh publish-s3.yml "$DISPATCH_REF" "version=$VERSION" "ref=$SHA"
 
-      - uses: ./.github/actions/build-cpp
+  release:
+    name: Tag and GitHub release
+    runs-on: ubuntu-latest
+    needs: [version, publish-s3]
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: ncipollo/release-action@v1
         with:
-          build_type: Release
-          build_tests: "OFF"
+          tag: v${{ needs.version.outputs.version }}
+          commit: ${{ needs.version.outputs.sha }}
+          generateReleaseNotes: true
+          skipIfReleaseExists: true
+          makeLatest: "true"
 
-      - name: Set RPATH for Linux
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update && sudo apt-get install -y patchelf
-          patchelf --set-rpath '$ORIGIN' build/lib/libquiver_c.so
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: native-${{ matrix.platform_key }}
-          path: ${{ matrix.lib_paths }}
-
-  upload-s3:
-    name: Upload native libs to S3
-    runs-on: [self-hosted, linux]
-    needs: [build, version]
+  publish-julia:
+    name: Publish Julia
+    runs-on: ubuntu-latest
+    needs: [version, release]
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: write
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ github.sha }}
+      - name: Dispatch and watch publish-julia.yml
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: bash scripts/ci/dispatch_workflow.sh publish-julia.yml "v$VERSION" "version=$VERSION"
 
-      - name: Download Linux x86_64 native libraries
-        uses: actions/download-artifact@v8
+  publish-python:
+    name: Publish Python
+    runs-on: ubuntu-latest
+    needs: [version, release]
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v6
         with:
-          name: native-linux-x86_64
-          path: native/linux-x86_64
+          ref: ${{ github.sha }}
+      # publish-python.yml declares only a `ref` input; on the tag, github.sha already is
+      # the release commit, and undeclared inputs are a hard 422 — so pass no inputs.
+      - name: Dispatch and watch publish-python.yml
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: bash scripts/ci/dispatch_workflow.sh publish-python.yml "v$VERSION"
 
-      - name: Download Windows x86_64 native libraries
-        uses: actions/download-artifact@v8
+  publish-js:
+    name: Publish JS
+    runs-on: ubuntu-latest
+    needs: [version, release]
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v6
         with:
-          name: native-windows-x86_64
-          path: native/windows-x86_64
-
-      - name: Upload native libs to S3
-        run: bash scripts/ci/native_s3.sh upload "${{ needs.version.outputs.version }}"
+          ref: ${{ github.sha }}
+      - name: Dispatch and watch publish-js.yml
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: bash scripts/ci/dispatch_workflow.sh publish-js.yml "v$VERSION" "version=$VERSION"
