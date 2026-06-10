@@ -54,7 +54,7 @@ jobs:
             platform_key: macos-x86_64
             lib_paths: |
               build/lib/libquiver.dylib
-              build/lib/libquiver_c.dylib              
+              build/lib/libquiver_c.dylib
           - os: windows-latest
             platform_key: windows-x86_64
             lib_paths: |
