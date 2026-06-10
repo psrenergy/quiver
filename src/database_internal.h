@@ -111,7 +111,9 @@ inline std::vector<std::string> find_dimension_columns(const TableDefinition& ta
 }
 
 // True if the Value variant holds the data type expected by a schema column.
-// NULL values match any column type.
+// NULL values match any column type. Integer values are also accepted for
+// REAL columns (SQLite STRICT converts them to real on insert), so callers in
+// any binding can write whole numbers into float columns.
 inline bool value_matches_type(const Value& v, DataType expected) {
     return std::visit(
         [expected](const auto& x) {
@@ -119,7 +121,7 @@ inline bool value_matches_type(const Value& v, DataType expected) {
             if constexpr (std::is_same_v<T, std::nullptr_t>)
                 return true;
             else if constexpr (std::is_same_v<T, int64_t>)
-                return expected == DataType::Integer;
+                return expected == DataType::Integer || expected == DataType::Real;
             else if constexpr (std::is_same_v<T, double>)
                 return expected == DataType::Real;
             else

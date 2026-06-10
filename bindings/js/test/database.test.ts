@@ -99,6 +99,19 @@ describe("Database lifecycle", () => {
     }
   });
 
+  test("open with readOnly rejects writes", () => {
+    const dir = makeTempDir();
+    const dbPath = join(dir, "test.db");
+    Database.fromSchema(dbPath, SCHEMA_PATH).close();
+
+    const reopened = Database.open(dbPath, { readOnly: true });
+    try {
+      expect(() => reopened.createElement("Configuration", { label: "nope" })).toThrow();
+    } finally {
+      reopened.close();
+    }
+  });
+
   test("close is idempotent", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     db.close();

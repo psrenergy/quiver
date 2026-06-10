@@ -136,9 +136,8 @@ class TestFKResolutionCreate:
             date_time=["2024-01-01", "2024-01-02"],
             sponsor_id=["Parent 1", "Parent 2"],
         )
-        rows = relations_db.read_time_series_group("Child", "events", child_id)
-        sponsor_ids = [row["sponsor_id"] for row in rows]
-        assert sponsor_ids == [1, 2]
+        data = relations_db.read_time_series_group("Child", "events", child_id)
+        assert data["sponsor_id"] == [1, 2]
 
     def test_all_fk_types_in_one_call(self, relations_db: Database) -> None:
         """All FK types resolved in a single create_element call."""
@@ -161,8 +160,8 @@ class TestFKResolutionCreate:
         # Verify vector FK
         assert relations_db.read_vector_integers_by_id("Child", "parent_ref", child_id) == [1]
         # Verify time series FK
-        rows = relations_db.read_time_series_group("Child", "events", child_id)
-        assert [row["sponsor_id"] for row in rows] == [2]
+        data = relations_db.read_time_series_group("Child", "events", child_id)
+        assert data["sponsor_id"] == [2]
 
     def test_no_fk_columns_unchanged(self, db: Database) -> None:
         """No FK columns: pre-resolve pass is a no-op for non-FK schemas."""

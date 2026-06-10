@@ -512,7 +512,7 @@ TEST(Database, TimeSeriesUnknownColumn) {
     EXPECT_NE(msg.find("column 'pressure' not found in group 'data'"), std::string::npos) << "Actual: " << msg;
 }
 
-TEST(Database, TimeSeriesTypeMismatchIntegerToReal) {
+TEST(Database, TimeSeriesIntegerAcceptedForRealColumn) {
     auto db = quiver::Database::from_schema(
         ":memory:", VALID_SCHEMA("collections.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
 
@@ -524,10 +524,14 @@ TEST(Database, TimeSeriesTypeMismatchIntegerToReal) {
     e1.set("label", std::string("Item 1"));
     auto id = db.create_element("Collection", e1);
 
+    // Integer values are accepted for REAL columns and converted on insert
     std::vector<std::map<std::string, quiver::Value>> rows = {
         {{"date_time", std::string("2024-01-01T10:00:00")}, {"value", int64_t{1}}}};
-    auto msg = capture_update_error(db, "Collection", "data", id, rows);
-    EXPECT_NE(msg.find("column 'value' has type REAL but received INTEGER"), std::string::npos) << "Actual: " << msg;
+    db.update_time_series_group("Collection", "data", id, rows);
+
+    auto result = db.read_time_series_group("Collection", "data", id);
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_DOUBLE_EQ(std::get<double>(result[0].at("value")), 1.0);
 }
 
 TEST(Database, TimeSeriesTypeMismatchRealToInteger) {
@@ -1061,17 +1065,17 @@ TEST(Database, AddTimeSeriesRowErrors) {
             << "Actual: " << msg;
     }
 
-    // d. Type mismatch: INTEGER passed for REAL column 'load'.
+    // d. INTEGER passed for REAL column 'load' is accepted (converted on insert).
     {
-        auto msg = capture_add_row_error(
-            db,
+        db.add_time_series_row(
             "Resource",
             "load",
             id,
             {{"date_time", std::string("2024-01-01")}, {"block", int64_t{1}}, {"load", int64_t{42}}});
-        EXPECT_NE(msg.find("Cannot add_time_series_row: column 'load' has type REAL but received INTEGER"),
-                  std::string::npos)
-            << "Actual: " << msg;
+        auto rows = db.read_time_series_group("Resource", "load", id);
+        ASSERT_EQ(rows.size(), 1);
+        EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("load")), 42.0);
+        db.update_time_series_group("Resource", "load", id, {});
     }
 
     // e. Type mismatch: REAL passed for INTEGER column 'block'.

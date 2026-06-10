@@ -14,4 +14,18 @@ export { QuiverError } from "./errors.ts";
 export { LuaRunner } from "./lua-runner.ts";
 export type { GroupMetadata, ScalarMetadata } from "./metadata.ts";
 export type { TimeSeriesData } from "./time-series.ts";
-export type { ArrayValue, ElementData, QueryParam, ScalarValue, Value } from "./types.ts";
+export {
+  LOG_LEVEL_DEBUG,
+  LOG_LEVEL_ERROR,
+  LOG_LEVEL_INFO,
+  LOG_LEVEL_OFF,
+  LOG_LEVEL_WARN,
+} from "./types.ts";
+export type {
+  ArrayValue,
+  DatabaseOptions,
+  ElementData,
+  QueryParam,
+  ScalarValue,
+  Value,
+} from "./types.ts";

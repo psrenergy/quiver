@@ -1,6 +1,6 @@
 # Time Series
 
-It is possible to store time series data in your database. Time series in `Quiver` are very flexible. You can have missing values, and you can have sparse data. 
+It is possible to store time series data in your database. Time series in `Quiver` are very flexible. You can have missing values, and you can have sparse data.
 
 There is a specific table format that must be followed. Consider the following example:
 
@@ -11,244 +11,160 @@ CREATE TABLE Resource (
 ) STRICT;
 
 CREATE TABLE Resource_time_series_group1 (
-    id INTEGER, 
+    id INTEGER,
     date_time TEXT NOT NULL,
     some_vector1 REAL,
     some_vector2 REAL,
     FOREIGN KEY(id) REFERENCES Resource(id) ON DELETE CASCADE ON UPDATE CASCADE,
     PRIMARY KEY (id, date_time)
-) STRICT; 
+) STRICT;
 ```
 
-It is mandatory for a time series to be indexed by a `date_time` column with the following format: `YYYY-MM-DD HH:MM:SS`. You can use the `Dates.jl` package for handling this format.
-
-```julia
-using Dates
-date = DateTime(2024, 3, 1) # 2024-03-01T00:00:00 (March 1st, 2024)
-```
+A time series table is named `{Collection}_time_series_{group}` and must be indexed by a
+dimension column whose name starts with `date_` (usually `date_time`), stored as ISO 8601
+text (`YYYY-MM-DDTHH:MM:SS`). The bindings convert their native datetime types to and from
+this format automatically.
 
 Notice that in this example, there are two value columns `some_vector1` and `some_vector2`. You can have as many value columns as you want. You can also separate the time series data into different tables, by creating a table `Resource_time_series_group2` for example.
 
 It is also possible to add more dimensions to your time series, such as `block` and `scenario`.
 
-```sql	
+```sql
 CREATE TABLE Resource_time_series_group2 (
-    id INTEGER, 
+    id INTEGER,
     date_time TEXT NOT NULL,
     block INTEGER NOT NULL,
     some_vector3 REAL,
     some_vector4 REAL,
     FOREIGN KEY(id) REFERENCES Resource(id) ON DELETE CASCADE ON UPDATE CASCADE,
     PRIMARY KEY (id, date_time, block)
-) STRICT; 
+) STRICT;
 ```
 
-## Rules 
+## Rules
 
-Time series in `Quiver` are very flexible. You can have missing values, and you can have sparse data. 
+Time series in `Quiver` are very flexible. You can have missing values (`NULL`), and you can have sparse data.
 
-If you are querying for a time series row entry that has a missing value, it first checks if there is a data with a `date_time` earlier than the queried `date_time`. If there is, it returns the value of the previous data. If there is no data earlier than the queried `date_time`, it returns a specified value according to the type of data you are querying.
+When reading a single time series row at a given `date_time` (`read_time_series_row`), the
+value returned for each element is the **last non-null value at or before** the queried
+date. If an element has no data at or before that date, the entry is null (`nothing` in
+Julia, `None` in Python, `null` in Dart/JS, `nil` in Lua).
 
-- For `Float64`, it returns `NaN`.
-- For `Int64`, it returns `typemin(Int)`.
-- For `String`, it returns `""` (empty String).
-- For `DateTime`, it returns `typemin(DateTime)`.
+For example, if you have the following data for the attribute `some_vector1`:
 
-For example, if you have the following data:
+| **Date** | **Resource 1** | **Resource 2** |
+|:--------:|:--------------:|:--------------:|
+|   2020   |      1.0       |    missing     |
+|   2021   |    missing     |      1.0       |
+|   2022   |      3.0       |    missing     |
 
-| **Date** | **some_vector1(Float64)** | **some_vector2(Float64)** |
-|:--------:|:-----------:|:-----------:|
-|   2020   |      1.0      |   missing   |
-|   2021   |   missing   |      1.0      |
-|   2022   |      3.0      |   missing   |
-
-1. If you query for `some_vector1` at `2020`, it returns `1.0`. 
-2. If you query for `some_vector2` at `2020`, it returns `NaN`. 
-3. If you query for `some_vector1` at `2021`, it returns `1.0`. 
-4. If you query for `some_vector2` at `2021`, it returns `1.0`. 
-5. If you query for `some_vector1` at `2022`, it returns `3.0`. 
-6. If you query for `some_vector2` at `2022`, it returns `1.0`.
-
+1. Querying at `2020` returns `[1.0, nothing]`.
+2. Querying at `2021` returns `[1.0, 1.0]`.
+3. Querying at `2022` returns `[3.0, 1.0]`.
 
 ## Inserting data
 
-When creating a new element that has a time series, you can pass this information via a `DataFrame`. Consider the collection `Resource` with the two time series tables `Resource_time_series_group1` and `Resource_time_series_group2`.
+Time series data is column-oriented in every binding: a map of column name to a list of
+values, one list entry per row. You can pass the data directly when creating an element:
 
 ```julia
-using DataFrames
 using Dates
 using Quiver
-Quiver = Quiver.Quiver
 
 db = Quiver.from_schema(db_path, path_schema)
 
-Quiver.create_element!(db, "Configuration"; label = "Toy Case", value1 = 1.0)
-
-df_group1 = DataFrame(;
-        date_time = [DateTime(2000), DateTime(2001), DateTime(2002)],
-        some_vector1 = [missing, 1.0, 2.0],
-        some_vector2 = [1.0, missing, 5.0],
-    )
-
-df_group2 = DataFrame(;
-            date_time = [
-                DateTime(2000),
-                DateTime(2000),
-                DateTime(2000),
-                DateTime(2000),
-                DateTime(2001),
-                DateTime(2001),
-                DateTime(2001),
-                DateTime(2009),
-            ],
-            block = [1, 1, 1, 1, 2, 2, 2, 2],
-            some_vector3 = [1.0, 2.0, 3.0, 4.0, 1, 2, 3, 4],
-            some_vector4 = [1.0, 2.0, 3.0, 4.0, 1, 2, 3, 4],
-        )
-
+Quiver.create_element!(db, "Configuration"; label = "Toy Case")
 
 Quiver.create_element!(
     db,
     "Resource";
     label = "Resource 1",
-    group1 = df_group1,
-    group2 = df_group2,
+    date_time = [DateTime(2000), DateTime(2001), DateTime(2002)],
+    some_vector1 = [1.0, 2.0, 3.0],
+    some_vector2 = [4.0, 5.0, 6.0],
 )
 ```
 
-It is also possible to insert a single row of a time series. This is useful when you want to insert a specific dimension entry. This way of inserting time series is less efficient than inserting a whole `DataFrame`.
+Or replace the whole group for an existing element with `update_time_series_group!`:
 
 ```julia
-using DataFrames
-using Dates
-using Quiver
-Quiver = Quiver.Quiver
-
-db = Quiver.from_schema(db_path, path_schema)
-
-Quiver.create_element!(db, "Configuration"; label = "Toy Case", value1 = 1.0)
-
-id = Quiver.create_element!(
+Quiver.update_time_series_group!(
     db,
-    "Resource";
-    label = "Resource 1"
+    "Resource",
+    "group1",
+    id;
+    date_time = [DateTime(2000), DateTime(2001)],
+    some_vector1 = [10.0, 11.0],
+    some_vector2 = [20.0, 21.0],
 )
+```
 
+It is also possible to insert (or upsert) a single row. Calling it again with the same
+dimension values overwrites the value columns:
+
+```julia
 Quiver.add_time_series_row!(
     db,
     "Resource",
     "group1",
     id;
     date_time = DateTime(2000),
-    some_vector1 = 10.0
-)
-
-Quiver.add_time_series_row!(
-    db,
-    "Resource",
-    "group1",
-    id;
-    date_time = DateTime(2001),
-    some_vector1 = 11.0
+    some_vector1 = 10.0,
 )
 ```
 
 ## Reading data
 
-You can read the information from the time series in two different ways.
+### Reading a whole group
 
-### Reading as a table
-First, you can read the whole time series table for a given value, as a `DataFrame`.
+`read_time_series_group` returns the group's data column-oriented, sorted by the dimension
+column. The dimension column is returned as native datetimes.
 
 ```julia
-df = Quiver.read_time_series_table(
-    db,
-    "Resource",
-    "some_vector1",
-    "Resource 1",
-)
+data = Quiver.read_time_series_group(db, "Resource", "group1", id)
+# data["date_time"]    -> [DateTime(2000), DateTime(2001)]
+# data["some_vector1"] -> [10.0, 11.0]
 ```
 
 ### Reading a single row
 
-It is also possible to read a single row of the time series in the form of an array. This is useful when you want to query a specific dimension entry.
-For this function, there are performance improvements when reading the data via caching the previous and next non-missing values. 
+`read_time_series_row` returns one value per element of the collection (ordered by element
+id) using the "last non-null value at or before `date_time`" rule described above:
 
 ```julia
 values = Quiver.read_time_series_row(
     db,
     "Resource",
-    "some_vector1",
-    Float64;
-    date_time = DateTime(2020)
+    "group1",
+    "some_vector1";
+    date_time = DateTime(2020),
 )
 ```
 
-When querying a row, all values should non-missing. However, if there is a missing value, the function will return the previous non-missing value. And if even the previous value is missing, it will return a specified value according to the type of data you are querying.
-
-
-- For `Float64`, it returns `NaN`.
-- For `Int64`, it returns `typemin(Int)`.
-- For `String`, it returns `""` (empty String).
-- For `DateTime`, it returns `typemin(DateTime)`.
-
-For example, if you have the following data for the time series `some_vector1`:
-
-| **Date** | **Resource 1** | **Resource 2** |
-|:--------:|:-----------:|:-----------:|
-|   2020   |      1.0      |   missing   |
-|   2021   |   missing   |      1.0      |
-|   2022   |      3.0      |   missing   |
-
-1. If you query at `2020`, it returns `[1.0, NaN]`. 
-3. If you query at `2021`, it returns `[1.0, 1.0]`. 
-5. If you query at `2022`, it returns `[3.0, 1.0]`. 
-
-
 ## Updating data
 
-When updating one of the entries of a time series for a given element and attribute, you need to specify the exact dimension values of the row you want to update. 
-
-
-For example, consider a time series that has `block` and `data_time` dimensions.
+`update_time_series_group!` replaces **all** rows of the group for the element. To change a
+single row, use `add_time_series_row!` with the row's exact dimension values — existing
+value columns at that dimension key are overwritten:
 
 ```julia
-Quiver.update_time_series_row!(
+Quiver.add_time_series_row!(
     db,
     "Resource",
-    "some_vector3",
-    "Resource 1",
-    10.0; # new value
+    "group2",
+    id;
     date_time = DateTime(2000),
-    block = 1
+    block = 1,
+    some_vector3 = 10.0,
 )
 ```
 
 ## Deleting data
 
-You can delete the whole time series of an element for a given time series group.
-Consider the following table:
-
-```sql
-CREATE TABLE Resource_time_series_group1 (
-    id INTEGER, 
-    date_time TEXT NOT NULL,
-    some_vector1 REAL,
-    some_vector2 REAL,
-    FOREIGN KEY(id) REFERENCES Resource(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    PRIMARY KEY (id, date_time)
-) STRICT; 
-```
-
-This table represents a "group" that stores two time series `some_vector1` and `some_vector2`. You can delete all the data from this group by calling the following function:
+Updating a group with no data clears every row of that group for the element:
 
 ```julia
-Quiver.delete_time_series!(
-    db,
-    "Resource",
-    "group1",
-    "Resource 1",
-)
+Quiver.update_time_series_group!(db, "Resource", "group1", id)
 ```
 
-When trying to read a time series that has been deleted, the function will return an empty `DataFrame`.
+Reading a cleared group returns empty data.

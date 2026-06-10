@@ -864,21 +864,25 @@ TEST(DatabaseCApi, UpdateTimeSeriesGroupTypeMismatch) {
     quiver_database_create_element(db, "Sensor", sensor, &id);
     EXPECT_EQ(quiver_element_destroy(sensor), QUIVER_OK);
 
-    // Pass INTEGER type for temperature (should be FLOAT)
-    const char* col_names[] = {"date_time", "temperature"};
-    int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_INTEGER};  // wrong type
+    // Pass FLOAT type for humidity (should be INTEGER)
+    const char* col_names[] = {"date_time", "temperature", "humidity", "status"};
+    int col_types[] = {QUIVER_DATA_TYPE_STRING,
+                       QUIVER_DATA_TYPE_FLOAT,
+                       QUIVER_DATA_TYPE_FLOAT,
+                       QUIVER_DATA_TYPE_STRING};  // humidity type is wrong
     const char* dts[] = {"2024-01-01T10:00:00"};
-    int64_t temps[] = {20};
-    const void* col_data[] = {dts, temps};
+    double temps[] = {20.5};
+    double humids[] = {65.5};
+    const char* stats[] = {"ok"};
+    const void* col_data[] = {dts, temps, humids, stats};
     auto err =
-        quiver_database_update_time_series_group(db, "Sensor", "readings", id, col_names, col_types, col_data, 2, 1);
+        quiver_database_update_time_series_group(db, "Sensor", "readings", id, col_names, col_types, col_data, 4, 1);
     EXPECT_EQ(err, QUIVER_ERROR);
 
     std::string error_msg = quiver_get_last_error();
-    EXPECT_NE(error_msg.find("Cannot update_time_series_group: column"), std::string::npos)
+    EXPECT_NE(error_msg.find("Cannot update_time_series_group: column 'humidity' has type INTEGER but received REAL"),
+              std::string::npos)
         << "Error was: " << error_msg;
-    EXPECT_NE(error_msg.find("has type"), std::string::npos) << "Error was: " << error_msg;
-    EXPECT_NE(error_msg.find("but received"), std::string::npos) << "Error was: " << error_msg;
 
     quiver_database_close(db);
 }
@@ -1472,7 +1476,7 @@ TEST(DatabaseCApi, AddTimeSeriesRowTypeMismatch) {
     quiver_database_create_element(db, "Resource", resource, &id);
     EXPECT_EQ(quiver_element_destroy(resource), QUIVER_OK);
 
-    // a. INTEGER passed for REAL column 'load'.
+    // a. INTEGER passed for REAL column 'load' is accepted (converted on insert).
     {
         const char* col_names[] = {"date_time", "block", "load"};
         int col_types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_INTEGER};
@@ -1481,11 +1485,7 @@ TEST(DatabaseCApi, AddTimeSeriesRowTypeMismatch) {
         int64_t load_buf[] = {42};
         const void* col_data[] = {dt_buf, block_buf, load_buf};
         auto err = quiver_database_add_time_series_row(db, "Resource", "load", id, col_names, col_types, col_data, 3);
-        EXPECT_EQ(err, QUIVER_ERROR);
-        std::string msg = quiver_get_last_error();
-        EXPECT_NE(msg.find("Cannot add_time_series_row: column"), std::string::npos) << "Actual: " << msg;
-        EXPECT_NE(msg.find("has type"), std::string::npos) << "Actual: " << msg;
-        EXPECT_NE(msg.find("but received"), std::string::npos) << "Actual: " << msg;
+        EXPECT_EQ(err, QUIVER_OK);
     }
 
     // b. FLOAT passed for INTEGER column 'block'.

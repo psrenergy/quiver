@@ -38,14 +38,6 @@ function update_time_series_group!(db::Database, collection::String, group::Stri
         end
     end
 
-    # Fetch metadata for auto-coercion (Int -> Float when schema expects REAL)
-    metadata = get_time_series_metadata(db, collection, group)
-    schema_types = Dict{String, C.quiver_data_type_t}()
-    schema_types[metadata.dimension_column] = C.QUIVER_DATA_TYPE_STRING
-    for vc in metadata.value_columns
-        schema_types[vc.name] = vc.data_type
-    end
-
     column_count = length(kwargs)
     col_names_strs = String[]
     col_types = Cint[]
@@ -55,7 +47,6 @@ function update_time_series_group!(db::Database, collection::String, group::Stri
     for (k, v) in kwargs
         col_name = String(k)
         push!(col_names_strs, col_name)
-        schema_type = get(schema_types, col_name, nothing)
 
         if eltype(v) <: DateTime
             # DateTime -> format to string
@@ -74,18 +65,12 @@ function update_time_series_group!(db::Database, collection::String, group::Stri
             push!(col_types, Cint(C.QUIVER_DATA_TYPE_STRING))
             push!(col_data_ptrs, pointer(ptrs))
         elseif eltype(v) <: Integer
-            # Check if schema expects FLOAT -> auto-coerce
-            if schema_type == C.QUIVER_DATA_TYPE_FLOAT
-                float_arr = Float64[Float64(x) for x in v]
-                push!(refs, float_arr)
-                push!(col_types, Cint(C.QUIVER_DATA_TYPE_FLOAT))
-                push!(col_data_ptrs, pointer(float_arr))
-            else
-                int_arr = Int64[Int64(x) for x in v]
-                push!(refs, int_arr)
-                push!(col_types, Cint(C.QUIVER_DATA_TYPE_INTEGER))
-                push!(col_data_ptrs, pointer(int_arr))
-            end
+            # Integer columns are sent as-is; the C++ layer accepts integers
+            # for REAL columns and SQLite converts them on insert.
+            int_arr = Int64[Int64(x) for x in v]
+            push!(refs, int_arr)
+            push!(col_types, Cint(C.QUIVER_DATA_TYPE_INTEGER))
+            push!(col_data_ptrs, pointer(int_arr))
         elseif eltype(v) <: Real
             float_arr = Float64[Float64(x) for x in v]
             push!(refs, float_arr)
