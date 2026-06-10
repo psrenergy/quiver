@@ -1,31 +1,8 @@
-name: Release
-
-# Orchestrates a full release: native build to S3, then git tag + GitHub release, then the
-# three binding publishes in parallel. The children run as their own top-level
-# workflow_dispatch runs (via scripts/ci/dispatch_workflow.sh), NOT as reusable workflows:
-# npm and PyPI trusted publishing validate the top-level workflow filename from the OIDC
-# claims, so publish-js.yml / publish-python.yml must stay top-level.
-#
-# The bindings are dispatched on the freshly created tag (v<version>). That pins their
-# workflow definition and checkout to the release commit, gives publish-python a unique
-# concurrency group (its cancel-in-progress:true can't be tripped by a master push), and
-# makes run correlation collision-proof. The npm/pypi GitHub environments must keep their
-# deployment branch policy at "No restriction" (or allow v* tags) or tag-dispatched
-# publishes will be rejected by environment protection.
-#
-# There is deliberately no version input: the tag must equal what the source at the released
-# sha declares (scripts/assert_version.py asserts all binding manifests agree).
+name: Publish
 
 on:
   workflow_dispatch:
-    inputs:
-      ref:
-        description: "Git ref or sha to release. Default: the triggering commit."
-        required: false
-        default: ""
 
-# Serialize releases: they touch global resources (S3 keys, registries, the tag namespace),
-# and serialization also makes the publish-s3 run correlation race-free.
 concurrency:
   group: release
   cancel-in-progress: false
@@ -44,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ github.sha }}
       - id: v
         run: |
           sha="$(git rev-parse HEAD)"
@@ -78,7 +55,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ github.sha }}
       # The tag does not exist yet, so dispatch on the orchestrator's branch and pin the
       # child's checkout to the release sha explicitly.
       - name: Dispatch and watch publish-s3.yml
@@ -117,7 +94,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ github.sha }}
       - name: Dispatch and watch publish-julia.yml
         env:
           GH_TOKEN: ${{ github.token }}
@@ -136,7 +113,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ github.sha }}
       # publish-python.yml declares only a `ref` input; on the tag, github.sha already is
       # the release commit, and undeclared inputs are a hard 422 — so pass no inputs.
       - name: Dispatch and watch publish-python.yml
@@ -157,7 +134,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ github.sha }}
       - name: Dispatch and watch publish-js.yml
         env:
           GH_TOKEN: ${{ github.token }}
