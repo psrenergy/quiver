@@ -23,6 +23,7 @@ jobs:
           - '1.12'
         os:
           - ubuntu-latest
+          - macos-latest
           - windows-latest
         arch:
           - x64
