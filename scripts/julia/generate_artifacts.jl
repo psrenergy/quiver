@@ -1,27 +1,4 @@
 #!/usr/bin/env julia
-#
-# Generate the Julia `Artifacts.toml` for Quiver from prebuilt native libraries,
-# (optionally) upload the per-platform tarballs to S3, and emit the toml.
-#
-# This is vendored deliberately: it has NO dependency on ArtifactsGenerator.jl and
-# uses only Julia stdlibs (Tar, SHA, TOML) plus the `gzip` and `aws` CLIs, which are
-# present on the CI runner. It is the single source of truth for how Quiver's binary
-# artifacts are packaged and described to the published Quiver.jl mirror.
-#
-# Usage:
-#   julia scripts/julia/generate_artifacts.jl \
-#       --version 0.8.0 \
-#       --output  /path/to/Artifacts.toml \
-#       --platform linux-x86_64   /path/to/linux/libs \
-#       --platform windows-x86_64 /path/to/windows/libs \
-#       [--no-upload]
-#
-# Each `--platform <tag> <dir>` pair names a known platform and the directory that
-# holds its libquiver / libquiver_c shared libraries. The tarball is laid out so the
-# Quiver loader resolves `joinpath(artifact_dir, library_dir())` -> the libraries.
-#
-# Env overrides: QUIVER_S3_BUCKET (default "julia-artifacts"),
-#                QUIVER_S3_PREFIX (default "quiver").
 
 using Tar
 using SHA
@@ -30,19 +7,16 @@ using TOML
 const S3_BUCKET = get(ENV, "QUIVER_S3_BUCKET", "julia-artifacts")
 const S3_PREFIX = get(ENV, "QUIVER_S3_PREFIX", "quiver")
 
-# Per-platform packaging rules:
-#   subdir -> the directory the loader expects (matches library_dir())
-#   ext    -> shared-library extension
-#   tags   -> Artifacts.toml platform selectors. `libc` keeps a glibc build from
-#             being served to musl hosts; cxxstring_abi is intentionally omitted
-#             because the Julia boundary is the extern-"C" libquiver_c.
+# macOS ships libquiver under its install name (libquiver.0.dylib, SOVERSION 0): dyld
+# resolves libquiver_c's @rpath/libquiver.0.dylib dependency filesystem-first, and a second
+# libquiver.dylib copy in the same directory could be loaded as a duplicate image. Linux
+# instead relies on ld.so SONAME matching of the preloaded libquiver.so, so the artifact
+# omits libquiver.so.0.
 const PLATFORMS = Dict(
-    "linux-x86_64"   => (subdir = "lib", ext = ".so",  tags = Dict("os" => "linux",   "arch" => "x86_64", "libc" => "glibc")),
-    "windows-x86_64" => (subdir = "bin", ext = ".dll", tags = Dict("os" => "windows", "arch" => "x86_64")),
+    "linux-x86_64"   => (subdir = "lib", files = ("libquiver.so", "libquiver_c.so"),         tags = Dict("os" => "linux",   "arch" => "x86_64", "libc" => "glibc")),
+    "macos-aarch64"  => (subdir = "lib", files = ("libquiver.0.dylib", "libquiver_c.dylib"), tags = Dict("os" => "macos",   "arch" => "aarch64")),
+    "windows-x86_64" => (subdir = "bin", files = ("libquiver.dll", "libquiver_c.dll"),       tags = Dict("os" => "windows", "arch" => "x86_64")),
 )
-
-# libquiver_c depends on libquiver; both ship in the same directory.
-const LIB_STEMS = ("libquiver", "libquiver_c")
 
 function parse_args(argv)
     version = nothing
@@ -69,33 +43,24 @@ function parse_args(argv)
     return (; version, output, upload, platforms)
 end
 
-# Stage a platform's libraries under the loader-expected subdir and return the dir.
 function stage_platform(tag, srcdir)
     haskey(PLATFORMS, tag) || error("Unknown platform tag: $tag")
     info = PLATFORMS[tag]
     staging = mktempdir()
     libdir = joinpath(staging, info.subdir)
     mkpath(libdir)
-    for stem in LIB_STEMS
-        name = stem * info.ext
+    for name in info.files
         src = joinpath(srcdir, name)
         isfile(src) || error("Missing $name in $srcdir for platform $tag")
         dst = joinpath(libdir, name)
-        cp(src, dst)
-        # Mark the library executable so Tar.create records mode 0755. The publish-julia
-        # job runs on Linux, where the downloaded artifacts are 0644 (non-executable). Pkg's
-        # Windows extraction turns a non-executable tar entry into an NTFS ACL *without*
-        # execute, and then LoadLibrary fails with "Access is denied" (the Linux .so load
-        # ignores the bit, which is why only Windows broke). BinaryBuilder marks Windows
-        # DLLs 0755 for the same reason.
+        # realpath: in CI srcdir holds real files, but a local run against build/lib would
+        # otherwise copy CMake's symlinks as symlinks and tar dangling links.
+        cp(realpath(src), dst)
         chmod(dst, 0o755)
     end
     return staging
 end
 
-# Create the gzipped tarball; return (tgz_path, git-tree-sha1, sha256-of-tgz).
-# The tree hash is computed from the same clean tar that gets gzipped, so it matches
-# what Pkg recomputes after download+extract.
 function build_tarball(tag, staging, outdir)
     tar_path = joinpath(outdir, "quiver-$tag.tar")
     Tar.create(staging, tar_path)
@@ -117,8 +82,6 @@ function main(argv)
         filename = basename(tb.tgz_path)
         url = "https://$S3_BUCKET.s3.amazonaws.com/$S3_PREFIX/$(args.version)/$filename"
         if args.upload
-            # public-read ACL so Pkg can fetch the artifact anonymously
-            # (matches ArtifactsGenerator.jl's `x-amz-acl: public-read` on PSRIO uploads).
             run(`aws s3 cp $(tb.tgz_path) s3://$S3_BUCKET/$S3_PREFIX/$(args.version)/$filename --acl public-read`)
         end
         entry = Dict{String,Any}(PLATFORMS[tag].tags)

@@ -42,6 +42,8 @@ const libquiver_c = joinpath(quiver_lib_dir(), library_name())
 
 function __init__()
     # Pre-load the transitive dependency (libquiver) from the same directory (Windows robustness).
-    dep = Sys.iswindows() ? "libquiver.dll" : Sys.isapple() ? "libquiver.dylib" : "libquiver.so"
+    # On macOS the artifact ships libquiver only under its install name (the .0 tracks
+    # SOVERSION = major version).
+    dep = Sys.iswindows() ? "libquiver.dll" : Sys.isapple() ? "libquiver.0.dylib" : "libquiver.so"
     Libdl.dlopen(joinpath(dirname(libquiver_c), dep); throw_error = false)
 end

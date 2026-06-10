@@ -175,8 +175,8 @@ const allSymbols = {
 const __dirname: string = import.meta.dir;
 
 // Map Bun's process.platform/arch onto the `libs/{os}-{arch}/` directory names
-// used by the bundled native libraries (e.g. "windows-x86_64", "linux-x86_64").
-const OS_NAMES: Record<string, string> = { win32: "windows", darwin: "darwin", linux: "linux" };
+// used by the bundled native libraries (e.g. "windows-x86_64", "macos-aarch64").
+const OS_NAMES: Record<string, string> = { win32: "windows", darwin: "macos", linux: "linux" };
 const ARCH_NAMES: Record<string, string> = { x64: "x86_64", arm64: "aarch64" };
 const osName = OS_NAMES[process.platform] ?? process.platform;
 const archName = ARCH_NAMES[process.arch] ?? process.arch;

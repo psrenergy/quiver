@@ -15,13 +15,24 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Toolchain fingerprint
+      id: toolchain
+      shell: bash
+      # FetchContent subbuilds pin the CMake generator in their CMakeCache; restoring a
+      # _deps cache built with a different default generator (e.g. windows-latest moving
+      # from VS 17 to VS 18) fails configure with "does not match the generator used
+      # previously" — so the cache key must change whenever the default generator does.
+      run: |
+        fp="$(cmake --help | sed -n 's/^\* *\([^=]*\)=.*/\1/p' | head -n1 | tr -dc 'A-Za-z0-9._-')"
+        echo "fp=${fp:-unknown}" >> "$GITHUB_OUTPUT"
+
     - name: Cache CMake FetchContent sources
       uses: actions/cache@v4
       with:
         path: build/_deps
-        key: cmake-deps-${{ runner.os }}-${{ hashFiles('cmake/Dependencies.cmake', 'CMakeLists.txt') }}
+        key: cmake-deps-${{ runner.os }}-${{ steps.toolchain.outputs.fp }}-${{ hashFiles('cmake/Dependencies.cmake', 'CMakeLists.txt') }}
         restore-keys: |
-          cmake-deps-${{ runner.os }}-
+          cmake-deps-${{ runner.os }}-${{ steps.toolchain.outputs.fp }}-
 
     - name: Setup sccache
       uses: hendrikmuhs/ccache-action@v1.2

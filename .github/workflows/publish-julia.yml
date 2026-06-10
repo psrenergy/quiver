@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Override version (which S3 build to download and publish). Default: detect from CMakeLists.txt."
+        description: "Override version"
         required: false
         default: ""
       ref:
-        description: "Git ref or sha to publish. Default: the triggering commit."
+        description: "Override ref or sha"
         required: false
         default: ""
 
@@ -34,7 +34,7 @@ jobs:
           echo "version=$v" >> "$GITHUB_OUTPUT"
 
   publish:
-    name: Publish Julia (PR to Quiver.jl)
+    name: Publish Julia
     runs-on: [self-hosted, linux]
     needs: version
     steps:
@@ -56,6 +56,7 @@ jobs:
             --version "${{ needs.version.outputs.version }}" \
             --output "$RUNNER_TEMP/Artifacts.toml" \
             --platform linux-x86_64 native/linux-x86_64 \
+            --platform macos-aarch64 native/macos-aarch64 \
             --platform windows-x86_64 native/windows-x86_64
 
       - name: Checkout Quiver.jl

@@ -653,8 +653,9 @@ bindings/python/generator/generator.bat  # Python
   truth*; the published `psrenergy/Quiver.jl` is a **full generated mirror** (never hand-edit it —
   develop only in `bindings/julia`). It is a plain S3-artifact package in General (no `Quiver_jll`,
   no Yggdrasil). The `publish-julia.yml` workflow (`workflow_dispatch`; runs standalone or
-  dispatched by the `release.yml` orchestrator) downloads the native libs from S3 (staged there
-  by the `publish-s3.yml` native build), runs
+  dispatched by the `publish.yml` orchestrator) downloads the native libs from S3 (staged there
+  by the `publish-s3.yml` native build for `linux-x86_64`, `macos-aarch64`, and
+  `windows-x86_64`), runs
   `scripts/julia/generate_artifacts.jl` (tar → S3 upload → `Artifacts.toml`), then **wipes the mirror
   (keeping only its `.git/`) and copies the entire `bindings/julia` tree into it** — `src/`, `test/`,
   `.github/` (the mirror's `CI.yml`/`TagBot.yml` live here, dormant in the monorepo since nested
@@ -670,6 +671,17 @@ bindings/python/generator/generator.bat  # Python
   Windows DLLs **must be executable in the artifact**, or Pkg's Windows extraction yields an NTFS ACL
   without execute and `LoadLibrary` fails with "Access is denied" (Linux `.so` load ignores the bit, so
   the symptom is Windows-only).
+- **macOS artifact gotchas** (Apple-Silicon-only, `macos-aarch64`): (1) dyld resolves dependent
+  dylibs **filesystem-first** — no Linux-style SONAME matching against already-loaded images — so
+  the artifact ships libquiver ONLY under its install name `libquiver.0.dylib` (the `.0` tracks
+  SOVERSION = major version); a second `libquiver.dylib` copy in the same dir could be loaded as a
+  duplicate image (duplicated static state, e.g. the binary write registry). `libquiver_c.dylib`
+  gets an `@loader_path` rpath via `install_name_tool` in `publish-s3.yml`. (2) `install_name_tool`
+  invalidates the ad-hoc linker signature and arm64 macOS SIGKILLs `dlopen` of unsigned code, so
+  the workflow re-signs with `codesign --force --sign -` — that step is load-bearing. (3) The
+  mirror's `CI.yml` passes no `arch` to setup-julia (runner-native: x64 on ubuntu/windows, aarch64
+  on macos-latest); x64 Julia on an arm64 mac runs under Rosetta and would not match the
+  `arch = "aarch64"` Artifacts.toml entry.
 - **Library loader** (`src/c_api.jl`, emitted from `generator/prologue.jl`) resolves `libquiver_c`
   in three tiers: `QUIVER_LIB_DIR` env → S3 artifact (when an `Artifacts.toml` is present, i.e. the
   published mirror) → in-tree `build/` (monorepo dev, the default here). Uses the runtime Artifacts
@@ -712,9 +724,10 @@ bindings/python/generator/generator.bat  # Python
     `ffi-helpers.makeDefaultOptions()` builds the options struct in JS.
 - **Publishing:** `package.json` `files` allowlist ships `libs/**`; an empty `.npmignore` stops
   `npm pack` falling back to `.gitignore` (which excludes `*.dll`/`*.so`). The `publish-js.yml`
-  workflow (`workflow_dispatch`; runs standalone or dispatched by the `release.yml` orchestrator)
+  workflow (`workflow_dispatch`; runs standalone or dispatched by the `publish.yml` orchestrator)
   downloads native libs from S3 (staged by the `publish-s3.yml` native build) into
-  `libs/{linux,windows}-x86_64/`, asserts every lib is in a throwaway `npm pack` tarball via
+  `libs/{linux-x86_64,macos-aarch64,windows-x86_64}/`, asserts every lib is in a throwaway
+  `npm pack` tarball via
   `tar -tzf` (format-independent; npm roots entries under `package/`), then publishes with
   **`npm publish --loglevel verbose` via `actions/setup-node@v6`** using **npm Trusted Publishing
   (OIDC)** — `permissions: id-token: write`, no stored token; npm packs inline so the published
@@ -730,7 +743,7 @@ bindings/python/generator/generator.bat  # Python
   Bun. A standalone re-dispatch of an already-published version is skipped via an `npm view` guard.
 
 ### Release Pipeline
-- `release.yml` (`workflow_dispatch`, optional `ref` input, no version input — the tag must equal
+- `publish.yml` (`workflow_dispatch`, optional `ref` input, no version input — the tag must equal
   what the source declares) orchestrates a full release: resolve version via
   `scripts/assert_version.py` + assert tag `v<version>` is absent or already at the release sha →
   dispatch `publish-s3.yml` and wait → create tag + GitHub release (`ncipollo/release-action`,

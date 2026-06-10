@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Override the version used as the S3 key. Default: detect from CMakeLists.txt."
+        description: "Override the version"
         required: false
         default: ""
       ref:
-        description: "Git ref or sha to build. Default: the triggering commit."
+        description: "Override ref or sha"
         required: false
         default: ""
 
@@ -50,6 +50,15 @@ jobs:
               build/lib/libquiver.so
               build/lib/libquiver.so.0
               build/lib/libquiver_c.so
+          # libquiver ships ONLY under its install name (libquiver.0.dylib, SOVERSION 0).
+          # dyld resolves libquiver_c's @rpath/libquiver.0.dylib dependency filesystem-first
+          # (no Linux-style SONAME matching against loaded images), so shipping a second
+          # libquiver.dylib copy alongside it risks loading the library twice.
+          - os: macos-latest
+            platform_key: macos-aarch64
+            lib_paths: |
+              build/lib/libquiver.0.dylib
+              build/lib/libquiver_c.dylib
           - os: windows-latest
             platform_key: windows-x86_64
             lib_paths: |
@@ -72,6 +81,14 @@ jobs:
           sudo apt-get update && sudo apt-get install -y patchelf
           patchelf --set-rpath '$ORIGIN' build/lib/libquiver_c.so
 
+      - name: Set RPATH for macOS
+        if: runner.os == 'macOS'
+        run: |
+          install_name_tool -add_rpath '@loader_path' build/lib/libquiver_c.dylib
+          # install_name_tool invalidates the ad-hoc linker signature; arm64 macOS SIGKILLs
+          # dlopen of an unsigned dylib, so re-sign after all modifications.
+          codesign --force --sign - build/lib/libquiver_c.dylib
+
       - uses: actions/upload-artifact@v7
         with:
           name: native-${{ matrix.platform_key }}
@@ -91,6 +108,12 @@ jobs:
         with:
           name: native-linux-x86_64
           path: native/linux-x86_64
+
+      - name: Download macOS aarch64 native libraries
+        uses: actions/download-artifact@v8
+        with:
+          name: native-macos-aarch64
+          path: native/macos-aarch64
 
       - name: Download Windows x86_64 native libraries
         uses: actions/download-artifact@v8
