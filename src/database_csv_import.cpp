@@ -297,6 +297,13 @@ void Database::import_csv(const std::string& collection,
 
         const auto* table_def = impl_->schema->get_table(collection);
 
+        // Capture the current label -> id mapping BEFORE deleting, so existing
+        // elements keep their ids when re-inserted. The scalar CSV omits the id
+        // column (label-identifier mode), so without this every row would get a
+        // fresh AUTOINCREMENT id and any foreign key in another table (e.g.
+        // Child.parent_id) would silently end up pointing at a different element.
+        auto existing_label_to_id = build_label_to_id_map(*this, collection);
+
         // Build FK map: column_name -> ForeignKey
         std::unordered_map<std::string, ForeignKey> fk_map;
         for (const auto& fk : table_def->foreign_keys) {
@@ -373,22 +380,30 @@ void Database::import_csv(const std::string& collection,
 
             execute_raw("DELETE FROM " + collection);
 
-            // Build INSERT statement
-            std::string insert_cols;
-            std::string insert_placeholders;
-            for (size_t i = 0; i < db_cols.size(); ++i) {
-                if (i > 0) {
-                    insert_cols += ", ";
-                    insert_placeholders += ", ";
-                }
-                insert_cols += db_cols[i];
-                insert_placeholders += "?";
+            // Build INSERT statement. The id column is inserted explicitly (it is
+            // not one of db_cols) so existing elements keep their ids; new labels
+            // pass NULL and get a fresh AUTOINCREMENT id above the preserved range.
+            std::string insert_cols = "id";
+            std::string insert_placeholders = "?";
+            for (const auto& col : db_cols) {
+                insert_cols += ", " + col;
+                insert_placeholders += ", ?";
             }
             auto insert_sql =
                 "INSERT INTO " + collection + " (" + insert_cols + ") VALUES (" + insert_placeholders + ")";
 
             for (size_t row = 0; row < row_count; ++row) {
                 std::vector<Value> parameters;
+
+                // Preserve the id of an already-existing element (matched by
+                // label); a genuinely new element maps to NULL -> a fresh id.
+                auto label = read_cell(doc, csv_col_index.at("label"), row);
+                if (auto it = existing_label_to_id.find(label); it != existing_label_to_id.end()) {
+                    parameters.emplace_back(it->second);
+                } else {
+                    parameters.emplace_back(nullptr);
+                }
+
                 for (const auto& col_name : db_cols) {
                     std::string cell = read_cell(doc, csv_col_index[col_name], row);
                     const auto* col_def = table_def->get_column(col_name);
