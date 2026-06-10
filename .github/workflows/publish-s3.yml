@@ -1,4 +1,4 @@
-name: Publish (native libs -> S3)
+name: Publish S3
 
 on:
   workflow_dispatch:
