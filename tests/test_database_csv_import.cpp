@@ -1364,3 +1364,49 @@ TEST(DatabaseCSV, ImportCSV_Scalar_PreservesIdsForForeignKeys) {
 
     fs::remove(csv_path);
 }
+
+// A CSV mixing new and existing labels: existing labels keep their ids and the
+// new label gets a fresh id above the preserved range, even when the new row
+// comes first in the CSV (the order most likely to provoke an id collision).
+TEST(DatabaseCSV, ImportCSV_Scalar_MixedNewAndExistingLabels) {
+    auto db = make_relations_db();
+
+    for (const auto* label : {"Parent A", "Parent B", "Parent C"}) {
+        quiver::Element p;
+        p.set("label", std::string(label));
+        db.create_element("Parent", p);
+    }
+
+    // Sparse surviving ids (2, 3).
+    db.delete_element("Parent", 1);
+
+    auto parent_id = [&](const std::string& label) {
+        return db.query_integer("SELECT id FROM Parent WHERE label = ?", {label}).value();
+    };
+    auto id_b = parent_id("Parent B");
+    auto id_c = parent_id("Parent C");
+
+    quiver::Element c;
+    c.set("label", std::string("Child B")).set("parent_id", id_b);
+    db.create_element("Child", c);
+
+    // New label listed BEFORE the existing ones.
+    auto csv_path = temp_csv("ImportScalarMixedLabels");
+    write_csv_file(csv_path.string(),
+                   "sep=,\nlabel\n"
+                   "Parent New\n"
+                   "Parent B\n"
+                   "Parent C\n");
+    db.import_csv("Parent", "", csv_path.string());
+
+    // Existing labels keep their ids; the new label's id is above them all.
+    EXPECT_EQ(parent_id("Parent B"), id_b);
+    EXPECT_EQ(parent_id("Parent C"), id_c);
+    EXPECT_GT(parent_id("Parent New"), id_c);
+
+    // The child still references the same parent.
+    auto cid = db.query_integer("SELECT id FROM Child WHERE label = ?", {std::string("Child B")}).value();
+    EXPECT_EQ(db.read_scalar_integer_by_id("Child", "parent_id", cid).value(), id_b);
+
+    fs::remove(csv_path);
+}

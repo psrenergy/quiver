@@ -380,9 +380,7 @@ void Database::import_csv(const std::string& collection,
 
             execute_raw("DELETE FROM " + collection);
 
-            // Build INSERT statement. The id column is inserted explicitly (it is
-            // not one of db_cols) so existing elements keep their ids; new labels
-            // pass NULL and get a fresh AUTOINCREMENT id above the preserved range.
+            // Build INSERT statement; id is inserted explicitly (it is not one of db_cols).
             std::string insert_cols = "id";
             std::string insert_placeholders = "?";
             for (const auto& col : db_cols) {
@@ -395,8 +393,7 @@ void Database::import_csv(const std::string& collection,
             for (size_t row = 0; row < row_count; ++row) {
                 std::vector<Value> parameters;
 
-                // Preserve the id of an already-existing element (matched by
-                // label); a genuinely new element maps to NULL -> a fresh id.
+                // Existing label -> preserved id; new label -> NULL -> fresh id.
                 auto label = read_cell(doc, csv_col_index.at("label"), row);
                 if (auto it = existing_label_to_id.find(label); it != existing_label_to_id.end()) {
                     parameters.emplace_back(it->second);
