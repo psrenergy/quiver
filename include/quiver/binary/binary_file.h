@@ -55,11 +55,6 @@ private:
     void validate_file_is_open() const;
     void validate_dimension_values(const std::unordered_map<std::string, int64_t>& dims);
     void validate_data_length(const std::vector<double>& data);
-
-protected:
-    std::iostream& get_io();
-    void set_io(std::unique_ptr<std::iostream> io);
-    void set_metadata(BinaryMetadata metadata);
 };
 
 }  // namespace quiver

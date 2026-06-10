@@ -37,77 +37,16 @@ void ExpressionAggregateAgents::compute_row(const std::vector<int64_t>& dims, st
 
     operand_->compute_row(dims, operand_row_buf_);
 
-    const double nan_value = std::numeric_limits<double>::quiet_NaN();
+    AggregationState state;
+    std::vector<double> percentile_scratch;
+    if (operation_ == Operation::Percentile) {
+        percentile_scratch.reserve(operand_row_buf_.size());
+    }
 
-    switch (operation_) {
-    case Operation::Sum: {
-        double sum = 0.0;
-        int64_t count = 0;
-        for (double v : operand_row_buf_) {
-            if (std::isnan(v)) {
-                continue;
-            }
-            sum += v;
-            ++count;
-        }
-        out[0] = (count > 0) ? sum : nan_value;
-        break;
+    for (double v : operand_row_buf_) {
+        aggregation_accumulate(operation_, state, percentile_scratch, v);
     }
-    case Operation::Mean: {
-        double sum = 0.0;
-        int64_t count = 0;
-        for (double v : operand_row_buf_) {
-            if (std::isnan(v)) {
-                continue;
-            }
-            sum += v;
-            ++count;
-        }
-        out[0] = (count > 0) ? sum / static_cast<double>(count) : nan_value;
-        break;
-    }
-    case Operation::Min: {
-        double m = std::numeric_limits<double>::infinity();
-        int64_t count = 0;
-        for (double v : operand_row_buf_) {
-            if (std::isnan(v)) {
-                continue;
-            }
-            if (v < m) {
-                m = v;
-            }
-            ++count;
-        }
-        out[0] = (count > 0) ? m : nan_value;
-        break;
-    }
-    case Operation::Max: {
-        double m = -std::numeric_limits<double>::infinity();
-        int64_t count = 0;
-        for (double v : operand_row_buf_) {
-            if (std::isnan(v)) {
-                continue;
-            }
-            if (v > m) {
-                m = v;
-            }
-            ++count;
-        }
-        out[0] = (count > 0) ? m : nan_value;
-        break;
-    }
-    case Operation::Percentile: {
-        std::vector<double> scratch;
-        scratch.reserve(operand_row_buf_.size());
-        for (double v : operand_row_buf_) {
-            if (!std::isnan(v)) {
-                scratch.push_back(v);
-            }
-        }
-        out[0] = compute_percentile(scratch, *parameter_);
-        break;
-    }
-    }
+    out[0] = aggregation_finalize(operation_, state, percentile_scratch, parameter_);
 }
 
 void ExpressionAggregateAgents::collect_input_files(std::vector<BinaryFile*>& out) const {

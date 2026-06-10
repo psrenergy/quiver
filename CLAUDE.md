@@ -188,7 +188,7 @@ struct Database::Impl {
 };
 ```
 
-Binary subsystem: `BinaryFile` and `CSVConverter` use Pimpl (hide file I/O dependencies). `BinaryMetadata`, `Dimension`, `TimeProperties` are plain value types.
+Binary subsystem: `BinaryFile` uses Pimpl (hides file I/O dependencies). `CSVConverter` is a plain class composing a `BinaryMetadata` and the CSV `iostream` (no Pimpl, no inheritance). `BinaryMetadata`, `Dimension`, `TimeProperties` are plain value types.
 
 Expression subsystem: `Expression` is a plain value type wrapping `shared_ptr<ExpressionNode>` — no Pimpl. `ExpressionNode` is an abstract base with virtual `metadata()` / `compute_row()`; concrete subclasses `ExpressionFile`, `ExpressionScalar`, `ExpressionBinary`, `ExpressionUnary`, `ExpressionTernary`, `ExpressionAggregate`, `ExpressionAggregateAgents`, `ExpressionSelectAgents`, `ExpressionRenameAgents` are exposed via `QUIVER_API` and use Rule of Zero. Polymorphism is justified by the recursive tree shape (`ExpressionBinary`, `ExpressionUnary`, `ExpressionTernary`, and the aggregation / label-projection nodes own child `shared_ptr<ExpressionNode>` operands).
 
@@ -468,7 +468,7 @@ Element().set("label", "Item 1").set("value", 42).set("tags", {"a", "b"})
 Standalone binary file I/O layer for `.qvr` files with `.toml` metadata sidecars.
 
 - `BinaryFile` class (Pimpl): `open_file(path, mode, metadata?)`, `read(dims)`, `write(dims, data)`, `get_metadata()`, `get_file_path()`
-- `CSVConverter` class (Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)`
+- `CSVConverter` class (composition, no Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)`
 - `BinaryMetadata` struct: `dimensions`, `initial_datetime`, `unit`, `labels`, `version`; `number_of_time_dimensions()` is derived from `dimensions` (not stored)
   - Factories: `from_toml_content()`, `from_element()`
   - Serialization: `to_toml()`

@@ -41,39 +41,9 @@ ExpressionTernary::ExpressionTernary(Operation operation,
     broadcast_meta_ = build_ternary_broadcast_metadata(condition_meta, then_meta, else_meta, std::move(output_labels));
     broadcast_meta_.validate();
 
-    const auto& out_dims = broadcast_meta_.dimensions;
-    condition_dim_sizes_.assign(out_dims.size(), 0);
-    then_dim_sizes_.assign(out_dims.size(), 0);
-    else_dim_sizes_.assign(out_dims.size(), 0);
-    condition_to_out_.assign(condition_meta.dimensions.size(), -1);
-    then_to_out_.assign(then_meta.dimensions.size(), -1);
-    else_to_out_.assign(else_meta.dimensions.size(), -1);
-
-    for (size_t out_i = 0; out_i < out_dims.size(); ++out_i) {
-        const auto ci = find_dim_index(condition_meta.dimensions, out_dims[out_i].name);
-        const auto ti = find_dim_index(then_meta.dimensions, out_dims[out_i].name);
-        const auto ei = find_dim_index(else_meta.dimensions, out_dims[out_i].name);
-        condition_dim_sizes_[out_i] = (ci >= 0) ? condition_meta.dimensions[ci].size : 0;
-        then_dim_sizes_[out_i] = (ti >= 0) ? then_meta.dimensions[ti].size : 0;
-        else_dim_sizes_[out_i] = (ei >= 0) ? else_meta.dimensions[ei].size : 0;
-        if (ci >= 0)
-            condition_to_out_[ci] = static_cast<int>(out_i);
-        if (ti >= 0)
-            then_to_out_[ti] = static_cast<int>(out_i);
-        if (ei >= 0)
-            else_to_out_[ei] = static_cast<int>(out_i);
-    }
-
-    condition_label_count_ = condition_meta.labels.size();
-    then_label_count_ = then_meta.labels.size();
-    else_label_count_ = else_meta.labels.size();
-
-    condition_dims_buf_.resize(condition_meta.dimensions.size());
-    then_dims_buf_.resize(then_meta.dimensions.size());
-    else_dims_buf_.resize(else_meta.dimensions.size());
-    condition_buf_.resize(condition_label_count_);
-    then_buf_.resize(then_label_count_);
-    else_buf_.resize(else_label_count_);
+    condition_op_ = make_broadcast_operand(condition_meta, broadcast_meta_.dimensions);
+    then_op_ = make_broadcast_operand(then_meta, broadcast_meta_.dimensions);
+    else_op_ = make_broadcast_operand(else_meta, broadcast_meta_.dimensions);
 }
 
 const BinaryMetadata& ExpressionTernary::metadata() const {
@@ -86,40 +56,14 @@ void ExpressionTernary::compute_row(const std::vector<int64_t>& dims, std::vecto
         out.resize(out_label_count);
     }
 
-    for (size_t ci = 0; ci < condition_dims_buf_.size(); ++ci) {
-        const auto out_i = condition_to_out_[ci];
-        auto coord = dims[out_i];
-        if (condition_dim_sizes_[out_i] == 1) {
-            coord = 1;
-        }
-        condition_dims_buf_[ci] = coord;
-    }
-    for (size_t ti = 0; ti < then_dims_buf_.size(); ++ti) {
-        const auto out_i = then_to_out_[ti];
-        auto coord = dims[out_i];
-        if (then_dim_sizes_[out_i] == 1) {
-            coord = 1;
-        }
-        then_dims_buf_[ti] = coord;
-    }
-    for (size_t ei = 0; ei < else_dims_buf_.size(); ++ei) {
-        const auto out_i = else_to_out_[ei];
-        auto coord = dims[out_i];
-        if (else_dim_sizes_[out_i] == 1) {
-            coord = 1;
-        }
-        else_dims_buf_[ei] = coord;
-    }
-
-    condition_->compute_row(condition_dims_buf_, condition_buf_);
-    then_value_->compute_row(then_dims_buf_, then_buf_);
-    else_value_->compute_row(else_dims_buf_, else_buf_);
+    compute_broadcast_operand_row(condition_op_, *condition_, dims);
+    compute_broadcast_operand_row(then_op_, *then_value_, dims);
+    compute_broadcast_operand_row(else_op_, *else_value_, dims);
 
     for (size_t k = 0; k < out_label_count; ++k) {
-        const size_t ck = (condition_label_count_ == 1) ? 0 : k;
-        const size_t tk = (then_label_count_ == 1) ? 0 : k;
-        const size_t ek = (else_label_count_ == 1) ? 0 : k;
-        out[k] = apply(operation_, condition_buf_[ck], then_buf_[tk], else_buf_[ek]);
+        out[k] = apply(operation_, condition_op_.row_buf[broadcast_label_index(condition_op_, k)],
+                       then_op_.row_buf[broadcast_label_index(then_op_, k)],
+                       else_op_.row_buf[broadcast_label_index(else_op_, k)]);
     }
 }
 

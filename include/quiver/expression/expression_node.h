@@ -55,6 +55,17 @@ private:
     BinaryMetadata broadcast_meta_;
 };
 
+// Per-operand broadcast machinery shared by ExpressionBinary and ExpressionTernary:
+// translation tables from the broadcast output space into the operand's own
+// dimension space, plus reusable per-row buffers.
+struct BroadcastOperand {
+    std::vector<int64_t> dim_sizes;  // indexed by output dimension; 0 when absent from this operand
+    std::vector<int> to_out;         // operand dimension index -> output dimension index
+    size_t label_count = 0;
+    mutable std::vector<int64_t> dims_buf;
+    mutable std::vector<double> row_buf;
+};
+
 class QUIVER_API ExpressionBinary final : public ExpressionNode {
 public:
     enum class Operation { Add, Subtract, Multiply, Divide };
@@ -72,20 +83,8 @@ private:
     std::shared_ptr<ExpressionNode> lhs_;
     std::shared_ptr<ExpressionNode> rhs_;
     BinaryMetadata broadcast_meta_;
-
-    std::vector<int64_t> lhs_dim_sizes_;
-    std::vector<int64_t> rhs_dim_sizes_;
-
-    std::vector<int> lhs_to_out_;
-    std::vector<int> rhs_to_out_;
-
-    size_t lhs_label_count_ = 0;
-    size_t rhs_label_count_ = 0;
-
-    mutable std::vector<int64_t> lhs_dims_buf_;
-    mutable std::vector<int64_t> rhs_dims_buf_;
-    mutable std::vector<double> lhs_buf_;
-    mutable std::vector<double> rhs_buf_;
+    BroadcastOperand lhs_op_;
+    BroadcastOperand rhs_op_;
 };
 
 class QUIVER_API ExpressionUnary final : public ExpressionNode {
@@ -127,25 +126,9 @@ private:
     std::shared_ptr<ExpressionNode> then_value_;
     std::shared_ptr<ExpressionNode> else_value_;
     BinaryMetadata broadcast_meta_;
-
-    std::vector<int64_t> condition_dim_sizes_;
-    std::vector<int64_t> then_dim_sizes_;
-    std::vector<int64_t> else_dim_sizes_;
-
-    std::vector<int> condition_to_out_;
-    std::vector<int> then_to_out_;
-    std::vector<int> else_to_out_;
-
-    size_t condition_label_count_ = 0;
-    size_t then_label_count_ = 0;
-    size_t else_label_count_ = 0;
-
-    mutable std::vector<int64_t> condition_dims_buf_;
-    mutable std::vector<int64_t> then_dims_buf_;
-    mutable std::vector<int64_t> else_dims_buf_;
-    mutable std::vector<double> condition_buf_;
-    mutable std::vector<double> then_buf_;
-    mutable std::vector<double> else_buf_;
+    BroadcastOperand condition_op_;
+    BroadcastOperand then_op_;
+    BroadcastOperand else_op_;
 };
 
 class QUIVER_API ExpressionAggregate final : public ExpressionNode {

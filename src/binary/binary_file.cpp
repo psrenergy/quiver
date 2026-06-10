@@ -302,16 +302,4 @@ const std::string& BinaryFile::get_file_path() const {
     return impl_->file_path;
 }
 
-std::iostream& BinaryFile::get_io() {
-    return *impl_->io;
-}
-
-void BinaryFile::set_io(std::unique_ptr<std::iostream> io) {
-    impl_->io = std::move(io);
-}
-
-void BinaryFile::set_metadata(BinaryMetadata metadata) {
-    impl_->metadata = std::move(metadata);
-}
-
 }  // namespace quiver

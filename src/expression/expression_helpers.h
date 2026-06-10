@@ -321,6 +321,112 @@ inline double compute_percentile(std::vector<double>& values, double fraction) {
     return values[lo] * (1.0 - frac) + values[hi] * frac;
 }
 
+// ============================================================================
+// Broadcast operand helpers (shared by ExpressionBinary / ExpressionTernary)
+// ============================================================================
+
+inline BroadcastOperand make_broadcast_operand(const BinaryMetadata& operand_meta,
+                                               const std::vector<Dimension>& out_dims) {
+    BroadcastOperand op;
+    op.dim_sizes.assign(out_dims.size(), 0);
+    op.to_out.assign(operand_meta.dimensions.size(), -1);
+    for (size_t out_i = 0; out_i < out_dims.size(); ++out_i) {
+        const auto idx = find_dim_index(operand_meta.dimensions, out_dims[out_i].name);
+        if (idx >= 0) {
+            op.dim_sizes[out_i] = operand_meta.dimensions[idx].size;
+            op.to_out[idx] = static_cast<int>(out_i);
+        }
+    }
+    op.label_count = operand_meta.labels.size();
+    op.dims_buf.resize(operand_meta.dimensions.size());
+    op.row_buf.resize(op.label_count);
+    return op;
+}
+
+// Translate output coordinates into the operand's dimension space (size-1
+// dimensions broadcast by pinning their coordinate to 1) and compute the
+// operand's row into its reusable row_buf.
+inline void
+compute_broadcast_operand_row(const BroadcastOperand& op, const ExpressionNode& node, const std::vector<int64_t>& dims) {
+    for (size_t i = 0; i < op.dims_buf.size(); ++i) {
+        const auto out_i = op.to_out[i];
+        auto coord = dims[out_i];
+        if (op.dim_sizes[out_i] == 1) {
+            coord = 1;
+        }
+        op.dims_buf[i] = coord;
+    }
+    node.compute_row(op.dims_buf, op.row_buf);
+}
+
+// Single-label operands broadcast their one value across all output labels
+inline size_t broadcast_label_index(const BroadcastOperand& op, size_t k) {
+    return (op.label_count == 1) ? 0 : k;
+}
+
+// ============================================================================
+// Aggregation accumulation (shared by ExpressionAggregate / ExpressionAggregateAgents)
+// ============================================================================
+
+struct AggregationState {
+    double sum = 0.0;
+    int64_t count = 0;
+    double min = std::numeric_limits<double>::infinity();
+    double max = -std::numeric_limits<double>::infinity();
+};
+
+// NaN inputs are skipped; Percentile collects into the caller's scratch buffer.
+template <typename Op>
+void aggregation_accumulate(Op op, AggregationState& state, std::vector<double>& percentile_scratch, double value) {
+    if (std::isnan(value)) {
+        return;
+    }
+    switch (op) {
+    case Op::Sum:
+    case Op::Mean:
+        state.sum += value;
+        ++state.count;
+        break;
+    case Op::Min:
+        if (value < state.min) {
+            state.min = value;
+        }
+        ++state.count;
+        break;
+    case Op::Max:
+        if (value > state.max) {
+            state.max = value;
+        }
+        ++state.count;
+        break;
+    case Op::Percentile:
+        percentile_scratch.push_back(value);
+        break;
+    }
+}
+
+// An all-NaN (empty) accumulation yields NaN.
+template <typename Op>
+double aggregation_finalize(Op op,
+                            const AggregationState& state,
+                            std::vector<double>& percentile_scratch,
+                            const std::optional<double>& parameter) {
+    const double nan_value = std::numeric_limits<double>::quiet_NaN();
+    switch (op) {
+    case Op::Sum:
+        return (state.count > 0) ? state.sum : nan_value;
+    case Op::Mean:
+        return (state.count > 0) ? state.sum / static_cast<double>(state.count) : nan_value;
+    case Op::Min:
+        return (state.count > 0) ? state.min : nan_value;
+    case Op::Max:
+        return (state.count > 0) ? state.max : nan_value;
+    case Op::Percentile:
+        return compute_percentile(percentile_scratch, *parameter);
+    }
+    return nan_value;
+}
+
 }  // namespace quiver
 
 #endif  // QUIVER_EXPRESSION_HELPERS_H
