@@ -50,10 +50,6 @@ jobs:
               build/lib/libquiver.so
               build/lib/libquiver.so.0
               build/lib/libquiver_c.so
-          # libquiver ships ONLY under its install name (libquiver.0.dylib, SOVERSION 0).
-          # dyld resolves libquiver_c's @rpath/libquiver.0.dylib dependency filesystem-first
-          # (no Linux-style SONAME matching against loaded images), so shipping a second
-          # libquiver.dylib copy alongside it risks loading the library twice.
           - os: macos-latest
             platform_key: macos-aarch64
             lib_paths: |
