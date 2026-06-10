@@ -717,9 +717,13 @@ bindings/python/generator/generator.bat  # Python
   pipeline split) downloads native libs from S3 (staged by the `publish.yml` native build) into
   `libs/{linux,windows}-x86_64/`, asserts every lib is in a throwaway `npm pack` tarball via
   `tar -tzf` (format-independent; npm roots entries under `package/`), then publishes with
-  **`npm publish` via `actions/setup-node`** using **npm Trusted Publishing (OIDC)** —
-  `permissions: id-token: write`, no stored token; npm packs inline so the published artifact
-  carries the deterministic, asserted file set. `publishConfig.provenance: true` emits a signed
+  **`npm publish --loglevel verbose` via `actions/setup-node@v6`** using **npm Trusted Publishing
+  (OIDC)** — `permissions: id-token: write`, no stored token; npm packs inline so the published
+  artifact carries the deterministic, asserted file set. setup-node uses
+  `package-manager-cache: false` (v6 caches by default; the Bun project has no `package-lock.json`).
+  Verbose logging is load-bearing: npm logs the OIDC exchange result only at that level — a failed
+  exchange silently falls back to token auth (setup-node's `NODE_AUTH_TOKEN` placeholder) and dies
+  with a misleading E404 on the PUT. `publishConfig.provenance: true` emits a signed
   provenance attestation (repo is public). Requires a trusted publisher configured on npmjs.com
   (GitHub Actions · `psrenergy/quiver` · workflow `publish-js.yml` · environment `npm`) and
   npm ≥ 11.5.1 (ensured via `npm install -g npm@latest` on Node 24). Bun can't do OIDC trusted
