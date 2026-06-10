@@ -66,22 +66,19 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_row(quiver_database
     QUIVER_REQUIRE(db, collection, group, attribute, date_time, out_data_type, out_values, out_count);
 
     try {
+        // The C++ layer validates collection/group/attribute and throws the
+        // canonical errors; afterwards the metadata lookup below cannot miss.
+        auto values = db->db.read_time_series_row(collection, group, attribute, date_time);
+
         auto metadata = db->db.get_time_series_metadata(collection, group);
         quiver::DataType attr_type{};
-        bool found = false;
         for (const auto& vc : metadata.value_columns) {
             if (vc.name == attribute) {
                 attr_type = vc.data_type;
-                found = true;
                 break;
             }
         }
-        if (!found) {
-            throw std::runtime_error("Time series attribute not found: '" + std::string(attribute) + "' in group '" +
-                                     std::string(group) + "' of collection '" + std::string(collection) + "'");
-        }
 
-        auto values = db->db.read_time_series_row(collection, group, attribute, date_time);
         *out_count = values.size();
         *out_data_type = to_c_data_type(attr_type);
 

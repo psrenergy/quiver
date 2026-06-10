@@ -147,7 +147,6 @@ const luaSymbols = {
   quiver_lua_runner_new: { args: [P, P], returns: I32 },
   quiver_lua_runner_free: { args: [P], returns: I32 },
   quiver_lua_runner_run: { args: [P, BUF], returns: I32 },
-  quiver_lua_runner_get_error: { args: [P, P], returns: I32 },
 } as const;
 
 // Combined symbol map for dlopen.

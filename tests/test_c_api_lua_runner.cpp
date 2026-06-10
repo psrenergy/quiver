@@ -120,8 +120,7 @@ TEST_F(LuaRunnerCApiTest, SyntaxError) {
     auto result = quiver_lua_runner_run(lua, "invalid lua syntax !!!");
     EXPECT_NE(result, QUIVER_OK);
 
-    const char* error = nullptr;
-    ASSERT_EQ(quiver_lua_runner_get_error(lua, &error), QUIVER_OK);
+    const char* error = quiver_get_last_error();
     EXPECT_NE(error, nullptr);
 
     quiver_lua_runner_free(lua);
@@ -142,17 +141,11 @@ TEST_F(LuaRunnerCApiTest, RuntimeError) {
     auto result = quiver_lua_runner_run(lua, "error('This is a runtime error')");
     EXPECT_NE(result, QUIVER_OK);
 
-    const char* error = nullptr;
-    ASSERT_EQ(quiver_lua_runner_get_error(lua, &error), QUIVER_OK);
+    const char* error = quiver_get_last_error();
     EXPECT_NE(error, nullptr);
 
     quiver_lua_runner_free(lua);
     quiver_database_close(db);
-}
-
-TEST_F(LuaRunnerCApiTest, GetErrorNull) {
-    const char* error = nullptr;
-    EXPECT_EQ(quiver_lua_runner_get_error(nullptr, &error), QUIVER_ERROR);
 }
 
 TEST_F(LuaRunnerCApiTest, ReuseRunner) {
@@ -380,8 +373,7 @@ TEST_F(LuaRunnerCApiTest, AssertionFailure) {
     auto result = quiver_lua_runner_run(lua, "assert(false, 'Test assertion failure')");
     EXPECT_NE(result, QUIVER_OK);
 
-    const char* error = nullptr;
-    ASSERT_EQ(quiver_lua_runner_get_error(lua, &error), QUIVER_OK);
+    const char* error = quiver_get_last_error();
     EXPECT_NE(error, nullptr);
     EXPECT_NE(std::string(error).find("assertion"), std::string::npos);
 
@@ -403,8 +395,7 @@ TEST_F(LuaRunnerCApiTest, UndefinedVariableError) {
     auto result = quiver_lua_runner_run(lua, "local x = undefined_variable + 1");
     EXPECT_NE(result, QUIVER_OK);
 
-    const char* error = nullptr;
-    ASSERT_EQ(quiver_lua_runner_get_error(lua, &error), QUIVER_OK);
+    const char* error = quiver_get_last_error();
     EXPECT_NE(error, nullptr);
 
     quiver_lua_runner_free(lua);
@@ -425,8 +416,7 @@ TEST_F(LuaRunnerCApiTest, ErrorClearedAfterSuccessfulRun) {
     // First, run a failing script
     auto result = quiver_lua_runner_run(lua, "invalid lua syntax !!!");
     EXPECT_NE(result, QUIVER_OK);
-    const char* error1 = nullptr;
-    ASSERT_EQ(quiver_lua_runner_get_error(lua, &error1), QUIVER_OK);
+    const char* error1 = quiver_get_last_error();
     EXPECT_NE(error1, nullptr);
 
     // Now run a successful script
@@ -480,8 +470,7 @@ TEST_F(LuaRunnerCApiTest, RunScriptUnsupportedAttributeTypeFails) {
     auto result = quiver_lua_runner_run(lua, R"(db:create_element("Configuration", { label = "X", enabled = true }))");
     EXPECT_EQ(result, QUIVER_ERROR);
 
-    const char* error = nullptr;
-    ASSERT_EQ(quiver_lua_runner_get_error(lua, &error), QUIVER_OK);
+    const char* error = quiver_get_last_error();
     ASSERT_NE(error, nullptr);
     EXPECT_NE(std::string(error).find("Cannot table_to_element: attribute 'enabled'"), std::string::npos) << error;
 

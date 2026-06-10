@@ -2695,23 +2695,6 @@ class QuiverDatabaseBindings {
       );
   late final _quiver_lua_runner_run = _quiver_lua_runner_runPtr
       .asFunction<int Function(ffi.Pointer<quiver_lua_runner_t>, ffi.Pointer<ffi.Char>)>();
-
-  int quiver_lua_runner_get_error(
-    ffi.Pointer<quiver_lua_runner_t> runner,
-    ffi.Pointer<ffi.Pointer<ffi.Char>> out_error,
-  ) {
-    return _quiver_lua_runner_get_error(
-      runner,
-      out_error,
-    );
-  }
-
-  late final _quiver_lua_runner_get_errorPtr =
-      _lookup<
-        ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_lua_runner_t>, ffi.Pointer<ffi.Pointer<ffi.Char>>)>
-      >('quiver_lua_runner_get_error');
-  late final _quiver_lua_runner_get_error = _quiver_lua_runner_get_errorPtr
-      .asFunction<int Function(ffi.Pointer<quiver_lua_runner_t>, ffi.Pointer<ffi.Pointer<ffi.Char>>)>();
 }
 
 abstract class quiver_error_t {
