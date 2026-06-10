@@ -1,14 +1,4 @@
 #!/usr/bin/env python3
-"""Assert the project version is consistent across every version-bearing file, and print it.
-
-Run with no arguments. Treats CMakeLists.txt (the first TARGETS entry) as the source of truth
-and exits non-zero unless every other file matches it; on success it prints the version to stdout
-so callers (the detect-version action and the publish workflows' version jobs) can capture it.
-TARGETS is the single source of truth for which files carry the version and how each is parsed.
-
-Each regex must match exactly once; a zero- or multi-match outcome is fatal so that silent
-drift (e.g. a file format change) fails loudly in CI.
-"""
 
 from __future__ import annotations
 
