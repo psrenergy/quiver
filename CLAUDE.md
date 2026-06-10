@@ -1,6 +1,6 @@
 # Project: Quiver
 
-SQLite wrapper library with C++ core, C API for FFI, and language bindings (Julia, Dart).
+SQLite wrapper library with C++ core, C API for FFI, and language bindings (Julia, Dart, Python, JS/Bun, plus embedded Lua).
 
 ## Architecture
 
@@ -11,6 +11,14 @@ include/quiver/           # C++ public headers
   options.h               # DatabaseOptions, CSVOptions types and factories
   element.h               # Element builder for create operations
   lua_runner.h            # Lua scripting support
+  schema.h                # Schema/TableDefinition introspection, group table name helpers
+  schema_validator.h      # SchemaValidator - schema convention checks
+  type_validator.h        # TypeValidator - value-vs-column type checks
+  value.h                 # Value variant (nullptr/int64/double/string)
+  data_type.h             # DataType enum, data_type_to_string, is_date_time_column
+  row.h / result.h        # Row and Result query-result types
+  migration.h / migrations.h  # Migration (version dir, up/down sql) and Migrations discovery
+  export.h / quiver.h     # Export macro, umbrella header
 include/quiver/binary/      # Binary subsystem headers (binary file I/O)
   binary_file.h               # BinaryFile class (Pimpl) - open_file, read, write, get_metadata
   csv_converter.h              # CSVConverter class - bin_to_csv, csv_to_bin
@@ -21,8 +29,9 @@ include/quiver/binary/      # Binary subsystem headers (binary file I/O)
   time_constants.h        # Time dimension size constraints
 include/quiver/expression/  # Expression subsystem headers (lazy expressions on .qvr files)
   expression.h                # Expression value type, + - * / operator overloads, save engine
-  expression_node.h           # ExpressionNode base + ExpressionFile/Scalar/Binary + Unary/Ternary/Aggregation scaffolds
+  expression_node.h           # ExpressionNode base + concrete node classes + BroadcastOperand
 include/quiver/c/         # C API headers (for FFI)
+  common.h                # quiver_error_t, quiver_get_last_error, quiver_version
   options.h               # All option types and defaults: LogLevel, DatabaseOptions, CSVOptions
   database.h
   element.h
@@ -31,20 +40,34 @@ include/quiver/c/binary/    # Binary C API headers
   binary_file.h               # quiver_binary_file_t opaque handle, open/close/read/write
   csv_converter.h              # bin_to_csv, csv_to_bin functions
   binary_metadata.h         # quiver_binary_metadata_t + flat structs (quiver_dimension_t, quiver_time_properties_t)
+include/quiver/c/expression/  # Expression C API header
+  expression.h                # quiver_expression_t handle + node constructors + five operation enums
 src/                      # C++ implementation
+  database.cpp            # Lifecycle, factories, transactions, execute, migrate_up
+  database_impl.h         # Database::Impl - schema/type validators, FK resolution, group inserts, TransactionGuard
+  database_internal.h     # internal:: helpers - read templates, value_matches_type, metadata converters
+  database_create.cpp / database_read.cpp / database_update.cpp / database_delete.cpp
+  database_metadata.cpp / database_query.cpp / database_time_series.cpp / database_describe.cpp
   database_csv_export.cpp # CSV export implementation
   database_csv_import.cpp # CSV import implementation
+  schema.cpp              # Schema introspection (from_database), table classification, group_names
+  schema_validator.cpp    # Schema convention validation
+  type_validator.cpp      # Scalar/array type validation (caller-threaded Pattern 1 messages)
+  element.cpp / row.cpp / result.cpp / migration.cpp / migrations.cpp
+  lua_runner.cpp          # LuaRunner (sol2) - all Lua bindings
   cli/main.cpp            # quiver_cli CLI entry point
   utils/string.h          # String utilities: new_c_str, trim
+  utils/datetime.h        # ISO 8601 parse/format helpers
 src/binary/                 # Binary C++ implementation
-  binary_file.cpp             # BinaryFile class (Pimpl impl)
+  binary_file.cpp             # BinaryFile class (Pimpl impl) + write registry
+  binary_utils.h              # Shared file-extension constants
   csv_converter.cpp            # CSVConverter implementation
   iteration.cpp               # first_dimensions/next_dimensions impls + dimension_sizes_at_values helper
   binary_metadata.cpp       # BinaryMetadata factories, serialization, validation
   time_properties.cpp     # TimeFrequency string conversion
 src/expression/             # Expression C++ implementation
   expression.cpp              # Expression class, operator overloads, save engine
-  expression_helpers.h        # Shared inline helpers (validation, broadcast metadata, aggregation templates, percentile)
+  expression_helpers.h        # Shared inline helpers (validation, broadcast metadata/operands, aggregation accumulators, percentile)
   expression_file.cpp         # ExpressionFile (leaf reading from .qvr)
   expression_scalar.cpp       # ExpressionScalar (constant broadcast)
   expression_binary.cpp       # ExpressionBinary (Add/Sub/Mul/Div)
@@ -55,8 +78,9 @@ src/expression/             # Expression C++ implementation
   expression_select_agents.cpp     # ExpressionSelectAgents (label-axis projection)
   expression_rename_agents.cpp     # ExpressionRenameAgents (label-axis rename)
 src/c/                    # C API implementation
+  common.cpp              # quiver_get_last_error / quiver_set_last_error / quiver_version
   internal.h              # Shared structs (quiver_database, quiver_element, quiver_binary_file, quiver_binary_metadata), QUIVER_REQUIRE macro
-  database_helpers.h      # Marshaling templates, strdup_safe, metadata converters
+  database_helpers.h      # Marshaling templates, string array copiers, metadata converters
   options.cpp             # Option defaults: quiver_database_options_default, quiver_csv_options_default
   database.cpp            # Lifecycle: open, close, factory methods, describe
   database_options.h      # Option converters: convert_database_options, convert_csv_options
@@ -69,15 +93,20 @@ src/c/                    # C API implementation
   database_query.cpp      # Query operations (plain and parameterized)
   database_time_series.cpp # Time series operations + co-located free functions
   database_transaction.cpp # Transaction control (begin, commit, rollback, in_transaction)
+  element.cpp             # Element builder C API
+  lua_runner.cpp          # LuaRunner C API (errors via quiver_get_last_error)
 src/c/binary/               # Binary C API implementation
   binary_file.cpp             # BinaryFile lifecycle, read/write, getters
   csv_converter.cpp            # CSV conversion wrappers
   binary_metadata.cpp       # Metadata lifecycle, builders, getters, serialization
+src/c/expression/           # Expression C API implementation
+  expression.cpp              # Node constructors, save, free
 bindings/julia/           # Julia bindings (Quiver.jl)
   src/binary/               # Binary Julia wrappers (Metadata, File, csv_converter)
-bindings/dart/            # Dart bindings (quiver)
-bindings/python/          # Python bindings (quiver) - CFFI ABI-mode
-tests/                    # C++ tests
+bindings/dart/            # Dart bindings (quiverdb)
+bindings/python/          # Python bindings (quiverdb) - CFFI ABI-mode
+bindings/js/              # JS/Bun bindings (quiverdb on npm) - bun:ffi, hand-written loader.ts
+tests/                    # C++ and C API tests
 tests/schemas/            # Shared SQL schemas for all tests
 ```
 
@@ -126,8 +155,10 @@ scripts/test-all.bat             # Run all tests (assumes already built)
 ./build/bin/quiver_c_tests.exe    # C API tests
 bindings/julia/test/test.bat      # Julia tests
 bindings/dart/test/test.bat       # Dart tests
-bindings/python/test/test.bat     # Python tests
+bindings/js/test/test.bat         # JavaScript (Bun) tests
+bindings/python/tests/test.bat    # Python tests
 ```
+`scripts/test-all.bat` runs all six suites plus a `quiver_cli` smoke test (step 7).
 
 ### CLI Executable
 ```bash
@@ -141,32 +172,29 @@ bindings/python/test/test.bat     # Python tests
 Standalone executable comparing individual vs batched transaction performance. Not part of test suite. Built by `build-all.bat` but never executed automatically.
 
 ### Test Organization
-Test files organized by functionality:
-- `test_database_lifecycle.cpp` - open, close, move semantics, options
-- `test_database_create.cpp` - create element operations
-- `test_database_csv_export.cpp` - CSV export operations (scalar, group, options, formatting)
-- `test_database_csv_import.cpp` - CSV import operations (round-trip, enum resolution, delimiters, error handling)
-- `test_database_read.cpp` - read scalar/vector/set operations
-- `test_database_update.cpp` - update scalar/vector/set operations
-- `test_database_delete.cpp` - delete element operations
-- `test_database_query.cpp` - parameterized and non-parameterized query operations
-- `test_database_time_series.cpp` - time series read/update/metadata operations
-- `test_database_transaction.cpp` - explicit transaction control (begin/commit/rollback)
+C++ core tests (`tests/test_*.cpp`, one file per functional area):
+- Database: `test_database_lifecycle.cpp` (open/close/move/options), `test_database_create.cpp`,
+  `test_database_read.cpp`, `test_database_update.cpp`, `test_database_delete.cpp`,
+  `test_database_query.cpp`, `test_database_time_series.cpp`, `test_database_transaction.cpp`,
+  `test_database_csv_export.cpp`, `test_database_csv_import.cpp`, `test_database_errors.cpp`
+- Supporting types: `test_element.cpp`, `test_row_result.cpp`, `test_migrations.cpp`,
+  `test_schema_validator.cpp`
+- Lua: `test_lua_runner.cpp` (all Lua-side bindings, error paths, transactions, CSV, time series)
+- Binary subsystem: `test_binary_file.cpp`, `test_binary_metadata.cpp`,
+  `test_binary_time_properties.cpp`, `test_csv_converter.cpp`, `test_iteration.cpp`
+- Expression subsystem: `test_expression.cpp`
+- `test_issues.cpp` - issue-numbered regression tests
 
-C API tests follow same pattern with `test_c_api_database_*.cpp` prefix:
-- `test_c_api_database_csv_export.cpp` - CSV export: scalar/group, RFC 4180, enum labels, date formatting, options
-- `test_c_api_database_csv_import.cpp` - CSV import: round-trip, semicolons, FK resolution, enum, trailing columns
-- `test_c_api_database_metadata.cpp` - Metadata get/list operations (vector, set, time series, scalar)
+C API tests mirror the same areas with the `test_c_api_*` prefix: one
+`test_c_api_database_*.cpp` per database area plus `test_c_api_element.cpp`,
+`test_c_api_lua_runner.cpp`, `test_c_api_expression.cpp`, and the binary trio
+`test_c_api_binary_file.cpp` / `test_c_api_binary_metadata.cpp` / `test_c_api_csv_converter.cpp`.
 
-Binary C API tests with `test_c_api_binary_*.cpp` prefix:
-- `test_c_api_binary_file.cpp` - BinaryFile open/close, write/read round-trip, getters, allow_nulls
-- `test_c_api_csv_converter.cpp` - bin_to_csv, csv_to_bin, round-trip verification
-- `test_c_api_binary_metadata.cpp` - Metadata lifecycle, builders/getters, dimensions, TOML round-trip, from_element
-
-Julia binary tests:
-- `test_binary_file.jl` - BinaryFile open/close, write/read round-trip, getters, allow_nulls
-- `test_csv_converter.jl` - bin_to_csv, csv_to_bin, round-trip verification
-- `test_binary_metadata.jl` - Metadata builder, getters, TOML round-trip, from_element
+Binding suites live in `bindings/julia/test/`, `bindings/dart/test/`,
+`bindings/python/tests/`, and `bindings/js/test/`, mirroring the same areas in each
+language's idiom. Julia additionally covers the binary/expression subsystems
+(`test_binary_file.jl`, `test_binary_metadata.jl`, `test_csv_converter.jl`,
+`test_expression.jl`) and the relation-map helpers (`test_helper_maps.jl`).
 
 All test schemas located in `tests/schemas/valid/` and `tests/schemas/invalid/`.
 
@@ -243,7 +271,10 @@ throw std::runtime_error("Failed to open database: " + sqlite3_errmsg(db));
 throw std::runtime_error("Failed to execute statement: " + sqlite3_errmsg(db));
 ```
 
-No ad-hoc formats. Downstream layers (C API, bindings) can rely on consistent error structure.
+No ad-hoc formats in the database core. Downstream layers (C API, bindings) can rely on
+consistent error structure. Known exception: the binary/expression subsystem's metadata
+validation throws descriptive messages (e.g. `"Number of labels must be positive, got 0"`)
+that predate the pattern; new code should use the three patterns.
 
 ### Logging
 spdlog with debug/info/warn/error levels:
@@ -442,13 +473,14 @@ Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references.
 ## Core API
 
 ### Database Class
-- Factory methods: `from_schema()`, `from_migrations()`
+- Factory methods: `from_schema()`, `from_migrations()` — `DatabaseOptions` (`read_only`, `console_level`) are exposed as optional parameters in every binding
 - Transaction control: `begin_transaction()`, `commit()`, `rollback()`, `in_transaction()`
 - CRUD: `create_element(collection, element)`
 - Scalar readers: `read_scalar_integers/floats/strings(collection, attribute)`
 - Vector readers: `read_vector_integers/floats/strings(collection, attribute)`
 - Set readers: `read_set_integers/floats/strings(collection, attribute)`
 - Time series: `read_time_series_group()`, `update_time_series_group()`, `add_time_series_row()` — both `read_time_series_group` and `update_time_series_group` use multi-column `vector<map<string, Value>>` rows with N typed value columns per time series group; `add_time_series_row` appends/upserts a single row using a `map<string, Value>` (one value per column). All bindings expose the group read/update as **column-oriented** data (`{column: [values]}`), the canonical cross-binding shape. Integer values are accepted for REAL columns in time series writes (converted on insert).
+- Time series row: `read_time_series_row(collection, group, attribute, date_time)` — one value per element using "last non-null value at or before date_time" semantics; `nullptr` Value for elements with no matching data. Bound in every layer (C API typed-array dispatch on `out_data_type`; bindings surface `nothing`/`null`/`None`/`nil` entries).
 - Time series files: `has_time_series_files()`, `list_time_series_files_columns()`, `read_time_series_files()`, `update_time_series_files()`
 - Metadata: `get_scalar_metadata()`, `get_vector_metadata()`, `get_set_metadata()`, `get_time_series_metadata()` — all group metadata returns unified `GroupMetadata` with `dimension_column` (populated for time series, empty for vectors/sets)
 - List groups: `list_scalar_attributes()`, `list_vector_groups()`, `list_set_groups()`, `list_time_series_groups()`
@@ -471,7 +503,7 @@ Standalone binary file I/O layer for `.qvr` files with `.toml` metadata sidecars
 > Dart, Python, and JS deliberately do not expose them (no current consumer); the
 > tests-at-every-layer rule has this one documented exception.
 
-- `BinaryFile` class (Pimpl): `open_file(path, mode, metadata?)`, `read(dims)`, `write(dims, data)`, `get_metadata()`, `get_file_path()`
+- `BinaryFile` class (Pimpl): `open_file(path, mode, metadata?)`, `read(dims, allow_nulls = false)`, `write(data, dims)`, `get_metadata()`, `get_file_path()`
 - `CSVConverter` class (composition, no Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)`
 - `BinaryMetadata` struct: `dimensions`, `initial_datetime`, `unit`, `labels`, `version`; `number_of_time_dimensions()` is derived from `dimensions` (not stored)
   - Factories: `from_toml_content()`, `from_element()`
@@ -492,7 +524,7 @@ Free functions in `quiver::` for traversing the dimension space of a `BinaryMeta
 Used by `Expression::save()` and `CSVConverter::{bin_to_csv, csv_to_bin}` — single source of truth for `.qvr` traversal.
 
 #### Write Registry
-In-process path registry prevents reading files that are currently open for writing. A `static std::unordered_set<std::string>` in `binary.cpp` tracks canonical paths of files open in write mode. Opening a reader or a second writer on a registered path throws `std::runtime_error`. The registry entry is removed in the `Binary` destructor (before flush). Move semantics work correctly: moved-from objects have null `impl_` and skip unregistration. Not thread-safe or multi-process safe.
+In-process path registry prevents reading files that are currently open for writing. A `static std::unordered_set<std::string>` in `binary_file.cpp` tracks canonical paths of files open in write mode. Opening a reader or a second writer on a registered path throws `std::runtime_error`. The registry entry is removed in `BinaryFile::close()` (after flush; the destructor closes). Move semantics work correctly: moved-from objects have null `impl_` and skip unregistration. Not thread-safe or multi-process safe.
 
 #### Binary Performance Bottlenecks
 Profiled with 480×500×31 dimensions (~7.3M read/write calls). Main hot-path costs:
@@ -526,9 +558,9 @@ result.save("output");  // writes output.qvr + output.toml
   - `ExpressionNode` (abstract): `metadata()`, `compute_row(dims, out)`
   - `ExpressionFile`: lazy reads from a `.qvr`. Caches an open `BinaryFile` and a reusable `unordered_map` across calls (mutable members; not thread-safe per instance).
   - `ExpressionScalar`: broadcasts a constant across the operand's label space.
-  - `ExpressionBinary`: combines two operands with `ExpressionBinary::Operation::{Add,Subtract,Multiply,Divide}` (nested enum). Constructor pre-computes broadcast metadata (`build_broadcast_metadata`), reusable input/output buffers, and `lhs_to_out_`/`rhs_to_out_` index translation tables. The `apply(Operation, double, double)` operation-dispatch is a private static member.
+  - `ExpressionBinary`: combines two operands with `ExpressionBinary::Operation::{Add,Subtract,Multiply,Divide}` (nested enum). Constructor pre-computes broadcast metadata (`build_broadcast_metadata`) and one `BroadcastOperand` per operand (index translation tables + reusable buffers, built by `make_broadcast_operand` and driven per row by `compute_broadcast_operand_row` — both shared with `ExpressionTernary` via `expression_helpers.h`). The `apply(Operation, double, double)` operation-dispatch is a private static member.
   - `ExpressionUnary`: applies a single-operand math function with `ExpressionUnary::Operation::{Negate,Abs,Sqrt,Log,Exp}` (nested enum). `metadata()` returns the operand's metadata unchanged (no dimensional analysis — `sqrt(MW)` stays as `MW`). Constructor pre-allocates a reusable `operand_row_buf_`. Lets IEEE-754 NaN/inf propagate naturally (`sqrt(-1) → NaN`, `log(0) → -inf`); no NaN special-casing. The `apply(Operation, double)` operation-dispatch is a private static member.
-  - `ExpressionTernary`: selects per-element across three operands. `Operation::{IfElse}` (nested enum). For `IfElse`: NaN in `condition` → NaN; `condition != 0` → `then_value`; else `else_value`. Constructor eagerly validates (`then` and `else` units must match; `condition`'s unit is ignored; shapes broadcast across all three pairs), pre-builds broadcast metadata via `build_ternary_broadcast_metadata`, pre-allocates per-operand dim/label translation tables and reusable buffers. The `apply(Operation, double, double, double)` operation-dispatch is a private static member.
+  - `ExpressionTernary`: selects per-element across three operands. `Operation::{IfElse}` (nested enum). For `IfElse`: NaN in `condition` → NaN; `condition != 0` → `then_value`; else `else_value`. Constructor eagerly validates (`then` and `else` units must match; `condition`'s unit is ignored; shapes broadcast across all three pairs), pre-builds broadcast metadata via `build_ternary_broadcast_metadata` and one `BroadcastOperand` per operand (same shared machinery as `ExpressionBinary`). The `apply(Operation, double, double, double)` operation-dispatch is a private static member.
   - `ExpressionAggregate`: collapses a named dimension. `Operation::{Sum,Mean,Min,Max,Percentile}` (nested enum). Constructor eagerly removes the dim from output metadata, rewires child time-dim `parent_dimension_index` transitively (a time dim whose parent was removed re-points to the removed dim's grandparent, or `-1`), and pre-allocates index translation + reusable buffers. Skips NaN inputs during accumulation; all-NaN range yields NaN.
   - `ExpressionAggregateAgents`: collapses the label axis to a single entry named after the operation (e.g., `"sum"`, `"mean"`, `"percentile"`). Dimensions, `initial_datetime`, `unit` unchanged. Same NaN policy as `ExpressionAggregate`.
   - `ExpressionSelectAgents`: projects the operand onto a caller-supplied label list. Constructor pre-computes a `selected_indices_` table from operand-label → output-position, copies operand metadata with `labels` replaced, and calls `output_meta_.validate()` (which rejects duplicate output labels). Missing labels throw `"Cannot select_agents: label not found: '<name>'"`. `compute_row` reads the operand row into a reusable buffer and gathers selected columns into `out`.
@@ -572,19 +604,20 @@ lua.run(R"(
 | Transaction | `rollback()` | `quiver_database_rollback()` | `rollback!()` | `rollback()` | `rollback()` |
 | Transaction | `in_transaction()` | `quiver_database_in_transaction()` | `in_transaction()` | `inTransaction()` | `in_transaction()` |
 | Create | `create_element()` | `quiver_database_create_element()` | `create_element!()` | `createElement()` | `create_element()` |
-
-> **Note:** Python's `create_element` and `update_element` accept `**kwargs` instead of a positional Element argument: `db.create_element("Collection", label="x", value=42)`.
 | Read scalar | `read_scalar_integers()` | `quiver_database_read_scalar_integers()` | `read_scalar_integers()` | `readScalarIntegers()` | `read_scalar_integers()` |
 | Read by Id | `read_scalar_integer_by_id()` | `quiver_database_read_scalar_integer_by_id()` | `read_scalar_integer_by_id()` | `readScalarIntegerById()` | N/A (use composites) |
 | Delete | `delete_element()` | `quiver_database_delete_element()` | `delete_element!()` | `deleteElement()` | `delete_element()` |
 | Metadata | `get_scalar_metadata()` | `quiver_database_get_scalar_metadata()` | `get_scalar_metadata()` | `getScalarMetadata()` | `get_scalar_metadata()` |
 | List groups | `list_vector_groups()` | `quiver_database_list_vector_groups()` | `list_vector_groups()` | `listVectorGroups()` | `list_vector_groups()` |
 | Time series read | `read_time_series_group()` | `quiver_database_read_time_series_group()` | `read_time_series_group()` | `readTimeSeriesGroup()` | `read_time_series_group()` |
+| Time series row | `read_time_series_row()` | `quiver_database_read_time_series_row()` | `read_time_series_row()` | `readTimeSeriesRow()` | `read_time_series_row()` |
 | Time series add row | `add_time_series_row()` | `quiver_database_add_time_series_row()` | `add_time_series_row!()` | `addTimeSeriesRow()` | `add_time_series_row()` |
 | Time series update | `update_time_series_group()` | `quiver_database_update_time_series_group()` | `update_time_series_group!()` | `updateTimeSeriesGroup()` | `update_time_series_group()` |
 | Query | `query_string()` | `quiver_database_query_string()` | `query_string()` | `queryString()` | `query_string()` |
 | CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | `export_csv()` |
 | Describe | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |
+
+> **Note:** Python's `create_element` and `update_element` accept `**kwargs` instead of a positional Element argument: `db.create_element("Collection", label="x", value=42)`. JS follows the Dart camelCase rule (`readTimeSeriesRow`, `addTimeSeriesRow`, ...) with `Csv` cased as `exportCsv`/`importCsv`.
 
 **Binary cross-layer examples:**
 
@@ -593,7 +626,7 @@ lua.run(R"(
 | Open file | `BinaryFile::open_file(path, mode, md?)` | `quiver_binary_file_open_file()` | `open_file(path; mode, metadata=nothing)` |
 | Close | (destructor) | `quiver_binary_file_close()` | `close!(file)` |
 | Read | `binary_file.read(dims)` | `quiver_binary_file_read()` | `read(file; dims...)` |
-| Write | `binary_file.write(dims, data)` | `quiver_binary_file_write()` | `write!(file; data=data, dims...)` |
+| Write | `binary_file.write(data, dims)` | `quiver_binary_file_write()` | `write!(file; data=data, dims...)` |
 | Get metadata | `binary_file.get_metadata()` | `quiver_binary_file_get_metadata()` | `get_metadata(file)` |
 | Get file path | `binary_file.get_file_path()` | `quiver_binary_file_get_file_path()` | `get_file_path(file)` |
 | Bin to CSV | `CSVConverter::bin_to_csv()` | `quiver_csv_converter_bin_to_csv()` | `bin_to_csv()` |
@@ -606,24 +639,25 @@ The transformation rules are mechanical. Given any C++ method name, you can deri
 
 ### Binding-Only Convenience Methods
 
-Julia, Dart, Lua, and JS provide additional convenience methods that compose core operations. These have no direct C++ or C API counterpart.
+The bindings provide additional convenience methods that compose core operations. These have no direct C++ or C API counterpart. (JS deliberately keeps a string-based datetime surface — no DateTime wrappers.)
 
-**DateTime wrappers (Julia and Dart only):**
+**DateTime wrappers (Julia, Dart, and Python):**
 
-|             Julia             |           Dart            |               Wraps               |
-| ----------------------------- | ------------------------- | --------------------------------- |
-| `read_scalar_date_time_by_id` | `readScalarDateTimeById`  | string read + date parsing        |
-| `read_vector_date_time_by_id` | `readVectorDateTimesById` | string vector read + date parsing |
-| `read_set_date_time_by_id`    | `readSetDateTimesById`    | string set read + date parsing    |
-| `query_date_time`             | `queryDateTime`           | string query + date parsing       |
+|             Julia             |           Dart            |             Python            |               Wraps               |
+| ----------------------------- | ------------------------- | ----------------------------- | --------------------------------- |
+| `read_scalar_date_time_by_id` | `readScalarDateTimeById`  | `read_scalar_date_time_by_id` | string read + date parsing        |
+| `read_vector_date_time_by_id` | `readVectorDateTimesById` | `read_vector_date_time_by_id` | string vector read + date parsing |
+| `read_set_date_time_by_id`    | `readSetDateTimesById`    | `read_set_date_time_by_id`    | string set read + date parsing    |
+| `query_date_time`             | `queryDateTime`           | `query_date_time`             | string query + date parsing       |
 
-**Composite read helpers (Julia, Dart, Lua, and JS):**
+**Composite read helpers (all five bindings):**
 
-|        Julia         |       Dart        |         Lua          |        JS         |                 Wraps                  |
-| -------------------- | ----------------- | -------------------- | ----------------- | -------------------------------------- |
-| `read_scalars_by_id` | `readScalarsById` | `read_scalars_by_id` | `readScalarsById` | `list_scalar_attributes` + typed reads |
-| `read_vectors_by_id` | `readVectorsById` | `read_vectors_by_id` | `readVectorsById` | `list_vector_groups` + typed reads     |
-| `read_sets_by_id`    | `readSetsById`    | `read_sets_by_id`    | `readSetsById`    | `list_set_groups` + typed reads        |
+|        Julia         |       Dart        |        Python        |         Lua          |        JS         |                 Wraps                  |
+| -------------------- | ----------------- | -------------------- | -------------------- | ----------------- | -------------------------------------- |
+| `read_scalars_by_id` | `readScalarsById` | `read_scalars_by_id` | `read_scalars_by_id` | `readScalarsById` | `list_scalar_attributes` + typed reads |
+| `read_vectors_by_id` | `readVectorsById` | `read_vectors_by_id` | `read_vectors_by_id` | `readVectorsById` | `list_vector_groups` + typed reads     |
+| `read_sets_by_id`    | `readSetsById`    | `read_sets_by_id`    | `read_sets_by_id`    | `readSetsById`    | `list_set_groups` + typed reads        |
+| `read_element_by_id` | `readElementById` | `read_element_by_id` | `read_element_by_id` | N/A               | scalars + vectors + sets merged        |
 
 **Relation map helpers (Julia only):** `bindings/julia/src/helper_maps.jl` builds
 relation maps (FK column discovery + label/id joins) on top of the core read API.
@@ -631,18 +665,18 @@ It is a documented Julia-only convenience for PSR's modeling tooling — a delib
 exception to the thin-bindings rule, kept in the binding because only Julia consumers
 use it.
 
-**Transaction block wrappers (Julia, Dart, and Lua):**
+**Transaction block wrappers (Julia, Dart, Python, and Lua):**
 
-| Julia | Dart | Lua | Wraps |
-|-------|------|-----|-------|
-| `transaction(db) do db...end` | `db.transaction((db) {...})` | `db:transaction(function(db)...end)` | begin + fn + commit/rollback |
+| Julia | Dart | Python | Lua | Wraps |
+|-------|------|--------|-----|-------|
+| `transaction(db) do db...end` | `db.transaction((db) {...})` | `with db.transaction():` | `db:transaction(function(db)...end)` | begin + fn + commit/rollback |
 
-**Multi-column group readers (Julia and Dart only):**
+**Multi-column group readers (Julia, Dart, and Python):**
 
-| Julia | Dart | Wraps |
-|-------|------|-------|
-| `read_vector_group_by_id` | `readVectorGroupById` | metadata + per-column vector reads |
-| `read_set_group_by_id` | `readSetGroupById` | metadata + per-column set reads |
+| Julia | Dart | Python | Wraps |
+|-------|------|--------|-------|
+| `read_vector_group_by_id` | `readVectorGroupById` | `read_vector_group_by_id` | metadata + per-column vector reads |
+| `read_set_group_by_id` | `readSetGroupById` | `read_set_group_by_id` | metadata + per-column set reads |
 
 ## Bindings
 
