@@ -12,6 +12,13 @@
 // function), so it is intentionally omitted here — re-add it as a `db:read_time_series_row` token
 // only after a quiverdb release whose binding exposes it.
 //
+// NOTE: the binary/expression subsystems (quiver.* globals + file:/expr: methods) are bound in
+// quiver repo HEAD (src/lua_runner.cpp, sol2) but are NOT in the shipped quiverdb 0.9.5 binding, and
+// they do unconfined filesystem I/O — documented below as HEAD-only + sandbox-disabled (same posture
+// as export_csv/import_csv). They are quiver.*/file:/expr: calls, not db:<name> tokens, so the drift
+// probe does not cover them; re-classify them as live only after a quiverdb release ships them and
+// the sandbox file policy allows it.
+//
 // FORMAT CONVENTION (load-bearing for the drift test): every method must appear at least once as
 // the literal token `db:<snake_case_name>`. Methods the agent must NOT call (the transaction
 // methods and export_csv/import_csv) are still listed as `db:<name>` tokens — annotated DO NOT
@@ -358,8 +365,49 @@ db:delete_element("Collection", item2)
 
 ---
 
+## Binary & expression subsystems
+
+> **HEAD-only + filesystem.** Bound in quiver repo HEAD (Lua via sol2) but NOT in the shipped
+> quiverdb 0.9.5 binding, and every call below reads/writes \`.qvr\`/\`.csv\` files at **unconfined
+> paths** — the same reason \`db:export_csv\`/\`db:import_csv\` are disabled here. Reference only until a
+> quiverdb release ships them and the sandbox file policy allows it.
+
+Dense N-dimensional \`float64\` arrays (\`.qvr\` + \`.toml\` sidecar) plus lazy arithmetic over them,
+under a global \`quiver\` table (not \`db\`). Mirrors the Julia surface; aggregation ops are strings
+(Lua has no enums); operators are \`+ - * /\` and unary \`-\`, with scalars allowed on either side.
+
+\`\`\`lua
+local md = quiver.metadata{
+    initial_datetime = "2025-01-01T00:00:00", unit = "MW",
+    labels = {"v1", "v2"}, dimensions = {"stage", "block"}, dimension_sizes = {4, 31},
+    time_dimensions = {"stage", "block"}, frequencies = {"monthly", "daily"},
+}
+local f = quiver.open_file(path, "w", md)          -- mode "r"/"w"; md required for "w"
+f:write({1.0, 2.0}, {stage = 1, block = 1})         -- data table, dims table
+f:close()
+local r = quiver.open_file(path, "r")
+local cell = r:read({stage = 1, block = 1})         -- { v1, v2 }; pass true as 2nd arg to allow NaN
+r:get_metadata(); r:get_file_path(); r:is_open()
+md:get_unit(); md:get_version(); md:get_initial_datetime()
+md:get_labels(); md:get_dimensions(); md:get_number_of_time_dimensions(); md:to_toml()
+quiver.metadata_from_toml(text); quiver.metadata_from_element(tbl)
+quiver.bin_to_csv(path)                              -- + false to keep time dims as columns
+quiver.csv_to_bin(path)
+
+local e = (quiver.expression(r) + 10.0) * 2.0        -- files auto-wrap; scalars either side
+e = quiver.abs(e); e = quiver.sqrt(e)                -- also quiver.log / quiver.exp
+e = quiver.ifelse(cond_e, then_e, else_e)
+e = e:aggregate("stage", "sum")                      -- sum/mean/min/max/percentile
+e = e:aggregate("stage", "percentile", 0.9)          -- percentile needs the fraction
+e = e:aggregate_agents("mean")                       -- collapse the label axis
+e = e:select_agents({"v2"}); e = e:rename_agents({v1 = "alpha"})
+e:save(out_path); e:metadata()
+\`\`\`
+
+---
+
 ## What Lua does *not* expose
 
-DateTime wrapper helpers (Lua uses ISO 8601 strings), the binary/expression subsystems (\`.qvr\`
-files and lazy expressions — Julia-only), and \`_by_id\` single-scalar variants (use the composite
-by-id readers or the bulk readers instead).`;
+DateTime wrapper helpers (Lua uses ISO 8601 strings) and \`_by_id\` single-scalar variants (use the
+composite by-id readers or the bulk readers instead). The binary/expression subsystems ARE bound in
+Lua (see above) but are filesystem-based and HEAD-only — see the availability note there.`;
