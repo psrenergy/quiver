@@ -186,6 +186,10 @@ Implementation conventions in `lua_runner.cpp`:
 - Lua→C++ converters **throw on unsupported value types** (booleans, functions, ...) — never
   skip silently; a skipped positional query parameter would shift the rest and bind NULL to the
   trailing placeholder.
+- `update_time_series_group_lua` transpose **throws on non-array / all-empty columns** rather than
+  producing zero rows (which the C++ core would treat as the documented `{}`-clears path) — a
+  scalar passed where an array is expected, or named-but-empty columns, is a silent-clear trap.
+  Only a genuinely empty `{}` (no columns) clears.
 - Script errors surface as `"Failed to run Lua script: ..."` (root Pattern 3).
 
 ## Binary Subsystem

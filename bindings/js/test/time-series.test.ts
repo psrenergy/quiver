@@ -100,6 +100,48 @@ describe("readTimeSeriesGroup / updateTimeSeriesGroup (single-column)", () => {
       db.close();
     }
   });
+
+  test("throws on jagged columns instead of corrupting the C API call", () => {
+    const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
+    try {
+      const id = db.createElement("Collection", { label: "Item1" });
+
+      expect(() =>
+        db.updateTimeSeriesGroup("Collection", "data", id, {
+          date_time: ["2024-01-01", "2024-01-02"],
+          value: [1.5],
+        }),
+      ).toThrow();
+    } finally {
+      db.close();
+    }
+  });
+
+  test("throws on named-but-empty columns instead of silently clearing", () => {
+    const db = Database.fromSchema(":memory:", COLLECTIONS_SCHEMA);
+    try {
+      const id = db.createElement("Collection", { label: "Item1" });
+
+      db.updateTimeSeriesGroup("Collection", "data", id, {
+        date_time: ["2024-01-01"],
+        value: [1.5],
+      });
+
+      expect(() =>
+        db.updateTimeSeriesGroup("Collection", "data", id, {
+          date_time: [],
+          value: [],
+        }),
+      ).toThrow();
+
+      // The existing rows must still be intact (no silent delete).
+      const result = db.readTimeSeriesGroup("Collection", "data", id);
+      expect(result.date_time).toEqual(["2024-01-01"]);
+      expect(result.value).toEqual([1.5]);
+    } finally {
+      db.close();
+    }
+  });
 });
 
 describe("readTimeSeriesGroup / updateTimeSeriesGroup (multi-column)", () => {

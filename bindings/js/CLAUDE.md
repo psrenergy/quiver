@@ -48,6 +48,10 @@ biome.json        # Lint/format config
   element with `DataView.setBigInt64`, so `bigint` inputs (scalar or array) are preserved
   exactly, never coerced through `Number`. Read paths return `number` (converted via `Number()`
   after the FFI call) — the deliberately simple surface.
+- **`updateTimeSeriesGroup` validates before marshalling** (`src/time-series.ts`): rejects jagged
+  columns and named-but-empty columns (`rowCount === 0`) with a `QuiverError`. This is load-bearing
+  — an empty column would otherwise marshal a `null` data pointer that the C API dereferences
+  against the first column's `row_count`. Pass `{}` (no columns) to clear the group.
 - **Test/lint/format**: `bun test test`, `bun run lint`, `bun run format` (biome, project-pinned
   version). No permission flags needed (Bun has none — don't carry over Deno habits). There is
   pre-existing lint debt in untouched files — fix only what your change orphans, don't drive-by
