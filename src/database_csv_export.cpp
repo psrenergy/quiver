@@ -1,6 +1,7 @@
 #include "database_impl.h"
 #include "quiver/options.h"
 #include "quiver/schema.h"
+#include "utils/csv_format.h"
 #include "utils/datetime.h"
 
 #include <algorithm>
@@ -21,8 +22,11 @@ namespace quiver {
 // NULL -> empty string, integers check enum_labels,
 // floats use %g for clean output, strings apply DateTime formatting.
 // rapidcsv handles CSV escaping/quoting via auto-quote.
-static std::string
-value_to_csv_string(const Value& value, const std::string& column_name, DataType data_type, const CSVOptions& options) {
+static std::string value_to_csv_string(const Value& value,
+                                       const std::string& column_name,
+                                       DataType data_type,
+                                       const CSVOptions& options,
+                                       char decimal_separator) {
     // NULL -> empty field
     if (std::holds_alternative<std::nullptr_t>(value)) {
         return "";
@@ -42,11 +46,17 @@ value_to_csv_string(const Value& value, const std::string& column_name, DataType
         return std::to_string(int_val);
     }
 
-    // Float: use snprintf with %g for clean output (no trailing zeros)
+    // Float: use snprintf with %g for clean output (no trailing zeros). Emit the
+    // locale decimal separator so a ',' locale writes "1,5" (paired with a ';'
+    // field delimiter), which Excel then reads back as a number.
     if (std::holds_alternative<double>(value)) {
         char buf[64];
         std::snprintf(buf, sizeof(buf), "%g", std::get<double>(value));
-        return std::string(buf);
+        std::string formatted(buf);
+        if (decimal_separator == ',') {
+            std::replace(formatted.begin(), formatted.end(), '.', ',');
+        }
+        return formatted;
     }
 
     // String (may be DateTime)
@@ -62,17 +72,18 @@ value_to_csv_string(const Value& value, const std::string& column_name, DataType
 }
 
 // Build a rapidcsv Document with column headers enabled and LF-only line endings.
-// SeparatorParams: comma separator, no trim, no CR (LF only), quoted linebreaks, auto-quote, double-quote char.
-static rapidcsv::Document make_csv_document() {
+// SeparatorParams: given delimiter, no trim, no CR (LF only), quoted linebreaks, auto-quote, double-quote char.
+static rapidcsv::Document make_csv_document(char field_delimiter) {
     return rapidcsv::Document(
-        "", rapidcsv::LabelParams(0, -1), rapidcsv::SeparatorParams(',', false, false, true, true, '"'));
+        "", rapidcsv::LabelParams(0, -1), rapidcsv::SeparatorParams(field_delimiter, false, false, true, true, '"'));
 }
 
 // Save a rapidcsv Document to a file path via stringstream intermediary.
-// Uses binary mode to prevent Windows CRLF conversion.
-static void save_csv_document(rapidcsv::Document& doc, const std::string& path) {
+// Writes a sep= header matching the field delimiter so Excel selects the right
+// column separator on open. Uses binary mode to prevent Windows CRLF conversion.
+static void save_csv_document(rapidcsv::Document& doc, const std::string& path, char field_delimiter) {
     std::ostringstream oss;
-    oss << "sep=,\n";
+    oss << (field_delimiter == ';' ? "sep=;\n" : "sep=,\n");
     doc.Save(oss);
 
     std::ofstream file(path, std::ios::binary);
@@ -88,8 +99,10 @@ static void write_csv(const Result& data_result,
                       const std::vector<std::string>& csv_columns,
                       const std::unordered_map<std::string, DataType>& type_map,
                       const CSVOptions& options,
-                      const std::string& path) {
-    auto doc = make_csv_document();
+                      const std::string& path,
+                      char field_delimiter,
+                      char decimal_separator) {
+    auto doc = make_csv_document(field_delimiter);
 
     for (size_t i = 0; i < csv_columns.size(); ++i) {
         doc.SetColumnName(i, csv_columns[i]);
@@ -106,12 +119,13 @@ static void write_csv(const Result& data_result,
     size_t row_idx = 0;
     for (const auto& row : data_result) {
         for (size_t i = 0; i < csv_columns.size(); ++i) {
-            doc.SetCell<std::string>(i, row_idx, value_to_csv_string(row[i], csv_columns[i], col_types[i], options));
+            doc.SetCell<std::string>(
+                i, row_idx, value_to_csv_string(row[i], csv_columns[i], col_types[i], options, decimal_separator));
         }
         ++row_idx;
     }
 
-    save_csv_document(doc, path);
+    save_csv_document(doc, path, field_delimiter);
 }
 
 void Database::export_csv(const std::string& collection,
@@ -125,6 +139,11 @@ void Database::export_csv(const std::string& collection,
     if (!parent.empty()) {
         fs::create_directories(parent);
     }
+
+    // Match the output to the OS locale so Excel reads numbers correctly: a ','
+    // decimal separator pairs with a ';' field delimiter (and '.' with ',').
+    const char decimal_separator = csv_format::locale_decimal_separator();
+    const char field_delimiter = csv_format::field_delimiter_for_decimal(decimal_separator);
 
     if (group.empty()) {
         // Scalar export
@@ -158,7 +177,7 @@ void Database::export_csv(const std::string& collection,
         }
 
         auto data_result = execute("SELECT " + select_cols + " FROM " + collection + " ORDER BY rowid");
-        write_csv(data_result, csv_columns, type_map, options, path);
+        write_csv(data_result, csv_columns, type_map, options, path, field_delimiter, decimal_separator);
     } else {
         // Group export
         impl_->require_collection(collection, "export_csv");
@@ -246,7 +265,7 @@ void Database::export_csv(const std::string& collection,
                             " C ON C.id = G.id " + order_clause;
 
         auto data_result = execute(query);
-        write_csv(data_result, csv_columns, type_map, options, path);
+        write_csv(data_result, csv_columns, type_map, options, path, field_delimiter, decimal_separator);
     }
 }
 

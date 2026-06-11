@@ -1301,6 +1301,33 @@ TEST(DatabaseCSV, ImportCSV_Vector_TrailingEmptyColumns) {
 }
 
 // ============================================================================
+// import_csv: locale decimal / field separators
+// ============================================================================
+
+// A ';'-delimited file (what a comma-locale Excel writes) uses ',' decimals
+// across multiple numeric columns. The old ';'->',' swap corrupted this; parsing
+// with the real delimiter keeps each numeric column intact.
+TEST(DatabaseCSV, ImportCSV_Semicolon_CommaDecimals_SepHeader) {
+    auto db = make_db();
+
+    auto csv_path = temp_csv("ImportSemicolonCommaDecimals");
+    write_csv_file(csv_path.string(),
+                   "sep=;\r\n"
+                   "label;name;status;price;date_created;notes\r\n"
+                   "Wind;WindPower;1;1000,5;;\r\n"
+                   "Solar;SolarPV;2;800,75;;\r\n");
+
+    db.import_csv("Items", "", csv_path.string());
+
+    EXPECT_EQ(db.read_scalar_integer_by_id("Items", "status", 1).value(), 1);
+    EXPECT_NEAR(db.read_scalar_float_by_id("Items", "price", 1).value(), 1000.5, 0.001);
+    EXPECT_EQ(db.read_scalar_integer_by_id("Items", "status", 2).value(), 2);
+    EXPECT_NEAR(db.read_scalar_float_by_id("Items", "price", 2).value(), 800.75, 0.001);
+
+    fs::remove(csv_path);
+}
+
+// ============================================================================
 // import_csv: label-identifier mode must preserve element ids
 // ============================================================================
 
@@ -1407,6 +1434,149 @@ TEST(DatabaseCSV, ImportCSV_Scalar_MixedNewAndExistingLabels) {
     // The child still references the same parent.
     auto cid = db.query_integer("SELECT id FROM Child WHERE label = ?", {std::string("Child B")}).value();
     EXPECT_EQ(db.read_scalar_integer_by_id("Child", "parent_id", cid).value(), id_b);
+
+    fs::remove(csv_path);
+}
+
+// With no sep= line the delimiter is inferred from the header row.
+TEST(DatabaseCSV, ImportCSV_Semicolon_CommaDecimals_NoSepHeader) {
+    auto db = make_db();
+
+    auto csv_path = temp_csv("ImportSemicolonNoSep");
+    write_csv_file(csv_path.string(),
+                   "label;name;status;price;date_created;notes\r\n"
+                   "Geo;Geothermal;0;1234,56;;\r\n");
+
+    db.import_csv("Items", "", csv_path.string());
+
+    EXPECT_NEAR(db.read_scalar_float_by_id("Items", "price", 1).value(), 1234.56, 0.001);
+
+    fs::remove(csv_path);
+}
+
+// Excel for Mac / hand-edited files may use LF (or legacy bare CR) instead of
+// CRLF; the sep= line must still strip and rows must still split.
+TEST(DatabaseCSV, ImportCSV_Semicolon_LFLineEndings) {
+    auto db = make_db();
+
+    auto csv_path = temp_csv("ImportSemicolonLF");
+    write_csv_file(csv_path.string(),
+                   "sep=;\n"
+                   "label;name;status;price;date_created;notes\n"
+                   "Tidal;Tidal;0;42,5;;\n");
+
+    db.import_csv("Items", "", csv_path.string());
+    EXPECT_NEAR(db.read_scalar_float_by_id("Items", "price", 1).value(), 42.5, 0.001);
+
+    fs::remove(csv_path);
+}
+
+TEST(DatabaseCSV, ImportCSV_Semicolon_CRLineEndings) {
+    auto db = make_db();
+
+    auto csv_path = temp_csv("ImportSemicolonCR");
+    write_csv_file(csv_path.string(),
+                   "sep=;\r"
+                   "label;name;status;price;date_created;notes\r"
+                   "Wave;Wave;0;7,25;;\r");
+
+    db.import_csv("Items", "", csv_path.string());
+    EXPECT_NEAR(db.read_scalar_float_by_id("Items", "price", 1).value(), 7.25, 0.001);
+
+    fs::remove(csv_path);
+}
+
+// A comma-locale Excel writes '.' as the thousands separator: "1.234.567,89".
+// Grouping must be stripped, not parsed as decimal points.
+TEST(DatabaseCSV, ImportCSV_Semicolon_ThousandsSeparators) {
+    auto db = make_db();
+
+    auto csv_path = temp_csv("ImportSemicolonThousands");
+    write_csv_file(csv_path.string(),
+                   "sep=;\r\n"
+                   "label;name;status;price;date_created;notes\r\n"
+                   "Big;BigPlant;0;1.234.567,89;;\r\n");
+
+    db.import_csv("Items", "", csv_path.string());
+    EXPECT_NEAR(db.read_scalar_float_by_id("Items", "price", 1).value(), 1234567.89, 0.001);
+
+    fs::remove(csv_path);
+}
+
+// Regression: on a ';' file "1.234" means 1234, not 1.234 — the '.' is grouping.
+TEST(DatabaseCSV, ImportCSV_Semicolon_GroupedIntegerNotDecimal) {
+    auto db = make_db();
+
+    auto csv_path = temp_csv("ImportSemicolonGroupedInt");
+    write_csv_file(csv_path.string(),
+                   "sep=;\r\n"
+                   "label;name;status;price;date_created;notes\r\n"
+                   "Grp;Grouped;0;1.234;;\r\n");
+
+    db.import_csv("Items", "", csv_path.string());
+    EXPECT_NEAR(db.read_scalar_float_by_id("Items", "price", 1).value(), 1234.0, 0.001);
+
+    fs::remove(csv_path);
+}
+
+// A '.'-locale Excel writes ',' as the thousands separator and quotes the cell so
+// the comma is not read as a column break: "1,000.5".
+TEST(DatabaseCSV, ImportCSV_Comma_QuotedThousandsSeparators) {
+    auto db = make_db();
+
+    auto csv_path = temp_csv("ImportCommaQuotedThousands");
+    write_csv_file(csv_path.string(),
+                   "sep=,\r\n"
+                   "label,name,status,price,date_created,notes\r\n"
+                   "US,USPlant,0,\"1,000.5\",,\r\n");
+
+    db.import_csv("Items", "", csv_path.string());
+    EXPECT_NEAR(db.read_scalar_float_by_id("Items", "price", 1).value(), 1000.5, 0.001);
+
+    fs::remove(csv_path);
+}
+
+// Two adjacent numeric columns in a group (temperature REAL, humidity INTEGER) on
+// a ';' file with a comma decimal — the case the old ';'->',' swap corrupted.
+TEST(DatabaseCSV, ImportCSV_Semicolon_TimeSeriesMultiColumn) {
+    auto db = make_db();
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item1")).set("name", std::string("Alpha"));
+    db.create_element("Items", e1);
+
+    auto csv_path = temp_csv("ImportSemicolonTS");
+    write_csv_file(csv_path.string(),
+                   "sep=;\r\n"
+                   "id;date_time;temperature;humidity\r\n"
+                   "Item1;2024-01-01T10:00:00;22,5;60\r\n");
+
+    db.import_csv("Items", "readings", csv_path.string());
+
+    auto rows = db.read_time_series_group("Items", "readings", 1);
+    ASSERT_EQ(rows.size(), 1u);
+    EXPECT_NEAR(std::get<double>(rows[0].at("temperature")), 22.5, 0.001);
+    EXPECT_EQ(std::get<int64_t>(rows[0].at("humidity")), 60);
+
+    fs::remove(csv_path);
+}
+
+// export_csv picks the separators for the host locale; import reads them back
+// symmetrically, so the round-trip preserves decimal values on any locale.
+TEST(DatabaseCSV, ImportCSV_LocaleRoundTrip_PreservesDecimals) {
+    auto db = make_db();
+
+    quiver::Element e1;
+    e1.set("label", std::string("Hydro")).set("name", std::string("Hydro")).set("price", 1500.25);
+    db.create_element("Items", e1);
+
+    auto csv_path = temp_csv("ImportLocaleRoundTrip");
+    db.export_csv("Items", "", csv_path.string());
+
+    auto db2 = make_db();
+    db2.import_csv("Items", "", csv_path.string());
+
+    EXPECT_NEAR(db2.read_scalar_float_by_id("Items", "price", 1).value(), 1500.25, 0.001);
 
     fs::remove(csv_path);
 }
