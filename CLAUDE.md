@@ -41,7 +41,7 @@ Top-level configs: `CMakePresets.json`, `.clang-format`, `.clang-tidy`, `.clangd
 - **Homogeneity**: Binding interfaces must be consistent and intuitive. API surface should feel uniform across wrappers.
 - **Ownership**: RAII used strictly. Ownership of pointers/resources must be explicit and unambiguous.
 - **Constraint**: Be critical. If code is already optimal, state that clearly. Do not invent useless suggestions just to provide output.
-- All public C++ methods should be bound to C API, then to Julia/Dart/Python/JS/Lua (exception: the binary/expression subsystems are Julia-only by decision)
+- All public C++ methods should be bound to C API, then to Julia/Dart/Python/JS/Lua (exception: the binary/expression subsystems are exposed only in Julia and Lua by decision — not Dart/Python/JS)
 - All *.sql test schemas in `tests/schemas/`, bindings reference from there
 - **Self-Updating**: Keep the CLAUDE.md nearest to your change up to date (root + `src/`, `src/c/`, `bindings/{julia,dart,python,js}/`, `tests/`, `.github/`)
 
@@ -53,10 +53,12 @@ Settled questions — don't relitigate without the user; each was decided delibe
   canonical cross-binding shape. The C++ core keeps row-shaped `vector<map<string, Value>>`.
 - **`DatabaseOptions`** (`read_only`, `console_level`) is exposed as optional parameters on the
   open/factory methods of every binding.
-- **Binary + expression subsystems are Julia-only.** Dart, Python, and JS deliberately do not
-  expose them (no current consumer); the tests-at-every-layer rule has this one documented
-  exception. `helper_maps.jl` is a second documented Julia-only exception (see convenience
-  methods below).
+- **Binary + expression subsystems are exposed in Julia and Lua only.** Dart, Python, and JS
+  deliberately do not expose them (no FFI consumer); the tests-at-every-layer rule has this one
+  documented exception. Lua binds the C++ classes directly via sol2 (`src/lua_runner.cpp`), so it
+  uses a `quiver.*` namespace + method syntax + string aggregation operations (see cross-layer
+  table). `helper_maps.jl` is a second documented Julia-only exception (see convenience methods
+  below).
 - **Int-for-REAL coercion lives in C++** (`value_matches_type` accepts int64 for REAL columns in
   time-series writes); bindings never coerce schema-dependently.
 - **Migration `down_sql` is a required feature** — do not remove the down path.
@@ -292,11 +294,11 @@ Builder for element creation with fluent API:
 Element().set("label", "Item 1").set("value", 42).set("tags", {"a", "b"})
 ```
 
-### Binary & Expression Subsystems (Julia-only)
+### Binary & Expression Subsystems (Julia + Lua)
 `.qvr` binary file I/O with `.toml` metadata sidecars (`BinaryFile`, `CSVConverter`,
 `BinaryMetadata`) and lazy arithmetic expressions over them (`Expression` DAGs with
-broadcast, aggregation, and label projection, materialized via `save()`). Full reference:
-`src/CLAUDE.md`.
+broadcast, aggregation, and label projection, materialized via `save()`). Exposed in Julia
+(FFI) and Lua (sol2). Full reference: `src/CLAUDE.md`.
 
 ### LuaRunner Class
 Executes Lua scripts against a database; the `db` userdata exposes the same API surface
@@ -339,21 +341,29 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | `export_csv()` |
 | Describe | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |
 
-**Binary cross-layer examples (Julia-only subsystem):**
+**Binary cross-layer examples (Julia + Lua subsystem):**
 
-| Category | C++ | C API | Julia |
-|----------|-----|-------|-------|
-| Open file | `BinaryFile::open_file(path, mode, md?)` | `quiver_binary_file_open_file()` | `open_file(path; mode, metadata=nothing)` |
-| Close | (destructor) | `quiver_binary_file_close()` | `close!(file)` |
-| Read | `binary_file.read(dims)` | `quiver_binary_file_read()` | `read(file; dims...)` |
-| Write | `binary_file.write(data, dims)` | `quiver_binary_file_write()` | `write!(file; data=data, dims...)` |
-| Get metadata | `binary_file.get_metadata()` | `quiver_binary_file_get_metadata()` | `get_metadata(file)` |
-| Get file path | `binary_file.get_file_path()` | `quiver_binary_file_get_file_path()` | `get_file_path(file)` |
-| Bin to CSV | `CSVConverter::bin_to_csv()` | `quiver_csv_converter_bin_to_csv()` | `bin_to_csv()` |
-| CSV to bin | `CSVConverter::csv_to_bin()` | `quiver_csv_converter_csv_to_bin()` | `csv_to_bin()` |
-| Metadata builder | `BinaryMetadata{}` | `quiver_binary_metadata_create()` | `Metadata(; kwargs...)` |
-| Metadata from TOML | `BinaryMetadata::from_toml_content()` | `quiver_binary_metadata_from_toml()` | `from_toml_content()` |
-| Metadata from Element | `BinaryMetadata::from_element()` | `quiver_binary_metadata_from_element()` | `from_element()` |
+| Category | C++ | C API | Julia | Lua |
+|----------|-----|-------|-------|-----|
+| Open file | `BinaryFile::open_file(path, mode, md?)` | `quiver_binary_file_open_file()` | `open_file(path; mode, metadata=nothing)` | `quiver.open_file(path, mode, md?)` |
+| Close | (destructor) | `quiver_binary_file_close()` | `close!(file)` | `file:close()` |
+| Read | `binary_file.read(dims)` | `quiver_binary_file_read()` | `read(file; dims...)` | `file:read(dims, allow_nulls?)` |
+| Write | `binary_file.write(data, dims)` | `quiver_binary_file_write()` | `write!(file; data=data, dims...)` | `file:write(data, dims)` |
+| Get metadata | `binary_file.get_metadata()` | `quiver_binary_file_get_metadata()` | `get_metadata(file)` | `file:get_metadata()` |
+| Get file path | `binary_file.get_file_path()` | `quiver_binary_file_get_file_path()` | `get_file_path(file)` | `file:get_file_path()` |
+| Bin to CSV | `CSVConverter::bin_to_csv()` | `quiver_csv_converter_bin_to_csv()` | `bin_to_csv()` | `quiver.bin_to_csv(path, aggregate?)` |
+| CSV to bin | `CSVConverter::csv_to_bin()` | `quiver_csv_converter_csv_to_bin()` | `csv_to_bin()` | `quiver.csv_to_bin(path)` |
+| Metadata builder | `BinaryMetadata{}` | `quiver_binary_metadata_create()` | `Metadata(; kwargs...)` | `quiver.metadata{kwargs}` |
+| Metadata from TOML | `BinaryMetadata::from_toml_content()` | `quiver_binary_metadata_from_toml()` | `from_toml_content()` | `quiver.metadata_from_toml()` |
+| Metadata from Element | `BinaryMetadata::from_element()` | `quiver_binary_metadata_from_element()` | `from_element()` | `quiver.metadata_from_element()` |
+
+The Lua **expression** surface mirrors Julia's: build from a file with `quiver.expression(file)` (or
+operate on files directly), compose with the `+ - * /` operators and unary `-` (metamethods, with
+scalar-on-either-side and `file_a + file_b` both supported), unary math via `quiver.abs/sqrt/log/exp`,
+`quiver.ifelse(cond, then, else)`, and the methods `expr:aggregate(dim, op[, p])` /
+`expr:aggregate_agents(op[, p])` / `expr:select_agents(labels)` / `expr:rename_agents({old=new})` /
+`expr:save(path)` / `expr:metadata()`. Aggregation `op` is a **string**
+(`"sum"/"mean"/"min"/"max"/"percentile"`) — Lua has no enums, mirroring JS's string-based surface.
 
 ### Binding-Only Convenience Methods
 

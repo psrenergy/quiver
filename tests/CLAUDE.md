@@ -15,7 +15,9 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   `_update`, `_delete`, `_query`, `_time_series`, `_transaction`, `_errors`, `_csv_export`,
   `_csv_import`, `_all_types`, `_fk`). The shared `LuaRunnerTest` fixture and common include
   prelude live in `test_lua_runner.h`; the single-use `LuaRunnerAllTypesTest` / `LuaRunnerFkTest`
-  fixtures stay local to their files.
+  fixtures stay local to their files. The Lua binary/expression subsystem bindings are covered by
+  `test_lua_binary.cpp` and `test_lua_expression.cpp` (their fixtures write `.qvr` temp files, like
+  `test_expression.cpp`).
 - Binary subsystem: `test_binary_file.cpp`, `test_binary_metadata.cpp`,
   `test_binary_time_properties.cpp`, `test_csv_converter.cpp`, `test_iteration.cpp`
 - Expression subsystem: `test_expression.cpp`
