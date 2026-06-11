@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import pytest
 
-from quiverdb import Database
-
+from quiverdb import Database, QuiverError
 
 # -- Helpers ------------------------------------------------------------------
 
@@ -20,11 +21,23 @@ def _create_collection_element(db: Database, label: str) -> int:
     return db.create_element("Collection", label=label)
 
 
-SAMPLE_ROWS = [
-    {"date_time": "2024-01-01T00:00:00", "temperature": 20.5, "humidity": 65, "status": "normal"},
-    {"date_time": "2024-01-02T00:00:00", "temperature": 21.3, "humidity": 70, "status": "normal"},
-    {"date_time": "2024-01-03T00:00:00", "temperature": 19.8, "humidity": 55, "status": "low"},
-]
+def _utc(year: int, month: int, day: int) -> datetime:
+    return datetime(year, month, day, tzinfo=timezone.utc)
+
+
+SAMPLE_DATA = {
+    "date_time": ["2024-01-01T00:00:00", "2024-01-02T00:00:00", "2024-01-03T00:00:00"],
+    "temperature": [20.5, 21.3, 19.8],
+    "humidity": [65, 70, 55],
+    "status": ["normal", "normal", "low"],
+}
+
+SAMPLE_READBACK = {
+    "date_time": [_utc(2024, 1, 1), _utc(2024, 1, 2), _utc(2024, 1, 3)],
+    "temperature": [20.5, 21.3, 19.8],
+    "humidity": [65, 70, 55],
+    "status": ["normal", "normal", "low"],
+}
 
 
 # -- Read tests (mixed_time_series_db: Sensor schema) -------------------------
@@ -32,50 +45,70 @@ SAMPLE_ROWS = [
 
 class TestReadTimeSeriesGroup:
     def test_read_time_series_group_empty(self, mixed_time_series_db: Database) -> None:
-        """Read from element with no rows returns empty list."""
+        """Read from element with no rows returns empty dict."""
         eid = _create_sensor(mixed_time_series_db, "S1")
         result = mixed_time_series_db.read_time_series_group("Sensor", "readings", eid)
-        assert result == []
+        assert result == {}
 
     def test_read_time_series_group_single_row(self, mixed_time_series_db: Database) -> None:
-        """Write one row, read back, verify all column types correct."""
+        """Write one row, read back, verify all column values."""
         eid = _create_sensor(mixed_time_series_db, "S1")
-        row = {"date_time": "2024-01-01T00:00:00", "temperature": 20.5, "humidity": 65, "status": "normal"}
-        mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, [row])
+        data = {
+            "date_time": ["2024-01-01T00:00:00"],
+            "temperature": [20.5],
+            "humidity": [65],
+            "status": ["normal"],
+        }
+        mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, data)
 
         result = mixed_time_series_db.read_time_series_group("Sensor", "readings", eid)
-        assert len(result) == 1
-        assert result[0] == row
+        assert result == {
+            "date_time": [_utc(2024, 1, 1)],
+            "temperature": [20.5],
+            "humidity": [65],
+            "status": ["normal"],
+        }
 
     def test_read_time_series_group_multiple_rows(self, mixed_time_series_db: Database) -> None:
         """Write multiple rows, read back, verify ordering and all values."""
         eid = _create_sensor(mixed_time_series_db, "S1")
-        mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, SAMPLE_ROWS)
+        mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, SAMPLE_DATA)
 
         result = mixed_time_series_db.read_time_series_group("Sensor", "readings", eid)
-        assert len(result) == 3
-        assert result == SAMPLE_ROWS
+        assert result == SAMPLE_READBACK
 
     def test_read_time_series_group_column_order(self, mixed_time_series_db: Database) -> None:
         """Verify dimension column (date_time) comes first in dict key order."""
         eid = _create_sensor(mixed_time_series_db, "S1")
-        mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, SAMPLE_ROWS[:1])
+        mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, SAMPLE_DATA)
 
         result = mixed_time_series_db.read_time_series_group("Sensor", "readings", eid)
-        keys = list(result[0].keys())
-        assert keys[0] == "date_time"
+        assert next(iter(result)) == "date_time"
 
     def test_read_time_series_group_types(self, mixed_time_series_db: Database) -> None:
-        """Verify int for INTEGER, float for FLOAT, str for STRING/DATE_TIME columns."""
+        """Verify datetime for the dimension column and schema types for values."""
         eid = _create_sensor(mixed_time_series_db, "S1")
-        mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, SAMPLE_ROWS[:1])
+        mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, SAMPLE_DATA)
 
         result = mixed_time_series_db.read_time_series_group("Sensor", "readings", eid)
-        row = result[0]
-        assert type(row["date_time"]) is str  # DATE_TIME -> str
-        assert type(row["temperature"]) is float  # FLOAT -> float
-        assert type(row["humidity"]) is int  # INTEGER -> int
-        assert type(row["status"]) is str  # STRING -> str
+        assert type(result["date_time"][0]) is datetime  # dimension -> datetime
+        assert type(result["temperature"][0]) is float  # FLOAT -> float
+        assert type(result["humidity"][0]) is int  # INTEGER -> int
+        assert type(result["status"][0]) is str  # STRING -> str
+
+    def test_update_time_series_group_accepts_datetime_values(self, mixed_time_series_db: Database) -> None:
+        """datetime objects in the dimension column are formatted automatically."""
+        eid = _create_sensor(mixed_time_series_db, "S1")
+        data = {
+            "date_time": [datetime(2024, 1, 1)],
+            "temperature": [20.5],
+            "humidity": [65],
+            "status": ["normal"],
+        }
+        mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, data)
+
+        result = mixed_time_series_db.read_time_series_group("Sensor", "readings", eid)
+        assert result["date_time"] == [_utc(2024, 1, 1)]
 
 
 # -- Write tests (mixed_time_series_db: Sensor schema) ------------------------
@@ -83,69 +116,94 @@ class TestReadTimeSeriesGroup:
 
 class TestUpdateTimeSeriesGroup:
     def test_update_time_series_group_round_trip(self, mixed_time_series_db: Database) -> None:
-        """Write rows, read back, assert exact match."""
+        """Write columns, read back, assert exact match."""
         eid = _create_sensor(mixed_time_series_db, "S1")
-        mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, SAMPLE_ROWS)
+        mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, SAMPLE_DATA)
 
         result = mixed_time_series_db.read_time_series_group("Sensor", "readings", eid)
-        assert result == SAMPLE_ROWS
+        assert result == SAMPLE_READBACK
 
     def test_update_time_series_group_clear(self, mixed_time_series_db: Database) -> None:
-        """Write rows, then update with empty list, read back returns empty."""
+        """Write rows, then update with empty dict, read back returns empty."""
         eid = _create_sensor(mixed_time_series_db, "S1")
-        mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, SAMPLE_ROWS)
-        mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, [])
+        mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, SAMPLE_DATA)
+        mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, {})
 
         result = mixed_time_series_db.read_time_series_group("Sensor", "readings", eid)
-        assert result == []
+        assert result == {}
 
     def test_update_time_series_group_overwrite(self, mixed_time_series_db: Database) -> None:
         """Write rows, write different rows, read back returns only new rows."""
         eid = _create_sensor(mixed_time_series_db, "S1")
-        mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, SAMPLE_ROWS)
+        mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, SAMPLE_DATA)
 
-        new_rows = [
-            {"date_time": "2024-06-01T00:00:00", "temperature": 30.0, "humidity": 80, "status": "hot"},
-        ]
-        mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, new_rows)
+        new_data = {
+            "date_time": ["2024-06-01T00:00:00"],
+            "temperature": [30.0],
+            "humidity": [80],
+            "status": ["hot"],
+        }
+        mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, new_data)
 
         result = mixed_time_series_db.read_time_series_group("Sensor", "readings", eid)
-        assert len(result) == 1
-        assert result == new_rows
+        assert result["temperature"] == [30.0]
+        assert result["status"] == ["hot"]
 
 
 # -- Validation tests ----------------------------------------------------------
 
 
 class TestTimeSeriesValidation:
-    def test_update_time_series_group_missing_column(self, mixed_time_series_db: Database) -> None:
-        """Omit a column from row dict, expect ValueError."""
+    def test_update_time_series_group_mismatched_lengths(self, mixed_time_series_db: Database) -> None:
+        """Column lists of differing lengths raise ValueError before the FFI call."""
         eid = _create_sensor(mixed_time_series_db, "S1")
-        bad_row = {"date_time": "2024-01-01T00:00:00", "temperature": 20.5, "humidity": 65}
-        # Missing "status" column
-        with pytest.raises(ValueError, match="missing column 'status'"):
-            mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, [bad_row])
+        bad_data = {
+            "date_time": ["2024-01-01T00:00:00", "2024-01-02T00:00:00"],
+            "temperature": [20.5],
+            "humidity": [65, 70],
+            "status": ["normal", "normal"],
+        }
+        with pytest.raises(ValueError, match="same length"):
+            mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, bad_data)
 
-    def test_update_time_series_group_wrong_type_int_for_float(self, mixed_time_series_db: Database) -> None:
-        """Pass int where float expected, expect TypeError."""
+    def test_update_time_series_group_int_for_float_column(self, mixed_time_series_db: Database) -> None:
+        """Integers are accepted for REAL columns (converted on insert)."""
         eid = _create_sensor(mixed_time_series_db, "S1")
-        bad_row = {"date_time": "2024-01-01T00:00:00", "temperature": 20, "humidity": 65, "status": "normal"}
-        with pytest.raises(TypeError, match="Column 'temperature' expects float, got int"):
-            mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, [bad_row])
+        data = {
+            "date_time": ["2024-01-01T00:00:00"],
+            "temperature": [20],
+            "humidity": [65],
+            "status": ["normal"],
+        }
+        mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, data)
+
+        result = mixed_time_series_db.read_time_series_group("Sensor", "readings", eid)
+        assert result["temperature"] == [20.0]
 
     def test_update_time_series_group_wrong_type_str_for_int(self, mixed_time_series_db: Database) -> None:
-        """Pass str where int expected, expect TypeError."""
+        """Strings for an INTEGER column are rejected by the C++ layer."""
         eid = _create_sensor(mixed_time_series_db, "S1")
-        bad_row = {"date_time": "2024-01-01T00:00:00", "temperature": 20.5, "humidity": "65", "status": "normal"}
-        with pytest.raises(TypeError, match="Column 'humidity' expects int, got str"):
-            mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, [bad_row])
+        bad_data = {
+            "date_time": ["2024-01-01T00:00:00"],
+            "temperature": [20.5],
+            "humidity": ["65"],
+            "status": ["normal"],
+        }
+        with pytest.raises(QuiverError, match="column 'humidity' has type INTEGER but received TEXT"):
+            mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, bad_data)
 
-    def test_update_time_series_group_wrong_type_bool_for_int(self, mixed_time_series_db: Database) -> None:
-        """Pass bool where int expected, expect TypeError (strict type check)."""
+    def test_update_time_series_group_unknown_column(self, mixed_time_series_db: Database) -> None:
+        """Columns that do not exist in the schema are rejected by the C++ layer."""
         eid = _create_sensor(mixed_time_series_db, "S1")
-        bad_row = {"date_time": "2024-01-01T00:00:00", "temperature": 20.5, "humidity": True, "status": "normal"}
-        with pytest.raises(TypeError, match="Column 'humidity' expects int, got bool"):
-            mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, [bad_row])
+        bad_data = {
+            "date_time": ["2024-01-01T00:00:00"],
+            "temperature": [20.5],
+            "humidity": [65],
+            "status": ["normal"],
+            "nonexistent": [1],
+        }
+        with pytest.raises(QuiverError, match="column 'nonexistent' not found"):
+            mixed_time_series_db.update_time_series_group("Sensor", "readings", eid, bad_data)
 
 
 # -- Single-column tests (collections_db) -------------------------------------
@@ -155,15 +213,17 @@ class TestTimeSeriesSingleColumn:
     def test_read_time_series_group_single_column(self, collections_db: Database) -> None:
         """Write and read a simple date_time+value time series."""
         eid = _create_collection_element(collections_db, "Item1")
-        rows = [
-            {"date_time": "2024-01-01T00:00:00", "value": 3.14},
-            {"date_time": "2024-01-02T00:00:00", "value": 2.72},
-        ]
-        collections_db.update_time_series_group("Collection", "data", eid, rows)
+        data = {
+            "date_time": ["2024-01-01T00:00:00", "2024-01-02T00:00:00"],
+            "value": [3.14, 2.72],
+        }
+        collections_db.update_time_series_group("Collection", "data", eid, data)
 
         result = collections_db.read_time_series_group("Collection", "data", eid)
-        assert len(result) == 2
-        assert result == rows
+        assert result == {
+            "date_time": [_utc(2024, 1, 1), _utc(2024, 1, 2)],
+            "value": [3.14, 2.72],
+        }
 
 
 # -- Time series files tests ---------------------------------------------------
@@ -236,9 +296,8 @@ class TestAddTimeSeriesRow:
         collections_db.add_time_series_row("Collection", "data", eid, date_time="2024-01-01", value=10.0)
 
         result = collections_db.read_time_series_group("Collection", "data", eid)
-        assert len(result) == 1
-        assert result[0]["date_time"] == "2024-01-01"
-        assert result[0]["value"] == 10.0
+        assert result["date_time"] == [_utc(2024, 1, 1)]
+        assert result["value"] == [10.0]
 
     def test_add_time_series_row_upsert(self, collections_db: Database) -> None:
         """Insert then call again with same dimension PK; value column is overwritten."""
@@ -247,8 +306,7 @@ class TestAddTimeSeriesRow:
         collections_db.add_time_series_row("Collection", "data", eid, date_time="2024-01-01", value=99.0)
 
         result = collections_db.read_time_series_group("Collection", "data", eid)
-        assert len(result) == 1
-        assert result[0]["value"] == 99.0
+        assert result["value"] == [99.0]
 
     def test_add_time_series_row_dict_unpacking(self, collections_db: Database) -> None:
         """Dict unpacking pattern works: db.add_time_series_row(..., **row_dict)."""
@@ -257,9 +315,8 @@ class TestAddTimeSeriesRow:
         collections_db.add_time_series_row("Collection", "data", eid, **row_dict)
 
         result = collections_db.read_time_series_group("Collection", "data", eid)
-        assert len(result) == 1
-        assert result[0]["date_time"] == "2024-02-01"
-        assert result[0]["value"] == 7.5
+        assert result["date_time"] == [_utc(2024, 2, 1)]
+        assert result["value"] == [7.5]
 
     def test_add_time_series_row_multi_dim(self, multi_dim_ts_db: Database) -> None:
         """Multi-dimension PK (date_time + block) round-trips through the Python wrapper."""
@@ -269,18 +326,15 @@ class TestAddTimeSeriesRow:
         )
 
         result = multi_dim_ts_db.read_time_series_group("Resource", "load", eid)
-        assert len(result) == 1
-        assert result[0]["date_time"] == "2024-01-01"
-        assert result[0]["block"] == 1
-        assert result[0]["load"] == 500.0
-        assert result[0]["flag"] == 0
+        assert result["date_time"] == [_utc(2024, 1, 1)]
+        assert result["block"] == [1]
+        assert result["load"] == [500.0]
+        assert result["flag"] == [0]
 
 
 class TestReadTimeSeriesRow:
     def test_read_time_series_row_returns_one_value_per_element(self, collections_db: Database) -> None:
         """Last non-null value at or before the given date, one entry per element."""
-        from datetime import datetime
-
         id1 = _create_collection_element(collections_db, "Item 1")
         id2 = _create_collection_element(collections_db, "Item 2")
 
@@ -288,34 +342,23 @@ class TestReadTimeSeriesRow:
             "Collection",
             "data",
             id1,
-            [
-                {"date_time": "2024-01-01T00:00:00", "value": 10.5},
-                {"date_time": "2024-02-01T00:00:00", "value": 20.5},
-            ],
+            {"date_time": ["2024-01-01T00:00:00", "2024-02-01T00:00:00"], "value": [10.5, 20.5]},
         )
         collections_db.update_time_series_group(
             "Collection",
             "data",
             id2,
-            [{"date_time": "2024-01-01T00:00:00", "value": 30.5}],
+            {"date_time": ["2024-01-01T00:00:00"], "value": [30.5]},
         )
 
         row = collections_db.read_time_series_row("Collection", "data", "value", datetime(2024, 1, 15))
         assert row == [10.5, 30.5]
 
     def test_read_time_series_row_no_elements(self, collections_db: Database) -> None:
-        from datetime import datetime
-
         row = collections_db.read_time_series_row("Collection", "data", "value", datetime(2024, 1, 15))
         assert row == []
 
     def test_read_time_series_row_unknown_attribute_raises(self, collections_db: Database) -> None:
-        from datetime import datetime
-
-        import pytest
-
-        from quiverdb import QuiverError
-
         _create_collection_element(collections_db, "Item 1")
         with pytest.raises(QuiverError, match="Time series attribute not found"):
             collections_db.read_time_series_row("Collection", "data", "nonexistent", datetime(2024, 1, 15))

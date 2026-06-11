@@ -37,6 +37,18 @@ def test_open_existing_database(valid_schema_path: Path, tmp_path: Path) -> None
     reopened.close()
 
 
+def test_open_read_only_rejects_writes(valid_schema_path: Path, tmp_path: Path) -> None:
+    db_path = str(tmp_path / "test.db")
+    Database.from_schema(db_path, str(valid_schema_path)).close()
+
+    reopened = Database.open(db_path, read_only=True)
+    try:
+        with pytest.raises(QuiverError):
+            reopened.create_element("Configuration", label="nope")
+    finally:
+        reopened.close()
+
+
 def test_close_is_idempotent(db: Database) -> None:
     db.close()
     db.close()  # Should not raise

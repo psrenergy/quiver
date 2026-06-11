@@ -117,6 +117,26 @@ void main() {
         tempDir.deleteSync(recursive: true);
       }
     });
+
+    test('readOnly open rejects writes', () {
+      final tempDir = Directory.systemTemp.createTempSync('quiver_test_');
+      final dbPath = path.join(tempDir.path, 'test.db');
+      try {
+        Database.fromSchema(dbPath, schemaPath).close();
+
+        final reopened = Database.open(dbPath, readOnly: true);
+        try {
+          expect(
+            () => reopened.createElement('Configuration', {'label': 'nope'}),
+            throwsA(isA<DatabaseException>()),
+          );
+        } finally {
+          reopened.close();
+        }
+      } finally {
+        tempDir.deleteSync(recursive: true);
+      }
+    });
   });
 
   group('Database currentVersion', () {

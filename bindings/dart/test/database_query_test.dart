@@ -194,7 +194,7 @@ void main() {
           'string_attribute': 'hello world',
         });
 
-        final result = db.queryStringParams(
+        final result = db.queryString(
           'SELECT string_attribute FROM Configuration WHERE label = ?',
           ['Test Label'],
         );
@@ -215,7 +215,7 @@ void main() {
           'string_attribute': 'hello',
         });
 
-        final result = db.queryStringParams(
+        final result = db.queryString(
           'SELECT string_attribute FROM Configuration WHERE label = ?',
           ['NoMatch'],
         );
@@ -238,7 +238,7 @@ void main() {
           'integer_attribute': 42,
         });
 
-        final result = db.queryIntegerParams(
+        final result = db.queryInteger(
           'SELECT integer_attribute FROM Configuration WHERE label = ?',
           ['Test'],
         );
@@ -263,7 +263,7 @@ void main() {
           'integer_attribute': 20,
         });
 
-        final result = db.queryIntegerParams(
+        final result = db.queryInteger(
           'SELECT integer_attribute FROM Configuration WHERE integer_attribute > ? ORDER BY integer_attribute',
           [15],
         );
@@ -286,7 +286,7 @@ void main() {
           'float_attribute': 3.14159,
         });
 
-        final result = db.queryFloatParams(
+        final result = db.queryFloat(
           'SELECT float_attribute FROM Configuration WHERE label = ?',
           ['Test'],
         );
@@ -313,7 +313,7 @@ void main() {
           'integer_attribute': 20,
         });
 
-        final result = db.queryIntegerParams(
+        final result = db.queryInteger(
           'SELECT integer_attribute FROM Configuration WHERE label = ? AND integer_attribute > ?',
           ['B', 5],
         );
@@ -336,7 +336,7 @@ void main() {
           'date_attribute': DateTime(2024, 6, 15, 10, 30, 0),
         });
 
-        final result = db.queryDateTimeParams(
+        final result = db.queryDateTime(
           'SELECT date_attribute FROM Configuration WHERE label = ?',
           ['Test'],
         );

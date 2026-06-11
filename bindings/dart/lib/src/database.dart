@@ -33,12 +33,33 @@ class Database {
   /// Internal: Returns the native pointer for use by other library components.
   Pointer<quiver_database_t> get ptr => _ptr;
 
+  static Pointer<quiver_database_options_t> _makeOptions(
+    Arena arena,
+    bool readOnly,
+    int? consoleLevel,
+  ) {
+    final optionsPtr = arena<quiver_database_options_t>();
+    optionsPtr.ref = bindings.quiver_database_options_default();
+    optionsPtr.ref.read_only = readOnly ? 1 : 0;
+    if (consoleLevel != null) {
+      optionsPtr.ref.console_level = consoleLevel;
+    }
+    return optionsPtr;
+  }
+
   /// Creates a new database from a SQL schema file.
-  factory Database.fromSchema(String dbPath, String schemaPath) {
+  ///
+  /// [consoleLevel] takes a `quiver_log_level_t` constant (e.g.
+  /// `quiver_log_level_t.QUIVER_LOG_OFF`).
+  factory Database.fromSchema(
+    String dbPath,
+    String schemaPath, {
+    bool readOnly = false,
+    int? consoleLevel,
+  }) {
     final arena = Arena();
     try {
-      final optionsPtr = arena<quiver_database_options_t>();
-      optionsPtr.ref = bindings.quiver_database_options_default();
+      final optionsPtr = _makeOptions(arena, readOnly, consoleLevel);
       final outDbPtr = arena<Pointer<quiver_database_t>>();
 
       check(
@@ -59,11 +80,15 @@ class Database {
   /// Creates a new database from a migrations directory.
   /// The migrations directory should contain numbered subdirectories (1/, 2/, etc.)
   /// each with an up.sql file.
-  factory Database.fromMigrations(String dbPath, String migrationsPath) {
+  factory Database.fromMigrations(
+    String dbPath,
+    String migrationsPath, {
+    bool readOnly = false,
+    int? consoleLevel,
+  }) {
     final arena = Arena();
     try {
-      final optionsPtr = arena<quiver_database_options_t>();
-      optionsPtr.ref = bindings.quiver_database_options_default();
+      final optionsPtr = _makeOptions(arena, readOnly, consoleLevel);
       final outDbPtr = arena<Pointer<quiver_database_t>>();
 
       check(
@@ -82,11 +107,14 @@ class Database {
   }
 
   /// Opens an existing database file.
-  factory Database.open(String dbPath) {
+  factory Database.open(
+    String dbPath, {
+    bool readOnly = false,
+    int? consoleLevel,
+  }) {
     final arena = Arena();
     try {
-      final optionsPtr = arena<quiver_database_options_t>();
-      optionsPtr.ref = bindings.quiver_database_options_default();
+      final optionsPtr = _makeOptions(arena, readOnly, consoleLevel);
       final outDbPtr = arena<Pointer<quiver_database_t>>();
 
       check(

@@ -722,13 +722,17 @@ struct LuaRunner::Impl {
                                                  sol::this_state s) {
         sol::state_view lua(s);
         auto rows = db.read_time_series_group(collection, group, id);
+        // Column-oriented result: { name = {v1, v2, ...}, ... }
         auto t = lua.create_table();
-        for (size_t i = 0; i < rows.size(); ++i) {
-            auto row = lua.create_table();
-            for (const auto& [key, val] : rows[i]) {
-                row[key] = value_to_lua_object(lua, val);
+        if (rows.empty()) {
+            return t;
+        }
+        for (const auto& [name, _] : rows[0]) {
+            auto column = lua.create_table();
+            for (size_t i = 0; i < rows.size(); ++i) {
+                column[i + 1] = value_to_lua_object(lua, rows[i].at(name));
             }
-            t[i + 1] = row;
+            t[name] = column;
         }
         return t;
     }
@@ -752,11 +756,35 @@ struct LuaRunner::Impl {
                                              const std::string& collection,
                                              const std::string& group,
                                              int64_t id,
-                                             sol::table rows) {
+                                             sol::table columns) {
+        // Column-oriented input: { name = {v1, v2, ...}, ... } transposed into
+        // the row maps the C++ API takes. An empty table clears all rows.
         std::vector<std::map<std::string, Value>> cpp_rows;
-        for (size_t i = 1; i <= rows.size(); ++i) {
-            sol::table row = rows[i];
-            cpp_rows.push_back(lua_table_to_value_map(row));
+        bool first_column = true;
+        for (auto& pair : columns) {
+            auto name = pair.first.as<std::string>();
+            sol::table column = pair.second;
+            const size_t n = column.size();
+            if (first_column) {
+                cpp_rows.resize(n);
+                first_column = false;
+            } else if (n != cpp_rows.size()) {
+                throw std::runtime_error("Cannot update_time_series_group: column '" + name + "' has length " +
+                                         std::to_string(n) + " but expected " + std::to_string(cpp_rows.size()));
+            }
+            for (size_t i = 1; i <= n; ++i) {
+                sol::object val = column[i];
+                if (val.is<int64_t>()) {
+                    cpp_rows[i - 1][name] = val.as<int64_t>();
+                } else if (val.is<double>()) {
+                    cpp_rows[i - 1][name] = val.as<double>();
+                } else if (val.is<std::string>()) {
+                    cpp_rows[i - 1][name] = val.as<std::string>();
+                } else {
+                    throw std::runtime_error("Cannot update_time_series_group: column '" + name +
+                                             "' has unsupported Lua type");
+                }
+            }
         }
         db.update_time_series_group(collection, group, id, cpp_rows);
     }

@@ -14,6 +14,16 @@ class DataType(IntEnum):
     NULL = 4
 
 
+class LogLevel(IntEnum):
+    """Console log level constants matching C API quiver_log_level_t."""
+
+    DEBUG = 0
+    INFO = 1
+    WARN = 2
+    ERROR = 3
+    OFF = 4
+
+
 @dataclass(frozen=True)
 class CSVOptions:
     """Options for CSV import and export operations."""

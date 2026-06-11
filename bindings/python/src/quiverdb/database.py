@@ -21,11 +21,29 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         self._closed = False
 
     @staticmethod
-    def from_schema(db_path: str, schema_path: str) -> Database:
-        """Create a database from a SQL schema file."""
+    def _make_options(read_only: bool, console_level: int | None):
         lib = get_lib()
         options = ffi.new("quiver_database_options_t*")
         options[0] = lib.quiver_database_options_default()
+        options.read_only = 1 if read_only else 0
+        if console_level is not None:
+            options.console_level = console_level
+        return options
+
+    @staticmethod
+    def from_schema(
+        db_path: str,
+        schema_path: str,
+        *,
+        read_only: bool = False,
+        console_level: int | None = None,
+    ) -> Database:
+        """Create a database from a SQL schema file.
+
+        console_level takes a LogLevel constant (e.g. LogLevel.OFF).
+        """
+        lib = get_lib()
+        options = Database._make_options(read_only, console_level)
         out_db = ffi.new("quiver_database_t**")
         check(
             lib.quiver_database_from_schema(
@@ -38,11 +56,16 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         return Database(out_db[0])
 
     @staticmethod
-    def from_migrations(db_path: str, migrations_path: str) -> Database:
+    def from_migrations(
+        db_path: str,
+        migrations_path: str,
+        *,
+        read_only: bool = False,
+        console_level: int | None = None,
+    ) -> Database:
         """Create a database using a migrations directory."""
         lib = get_lib()
-        options = ffi.new("quiver_database_options_t*")
-        options[0] = lib.quiver_database_options_default()
+        options = Database._make_options(read_only, console_level)
         out_db = ffi.new("quiver_database_t**")
         check(
             lib.quiver_database_from_migrations(
@@ -55,11 +78,15 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         return Database(out_db[0])
 
     @staticmethod
-    def open(db_path: str) -> Database:
+    def open(
+        db_path: str,
+        *,
+        read_only: bool = False,
+        console_level: int | None = None,
+    ) -> Database:
         """Open an existing database file."""
         lib = get_lib()
-        options = ffi.new("quiver_database_options_t*")
-        options[0] = lib.quiver_database_options_default()
+        options = Database._make_options(read_only, console_level)
         out_db = ffi.new("quiver_database_t**")
         check(
             lib.quiver_database_open(
@@ -1103,8 +1130,12 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         collection: str,
         group: str,
         id: int,
-    ) -> list[dict]:
-        """Read time series data for an element. Returns list of row dicts with typed values."""
+    ) -> dict[str, list]:
+        """Read time series data for an element as column lists keyed by column name.
+
+        The dimension column (e.g. date_time) is parsed into timezone-aware UTC
+        datetimes; value columns keep their schema types.
+        """
         self._ensure_open()
         lib = get_lib()
         out_names = ffi.new("char***")
@@ -1128,28 +1159,25 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         col_count = out_col_count[0]
         row_count = out_row_count[0]
         if col_count == 0 or row_count == 0:
-            return []
+            return {}
         try:
-            # Build column info
-            columns = []
+            dim_col = self.get_time_series_metadata(collection, group).dimension_column
+
+            result: dict[str, list] = {}
             for c in range(col_count):
                 name = ffi.string(out_names[0][c]).decode("utf-8")
                 ctype = out_types[0][c]
-                columns.append((name, ctype))
-
-            # Transpose columnar to row dicts
-            rows: list[dict] = []
-            for r in range(row_count):
-                row: dict = {}
-                for c, (name, ctype) in enumerate(columns):
-                    if ctype == DataType.INTEGER:
-                        row[name] = ffi.cast("int64_t*", out_data[0][c])[r]
-                    elif ctype == DataType.FLOAT:
-                        row[name] = ffi.cast("double*", out_data[0][c])[r]
-                    else:  # STRING or DATE_TIME
-                        row[name] = ffi.string(ffi.cast("char**", out_data[0][c])[r]).decode("utf-8")
-                rows.append(row)
-            return rows
+                if ctype == DataType.INTEGER:
+                    int_ptr = ffi.cast("int64_t*", out_data[0][c])
+                    result[name] = [int_ptr[r] for r in range(row_count)]
+                elif ctype == DataType.FLOAT:
+                    float_ptr = ffi.cast("double*", out_data[0][c])
+                    result[name] = [float_ptr[r] for r in range(row_count)]
+                else:  # STRING or DATE_TIME
+                    str_ptr = ffi.cast("char**", out_data[0][c])
+                    strings = [ffi.string(str_ptr[r]).decode("utf-8") for r in range(row_count)]
+                    result[name] = [_parse_datetime(s) for s in strings] if name == dim_col else strings
+            return result
         finally:
             lib.quiver_database_free_time_series_data(out_names[0], out_types[0], out_data[0], col_count, row_count)
 
@@ -1208,15 +1236,19 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         collection: str,
         group: str,
         id: int,
-        rows: list[dict],
+        data: dict[str, list],
     ) -> None:
-        """Update time series data for an element. Pass empty list to clear all rows."""
+        """Update time series data for an element from column lists keyed by name.
+
+        Pass an empty dict to clear all rows. datetime values are formatted to
+        ISO strings; integers are accepted for REAL columns.
+        """
         self._ensure_open()
         lib = get_lib()
         c_collection = collection.encode("utf-8")
         c_group = group.encode("utf-8")
 
-        if not rows:
+        if not data:
             # Clear operation
             check(
                 lib.quiver_database_update_time_series_group(
@@ -1225,11 +1257,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             )
             return
 
-        # Get metadata for column schema
-        metadata = self.get_time_series_metadata(collection, group)
-        keepalive, c_col_names, c_col_types, c_col_data, col_count, row_count = _marshal_time_series_columns(
-            rows, metadata
-        )
+        keepalive, c_col_names, c_col_types, c_col_data, col_count, row_count = _marshal_time_series_columns(data)
         check(
             lib.quiver_database_update_time_series_group(
                 self._ptr, c_collection, c_group, id, c_col_names, c_col_types, c_col_data, col_count, row_count
@@ -1591,70 +1619,61 @@ def _marshal_params(parameters: list) -> tuple:
     return keepalive, c_types, c_values
 
 
-def _marshal_time_series_columns(
-    rows: list[dict],
-    metadata: GroupMetadata,
-) -> tuple:
-    """Marshal Python row dicts into columnar C API arrays for time series update.
+def _marshal_time_series_columns(data: dict[str, list]) -> tuple:
+    """Marshal column lists into parallel C arrays for the columnar time series API.
+
+    Column types are dispatched on the first element: datetime/str -> STRING,
+    bool/int -> INTEGER, float -> FLOAT. The C++ layer validates against the
+    schema and accepts integers for REAL columns.
 
     Returns (keepalive, c_col_names, c_col_types, c_col_data, col_count, row_count)
     where keepalive must remain referenced until the C API call completes.
     """
-    # Build column schema from metadata: dimension column first, then value columns
-    # Dimension column type is always STRING since it's TEXT in SQL
-    columns: list[tuple[str, int]] = []
-    columns.append((metadata.dimension_column, DataType.STRING))
-    for vc in metadata.value_columns:
-        columns.append((vc.name, vc.data_type))
+    col_count = len(data)
+    row_count = len(next(iter(data.values())))
+    for name, values in data.items():
+        if len(values) != row_count:
+            raise ValueError(f"All column lists must have the same length, got {len(values)} for '{name}'")
 
-    col_count = len(columns)
-    row_count = len(rows)
     keepalive: list = []
-
-    # Validate rows
-    for r, row in enumerate(rows):
-        for name, col_type in columns:
-            if name not in row:
-                raise ValueError(f"Row {r} is missing column '{name}'")
-            v = row[name]
-            if col_type == DataType.INTEGER:
-                if type(v) is not int:
-                    raise TypeError(f"Column '{name}' expects int, got {type(v).__name__}")
-            elif col_type == DataType.FLOAT:
-                if type(v) is not float:
-                    raise TypeError(f"Column '{name}' expects float, got {type(v).__name__}")
-            else:  # STRING or DATE_TIME
-                if type(v) is not str:
-                    raise TypeError(f"Column '{name}' expects str, got {type(v).__name__}")
-
-    # Build column name array
     c_col_names = ffi.new("const char*[]", col_count)
-    for c, (name, _) in enumerate(columns):
-        buf = ffi.new("char[]", name.encode("utf-8"))
-        keepalive.append(buf)
-        c_col_names[c] = buf
-
-    # Build column type array
-    c_col_types = ffi.new("int[]", [ct for _, ct in columns])
-
-    # Build column data arrays (transpose rows to columnar)
+    c_col_types = ffi.new("int[]", col_count)
     c_col_data = ffi.new("void*[]", col_count)
-    for c, (name, col_type) in enumerate(columns):
-        if col_type == DataType.INTEGER:
-            arr = ffi.new("int64_t[]", [row[name] for row in rows])
-            keepalive.append(arr)
-            c_col_data[c] = ffi.cast("void*", arr)
-        elif col_type == DataType.FLOAT:
-            arr = ffi.new("double[]", [row[name] for row in rows])
-            keepalive.append(arr)
-            c_col_data[c] = ffi.cast("void*", arr)
-        else:  # STRING or DATE_TIME
-            encoded = [row[name].encode("utf-8") for row in rows]
+
+    for c, (name, values) in enumerate(data.items()):
+        name_buf = ffi.new("char[]", name.encode("utf-8"))
+        keepalive.append(name_buf)
+        c_col_names[c] = name_buf
+
+        first = values[0]
+        if isinstance(first, datetime):
+            encoded = [v.strftime("%Y-%m-%dT%H:%M:%S").encode("utf-8") for v in values]
             c_strs = [ffi.new("char[]", e) for e in encoded]
             keepalive.extend(c_strs)
             c_arr = ffi.new("char*[]", c_strs)
             keepalive.append(c_arr)
+            c_col_types[c] = DataType.STRING
             c_col_data[c] = ffi.cast("void*", c_arr)
+        elif isinstance(first, str):
+            encoded = [v.encode("utf-8") for v in values]
+            c_strs = [ffi.new("char[]", e) for e in encoded]
+            keepalive.extend(c_strs)
+            c_arr = ffi.new("char*[]", c_strs)
+            keepalive.append(c_arr)
+            c_col_types[c] = DataType.STRING
+            c_col_data[c] = ffi.cast("void*", c_arr)
+        elif isinstance(first, bool) or isinstance(first, int):
+            arr = ffi.new("int64_t[]", [int(v) for v in values])
+            keepalive.append(arr)
+            c_col_types[c] = DataType.INTEGER
+            c_col_data[c] = ffi.cast("void*", arr)
+        elif isinstance(first, float):
+            arr = ffi.new("double[]", [float(v) for v in values])
+            keepalive.append(arr)
+            c_col_types[c] = DataType.FLOAT
+            c_col_data[c] = ffi.cast("void*", arr)
+        else:
+            raise TypeError(f"Unsupported value type for column '{name}': {type(first).__name__}")
 
     return keepalive, c_col_names, c_col_types, c_col_data, col_count, row_count
 
