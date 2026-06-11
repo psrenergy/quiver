@@ -20,7 +20,18 @@ add_executable(quiver_tests
     test_database_update.cpp
     test_element.cpp
     test_issues.cpp
-    test_lua_runner.cpp
+    test_lua_runner_all_types.cpp
+    test_lua_runner_create.cpp
+    test_lua_runner_csv_export.cpp
+    test_lua_runner_csv_import.cpp
+    test_lua_runner_delete.cpp
+    test_lua_runner_errors.cpp
+    test_lua_runner_fk.cpp
+    test_lua_runner_query.cpp
+    test_lua_runner_read.cpp
+    test_lua_runner_time_series.cpp
+    test_lua_runner_transaction.cpp
+    test_lua_runner_update.cpp
     test_migrations.cpp
     test_row_result.cpp
     test_schema_validator.cpp
