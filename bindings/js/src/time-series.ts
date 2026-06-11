@@ -1,6 +1,6 @@
 import { CString, type Pointer, ptr, read, toArrayBuffer } from "bun:ffi";
 import { Database } from "./database.ts";
-import { check } from "./errors.ts";
+import { check, QuiverError } from "./errors.ts";
 import {
   allocNativeFloat64,
   allocNativeInt64,
@@ -186,6 +186,26 @@ Database.prototype.updateTimeSeriesGroup = function (
 
   const columnCount = entries.length;
   const rowCount = entries[0][1].length;
+
+  // Validate before marshalling: a jagged column would desync the parallel
+  // arrays the C API reads against row_count, and a zero-length column (with
+  // columns present) would otherwise marshal a null data pointer that the C API
+  // dereferences. Named-but-empty columns are a caller mistake -- pass {} to
+  // clear the group instead.
+  for (const [name, values] of entries) {
+    if (values.length !== rowCount) {
+      throw new QuiverError(
+        `Cannot updateTimeSeriesGroup: column '${name}' has length ${values.length} but expected ${rowCount}`,
+      );
+    }
+  }
+  if (rowCount === 0) {
+    const names = entries.map(([name]) => name).join(", ");
+    throw new QuiverError(
+      `Cannot updateTimeSeriesGroup: columns [${names}] contain no rows; pass {} to clear the group`,
+    );
+  }
+
   const keepalive: Allocation[] = [];
 
   // Build column names as native string array
@@ -201,10 +221,7 @@ Database.prototype.updateTimeSeriesGroup = function (
   for (let c = 0; c < columnCount; c++) {
     const values = entries[c][1];
 
-    if (values.length === 0) {
-      typesDv.setInt32(c * 4, DATA_TYPE_STRING, true);
-      dataPtrs.push(null);
-    } else if (typeof values[0] === "string") {
+    if (typeof values[0] === "string") {
       typesDv.setInt32(c * 4, DATA_TYPE_STRING, true);
       const { table, keepalive: strPtrs } = allocNativeStringArray(values as string[]);
       keepalive.push(table, ...strPtrs);

@@ -758,12 +758,22 @@ struct LuaRunner::Impl {
                                              int64_t id,
                                              sol::table columns) {
         // Column-oriented input: { name = {v1, v2, ...}, ... } transposed into
-        // the row maps the C++ API takes. An empty table clears all rows.
+        // the row maps the C++ API takes. An empty table (no columns) clears all
+        // rows. Supplying named columns that transpose to zero rows is almost
+        // always a caller mistake -- a scalar passed where an array was expected
+        // (the add_time_series_row shape), or an empty / non-sequence array whose
+        // Lua length is 0 -- so it throws instead of silently clearing the group.
         std::vector<std::map<std::string, Value>> cpp_rows;
+        std::vector<std::string> column_names;
         bool first_column = true;
         for (auto& pair : columns) {
             auto name = pair.first.as<std::string>();
+            if (!pair.second.is<sol::table>()) {
+                throw std::runtime_error("Cannot update_time_series_group: column '" + name +
+                                         "' must be an array of values");
+            }
             sol::table column = pair.second;
+            column_names.push_back(name);
             const size_t n = column.size();
             if (first_column) {
                 cpp_rows.resize(n);
@@ -785,6 +795,17 @@ struct LuaRunner::Impl {
                                              "' has unsupported Lua type");
                 }
             }
+        }
+        if (!column_names.empty() && cpp_rows.empty()) {
+            std::string joined;
+            for (size_t i = 0; i < column_names.size(); ++i) {
+                if (i > 0) {
+                    joined += ", ";
+                }
+                joined += column_names[i];
+            }
+            throw std::runtime_error("Cannot update_time_series_group: columns [" + joined +
+                                     "] contain no rows; pass an empty table {} to clear the group");
         }
         db.update_time_series_group(collection, group, id, cpp_rows);
     }

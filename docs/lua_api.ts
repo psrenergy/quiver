@@ -184,8 +184,14 @@ local row = db:read_time_series_row(collection, group, attribute, date_time)
 
 ### Replace a whole group
 
-Column-oriented input. **All columns must have the same length.** Passing an empty table \`{}\`
-clears the group.
+Column-oriented input — each value must be an **array**. **All columns must have the same
+length.** Passing an empty table \`{}\` (no columns) clears the group.
+
+Anything that would transpose to zero rows throws instead of silently clearing: passing a scalar
+where an array is expected (\`{ date_time = "...", value = 5 }\` — the \`add_time_series_row\`
+shape) raises \`Cannot update_time_series_group: column '...' must be an array of values\`, and
+named columns that are all empty raise \`Cannot update_time_series_group: columns [...] contain no
+rows; pass an empty table {} to clear the group\`. Only the explicit \`{}\` clears.
 
 \`\`\`lua
 db:update_time_series_group("Items", "data", id, {
