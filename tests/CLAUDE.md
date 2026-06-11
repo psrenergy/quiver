@@ -11,7 +11,11 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   `test_database_csv_export.cpp`, `test_database_csv_import.cpp`, `test_database_errors.cpp`
 - Supporting types: `test_element.cpp`, `test_row_result.cpp`, `test_migrations.cpp`,
   `test_schema_validator.cpp`
-- Lua: `test_lua_runner.cpp` (all Lua-side bindings, error paths, transactions, CSV, time series)
+- Lua: `test_lua_runner_*.cpp` — per-area split mirroring the database files (`_create`, `_read`,
+  `_update`, `_delete`, `_query`, `_time_series`, `_transaction`, `_errors`, `_csv_export`,
+  `_csv_import`, `_all_types`, `_fk`). The shared `LuaRunnerTest` fixture and common include
+  prelude live in `test_lua_runner.h`; the single-use `LuaRunnerAllTypesTest` / `LuaRunnerFkTest`
+  fixtures stay local to their files.
 - Binary subsystem: `test_binary_file.cpp`, `test_binary_metadata.cpp`,
   `test_binary_time_properties.cpp`, `test_csv_converter.cpp`, `test_iteration.cpp`
 - Expression subsystem: `test_expression.cpp`
