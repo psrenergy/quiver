@@ -23,6 +23,18 @@ function tempCsv(name: string): string {
   return join(mkdtempSync(join(tmpdir(), "quiver_js_test_")), `${name}.csv`);
 }
 
+// Read an exported CSV and canonicalize it to comma-delimited, '.'-decimal form so
+// byte-level assertions stay independent of the host locale: exportCsv emits a
+// ';'-delimited, ','-decimal file on a comma-locale machine (matching Excel). Safe
+// only for values free of spaces and embedded commas, which holds for these tests.
+function readCsvCanonical(path: string): string {
+  let content = readFileSync(path, "utf8");
+  if (content.startsWith("sep=;")) {
+    content = content.replaceAll(",", ".").replaceAll(";", ",");
+  }
+  return content;
+}
+
 function cleanup(...paths: string[]): void {
   for (const p of paths) {
     try {
@@ -61,7 +73,7 @@ describe("CSV export", () => {
 
       db.exportCsv("Items", "", csvPath);
 
-      const content = readFileSync(csvPath, "utf8");
+      const content = readCsvCanonical(csvPath);
 
       // Header row
       expect(content).toContain("label,name,status,price,date_created,notes\n");
@@ -84,7 +96,7 @@ describe("CSV export", () => {
 
       db.exportCsv("Items", "measurements", csvPath);
 
-      const content = readFileSync(csvPath, "utf8");
+      const content = readCsvCanonical(csvPath);
 
       // Header with sep= prefix
       expect(content).toContain("sep=,\nid,vector_index,measurement\n");
@@ -105,7 +117,7 @@ describe("CSV export", () => {
     try {
       db.exportCsv("Items", "", csvPath);
 
-      const content = readFileSync(csvPath, "utf8");
+      const content = readCsvCanonical(csvPath);
 
       // Header row with sep= prefix and columns
       expect(content).toEqual("sep=,\nlabel,name,status,price,date_created,notes\n");
@@ -257,7 +269,7 @@ describe("CSV options", () => {
 
       db.exportCsv("Items", "", csvPath, options);
 
-      const content = readFileSync(csvPath, "utf8");
+      const content = readCsvCanonical(csvPath);
 
       // status column should have labels instead of integers
       expect(content).toContain("Item1,Alpha,Active,");
