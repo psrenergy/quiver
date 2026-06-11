@@ -120,6 +120,40 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroup) {
     EXPECT_DOUBLE_EQ(std::get<double>(rows[2].at("value")), 30.0);
 }
 
+TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupScalarColumnThrows) {
+    // Negative path: passing scalars (the add_time_series_row shape) where the
+    // column-oriented update expects arrays must throw instead of silently
+    // transposing to zero rows and committing a no-op clear.
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        db:update_time_series_group("Collection", "data", )" +
+                         std::to_string(id) + R"(, { date_time = "2024-06-01", value = 10.0 })
+    )";
+    EXPECT_THROW({ lua.run(script); }, std::runtime_error);
+}
+
+TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupAllEmptyColumnsThrows) {
+    // Negative path: named columns that transpose to zero rows are a caller
+    // mistake (only an empty table {} clears the group), so this must throw
+    // rather than silently delete the element's existing rows.
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        db:update_time_series_group("Collection", "data", )" +
+                         std::to_string(id) + R"(, { date_time = {}, value = {} })
+    )";
+    EXPECT_THROW({ lua.run(script); }, std::runtime_error);
+}
+
 TEST_F(LuaRunnerTest, AddTimeSeriesRowInsert) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
