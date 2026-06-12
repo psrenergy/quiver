@@ -12,6 +12,7 @@
 #include "utils/datetime.h"
 
 #include <chrono>
+#include <filesystem>
 #include <map>
 #include <memory>
 #include <optional>
@@ -29,6 +30,9 @@ struct LuaRunner::Impl {
 
     explicit Impl(Database& database) : db(database) {
         lua.open_libraries(sol::lib::base, sol::lib::string, sol::lib::table);
+        // Scripts may not load Lua source from disk; string-form load() stays available.
+        lua["dofile"] = sol::lua_nil;
+        lua["loadfile"] = sol::lua_nil;
         lua.create_named_table("quiver");
         bind_database();
         bind_binary();
@@ -87,7 +91,10 @@ struct LuaRunner::Impl {
                const std::string& group,
                const std::string& path,
                sol::optional<sol::table> options_table) {
-                self.export_csv(collection, group, path, parse_csv_options(std::move(options_table)));
+                self.export_csv(collection,
+                                group,
+                                resolve_sandboxed_path(self, "export_csv", path),
+                                parse_csv_options(std::move(options_table)));
             },
             // Group 12: CSV import
             "import_csv",
@@ -96,7 +103,10 @@ struct LuaRunner::Impl {
                const std::string& group,
                const std::string& path,
                sol::optional<sol::table> options_table) {
-                self.import_csv(collection, group, path, parse_csv_options(std::move(options_table)));
+                self.import_csv(collection,
+                                group,
+                                resolve_sandboxed_path(self, "import_csv", path),
+                                parse_csv_options(std::move(options_table)));
             });
         // NOLINTEND(performance-unnecessary-value-parameter)
 
@@ -152,6 +162,28 @@ struct LuaRunner::Impl {
         bind.set_function("query_string", &query_string_lua);
         bind.set_function("query_integer", &query_integer_lua);
         bind.set_function("query_float", &query_float_lua);
+
+        // Binary subsystem file I/O — db-scoped and sandboxed: paths resolve against the directory
+        // containing the database file and must stay inside it.
+        bind.set_function("open_file",
+                          [](Database& self,
+                             const std::string& path,
+                             const std::string& mode,
+                             sol::optional<BinaryMetadata> metadata) -> std::unique_ptr<BinaryFile> {
+                              if (mode.size() != 1 || (mode[0] != 'r' && mode[0] != 'w')) {
+                                  throw std::runtime_error("Cannot open_file: mode must be \"r\" or \"w\"");
+                              }
+                              const auto resolved = resolve_sandboxed_path(self, "open_file", path);
+                              std::optional<BinaryMetadata> md =
+                                  metadata ? std::optional<BinaryMetadata>(*metadata) : std::nullopt;
+                              return std::make_unique<BinaryFile>(BinaryFile::open_file(resolved, mode[0], md));
+                          });
+        bind.set_function("bin_to_csv", [](Database& self, const std::string& path, sol::optional<bool> aggregate) {
+            CSVConverter::bin_to_csv(resolve_sandboxed_path(self, "bin_to_csv", path), aggregate.value_or(true));
+        });
+        bind.set_function("csv_to_bin", [](Database& self, const std::string& path) {
+            CSVConverter::csv_to_bin(resolve_sandboxed_path(self, "csv_to_bin", path));
+        });
     }
 
     // ========================================================================
@@ -224,26 +256,11 @@ struct LuaRunner::Impl {
             sol::meta_function::unary_minus,
             [](sol::object a, sol::object) { return -to_expression(a); });
 
-        ns.set_function("open_file",
-                        [](const std::string& path,
-                           const std::string& mode,
-                           sol::optional<BinaryMetadata> metadata) -> std::unique_ptr<BinaryFile> {
-                            if (mode.size() != 1 || (mode[0] != 'r' && mode[0] != 'w')) {
-                                throw std::runtime_error("Cannot open_file: mode must be \"r\" or \"w\"");
-                            }
-                            std::optional<BinaryMetadata> md =
-                                metadata ? std::optional<BinaryMetadata>(*metadata) : std::nullopt;
-                            return std::make_unique<BinaryFile>(BinaryFile::open_file(path, mode[0], md));
-                        });
         ns.set_function("metadata", [](const sol::table& t) { return build_metadata_from_lua(t); });
         ns.set_function("metadata_from_toml",
                         [](const std::string& content) { return BinaryMetadata::from_toml_content(content); });
         ns.set_function("metadata_from_element",
                         [](const sol::table& t) { return BinaryMetadata::from_element(table_to_element(t)); });
-        ns.set_function("bin_to_csv", [](const std::string& path, sol::optional<bool> aggregate) {
-            CSVConverter::bin_to_csv(path, aggregate.value_or(true));
-        });
-        ns.set_function("csv_to_bin", [](const std::string& path) { CSVConverter::csv_to_bin(path); });
         // NOLINTEND(performance-unnecessary-value-parameter)
     }
 
@@ -260,7 +277,7 @@ struct LuaRunner::Impl {
             "Expression",
             sol::no_constructor,
             "save",
-            [](Expression& self, const std::string& path) { self.save(path); },
+            [this](Expression& self, const std::string& path) { self.save(resolve_sandboxed_path(db, "save", path)); },
             "metadata",
             [](Expression& self) -> BinaryMetadata { return self.metadata(); },
             "aggregate",
@@ -466,6 +483,45 @@ struct LuaRunner::Impl {
         if (op == "percentile")
             return ExpressionAggregateAgents::Operation::Percentile;
         throw std::runtime_error("Cannot aggregate_agents: unknown operation '" + op + "'");
+    }
+
+    // Resolves a script-supplied path against the database file's directory and enforces that the
+    // result stays strictly inside it (subdirectories allowed). Returns the resolved absolute path.
+    // `operation` is the public method name the user called (threaded into Pattern 1 messages).
+    static std::string
+    resolve_sandboxed_path(const Database& db, const std::string& operation, const std::string& path) {
+        namespace fs = std::filesystem;
+
+        const std::string& db_path = db.path();
+        if (db_path == ":memory:") {
+            throw std::runtime_error("Cannot " + operation +
+                                     ": database is in-memory, file operations are unavailable");
+        }
+
+        // Same root derivation as create_database_logger: a bare filename has an empty
+        // parent_path and resolves against the current working directory.
+        auto root = fs::path(db_path).parent_path();
+        if (root.empty()) {
+            root = fs::current_path();
+        }
+        root = fs::weakly_canonical(root);
+
+        auto candidate = fs::path(path);
+        if (candidate.is_relative()) {
+            candidate = root / candidate;
+        }
+        candidate = fs::weakly_canonical(candidate);
+
+        // Strict containment: candidate == root is rejected too — the binary subsystem appends
+        // ".qvr"/".toml" by string concatenation, so the root itself would yield "<root>.qvr"
+        // outside the sandbox.
+        const auto rel = candidate.lexically_relative(root);
+        if (rel.empty() || rel == "." || rel.begin()->string() == "..") {
+            throw std::runtime_error("Cannot " + operation + ": path '" + path +
+                                     "' escapes the database directory '" + root.string() + "'");
+        }
+
+        return candidate.string();
     }
 
     static CSVOptions parse_csv_options(sol::optional<sol::table> options_table) {
