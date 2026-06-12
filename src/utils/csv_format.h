@@ -5,6 +5,10 @@
 #include <regex>
 #include <string>
 
+#ifdef __APPLE__
+#include <CoreFoundation/CoreFoundation.h>
+#endif
+
 // Locale-aware CSV number formatting helpers.
 //
 // Excel reads CSV numbers using the OS locale's decimal separator, so a ','
@@ -13,9 +17,25 @@
 // helpers keep export and import symmetric across locales.
 namespace quiver::csv_format {
 
-// The decimal separator ('.' or ',') of the user's preferred locale, taken from
-// the environment. Falls back to '.' when the locale can't be determined. Reads
-// the locale without mutating the global C locale (so std::stod keeps using '.').
+// The decimal separator ('.' or ',') of the user's preferred locale. Falls back
+// to '.' when the locale can't be determined. Reads the locale without mutating
+// the global C locale (so std::stod keeps using '.').
+#ifdef __APPLE__
+// macOS: locale env vars (LANG/LC_*) are a Terminal convention — GUI apps
+// launched from Finder/launchd don't have them, so std::locale("") would always
+// resolve to "C". Query the System Settings region via CoreFoundation instead,
+// which is the same source Excel for Mac reads its separators from.
+inline char locale_decimal_separator() {
+    CFLocaleRef loc = CFLocaleCopyCurrent();
+    auto sep = static_cast<CFStringRef>(CFLocaleGetValue(loc, kCFLocaleDecimalSeparator));
+    char buffer[8] = {};
+    const bool ok = sep != nullptr && CFStringGetCString(sep, buffer, sizeof(buffer), kCFStringEncodingUTF8);
+    CFRelease(loc);
+    return ok && buffer[0] == ',' ? ',' : '.';
+}
+#else
+// Windows (MSVC): std::locale("") reads the user's regional settings from the
+// OS, matching Excel. Linux: resolved from LANG/LC_* env vars.
 inline char locale_decimal_separator() {
     try {
         std::locale loc("");
@@ -25,6 +45,7 @@ inline char locale_decimal_separator() {
         return '.';
     }
 }
+#endif
 
 // The field delimiter that must be paired with a decimal separator. A ',' decimal
 // forces ';' as the delimiter, because ',' cannot be both at once.
