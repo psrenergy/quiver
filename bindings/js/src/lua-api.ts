@@ -1,18 +1,14 @@
 // Agent-facing reference for the Lua `db` API available inside run_lua scripts.
 //
 // Authority: `src/lua_runner.cpp` `bind_database()` (this repo) — extracted by hand, NOT imported.
-// The shipped quiverdb native binding is the runtime truth; this is docs.
+// The shipped quiverdb native binding is the runtime truth; this is docs. Whenever the C++ Lua
+// binding changes, re-diff every signature below against `bind_database()` (names, arg order, arg
+// types, return shapes).
 //
-// NOTE: read_time_series_row is bound in quiver's repo HEAD (lua_runner.cpp) but NOT in the shipped
-// quiverdb 0.9.5 native binding the agent runs against (verified: the live probe finds no such
-// function), so it is intentionally omitted here — re-add it as a `db:read_time_series_row` token
-// only after a quiverdb release whose binding exposes it.
-//
-// NOTE: the binary/expression subsystems (quiver.* globals + file:/expr: methods) are bound in
-// quiver repo HEAD (src/lua_runner.cpp, sol2) but are NOT in the shipped quiverdb 0.9.5 binding, and
-// they do unconfined filesystem I/O — documented below as HEAD-only + sandbox-disabled (same posture
-// as export_csv/import_csv). They are quiver.*/file:/expr: calls, not db:<name> tokens; re-classify
-// them as live only after a quiverdb release ships them and the sandbox file policy allows it.
+// NOTE: the binary/expression subsystems (quiver.* globals + file:/expr: methods) ARE bound in the
+// native binding, but every call does unconfined filesystem I/O, so they are sandbox-disabled here
+// — same posture as export_csv/import_csv. Documented below for reference, annotated DO NOT CALL.
+// They are quiver.*/file:/expr: calls, not db:<name> tokens.
 //
 // FORMAT CONVENTION: every method should appear at least once as the literal token
 // `db:<snake_case_name>`. Methods the agent must NOT call (the transaction methods and
@@ -83,11 +79,16 @@ datetime surface — there are no DateTime wrapper helpers, unlike Julia/Dart/Py
 ## Database info
 
 \`\`\`lua
-db:is_healthy()        -- boolean
-db:current_version()   -- integer (current migration version)
-db:path()              -- string (database file path)
-db:describe()          -- prints schema info to stdout, returns nothing
+db:is_healthy()                    -- boolean
+db:current_version()               -- integer (current migration version)
+db:path()                          -- string (database file path)
+db:describe()                      -- string: whole-DB text report (returns it, does NOT print)
+db:describe_collection(collection) -- string: one collection's structure (text report)
+db:summarize_collection(collection)-- string: per-scalar null/non-null counts, low-cardinality
+                                   --         integer value distributions, per-group sizes
 \`\`\`
+
+All three \`describe*\`/\`summarize*\` methods **return** a string — \`print()\` it to see it.
 
 ---
 
@@ -193,7 +194,7 @@ Scalar attributes with no value come back as \`nil\`.
 Time-series group data is **column-oriented** in Lua: \`{ column = { v1, v2, ... }, ... }\`. The
 dimension (ordering) column is a \`date_*\` text column holding ISO 8601 timestamps.
 
-### Read a whole group
+### Read a whole group (column-oriented)
 
 \`\`\`lua
 local ts = db:read_time_series_group(collection, group, id)
@@ -201,23 +202,56 @@ local ts = db:read_time_series_group(collection, group, id)
 -- returns an empty table {} if the element has no rows
 \`\`\`
 
-### Replace a whole group
+### Read one value per element at a date (\`read_time_series_row\`)
 
-**ROW-oriented input:** an array of row tables, each with the dimension column plus its value
-column(s). (Reads above are column-oriented; writes are NOT — this asymmetry is real, and passing
-column-oriented data here silently writes nothing.) Passing an empty table \`{}\` clears the group.
+\`\`\`lua
+local values = db:read_time_series_row(collection, group, attribute, date_time)
+-- { v_elem1, v_elem2, ... } in element-id order
+\`\`\`
+
+One value per element using **last non-null value at or before \`date_time\`** semantics. Elements
+with no matching data yield \`nil\` in the array. \`date_time\` is an ISO 8601 string.
+
+### Replace a whole group (column-oriented — SAME shape as the read)
+
+\`update_time_series_group\` takes the **exact column-oriented shape \`read_time_series_group\`
+returns**: a table mapping each column name to a 1-indexed array of its values. Read → modify →
+write round-trips. Passing an empty table \`{}\` clears the group.
 
 \`\`\`lua
 db:update_time_series_group("Items", "data", id, {
-    { date_time = "2024-01-01T00:00:00", value = 10.5 },
-    { date_time = "2024-01-02T00:00:00", value = 20.0 },
-    { date_time = "2024-01-03T00:00:00", value = 30.0 },
+    date_time = { "2024-01-01T00:00:00", "2024-01-02T00:00:00", "2024-01-03T00:00:00" },
+    value     = { 10.5, 20.0, 30.0 },
 })
 
 db:update_time_series_group("Items", "data", id, {})   -- clears the group
 \`\`\`
 
-### Append/upsert a single row
+A read-modify-write looks like this:
+
+\`\`\`lua
+local ts = db:read_time_series_group("Items", "data", id)
+ts.value[2] = 125.0                                    -- edit the 2nd row's value
+db:update_time_series_group("Items", "data", id, ts)   -- write the whole group back
+\`\`\`
+
+**DO NOT pass an array of row tables** (\`{ { date_time = ..., value = ... }, ... }\`) — that is the
+\`add_time_series_row\` shape, not this one. Doing so raises
+\`stack index -1, expected string, received number\` (the integer array indices 1, 2, 3 are not
+column names). Each value of the top-level table must be an **array**, not a scalar.
+
+**Rules** (validation throws, rolling the script back):
+- Every column value must be an array — a bare scalar throws \`column '...' must be an array of values\`.
+- All columns must have the **same length** — a mismatch throws \`column '...' has length N but expected M\`.
+- Named-but-empty columns throw (\`contain no rows; pass an empty table {} to clear\`) rather than
+  silently clearing — only a bare \`{}\` clears.
+- Write REAL-column values as float literals (\`30.0\`, not \`30\`); STRICT validation rejects an
+  integer for a REAL column. Other Lua types throw \`column '...' has unsupported Lua type\`.
+
+### Append/upsert a single row (\`add_time_series_row\` — ROW-oriented, the one exception)
+
+Unlike the column-oriented group update above, this takes **one row table of scalars** (dimension
+column + value column(s)), and upserts that single row:
 
 \`\`\`lua
 db:add_time_series_row("Items", "data", id, {
@@ -225,10 +259,6 @@ db:add_time_series_row("Items", "data", id, {
     value     = 40.0,
 })
 \`\`\`
-
-Write REAL-column values as float literals (40.0, not 40); STRICT validation rejects an integer for
-a REAL column. Unsupported Lua types in a column throw \`Cannot update_time_series_group: column
-'...' has unsupported Lua type\`.
 
 ---
 
@@ -359,12 +389,11 @@ db:delete_element("Collection", item2)
 
 ---
 
-## Binary & expression subsystems
+## Binary & expression subsystems — DO NOT CALL
 
-> **HEAD-only + filesystem.** Bound in quiver repo HEAD (Lua via sol2) but NOT in the shipped
-> quiverdb 0.9.5 binding, and every call below reads/writes \`.qvr\`/\`.csv\` files at **unconfined
-> paths** — the same reason \`db:export_csv\`/\`db:import_csv\` are disabled here. Reference only until a
-> quiverdb release ships them and the sandbox file policy allows it.
+> **Filesystem — sandbox-disabled.** These ARE bound in the native binding, but every call below
+> reads/writes \`.qvr\`/\`.csv\` files at **unconfined paths** — the same reason
+> \`db:export_csv\`/\`db:import_csv\` are disabled here. Documented for reference only; do not use them.
 
 Dense N-dimensional \`float64\` arrays (\`.qvr\` + \`.toml\` sidecar) plus lazy arithmetic over them,
 under a global \`quiver\` table (not \`db\`). Mirrors the Julia surface; aggregation ops are strings
@@ -404,4 +433,4 @@ e:save(out_path); e:metadata()
 
 DateTime wrapper helpers (Lua uses ISO 8601 strings) and \`_by_id\` single-scalar variants (use the
 composite by-id readers or the bulk readers instead). The binary/expression subsystems ARE bound in
-Lua (see above) but are filesystem-based and HEAD-only — see the availability note there.`;
+Lua (see above) but are filesystem-based and sandbox-disabled — never call them.`;
