@@ -11,16 +11,10 @@ import "./composites.ts";
 export type { CsvOptions } from "./csv.ts";
 export { Database } from "./database.ts";
 export { QuiverError } from "./errors.ts";
+export { LUA_DB_API_REFERENCE } from "./lua-api.ts";
 export { LuaRunner } from "./lua-runner.ts";
 export type { GroupMetadata, ScalarMetadata } from "./metadata.ts";
 export type { TimeSeriesData } from "./time-series.ts";
-export {
-  LOG_LEVEL_DEBUG,
-  LOG_LEVEL_ERROR,
-  LOG_LEVEL_INFO,
-  LOG_LEVEL_OFF,
-  LOG_LEVEL_WARN,
-} from "./types.ts";
 export type {
   ArrayValue,
   DatabaseOptions,
@@ -28,4 +22,11 @@ export type {
   QueryParam,
   ScalarValue,
   Value,
+} from "./types.ts";
+export {
+  LOG_LEVEL_DEBUG,
+  LOG_LEVEL_ERROR,
+  LOG_LEVEL_INFO,
+  LOG_LEVEL_OFF,
+  LOG_LEVEL_WARN,
 } from "./types.ts";

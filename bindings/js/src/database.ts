@@ -180,7 +180,9 @@ export class Database {
   declare isHealthy: () => boolean;
   declare currentVersion: () => number;
   declare path: () => string;
-  declare describe: () => void;
+  declare describe: () => string;
+  declare describeCollection: (collection: string) => string;
+  declare summarizeCollection: (collection: string) => string;
 
   // --- Composite helpers (implemented in composites.ts) ---
   declare readScalarsById: (

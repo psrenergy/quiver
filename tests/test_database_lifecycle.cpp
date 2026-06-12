@@ -389,9 +389,7 @@ TEST_F(TempFileFixture, DescribeDoesNotThrow) {
 
 // Helper to capture describe() output
 static std::string capture_describe(const quiver::Database& db) {
-    std::ostringstream oss;
-    db.describe(oss);
-    return oss.str();
+    return db.describe();
 }
 
 TEST_F(TempFileFixture, DescribeVectorsHeaderPrintedOnce) {

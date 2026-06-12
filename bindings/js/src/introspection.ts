@@ -1,6 +1,6 @@
 import { Database } from "./database.ts";
 import { check } from "./errors.ts";
-import { allocPtrOut, decodeStringFromBuf } from "./ffi-helpers.ts";
+import { allocPtrOut, decodeStringFromBuf, readPtrOut, toCString } from "./ffi-helpers.ts";
 import { getSymbols } from "./loader.ts";
 
 Database.prototype.isHealthy = function (this: Database): boolean {
@@ -24,7 +24,31 @@ Database.prototype.path = function (this: Database): string {
   return decodeStringFromBuf(outPath);
 };
 
-Database.prototype.describe = function (this: Database): void {
+Database.prototype.describe = function (this: Database): string {
   const lib = getSymbols();
-  check(lib.quiver_database_describe(this._handle));
+  const out = allocPtrOut();
+  check(lib.quiver_database_describe(this._handle, out.buf));
+  const result = decodeStringFromBuf(out);
+  lib.quiver_database_free_string(readPtrOut(out));
+  return result;
+};
+
+Database.prototype.describeCollection = function (this: Database, collection: string): string {
+  const lib = getSymbols();
+  const collBuf = toCString(collection);
+  const out = allocPtrOut();
+  check(lib.quiver_database_describe_collection(this._handle, collBuf.buf, out.buf));
+  const result = decodeStringFromBuf(out);
+  lib.quiver_database_free_string(readPtrOut(out));
+  return result;
+};
+
+Database.prototype.summarizeCollection = function (this: Database, collection: string): string {
+  const lib = getSymbols();
+  const collBuf = toCString(collection);
+  const out = allocPtrOut();
+  check(lib.quiver_database_summarize_collection(this._handle, collBuf.buf, out.buf));
+  const result = decodeStringFromBuf(out);
+  lib.quiver_database_free_string(readPtrOut(out));
+  return result;
 };

@@ -11,6 +11,7 @@ add_executable(quiver_tests
     test_database_csv_export.cpp
     test_database_csv_import.cpp
     test_database_delete.cpp
+    test_database_describe.cpp
     test_database_errors.cpp
     test_database_lifecycle.cpp
     test_database_query.cpp
@@ -27,6 +28,7 @@ add_executable(quiver_tests
     test_lua_runner_csv_export.cpp
     test_lua_runner_csv_import.cpp
     test_lua_runner_delete.cpp
+    test_lua_runner_describe.cpp
     test_lua_runner_errors.cpp
     test_lua_runner_fk.cpp
     test_lua_runner_query.cpp

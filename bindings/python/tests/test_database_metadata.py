@@ -1,13 +1,15 @@
-"""Tests for metadata get and list operations."""
+"""Tests for metadata get and list operations, plus schema-inspection
+methods (describe / describe_collection / summarize_collection)."""
 
 from __future__ import annotations
 
 import dataclasses
+from collections.abc import Generator
+from pathlib import Path
 
 import pytest
 
-from quiverdb import DataType, Database, GroupMetadata, ScalarMetadata
-
+from quiverdb import Database, DataType, GroupMetadata, QuiverError, ScalarMetadata
 
 # -- get_scalar_metadata -------------------------------------------------------
 
@@ -190,3 +192,40 @@ class TestDataType:
         meta = db.get_scalar_metadata("Configuration", "label")
         assert isinstance(meta.data_type, DataType)
         assert meta.data_type == DataType.STRING
+
+
+# -- Schema inspection (describe / describe_collection / summarize_collection).
+#    The binding only verifies each method returns a string; the report content
+#    is covered by the C++ core tests (tests/test_database_describe.cpp).
+# -----------------------------------------------------------------------------
+
+
+@pytest.fixture
+def collections_db(collections_schema_path: Path) -> Generator[Database, None, None]:
+    """An in-memory database opened from the collections schema."""
+    database = Database.from_schema(":memory:", str(collections_schema_path))
+    yield database
+    database.close()
+
+
+class TestDescribe:
+    def test_returns_string(self, collections_db: Database) -> None:
+        assert isinstance(collections_db.describe(), str)
+
+
+class TestDescribeCollection:
+    def test_returns_string(self, collections_db: Database) -> None:
+        assert isinstance(collections_db.describe_collection("Collection"), str)
+
+    def test_raises_on_unknown_collection(self, collections_db: Database) -> None:
+        with pytest.raises(QuiverError):
+            collections_db.describe_collection("DoesNotExist")
+
+
+class TestSummarizeCollection:
+    def test_returns_string(self, collections_db: Database) -> None:
+        assert isinstance(collections_db.summarize_collection("Collection"), str)
+
+    def test_raises_on_unknown_collection(self, collections_db: Database) -> None:
+        with pytest.raises(QuiverError):
+            collections_db.summarize_collection("DoesNotExist")

@@ -138,8 +138,9 @@ TEST_F(LuaRunnerTest, Describe) {
 
     quiver::LuaRunner lua(db);
 
-    // describe() prints to stdout and should not throw
+    // describe() returns a human-readable report string
     lua.run(R"(
-        db:describe()
+        local report = db:describe()
+        assert(report:find("Collection: Configuration"), "describe should mention Configuration")
     )");
 }

@@ -148,6 +148,13 @@ quiver_database_free_group_metadata_array(quiver_group_metadata_t*, size_t)
 ```
 Internal helpers `convert_scalar_to_c`, `convert_group_to_c`, `free_scalar_fields`, `free_group_fields` in `database_helpers.h` avoid duplication.
 
+## Database Description / Statistics
+
+`quiver_database_describe` / `_describe_collection` / `_summarize_collection` each return a
+human-readable **text report** via a `char** out_report` out-param (freed by the existing
+`quiver_database_free_string`) — no structs. All three live in `database.cpp` as trivial
+`new_c_str(db->db.<fn>(...))` wrappers.
+
 ## Multi-Column Time Series
 
 The C API uses a columnar typed-arrays pattern for time series read and update:

@@ -157,7 +157,14 @@ impl_->logger->debug("Opening database: {}", path);
   `_vector_` / `_set_` / `_time_series_` tables (`group_names` excludes `_time_series_files`).
   All list/metadata/describe call sites use them — never hand-roll prefix scans.
 - **Declaration order everywhere**: metadata and list functions iterate `column_order`
-  (declaration order), matching `describe()` and CSV export. Nothing reports alphabetical order.
+  (declaration order), matching the `describe(ostream&)` dump and CSV export. Nothing reports alphabetical order.
+- **`describe*` return text reports** (`database_describe.cpp`): `describe()` (whole-DB overview),
+  `describe_collection(c)` (one collection's structure), `summarize_collection(c)` (per-scalar
+  null/non-null counts + low-cardinality integer distributions [threshold `kMaxDistributionCardinality`]
+  + per-group empty/non-empty counts) all build an `std::ostringstream` and return `std::string`. These
+  const methods run their own read-only SQL via an anon-namespace `query_int_rows` helper that
+  prepares/steps directly on `impl_->db` (the `current_version() const` pattern — `execute()` is
+  non-const). All three are bound 1:1 across the C API and every binding as string getters.
 - **`TypeValidator` threads the caller's name** (`type_validator.cpp`): call sites pass
   `"create_element"` / `"update_element"` so messages read `"Cannot create_element: type
   mismatch for column ..."` (root Pattern 1).
@@ -183,6 +190,8 @@ lua.run(R"(
 Implementation conventions in `lua_runner.cpp`:
 - `parse_csv_options(table)` is the single CSVOptions parser shared by `export_csv`/`import_csv`.
 - `to_lua_table<T>` overloads (flat + nested) are the only vector→table marshalers.
+- `describe` / `describe_collection` / `summarize_collection` are bound as plain lambdas returning
+  the C++ `std::string` text report (`db:describe()` returns a string — it does not print).
 - Lua→C++ converters **throw on unsupported value types** (booleans, functions, ...) — never
   skip silently; a skipped positional query parameter would shift the rest and bind NULL to the
   trailing placeholder.

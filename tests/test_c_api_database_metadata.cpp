@@ -140,3 +140,68 @@ TEST(DatabaseCApiMetadata, ListScalarAttributes) {
     quiver_database_free_scalar_metadata_array(attrs, count);
     quiver_database_close(db);
 }
+
+// ============================================================================
+// describe / describe_collection / summarize_collection (text reports)
+// ============================================================================
+
+namespace {
+quiver_database_t* open_collections() {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    EXPECT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("collections.sql").c_str(), &options, &db),
+              QUIVER_OK);
+    EXPECT_NE(db, nullptr);
+    return db;
+}
+}  // namespace
+
+TEST(DatabaseCApiMetadata, DescribeReturnsText) {
+    quiver_database_t* db = open_collections();
+
+    char* report = nullptr;
+    ASSERT_EQ(quiver_database_describe(db, &report), QUIVER_OK);
+    ASSERT_NE(report, nullptr);
+    std::string text = report;
+    EXPECT_NE(text.find("Collection: Configuration"), std::string::npos);
+    EXPECT_NE(text.find("Collection: Collection"), std::string::npos);
+    quiver_database_free_string(report);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApiMetadata, DescribeCollectionReturnsText) {
+    quiver_database_t* db = open_collections();
+
+    char* report = nullptr;
+    ASSERT_EQ(quiver_database_describe_collection(db, "Collection", &report), QUIVER_OK);
+    ASSERT_NE(report, nullptr);
+    std::string text = report;
+    EXPECT_NE(text.find("Collection: Collection"), std::string::npos);
+    EXPECT_NE(text.find("[date_time]"), std::string::npos);
+    quiver_database_free_string(report);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApiMetadata, SummarizeCollectionReturnsText) {
+    quiver_database_t* db = open_collections();
+
+    char* report = nullptr;
+    ASSERT_EQ(quiver_database_summarize_collection(db, "Collection", &report), QUIVER_OK);
+    ASSERT_NE(report, nullptr);
+    EXPECT_NE(std::string(report).find("non-null"), std::string::npos);
+    quiver_database_free_string(report);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApiMetadata, SummarizeCollectionNotFound) {
+    quiver_database_t* db = open_collections();
+
+    char* report = nullptr;
+    EXPECT_EQ(quiver_database_summarize_collection(db, "Nope", &report), QUIVER_ERROR);
+
+    quiver_database_close(db);
+}

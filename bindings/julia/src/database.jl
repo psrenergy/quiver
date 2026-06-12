@@ -54,11 +54,6 @@ function current_version(db::Database)
     return out_version[]
 end
 
-function describe(db::Database)
-    check(C.quiver_database_describe(db.ptr))
-    return nothing
-end
-
 function is_healthy(db::Database)
     out = Ref{Cint}(0)
     check(C.quiver_database_is_healthy(db.ptr, out))

@@ -2357,16 +2357,66 @@ class QuiverDatabaseBindings {
 
   int quiver_database_describe(
     ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> out_report,
   ) {
     return _quiver_database_describe(
       db,
+      out_report,
     );
   }
 
   late final _quiver_database_describePtr =
-      _lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_database_t>)>>('quiver_database_describe');
+      _lookup<
+        ffi.NativeFunction<ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Pointer<ffi.Char>>)>
+      >('quiver_database_describe');
   late final _quiver_database_describe = _quiver_database_describePtr
-      .asFunction<int Function(ffi.Pointer<quiver_database_t>)>();
+      .asFunction<int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Pointer<ffi.Char>>)>();
+
+  int quiver_database_describe_collection(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> out_report,
+  ) {
+    return _quiver_database_describe_collection(
+      db,
+      collection,
+      out_report,
+    );
+  }
+
+  late final _quiver_database_describe_collectionPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Char>>)
+        >
+      >('quiver_database_describe_collection');
+  late final _quiver_database_describe_collection = _quiver_database_describe_collectionPtr
+      .asFunction<
+        int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Char>>)
+      >();
+
+  int quiver_database_summarize_collection(
+    ffi.Pointer<quiver_database_t> db,
+    ffi.Pointer<ffi.Char> collection,
+    ffi.Pointer<ffi.Pointer<ffi.Char>> out_report,
+  ) {
+    return _quiver_database_summarize_collection(
+      db,
+      collection,
+      out_report,
+    );
+  }
+
+  late final _quiver_database_summarize_collectionPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Char>>)
+        >
+      >('quiver_database_summarize_collection');
+  late final _quiver_database_summarize_collection = _quiver_database_summarize_collectionPtr
+      .asFunction<
+        int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Char>>)
+      >();
 
   int quiver_element_create(
     ffi.Pointer<ffi.Pointer<quiver_element_t1>> out_element,

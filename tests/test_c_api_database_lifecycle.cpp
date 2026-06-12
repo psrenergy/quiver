@@ -516,8 +516,11 @@ TEST_F(TempFileFixture, DescribeDoesNotFail) {
     ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
     ASSERT_NE(db, nullptr);
 
-    auto err = quiver_database_describe(db);
-    EXPECT_EQ(err, QUIVER_OK);
+    char* report = nullptr;
+    ASSERT_EQ(quiver_database_describe(db, &report), QUIVER_OK);
+    ASSERT_NE(report, nullptr);
+    EXPECT_NE(std::string(report).find("Database: :memory:"), std::string::npos);
+    quiver_database_free_string(report);
 
     quiver_database_close(db);
 }

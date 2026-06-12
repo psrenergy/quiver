@@ -22,7 +22,7 @@ scripts/                  # build-all/test-all/clean-all.bat, format.bat, tidy.b
                           # ci/{dispatch_workflow.sh, native_s3.sh}, julia/generate_artifacts.jl
 cmake/                    # CompilerOptions.cmake, Dependencies.cmake, Platform.cmake, quiverConfig.cmake.in
 example/                  # example1.lua + example1.bat — quiver_cli/Lua CRUD demo
-docs/                     # User-facing docs: introduction, rules, attributes, migrations, time_series, lua_api
+docs/                     # User-facing docs: introduction, rules, attributes, migrations, time_series
 assets/                   # logo.svg
 ```
 
@@ -286,7 +286,7 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - Metadata: `get_{scalar,vector,set,time_series}_metadata()` — group metadata is a unified `GroupMetadata` with `dimension_column` (populated for time series, empty for vectors/sets)
 - List groups: `list_scalar_attributes()`, `list_vector_groups()`, `list_set_groups()`, `list_time_series_groups()`
 - Query: `query_string/integer/float(sql, parameters = {})` - parameterized SQL with positional `?` placeholders
-- Schema inspection: `describe()` - prints schema info to stdout; CSV: `export_csv()`, `import_csv()` with optional enum/date formatting via `CSVOptions`
+- Schema inspection — human-readable **text reports** (all return `std::string`): `describe()` (whole-DB overview: every collection, element counts, attribute/group names); `describe_collection(c)` (one collection's structure); `summarize_collection(c)` (per-scalar null/non-null counts + low-cardinality integer value distributions, per-group empty/non-empty counts). CSV: `export_csv()`, `import_csv()` with optional enum/date formatting via `CSVOptions`
 
 ### Element Class
 Builder for element creation with fluent API:
@@ -339,7 +339,9 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Time series update | `update_time_series_group()` | `quiver_database_update_time_series_group()` | `update_time_series_group!()` | `updateTimeSeriesGroup()` | `update_time_series_group()` |
 | Query | `query_string()` | `quiver_database_query_string()` | `query_string()` | `queryString()` | `query_string()` |
 | CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | `export_csv()` |
-| Describe | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |
+| Describe (text) | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |
+| Describe collection | `describe_collection()` | `quiver_database_describe_collection()` | `describe_collection()` | `describeCollection()` | `describe_collection()` |
+| Summarize collection | `summarize_collection()` | `quiver_database_summarize_collection()` | `summarize_collection()` | `summarizeCollection()` | `summarize_collection()` |
 
 **Binary cross-layer examples (Julia + Lua subsystem):**
 
