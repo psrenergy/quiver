@@ -13,7 +13,7 @@
 // FORMAT CONVENTION: every method should appear at least once as the literal token
 // `db:<snake_case_name>`. Methods the agent must NOT call (the transaction methods and
 // export_csv/import_csv) are still listed as `db:<name>` tokens — annotated DO NOT CALL — so they
-// stay covered. Keep this reference well under 15000 chars when editing.
+// stay covered.
 export const LUA_DB_API_REFERENCE = `
 # Quiver Lua API Reference
 
