@@ -184,3 +184,48 @@ function list_time_series_files_columns(db::Database, collection::String)
     C.quiver_database_free_string_array(out_columns[], count)
     return result
 end
+
+# -----------------------------------------------------------------------------
+# Schema inspection — human-readable text reports
+# (describe / describe_collection / summarize_collection)
+# -----------------------------------------------------------------------------
+
+"""
+    describe(db::Database) -> String
+
+Return a human-readable text report describing the whole database (every collection,
+its element count, and its attribute groups).
+"""
+function describe(db::Database)
+    out_report = Ref{Ptr{Cchar}}(C_NULL)
+    check(C.quiver_database_describe(db.ptr, out_report))
+    result = unsafe_string(out_report[])
+    C.quiver_database_free_string(out_report[])
+    return result
+end
+
+"""
+    describe_collection(db::Database, collection::AbstractString) -> String
+
+Return a human-readable text report describing a single collection's schema.
+"""
+function describe_collection(db::Database, collection::AbstractString)
+    out_report = Ref{Ptr{Cchar}}(C_NULL)
+    check(C.quiver_database_describe_collection(db.ptr, collection, out_report))
+    result = unsafe_string(out_report[])
+    C.quiver_database_free_string(out_report[])
+    return result
+end
+
+"""
+    summarize_collection(db::Database, collection::AbstractString) -> String
+
+Return a human-readable text report summarizing a single collection's data statistics.
+"""
+function summarize_collection(db::Database, collection::AbstractString)
+    out_report = Ref{Ptr{Cchar}}(C_NULL)
+    check(C.quiver_database_summarize_collection(db.ptr, collection, out_report))
+    result = unsafe_string(out_report[])
+    C.quiver_database_free_string(out_report[])
+    return result
+end

@@ -49,7 +49,6 @@ ffi.cdef("""
     quiver_error_t quiver_database_is_healthy(quiver_database_t* db, int* out_healthy);
     quiver_error_t quiver_database_path(quiver_database_t* db, const char** out_path);
     quiver_error_t quiver_database_current_version(quiver_database_t* db, int64_t* out_version);
-    quiver_error_t quiver_database_describe(quiver_database_t* db);
 
     // database.h - element operations
     typedef struct quiver_element quiver_element_t;
@@ -232,6 +231,14 @@ ffi.cdef("""
         quiver_scalar_metadata_t* metadata, size_t count);
     quiver_error_t quiver_database_free_group_metadata_array(
         quiver_group_metadata_t* metadata, size_t count);
+
+    // Schema inspection - human-readable text reports. Each returns a heap string
+    // via *out_report, freed with quiver_database_free_string.
+    quiver_error_t quiver_database_describe(quiver_database_t* db, char** out_report);
+    quiver_error_t quiver_database_describe_collection(quiver_database_t* db,
+        const char* collection, char** out_report);
+    quiver_error_t quiver_database_summarize_collection(quiver_database_t* db,
+        const char* collection, char** out_report);
 
     // Update element
     quiver_error_t quiver_database_update_element(quiver_database_t* db,

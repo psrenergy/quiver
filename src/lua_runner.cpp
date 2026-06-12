@@ -43,8 +43,6 @@ struct LuaRunner::Impl {
             "Database",
             "delete_element",
             [](Database& self, const std::string& collection, int64_t id) { self.delete_element(collection, id); },
-            "describe",
-            [](Database& self) { self.describe(); },
             // Group 1: Database info
             "is_healthy",
             [](Database& self) { return self.is_healthy(); },
@@ -142,6 +140,14 @@ struct LuaRunner::Impl {
         bind.set_function("list_set_groups", &list_set_metadata_lua);
         bind.set_function("list_time_series_groups", &list_time_series_groups_lua);
         bind.set_function("list_time_series_files_columns", &list_time_series_files_columns_lua);
+
+        bind.set_function("describe", [](Database& self) { return self.describe(); });
+        bind.set_function("describe_collection", [](Database& self, const std::string& collection) {
+            return self.describe_collection(collection);
+        });
+        bind.set_function("summarize_collection", [](Database& self, const std::string& collection) {
+            return self.summarize_collection(collection);
+        });
 
         bind.set_function("query_string", &query_string_lua);
         bind.set_function("query_integer", &query_integer_lua);

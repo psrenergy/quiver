@@ -40,7 +40,7 @@ const lifecycleSymbols = {
   quiver_database_is_healthy: { args: [P, P], returns: I32 },
   quiver_database_path: { args: [P, P], returns: I32 },
   quiver_database_current_version: { args: [P, P], returns: I32 },
-  quiver_database_describe: { args: [P], returns: I32 },
+  quiver_database_describe: { args: [P, P], returns: I32 },
 } as const;
 
 const elementSymbols = {
@@ -112,6 +112,11 @@ const metadataSymbols = {
   quiver_database_list_time_series_groups: { args: [P, BUF, P, P], returns: I32 },
 } as const;
 
+const describeSymbols = {
+  quiver_database_describe_collection: { args: [P, BUF, P], returns: I32 },
+  quiver_database_summarize_collection: { args: [P, BUF, P], returns: I32 },
+} as const;
+
 const timeSeriesSymbols = {
   quiver_database_read_time_series_group: { args: [P, BUF, BUF, I64, P, P, P, P, P], returns: I32 },
   quiver_database_read_time_series_row: { args: [P, BUF, BUF, BUF, BUF, P, P, P], returns: I32 },
@@ -160,6 +165,7 @@ const allSymbols = {
   ...querySymbols,
   ...transactionSymbols,
   ...metadataSymbols,
+  ...describeSymbols,
   ...timeSeriesSymbols,
   ...csvSymbols,
   ...freeSymbols,

@@ -1,13 +1,15 @@
-"""Tests for metadata get and list operations."""
+"""Tests for metadata get and list operations, plus schema-inspection
+methods (describe / describe_collection / summarize_collection)."""
 
 from __future__ import annotations
 
 import dataclasses
+from collections.abc import Generator
+from pathlib import Path
 
 import pytest
 
-from quiverdb import DataType, Database, GroupMetadata, ScalarMetadata
-
+from quiverdb import Database, DataType, GroupMetadata, QuiverError, ScalarMetadata
 
 # -- get_scalar_metadata -------------------------------------------------------
 
@@ -190,3 +192,56 @@ class TestDataType:
         meta = db.get_scalar_metadata("Configuration", "label")
         assert isinstance(meta.data_type, DataType)
         assert meta.data_type == DataType.STRING
+
+
+# -- Schema inspection (describe / describe_collection / summarize_collection).
+#    Each returns a human-readable text report. Mirrors
+#    bindings/js/src/introspection.ts. -----------------------------------------
+
+
+@pytest.fixture
+def seeded_db(collections_schema_path: Path) -> Generator[Database, None, None]:
+    """An in-memory collections database seeded with three elements.
+
+    Element 'a' has a non-empty value_int vector; 'b' and 'c' have none.
+    some_integer values are 1, 1, 5 (distribution: 1 -> 2, 5 -> 1).
+    """
+    database = Database.from_schema(":memory:", str(collections_schema_path))
+    database.create_element("Collection", label="a", some_integer=1, value_int=[10, 20])
+    database.create_element("Collection", label="b", some_integer=1)
+    database.create_element("Collection", label="c", some_integer=5)
+    yield database
+    database.close()
+
+
+class TestDescribe:
+    def test_returns_text_report_for_all_collections(self, seeded_db: Database) -> None:
+        report = seeded_db.describe()
+        assert isinstance(report, str)
+        assert "Collection: Configuration" in report
+        assert "Collection: Collection (3 elements)" in report
+
+
+class TestDescribeCollection:
+    def test_returns_text_report_for_one_collection(self, seeded_db: Database) -> None:
+        report = seeded_db.describe_collection("Collection")
+        assert isinstance(report, str)
+        assert "Collection: Collection" in report
+        assert "[date_time]" in report
+        assert "Configuration" not in report
+
+    def test_raises_on_unknown_collection(self, seeded_db: Database) -> None:
+        with pytest.raises(QuiverError):
+            seeded_db.describe_collection("DoesNotExist")
+
+
+class TestSummarizeCollection:
+    def test_reports_counts_distributions_and_groups(self, seeded_db: Database) -> None:
+        report = seeded_db.summarize_collection("Collection")
+        assert isinstance(report, str)
+        assert "some_integer: 3 non-null, 0 null; values {1: 2, 5: 1}" in report
+        assert "values: 1/3 non-empty" in report
+
+    def test_raises_on_unknown_collection(self, seeded_db: Database) -> None:
+        with pytest.raises(QuiverError):
+            seeded_db.summarize_collection("DoesNotExist")

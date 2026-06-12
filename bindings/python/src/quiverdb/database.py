@@ -10,7 +10,11 @@ from quiverdb.database_csv_export import DatabaseCSVExport
 from quiverdb.database_csv_import import DatabaseCSVImport
 from quiverdb.element import Element
 from quiverdb.exceptions import QuiverError
-from quiverdb.metadata import DataType, GroupMetadata, ScalarMetadata
+from quiverdb.metadata import (
+    DataType,
+    GroupMetadata,
+    ScalarMetadata,
+)
 
 
 class Database(DatabaseCSVExport, DatabaseCSVImport):
@@ -149,11 +153,44 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         check(lib.quiver_database_is_healthy(self._ptr, out))
         return bool(out[0])
 
-    def describe(self) -> None:
-        """Print schema inspection output to stdout."""
+    # -- Schema inspection ------------------------------------------------------
+
+    def describe(self) -> str:
+        """Return a human-readable report of every collection in the database."""
         self._ensure_open()
         lib = get_lib()
-        check(lib.quiver_database_describe(self._ptr))
+        out = ffi.new("char**")
+        check(lib.quiver_database_describe(self._ptr, out))
+        try:
+            return ffi.string(out[0]).decode("utf-8")
+        finally:
+            lib.quiver_database_free_string(out[0])
+
+    def describe_collection(self, collection: str) -> str:
+        """Return a human-readable report of a single collection's structure."""
+        self._ensure_open()
+        lib = get_lib()
+        out = ffi.new("char**")
+        check(lib.quiver_database_describe_collection(self._ptr, collection.encode("utf-8"), out))
+        try:
+            return ffi.string(out[0]).decode("utf-8")
+        finally:
+            lib.quiver_database_free_string(out[0])
+
+    def summarize_collection(self, collection: str) -> str:
+        """Return a human-readable value-statistics report for a single collection.
+
+        Reports per-scalar null/non-null counts and integer value distributions,
+        and per-group empty/non-empty element counts.
+        """
+        self._ensure_open()
+        lib = get_lib()
+        out = ffi.new("char**")
+        check(lib.quiver_database_summarize_collection(self._ptr, collection.encode("utf-8"), out))
+        try:
+            return ffi.string(out[0]).decode("utf-8")
+        finally:
+            lib.quiver_database_free_string(out[0])
 
     def create_element(self, collection: str, **kwargs: object) -> int:
         """Create a new element. Returns the new element ID."""
