@@ -20,6 +20,8 @@ add_executable(quiver_tests
     test_database_update.cpp
     test_element.cpp
     test_issues.cpp
+    test_lua_binary.cpp
+    test_lua_expression.cpp
     test_lua_runner_all_types.cpp
     test_lua_runner_create.cpp
     test_lua_runner_csv_export.cpp

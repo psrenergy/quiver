@@ -1,13 +1,25 @@
 #include "quiver/lua_runner.h"
 
+#include "quiver/binary/binary_file.h"
+#include "quiver/binary/binary_metadata.h"
+#include "quiver/binary/csv_converter.h"
+#include "quiver/binary/time_properties.h"
 #include "quiver/database.h"
 #include "quiver/element.h"
+#include "quiver/expression/expression.h"
 #include "quiver/options.h"
 #include "quiver/value.h"
+#include "utils/datetime.h"
 
+#include <chrono>
 #include <map>
+#include <memory>
+#include <optional>
 #include <sol/sol.hpp>
 #include <stdexcept>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace quiver {
 
@@ -17,7 +29,10 @@ struct LuaRunner::Impl {
 
     explicit Impl(Database& database) : db(database) {
         lua.open_libraries(sol::lib::base, sol::lib::string, sol::lib::table);
+        lua.create_named_table("quiver");
         bind_database();
+        bind_binary();
+        bind_expression();
         lua["db"] = &db;
     }
 
@@ -134,8 +149,318 @@ struct LuaRunner::Impl {
     }
 
     // ========================================================================
+    // Binary subsystem bindings (mirrors the Julia Binary.* surface)
+    // ========================================================================
+
+    void bind_binary() {
+        sol::table ns = lua["quiver"];
+
+        // NOLINTBEGIN(performance-unnecessary-value-parameter) sol2 lambda bindings require pass-by-value for type
+        // deduction
+        lua.new_usertype<BinaryMetadata>(
+            "BinaryMetadata",
+            sol::no_constructor,
+            "get_unit",
+            [](BinaryMetadata& self) -> std::string { return self.unit; },
+            "get_version",
+            [](BinaryMetadata& self) -> std::string { return self.version; },
+            "get_initial_datetime",
+            [](BinaryMetadata& self) -> std::string { return quiver::datetime::format_utc(self.initial_datetime); },
+            "get_labels",
+            [](BinaryMetadata& self, sol::this_state s) {
+                sol::state_view lua(s);
+                return to_lua_table(lua, self.labels);
+            },
+            "get_dimensions",
+            [](BinaryMetadata& self, sol::this_state s) {
+                sol::state_view lua(s);
+                auto t = lua.create_table();
+                for (size_t i = 0; i < self.dimensions.size(); ++i) {
+                    t[i + 1] = dimension_to_lua(lua, self.dimensions[i]);
+                }
+                return t;
+            },
+            "get_number_of_time_dimensions",
+            [](BinaryMetadata& self) { return self.number_of_time_dimensions(); },
+            "to_toml",
+            [](BinaryMetadata& self) -> std::string { return self.to_toml(); });
+
+        lua.new_usertype<BinaryFile>(
+            "BinaryFile",
+            sol::no_constructor,
+            "read",
+            [](BinaryFile& self, const sol::table& dims, sol::optional<bool> allow_nulls, sol::this_state s) {
+                sol::state_view lua(s);
+                auto data = self.read(lua_table_to_dim_map(dims), allow_nulls.value_or(false));
+                return to_lua_table(lua, data);
+            },
+            "write",
+            [](BinaryFile& self, const sol::table& data, const sol::table& dims) {
+                self.write(lua_table_to_double_vector(data), lua_table_to_dim_map(dims));
+            },
+            "close",
+            [](BinaryFile& self) { self.close(); },
+            "is_open",
+            [](BinaryFile& self) { return self.is_open(); },
+            "get_metadata",
+            [](BinaryFile& self) -> BinaryMetadata { return self.get_metadata(); },
+            "get_file_path",
+            [](BinaryFile& self) -> std::string { return self.get_file_path(); },
+            // Arithmetic on files mirrors Julia: file_a + file_b, -file, file * 2.0 (auto-wrap to Expression)
+            sol::meta_function::addition,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Add, a, b); },
+            sol::meta_function::subtraction,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Subtract, a, b); },
+            sol::meta_function::multiplication,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Multiply, a, b); },
+            sol::meta_function::division,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Divide, a, b); },
+            sol::meta_function::unary_minus,
+            [](sol::object a, sol::object) { return -to_expression(a); });
+
+        ns.set_function("open_file",
+                        [](const std::string& path,
+                           const std::string& mode,
+                           sol::optional<BinaryMetadata> metadata) -> std::unique_ptr<BinaryFile> {
+                            if (mode.size() != 1 || (mode[0] != 'r' && mode[0] != 'w')) {
+                                throw std::runtime_error("Cannot open_file: mode must be \"r\" or \"w\"");
+                            }
+                            std::optional<BinaryMetadata> md =
+                                metadata ? std::optional<BinaryMetadata>(*metadata) : std::nullopt;
+                            return std::make_unique<BinaryFile>(BinaryFile::open_file(path, mode[0], md));
+                        });
+        ns.set_function("metadata", [](const sol::table& t) { return build_metadata_from_lua(t); });
+        ns.set_function("metadata_from_toml",
+                        [](const std::string& content) { return BinaryMetadata::from_toml_content(content); });
+        ns.set_function("metadata_from_element",
+                        [](const sol::table& t) { return BinaryMetadata::from_element(table_to_element(t)); });
+        ns.set_function("bin_to_csv", [](const std::string& path, sol::optional<bool> aggregate) {
+            CSVConverter::bin_to_csv(path, aggregate.value_or(true));
+        });
+        ns.set_function("csv_to_bin", [](const std::string& path) { CSVConverter::csv_to_bin(path); });
+        // NOLINTEND(performance-unnecessary-value-parameter)
+    }
+
+    // ========================================================================
+    // Expression subsystem bindings (mirrors the Julia Expression surface)
+    // ========================================================================
+
+    void bind_expression() {
+        sol::table ns = lua["quiver"];
+
+        // NOLINTBEGIN(performance-unnecessary-value-parameter) sol2 lambda bindings require pass-by-value for type
+        // deduction
+        lua.new_usertype<Expression>(
+            "Expression",
+            sol::no_constructor,
+            "save",
+            [](Expression& self, const std::string& path) { self.save(path); },
+            "metadata",
+            [](Expression& self) -> BinaryMetadata { return self.metadata(); },
+            "aggregate",
+            [](Expression& self, const std::string& dimension, const std::string& op, sol::optional<double> parameter) {
+                return self.aggregate(
+                    dimension, parse_aggregate_op(op), parameter ? std::optional<double>(*parameter) : std::nullopt);
+            },
+            "aggregate_agents",
+            [](Expression& self, const std::string& op, sol::optional<double> parameter) {
+                return self.aggregate_agents(parse_aggregate_agents_op(op),
+                                             parameter ? std::optional<double>(*parameter) : std::nullopt);
+            },
+            "select_agents",
+            [](Expression& self, const sol::table& labels) {
+                return self.select_agents(lua_table_to_string_vector(labels));
+            },
+            "rename_agents",
+            [](Expression& self, const sol::table& mapping) {
+                std::vector<std::pair<std::string, std::string>> pairs;
+                for (auto& kv : mapping) {
+                    pairs.emplace_back(kv.first.as<std::string>(), kv.second.as<std::string>());
+                }
+                return self.rename_agents(pairs);
+            },
+            sol::meta_function::addition,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Add, a, b); },
+            sol::meta_function::subtraction,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Subtract, a, b); },
+            sol::meta_function::multiplication,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Multiply, a, b); },
+            sol::meta_function::division,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Divide, a, b); },
+            sol::meta_function::unary_minus,
+            [](sol::object a, sol::object) { return -to_expression(a); });
+
+        ns.set_function("expression", [](sol::object o) { return to_expression(o); });
+        ns.set_function("abs", [](sol::object o) { return quiver::abs(to_expression(o)); });
+        ns.set_function("sqrt", [](sol::object o) { return quiver::sqrt(to_expression(o)); });
+        ns.set_function("log", [](sol::object o) { return quiver::log(to_expression(o)); });
+        ns.set_function("exp", [](sol::object o) { return quiver::exp(to_expression(o)); });
+        ns.set_function("ifelse", [](sol::object c, sol::object t, sol::object e) {
+            return quiver::ifelse(to_expression(c), to_expression(t), to_expression(e));
+        });
+        // NOLINTEND(performance-unnecessary-value-parameter)
+    }
+
+    // ========================================================================
     // Conversion helpers
     // ========================================================================
+
+    static std::unordered_map<std::string, int64_t> lua_table_to_dim_map(const sol::table& t) {
+        std::unordered_map<std::string, int64_t> dims;
+        for (auto& pair : t) {
+            dims[pair.first.as<std::string>()] = pair.second.as<int64_t>();
+        }
+        return dims;
+    }
+
+    static std::string lua_opt_string(const sol::table& t, const char* key, const std::string& fallback) {
+        auto opt = t.get<sol::optional<std::string>>(key);
+        return opt ? *opt : fallback;
+    }
+
+    static std::vector<std::string> lua_opt_string_vector(const sol::table& t, const char* key) {
+        auto opt = t.get<sol::optional<sol::table>>(key);
+        return opt ? lua_table_to_string_vector(*opt) : std::vector<std::string>{};
+    }
+
+    static std::vector<int64_t> lua_opt_int64_vector(const sol::table& t, const char* key) {
+        auto opt = t.get<sol::optional<sol::table>>(key);
+        return opt ? lua_table_to_int64_vector(*opt) : std::vector<int64_t>{};
+    }
+
+    // Build BinaryMetadata from a Lua kwargs table, mirroring the Julia Metadata(; ...) constructor:
+    // assemble an Element and delegate to from_element (which computes time-dimension initial values).
+    static BinaryMetadata build_metadata_from_lua(const sol::table& t) {
+        Element el;
+        el.set("version", lua_opt_string(t, "version", "1"));
+        el.set("initial_datetime", lua_opt_string(t, "initial_datetime", ""));
+        el.set("unit", lua_opt_string(t, "unit", ""));
+        el.set("labels", lua_opt_string_vector(t, "labels"));
+        el.set("dimensions", lua_opt_string_vector(t, "dimensions"));
+        el.set("dimension_sizes", lua_opt_int64_vector(t, "dimension_sizes"));
+        el.set("time_dimensions", lua_opt_string_vector(t, "time_dimensions"));
+        el.set("frequencies", lua_opt_string_vector(t, "frequencies"));
+        return BinaryMetadata::from_element(el);
+    }
+
+    static sol::table dimension_to_lua(sol::state_view& lua, const Dimension& dim) {
+        auto t = lua.create_table();
+        t["name"] = dim.name;
+        t["size"] = dim.size;
+        t["is_time_dimension"] = dim.is_time_dimension();
+        if (dim.is_time_dimension()) {
+            t["frequency"] = frequency_to_string(dim.time->frequency);
+            t["initial_value"] = dim.time->initial_value;
+            t["parent_dimension_index"] = dim.time->parent_dimension_index;
+        } else {
+            t["frequency"] = sol::lua_nil;
+            t["initial_value"] = sol::lua_nil;
+            t["parent_dimension_index"] = sol::lua_nil;
+        }
+        return t;
+    }
+
+    // ------------------------------------------------------------------------
+    // Expression operator dispatch (shared by Expression and BinaryFile metamethods)
+    // ------------------------------------------------------------------------
+
+    enum class BinOp { Add, Subtract, Multiply, Divide };
+
+    static bool is_number(const sol::object& o) { return o.get_type() == sol::type::number; }
+
+    // A Lua operand in arithmetic is either an Expression, a BinaryFile (auto-wrapped), or a number
+    // (handled by the scalar operator overloads). Numbers are rejected here on purpose.
+    static Expression to_expression(const sol::object& o) {
+        if (o.is<Expression>()) {
+            return o.as<Expression>();
+        }
+        if (o.is<BinaryFile>()) {
+            return Expression(o.as<BinaryFile&>());
+        }
+        throw std::runtime_error("Cannot build expression: operand must be an expression or a binary file");
+    }
+
+    static Expression apply_binop(BinOp op, const Expression& l, const Expression& r) {
+        switch (op) {
+        case BinOp::Add:
+            return l + r;
+        case BinOp::Subtract:
+            return l - r;
+        case BinOp::Multiply:
+            return l * r;
+        case BinOp::Divide:
+            return l / r;
+        }
+        throw std::runtime_error("Cannot apply operator: unknown operation");
+    }
+
+    static Expression apply_binop(BinOp op, const Expression& l, double r) {
+        switch (op) {
+        case BinOp::Add:
+            return l + r;
+        case BinOp::Subtract:
+            return l - r;
+        case BinOp::Multiply:
+            return l * r;
+        case BinOp::Divide:
+            return l / r;
+        }
+        throw std::runtime_error("Cannot apply operator: unknown operation");
+    }
+
+    static Expression apply_binop(BinOp op, double l, const Expression& r) {
+        switch (op) {
+        case BinOp::Add:
+            return l + r;
+        case BinOp::Subtract:
+            return l - r;
+        case BinOp::Multiply:
+            return l * r;
+        case BinOp::Divide:
+            return l / r;
+        }
+        throw std::runtime_error("Cannot apply operator: unknown operation");
+    }
+
+    static Expression binop_dispatch(BinOp op, const sol::object& lhs, const sol::object& rhs) {
+        bool lnum = is_number(lhs);
+        bool rnum = is_number(rhs);
+        if (lnum && !rnum) {
+            return apply_binop(op, lhs.as<double>(), to_expression(rhs));
+        }
+        if (!lnum && rnum) {
+            return apply_binop(op, to_expression(lhs), rhs.as<double>());
+        }
+        return apply_binop(op, to_expression(lhs), to_expression(rhs));
+    }
+
+    static ExpressionAggregate::Operation parse_aggregate_op(const std::string& op) {
+        if (op == "sum")
+            return ExpressionAggregate::Operation::Sum;
+        if (op == "mean")
+            return ExpressionAggregate::Operation::Mean;
+        if (op == "min")
+            return ExpressionAggregate::Operation::Min;
+        if (op == "max")
+            return ExpressionAggregate::Operation::Max;
+        if (op == "percentile")
+            return ExpressionAggregate::Operation::Percentile;
+        throw std::runtime_error("Cannot aggregate: unknown operation '" + op + "'");
+    }
+
+    static ExpressionAggregateAgents::Operation parse_aggregate_agents_op(const std::string& op) {
+        if (op == "sum")
+            return ExpressionAggregateAgents::Operation::Sum;
+        if (op == "mean")
+            return ExpressionAggregateAgents::Operation::Mean;
+        if (op == "min")
+            return ExpressionAggregateAgents::Operation::Min;
+        if (op == "max")
+            return ExpressionAggregateAgents::Operation::Max;
+        if (op == "percentile")
+            return ExpressionAggregateAgents::Operation::Percentile;
+        throw std::runtime_error("Cannot aggregate_agents: unknown operation '" + op + "'");
+    }
 
     static CSVOptions parse_csv_options(sol::optional<sol::table> options_table) {
         CSVOptions options;

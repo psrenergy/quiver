@@ -1,3 +1,29 @@
+// Agent-facing reference for the Lua `db` API available inside run_lua scripts.
+//
+// Authority: quiver/src/lua_runner.cpp `bind_database()` (read-only sibling repo) — extracted by
+// hand, NOT imported. The shipped quiverdb native binding is the runtime truth; this is docs.
+//
+// Drift guard: test/lua-api.test.ts regex-extracts every `db:<name>` token below and probes
+// `type(db[name]) == "function"` against a real database through the Lua worker, so a quiverdb
+// upgrade that renames or drops a method fails `bun test`.
+//
+// NOTE: read_time_series_row is bound in quiver's repo HEAD (lua_runner.cpp) but NOT in the shipped
+// quiverdb 0.9.5 native binding the agent runs against (verified: the live probe finds no such
+// function), so it is intentionally omitted here — re-add it as a `db:read_time_series_row` token
+// only after a quiverdb release whose binding exposes it.
+//
+// NOTE: the binary/expression subsystems (quiver.* globals + file:/expr: methods) are bound in
+// quiver repo HEAD (src/lua_runner.cpp, sol2) but are NOT in the shipped quiverdb 0.9.5 binding, and
+// they do unconfined filesystem I/O — documented below as HEAD-only + sandbox-disabled (same posture
+// as export_csv/import_csv). They are quiver.*/file:/expr: calls, not db:<name> tokens, so the drift
+// probe does not cover them; re-classify them as live only after a quiverdb release ships them and
+// the sandbox file policy allows it.
+//
+// FORMAT CONVENTION (load-bearing for the drift test): every method must appear at least once as
+// the literal token `db:<snake_case_name>`. Methods the agent must NOT call (the transaction
+// methods and export_csv/import_csv) are still listed as `db:<name>` tokens — annotated DO NOT
+// CALL — so the drift probe and the >=45-method count keep covering them. Keep SYSTEM_PROMPT under
+// the 15000-char bound asserted in test/lua-api.test.ts when editing.
 export const LUA_DB_API_REFERENCE = `
 # Quiver Lua API Reference
 
@@ -30,7 +56,7 @@ Lua values map to Quiver column values as follows:
 | Lua value          | Quiver value | Notes                                          |
 | ------------------ | ------------ | ---------------------------------------------- |
 | integer            | INTEGER      | Lua integers map to int64.                     |
-| number (float)     | REAL         | Integer values are accepted for REAL columns.  |
+| number (float)     | REAL         | REAL columns reject bare integers: write 75.0, not 75. |
 | string             | TEXT         | Also used for \`date_time\` columns (ISO 8601).  |
 | \`nil\`              | NULL         | In query params, file paths, and ts rows.      |
 | table (1-indexed)  | array        | Used for vectors/sets and column-oriented data.|
@@ -45,6 +71,21 @@ datetime surface — there are no DateTime wrapper helpers, unlike Julia/Dart/Py
 
 ---
 
+## Critical rules
+
+- **STRICT typing.** A REAL column rejects integer literals — write \`75.0\`, not \`75\`; an INTEGER
+  column rejects floats. A mismatch raises a validation error and rolls the whole script back.
+- **One managed transaction.** run_lua wraps the whole script in a single transaction (see
+  Transactions below) — never call the transaction methods yourself.
+- **No file access.** Never call \`db:export_csv\` / \`db:import_csv\` (paths are unconfined; disabled
+  here). Only the \`base\`, \`string\`, and \`table\` libraries are loaded — there is NO \`math\` (use
+  \`//\` for integer division), and no \`os\`, \`io\`, \`require\`, \`load\`, or \`dofile\`.
+- **Output.** Scripts cannot return values to the tool — use \`print()\` for anything you need to
+  see (it is captured). Arrays are 1-indexed (iterate with \`ipairs\`); reading a NULL yields \`nil\`,
+  writing \`nil\` stores NULL.
+
+---
+
 ## Database info
 
 \`\`\`lua
@@ -56,24 +97,18 @@ db:describe()          -- prints schema info to stdout, returns nothing
 
 ---
 
-## Transactions
+## Transactions — DO NOT CALL
+
+run_lua already wraps your whole script in ONE transaction (commit on success; rollback on any
+error or timeout-kill). These exist but you must **never** call them — a mid-script commit defeats
+the all-or-nothing guarantee and a later timeout-kill would no longer roll back partial writes:
 
 \`\`\`lua
-db:begin_transaction()
-db:commit()
-db:rollback()
-db:in_transaction()    -- boolean
-\`\`\`
-
-Plus a block wrapper that begins a transaction, runs your function, and commits — or rolls back
-and re-raises if the function errors. It returns the function's first return value (or \`nil\`):
-
-\`\`\`lua
-local new_id = db:transaction(function(db)
-    local id = db:create_element("Collection", { label = "Item" })
-    db:update_element("Collection", id, { value = 10 })
-    return id
-end)
+db:begin_transaction()   -- DO NOT CALL
+db:commit()              -- DO NOT CALL
+db:rollback()            -- DO NOT CALL
+db:in_transaction()      -- DO NOT CALL
+db:transaction(fn)       -- DO NOT CALL (the tool's wrapper already provides the transaction)
 \`\`\`
 
 ---
@@ -172,31 +207,17 @@ local ts = db:read_time_series_group(collection, group, id)
 -- returns an empty table {} if the element has no rows
 \`\`\`
 
-### Read one row across all elements
-
-Returns an array with one value per element, using "last non-null value at or before
-\`date_time\`" semantics. Elements with no matching data come back as \`nil\`.
-
-\`\`\`lua
-local row = db:read_time_series_row(collection, group, attribute, date_time)
--- e.g. db:read_time_series_row("Items", "data", "value", "2024-01-04T00:00:00")
-\`\`\`
-
 ### Replace a whole group
 
-Column-oriented input — each value must be an **array**. **All columns must have the same
-length.** Passing an empty table \`{}\` (no columns) clears the group.
-
-Anything that would transpose to zero rows throws instead of silently clearing: passing a scalar
-where an array is expected (\`{ date_time = "...", value = 5 }\` — the \`add_time_series_row\`
-shape) raises \`Cannot update_time_series_group: column '...' must be an array of values\`, and
-named columns that are all empty raise \`Cannot update_time_series_group: columns [...] contain no
-rows; pass an empty table {} to clear the group\`. Only the explicit \`{}\` clears.
+**ROW-oriented input:** an array of row tables, each with the dimension column plus its value
+column(s). (Reads above are column-oriented; writes are NOT — this asymmetry is real, and passing
+column-oriented data here silently writes nothing.) Passing an empty table \`{}\` clears the group.
 
 \`\`\`lua
 db:update_time_series_group("Items", "data", id, {
-    date_time = { "2024-01-01T00:00:00", "2024-01-02T00:00:00", "2024-01-03T00:00:00" },
-    value     = { 10.5, 20.0, 30.0 },
+    { date_time = "2024-01-01T00:00:00", value = 10.5 },
+    { date_time = "2024-01-02T00:00:00", value = 20.0 },
+    { date_time = "2024-01-03T00:00:00", value = 30.0 },
 })
 
 db:update_time_series_group("Items", "data", id, {})   -- clears the group
@@ -211,8 +232,9 @@ db:add_time_series_row("Items", "data", id, {
 })
 \`\`\`
 
-Integer values are accepted for REAL columns (converted on insert). Unsupported Lua types in a
-column throw \`Cannot update_time_series_group: column '...' has unsupported Lua type\`.
+Write REAL-column values as float literals (40.0, not 40); STRICT validation rejects an integer for
+a REAL column. Unsupported Lua types in a column throw \`Cannot update_time_series_group: column
+'...' has unsupported Lua type\`.
 
 ---
 
@@ -302,28 +324,17 @@ local count = db:query_integer("SELECT COUNT(*) FROM Collection")
 
 ---
 
-## CSV import / export
+## CSV import / export — DO NOT CALL
 
 \`\`\`lua
-db:export_csv(collection, group, path, options)   -- options optional
-db:import_csv(collection, group, path, options)   -- options optional
+db:export_csv(collection, group, path, options)   -- DO NOT CALL
+db:import_csv(collection, group, path, options)   -- DO NOT CALL
 \`\`\`
 
-The optional \`options\` table:
-
-\`\`\`lua
-{
-    date_time_format = "%Y-%m-%d",     -- string
-    enum_labels = {                    -- { attribute = { locale = { label = int } } }
-        status = {
-            en = { active = 1, inactive = 0 },
-        },
-    },
-}
-\`\`\`
-
-Note: \`import_csv\` refuses to run inside an open transaction (it toggles \`PRAGMA foreign_keys\`,
-a no-op mid-transaction) and will throw \`Cannot import_csv: transaction already active\`.
+**Never call \`db:export_csv\` or \`db:import_csv\`.** Their path argument is NOT confined to the
+workspace, so they could read or overwrite arbitrary files (including the user's original study).
+They are disabled in this sandbox and raise an error if called. Edit data with the CRUD and
+time-series methods instead.
 
 ---
 
@@ -345,21 +356,8 @@ for _, id in ipairs(ids) do
     print("Element " .. id .. ", label = " .. tostring(element.label))
 end
 
--- update inside a transaction block
-db:transaction(function(db)
-    db:update_element("Collection", item1, { some_integer = 999 })
-end)
-
--- time series
-db:update_time_series_group("Collection", "data", item1, {
-    date_time = { "2024-01-01T00:00:00", "2024-01-02T00:00:00" },
-    value     = { 10.5, 20.0 },
-})
-db:add_time_series_row("Collection", "data", item1, {
-    date_time = "2024-01-03T00:00:00",
-    value     = 30.0,
-})
-local ts = db:read_time_series_group("Collection", "data", item1)
+-- update (run_lua already runs the whole script in one transaction)
+db:update_element("Collection", item1, { some_integer = 999 })
 
 -- delete
 db:delete_element("Collection", item2)
@@ -367,11 +365,49 @@ db:delete_element("Collection", item2)
 
 ---
 
+## Binary & expression subsystems
+
+> **HEAD-only + filesystem.** Bound in quiver repo HEAD (Lua via sol2) but NOT in the shipped
+> quiverdb 0.9.5 binding, and every call below reads/writes \`.qvr\`/\`.csv\` files at **unconfined
+> paths** — the same reason \`db:export_csv\`/\`db:import_csv\` are disabled here. Reference only until a
+> quiverdb release ships them and the sandbox file policy allows it.
+
+Dense N-dimensional \`float64\` arrays (\`.qvr\` + \`.toml\` sidecar) plus lazy arithmetic over them,
+under a global \`quiver\` table (not \`db\`). Mirrors the Julia surface; aggregation ops are strings
+(Lua has no enums); operators are \`+ - * /\` and unary \`-\`, with scalars allowed on either side.
+
+\`\`\`lua
+local md = quiver.metadata{
+    initial_datetime = "2025-01-01T00:00:00", unit = "MW",
+    labels = {"v1", "v2"}, dimensions = {"stage", "block"}, dimension_sizes = {4, 31},
+    time_dimensions = {"stage", "block"}, frequencies = {"monthly", "daily"},
+}
+local f = quiver.open_file(path, "w", md)          -- mode "r"/"w"; md required for "w"
+f:write({1.0, 2.0}, {stage = 1, block = 1})         -- data table, dims table
+f:close()
+local r = quiver.open_file(path, "r")
+local cell = r:read({stage = 1, block = 1})         -- { v1, v2 }; pass true as 2nd arg to allow NaN
+r:get_metadata(); r:get_file_path(); r:is_open()
+md:get_unit(); md:get_version(); md:get_initial_datetime()
+md:get_labels(); md:get_dimensions(); md:get_number_of_time_dimensions(); md:to_toml()
+quiver.metadata_from_toml(text); quiver.metadata_from_element(tbl)
+quiver.bin_to_csv(path)                              -- + false to keep time dims as columns
+quiver.csv_to_bin(path)
+
+local e = (quiver.expression(r) + 10.0) * 2.0        -- files auto-wrap; scalars either side
+e = quiver.abs(e); e = quiver.sqrt(e)                -- also quiver.log / quiver.exp
+e = quiver.ifelse(cond_e, then_e, else_e)
+e = e:aggregate("stage", "sum")                      -- sum/mean/min/max/percentile
+e = e:aggregate("stage", "percentile", 0.9)          -- percentile needs the fraction
+e = e:aggregate_agents("mean")                       -- collapse the label axis
+e = e:select_agents({"v2"}); e = e:rename_agents({v1 = "alpha"})
+e:save(out_path); e:metadata()
+\`\`\`
+
+---
+
 ## What Lua does *not* expose
 
-- **DateTime wrappers.** Lua uses a string-based datetime surface (ISO 8601 strings); there are
-  no \`read_scalar_date_time_by_id\`-style parsing helpers as in Julia/Dart/Python.
-- **The binary and expression subsystems** (\`.qvr\` files, lazy expressions) are Julia-only and
-  are not bound in Lua.
-- **\`read_element_by_id\` has no \`_by_id\` single-scalar variants** (e.g. \`read_scalar_integer_by_id\`);
-  use the composite by-id readers or the bulk readers instead.`;
+DateTime wrapper helpers (Lua uses ISO 8601 strings) and \`_by_id\` single-scalar variants (use the
+composite by-id readers or the bulk readers instead). The binary/expression subsystems ARE bound in
+Lua (see above) but are filesystem-based and HEAD-only — see the availability note there.`;
