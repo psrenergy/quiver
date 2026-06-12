@@ -1,11 +1,7 @@
 // Agent-facing reference for the Lua `db` API available inside run_lua scripts.
 //
-// Authority: quiver/src/lua_runner.cpp `bind_database()` (read-only sibling repo) — extracted by
-// hand, NOT imported. The shipped quiverdb native binding is the runtime truth; this is docs.
-//
-// Drift guard: test/lua-api.test.ts regex-extracts every `db:<name>` token below and probes
-// `type(db[name]) == "function"` against a real database through the Lua worker, so a quiverdb
-// upgrade that renames or drops a method fails `bun test`.
+// Authority: `src/lua_runner.cpp` `bind_database()` (this repo) — extracted by hand, NOT imported.
+// The shipped quiverdb native binding is the runtime truth; this is docs.
 //
 // NOTE: read_time_series_row is bound in quiver's repo HEAD (lua_runner.cpp) but NOT in the shipped
 // quiverdb 0.9.5 native binding the agent runs against (verified: the live probe finds no such
@@ -15,15 +11,13 @@
 // NOTE: the binary/expression subsystems (quiver.* globals + file:/expr: methods) are bound in
 // quiver repo HEAD (src/lua_runner.cpp, sol2) but are NOT in the shipped quiverdb 0.9.5 binding, and
 // they do unconfined filesystem I/O — documented below as HEAD-only + sandbox-disabled (same posture
-// as export_csv/import_csv). They are quiver.*/file:/expr: calls, not db:<name> tokens, so the drift
-// probe does not cover them; re-classify them as live only after a quiverdb release ships them and
-// the sandbox file policy allows it.
+// as export_csv/import_csv). They are quiver.*/file:/expr: calls, not db:<name> tokens; re-classify
+// them as live only after a quiverdb release ships them and the sandbox file policy allows it.
 //
-// FORMAT CONVENTION (load-bearing for the drift test): every method must appear at least once as
-// the literal token `db:<snake_case_name>`. Methods the agent must NOT call (the transaction
-// methods and export_csv/import_csv) are still listed as `db:<name>` tokens — annotated DO NOT
-// CALL — so the drift probe and the >=45-method count keep covering them. Keep SYSTEM_PROMPT under
-// the 15000-char bound asserted in test/lua-api.test.ts when editing.
+// FORMAT CONVENTION: every method should appear at least once as the literal token
+// `db:<snake_case_name>`. Methods the agent must NOT call (the transaction methods and
+// export_csv/import_csv) are still listed as `db:<name>` tokens — annotated DO NOT CALL — so they
+// stay covered. Keep this reference well under 15000 chars when editing.
 export const LUA_DB_API_REFERENCE = `
 # Quiver Lua API Reference
 

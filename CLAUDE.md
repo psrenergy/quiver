@@ -22,7 +22,7 @@ scripts/                  # build-all/test-all/clean-all.bat, format.bat, tidy.b
                           # ci/{dispatch_workflow.sh, native_s3.sh}, julia/generate_artifacts.jl
 cmake/                    # CompilerOptions.cmake, Dependencies.cmake, Platform.cmake, quiverConfig.cmake.in
 example/                  # example1.lua + example1.bat — quiver_cli/Lua CRUD demo
-docs/                     # User-facing docs: introduction, rules, attributes, migrations, time_series, lua_api
+docs/                     # User-facing docs: introduction, rules, attributes, migrations, time_series
 assets/                   # logo.svg
 ```
 

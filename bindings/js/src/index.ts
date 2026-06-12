@@ -11,6 +11,7 @@ import "./composites.ts";
 export type { CsvOptions } from "./csv.ts";
 export { Database } from "./database.ts";
 export { QuiverError } from "./errors.ts";
+export { LUA_DB_API_REFERENCE } from "./lua-api.ts";
 export { LuaRunner } from "./lua-runner.ts";
 export type { GroupMetadata, ScalarMetadata } from "./metadata.ts";
 export type { TimeSeriesData } from "./time-series.ts";
