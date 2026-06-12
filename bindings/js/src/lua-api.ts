@@ -441,10 +441,12 @@ db:delete_element("Collection", item2)
 
 ## Binary & expression subsystems
 
-Dense N-dimensional \`float64\` arrays (\`.qvr\` + \`.toml\` sidecar) plus lazy arithmetic over them,
-under a global \`quiver\` table (not \`db\`). Mirrors the Julia surface; aggregation ops are strings
-(Lua has no enums); operators are \`+ - * /\` and unary \`-\`, with scalars allowed on either side.
-These read/write files on the host filesystem (\`path\` is host-resolved).
+Dense N-dimensional \`float64\` arrays (\`.qvr\` + \`.toml\` sidecar) plus lazy arithmetic over them.
+File I/O is db-scoped (\`db:open_file\` / \`db:bin_to_csv\` / \`db:csv_to_bin\`); paths are extensionless
+base paths, sandboxed to the database directory (see Critical rules), and \`get_file_path()\` returns
+the resolved absolute path. The pure-metadata builders and expression constructors live under the
+global \`quiver\` table. Mirrors the Julia surface; aggregation ops are strings (Lua has no enums);
+operators are \`+ - * /\` and unary \`-\`, with scalars allowed on either side.
 
 \`\`\`lua
 local md = quiver.metadata{
@@ -452,17 +454,17 @@ local md = quiver.metadata{
     labels = {"v1", "v2"}, dimensions = {"stage", "block"}, dimension_sizes = {4, 31},
     time_dimensions = {"stage", "block"}, frequencies = {"monthly", "daily"},
 }
-local f = quiver.open_file(path, "w", md)          -- mode "r"/"w"; md required for "w"
+local f = db:open_file(path, "w", md)               -- mode "r"/"w"; md required for "w"
 f:write({1.0, 2.0}, {stage = 1, block = 1})         -- data table, dims table
 f:close()
-local r = quiver.open_file(path, "r")
+local r = db:open_file(path, "r")
 local cell = r:read({stage = 1, block = 1})         -- { v1, v2 }; pass true as 2nd arg to allow NaN
 r:get_metadata(); r:get_file_path(); r:is_open()
 md:get_unit(); md:get_version(); md:get_initial_datetime()
 md:get_labels(); md:get_dimensions(); md:get_number_of_time_dimensions(); md:to_toml()
 quiver.metadata_from_toml(text); quiver.metadata_from_element(tbl)
-quiver.bin_to_csv(path)                              -- aggregate=true by default; pass false to keep time dims as columns
-quiver.csv_to_bin(path)
+db:bin_to_csv(path)                                  -- aggregate=true by default; pass false to keep time dims as columns
+db:csv_to_bin(path)
 
 local e = (quiver.expression(r) + 10.0) * 2.0        -- files auto-wrap; scalars either side
 e = quiver.abs(e); e = quiver.sqrt(e)                -- also quiver.log / quiver.exp
@@ -471,7 +473,7 @@ e = e:aggregate("stage", "sum")                      -- sum/mean/min/max/percent
 e = e:aggregate("stage", "percentile", 0.9)          -- percentile needs the fraction
 e = e:aggregate_agents("mean")                       -- collapse the label axis
 e = e:select_agents({"v2"}); e = e:rename_agents({v1 = "alpha"})
-e:save(out_path); e:metadata()
+e:save(out_path); e:metadata()                       -- save path is sandboxed like db:open_file
 \`\`\`
 
 **\`quiver.metadata{...}\` kwargs and defaults:** \`version\` defaults to \`"1"\`; \`initial_datetime\`

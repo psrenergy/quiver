@@ -188,6 +188,17 @@ lua.run(R"(
 ```
 
 Implementation conventions in `lua_runner.cpp`:
+- **Filesystem sandbox**: `resolve_sandboxed_path(db, operation, path)` is the single gate for
+  every file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`,
+  `db:export_csv`, `db:import_csv`, `expr:save`). It rejects `:memory:` databases, resolves
+  relative paths against the database file's directory (bare-filename db paths fall back to the
+  CWD at call time, mirroring `create_database_logger`), canonicalizes via `weakly_canonical`,
+  and requires strict containment (candidate == root is rejected — the binary subsystem appends
+  `.qvr`/`.toml` by string concatenation). The resolved absolute path is what's forwarded
+  downstream, so the process CWD is irrelevant to Lua file I/O. Pattern 1 messages thread the
+  public operation name. This is LuaRunner policy only — the C++/Julia surfaces stay unsandboxed.
+- `dofile` and `loadfile` are nil'd out after `open_libraries` (no loading Lua source from disk);
+  string-form `load` stays available.
 - `parse_csv_options(table)` is the single CSVOptions parser shared by `export_csv`/`import_csv`.
 - `to_lua_table<T>` overloads (flat + nested) are the only vector→table marshalers.
 - `describe` / `describe_collection` / `summarize_collection` are bound as plain lambdas returning
@@ -204,7 +215,7 @@ Implementation conventions in `lua_runner.cpp`:
 ## Binary Subsystem
 
 Standalone binary file I/O layer for `.qvr` files with `.toml` metadata sidecars.
-Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes directly via sol2 in `src/lua_runner.cpp` (`quiver.*` namespace + method syntax + string aggregation ops).
+Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes directly via sol2 in `src/lua_runner.cpp` (file I/O is db-scoped and sandboxed — `db:open_file`/`db:bin_to_csv`/`db:csv_to_bin`; metadata builders under `quiver.*`; method syntax + string aggregation ops).
 
 - `BinaryFile` class (Pimpl): `open_file(path, mode, metadata?)`, `read(dims, allow_nulls = false)`, `write(data, dims)`, `get_metadata()`, `get_file_path()`
 - `CSVConverter` class (composition, no Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)`
@@ -241,7 +252,7 @@ Profiled with 480×500×31 dimensions (~7.3M read/write calls). Main hot-path co
 
 ## Expression Subsystem
 
-Lazy expressions over `.qvr` binary files. Build a DAG using `+ - * /` operator overloads (binary and unary minus) and unary math free functions, materialize via `save()`. Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes directly via sol2 in `src/lua_runner.cpp` (`quiver.*` namespace + method syntax + string aggregation ops).
+Lazy expressions over `.qvr` binary files. Build a DAG using `+ - * /` operator overloads (binary and unary minus) and unary math free functions, materialize via `save()`. Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes directly via sol2 in `src/lua_runner.cpp` (`quiver.*` namespace + method syntax + string aggregation ops; `expr:save` paths are sandboxed to the database directory).
 
 ```cpp
 auto a = BinaryFile::open_file("a", 'r');

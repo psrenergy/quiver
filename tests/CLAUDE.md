@@ -13,11 +13,15 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   `test_schema_validator.cpp`
 - Lua: `test_lua_runner_*.cpp` — per-area split mirroring the database files (`_create`, `_read`,
   `_update`, `_delete`, `_query`, `_time_series`, `_transaction`, `_errors`, `_csv_export`,
-  `_csv_import`, `_all_types`, `_fk`). The shared `LuaRunnerTest` fixture and common include
+  `_csv_import`, `_all_types`, `_fk`). The shared `LuaRunnerTest` and `LuaSandboxTest` fixtures,
+  the `expect_lua_error` helper (throw + message-substring assert — plain `EXPECT_THROW` passes
+  vacuously when a removed function raises "attempt to call a nil value"), and the common include
   prelude live in `test_lua_runner.h`; the single-use `LuaRunnerAllTypesTest` / `LuaRunnerFkTest`
-  fixtures stay local to their files. The Lua binary/expression subsystem bindings are covered by
-  `test_lua_binary.cpp` and `test_lua_expression.cpp` (their fixtures write `.qvr` temp files, like
-  `test_expression.cpp`).
+  fixtures stay local to their files. Lua file operations are sandboxed to the database directory
+  (root design decision), so every file-touching Lua test uses `LuaSandboxTest`: a file-backed db
+  in a dedicated per-test temp dir, with scripts passing relative paths. The Lua binary/expression
+  subsystem bindings (and the sandbox itself) are covered by `test_lua_binary.cpp` and
+  `test_lua_expression.cpp`.
 - Binary subsystem: `test_binary_file.cpp`, `test_binary_metadata.cpp`,
   `test_binary_time_properties.cpp`, `test_csv_converter.cpp`, `test_iteration.cpp`
 - Expression subsystem: `test_expression.cpp`

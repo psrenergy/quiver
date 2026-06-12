@@ -165,19 +165,17 @@ struct LuaRunner::Impl {
 
         // Binary subsystem file I/O — db-scoped and sandboxed: paths resolve against the directory
         // containing the database file and must stay inside it.
-        bind.set_function("open_file",
-                          [](Database& self,
-                             const std::string& path,
-                             const std::string& mode,
-                             sol::optional<BinaryMetadata> metadata) -> std::unique_ptr<BinaryFile> {
-                              if (mode.size() != 1 || (mode[0] != 'r' && mode[0] != 'w')) {
-                                  throw std::runtime_error("Cannot open_file: mode must be \"r\" or \"w\"");
-                              }
-                              const auto resolved = resolve_sandboxed_path(self, "open_file", path);
-                              std::optional<BinaryMetadata> md =
-                                  metadata ? std::optional<BinaryMetadata>(*metadata) : std::nullopt;
-                              return std::make_unique<BinaryFile>(BinaryFile::open_file(resolved, mode[0], md));
-                          });
+        bind.set_function(
+            "open_file",
+            [](Database& self, const std::string& path, const std::string& mode, sol::optional<BinaryMetadata> metadata)
+                -> std::unique_ptr<BinaryFile> {
+                if (mode.size() != 1 || (mode[0] != 'r' && mode[0] != 'w')) {
+                    throw std::runtime_error("Cannot open_file: mode must be \"r\" or \"w\"");
+                }
+                const auto resolved = resolve_sandboxed_path(self, "open_file", path);
+                std::optional<BinaryMetadata> md = metadata ? std::optional<BinaryMetadata>(*metadata) : std::nullopt;
+                return std::make_unique<BinaryFile>(BinaryFile::open_file(resolved, mode[0], md));
+            });
         bind.set_function("bin_to_csv", [](Database& self, const std::string& path, sol::optional<bool> aggregate) {
             CSVConverter::bin_to_csv(resolve_sandboxed_path(self, "bin_to_csv", path), aggregate.value_or(true));
         });
@@ -517,8 +515,8 @@ struct LuaRunner::Impl {
         // outside the sandbox.
         const auto rel = candidate.lexically_relative(root);
         if (rel.empty() || rel == "." || rel.begin()->string() == "..") {
-            throw std::runtime_error("Cannot " + operation + ": path '" + path +
-                                     "' escapes the database directory '" + root.string() + "'");
+            throw std::runtime_error("Cannot " + operation + ": path '" + path + "' escapes the database directory '" +
+                                     root.string() + "'");
         }
 
         return candidate.string();
