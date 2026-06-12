@@ -5,9 +5,9 @@
 // binding changes, re-diff every signature below against `bind_database()` (names, arg order, arg
 // types, return shapes).
 //
-// NOTE: the binary/expression subsystems (quiver.* globals + file:/expr: methods) are bound in the
-// native binding and documented below. They are quiver.*/file:/expr: calls, not db:<name> tokens,
-// and they read/write files on the host filesystem.
+// NOTE: the binary/expression subsystems are bound in the native binding and documented below.
+// File-touching operations (db:open_file, db:bin_to_csv, db:csv_to_bin, expr:save) are sandboxed
+// to the database file's directory; the pure-metadata builders stay under the quiver.* global.
 //
 // FORMAT CONVENTION: every db: method should appear at least once as the literal token
 // `db:<snake_case_name>` so coverage is greppable.
@@ -66,7 +66,14 @@ datetime surface — there are no DateTime wrapper helpers, unlike Julia/Dart/Py
   \`Failed to run Lua script: <message>\`. Validation failures roll back whatever the current
   transaction covered.
 - **Standard library.** Only the \`base\`, \`string\`, and \`table\` libraries are loaded — there is NO
-  \`math\` (use \`//\` for integer division), and no \`os\`, \`io\`, \`require\`, \`load\`, or \`dofile\`.
+  \`math\` (use \`//\` for integer division), and no \`os\`, \`io\`, or \`require\`; \`dofile\` and
+  \`loadfile\` are removed (string-form \`load\` is available).
+- **Filesystem sandbox.** Every file-touching operation (\`db:export_csv\`, \`db:import_csv\`,
+  \`db:open_file\`, \`db:bin_to_csv\`, \`db:csv_to_bin\`, \`expr:save\`) resolves relative paths against
+  the directory containing the database file and rejects anything outside it (subdirectories are
+  fine; \`..\` escapes and outside absolute paths throw \`Cannot <op>: path '...' escapes the
+  database directory ...\`). On an in-memory database these operations throw
+  \`Cannot <op>: database is in-memory, file operations are unavailable\`.
 - **Output.** Scripts cannot return values to the tool — use \`print()\` for anything you need to
   see (it is captured). Arrays are 1-indexed (iterate with \`ipairs\`); reading a NULL yields \`nil\`,
   writing \`nil\` stores NULL where NULL is accepted (query params, ts rows, file columns — but NOT
@@ -373,8 +380,9 @@ local count = db:query_integer("SELECT COUNT(*) FROM Collection")
 
 ## CSV import / export
 
-Export a time-series group to a CSV file, or import one from a CSV file. \`path\` is resolved by the
-host filesystem; \`options\` is optional.
+Export a time-series group to a CSV file, or import one from a CSV file. \`path\` is sandboxed:
+relative paths resolve against the database file's directory and must stay inside it (see
+Critical rules); \`options\` is optional.
 
 \`\`\`lua
 db:export_csv(collection, group, path, options)
