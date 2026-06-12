@@ -148,6 +148,31 @@ TEST_F(LuaRunnerCApiTest, RuntimeError) {
     quiver_database_close(db);
 }
 
+TEST_F(LuaRunnerCApiTest, SandboxViolationError) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    quiver_lua_runner_t* lua = nullptr;
+    ASSERT_EQ(quiver_lua_runner_new(db, &lua), QUIVER_OK);
+    ASSERT_NE(lua, nullptr);
+
+    // File operations are db-scoped and sandboxed; the violation surfaces through the single
+    // error channel with the script-failure prefix wrapping the Pattern 1 message.
+    auto result = quiver_lua_runner_run(lua, "db:open_file('x', 'r')");
+    EXPECT_NE(result, QUIVER_OK);
+
+    const char* error = quiver_get_last_error();
+    ASSERT_NE(error, nullptr);
+    EXPECT_NE(std::string(error).find("Failed to run Lua script:"), std::string::npos) << error;
+    EXPECT_NE(std::string(error).find("Cannot open_file: database is in-memory"), std::string::npos) << error;
+
+    quiver_lua_runner_free(lua);
+    quiver_database_close(db);
+}
+
 TEST_F(LuaRunnerCApiTest, ReuseRunner) {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;

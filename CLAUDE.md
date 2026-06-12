@@ -55,10 +55,18 @@ Settled questions — don't relitigate without the user; each was decided delibe
   open/factory methods of every binding.
 - **Binary + expression subsystems are exposed in Julia and Lua only.** Dart, Python, and JS
   deliberately do not expose them (no FFI consumer); the tests-at-every-layer rule has this one
-  documented exception. Lua binds the C++ classes directly via sol2 (`src/lua_runner.cpp`), so it
-  uses a `quiver.*` namespace + method syntax + string aggregation operations (see cross-layer
-  table). `helper_maps.jl` is a second documented Julia-only exception (see convenience methods
-  below).
+  documented exception. Lua binds the C++ classes directly via sol2 (`src/lua_runner.cpp`) with
+  method syntax + string aggregation operations; pure-metadata builders live under a `quiver.*`
+  namespace while file I/O is db-scoped (see cross-layer table and the sandbox decision below).
+  `helper_maps.jl` is a second documented Julia-only exception (see convenience methods below).
+- **Lua file operations are db-scoped and sandboxed to the database directory.** Every
+  file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`, `db:export_csv`,
+  `db:import_csv`, `expr:save`) resolves relative paths against the directory containing the
+  database file and rejects — reads and writes alike — anything that escapes it (subdirectories
+  OK; checked via `weakly_canonical` with strict containment). In-memory databases (`:memory:`)
+  reject all file operations. `dofile`/`loadfile` are removed from the Lua environment
+  (string-form `load` stays). Julia's standalone `open_file` is unaffected — this is LuaRunner
+  policy (`resolve_sandboxed_path` in `src/lua_runner.cpp`), not binary-subsystem policy.
 - **Int-for-REAL coercion lives in C++** (`value_matches_type` accepts int64 for REAL columns in
   time-series writes); bindings never coerce schema-dependently.
 - **Migration `down_sql` is a required feature** — do not remove the down path.
@@ -347,14 +355,14 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 
 | Category | C++ | C API | Julia | Lua |
 |----------|-----|-------|-------|-----|
-| Open file | `BinaryFile::open_file(path, mode, md?)` | `quiver_binary_file_open_file()` | `open_file(path; mode, metadata=nothing)` | `quiver.open_file(path, mode, md?)` |
+| Open file | `BinaryFile::open_file(path, mode, md?)` | `quiver_binary_file_open_file()` | `open_file(path; mode, metadata=nothing)` | `db:open_file(path, mode, md?)` |
 | Close | (destructor) | `quiver_binary_file_close()` | `close!(file)` | `file:close()` |
 | Read | `binary_file.read(dims)` | `quiver_binary_file_read()` | `read(file; dims...)` | `file:read(dims, allow_nulls?)` |
 | Write | `binary_file.write(data, dims)` | `quiver_binary_file_write()` | `write!(file; data=data, dims...)` | `file:write(data, dims)` |
 | Get metadata | `binary_file.get_metadata()` | `quiver_binary_file_get_metadata()` | `get_metadata(file)` | `file:get_metadata()` |
 | Get file path | `binary_file.get_file_path()` | `quiver_binary_file_get_file_path()` | `get_file_path(file)` | `file:get_file_path()` |
-| Bin to CSV | `CSVConverter::bin_to_csv()` | `quiver_csv_converter_bin_to_csv()` | `bin_to_csv()` | `quiver.bin_to_csv(path, aggregate?)` |
-| CSV to bin | `CSVConverter::csv_to_bin()` | `quiver_csv_converter_csv_to_bin()` | `csv_to_bin()` | `quiver.csv_to_bin(path)` |
+| Bin to CSV | `CSVConverter::bin_to_csv()` | `quiver_csv_converter_bin_to_csv()` | `bin_to_csv()` | `db:bin_to_csv(path, aggregate?)` |
+| CSV to bin | `CSVConverter::csv_to_bin()` | `quiver_csv_converter_csv_to_bin()` | `csv_to_bin()` | `db:csv_to_bin(path)` |
 | Metadata builder | `BinaryMetadata{}` | `quiver_binary_metadata_create()` | `Metadata(; kwargs...)` | `quiver.metadata{kwargs}` |
 | Metadata from TOML | `BinaryMetadata::from_toml_content()` | `quiver_binary_metadata_from_toml()` | `from_toml_content()` | `quiver.metadata_from_toml()` |
 | Metadata from Element | `BinaryMetadata::from_element()` | `quiver_binary_metadata_from_element()` | `from_element()` | `quiver.metadata_from_element()` |
@@ -366,6 +374,8 @@ scalar-on-either-side and `file_a + file_b` both supported), unary math via `qui
 `expr:aggregate_agents(op[, p])` / `expr:select_agents(labels)` / `expr:rename_agents({old=new})` /
 `expr:save(path)` / `expr:metadata()`. Aggregation `op` is a **string**
 (`"sum"/"mean"/"min"/"max"/"percentile"`) — Lua has no enums, mirroring JS's string-based surface.
+Lua file I/O is db-scoped (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`) and `expr:save` paths
+are sandboxed to the database directory (see Design Decisions).
 
 ### Binding-Only Convenience Methods
 

@@ -250,6 +250,18 @@ TEST_F(LuaRunnerTest, LuaScriptWithUnicodeCharacters) {
     EXPECT_EQ(collection_labels.size(), 1);
 }
 
+TEST_F(LuaRunnerTest, DofileAndLoadfileRemoved) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    // Scripts may not load Lua source from disk; string-form load() stays available.
+    lua.run(R"(
+        assert(dofile == nil, "dofile should be removed")
+        assert(loadfile == nil, "loadfile should be removed")
+        assert(load("return 1 + 1")() == 2, "string-form load should work")
+    )");
+}
+
 TEST_F(LuaRunnerTest, QueryParameterUnsupportedTypeThrows) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));

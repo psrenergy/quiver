@@ -1,6 +1,5 @@
 #include "test_lua_runner.h"
 
-#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -12,23 +11,13 @@ static std::string read_csv_file(const std::string& path) {
     return ss.str();
 }
 
-static std::filesystem::path lua_csv_temp(const std::string& test_name) {
-    return std::filesystem::temp_directory_path() / ("quiver_lua_test_" + test_name + ".csv");
-}
+// db:export_csv paths are sandboxed: relative paths resolve against the database directory.
+class LuaRunner_ExportCSV : public LuaSandboxTest {};
 
-// Convert path to forward slashes for safe Lua string embedding
-static std::string lua_safe_path(const std::filesystem::path& p) {
-    auto s = p.string();
-    std::replace(s.begin(), s.end(), '\\', '/');
-    return s;
-}
-
-TEST(LuaRunner_ExportCSV, ScalarDefaults) {
+TEST_F(LuaRunner_ExportCSV, ScalarDefaults) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
-    auto db = quiver::Database::from_schema(":memory:", csv_schema);
+    auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::LuaRunner lua(db);
-
-    auto csv_path = lua_csv_temp("ScalarDefaults");
 
     lua.run(R"(
         db:create_element("Items", {
@@ -41,22 +30,18 @@ TEST(LuaRunner_ExportCSV, ScalarDefaults) {
         })
     )");
 
-    lua.run(R"(db:export_csv("Items", "", ")" + lua_safe_path(csv_path) + "\")");
+    lua.run(R"(db:export_csv("Items", "", "out.csv"))");
 
-    auto content = read_csv_file(csv_path.string());
+    auto content = read_csv_file((sandbox / "out.csv").string());
     EXPECT_NE(content.find("label,name,status,price,date_created,notes\n"), std::string::npos);
     EXPECT_NE(content.find("Item1,Alpha,1,9.99,2024-01-15T10:30:00,first\n"), std::string::npos);
     EXPECT_NE(content.find("Item2,Beta,2,19.5,2024-02-20T08:00:00,second\n"), std::string::npos);
-
-    std::filesystem::remove(csv_path);
 }
 
-TEST(LuaRunner_ExportCSV, GroupExport) {
+TEST_F(LuaRunner_ExportCSV, GroupExport) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
-    auto db = quiver::Database::from_schema(":memory:", csv_schema);
+    auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::LuaRunner lua(db);
-
-    auto csv_path = lua_csv_temp("GroupExport");
 
     lua.run(R"(
         local id1 = db:create_element("Items", { label = "Item1", name = "Alpha" })
@@ -65,25 +50,21 @@ TEST(LuaRunner_ExportCSV, GroupExport) {
         db:update_element("Items", id2, { measurement = {4.4, 5.5} })
     )");
 
-    lua.run(R"(db:export_csv("Items", "measurements", ")" + lua_safe_path(csv_path) + "\")");
+    lua.run(R"(db:export_csv("Items", "measurements", "out.csv"))");
 
-    auto content = read_csv_file(csv_path.string());
+    auto content = read_csv_file((sandbox / "out.csv").string());
     EXPECT_NE(content.find("sep=,\nid,vector_index,measurement\n"), std::string::npos);
     EXPECT_NE(content.find("Item1,1,1.1\n"), std::string::npos);
     EXPECT_NE(content.find("Item1,2,2.2\n"), std::string::npos);
     EXPECT_NE(content.find("Item1,3,3.3\n"), std::string::npos);
     EXPECT_NE(content.find("Item2,1,4.4\n"), std::string::npos);
     EXPECT_NE(content.find("Item2,2,5.5\n"), std::string::npos);
-
-    std::filesystem::remove(csv_path);
 }
 
-TEST(LuaRunner_ExportCSV, EnumLabels) {
+TEST_F(LuaRunner_ExportCSV, EnumLabels) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
-    auto db = quiver::Database::from_schema(":memory:", csv_schema);
+    auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::LuaRunner lua(db);
-
-    auto csv_path = lua_csv_temp("EnumLabels");
 
     lua.run(R"(
         db:create_element("Items", {
@@ -96,26 +77,23 @@ TEST(LuaRunner_ExportCSV, EnumLabels) {
         })
     )");
 
-    lua.run(R"(db:export_csv("Items", "", ")" + lua_safe_path(csv_path) +
-            "\", {\n"
-            "    enum_labels = {\n"
-            "        status = { en = { Active = 1, Inactive = 2 } }\n"
-            "    }\n"
-            "})");
+    lua.run(R"(
+        db:export_csv("Items", "", "out.csv", {
+            enum_labels = {
+                status = { en = { Active = 1, Inactive = 2 } }
+            }
+        })
+    )");
 
-    auto content = read_csv_file(csv_path.string());
+    auto content = read_csv_file((sandbox / "out.csv").string());
     EXPECT_NE(content.find("Item1,Alpha,Active,9.99,2024-01-15T10:30:00,first\n"), std::string::npos);
     EXPECT_NE(content.find("Item2,Beta,Inactive,19.5,2024-02-20T08:00:00,second\n"), std::string::npos);
-
-    std::filesystem::remove(csv_path);
 }
 
-TEST(LuaRunner_ExportCSV, DateTimeFormat) {
+TEST_F(LuaRunner_ExportCSV, DateTimeFormat) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
-    auto db = quiver::Database::from_schema(":memory:", csv_schema);
+    auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::LuaRunner lua(db);
-
-    auto csv_path = lua_csv_temp("DateTimeFormat");
 
     lua.run(R"(
         db:create_element("Items", {
@@ -124,23 +102,20 @@ TEST(LuaRunner_ExportCSV, DateTimeFormat) {
         })
     )");
 
-    lua.run(R"(db:export_csv("Items", "", ")" + lua_safe_path(csv_path) +
-            "\", {\n"
-            "    date_time_format = \"%Y/%m/%d\"\n"
-            "})");
+    lua.run(R"(
+        db:export_csv("Items", "", "out.csv", {
+            date_time_format = "%Y/%m/%d"
+        })
+    )");
 
-    auto content = read_csv_file(csv_path.string());
+    auto content = read_csv_file((sandbox / "out.csv").string());
     EXPECT_NE(content.find("Item1,Alpha,1,9.99,2024/01/15,first\n"), std::string::npos);
-
-    std::filesystem::remove(csv_path);
 }
 
-TEST(LuaRunner_ExportCSV, CombinedOptions) {
+TEST_F(LuaRunner_ExportCSV, CombinedOptions) {
     auto csv_schema = VALID_SCHEMA("csv_export.sql");
-    auto db = quiver::Database::from_schema(":memory:", csv_schema);
+    auto db = quiver::Database::from_schema(db_path(), csv_schema);
     quiver::LuaRunner lua(db);
-
-    auto csv_path = lua_csv_temp("CombinedOptions");
 
     lua.run(R"(
         db:create_element("Items", {
@@ -153,19 +128,50 @@ TEST(LuaRunner_ExportCSV, CombinedOptions) {
         })
     )");
 
-    lua.run(R"(db:export_csv("Items", "", ")" + lua_safe_path(csv_path) +
-            "\", {\n"
-            "    enum_labels = {\n"
-            "        status = { en = { Active = 1, Inactive = 2 } }\n"
-            "    },\n"
-            "    date_time_format = \"%Y/%m/%d\"\n"
-            "})");
+    lua.run(R"(
+        db:export_csv("Items", "", "out.csv", {
+            enum_labels = {
+                status = { en = { Active = 1, Inactive = 2 } }
+            },
+            date_time_format = "%Y/%m/%d"
+        })
+    )");
 
-    auto content = read_csv_file(csv_path.string());
+    auto content = read_csv_file((sandbox / "out.csv").string());
     EXPECT_NE(content.find("label,name,status,price,date_created,notes\n"), std::string::npos);
     EXPECT_NE(content.find("Item1,Alpha,Active,9.99,2024/01/15,first\n"), std::string::npos);
     EXPECT_NE(content.find("Item2,Beta,Inactive,19.5,2024/02/20,second\n"), std::string::npos) << "Actual content:\n"
                                                                                                << content;
+}
 
-    std::filesystem::remove(csv_path);
+// --- db-directory sandbox ---
+
+TEST_F(LuaRunner_ExportCSV, RelativeResolvesAgainstDbDir) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(db_path(), csv_schema);
+    quiver::LuaRunner lua(db);
+
+    lua.run(R"(db:create_element("Items", { label = "Item1", name = "Alpha" }))");
+    lua.run(R"(db:export_csv("Items", "", "out.csv"))");
+
+    EXPECT_TRUE(std::filesystem::exists(sandbox / "out.csv"));
+    EXPECT_FALSE(std::filesystem::exists(std::filesystem::current_path() / "out.csv"));
+}
+
+TEST_F(LuaRunner_ExportCSV, EscapeThrows) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(db_path(), csv_schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua,
+                     R"(db:export_csv("Items", "", "../x.csv"))",
+                     "Cannot export_csv: path '../x.csv' escapes the database directory");
+}
+
+TEST_F(LuaRunner_ExportCSV, InMemoryThrows) {
+    auto csv_schema = VALID_SCHEMA("csv_export.sql");
+    auto db = quiver::Database::from_schema(":memory:", csv_schema);
+    quiver::LuaRunner lua(db);
+
+    expect_lua_error(lua, R"(db:export_csv("Items", "", "out.csv"))", "Cannot export_csv: database is in-memory");
 }
