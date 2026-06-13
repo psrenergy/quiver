@@ -48,7 +48,7 @@ extension DatabaseUpdate on Database {
     String collection,
     String group,
     int id,
-    Map<String, List<Object>> data,
+    Map<String, List<Object?>> data,
   ) {
     _ensureNotClosed();
 
@@ -61,6 +61,7 @@ extension DatabaseUpdate on Database {
             collection.toNativeUtf8(allocator: arena).cast(),
             group.toNativeUtf8(allocator: arena).cast(),
             id,
+            nullptr,
             nullptr,
             nullptr,
             nullptr,
@@ -83,6 +84,7 @@ extension DatabaseUpdate on Database {
       final columnNames = arena<Pointer<Char>>(columnCount);
       final columnTypes = arena<Int>(columnCount);
       final columnData = arena<Pointer<Void>>(columnCount);
+      final columnHasValue = arena<Pointer<Uint8>>(columnCount);
 
       var i = 0;
       for (final entry in data.entries) {
@@ -90,6 +92,7 @@ extension DatabaseUpdate on Database {
         final column = _marshalTimeSeriesColumn(arena, entry.value);
         columnTypes[i] = column.type;
         columnData[i] = column.data;
+        columnHasValue[i] = column.hasValue;
         i++;
       }
 
@@ -102,6 +105,7 @@ extension DatabaseUpdate on Database {
           columnNames,
           columnTypes,
           columnData,
+          columnHasValue,
           columnCount,
           rowCount,
         ),
@@ -205,57 +209,87 @@ extension DatabaseUpdate on Database {
     }
   }
 
-  /// Marshals one time series column into an arena-allocated typed array,
-  /// returning its quiver_data_type_t tag and data pointer.
-  /// Supported value types: int, double, String, DateTime.
-  ({int type, Pointer<Void> data}) _marshalTimeSeriesColumn(
+  /// Marshals one time series column into arena-allocated typed + mask arrays,
+  /// returning its quiver_data_type_t tag, data pointer, and per-cell NULL mask.
+  /// Supported value types: int, double, String, DateTime; a `null` entry becomes
+  /// a SQL NULL (mask 0) with a placeholder in the data array. An all-null (or
+  /// empty) column is tagged FLOAT with a zeroed placeholder — the C API ignores
+  /// the type tag and data for masked-out cells.
+  ({int type, Pointer<Void> data, Pointer<Uint8> hasValue}) _marshalTimeSeriesColumn(
     Arena arena,
-    List<Object> values,
+    List<Object?> values,
   ) {
-    if (values.isEmpty) {
-      return (type: quiver_data_type_t.QUIVER_DATA_TYPE_STRING, data: nullptr);
+    final mask = arena<Uint8>(values.length);
+    for (var r = 0; r < values.length; r++) {
+      mask[r] = values[r] == null ? 0 : 1;
     }
-    final first = values.first;
+
+    Object? first;
+    for (final v in values) {
+      if (v != null) {
+        first = v;
+        break;
+      }
+    }
+
+    if (first == null) {
+      // All-null (or empty) column.
+      final arr = arena<Double>(values.isEmpty ? 1 : values.length);
+      for (var r = 0; r < values.length; r++) {
+        arr[r] = 0.0;
+      }
+      return (
+        type: quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT,
+        data: arr.cast(),
+        hasValue: mask,
+      );
+    }
     if (first is int) {
       final arr = arena<Int64>(values.length);
       for (var r = 0; r < values.length; r++) {
-        arr[r] = values[r] as int;
+        arr[r] = values[r] == null ? 0 : values[r] as int;
       }
       return (
         type: quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER,
         data: arr.cast(),
+        hasValue: mask,
       );
     }
     if (first is double) {
       final arr = arena<Double>(values.length);
       for (var r = 0; r < values.length; r++) {
-        arr[r] = values[r] as double;
+        arr[r] = values[r] == null ? 0.0 : values[r] as double;
       }
       return (
         type: quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT,
         data: arr.cast(),
+        hasValue: mask,
       );
     }
     if (first is String) {
       final arr = arena<Pointer<Char>>(values.length);
       for (var r = 0; r < values.length; r++) {
-        arr[r] = (values[r] as String).toNativeUtf8(allocator: arena).cast();
+        arr[r] = values[r] == null ? nullptr : (values[r] as String).toNativeUtf8(allocator: arena).cast();
       }
       return (
         type: quiver_data_type_t.QUIVER_DATA_TYPE_STRING,
         data: arr.cast(),
+        hasValue: mask,
       );
     }
     if (first is DateTime) {
       final arr = arena<Pointer<Char>>(values.length);
       for (var r = 0; r < values.length; r++) {
-        arr[r] = dateTimeToString(
-          values[r] as DateTime,
-        ).toNativeUtf8(allocator: arena).cast();
+        arr[r] = values[r] == null
+            ? nullptr
+            : dateTimeToString(
+                values[r] as DateTime,
+              ).toNativeUtf8(allocator: arena).cast();
       }
       return (
         type: quiver_data_type_t.QUIVER_DATA_TYPE_STRING,
         data: arr.cast(),
+        hasValue: mask,
       );
     }
     throw ArgumentError('Unsupported value type: ${first.runtimeType}');

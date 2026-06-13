@@ -1222,8 +1222,7 @@ struct LuaRunner::Impl {
             const auto* column = find_column(dim);
             if (column->extent != row_count) {
                 throw std::runtime_error("Cannot update_time_series_group: column '" + dim + "' has length " +
-                                         std::to_string(column->extent) + " but expected " +
-                                         std::to_string(row_count));
+                                         std::to_string(column->extent) + " but expected " + std::to_string(row_count));
             }
             if (column->count != column->extent) {
                 for (size_t i = 1; i <= column->extent; ++i) {
@@ -1237,9 +1236,8 @@ struct LuaRunner::Impl {
 
         for (const auto& column : lua_columns) {
             if (column.extent > row_count) {
-                throw std::runtime_error("Cannot update_time_series_group: column '" + column.name +
-                                         "' has length " + std::to_string(column.extent) + " but expected " +
-                                         std::to_string(row_count));
+                throw std::runtime_error("Cannot update_time_series_group: column '" + column.name + "' has length " +
+                                         std::to_string(column.extent) + " but expected " + std::to_string(row_count));
             }
         }
 

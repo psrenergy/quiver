@@ -524,13 +524,14 @@ function read_time_series_group(db::Database, collection::String, group::String,
     out_col_names = Ref{Ptr{Ptr{Cchar}}}(C_NULL)
     out_col_types = Ref{Ptr{Cint}}(C_NULL)
     out_col_data = Ref{Ptr{Ptr{Cvoid}}}(C_NULL)
+    out_col_has_value = Ref{Ptr{Ptr{UInt8}}}(C_NULL)
     out_col_count = Ref{Csize_t}(0)
     out_row_count = Ref{Csize_t}(0)
 
     check(
         C.quiver_database_read_time_series_group(
             db.ptr, collection, group, id,
-            out_col_names, out_col_types, out_col_data, out_col_count, out_row_count,
+            out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count,
         ),
     )
 
@@ -545,29 +546,35 @@ function read_time_series_group(db::Database, collection::String, group::String,
     metadata = get_time_series_metadata(db, collection, group)
     dim_col = metadata.dimension_column
 
-    # Unmarshal column names, types, data
+    # Unmarshal column names, types, data, and per-cell NULL masks
     name_ptrs = unsafe_wrap(Array, out_col_names[], col_count)
     type_vals = unsafe_wrap(Array, out_col_types[], col_count)
     data_ptrs = unsafe_wrap(Array, out_col_data[], col_count)
+    mask_ptrs = unsafe_wrap(Array, out_col_has_value[], col_count)
 
+    # Value columns are typed Union{T, Nothing}: mask[r] == 0 surfaces as `nothing`. The
+    # dimension column's mask is always all 1, so it stays a dense Vector{DateTime}.
     result = Dict{String, Vector}()
     for i in 1:col_count
         col_name = unsafe_string(name_ptrs[i])
         col_type = type_vals[i]
+        mask = unsafe_wrap(Array, mask_ptrs[i], row_count)
 
         if col_type == Cint(C.QUIVER_DATA_TYPE_INTEGER)
-            int_ptr = reinterpret(Ptr{Int64}, data_ptrs[i])
-            result[col_name] = copy(unsafe_wrap(Array, int_ptr, row_count))
+            int_arr = unsafe_wrap(Array, reinterpret(Ptr{Int64}, data_ptrs[i]), row_count)
+            result[col_name] = Union{Int64, Nothing}[mask[r] != 0 ? int_arr[r] : nothing for r in 1:row_count]
         elseif col_type == Cint(C.QUIVER_DATA_TYPE_FLOAT)
-            float_ptr = reinterpret(Ptr{Float64}, data_ptrs[i])
-            result[col_name] = copy(unsafe_wrap(Array, float_ptr, row_count))
+            float_arr = unsafe_wrap(Array, reinterpret(Ptr{Float64}, data_ptrs[i]), row_count)
+            result[col_name] = Union{Float64, Nothing}[mask[r] != 0 ? float_arr[r] : nothing for r in 1:row_count]
         elseif col_type == Cint(C.QUIVER_DATA_TYPE_STRING) || col_type == Cint(C.QUIVER_DATA_TYPE_DATE_TIME)
             str_ptr_ptr = reinterpret(Ptr{Ptr{Cchar}}, data_ptrs[i])
             str_ptrs = unsafe_wrap(Array, str_ptr_ptr, row_count)
             if col_name == dim_col
                 result[col_name] = DateTime[string_to_date_time(unsafe_string(p)) for p in str_ptrs]
             else
-                result[col_name] = String[unsafe_string(p) for p in str_ptrs]
+                # Never unsafe_string a masked-out (NULL) pointer.
+                result[col_name] =
+                    Union{String, Nothing}[mask[r] != 0 ? unsafe_string(str_ptrs[r]) : nothing for r in 1:row_count]
             end
         else
             throw(ArgumentError("Unsupported data type $(col_type) for column '$col_name'"))
@@ -576,7 +583,7 @@ function read_time_series_group(db::Database, collection::String, group::String,
 
     # Free C-allocated memory
     C.quiver_database_free_time_series_data(
-        out_col_names[], out_col_types[], out_col_data[],
+        out_col_names[], out_col_types[], out_col_data[], out_col_has_value[],
         Csize_t(col_count), Csize_t(row_count),
     )
 

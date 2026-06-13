@@ -993,9 +993,9 @@ extension DatabaseRead on Database {
   /// Reads a time series group for an element by Id.
   /// Returns a Map of column names to typed Lists.
   /// The dimension column is parsed to List<DateTime>.
-  /// INTEGER columns return List<int>, FLOAT columns return List<double>,
-  /// other TEXT columns return List<String>.
-  Map<String, List<Object>> readTimeSeriesGroup(
+  /// INTEGER columns return List<int?>, FLOAT columns return List<double?>,
+  /// other TEXT columns return List<String?>; a SQL NULL cell is `null`.
+  Map<String, List<Object?>> readTimeSeriesGroup(
     String collection,
     String group,
     int id,
@@ -1007,6 +1007,7 @@ extension DatabaseRead on Database {
       final outColNames = arena<Pointer<Pointer<Char>>>();
       final outColTypes = arena<Pointer<Int>>();
       final outColData = arena<Pointer<Pointer<Void>>>();
+      final outColHasValue = arena<Pointer<Pointer<Uint8>>>();
       final outColCount = arena<Size>();
       final outRowCount = arena<Size>();
 
@@ -1019,6 +1020,7 @@ extension DatabaseRead on Database {
           outColNames,
           outColTypes,
           outColData,
+          outColHasValue,
           outColCount,
           outRowCount,
         ),
@@ -1033,17 +1035,20 @@ extension DatabaseRead on Database {
       final meta = getTimeSeriesMetadata(collection, group);
       final dimCol = meta.dimensionColumn;
 
-      final result = <String, List<Object>>{};
+      // Per-cell NULL mask: mask[r] == 0 means SQL NULL, surfaced as null. The
+      // dimension column's mask is always all 1, so it stays a dense List<DateTime>.
+      final result = <String, List<Object?>>{};
       for (var c = 0; c < colCount; c++) {
         final colName = outColNames.value[c].cast<Utf8>().toDartString();
         final colType = outColTypes.value[c];
+        final mask = outColHasValue.value[c];
 
         if (colType == quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER) {
           final ptr = outColData.value[c].cast<Int64>();
-          result[colName] = List<int>.generate(rowCount, (r) => ptr[r]);
+          result[colName] = List<int?>.generate(rowCount, (r) => mask[r] != 0 ? ptr[r] : null);
         } else if (colType == quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT) {
           final ptr = outColData.value[c].cast<Double>();
-          result[colName] = List<double>.generate(rowCount, (r) => ptr[r]);
+          result[colName] = List<double?>.generate(rowCount, (r) => mask[r] != 0 ? ptr[r] : null);
         } else {
           // STRING or DATE_TIME
           final ptr = outColData.value[c].cast<Pointer<Char>>();
@@ -1053,9 +1058,10 @@ extension DatabaseRead on Database {
               (r) => stringToDateTime(ptr[r].cast<Utf8>().toDartString()),
             );
           } else {
-            result[colName] = List<String>.generate(
+            // Never toDartString a masked-out (NULL) pointer.
+            result[colName] = List<String?>.generate(
               rowCount,
-              (r) => ptr[r].cast<Utf8>().toDartString(),
+              (r) => mask[r] != 0 ? ptr[r].cast<Utf8>().toDartString() : null,
             );
           }
         }
@@ -1066,6 +1072,7 @@ extension DatabaseRead on Database {
         outColNames.value,
         outColTypes.value,
         outColData.value,
+        outColHasValue.value,
         colCount,
         rowCount,
       );

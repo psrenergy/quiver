@@ -272,9 +272,9 @@ TEST(DatabaseCApiCSV, ImportCSV_TimeSeries_RoundTrip) {
     double temperatures[] = {22.5, 23.0};
     int64_t humidities[] = {60, 55};
     const void* col_data[] = {date_times, temperatures, humidities};
-    ASSERT_EQ(
-        quiver_database_update_time_series_group(db, "Items", "readings", id1, col_names, col_types, col_data, nullptr, 3, 2),
-        QUIVER_OK);
+    ASSERT_EQ(quiver_database_update_time_series_group(
+                  db, "Items", "readings", id1, col_names, col_types, col_data, nullptr, 3, 2),
+              QUIVER_OK);
 
     // Export
     auto csv_path = temp_csv("ImportTSRT");
@@ -282,7 +282,8 @@ TEST(DatabaseCApiCSV, ImportCSV_TimeSeries_RoundTrip) {
     ASSERT_EQ(quiver_database_export_csv(db, "Items", "readings", csv_path.string().c_str(), &csv_options), QUIVER_OK);
 
     // Clear and re-import
-    ASSERT_EQ(quiver_database_update_time_series_group(db, "Items", "readings", id1, nullptr, nullptr, nullptr, nullptr, 0, 0),
+    ASSERT_EQ(quiver_database_update_time_series_group(
+                  db, "Items", "readings", id1, nullptr, nullptr, nullptr, nullptr, 0, 0),
               QUIVER_OK);
 
     auto import_options = quiver_csv_options_default();
@@ -308,7 +309,8 @@ TEST(DatabaseCApiCSV, ImportCSV_TimeSeries_RoundTrip) {
                                                      &out_row_count),
               QUIVER_OK);
     EXPECT_EQ(out_row_count, 2u);
-    quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count);
+    quiver_database_free_time_series_data(
+        out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count);
 
     fs::remove(csv_path);
     quiver_database_close(db);
@@ -792,7 +794,8 @@ TEST(DatabaseCApiCSV, ImportCSV_TimeSeries_EnumInGroup_RoundTrip) {
     EXPECT_EQ(humidity_data[0], 60);
     EXPECT_EQ(humidity_data[1], 90);
 
-    quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count);
+    quiver_database_free_time_series_data(
+        out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count);
 
     fs::remove(csv_path);
     quiver_database_close(db);

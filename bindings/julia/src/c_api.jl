@@ -313,12 +313,12 @@ function quiver_database_free_group_metadata_array(metadata, count)
     @ccall libquiver_c.quiver_database_free_group_metadata_array(metadata::Ptr{quiver_group_metadata_t}, count::Csize_t)::quiver_error_t
 end
 
-function quiver_database_read_time_series_group(db, collection, group, id, out_column_names, out_column_types, out_column_data, out_column_count, out_row_count)
-    @ccall libquiver_c.quiver_database_read_time_series_group(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, out_column_names::Ptr{Ptr{Ptr{Cchar}}}, out_column_types::Ptr{Ptr{Cint}}, out_column_data::Ptr{Ptr{Ptr{Cvoid}}}, out_column_count::Ptr{Csize_t}, out_row_count::Ptr{Csize_t})::quiver_error_t
+function quiver_database_read_time_series_group(db, collection, group, id, out_column_names, out_column_types, out_column_data, out_column_has_value, out_column_count, out_row_count)
+    @ccall libquiver_c.quiver_database_read_time_series_group(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, out_column_names::Ptr{Ptr{Ptr{Cchar}}}, out_column_types::Ptr{Ptr{Cint}}, out_column_data::Ptr{Ptr{Ptr{Cvoid}}}, out_column_has_value::Ptr{Ptr{Ptr{UInt8}}}, out_column_count::Ptr{Csize_t}, out_row_count::Ptr{Csize_t})::quiver_error_t
 end
 
-function quiver_database_update_time_series_group(db, collection, group, id, column_names, column_types, column_data, column_count, row_count)
-    @ccall libquiver_c.quiver_database_update_time_series_group(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_count::Csize_t, row_count::Csize_t)::quiver_error_t
+function quiver_database_update_time_series_group(db, collection, group, id, column_names, column_types, column_data, column_has_value, column_count, row_count)
+    @ccall libquiver_c.quiver_database_update_time_series_group(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, id::Int64, column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_has_value::Ptr{Ptr{UInt8}}, column_count::Csize_t, row_count::Csize_t)::quiver_error_t
 end
 
 function quiver_database_add_time_series_row(db, collection, group, id, column_names, column_types, column_data, column_count)
@@ -329,8 +329,8 @@ function quiver_database_read_time_series_row(db, collection, group, attribute, 
     @ccall libquiver_c.quiver_database_read_time_series_row(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, group::Ptr{Cchar}, attribute::Ptr{Cchar}, date_time::Ptr{Cchar}, out_data_type::Ptr{Cint}, out_values::Ptr{Ptr{Cvoid}}, out_count::Ptr{Csize_t})::quiver_error_t
 end
 
-function quiver_database_free_time_series_data(column_names, column_types, column_data, column_count, row_count)
-    @ccall libquiver_c.quiver_database_free_time_series_data(column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_count::Csize_t, row_count::Csize_t)::quiver_error_t
+function quiver_database_free_time_series_data(column_names, column_types, column_data, column_has_value, column_count, row_count)
+    @ccall libquiver_c.quiver_database_free_time_series_data(column_names::Ptr{Ptr{Cchar}}, column_types::Ptr{Cint}, column_data::Ptr{Ptr{Cvoid}}, column_has_value::Ptr{Ptr{UInt8}}, column_count::Csize_t, row_count::Csize_t)::quiver_error_t
 end
 
 function quiver_database_has_time_series_files(db, collection, out_result)

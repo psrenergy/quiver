@@ -206,10 +206,18 @@ Implementation conventions in `lua_runner.cpp`:
 - Lua→C++ converters **throw on unsupported value types** (booleans, functions, ...) — never
   skip silently; a skipped positional query parameter would shift the rest and bind NULL to the
   trailing placeholder.
-- `update_time_series_group_lua` transpose **throws on non-array / all-empty columns** rather than
-  producing zero rows (which the C++ core would treat as the documented `{}`-clears path) — a
-  scalar passed where an array is expected, or named-but-empty columns, is a silent-clear trap.
-  Only a genuinely empty `{}` (no columns) clears.
+- `update_time_series_group_lua` transpose: the **dimension column(s) are the row-count
+  authority**, discovered via public `get_time_series_metadata` (`dimension_column` plus any
+  `value_columns` with `primary_key` set — the multi-dim case; `Database` exposes no Schema
+  accessor so `internal::find_dimension_columns` is unreachable here). Dimension columns must be
+  present and dense; value columns may be shorter, sparse, or empty — missing indices become
+  `Value{nullptr}` (rows stay uniform: the core builds its INSERT list from `rows[0]`).
+  Longer-than-dimension throws; a non-array column or non-positive-integer key throws; named
+  columns with a zero-length dimension still throw — only a genuinely empty `{}` (no columns)
+  clears (the anti-silent-clear trap is preserved). Column extents come from a `pairs` walk, never
+  `sol::table::size()` (`lua_rawlen` returns an arbitrary border on a table with holes). The read
+  path emits NULL cells as `nil` holes (an all-NULL column is an empty table with the key present),
+  so read → modify → write round-trips; `#ts.<dimension>` is the trustworthy row count.
 - Script errors surface as `"Failed to run Lua script: ..."` (root Pattern 3).
 
 ## Binary Subsystem

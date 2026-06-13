@@ -225,6 +225,11 @@ local ts = db:read_time_series_group(collection, group, id)
 -- returns an empty table {} if the element has no rows
 \`\`\`
 
+A \`NULL\` value cell comes back as a \`nil\` hole (the index is simply absent), and an all-\`NULL\`
+value column is an empty table \`{}\` (its key is still present). Because \`nil\` cannot occupy an
+array slot, **take the row count from the dimension column** (\`#ts.date_time\`), never from a value
+column.
+
 ### Read one value per element at a date (\`read_time_series_row\`)
 
 \`\`\`lua
@@ -265,14 +270,18 @@ column names). Each value of the top-level table must be an **array**, not a sca
 
 **Rules** (validation throws, rolling the script back):
 - Every column value must be an array — a bare scalar throws \`column '...' must be an array of values\`.
-- All columns must have the **same length** — a mismatch throws \`column '...' has length N but expected M\`.
-- Named-but-empty columns throw (\`contain no rows; pass an empty table {} to clear\`) rather than
-  silently clearing — only a bare \`{}\` clears.
-- Write REAL-column values as float literals (\`30.0\`, not \`30\`); STRICT validation rejects an
-  integer for a REAL column. Other Lua types throw \`column '...' has unsupported Lua type\`.
-- \`nil\` is **not** accepted inside a column here (it throws \`unsupported Lua type\`); columns must
-  be fully populated. To write a NULL into a single row, use \`add_time_series_row\` instead, which
-  does accept \`nil\`.
+- The **dimension column(s) set the row count** and must be present and fully populated: the
+  \`date_*\` ordering column, plus any extra primary-key columns in a multi-dimensional group (e.g.
+  \`block\`). A missing one throws \`missing dimension column '...'\`; a \`nil\` inside one throws
+  \`dimension column '...' has nil at index N\` (they are primary-key columns and cannot be NULL).
+- **Value columns may be shorter, sparser, or absent** relative to the dimension column — every
+  missing cell is written as \`NULL\`. So \`value = { 10.0, nil, 30.0 }\` or a too-short \`value = { 10.0 }\`
+  both write NULLs for the gaps; this is how you round-trip the \`nil\` holes a read produces. A value
+  column **longer** than the dimension column throws \`column '...' has length N but expected M\`.
+- Named columns whose dimension transposes to zero rows throw (\`contain no rows; pass an empty
+  table {} to clear the group\`) — only a bare \`{}\` clears.
+- Integer values are accepted for REAL columns (converted on insert). Booleans, functions, and
+  other unsupported Lua types throw \`column '...' has unsupported Lua type\`.
 
 ### Append/upsert a single row (\`add_time_series_row\` — ROW-oriented, the one exception)
 

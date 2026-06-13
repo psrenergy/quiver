@@ -27,6 +27,13 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
 - **Always `GC.@preserve`**: refs produced by `marshal_params` (and any `Ref`s passed as pointers)
   must stay inside a `GC.@preserve refs ...` block spanning the ccall — the GC may otherwise
   collect them mid-call.
+- **Time-series group NULLs**: `read_time_series_group` returns value columns as
+  `Vector{Union{T, Nothing}}` **always** (type-stable, like the `Optional{String}` precedent in
+  `read_time_series_row`) — a NULL cell is `nothing`; the dimension column stays a dense
+  `Vector{DateTime}`. `update_time_series_group!` accepts `nothing` cells, dispatching on
+  `Base.nonnothingtype(eltype(v))` with the all-`nothing` branch (`Union{}`) first; it always passes
+  a per-column `UInt8` mask (added to the `GC.@preserve` set). An all-`nothing` column marshals as a
+  FLOAT tag + zeroed placeholder.
 - **Library loader** (`src/c_api.jl`, emitted from `generator/prologue.jl`) resolves `libquiver_c`
   in three tiers: `QUIVER_LIB_DIR` env → S3 artifact (when an `Artifacts.toml` is present, i.e. the
   published mirror) → in-tree `build/` (monorepo dev, the default here). Uses the runtime Artifacts

@@ -558,7 +558,8 @@ TEST(DatabaseCApi, UpdateElementWithTimeSeries) {
     EXPECT_DOUBLE_EQ(out_values[1], 20.0);
     EXPECT_DOUBLE_EQ(out_values[2], 30.0);
 
-    quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count);
+    quiver_database_free_time_series_data(
+        out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count);
     quiver_database_close(db);
 }
 
@@ -1254,7 +1255,8 @@ TEST(DatabaseCApi, UpdateElementTimeSeriesFkLabels) {
     EXPECT_EQ(sponsor_ids[0], 2);
     EXPECT_EQ(sponsor_ids[1], 1);
 
-    quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count);
+    quiver_database_free_time_series_data(
+        out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count);
     quiver_database_close(db);
 }
 
@@ -1360,7 +1362,8 @@ TEST(DatabaseCApi, UpdateElementAllFkTypesInOneCall) {
     ASSERT_EQ(out_col_count, 2);
     auto* sponsor_ids = static_cast<int64_t*>(out_col_data[1]);
     EXPECT_EQ(sponsor_ids[0], 2);
-    quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count);
+    quiver_database_free_time_series_data(
+        out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count);
 
     quiver_database_close(db);
 }

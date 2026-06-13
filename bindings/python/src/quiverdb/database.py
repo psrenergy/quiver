@@ -1218,7 +1218,9 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                 else:  # STRING or DATE_TIME
                     str_ptr = ffi.cast("char**", out_data[0][c])
                     if name == dim_col:
-                        result[name] = [_parse_datetime(ffi.string(str_ptr[r]).decode("utf-8")) for r in range(row_count)]
+                        result[name] = [
+                            _parse_datetime(ffi.string(str_ptr[r]).decode("utf-8")) for r in range(row_count)
+                        ]
                     else:
                         result[name] = [
                             ffi.string(str_ptr[r]).decode("utf-8") if mask[r] else None for r in range(row_count)

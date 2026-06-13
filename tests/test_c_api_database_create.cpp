@@ -167,7 +167,8 @@ TEST(DatabaseCApi, CreateElementWithTimeSeries) {
     EXPECT_DOUBLE_EQ(out_values[1], 2.5);
     EXPECT_DOUBLE_EQ(out_values[2], 3.5);
 
-    quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count);
+    quiver_database_free_time_series_data(
+        out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count);
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     quiver_database_close(db);
 }
@@ -233,8 +234,12 @@ TEST(DatabaseCApi, CreateElementWithMultiTimeSeries) {
     EXPECT_DOUBLE_EQ(out_temp_values[0], 20.0);
     EXPECT_DOUBLE_EQ(out_temp_values[1], 21.5);
     EXPECT_DOUBLE_EQ(out_temp_values[2], 22.0);
-    quiver_database_free_time_series_data(
-        out_temp_col_names, out_temp_col_types, out_temp_col_data, out_temp_col_has_value, out_temp_col_count, out_temp_row_count);
+    quiver_database_free_time_series_data(out_temp_col_names,
+                                          out_temp_col_types,
+                                          out_temp_col_data,
+                                          out_temp_col_has_value,
+                                          out_temp_col_count,
+                                          out_temp_row_count);
 
     // Verify humidity group (multi-column)
     char** out_hum_col_names = nullptr;
@@ -264,8 +269,12 @@ TEST(DatabaseCApi, CreateElementWithMultiTimeSeries) {
     EXPECT_DOUBLE_EQ(out_hum_values[0], 45.0);
     EXPECT_DOUBLE_EQ(out_hum_values[1], 50.0);
     EXPECT_DOUBLE_EQ(out_hum_values[2], 55.0);
-    quiver_database_free_time_series_data(
-        out_hum_col_names, out_hum_col_types, out_hum_col_data, out_hum_col_has_value, out_hum_col_count, out_hum_row_count);
+    quiver_database_free_time_series_data(out_hum_col_names,
+                                          out_hum_col_types,
+                                          out_hum_col_data,
+                                          out_hum_col_has_value,
+                                          out_hum_col_count,
+                                          out_hum_row_count);
 
     EXPECT_EQ(quiver_element_destroy(element), QUIVER_OK);
     quiver_database_close(db);
@@ -611,7 +620,8 @@ TEST(DatabaseCApi, CreateElementTimeSeriesFkLabels) {
     EXPECT_EQ(sponsor_ids[0], 1);
     EXPECT_EQ(sponsor_ids[1], 2);
 
-    quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count);
+    quiver_database_free_time_series_data(
+        out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count);
     quiver_database_close(db);
 }
 
@@ -707,7 +717,8 @@ TEST(DatabaseCApi, CreateElementAllFkTypesInOneCall) {
     ASSERT_EQ(out_row_count, 1);
     auto* sponsor_ids = static_cast<int64_t*>(out_col_data[1]);
     EXPECT_EQ(sponsor_ids[0], 2);
-    quiver_database_free_time_series_data(out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count);
+    quiver_database_free_time_series_data(
+        out_col_names, out_col_types, out_col_data, out_col_has_value, out_col_count, out_row_count);
 
     quiver_database_close(db);
 }
