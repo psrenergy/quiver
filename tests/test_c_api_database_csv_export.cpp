@@ -202,7 +202,7 @@ TEST(DatabaseCApiCSV, ExportCSV_TimeSeriesGroupExport) {
     int64_t humidities[] = {60, 55};
     const void* col_data[] = {date_times, temperatures, humidities};
     ASSERT_EQ(
-        quiver_database_update_time_series_group(db, "Items", "readings", id1, col_names, col_types, col_data, 3, 2),
+        quiver_database_update_time_series_group(db, "Items", "readings", id1, col_names, col_types, col_data, nullptr, 3, 2),
         QUIVER_OK);
 
     auto csv_path = temp_csv("TimeSeriesExport");
