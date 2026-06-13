@@ -98,7 +98,6 @@ Reviewed adversarially and rejected — these are not improvements:
 - Deleting or "cleaning up" `tests/sandbox` — intentional scratch target.
 - "Simplifying" the documented Bun FFI workarounds (`bindings/js/CLAUDE.md`) or the binary
   hot-path decisions (`src/CLAUDE.md`) — load-bearing.
-- Reorganizing test files (issue-numbered tests, per-area splits) for tidiness.
 - Drive-by fixing pre-existing lint debt in untouched JS files.
 
 ## Build & Test
