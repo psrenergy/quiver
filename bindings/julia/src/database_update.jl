@@ -20,7 +20,7 @@ function update_time_series_group!(db::Database, collection::String, group::Stri
         check(
             C.quiver_database_update_time_series_group(
                 db.ptr, collection, group, id,
-                C_NULL, C_NULL, C_NULL, Csize_t(0), Csize_t(0),
+                C_NULL, C_NULL, C_NULL, C_NULL, Csize_t(0), Csize_t(0),
             ),
         )
         return nothing
@@ -42,37 +42,56 @@ function update_time_series_group!(db::Database, collection::String, group::Stri
     col_names_strs = String[]
     col_types = Cint[]
     col_data_ptrs = Ptr{Cvoid}[]
+    col_mask_ptrs = Ptr{UInt8}[]
     refs = Any[]  # Keep references alive for GC.@preserve
 
     for (k, v) in kwargs
         col_name = String(k)
         push!(col_names_strs, col_name)
 
-        if eltype(v) <: DateTime
-            # DateTime -> format to string
-            str_vals = [date_time_to_string(dt) for dt in v]
-            cstrs = [Base.cconvert(Cstring, s) for s in str_vals]
-            ptrs = Ptr{Cchar}[Base.unsafe_convert(Cstring, cs) for cs in cstrs]
+        # Per-cell NULL mask: `nothing` entries become SQL NULL. Always passed
+        # (dense columns get an all-ones mask).
+        mask = UInt8[isnothing(x) ? 0x0 : 0x1 for x in v]
+        push!(refs, mask)
+        push!(col_mask_ptrs, pointer(mask))
+
+        # Dispatch on the non-nothing element type. An all-nothing column has
+        # eltype Nothing -> nonnothingtype Union{}, handled first; the value is a
+        # zeroed FLOAT placeholder (the C API ignores type/data for masked cells).
+        T = Base.nonnothingtype(eltype(v))
+        if T === Union{}
+            float_arr = zeros(Float64, row_count)
+            push!(refs, float_arr)
+            push!(col_types, Cint(C.QUIVER_DATA_TYPE_FLOAT))
+            push!(col_data_ptrs, pointer(float_arr))
+        elseif T <: DateTime
+            cstrs =
+                [isnothing(x) ? Base.cconvert(Cstring, "") : Base.cconvert(Cstring, date_time_to_string(x)) for x in v]
+            ptrs = Ptr{Cchar}[
+                isnothing(v[j]) ? Ptr{Cchar}(C_NULL) : Base.unsafe_convert(Cstring, cstrs[j]) for j in 1:row_count
+            ]
             push!(refs, cstrs)
             push!(refs, ptrs)
             push!(col_types, Cint(C.QUIVER_DATA_TYPE_STRING))
             push!(col_data_ptrs, pointer(ptrs))
-        elseif eltype(v) <: AbstractString
-            cstrs = [Base.cconvert(Cstring, s) for s in v]
-            ptrs = Ptr{Cchar}[Base.unsafe_convert(Cstring, cs) for cs in cstrs]
+        elseif T <: AbstractString
+            cstrs = [isnothing(x) ? Base.cconvert(Cstring, "") : Base.cconvert(Cstring, String(x)) for x in v]
+            ptrs = Ptr{Cchar}[
+                isnothing(v[j]) ? Ptr{Cchar}(C_NULL) : Base.unsafe_convert(Cstring, cstrs[j]) for j in 1:row_count
+            ]
             push!(refs, cstrs)
             push!(refs, ptrs)
             push!(col_types, Cint(C.QUIVER_DATA_TYPE_STRING))
             push!(col_data_ptrs, pointer(ptrs))
-        elseif eltype(v) <: Integer
+        elseif T <: Integer
             # Integer columns are sent as-is; the C++ layer accepts integers
             # for REAL columns and SQLite converts them on insert.
-            int_arr = Int64[Int64(x) for x in v]
+            int_arr = Int64[isnothing(x) ? Int64(0) : Int64(x) for x in v]
             push!(refs, int_arr)
             push!(col_types, Cint(C.QUIVER_DATA_TYPE_INTEGER))
             push!(col_data_ptrs, pointer(int_arr))
-        elseif eltype(v) <: Real
-            float_arr = Float64[Float64(x) for x in v]
+        elseif T <: Real
+            float_arr = Float64[isnothing(x) ? 0.0 : Float64(x) for x in v]
             push!(refs, float_arr)
             push!(col_types, Cint(C.QUIVER_DATA_TYPE_FLOAT))
             push!(col_data_ptrs, pointer(float_arr))
@@ -87,17 +106,19 @@ function update_time_series_group!(db::Database, collection::String, group::Stri
     push!(refs, name_cstrs)
     push!(refs, name_ptrs)
 
-    # Build column_types and column_data arrays
+    # Build column_types, column_data, and column_has_value arrays
     col_types_arr = Cint[t for t in col_types]
     col_data_arr = Ptr{Cvoid}[p for p in col_data_ptrs]
+    col_mask_arr = Ptr{UInt8}[p for p in col_mask_ptrs]
     push!(refs, col_types_arr)
     push!(refs, col_data_arr)
+    push!(refs, col_mask_arr)
 
     GC.@preserve refs begin
         check(
             C.quiver_database_update_time_series_group(
                 db.ptr, collection, group, id,
-                name_ptrs, col_types_arr, col_data_arr,
+                name_ptrs, col_types_arr, col_data_arr, col_mask_arr,
                 Csize_t(column_count), Csize_t(row_count),
             ),
         )

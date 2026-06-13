@@ -275,7 +275,8 @@ ffi.cdef("""
     quiver_error_t quiver_database_read_time_series_group(quiver_database_t* db,
         const char* collection, const char* group, int64_t id,
         char*** out_column_names, int** out_column_types,
-        void*** out_column_data, size_t* out_column_count, size_t* out_row_count);
+        void*** out_column_data, uint8_t*** out_column_has_value,
+        size_t* out_column_count, size_t* out_row_count);
 
     quiver_error_t quiver_database_read_time_series_row(quiver_database_t* db,
         const char* collection, const char* group, const char* attribute,
@@ -284,7 +285,8 @@ ffi.cdef("""
     quiver_error_t quiver_database_update_time_series_group(quiver_database_t* db,
         const char* collection, const char* group, int64_t id,
         const char* const* column_names, const int* column_types,
-        void** column_data, size_t column_count, size_t row_count);
+        void** column_data, const uint8_t* const* column_has_value,
+        size_t column_count, size_t row_count);
 
     quiver_error_t quiver_database_add_time_series_row(quiver_database_t* db,
         const char* collection, const char* group, int64_t id,
@@ -292,7 +294,7 @@ ffi.cdef("""
         const void* const* column_data, size_t column_count);
 
     quiver_error_t quiver_database_free_time_series_data(char** column_names,
-        int* column_types, void** column_data,
+        int* column_types, void** column_data, uint8_t** column_has_value,
         size_t column_count, size_t row_count);
 
     // Time series files

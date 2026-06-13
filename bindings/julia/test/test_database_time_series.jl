@@ -61,11 +61,11 @@ include("fixture.jl")
         @test result["date_time"][3] == DateTime(2024, 1, 1, 12, 0, 0)
         @test result["date_time"] isa Vector{DateTime}
 
-        # Value column values are Float64
+        # Value columns are typed Union{T, Nothing} (a NULL cell surfaces as `nothing`)
         @test result["value"][1] == 1.5
         @test result["value"][2] == 2.5
         @test result["value"][3] == 3.5
-        @test result["value"] isa Vector{Float64}
+        @test result["value"] isa Vector{Union{Float64, Nothing}}
 
         Quiver.close!(db)
     end
@@ -281,15 +281,15 @@ include("fixture.jl")
         @test result["date_time"][2] == DateTime(2024, 1, 1, 11, 0, 0)
 
         # REAL column: Float64
-        @test result["temperature"] isa Vector{Float64}
+        @test result["temperature"] isa Vector{Union{Float64, Nothing}}
         @test result["temperature"] == [20.5, 21.3]
 
         # INTEGER column: Int64
-        @test result["humidity"] isa Vector{Int64}
+        @test result["humidity"] isa Vector{Union{Int64, Nothing}}
         @test result["humidity"] == [45, 50]
 
         # TEXT column: String
-        @test result["status"] isa Vector{String}
+        @test result["status"] isa Vector{Union{String, Nothing}}
         @test result["status"] == ["normal", "high"]
 
         Quiver.close!(db)
@@ -312,7 +312,7 @@ include("fixture.jl")
 
         result = Quiver.read_time_series_group(db, "Sensor", "readings", id)
         @test result["temperature"] == [20.0]
-        @test result["temperature"] isa Vector{Float64}
+        @test result["temperature"] isa Vector{Union{Float64, Nothing}}
 
         Quiver.close!(db)
     end
@@ -761,6 +761,73 @@ include("fixture.jl")
 
         @test_throws Quiver.DatabaseException Quiver.read_time_series_files(db, "Configuration")
         @test_throws Quiver.DatabaseException Quiver.list_time_series_files_columns(db, "Configuration")
+
+        Quiver.close!(db)
+    end
+
+    @testset "NULL cells round-trip" begin
+        # nullable_time_series.sql: Sensor.readings with date_time TEXT NOT NULL,
+        # temperature REAL, counter INTEGER, status TEXT (nullable value columns).
+        path_schema = joinpath(tests_path(), "schemas", "valid", "nullable_time_series.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+        Quiver.create_element!(db, "Configuration"; label = "Config")
+        id = Quiver.create_element!(db, "Sensor"; label = "Sensor 1")
+
+        Quiver.update_time_series_group!(
+            db, "Sensor", "readings", id;
+            date_time = [DateTime(2024, 1, 1), DateTime(2024, 1, 2)],
+            temperature = [10.5, nothing],
+            counter = [nothing, 7],
+            status = ["ok", nothing],
+        )
+
+        result = Quiver.read_time_series_group(db, "Sensor", "readings", id)
+        @test result["temperature"] == [10.5, nothing]
+        @test result["counter"] == [nothing, 7]
+        @test result["status"] == ["ok", nothing]
+
+        Quiver.close!(db)
+    end
+
+    @testset "NULL all-nothing column" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "nullable_time_series.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+        Quiver.create_element!(db, "Configuration"; label = "Config")
+        id = Quiver.create_element!(db, "Sensor"; label = "Sensor 1")
+
+        Quiver.update_time_series_group!(
+            db, "Sensor", "readings", id;
+            date_time = [DateTime(2024, 1, 1), DateTime(2024, 1, 2)],
+            status = [nothing, nothing],
+        )
+
+        result = Quiver.read_time_series_group(db, "Sensor", "readings", id)
+        @test result["status"] == [nothing, nothing]
+
+        Quiver.close!(db)
+    end
+
+    @testset "NULL read-modify-write" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "nullable_time_series.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+        Quiver.create_element!(db, "Configuration"; label = "Config")
+        id = Quiver.create_element!(db, "Sensor"; label = "Sensor 1")
+
+        Quiver.update_time_series_group!(
+            db, "Sensor", "readings", id;
+            date_time = [DateTime(2024, 1, 1), DateTime(2024, 1, 2)],
+            temperature = [10.5, nothing],
+        )
+
+        ts = Quiver.read_time_series_group(db, "Sensor", "readings", id)
+        ts["temperature"][1] = 99.0
+        Quiver.update_time_series_group!(
+            db, "Sensor", "readings", id;
+            date_time = ts["date_time"], temperature = ts["temperature"],
+        )
+
+        result = Quiver.read_time_series_group(db, "Sensor", "readings", id)
+        @test result["temperature"] == [99.0, nothing]
 
         Quiver.close!(db)
     end

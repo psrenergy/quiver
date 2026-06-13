@@ -1517,6 +1517,7 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>> out_column_names,
     ffi.Pointer<ffi.Pointer<ffi.Int>> out_column_types,
     ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Void>>> out_column_data,
+    ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Uint8>>> out_column_has_value,
     ffi.Pointer<ffi.Size> out_column_count,
     ffi.Pointer<ffi.Size> out_row_count,
   ) {
@@ -1528,6 +1529,7 @@ class QuiverDatabaseBindings {
       out_column_names,
       out_column_types,
       out_column_data,
+      out_column_has_value,
       out_column_count,
       out_row_count,
     );
@@ -1544,6 +1546,7 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
             ffi.Pointer<ffi.Pointer<ffi.Int>>,
             ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Void>>>,
+            ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Uint8>>>,
             ffi.Pointer<ffi.Size>,
             ffi.Pointer<ffi.Size>,
           )
@@ -1559,6 +1562,7 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Char>>>,
           ffi.Pointer<ffi.Pointer<ffi.Int>>,
           ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Void>>>,
+          ffi.Pointer<ffi.Pointer<ffi.Pointer<ffi.Uint8>>>,
           ffi.Pointer<ffi.Size>,
           ffi.Pointer<ffi.Size>,
         )
@@ -1572,6 +1576,7 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Pointer<ffi.Char>> column_names,
     ffi.Pointer<ffi.Int> column_types,
     ffi.Pointer<ffi.Pointer<ffi.Void>> column_data,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> column_has_value,
     int column_count,
     int row_count,
   ) {
@@ -1583,6 +1588,7 @@ class QuiverDatabaseBindings {
       column_names,
       column_types,
       column_data,
+      column_has_value,
       column_count,
       row_count,
     );
@@ -1599,6 +1605,7 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Pointer<ffi.Char>>,
             ffi.Pointer<ffi.Int>,
             ffi.Pointer<ffi.Pointer<ffi.Void>>,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
             ffi.Size,
             ffi.Size,
           )
@@ -1614,6 +1621,7 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Pointer<ffi.Char>>,
           ffi.Pointer<ffi.Int>,
           ffi.Pointer<ffi.Pointer<ffi.Void>>,
+          ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           int,
           int,
         )
@@ -1725,6 +1733,7 @@ class QuiverDatabaseBindings {
     ffi.Pointer<ffi.Pointer<ffi.Char>> column_names,
     ffi.Pointer<ffi.Int> column_types,
     ffi.Pointer<ffi.Pointer<ffi.Void>> column_data,
+    ffi.Pointer<ffi.Pointer<ffi.Uint8>> column_has_value,
     int column_count,
     int row_count,
   ) {
@@ -1732,6 +1741,7 @@ class QuiverDatabaseBindings {
       column_names,
       column_types,
       column_data,
+      column_has_value,
       column_count,
       row_count,
     );
@@ -1744,6 +1754,7 @@ class QuiverDatabaseBindings {
             ffi.Pointer<ffi.Pointer<ffi.Char>>,
             ffi.Pointer<ffi.Int>,
             ffi.Pointer<ffi.Pointer<ffi.Void>>,
+            ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
             ffi.Size,
             ffi.Size,
           )
@@ -1755,6 +1766,7 @@ class QuiverDatabaseBindings {
           ffi.Pointer<ffi.Pointer<ffi.Char>>,
           ffi.Pointer<ffi.Int>,
           ffi.Pointer<ffi.Pointer<ffi.Void>>,
+          ffi.Pointer<ffi.Pointer<ffi.Uint8>>,
           int,
           int,
         )

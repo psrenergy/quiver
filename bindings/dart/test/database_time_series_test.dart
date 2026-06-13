@@ -368,20 +368,20 @@ void main() {
         expect(result['date_time']![1], equals(DateTime(2024, 1, 1, 11, 0, 0)));
         expect(result['date_time'], isA<List<DateTime>>());
 
-        // REAL column: double
+        // REAL column: double (nullable element type — a NULL cell is null)
         expect(result['temperature']![0], equals(20.5));
         expect(result['temperature']![1], equals(21.3));
-        expect(result['temperature'], isA<List<double>>());
+        expect(result['temperature'], isA<List<double?>>());
 
         // INTEGER column: int
         expect(result['humidity']![0], equals(45));
         expect(result['humidity']![1], equals(50));
-        expect(result['humidity'], isA<List<int>>());
+        expect(result['humidity'], isA<List<int?>>());
 
         // TEXT column: String
         expect(result['status']![0], equals('normal'));
         expect(result['status']![1], equals('high'));
-        expect(result['status'], isA<List<String>>());
+        expect(result['status'], isA<List<String?>>());
       } finally {
         db.close();
       }
@@ -707,6 +707,71 @@ void main() {
           DateTime(2024, 1, 15),
         );
         expect(row, isEmpty);
+      } finally {
+        db.close();
+      }
+    });
+  });
+
+  group('Time Series NULL cells', () {
+    // nullable_time_series.sql: Sensor.readings with date_time TEXT NOT NULL,
+    // temperature REAL, counter INTEGER, status TEXT (nullable value columns).
+    Database openNullable() => Database.fromSchema(
+      ':memory:',
+      path.join(testsPath, 'schemas', 'valid', 'nullable_time_series.sql'),
+    );
+
+    test('null cells round-trip through update and read', () {
+      final db = openNullable();
+      try {
+        final id = db.createElement('Sensor', {'label': 'S1'});
+        db.updateTimeSeriesGroup('Sensor', 'readings', id, {
+          'date_time': ['2024-01-01', '2024-01-02'],
+          'temperature': [10.5, null],
+          'counter': [null, 7],
+          'status': ['ok', null],
+        });
+
+        final result = db.readTimeSeriesGroup('Sensor', 'readings', id);
+        expect(result['temperature'], equals([10.5, null]));
+        expect(result['counter'], equals([null, 7]));
+        expect(result['status'], equals(['ok', null]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('all-null value column reads back as all nulls', () {
+      final db = openNullable();
+      try {
+        final id = db.createElement('Sensor', {'label': 'S1'});
+        db.updateTimeSeriesGroup('Sensor', 'readings', id, {
+          'date_time': ['2024-01-01', '2024-01-02'],
+          'status': [null, null],
+        });
+
+        final result = db.readTimeSeriesGroup('Sensor', 'readings', id);
+        expect(result['status'], equals([null, null]));
+      } finally {
+        db.close();
+      }
+    });
+
+    test('null cells survive a read-modify-write round-trip', () {
+      final db = openNullable();
+      try {
+        final id = db.createElement('Sensor', {'label': 'S1'});
+        db.updateTimeSeriesGroup('Sensor', 'readings', id, {
+          'date_time': ['2024-01-01', '2024-01-02'],
+          'temperature': [10.5, null],
+        });
+
+        final ts = db.readTimeSeriesGroup('Sensor', 'readings', id);
+        ts['temperature']![0] = 99.0;
+        db.updateTimeSeriesGroup('Sensor', 'readings', id, ts);
+
+        final result = db.readTimeSeriesGroup('Sensor', 'readings', id);
+        expect(result['temperature'], equals([99.0, null]));
       } finally {
         db.close();
       }

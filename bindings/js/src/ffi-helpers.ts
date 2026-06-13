@@ -141,14 +141,17 @@ export function allocNativeString(str: string): Allocation {
   return { ptr: ptr(buf), buf };
 }
 
-/** Build a native string pointer table (const char* const*) from an array of strings. */
-export function allocNativeStringArray(strings: string[]): {
+/**
+ * Build a native string pointer table (const char* const*) from an array of strings.
+ * A `null` entry becomes a NULL pointer in the table (used for SQL-NULL string cells).
+ */
+export function allocNativeStringArray(strings: (string | null)[]): {
   table: Allocation;
   keepalive: Allocation[];
 } {
-  const strAllocs = strings.map((s) => allocNativeString(s));
-  const table = allocNativePtrTable(strAllocs.map((a) => a.ptr));
-  return { table, keepalive: strAllocs };
+  const strAllocs = strings.map((s) => (s === null ? null : allocNativeString(s)));
+  const table = allocNativePtrTable(strAllocs.map((a) => (a ? a.ptr : null)));
+  return { table, keepalive: strAllocs.filter((a): a is Allocation => a !== null) };
 }
 
 /** Get the native address of a pointer as BigInt. */

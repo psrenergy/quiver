@@ -62,6 +62,23 @@ For example, if you have the following data for the attribute `some_vector1`:
 2. Querying at `2021` returns `[1.0, 1.0]`.
 3. Querying at `2022` returns `[3.0, 1.0]`.
 
+### NULL cells in a group
+
+`read_time_series_group` and `update_time_series_group` round-trip `NULL` value cells, so a
+read → modify → write cycle preserves them. A `NULL` value surfaces per binding as `nothing`
+(Julia), `None` (Python), `null` (Dart/JS), or `nil` (Lua); value columns come back null-padded
+to the same length as the dimension column (in Julia they are typed `Vector{Union{T, Nothing}}`).
+An all-`NULL` value column reads back as a full-length column of nulls — except in **Lua**, where
+a `nil` cannot occupy an array slot: a `NULL` cell is a hole and an all-`NULL` column is an empty
+table (with its key present). In Lua, take the row count from the dimension column
+(`#ts.date_time`), never from a value column.
+
+When writing, the dimension column(s) must be present and fully populated (they are primary-key
+columns and cannot be `NULL`). Value columns may carry nulls; in Lua a value column may also be
+shorter than, or sparser than, the dimension column — every missing cell is written as `NULL`.
+A column longer than the dimension column is an error. (The FFI bindings still require every
+column to have equal length — pass explicit nulls.)
+
 ## Inserting data
 
 Time series data is column-oriented in every binding: a map of column name to a list of

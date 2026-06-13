@@ -79,6 +79,15 @@ Settled questions — don't relitigate without the user; each was decided delibe
 - **JS keeps a string-based datetime surface** — no DateTime wrappers.
 - **Binary `dims` parameter is the map-based form only** — indexed overloads were prototyped and
   deliberately dropped (perf rationale in `src/CLAUDE.md`).
+- **Time-series group NULLs round-trip via a per-cell presence mask.** The columnar C API
+  (`read`/`update`/`free_time_series_data`) carries a `uint8_t` mask parallel to the data arrays
+  (NULL mask = dense; `mask[c][r] == 0` = SQL NULL, data ignored — so an all-NULL column can be
+  FLOAT-tagged against any schema column). FFI bindings (Julia/Python/Dart/JS) read null-padded
+  columns and accept null cells on update; their existing equal-length validations stay. Lua is
+  mask- and sentinel-free: NULL is plain `nil`, the dimension column(s) are the row-count authority
+  (`#ts.<dimension>`), value columns may be short/sparse/empty (missing cells write NULL),
+  longer-than-dimension errors, and the named-but-empty anti-silent-clear trap is preserved
+  (`{}` clears).
 
 ## Do Not "Fix"
 
@@ -288,7 +297,7 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - Transaction control: `begin_transaction()`, `commit()`, `rollback()`, `in_transaction()`
 - CRUD: `create_element(collection, element)`, `update_element`, `delete_element`
 - Scalar/vector/set readers: `read_{scalar,vector,set}_{integers,floats,strings}(collection, attribute)` (+ `_by_id` variants)
-- Time series: `read_time_series_group()`, `update_time_series_group()`, `add_time_series_row()` — group read/update use N typed value columns per group; `add_time_series_row` appends/upserts a single row. All bindings expose group data **column-oriented** (`{column: [values]}`); updating with no data clears the group. Integer values are accepted for REAL columns (converted on insert).
+- Time series: `read_time_series_group()`, `update_time_series_group()`, `add_time_series_row()` — group read/update use N typed value columns per group; `add_time_series_row` appends/upserts a single row. All bindings expose group data **column-oriented** (`{column: [values]}`); updating with no data clears the group. Integer values are accepted for REAL columns (converted on insert). NULL cells round-trip through every layer: the C API carries a per-cell presence mask, the FFI bindings surface null-padded columns (`nothing`/`None`/`null`), and Lua uses plain `nil` holes with the row count taken from the dimension column(s) — see the design decision below.
 - Time series row: `read_time_series_row(collection, group, attribute, date_time)` — one value per element using "last non-null value at or before date_time" semantics; null Value for elements with no matching data (bindings surface `nothing`/`null`/`None`/`nil`).
 - Time series files: `has_time_series_files()`, `list_time_series_files_columns()`, `read_time_series_files()`, `update_time_series_files()`
 - Metadata: `get_{scalar,vector,set,time_series}_metadata()` — group metadata is a unified `GroupMetadata` with `dimension_column` (populated for time series, empty for vectors/sets)

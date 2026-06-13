@@ -137,10 +137,11 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_databa
                                                                    char*** out_column_names,
                                                                    int** out_column_types,
                                                                    void*** out_column_data,
+                                                                   uint8_t*** out_column_has_value,
                                                                    size_t* out_column_count,
                                                                    size_t* out_row_count) {
     QUIVER_REQUIRE(db, collection, group, out_column_names, out_column_types);
-    QUIVER_REQUIRE(out_column_data, out_column_count, out_row_count);
+    QUIVER_REQUIRE(out_column_data, out_column_has_value, out_column_count, out_row_count);
 
     try {
         auto metadata = db->db.get_time_series_metadata(collection, group);
@@ -150,6 +151,7 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_databa
             *out_column_names = nullptr;
             *out_column_types = nullptr;
             *out_column_data = nullptr;
+            *out_column_has_value = nullptr;
             *out_column_count = 0;
             *out_row_count = 0;
             return QUIVER_OK;
@@ -170,11 +172,17 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_databa
         *out_column_names = new char*[col_count]();
         *out_column_types = new int[col_count]();
         *out_column_data = new void*[col_count]();
+        *out_column_has_value = new uint8_t*[col_count]();
 
         try {
             for (size_t c = 0; c < col_count; ++c) {
                 (*out_column_names)[c] = quiver::string::new_c_str(columns[c].first);
                 (*out_column_types)[c] = columns[c].second;
+
+                // Allocate the mask before the type switch so the unknown-type
+                // default branch leaves a freeable slot behind
+                auto* mask = new uint8_t[row_count];
+                (*out_column_has_value)[c] = mask;
 
                 switch (columns[c].second) {
                 case QUIVER_DATA_TYPE_INTEGER: {
@@ -182,12 +190,16 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_databa
                     (*out_column_data)[c] = arr;
                     for (size_t r = 0; r < row_count; ++r) {
                         auto& val = rows[r].at(columns[c].first);
-                        if (std::holds_alternative<int64_t>(val))
+                        if (std::holds_alternative<int64_t>(val)) {
                             arr[r] = std::get<int64_t>(val);
-                        else if (std::holds_alternative<double>(val))
+                            mask[r] = 1;
+                        } else if (std::holds_alternative<double>(val)) {
                             arr[r] = static_cast<int64_t>(std::get<double>(val));
-                        else
+                            mask[r] = 1;
+                        } else {
                             arr[r] = 0;
+                            mask[r] = 0;
+                        }
                     }
                     break;
                 }
@@ -196,12 +208,16 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_databa
                     (*out_column_data)[c] = arr;
                     for (size_t r = 0; r < row_count; ++r) {
                         auto& val = rows[r].at(columns[c].first);
-                        if (std::holds_alternative<double>(val))
+                        if (std::holds_alternative<double>(val)) {
                             arr[r] = std::get<double>(val);
-                        else if (std::holds_alternative<int64_t>(val))
+                            mask[r] = 1;
+                        } else if (std::holds_alternative<int64_t>(val)) {
                             arr[r] = static_cast<double>(std::get<int64_t>(val));
-                        else
+                            mask[r] = 1;
+                        } else {
                             arr[r] = 0.0;
+                            mask[r] = 0;
+                        }
                     }
                     break;
                 }
@@ -210,7 +226,14 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_databa
                     auto** arr = new char*[row_count]();
                     (*out_column_data)[c] = arr;
                     for (size_t r = 0; r < row_count; ++r) {
-                        arr[r] = quiver::string::new_c_str(std::get<std::string>(rows[r].at(columns[c].first)));
+                        auto& val = rows[r].at(columns[c].first);
+                        if (std::holds_alternative<std::string>(val)) {
+                            arr[r] = quiver::string::new_c_str(std::get<std::string>(val));
+                            mask[r] = 1;
+                        } else {
+                            arr[r] = nullptr;
+                            mask[r] = 0;
+                        }
                     }
                     break;
                 }
@@ -222,10 +245,11 @@ QUIVER_C_API quiver_error_t quiver_database_read_time_series_group(quiver_databa
         } catch (...) {
             // Clean up partially allocated results
             quiver_database_free_time_series_data(
-                *out_column_names, *out_column_types, *out_column_data, col_count, row_count);
+                *out_column_names, *out_column_types, *out_column_data, *out_column_has_value, col_count, row_count);
             *out_column_names = nullptr;
             *out_column_types = nullptr;
             *out_column_data = nullptr;
+            *out_column_has_value = nullptr;
             *out_column_count = 0;
             *out_row_count = 0;
             throw;
@@ -247,6 +271,7 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
                                                                      const char* const* column_names,
                                                                      const int* column_types,
                                                                      const void* const* column_data,
+                                                                     const uint8_t* const* column_has_value,
                                                                      size_t column_count,
                                                                      size_t row_count) {
     QUIVER_REQUIRE(db, collection, group);
@@ -262,6 +287,14 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group(quiver_data
             std::map<std::string, quiver::Value> row;
             for (size_t c = 0; c < column_count; ++c) {
                 std::string col_name(column_names[c]);
+                // Masked-out cell: explicit NULL in every row (the core builds its
+                // INSERT column list from rows[0], so rows must stay uniform); the
+                // data entry is intentionally never read
+                const uint8_t* mask = column_has_value ? column_has_value[c] : nullptr;
+                if (mask && mask[r] == 0) {
+                    row[col_name] = nullptr;
+                    continue;
+                }
                 switch (column_types[c]) {
                 case QUIVER_DATA_TYPE_INTEGER:
                     row[col_name] = static_cast<const int64_t*>(column_data[c])[r];
@@ -336,11 +369,12 @@ QUIVER_C_API quiver_error_t quiver_database_add_time_series_row(quiver_database_
 QUIVER_C_API quiver_error_t quiver_database_free_time_series_data(char** column_names,
                                                                   int* column_types,
                                                                   void** column_data,
+                                                                  uint8_t** column_has_value,
                                                                   size_t column_count,
                                                                   size_t row_count) {
     try {
         // Empty result: NULL pointers are valid (nothing to free)
-        if (!column_names && !column_data) {
+        if (!column_names && !column_data && !column_has_value) {
             return QUIVER_OK;
         }
 
@@ -350,6 +384,15 @@ QUIVER_C_API quiver_error_t quiver_database_free_time_series_data(char** column_
                 delete[] column_names[i];
             }
             delete[] column_names;
+        }
+
+        // Free masks before the typed column_data dispatch below, which can
+        // throw on an unknown type and must not leak them
+        if (column_has_value) {
+            for (size_t i = 0; i < column_count; ++i) {
+                delete[] column_has_value[i];
+            }
+            delete[] column_has_value;
         }
 
         // Free column data based on column_types
