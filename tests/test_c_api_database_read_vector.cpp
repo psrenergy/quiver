@@ -601,4 +601,3 @@ TEST(DatabaseCApi, ReadVectorStringsByIdHappyPath) {
     quiver_database_free_string_array(read_values, count);
     quiver_database_close(db);
 }
-

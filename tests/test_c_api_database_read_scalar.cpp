@@ -765,4 +765,3 @@ TEST(DatabaseCApi, DateTimeReadScalarString) {
     delete[] value;
     quiver_database_close(db);
 }
-

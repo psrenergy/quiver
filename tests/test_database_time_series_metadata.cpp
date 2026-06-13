@@ -40,4 +40,3 @@ TEST(Database, ListTimeSeriesGroupsEmpty) {
     auto groups = db.list_time_series_groups("Configuration");
     EXPECT_TRUE(groups.empty());
 }
-

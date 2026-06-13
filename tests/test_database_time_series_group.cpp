@@ -406,4 +406,3 @@ TEST(Database, UpdateTimeSeriesGroupMissingBlockInLaterRow) {
     auto result = db.read_time_series_group("Resource", "load", id);
     EXPECT_TRUE(result.empty());
 }
-

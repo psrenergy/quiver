@@ -98,4 +98,3 @@ TEST(Database, TimeSeriesFilesNotFound) {
     EXPECT_THROW(db.read_time_series_files("Configuration"), std::runtime_error);
     EXPECT_THROW(db.list_time_series_files_columns("Configuration"), std::runtime_error);
 }
-
