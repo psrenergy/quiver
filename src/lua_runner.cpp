@@ -11,6 +11,7 @@
 #include "quiver/value.h"
 #include "utils/datetime.h"
 
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <map>
@@ -1137,61 +1138,146 @@ struct LuaRunner::Impl {
         return t;
     }
 
-    static void update_time_series_group_lua(Database& db,
-                                             const std::string& collection,
-                                             const std::string& group,
-                                             int64_t id,
-                                             sol::table columns) {
-        // Column-oriented input: { name = {v1, v2, ...}, ... } transposed into
-        // the row maps the C++ API takes. An empty table (no columns) clears all
-        // rows. Supplying named columns that transpose to zero rows is almost
-        // always a caller mistake -- a scalar passed where an array was expected
-        // (the add_time_series_row shape), or an empty / non-sequence array whose
-        // Lua length is 0 -- so it throws instead of silently clearing the group.
-        std::vector<std::map<std::string, Value>> cpp_rows;
-        std::vector<std::string> column_names;
-        bool first_column = true;
+    // One named column of the column-oriented update payload: its Lua table plus the extent
+    // (largest 1-based integer key; 0 when empty) and the number of non-nil cells. nil cells
+    // never appear during table iteration, so count < extent means the column has holes.
+    // Computed via iteration instead of sol::table::size() because lua_rawlen on a table with
+    // holes returns an arbitrary border.
+    struct TimeSeriesColumn {
+        std::string name;
+        sol::table values;
+        size_t extent = 0;
+        size_t count = 0;
+    };
+
+    static std::vector<TimeSeriesColumn> collect_time_series_columns(const sol::table& columns) {
+        std::vector<TimeSeriesColumn> result;
         for (auto& pair : columns) {
             auto name = pair.first.as<std::string>();
             if (!pair.second.is<sol::table>()) {
                 throw std::runtime_error("Cannot update_time_series_group: column '" + name +
                                          "' must be an array of values");
             }
-            sol::table column = pair.second;
-            column_names.push_back(name);
-            const size_t n = column.size();
-            if (first_column) {
-                cpp_rows.resize(n);
-                first_column = false;
-            } else if (n != cpp_rows.size()) {
-                throw std::runtime_error("Cannot update_time_series_group: column '" + name + "' has length " +
-                                         std::to_string(n) + " but expected " + std::to_string(cpp_rows.size()));
-            }
-            for (size_t i = 1; i <= n; ++i) {
-                sol::object val = column[i];
-                if (val.is<int64_t>()) {
-                    cpp_rows[i - 1][name] = val.as<int64_t>();
-                } else if (val.is<double>()) {
-                    cpp_rows[i - 1][name] = val.as<double>();
-                } else if (val.is<std::string>()) {
-                    cpp_rows[i - 1][name] = val.as<std::string>();
-                } else {
+            TimeSeriesColumn column{name, pair.second.as<sol::table>()};
+            for (auto& cell : column.values) {
+                if (!cell.first.is<int64_t>() || cell.first.as<int64_t>() < 1) {
                     throw std::runtime_error("Cannot update_time_series_group: column '" + name +
-                                             "' has unsupported Lua type");
+                                             "' must be an array of values");
+                }
+                column.extent = std::max(column.extent, static_cast<size_t>(cell.first.as<int64_t>()));
+                ++column.count;
+            }
+            result.push_back(std::move(column));
+        }
+        return result;
+    }
+
+    static void update_time_series_group_lua(Database& db,
+                                             const std::string& collection,
+                                             const std::string& group,
+                                             int64_t id,
+                                             sol::table columns) {
+        // Column-oriented input: { name = {v1, v2, ...}, ... } transposed into the row maps the
+        // C++ API takes. The dimension column(s) are the row count authority -- PK members are
+        // implicitly NOT NULL in STRICT tables, so they must be present and dense. Value columns
+        // may be shorter, sparse, or empty: every cell missing at a dimension index is written as
+        // NULL, which round-trips the nil holes that read_time_series_group produces. An empty
+        // table (no columns) clears all rows; named columns whose dimension transposes to zero
+        // rows still throw instead of silently clearing the group.
+        auto lua_columns = collect_time_series_columns(columns);
+        if (lua_columns.empty()) {
+            db.update_time_series_group(collection, group, id, {});
+            return;
+        }
+
+        // The date_ ordering column plus any extra PK dimensions (multi-dim groups, e.g.
+        // (date_time, block)): get_time_series_metadata reports the extras as value_columns
+        // with primary_key set.
+        auto metadata = db.get_time_series_metadata(collection, group);
+        std::vector<std::string> dimension_columns;
+        dimension_columns.push_back(metadata.dimension_column);
+        for (const auto& vc : metadata.value_columns) {
+            if (vc.primary_key) {
+                dimension_columns.push_back(vc.name);
+            }
+        }
+
+        const auto find_column = [&](const std::string& name) -> const TimeSeriesColumn* {
+            for (const auto& column : lua_columns) {
+                if (column.name == name) {
+                    return &column;
+                }
+            }
+            return nullptr;
+        };
+
+        for (const auto& dim : dimension_columns) {
+            if (find_column(dim) == nullptr) {
+                throw std::runtime_error("Cannot update_time_series_group: missing dimension column '" + dim + "'");
+            }
+        }
+
+        const size_t row_count = find_column(dimension_columns.front())->extent;
+        for (const auto& dim : dimension_columns) {
+            const auto* column = find_column(dim);
+            if (column->extent != row_count) {
+                throw std::runtime_error("Cannot update_time_series_group: column '" + dim + "' has length " +
+                                         std::to_string(column->extent) + " but expected " +
+                                         std::to_string(row_count));
+            }
+            if (column->count != column->extent) {
+                for (size_t i = 1; i <= column->extent; ++i) {
+                    if (!column->values[i].valid()) {
+                        throw std::runtime_error("Cannot update_time_series_group: dimension column '" + dim +
+                                                 "' has nil at index " + std::to_string(i));
+                    }
                 }
             }
         }
-        if (!column_names.empty() && cpp_rows.empty()) {
+
+        for (const auto& column : lua_columns) {
+            if (column.extent > row_count) {
+                throw std::runtime_error("Cannot update_time_series_group: column '" + column.name +
+                                         "' has length " + std::to_string(column.extent) + " but expected " +
+                                         std::to_string(row_count));
+            }
+        }
+
+        if (row_count == 0) {
             std::string joined;
-            for (size_t i = 0; i < column_names.size(); ++i) {
+            for (size_t i = 0; i < lua_columns.size(); ++i) {
                 if (i > 0) {
                     joined += ", ";
                 }
-                joined += column_names[i];
+                joined += lua_columns[i].name;
             }
             throw std::runtime_error("Cannot update_time_series_group: columns [" + joined +
                                      "] contain no rows; pass an empty table {} to clear the group");
         }
+
+        // Uniform rows: the C++ core derives the INSERT column list from rows[0], so every row
+        // carries every named column, with explicit NULL for the cells the caller left out.
+        std::vector<std::map<std::string, Value>> cpp_rows(row_count);
+        for (const auto& column : lua_columns) {
+            for (auto& row : cpp_rows) {
+                row[column.name] = nullptr;
+            }
+            for (auto& cell : column.values) {
+                const auto index = static_cast<size_t>(cell.first.as<int64_t>());
+                sol::object val = cell.second;
+                if (val.is<int64_t>()) {
+                    cpp_rows[index - 1][column.name] = val.as<int64_t>();
+                } else if (val.is<double>()) {
+                    cpp_rows[index - 1][column.name] = val.as<double>();
+                } else if (val.is<std::string>()) {
+                    cpp_rows[index - 1][column.name] = val.as<std::string>();
+                } else {
+                    throw std::runtime_error("Cannot update_time_series_group: column '" + column.name +
+                                             "' has unsupported Lua type");
+                }
+            }
+        }
+
         db.update_time_series_group(collection, group, id, cpp_rows);
     }
 

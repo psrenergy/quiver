@@ -13,6 +13,8 @@ CREATE TABLE Sensor (
 CREATE TABLE Sensor_time_series_readings (
     id INTEGER NOT NULL REFERENCES Sensor(id) ON DELETE CASCADE ON UPDATE CASCADE,
     date_time TEXT NOT NULL,
+    temperature REAL,
+    counter INTEGER,
     status TEXT,
     PRIMARY KEY (id, date_time)
 ) STRICT;
