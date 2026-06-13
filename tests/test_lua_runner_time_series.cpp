@@ -134,7 +134,7 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupScalarColumnThrows) {
         db:update_time_series_group("Collection", "data", )" +
                          std::to_string(id) + R"(, { date_time = "2024-06-01", value = 10.0 })
     )";
-    EXPECT_THROW({ lua.run(script); }, std::runtime_error);
+    expect_lua_error(lua, script, "must be an array of values");
 }
 
 TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupAllEmptyColumnsThrows) {
@@ -151,7 +151,260 @@ TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupAllEmptyColumnsThrows) {
         db:update_time_series_group("Collection", "data", )" +
                          std::to_string(id) + R"(, { date_time = {}, value = {} })
     )";
-    EXPECT_THROW({ lua.run(script); }, std::runtime_error);
+    expect_lua_error(lua, script, "contain no rows");
+}
+
+// --- NULL round-trip: dimension column is the row-count authority; value columns
+// may be shorter, sparse, or empty, with missing cells written as SQL NULL ---
+
+TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupNilHoleWritesNull) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        db:update_time_series_group("Collection", "data", )" +
+                         std::to_string(id) + R"(, {
+            date_time = { "2024-01-01", "2024-01-02", "2024-01-03" },
+            value = { 10.0, nil, 30.0 },
+        })
+    )";
+    lua.run(script);
+
+    auto rows = db.read_time_series_group("Collection", "data", id);
+    ASSERT_EQ(rows.size(), 3);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("value")), 10.0);
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[1].at("value")));
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[2].at("value")), 30.0);
+}
+
+TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupShortColumnPadsNull) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        db:update_time_series_group("Collection", "data", )" +
+                         std::to_string(id) + R"(, {
+            date_time = { "2024-01-01", "2024-01-02", "2024-01-03" },
+            value = { 10.0 },
+        })
+    )";
+    lua.run(script);
+
+    auto rows = db.read_time_series_group("Collection", "data", id);
+    ASSERT_EQ(rows.size(), 3);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("value")), 10.0);
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[1].at("value")));
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[2].at("value")));
+}
+
+TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupValueColumnLongerThrows) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        db:update_time_series_group("Collection", "data", )" +
+                         std::to_string(id) + R"(, {
+            date_time = { "2024-01-01", "2024-01-02", "2024-01-03" },
+            value = { 10.0, 20.0, 30.0, 40.0 },
+        })
+    )";
+    expect_lua_error(lua, script, "has length 4 but expected 3");
+}
+
+TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupMissingDimensionThrows) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        db:update_time_series_group("Collection", "data", )" +
+                         std::to_string(id) + R"(, { value = { 10.0 } })
+    )";
+    expect_lua_error(lua, script, "missing dimension column 'date_time'");
+}
+
+TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupDimensionNilThrows) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        db:update_time_series_group("Collection", "data", )" +
+                         std::to_string(id) + R"(, {
+            date_time = { "2024-01-01", nil, "2024-01-03" },
+            value = { 10.0, 20.0, 30.0 },
+        })
+    )";
+    expect_lua_error(lua, script, "dimension column 'date_time' has nil at index 2");
+}
+
+TEST_F(LuaRunnerTest, ReadTimeSeriesGroupNullIsNilHole) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    // Seed 3 rows with a NULL value in the middle row.
+    std::vector<std::map<std::string, quiver::Value>> rows = {
+        {{"date_time", std::string("2024-01-01")}, {"value", 1.5}},
+        {{"date_time", std::string("2024-01-02")}, {"value", nullptr}},
+        {{"date_time", std::string("2024-01-03")}, {"value", 3.5}},
+    };
+    db.update_time_series_group("Collection", "data", id, rows);
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        local data = db:read_time_series_group("Collection", "data", )" +
+                         std::to_string(id) + R"()
+        -- The dimension column is the row-count authority; value columns may have nil holes.
+        assert(#data.date_time == 3, "Expected 3 rows, got " .. #data.date_time)
+        assert(data.value[1] == 1.5, "Expected value[1] == 1.5")
+        assert(data.value[2] == nil, "Expected value[2] to be nil, SQL NULL")
+        assert(data.value[3] == 3.5, "Expected value[3] == 3.5")
+    )";
+    lua.run(script);
+}
+
+TEST_F(LuaRunnerTest, TimeSeriesGroupNilRoundTrip) {
+    // The reported scenario: read a group with a NULL cell, modify another cell,
+    // and write the whole group back. The nil hole must survive the round-trip.
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Collection", quiver::Element().set("label", "Item 1"));
+
+    std::vector<std::map<std::string, quiver::Value>> rows = {
+        {{"date_time", std::string("2024-01-01")}, {"value", 1.5}},
+        {{"date_time", std::string("2024-01-02")}, {"value", nullptr}},
+        {{"date_time", std::string("2024-01-03")}, {"value", 3.5}},
+    };
+    db.update_time_series_group("Collection", "data", id, rows);
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        local ts = db:read_time_series_group("Collection", "data", )" +
+                         std::to_string(id) + R"()
+        ts.value[1] = 99.0
+        db:update_time_series_group("Collection", "data", )" +
+                         std::to_string(id) + R"(, ts)
+    )";
+    lua.run(script);
+
+    auto result = db.read_time_series_group("Collection", "data", id);
+    ASSERT_EQ(result.size(), 3);
+    EXPECT_DOUBLE_EQ(std::get<double>(result[0].at("value")), 99.0);
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(result[1].at("value")));
+    EXPECT_DOUBLE_EQ(std::get<double>(result[2].at("value")), 3.5);
+}
+
+TEST_F(LuaRunnerTest, TimeSeriesGroupAllNullColumnRoundTrip) {
+    // An all-NULL value column reads back as an empty table (with the key present)
+    // and round-trips as all-NULL under the dimension-authority transpose.
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("nullable_time_series.sql"));
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Sensor", quiver::Element().set("label", "Sensor 1"));
+
+    std::vector<std::map<std::string, quiver::Value>> rows = {
+        {{"date_time", std::string("2024-01-01")}, {"status", nullptr}},
+        {{"date_time", std::string("2024-01-02")}, {"status", nullptr}},
+    };
+    db.update_time_series_group("Sensor", "readings", id, rows);
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        local ts = db:read_time_series_group("Sensor", "readings", )" +
+                         std::to_string(id) + R"()
+        assert(#ts.date_time == 2, "Expected 2 rows, got " .. #ts.date_time)
+        assert(type(ts.status) == "table", "Expected status column key present as a table")
+        assert(next(ts.status) == nil, "Expected status column to be an empty table, all NULL")
+        db:update_time_series_group("Sensor", "readings", )" +
+                         std::to_string(id) + R"(, ts)
+    )";
+    lua.run(script);
+
+    auto result = db.read_time_series_group("Sensor", "readings", id);
+    ASSERT_EQ(result.size(), 2);
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(result[0].at("status")));
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(result[1].at("status")));
+}
+
+TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupMultiDimNulls) {
+    // Multi-dimension group (date_time + block are both PK): both dimension
+    // columns must be dense and equal-length; value columns may be short/empty.
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql"));
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Resource", quiver::Element().set("label", "Resource 1"));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        db:update_time_series_group("Resource", "load", )" +
+                         std::to_string(id) + R"(, {
+            date_time = { "2024-06-01", "2024-06-02", "2024-06-03" },
+            block = { 1, 1, 1 },
+            load = { 1.5 },
+            flag = {},
+        })
+    )";
+    lua.run(script);
+
+    auto rows = db.read_time_series_group("Resource", "load", id);
+    ASSERT_EQ(rows.size(), 3);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("load")), 1.5);
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[1].at("load")));
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[2].at("load")));
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[0].at("flag")));
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[1].at("flag")));
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[2].at("flag")));
+}
+
+TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupMultiDimBlockLengthMismatchThrows) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql"));
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Resource", quiver::Element().set("label", "Resource 1"));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        db:update_time_series_group("Resource", "load", )" +
+                         std::to_string(id) + R"(, {
+            date_time = { "2024-06-01", "2024-06-02", "2024-06-03" },
+            block = { 1, 2 },
+            load = { 1.5, 2.5, 3.5 },
+        })
+    )";
+    expect_lua_error(lua, script, "column 'block' has length 2 but expected 3");
+}
+
+TEST_F(LuaRunnerTest, UpdateTimeSeriesGroupMultiDimMissingBlockThrows) {
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql"));
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    int64_t id = db.create_element("Resource", quiver::Element().set("label", "Resource 1"));
+
+    quiver::LuaRunner lua(db);
+
+    std::string script = R"(
+        db:update_time_series_group("Resource", "load", )" +
+                         std::to_string(id) + R"(, {
+            date_time = { "2024-06-01" },
+            load = { 1.5 },
+        })
+    )";
+    expect_lua_error(lua, script, "missing dimension column 'block'");
 }
 
 TEST_F(LuaRunnerTest, AddTimeSeriesRowInsert) {

@@ -26,7 +26,7 @@ import {
   DATA_TYPE_STRING,
 } from "./types.ts";
 
-export type TimeSeriesData = Record<string, (number | string)[]>;
+export type TimeSeriesData = Record<string, (number | string | null)[]>;
 
 Database.prototype.readTimeSeriesGroup = function (
   this: Database,
@@ -40,6 +40,7 @@ Database.prototype.readTimeSeriesGroup = function (
   const outNames = allocPtrOut();
   const outTypes = allocPtrOut();
   const outData = allocPtrOut();
+  const outHasValue = allocPtrOut();
   const outColCount = allocUint64Out();
   const outRowCount = allocUint64Out();
 
@@ -52,6 +53,7 @@ Database.prototype.readTimeSeriesGroup = function (
       outNames.buf,
       outTypes.buf,
       outData.buf,
+      outHasValue.buf,
       outColCount.buf,
       outRowCount.buf,
     ),
@@ -64,26 +66,49 @@ Database.prototype.readTimeSeriesGroup = function (
   const namesPtr = readPtrOut(outNames);
   const typesPtr = readPtrOut(outTypes);
   const dataPtr = readPtrOut(outData);
+  const hasValuePtr = readPtrOut(outHasValue);
 
   const colNames = decodeStringArray(namesPtr, colCount);
   const typesAb = toArrayBuffer(typesPtr as Pointer, 0, colCount * 4);
   const types = Array.from(new Int32Array(typesAb));
   const dataPtrs = decodePtrArray(dataPtr, colCount);
+  const maskPtrs = decodePtrArray(hasValuePtr, colCount);
 
+  // Per-cell NULL mask: mask[r] === 0 means SQL NULL, surfaced as JS null. The
+  // dimension column's mask is always all 1, so it stays dense.
   const result: TimeSeriesData = {};
   for (let c = 0; c < colCount; c++) {
     const colName = colNames[c];
+    const maskPtr = maskPtrs[c];
+    const mask = maskPtr ? new Uint8Array(toArrayBuffer(maskPtr as Pointer, 0, rowCount)) : null;
     switch (types[c]) {
-      case DATA_TYPE_INTEGER:
-        result[colName] = decodeInt64Array(dataPtrs[c], rowCount);
+      case DATA_TYPE_INTEGER: {
+        const vals = decodeInt64Array(dataPtrs[c], rowCount);
+        result[colName] = mask ? vals.map((v, r) => (mask[r] ? v : null)) : vals;
         break;
-      case DATA_TYPE_FLOAT:
-        result[colName] = decodeFloat64Array(dataPtrs[c], rowCount);
+      }
+      case DATA_TYPE_FLOAT: {
+        const vals = decodeFloat64Array(dataPtrs[c], rowCount);
+        result[colName] = mask ? vals.map((v, r) => (mask[r] ? v : null)) : vals;
         break;
+      }
       case DATA_TYPE_STRING:
-      case DATA_TYPE_DATE_TIME:
-        result[colName] = decodeStringArray(dataPtrs[c], rowCount);
+      case DATA_TYPE_DATE_TIME: {
+        // Read pointer-by-pointer (not decodeStringArray): a masked-out cell is a
+        // NULL char* that CString cannot construct from.
+        const base = dataPtrs[c];
+        const col: (string | null)[] = new Array(rowCount);
+        for (let r = 0; r < rowCount; r++) {
+          if (mask && !mask[r]) {
+            col[r] = null;
+            continue;
+          }
+          const strPtr = base ? read.ptr(base as Pointer, r * 8) : 0;
+          col[r] = strPtr === 0 ? null : new CString(strPtr as Pointer).toString();
+        }
+        result[colName] = col;
         break;
+      }
     }
   }
 
@@ -91,6 +116,7 @@ Database.prototype.readTimeSeriesGroup = function (
     namesPtr,
     typesPtr,
     dataPtr,
+    hasValuePtr,
     BigInt(colCount),
     BigInt(rowCount),
   );
@@ -177,6 +203,7 @@ Database.prototype.updateTimeSeriesGroup = function (
         null,
         null,
         null,
+        null,
         0n,
         0n,
       ),
@@ -213,32 +240,58 @@ Database.prototype.updateTimeSeriesGroup = function (
   const { table: namesTable, keepalive: namesPtrs } = allocNativeStringArray(colNames);
   keepalive.push(namesTable, ...namesPtrs);
 
-  // Build column types and data
+  // Build column types, data, and per-cell NULL masks. A null cell becomes
+  // mask 0 + a placeholder in the data array (the C API never reads it). An
+  // all-null column is tagged FLOAT with zeroed data — the type tag is ignored
+  // for masked-out cells.
   const typesBuf = new Uint8Array(columnCount * 4);
   const typesDv = new DataView(typesBuf.buffer);
   const dataPtrs: (Pointer | null)[] = [];
+  const maskPtrs: (Pointer | null)[] = [];
 
   for (let c = 0; c < columnCount; c++) {
-    const values = entries[c][1];
+    const [colName, values] = entries[c];
+    const first = values.find((v) => v !== null);
 
-    if (typeof values[0] === "string") {
+    // Mask via direct indexing — never a DataView, to avoid the documented
+    // .buffer-materialization pitfall between ptr() and the FFI call.
+    const maskBuf = new Uint8Array(rowCount);
+    for (let r = 0; r < rowCount; r++) maskBuf[r] = values[r] === null ? 0 : 1;
+    const maskAlloc: Allocation = { ptr: ptr(maskBuf), buf: maskBuf };
+    keepalive.push(maskAlloc);
+    maskPtrs.push(maskAlloc.ptr);
+
+    if (first === undefined) {
+      // All-null column
+      typesDv.setInt32(c * 4, DATA_TYPE_FLOAT, true);
+      const p = allocNativeFloat64(new Array(rowCount).fill(0));
+      keepalive.push(p);
+      dataPtrs.push(p.ptr);
+    } else if (typeof first === "string") {
       typesDv.setInt32(c * 4, DATA_TYPE_STRING, true);
-      const { table, keepalive: strPtrs } = allocNativeStringArray(values as string[]);
+      const { table, keepalive: strPtrs } = allocNativeStringArray(
+        values.map((v) => (v === null ? null : (v as string))),
+      );
       keepalive.push(table, ...strPtrs);
       dataPtrs.push(table.ptr);
-    } else if (typeof values[0] === "number") {
-      const allIntegers = (values as number[]).every((v) => Number.isInteger(v));
-      if (allIntegers) {
+    } else if (typeof first === "number") {
+      const nonNull = values.filter((v) => v !== null) as number[];
+      const sanitized = values.map((v) => (v === null ? 0 : (v as number)));
+      if (nonNull.every((v) => Number.isInteger(v))) {
         typesDv.setInt32(c * 4, DATA_TYPE_INTEGER, true);
-        const p = allocNativeInt64(values as number[]);
+        const p = allocNativeInt64(sanitized);
         keepalive.push(p);
         dataPtrs.push(p.ptr);
       } else {
         typesDv.setInt32(c * 4, DATA_TYPE_FLOAT, true);
-        const p = allocNativeFloat64(values as number[]);
+        const p = allocNativeFloat64(sanitized);
         keepalive.push(p);
         dataPtrs.push(p.ptr);
       }
+    } else {
+      throw new QuiverError(
+        `Cannot updateTimeSeriesGroup: column '${colName}' has unsupported value type ${typeof first}`,
+      );
     }
   }
 
@@ -246,6 +299,8 @@ Database.prototype.updateTimeSeriesGroup = function (
   keepalive.push(typesAlloc);
   const dataTable = allocNativePtrTable(dataPtrs);
   keepalive.push(dataTable);
+  const maskTable = allocNativePtrTable(maskPtrs);
+  keepalive.push(maskTable);
 
   check(
     lib.quiver_database_update_time_series_group(
@@ -256,6 +311,7 @@ Database.prototype.updateTimeSeriesGroup = function (
       namesTable.buf,
       typesAlloc.buf,
       dataTable.buf,
+      maskTable.buf,
       BigInt(columnCount),
       BigInt(rowCount),
     ),

@@ -118,14 +118,14 @@ const describeSymbols = {
 } as const;
 
 const timeSeriesSymbols = {
-  quiver_database_read_time_series_group: { args: [P, BUF, BUF, I64, P, P, P, P, P], returns: I32 },
+  quiver_database_read_time_series_group: { args: [P, BUF, BUF, I64, P, P, P, P, P, P], returns: I32 },
   quiver_database_read_time_series_row: { args: [P, BUF, BUF, BUF, BUF, P, P, P], returns: I32 },
   quiver_database_add_time_series_row: { args: [P, BUF, BUF, I64, P, P, P, USIZE], returns: I32 },
   quiver_database_update_time_series_group: {
-    args: [P, BUF, BUF, I64, P, P, P, USIZE, USIZE],
+    args: [P, BUF, BUF, I64, P, P, P, P, USIZE, USIZE],
     returns: I32,
   },
-  quiver_database_free_time_series_data: { args: [P, P, P, USIZE, USIZE], returns: I32 },
+  quiver_database_free_time_series_data: { args: [P, P, P, P, USIZE, USIZE], returns: I32 },
   quiver_database_has_time_series_files: { args: [P, BUF, P], returns: I32 },
   quiver_database_list_time_series_files_columns: { args: [P, BUF, P, P], returns: I32 },
   quiver_database_read_time_series_files: { args: [P, BUF, P, P, P], returns: I32 },
