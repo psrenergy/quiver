@@ -57,6 +57,25 @@ private:
 
     friend QUIVER_API Expression ifelse(const Expression&, const Expression&, const Expression&);
 
+    friend QUIVER_API Expression gt(const Expression&, const Expression&);
+    friend QUIVER_API Expression gt(const Expression&, double);
+    friend QUIVER_API Expression gt(double, const Expression&);
+    friend QUIVER_API Expression lt(const Expression&, const Expression&);
+    friend QUIVER_API Expression lt(const Expression&, double);
+    friend QUIVER_API Expression lt(double, const Expression&);
+    friend QUIVER_API Expression gte(const Expression&, const Expression&);
+    friend QUIVER_API Expression gte(const Expression&, double);
+    friend QUIVER_API Expression gte(double, const Expression&);
+    friend QUIVER_API Expression lte(const Expression&, const Expression&);
+    friend QUIVER_API Expression lte(const Expression&, double);
+    friend QUIVER_API Expression lte(double, const Expression&);
+    friend QUIVER_API Expression eq(const Expression&, const Expression&);
+    friend QUIVER_API Expression eq(const Expression&, double);
+    friend QUIVER_API Expression eq(double, const Expression&);
+    friend QUIVER_API Expression neq(const Expression&, const Expression&);
+    friend QUIVER_API Expression neq(const Expression&, double);
+    friend QUIVER_API Expression neq(double, const Expression&);
+
     std::shared_ptr<ExpressionNode> node_;
 };
 
