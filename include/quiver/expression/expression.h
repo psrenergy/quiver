@@ -103,6 +103,28 @@ QUIVER_API Expression exp(const Expression& operand);
 
 QUIVER_API Expression ifelse(const Expression& condition, const Expression& then_value, const Expression& else_value);
 
+// Element-wise comparisons producing 1.0 (true) / 0.0 (false); a NaN operand propagates as NaN.
+// Free functions (not operators) so the surface is identical in C++ and Lua, where comparison
+// metamethods cannot return an Expression.
+QUIVER_API Expression gt(const Expression& lhs, const Expression& rhs);
+QUIVER_API Expression gt(const Expression& lhs, double rhs);
+QUIVER_API Expression gt(double lhs, const Expression& rhs);
+QUIVER_API Expression lt(const Expression& lhs, const Expression& rhs);
+QUIVER_API Expression lt(const Expression& lhs, double rhs);
+QUIVER_API Expression lt(double lhs, const Expression& rhs);
+QUIVER_API Expression gte(const Expression& lhs, const Expression& rhs);
+QUIVER_API Expression gte(const Expression& lhs, double rhs);
+QUIVER_API Expression gte(double lhs, const Expression& rhs);
+QUIVER_API Expression lte(const Expression& lhs, const Expression& rhs);
+QUIVER_API Expression lte(const Expression& lhs, double rhs);
+QUIVER_API Expression lte(double lhs, const Expression& rhs);
+QUIVER_API Expression eq(const Expression& lhs, const Expression& rhs);
+QUIVER_API Expression eq(const Expression& lhs, double rhs);
+QUIVER_API Expression eq(double lhs, const Expression& rhs);
+QUIVER_API Expression neq(const Expression& lhs, const Expression& rhs);
+QUIVER_API Expression neq(const Expression& lhs, double rhs);
+QUIVER_API Expression neq(double lhs, const Expression& rhs);
+
 }  // namespace quiver
 
 #endif  // QUIVER_EXPRESSION_H
