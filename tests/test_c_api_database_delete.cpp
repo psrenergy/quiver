@@ -167,9 +167,9 @@ TEST(DatabaseCApi, DeleteElementByIdNonExistent) {
     quiver_database_create_element(db, "Configuration", e, &_id);
     EXPECT_EQ(quiver_element_destroy(e), QUIVER_OK);
 
-    // Delete non-existent Id - should succeed silently (SQL DELETE is idempotent)
+    // Deleting a non-existent Id now reports an error instead of silently no-op'ing
     auto err = quiver_database_delete_element(db, "Configuration", 999);
-    EXPECT_EQ(err, QUIVER_OK);
+    EXPECT_NE(err, QUIVER_OK);
 
     // Verify original element still exists
     int64_t* ids = nullptr;

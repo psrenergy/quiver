@@ -1024,3 +1024,32 @@ TEST(Database, UpdateElementFkResolutionFailurePreservesExisting) {
     ASSERT_EQ(parent_ids.size(), 1);
     EXPECT_EQ(parent_ids[0], 1);
 }
+
+TEST(Database, UpdateElementByIdNonExistent) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Config 1")));
+
+    // Updating a non-existent id throws "Element not found" rather than silently no-op'ing
+    quiver::Element update;
+    update.set("integer_attribute", int64_t{99});
+    EXPECT_THROW(db.update_element("Configuration", 999, update), std::runtime_error);
+}
+
+TEST(Database, UpdateScalarTypeCoercionPolicy) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    int64_t id = db.create_element("Configuration", quiver::Element().set("label", std::string("Config 1")));
+
+    // A float (even a whole-valued one) is rejected for an INTEGER column.
+    EXPECT_THROW(db.update_element("Configuration", id, quiver::Element().set("integer_attribute", 42.0)),
+                 std::runtime_error);
+
+    // An integer is accepted for a REAL column (coerced to real on insert).
+    db.update_element("Configuration", id, quiver::Element().set("float_attribute", int64_t{7}));
+    auto val = db.read_scalar_float_by_id("Configuration", "float_attribute", id);
+    ASSERT_TRUE(val.has_value());
+    EXPECT_DOUBLE_EQ(*val, 7.0);
+}

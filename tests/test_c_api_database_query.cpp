@@ -535,3 +535,28 @@ TEST(DatabaseCApiQuery, QueryParamsUnknownType) {
 
     quiver_database_close(db);
 }
+
+TEST(DatabaseCApiQuery, QueryParameterCountMismatch) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
+
+    quiver_element_t* e = nullptr;
+    ASSERT_EQ(quiver_element_create(&e), QUIVER_OK);
+    quiver_element_set_string(e, "label", "Test");
+    int64_t cid = 0;
+    quiver_database_create_element(db, "Configuration", e, &cid);
+    quiver_element_destroy(e);
+
+    // One placeholder but zero parameters -> error
+    char* value = nullptr;
+    int has_value = 0;
+    auto err = quiver_database_query_string_params(
+        db, "SELECT label FROM Configuration WHERE id = ?", nullptr, nullptr, 0, &value, &has_value);
+    EXPECT_EQ(err, QUIVER_ERROR);
+    std::string msg = quiver_get_last_error();
+    EXPECT_NE(msg.find("expected 1 bound parameter"), std::string::npos) << "Actual: " << msg;
+
+    quiver_database_close(db);
+}

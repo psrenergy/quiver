@@ -646,3 +646,22 @@ TEST(Database, ScalarFkResolutionFailureCausesNoPartialWrites) {
     auto labels = db.read_scalar_strings("Child", "label");
     EXPECT_EQ(labels.size(), 0);
 }
+
+TEST(Database, CreateScalarTypeCoercionPolicy) {
+    auto db = quiver::Database::from_schema(
+        ":memory:", VALID_SCHEMA("basic.sql"), {.read_only = false, .console_level = quiver::LogLevel::Off});
+
+    // A float (even a whole-valued one) is rejected for an INTEGER column.
+    quiver::Element bad;
+    bad.set("label", std::string("Bad")).set("integer_attribute", 42.0);
+    EXPECT_THROW(db.create_element("Configuration", bad), std::runtime_error);
+
+    // An integer is accepted for a REAL column (coerced to real on insert).
+    quiver::Element ok;
+    ok.set("label", std::string("Ok")).set("float_attribute", int64_t{7});
+    db.create_element("Configuration", ok);
+
+    auto floats = db.read_scalar_floats("Configuration", "float_attribute");
+    ASSERT_EQ(floats.size(), 1);
+    EXPECT_DOUBLE_EQ(floats[0], 7.0);
+}

@@ -36,13 +36,17 @@ void TypeValidator::validate_value(const std::string& caller,
                 // NULL allowed for any type
                 return;
             } else if constexpr (std::is_same_v<T, int64_t>) {
-                if (expected_type != DataType::Integer) {
+                // Integers are accepted for INTEGER and REAL columns (SQLite STRICT converts
+                // whole numbers to real on insert) -- the single coercion policy shared with
+                // internal::value_matches_type (used by the time-series writers).
+                if (expected_type != DataType::Integer && expected_type != DataType::Real) {
                     throw std::runtime_error("Cannot " + caller + ": type mismatch for " + context + ": expected " +
                                              data_type_to_string(expected_type) + ", got INTEGER");
                 }
             } else if constexpr (std::is_same_v<T, double>) {
-                // REAL can be stored in INTEGER or REAL columns
-                if (expected_type != DataType::Real && expected_type != DataType::Integer) {
+                // Floats only go to REAL columns -- writing a float into an INTEGER column is
+                // rejected (it would silently truncate or fail SQLite STRICT at insert time).
+                if (expected_type != DataType::Real) {
                     throw std::runtime_error("Cannot " + caller + ": type mismatch for " + context + ": expected " +
                                              data_type_to_string(expected_type) + ", got REAL");
                 }

@@ -107,7 +107,7 @@ void main() {
       }
     });
 
-    test('deletes non-existent element (idempotent)', () {
+    test('throws for non-existent element', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
@@ -115,8 +115,11 @@ void main() {
       try {
         db.createElement('Configuration', {'label': 'Config 1'});
 
-        // Delete non-existent element should succeed
-        db.deleteElement('Configuration', 999);
+        // Deleting a non-existent element throws "Element not found"
+        expect(
+          () => db.deleteElement('Configuration', 999),
+          throwsA(isA<DatabaseException>()),
+        );
 
         // Verify original element still exists
         final ids = db.readElementIds('Configuration');

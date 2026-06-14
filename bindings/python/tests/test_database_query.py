@@ -6,7 +6,7 @@ from datetime import datetime
 
 import pytest
 
-from quiverdb import Database
+from quiverdb import Database, QuiverError
 
 
 # -- Simple queries (QUERY-01) ------------------------------------------------
@@ -169,3 +169,16 @@ class TestQueryDateTime:
         db.create_element("Configuration", label="item1", date_attribute="not-a-date")
         with pytest.raises(ValueError):
             db.query_date_time("SELECT date_attribute FROM Configuration WHERE label = 'item1'")
+
+
+class TestQueryParameterCount:
+    def test_parameter_count_mismatch_raises(self, db: Database) -> None:
+        db.create_element("Configuration", label="item1", integer_attribute=1)
+        # Too few parameters for the single placeholder
+        with pytest.raises(QuiverError):
+            db.query_string("SELECT label FROM Configuration WHERE id = ?", parameters=[])
+        # Too many parameters for the single placeholder
+        with pytest.raises(QuiverError):
+            db.query_string("SELECT label FROM Configuration WHERE id = ?", parameters=[1, 2])
+        # Exactly one parameter succeeds
+        assert db.query_string("SELECT label FROM Configuration WHERE id = ?", parameters=[1]) == "item1"

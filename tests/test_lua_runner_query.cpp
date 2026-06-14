@@ -144,3 +144,25 @@ TEST_F(LuaRunnerTest, Describe) {
         assert(report:find("Collection: Configuration"), "describe should mention Configuration")
     )");
 }
+
+TEST_F(LuaRunnerTest, QueryParameterCountMismatch) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+    db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{42}));
+
+    quiver::LuaRunner lua(db);
+
+    // Too few parameters for the single placeholder
+    expect_lua_error(
+        lua, R"(db:query_string("SELECT label FROM Collection WHERE some_integer = ?", {}))", "expected 1 bound");
+
+    // Too many parameters for the single placeholder
+    expect_lua_error(
+        lua, R"(db:query_string("SELECT label FROM Collection WHERE some_integer = ?", {42, 43}))", "expected 1 bound");
+
+    // Exactly one parameter succeeds
+    lua.run(R"(
+        local label = db:query_string("SELECT label FROM Collection WHERE some_integer = ?", {42})
+        assert(label == "Item 1", "expected Item 1, got " .. tostring(label))
+    )");
+}

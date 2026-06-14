@@ -168,8 +168,16 @@ impl_->logger->debug("Opening database: {}", path);
 - **`TypeValidator` threads the caller's name** (`type_validator.cpp`): call sites pass
   `"create_element"` / `"update_element"` so messages read `"Cannot create_element: type
   mismatch for column ..."` (root Pattern 1).
-- **`value_matches_type`** (`database_internal.h`) accepts int64 for both `INTEGER` and `REAL`
-  columns — this is where int-for-REAL time-series coercion lives (root design decision).
+- **One scalar typing policy** shared by `value_matches_type` (`database_internal.h`, time-series
+  writes) and `TypeValidator::validate_value` (`type_validator.cpp`, scalar create/update): int64
+  matches `INTEGER` or `REAL` (int-for-REAL coercion), double matches `REAL` only (a float into an
+  `INTEGER` column is rejected), string matches `TEXT`/`INTEGER`(FK label)/`DATE_TIME`. Keep the two
+  in sync (root design decision).
+- **`update_element` / `delete_element` verify the id exists** (`SELECT 1 ... WHERE id = ?` via
+  `execute`) and throw Pattern 2 `"Element not found: ..."` — no silent no-op.
+- **`execute` validates parameter count** (`database.cpp`): `sqlite3_bind_parameter_count` must
+  equal `parameters.size()`, else it throws — the single guard for every `query_*` and internal
+  parameterized statement.
 - **Utilities**: `quiver::string::new_c_str` / `trim` in `src/utils/string.h`; ISO 8601
   (`YYYY-MM-DDTHH:MM:SS`) parse/format helpers in `src/utils/datetime.h`;
   use `is_date_time_column` (`data_type.h`) for `date_`-prefix checks (one legacy hand-rolled

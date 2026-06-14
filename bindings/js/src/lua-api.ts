@@ -42,8 +42,8 @@ Lua values map to Quiver column values as follows:
 
 | Lua value          | Quiver value | Notes                                          |
 | ------------------ | ------------ | ---------------------------------------------- |
-| integer            | INTEGER      | Lua integers map to int64.                     |
-| number (float)     | REAL         | REAL columns reject bare integers: write 75.0, not 75. |
+| integer            | INTEGER      | Also accepted for REAL columns (coerced to real). |
+| number (float)     | REAL         | A float is rejected for an INTEGER column.     |
 | string             | TEXT         | Also used for \`date_time\` columns (ISO 8601).  |
 | \`nil\`              | NULL         | In query params, file paths, and ts rows.      |
 | table (1-indexed)  | array        | Used for vectors/sets and column-oriented data.|
@@ -60,8 +60,9 @@ datetime surface — there are no DateTime wrapper helpers, unlike Julia/Dart/Py
 
 ## Critical rules
 
-- **STRICT typing.** A REAL column rejects integer literals — write \`75.0\`, not \`75\`; an INTEGER
-  column rejects floats. A mismatch raises a validation error and rolls the whole script back.
+- **Type coercion.** An integer is accepted for a REAL column (coerced to real on insert); a float
+  is rejected for an INTEGER column. Other type mismatches raise a validation error and roll the
+  whole script back.
 - **Errors abort the script.** Any error thrown by a \`db:\` call stops the script and surfaces as
   \`Failed to run Lua script: <message>\`. Validation failures roll back whatever the current
   transaction covered.
@@ -78,6 +79,10 @@ datetime surface — there are no DateTime wrapper helpers, unlike Julia/Dart/Py
   see (it is captured). Arrays are 1-indexed (iterate with \`ipairs\`); reading a NULL yields \`nil\`,
   writing \`nil\` stores NULL where NULL is accepted (query params, ts rows, file columns — but NOT
   element scalar attributes; see CRUD).
+- **Embedding harness may restrict further.** The library itself allows transactions and the
+  (sandboxed) CSV/file operations below. A host that runs your script (e.g. a hosted \`run_lua\`
+  tool) may disable some of them and report \`disabled in the run_lua sandbox\` — that limit comes
+  from the harness, not from quiverdb.
 
 ---
 
@@ -152,11 +157,16 @@ db:update_element("Collection", id, { some_integer = 999 })
 \`\`\`
 
 Notes:
+- **\`update_element\` / \`delete_element\` require an existing id.** Targeting an id that does not
+  exist throws \`Element not found: <id> in collection '<collection>'\` (no silent no-op). Use
+  \`read_element_ids\` to get valid ids.
 - **Empty arrays are skipped.** An attribute whose value is \`{}\` writes no vector/set (the element
   type can't be inferred from an empty array), so it is silently dropped.
-- **No \`nil\` scalar attributes.** Passing \`nil\` for a scalar attribute **throws** (unsupported
-  type). To leave a column unset, omit the key — you cannot set a scalar to NULL via the element
-  table. (\`nil\` → NULL is only accepted by \`add_time_series_row\` and \`update_time_series_files\`.)
+- **No \`nil\` scalar attributes.** In Lua a key set to \`nil\` is dropped from the table, so
+  \`{ x = nil }\` is identical to \`{}\`; an update/create table that ends up with no attributes
+  **throws** (\`element must have at least one attribute\`). To leave a column unchanged, omit the
+  key — you cannot set a scalar to NULL via the element table. (\`nil\` → NULL is only accepted by
+  \`add_time_series_row\` and \`update_time_series_files\`.)
 
 ---
 
@@ -367,7 +377,9 @@ entirely.
 ## Query (parameterized SQL)
 
 Positional \`?\` placeholders; \`params\` is an optional 1-indexed array. Each returns the first
-column of the first row as the requested type, or \`nil\` if there is no result.
+column of the first row as the requested type, or \`nil\` if there is no result. The number of
+\`params\` must match the number of \`?\` placeholders exactly — a mismatch (too few or too many)
+throws rather than binding NULL or ignoring extras.
 
 \`\`\`lua
 db:query_string(sql, params)    -- string or nil

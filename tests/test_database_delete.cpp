@@ -88,8 +88,8 @@ TEST(Database, DeleteElementByIdNonExistent) {
     e.set("label", std::string("Config 1")).set("integer_attribute", int64_t{42});
     db.create_element("Configuration", e);
 
-    // Delete non-existent ID - should succeed silently (SQL DELETE is idempotent)
-    db.delete_element("Configuration", 999);
+    // Deleting a non-existent id throws "Element not found" rather than silently no-op'ing
+    EXPECT_THROW(db.delete_element("Configuration", 999), std::runtime_error);
 
     // Verify original element still exists
     auto ids = db.read_element_ids("Configuration");

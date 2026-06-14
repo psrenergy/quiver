@@ -1606,3 +1606,53 @@ TEST(DatabaseCApi, UpdateSetFloatsHappyPath) {
     quiver_database_free_float_array(read_values);
     quiver_database_close(db);
 }
+
+TEST(DatabaseCApi, UpdateElementByIdNonExistent) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
+
+    quiver_element_t* config = nullptr;
+    ASSERT_EQ(quiver_element_create(&config), QUIVER_OK);
+    quiver_element_set_string(config, "label", "Config 1");
+    int64_t cid = 0;
+    quiver_database_create_element(db, "Configuration", config, &cid);
+    quiver_element_destroy(config);
+
+    // Updating a non-existent id reports an error
+    quiver_element_t* update = nullptr;
+    ASSERT_EQ(quiver_element_create(&update), QUIVER_OK);
+    quiver_element_set_integer(update, "integer_attribute", 99);
+    EXPECT_NE(quiver_database_update_element(db, "Configuration", 999, update), QUIVER_OK);
+    quiver_element_destroy(update);
+
+    quiver_database_close(db);
+}
+
+TEST(DatabaseCApi, ScalarTypeCoercionPolicy) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
+
+    // A float is rejected for an INTEGER column.
+    quiver_element_t* bad = nullptr;
+    ASSERT_EQ(quiver_element_create(&bad), QUIVER_OK);
+    quiver_element_set_string(bad, "label", "Bad");
+    quiver_element_set_float(bad, "integer_attribute", 42.0);
+    int64_t bad_id = 0;
+    EXPECT_NE(quiver_database_create_element(db, "Configuration", bad, &bad_id), QUIVER_OK);
+    quiver_element_destroy(bad);
+
+    // An integer is accepted for a REAL column.
+    quiver_element_t* ok = nullptr;
+    ASSERT_EQ(quiver_element_create(&ok), QUIVER_OK);
+    quiver_element_set_string(ok, "label", "Ok");
+    quiver_element_set_integer(ok, "float_attribute", 7);
+    int64_t ok_id = 0;
+    EXPECT_EQ(quiver_database_create_element(db, "Configuration", ok, &ok_id), QUIVER_OK);
+    quiver_element_destroy(ok);
+
+    quiver_database_close(db);
+}
