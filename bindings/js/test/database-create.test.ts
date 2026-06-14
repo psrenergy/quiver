@@ -251,7 +251,9 @@ describe("scalar type coercion policy", () => {
   test("rejects a fractional number for an INTEGER column", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {
-      expect(() => db.createElement("AllTypes", { label: "Item1", some_integer: 1.5 })).toThrow(QuiverError);
+      expect(() => db.createElement("AllTypes", { label: "Item1", some_integer: 1.5 })).toThrow(
+        QuiverError,
+      );
     } finally {
       db.close();
     }

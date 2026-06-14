@@ -215,7 +215,8 @@ TEST_F(LuaRunnerTest, ScalarTypeCoercionPolicy) {
     lua.run(R"(db:create_element("Configuration", { label = "Config" }))");
 
     // A Lua float (even a whole-valued one) is rejected for an INTEGER column.
-    expect_lua_error(lua, R"(
+    expect_lua_error(lua,
+                     R"(
         db:create_element("Collection", { label = "Bad", some_integer = 42.0 })
     )",
                      "got REAL");

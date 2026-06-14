@@ -133,11 +133,17 @@ describe("query parameter count", () => {
     try {
       db.createElement("AllTypes", { label: "Item1", some_integer: 1 });
       // Too few parameters for one placeholder
-      expect(() => db.queryString("SELECT label FROM AllTypes WHERE some_integer = ?", [])).toThrow();
+      expect(() =>
+        db.queryString("SELECT label FROM AllTypes WHERE some_integer = ?", []),
+      ).toThrow();
       // Too many parameters for one placeholder
-      expect(() => db.queryString("SELECT label FROM AllTypes WHERE some_integer = ?", [1, 2])).toThrow();
+      expect(() =>
+        db.queryString("SELECT label FROM AllTypes WHERE some_integer = ?", [1, 2]),
+      ).toThrow();
       // Exactly one parameter succeeds
-      expect(db.queryString("SELECT label FROM AllTypes WHERE some_integer = ?", [1])).toEqual("Item1");
+      expect(db.queryString("SELECT label FROM AllTypes WHERE some_integer = ?", [1])).toEqual(
+        "Item1",
+      );
     } finally {
       db.close();
     }
