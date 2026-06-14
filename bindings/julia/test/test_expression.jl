@@ -1982,7 +1982,7 @@ end
         end
     end
 
-    @testset "Logical operators & | ~" begin
+    @testset "Logical operators & | !" begin
         path_a, path_b, path_out = make_path("a"), make_path("b"), make_path("out")
         try
             write_fixture(path_a, (r, c, k) -> r == 2 ? 0 : 3)  # false on row 2, true elsewhere
@@ -2010,7 +2010,7 @@ end
             cleanup(path_out)
 
             with_expr(path_a) do a
-                e = ~a
+                e = !a
                 Quiver.save(e, path_out)
                 return Quiver.close!(e)
             end
@@ -2052,7 +2052,7 @@ end
                 with_expr(path_b) do b
                     with_expr(path_c) do c
                         # (a > 1) and not(a > 2) -> only row 2
-                        cond = Quiver.gt(a, 1.0) & ~Quiver.gt(a, 2.0)
+                        cond = Quiver.gt(a, 1.0) & !Quiver.gt(a, 2.0)
                         e = Base.ifelse(cond, b, c)
                         Quiver.save(e, path_out)
                         return Quiver.close!(e)
