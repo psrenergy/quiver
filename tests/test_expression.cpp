@@ -2244,7 +2244,7 @@ TEST_F(ExpressionFixture, ComparisonUnitMismatchThrows) {
 }
 
 // ============================================================================
-// Logical operations (and_ / or_ / not_) on boolean-valued expressions
+// Logical operations (&& / || / !) on boolean-valued expressions
 // ============================================================================
 
 TEST_F(ExpressionFixture, LogicalAndOrTruthiness) {
@@ -2316,7 +2316,7 @@ TEST_F(ExpressionFixture, LogicalPropagatesNaN) {
 }
 
 TEST_F(ExpressionFixture, LogicalIsUnitlessAcrossUnits) {
-    // Two comparisons whose source files have different units: and_ must NOT throw, and the result
+    // Two comparisons whose source files have different units: && must NOT throw, and the result
     // is unitless. (Comparisons keep their source unit; logical ops are unit-agnostic.)
     auto md_mw = make_simple_metadata();  // unit MW
     auto md_gwh = BinaryMetadata::from_element(Element()

@@ -320,7 +320,7 @@ TEST_F(LuaExpressionTest, ComparisonPropagatesNaN) {
     )");
 }
 
-TEST_F(LuaExpressionTest, LogicalFreeFunctions) {
+TEST_F(LuaExpressionTest, LogicalOperators) {
     auto db = quiver::Database::from_schema(db_path(), schema);
     quiver::LuaRunner lua(db);
     lua.run(prelude() + R"(
