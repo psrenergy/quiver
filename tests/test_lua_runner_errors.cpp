@@ -262,6 +262,32 @@ TEST_F(LuaRunnerTest, DofileAndLoadfileRemoved) {
     )");
 }
 
+TEST_F(LuaRunnerTest, StandardLibrariesEnabled) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    // The pure-computation libraries (math/coroutine/utf8) are available.
+    lua.run(R"(
+        assert(math.floor(3.7) == 3, "math should be available")
+        assert(type(coroutine.create) == "function", "coroutine should be available")
+        assert(utf8.len("abc") == 3, "utf8 should be available")
+    )");
+}
+
+TEST_F(LuaRunnerTest, UnsafeLibrariesNotLoaded) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::LuaRunner lua(db);
+
+    // os/io/package/debug are never opened: no shell, process, env, filesystem, or module access.
+    lua.run(R"(
+        assert(os == nil, "os should not be loaded")
+        assert(io == nil, "io should not be loaded")
+        assert(package == nil, "package should not be loaded")
+        assert(require == nil, "require should not be loaded")
+        assert(debug == nil, "debug should not be loaded")
+    )");
+}
+
 TEST_F(LuaRunnerTest, QueryParameterUnsupportedTypeThrows) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
