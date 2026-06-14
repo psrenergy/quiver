@@ -1,7 +1,9 @@
 #include "expression_helpers.h"
 #include "quiver/expression/expression_node.h"
 
+#include <cmath>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -19,6 +21,41 @@ double ExpressionBinary::apply(Operation operation, double lhs, double rhs) {
         return lhs * rhs;
     case Operation::Divide:
         return lhs / rhs;
+    case Operation::Gt:
+    case Operation::Lt:
+    case Operation::Gte:
+    case Operation::Lte:
+    case Operation::Eq:
+    case Operation::Neq: {
+        // A NaN operand (missing data) propagates so ifelse(cmp, ...) yields NaN.
+        if (std::isnan(lhs) || std::isnan(rhs)) {
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+        bool result = false;
+        switch (operation) {
+        case Operation::Gt:
+            result = lhs > rhs;
+            break;
+        case Operation::Lt:
+            result = lhs < rhs;
+            break;
+        case Operation::Gte:
+            result = lhs >= rhs;
+            break;
+        case Operation::Lte:
+            result = lhs <= rhs;
+            break;
+        case Operation::Eq:
+            result = lhs == rhs;
+            break;
+        case Operation::Neq:
+            result = lhs != rhs;
+            break;
+        default:
+            break;
+        }
+        return result ? 1.0 : 0.0;
+    }
     }
     throw std::runtime_error("Cannot apply: unhandled ExpressionBinary::Operation variant");
 }

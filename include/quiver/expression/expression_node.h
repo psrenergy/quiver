@@ -68,7 +68,7 @@ struct BroadcastOperand {
 
 class QUIVER_API ExpressionBinary final : public ExpressionNode {
 public:
-    enum class Operation { Add, Subtract, Multiply, Divide };
+    enum class Operation { Add, Subtract, Multiply, Divide, Gt, Lt, Gte, Lte, Eq, Neq };
 
     ExpressionBinary(Operation operation, std::shared_ptr<ExpressionNode> lhs, std::shared_ptr<ExpressionNode> rhs);
 
