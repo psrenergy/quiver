@@ -30,7 +30,8 @@ struct LuaRunner::Impl {
     sol::state lua;
 
     explicit Impl(Database& database) : db(database) {
-        lua.open_libraries(sol::lib::base, sol::lib::string, sol::lib::table);
+        lua.open_libraries(
+            sol::lib::base, sol::lib::string, sol::lib::table, sol::lib::math, sol::lib::coroutine, sol::lib::utf8);
         // Scripts may not load Lua source from disk; string-form load() stays available.
         lua["dofile"] = sol::lua_nil;
         lua["loadfile"] = sol::lua_nil;

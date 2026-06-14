@@ -197,6 +197,9 @@ Implementation conventions in `lua_runner.cpp`:
   `.qvr`/`.toml` by string concatenation). The resolved absolute path is what's forwarded
   downstream, so the process CWD is irrelevant to Lua file I/O. Pattern 1 messages thread the
   public operation name. This is LuaRunner policy only — the C++/Julia surfaces stay unsandboxed.
+- **Enabled standard libraries**: `base`, `string`, `table`, `math`, `coroutine`, and `utf8`
+  (pure computation only). `os`, `io`, `package`/`require`, and `debug` stay unloaded — scripts
+  cannot reach the shell, the process, the environment, or the filesystem outside the db sandbox.
 - `dofile` and `loadfile` are nil'd out after `open_libraries` (no loading Lua source from disk);
   string-form `load` stays available.
 - `parse_csv_options(table)` is the single CSVOptions parser shared by `export_csv`/`import_csv`.

@@ -65,8 +65,10 @@ Settled questions — don't relitigate without the user; each was decided delibe
   database file and rejects — reads and writes alike — anything that escapes it (subdirectories
   OK; checked via `weakly_canonical` with strict containment). In-memory databases (`:memory:`)
   reject all file operations. `dofile`/`loadfile` are removed from the Lua environment
-  (string-form `load` stays). Julia's standalone `open_file` is unaffected — this is LuaRunner
-  policy (`resolve_sandboxed_path` in `src/lua_runner.cpp`), not binary-subsystem policy.
+  (string-form `load` stays). The enabled standard libraries are the pure-computation set
+  `base`/`string`/`table`/`math`/`coroutine`/`utf8`; `os`/`io`/`package`/`debug` stay unloaded.
+  Julia's standalone `open_file` is unaffected — this is LuaRunner policy (`resolve_sandboxed_path`
+  in `src/lua_runner.cpp`), not binary-subsystem policy.
 - **Int-for-REAL coercion lives in C++** (`value_matches_type` accepts int64 for REAL columns in
   time-series writes); bindings never coerce schema-dependently.
 - **Migration `down_sql` is a required feature** — do not remove the down path.
