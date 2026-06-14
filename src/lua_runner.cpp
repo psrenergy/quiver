@@ -261,7 +261,7 @@ struct LuaRunner::Impl {
             sol::meta_function::bitwise_or,
             [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Or, a, b); },
             sol::meta_function::bitwise_not,
-            [](sol::object a, sol::object) { return ~to_expression(a); });
+            [](sol::object a, sol::object) { return !to_expression(a); });
 
         ns.set_function("metadata", [](const sol::table& t) { return build_metadata_from_lua(t); });
         ns.set_function("metadata_from_toml",
@@ -325,7 +325,7 @@ struct LuaRunner::Impl {
             sol::meta_function::bitwise_or,
             [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Or, a, b); },
             sol::meta_function::bitwise_not,
-            [](sol::object a, sol::object) { return ~to_expression(a); });
+            [](sol::object a, sol::object) { return !to_expression(a); });
 
         ns.set_function("expression", [](sol::object o) { return to_expression(o); });
         ns.set_function("abs", [](sol::object o) { return quiver::abs(to_expression(o)); });
@@ -438,21 +438,21 @@ struct LuaRunner::Impl {
         case BinOp::Divide:
             return l / r;
         case BinOp::Gt:
-            return quiver::gt(l, r);
+            return l > r;
         case BinOp::Lt:
-            return quiver::lt(l, r);
+            return l < r;
         case BinOp::Gte:
-            return quiver::gte(l, r);
+            return l >= r;
         case BinOp::Lte:
-            return quiver::lte(l, r);
+            return l <= r;
         case BinOp::Eq:
-            return quiver::eq(l, r);
+            return l == r;
         case BinOp::Neq:
-            return quiver::neq(l, r);
+            return l != r;
         case BinOp::And:
-            return l & r;
+            return l && r;
         case BinOp::Or:
-            return l | r;
+            return l || r;
         }
         throw std::runtime_error("Cannot apply operator: unknown operation");
     }
@@ -468,21 +468,21 @@ struct LuaRunner::Impl {
         case BinOp::Divide:
             return l / r;
         case BinOp::Gt:
-            return quiver::gt(l, r);
+            return l > r;
         case BinOp::Lt:
-            return quiver::lt(l, r);
+            return l < r;
         case BinOp::Gte:
-            return quiver::gte(l, r);
+            return l >= r;
         case BinOp::Lte:
-            return quiver::lte(l, r);
+            return l <= r;
         case BinOp::Eq:
-            return quiver::eq(l, r);
+            return l == r;
         case BinOp::Neq:
-            return quiver::neq(l, r);
+            return l != r;
         case BinOp::And:
-            return l & r;
+            return l && r;
         case BinOp::Or:
-            return l | r;
+            return l || r;
         }
         throw std::runtime_error("Cannot apply operator: unknown operation");
     }
@@ -498,21 +498,21 @@ struct LuaRunner::Impl {
         case BinOp::Divide:
             return l / r;
         case BinOp::Gt:
-            return quiver::gt(l, r);
+            return l > r;
         case BinOp::Lt:
-            return quiver::lt(l, r);
+            return l < r;
         case BinOp::Gte:
-            return quiver::gte(l, r);
+            return l >= r;
         case BinOp::Lte:
-            return quiver::lte(l, r);
+            return l <= r;
         case BinOp::Eq:
-            return quiver::eq(l, r);
+            return l == r;
         case BinOp::Neq:
-            return quiver::neq(l, r);
+            return l != r;
         case BinOp::And:
-            return l & r;
+            return l && r;
         case BinOp::Or:
-            return l | r;
+            return l || r;
         }
         throw std::runtime_error("Cannot apply operator: unknown operation");
     }

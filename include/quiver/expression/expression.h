@@ -57,32 +57,32 @@ private:
 
     friend QUIVER_API Expression ifelse(const Expression&, const Expression&, const Expression&);
 
-    friend QUIVER_API Expression gt(const Expression&, const Expression&);
-    friend QUIVER_API Expression gt(const Expression&, double);
-    friend QUIVER_API Expression gt(double, const Expression&);
-    friend QUIVER_API Expression lt(const Expression&, const Expression&);
-    friend QUIVER_API Expression lt(const Expression&, double);
-    friend QUIVER_API Expression lt(double, const Expression&);
-    friend QUIVER_API Expression gte(const Expression&, const Expression&);
-    friend QUIVER_API Expression gte(const Expression&, double);
-    friend QUIVER_API Expression gte(double, const Expression&);
-    friend QUIVER_API Expression lte(const Expression&, const Expression&);
-    friend QUIVER_API Expression lte(const Expression&, double);
-    friend QUIVER_API Expression lte(double, const Expression&);
-    friend QUIVER_API Expression eq(const Expression&, const Expression&);
-    friend QUIVER_API Expression eq(const Expression&, double);
-    friend QUIVER_API Expression eq(double, const Expression&);
-    friend QUIVER_API Expression neq(const Expression&, const Expression&);
-    friend QUIVER_API Expression neq(const Expression&, double);
-    friend QUIVER_API Expression neq(double, const Expression&);
+    friend QUIVER_API Expression operator>(const Expression&, const Expression&);
+    friend QUIVER_API Expression operator>(const Expression&, double);
+    friend QUIVER_API Expression operator>(double, const Expression&);
+    friend QUIVER_API Expression operator<(const Expression&, const Expression&);
+    friend QUIVER_API Expression operator<(const Expression&, double);
+    friend QUIVER_API Expression operator<(double, const Expression&);
+    friend QUIVER_API Expression operator>=(const Expression&, const Expression&);
+    friend QUIVER_API Expression operator>=(const Expression&, double);
+    friend QUIVER_API Expression operator>=(double, const Expression&);
+    friend QUIVER_API Expression operator<=(const Expression&, const Expression&);
+    friend QUIVER_API Expression operator<=(const Expression&, double);
+    friend QUIVER_API Expression operator<=(double, const Expression&);
+    friend QUIVER_API Expression operator==(const Expression&, const Expression&);
+    friend QUIVER_API Expression operator==(const Expression&, double);
+    friend QUIVER_API Expression operator==(double, const Expression&);
+    friend QUIVER_API Expression operator!=(const Expression&, const Expression&);
+    friend QUIVER_API Expression operator!=(const Expression&, double);
+    friend QUIVER_API Expression operator!=(double, const Expression&);
 
-    friend QUIVER_API Expression operator&(const Expression&, const Expression&);
-    friend QUIVER_API Expression operator&(const Expression&, double);
-    friend QUIVER_API Expression operator&(double, const Expression&);
-    friend QUIVER_API Expression operator|(const Expression&, const Expression&);
-    friend QUIVER_API Expression operator|(const Expression&, double);
-    friend QUIVER_API Expression operator|(double, const Expression&);
-    friend QUIVER_API Expression operator~(const Expression&);
+    friend QUIVER_API Expression operator&&(const Expression&, const Expression&);
+    friend QUIVER_API Expression operator&&(const Expression&, double);
+    friend QUIVER_API Expression operator&&(double, const Expression&);
+    friend QUIVER_API Expression operator||(const Expression&, const Expression&);
+    friend QUIVER_API Expression operator||(const Expression&, double);
+    friend QUIVER_API Expression operator||(double, const Expression&);
+    friend QUIVER_API Expression operator!(const Expression&);
 
     std::shared_ptr<ExpressionNode> node_;
 };
@@ -112,38 +112,39 @@ QUIVER_API Expression exp(const Expression& operand);
 QUIVER_API Expression ifelse(const Expression& condition, const Expression& then_value, const Expression& else_value);
 
 // Element-wise comparisons producing 1.0 (true) / 0.0 (false); a NaN operand propagates as NaN.
-// Free functions (not operators) so the surface is identical in C++ and Lua, where comparison
-// metamethods cannot return an Expression.
-QUIVER_API Expression gt(const Expression& lhs, const Expression& rhs);
-QUIVER_API Expression gt(const Expression& lhs, double rhs);
-QUIVER_API Expression gt(double lhs, const Expression& rhs);
-QUIVER_API Expression lt(const Expression& lhs, const Expression& rhs);
-QUIVER_API Expression lt(const Expression& lhs, double rhs);
-QUIVER_API Expression lt(double lhs, const Expression& rhs);
-QUIVER_API Expression gte(const Expression& lhs, const Expression& rhs);
-QUIVER_API Expression gte(const Expression& lhs, double rhs);
-QUIVER_API Expression gte(double lhs, const Expression& rhs);
-QUIVER_API Expression lte(const Expression& lhs, const Expression& rhs);
-QUIVER_API Expression lte(const Expression& lhs, double rhs);
-QUIVER_API Expression lte(double lhs, const Expression& rhs);
-QUIVER_API Expression eq(const Expression& lhs, const Expression& rhs);
-QUIVER_API Expression eq(const Expression& lhs, double rhs);
-QUIVER_API Expression eq(double lhs, const Expression& rhs);
-QUIVER_API Expression neq(const Expression& lhs, const Expression& rhs);
-QUIVER_API Expression neq(const Expression& lhs, double rhs);
-QUIVER_API Expression neq(double lhs, const Expression& rhs);
+// `==`/`!=` return an elementwise mask Expression (not a bool, Eigen-style). All operators take the
+// three combos explicitly (no reliance on C++20 reversed candidates, which the compiler does not
+// synthesize for these non-bool-returning operators).
+QUIVER_API Expression operator>(const Expression& lhs, const Expression& rhs);
+QUIVER_API Expression operator>(const Expression& lhs, double rhs);
+QUIVER_API Expression operator>(double lhs, const Expression& rhs);
+QUIVER_API Expression operator<(const Expression& lhs, const Expression& rhs);
+QUIVER_API Expression operator<(const Expression& lhs, double rhs);
+QUIVER_API Expression operator<(double lhs, const Expression& rhs);
+QUIVER_API Expression operator>=(const Expression& lhs, const Expression& rhs);
+QUIVER_API Expression operator>=(const Expression& lhs, double rhs);
+QUIVER_API Expression operator>=(double lhs, const Expression& rhs);
+QUIVER_API Expression operator<=(const Expression& lhs, const Expression& rhs);
+QUIVER_API Expression operator<=(const Expression& lhs, double rhs);
+QUIVER_API Expression operator<=(double lhs, const Expression& rhs);
+QUIVER_API Expression operator==(const Expression& lhs, const Expression& rhs);
+QUIVER_API Expression operator==(const Expression& lhs, double rhs);
+QUIVER_API Expression operator==(double lhs, const Expression& rhs);
+QUIVER_API Expression operator!=(const Expression& lhs, const Expression& rhs);
+QUIVER_API Expression operator!=(const Expression& lhs, double rhs);
+QUIVER_API Expression operator!=(double lhs, const Expression& rhs);
 
 // Logical operators on boolean-valued expressions (nonzero is true), producing `1.0`/`0.0`; a NaN
-// operand propagates as NaN. The result is unitless and `&`/`|` skip unit-match validation, so
-// conditions on different-unit variables compose. The bitwise-operator family is used because
-// `and`/`or`/`not` are reserved keywords (the NumPy/pandas convention for elementwise logic).
-QUIVER_API Expression operator&(const Expression& lhs, const Expression& rhs);
-QUIVER_API Expression operator&(const Expression& lhs, double rhs);
-QUIVER_API Expression operator&(double lhs, const Expression& rhs);
-QUIVER_API Expression operator|(const Expression& lhs, const Expression& rhs);
-QUIVER_API Expression operator|(const Expression& lhs, double rhs);
-QUIVER_API Expression operator|(double lhs, const Expression& rhs);
-QUIVER_API Expression operator~(const Expression& operand);
+// operand propagates as NaN. The result is unitless and `&&`/`||` skip unit-match validation, so
+// conditions on different-unit variables compose. Overloading `&&`/`||` drops short-circuiting,
+// which is irrelevant for a lazy DAG (both operands are always built).
+QUIVER_API Expression operator&&(const Expression& lhs, const Expression& rhs);
+QUIVER_API Expression operator&&(const Expression& lhs, double rhs);
+QUIVER_API Expression operator&&(double lhs, const Expression& rhs);
+QUIVER_API Expression operator||(const Expression& lhs, const Expression& rhs);
+QUIVER_API Expression operator||(const Expression& lhs, double rhs);
+QUIVER_API Expression operator||(double lhs, const Expression& rhs);
+QUIVER_API Expression operator!(const Expression& operand);
 
 }  // namespace quiver
 

@@ -126,8 +126,9 @@ for (op, fname) in ((:(>), :gt), (:(<), :lt), (:(>=), :gte), (:(<=), :lte))
 end
 
 # Logical operators on boolean-valued expressions (nonzero = true, NaN propagates); the result is
-# unitless. The bitwise-operator family `&`/`|`/`~` is used because `and`/`or`/`not` are reserved
-# (`&&`/`||` can't be overloaded — they short-circuit). Matches the NumPy/pandas convention.
+# unitless. `&`/`|` are used for and/or because `&&`/`||` are short-circuit syntax that can't be
+# overloaded (on Bool, `&`/`|` are the non-short-circuit logical operators); `!` is a real function
+# so it stays the logical-not operator.
 for (op, cop) in ((:(&), :QUIVER_EXPRESSION_OPERATION_AND), (:(|), :QUIVER_EXPRESSION_OPERATION_OR))
     @eval begin
         Base.$op(a::Expression, b::Expression) = _binop(C.$cop, a, b)
@@ -141,8 +142,8 @@ for (op, cop) in ((:(&), :QUIVER_EXPRESSION_OPERATION_AND), (:(|), :QUIVER_EXPRE
     end
 end
 
-Base.:~(a::Expression) = _unop(C.QUIVER_EXPRESSION_UNARY_OPERATION_NOT, a)
-Base.:~(a::Binary.File) = ~Expression(a)
+Base.:!(a::Expression) = _unop(C.QUIVER_EXPRESSION_UNARY_OPERATION_NOT, a)
+Base.:!(a::Binary.File) = !Expression(a)
 
 Base.:-(a::Binary.File) = -Expression(a)
 Base.abs(a::Binary.File) = abs(Expression(a))

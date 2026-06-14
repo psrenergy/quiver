@@ -23,21 +23,21 @@ quiver::Expression dispatch(quiver_expression_operation_t operation, const Lhs& 
     case QUIVER_EXPRESSION_OPERATION_DIVIDE:
         return lhs / rhs;
     case QUIVER_EXPRESSION_OPERATION_GT:
-        return quiver::gt(lhs, rhs);
+        return lhs > rhs;
     case QUIVER_EXPRESSION_OPERATION_LT:
-        return quiver::lt(lhs, rhs);
+        return lhs < rhs;
     case QUIVER_EXPRESSION_OPERATION_GTE:
-        return quiver::gte(lhs, rhs);
+        return lhs >= rhs;
     case QUIVER_EXPRESSION_OPERATION_LTE:
-        return quiver::lte(lhs, rhs);
+        return lhs <= rhs;
     case QUIVER_EXPRESSION_OPERATION_EQ:
-        return quiver::eq(lhs, rhs);
+        return lhs == rhs;
     case QUIVER_EXPRESSION_OPERATION_NEQ:
-        return quiver::neq(lhs, rhs);
+        return lhs != rhs;
     case QUIVER_EXPRESSION_OPERATION_AND:
-        return lhs & rhs;
+        return lhs && rhs;
     case QUIVER_EXPRESSION_OPERATION_OR:
-        return lhs | rhs;
+        return lhs || rhs;
     }
     throw std::runtime_error("Cannot apply: unknown expression operation");
 }
@@ -55,7 +55,7 @@ quiver::Expression dispatch_unary(quiver_expression_unary_operation_t operation,
     case QUIVER_EXPRESSION_UNARY_OPERATION_EXP:
         return quiver::exp(operand);
     case QUIVER_EXPRESSION_UNARY_OPERATION_NOT:
-        return ~operand;
+        return !operand;
     }
     throw std::runtime_error("Cannot apply: unknown expression unary operation");
 }
