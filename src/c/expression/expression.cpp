@@ -22,6 +22,18 @@ quiver::Expression dispatch(quiver_expression_operation_t operation, const Lhs& 
         return lhs * rhs;
     case QUIVER_EXPRESSION_OPERATION_DIVIDE:
         return lhs / rhs;
+    case QUIVER_EXPRESSION_OPERATION_GT:
+        return quiver::gt(lhs, rhs);
+    case QUIVER_EXPRESSION_OPERATION_LT:
+        return quiver::lt(lhs, rhs);
+    case QUIVER_EXPRESSION_OPERATION_GTE:
+        return quiver::gte(lhs, rhs);
+    case QUIVER_EXPRESSION_OPERATION_LTE:
+        return quiver::lte(lhs, rhs);
+    case QUIVER_EXPRESSION_OPERATION_EQ:
+        return quiver::eq(lhs, rhs);
+    case QUIVER_EXPRESSION_OPERATION_NEQ:
+        return quiver::neq(lhs, rhs);
     }
     throw std::runtime_error("Cannot apply: unknown expression operation");
 }
