@@ -126,3 +126,20 @@ describe("queryFloat", () => {
     }
   });
 });
+
+describe("query parameter count", () => {
+  test("throws when parameter count does not match placeholders", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      db.createElement("AllTypes", { label: "Item1", some_integer: 1 });
+      // Too few parameters for one placeholder
+      expect(() => db.queryString("SELECT label FROM AllTypes WHERE some_integer = ?", [])).toThrow();
+      // Too many parameters for one placeholder
+      expect(() => db.queryString("SELECT label FROM AllTypes WHERE some_integer = ?", [1, 2])).toThrow();
+      // Exactly one parameter succeeds
+      expect(db.queryString("SELECT label FROM AllTypes WHERE some_integer = ?", [1])).toEqual("Item1");
+    } finally {
+      db.close();
+    }
+  });
+});

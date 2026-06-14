@@ -211,6 +211,16 @@ describe("deleteElement", () => {
     }
   });
 
+  test("throws on non-existent ID", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      db.createElement("AllTypes", { label: "Item1" });
+      expect(() => db.deleteElement("AllTypes", 999)).toThrow(QuiverError);
+    } finally {
+      db.close();
+    }
+  });
+
   test("throws on closed database", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     db.close();
@@ -222,6 +232,28 @@ describe("deleteElement", () => {
       db.deleteElement("AllTypes", 1);
     } catch (e) {
       expect((e as QuiverError).message).toContain("Database is closed");
+    }
+  });
+});
+
+describe("scalar type coercion policy", () => {
+  test("accepts a whole number for a REAL column", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      // JS sends whole numbers as int64; an integer is accepted for a REAL column.
+      db.createElement("AllTypes", { label: "Item1", some_float: 7 });
+      expect(db.queryFloat("SELECT some_float FROM AllTypes WHERE id = 1")).toEqual(7);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("rejects a fractional number for an INTEGER column", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      expect(() => db.createElement("AllTypes", { label: "Item1", some_integer: 1.5 })).toThrow(QuiverError);
+    } finally {
+      db.close();
     }
   });
 });

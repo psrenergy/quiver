@@ -69,8 +69,16 @@ Settled questions — don't relitigate without the user; each was decided delibe
   `base`/`string`/`table`/`math`/`coroutine`/`utf8`; `os`/`io`/`package`/`debug` stay unloaded.
   Julia's standalone `open_file` is unaffected — this is LuaRunner policy (`resolve_sandboxed_path`
   in `src/lua_runner.cpp`), not binary-subsystem policy.
-- **Int-for-REAL coercion lives in C++** (`value_matches_type` accepts int64 for REAL columns in
-  time-series writes); bindings never coerce schema-dependently.
+- **One scalar typing policy lives in C++**: an int64 is accepted for INTEGER and REAL columns
+  (int-for-REAL coercion), a double only for REAL (a float into an INTEGER column is rejected), a
+  string for TEXT / INTEGER-FK / DATE_TIME. `TypeValidator` (scalar create/update) and
+  `value_matches_type` (time-series writes) share this rule; bindings never coerce
+  schema-dependently.
+- **`update_element` / `delete_element` throw on a missing id** (`"Element not found: <id> in
+  collection '<c>'"`, Pattern 2) — not a silent no-op. The error surfaces through the C API error
+  channel and every binding.
+- **`query_*` validate parameter count**: `execute` rejects a mismatch between bound parameters and
+  `?` placeholders (too few or too many) instead of binding NULL / ignoring extras.
 - **Migration `down_sql` is a required feature** — do not remove the down path.
 - **`import_csv` refuses to run inside an open transaction** (`PRAGMA foreign_keys` is a no-op
   mid-transaction, so nesting is unsupportable) — Pattern 1 precondition, not a silent rollback.

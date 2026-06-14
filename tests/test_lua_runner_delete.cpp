@@ -62,10 +62,11 @@ TEST_F(LuaRunnerTest, DeleteElementByIdNonExistent) {
 
     quiver::LuaRunner lua(db);
 
-    // Deleting non-existent element should succeed silently (idempotent)
-    lua.run(R"(
-        db:delete_element("Collection", 999)
+    // Deleting a non-existent element throws "Element not found"
+    expect_lua_error(lua, R"(db:delete_element("Collection", 999))", "Element not found");
 
+    // Original element is untouched
+    lua.run(R"(
         local ids = db:read_element_ids("Collection")
         assert(#ids == 1, "Original element should still exist")
     )");

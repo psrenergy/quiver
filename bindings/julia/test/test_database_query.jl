@@ -270,6 +270,23 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "Parameter Count Mismatch" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+        Quiver.create_element!(db, "Configuration"; label = "Item1", integer_attribute = 1)
+
+        # Too few parameters for the single placeholder
+        @test_throws Quiver.DatabaseException Quiver.query_string(
+            db, "SELECT label FROM Configuration WHERE id = ?", Any[])
+        # Too many parameters for the single placeholder
+        @test_throws Quiver.DatabaseException Quiver.query_string(
+            db, "SELECT label FROM Configuration WHERE id = ?", Any[1, 2])
+        # Exactly one parameter succeeds
+        @test Quiver.query_string(db, "SELECT label FROM Configuration WHERE id = ?", Any[1]) == "Item1"
+
+        Quiver.close!(db)
+    end
 end
 
 end

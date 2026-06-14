@@ -237,3 +237,13 @@ class TestFKResolutionCreate:
         # No Parent, no Child created
         result = relations_db.read_scalar_integers("Child", "parent_id")
         assert result == []
+
+
+class TestCreateScalarTypeCoercion:
+    def test_float_rejected_for_integer_column(self, db: Database) -> None:
+        with pytest.raises(QuiverError):
+            db.create_element("Configuration", label="cfg", integer_attribute=42.0)
+
+    def test_integer_accepted_for_real_column(self, db: Database) -> None:
+        elem_id = db.create_element("Configuration", label="cfg", float_attribute=7)
+        assert db.read_scalar_float_by_id("Configuration", "float_attribute", elem_id) == 7.0

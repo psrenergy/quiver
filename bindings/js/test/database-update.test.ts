@@ -20,6 +20,16 @@ describe("updateElement", () => {
     }
   });
 
+  test("throws on non-existent ID", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      db.createElement("AllTypes", { label: "Item1" });
+      expect(() => db.updateElement("AllTypes", 999, { some_integer: 5 })).toThrow(QuiverError);
+    } finally {
+      db.close();
+    }
+  });
+
   test("updates float scalar", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     try {

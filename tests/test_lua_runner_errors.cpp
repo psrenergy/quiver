@@ -208,21 +208,30 @@ TEST_F(LuaRunnerTest, MultipleOperationsPartialFailure) {
     EXPECT_EQ(labels[0], "Item 1");
 }
 
-TEST_F(LuaRunnerTest, LuaTypeCoercionInteger) {
+TEST_F(LuaRunnerTest, ScalarTypeCoercionPolicy) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::LuaRunner lua(db);
 
+    lua.run(R"(db:create_element("Configuration", { label = "Config" }))");
+
+    // A Lua float (even a whole-valued one) is rejected for an INTEGER column.
+    expect_lua_error(lua, R"(
+        db:create_element("Collection", { label = "Bad", some_integer = 42.0 })
+    )",
+                     "got REAL");
+
+    // An integer is accepted for a REAL column (coerced to real on insert).
     lua.run(R"(
-        db:create_element("Configuration", { label = "Config" })
-        db:create_element("Collection", {
-            label = "Item 1",
-            some_integer = 42.0  -- Lua number that happens to be whole
-        })
+        db:create_element("Collection", { label = "Item 1", some_integer = 42, some_float = 7 })
     )");
 
     auto integers = db.read_scalar_integers("Collection", "some_integer");
-    EXPECT_EQ(integers.size(), 1);
+    ASSERT_EQ(integers.size(), 1);
     EXPECT_EQ(integers[0], 42);
+
+    auto floats = db.read_scalar_floats("Collection", "some_float");
+    ASSERT_EQ(floats.size(), 1);
+    EXPECT_DOUBLE_EQ(floats[0], 7.0);
 }
 
 TEST_F(LuaRunnerTest, ReadElementIdsFromNonExistentCollection) {

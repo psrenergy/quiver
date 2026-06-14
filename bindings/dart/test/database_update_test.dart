@@ -311,7 +311,7 @@ void main() {
   });
 
   group('Update Invalid Element Id', () {
-    test('does not throw for nonexistent Id', () {
+    test('throws for nonexistent Id', () {
       final db = Database.fromSchema(
         ':memory:',
         path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
@@ -322,8 +322,13 @@ void main() {
           'integer_attribute': 100,
         });
 
-        // Update element that doesn't exist - should not throw
-        db.updateElement('Configuration', 999, {'integer_attribute': 500});
+        // Updating an element that doesn't exist throws "Element not found"
+        expect(
+          () => db.updateElement('Configuration', 999, {
+            'integer_attribute': 500,
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
 
         // Verify original element unchanged
         final value = db.readScalarIntegerById(
