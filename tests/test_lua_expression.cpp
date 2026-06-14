@@ -255,3 +255,114 @@ TEST_F(LuaExpressionTest, SaveEscapeThrows) {
     )",
                      "Cannot save: path '../out' escapes the database directory");
 }
+
+TEST_F(LuaExpressionTest, ComparisonFreeFunctions) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(prelude() + R"(
+        fill('expr_a', 5.0, 1.0)
+        fill('expr_b', 3.0, 3.0)
+        local fa = db:open_file('expr_a', 'r')
+        local fb = db:open_file('expr_b', 'r')
+        -- gt between two files: 5>3 -> 1, 1>3 -> 0
+        quiver.gt(fa, fb):save('expr_out')
+        local r = db:open_file('expr_out', 'r')
+        local cell = r:read({row=1, col=1})
+        assert(cell[1] == 1.0 and cell[2] == 0.0, 'gt file/file')
+        r:close()
+        -- lte with a scalar on the right: 5<=4 -> 0, 1<=4 -> 1
+        quiver.lte(quiver.expression(fa), 4.0):save('expr_out2')
+        local r2 = db:open_file('expr_out2', 'r')
+        local c2 = r2:read({row=1, col=1})
+        assert(c2[1] == 0.0 and c2[2] == 1.0, 'lte expr/scalar')
+        r2:close()
+        fa:close(); fb:close()
+    )");
+}
+
+TEST_F(LuaExpressionTest, ComparisonDrivesIfElse) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(prelude() + R"(
+        fill('expr_a', 5.0, 1.0)
+        fill('expr_b', 10.0, 10.0)
+        fill('expr_c', 20.0, 20.0)
+        local fa = db:open_file('expr_a', 'r')
+        local fb = db:open_file('expr_b', 'r')
+        local fc = db:open_file('expr_c', 'r')
+        -- where a > 3 pick then(10) else else(20): v1 5>3 -> 10, v2 1>3 -> 20
+        local expr = quiver.ifelse(quiver.gt(quiver.expression(fa), 3.0), fb, fc)
+        expr:save('expr_out')
+        fa:close(); fb:close(); fc:close()
+        local r = db:open_file('expr_out', 'r')
+        local cell = r:read({row=1, col=1})
+        assert(cell[1] == 10.0 and cell[2] == 20.0, 'comparison drives ifelse')
+        r:close()
+    )");
+}
+
+TEST_F(LuaExpressionTest, ComparisonPropagatesNaN) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(prelude() + R"(
+        -- 0/0 produces NaN in the file's first label
+        local f = db:open_file('expr_a', 'w', make_md())
+        for row=1,3 do for col=1,2 do f:write({0/0, 5.0}, {row=row, col=col}) end end
+        f:close()
+        local fa = db:open_file('expr_a', 'r')
+        quiver.gt(quiver.expression(fa), 3.0):save('expr_out')
+        fa:close()
+        local r = db:open_file('expr_out', 'r')
+        local cell = r:read({row=1, col=1}, true)  -- allow NaN
+        assert(cell[1] ~= cell[1], 'NaN operand propagates (NaN ~= NaN)')
+        assert(cell[2] == 1.0, '5 > 3 -> 1')
+        r:close()
+    )");
+}
+
+TEST_F(LuaExpressionTest, LogicalOperators) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(prelude() + R"(
+        fill('expr_a', 1.0, 0.0)   -- v1 true, v2 false
+        fill('expr_b', 1.0, 1.0)   -- both true
+        local fa = db:open_file('expr_a', 'r')
+        local fb = db:open_file('expr_b', 'r')
+
+        local e_and = fa & fb; e_and:save('expr_and')
+        local ra = db:open_file('expr_and', 'r'); local ca = ra:read({row=1, col=1})
+        assert(ca[1] == 1.0 and ca[2] == 0.0, '&: true&true=1, false&true=0'); ra:close()
+
+        local e_or = fa | fb; e_or:save('expr_or')
+        local ro = db:open_file('expr_or', 'r'); local co = ro:read({row=1, col=1})
+        assert(co[1] == 1.0 and co[2] == 1.0, '|: true|true=1, false|true=1'); ro:close()
+
+        local e_not = ~fa; e_not:save('expr_not')
+        local rn = db:open_file('expr_not', 'r'); local cn = rn:read({row=1, col=1})
+        assert(cn[1] == 0.0 and cn[2] == 1.0, '~: ~true=0, ~false=1'); rn:close()
+
+        fa:close(); fb:close()
+    )");
+}
+
+TEST_F(LuaExpressionTest, LogicalComposesIfElse) {
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    quiver::LuaRunner lua(db);
+    lua.run(prelude() + R"(
+        fill('expr_a', 5.0, 0.5)    -- value to test against a range
+        fill('expr_b', 10.0, 10.0)  -- then
+        fill('expr_c', 20.0, 20.0)  -- else
+        local fa = db:open_file('expr_a', 'r')
+        local fb = db:open_file('expr_b', 'r')
+        local fc = db:open_file('expr_c', 'r')
+        -- pick "then" where (a > 1) and not(a > 8): v1 5 -> then(10), v2 0.5 -> else(20)
+        local cond = quiver.gt(quiver.expression(fa), 1.0) & ~quiver.gt(quiver.expression(fa), 8.0)
+        quiver.ifelse(cond, fb, fc):save('expr_out')
+        fa:close(); fb:close(); fc:close()
+        local r = db:open_file('expr_out', 'r')
+        local cell = r:read({row=1, col=1})
+        assert(cell[1] == 10.0, 'v1 in (1,8] -> then')
+        assert(cell[2] == 20.0, 'v2 not in range -> else')
+        r:close()
+    )");
+}

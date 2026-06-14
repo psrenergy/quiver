@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -21,6 +22,12 @@ double ExpressionUnary::apply(Operation operation, double x) {
         return std::log(x);
     case Operation::Exp:
         return std::exp(x);
+    case Operation::Not:
+        // Logical NOT on a nonzero-is-true operand; a NaN operand propagates as NaN.
+        if (std::isnan(x)) {
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+        return (x == 0.0) ? 1.0 : 0.0;
     }
     throw std::runtime_error("Cannot apply: unhandled ExpressionUnary::Operation variant");
 }
@@ -28,10 +35,15 @@ double ExpressionUnary::apply(Operation operation, double x) {
 ExpressionUnary::ExpressionUnary(Operation operation, std::shared_ptr<ExpressionNode> operand)
     : operation_(operation), operand_(std::move(operand)) {
     operand_row_buf_.resize(operand_->metadata().labels.size());
+    if (operation_ == Operation::Not) {
+        // NOT yields a unitless boolean; other unary ops pass the operand metadata through.
+        output_meta_ = operand_->metadata();
+        output_meta_.unit = "";
+    }
 }
 
 const BinaryMetadata& ExpressionUnary::metadata() const {
-    return operand_->metadata();
+    return (operation_ == Operation::Not) ? output_meta_ : operand_->metadata();
 }
 
 void ExpressionUnary::compute_row(const std::vector<int64_t>& dims, std::vector<double>& out) const {

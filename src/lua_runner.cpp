@@ -254,7 +254,14 @@ struct LuaRunner::Impl {
             sol::meta_function::division,
             [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Divide, a, b); },
             sol::meta_function::unary_minus,
-            [](sol::object a, sol::object) { return -to_expression(a); });
+            [](sol::object a, sol::object) { return -to_expression(a); },
+            // Logical ops (nonzero = true, NaN propagates, unitless): `&` / `|` / `~`.
+            sol::meta_function::bitwise_and,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::And, a, b); },
+            sol::meta_function::bitwise_or,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Or, a, b); },
+            sol::meta_function::bitwise_not,
+            [](sol::object a, sol::object) { return !to_expression(a); });
 
         ns.set_function("metadata", [](const sol::table& t) { return build_metadata_from_lua(t); });
         ns.set_function("metadata_from_toml",
@@ -311,7 +318,14 @@ struct LuaRunner::Impl {
             sol::meta_function::division,
             [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Divide, a, b); },
             sol::meta_function::unary_minus,
-            [](sol::object a, sol::object) { return -to_expression(a); });
+            [](sol::object a, sol::object) { return -to_expression(a); },
+            // Logical ops (nonzero = true, NaN propagates, unitless): `&` / `|` / `~`.
+            sol::meta_function::bitwise_and,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::And, a, b); },
+            sol::meta_function::bitwise_or,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Or, a, b); },
+            sol::meta_function::bitwise_not,
+            [](sol::object a, sol::object) { return !to_expression(a); });
 
         ns.set_function("expression", [](sol::object o) { return to_expression(o); });
         ns.set_function("abs", [](sol::object o) { return quiver::abs(to_expression(o)); });
@@ -321,6 +335,16 @@ struct LuaRunner::Impl {
         ns.set_function("ifelse", [](sol::object c, sol::object t, sol::object e) {
             return quiver::ifelse(to_expression(c), to_expression(t), to_expression(e));
         });
+        // Comparisons produce 1.0/0.0 per element (NaN operand -> NaN). Free functions because Lua
+        // comparison metamethods are coerced to bool and cannot return an Expression.
+        ns.set_function("gt", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Gt, a, b); });
+        ns.set_function("lt", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Lt, a, b); });
+        ns.set_function("gte", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Gte, a, b); });
+        ns.set_function("lte", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Lte, a, b); });
+        ns.set_function("eq", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Eq, a, b); });
+        ns.set_function("neq", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Neq, a, b); });
+        // Logical ops on boolean-valued expressions are the `&` / `|` / `~` metamethods bound on the
+        // Expression and BinaryFile usertypes (`and`/`or`/`not` are Lua keywords, so no free functions).
         // NOLINTEND(performance-unnecessary-value-parameter)
     }
 
@@ -387,7 +411,7 @@ struct LuaRunner::Impl {
     // Expression operator dispatch (shared by Expression and BinaryFile metamethods)
     // ------------------------------------------------------------------------
 
-    enum class BinOp { Add, Subtract, Multiply, Divide };
+    enum class BinOp { Add, Subtract, Multiply, Divide, Gt, Lt, Gte, Lte, Eq, Neq, And, Or };
 
     static bool is_number(const sol::object& o) { return o.get_type() == sol::type::number; }
 
@@ -413,6 +437,22 @@ struct LuaRunner::Impl {
             return l * r;
         case BinOp::Divide:
             return l / r;
+        case BinOp::Gt:
+            return l > r;
+        case BinOp::Lt:
+            return l < r;
+        case BinOp::Gte:
+            return l >= r;
+        case BinOp::Lte:
+            return l <= r;
+        case BinOp::Eq:
+            return l == r;
+        case BinOp::Neq:
+            return l != r;
+        case BinOp::And:
+            return l && r;
+        case BinOp::Or:
+            return l || r;
         }
         throw std::runtime_error("Cannot apply operator: unknown operation");
     }
@@ -427,6 +467,22 @@ struct LuaRunner::Impl {
             return l * r;
         case BinOp::Divide:
             return l / r;
+        case BinOp::Gt:
+            return l > r;
+        case BinOp::Lt:
+            return l < r;
+        case BinOp::Gte:
+            return l >= r;
+        case BinOp::Lte:
+            return l <= r;
+        case BinOp::Eq:
+            return l == r;
+        case BinOp::Neq:
+            return l != r;
+        case BinOp::And:
+            return l && r;
+        case BinOp::Or:
+            return l || r;
         }
         throw std::runtime_error("Cannot apply operator: unknown operation");
     }
@@ -441,6 +497,22 @@ struct LuaRunner::Impl {
             return l * r;
         case BinOp::Divide:
             return l / r;
+        case BinOp::Gt:
+            return l > r;
+        case BinOp::Lt:
+            return l < r;
+        case BinOp::Gte:
+            return l >= r;
+        case BinOp::Lte:
+            return l <= r;
+        case BinOp::Eq:
+            return l == r;
+        case BinOp::Neq:
+            return l != r;
+        case BinOp::And:
+            return l && r;
+        case BinOp::Or:
+            return l || r;
         }
         throw std::runtime_error("Cannot apply operator: unknown operation");
     }
