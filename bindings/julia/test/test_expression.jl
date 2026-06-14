@@ -1981,6 +1981,91 @@ end
             cleanup(path_a, path_out)
         end
     end
+
+    @testset "Logical operators and named functions" begin
+        path_a, path_b, path_out = make_path("a"), make_path("b"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r == 2 ? 0 : 3)  # false on row 2, true elsewhere
+            write_fixture(path_b, (r, c, k) -> c == 1 ? 0 : -2)  # false on col 1, true elsewhere
+            va, vb = read_all_cells(path_a), read_all_cells(path_b)
+
+            # operator & equals named and_
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    e = a & b
+                    Quiver.save(e, path_out)
+                    return Quiver.close!(e)
+                end
+            end
+            @test read_all_cells(path_out) == Float64.((va .!= 0) .& (vb .!= 0))
+            cleanup(path_out)
+
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    e = Quiver.or_(a, b)
+                    Quiver.save(e, path_out)
+                    return Quiver.close!(e)
+                end
+            end
+            @test read_all_cells(path_out) == Float64.((va .!= 0) .| (vb .!= 0))
+            cleanup(path_out)
+
+            # not: operator ! and named not_
+            with_expr(path_a) do a
+                e = !a
+                Quiver.save(e, path_out)
+                return Quiver.close!(e)
+            end
+            @test read_all_cells(path_out) == Float64.(va .== 0)
+        finally
+            cleanup(path_a, path_b, path_out)
+        end
+    end
+
+    @testset "Logical is unitless across units" begin
+        path_a, path_b, path_out = make_path("a"), make_path("b"), make_path("out")
+        try
+            write_fixture_with_metadata(path_a, make_metadata(unit = "MW"), (r, c, k) -> r)
+            write_fixture_with_metadata(path_b, make_metadata(unit = "GWh"), (r, c, k) -> c)
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    # comparisons on different-unit sources; and_ must not throw and is unitless
+                    e = Quiver.and_(Quiver.gt(a, 1.0), Quiver.gt(b, 0.0))
+                    md = Quiver.get_metadata(e)
+                    @test Quiver.Binary.get_unit(md) == ""
+                    Quiver.save(e, path_out)
+                    return Quiver.close!(e)
+                end
+            end
+            @test isfile(path_out * ".qvr")
+        finally
+            cleanup(path_a, path_b, path_out)
+        end
+    end
+
+    @testset "Logical composes ifelse" begin
+        path_a, path_b, path_c, path_out = make_path("a"), make_path("b"), make_path("c"), make_path("out")
+        try
+            write_fixture(path_a, (r, c, k) -> r)  # 1, 2, 3 across rows
+            write_fixture(path_b, (r, c, k) -> 100)
+            write_fixture(path_c, (r, c, k) -> -100)
+            va = read_all_cells(path_a)
+            with_expr(path_a) do a
+                with_expr(path_b) do b
+                    with_expr(path_c) do c
+                        # (a > 1) and not(a > 2) -> only row 2
+                        cond = Quiver.and_(Quiver.gt(a, 1.0), !Quiver.gt(a, 2.0))
+                        e = Base.ifelse(cond, b, c)
+                        Quiver.save(e, path_out)
+                        return Quiver.close!(e)
+                    end
+                end
+            end
+            @test read_all_cells(path_out) == [(v > 1 && !(v > 2)) ? 100.0 : -100.0 for v in va]
+        finally
+            cleanup(path_a, path_b, path_c, path_out)
+        end
+    end
 end
 
 end

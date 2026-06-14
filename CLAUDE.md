@@ -389,8 +389,10 @@ The Lua **expression** surface mirrors Julia's: build from a file with `quiver.e
 operate on files directly), compose with the `+ - * /` operators and unary `-` (metamethods, with
 scalar-on-either-side and `file_a + file_b` both supported), unary math via `quiver.abs/sqrt/log/exp`,
 element-wise comparisons via `quiver.gt/lt/gte/lte/eq/neq` (free functions — Lua comparison
-metamethods can't return an `Expression`; produce `1.0`/`0.0`, NaN operand → NaN),
-`quiver.ifelse(cond, then, else)`, and the methods `expr:aggregate(dim, op[, p])` /
+metamethods can't return an `Expression`; produce `1.0`/`0.0`, NaN operand → NaN), boolean logic
+via `quiver.and_/or_/not_` (free functions — `and`/`or`/`not` are Lua keywords; nonzero is true,
+unitless result, NaN propagates), `quiver.ifelse(cond, then, else)`, and the methods
+`expr:aggregate(dim, op[, p])` /
 `expr:aggregate_agents(op[, p])` / `expr:select_agents(labels)` / `expr:rename_agents({old=new})` /
 `expr:save(path)` / `expr:metadata()`. Aggregation `op` is a **string**
 (`"sum"/"mean"/"min"/"max"/"percentile"`) — Lua has no enums, mirroring JS's string-based surface.

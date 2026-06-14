@@ -25,15 +25,18 @@ typedef enum {
     QUIVER_EXPRESSION_OPERATION_LTE = 7,
     QUIVER_EXPRESSION_OPERATION_EQ = 8,
     QUIVER_EXPRESSION_OPERATION_NEQ = 9,
+    QUIVER_EXPRESSION_OPERATION_AND = 10,
+    QUIVER_EXPRESSION_OPERATION_OR = 11,
 } quiver_expression_operation_t;
 
-// Unary operation kind
+// Unary operation kind. NOT is logical negation of a boolean-valued operand (nonzero -> 0, 0 -> 1).
 typedef enum {
     QUIVER_EXPRESSION_UNARY_OPERATION_NEGATE = 0,
     QUIVER_EXPRESSION_UNARY_OPERATION_ABS = 1,
     QUIVER_EXPRESSION_UNARY_OPERATION_SQRT = 2,
     QUIVER_EXPRESSION_UNARY_OPERATION_LOG = 3,
     QUIVER_EXPRESSION_UNARY_OPERATION_EXP = 4,
+    QUIVER_EXPRESSION_UNARY_OPERATION_NOT = 5,
 } quiver_expression_unary_operation_t;
 
 // Ternary operation kind

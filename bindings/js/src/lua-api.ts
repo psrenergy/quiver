@@ -490,7 +490,8 @@ db:csv_to_bin(path)
 local e = (quiver.expression(r) + 10.0) * 2.0        -- files auto-wrap; scalars either side
 e = quiver.abs(e); e = quiver.sqrt(e)                -- also quiver.log / quiver.exp
 local cond_e = quiver.gt(e, 3.0)                     -- gt/lt/gte/lte/eq/neq -> 1.0/0.0 (NaN -> NaN)
-e = quiver.ifelse(cond_e, then_e, else_e)            -- build cond_e with the comparison functions
+cond_e = quiver.and_(cond_e, quiver.not_(quiver.lt(e, 1.0)))  -- and_/or_/not_ (keywords -> trailing _)
+e = quiver.ifelse(cond_e, then_e, else_e)            -- build cond_e with comparison + logical functions
 e = e:aggregate("stage", "sum")                      -- sum/mean/min/max/percentile
 e = e:aggregate("stage", "percentile", 0.9)          -- percentile needs the fraction
 e = e:aggregate_agents("mean")                       -- collapse the label axis

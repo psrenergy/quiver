@@ -329,6 +329,11 @@ struct LuaRunner::Impl {
         ns.set_function("lte", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Lte, a, b); });
         ns.set_function("eq", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Eq, a, b); });
         ns.set_function("neq", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Neq, a, b); });
+        // Logical ops on boolean-valued expressions (nonzero = true, NaN propagates). Named with a
+        // trailing underscore because `and`/`or`/`not` are Lua keywords.
+        ns.set_function("and_", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::And, a, b); });
+        ns.set_function("or_", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Or, a, b); });
+        ns.set_function("not_", [](sol::object o) { return quiver::not_(to_expression(o)); });
         // NOLINTEND(performance-unnecessary-value-parameter)
     }
 
@@ -395,7 +400,7 @@ struct LuaRunner::Impl {
     // Expression operator dispatch (shared by Expression and BinaryFile metamethods)
     // ------------------------------------------------------------------------
 
-    enum class BinOp { Add, Subtract, Multiply, Divide, Gt, Lt, Gte, Lte, Eq, Neq };
+    enum class BinOp { Add, Subtract, Multiply, Divide, Gt, Lt, Gte, Lte, Eq, Neq, And, Or };
 
     static bool is_number(const sol::object& o) { return o.get_type() == sol::type::number; }
 
@@ -433,6 +438,10 @@ struct LuaRunner::Impl {
             return quiver::eq(l, r);
         case BinOp::Neq:
             return quiver::neq(l, r);
+        case BinOp::And:
+            return quiver::and_(l, r);
+        case BinOp::Or:
+            return quiver::or_(l, r);
         }
         throw std::runtime_error("Cannot apply operator: unknown operation");
     }
@@ -459,6 +468,10 @@ struct LuaRunner::Impl {
             return quiver::eq(l, r);
         case BinOp::Neq:
             return quiver::neq(l, r);
+        case BinOp::And:
+            return quiver::and_(l, r);
+        case BinOp::Or:
+            return quiver::or_(l, r);
         }
         throw std::runtime_error("Cannot apply operator: unknown operation");
     }
@@ -485,6 +498,10 @@ struct LuaRunner::Impl {
             return quiver::eq(l, r);
         case BinOp::Neq:
             return quiver::neq(l, r);
+        case BinOp::And:
+            return quiver::and_(l, r);
+        case BinOp::Or:
+            return quiver::or_(l, r);
         }
         throw std::runtime_error("Cannot apply operator: unknown operation");
     }

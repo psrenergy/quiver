@@ -76,6 +76,14 @@ private:
     friend QUIVER_API Expression neq(const Expression&, double);
     friend QUIVER_API Expression neq(double, const Expression&);
 
+    friend QUIVER_API Expression and_(const Expression&, const Expression&);
+    friend QUIVER_API Expression and_(const Expression&, double);
+    friend QUIVER_API Expression and_(double, const Expression&);
+    friend QUIVER_API Expression or_(const Expression&, const Expression&);
+    friend QUIVER_API Expression or_(const Expression&, double);
+    friend QUIVER_API Expression or_(double, const Expression&);
+    friend QUIVER_API Expression not_(const Expression&);
+
     std::shared_ptr<ExpressionNode> node_;
 };
 
@@ -124,6 +132,18 @@ QUIVER_API Expression eq(double lhs, const Expression& rhs);
 QUIVER_API Expression neq(const Expression& lhs, const Expression& rhs);
 QUIVER_API Expression neq(const Expression& lhs, double rhs);
 QUIVER_API Expression neq(double lhs, const Expression& rhs);
+
+// Logical operators on boolean-valued expressions (nonzero is true), producing `1.0`/`0.0`; a NaN
+// operand propagates as NaN. The result is unitless and `and_`/`or_` skip unit-match validation, so
+// conditions on different-unit variables compose. Named (not operators) for a uniform C++/Lua
+// surface (`and`/`or`/`not` are reserved keywords).
+QUIVER_API Expression and_(const Expression& lhs, const Expression& rhs);
+QUIVER_API Expression and_(const Expression& lhs, double rhs);
+QUIVER_API Expression and_(double lhs, const Expression& rhs);
+QUIVER_API Expression or_(const Expression& lhs, const Expression& rhs);
+QUIVER_API Expression or_(const Expression& lhs, double rhs);
+QUIVER_API Expression or_(double lhs, const Expression& rhs);
+QUIVER_API Expression not_(const Expression& operand);
 
 }  // namespace quiver
 

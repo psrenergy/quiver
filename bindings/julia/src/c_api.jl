@@ -677,6 +677,8 @@ const quiver_expression_t = quiver_expression
     QUIVER_EXPRESSION_OPERATION_LTE = 7
     QUIVER_EXPRESSION_OPERATION_EQ = 8
     QUIVER_EXPRESSION_OPERATION_NEQ = 9
+    QUIVER_EXPRESSION_OPERATION_AND = 10
+    QUIVER_EXPRESSION_OPERATION_OR = 11
 end
 
 @cenum quiver_expression_unary_operation_t::UInt32 begin
@@ -685,6 +687,7 @@ end
     QUIVER_EXPRESSION_UNARY_OPERATION_SQRT = 2
     QUIVER_EXPRESSION_UNARY_OPERATION_LOG = 3
     QUIVER_EXPRESSION_UNARY_OPERATION_EXP = 4
+    QUIVER_EXPRESSION_UNARY_OPERATION_NOT = 5
 end
 
 @cenum quiver_expression_ternary_operation_t::UInt32 begin

@@ -232,4 +232,32 @@ Expression neq(double lhs, const Expression& rhs) {
     return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Neq, scalar, rhs.node_));
 }
 
+Expression and_(const Expression& lhs, const Expression& rhs) {
+    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::And, lhs.node_, rhs.node_));
+}
+Expression and_(const Expression& lhs, double rhs) {
+    auto scalar = std::make_shared<ExpressionScalar>(rhs, lhs.metadata());
+    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::And, lhs.node_, scalar));
+}
+Expression and_(double lhs, const Expression& rhs) {
+    auto scalar = std::make_shared<ExpressionScalar>(lhs, rhs.metadata());
+    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::And, scalar, rhs.node_));
+}
+
+Expression or_(const Expression& lhs, const Expression& rhs) {
+    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Or, lhs.node_, rhs.node_));
+}
+Expression or_(const Expression& lhs, double rhs) {
+    auto scalar = std::make_shared<ExpressionScalar>(rhs, lhs.metadata());
+    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Or, lhs.node_, scalar));
+}
+Expression or_(double lhs, const Expression& rhs) {
+    auto scalar = std::make_shared<ExpressionScalar>(lhs, rhs.metadata());
+    return Expression(std::make_shared<ExpressionBinary>(ExpressionBinary::Operation::Or, scalar, rhs.node_));
+}
+
+Expression not_(const Expression& operand) {
+    return Expression(std::make_shared<ExpressionUnary>(ExpressionUnary::Operation::Not, operand.node_));
+}
+
 }  // namespace quiver
