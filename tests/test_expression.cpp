@@ -2140,13 +2140,12 @@ TEST_F(ExpressionFixture, ComparisonAllOpsTwoFiles) {
         for (size_t i = 0; i < vo.size(); ++i) {
             EXPECT_DOUBLE_EQ(vo[i], c.ref(va[i], vb[i]) ? 1.0 : 0.0) << " at index " << i;
         }
-        cleanup();
-        write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t k) {
-            return static_cast<double>(dims[0] * 10 + dims[1] + static_cast<int64_t>(k));
-        });
-        write_qvr(path_b, md, [](const std::vector<int64_t>& dims, size_t k) {
-            return static_cast<double>(dims[1] * 10 + dims[0] + static_cast<int64_t>(k));
-        });
+        // Clear only the output between ops; inputs stay written (readers above still hold them).
+        for (auto ext : {".qvr", ".toml"}) {
+            auto full = path_out + ext;
+            if (fs::exists(full))
+                fs::remove(full);
+        }
     }
 }
 
@@ -2224,11 +2223,15 @@ TEST_F(ExpressionFixture, ComparisonDrivesIfElse) {
 
 TEST_F(ExpressionFixture, ComparisonUnitMismatchThrows) {
     auto md_a = BinaryMetadata::from_element(Element()
+                                                .set("version", "1")
+                                                .set("initial_datetime", "2025-01-01T00:00:00")
                                                 .set("unit", "MW")
                                                 .set("dimensions", {"row"})
                                                 .set("dimension_sizes", {2})
                                                 .set("labels", {"v"}));
     auto md_b = BinaryMetadata::from_element(Element()
+                                                .set("version", "1")
+                                                .set("initial_datetime", "2025-01-01T00:00:00")
                                                 .set("unit", "GWh")
                                                 .set("dimensions", {"row"})
                                                 .set("dimension_sizes", {2})
