@@ -2259,7 +2259,7 @@ TEST_F(ExpressionFixture, LogicalAndOrTruthiness) {
     {
         auto a = BinaryFile::open_file(path_a, 'r');
         auto b = BinaryFile::open_file(path_b, 'r');
-        and_(Expression(a), Expression(b)).save(path_out);
+        (Expression(a) & Expression(b)).save(path_out);
         auto vo = read_all_cells(path_out);
         ASSERT_EQ(vo.size(), va.size());
         for (size_t i = 0; i < vo.size(); ++i)
@@ -2273,7 +2273,7 @@ TEST_F(ExpressionFixture, LogicalAndOrTruthiness) {
     {
         auto a = BinaryFile::open_file(path_a, 'r');
         auto b = BinaryFile::open_file(path_b, 'r');
-        or_(Expression(a), Expression(b)).save(path_out);
+        (Expression(a) | Expression(b)).save(path_out);
         auto vo = read_all_cells(path_out);
         ASSERT_EQ(vo.size(), va.size());
         for (size_t i = 0; i < vo.size(); ++i)
@@ -2285,7 +2285,7 @@ TEST_F(ExpressionFixture, LogicalNotInverts) {
     auto md = make_simple_metadata();
     write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t /*k*/) { return (dims[0] == 1) ? 5.0 : 0.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
-    not_(Expression(a)).save(path_out);
+    (~Expression(a)).save(path_out);
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(vo.size(), va.size());
@@ -2302,7 +2302,7 @@ TEST_F(ExpressionFixture, LogicalPropagatesNaN) {
     write_qvr(path_b, md, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     auto a = BinaryFile::open_file(path_a, 'r');
     auto b = BinaryFile::open_file(path_b, 'r');
-    and_(Expression(a), Expression(b)).save(path_out);
+    (Expression(a) & Expression(b)).save(path_out);
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(vo.size(), va.size());
@@ -2333,7 +2333,7 @@ TEST_F(ExpressionFixture, LogicalIsUnitlessAcrossUnits) {
     auto a = BinaryFile::open_file(path_a, 'r');
     auto b = BinaryFile::open_file(path_b, 'r');
     // gt(a, 1.0) is MW-tagged, gt(b, 0.0) is GWh-tagged; and_ combines them without a unit error.
-    Expression e = and_(gt(Expression(a), 1.0), gt(Expression(b), 0.0));
+    Expression e = gt(Expression(a), 1.0) & gt(Expression(b), 0.0);
     EXPECT_EQ(e.metadata().unit, "");
     e.save(path_out);  // also exercises materialization
     EXPECT_TRUE(fs::exists(path_out + ".qvr"));
@@ -2350,7 +2350,7 @@ TEST_F(ExpressionFixture, LogicalDrivesIfElse) {
     auto then_v = BinaryFile::open_file(path_b, 'r');
     auto else_v = BinaryFile::open_file(path_c, 'r');
     // (1 < a) AND (a < 3) -> only row 2 selects "then"
-    ifelse(and_(gt(Expression(a), 1.0), lt(Expression(a), 3.0)), Expression(then_v), Expression(else_v)).save(path_out);
+    ifelse(gt(Expression(a), 1.0) & lt(Expression(a), 3.0), Expression(then_v), Expression(else_v)).save(path_out);
     auto va = read_all_cells(path_a);
     auto vo = read_all_cells(path_out);
     ASSERT_EQ(vo.size(), va.size());

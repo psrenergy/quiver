@@ -254,7 +254,14 @@ struct LuaRunner::Impl {
             sol::meta_function::division,
             [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Divide, a, b); },
             sol::meta_function::unary_minus,
-            [](sol::object a, sol::object) { return -to_expression(a); });
+            [](sol::object a, sol::object) { return -to_expression(a); },
+            // Logical ops (nonzero = true, NaN propagates, unitless): `&` / `|` / `~`.
+            sol::meta_function::bitwise_and,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::And, a, b); },
+            sol::meta_function::bitwise_or,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Or, a, b); },
+            sol::meta_function::bitwise_not,
+            [](sol::object a, sol::object) { return ~to_expression(a); });
 
         ns.set_function("metadata", [](const sol::table& t) { return build_metadata_from_lua(t); });
         ns.set_function("metadata_from_toml",
@@ -311,7 +318,14 @@ struct LuaRunner::Impl {
             sol::meta_function::division,
             [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Divide, a, b); },
             sol::meta_function::unary_minus,
-            [](sol::object a, sol::object) { return -to_expression(a); });
+            [](sol::object a, sol::object) { return -to_expression(a); },
+            // Logical ops (nonzero = true, NaN propagates, unitless): `&` / `|` / `~`.
+            sol::meta_function::bitwise_and,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::And, a, b); },
+            sol::meta_function::bitwise_or,
+            [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Or, a, b); },
+            sol::meta_function::bitwise_not,
+            [](sol::object a, sol::object) { return ~to_expression(a); });
 
         ns.set_function("expression", [](sol::object o) { return to_expression(o); });
         ns.set_function("abs", [](sol::object o) { return quiver::abs(to_expression(o)); });
@@ -329,11 +343,8 @@ struct LuaRunner::Impl {
         ns.set_function("lte", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Lte, a, b); });
         ns.set_function("eq", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Eq, a, b); });
         ns.set_function("neq", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Neq, a, b); });
-        // Logical ops on boolean-valued expressions (nonzero = true, NaN propagates). Named with a
-        // trailing underscore because `and`/`or`/`not` are Lua keywords.
-        ns.set_function("and_", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::And, a, b); });
-        ns.set_function("or_", [](sol::object a, sol::object b) { return binop_dispatch(BinOp::Or, a, b); });
-        ns.set_function("not_", [](sol::object o) { return quiver::not_(to_expression(o)); });
+        // Logical ops on boolean-valued expressions are the `&` / `|` / `~` metamethods bound on the
+        // Expression and BinaryFile usertypes (`and`/`or`/`not` are Lua keywords, so no free functions).
         // NOLINTEND(performance-unnecessary-value-parameter)
     }
 
@@ -439,9 +450,9 @@ struct LuaRunner::Impl {
         case BinOp::Neq:
             return quiver::neq(l, r);
         case BinOp::And:
-            return quiver::and_(l, r);
+            return l & r;
         case BinOp::Or:
-            return quiver::or_(l, r);
+            return l | r;
         }
         throw std::runtime_error("Cannot apply operator: unknown operation");
     }
@@ -469,9 +480,9 @@ struct LuaRunner::Impl {
         case BinOp::Neq:
             return quiver::neq(l, r);
         case BinOp::And:
-            return quiver::and_(l, r);
+            return l & r;
         case BinOp::Or:
-            return quiver::or_(l, r);
+            return l | r;
         }
         throw std::runtime_error("Cannot apply operator: unknown operation");
     }
@@ -499,9 +510,9 @@ struct LuaRunner::Impl {
         case BinOp::Neq:
             return quiver::neq(l, r);
         case BinOp::And:
-            return quiver::and_(l, r);
+            return l & r;
         case BinOp::Or:
-            return quiver::or_(l, r);
+            return l | r;
         }
         throw std::runtime_error("Cannot apply operator: unknown operation");
     }

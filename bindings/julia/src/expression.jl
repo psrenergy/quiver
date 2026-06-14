@@ -126,39 +126,23 @@ for (op, fname) in ((:(>), :gt), (:(<), :lt), (:(>=), :gte), (:(<=), :lte))
 end
 
 # Logical operators on boolean-valued expressions (nonzero = true, NaN propagates); the result is
-# unitless. Named functions and_/or_ mirror the Lua surface (`and`/`or` are reserved); `&`/`|` give
-# operator sugar (`&&`/`||` can't be overloaded — they short-circuit).
-for (fname, cop) in ((:and_, :QUIVER_EXPRESSION_OPERATION_AND), (:or_, :QUIVER_EXPRESSION_OPERATION_OR))
+# unitless. The bitwise-operator family `&`/`|`/`~` is used because `and`/`or`/`not` are reserved
+# (`&&`/`||` can't be overloaded — they short-circuit). Matches the NumPy/pandas convention.
+for (op, cop) in ((:(&), :QUIVER_EXPRESSION_OPERATION_AND), (:(|), :QUIVER_EXPRESSION_OPERATION_OR))
     @eval begin
-        $fname(a::Expression, b::Expression) = _binop(C.$cop, a, b)
-        $fname(a::Expression, b::Real) = _binop(C.$cop, a, b)
-        $fname(a::Real, b::Expression) = _binop(C.$cop, a, b)
-        $fname(a::Binary.File, b::Binary.File) = _binop(C.$cop, Expression(a), Expression(b))
-        $fname(a::Binary.File, b::Real) = _binop(C.$cop, Expression(a), b)
-        $fname(a::Real, b::Binary.File) = _binop(C.$cop, a, Expression(b))
-        $fname(a::Binary.File, b::Expression) = _binop(C.$cop, Expression(a), b)
-        $fname(a::Expression, b::Binary.File) = _binop(C.$cop, a, Expression(b))
+        Base.$op(a::Expression, b::Expression) = _binop(C.$cop, a, b)
+        Base.$op(a::Expression, b::Real) = _binop(C.$cop, a, b)
+        Base.$op(a::Real, b::Expression) = _binop(C.$cop, a, b)
+        Base.$op(a::Binary.File, b::Binary.File) = _binop(C.$cop, Expression(a), Expression(b))
+        Base.$op(a::Binary.File, b::Real) = _binop(C.$cop, Expression(a), b)
+        Base.$op(a::Real, b::Binary.File) = _binop(C.$cop, a, Expression(b))
+        Base.$op(a::Binary.File, b::Expression) = _binop(C.$cop, Expression(a), b)
+        Base.$op(a::Expression, b::Binary.File) = _binop(C.$cop, a, Expression(b))
     end
 end
 
-for (op, fname) in ((:(&), :and_), (:(|), :or_))
-    @eval begin
-        Base.$op(a::Expression, b::Expression) = $fname(a, b)
-        Base.$op(a::Expression, b::Real) = $fname(a, b)
-        Base.$op(a::Real, b::Expression) = $fname(a, b)
-        Base.$op(a::Binary.File, b::Binary.File) = $fname(a, b)
-        Base.$op(a::Binary.File, b::Real) = $fname(a, b)
-        Base.$op(a::Real, b::Binary.File) = $fname(a, b)
-        Base.$op(a::Binary.File, b::Expression) = $fname(a, b)
-        Base.$op(a::Expression, b::Binary.File) = $fname(a, b)
-    end
-end
-
-# Logical NOT (unary): named not_ + `!` operator sugar.
-not_(a::Expression) = _unop(C.QUIVER_EXPRESSION_UNARY_OPERATION_NOT, a)
-not_(a::Binary.File) = not_(Expression(a))
-Base.:!(a::Expression) = not_(a)
-Base.:!(a::Binary.File) = not_(Expression(a))
+Base.:~(a::Expression) = _unop(C.QUIVER_EXPRESSION_UNARY_OPERATION_NOT, a)
+Base.:~(a::Binary.File) = ~Expression(a)
 
 Base.:-(a::Binary.File) = -Expression(a)
 Base.abs(a::Binary.File) = abs(Expression(a))

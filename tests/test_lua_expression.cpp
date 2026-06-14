@@ -329,17 +329,17 @@ TEST_F(LuaExpressionTest, LogicalFreeFunctions) {
         local fa = db:open_file('expr_a', 'r')
         local fb = db:open_file('expr_b', 'r')
 
-        quiver.and_(fa, fb):save('expr_and')
+        local e_and = fa & fb; e_and:save('expr_and')
         local ra = db:open_file('expr_and', 'r'); local ca = ra:read({row=1, col=1})
-        assert(ca[1] == 1.0 and ca[2] == 0.0, 'and_: true&true=1, false&true=0'); ra:close()
+        assert(ca[1] == 1.0 and ca[2] == 0.0, '&: true&true=1, false&true=0'); ra:close()
 
-        quiver.or_(fa, fb):save('expr_or')
+        local e_or = fa | fb; e_or:save('expr_or')
         local ro = db:open_file('expr_or', 'r'); local co = ro:read({row=1, col=1})
-        assert(co[1] == 1.0 and co[2] == 1.0, 'or_: true|true=1, false|true=1'); ro:close()
+        assert(co[1] == 1.0 and co[2] == 1.0, '|: true|true=1, false|true=1'); ro:close()
 
-        quiver.not_(quiver.expression(fa)):save('expr_not')
+        local e_not = ~fa; e_not:save('expr_not')
         local rn = db:open_file('expr_not', 'r'); local cn = rn:read({row=1, col=1})
-        assert(cn[1] == 0.0 and cn[2] == 1.0, 'not_: !true=0, !false=1'); rn:close()
+        assert(cn[1] == 0.0 and cn[2] == 1.0, '~: ~true=0, ~false=1'); rn:close()
 
         fa:close(); fb:close()
     )");
@@ -356,8 +356,7 @@ TEST_F(LuaExpressionTest, LogicalComposesIfElse) {
         local fb = db:open_file('expr_b', 'r')
         local fc = db:open_file('expr_c', 'r')
         -- pick "then" where (a > 1) and not(a > 8): v1 5 -> then(10), v2 0.5 -> else(20)
-        local cond = quiver.and_(quiver.gt(quiver.expression(fa), 1.0),
-                                 quiver.not_(quiver.gt(quiver.expression(fa), 8.0)))
+        local cond = quiver.gt(quiver.expression(fa), 1.0) & ~quiver.gt(quiver.expression(fa), 8.0)
         quiver.ifelse(cond, fb, fc):save('expr_out')
         fa:close(); fb:close(); fc:close()
         local r = db:open_file('expr_out', 'r')
