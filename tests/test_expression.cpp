@@ -2205,7 +2205,7 @@ TEST_F(ExpressionFixture, ComparisonDrivesIfElse) {
     write_qvr(path_a, md, [](const std::vector<int64_t>& dims, size_t /*k*/) {
         return static_cast<double>(dims[0]);  // 1, 2, 3 across rows
     });
-    write_qvr(path_b, md, [](const std::vector<int64_t>&, size_t) { return 100.0; });  // then
+    write_qvr(path_b, md, [](const std::vector<int64_t>&, size_t) { return 100.0; });   // then
     write_qvr(path_c, md, [](const std::vector<int64_t>&, size_t) { return -100.0; });  // else
 
     auto a = BinaryFile::open_file(path_a, 'r');
@@ -2223,19 +2223,19 @@ TEST_F(ExpressionFixture, ComparisonDrivesIfElse) {
 
 TEST_F(ExpressionFixture, ComparisonUnitMismatchThrows) {
     auto md_a = BinaryMetadata::from_element(Element()
-                                                .set("version", "1")
-                                                .set("initial_datetime", "2025-01-01T00:00:00")
-                                                .set("unit", "MW")
-                                                .set("dimensions", {"row"})
-                                                .set("dimension_sizes", {2})
-                                                .set("labels", {"v"}));
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "MW")
+                                                 .set("dimensions", {"row"})
+                                                 .set("dimension_sizes", {2})
+                                                 .set("labels", {"v"}));
     auto md_b = BinaryMetadata::from_element(Element()
-                                                .set("version", "1")
-                                                .set("initial_datetime", "2025-01-01T00:00:00")
-                                                .set("unit", "GWh")
-                                                .set("dimensions", {"row"})
-                                                .set("dimension_sizes", {2})
-                                                .set("labels", {"v"}));
+                                                 .set("version", "1")
+                                                 .set("initial_datetime", "2025-01-01T00:00:00")
+                                                 .set("unit", "GWh")
+                                                 .set("dimensions", {"row"})
+                                                 .set("dimension_sizes", {2})
+                                                 .set("labels", {"v"}));
     write_qvr(path_a, md_a, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     write_qvr(path_b, md_b, [](const std::vector<int64_t>&, size_t) { return 1.0; });
     auto a = BinaryFile::open_file(path_a, 'r');

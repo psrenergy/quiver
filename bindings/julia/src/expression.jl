@@ -92,6 +92,39 @@ Base.:/(a::Real, b::Binary.File) = a / Expression(b)
 Base.:/(a::Binary.File, b::Expression) = Expression(a) / b
 Base.:/(a::Expression, b::Binary.File) = a / Expression(b)
 
+# Element-wise comparisons: 1.0 (true) / 0.0 (false) per element; a NaN operand propagates as NaN.
+# Named functions gt/lt/gte/lte/eq/neq mirror the Lua surface; eq/neq are named-only because
+# overloading ==/!= to return an Expression would break Dict/Set/isequal. Operator sugar (> < >= <=)
+# is provided for the four orderings. Generated for the {Expression, Real, Binary.File} combos that
+# the arithmetic operators above cover.
+for (fname, cop) in ((:gt, :QUIVER_EXPRESSION_OPERATION_GT), (:lt, :QUIVER_EXPRESSION_OPERATION_LT),
+    (:gte, :QUIVER_EXPRESSION_OPERATION_GTE), (:lte, :QUIVER_EXPRESSION_OPERATION_LTE),
+    (:eq, :QUIVER_EXPRESSION_OPERATION_EQ), (:neq, :QUIVER_EXPRESSION_OPERATION_NEQ))
+    @eval begin
+        $fname(a::Expression, b::Expression) = _binop(C.$cop, a, b)
+        $fname(a::Expression, b::Real) = _binop(C.$cop, a, b)
+        $fname(a::Real, b::Expression) = _binop(C.$cop, a, b)
+        $fname(a::Binary.File, b::Binary.File) = _binop(C.$cop, Expression(a), Expression(b))
+        $fname(a::Binary.File, b::Real) = _binop(C.$cop, Expression(a), b)
+        $fname(a::Real, b::Binary.File) = _binop(C.$cop, a, Expression(b))
+        $fname(a::Binary.File, b::Expression) = _binop(C.$cop, Expression(a), b)
+        $fname(a::Expression, b::Binary.File) = _binop(C.$cop, a, Expression(b))
+    end
+end
+
+for (op, fname) in ((:(>), :gt), (:(<), :lt), (:(>=), :gte), (:(<=), :lte))
+    @eval begin
+        Base.$op(a::Expression, b::Expression) = $fname(a, b)
+        Base.$op(a::Expression, b::Real) = $fname(a, b)
+        Base.$op(a::Real, b::Expression) = $fname(a, b)
+        Base.$op(a::Binary.File, b::Binary.File) = $fname(a, b)
+        Base.$op(a::Binary.File, b::Real) = $fname(a, b)
+        Base.$op(a::Real, b::Binary.File) = $fname(a, b)
+        Base.$op(a::Binary.File, b::Expression) = $fname(a, b)
+        Base.$op(a::Expression, b::Binary.File) = $fname(a, b)
+    end
+end
+
 Base.:-(a::Binary.File) = -Expression(a)
 Base.abs(a::Binary.File) = abs(Expression(a))
 Base.sqrt(a::Binary.File) = sqrt(Expression(a))
