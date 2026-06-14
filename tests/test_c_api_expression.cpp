@@ -1626,3 +1626,53 @@ TEST_F(ExpressionCApiFixture, RenameAgentsNullArguments) {
 
     quiver_expression_close(a);
 }
+
+TEST_F(ExpressionCApiFixture, CompareGreaterThanTwoFiles) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 10 + c + k); });
+    write_fixture(path_b, [](int r, int c, int k) { return static_cast<double>(c * 10 + r + k); });
+
+    auto* a = expr_from_file(path_a);
+    auto* b = expr_from_file(path_b);
+    quiver_expression_t* cmp = nullptr;
+    ASSERT_EQ(quiver_expression_apply(QUIVER_EXPRESSION_OPERATION_GT, a, b, &cmp), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(cmp, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(b);
+    quiver_expression_close(cmp);
+
+    auto va = read_all_cells(path_a);
+    auto vb = read_all_cells(path_b);
+    auto vo = read_all_cells(path_out);
+    ASSERT_EQ(va.size(), vo.size());
+    for (size_t i = 0; i < va.size(); ++i)
+        EXPECT_DOUBLE_EQ(vo[i], (va[i] > vb[i]) ? 1.0 : 0.0);
+}
+
+TEST_F(ExpressionCApiFixture, CompareScalarBothSides) {
+    write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 100 + c * 10 + k); });
+    auto va = read_all_cells(path_a);
+
+    // expr >= 100 (scalar on the right)
+    auto* a = expr_from_file(path_a);
+    quiver_expression_t* ge = nullptr;
+    ASSERT_EQ(quiver_expression_apply_scalar_right(QUIVER_EXPRESSION_OPERATION_GTE, a, 100.0, &ge), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(ge, path_out.c_str()), QUIVER_OK);
+    quiver_expression_close(a);
+    quiver_expression_close(ge);
+    auto vge = read_all_cells(path_out);
+    ASSERT_EQ(vge.size(), va.size());
+    for (size_t i = 0; i < va.size(); ++i)
+        EXPECT_DOUBLE_EQ(vge[i], (va[i] >= 100.0) ? 1.0 : 0.0);
+
+    // 100 < expr (scalar on the left)
+    auto* a2 = expr_from_file(path_a);
+    quiver_expression_t* lt = nullptr;
+    ASSERT_EQ(quiver_expression_apply_scalar_left(QUIVER_EXPRESSION_OPERATION_LT, 100.0, a2, &lt), QUIVER_OK);
+    ASSERT_EQ(quiver_expression_save(lt, path_c.c_str()), QUIVER_OK);
+    quiver_expression_close(a2);
+    quiver_expression_close(lt);
+    auto vlt = read_all_cells(path_c);
+    ASSERT_EQ(vlt.size(), va.size());
+    for (size_t i = 0; i < va.size(); ++i)
+        EXPECT_DOUBLE_EQ(vlt[i], (100.0 < va[i]) ? 1.0 : 0.0);
+}
