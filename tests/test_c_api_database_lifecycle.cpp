@@ -231,32 +231,6 @@ TEST_F(TempFileFixture, FromSchemaInvalidPath) {
 }
 
 // ============================================================================
-// From migrations tests
-// ============================================================================
-
-TEST_F(TempFileFixture, FromMigrationsNullDbPath) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
-    quiver_database_t* db = nullptr;
-    EXPECT_EQ(quiver_database_from_migrations(nullptr, "migrations/", &options, &db), QUIVER_ERROR);
-}
-
-TEST_F(TempFileFixture, FromMigrationsNullMigrationsPath) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
-    quiver_database_t* db = nullptr;
-    EXPECT_EQ(quiver_database_from_migrations(":memory:", nullptr, &options, &db), QUIVER_ERROR);
-}
-
-TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
-    auto options = quiver_database_options_default();
-    options.console_level = QUIVER_LOG_OFF;
-    quiver_database_t* db = nullptr;
-    // Invalid migrations path returns error
-    EXPECT_NE(quiver_database_from_migrations(":memory:", "nonexistent/migrations/", &options, &db), QUIVER_OK);
-}
-
-// ============================================================================
 // From database (migrations/ + ui/) tests
 // ============================================================================
 

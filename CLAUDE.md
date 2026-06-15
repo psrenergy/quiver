@@ -62,7 +62,7 @@ Settled questions — don't relitigate without the user; each was decided delibe
   non-localized `unit = "..."` string is accepted) — no locale plumbing across FFI, `""` is the
   unknown sentinel. The
   `UiConfig` is **not persisted into SQLite**: a database opened any other way (plain ctor / `open()`
-  / `from_migrations` / `from_schema`, or the Lua-provided `db`) returns `""` from the getters.
+  / `from_schema`, or the Lua-provided `db`) returns `""` from the getters.
   Persisting it is possible future work, intentionally out of scope here.
 - **`DatabaseOptions`** (`read_only`, `console_level`) is exposed as optional parameters on the
   open/factory methods of every binding.
@@ -315,7 +315,7 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - **Examples:** `create_element`, `read_vector_floats_by_id`, `get_scalar_metadata`, `list_time_series_groups`
 
 ### Database Class
-- Factory methods: `from_schema()`, `from_migrations()`, `from_database()` — `DatabaseOptions` (`read_only`, `console_level`) exposed as optional parameters in every binding. `from_database(db_path, dir)` points at a model directory holding both a `migrations/` subfolder (applied as in `from_migrations`) and a `ui/` subfolder (UI metadata read into the instance — see UI Metadata below and the design decision)
+- Factory methods: `from_schema()`, `from_database()` — `DatabaseOptions` (`read_only`, `console_level`) exposed as optional parameters in every binding. `from_database(db_path, dir)` points at a model directory holding a `migrations/` subfolder (its versioned migrations are applied) and an optional `ui/` subfolder (UI metadata read into the instance — see UI Metadata below and the design decision)
 - Transaction control: `begin_transaction()`, `commit()`, `rollback()`, `in_transaction()`
 - CRUD: `create_element(collection, element)`, `update_element`, `delete_element`
 - Scalar/vector/set readers: `read_{scalar,vector,set}_{integers,floats,strings}(collection, attribute)` (+ `_by_id` variants)

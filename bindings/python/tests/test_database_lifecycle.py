@@ -22,12 +22,6 @@ def test_from_schema_context_manager(valid_schema_path: Path, tmp_path: Path) ->
         db.path()
 
 
-def test_from_migrations_creates_database(migrations_path: Path, tmp_path: Path) -> None:
-    db = Database.from_migrations(str(tmp_path / "test.db"), str(migrations_path))
-    assert db is not None
-    db.close()
-
-
 def test_from_database_loads_ui_metadata(database_dir: Path, tmp_path: Path) -> None:
     db = Database.from_database(str(tmp_path / "test.db"), str(database_dir))
     try:

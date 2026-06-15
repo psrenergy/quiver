@@ -62,8 +62,8 @@ end
     end
 
     @testset "Migrations returns count" begin
-        path_migrations = joinpath(tests_path(), "schemas", "migrations")
-        db = Quiver.from_migrations(":memory:", path_migrations)
+        # schemas/ holds the shared 3-migration fixture under migrations/ (no ui/ -> empty UI).
+        db = Quiver.from_database(":memory:", joinpath(tests_path(), "schemas"))
         @test Quiver.current_version(db) == 3
         Quiver.close!(db)
     end

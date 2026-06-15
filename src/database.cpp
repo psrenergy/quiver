@@ -239,24 +239,6 @@ const std::string& Database::path() const {
     return impl_->path;
 }
 
-Database Database::from_migrations(const std::string& db_path,
-                                   const std::string& migrations_path,
-                                   const DatabaseOptions& options) {
-    namespace fs = std::filesystem;
-    if (options.read_only) {
-        throw std::runtime_error("Cannot from_migrations: read_only mode (use Database constructor to open existing)");
-    }
-    if (!fs::exists(migrations_path)) {
-        throw std::runtime_error("Migrations path not found: " + migrations_path);
-    }
-    if (!fs::is_directory(migrations_path)) {
-        throw std::runtime_error("Cannot from_migrations: path is not a directory: " + migrations_path);
-    }
-    auto db = Database(db_path, options);
-    db.migrate_up(migrations_path);
-    return db;
-}
-
 Database Database::from_database(const std::string& db_path, const std::string& dir, const DatabaseOptions& options) {
     namespace fs = std::filesystem;
     if (options.read_only) {
@@ -268,11 +250,15 @@ Database Database::from_database(const std::string& db_path, const std::string& 
     if (!fs::is_directory(dir)) {
         throw std::runtime_error("Cannot from_database: path is not a directory: " + dir);
     }
+    const auto migrations_path = fs::path(dir) / "migrations";
+    if (!fs::exists(migrations_path)) {
+        throw std::runtime_error("Migrations path not found: " + migrations_path.string());
+    }
     // Read the UI metadata before creating/migrating the database file, so a malformed ui/ fails the
-    // factory without leaving a partially-initialized database on disk. The migration path is then
-    // delegated to from_migrations, which enforces that dir/migrations exists.
+    // factory without leaving a partially-initialized database on disk.
     auto ui = UiConfig::from_directory((fs::path(dir) / "ui").string());
-    auto db = from_migrations(db_path, (fs::path(dir) / "migrations").string(), options);
+    auto db = Database(db_path, options);
+    db.migrate_up(migrations_path.string());
     db.impl_->ui = std::move(ui);
     return db;
 }

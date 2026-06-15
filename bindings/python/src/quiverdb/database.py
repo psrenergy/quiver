@@ -60,28 +60,6 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         return Database(out_db[0])
 
     @staticmethod
-    def from_migrations(
-        db_path: str,
-        migrations_path: str,
-        *,
-        read_only: bool = False,
-        console_level: int | None = None,
-    ) -> Database:
-        """Create a database using a migrations directory."""
-        lib = get_lib()
-        options = Database._make_options(read_only, console_level)
-        out_db = ffi.new("quiver_database_t**")
-        check(
-            lib.quiver_database_from_migrations(
-                db_path.encode("utf-8"),
-                migrations_path.encode("utf-8"),
-                options,
-                out_db,
-            )
-        )
-        return Database(out_db[0])
-
-    @staticmethod
     def from_database(
         db_path: str,
         dir: str,
@@ -91,8 +69,8 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
     ) -> Database:
         """Create a database from a model directory containing migrations/ and ui/.
 
-        Migrations under <dir>/migrations are applied as in from_migrations; UI
-        metadata under <dir>/ui is loaded into the returned instance.
+        The versioned migrations under <dir>/migrations are applied; UI metadata
+        under <dir>/ui is loaded into the returned instance.
         """
         lib = get_lib()
         options = Database._make_options(read_only, console_level)

@@ -137,10 +137,10 @@ if exist "%ROOT_DIR%\build\bin\quiver_cli.exe" (
         SET CLI_RESULT=FAIL
         SET FAILED=1
     )
-    REM --schema and --migrations are mutually exclusive: must exit with code 2
-    "%ROOT_DIR%\build\bin\quiver_cli.exe" --schema a.sql --migrations m :memory: "%ROOT_DIR%\example\example1.lua" >nul 2>&1
+    REM --schema and --database are mutually exclusive: must exit with code 2
+    "%ROOT_DIR%\build\bin\quiver_cli.exe" --schema a.sql --database m :memory: "%ROOT_DIR%\example\example1.lua" >nul 2>&1
     if !errorlevel! neq 2 (
-        echo ERROR: CLI accepted --schema and --migrations together
+        echo ERROR: CLI accepted --schema and --database together
         SET CLI_RESULT=FAIL
         SET FAILED=1
     )

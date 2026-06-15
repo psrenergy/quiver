@@ -27,12 +27,6 @@ def valid_schema_path(schemas_path: Path) -> Path:
 
 
 @pytest.fixture
-def migrations_path(schemas_path: Path) -> Path:
-    """Return the path to the test migrations directory."""
-    return schemas_path / "migrations"
-
-
-@pytest.fixture
 def database_dir(schemas_path: Path) -> Path:
     """Return the from_database fixture directory (contains migrations/ and ui/)."""
     return schemas_path / "from_database"

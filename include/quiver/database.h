@@ -28,16 +28,13 @@ public:
     Database(Database&& other) noexcept;
     Database& operator=(Database&& other) noexcept;
 
-    static Database from_migrations(const std::string& db_path,
-                                    const std::string& migrations_path,
-                                    const DatabaseOptions& options = {});
-
     static Database
     from_schema(const std::string& db_path, const std::string& schema_path, const DatabaseOptions& options = {});
 
-    // Creates a database from a model directory containing a `migrations/` subfolder (applied as in
-    // from_migrations) and a `ui/` subfolder (UI metadata loaded into the returned instance). The UI
-    // data lives only on this in-process object — reopening db_path later does not restore it.
+    // Creates a database from a model directory containing a `migrations/` subfolder (its versioned
+    // up.sql/down.sql migrations are applied) and an optional `ui/` subfolder (UI metadata loaded
+    // into the returned instance). The UI data lives only on this in-process object — reopening
+    // db_path later does not restore it.
     static Database
     from_database(const std::string& db_path, const std::string& dir, const DatabaseOptions& options = {});
     bool is_healthy() const;

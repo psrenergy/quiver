@@ -10,7 +10,6 @@ import { Database, QuiverError } from "../src/index.ts";
 import { getSymbols } from "../src/loader.ts";
 
 const SCHEMA_PATH = join(__dirname, "..", "..", "..", "tests", "schemas", "valid", "basic.sql");
-const MIGRATIONS_PATH = join(__dirname, "..", "..", "..", "tests", "schemas", "migrations");
 const DATABASE_DIR = join(__dirname, "..", "..", "..", "tests", "schemas", "from_database");
 
 describe("Database lifecycle", () => {
@@ -57,33 +56,6 @@ describe("Database lifecycle", () => {
   test("fromSchema with invalid schema throws QuiverError", () => {
     expect(() => {
       Database.fromSchema(":memory:", "nonexistent/path/schema.sql");
-    }).toThrow(QuiverError);
-  });
-
-  test("fromMigrations opens database and returns Database instance", () => {
-    const db = Database.fromMigrations(":memory:", MIGRATIONS_PATH);
-    try {
-      expect(db !== undefined).toBeTruthy();
-      expect(db instanceof Database).toBeTruthy();
-    } finally {
-      db.close();
-    }
-  });
-
-  test("fromMigrations creates database file on disk", () => {
-    const dir = makeTempDir();
-    const dbPath = join(dir, "test.db");
-    const db = Database.fromMigrations(dbPath, MIGRATIONS_PATH);
-    try {
-      expect(existsSync(dbPath)).toEqual(true);
-    } finally {
-      db.close();
-    }
-  });
-
-  test("fromMigrations with invalid path throws QuiverError", () => {
-    expect(() => {
-      Database.fromMigrations(":memory:", "nonexistent/path");
     }).toThrow(QuiverError);
   });
 

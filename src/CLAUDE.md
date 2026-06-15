@@ -134,13 +134,12 @@ Database& operator=(Database&&) = default;
 Static methods for database creation:
 ```cpp
 static Database from_schema(const std::string& db_path, const std::string& schema_path, const DatabaseOptions& options = {});
-static Database from_migrations(const std::string& db_path, const std::string& migrations_path, const DatabaseOptions& options = {});
 static Database from_database(const std::string& db_path, const std::string& dir, const DatabaseOptions& options = {});
 ```
-`schema_path` is a `.sql` file; `migrations_path` is a directory of numbered version
-subdirectories with `up.sql`/`down.sql`. `from_database`'s `dir` is a model directory that holds
-both `dir/migrations` (applied via `migrate_up`, like `from_migrations`) and `dir/ui` (read into a
-`UiConfig` — see UI Config below).
+`schema_path` is a `.sql` file. `from_database`'s `dir` is a model directory that holds `dir/migrations`
+(a directory of numbered version subdirectories with `up.sql`/`down.sql`, applied via the private
+`migrate_up`) and an optional `dir/ui` (read into a `UiConfig` — see UI Config below). `from_database`
+is the only public entry point that applies migrations.
 
 ## UI Config
 
@@ -153,7 +152,8 @@ be a localized sub-table or a bare string, resolved **English-first** by `pick_l
 else each declared localization, else any locale; empty strings count as absent). A missing `ui_dir`
 or `main.toml` yields an empty config (no throw); malformed TOML in a file that exists throws
 Pattern 3 with the path. `from_database` reads the UI **before** creating/migrating the db file (so a
-malformed ui/ leaves no partial db) and delegates the migration path to `from_migrations`.
+malformed ui/ leaves no partial db), then applies `dir/migrations` via the private `migrate_up`
+(throwing "Migrations path not found" if absent).
 `Database::Impl` holds one `UiConfig ui;` (default-empty), populated only by `from_database`;
 `get_model_name()` / `get_attribute_unit()` delegate to it and return `""` when no UI was loaded. Not
 persisted to SQLite (root design decision) — only the in-process `from_database` instance carries it.

@@ -77,38 +77,9 @@ class Database {
     }
   }
 
-  /// Creates a new database from a migrations directory.
-  /// The migrations directory should contain numbered subdirectories (1/, 2/, etc.)
-  /// each with an up.sql file.
-  factory Database.fromMigrations(
-    String dbPath,
-    String migrationsPath, {
-    bool readOnly = false,
-    int? consoleLevel,
-  }) {
-    final arena = Arena();
-    try {
-      final optionsPtr = _makeOptions(arena, readOnly, consoleLevel);
-      final outDbPtr = arena<Pointer<quiver_database_t>>();
-
-      check(
-        bindings.quiver_database_from_migrations(
-          dbPath.toNativeUtf8(allocator: arena).cast(),
-          migrationsPath.toNativeUtf8(allocator: arena).cast(),
-          optionsPtr,
-          outDbPtr,
-        ),
-      );
-
-      return Database._(outDbPtr.value);
-    } finally {
-      arena.releaseAll();
-    }
-  }
-
   /// Creates a new database from a model directory containing a `migrations/`
-  /// subfolder (applied as in [Database.fromMigrations]) and a `ui/` subfolder
-  /// (UI metadata loaded into the returned instance).
+  /// subfolder (its versioned migrations are applied) and an optional `ui/`
+  /// subfolder (UI metadata loaded into the returned instance).
   factory Database.fromDatabase(
     String dbPath,
     String dir, {

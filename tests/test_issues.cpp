@@ -17,17 +17,16 @@ protected:
 };
 
 TEST_F(IssuesFixture, Issue52) {
-    auto migrations_path = issues_path + "/issue52";
+    auto database_dir = issues_path + "/issue52";
 
-    EXPECT_THROW(quiver::Database::from_migrations(":memory:", migrations_path), std::runtime_error);
+    EXPECT_THROW(quiver::Database::from_database(":memory:", database_dir), std::runtime_error);
 }
 
 TEST_F(IssuesFixture, Issue161) {
-    auto migrations_path = schemas_path + "/migrations";
     auto schema_path = schemas_path + "/valid/basic.sql";
 
     quiver::DatabaseOptions options;
     options.read_only = true;
-    EXPECT_THROW(quiver::Database::from_migrations(":memory:", migrations_path, options), std::runtime_error);
+    EXPECT_THROW(quiver::Database::from_database(":memory:", schemas_path, options), std::runtime_error);
     EXPECT_THROW(quiver::Database::from_schema(":memory:", schema_path, options), std::runtime_error);
 }

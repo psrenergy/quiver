@@ -7,7 +7,6 @@ import 'package:path/path.dart' as path;
 void main() {
   final testsPath = path.join(path.current, '..', '..', 'tests');
   final schemaPath = path.join(testsPath, 'schemas', 'valid', 'basic.sql');
-  final migrationsPath = path.join(testsPath, 'schemas', 'migrations');
   final databaseDir = path.join(testsPath, 'schemas', 'from_database');
 
   group('Database fromSchema', () {
@@ -54,48 +53,6 @@ void main() {
     test('throws on empty schema path', () {
       expect(
         () => Database.fromSchema(':memory:', ''),
-        throwsA(isA<DatabaseException>()),
-      );
-    });
-  });
-
-  group('Database fromMigrations', () {
-    test('creates database with migrations applied', () {
-      // Migrations apply Test1, Test2 (dropped), Test3 - these are not Quiver collections
-      // so we just verify the database is created successfully
-      final db = Database.fromMigrations(':memory:', migrationsPath);
-      try {
-        // Database was created and migrations were applied
-      } finally {
-        db.close();
-      }
-    });
-
-    test('works with in-memory database', () {
-      final db = Database.fromMigrations(':memory:', migrationsPath);
-      try {
-        // Database was created successfully with all migrations applied
-      } finally {
-        db.close();
-      }
-    });
-
-    test('creates database file on disk', () {
-      final tempDir = Directory.systemTemp.createTempSync('quiver_test_');
-      final dbPath = path.join(tempDir.path, 'test.db');
-      try {
-        final db = Database.fromMigrations(dbPath, migrationsPath);
-        db.close();
-        expect(File(dbPath).existsSync(), isTrue);
-      } finally {
-        tempDir.deleteSync(recursive: true);
-      }
-    });
-
-    test('throws on invalid migrations path', () {
-      // Invalid path should throw DatabaseException
-      expect(
-        () => Database.fromMigrations(':memory:', 'nonexistent/path'),
         throwsA(isA<DatabaseException>()),
       );
     });
@@ -188,10 +145,10 @@ void main() {
       }
     });
 
-    test('returns migration count for migrations-based database', () {
-      final db = Database.fromMigrations(':memory:', migrationsPath);
+    test('returns migration count for a model directory', () {
+      // schemas/ holds the shared 3-migration fixture under migrations/ (no ui/ -> empty UI).
+      final db = Database.fromDatabase(':memory:', path.join(testsPath, 'schemas'));
       try {
-        // Migrations folder has 3 migrations
         expect(db.currentVersion(), equals(3));
       } finally {
         db.close();

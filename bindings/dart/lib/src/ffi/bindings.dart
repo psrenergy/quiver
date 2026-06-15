@@ -92,41 +92,6 @@ class QuiverDatabaseBindings {
         )
       >();
 
-  int quiver_database_from_migrations(
-    ffi.Pointer<ffi.Char> db_path,
-    ffi.Pointer<ffi.Char> migrations_path,
-    ffi.Pointer<quiver_database_options_t> options,
-    ffi.Pointer<ffi.Pointer<quiver_database_t>> out_db,
-  ) {
-    return _quiver_database_from_migrations(
-      db_path,
-      migrations_path,
-      options,
-      out_db,
-    );
-  }
-
-  late final _quiver_database_from_migrationsPtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Int32 Function(
-            ffi.Pointer<ffi.Char>,
-            ffi.Pointer<ffi.Char>,
-            ffi.Pointer<quiver_database_options_t>,
-            ffi.Pointer<ffi.Pointer<quiver_database_t>>,
-          )
-        >
-      >('quiver_database_from_migrations');
-  late final _quiver_database_from_migrations = _quiver_database_from_migrationsPtr
-      .asFunction<
-        int Function(
-          ffi.Pointer<ffi.Char>,
-          ffi.Pointer<ffi.Char>,
-          ffi.Pointer<quiver_database_options_t>,
-          ffi.Pointer<ffi.Pointer<quiver_database_t>>,
-        )
-      >();
-
   int quiver_database_from_schema(
     ffi.Pointer<ffi.Char> db_path,
     ffi.Pointer<ffi.Char> schema_path,

@@ -34,7 +34,6 @@ const lifecycleSymbols = {
   // never called -- makeDefaultOptions() in ffi-helpers.ts builds the options
   // struct in JS.
   quiver_database_from_schema: { args: [BUF, BUF, BUF, P], returns: I32 },
-  quiver_database_from_migrations: { args: [BUF, BUF, BUF, P], returns: I32 },
   quiver_database_from_database: { args: [BUF, BUF, BUF, P], returns: I32 },
   quiver_database_open: { args: [BUF, BUF, P], returns: I32 },
   quiver_database_close: { args: [P], returns: I32 },

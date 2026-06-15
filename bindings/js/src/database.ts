@@ -29,29 +29,6 @@ export class Database {
     return new Database(readPtrOut(outDb));
   }
 
-  static fromMigrations(
-    dbPath: string,
-    migrationsPath: string,
-    options?: DatabaseOptions,
-  ): Database {
-    const lib = getSymbols();
-    const optionsBuf = makeDefaultOptions(options);
-    const outDb = allocPtrOut();
-    const dbPathBuf = toCString(dbPath);
-    const migrPathBuf = toCString(migrationsPath);
-
-    check(
-      lib.quiver_database_from_migrations(
-        dbPathBuf.buf,
-        migrPathBuf.buf,
-        optionsBuf.buf,
-        outDb.buf,
-      ),
-    );
-
-    return new Database(readPtrOut(outDb));
-  }
-
   static fromDatabase(dbPath: string, dir: string, options?: DatabaseOptions): Database {
     const lib = getSymbols();
     const optionsBuf = makeDefaultOptions(options);

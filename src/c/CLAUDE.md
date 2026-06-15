@@ -157,8 +157,8 @@ human-readable **text report** via a `char** out_report` out-param (freed by the
 
 `quiver_database_get_model_name` / `_get_attribute_unit` (also in `database.cpp`) follow the same
 string-out pattern (freed by `quiver_database_free_string`); they return `""` when no UI metadata is
-loaded. The `quiver_database_from_database` factory mirrors `quiver_database_from_migrations`
-verbatim (NULL options → defaults). No new free function was added for any of these.
+loaded. The `quiver_database_from_database` factory follows the same shape as the other factories
+(NULL options → defaults). No new free function was added for any of these.
 
 ## Multi-Column Time Series
 
