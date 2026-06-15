@@ -31,9 +31,9 @@ public:
 
 private:
     std::string model_;
-    std::string extension_;                    // parsed from main.toml; not yet exposed across FFI
-    std::vector<std::string> collections_;     // parsed from main.toml; not yet exposed across FFI
-    std::vector<std::string> localizations_;   // drives the English-first unit fallback order
+    std::string extension_;                   // parsed from main.toml; not yet exposed across FFI
+    std::vector<std::string> collections_;    // parsed from main.toml; not yet exposed across FFI
+    std::vector<std::string> localizations_;  // drives the English-first unit fallback order
     // collection id -> attribute id -> unit (only attributes that have a non-empty unit)
     std::map<std::string, std::map<std::string, std::string>> units_;
 };

@@ -59,9 +59,7 @@ export class Database {
     const dbPathBuf = toCString(dbPath);
     const dirBuf = toCString(dir);
 
-    check(
-      lib.quiver_database_from_database(dbPathBuf.buf, dirBuf.buf, optionsBuf.buf, outDb.buf),
-    );
+    check(lib.quiver_database_from_database(dbPathBuf.buf, dirBuf.buf, optionsBuf.buf, outDb.buf));
 
     return new Database(readPtrOut(outDb));
   }
