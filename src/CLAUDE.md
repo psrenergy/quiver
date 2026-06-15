@@ -148,13 +148,15 @@ both `dir/migrations` (applied via `migrate_up`, like `from_migrations`) and `di
 `ui/` folder shipped with a model database. `UiConfig::from_directory(ui_dir)` parses `main.toml`
 (model name) and each `<collection>.toml`'s `[[attribute]]` units with toml++ (same idioms as
 `binary/binary_metadata.cpp`; toml++ is `PRIVATE` on the `quiver` target so it stays out of public
-headers). Units are keyed by each file's top-level `id` (the canonical collection name) and selected
-**English-first** (`unit.en`, else the first declared localization, else `""`). A missing `ui_dir`
+headers). Units are keyed by each file's top-level `id` (the canonical collection name); a unit may
+be a localized sub-table or a bare string, resolved **English-first** by `pick_localized` (`unit.en`,
+else each declared localization, else any locale; empty strings count as absent). A missing `ui_dir`
 or `main.toml` yields an empty config (no throw); malformed TOML in a file that exists throws
-Pattern 3 with the path. `Database::Impl` holds one `UiConfig ui;` (default-empty), populated only by
-`from_database`; `get_model_name()` / `get_attribute_unit()` delegate to it and return `""` when no
-UI was loaded. Not persisted to SQLite (root design decision) — only the in-process `from_database`
-instance carries it.
+Pattern 3 with the path. `from_database` reads the UI **before** creating/migrating the db file (so a
+malformed ui/ leaves no partial db) and delegates the migration path to `from_migrations`.
+`Database::Impl` holds one `UiConfig ui;` (default-empty), populated only by `from_database`;
+`get_model_name()` / `get_attribute_unit()` delegate to it and return `""` when no UI was loaded. Not
+persisted to SQLite (root design decision) — only the in-process `from_database` instance carries it.
 
 ## Logging
 

@@ -57,8 +57,10 @@ Settled questions — don't relitigate without the user; each was decided delibe
   only `get_model_name()` + `get_attribute_unit()`; the rest of the UI files (enums, labels,
   tooltips, cards, queries, `[[attribute_query]]`) is deliberately ignored for now. Units are keyed
   by the collection's canonical UI `id` (capitalized "Material" — matches the SQL table name), not
-  the file stem. Localized strings resolve **English-first** (`unit.en`, else the first declared
-  localization, else `""`) — no locale plumbing across FFI, `""` is the unknown sentinel. The
+  the file stem. Localized strings resolve **English-first** (`unit.en`, else each declared
+  localization in order, else any remaining locale; an empty string counts as absent, and a bare
+  non-localized `unit = "..."` string is accepted) — no locale plumbing across FFI, `""` is the
+  unknown sentinel. The
   `UiConfig` is **not persisted into SQLite**: a database opened any other way (plain ctor / `open()`
   / `from_migrations` / `from_schema`, or the Lua-provided `db`) returns `""` from the getters.
   Persisting it is possible future work, intentionally out of scope here.

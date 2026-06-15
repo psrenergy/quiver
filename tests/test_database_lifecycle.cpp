@@ -1,6 +1,7 @@
 #include "test_utils.h"
 
 #include <filesystem>
+#include <fstream>
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/migration.h>
@@ -306,6 +307,37 @@ TEST_F(DatabaseDirFixture, FromDatabaseRejectsReadOnly) {
 
 TEST_F(DatabaseDirFixture, FromDatabaseInvalidPath) {
     EXPECT_THROW(quiver::Database::from_database(path, "nonexistent/database/"), std::runtime_error);
+}
+
+TEST_F(DatabaseDirFixture, FromDatabaseMissingMigrationsThrows) {
+    // A directory that exists but has no migrations/ subfolder must fail fast (delegated to
+    // from_migrations), not silently yield a schema-less version-0 database.
+    const auto dir_without_migrations = (fs::path(__FILE__).parent_path() / "schemas" / "valid").string();
+    EXPECT_THROW(quiver::Database::from_database(path, dir_without_migrations), std::runtime_error);
+    EXPECT_FALSE(fs::exists(path));
+}
+
+TEST_F(DatabaseDirFixture, FromDatabaseMalformedUiLeavesNoDatabaseFile) {
+    // UI is parsed before the db is created/migrated, so a malformed ui/ throws without leaving a
+    // partially-initialized database on disk.
+    const auto tmp = fs::temp_directory_path() / "quiver_from_database_malformed_ui";
+    fs::remove_all(tmp);
+    fs::create_directories(tmp / "migrations" / "1");
+    {
+        std::ofstream up((tmp / "migrations" / "1" / "up.sql").string());
+        up << "PRAGMA user_version = 1;\nCREATE TABLE Configuration (id INTEGER PRIMARY KEY, label TEXT UNIQUE NOT "
+              "NULL) STRICT;\n";
+    }
+    fs::create_directories(tmp / "ui");
+    {
+        std::ofstream bad((tmp / "ui" / "material.toml").string());
+        bad << "id = \"Material\"\nthis is not valid toml = =\n";
+    }
+
+    EXPECT_THROW(quiver::Database::from_database(path, tmp.string()), std::runtime_error);
+    EXPECT_FALSE(fs::exists(path));
+
+    fs::remove_all(tmp);
 }
 
 TEST_F(TempFileFixture, UiMetadataEmptyWithoutFromDatabase) {

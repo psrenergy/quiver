@@ -21,6 +21,26 @@ toml::table parse_toml_file(const std::string& path) {
     }
 }
 
+// Picks a localized string from a {en = "...", pt = "..."} sub-table: English first, then each
+// declared localization in order, then any remaining locale. Empty strings are treated as absent so
+// an explicit `unit.en = ""` does not shadow a real value in another locale.
+std::string pick_localized(const toml::table& values, const std::vector<std::string>& localizations) {
+    if (auto en = values["en"].value<std::string>(); en && !en->empty()) {
+        return *en;
+    }
+    for (const auto& localization : localizations) {
+        if (auto value = values[localization].value<std::string>(); value && !value->empty()) {
+            return *value;
+        }
+    }
+    for (const auto& [key, value] : values) {
+        if (auto str = value.value<std::string>(); str && !str->empty()) {
+            return *str;
+        }
+    }
+    return "";
+}
+
 }  // namespace
 
 UiConfig UiConfig::from_directory(const std::string& ui_dir) {
@@ -37,16 +57,6 @@ UiConfig UiConfig::from_directory(const std::string& ui_dir) {
         const toml::table tbl = parse_toml_file(main_path.string());
         if (auto v = tbl["model"].value<std::string>()) {
             config.model_ = *v;
-        }
-        if (auto v = tbl["extension"].value<std::string>()) {
-            config.extension_ = *v;
-        }
-        if (auto* arr = tbl["collections"].as_array()) {
-            for (auto& elem : *arr) {
-                if (auto v = elem.value<std::string>()) {
-                    config.collections_.push_back(*v);
-                }
-            }
         }
         if (auto* arr = tbl["localizations"].as_array()) {
             for (auto& elem : *arr) {
@@ -91,18 +101,13 @@ UiConfig UiConfig::from_directory(const std::string& ui_dir) {
                 continue;
             }
 
-            // English-first: prefer unit.en, else the first declared localization that has a value.
+            // Unit may be a localized sub-table (unit.en/unit.pt/...) or a bare string. English-first.
             std::string unit;
             const auto unit_node = (*attribute)["unit"];
-            if (auto en = unit_node["en"].value<std::string>()) {
-                unit = *en;
-            } else {
-                for (const auto& localization : config.localizations_) {
-                    if (auto value = unit_node[localization].value<std::string>()) {
-                        unit = *value;
-                        break;
-                    }
-                }
+            if (const auto* unit_table = unit_node.as_table()) {
+                unit = pick_localized(*unit_table, config.localizations_);
+            } else if (auto bare = unit_node.value<std::string>()) {
+                unit = *bare;
             }
 
             if (!unit.empty()) {

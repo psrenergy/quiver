@@ -268,9 +268,12 @@ Database Database::from_database(const std::string& db_path, const std::string& 
     if (!fs::is_directory(dir)) {
         throw std::runtime_error("Cannot from_database: path is not a directory: " + dir);
     }
-    auto db = Database(db_path, options);
-    db.migrate_up((fs::path(dir) / "migrations").string());
-    db.impl_->ui = UiConfig::from_directory((fs::path(dir) / "ui").string());
+    // Read the UI metadata before creating/migrating the database file, so a malformed ui/ fails the
+    // factory without leaving a partially-initialized database on disk. The migration path is then
+    // delegated to from_migrations, which enforces that dir/migrations exists.
+    auto ui = UiConfig::from_directory((fs::path(dir) / "ui").string());
+    auto db = from_migrations(db_path, (fs::path(dir) / "migrations").string(), options);
+    db.impl_->ui = std::move(ui);
     return db;
 }
 
