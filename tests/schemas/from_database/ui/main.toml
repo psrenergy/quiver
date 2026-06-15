@@ -1,0 +1,4 @@
+model = "demo_model"
+extension = "demo"
+collections = ["Material"]
+localizations = ["en", "pt"]

@@ -28,6 +28,28 @@ def test_from_migrations_creates_database(migrations_path: Path, tmp_path: Path)
     db.close()
 
 
+def test_from_database_loads_ui_metadata(database_dir: Path, tmp_path: Path) -> None:
+    db = Database.from_database(str(tmp_path / "test.db"), str(database_dir))
+    try:
+        assert db.current_version() == 1
+        assert db.get_model_name() == "demo_model"
+        assert db.get_attribute_unit("Material", "demand") == "unit/year"
+        assert db.get_attribute_unit("Material", "label") == ""
+        assert db.get_attribute_unit("Nonexistent", "x") == ""
+    finally:
+        db.close()
+
+
+def test_from_database_invalid_path(tmp_path: Path) -> None:
+    with pytest.raises(QuiverError):
+        Database.from_database(str(tmp_path / "test.db"), "nonexistent/path")
+
+
+def test_ui_metadata_empty_without_from_database(db: Database) -> None:
+    assert db.get_model_name() == ""
+    assert db.get_attribute_unit("Material", "demand") == ""
+
+
 def test_open_existing_database(valid_schema_path: Path, tmp_path: Path) -> None:
     db_path = str(tmp_path / "test.db")
     Database.from_schema(db_path, str(valid_schema_path)).close()

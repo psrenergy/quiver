@@ -257,6 +257,23 @@ Database Database::from_migrations(const std::string& db_path,
     return db;
 }
 
+Database Database::from_database(const std::string& db_path, const std::string& dir, const DatabaseOptions& options) {
+    namespace fs = std::filesystem;
+    if (options.read_only) {
+        throw std::runtime_error("Cannot from_database: read_only mode (use Database constructor to open existing)");
+    }
+    if (!fs::exists(dir)) {
+        throw std::runtime_error("Database directory not found: " + dir);
+    }
+    if (!fs::is_directory(dir)) {
+        throw std::runtime_error("Cannot from_database: path is not a directory: " + dir);
+    }
+    auto db = Database(db_path, options);
+    db.migrate_up((fs::path(dir) / "migrations").string());
+    db.impl_->ui = UiConfig::from_directory((fs::path(dir) / "ui").string());
+    return db;
+}
+
 Database
 Database::from_schema(const std::string& db_path, const std::string& schema_path, const DatabaseOptions& options) {
     namespace fs = std::filesystem;
@@ -272,6 +289,14 @@ Database::from_schema(const std::string& db_path, const std::string& schema_path
     auto db = Database(db_path, options);
     db.apply_schema(schema_path);
     return db;
+}
+
+std::string Database::get_model_name() const {
+    return impl_->ui.model_name();
+}
+
+std::string Database::get_attribute_unit(const std::string& collection, const std::string& attribute) const {
+    return impl_->ui.attribute_unit(collection, attribute);
 }
 
 void Database::set_version(int64_t version) {

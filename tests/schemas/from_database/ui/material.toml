@@ -1,0 +1,22 @@
+id = "Material"
+label.en = "Materials"
+label.pt = "Materiais"
+
+[[attribute]]
+id = "label"
+label.en = "Name"
+label.pt = "Nome"
+
+[[attribute]]
+id = "demand"
+label.en = "Demand"
+label.pt = "Demanda"
+unit.en = "unit/year"
+unit.pt = "unidade/ano"
+
+# Unit only declared in pt — exercises the English-first fallback to the first declared locale.
+[[attribute]]
+id = "pt_only_unit"
+label.en = "Pt Only"
+label.pt = "Apenas Pt"
+unit.pt = "unidade"

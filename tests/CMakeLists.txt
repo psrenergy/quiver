@@ -44,6 +44,7 @@ add_executable(quiver_tests
     test_migrations.cpp
     test_row_result.cpp
     test_schema_validator.cpp
+    test_ui_config.cpp
 )
 
 target_link_libraries(quiver_tests

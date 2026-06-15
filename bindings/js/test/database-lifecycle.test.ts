@@ -11,6 +11,7 @@ import { getSymbols } from "../src/loader.ts";
 
 const SCHEMA_PATH = join(__dirname, "..", "..", "..", "tests", "schemas", "valid", "basic.sql");
 const MIGRATIONS_PATH = join(__dirname, "..", "..", "..", "tests", "schemas", "migrations");
+const DATABASE_DIR = join(__dirname, "..", "..", "..", "tests", "schemas", "from_database");
 
 describe("Database lifecycle", () => {
   const tempDirs: string[] = [];
@@ -84,6 +85,37 @@ describe("Database lifecycle", () => {
     expect(() => {
       Database.fromMigrations(":memory:", "nonexistent/path");
     }).toThrow(QuiverError);
+  });
+
+  test("fromDatabase applies migrations and loads UI metadata", () => {
+    const dir = makeTempDir();
+    const dbPath = join(dir, "test.db");
+    const db = Database.fromDatabase(dbPath, DATABASE_DIR);
+    try {
+      expect(db.currentVersion()).toEqual(1);
+      expect(db.getModelName()).toEqual("demo_model");
+      expect(db.getAttributeUnit("Material", "demand")).toEqual("unit/year");
+      expect(db.getAttributeUnit("Material", "label")).toEqual("");
+      expect(db.getAttributeUnit("Nonexistent", "x")).toEqual("");
+    } finally {
+      db.close();
+    }
+  });
+
+  test("fromDatabase with invalid path throws QuiverError", () => {
+    expect(() => {
+      Database.fromDatabase(":memory:", "nonexistent/path");
+    }).toThrow(QuiverError);
+  });
+
+  test("UI metadata is empty without fromDatabase", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      expect(db.getModelName()).toEqual("");
+      expect(db.getAttributeUnit("Material", "demand")).toEqual("");
+    } finally {
+      db.close();
+    }
   });
 
   test("open reopens an existing database file", () => {

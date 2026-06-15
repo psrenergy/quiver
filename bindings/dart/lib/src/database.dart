@@ -106,6 +106,35 @@ class Database {
     }
   }
 
+  /// Creates a new database from a model directory containing a `migrations/`
+  /// subfolder (applied as in [Database.fromMigrations]) and a `ui/` subfolder
+  /// (UI metadata loaded into the returned instance).
+  factory Database.fromDatabase(
+    String dbPath,
+    String dir, {
+    bool readOnly = false,
+    int? consoleLevel,
+  }) {
+    final arena = Arena();
+    try {
+      final optionsPtr = _makeOptions(arena, readOnly, consoleLevel);
+      final outDbPtr = arena<Pointer<quiver_database_t>>();
+
+      check(
+        bindings.quiver_database_from_database(
+          dbPath.toNativeUtf8(allocator: arena).cast(),
+          dir.toNativeUtf8(allocator: arena).cast(),
+          optionsPtr,
+          outDbPtr,
+        ),
+      );
+
+      return Database._(outDbPtr.value);
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
   /// Opens an existing database file.
   factory Database.open(
     String dbPath, {
@@ -227,6 +256,45 @@ class Database {
       );
       final result = outReport.value.cast<Utf8>().toDartString();
       bindings.quiver_database_free_string(outReport.value);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Returns the model name from the UI metadata loaded via
+  /// [Database.fromDatabase]; an empty string when no UI metadata is loaded.
+  String getModelName() {
+    _ensureNotClosed();
+    final arena = Arena();
+    try {
+      final outName = arena<Pointer<Char>>();
+      check(bindings.quiver_database_get_model_name(_ptr, outName));
+      final result = outName.value.cast<Utf8>().toDartString();
+      bindings.quiver_database_free_string(outName.value);
+      return result;
+    } finally {
+      arena.releaseAll();
+    }
+  }
+
+  /// Returns the English-first unit for an attribute from the UI metadata loaded
+  /// via [Database.fromDatabase]; an empty string when unknown or unit-less.
+  String getAttributeUnit(String collection, String attribute) {
+    _ensureNotClosed();
+    final arena = Arena();
+    try {
+      final outUnit = arena<Pointer<Char>>();
+      check(
+        bindings.quiver_database_get_attribute_unit(
+          _ptr,
+          collection.toNativeUtf8(allocator: arena).cast(),
+          attribute.toNativeUtf8(allocator: arena).cast(),
+          outUnit,
+        ),
+      );
+      final result = outUnit.value.cast<Utf8>().toDartString();
+      bindings.quiver_database_free_string(outUnit.value);
       return result;
     } finally {
       arena.releaseAll();

@@ -35,6 +35,7 @@ const lifecycleSymbols = {
   // struct in JS.
   quiver_database_from_schema: { args: [BUF, BUF, BUF, P], returns: I32 },
   quiver_database_from_migrations: { args: [BUF, BUF, BUF, P], returns: I32 },
+  quiver_database_from_database: { args: [BUF, BUF, BUF, P], returns: I32 },
   quiver_database_open: { args: [BUF, BUF, P], returns: I32 },
   quiver_database_close: { args: [P], returns: I32 },
   quiver_database_is_healthy: { args: [P, P], returns: I32 },
@@ -115,6 +116,8 @@ const metadataSymbols = {
 const describeSymbols = {
   quiver_database_describe_collection: { args: [P, BUF, P], returns: I32 },
   quiver_database_summarize_collection: { args: [P, BUF, P], returns: I32 },
+  quiver_database_get_model_name: { args: [P, P], returns: I32 },
+  quiver_database_get_attribute_unit: { args: [P, BUF, BUF, P], returns: I32 },
 } as const;
 
 const timeSeriesSymbols = {

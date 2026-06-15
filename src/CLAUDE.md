@@ -21,6 +21,7 @@ include/quiver/           # C++ public headers
   data_type.h             # DataType enum, data_type_to_string, is_date_time_column
   row.h / result.h        # Row and Result query-result types
   migration.h / migrations.h  # Migration (version dir, up/down sql) and Migrations discovery
+  ui_config.h             # UiConfig - reads ui/ TOML (model name + per-attribute units)
   export.h / quiver.h     # Export macro, umbrella header
 include/quiver/binary/      # Binary subsystem headers (binary file I/O)
   binary_file.h               # BinaryFile class (Pimpl) - open_file, read, write, get_metadata
@@ -44,6 +45,7 @@ src/                      # C++ implementation
   schema_validator.cpp    # Schema convention validation
   type_validator.cpp      # Scalar/array type validation (caller-threaded Pattern 1 messages)
   element.cpp / row.cpp / result.cpp / migration.cpp / migrations.cpp
+  ui_config.cpp           # UiConfig::from_directory - toml++ reader for the ui/ folder
   lua_runner.cpp          # LuaRunner (sol2) - all Lua bindings
   cli/main.cpp            # quiver_cli CLI entry point
   utils/string.h          # String utilities: new_c_str, trim
@@ -133,9 +135,26 @@ Static methods for database creation:
 ```cpp
 static Database from_schema(const std::string& db_path, const std::string& schema_path, const DatabaseOptions& options = {});
 static Database from_migrations(const std::string& db_path, const std::string& migrations_path, const DatabaseOptions& options = {});
+static Database from_database(const std::string& db_path, const std::string& dir, const DatabaseOptions& options = {});
 ```
 `schema_path` is a `.sql` file; `migrations_path` is a directory of numbered version
-subdirectories with `up.sql`/`down.sql`.
+subdirectories with `up.sql`/`down.sql`. `from_database`'s `dir` is a model directory that holds
+both `dir/migrations` (applied via `migrate_up`, like `from_migrations`) and `dir/ui` (read into a
+`UiConfig` — see UI Config below).
+
+## UI Config
+
+`UiConfig` (`include/quiver/ui_config.h`, `src/ui_config.cpp`) is a plain value type that reads the
+`ui/` folder shipped with a model database. `UiConfig::from_directory(ui_dir)` parses `main.toml`
+(model name) and each `<collection>.toml`'s `[[attribute]]` units with toml++ (same idioms as
+`binary/binary_metadata.cpp`; toml++ is `PRIVATE` on the `quiver` target so it stays out of public
+headers). Units are keyed by each file's top-level `id` (the canonical collection name) and selected
+**English-first** (`unit.en`, else the first declared localization, else `""`). A missing `ui_dir`
+or `main.toml` yields an empty config (no throw); malformed TOML in a file that exists throws
+Pattern 3 with the path. `Database::Impl` holds one `UiConfig ui;` (default-empty), populated only by
+`from_database`; `get_model_name()` / `get_attribute_unit()` delegate to it and return `""` when no
+UI was loaded. Not persisted to SQLite (root design decision) — only the in-process `from_database`
+instance carries it.
 
 ## Logging
 

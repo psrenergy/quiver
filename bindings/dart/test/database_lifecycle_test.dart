@@ -8,6 +8,7 @@ void main() {
   final testsPath = path.join(path.current, '..', '..', 'tests');
   final schemaPath = path.join(testsPath, 'schemas', 'valid', 'basic.sql');
   final migrationsPath = path.join(testsPath, 'schemas', 'migrations');
+  final databaseDir = path.join(testsPath, 'schemas', 'from_database');
 
   group('Database fromSchema', () {
     test('creates database from schema file', () {
@@ -97,6 +98,44 @@ void main() {
         () => Database.fromMigrations(':memory:', 'nonexistent/path'),
         throwsA(isA<DatabaseException>()),
       );
+    });
+  });
+
+  group('Database fromDatabase', () {
+    test('applies migrations and loads UI metadata', () {
+      final tempDir = Directory.systemTemp.createTempSync('quiver_test_');
+      final dbPath = path.join(tempDir.path, 'test.db');
+      try {
+        final db = Database.fromDatabase(dbPath, databaseDir);
+        try {
+          expect(db.currentVersion(), equals(1));
+          expect(db.getModelName(), equals('demo_model'));
+          expect(db.getAttributeUnit('Material', 'demand'), equals('unit/year'));
+          expect(db.getAttributeUnit('Material', 'label'), equals(''));
+          expect(db.getAttributeUnit('Nonexistent', 'x'), equals(''));
+        } finally {
+          db.close();
+        }
+      } finally {
+        tempDir.deleteSync(recursive: true);
+      }
+    });
+
+    test('throws on invalid directory', () {
+      expect(
+        () => Database.fromDatabase(':memory:', 'nonexistent/path'),
+        throwsA(isA<DatabaseException>()),
+      );
+    });
+
+    test('UI metadata is empty without fromDatabase', () {
+      final db = Database.fromSchema(':memory:', schemaPath);
+      try {
+        expect(db.getModelName(), equals(''));
+        expect(db.getAttributeUnit('Material', 'demand'), equals(''));
+      } finally {
+        db.close();
+      }
     });
   });
 

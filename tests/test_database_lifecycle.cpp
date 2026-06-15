@@ -264,6 +264,56 @@ TEST_F(MigrationFixture, DatabaseFromMigrationsInvalidPath) {
     EXPECT_THROW(quiver::Database::from_migrations(path, "nonexistent/migrations/"), std::runtime_error);
 }
 
+// ============================================================================
+// from_database (migrations/ + ui/) tests
+// ============================================================================
+
+class DatabaseDirFixture : public ::testing::Test {
+protected:
+    void SetUp() override {
+        path = (fs::temp_directory_path() / "quiver_from_database_test.db").string();
+        dir = (fs::path(__FILE__).parent_path() / "schemas" / "from_database").string();
+        if (fs::exists(path))
+            fs::remove(path);
+    }
+    void TearDown() override {
+        if (fs::exists(path))
+            fs::remove(path);
+    }
+    std::string path;
+    std::string dir;
+};
+
+TEST_F(DatabaseDirFixture, FromDatabaseAppliesMigrations) {
+    auto db = quiver::Database::from_database(path, dir);
+    EXPECT_EQ(db.current_version(), 1);
+    EXPECT_TRUE(db.is_healthy());
+}
+
+TEST_F(DatabaseDirFixture, FromDatabaseLoadsUiMetadata) {
+    auto db = quiver::Database::from_database(path, dir);
+    EXPECT_EQ(db.get_model_name(), "demo_model");
+    EXPECT_EQ(db.get_attribute_unit("Material", "demand"), "unit/year");
+    EXPECT_EQ(db.get_attribute_unit("Material", "label"), "");
+    EXPECT_EQ(db.get_attribute_unit("Nonexistent", "x"), "");
+}
+
+TEST_F(DatabaseDirFixture, FromDatabaseRejectsReadOnly) {
+    quiver::DatabaseOptions options;
+    options.read_only = true;
+    EXPECT_THROW(quiver::Database::from_database(path, dir, options), std::runtime_error);
+}
+
+TEST_F(DatabaseDirFixture, FromDatabaseInvalidPath) {
+    EXPECT_THROW(quiver::Database::from_database(path, "nonexistent/database/"), std::runtime_error);
+}
+
+TEST_F(TempFileFixture, UiMetadataEmptyWithoutFromDatabase) {
+    auto db = quiver::Database::from_schema(path, VALID_SCHEMA("basic.sql"));
+    EXPECT_EQ(db.get_model_name(), "");
+    EXPECT_EQ(db.get_attribute_unit("Material", "demand"), "");
+}
+
 TEST_F(MigrationFixture, MigrationVersionZero) {
     quiver::Migrations migrations(migrations_path);
 

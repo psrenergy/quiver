@@ -257,6 +257,64 @@ TEST_F(TempFileFixture, FromMigrationsInvalidPath) {
 }
 
 // ============================================================================
+// From database (migrations/ + ui/) tests
+// ============================================================================
+
+TEST_F(TempFileFixture, FromDatabaseNullArgs) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    EXPECT_EQ(quiver_database_from_database(nullptr, "dir/", &options, &db), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_from_database(":memory:", nullptr, &options, &db), QUIVER_ERROR);
+}
+
+TEST_F(TempFileFixture, FromDatabaseInvalidPath) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    EXPECT_NE(quiver_database_from_database(":memory:", "nonexistent/database/", &options, &db), QUIVER_OK);
+}
+
+TEST_F(TempFileFixture, FromDatabaseLoadsUiMetadata) {
+    auto options = quiver_database_options_default();
+    options.console_level = QUIVER_LOG_OFF;
+    quiver_database_t* db = nullptr;
+    const auto dir = SCHEMA_PATH("schemas/from_database");
+    ASSERT_EQ(quiver_database_from_database(path.c_str(), dir.c_str(), &options, &db), QUIVER_OK);
+    ASSERT_NE(db, nullptr);
+
+    int64_t version = 0;
+    EXPECT_EQ(quiver_database_current_version(db, &version), QUIVER_OK);
+    EXPECT_EQ(version, 1);
+
+    char* model = nullptr;
+    ASSERT_EQ(quiver_database_get_model_name(db, &model), QUIVER_OK);
+    ASSERT_NE(model, nullptr);
+    EXPECT_STREQ(model, "demo_model");
+    quiver_database_free_string(model);
+
+    char* unit = nullptr;
+    ASSERT_EQ(quiver_database_get_attribute_unit(db, "Material", "demand", &unit), QUIVER_OK);
+    ASSERT_NE(unit, nullptr);
+    EXPECT_STREQ(unit, "unit/year");
+    quiver_database_free_string(unit);
+
+    // Unknown attribute -> empty string (not an error).
+    char* missing = nullptr;
+    ASSERT_EQ(quiver_database_get_attribute_unit(db, "Material", "nope", &missing), QUIVER_OK);
+    ASSERT_NE(missing, nullptr);
+    EXPECT_STREQ(missing, "");
+    quiver_database_free_string(missing);
+
+    quiver_database_close(db);
+}
+
+TEST_F(TempFileFixture, GetModelNameNullArgs) {
+    char* out = nullptr;
+    EXPECT_EQ(quiver_database_get_model_name(nullptr, &out), QUIVER_ERROR);
+}
+
+// ============================================================================
 // Additional error handling tests
 // ============================================================================
 

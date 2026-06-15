@@ -52,3 +52,27 @@ Database.prototype.summarizeCollection = function (this: Database, collection: s
   lib.quiver_database_free_string(readPtrOut(out));
   return result;
 };
+
+Database.prototype.getModelName = function (this: Database): string {
+  const lib = getSymbols();
+  const out = allocPtrOut();
+  check(lib.quiver_database_get_model_name(this._handle, out.buf));
+  const result = decodeStringFromBuf(out);
+  lib.quiver_database_free_string(readPtrOut(out));
+  return result;
+};
+
+Database.prototype.getAttributeUnit = function (
+  this: Database,
+  collection: string,
+  attribute: string,
+): string {
+  const lib = getSymbols();
+  const collBuf = toCString(collection);
+  const attrBuf = toCString(attribute);
+  const out = allocPtrOut();
+  check(lib.quiver_database_get_attribute_unit(this._handle, collBuf.buf, attrBuf.buf, out.buf));
+  const result = decodeStringFromBuf(out);
+  lib.quiver_database_free_string(readPtrOut(out));
+  return result;
+};

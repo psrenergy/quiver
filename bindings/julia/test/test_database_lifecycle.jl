@@ -69,6 +69,30 @@ end
     end
 end
 
+@testset "from_database" begin
+    dir = joinpath(tests_path(), "schemas", "from_database")
+    mktempdir() do tmp
+        db_path = joinpath(tmp, "test.db")
+        db = Quiver.from_database(db_path, dir)
+        @test Quiver.current_version(db) == 1
+        @test Quiver.is_healthy(db) == true
+        @test Quiver.get_model_name(db) == "demo_model"
+        @test Quiver.get_attribute_unit(db, "Material", "demand") == "unit/year"
+        @test Quiver.get_attribute_unit(db, "Material", "label") == ""
+        @test Quiver.get_attribute_unit(db, "Nonexistent", "x") == ""
+        Quiver.close!(db)
+        return nothing
+    end
+end
+
+@testset "UI metadata empty without from_database" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    db = Quiver.from_schema(":memory:", path_schema)
+    @test Quiver.get_model_name(db) == ""
+    @test Quiver.get_attribute_unit(db, "Material", "demand") == ""
+    Quiver.close!(db)
+end
+
 @testset "is_healthy" begin
     path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
     db = Quiver.from_schema(":memory:", path_schema)

@@ -5,6 +5,7 @@
 #include "quiver/schema.h"
 #include "quiver/schema_validator.h"
 #include "quiver/type_validator.h"
+#include "quiver/ui_config.h"
 
 #include <map>
 #include <memory>
@@ -28,6 +29,7 @@ struct Database::Impl {
     std::shared_ptr<spdlog::logger> logger;
     std::unique_ptr<Schema> schema;
     std::unique_ptr<TypeValidator> type_validator;
+    UiConfig ui;  // model name + per-attribute units; populated only by Database::from_database
 
     void require_schema(const char* operation) const {
         if (!schema) {

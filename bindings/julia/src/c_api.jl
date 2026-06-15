@@ -123,6 +123,10 @@ function quiver_database_from_schema(db_path, schema_path, options, out_db)
     @ccall libquiver_c.quiver_database_from_schema(db_path::Ptr{Cchar}, schema_path::Ptr{Cchar}, options::Ptr{quiver_database_options_t}, out_db::Ptr{Ptr{quiver_database_t}})::quiver_error_t
 end
 
+function quiver_database_from_database(db_path, dir, options, out_db)
+    @ccall libquiver_c.quiver_database_from_database(db_path::Ptr{Cchar}, dir::Ptr{Cchar}, options::Ptr{quiver_database_options_t}, out_db::Ptr{Ptr{quiver_database_t}})::quiver_error_t
+end
+
 function quiver_database_close(db)
     @ccall libquiver_c.quiver_database_close(db::Ptr{quiver_database_t})::quiver_error_t
 end
@@ -423,6 +427,14 @@ end
 
 function quiver_database_summarize_collection(db, collection, out_report)
     @ccall libquiver_c.quiver_database_summarize_collection(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_report::Ptr{Ptr{Cchar}})::quiver_error_t
+end
+
+function quiver_database_get_model_name(db, out_name)
+    @ccall libquiver_c.quiver_database_get_model_name(db::Ptr{quiver_database_t}, out_name::Ptr{Ptr{Cchar}})::quiver_error_t
+end
+
+function quiver_database_get_attribute_unit(db, collection, attribute, out_unit)
+    @ccall libquiver_c.quiver_database_get_attribute_unit(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, attribute::Ptr{Cchar}, out_unit::Ptr{Ptr{Cchar}})::quiver_error_t
 end
 
 function quiver_element_create(out_element)

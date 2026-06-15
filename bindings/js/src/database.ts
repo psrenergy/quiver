@@ -52,6 +52,20 @@ export class Database {
     return new Database(readPtrOut(outDb));
   }
 
+  static fromDatabase(dbPath: string, dir: string, options?: DatabaseOptions): Database {
+    const lib = getSymbols();
+    const optionsBuf = makeDefaultOptions(options);
+    const outDb = allocPtrOut();
+    const dbPathBuf = toCString(dbPath);
+    const dirBuf = toCString(dir);
+
+    check(
+      lib.quiver_database_from_database(dbPathBuf.buf, dirBuf.buf, optionsBuf.buf, outDb.buf),
+    );
+
+    return new Database(readPtrOut(outDb));
+  }
+
   static open(dbPath: string, options?: DatabaseOptions): Database {
     const lib = getSymbols();
     const optionsBuf = makeDefaultOptions(options);
@@ -183,6 +197,8 @@ export class Database {
   declare describe: () => string;
   declare describeCollection: (collection: string) => string;
   declare summarizeCollection: (collection: string) => string;
+  declare getModelName: () => string;
+  declare getAttributeUnit: (collection: string, attribute: string) => string;
 
   // --- Composite helpers (implemented in composites.ts) ---
   declare readScalarsById: (

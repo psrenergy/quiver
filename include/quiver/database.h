@@ -34,6 +34,12 @@ public:
 
     static Database
     from_schema(const std::string& db_path, const std::string& schema_path, const DatabaseOptions& options = {});
+
+    // Creates a database from a model directory containing a `migrations/` subfolder (applied as in
+    // from_migrations) and a `ui/` subfolder (UI metadata loaded into the returned instance). The UI
+    // data lives only on this in-process object — reopening db_path later does not restore it.
+    static Database
+    from_database(const std::string& db_path, const std::string& dir, const DatabaseOptions& options = {});
     bool is_healthy() const;
 
     int64_t current_version() const;
@@ -145,6 +151,12 @@ public:
     // summarize_collection(): one collection's value statistics (null/non-null counts, low-cardinality
     // integer value distributions, per-group empty/non-empty counts).
     std::string summarize_collection(const std::string& collection) const;
+
+    // UI metadata (populated only via from_database; "" otherwise).
+    // get_model_name(): the model name from ui/main.toml.
+    std::string get_model_name() const;
+    // get_attribute_unit(): English-first unit for an attribute; "" if unknown or unit-less.
+    std::string get_attribute_unit(const std::string& collection, const std::string& attribute) const;
 
     // CSV operations
     void export_csv(const std::string& collection,
