@@ -231,7 +231,7 @@ TEST_F(TempFileFixture, FromSchemaInvalidPath) {
 }
 
 // ============================================================================
-// From database (migrations/ + ui/) tests
+// From hub (migrations/ + ui/) tests
 // ============================================================================
 
 TEST_F(TempFileFixture, FromHubNullArgs) {

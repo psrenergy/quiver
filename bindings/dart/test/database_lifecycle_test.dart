@@ -145,7 +145,7 @@ void main() {
       }
     });
 
-    test('returns migration count for a model directory', () {
+    test('returns migration count for a hub directory', () {
       // schemas/ holds the shared 3-migration fixture under migrations/ (no ui/ -> empty UI).
       final db = Database.fromHub(':memory:', path.join(testsPath, 'schemas'));
       try {

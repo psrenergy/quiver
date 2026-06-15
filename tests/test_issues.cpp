@@ -17,9 +17,9 @@ protected:
 };
 
 TEST_F(IssuesFixture, Issue52) {
-    auto database_dir = issues_path + "/issue52";
+    auto hub_dir = issues_path + "/issue52";
 
-    EXPECT_THROW(quiver::Database::from_hub(":memory:", database_dir), std::runtime_error);
+    EXPECT_THROW(quiver::Database::from_hub(":memory:", hub_dir), std::runtime_error);
 }
 
 TEST_F(IssuesFixture, Issue161) {
